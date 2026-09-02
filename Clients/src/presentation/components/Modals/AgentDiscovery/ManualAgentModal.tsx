@@ -123,18 +123,27 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
       anchor="right"
       open={isOpen}
       onClose={handleClose}
-      PaperProps={{
-        sx: { width: 440, backgroundColor: theme.palette.background.modal || "#FCFCFD" },
+      slotProps={{
+        paper: {
+          sx: { width: 440, backgroundColor: theme.palette.background.modal || "#FCFCFD" },
+        },
       }}
     >
       {/* Header */}
       <Stack
         direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-        sx={{ p: "16px 24px" }}
+        sx={{
+          justifyContent: "space-between",
+          alignItems: "center",
+          p: "16px 24px",
+        }}
       >
-        <Typography fontSize={16} fontWeight={600}>
+        <Typography
+          sx={{
+            fontSize: 16,
+            fontWeight: 600,
+          }}
+        >
           {isEditMode ? "Edit agent" : "Add agent manually"}
         </Typography>
         <IconButton onClick={handleClose} size="small">
@@ -203,7 +212,14 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
 
       {/* Footer */}
       <Divider />
-      <Stack direction="row" justifyContent="flex-end" gap={1} sx={{ p: "16px 24px" }}>
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: "flex-end",
+          gap: 1,
+          p: "16px 24px",
+        }}
+      >
         <CustomizableButton
           variant="outlined"
           sx={{ border: "1px solid #d0d5dd" }}

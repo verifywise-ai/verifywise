@@ -873,7 +873,11 @@ const Training: React.FC = () => {
               zIndex: 1000,
             }}
           >
-            <Box mb={2}>
+            <Box
+              sx={{
+                mb: 2,
+              }}
+            >
               <Alert
                 variant={alert.variant}
                 title={alert.title}
@@ -922,12 +926,20 @@ const Training: React.FC = () => {
           {/* Filter + Search row */}
           <Stack
             direction="row"
-            alignItems="center"
-            justifyContent="space-between"
-            sx={{ gap: "20px" }}
+            sx={{
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "20px",
+            }}
           >
             {/* Left side: FilterBy, GroupBy, Search */}
-            <Stack direction="row" spacing={2} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <FilterBy
                 columns={trainingFilterColumns}
                 onFilterChange={handleTrainingFilterChange}
@@ -960,7 +972,13 @@ const Training: React.FC = () => {
             </Stack>
 
             {/* Right side: Export and Add Button */}
-            <Stack direction="row" gap="8px" alignItems="center">
+            <Stack
+              direction="row"
+              sx={{
+                gap: "8px",
+                alignItems: "center",
+              }}
+            >
               <ExportMenu
                 data={exportData}
                 columns={exportColumns}
@@ -1006,11 +1024,19 @@ const Training: React.FC = () => {
         <>
           <Stack
             direction="row"
-            alignItems="center"
-            justifyContent="space-between"
-            sx={{ gap: "20px" }}
+            sx={{
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "20px",
+            }}
           >
-            <Stack direction="row" spacing={2} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <FilterBy
                 columns={evidenceFilterColumns}
                 onFilterChange={handleEvidenceFilterChange}
@@ -1037,7 +1063,13 @@ const Training: React.FC = () => {
               />
             </Stack>
 
-            <Stack direction="row" gap="8px" alignItems="center">
+            <Stack
+              direction="row"
+              sx={{
+                gap: "8px",
+                alignItems: "center",
+              }}
+            >
               <ExportMenu
                 data={evidenceExportData}
                 columns={evidenceExportColumns}

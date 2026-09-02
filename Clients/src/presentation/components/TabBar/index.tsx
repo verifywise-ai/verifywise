@@ -154,7 +154,9 @@ const TabBar: React.FC<TabBarProps> = ({
     <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
       <TabList
         onChange={handleChange}
-        TabIndicatorProps={{ style: { backgroundColor: indicatorColor } }}
+        slotProps={{
+          indicator: { style: { backgroundColor: indicatorColor } },
+        }}
         sx={standardTabListStyle}
         data-joyride-id={dataJoyrideId}
         {...(scrollable && {

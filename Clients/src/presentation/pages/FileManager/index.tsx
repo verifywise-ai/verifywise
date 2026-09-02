@@ -843,7 +843,13 @@ const FileManager: React.FC = (): JSX.Element => {
                 loading={loadingBreadcrumb}
               />
             </Box>
-            <Stack direction="row" gap="8px" sx={{ flexShrink: 0 }}>
+            <Stack
+              direction="row"
+              sx={{
+                gap: "8px",
+                flexShrink: 0,
+              }}
+            >
               {canManageFolders && (
                 <CustomizableButton
                   variant="outlined"

@@ -286,23 +286,53 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
 
         {mode !== "view" && (
           <>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <Typography fontWeight={600} color={theme.palette.text.primary}>
+            <Stack
+              direction="row"
+              sx={{
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 3,
+              }}
+            >
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
+                <Typography
+                  color={theme.palette.text.primary}
+                  sx={{
+                    fontWeight: 600,
+                  }}
+                >
                   {isEdit ? "Edit incident" : "Create new incident"}
                 </Typography>
                 {isEdit && values.incident_id && (
                   <Typography
-                    fontWeight={400}
-                    fontSize={14}
                     sx={{
+                      fontWeight: 400,
+                      fontSize: 14,
                       ml: 1,
                     }}
                   >
-                    <Typography component="span" color={theme.palette.text.secondary} fontSize={14}>
+                    <Typography
+                      component="span"
+                      color={theme.palette.text.secondary}
+                      sx={{
+                        fontSize: 14,
+                      }}
+                    >
                       (Incident ID:{" "}
                     </Typography>
-                    <Typography component="span" color={theme.palette.text.tertiary} fontSize={14}>
+                    <Typography
+                      component="span"
+                      color={theme.palette.text.tertiary}
+                      sx={{
+                        fontSize: 14,
+                      }}
+                    >
                       {values.incident_id})
                     </Typography>
                   </Typography>
@@ -342,10 +372,21 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
           <HistorySidebar inline isOpen={true} entityType="incident" entityId={incidentId} />
         ) : (
           <form onSubmit={handleSaveIncident}>
-            <Stack spacing={4} width="100%">
+            <Stack
+              spacing={4}
+              sx={{
+                width: "100%",
+              }}
+            >
               {/* SECTION 1: INCIDENT INFORMATION */}
               <Stack spacing={4}>
-                <Stack direction="row" spacing={1} alignItems="baseline">
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: "baseline",
+                  }}
+                >
                   <Typography
                     sx={{
                       fontSize: 12,
@@ -369,7 +410,13 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                 </Stack>
 
                 {/* Row: AI Project + Incident Type */}
-                <Stack direction={"row"} gap={theme.spacing(8)} sx={{ mt: 2 }}>
+                <Stack
+                  direction={"row"}
+                  sx={{
+                    gap: theme.spacing(8),
+                    mt: 2,
+                  }}
+                >
                   <Stack sx={{ gap: 3, width: "50%" }}>
                     <SelectComponent
                       id="ai_project"
@@ -403,7 +450,13 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                 </Stack>
 
                 {/* Row: Severity + Status */}
-                <Stack direction={"row"} gap={theme.spacing(8)} sx={{ mt: 2 }}>
+                <Stack
+                  direction={"row"}
+                  sx={{
+                    gap: theme.spacing(8),
+                    mt: 2,
+                  }}
+                >
                   <Stack sx={{ gap: 3, width: "50%" }}>
                     <SelectComponent
                       id="severity"
@@ -433,7 +486,13 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                 </Stack>
 
                 {/* Row: Occurred Date + Detected Date */}
-                <Stack direction={"row"} gap={theme.spacing(8)} sx={{ mt: 2 }}>
+                <Stack
+                  direction={"row"}
+                  sx={{
+                    gap: theme.spacing(8),
+                    mt: 2,
+                  }}
+                >
                   <Suspense fallback={<div>Loading...</div>}>
                     <Stack sx={{ gap: 3, width: "50%" }}>
                       <DatePicker
@@ -461,7 +520,13 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                 </Stack>
 
                 {/* Row: Reporter + Model/System Version */}
-                <Stack direction={"row"} gap={theme.spacing(8)} sx={{ mt: 2 }}>
+                <Stack
+                  direction={"row"}
+                  sx={{
+                    gap: theme.spacing(8),
+                    mt: 2,
+                  }}
+                >
                   <Stack sx={{ gap: 3, width: "50%" }}>
                     <SelectComponent
                       id="reporter"
@@ -500,7 +565,13 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
 
               {/* SECTION 2: IMPACT ASSESSMENT */}
               <Stack spacing={4}>
-                <Stack direction="row" spacing={1} alignItems="baseline">
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: "baseline",
+                  }}
+                >
                   <Typography
                     sx={{
                       fontSize: 12,
@@ -596,7 +667,13 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
 
               {/* SECTION 3: RESPONSE & ACTIONS */}
               <Stack spacing={4}>
-                <Stack direction="row" spacing={1} alignItems="baseline">
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: "baseline",
+                  }}
+                >
                   <Typography
                     sx={{
                       fontSize: 12,
@@ -649,7 +726,13 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
 
               {/* SECTION 4: APPROVAL & REPORTING */}
               <Stack spacing={4}>
-                <Stack direction="row" spacing={1} alignItems="baseline">
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: "baseline",
+                  }}
+                >
                   <Typography
                     sx={{
                       fontSize: 12,
@@ -673,7 +756,13 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                 </Stack>
 
                 {/* Row: Approval Status + Approved By */}
-                <Stack direction={"row"} gap={theme.spacing(8)} sx={{ mt: 2 }}>
+                <Stack
+                  direction={"row"}
+                  sx={{
+                    gap: theme.spacing(8),
+                    mt: 2,
+                  }}
+                >
                   <Stack sx={{ gap: 3, width: "50%" }}>
                     <SelectComponent
                       id="approval_status"
@@ -701,7 +790,13 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                 </Stack>
 
                 {/* Row: Approval Date */}
-                <Stack direction={"row"} gap={theme.spacing(8)} sx={{ mt: 2 }}>
+                <Stack
+                  direction={"row"}
+                  sx={{
+                    gap: theme.spacing(8),
+                    mt: 2,
+                  }}
+                >
                   <Suspense fallback={<div>Loading...</div>}>
                     <Stack sx={{ gap: 3, width: "50%" }}>
                       <DatePicker
@@ -754,8 +849,10 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
             <Stack
               direction="row"
               spacing={2}
-              mt={6}
-              justifyContent={mode === "view" ? "flex-start" : "flex-end"}
+              sx={{
+                mt: 6,
+                justifyContent: mode === "view" ? "flex-start" : "flex-end",
+              }}
             >
               {mode === "view" ? (
                 <CustomizableButton variant="contained" text="Close" onClick={handleClose} />

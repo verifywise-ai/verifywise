@@ -57,29 +57,47 @@ function DatePicker({
       : sx;
 
   return (
-    <Stack gap={theme.spacing(2)} sx={extractedLayoutProps}>
+    <Stack
+      sx={[
+        {
+          gap: theme.spacing(2),
+        },
+        ...(Array.isArray(extractedLayoutProps) ? extractedLayoutProps : [extractedLayoutProps]),
+      ]}
+    >
       {label && (
         <Typography
           component="p"
           variant="body1"
           color={theme.palette.text.secondary}
-          fontWeight={500}
-          fontSize={"13px"}
-          sx={{ margin: 0, height: "22px" }}
+          sx={{
+            fontWeight: 500,
+            fontSize: "13px",
+            margin: 0,
+            height: "22px",
+          }}
         >
           {label}
           {isRequired && (
-            <Typography component="span" ml={theme.spacing(1)} color={theme.palette.error.text}>
+            <Typography
+              component="span"
+              color={theme.palette.error.text}
+              sx={{
+                ml: theme.spacing(1),
+              }}
+            >
               *
             </Typography>
           )}
           {isOptional && (
             <Typography
               component="span"
-              fontSize="inherit"
-              fontWeight={400}
-              ml={theme.spacing(2)}
-              sx={{ opacity: 0.6 }}
+              sx={{
+                fontSize: "inherit",
+                fontWeight: 400,
+                ml: theme.spacing(2),
+                opacity: 0.6,
+              }}
             >
               {optionalLabel || "(optional)"}
             </Typography>
@@ -115,8 +133,8 @@ function DatePicker({
           role="alert"
           className="input-error"
           color={theme.palette.status.error.text}
-          mt={theme.spacing(2)}
           sx={{
+            mt: theme.spacing(2),
             opacity: 0.8,
             fontSize: 11,
           }}

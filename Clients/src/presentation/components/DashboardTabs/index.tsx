@@ -99,7 +99,9 @@ const DashboardTabs: React.FC<DashboardTabsProps> = ({
     <Box sx={{ borderBottom: 1, borderColor: "divider", display: "flex", alignItems: "flex-end" }}>
       <TabList
         onChange={handleTabChange}
-        TabIndicatorProps={{ style: { backgroundColor: INDICATOR_COLOR } }}
+        slotProps={{
+          indicator: { style: { backgroundColor: INDICATOR_COLOR } },
+        }}
         sx={{
           "minHeight": "20px",
           "flex": 1,
@@ -176,15 +178,17 @@ const DashboardTabs: React.FC<DashboardTabsProps> = ({
         anchorEl={menuAnchor}
         open={menuOpen}
         onClose={handleMenuClose}
-        PaperProps={{
-          elevation: 3,
-          sx: {
-            minWidth: 280,
-            maxHeight: 400,
-            mt: 1,
-            borderRadius: "8px",
-            border: `1px solid ${border.light}`,
-            boxShadow: "0px 4px 16px rgba(0, 0, 0, 0.08)",
+        slotProps={{
+          paper: {
+            elevation: 3,
+            sx: {
+              minWidth: 280,
+              maxHeight: 400,
+              mt: 1,
+              borderRadius: "8px",
+              border: `1px solid ${border.light}`,
+              boxShadow: "0px 4px 16px rgba(0, 0, 0, 0.08)",
+            },
           },
         }}
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
@@ -241,15 +245,22 @@ const DashboardTabs: React.FC<DashboardTabsProps> = ({
               <ListItemText
                 primary={tab.label}
                 secondary={tab.description}
-                primaryTypographyProps={{
-                  fontSize: 13,
-                  fontWeight: isActive ? 500 : 400,
-                  color: isActive ? text.primary : text.secondary,
-                }}
-                secondaryTypographyProps={{
-                  fontSize: 10,
-                  color: text.accent,
-                  mt: 0.25,
+                slotProps={{
+                  primary: {
+                    sx: {
+                      fontSize: 13,
+                      fontWeight: isActive ? 500 : 400,
+                      color: isActive ? text.primary : text.secondary,
+                    },
+                  },
+
+                  secondary: {
+                    sx: {
+                      fontSize: 10,
+                      color: text.accent,
+                      mt: 0.25,
+                    },
+                  },
                 }}
               />
             </MenuItem>

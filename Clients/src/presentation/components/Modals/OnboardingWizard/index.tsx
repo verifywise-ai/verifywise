@@ -178,9 +178,21 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
             padding: "32px 32px 28px",
           }}
         >
-          <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+          <Stack
+            direction="row"
+            sx={{
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+            }}
+          >
             <Stack spacing={0}>
-              <Stack direction="row" alignItems="center" spacing={1}>
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <BadgeIcon size={18} color={isDark ? "#b52180" : "#4ADE80"} strokeWidth={2} />
                 <Typography
                   sx={{
@@ -352,8 +364,8 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         {/* ── Footer ── */}
         <Stack
           direction="row"
-          justifyContent="space-between"
           sx={{
+            justifyContent: "space-between",
             bgcolor: "#FAFBFC",
             borderTop: "1px solid #E0E4E9",
             padding: "14px 32px",

@@ -116,7 +116,14 @@ const FriaEvidenceButton = ({
           }}
         />
         {files.length > 0 && (
-          <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+          <Stack
+            direction="row"
+            spacing={0.5}
+            useFlexGap
+            sx={{
+              flexWrap: "wrap",
+            }}
+          >
             {files.map((file) => (
               <Box
                 key={file.link_id}

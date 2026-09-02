@@ -63,7 +63,13 @@ export function VisibilityChips({ value, onChange }: VisibilityChipsProps) {
     >
       {OPTIONS.map((opt) => (
         <ToggleButton key={opt.value} value={opt.value} disableRipple>
-          <Stack direction="row" alignItems="center" spacing={0.75}>
+          <Stack
+            direction="row"
+            spacing={0.75}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             <opt.Icon size={14} />
             <span>{opt.label}</span>
           </Stack>

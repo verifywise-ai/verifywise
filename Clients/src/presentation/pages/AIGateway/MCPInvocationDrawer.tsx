@@ -112,11 +112,34 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
           />
         </EmptyState>
       ) : row ? (
-        <Stack gap="20px">
+        <Stack
+          sx={{
+            gap: "20px",
+          }}
+        >
           {/* Header */}
-          <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap="8px">
-            <Stack gap="6px" sx={{ minWidth: 0 }}>
-              <Stack direction="row" alignItems="center" gap="8px" flexWrap="wrap">
+          <Stack
+            direction="row"
+            sx={{
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              gap: "8px",
+            }}
+          >
+            <Stack
+              sx={{
+                gap: "6px",
+                minWidth: 0,
+              }}
+            >
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: "center",
+                  gap: "8px",
+                  flexWrap: "wrap",
+                }}
+              >
                 <Typography sx={{ fontSize: 16, fontWeight: 600, fontFamily: "monospace" }}>
                   {row.tool_name}
                 </Typography>
@@ -176,9 +199,20 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
 
           <Box>
             <Typography sx={labelSx}>EVENTS</Typography>
-            <Stack gap="6px">
+            <Stack
+              sx={{
+                gap: "6px",
+              }}
+            >
               {(row.events || []).map((e: InvocationEvent, i: number) => (
-                <Stack key={i} direction="row" justifyContent="space-between" gap="12px">
+                <Stack
+                  key={i}
+                  direction="row"
+                  sx={{
+                    justifyContent: "space-between",
+                    gap: "12px",
+                  }}
+                >
                   <Typography sx={{ fontSize: 12 }}>
                     {e.type}
                     {e.detail ? ` · ${e.detail}` : ""}

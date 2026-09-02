@@ -365,9 +365,9 @@ const Login: React.FC = () => {
           {showSetupBanner && (
             <Stack
               direction="row"
-              alignItems="flex-start"
-              gap={theme.spacing(8)}
               sx={{
+                alignItems: "flex-start",
+                gap: theme.spacing(8),
                 width: 360,
                 padding: theme.spacing(8),
                 backgroundColor: singleTheme.alertStyles.info.bg,

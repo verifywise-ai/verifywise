@@ -355,7 +355,11 @@ const GenericFramework = ({
                   padding: "16px 16px 16px 40px",
                 }}
               >
-                <Typography fontSize={13}>
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                  }}
+                >
                   {row.label} {row.node.title}
                 </Typography>
                 <StatusDropdown
@@ -374,7 +378,11 @@ const GenericFramework = ({
               onClick={() => handleRowClick("l2", row.node)}
               sx={styles.subClauseRow(isLast, flashingRowId === row.node.impl_id)}
             >
-              <Typography fontSize={13}>
+              <Typography
+                sx={{
+                  fontSize: 13,
+                }}
+              >
                 {row.label} {row.node.title}
               </Typography>
               <StatusDropdown

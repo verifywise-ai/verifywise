@@ -11,7 +11,13 @@ const RegulatoryRadar: React.FC = () => {
       title="Regulatory Radar"
       subtitle="Monitor regulatory changes, track compliance deadlines, and receive alerts."
     >
-      <Stack gap="16px" alignItems="center" sx={{ py: "48px" }}>
+      <Stack
+        sx={{
+          gap: "16px",
+          alignItems: "center",
+          py: "48px",
+        }}
+      >
         <GovernanceTooltip
           header="Regulatory Radar"
           description="Monitor regulatory changes, track compliance deadlines, and receive alerts. This module is coming soon."
@@ -35,7 +41,13 @@ const RegulatoryRadar: React.FC = () => {
         <Typography sx={{ fontSize: 16, fontWeight: 600, color: text.primary }}>
           Regulatory Radar
         </Typography>
-        <Stack direction="row" gap="8px" alignItems="center">
+        <Stack
+          direction="row"
+          sx={{
+            gap: "8px",
+            alignItems: "center",
+          }}
+        >
           <Clock size={16} color={text.muted} />
           <Typography sx={{ fontSize: 14, color: text.muted }}>
             Coming soon — automated regulatory change monitoring.

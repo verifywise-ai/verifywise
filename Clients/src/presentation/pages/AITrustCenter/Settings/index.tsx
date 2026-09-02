@@ -398,7 +398,13 @@ const AITrustCenterSettings: React.FC = () => {
             </Typography>
           </Box>
           <Stack>
-            <Box gap={1} sx={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
               <Box
                 sx={{
                   "width": 120,
@@ -661,7 +667,11 @@ const AITrustCenterSettings: React.FC = () => {
         <ConfirmationModal
           title="Confirm logo removal"
           body={
-            <Typography fontSize={13}>
+            <Typography
+              sx={{
+                fontSize: 13,
+              }}
+            >
               Are you sure you want to remove the company logo? This action cannot be undone.
             </Typography>
           }

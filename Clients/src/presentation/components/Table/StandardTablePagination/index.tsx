@@ -78,7 +78,6 @@ const StandardTablePagination: React.FC<StandardTablePaginationProps> = memo(
                   rowsPerPage={rowsPerPage}
                   rowsPerPageOptions={rowsPerPageOptions}
                   onRowsPerPageChange={onRowsPerPageChange}
-                  ActionsComponent={TablePaginationActions}
                   labelRowsPerPage={`${capitalPlural} per page`}
                   labelDisplayedRows={({ page: p, count }) =>
                     `Page ${p + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
@@ -97,18 +96,24 @@ const StandardTablePagination: React.FC<StandardTablePaginationProps> = memo(
                     select: {
                       MenuProps: {
                         keepMounted: true,
-                        PaperProps: {
-                          className: "pagination-dropdown",
-                          sx: { mt: 0, mb: theme.spacing(2) },
+
+                        slotProps: {
+                          paper: {
+                            className: "pagination-dropdown",
+                            sx: { mt: 0, mb: theme.spacing(2) },
+                          },
                         },
+
                         transformOrigin: {
                           vertical: "bottom",
                           horizontal: "left",
                         },
+
                         anchorOrigin: {
                           vertical: "top",
                           horizontal: "left",
                         },
+
                         sx: { mt: theme.spacing(-2) },
                       },
                       inputProps: { id: "pagination-dropdown" },
@@ -121,6 +126,7 @@ const StandardTablePagination: React.FC<StandardTablePaginationProps> = memo(
                       },
                     },
                   }}
+                  ActionsComponent={TablePaginationActions}
                 />
               </Box>
             </Box>

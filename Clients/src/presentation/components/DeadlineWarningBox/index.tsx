@@ -70,11 +70,11 @@ const DeadlineWarningBox = () => {
     <Stack
       data-testid="deadline-warning-banner"
       direction={{ xs: "column", sm: "row" }}
-      alignItems={{ xs: "flex-start", sm: "center" }}
-      justifyContent="space-between"
       spacing={1.5}
       role="alert"
       sx={{
+        alignItems: { xs: "flex-start", sm: "center" },
+        justifyContent: "space-between",
         py: "10px",
         px: 2,
         backgroundColor: palette.bg,
@@ -82,7 +82,14 @@ const DeadlineWarningBox = () => {
         borderRadius: 2,
       }}
     >
-      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0 }}>
+      <Stack
+        direction="row"
+        spacing={1.5}
+        sx={{
+          alignItems: "center",
+          minWidth: 0,
+        }}
+      >
         {isCritical ? (
           <AlertTriangle size={16} color={palette.text} style={{ flexShrink: 0 }} />
         ) : (
@@ -148,7 +155,16 @@ const DeadlineWarningBox = () => {
               "&:hover": { backgroundColor: `${background.accent} !important` },
             }}
           >
-            <ListItemText primary={option.label} primaryTypographyProps={{ fontSize: "13px" }} />
+            <ListItemText
+              primary={option.label}
+              slotProps={{
+                primary: {
+                  sx: {
+                    fontSize: "13px",
+                  },
+                },
+              }}
+            />
           </MenuItem>
         ))}
       </Menu>

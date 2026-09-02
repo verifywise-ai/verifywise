@@ -14,7 +14,13 @@ const DetailField: React.FC<DetailFieldProps> = ({ label, value, withWrap = fals
   const displayValue = Array.isArray(value) ? value.join(", ") : value;
 
   return (
-    <Stack direction="row" spacing={6} alignItems="flex-start">
+    <Stack
+      direction="row"
+      spacing={6}
+      sx={{
+        alignItems: "flex-start",
+      }}
+    >
       {icon && (
         <Box
           sx={{
@@ -27,7 +33,12 @@ const DetailField: React.FC<DetailFieldProps> = ({ label, value, withWrap = fals
           {icon}
         </Box>
       )}
-      <Stack spacing={1} flex={1}>
+      <Stack
+        spacing={1}
+        sx={{
+          flex: 1,
+        }}
+      >
         <Typography sx={stepDetailLabelStyle}>{label}</Typography>
         <Typography sx={withWrap ? stepDetailValueWithWrapStyle : stepDetailValueStyle}>
           {displayValue}

@@ -76,7 +76,12 @@ const WorkflowFields: React.FC<WorkflowFieldsProps> = ({
     <>
       {showImplementationDescription && (
         <Stack>
-          <Typography fontSize={13} sx={{ marginBottom: "5px" }}>
+          <Typography
+            sx={{
+              fontSize: 13,
+              marginBottom: "5px",
+            }}
+          >
             {implementationDescriptionLabel}
           </Typography>
           <RichTextEditor
@@ -90,7 +95,11 @@ const WorkflowFields: React.FC<WorkflowFieldsProps> = ({
         </Stack>
       )}
 
-      <Stack gap="24px">
+      <Stack
+        sx={{
+          gap: "24px",
+        }}
+      >
         <Select
           id="status"
           label="Status:"
@@ -147,7 +156,12 @@ const WorkflowFields: React.FC<WorkflowFieldsProps> = ({
         />
 
         <Stack>
-          <Typography fontSize={13} sx={{ marginBottom: "5px" }}>
+          <Typography
+            sx={{
+              fontSize: 13,
+              marginBottom: "5px",
+            }}
+          >
             {auditorFeedbackLabel}
           </Typography>
           <Field

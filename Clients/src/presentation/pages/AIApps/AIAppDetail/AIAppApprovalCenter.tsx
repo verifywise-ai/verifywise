@@ -24,8 +24,18 @@ export default function AIAppApprovalCenter({
   const chipProps = statusToChipProps(app.status);
 
   return (
-    <Stack gap="16px">
-      <Stack direction="row" alignItems="center" gap="8px">
+    <Stack
+      sx={{
+        gap: "16px",
+      }}
+    >
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: "center",
+          gap: "8px",
+        }}
+      >
         <IconButton onClick={onBack} size="small">
           <ArrowLeft size={16} strokeWidth={1.5} />
         </IconButton>
@@ -73,7 +83,14 @@ export default function AIAppApprovalCenter({
         />
       </Box>
 
-      <Stack direction="row" alignItems="center" gap="8px" sx={{ mt: "8px" }}>
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: "center",
+          gap: "8px",
+          mt: "8px",
+        }}
+      >
         <ShieldAlert size={16} strokeWidth={1.5} color={palette.text.secondary} />
         <Typography sx={{ fontSize: 13, fontWeight: 500, color: palette.text.secondary }}>
           Change status:
@@ -100,7 +117,13 @@ export default function AIAppApprovalCenter({
       {app.departments.length > 0 && (
         <Box sx={{ mt: "8px" }}>
           <Typography sx={{ fontSize: 13, fontWeight: 600, mb: "8px" }}>Departments</Typography>
-          <Stack direction="row" gap="8px" flexWrap="wrap">
+          <Stack
+            direction="row"
+            sx={{
+              gap: "8px",
+              flexWrap: "wrap",
+            }}
+          >
             {app.departments.map((dept) => (
               <Chip
                 key={dept.department}

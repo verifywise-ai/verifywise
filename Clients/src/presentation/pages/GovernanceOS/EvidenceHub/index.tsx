@@ -11,7 +11,13 @@ const EvidenceHub: React.FC = () => {
       title="Evidence Hub"
       subtitle="Centralize and manage compliance evidence across all frameworks and projects."
     >
-      <Stack gap="16px" alignItems="center" sx={{ py: "48px" }}>
+      <Stack
+        sx={{
+          gap: "16px",
+          alignItems: "center",
+          py: "48px",
+        }}
+      >
         <GovernanceTooltip
           header="Evidence Hub"
           description="Centralize and manage compliance evidence across frameworks and projects. This module is coming soon."
@@ -35,7 +41,13 @@ const EvidenceHub: React.FC = () => {
         <Typography sx={{ fontSize: 16, fontWeight: 600, color: text.primary }}>
           Evidence Hub
         </Typography>
-        <Stack direction="row" gap="8px" alignItems="center">
+        <Stack
+          direction="row"
+          sx={{
+            gap: "8px",
+            alignItems: "center",
+          }}
+        >
           <Clock size={16} color={text.muted} />
           <Typography sx={{ fontSize: 14, color: text.muted }}>
             Coming soon — automated evidence collection and centralized storage.

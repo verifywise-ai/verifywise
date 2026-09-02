@@ -158,9 +158,9 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
   if (loading && logs.length === 0) {
     return (
       <Stack
-        alignItems="center"
-        justifyContent="center"
         sx={{
+          alignItems: "center",
+          justifyContent: "center",
           border: "1px solid #EEEEEE",
           borderRadius: "4px",
           padding: theme.spacing(15, 5),
@@ -176,7 +176,14 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
     <Box>
       {/* Stats Summary */}
       {stats && (
-        <Stack direction="row" spacing={4} mb={4} flexWrap="wrap">
+        <Stack
+          direction="row"
+          spacing={4}
+          sx={{
+            mb: 4,
+            flexWrap: "wrap",
+          }}
+        >
           <Box
             sx={{
               border: "1px solid #eaecf0",
@@ -376,7 +383,13 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                         </IconButton>
                       </TableCell>
                       <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                        <Stack direction="row" spacing={1} alignItems="center">
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          sx={{
+                            alignItems: "center",
+                          }}
+                        >
                           <Clock size={14} color="#8594AC" />
                           <Typography sx={{ fontSize: 13 }}>
                             {formatDate(log.triggered_at)}
@@ -397,7 +410,13 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                         </Typography>
                       </TableCell>
                       <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                        <Stack direction="row" spacing={1} alignItems="center">
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          sx={{
+                            alignItems: "center",
+                          }}
+                        >
                           <Timer size={14} color="#8594AC" />
                           <Typography sx={{ fontSize: 13 }}>
                             {formatExecutionTime(log.execution_time_ms)}
@@ -423,7 +442,11 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
 
                               {/* Trigger Data */}
                               {log.trigger_data && Object.keys(log.trigger_data).length > 0 && (
-                                <Box mb={2}>
+                                <Box
+                                  sx={{
+                                    mb: 2,
+                                  }}
+                                >
                                   <Box
                                     sx={{
                                       display: "grid",
@@ -505,7 +528,11 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
 
                               {/* Actions Results - Step-by-Step Timeline */}
                               {log.actions && log.actions.length > 0 && (
-                                <Box mt={2}>
+                                <Box
+                                  sx={{
+                                    mt: 2,
+                                  }}
+                                >
                                   <Typography variant="subtitle2" gutterBottom sx={{ mb: 2 }}>
                                     Execution Flow ({log.actions.length}{" "}
                                     {log.actions.length === 1 ? "step" : "steps"})
@@ -540,7 +567,9 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                                           <Stack
                                             direction="row"
                                             spacing={2}
-                                            alignItems="flex-start"
+                                            sx={{
+                                              alignItems: "flex-start",
+                                            }}
                                           >
                                             {/* Step Number with Icon */}
                                             <Box
@@ -580,14 +609,18 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                                               {/* Step Header */}
                                               <Stack
                                                 direction="row"
-                                                alignItems="center"
-                                                justifyContent="space-between"
-                                                mb={1}
+                                                sx={{
+                                                  alignItems: "center",
+                                                  justifyContent: "space-between",
+                                                  mb: 1,
+                                                }}
                                               >
                                                 <Stack
                                                   direction="row"
-                                                  alignItems="center"
                                                   spacing={1}
+                                                  sx={{
+                                                    alignItems: "center",
+                                                  }}
                                                 >
                                                   <Typography
                                                     sx={{
@@ -624,8 +657,10 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                                                 {action.executed_at && (
                                                   <Stack
                                                     direction="row"
-                                                    alignItems="center"
                                                     spacing={1}
+                                                    sx={{
+                                                      alignItems: "center",
+                                                    }}
                                                   >
                                                     <Clock size={12} color="#8594AC" />
                                                     <Typography
@@ -701,7 +736,13 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                                         border: `1px solid ${log.status === "success" ? "#138A5E" : log.status === "failure" ? "#D32F2F" : "#795000"}`,
                                       }}
                                     >
-                                      <Stack direction="row" alignItems="center" spacing={2}>
+                                      <Stack
+                                        direction="row"
+                                        spacing={2}
+                                        sx={{
+                                          alignItems: "center",
+                                        }}
+                                      >
                                         {log.status === "success" ? (
                                           <CheckCircle size={20} color={status.success.text} />
                                         ) : log.status === "failure" ? (
@@ -752,7 +793,11 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
 
                               {/* Error Message */}
                               {log.error_message && (
-                                <Box mt={2}>
+                                <Box
+                                  sx={{
+                                    mt: 2,
+                                  }}
+                                >
                                   <Typography variant="caption" color="error">
                                     Error: {log.error_message}
                                   </Typography>
@@ -775,7 +820,6 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                     rowsPerPage={rowsPerPage}
                     rowsPerPageOptions={[5, 10, 25, 50]}
                     onRowsPerPageChange={handleChangeRowsPerPage}
-                    ActionsComponent={(props) => <TablePaginationActions {...props} />}
                     labelRowsPerPage="Rows per page"
                     labelDisplayedRows={({ page, count }) =>
                       `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
@@ -784,21 +828,27 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                       select: {
                         MenuProps: {
                           keepMounted: true,
-                          PaperProps: {
-                            className: "pagination-dropdown",
-                            sx: {
-                              mt: 0,
-                              mb: theme.spacing(2),
+
+                          slotProps: {
+                            paper: {
+                              className: "pagination-dropdown",
+                              sx: {
+                                mt: 0,
+                                mb: theme.spacing(2),
+                              },
                             },
                           },
+
                           transformOrigin: {
                             vertical: "bottom",
                             horizontal: "left",
                           },
+
                           anchorOrigin: {
                             vertical: "top",
                             horizontal: "left",
                           },
+
                           sx: { mt: theme.spacing(-2) },
                         },
                         inputProps: { id: "pagination-dropdown" },
@@ -837,6 +887,7 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                         padding: theme.spacing(4),
                       },
                     }}
+                    ActionsComponent={(props) => <TablePaginationActions {...props} />}
                   />
                 </TableRow>
               </TableFooter>

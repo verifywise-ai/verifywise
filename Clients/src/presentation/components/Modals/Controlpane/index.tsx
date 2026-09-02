@@ -82,8 +82,8 @@ const CustomModal: React.FC<ICustomModalProps> = ({
       }}
     >
       <Stack
-        gap={theme.spacing(4)}
         sx={{
+          "gap": theme.spacing(4),
           "position": "absolute",
           "top": "50%",
           "left": "50%",
@@ -94,9 +94,11 @@ const CustomModal: React.FC<ICustomModalProps> = ({
           "boxShadow": 24,
           "paddingY": theme.spacing(15),
           "paddingX": theme.spacing(20),
+
           "&:focus": {
             outline: "none",
           },
+
           "maxHeight": "90vh",
           "overflowY": "auto",
         }}
@@ -109,17 +111,36 @@ const CustomModal: React.FC<ICustomModalProps> = ({
             alignItems: "center",
           }}
         >
-          <Typography fontSize={16} fontWeight={600} sx={{ textAlign: "left" }}>
+          <Typography
+            sx={{
+              fontSize: 16,
+              fontWeight: 600,
+              textAlign: "left",
+            }}
+          >
             {title}
           </Typography>
 
           <CloseIcon size={20} onClick={handleClose} style={{ cursor: "pointer" }} />
         </Stack>
-        <Typography fontSize={13}>{content}</Typography>
+        <Typography
+          sx={{
+            fontSize: 13,
+          }}
+        >
+          {content}
+        </Typography>
         <DropDowns />
 
         {responseMessage && (
-          <Typography fontSize={13} color="error" sx={{ mb: 2, fontWeight: 500 }}>
+          <Typography
+            color="error"
+            sx={{
+              fontSize: 13,
+              mb: 2,
+              fontWeight: 500,
+            }}
+          >
             {responseMessage}
           </Typography>
         )}
@@ -175,7 +196,14 @@ const CustomModal: React.FC<ICustomModalProps> = ({
 
         {/* Dynamic Content Based on Active Section */}
         <Box>
-          <Typography fontSize={16} fontWeight={600} sx={{ textAlign: "left", mb: 3 }}>
+          <Typography
+            sx={{
+              fontSize: 16,
+              fontWeight: 600,
+              textAlign: "left",
+              mb: 3,
+            }}
+          >
             {subControlTlts[selectedTab]}
           </Typography>
           <Typography variant="body1" sx={{ mb: 5 }}>
@@ -216,7 +244,13 @@ const CustomModal: React.FC<ICustomModalProps> = ({
             mt: 2,
           }}
         >
-          <Stack gap={theme.spacing(4)} sx={{ display: "flex", flexDirection: "row" }}>
+          <Stack
+            sx={{
+              gap: theme.spacing(4),
+              display: "flex",
+              flexDirection: "row",
+            }}
+          >
             <Button variant="contained" onClick={() => {}} sx={buttonStyle} disableRipple>
               &lt;- Previous Control
             </Button>

@@ -45,7 +45,14 @@ const CompletionStep: React.FC<OnboardingStepProps> = ({ onNext }) => {
     return () => clearInterval(interval);
   }, []);
   return (
-    <Stack spacing={4} alignItems="center" justifyContent="center" sx={{ minHeight: "400px" }}>
+    <Stack
+      spacing={4}
+      sx={{
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: "400px",
+      }}
+    >
       <Box
         sx={{
           "animation": "scaleIn 0.5s ease-out",
@@ -64,7 +71,12 @@ const CompletionStep: React.FC<OnboardingStepProps> = ({ onNext }) => {
         <CheckCircle2 size={56} color={brand.primary} strokeWidth={1.5} />
       </Box>
 
-      <Stack spacing={2} alignItems="center">
+      <Stack
+        spacing={2}
+        sx={{
+          alignItems: "center",
+        }}
+      >
         <Typography
           variant="h4"
           sx={{
@@ -90,7 +102,12 @@ const CompletionStep: React.FC<OnboardingStepProps> = ({ onNext }) => {
         </Typography>
       </Stack>
 
-      <Stack alignItems="center" sx={{ width: "100%" }}>
+      <Stack
+        sx={{
+          alignItems: "center",
+          width: "100%",
+        }}
+      >
         <CustomizableButton
           variant="contained"
           text="Finish"

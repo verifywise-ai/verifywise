@@ -453,9 +453,9 @@ const LogsTable: React.FC<LogsTableProps> = ({ data, isLoading = false, paginate
   if (!sortedData || sortedData.length === 0) {
     return (
       <Stack
-        alignItems="center"
-        justifyContent="center"
         sx={{
+          alignItems: "center",
+          justifyContent: "center",
           border: "1px solid #d0d5dd",
           borderRadius: "4px",
           padding: theme.spacing(15, 5),
@@ -500,7 +500,6 @@ const LogsTable: React.FC<LogsTableProps> = ({ data, isLoading = false, paginate
                 rowsPerPage={rowsPerPage}
                 rowsPerPageOptions={[5, 10, 15, 25, 50]}
                 onRowsPerPageChange={handleChangeRowsPerPage}
-                ActionsComponent={(props) => <TablePaginationActions {...props} />}
                 labelRowsPerPage="Rows per page"
                 labelDisplayedRows={({ page, count }) =>
                   `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
@@ -509,21 +508,27 @@ const LogsTable: React.FC<LogsTableProps> = ({ data, isLoading = false, paginate
                   select: {
                     MenuProps: {
                       keepMounted: true,
-                      PaperProps: {
-                        className: "pagination-dropdown",
-                        sx: {
-                          mt: 0,
-                          mb: theme.spacing(2),
+
+                      slotProps: {
+                        paper: {
+                          className: "pagination-dropdown",
+                          sx: {
+                            mt: 0,
+                            mb: theme.spacing(2),
+                          },
                         },
                       },
+
                       transformOrigin: {
                         vertical: "bottom",
                         horizontal: "left",
                       },
+
                       anchorOrigin: {
                         vertical: "top",
                         horizontal: "left",
                       },
+
                       sx: { mt: theme.spacing(-2) },
                     },
                     inputProps: { id: "pagination-dropdown" },
@@ -563,6 +568,7 @@ const LogsTable: React.FC<LogsTableProps> = ({ data, isLoading = false, paginate
                     padding: theme.spacing(4),
                   },
                 }}
+                ActionsComponent={(props) => <TablePaginationActions {...props} />}
               />
             </TableRow>
           </TableBody>

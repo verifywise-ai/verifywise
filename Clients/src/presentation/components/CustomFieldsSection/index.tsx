@@ -336,24 +336,43 @@ const CustomFieldRow: React.FC<CustomFieldRowProps> = ({
   const showClear = !draftIsEmpty;
 
   return (
-    <Stack gap={theme.spacing(2)}>
+    <Stack
+      sx={{
+        gap: theme.spacing(2),
+      }}
+    >
       <Typography
         component="p"
         variant="body1"
         color={theme.palette.text.secondary}
-        fontWeight={500}
-        fontSize={"13px"}
-        sx={{ margin: 0, height: "22px" }}
+        sx={{
+          fontWeight: 500,
+          fontSize: "13px",
+          margin: 0,
+          height: "22px",
+        }}
       >
         {definition.label}
         {definition.required && (
-          <Typography component="span" ml={theme.spacing(1)} color={theme.palette.error.text}>
+          <Typography
+            component="span"
+            color={theme.palette.error.text}
+            sx={{
+              ml: theme.spacing(1),
+            }}
+          >
             *
           </Typography>
         )}
       </Typography>
 
-      <Stack direction="row" spacing={2} alignItems="center">
+      <Stack
+        direction="row"
+        spacing={2}
+        sx={{
+          alignItems: "center",
+        }}
+      >
         <Box sx={{ flex: 1, minWidth: 0 }}>
           {renderInput({ definition, draft, setDraft, disabled: false })}
         </Box>

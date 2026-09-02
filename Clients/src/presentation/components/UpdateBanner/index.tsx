@@ -11,9 +11,9 @@ export default function UpdateBanner() {
       aria-live="polite"
       aria-atomic="true"
       direction="row"
-      alignItems="center"
-      gap={theme.spacing(4)}
       sx={{
+        alignItems: "center",
+        gap: theme.spacing(4),
         position: "fixed",
         top: theme.spacing(5),
         left: "50%",

@@ -30,10 +30,20 @@ const StructInfoPanels: React.FC<StructInfoPanelsProps> = ({
             borderRadius: "4px",
           }}
         >
-          <Typography fontSize={13} sx={{ marginBottom: "8px" }}>
+          <Typography
+            sx={{
+              fontSize: 13,
+              marginBottom: "8px",
+            }}
+          >
             <strong>{summaryLabel}:</strong>
           </Typography>
-          <Typography fontSize={13} color="#666">
+          <Typography
+            sx={{
+              fontSize: 13,
+              color: "#666",
+            }}
+          >
             {summary}
           </Typography>
         </Stack>
@@ -48,12 +58,26 @@ const StructInfoPanels: React.FC<StructInfoPanelsProps> = ({
             borderRadius: "4px",
           }}
         >
-          <Typography fontSize={13} sx={{ marginBottom: "8px", fontWeight: 600 }}>
+          <Typography
+            sx={{
+              fontSize: 13,
+              marginBottom: "8px",
+              fontWeight: 600,
+            }}
+          >
             Key Questions:
           </Typography>
           <Stack spacing={1}>
             {questions.map((q, idx) => (
-              <Typography key={idx} fontSize={12} color="#666" sx={{ pl: 1, position: "relative" }}>
+              <Typography
+                key={idx}
+                sx={{
+                  fontSize: 12,
+                  color: "#666",
+                  pl: 1,
+                  position: "relative",
+                }}
+              >
                 • {q}
               </Typography>
             ))}
@@ -70,12 +94,26 @@ const StructInfoPanels: React.FC<StructInfoPanelsProps> = ({
             borderRadius: "4px",
           }}
         >
-          <Typography fontSize={13} sx={{ marginBottom: "8px", fontWeight: 600 }}>
+          <Typography
+            sx={{
+              fontSize: 13,
+              marginBottom: "8px",
+              fontWeight: 600,
+            }}
+          >
             Evidence Examples:
           </Typography>
           <Stack spacing={1}>
             {evidenceExamples.map((ex, idx) => (
-              <Typography key={idx} fontSize={12} color="#666" sx={{ pl: 1, position: "relative" }}>
+              <Typography
+                key={idx}
+                sx={{
+                  fontSize: 12,
+                  color: "#666",
+                  pl: 1,
+                  position: "relative",
+                }}
+              >
                 • {ex}
               </Typography>
             ))}

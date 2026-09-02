@@ -192,7 +192,14 @@ export default function AIAuditDashboard() {
   return (
     <Box>
       {/* Header — matches Readiness / AI content review style */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb="8px">
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: "8px",
+        }}
+      >
         <Box>
           <Typography
             sx={{
@@ -209,7 +216,13 @@ export default function AIAuditDashboard() {
           </Typography>
         </Box>
 
-        <Stack direction="row" alignItems="center" spacing={1.5}>
+        <Stack
+          direction="row"
+          spacing={1.5}
+          sx={{
+            alignItems: "center",
+          }}
+        >
           {/* Period chips — same pattern as VisibilityChips */}
           <Stack direction="row" spacing={1}>
             {PERIOD_OPTIONS.map((opt) => {
@@ -273,7 +286,13 @@ export default function AIAuditDashboard() {
         ) : (
           statCards.map((card) => (
             <Stack key={card.label} sx={cardStyles.base(theme)}>
-              <Stack direction="row" alignItems="center" spacing={0.75}>
+              <Stack
+                direction="row"
+                spacing={0.75}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <Box sx={{ color: textColors.icon, display: "flex" }}>{card.icon}</Box>
                 <Typography
                   sx={{
@@ -443,7 +462,6 @@ export default function AIAuditDashboard() {
       {/* Tab header — same style as AI content review */}
       <Tabs
         value={0}
-        TabIndicatorProps={{ style: { backgroundColor: brand.primary } }}
         sx={{
           "mb": "8px",
           "minHeight": "20px",
@@ -457,10 +475,19 @@ export default function AIAuditDashboard() {
           "& .Mui-selected": { color: brand.primary },
           "& .MuiTabs-flexContainer": { columnGap: "34px" },
         }}
+        slotProps={{
+          indicator: { style: { backgroundColor: brand.primary } },
+        }}
       >
         <Tab
           label={
-            <Stack direction="row" alignItems="center" spacing={0.75}>
+            <Stack
+              direction="row"
+              spacing={0.75}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <FileText size={14} />
               <span>Audit log</span>
               {logData?.total ? (
@@ -477,7 +504,14 @@ export default function AIAuditDashboard() {
       </Tabs>
 
       {/* Actor type filter chips */}
-      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: "8px" }}>
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: "center",
+          mb: "8px",
+        }}
+      >
         <Typography
           sx={{
             fontSize: 12,
@@ -616,10 +650,12 @@ export default function AIAuditDashboard() {
         onClose={() => setDetailOpen(false)}
         maxWidth="sm"
         fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: "4px",
-            border: `1px solid ${borderPalette.dark}`,
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: "4px",
+              border: `1px solid ${borderPalette.dark}`,
+            },
           },
         }}
       >
@@ -635,7 +671,13 @@ export default function AIAuditDashboard() {
         </DialogTitle>
         <DialogContent sx={{ py: 2 }}>
           {detailLoading ? (
-            <Box display="flex" justifyContent="center" py={4}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "center",
+                py: 4,
+              }}
+            >
               <CircularProgress size={24} />
             </Box>
           ) : detailTrail.length === 0 ? (
@@ -645,7 +687,14 @@ export default function AIAuditDashboard() {
           ) : (
             <Stack spacing={1.5} sx={{ py: 1 }}>
               {detailTrail.map((entry: any, i: number) => (
-                <Stack key={i} direction="row" spacing={1.5} alignItems="flex-start">
+                <Stack
+                  key={i}
+                  direction="row"
+                  spacing={1.5}
+                  sx={{
+                    alignItems: "flex-start",
+                  }}
+                >
                   <Box
                     sx={{
                       width: 8,
@@ -656,8 +705,19 @@ export default function AIAuditDashboard() {
                       flexShrink: 0,
                     }}
                   />
-                  <Stack spacing={0.25} flex={1}>
-                    <Stack direction="row" spacing={1} alignItems="center">
+                  <Stack
+                    spacing={0.25}
+                    sx={{
+                      flex: 1,
+                    }}
+                  >
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      sx={{
+                        alignItems: "center",
+                      }}
+                    >
                       <Chip
                         label={formatStateLabel(entry.to_state)}
                         size="small"

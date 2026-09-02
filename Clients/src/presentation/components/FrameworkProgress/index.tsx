@@ -20,7 +20,14 @@ export const FrameworkProgress: FC<FrameworkProgressProps> = ({
 
   return (
     <Box sx={{ mb: isLast ? 0 : 2 }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.5}>
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 0.5,
+        }}
+      >
         <Typography
           sx={{
             fontSize: theme.typography.fontSize,

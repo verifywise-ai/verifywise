@@ -496,7 +496,11 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
           isOpen
           title={`Assign reviewer to ${selectionCount} polic${selectionCount === 1 ? "y" : "ies"}`}
           body={
-            <Stack gap={2}>
+            <Stack
+              sx={{
+                gap: 2,
+              }}
+            >
               <Typography variant="body2" sx={{ color: "text.secondary", fontSize: 12 }}>
                 Replaces existing reviewer assignments.
               </Typography>
@@ -535,7 +539,11 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
           isOpen
           title={`Set tags on ${selectionCount} polic${selectionCount === 1 ? "y" : "ies"}`}
           body={
-            <Stack gap={2}>
+            <Stack
+              sx={{
+                gap: 2,
+              }}
+            >
               <Typography variant="body2" sx={{ color: "text.secondary", fontSize: 12 }}>
                 Replaces existing tags. Leave empty to clear.
               </Typography>

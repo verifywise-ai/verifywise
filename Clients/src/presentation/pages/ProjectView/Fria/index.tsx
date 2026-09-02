@@ -138,7 +138,12 @@ const FriaAssessment = ({ projectId }: FriaProps) => {
         : "Low risk level";
 
   return (
-    <Stack spacing={0} gap="16px">
+    <Stack
+      spacing={0}
+      sx={{
+        gap: "16px",
+      }}
+    >
       {/* Stat cards row */}
       <Box
         sx={{
@@ -216,7 +221,12 @@ const FriaAssessment = ({ projectId }: FriaProps) => {
 
         {/* Scrollable sections */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Stack spacing={0} gap="16px">
+          <Stack
+            spacing={0}
+            sx={{
+              gap: "16px",
+            }}
+          >
             <div
               id="org-profile"
               ref={(el) => {
@@ -343,7 +353,12 @@ const FriaAssessment = ({ projectId }: FriaProps) => {
         onSubmit={handleSubmitConfirm}
         submitButtonText="Save snapshot"
       >
-        <Stack spacing={0} gap="16px">
+        <Stack
+          spacing={0}
+          sx={{
+            gap: "16px",
+          }}
+        >
           <Typography sx={{ fontSize: 13, color: "text.secondary", lineHeight: 1.5 }}>
             This will save a snapshot of the current assessment so you can refer back to it later.
             Your changes are already auto-saved as you type.

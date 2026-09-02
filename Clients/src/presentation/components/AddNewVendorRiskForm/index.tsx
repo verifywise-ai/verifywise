@@ -458,8 +458,18 @@ const AddNewVendorRiskForm: FC<RiskSectionProps> = ({ closePopup, onSuccess, pop
   // Early return for loading state or no vendors
   if (dashboardValues.vendors.length === 0) {
     return (
-      <Stack alignItems="center" spacing={2} sx={{ py: 4 }}>
-        <Typography color="text.secondary">
+      <Stack
+        spacing={2}
+        sx={{
+          alignItems: "center",
+          py: 4,
+        }}
+      >
+        <Typography
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           No vendors available. Please create a vendor first to add vendor risks.
         </Typography>
       </Stack>
@@ -637,7 +647,13 @@ const AddNewVendorRiskForm: FC<RiskSectionProps> = ({ closePopup, onSuccess, pop
           aria-label={`${popupStatus === "new" ? "Save" : "Update"} vendor risk`}
         >
           {isSubmitting ? (
-            <Stack direction="row" alignItems="center" spacing={1}>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <CircularProgress size={16} color="inherit" />
               <Typography variant="body2">
                 {popupStatus === "new" ? "Saving..." : "Updating..."}

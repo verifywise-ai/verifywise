@@ -281,10 +281,22 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
                   style={{ flexShrink: 0, marginTop: 1 }}
                 />
                 <Box>
-                  <Typography fontSize={13} fontWeight={500} color="#B54708">
+                  <Typography
+                    sx={{
+                      fontSize: 13,
+                      fontWeight: 500,
+                      color: "#B54708",
+                    }}
+                  >
                     No endpoints configured
                   </Typography>
-                  <Typography fontSize={12} color="#93370D" mt="2px">
+                  <Typography
+                    sx={{
+                      fontSize: 12,
+                      color: "#93370D",
+                      mt: "2px",
+                    }}
+                  >
                     Virtual keys route requests through endpoints. You need at least one active
                     endpoint before creating a virtual key.{" "}
                     <Link to="/ai-gateway/endpoints" style={{ color: "#B54708", fontWeight: 500 }}>
@@ -310,7 +322,11 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
       )}
 
       {!loading && keys.length > 0 && (
-        <Stack gap="8px">
+        <Stack
+          sx={{
+            gap: "8px",
+          }}
+        >
           {keys.map((key) => {
             const status = getStatusLabel(key);
             const budgetPct =
@@ -322,22 +338,46 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
               <Stack
                 key={key.id}
                 direction="row"
-                justifyContent="space-between"
-                alignItems="center"
                 sx={{
+                  justifyContent: "space-between",
+                  alignItems: "center",
                   p: "12px 16px",
                   border: `1px solid ${palette.border.dark}`,
                   borderRadius: "4px",
                 }}
               >
-                <Stack direction="row" alignItems="center" gap="12px" flex={1}>
+                <Stack
+                  direction="row"
+                  sx={{
+                    alignItems: "center",
+                    gap: "12px",
+                    flex: 1,
+                  }}
+                >
                   <KeyRound size={16} strokeWidth={1.5} color={palette.text.tertiary} />
-                  <Box flex={1}>
-                    <Stack direction="row" alignItems="center" gap="8px">
+                  <Box
+                    sx={{
+                      flex: 1,
+                    }}
+                  >
+                    <Stack
+                      direction="row"
+                      sx={{
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
                       <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{key.name}</Typography>
                       <Chip label={status} size="small" uppercase={false} />
                     </Stack>
-                    <Stack direction="row" gap="12px" alignItems="center" mt="2px">
+                    <Stack
+                      direction="row"
+                      sx={{
+                        gap: "12px",
+                        alignItems: "center",
+                        mt: "2px",
+                      }}
+                    >
                       <Typography
                         sx={{
                           fontSize: 12,
@@ -420,7 +460,13 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
                   </Box>
                 </Stack>
 
-                <Stack direction="row" alignItems="center" gap="4px">
+                <Stack
+                  direction="row"
+                  sx={{
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                >
                   {key.is_active && !key.revoked_at && (
                     <IconButton
                       size="small"
@@ -459,7 +505,11 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
         isSubmitting={createSubmitting}
         maxWidth="480px"
       >
-        <Stack gap="16px">
+        <Stack
+          sx={{
+            gap: "16px",
+          }}
+        >
           <Field
             label="Name"
             placeholder="e.g., Backend production key"
@@ -532,7 +582,11 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
         hideSubmitButton
         cancelButtonText="I copied, continue"
       >
-        <Stack gap="16px">
+        <Stack
+          sx={{
+            gap: "16px",
+          }}
+        >
           <Box
             sx={{
               p: "12px 16px",
@@ -624,8 +678,18 @@ response = client.chat.completions.create(
   if (embedded) {
     return (
       <Box sx={cardSx}>
-        <Stack gap="12px">
-          <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+        <Stack
+          sx={{
+            gap: "12px",
+          }}
+        >
+          <Stack
+            direction="row"
+            sx={{
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+            }}
+          >
             <Box>
               <Typography sx={sectionTitleSx}>Virtual keys</Typography>
               <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "4px" }}>

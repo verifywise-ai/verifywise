@@ -125,7 +125,14 @@ const SmartPrompt: React.FC = () => {
         />
 
         <Box sx={{ p: 2.5 }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+            }}
+          >
             <Typography
               variant="subtitle1"
               sx={{

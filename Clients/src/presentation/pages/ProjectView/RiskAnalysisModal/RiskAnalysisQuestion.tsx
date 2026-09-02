@@ -33,7 +33,14 @@ interface RiskAnalysisQuestionProps {
 const RiskAnalysisQuestion = ({ question, onSelect, answers }: RiskAnalysisQuestionProps) => {
   return (
     <Stack>
-      <Typography fontSize={15} fontWeight={600} my={4} color="text.primary">
+      <Typography
+        sx={{
+          fontSize: 15,
+          fontWeight: 600,
+          my: 4,
+          color: "text.primary",
+        }}
+      >
         {question.id}. {question.text}
       </Typography>
       {/* Options */}

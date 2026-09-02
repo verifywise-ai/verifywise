@@ -32,13 +32,13 @@ const SkipConfirmation: React.FC<SkipConfirmationProps> = ({ open, onConfirm, on
       }}
     >
       <Stack
-        gap={theme.spacing(2)}
-        color={theme.palette.text.secondary}
         onClick={(e) => {
           e.stopPropagation();
           e.preventDefault();
         }}
         sx={{
+          "gap": theme.spacing(2),
+          "color": theme.palette.text.secondary,
           "position": "absolute",
           "top": "50%",
           "left": "50%",
@@ -50,22 +50,37 @@ const SkipConfirmation: React.FC<SkipConfirmationProps> = ({ open, onConfirm, on
           "borderRadius": theme.shape.borderRadius,
           "boxShadow": 24,
           "p": theme.spacing(15),
+
           "&:focus": {
             outline: "none",
           },
         }}
       >
-        <Typography id="modal-skip-onboarding" fontSize={16} fontWeight={600}>
+        <Typography
+          id="modal-skip-onboarding"
+          sx={{
+            fontSize: 16,
+            fontWeight: 600,
+          }}
+        >
           {SKIP_CONFIRMATION_TEXT.title}
         </Typography>
-        <Typography id="skip-onboarding-confirmation" fontSize={13} textAlign={"left"}>
+        <Typography
+          id="skip-onboarding-confirmation"
+          sx={{
+            fontSize: 13,
+            textAlign: "left",
+          }}
+        >
           {SKIP_CONFIRMATION_TEXT.message}
         </Typography>
         <Stack
           direction="row"
-          gap={theme.spacing(4)}
-          mt={theme.spacing(12)}
-          justifyContent="flex-end"
+          sx={{
+            gap: theme.spacing(4),
+            mt: theme.spacing(12),
+            justifyContent: "flex-end",
+          }}
         >
           <Button
             disableRipple

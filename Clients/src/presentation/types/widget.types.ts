@@ -1,6 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
-import { SelectChangeEvent, SxProps, TextFieldProps, Theme } from "@mui/material";
+import {
+  FormHelperTextProps,
+  InputBaseProps,
+  SelectChangeEvent,
+  SxProps,
+  Theme,
+} from "@mui/material";
 import {
   AutoCompleteFieldCoreProps,
   DatePickerCoreProps,
@@ -122,8 +128,8 @@ export interface FieldProps {
   width?: number | string;
   rows?: number;
   helperText?: string;
-  InputProps?: TextFieldProps["InputProps"];
-  formHelperTextProps?: TextFieldProps["FormHelperTextProps"];
+  InputProps?: InputBaseProps;
+  formHelperTextProps?: FormHelperTextProps;
   dataTestId?: string;
   min?: number;
   max?: number;

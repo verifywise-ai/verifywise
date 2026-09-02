@@ -147,7 +147,13 @@ const Users = () => {
       }
     >
       {/* Search bar */}
-      <Stack direction="row" alignItems="center" gap={1.5}>
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: "center",
+          gap: 1.5,
+        }}
+      >
         <SearchBox
           placeholder="Search users..."
           value={searchTerm}
@@ -198,7 +204,13 @@ const Users = () => {
                 return (
                   <TableRow key={user.id} sx={tableStyles.body.row}>
                     <TableCell sx={tableStyles.body.cell}>
-                      <Stack direction="row" alignItems="center" gap={1}>
+                      <Stack
+                        direction="row"
+                        sx={{
+                          alignItems: "center",
+                          gap: 1,
+                        }}
+                      >
                         <Box
                           sx={{
                             width: 28,
@@ -398,7 +410,12 @@ const Users = () => {
             sx={{ width: "100%" }}
           />
           <Stack spacing={0.5}>
-            <Typography variant="body2" fontWeight={500}>
+            <Typography
+              variant="body2"
+              sx={{
+                fontWeight: 500,
+              }}
+            >
               Role
             </Typography>
             <select

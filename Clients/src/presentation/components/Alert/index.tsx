@@ -71,10 +71,10 @@ const Alert: React.FC<AlertProps> = ({
       aria-atomic="true"
       className="alert row-stack"
       direction={"row"}
-      justifyContent={"flex-start"}
-      alignItems={"center"}
-      gap={theme.spacing(8)}
       sx={{
+        justifyContent: "flex-start",
+        alignItems: "center",
+        gap: theme.spacing(8),
         position: "fixed",
         top: theme.spacing(5),
         right: theme.spacing(5),
@@ -92,7 +92,13 @@ const Alert: React.FC<AlertProps> = ({
           {icon}{" "}
         </Box>
       )}
-      <Stack direction={"column"} gap={"2px"} sx={{ flex: 1 }}>
+      <Stack
+        direction={"column"}
+        sx={{
+          gap: "2px",
+          flex: 1,
+        }}
+      >
         {title && <Typography sx={{ fontWeight: 700, color: text }}>{title}</Typography>}
         {body && <AlertBody body={body} textColor={text} />}
       </Stack>

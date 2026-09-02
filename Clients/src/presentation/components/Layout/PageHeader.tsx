@@ -12,12 +12,21 @@ export function PageHeader({ title, description, rightContent, titleFontFamily }
     <Stack spacing={2}>
       {/* Title + description */}
       {title && (
-        <Stack direction="row" alignItems="center" spacing={1} pt={2}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: "center",
+            pt: 2,
+          }}
+        >
           <Typography
             variant="h5"
-            fontWeight="600"
-            fontSize={20}
-            sx={{ fontFamily: titleFontFamily || "'Red Hat Display', 'Geist', sans-serif" }}
+            sx={{
+              fontWeight: "600",
+              fontSize: 20,
+              fontFamily: titleFontFamily || "'Red Hat Display', 'Geist', sans-serif",
+            }}
           >
             {title}
           </Typography>
@@ -26,7 +35,13 @@ export function PageHeader({ title, description, rightContent, titleFontFamily }
       )}
 
       {description && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+            mb: 3,
+          }}
+        >
           {description}
         </Typography>
       )}

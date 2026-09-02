@@ -805,15 +805,21 @@ const Tasks: React.FC = () => {
       {activeTab === "list" && (
         <Stack
           direction="row"
-          justifyContent="space-between"
-          alignItems="center"
-          sx={{ flexWrap: "wrap", rowGap: "8px" }}
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            rowGap: "8px",
+          }}
         >
           <Stack
             direction="row"
-            gap="8px"
-            alignItems="center"
-            sx={{ flexWrap: "wrap", rowGap: "8px" }}
+            sx={{
+              gap: "8px",
+              alignItems: "center",
+              flexWrap: "wrap",
+              rowGap: "8px",
+            }}
           >
             {/* FilterBy */}
             <Box data-joyride-id="task-filters">
@@ -850,15 +856,26 @@ const Tasks: React.FC = () => {
             </Box>
 
             {/* Toggles group with 16px spacing */}
-            <Stack direction="row" gap="16px" alignItems="center" sx={{ ml: "8px" }}>
+            <Stack
+              direction="row"
+              sx={{
+                gap: "16px",
+                alignItems: "center",
+                ml: "8px",
+              }}
+            >
               {/* My Tasks toggle - Admin only */}
               {userRoleName === "Admin" && (
                 <Stack sx={toggleContainerStyle} data-joyride-id="my-tasks-toggle">
                   <Typography
                     component="span"
                     variant="body2"
-                    color="text.secondary"
-                    sx={toggleLabelStyle}
+                    sx={[
+                      {
+                        color: "text.secondary",
+                      },
+                      ...(Array.isArray(toggleLabelStyle) ? toggleLabelStyle : [toggleLabelStyle]),
+                    ]}
                   >
                     My tasks only
                   </Typography>
@@ -875,8 +892,12 @@ const Tasks: React.FC = () => {
                 <Typography
                   component="span"
                   variant="body2"
-                  color="text.secondary"
-                  sx={toggleLabelStyle}
+                  sx={[
+                    {
+                      color: "text.secondary",
+                    },
+                    ...(Array.isArray(toggleLabelStyle) ? toggleLabelStyle : [toggleLabelStyle]),
+                  ]}
                 >
                   Include archived
                 </Typography>
@@ -892,10 +913,12 @@ const Tasks: React.FC = () => {
           {/* Right side: Export and Add button */}
           <Stack
             direction="row"
-            gap="8px"
-            alignItems="center"
             data-joyride-id="add-task-button"
-            sx={{ flexShrink: 0 }}
+            sx={{
+              gap: "8px",
+              alignItems: "center",
+              flexShrink: 0,
+            }}
           >
             <ExportMenu
               data={exportData}

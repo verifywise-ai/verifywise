@@ -90,7 +90,11 @@ const GovernanceSettings: React.FC = () => {
       title="Settings"
       subtitle="Manage Governance Intelligence configuration, preferences, and defaults."
     >
-      <Stack gap="16px">
+      <Stack
+        sx={{
+          gap: "16px",
+        }}
+      >
         {alert && (
           <Alert severity={alert.variant} sx={{ fontSize: 13 }}>
             {alert.message}
@@ -164,12 +168,22 @@ const GovernanceSettings: React.FC = () => {
             }}
           >
             {activeScenarioId ? (
-              <Stack gap="12px">
+              <Stack
+                sx={{
+                  gap: "12px",
+                }}
+              >
                 <Typography sx={{ fontSize: 13, fontWeight: 500, color: text.primary }}>
                   Scenario ID: {activeScenarioId}
                 </Typography>
                 {customPriority && (
-                  <Stack direction="row" flexWrap="wrap" gap="6px">
+                  <Stack
+                    direction="row"
+                    sx={{
+                      flexWrap: "wrap",
+                      gap: "6px",
+                    }}
+                  >
                     {customPriority.primary && (
                       <FrameworkChip
                         frameworkName={
@@ -206,7 +220,11 @@ const GovernanceSettings: React.FC = () => {
                 </Box>
               </Stack>
             ) : (
-              <Stack gap="12px">
+              <Stack
+                sx={{
+                  gap: "12px",
+                }}
+              >
                 <Typography sx={{ fontSize: 13, color: text.accent }}>
                   No active scenario selected.
                 </Typography>
@@ -350,7 +368,14 @@ const SettingsSection: React.FC<{
   children: React.ReactNode;
 }> = ({ icon, title, description, children }) => (
   <Box>
-    <Stack direction="row" gap="12px" alignItems="center" sx={{ mb: "12px" }}>
+    <Stack
+      direction="row"
+      sx={{
+        gap: "12px",
+        alignItems: "center",
+        mb: "12px",
+      }}
+    >
       <Box
         sx={{
           width: 32,

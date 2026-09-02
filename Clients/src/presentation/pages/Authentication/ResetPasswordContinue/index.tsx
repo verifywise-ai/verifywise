@@ -58,7 +58,13 @@ const ResetPasswordContinue = () => {
         </Stack>
         <Stack sx={{ gap: theme.spacing(6), textAlign: "center" }}>
           <Typography sx={{ fontSize: 16, fontWeight: "bold" }}>Password reset</Typography>
-          <Typography fontSize={13} color={text.tertiary} fontWeight={400}>
+          <Typography
+            color={text.tertiary}
+            sx={{
+              fontSize: 13,
+              fontWeight: 400,
+            }}
+          >
             Your password has been successfully reset. Click below to log in.
           </Typography>
         </Stack>

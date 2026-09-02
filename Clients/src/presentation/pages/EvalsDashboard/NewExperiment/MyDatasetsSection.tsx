@@ -49,7 +49,14 @@ export default function MyDatasetsSection({
 
   return (
     <Box>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: "center",
+          justifyContent: "space-between",
+          mb: 1,
+        }}
+      >
         <Typography
           sx={{
             fontSize: "12px",

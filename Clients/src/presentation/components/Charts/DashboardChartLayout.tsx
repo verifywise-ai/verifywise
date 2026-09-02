@@ -1,5 +1,5 @@
-import { Box, BoxProps } from "@mui/material";
-import { ReactNode } from "react";
+import { Box } from "@mui/material";
+import { CSSProperties, ReactNode } from "react";
 
 export const DASHBOARD_CHART_SIZE = 100;
 /** Fixed column width so donut/gauge centers align across dashboard cards. */
@@ -10,7 +10,7 @@ export const DASHBOARD_LEGEND_MAX_WIDTH = 160;
 interface DashboardChartLayoutProps {
   chart: ReactNode;
   sideContent: ReactNode;
-  alignItems?: BoxProps["alignItems"];
+  alignItems?: CSSProperties["alignItems"];
 }
 
 export function DashboardChartLayout({

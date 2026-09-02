@@ -176,7 +176,11 @@ const ScenarioBuilder = () => {
     formData.industry || formData.region || formData.riskLevel || formData.useCaseType;
 
   return (
-    <Stack gap="16px">
+    <Stack
+      sx={{
+        gap: "16px",
+      }}
+    >
       <ActiveScenarioPanel
         activeScenario={scenarios?.find((s) => s.id === selectedScenarioId)}
         onActivate={handleActivateClick}
@@ -196,7 +200,15 @@ const ScenarioBuilder = () => {
         <Typography sx={{ mb: "16px", fontSize: 14, fontWeight: 600 }}>
           Get Recommendations
         </Typography>
-        <Stack direction="row" gap="16px" flexWrap="wrap" useFlexGap alignItems="flex-end">
+        <Stack
+          direction="row"
+          useFlexGap
+          sx={{
+            gap: "16px",
+            flexWrap: "wrap",
+            alignItems: "flex-end",
+          }}
+        >
           <GovernanceTooltip
             header="Industry"
             description="Sector used to tailor scenario recommendations"
@@ -286,9 +298,17 @@ const ScenarioBuilder = () => {
 
       {/* Recommendation results */}
       {recommendMutation.data && recommendMutation.data.length > 0 && (
-        <Stack gap="16px">
+        <Stack
+          sx={{
+            gap: "16px",
+          }}
+        >
           <Typography sx={{ fontSize: 14, fontWeight: 600 }}>Recommended Scenarios</Typography>
-          <Stack gap="8px">
+          <Stack
+            sx={{
+              gap: "8px",
+            }}
+          >
             {recommendMutation.data.map((result) => (
               <ScenarioCard
                 key={result.scenario.id}
@@ -327,8 +347,18 @@ const ScenarioBuilder = () => {
       <Divider />
 
       {/* All scenarios */}
-      <Stack gap="16px">
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
+      <Stack
+        sx={{
+          gap: "16px",
+        }}
+      >
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <Typography sx={{ fontSize: 14, fontWeight: 600 }}>All Governance Scenarios</Typography>
           <GovernanceTooltip
             header="New scenario"
@@ -347,13 +377,22 @@ const ScenarioBuilder = () => {
         </Stack>
 
         {scenariosLoading ? (
-          <Stack alignItems="center" sx={{ py: "48px" }}>
+          <Stack
+            sx={{
+              alignItems: "center",
+              py: "48px",
+            }}
+          >
             <CircularProgress size={32} />
           </Stack>
         ) : !scenarios || scenarios.length === 0 ? (
           <EmptyState message="No governance scenarios available." icon={Compass} showBorder />
         ) : (
-          <Stack gap="8px">
+          <Stack
+            sx={{
+              gap: "8px",
+            }}
+          >
             {scenarios.map((scenario) => (
               <ScenarioCard
                 key={scenario.id}

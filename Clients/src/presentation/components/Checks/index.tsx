@@ -57,10 +57,18 @@ export function Check({ text, variant = "info", isOutlined = false }: CheckProps
     <Stack
       direction={"row"}
       className="check"
-      gap={isOutlined ? theme.spacing(6) : theme.spacing(4)}
-      alignItems={"center"}
+      sx={{
+        gap: isOutlined ? theme.spacing(6) : theme.spacing(4),
+        alignItems: "center",
+      }}
     >
-      <Box lineHeight={0}>{renderIcon()}</Box>
+      <Box
+        sx={{
+          lineHeight: 0,
+        }}
+      >
+        {renderIcon()}
+      </Box>
       <Typography
         component="span"
         sx={{

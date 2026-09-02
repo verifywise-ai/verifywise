@@ -160,8 +160,8 @@ export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps
             <Stack
               key={file.name}
               direction="row"
-              alignItems="center"
               sx={{
+                alignItems: "center",
                 p: "8px 12px",
                 borderRadius: "6px",
                 backgroundColor: "background.accent",

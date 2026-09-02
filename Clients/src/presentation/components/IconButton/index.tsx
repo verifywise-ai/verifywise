@@ -637,7 +637,12 @@ function IconButton({
           title={warningTitle}
           body={
             typeof warningMessage === "string" ? (
-              <Typography fontSize={13} color={theme.palette.text.primary}>
+              <Typography
+                color={theme.palette.text.primary}
+                sx={{
+                  fontSize: 13,
+                }}
+              >
                 {warningMessage}
               </Typography>
             ) : (
@@ -665,7 +670,12 @@ function IconButton({
           title={hardDeleteWarningTitle}
           body={
             typeof hardDeleteWarningMessage === "string" ? (
-              <Typography fontSize={13} color={theme.palette.text.primary}>
+              <Typography
+                color={theme.palette.text.primary}
+                sx={{
+                  fontSize: 13,
+                }}
+              >
                 {hardDeleteWarningMessage}
               </Typography>
             ) : (

@@ -179,7 +179,14 @@ export default function AIObservability() {
   return (
     <Box>
       {/* Header — matches AI audit style */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb="8px">
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: "8px",
+        }}
+      >
         <Box>
           <Typography
             sx={{
@@ -260,7 +267,13 @@ export default function AIObservability() {
                 padding: "8px 14px 14px 14px",
               }}
             >
-              <Stack direction="row" alignItems="center" spacing={0.75}>
+              <Stack
+                direction="row"
+                spacing={0.75}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <Box sx={{ color: textColors.icon, display: "flex" }}>{card.icon}</Box>
                 <Typography sx={{ fontSize: 12, color: textColors.secondary, fontWeight: 500 }}>
                   {card.label}
@@ -470,8 +483,10 @@ export default function AIObservability() {
         onClose={() => setDetailOpen(false)}
         maxWidth="md"
         fullWidth
-        PaperProps={{
-          sx: { borderRadius: "4px", border: `1px solid ${borderPalette.dark}` },
+        slotProps={{
+          paper: {
+            sx: { borderRadius: "4px", border: `1px solid ${borderPalette.dark}` },
+          },
         }}
       >
         <DialogTitle
@@ -487,7 +502,13 @@ export default function AIObservability() {
         </DialogTitle>
         <DialogContent sx={{ py: 2 }}>
           {detailLoading ? (
-            <Box display="flex" justifyContent="center" py={4}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "center",
+                py: 4,
+              }}
+            >
               <CircularProgress size={24} />
             </Box>
           ) : detailError ? (
@@ -506,7 +527,13 @@ export default function AIObservability() {
                 const widthPct = maxSpanDuration > 0 ? (duration / maxSpanDuration) * 100 : 0;
                 return (
                   <Stack key={span.span_id || i} spacing={0.5}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Stack
+                      direction="row"
+                      sx={{
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
                       <Typography sx={{ fontSize: 12, color: textColors.primary }}>
                         {span.name || "span"}
                       </Typography>

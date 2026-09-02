@@ -365,7 +365,13 @@ export default function ReportPage({
         }}
       >
         {isGenerating ? (
-          <Stack spacing={2} alignItems="center" sx={{ py: 3 }}>
+          <Stack
+            spacing={2}
+            sx={{
+              alignItems: "center",
+              py: 3,
+            }}
+          >
             <CircularProgress size={32} sx={{ color: palette.brand.primary }} />
             <Typography sx={{ fontSize: 14, fontWeight: 600, color: palette.text.primary }}>
               Generating report...
@@ -384,8 +390,20 @@ export default function ReportPage({
           </Stack>
         ) : (
           <>
-            <Stack direction="row" alignItems="center" justifyContent="space-between">
-              <Stack direction="row" alignItems="center" gap={2}>
+            <Stack
+              direction="row"
+              sx={{
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: "center",
+                  gap: 2,
+                }}
+              >
                 <Box
                   sx={{
                     width: 42,
@@ -466,13 +484,25 @@ export default function ReportPage({
               backgroundColor: palette.background.accent,
             }}
           >
-            <Stack direction="row" alignItems="center" gap={1.5}>
+            <Stack
+              direction="row"
+              sx={{
+                alignItems: "center",
+                gap: 1.5,
+              }}
+            >
               <Eye size={16} color={palette.brand.primary} />
               <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.primary }}>
                 {pdfTitle}
               </Typography>
             </Stack>
-            <Stack direction="row" alignItems="center" gap={0.5}>
+            <Stack
+              direction="row"
+              sx={{
+                alignItems: "center",
+                gap: 0.5,
+              }}
+            >
               <IconButton size="small" onClick={handleDownloadCurrent} title="Download PDF">
                 <Download size={16} color={palette.text.secondary} />
               </IconButton>
@@ -561,7 +591,13 @@ export default function ReportPage({
                   }}
                 >
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    <Stack direction="row" alignItems="center" gap={1}>
+                    <Stack
+                      direction="row"
+                      sx={{
+                        alignItems: "center",
+                        gap: 1,
+                      }}
+                    >
                       <FileText size={14} strokeWidth={1.5} color={palette.brand.primary} />
                       <Typography
                         sx={{ fontSize: 13, color: theme.palette.text.primary, fontWeight: 500 }}

@@ -310,10 +310,10 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
       >
         <Stack
           direction="row"
-          alignItems="flex-start"
-          justifyContent="space-between"
           spacing="16px"
           sx={{
+            alignItems: "flex-start",
+            justifyContent: "space-between",
             p: "16px 20px",
             flexShrink: 0,
             borderBottom: `1px solid ${theme.palette.border.light}`,

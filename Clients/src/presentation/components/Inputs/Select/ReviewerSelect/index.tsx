@@ -46,8 +46,9 @@ function ReviewerMultiSelect({
   return (
     <Stack
       className="vw-multi-select"
-      gap={theme.spacing(2)}
       sx={{
+        "gap": theme.spacing(2),
+
         ".MuiOutlinedInput-notchedOutline": {
           border: error
             ? `1px solid ${theme.palette.status.error.border}!important`
@@ -93,24 +94,27 @@ function ReviewerMultiSelect({
         displayEmpty
         MenuProps={{
           disableScrollLock: true,
-          PaperProps: {
-            sx: {
-              "borderRadius": theme.shape.borderRadius,
-              "boxShadow": theme.shadows[2],
-              "mt": 1,
-              "& .MuiMenuItem-root": {
-                "fontSize": 13,
-                "color": theme.palette.text.primary,
-                "transition": "color 0.2s ease, background-color 0.2s ease",
-                "&:hover": {
-                  backgroundColor: theme.palette.background.accent,
-                  color: theme.palette.primary.main,
-                },
-                "&.Mui-selected": {
-                  "backgroundColor": theme.palette.background.accent,
+
+          slotProps: {
+            paper: {
+              sx: {
+                "borderRadius": theme.shape.borderRadius,
+                "boxShadow": theme.shadows[2],
+                "mt": 1,
+                "& .MuiMenuItem-root": {
+                  "fontSize": 13,
+                  "color": theme.palette.text.primary,
+                  "transition": "color 0.2s ease, background-color 0.2s ease",
                   "&:hover": {
                     backgroundColor: theme.palette.background.accent,
                     color: theme.palette.primary.main,
+                  },
+                  "&.Mui-selected": {
+                    "backgroundColor": theme.palette.background.accent,
+                    "&:hover": {
+                      backgroundColor: theme.palette.background.accent,
+                      color: theme.palette.primary.main,
+                    },
                   },
                 },
               },
@@ -140,9 +144,13 @@ function ReviewerMultiSelect({
               <ListItemText
                 primary={`${user.name} ${user.surname ?? ""}`}
                 secondary={user.email}
-                secondaryTypographyProps={{
-                  fontSize: 11,
-                  color: theme.palette.text.disabled,
+                slotProps={{
+                  secondary: {
+                    sx: {
+                      fontSize: 11,
+                      color: theme.palette.text.disabled,
+                    },
+                  },
                 }}
               />
             </MenuItem>
@@ -154,8 +162,8 @@ function ReviewerMultiSelect({
         <Typography
           className="input-error"
           color={theme.palette.status.error.text}
-          mt={theme.spacing(2)}
           sx={{
+            mt: theme.spacing(2),
             opacity: 0.8,
             fontSize: 11,
           }}

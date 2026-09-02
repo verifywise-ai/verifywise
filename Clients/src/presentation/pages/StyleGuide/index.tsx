@@ -484,12 +484,14 @@ const StyleGuide: React.FC = () => {
                 py: "6px",
               },
             }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search size={12} color={theme.palette.text.tertiary} />
-                </InputAdornment>
-              ),
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search size={12} color={theme.palette.text.tertiary} />
+                  </InputAdornment>
+                ),
+              },
             }}
           />
           <Typography

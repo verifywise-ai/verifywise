@@ -1017,10 +1017,20 @@ const NewControlPane = ({
                   borderRadius: "4px",
                 }}
               >
-                <Typography fontSize={13} sx={{ marginBottom: "8px" }}>
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                    marginBottom: "8px",
+                  }}
+                >
                   <strong>Description:</strong>
                 </Typography>
-                <Typography fontSize={13} color="#666">
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                    color: "#666",
+                  }}
+                >
                   {controlData.description}
                 </Typography>
               </Stack>
@@ -1044,7 +1054,13 @@ const NewControlPane = ({
             borderBottom: "1px solid #eaecf0",
           }}
         >
-          <Stack direction="row" gap="16px" flexWrap="wrap">
+          <Stack
+            direction="row"
+            sx={{
+              gap: "16px",
+              flexWrap: "wrap",
+            }}
+          >
             <Select
               id="control-owner"
               label="Owner:"
@@ -1193,10 +1209,20 @@ const NewControlPane = ({
                       borderRadius: "4px",
                     }}
                   >
-                    <Typography fontSize={13} sx={{ marginBottom: "8px" }}>
+                    <Typography
+                      sx={{
+                        fontSize: 13,
+                        marginBottom: "8px",
+                      }}
+                    >
                       <strong>Description:</strong>
                     </Typography>
-                    <Typography fontSize={13} color="#666">
+                    <Typography
+                      sx={{
+                        fontSize: 13,
+                        color: "#666",
+                      }}
+                    >
                       {currentSubcontrol.description}
                     </Typography>
                   </Stack>
@@ -1215,10 +1241,20 @@ const NewControlPane = ({
 
                 {/* TAB 1: DETAILS */}
                 <TabPanel value="details" sx={{ padding: 0 }}>
-                  <Stack padding="15px 0" gap="15px">
+                  <Stack
+                    sx={{
+                      padding: "15px 0",
+                      gap: "15px",
+                    }}
+                  >
                     {/* Implementation Details */}
                     <Stack>
-                      <Typography fontSize={13} sx={{ marginBottom: "5px" }}>
+                      <Typography
+                        sx={{
+                          fontSize: 13,
+                          marginBottom: "5px",
+                        }}
+                      >
                         Implementation description:
                       </Typography>
                       <RichTextEditor
@@ -1237,7 +1273,11 @@ const NewControlPane = ({
                       />
                     </Stack>
 
-                    <Stack gap="24px">
+                    <Stack
+                      sx={{
+                        gap: "24px",
+                      }}
+                    >
                       <Select
                         id={`status-${currentSubcontrol.id}`}
                         label="Status:"
@@ -1262,7 +1302,12 @@ const NewControlPane = ({
 
                     {/* Evidence Description */}
                     <Stack>
-                      <Typography fontSize={13} sx={{ marginBottom: "5px" }}>
+                      <Typography
+                        sx={{
+                          fontSize: 13,
+                          marginBottom: "5px",
+                        }}
+                      >
                         Evidence:
                       </Typography>
                       <RichTextEditor
@@ -1283,7 +1328,12 @@ const NewControlPane = ({
 
                     {/* Auditor Feedback Description */}
                     <Stack>
-                      <Typography fontSize={13} sx={{ marginBottom: "5px" }}>
+                      <Typography
+                        sx={{
+                          fontSize: 13,
+                          marginBottom: "5px",
+                        }}
+                      >
                         Auditor feedback:
                       </Typography>
                       <RichTextEditor
@@ -2075,7 +2125,13 @@ const NewControlPane = ({
                       this subcontrol.
                     </Typography>
 
-                    <Stack direction="row" spacing={2} alignItems="center">
+                    <Stack
+                      direction="row"
+                      spacing={2}
+                      sx={{
+                        alignItems: "center",
+                      }}
+                    >
                       <Button
                         variant="contained"
                         sx={{

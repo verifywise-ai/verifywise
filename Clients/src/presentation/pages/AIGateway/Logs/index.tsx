@@ -115,7 +115,9 @@ function ConversationView({ messages }: { messages: RequestMessage[] }) {
   };
 
   return (
-    <Stack gap="8px">
+    <Stack sx={{
+      gap: "8px"
+    }}>
       {messages.map((msg, i) => (
         <Box key={`${msg.role}-${i}`}>
           <Typography
@@ -312,14 +314,29 @@ export default function LogsPage() {
       tipBoxEntity="ai-gateway-logs"
       helpArticlePath="ai-gateway/logs"
       actionButton={
-        <Stack direction="row" gap="8px" alignItems="center">
-          <Stack direction="row" alignItems="center" gap="6px">
+        <Stack
+          direction="row"
+          sx={{
+            gap: "8px",
+            alignItems: "center"
+          }}>
+          <Stack
+            direction="row"
+            sx={{
+              alignItems: "center",
+              gap: "6px"
+            }}>
             <Toggle
               checked={autoRefresh}
               onChange={() => setAutoRefresh((prev) => !prev)}
               size="small"
             />
-            <Typography fontSize={12} color="text.secondary" sx={{ whiteSpace: "nowrap" }}>
+            <Typography
+              sx={{
+                fontSize: 12,
+                color: "text.secondary",
+                whiteSpace: "nowrap"
+              }}>
               Live updates
             </Typography>
           </Stack>
@@ -356,7 +373,13 @@ export default function LogsPage() {
           borderRadius: theme.shape.borderRadius,
         }}
       >
-        <Stack direction="row" gap="12px" alignItems="center" flexWrap="wrap">
+        <Stack
+          direction="row"
+          sx={{
+            gap: "12px",
+            alignItems: "center",
+            flexWrap: "wrap"
+          }}>
           <Box sx={{ flex: "1 1 200px", minWidth: 180, maxWidth: 320 }}>
             <SearchBox
               value={search}
@@ -410,8 +433,15 @@ export default function LogsPage() {
 
       {hasLogs && (
         <Box sx={cardSx}>
-          <Stack gap="12px">
-            <Stack direction="row" alignItems="center" gap="6px">
+          <Stack sx={{
+            gap: "12px"
+          }}>
+            <Stack
+              direction="row"
+              sx={{
+                alignItems: "center",
+                gap: "6px"
+              }}>
               <Typography sx={sectionTitleSx}>Recent requests</Typography>
               <MuiTooltip
                 title="Click a row to expand and see full request/response details"
@@ -428,7 +458,9 @@ export default function LogsPage() {
               </Typography>
             </Stack>
 
-            <Stack gap="4px">
+            <Stack sx={{
+              gap: "4px"
+            }}>
               {groupedLogs.map(({ log, isFirstOfDay }) => (
                 <Box key={log.id}>
                   {/* Date group header */}
@@ -452,8 +484,6 @@ export default function LogsPage() {
                   {/* Log row */}
                   <Stack
                     direction="row"
-                    justifyContent="space-between"
-                    alignItems="center"
                     role="button"
                     tabIndex={0}
                     onClick={() => setExpandedId(expandedId === log.id ? null : log.id)}
@@ -464,14 +494,20 @@ export default function LogsPage() {
                       }
                     }}
                     sx={{
+                      justifyContent: "space-between",
+                      alignItems: "center",
                       p: "10px 14px",
                       borderRadius: "4px",
                       border: `1px solid ${palette.border.light}`,
                       cursor: "pointer",
-                      "&:hover": { backgroundColor: palette.background.hover },
-                    }}
-                  >
-                    <Stack direction="row" alignItems="center" gap="8px">
+                      "&:hover": { backgroundColor: palette.background.hover }
+                    }}>
+                    <Stack
+                      direction="row"
+                      sx={{
+                        alignItems: "center",
+                        gap: "8px"
+                      }}>
                       {expandedId === log.id ? (
                         <ChevronUp size={14} color={palette.text.tertiary} />
                       ) : (
@@ -485,10 +521,20 @@ export default function LogsPage() {
                       </Typography>
                     </Stack>
 
-                    <Stack direction="row" gap="12px" alignItems="center">
+                    <Stack
+                      direction="row"
+                      sx={{
+                        gap: "12px",
+                        alignItems: "center"
+                      }}>
                       {/* Virtual key name or user name */}
                       {log.virtual_key_id ? (
-                        <Stack direction="row" alignItems="center" gap="4px">
+                        <Stack
+                          direction="row"
+                          sx={{
+                            alignItems: "center",
+                            gap: "4px"
+                          }}>
                           <KeyRound size={12} color={palette.text.disabled} strokeWidth={1.5} />
                           <Typography sx={{ fontSize: 11, color: palette.text.tertiary }}>
                             {log.virtual_key_name || log.virtual_key_prefix || "Virtual key"}
@@ -647,9 +693,12 @@ export default function LogsPage() {
 
                       <Stack
                         direction="row"
-                        gap="16px"
-                        sx={{ mt: 1.5, pt: 1.5, borderTop: `1px solid ${palette.border.light}` }}
-                      >
+                        sx={{
+                          gap: "16px",
+                          mt: 1.5,
+                          pt: 1.5,
+                          borderTop: `1px solid ${palette.border.light}`
+                        }}>
                         <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
                           Latency: <strong>{log.latency_ms}ms</strong>
                         </Typography>
@@ -679,7 +728,6 @@ export default function LogsPage() {
                   rowsPerPage={rowsPerPage}
                   rowsPerPageOptions={[10, 25, 50]}
                   onRowsPerPageChange={handleChangeRowsPerPage}
-                  ActionsComponent={(props) => <TablePaginationActions {...props} />}
                   labelRowsPerPage="Rows per page"
                   labelDisplayedRows={({ page, count }) =>
                     `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
@@ -688,13 +736,17 @@ export default function LogsPage() {
                     select: {
                       MenuProps: {
                         keepMounted: true,
-                        PaperProps: {
-                          className: "pagination-dropdown",
-                          sx: { mt: 0, mb: theme.spacing(2) },
+
+                        slotProps: {
+                          paper: {
+                            className: "pagination-dropdown",
+                            sx: { mt: 0, mb: theme.spacing(2) },
+                          }
                         },
+
                         transformOrigin: { vertical: "bottom", horizontal: "left" },
                         anchorOrigin: { vertical: "top", horizontal: "left" },
-                        sx: { mt: theme.spacing(-2) },
+                        sx: { mt: theme.spacing(-2) }
                       },
                       inputProps: { id: "pagination-dropdown" },
                       IconComponent: () => <ChevronsUpDown size={16} />,
@@ -732,6 +784,7 @@ export default function LogsPage() {
                       border: `1px solid ${theme.palette.border.light}`,
                     },
                   }}
+                  ActionsComponent={(props) => <TablePaginationActions {...props} />}
                 />
               </TableRow>
             </TableBody>
@@ -744,7 +797,9 @@ export default function LogsPage() {
         {/* ─── Guardrail logs tab ────────────────────────────── */}
         {activeLogTab === "guardrails" && (
           <Box sx={cardSx}>
-            <Stack gap="12px">
+            <Stack sx={{
+              gap: "12px"
+            }}>
               <Typography sx={sectionTitleSx}>Guardrail detection logs</Typography>
               <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
                 Every blocked or masked request across all endpoints for the last 30 days.
@@ -785,13 +840,12 @@ export default function LogsPage() {
                     <Stack
                       key={log.id}
                       direction="row"
-                      alignItems="center"
                       sx={{
+                        alignItems: "center",
                         p: "6px 0",
                         borderBottom: `1px solid ${palette.border.light}`,
-                        "&:last-child": { borderBottom: "none" },
-                      }}
-                    >
+                        "&:last-child": { borderBottom: "none" }
+                      }}>
                       <Typography sx={{ flex: 0.8, fontSize: 12, color: palette.text.tertiary }}>
                         {displayFormattedDateTime(log.created_at)}
                       </Typography>
@@ -832,7 +886,6 @@ export default function LogsPage() {
                             setGrPage(0);
                             setPaginationRowCount("aiGatewayGuardrailLogs", rpp);
                           }}
-                          ActionsComponent={(props) => <TablePaginationActions {...props} />}
                           labelRowsPerPage="Rows per page"
                           labelDisplayedRows={({ page, count }) =>
                             `Page ${page + 1} of ${Math.max(1, Math.ceil(count / grRowsPerPage))}`
@@ -841,13 +894,17 @@ export default function LogsPage() {
                             select: {
                               MenuProps: {
                                 keepMounted: true,
-                                PaperProps: {
-                                  className: "pagination-dropdown",
-                                  sx: { mt: 0, mb: theme.spacing(2) },
+
+                                slotProps: {
+                                  paper: {
+                                    className: "pagination-dropdown",
+                                    sx: { mt: 0, mb: theme.spacing(2) },
+                                  }
                                 },
+
                                 transformOrigin: { vertical: "bottom", horizontal: "left" },
                                 anchorOrigin: { vertical: "top", horizontal: "left" },
-                                sx: { mt: theme.spacing(-2) },
+                                sx: { mt: theme.spacing(-2) }
                               },
                               inputProps: { id: "gr-pagination-dropdown" },
                               IconComponent: () => <ChevronsUpDown size={16} />,
@@ -885,6 +942,7 @@ export default function LogsPage() {
                               border: `1px solid ${theme.palette.border.light}`,
                             },
                           }}
+                          ActionsComponent={(props) => <TablePaginationActions {...props} />}
                         />
                       </TableRow>
                     </TableBody>

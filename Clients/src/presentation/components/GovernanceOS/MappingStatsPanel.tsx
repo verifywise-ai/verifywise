@@ -75,13 +75,24 @@ const MappingStatsPanel: React.FC<MappingStatsPanelProps> = ({ projectId }) => {
         header="Mapping statistics"
         description="Breakdown of cross-framework control mappings"
       >
-        <Stack direction="row" gap="16px" alignItems="center" sx={{ mb: "16px" }}>
+        <Stack
+          direction="row"
+          sx={{
+            gap: "16px",
+            alignItems: "center",
+            mb: "16px",
+          }}
+        >
           <Network size={20} color={brand.primary} />
           <Typography sx={{ fontSize: 14, fontWeight: 600 }}>Mapping Statistics</Typography>
         </Stack>
       </GovernanceTooltip>
 
-      <Stack gap="16px">
+      <Stack
+        sx={{
+          gap: "16px",
+        }}
+      >
         {/* Total mappings */}
         <Box
           sx={{
@@ -121,7 +132,13 @@ const MappingStatsPanel: React.FC<MappingStatsPanelProps> = ({ projectId }) => {
                 By domain
               </Typography>
             </GovernanceTooltip>
-            <Stack direction="row" flexWrap="wrap" gap="8px">
+            <Stack
+              direction="row"
+              sx={{
+                flexWrap: "wrap",
+                gap: "8px",
+              }}
+            >
               {domainEntries.map(([domain, count]) => (
                 <Box
                   key={domain}
@@ -158,7 +175,13 @@ const MappingStatsPanel: React.FC<MappingStatsPanelProps> = ({ projectId }) => {
                 By mapping strength
               </Typography>
             </GovernanceTooltip>
-            <Stack direction="row" flexWrap="wrap" gap="8px">
+            <Stack
+              direction="row"
+              sx={{
+                flexWrap: "wrap",
+                gap: "8px",
+              }}
+            >
               {strengthEntries.map(([strength, count]) => {
                 const colors = STRENGTH_COLORS[strength] || STRENGTH_COLORS.related;
                 const strengthTooltip =

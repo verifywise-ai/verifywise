@@ -227,7 +227,13 @@ export default function ProjectOverview({
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" py={8}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          py: 8,
+        }}
+      >
         <CircularProgress />
       </Box>
     );
@@ -405,7 +411,14 @@ export default function ProjectOverview({
       </Box>
 
       {/* Header with New Experiment button */}
-      <Box display="flex" justifyContent="flex-end" alignItems="center" mb={3}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "flex-end",
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
         <CustomizableButton
           onClick={handleNewExperiment}
           variant="contained"
@@ -467,7 +480,14 @@ export default function ProjectOverview({
 
       {/* Recent experiments table */}
       <Box>
-        <Box display="flex" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            mb: 2,
+          }}
+        >
           <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: "14px" }}>
             Recent experiments
           </Typography>
@@ -492,8 +512,14 @@ export default function ProjectOverview({
             </Typography>
             <Typography
               variant="body2"
-              color="text.secondary"
-              sx={{ mb: 2, fontSize: "12px", maxWidth: 320, mx: "auto", lineHeight: 1.5 }}
+              sx={{
+                color: "text.secondary",
+                mb: 2,
+                fontSize: "12px",
+                maxWidth: 320,
+                mx: "auto",
+                lineHeight: 1.5,
+              }}
             >
               Run your first experiment to start evaluating your LLM.
             </Typography>

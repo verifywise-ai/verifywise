@@ -358,7 +358,13 @@ const VWProjectRisksTableBody = ({
                           : "",
                   }}
                 >
-                  <Stack direction="row" alignItems="center" gap={0.5}>
+                  <Stack
+                    direction="row"
+                    sx={{
+                      alignItems: "center",
+                      gap: 0.5,
+                    }}
+                  >
                     <ViewRelationshipsButton
                       entityId={(row.id || 0) + 100000}
                       entityType="risk"
@@ -376,11 +382,25 @@ const VWProjectRisksTableBody = ({
                         openLinkedPolicies={() => handleViewLinkedPolicies(row.id!)}
                         warningTitle="Delete this project risk?"
                         warningMessage={
-                          <Stack gap={2}>
-                            <Typography fontSize={13} color={text.secondary}>
+                          <Stack
+                            sx={{
+                              gap: 2,
+                            }}
+                          >
+                            <Typography
+                              color={text.secondary}
+                              sx={{
+                                fontSize: 13,
+                              }}
+                            >
                               Are you sure you want to delete this project risk?
                             </Typography>
-                            <Typography fontSize={13} color={text.secondary}>
+                            <Typography
+                              color={text.secondary}
+                              sx={{
+                                fontSize: 13,
+                              }}
+                            >
                               This action is non-recoverable.
                             </Typography>
                           </Stack>
@@ -399,11 +419,13 @@ const VWProjectRisksTableBody = ({
             setShowMitigations(false);
             setShowMitigationProjectRisk(null);
           }}
-          PaperProps={{
-            sx: {
-              width: "800px",
-              maxWidth: "800px",
-              minHeight: "300px",
+          slotProps={{
+            paper: {
+              sx: {
+                width: "800px",
+                maxWidth: "800px",
+                minHeight: "300px",
+              },
             },
           }}
         >

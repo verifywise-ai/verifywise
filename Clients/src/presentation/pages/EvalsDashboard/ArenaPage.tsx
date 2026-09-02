@@ -575,7 +575,14 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
         /* Empty state when no battles at all */
         <>
           {/* New battle button row */}
-          <Box display="flex" justifyContent="flex-end" alignItems="center" mb={3}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "flex-end",
+              alignItems: "center",
+              mb: 3,
+            }}
+          >
             <CustomizableButton
               variant="contained"
               text="New battle"
@@ -661,7 +668,15 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
         /* Comparisons with toolbar */
         <>
           {/* Filter/Group/Search Toolbar + New battle button */}
-          <Stack direction="row" spacing={2} alignItems="center" sx={{ mt: 2, mb: 8 }}>
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
+              alignItems: "center",
+              mt: 2,
+              mb: 8,
+            }}
+          >
             <FilterBy
               columns={filterColumns}
               onFilterChange={(conditions, logic) => {
@@ -681,13 +696,6 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
               size="small"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Search size={16} color={palette.text.disabled} />
-                  </InputAdornment>
-                ),
-              }}
               sx={{
                 "width": 220,
                 "& .MuiOutlinedInput-root": {
@@ -700,6 +708,15 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
                   "&:hover fieldset": {
                     borderColor: palette.text.accent,
                   },
+                },
+              }}
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search size={16} color={palette.text.disabled} />
+                    </InputAdornment>
+                  ),
                 },
               }}
             />
@@ -787,7 +804,14 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
 
             {/* Evaluation Criteria */}
             <Box>
-              <Stack direction="row" alignItems="center" spacing={0.75} mb={1.5}>
+              <Stack
+                direction="row"
+                spacing={0.75}
+                sx={{
+                  alignItems: "center",
+                  mb: 1.5,
+                }}
+              >
                 <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary }}>
                   Evaluation criteria
                 </Typography>
@@ -884,7 +908,14 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
 
             {/* Dataset selector */}
             <Box>
-              <Stack direction="row" alignItems="center" spacing={1} mb={0.75}>
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  alignItems: "center",
+                  mb: 0.75,
+                }}
+              >
                 <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary }}>
                   Dataset
                 </Typography>
@@ -928,8 +959,21 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
         ) : (
           /* Step 2: Contestants */
           <Box>
-            <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3}>
-              <Stack direction="row" alignItems="center" spacing={1.5}>
+            <Stack
+              direction="row"
+              sx={{
+                alignItems: "center",
+                justifyContent: "space-between",
+                mb: 3,
+              }}
+            >
+              <Stack
+                direction="row"
+                spacing={1.5}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <Typography sx={{ fontSize: 14, fontWeight: 600, color: palette.text.secondary }}>
                   Contestants
                 </Typography>
@@ -1029,9 +1073,11 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
                     {/* Header with badge and remove button */}
                     <Stack
                       direction="row"
-                      justifyContent="space-between"
-                      alignItems="center"
-                      mb={2.5}
+                      sx={{
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        mb: 2.5,
+                      }}
                     >
                       <Box
                         sx={{

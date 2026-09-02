@@ -638,7 +638,13 @@ const TrustCenterResources: React.FC = () => {
           {isTableLoading ? (
             <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
           ) : tableError ? (
-            <Stack alignItems="center" spacing={2} sx={{ py: 4 }}>
+            <Stack
+              spacing={2}
+              sx={{
+                alignItems: "center",
+                py: 4,
+              }}
+            >
               <MuiAlert severity="error" sx={{ width: "100%", maxWidth: 600 }}>
                 {tableError?.message || "An error occurred loading resources."}
               </MuiAlert>

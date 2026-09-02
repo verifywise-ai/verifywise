@@ -1086,8 +1086,20 @@ const Vendors = () => {
         </Box>
         {value === "1" && (
           <Stack spacing={2}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Stack direction="row" gap={2} alignItems="center">
+            <Stack
+              direction="row"
+              sx={{
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Stack
+                direction="row"
+                sx={{
+                  gap: 2,
+                  alignItems: "center",
+                }}
+              >
                 <FilterBy columns={vendorFilterColumns} onFilterChange={handleVendorFilterChange} />
                 <GroupBy
                   options={[
@@ -1115,7 +1127,13 @@ const Vendors = () => {
                   fullWidth={false}
                 />
               </Stack>
-              <Stack direction="row" gap="8px" alignItems="center">
+              <Stack
+                direction="row"
+                sx={{
+                  gap: "8px",
+                  alignItems: "center",
+                }}
+              >
                 <ExportMenu
                   data={exportData}
                   columns={exportColumns}
@@ -1146,8 +1164,20 @@ const Vendors = () => {
 
         {value !== "1" && (
           <Stack spacing={2}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Stack direction="row" gap={2} alignItems="center">
+            <Stack
+              direction="row"
+              sx={{
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Stack
+                direction="row"
+                sx={{
+                  gap: 2,
+                  alignItems: "center",
+                }}
+              >
                 <Select
                   id="filter-status"
                   value={filterStatus}
@@ -1190,7 +1220,13 @@ const Vendors = () => {
                   fullWidth={false}
                 />
               </Stack>
-              <Stack direction="row" gap="8px" alignItems="center">
+              <Stack
+                direction="row"
+                sx={{
+                  gap: "8px",
+                  alignItems: "center",
+                }}
+              >
                 <ExportMenu
                   data={vendorRisksExportData}
                   columns={vendorRisksExportColumns}

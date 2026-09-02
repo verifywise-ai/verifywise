@@ -58,7 +58,14 @@ export default function UploadDatasetModal({
       title="Upload dataset"
       description="Upload a custom dataset in JSON format for your evaluations"
       customFooter={
-        <Stack direction="row" spacing={2} justifyContent="flex-end" width="100%">
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{
+            justifyContent: "flex-end",
+            width: "100%",
+          }}
+        >
           <CustomizableButton
             variant="outlined"
             text="Cancel"

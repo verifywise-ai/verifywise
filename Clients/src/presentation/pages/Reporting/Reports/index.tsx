@@ -356,9 +356,12 @@ const Reports: React.FC<ReportsProps> = ({
 
       <Stack
         direction="row"
-        justifyContent="space-between"
-        alignItems="flex-end"
-        sx={{ marginBottom: "16px", marginTop: "0px !important" }}
+        sx={{
+          justifyContent: "space-between",
+          alignItems: "flex-end",
+          marginBottom: "16px",
+          marginTop: "0px !important",
+        }}
       >
         <Box sx={{ display: "flex", gap: "8px", alignItems: "center" }}>
           <FilterBy columns={reportFilterColumns} onFilterChange={handleReportFilterChange} />

@@ -313,7 +313,13 @@ const ISO42001Annex = ({
                 <Typography sx={styles.controlTitle}>
                   {"A"}.{annex.annex_no}.{control.order_no} {control.title}
                 </Typography>
-                <Typography fontSize={13}>{control.description}</Typography>
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                  }}
+                >
+                  {control.description}
+                </Typography>
               </Stack>
               <StatusDropdown
                 currentStatus={control.status || "Not started"}

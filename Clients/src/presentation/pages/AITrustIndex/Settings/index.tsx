@@ -138,7 +138,12 @@ export default function Settings() {
           <CircularProgress size={24} sx={{ color: palette.brand.primary }} />
         </Box>
       ) : (
-        <Stack gap="24px" sx={{ maxWidth: 560 }}>
+        <Stack
+          sx={{
+            gap: "24px",
+            maxWidth: 560,
+          }}
+        >
           {/* Cadence note — reassures the admin the index runs automatically and
               shows when it last ran (from the global sync metadata). */}
           <Box
@@ -183,12 +188,25 @@ export default function Settings() {
             placeholder="Type an email and press Enter"
           />
 
-          <Stack direction="row" alignItems="center" gap="8px" sx={{ minHeight: 16 }}>
+          <Stack
+            direction="row"
+            sx={{
+              alignItems: "center",
+              gap: "8px",
+              minHeight: 16,
+            }}
+          >
             <Typography sx={{ fontSize: "12px", color: palette.text.tertiary }}>
               Changes are saved automatically.
             </Typography>
             {updateSettings.isPending && (
-              <Stack direction="row" alignItems="center" gap="4px">
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: "center",
+                  gap: "4px",
+                }}
+              >
                 <CircularProgress size={10} sx={{ color: palette.text.tertiary }} />
                 <Typography sx={{ fontSize: "12px", color: palette.text.tertiary }}>
                   Saving…

@@ -757,21 +757,33 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
   };
 
   return (
-    <Stack gap={theme.spacing(2)}>
+    <Stack
+      sx={{
+        gap: theme.spacing(2),
+      }}
+    >
       <Typography
         component="p"
         variant="body1"
         color={theme.palette.text.secondary}
-        fontWeight={500}
-        fontSize={"13px"}
-        sx={{ margin: 0, height: "22px" }}
+        sx={{
+          fontWeight: 500,
+          fontSize: "13px",
+          margin: 0,
+          height: "22px",
+        }}
       >
         Linked Items
       </Typography>
 
       {/* Display existing links */}
       {(value.length > 0 || pendingRemovals.length > 0) && (
-        <Stack gap={1} sx={{ mb: 1 }}>
+        <Stack
+          sx={{
+            gap: 1,
+            mb: 1,
+          }}
+        >
           {/* Active links */}
           {value.map((link, index) => (
             <Box
@@ -879,7 +891,15 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
       )}
 
       {/* Add new link - cascading dropdowns */}
-      <Stack direction="row" spacing={2} alignItems="flex-end" flexWrap="wrap" gap={1}>
+      <Stack
+        direction="row"
+        spacing={2}
+        sx={{
+          alignItems: "flex-end",
+          flexWrap: "wrap",
+          gap: 1,
+        }}
+      >
         {renderSelectionDropdowns()}
 
         {canAddLink && (

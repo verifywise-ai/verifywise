@@ -140,7 +140,13 @@ function PresetCard({
       }}
     >
       <Stack spacing={1}>
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+          }}
+        >
           <Typography sx={{ fontSize: 13, fontWeight: 600, color: theme.palette.text.primary }}>
             {preset.name}
           </Typography>
@@ -606,7 +612,11 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
         isOptional
       />
 
-      <Box mt="16px">
+      <Box
+        sx={{
+          mt: "16px",
+        }}
+      >
         <Select
           id="model-inventory-link"
           label="Link to model inventory (optional)"
@@ -653,7 +663,14 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
 
         {/* Metric mode selector */}
         <Box>
-          <Stack direction="row" alignItems="center" spacing={0.5} mb={1}>
+          <Stack
+            direction="row"
+            spacing={0.5}
+            sx={{
+              alignItems: "center",
+              mb: 1,
+            }}
+          >
             <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary }}>
               Audit metric
             </Typography>
@@ -693,7 +710,14 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
           </Typography>
           <Stack spacing={0.75}>
             {categoryNames.map((name) => (
-              <Stack key={name} direction="row" spacing={1} alignItems="center">
+              <Stack
+                key={name}
+                direction="row"
+                spacing={1}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <Box
                   sx={{
                     width: 4,
@@ -710,7 +734,13 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
               </Stack>
             ))}
             {metric === "selection_rate" && (
-              <Stack direction="row" spacing={1} alignItems="center">
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <Box
                   sx={{
                     width: 4,
@@ -727,7 +757,13 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
               </Stack>
             )}
             {metric === "scoring_rate" && (
-              <Stack direction="row" spacing={1} alignItems="center">
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <Box
                   sx={{
                     width: 4,
@@ -745,7 +781,13 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
             )}
             {metric === "fairness_metrics" && (
               <>
-                <Stack direction="row" spacing={1} alignItems="center">
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: "center",
+                  }}
+                >
                   <Box
                     sx={{
                       width: 4,
@@ -759,7 +801,13 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
                     <strong>Prediction</strong> — binary column with what the model predicted
                   </Typography>
                 </Stack>
-                <Stack direction="row" spacing={1} alignItems="center">
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: "center",
+                  }}
+                >
                   <Box
                     sx={{
                       width: 4,
@@ -806,7 +854,12 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
             style={{ display: "none" }}
           />
           {csvFile ? (
-            <Stack alignItems="center" spacing={1}>
+            <Stack
+              spacing={1}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <FileSpreadsheet size={32} color={palette.brand.primary} strokeWidth={1.5} />
               <Typography sx={{ fontSize: 13, fontWeight: 500, color: palette.text.primary }}>
                 {csvFile.name}
@@ -816,7 +869,12 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
               </Typography>
             </Stack>
           ) : (
-            <Stack alignItems="center" spacing={1}>
+            <Stack
+              spacing={1}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <Upload size={32} color={palette.text.accent} strokeWidth={1.5} />
               <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
                 Click to upload CSV file
@@ -830,7 +888,12 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
 
         {/* Column mapping */}
         {csvFile && csvHeaders.length > 0 && (
-          <Stack spacing="8px" mt={3}>
+          <Stack
+            spacing="8px"
+            sx={{
+              mt: 3,
+            }}
+          >
             <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary }}>
               Column mapping
             </Typography>
@@ -847,7 +910,14 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
               .map(([key, cat]) => {
                 const isOptional = !cat.groups || cat.groups.length === 0;
                 return (
-                  <Stack key={key} direction="row" alignItems="center" spacing={2}>
+                  <Stack
+                    key={key}
+                    direction="row"
+                    spacing={2}
+                    sx={{
+                      alignItems: "center",
+                    }}
+                  >
                     <Typography
                       sx={{
                         fontSize: 13,
@@ -871,7 +941,13 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
               })}
 
             {metric === "selection_rate" && (
-              <Stack direction="row" alignItems="center" spacing={2}>
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <Typography sx={{ fontSize: 13, color: palette.text.tertiary, minWidth: 140 }}>
                   Outcome column
                 </Typography>
@@ -887,7 +963,13 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
             )}
 
             {metric === "scoring_rate" && (
-              <Stack direction="row" alignItems="center" spacing={2}>
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <Typography sx={{ fontSize: 13, color: palette.text.tertiary, minWidth: 140 }}>
                   Score column
                 </Typography>
@@ -904,7 +986,13 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
 
             {metric === "fairness_metrics" && (
               <>
-                <Stack direction="row" alignItems="center" spacing={2}>
+                <Stack
+                  direction="row"
+                  spacing={2}
+                  sx={{
+                    alignItems: "center",
+                  }}
+                >
                   <Typography sx={{ fontSize: 13, color: palette.text.tertiary, minWidth: 140 }}>
                     Prediction column
                   </Typography>
@@ -917,7 +1005,13 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
                     sx={{ flex: 1 }}
                   />
                 </Stack>
-                <Stack direction="row" alignItems="center" spacing={2}>
+                <Stack
+                  direction="row"
+                  spacing={2}
+                  sx={{
+                    alignItems: "center",
+                  }}
+                >
                   <Typography sx={{ fontSize: 13, color: palette.text.tertiary, minWidth: 140 }}>
                     Ground truth column
                   </Typography>
@@ -937,7 +1031,11 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
 
         {/* CSV preview */}
         {csvPreview.length > 0 && (
-          <Box mt={3}>
+          <Box
+            sx={{
+              mt: 3,
+            }}
+          >
             <Typography
               sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary, mb: 2 }}
             >
@@ -1039,25 +1137,45 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
           Summary
         </Typography>
         <Stack spacing={1}>
-          <Stack direction="row" justifyContent="space-between">
+          <Stack
+            direction="row"
+            sx={{
+              justifyContent: "space-between",
+            }}
+          >
             <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>Framework</Typography>
             <Typography sx={{ fontSize: 13, color: palette.text.primary, fontWeight: 500 }}>
               {fullPreset?.name}
             </Typography>
           </Stack>
-          <Stack direction="row" justifyContent="space-between">
+          <Stack
+            direction="row"
+            sx={{
+              justifyContent: "space-between",
+            }}
+          >
             <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
               {systemLabel.reviewLabel}
             </Typography>
             <Typography sx={{ fontSize: 13, color: palette.text.primary }}>{aedtName}</Typography>
           </Stack>
-          <Stack direction="row" justifyContent="space-between">
+          <Stack
+            direction="row"
+            sx={{
+              justifyContent: "space-between",
+            }}
+          >
             <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>Dataset</Typography>
             <Typography sx={{ fontSize: 13, color: palette.text.primary }}>
               {csvFile?.name}
             </Typography>
           </Stack>
-          <Stack direction="row" justifyContent="space-between">
+          <Stack
+            direction="row"
+            sx={{
+              justifyContent: "space-between",
+            }}
+          >
             <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>Categories</Typography>
             <Typography sx={{ fontSize: 13, color: palette.text.primary }}>
               {Object.keys(fullPreset?.categories || {}).length}
@@ -1073,7 +1191,13 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
         </Typography>
         <Stack direction="row" spacing={2}>
           <Stack sx={{ flex: 1 }} spacing={0.5}>
-            <Stack direction="row" alignItems="center" spacing={0.5}>
+            <Stack
+              direction="row"
+              spacing={0.5}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <Typography sx={{ fontSize: 13, fontWeight: 500, color: palette.text.secondary }}>
                 Threshold (4/5ths rule)
               </Typography>
@@ -1098,7 +1222,13 @@ const NewBiasAuditModal: React.FC<NewBiasAuditModalProps> = ({
             />
           </Stack>
           <Stack sx={{ flex: 1 }} spacing={0.5}>
-            <Stack direction="row" alignItems="center" spacing={0.5}>
+            <Stack
+              direction="row"
+              spacing={0.5}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <Typography sx={{ fontSize: 13, fontWeight: 500, color: palette.text.secondary }}>
                 Small sample exclusion %
               </Typography>

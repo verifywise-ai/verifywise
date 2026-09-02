@@ -396,7 +396,12 @@ const VWISO27001AnnexDrawerDialog = ({
               evidenceExamples={formData.evidence_examples}
             />
           </Stack>
-          <Stack gap="24px" sx={{ marginTop: "15px" }}>
+          <Stack
+            sx={{
+              gap: "24px",
+              marginTop: "15px",
+            }}
+          >
             <WorkflowFields
               formData={formData}
               onFieldChange={handleWorkflowFieldChange}
@@ -444,7 +449,9 @@ const VWISO27001AnnexDrawerDialog = ({
       <Dialog
         open={auditedStatusModalOpen}
         onClose={() => setAuditedStatusModalOpen(false)}
-        PaperProps={{ sx: { width: "800px", maxWidth: "800px" } }}
+        slotProps={{
+          paper: { sx: { width: "800px", maxWidth: "800px" } },
+        }}
       >
         <AuditRiskPopup
           onClose={() => setAuditedStatusModalOpen(false)}

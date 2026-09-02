@@ -521,9 +521,9 @@ const SidebarShell: FC<SidebarShellProps> = ({
     <Stack
       component="aside"
       className={`sidebar-menu ${collapsed ? "collapsed" : "expanded"}`}
-      py={theme.spacing(6)}
-      gap={theme.spacing(2)}
       sx={{
+        py: theme.spacing(6),
+        gap: theme.spacing(2),
         width: collapsed ? "78px" : "260px",
         minWidth: collapsed ? "78px" : "260px",
         maxWidth: collapsed ? "78px" : "260px",
@@ -535,29 +535,35 @@ const SidebarShell: FC<SidebarShellProps> = ({
         borderRight: `1px solid ${theme.palette.border?.dark || borderPalette.dark}`,
         borderRadius: 0,
         backgroundColor: theme.palette.background.main,
+
         transition:
           "width 650ms cubic-bezier(0.36, -0.01, 0, 0.77), min-width 650ms cubic-bezier(0.36, -0.01, 0, 0.77), max-width 650ms cubic-bezier(0.36, -0.01, 0, 0.77)",
       }}
     >
       {/* Logo Header */}
       <Stack
-        pt={theme.spacing(6)}
-        pb={theme.spacing(12)}
         sx={{
+          pt: theme.spacing(6),
+          pb: theme.spacing(12),
           position: "relative",
+
           pl: delayedCollapsed
             ? theme.spacing(8)
             : `calc(${theme.spacing(8)} + ${theme.spacing(4)})`,
+
           pr: theme.spacing(8),
         }}
       >
         <Stack
           direction="row"
-          alignItems="center"
-          justifyContent={delayedCollapsed ? "center" : "flex-start"}
-          gap={theme.spacing(2)}
           className="app-title"
-          sx={{ position: "relative", height: "20px" }}
+          sx={{
+            alignItems: "center",
+            justifyContent: delayedCollapsed ? "center" : "flex-start",
+            gap: theme.spacing(2),
+            position: "relative",
+            height: "20px",
+          }}
         >
           {!delayedCollapsed && (
             <Box

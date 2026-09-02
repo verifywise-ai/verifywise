@@ -379,7 +379,11 @@ const VWISO27001ClauseDrawerDialog = ({
         drawerClassName="vw-iso-27001-clause-drawer-dialog"
       >
         <TabPanel value="details" sx={{ padding: "15px 20px", gap: "15px" }}>
-          <Stack gap="15px">
+          <Stack
+            sx={{
+              gap: "15px",
+            }}
+          >
             <StructInfoPanels
               summary={displayData?.requirement_summary}
               summaryLabel="Requirement Summary"
@@ -387,7 +391,12 @@ const VWISO27001ClauseDrawerDialog = ({
               evidenceExamples={displayData?.evidence_examples}
             />
           </Stack>
-          <Stack gap="24px" sx={{ mt: "15px" }}>
+          <Stack
+            sx={{
+              gap: "24px",
+              mt: "15px",
+            }}
+          >
             <WorkflowFields
               formData={formData}
               onFieldChange={handleFieldChange}
@@ -438,7 +447,9 @@ const VWISO27001ClauseDrawerDialog = ({
       <Dialog
         open={auditedStatusModalOpen}
         onClose={() => setAuditedStatusModalOpen(false)}
-        PaperProps={{ sx: { width: "800px", maxWidth: "800px" } }}
+        slotProps={{
+          paper: { sx: { width: "800px", maxWidth: "800px" } },
+        }}
       >
         <AuditRiskPopup
           onClose={() => setAuditedStatusModalOpen(false)}

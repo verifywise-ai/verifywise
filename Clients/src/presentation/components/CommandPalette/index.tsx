@@ -675,12 +675,21 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             <Command.Empty className="command-empty">
               <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
                 <Search size={24} color="#999" />
-                <Typography color="text.secondary">
+                <Typography
+                  sx={{
+                    color: "text.secondary",
+                  }}
+                >
                   {search
                     ? `No results found for "${search}"${reviewStatus ? ` with status "${REVIEW_STATUS_OPTIONS.find((o) => o.value === reviewStatus)?.label}"` : ""}`
                     : `No files found with status "${REVIEW_STATUS_OPTIONS.find((o) => o.value === reviewStatus)?.label}"`}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "text.secondary",
+                  }}
+                >
                   {search
                     ? "Try different keywords or check spelling"
                     : "Try a different status or add a search term"}
@@ -824,7 +833,13 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
               )}
 
               <Command.Empty className="command-empty">
-                <Typography color="text.secondary">No commands found for "{search}"</Typography>
+                <Typography
+                  sx={{
+                    color: "text.secondary",
+                  }}
+                >
+                  No commands found for "{search}"
+                </Typography>
               </Command.Empty>
 
               {groupedCommands.map(

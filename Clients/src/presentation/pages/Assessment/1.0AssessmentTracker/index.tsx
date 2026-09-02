@@ -286,12 +286,14 @@ const AssessmentTracker = ({
           </Stack>
           <Divider orientation="vertical" flexItem />
           <Stack
-            flex={1}
-            minWidth={0}
-            paddingY={2}
-            paddingLeft={8}
-            paddingRight={0}
-            sx={{ overflowY: "auto" }}
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              paddingY: 2,
+              paddingLeft: 8,
+              paddingRight: 0,
+              overflowY: "auto",
+            }}
           >
             {loadingAssessmentSubtopic ? (
               <CustomizableSkeleton

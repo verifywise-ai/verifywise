@@ -115,7 +115,13 @@ export default function ProviderModelFields({
           >
             Popular Models
           </Typography>
-          <Stack direction="row" flexWrap="wrap" gap={1}>
+          <Stack
+            direction="row"
+            sx={{
+              flexWrap: "wrap",
+              gap: 1,
+            }}
+          >
             {OPENROUTER_POPULAR_MODELS.map((m) => (
               <MuiChip
                 key={m.id}
@@ -181,9 +187,11 @@ export default function ProviderModelFields({
                 <MenuItem key={model.id} value={model.id}>
                   <Stack
                     direction="row"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    sx={{ width: "100%" }}
+                    sx={{
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      width: "100%",
+                    }}
                   >
                     <Typography sx={{ fontSize: "13px" }}>{model.name}</Typography>
                     {mode === "model" && model.inputCost !== undefined && (
@@ -257,9 +265,11 @@ export default function ProviderModelFields({
                 <MenuItem key={model.id} value={model.id}>
                   <Stack
                     direction="row"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    sx={{ width: "100%" }}
+                    sx={{
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      width: "100%",
+                    }}
                   >
                     <Typography sx={{ fontSize: "13px" }}>{model.name}</Typography>
                     {model.description && (
@@ -339,7 +349,13 @@ export default function ProviderModelFields({
                 border: `1px solid ${palette.status.success.border}`,
               }}
             >
-              <Stack direction="row" alignItems="center" spacing={1}>
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <Check size={16} color={palette.status.success.text} />
                 <Typography sx={{ fontSize: "12px", color: palette.status.success.text }}>
                   API key configured — will be saved for future experiments

@@ -59,10 +59,28 @@ export default function DatasetPreviewDrawer({
         }}
       >
         {/* Header */}
-        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
-          <Stack direction="row" alignItems="center" spacing={1}>
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             <Database size={18} color={palette.brand.primary} />
-            <Typography fontWeight={600} color={theme.palette.text.primary}>
+            <Typography
+              color={theme.palette.text.primary}
+              sx={{
+                fontWeight: 600,
+              }}
+            >
               {datasetName || "Dataset"}
             </Typography>
             {prompts.length > 0 && (
@@ -85,7 +103,12 @@ export default function DatasetPreviewDrawer({
         {/* Empty State */}
         {!loading && prompts.length === 0 && (
           <Box sx={{ textAlign: "center", py: 8 }}>
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               No prompts found in this dataset.
             </Typography>
           </Box>

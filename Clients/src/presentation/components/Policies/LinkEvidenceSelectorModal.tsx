@@ -383,7 +383,6 @@ const LinkEvidenceSelectorModal: React.FC<LinkEvidenceSelectorModalProps> = ({
                   rowsPerPage={rowsPerPage}
                   rowsPerPageOptions={[5, 10, 15, 25]}
                   onRowsPerPageChange={handleChangeRowsPerPage}
-                  ActionsComponent={(props) => <TablePaginationActions {...props} />}
                   slotProps={{
                     select: {
                       MenuProps: paginationMenuProps(theme),
@@ -392,6 +391,7 @@ const LinkEvidenceSelectorModal: React.FC<LinkEvidenceSelectorModalProps> = ({
                     },
                   }}
                   sx={paginationStyle(theme)}
+                  ActionsComponent={(props) => <TablePaginationActions {...props} />}
                 />
               </TableRow>
             </TableFooter>

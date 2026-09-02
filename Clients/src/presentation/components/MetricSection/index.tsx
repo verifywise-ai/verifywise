@@ -44,7 +44,14 @@ const MetricSection: FC<MetricSectionProps> = ({ title, assessments, controls })
       >
         {title}
       </Typography>
-      <Stack direction="row" justifyContent="space-between" spacing={15} sx={{ mb: 17 }}>
+      <Stack
+        direction="row"
+        spacing={15}
+        sx={{
+          justifyContent: "space-between",
+          mb: 17,
+        }}
+      >
         {metrics.map((metric, index) => (
           <StyledStack key={index}>
             <Typography sx={styles.gridTitle}>{metric.title}</Typography>

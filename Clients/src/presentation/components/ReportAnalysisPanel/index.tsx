@@ -79,8 +79,8 @@ function WarningNotice({ icon: Icon, text }: { icon: LucideIcon; text: string })
     <Stack
       direction="row"
       spacing="12px"
-      alignItems="flex-start"
       sx={{
+        alignItems: "flex-start",
         backgroundColor: theme.palette.status.warning.bg,
         border: `1px solid ${theme.palette.status.warning.main}`,
         borderRadius: "4px",
@@ -139,7 +139,13 @@ function ListItem({
   const theme = useTheme();
   return (
     <Stack spacing="4px">
-      <Stack direction="row" spacing="8px" alignItems="flex-start">
+      <Stack
+        direction="row"
+        spacing="8px"
+        sx={{
+          alignItems: "flex-start",
+        }}
+      >
         <Typography
           sx={{
             fontSize: 13,

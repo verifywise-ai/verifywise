@@ -203,7 +203,13 @@ const SharedView: React.FC = () => {
   const formatCellValue = (key: string, value: any) => {
     if (value === null || value === undefined) {
       return (
-        <Typography variant="body2" color="textSecondary" fontStyle="italic">
+        <Typography
+          variant="body2"
+          color="textSecondary"
+          sx={{
+            fontStyle: "italic",
+          }}
+        >
           N/A
         </Typography>
       );
@@ -409,7 +415,13 @@ const SharedView: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           {value === null || value === undefined ? (
-                            <Typography variant="body2" color="textSecondary" fontStyle="italic">
+                            <Typography
+                              variant="body2"
+                              color="textSecondary"
+                              sx={{
+                                fontStyle: "italic",
+                              }}
+                            >
                               N/A
                             </Typography>
                           ) : typeof value === "object" ? (

@@ -115,7 +115,12 @@ const ScenarioFormModal: React.FC<ScenarioFormModalProps> = ({
       isSubmitting={!isValid || isSubmitting}
       fitContent
     >
-      <Stack gap="16px" sx={{ minWidth: 480 }}>
+      <Stack
+        sx={{
+          gap: "16px",
+          minWidth: 480,
+        }}
+      >
         <GovernanceTooltip
           header="Scenario name"
           description="Short descriptive name for this scenario"
@@ -155,7 +160,14 @@ const ScenarioFormModal: React.FC<ScenarioFormModalProps> = ({
               Industry
             </Typography>
           </GovernanceTooltip>
-          <Stack direction="row" gap="8px" flexWrap="wrap" useFlexGap>
+          <Stack
+            direction="row"
+            useFlexGap
+            sx={{
+              gap: "8px",
+              flexWrap: "wrap",
+            }}
+          >
             {INDUSTRY_OPTIONS.map((ind) => (
               <Box
                 key={ind}
@@ -198,7 +210,14 @@ const ScenarioFormModal: React.FC<ScenarioFormModalProps> = ({
               Region
             </Typography>
           </GovernanceTooltip>
-          <Stack direction="row" gap="8px" flexWrap="wrap" useFlexGap>
+          <Stack
+            direction="row"
+            useFlexGap
+            sx={{
+              gap: "8px",
+              flexWrap: "wrap",
+            }}
+          >
             {REGION_OPTIONS.map((reg) => (
               <Box
                 key={reg}
@@ -240,7 +259,14 @@ const ScenarioFormModal: React.FC<ScenarioFormModalProps> = ({
               Frameworks *
             </Typography>
           </GovernanceTooltip>
-          <Stack direction="row" gap="8px" flexWrap="wrap" useFlexGap>
+          <Stack
+            direction="row"
+            useFlexGap
+            sx={{
+              gap: "8px",
+              flexWrap: "wrap",
+            }}
+          >
             {FRAMEWORK_OPTIONS.map((fw) => {
               const isSelected = selectedFrameworks.includes(fw.id);
               const isPrimary = primaryFramework === fw.id;

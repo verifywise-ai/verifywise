@@ -459,7 +459,13 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
                     e.stopPropagation();
                   }}
                 >
-                  <Stack direction="row" alignItems="center" gap={0.5}>
+                  <Stack
+                    direction="row"
+                    sx={{
+                      alignItems: "center",
+                      gap: 0.5,
+                    }}
+                  >
                     <ViewRelationshipsButton
                       entityId={modelInventory.id || 0}
                       entityType="model"

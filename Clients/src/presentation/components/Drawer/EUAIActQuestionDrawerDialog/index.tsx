@@ -383,7 +383,11 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
         drawerClassName="eu-ai-act-question-drawer-dialog"
       >
         <TabPanel value="details" sx={{ padding: "15px 20px", gap: "15px" }}>
-          <Stack gap="15px">
+          <Stack
+            sx={{
+              gap: "15px",
+            }}
+          >
             {displayQuestion?.question && (
               <Stack
                 sx={{
@@ -393,10 +397,20 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                   borderRadius: "4px",
                 }}
               >
-                <Typography fontSize={13} sx={{ marginBottom: "8px" }}>
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                    marginBottom: "8px",
+                  }}
+                >
                   <strong>Question:</strong>
                 </Typography>
-                <Typography fontSize={13} color="text.secondary">
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                    color: "text.secondary",
+                  }}
+                >
                   {displayQuestion.question}
                 </Typography>
               </Stack>
@@ -411,16 +425,33 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                   borderRadius: "4px",
                 }}
               >
-                <Typography fontSize={13} sx={{ marginBottom: "8px", fontWeight: 600 }}>
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                    marginBottom: "8px",
+                    fontWeight: 600,
+                  }}
+                >
                   Hint:
                 </Typography>
-                <Typography fontSize={13} color="#666">
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                    color: "#666",
+                  }}
+                >
                   {displayQuestion.hint}
                 </Typography>
               </Stack>
             )}
 
-            <Stack direction="row" gap={1} alignItems="center">
+            <Stack
+              direction="row"
+              sx={{
+                gap: 1,
+                alignItems: "center",
+              }}
+            >
               {displayQuestion?.priority_level &&
                 (() => {
                   const colors = getPriorityColors(displayQuestion.priority_level);
@@ -481,7 +512,12 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
             </Stack>
 
             <Stack>
-              <Typography fontSize={13} sx={{ marginBottom: "5px" }}>
+              <Typography
+                sx={{
+                  fontSize: 13,
+                  marginBottom: "5px",
+                }}
+              >
                 Answer:
               </Typography>
               <RichTextEditor
@@ -504,7 +540,12 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
             </Stack>
           </Stack>
 
-          <Stack gap="24px" sx={{ mt: "8px" }}>
+          <Stack
+            sx={{
+              gap: "24px",
+              mt: "8px",
+            }}
+          >
             <Select
               id="status"
               label="Status:"

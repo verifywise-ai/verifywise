@@ -69,11 +69,19 @@ const DrawerFrame: React.FC<DrawerFrameProps> = ({
       <Stack sx={{ width: DRAWER_WIDTH }}>
         <Stack
           direction="row"
-          justifyContent="space-between"
-          alignItems="center"
-          padding="15px 20px"
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "15px 20px",
+          }}
         >
-          <Typography id={DRAWER_TITLE_ID} fontSize={15} fontWeight={700}>
+          <Typography
+            id={DRAWER_TITLE_ID}
+            sx={{
+              fontSize: 15,
+              fontWeight: 700,
+            }}
+          >
             {title}
           </Typography>
           <CustomizableButton
@@ -98,9 +106,13 @@ const DrawerFrame: React.FC<DrawerFrameProps> = ({
 
         <Stack
           direction="row"
-          justifyContent="flex-end"
-          alignItems="center"
-          sx={{ padding: "15px 20px", marginTop: "auto", gap: "12px" }}
+          sx={{
+            justifyContent: "flex-end",
+            alignItems: "center",
+            padding: "15px 20px",
+            marginTop: "auto",
+            gap: "12px",
+          }}
         >
           {extraFooter}
           <CustomizableButton

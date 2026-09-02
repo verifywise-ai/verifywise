@@ -33,7 +33,11 @@ export default function MockDashboard() {
   const maxEndpointCost = Math.max(...MOCK_BY_ENDPOINT.map((ep) => ep.total_cost));
 
   return (
-    <Stack gap="16px">
+    <Stack
+      sx={{
+        gap: "16px",
+      }}
+    >
       {/* Stat cards */}
       <Box sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
         <StatCard
@@ -64,7 +68,11 @@ export default function MockDashboard() {
 
       {/* Cost over time chart */}
       <Box sx={cardSx}>
-        <Stack gap="12px">
+        <Stack
+          sx={{
+            gap: "12px",
+          }}
+        >
           <Typography sx={sectionTitleSx}>Cost over time</Typography>
           <ResponsiveContainer width="100%" height={260} minWidth={0} style={{ outline: "none" }}>
             <BarChart data={MOCK_BY_DAY}>
@@ -99,21 +107,34 @@ export default function MockDashboard() {
       </Box>
 
       {/* Two-column: Cost by model + Cost by endpoint */}
-      <Stack direction={{ xs: "column", md: "row" }} gap="16px">
+      <Stack
+        direction={{ xs: "column", md: "row" }}
+        sx={{
+          gap: "16px",
+        }}
+      >
         {/* Cost by model */}
         <Box sx={{ ...cardSx, flex: 1 }}>
-          <Stack gap="12px">
+          <Stack
+            sx={{
+              gap: "12px",
+            }}
+          >
             <Typography sx={sectionTitleSx}>Cost by model</Typography>
-            <Stack gap="6px">
+            <Stack
+              sx={{
+                gap: "6px",
+              }}
+            >
               {MOCK_BY_MODEL.map((m, i) => {
                 const pct = (m.total_cost / maxModelCost) * 100;
                 return (
                   <Stack
                     key={m.group_key}
                     direction="row"
-                    justifyContent="space-between"
-                    alignItems="center"
                     sx={{
+                      justifyContent: "space-between",
+                      alignItems: "center",
                       p: "22px 14px",
                       borderRadius: "4px",
                       border: `1px solid ${palette.border.light}`,
@@ -134,9 +155,14 @@ export default function MockDashboard() {
                     />
                     <Stack
                       direction="row"
-                      alignItems="center"
-                      gap="8px"
-                      sx={{ flex: 1, minWidth: 0, position: "relative", zIndex: 1 }}
+                      sx={{
+                        alignItems: "center",
+                        gap: "8px",
+                        flex: 1,
+                        minWidth: 0,
+                        position: "relative",
+                        zIndex: 1,
+                      }}
                     >
                       <Box
                         sx={{
@@ -160,9 +186,13 @@ export default function MockDashboard() {
                     </Stack>
                     <Stack
                       direction="row"
-                      gap="12px"
-                      alignItems="center"
-                      sx={{ flexShrink: 0, position: "relative", zIndex: 1 }}
+                      sx={{
+                        gap: "12px",
+                        alignItems: "center",
+                        flexShrink: 0,
+                        position: "relative",
+                        zIndex: 1,
+                      }}
                     >
                       <Typography sx={{ fontSize: 11, color: palette.text.tertiary }}>
                         {m.total_requests.toLocaleString()} req
@@ -185,18 +215,26 @@ export default function MockDashboard() {
 
         {/* Cost by endpoint */}
         <Box sx={{ ...cardSx, flex: 1 }}>
-          <Stack gap="12px">
+          <Stack
+            sx={{
+              gap: "12px",
+            }}
+          >
             <Typography sx={sectionTitleSx}>Cost by endpoint</Typography>
-            <Stack gap="6px">
+            <Stack
+              sx={{
+                gap: "6px",
+              }}
+            >
               {MOCK_BY_ENDPOINT.map((ep, i) => {
                 const pct = (ep.total_cost / maxEndpointCost) * 100;
                 return (
                   <Stack
                     key={ep.group_key}
                     direction="row"
-                    justifyContent="space-between"
-                    alignItems="center"
                     sx={{
+                      justifyContent: "space-between",
+                      alignItems: "center",
                       p: "22px 14px",
                       borderRadius: "4px",
                       border: `1px solid ${palette.border.light}`,
@@ -217,9 +255,12 @@ export default function MockDashboard() {
                     />
                     <Stack
                       direction="row"
-                      alignItems="center"
-                      gap="8px"
-                      sx={{ position: "relative", zIndex: 1 }}
+                      sx={{
+                        alignItems: "center",
+                        gap: "8px",
+                        position: "relative",
+                        zIndex: 1,
+                      }}
                     >
                       <Box
                         sx={{
@@ -234,9 +275,12 @@ export default function MockDashboard() {
                     </Stack>
                     <Stack
                       direction="row"
-                      gap="12px"
-                      alignItems="center"
-                      sx={{ position: "relative", zIndex: 1 }}
+                      sx={{
+                        gap: "12px",
+                        alignItems: "center",
+                        position: "relative",
+                        zIndex: 1,
+                      }}
                     >
                       <Typography sx={{ fontSize: 11, color: palette.text.tertiary }}>
                         {ep.total_requests.toLocaleString()} req

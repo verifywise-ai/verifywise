@@ -67,10 +67,12 @@ export function ScoreBreakdown({
               >
                 <Stack
                   direction="row"
-                  justifyContent="space-between"
-                  alignItems="baseline"
-                  gap="8px"
-                  sx={{ mb: "8px" }}
+                  sx={{
+                    justifyContent: "space-between",
+                    alignItems: "baseline",
+                    gap: "8px",
+                    mb: "8px",
+                  }}
                 >
                   <Typography sx={{ fontSize: "13px", fontWeight: 600 }}>{domain.name}</Typography>
                   <Typography sx={{ fontSize: "12px", color: palette.text.tertiary }}>
@@ -102,9 +104,9 @@ export function ScoreBreakdown({
                   <Stack
                     key={id}
                     direction="row"
-                    alignItems="flex-start"
-                    gap="12px"
                     sx={{
+                      alignItems: "flex-start",
+                      gap: "12px",
                       backgroundColor: palette.background.main,
                       px: "16px",
                       py: "8px",
@@ -141,7 +143,14 @@ export function ScoreBreakdown({
           );
         })}
       </Box>
-      <Stack direction="row" flexWrap="wrap" gap="16px" sx={{ mt: "12px" }}>
+      <Stack
+        direction="row"
+        sx={{
+          flexWrap: "wrap",
+          gap: "16px",
+          mt: "12px",
+        }}
+      >
         {(
           [
             ["#13715B", "Disclosed"],
@@ -151,7 +160,14 @@ export function ScoreBreakdown({
             ["#98A2B3", "Not applicable"],
           ] as [string, string][]
         ).map(([c, l]) => (
-          <Stack key={l} direction="row" alignItems="center" gap="6px">
+          <Stack
+            key={l}
+            direction="row"
+            sx={{
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
             <Box
               sx={{ width: "10px", height: "10px", borderRadius: "999px", backgroundColor: c }}
             />

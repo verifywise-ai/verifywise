@@ -162,7 +162,12 @@ const EditUserModal = ({
           sx={{ width: "100%" }}
         />
         <Stack spacing={0.5}>
-          <Typography variant="body2" fontWeight={500}>
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: 500,
+            }}
+          >
             Organization
           </Typography>
           <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
@@ -179,7 +184,12 @@ const EditUserModal = ({
           sx={{ width: "100%" }}
         />
         <Stack spacing={0.5}>
-          <Typography variant="body2" fontWeight={500}>
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: 500,
+            }}
+          >
             Joined
           </Typography>
           <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
@@ -187,7 +197,12 @@ const EditUserModal = ({
           </Typography>
         </Stack>
         <Stack spacing={0.5}>
-          <Typography variant="body2" fontWeight={500}>
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: 500,
+            }}
+          >
             Last login
           </Typography>
           <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
@@ -448,7 +463,14 @@ const AllUsers = () => {
         </Button>
       }
     >
-      <Stack direction="row" alignItems="center" gap="8px" flexWrap="wrap">
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: "center",
+          gap: "8px",
+          flexWrap: "wrap",
+        }}
+      >
         <SearchBox
           placeholder="Search users..."
           value={searchTerm}
@@ -464,7 +486,23 @@ const AllUsers = () => {
           disableClearable={filterOrg === "all"}
           isOptionEqualToValue={(opt, val) => opt._id === val._id}
           sx={{ width: 220 }}
-          componentsProps={{
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              placeholder="All Organizations"
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  fontSize: 13,
+                  backgroundColor:
+                    filterOrg !== "all"
+                      ? theme.palette.background.fill
+                      : theme.palette.background.main,
+                  ...getSelectStyles(theme),
+                },
+              }}
+            />
+          )}
+          slotProps={{
             paper: {
               sx: {
                 "borderRadius": theme.shape.borderRadius,
@@ -486,22 +524,6 @@ const AllUsers = () => {
               },
             },
           }}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              placeholder="All Organizations"
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  fontSize: 13,
-                  backgroundColor:
-                    filterOrg !== "all"
-                      ? theme.palette.background.fill
-                      : theme.palette.background.main,
-                  ...getSelectStyles(theme),
-                },
-              }}
-            />
-          )}
         />
         <Select
           id="filter-role"
@@ -545,7 +567,13 @@ const AllUsers = () => {
                       }}
                       onClick={() => handleSort(field)}
                     >
-                      <Stack direction="row" alignItems="center" gap={0.5}>
+                      <Stack
+                        direction="row"
+                        sx={{
+                          alignItems: "center",
+                          gap: 0.5,
+                        }}
+                      >
                         {label}
                         <SortIcon size={12} style={{ opacity: isActive ? 1 : 0.3 }} />
                       </Stack>
@@ -567,7 +595,13 @@ const AllUsers = () => {
                     onClick={() => setEditTarget(user)}
                   >
                     <TableCell sx={tableStyles.body.cell}>
-                      <Stack direction="row" alignItems="center" gap={1}>
+                      <Stack
+                        direction="row"
+                        sx={{
+                          alignItems: "center",
+                          gap: 1,
+                        }}
+                      >
                         <Box
                           sx={{
                             width: 28,

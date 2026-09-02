@@ -226,7 +226,12 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
           ) : paginatedRows.length === 0 ? (
             <TableRow>
               <TableCell colSpan={6} sx={{ textAlign: "center", py: 4 }}>
-                <Typography variant="body2" color="text.secondary">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: "text.secondary",
+                  }}
+                >
                   {emptyMessage}
                 </Typography>
               </TableCell>
@@ -365,13 +370,13 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
                 page={page}
                 onPageChange={handleChangePage}
                 onRowsPerPageChange={handleChangeRowsPerPage}
-                ActionsComponent={TablePaginationActions}
                 sx={{
                   "borderBottom": "none",
                   "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": {
                     fontSize: "12px",
                   },
                 }}
+                ActionsComponent={TablePaginationActions}
               />
             </TableRow>
           </TableFooter>

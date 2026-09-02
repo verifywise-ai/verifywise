@@ -20,7 +20,12 @@ const CustomizableAlert = ({
       onClose={() => {}}
       sx={{ border: `1px solid ${border}`, backgroundColor: bg }}
     >
-      <Typography color={text} fontSize={13}>
+      <Typography
+        color={text}
+        sx={{
+          fontSize: 13,
+        }}
+      >
         {title}
       </Typography>
     </Alert>

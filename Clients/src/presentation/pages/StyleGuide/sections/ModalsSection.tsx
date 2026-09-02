@@ -69,12 +69,14 @@ const ModalsSection: React.FC = () => {
       <Dialog
         open={demoModalOpen}
         onClose={() => setDemoModalOpen(false)}
-        PaperProps={{
-          sx: {
-            width: 480,
-            maxWidth: "90vw",
-            borderRadius: "4px",
-            border: `1px solid ${theme.palette.border.light}`,
+        slotProps={{
+          paper: {
+            sx: {
+              width: 480,
+              maxWidth: "90vw",
+              borderRadius: "4px",
+              border: `1px solid ${theme.palette.border.light}`,
+            },
           },
         }}
       >
@@ -134,10 +136,12 @@ const ModalsSection: React.FC = () => {
         anchor="right"
         open={demoDrawerOpen}
         onClose={() => setDemoDrawerOpen(false)}
-        PaperProps={{
-          sx: {
-            width: 400,
-            backgroundColor: theme.palette.background.modal,
+        slotProps={{
+          paper: {
+            sx: {
+              width: 400,
+              backgroundColor: theme.palette.background.modal,
+            },
           },
         }}
       >

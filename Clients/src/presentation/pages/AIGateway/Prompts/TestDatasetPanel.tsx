@@ -304,7 +304,13 @@ export default function TestDatasetPanel({
                 "& .MuiLinearProgress-bar": { bgcolor: "#13715B" },
               }}
             />
-            <Typography fontSize={11} color="text.secondary" mt={0.5}>
+            <Typography
+              sx={{
+                fontSize: 11,
+                color: "text.secondary",
+                mt: 0.5,
+              }}
+            >
               {progress}% complete
             </Typography>
           </Box>
@@ -354,20 +360,40 @@ export default function TestDatasetPanel({
                       />
                     </TableCell>
                     <TableCell sx={{ ...CELL_SX, maxWidth: 200 }}>
-                      <Typography fontSize={11} noWrap title={result?.content}>
+                      <Typography
+                        noWrap
+                        title={result?.content}
+                        sx={{
+                          fontSize: 11,
+                        }}
+                      >
                         {result?.content || (isRunning && !result ? "..." : "-")}
                       </Typography>
                     </TableCell>
                     <TableCell sx={CELL_SX}>
-                      <Typography fontSize={11}>
+                      <Typography
+                        sx={{
+                          fontSize: 11,
+                        }}
+                      >
                         {result?.latency ? `${result.latency}ms` : "-"}
                       </Typography>
                     </TableCell>
                     <TableCell sx={CELL_SX}>
-                      <Typography fontSize={11}>{result?.tokens ? result.tokens : "-"}</Typography>
+                      <Typography
+                        sx={{
+                          fontSize: 11,
+                        }}
+                      >
+                        {result?.tokens ? result.tokens : "-"}
+                      </Typography>
                     </TableCell>
                     <TableCell sx={CELL_SX}>
-                      <Typography fontSize={11}>
+                      <Typography
+                        sx={{
+                          fontSize: 11,
+                        }}
+                      >
                         {result?.cost ? `$${result.cost.toFixed(4)}` : "-"}
                       </Typography>
                     </TableCell>
@@ -399,7 +425,12 @@ export default function TestDatasetPanel({
           }}
         >
           <Plus size={13} strokeWidth={1.5} />
-          <Typography fontSize={12} fontWeight={500}>
+          <Typography
+            sx={{
+              fontSize: 12,
+              fontWeight: 500,
+            }}
+          >
             Add test case
           </Typography>
         </Box>

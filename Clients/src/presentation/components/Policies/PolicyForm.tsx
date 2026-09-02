@@ -107,7 +107,14 @@ const PolicyForm: React.FC<PolicyFormProps> = ({
   return (
     <Stack spacing={2} sx={{ width: "100%" }}>
       {/* Row 1: Policy owner, Next review date, Status */}
-      <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ width: "100%" }}>
+      <Stack
+        direction="row"
+        spacing={2}
+        sx={{
+          alignItems: "flex-start",
+          width: "100%",
+        }}
+      >
         {/* Policy Owner */}
         <AutoCompleteField
           id="policy-owner-input"

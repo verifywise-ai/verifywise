@@ -400,7 +400,6 @@ const LinkedObjectsTable: React.FC<LinkedObjectsTableProps> = ({
                 onPageChange={handleChangePage}
                 onRowsPerPageChange={handleChangeRowsPerPage}
                 rowsPerPageOptions={[5, 10, 15, 25]}
-                ActionsComponent={TablePaginationActions}
                 sx={paginationStyle(theme)}
                 slotProps={{
                   select: {
@@ -409,6 +408,7 @@ const LinkedObjectsTable: React.FC<LinkedObjectsTableProps> = ({
                     sx: paginationSelectStyle(theme),
                   },
                 }}
+                ActionsComponent={TablePaginationActions}
               />
             </TableRow>
           </TableFooter>

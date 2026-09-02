@@ -184,7 +184,14 @@ export default function Tracked() {
 
       {!isLoading && !isError && rows.length > 0 && (
         <>
-          <Stack direction="row" alignItems="center" gap="8px" sx={{ mb: "16px" }}>
+          <Stack
+            direction="row"
+            sx={{
+              alignItems: "center",
+              gap: "8px",
+              mb: "16px",
+            }}
+          >
             <CustomSelect
               currentValue={category}
               onValueChange={async (v) => {
@@ -243,7 +250,13 @@ export default function Tracked() {
             ))}
           </Box>
 
-          <Stack direction="row" alignItems="center" justifyContent="flex-end">
+          <Stack
+            direction="row"
+            sx={{
+              alignItems: "center",
+              justifyContent: "flex-end",
+            }}
+          >
             <TablePagination
               component="div"
               count={sortedRows.length}
@@ -255,9 +268,9 @@ export default function Tracked() {
                 setRowsPerPage(parseInt(e.target.value, 10));
                 setPage(0);
               }}
-              ActionsComponent={TablePaginationActions as any}
               labelRowsPerPage="Per page"
               sx={{ mt: "24px" }}
+              ActionsComponent={TablePaginationActions as any}
             />
           </Stack>
         </>

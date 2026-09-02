@@ -137,8 +137,8 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
     <Stack
       direction="row"
       spacing={1}
-      alignItems="center"
       sx={{
+        alignItems: "center",
         visibility: shouldHide ? "hidden" : "visible",
         opacity: shouldHide ? 0 : 1,
         pointerEvents: shouldHide ? "none" : "auto",

@@ -533,10 +533,21 @@ const Framework = () => {
             border: "1px solid status.default.border",
           }}
         >
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+          <Typography
+            variant="body1"
+            sx={{
+              color: "text.secondary",
+              mb: 2,
+            }}
+          >
             No organizational frameworks assigned yet.
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             Use the "Manage Frameworks" button to add frameworks to your organizational project.
           </Typography>
         </Box>
@@ -559,7 +570,9 @@ const Framework = () => {
               <TabList
                 data-joyride-id="framework-clause-tabs"
                 onChange={handleIso27001TabChange}
-                TabIndicatorProps={{ style: { backgroundColor: "brand.primary" } }}
+                slotProps={{
+                  indicator: { style: { backgroundColor: "brand.primary" } },
+                }}
                 sx={tabListStyle}
               >
                 <Tab label="Clauses" value="clause" sx={tabStyle} disableRipple />
@@ -625,7 +638,9 @@ const Framework = () => {
               <TabList
                 data-joyride-id="framework-clause-tabs"
                 onChange={handleIso42001TabChange}
-                TabIndicatorProps={{ style: { backgroundColor: "brand.primary" } }}
+                slotProps={{
+                  indicator: { style: { backgroundColor: "brand.primary" } },
+                }}
                 sx={tabListStyle}
               >
                 <Tab label="Clauses" value="clauses" sx={tabStyle} disableRipple />
@@ -691,7 +706,9 @@ const Framework = () => {
               <TabList
                 data-joyride-id="framework-nist-ai-rmf-tabs"
                 onChange={handleNistAiRmfTabChange}
-                TabIndicatorProps={{ style: { backgroundColor: "brand.primary" } }}
+                slotProps={{
+                  indicator: { style: { backgroundColor: "brand.primary" } },
+                }}
                 sx={tabListStyle}
               >
                 <Tab label="Govern" value="govern" sx={tabStyle} disableRipple />
@@ -853,10 +870,14 @@ const Framework = () => {
                     </ListItemIcon>
                     <ListItemText
                       primary="Add/remove frameworks"
-                      primaryTypographyProps={{
-                        fontSize: "13px",
-                        fontWeight: 400,
-                        color: "text.primary",
+                      slotProps={{
+                        primary: {
+                          sx: {
+                            fontSize: "13px",
+                            fontWeight: 400,
+                            color: "text.primary",
+                          },
+                        },
                       }}
                     />
                   </MenuItem>
@@ -874,10 +895,14 @@ const Framework = () => {
                     </ListItemIcon>
                     <ListItemText
                       primary="Edit project"
-                      primaryTypographyProps={{
-                        fontSize: "13px",
-                        fontWeight: 400,
-                        color: "text.primary",
+                      slotProps={{
+                        primary: {
+                          sx: {
+                            fontSize: "13px",
+                            fontWeight: 400,
+                            color: "text.primary",
+                          },
+                        },
                       }}
                     />
                   </MenuItem>
@@ -896,10 +921,14 @@ const Framework = () => {
                     </ListItemIcon>
                     <ListItemText
                       primary="Delete project"
-                      primaryTypographyProps={{
-                        fontSize: "13px",
-                        fontWeight: 400,
-                        color: "error.main",
+                      slotProps={{
+                        primary: {
+                          sx: {
+                            fontSize: "13px",
+                            fontWeight: 400,
+                            color: "error.main",
+                          },
+                        },
                       }}
                     />
                   </MenuItem>
@@ -1129,7 +1158,11 @@ const Framework = () => {
           <ConfirmationModal
             title="Confirm Delete"
             body={
-              <Typography fontSize={13}>
+              <Typography
+                sx={{
+                  fontSize: 13,
+                }}
+              >
                 Are you sure you want to delete the project "{organizationalProject.project_title}"?
                 This action cannot be undone and will remove all associated data.
               </Typography>

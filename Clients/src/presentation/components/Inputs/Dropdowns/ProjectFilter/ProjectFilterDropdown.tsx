@@ -29,25 +29,27 @@ function ProjectFilterDropdown({
           },
         }}
         MenuProps={{
-          PaperProps: {
-            sx: {
-              "borderRadius": theme.shape.borderRadius,
-              "boxShadow": theme.boxShadow,
-              "mt": 1,
-              "& .MuiMenuItem-root": {
-                "fontSize": 13,
-                "color": theme.palette.text.primary,
-                "&:hover": {
-                  backgroundColor: theme.palette.background.accent,
-                },
-                "&.Mui-selected": {
-                  "backgroundColor": theme.palette.background.accent,
+          slotProps: {
+            paper: {
+              sx: {
+                "borderRadius": theme.shape.borderRadius,
+                "boxShadow": theme.boxShadow,
+                "mt": 1,
+                "& .MuiMenuItem-root": {
+                  "fontSize": 13,
+                  "color": theme.palette.text.primary,
                   "&:hover": {
                     backgroundColor: theme.palette.background.accent,
                   },
-                },
-                "& .MuiTouchRipple-root": {
-                  display: "none",
+                  "&.Mui-selected": {
+                    "backgroundColor": theme.palette.background.accent,
+                    "&:hover": {
+                      backgroundColor: theme.palette.background.accent,
+                    },
+                  },
+                  "& .MuiTouchRipple-root": {
+                    display: "none",
+                  },
                 },
               },
             },

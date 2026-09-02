@@ -83,7 +83,14 @@ const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({
         background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
       }}
     >
-      <Stack direction="row" gap="16px" alignItems="center" sx={{ mb: "16px" }}>
+      <Stack
+        direction="row"
+        sx={{
+          gap: "16px",
+          alignItems: "center",
+          mb: "16px",
+        }}
+      >
         <Scale size={20} color={brand.primary} />
         <Typography sx={{ fontSize: 14, fontWeight: 600 }}>Scenario Comparison</Typography>
       </Stack>
@@ -99,7 +106,14 @@ const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({
       </GovernanceTooltip>
 
       {/* Scenario selectors */}
-      <Stack direction="row" gap="8px" flexWrap="wrap" sx={{ mb: "16px" }}>
+      <Stack
+        direction="row"
+        sx={{
+          gap: "8px",
+          flexWrap: "wrap",
+          mb: "16px",
+        }}
+      >
         {scenarios.map((scenario) => {
           const isSelected = selectedIds.includes(scenario.id);
           const disabled = !isSelected && selectedIds.length >= MAX_COMPARE;
@@ -203,7 +217,13 @@ const ScenarioComparison: React.FC<ScenarioComparisonProps> = ({
                 ].filter(Boolean) as number[];
                 return (
                   <Cell key={`f-${scenario.id}`}>
-                    <Stack direction="row" flexWrap="wrap" gap="4px">
+                    <Stack
+                      direction="row"
+                      sx={{
+                        flexWrap: "wrap",
+                        gap: "4px",
+                      }}
+                    >
                       {fwIds.map((id) => (
                         <FrameworkChip
                           key={id}

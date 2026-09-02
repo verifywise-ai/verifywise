@@ -172,8 +172,11 @@ const ValidationReportDrawer = ({
                   <Stack
                     key={`${entry.source}-${entry.at}-${index}`}
                     direction="row"
-                    alignItems="flex-start"
-                    sx={{ gap: "8px", flexWrap: "wrap" }}
+                    sx={{
+                      alignItems: "flex-start",
+                      gap: "8px",
+                      flexWrap: "wrap",
+                    }}
                   >
                     <Box component="span" sx={mrmTriggerBadgeStyle}>
                       {revalidationTriggerSourceLabel(entry.source)}
@@ -207,7 +210,14 @@ const ValidationReportDrawer = ({
 
           {REPORT_SECTIONS.map((section, index) => (
             <Box key={section.key}>
-              <Stack direction="row" alignItems="center" sx={{ gap: "8px", marginBottom: "8px" }}>
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: "center",
+                  gap: "8px",
+                  marginBottom: "8px",
+                }}
+              >
                 <Typography
                   component="span"
                   sx={{

@@ -55,12 +55,23 @@ const CrossMappingsTab: React.FC<CrossMappingsTabProps> = ({
           Linked risks
         </Typography>
 
-        <Typography variant="body2" color="text.tertiary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.tertiary",
+          }}
+        >
           Link risks from your risk database to track which risks are being addressed by this
           implementation.
         </Typography>
 
-        <Stack direction="row" spacing={2} alignItems="center">
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{
+            alignItems: "center",
+          }}
+        >
           <CustomizableButton
             variant="outlined"
             onClick={() => setIsLinkedRisksModalOpen(true)}

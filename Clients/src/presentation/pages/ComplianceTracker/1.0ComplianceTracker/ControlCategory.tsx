@@ -115,7 +115,9 @@ const ControlCategoryTile: React.FC<ControlCategoryProps> = ({
         >
           <Typography
             className="new-compliance-tracker-details-accordion-summary-title"
-            fontSize={13}
+            sx={{
+              fontSize: 13,
+            }}
           >
             {controlCategory.order_no} {controlCategory.title}
           </Typography>

@@ -116,11 +116,13 @@ function DropDowns({
       }}
     >
       <Stack
-        display="flex"
-        flexDirection="row"
-        justifyContent="space-between"
-        alignItems="flex-end"
-        gap={theme.spacing(4)}
+        sx={{
+          display: "flex",
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "flex-end",
+          gap: theme.spacing(4),
+        }}
       >
         <Select
           id="status"
@@ -169,11 +171,13 @@ function DropDowns({
 
       {/* Second Row */}
       <Stack
-        display="flex"
-        flexDirection="row"
-        justifyContent="space-between"
-        alignItems="flex-end"
-        gap={theme.spacing(4)}
+        sx={{
+          display: "flex",
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "flex-end",
+          gap: theme.spacing(4),
+        }}
       >
         <Select
           id="Owner"
@@ -220,7 +224,13 @@ function DropDowns({
         />
       </Stack>
 
-      <Typography fontSize={13} fontWeight={400} sx={{ textAlign: "start" }}>
+      <Typography
+        sx={{
+          fontSize: 13,
+          fontWeight: 400,
+          textAlign: "start",
+        }}
+      >
         Implementation details:
       </Typography>
       <Stack

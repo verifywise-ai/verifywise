@@ -565,7 +565,13 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
                     }}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <Stack direction="row" alignItems="center" gap={0.5}>
+                    <Stack
+                      direction="row"
+                      sx={{
+                        alignItems: "center",
+                        gap: 0.5,
+                      }}
+                    >
                       <ViewRelationshipsButton
                         entityId={project.id}
                         entityType="useCase"
@@ -618,7 +624,6 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
                   rowsPerPage={rowsPerPage}
                   rowsPerPageOptions={[5, 10, 15, 20, 25]}
                   onRowsPerPageChange={handleChangeRowsPerPage}
-                  ActionsComponent={(props) => <TablePaginationActions {...props} />}
                   labelRowsPerPage="Use cases per page"
                   labelDisplayedRows={({ page, count }) =>
                     `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
@@ -627,17 +632,22 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
                     select: {
                       MenuProps: {
                         keepMounted: true,
-                        PaperProps: {
-                          className: "pagination-dropdown",
-                          sx: {
-                            mt: 0,
-                            mb: theme.spacing(2),
+
+                        slotProps: {
+                          paper: {
+                            className: "pagination-dropdown",
+                            sx: {
+                              mt: 0,
+                              mb: theme.spacing(2),
+                            },
                           },
                         },
+
                         transformOrigin: {
                           vertical: "bottom",
                           horizontal: "left",
                         },
+
                         anchorOrigin: { vertical: "top", horizontal: "left" },
                         sx: { mt: theme.spacing(-2) },
                       },
@@ -668,6 +678,7 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
                       padding: theme.spacing(4),
                     },
                   }}
+                  ActionsComponent={(props) => <TablePaginationActions {...props} />}
                 />
               </TableRow>
             </TableFooter>

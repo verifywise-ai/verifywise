@@ -188,7 +188,11 @@ const ProjectRiskLinkedPolicies: React.FC<ProjectRiskLinkedPoliciesModalProps> =
 
       {alert && (
         <Fade in={showAlert} timeout={300} style={toastFadeStyle}>
-          <Box mb={2}>
+          <Box
+            sx={{
+              mb: 2,
+            }}
+          >
             <Alert
               variant={alert.variant}
               title={alert.title}

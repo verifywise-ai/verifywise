@@ -118,9 +118,9 @@ const EntityGraphModalInner: FC<EntityGraphModalProps> = ({
         {/* Header */}
         <Stack
           direction="row"
-          alignItems="center"
-          justifyContent="space-between"
           sx={{
+            alignItems: "center",
+            justifyContent: "space-between",
             px: 3,
             py: 2,
             borderBottom: `1px solid ${theme.palette.border.light}`,
@@ -128,7 +128,13 @@ const EntityGraphModalInner: FC<EntityGraphModalProps> = ({
             flexShrink: 0,
           }}
         >
-          <Stack direction="row" alignItems="center" gap={1.5}>
+          <Stack
+            direction="row"
+            sx={{
+              alignItems: "center",
+              gap: 1.5,
+            }}
+          >
             <Typography
               id="entity-graph-modal"
               variant="h6"
@@ -158,7 +164,13 @@ const EntityGraphModalInner: FC<EntityGraphModalProps> = ({
             )}
           </Stack>
 
-          <Stack direction="row" alignItems="center" gap={1}>
+          <Stack
+            direction="row"
+            sx={{
+              alignItems: "center",
+              gap: 1,
+            }}
+          >
             <IconButton
               onClick={handleClose}
               size="small"

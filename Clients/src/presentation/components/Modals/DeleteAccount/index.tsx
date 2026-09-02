@@ -54,13 +54,15 @@ const DeleteAccountConfirmation: React.FC<IDeleteAccountConfirmationProps> = ({
         onClose={onClose}
         aria-labelledby="alert-dialog-title"
         aria-describedby="alert-dialog-description"
-        PaperProps={{
-          sx: {
-            width: "439px", // Custom width
-            height: "240px", // Custom height
-            maxWidth: "none", // Disable the default maxWidth behavior
-            padding: "32px",
-            overflowY: "none",
+        slotProps={{
+          paper: {
+            sx: {
+              width: "439px", // Custom width
+              height: "240px", // Custom height
+              maxWidth: "none", // Disable the default maxWidth behavior
+              padding: "32px",
+              overflowY: "none",
+            },
           },
         }}
       >

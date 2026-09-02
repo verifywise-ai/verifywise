@@ -259,7 +259,13 @@ export default function AIToolsPage() {
     const cfg = STATUS_CONFIG[selectedTool.status];
     return (
       <PageHeaderExtended title={selectedTool.name} description="AI tool details">
-        <Stack direction="row" alignItems="center" gap="8px">
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
           <IconButton onClick={handleBack} size="small">
             <ArrowLeft size={16} strokeWidth={1.5} />
           </IconButton>
@@ -277,7 +283,11 @@ export default function AIToolsPage() {
         {detailLoading ? (
           <Skeleton height={300} />
         ) : (
-          <Stack gap="16px">
+          <Stack
+            sx={{
+              gap: "16px",
+            }}
+          >
             {/* Summary cards */}
             <Box
               sx={{
@@ -338,7 +348,13 @@ export default function AIToolsPage() {
             </Box>
 
             {/* Status change */}
-            <Stack direction="row" alignItems="center" gap="8px">
+            <Stack
+              direction="row"
+              sx={{
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
               <Typography sx={{ fontSize: 13, fontWeight: 500, color: palette.text.secondary }}>
                 Status:
               </Typography>
@@ -412,7 +428,12 @@ export default function AIToolsPage() {
             />
 
             {/* Departments & Top users side by side */}
-            <Stack direction="row" gap="16px">
+            <Stack
+              direction="row"
+              sx={{
+                gap: "16px",
+              }}
+            >
               {selectedTool.departments && selectedTool.departments.length > 0 && (
                 <Stack sx={{ flex: 1 }}>
                   <Typography sx={{ fontSize: 15, fontWeight: 600, mb: 1 }}>Departments</Typography>
@@ -505,7 +526,12 @@ export default function AIToolsPage() {
       helpArticlePath="shadow-ai/ai-tools"
       tipBoxEntity="shadow-ai-tools"
     >
-      <Stack direction="row" justifyContent="flex-end">
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: "flex-end",
+        }}
+      >
         <Select
           id="tools-status-filter"
           value={statusFilter}
@@ -561,7 +587,13 @@ export default function AIToolsPage() {
                     onClick={() => handleToolClick(t)}
                   >
                     <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                      <Stack direction="row" alignItems="center" gap="6px">
+                      <Stack
+                        direction="row"
+                        sx={{
+                          alignItems: "center",
+                          gap: "6px",
+                        }}
+                      >
                         <ToolIcon vendor={t.vendor} />
                         {t.name}
                       </Stack>
@@ -616,7 +648,6 @@ export default function AIToolsPage() {
                   onPageChange={(_e, newPage) => setPage(newPage + 1)}
                   rowsPerPage={ROWS_PER_PAGE}
                   rowsPerPageOptions={[ROWS_PER_PAGE]}
-                  ActionsComponent={(props) => <TablePaginationActions {...props} />}
                   labelRowsPerPage=""
                   labelDisplayedRows={({ page: p, count }) =>
                     `Page ${p + 1} of ${Math.max(0, Math.ceil(count / ROWS_PER_PAGE))}`
@@ -625,10 +656,14 @@ export default function AIToolsPage() {
                     select: {
                       MenuProps: {
                         keepMounted: true,
-                        PaperProps: {
-                          className: "pagination-dropdown",
-                          sx: { mt: 0, mb: theme.spacing(2) },
+
+                        slotProps: {
+                          paper: {
+                            className: "pagination-dropdown",
+                            sx: { mt: 0, mb: theme.spacing(2) },
+                          },
                         },
+
                         transformOrigin: { vertical: "bottom", horizontal: "left" },
                         anchorOrigin: { vertical: "top", horizontal: "left" },
                         sx: { mt: theme.spacing(-2) },
@@ -657,6 +692,7 @@ export default function AIToolsPage() {
                       padding: theme.spacing(4),
                     },
                   }}
+                  ActionsComponent={(props) => <TablePaginationActions {...props} />}
                 />
               </TableRow>
             </TableFooter>

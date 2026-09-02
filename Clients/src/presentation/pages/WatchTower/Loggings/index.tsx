@@ -92,9 +92,9 @@ const WatchTowerLogs = () => {
     return (
       <Stack className="watch-tower-logs" spacing={theme.spacing(4)}>
         <Stack
-          alignItems="center"
-          justifyContent="center"
           sx={{
+            alignItems: "center",
+            justifyContent: "center",
             border: `1px solid ${borderPalette.dark}`,
             borderRadius: "4px",
             padding: theme.spacing(15, 5),

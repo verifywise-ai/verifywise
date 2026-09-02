@@ -75,15 +75,23 @@ function MessageCell({ msg, placeholder }: { msg: Message | null; placeholder?: 
   return (
     <Box sx={{ flex: 1, p: "12px" }}>
       <Typography
-        fontSize={11}
-        fontWeight={600}
-        color="text.secondary"
-        textTransform="uppercase"
-        mb={0.5}
+        sx={{
+          fontSize: 11,
+          fontWeight: 600,
+          color: "text.secondary",
+          textTransform: "uppercase",
+          mb: 0.5,
+        }}
       >
         {msg.role}
       </Typography>
-      <Typography fontSize={12} sx={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+      <Typography
+        sx={{
+          fontSize: 12,
+          whiteSpace: "pre-wrap",
+          lineHeight: 1.6,
+        }}
+      >
         {msg.content || "(empty)"}
       </Typography>
     </Box>
@@ -119,12 +127,24 @@ function ConfigDiff({ a, b }: { a: Version; b: Version }) {
         borderRadius: "4px",
       }}
     >
-      <Typography fontSize={12} fontWeight={600} color="text.secondary" mb="8px">
+      <Typography
+        sx={{
+          fontSize: 12,
+          fontWeight: 600,
+          color: "text.secondary",
+          mb: "8px",
+        }}
+      >
         Configuration changes
       </Typography>
       <Stack spacing="4px">
         {changes.map((c) => (
-          <Typography key={c.field} fontSize={12}>
+          <Typography
+            key={c.field}
+            sx={{
+              fontSize: 12,
+            }}
+          >
             <strong>{c.field}:</strong> <span style={{ color: "#B42318" }}>{c.from}</span>
             {" → "}
             <span style={{ color: "#027A48" }}>{c.to}</span>
@@ -160,12 +180,24 @@ export default function VersionDiffModal({
       {/* Column headers */}
       <Box sx={{ display: "flex", gap: "8px", mb: "8px" }}>
         <Box sx={{ flex: 1 }}>
-          <Typography fontSize={12} fontWeight={600} color="text.secondary">
+          <Typography
+            sx={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: "text.secondary",
+            }}
+          >
             v{versionA.version}
           </Typography>
         </Box>
         <Box sx={{ flex: 1 }}>
-          <Typography fontSize={12} fontWeight={600} color="text.secondary">
+          <Typography
+            sx={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: "text.secondary",
+            }}
+          >
             v{versionB.version}
           </Typography>
         </Box>

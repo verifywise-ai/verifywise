@@ -236,7 +236,13 @@ export default function MCPToolCatalogPage() {
       rowKey={(tool) => tool.id}
       onRowClick={(tool) => openEditModal(tool)}
       renderRow={(tool) => [
-        <Stack direction="row" alignItems="center" gap="8px">
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
           <Wrench size={14} strokeWidth={1.5} color={palette.text.tertiary} />
           <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{tool.tool_name}</Typography>
         </Stack>,
@@ -280,7 +286,13 @@ export default function MCPToolCatalogPage() {
     >
       {/* Filters */}
       {!loading && tools.length > 0 && (
-        <Stack direction="row" gap="12px" sx={{ mb: "16px" }}>
+        <Stack
+          direction="row"
+          sx={{
+            gap: "12px",
+            mb: "16px",
+          }}
+        >
           <Box sx={{ minWidth: 200 }}>
             <Select
               id="filter-server"
@@ -341,7 +353,11 @@ export default function MCPToolCatalogPage() {
           showBorder={false}
         />
       ) : (
-        <Stack gap="16px">
+        <Stack
+          sx={{
+            gap: "16px",
+          }}
+        >
           {Object.entries(groupedTools).map(([serverName, serverTools]) => (
             <Box key={serverName} sx={cardSx}>
               <Typography sx={{ fontSize: 14, fontWeight: 600, mb: "12px" }}>
@@ -372,7 +388,11 @@ export default function MCPToolCatalogPage() {
         isSubmitting={isSubmitting}
         maxWidth="480px"
       >
-        <Stack gap="16px">
+        <Stack
+          sx={{
+            gap: "16px",
+          }}
+        >
           {editingTool && (
             <Box
               sx={{
@@ -409,7 +429,13 @@ export default function MCPToolCatalogPage() {
             getOptionValue={(item) => item._id}
           />
 
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Stack
+            direction="row"
+            sx={{
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <Box>
               <Typography sx={{ fontSize: 13 }}>Requires approval</Typography>
               <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
@@ -425,9 +451,9 @@ export default function MCPToolCatalogPage() {
           {form.risk_level === "high" && !form.requires_approval && (
             <Stack
               direction="row"
-              alignItems="flex-start"
-              gap="6px"
               sx={{
+                alignItems: "flex-start",
+                gap: "6px",
                 p: "8px 12px",
                 bgcolor: "#FFFAEB",
                 borderRadius: "4px",

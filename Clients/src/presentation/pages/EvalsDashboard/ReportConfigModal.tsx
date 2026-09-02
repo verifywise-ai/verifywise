@@ -142,7 +142,14 @@ export default function ReportConfigModal({
 
         {/* Experiment Selection */}
         <Box>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
+          <Stack
+            direction="row"
+            sx={{
+              alignItems: "center",
+              justifyContent: "space-between",
+              mb: 1,
+            }}
+          >
             <Typography sx={{ fontSize: 13, fontWeight: 600, color: "#344054" }}>
               Experiments to include
             </Typography>

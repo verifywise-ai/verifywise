@@ -32,7 +32,13 @@ export default function LifecyclePhaseContent({
         <Stack spacing={0} divider={<Box sx={{ borderTop: "1px solid #E0E4E9" }} />}>
           {items.map((item) => (
             <Stack key={item.id} sx={{ py: "16px", gap: "10px" }}>
-              <Stack direction="row" alignItems="center" sx={{ gap: "8px" }}>
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
                 <Typography sx={{ fontWeight: 500, color: "#344054", fontSize: "13px" }}>
                   {item.name}
                 </Typography>

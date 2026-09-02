@@ -110,7 +110,11 @@ const Resources = ({
     return <Typography>No resources available.</Typography>;
 
   return (
-    <Box width="100%">
+    <Box
+      sx={{
+        width: "100%",
+      }}
+    >
       <Typography variant="subtitle2" color={brand.primary} sx={{ fontWeight: 600, mb: 2 }}>
         Resources
       </Typography>
@@ -178,7 +182,13 @@ const Resources = ({
                     backgroundColor: sortConfig.key === "document name" ? "#e8e8e8" : "#fafafa",
                   }}
                 >
-                  <Box display="flex" alignItems="center" gap={1}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                    }}
+                  >
                     <CheckCircleOutlineIcon size={24} style={{ color: "#10B981" }} />
                     <Typography color={text.secondary} sx={{ fontSize: 13 }}>
                       {resource.name}

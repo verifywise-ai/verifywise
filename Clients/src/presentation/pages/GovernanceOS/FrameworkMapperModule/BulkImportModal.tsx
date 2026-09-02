@@ -192,7 +192,13 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
 
         {parsedRows.length > 0 && (
           <>
-            <Stack direction="row" spacing={2} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <Typography sx={{ fontSize: 13, fontWeight: 600 }}>Preview</Typography>
               {validCount > 0 && (
                 <Box

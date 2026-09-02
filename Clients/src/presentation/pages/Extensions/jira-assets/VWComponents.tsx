@@ -13,7 +13,7 @@ import {
   Switch,
   InputAdornment,
   IconButton,
-  TextFieldProps,
+  InputBaseProps,
   SelectChangeEvent,
 } from "@mui/material";
 import { ChevronDown, Eye, EyeOff } from "lucide-react";
@@ -113,7 +113,7 @@ interface VWFieldProps {
   width?: number | string;
   rows?: number;
   helperText?: string;
-  InputProps?: TextFieldProps["InputProps"];
+  InputProps?: InputBaseProps;
   sx?: any;
 }
 
@@ -144,8 +144,8 @@ export const VWField = forwardRef<HTMLInputElement, VWFieldProps>(
 
     return (
       <Stack
-        gap={1}
         sx={{
+          gap: 1,
           ...getInputStyles(!!error),
           width: width,
           ...(sx || {}),
@@ -155,23 +155,34 @@ export const VWField = forwardRef<HTMLInputElement, VWFieldProps>(
           <Typography
             component="p"
             color={colors.text.secondary}
-            fontWeight={500}
-            fontSize="13px"
-            sx={{ margin: 0, height: "22px" }}
+            sx={{
+              fontWeight: 500,
+              fontSize: "13px",
+              margin: 0,
+              height: "22px",
+            }}
           >
             {label}
             {isRequired && (
-              <Typography component="span" ml={0.5} color={colors.error.main}>
+              <Typography
+                component="span"
+                color={colors.error.main}
+                sx={{
+                  ml: 0.5,
+                }}
+              >
                 *
               </Typography>
             )}
             {isOptional && (
               <Typography
                 component="span"
-                fontSize="inherit"
-                fontWeight={400}
-                ml={1}
-                sx={{ opacity: 0.6 }}
+                sx={{
+                  fontSize: "inherit",
+                  fontWeight: 400,
+                  ml: 1,
+                  opacity: 0.6,
+                }}
               >
                 {optionalLabel || "(optional)"}
               </Typography>
@@ -192,42 +203,48 @@ export const VWField = forwardRef<HTMLInputElement, VWFieldProps>(
           helperText={helperText}
           size="small"
           fullWidth
-          inputProps={{
-            sx: {
-              color: colors.text.secondary,
-              fontSize: 13,
-              padding: "8px 12px",
+          sx={{ fontSize: 13 }}
+          slotProps={{
+            input: {
+              ...inputPropsOverride,
+              endAdornment:
+                inputPropsOverride?.endAdornment ||
+                (type === "password" && (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle password visibility"
+                      onClick={() => setVisible((show) => !show)}
+                      tabIndex={-1}
+                      sx={{
+                        "color": colors.border.dark,
+                        "padding": 0.5,
+                        "&:focus": { outline: "none" },
+                      }}
+                    >
+                      {!isVisible ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </IconButton>
+                  </InputAdornment>
+                )),
+            },
+
+            htmlInput: {
+              sx: {
+                color: colors.text.secondary,
+                fontSize: 13,
+                padding: "8px 12px",
+              },
             },
           }}
-          InputProps={{
-            ...inputPropsOverride,
-            endAdornment:
-              inputPropsOverride?.endAdornment ||
-              (type === "password" && (
-                <InputAdornment position="end">
-                  <IconButton
-                    aria-label="toggle password visibility"
-                    onClick={() => setVisible((show) => !show)}
-                    tabIndex={-1}
-                    sx={{
-                      "color": colors.border.dark,
-                      "padding": 0.5,
-                      "&:focus": { outline: "none" },
-                    }}
-                  >
-                    {!isVisible ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </IconButton>
-                </InputAdornment>
-              )),
-          }}
-          sx={{ fontSize: 13 }}
         />
         {error && (
           <Typography
             component="span"
             color={colors.error.main}
-            mt={0.5}
-            sx={{ opacity: 0.8, fontSize: 11 }}
+            sx={{
+              mt: 0.5,
+              opacity: 0.8,
+              fontSize: 11,
+            }}
           >
             {error}
           </Typography>
@@ -298,18 +315,34 @@ export const VWSelect: React.FC<VWSelectProps> = ({
   };
 
   return (
-    <Stack gap={1} sx={{ width: width }}>
+    <Stack
+      sx={{
+        gap: 1,
+        width: width,
+      }}
+    >
       {label && (
         <Typography
           component="p"
           color={colors.text.secondary}
-          fontWeight={500}
-          fontSize="13px"
-          sx={{ margin: 0, height: "22px", display: "flex", alignItems: "center" }}
+          sx={{
+            fontWeight: 500,
+            fontSize: "13px",
+            margin: 0,
+            height: "22px",
+            display: "flex",
+            alignItems: "center",
+          }}
         >
           {label}
           {isRequired && (
-            <Typography component="span" ml={0.5} color={colors.error.main}>
+            <Typography
+              component="span"
+              color={colors.error.main}
+              sx={{
+                ml: 0.5,
+              }}
+            >
               *
             </Typography>
           )}
@@ -338,24 +371,28 @@ export const VWSelect: React.FC<VWSelectProps> = ({
         disabled={disabled}
         MenuProps={{
           disableScrollLock: true,
-          PaperProps: {
-            sx: {
-              "borderRadius": "4px",
-              "boxShadow": "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-              "mt": 1,
-              "& .MuiMenuItem-root": {
-                "fontSize": 13,
-                "color": colors.text.primary,
-                "transition": "color 0.2s ease, background-color 0.2s ease",
-                "&:hover": {
-                  backgroundColor: colors.background.accent,
-                  color: colors.primary,
-                },
-                "&.Mui-selected": {
-                  "backgroundColor": colors.background.accent,
+
+          slotProps: {
+            paper: {
+              sx: {
+                "borderRadius": "4px",
+                "boxShadow":
+                  "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+                "mt": 1,
+                "& .MuiMenuItem-root": {
+                  "fontSize": 13,
+                  "color": colors.text.primary,
+                  "transition": "color 0.2s ease, background-color 0.2s ease",
                   "&:hover": {
                     backgroundColor: colors.background.accent,
                     color: colors.primary,
+                  },
+                  "&.Mui-selected": {
+                    "backgroundColor": colors.background.accent,
+                    "&:hover": {
+                      backgroundColor: colors.background.accent,
+                      color: colors.primary,
+                    },
                   },
                 },
               },
@@ -387,7 +424,14 @@ export const VWSelect: React.FC<VWSelectProps> = ({
         ))}
       </MuiSelect>
       {error && (
-        <Typography color={colors.error.main} mt={0.5} sx={{ opacity: 0.8, fontSize: 11 }}>
+        <Typography
+          color={colors.error.main}
+          sx={{
+            mt: 0.5,
+            opacity: 0.8,
+            fontSize: 11,
+          }}
+        >
           {error}
         </Typography>
       )}
@@ -450,7 +494,13 @@ export const VWToggle: React.FC<VWToggleProps> = ({
 
   if (label || description) {
     return (
-      <Stack direction="row" alignItems="flex-start" gap={1.5}>
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: "flex-start",
+          gap: 1.5,
+        }}
+      >
         <Switch
           checked={checked}
           onChange={onChange}
@@ -460,12 +510,23 @@ export const VWToggle: React.FC<VWToggleProps> = ({
         />
         <Stack>
           {label && (
-            <Typography fontSize={13} fontWeight={500} color={colors.text.primary}>
+            <Typography
+              color={colors.text.primary}
+              sx={{
+                fontSize: 13,
+                fontWeight: 500,
+              }}
+            >
               {label}
             </Typography>
           )}
           {description && (
-            <Typography fontSize={12} color={colors.text.tertiary}>
+            <Typography
+              color={colors.text.tertiary}
+              sx={{
+                fontSize: 12,
+              }}
+            >
               {description}
             </Typography>
           )}

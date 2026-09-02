@@ -20,7 +20,13 @@ const C = DASHBOARD_COLORS;
 // Shared legend item component
 function LegendItem({ label, value, color }: { label: string; value: number; color: string }) {
   return (
-    <Stack direction="row" alignItems="center" gap="8px">
+    <Stack
+      direction="row"
+      sx={{
+        alignItems: "center",
+        gap: "8px",
+      }}
+    >
       <Box
         sx={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: color, flexShrink: 0 }}
       />
@@ -111,7 +117,11 @@ export function PolicyStatusCard({ total, distribution }: PolicyStatusProps) {
     <DashboardChartLayout
       chart={<StatusDonutChart data={data} total={total} size={DASHBOARD_CHART_SIZE} />}
       sideContent={
-        <Stack gap="4px">
+        <Stack
+          sx={{
+            gap: "4px",
+          }}
+        >
           {data.map((item) => (
             <LegendItem key={item.label} {...item} />
           ))}
@@ -156,7 +166,14 @@ export function EvidenceCoverageCard({
 }: EvidenceCoverageProps) {
   return (
     <Box>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb="16px">
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: "16px",
+        }}
+      >
         <Typography sx={TEXT_STYLES.percentage}>{coveragePercentage}%</Typography>
         <Typography sx={{ fontSize: 12, color: C.textSecondary }}>model coverage</Typography>
       </Stack>
@@ -174,16 +191,33 @@ export function EvidenceCoverageCard({
           "& .MuiLinearProgress-bar": { backgroundColor: C.primary, borderRadius: 4 },
         }}
       />
-      <Stack direction="row" justifyContent="space-between">
-        <Stack alignItems="center">
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: "space-between",
+        }}
+      >
+        <Stack
+          sx={{
+            alignItems: "center",
+          }}
+        >
           <Typography sx={TEXT_STYLES.valueSmall}>{total}</Typography>
           <Typography sx={TEXT_STYLES.label}>Evidence items</Typography>
         </Stack>
-        <Stack alignItems="center">
+        <Stack
+          sx={{
+            alignItems: "center",
+          }}
+        >
           <Typography sx={TEXT_STYLES.valueSmall}>{totalFiles}</Typography>
           <Typography sx={TEXT_STYLES.label}>Files uploaded</Typography>
         </Stack>
-        <Stack alignItems="center">
+        <Stack
+          sx={{
+            alignItems: "center",
+          }}
+        >
           <Typography sx={{ ...TEXT_STYLES.valueSmall, color: C.primary }}>
             {modelsWithEvidence}/{totalModels}
           </Typography>
@@ -212,7 +246,11 @@ export function ModelLifecycleCard({ total, distribution }: ModelLifecycleProps)
     <DashboardChartLayout
       chart={<StatusDonutChart data={data} total={total} size={DASHBOARD_CHART_SIZE} />}
       sideContent={
-        <Stack gap="4px">
+        <Stack
+          sx={{
+            gap: "4px",
+          }}
+        >
           {data.map((item) => (
             <LegendItem key={item.label} {...item} />
           ))}

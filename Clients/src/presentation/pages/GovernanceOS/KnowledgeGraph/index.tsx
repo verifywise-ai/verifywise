@@ -11,7 +11,13 @@ const KnowledgeGraph: React.FC = () => {
       title="Knowledge Graph"
       subtitle="Visual exploration of governance relationships, controls, and compliance dependencies."
     >
-      <Stack gap="16px" alignItems="center" sx={{ py: "48px" }}>
+      <Stack
+        sx={{
+          gap: "16px",
+          alignItems: "center",
+          py: "48px",
+        }}
+      >
         <GovernanceTooltip
           header="Knowledge Graph"
           description="Visual exploration of governance relationships, controls, and compliance dependencies. This module is coming soon."
@@ -35,7 +41,13 @@ const KnowledgeGraph: React.FC = () => {
         <Typography sx={{ fontSize: 16, fontWeight: 600, color: text.primary }}>
           Knowledge Graph
         </Typography>
-        <Stack direction="row" gap="8px" alignItems="center">
+        <Stack
+          direction="row"
+          sx={{
+            gap: "8px",
+            alignItems: "center",
+          }}
+        >
           <Clock size={16} color={text.muted} />
           <Typography sx={{ fontSize: 14, color: text.muted }}>
             Coming soon — interactive visual graph of governance entities.

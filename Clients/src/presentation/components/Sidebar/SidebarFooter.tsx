@@ -911,13 +911,15 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
       {/* User Profile Section */}
       <Stack
         direction="row"
-        height="50px"
-        alignItems="center"
-        py={theme.spacing(4)}
-        px={theme.spacing(8)}
-        gap={theme.spacing(2)}
-        borderRadius={theme.shape.borderRadius}
-        sx={{ flexShrink: 0 }}
+        sx={{
+          height: "50px",
+          alignItems: "center",
+          py: theme.spacing(4),
+          px: theme.spacing(8),
+          gap: theme.spacing(2),
+          borderRadius: theme.shape.borderRadius,
+          flexShrink: 0,
+        }}
       >
         {delayedCollapsed ? (
           <Tooltip
@@ -946,8 +948,17 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
         ) : (
           <>
             <Avatar user={userAvator} size="small" sx={{ ml: theme.spacing(2) }} />
-            <Box ml={theme.spacing(2)}>
-              <Typography component="span" fontWeight={500}>
+            <Box
+              sx={{
+                ml: theme.spacing(2),
+              }}
+            >
+              <Typography
+                component="span"
+                sx={{
+                  fontWeight: 500,
+                }}
+              >
                 {user.name} {user.surname}
               </Typography>
               <Typography sx={{ textTransform: "capitalize" }}>{roleLabel}</Typography>
@@ -980,19 +991,21 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
           onClose={closePopup}
           hideBackdrop={true}
           transitionDuration={0}
-          PaperProps={{
-            sx: {
-              width: collapsed ? "260px" : "300px",
-              height: "auto",
-              maxHeight: "fit-content",
-              position: "absolute",
-              bottom: "80px",
-              left: collapsed ? "30px" : "30px",
-              borderRadius: "8px",
-              boxShadow: "0 12px 24px rgba(0,0,0,0.15)",
-              border: `1px solid ${theme.palette.divider}`,
-              backgroundColor: "transparent",
-              transition: "none",
+          slotProps={{
+            paper: {
+              sx: {
+                width: collapsed ? "260px" : "300px",
+                height: "auto",
+                maxHeight: "fit-content",
+                position: "absolute",
+                bottom: "80px",
+                left: collapsed ? "30px" : "30px",
+                borderRadius: "8px",
+                boxShadow: "0 12px 24px rgba(0,0,0,0.15)",
+                border: `1px solid ${theme.palette.divider}`,
+                backgroundColor: "transparent",
+                transition: "none",
+              },
             },
           }}
         >

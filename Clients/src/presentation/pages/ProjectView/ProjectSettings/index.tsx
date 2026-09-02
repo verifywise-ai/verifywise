@@ -846,7 +846,13 @@ const ProjectSettings = React.memo(
           <CustomizableSkeleton variant="rectangular" width="50%" height={200} />
         ) : (
           <Box sx={styles.root}>
-            <Stack component="form" onSubmit={handleSubmit} rowGap="15px">
+            <Stack
+              component="form"
+              onSubmit={handleSubmit}
+              sx={{
+                rowGap: "15px",
+              }}
+            >
               {/* Use Case Overview Card */}
               <Box sx={styles.card}>
                 <Typography sx={styles.sectionTitle}>Use Case Overview</Typography>
@@ -981,7 +987,11 @@ const ProjectSettings = React.memo(
                     <ConfirmationModal
                       title="Confirm owner change"
                       body={
-                        <Typography fontSize={13}>
+                        <Typography
+                          sx={{
+                            fontSize: 13,
+                          }}
+                        >
                           You setting ownership from{" "}
                           <strong>
                             {removedOwner?.name} {removedOwner?.surname}
@@ -1090,16 +1100,6 @@ const ProjectSettings = React.memo(
                           }
                           arrow
                           placement="top"
-                          PopperProps={{
-                            modifiers: [
-                              {
-                                name: "offset",
-                                options: {
-                                  offset: [0, 8],
-                                },
-                              },
-                            ],
-                          }}
                           slotProps={{
                             tooltip: {
                               sx: {
@@ -1109,10 +1109,22 @@ const ProjectSettings = React.memo(
                                 lineHeight: "1.3 !important",
                               },
                             },
+
                             arrow: {
                               sx: {
                                 fontSize: "12px",
                               },
+                            },
+
+                            popper: {
+                              modifiers: [
+                                {
+                                  name: "offset",
+                                  options: {
+                                    offset: [0, 8],
+                                  },
+                                },
+                              ],
                             },
                           }}
                         >
@@ -1393,7 +1405,11 @@ const ProjectSettings = React.memo(
                           </VWLink>
                         </Typography>
                       </Box>
-                      <Stack gap={1}>
+                      <Stack
+                        sx={{
+                          gap: 1,
+                        }}
+                      >
                         <Select
                           id="risk-classification-input"
                           label=""
@@ -1609,7 +1625,13 @@ const ProjectSettings = React.memo(
           <ConfirmationModal
             title="Confirm delete"
             body={
-              <Typography fontSize={13}>Are you sure you want to delete the use case?</Typography>
+              <Typography
+                sx={{
+                  fontSize: 13,
+                }}
+              >
+                Are you sure you want to delete the use case?
+              </Typography>
             }
             cancelText="Cancel"
             proceedText="Delete"
@@ -1625,7 +1647,11 @@ const ProjectSettings = React.memo(
           <ConfirmationModal
             title="Confirm framework removal"
             body={
-              <Typography fontSize={13}>
+              <Typography
+                sx={{
+                  fontSize: 13,
+                }}
+              >
                 Are you sure you want to remove {frameworkToRemove?.name} from the use case?
               </Typography>
             }

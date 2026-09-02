@@ -100,7 +100,14 @@ const ConfirmationToolUI: FC<{ result?: unknown }> = ({ result }) => {
       }}
     >
       {/* Header */}
-      <Stack direction="row" alignItems="center" spacing={1} mb={1}>
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: "center",
+          mb: 1,
+        }}
+      >
         <Icon size={16} style={{ color: config.text }} />
         <Typography
           sx={{
@@ -143,7 +150,13 @@ const ConfirmationToolUI: FC<{ result?: unknown }> = ({ result }) => {
 
       {/* Actions */}
       {!isResolved && (
-        <Stack direction="row" spacing={1} mt={1}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            mt: 1,
+          }}
+        >
           <Button
             size="small"
             variant="contained"
@@ -197,7 +210,14 @@ const ConfirmationToolUI: FC<{ result?: unknown }> = ({ result }) => {
 
       {/* Resolution state */}
       {resolution === "approved" && (
-        <Stack direction="row" alignItems="center" spacing={0.5} mt={1}>
+        <Stack
+          direction="row"
+          spacing={0.5}
+          sx={{
+            alignItems: "center",
+            mt: 1,
+          }}
+        >
           <Check size={14} style={{ color: statusColors.success.text }} />
           <Typography sx={{ fontSize: 12, fontWeight: 500, color: statusColors.success.text }}>
             Approved and executed
@@ -205,7 +225,14 @@ const ConfirmationToolUI: FC<{ result?: unknown }> = ({ result }) => {
         </Stack>
       )}
       {resolution === "rejected" && (
-        <Stack direction="row" alignItems="center" spacing={0.5} mt={1}>
+        <Stack
+          direction="row"
+          spacing={0.5}
+          sx={{
+            alignItems: "center",
+            mt: 1,
+          }}
+        >
           <X size={14} style={{ color: "#475467" }} />
           <Typography sx={{ fontSize: 12, fontWeight: 500, color: "#475467" }}>Rejected</Typography>
         </Stack>

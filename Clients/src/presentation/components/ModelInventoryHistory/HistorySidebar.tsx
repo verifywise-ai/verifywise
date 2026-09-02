@@ -187,7 +187,14 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
         }}
       >
         {/* Header */}
-        <Stack direction="row" gap="8px" alignItems="center" marginBottom="8px">
+        <Stack
+          direction="row"
+          sx={{
+            gap: "8px",
+            alignItems: "center",
+            marginBottom: "8px",
+          }}
+        >
           <VWAvatar
             user={{
               firstname: firstEntry.user_name || userName,
@@ -211,7 +218,13 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
                 `${userName} updated ${group.length} field${group.length > 1 ? "s" : ""}`}
               {firstEntry.action === "deleted" && `${userName} deleted this model`}
             </Typography>
-            <Stack direction="row" gap="8px" alignItems="center">
+            <Stack
+              direction="row"
+              sx={{
+                gap: "8px",
+                alignItems: "center",
+              }}
+            >
               <Clock size={10} color={theme.palette.text.secondary} />
               <Typography
                 sx={{
@@ -272,7 +285,13 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
                   </Typography>
                 </Box>
               ) : (
-                <Stack direction="row" gap="8px" alignItems="center">
+                <Stack
+                  direction="row"
+                  sx={{
+                    gap: "8px",
+                    alignItems: "center",
+                  }}
+                >
                   {/* Old Value */}
                   {entry.old_value && entry.old_value !== "-" && (
                     <Box

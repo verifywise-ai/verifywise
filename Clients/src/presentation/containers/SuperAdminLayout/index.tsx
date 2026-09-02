@@ -11,10 +11,14 @@ const SuperAdminLayout = () => {
 
   return (
     <Stack
-      maxWidth="100%"
-      flexDirection="row"
-      gap={0}
-      sx={{ backgroundColor: "#FCFCFD", height: "100vh", overflow: "hidden" }}
+      sx={{
+        maxWidth: "100%",
+        flexDirection: "row",
+        gap: 0,
+        backgroundColor: "#FCFCFD",
+        height: "100vh",
+        overflow: "hidden",
+      }}
     >
       <AppSwitcher
         activeModule={activeModule}

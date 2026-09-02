@@ -337,7 +337,13 @@ const ControlsTable: React.FC<ControlsTableProps> = ({
                       </Typography>
                     </TableCell>
                     <TableCell sx={styles.cell} key={`completion-${control.id}`}>
-                      <Stack direction="row" alignItems="center" spacing={1}>
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        sx={{
+                          alignItems: "center",
+                        }}
+                      >
                         <Box sx={{ width: "100%", mr: 1 }}>
                           <LinearProgress
                             variant="determinate"

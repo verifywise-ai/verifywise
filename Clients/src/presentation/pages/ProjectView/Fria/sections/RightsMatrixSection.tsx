@@ -127,7 +127,12 @@ function RightsMatrixSection({
               transition: "border-color 0.15s ease, background-color 0.15s ease",
             }}
           >
-            <Stack spacing={0} gap="8px">
+            <Stack
+              spacing={0}
+              sx={{
+                gap: "8px",
+              }}
+            >
               <Box
                 sx={{
                   display: "flex",
@@ -171,7 +176,12 @@ function RightsMatrixSection({
               </Box>
 
               {right.flagged && (
-                <Stack spacing={0} gap="8px">
+                <Stack
+                  spacing={0}
+                  sx={{
+                    gap: "8px",
+                  }}
+                >
                   <Box
                     sx={{
                       display: "grid",

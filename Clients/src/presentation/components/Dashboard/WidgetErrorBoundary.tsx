@@ -86,7 +86,14 @@ class WidgetErrorBoundary extends Component<Props, State> {
               {widgetTitle} Error
             </Typography>
 
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontSize: "0.875rem" }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+                mb: 2,
+                fontSize: "0.875rem",
+              }}
+            >
               This widget failed to load properly.
             </Typography>
 

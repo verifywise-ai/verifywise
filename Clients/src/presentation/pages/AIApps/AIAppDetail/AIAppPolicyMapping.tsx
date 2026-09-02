@@ -166,12 +166,20 @@ export default function AIAppPolicyMapping({ appId, appName, policies }: AIAppPo
     <Box>
       <Stack
         direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        gap="12px"
-        sx={{ mb: "16px" }}
+        sx={{
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "12px",
+          mb: "16px",
+        }}
       >
-        <Stack direction="row" alignItems="center" gap="8px">
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
           <ShieldCheck size={16} strokeWidth={1.5} color={palette.text.secondary} />
           <Typography sx={{ fontSize: 15, fontWeight: 600 }}>Policy mapping</Typography>
         </Stack>
@@ -197,11 +205,24 @@ export default function AIAppPolicyMapping({ appId, appName, policies }: AIAppPo
             border: `1px solid ${palette.border.light}`,
           }}
         >
-          <Stack direction="row" alignItems="center" gap="8px" sx={{ mb: "8px" }}>
+          <Stack
+            direction="row"
+            sx={{
+              alignItems: "center",
+              gap: "8px",
+              mb: "8px",
+            }}
+          >
             <Sparkles size={14} strokeWidth={1.5} color={palette.text.secondary} />
             <Typography sx={{ fontSize: 13, fontWeight: 600 }}>Suggested policies</Typography>
           </Stack>
-          <Stack direction="row" gap="8px" flexWrap="wrap">
+          <Stack
+            direction="row"
+            sx={{
+              gap: "8px",
+              flexWrap: "wrap",
+            }}
+          >
             {suggestedTitles.map((title) => (
               <CustomizableButton
                 key={title}

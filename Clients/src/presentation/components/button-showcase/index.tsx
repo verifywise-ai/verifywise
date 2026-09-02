@@ -33,7 +33,13 @@ function ButtonShowcase() {
       <Typography variant="h4" gutterBottom>
         Button Component Showcase
       </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+      <Typography
+        variant="body1"
+        sx={{
+          color: "text.secondary",
+          mb: 4,
+        }}
+      >
         Test all button variants and their states for consistency
       </Typography>
 
@@ -42,7 +48,14 @@ function ButtonShowcase() {
         <Typography variant="h6" gutterBottom>
           Primary Buttons (Before Standardization)
         </Typography>
-        <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
           <CustomizableButton
             variant="contained"
             color="primary"
@@ -83,7 +96,14 @@ function ButtonShowcase() {
         <Typography variant="h6" gutterBottom>
           Multi-Select Components
         </Typography>
-        <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
           <VerifyWiseMultiSelect
             options={multiSelectOptions}
             selectedValues={multiSelectValues}
@@ -108,7 +128,14 @@ function ButtonShowcase() {
         <Typography variant="h6" gutterBottom>
           Dashboard Action Buttons (30px)
         </Typography>
-        <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
           <Box
             component="button"
             aria-label="Integrations"
@@ -177,7 +204,14 @@ function ButtonShowcase() {
         <Typography variant="h6" gutterBottom>
           Icon Buttons
         </Typography>
-        <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
           <Box
             component="button"
             aria-label="Lock"
@@ -246,7 +280,14 @@ function ButtonShowcase() {
         <Typography variant="h6" gutterBottom>
           Secondary & Utility Buttons
         </Typography>
-        <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
           <CustomizableButton
             variant="outlined"
             color="primary"
@@ -268,7 +309,14 @@ function ButtonShowcase() {
         <Typography variant="h6" gutterBottom>
           Action Buttons (Save, Cancel, Delete, etc.)
         </Typography>
-        <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
           <CustomizableButton
             variant="contained"
             color="primary"
@@ -339,7 +387,13 @@ function ButtonShowcase() {
             <Typography variant="subtitle2" gutterBottom>
               Different Heights (28px, 30px, 32px, 34px):
             </Typography>
-            <Stack direction="row" spacing={2} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                 <Box
                   sx={{

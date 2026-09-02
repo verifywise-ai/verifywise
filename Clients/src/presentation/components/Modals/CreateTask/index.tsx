@@ -397,14 +397,22 @@ const CreateTask: FC<ICreateTaskProps> = ({
 
       {/* Row 3: Priority | Due date */}
       <Stack direction="row" spacing={6} sx={{ width: "748px" }}>
-        <Stack gap={theme.spacing(2)} sx={{ width: "350px" }}>
+        <Stack
+          sx={{
+            gap: theme.spacing(2),
+            width: "350px",
+          }}
+        >
           <Typography
             component="p"
             variant="body1"
             color={theme.palette.text.secondary}
-            fontWeight={500}
-            fontSize={"13px"}
-            sx={{ margin: 0, height: "22px" }}
+            sx={{
+              fontWeight: 500,
+              fontSize: "13px",
+              margin: 0,
+              height: "22px",
+            }}
           >
             Priority *
           </Typography>

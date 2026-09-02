@@ -302,7 +302,12 @@ const RisksView = ({
                 backgroundColor: "action.hover",
               }}
             >
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 This is a read-only view. To add or edit risks, go to the{" "}
                 <Typography
                   component="a"

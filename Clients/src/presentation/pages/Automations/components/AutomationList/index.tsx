@@ -121,9 +121,13 @@ const AutomationList: React.FC<AutomationListProps> = ({
         ) : automations.length === 0 ? (
           <Stack
             spacing={2}
-            alignItems="center"
-            justifyContent="center"
-            sx={{ flex: 1, p: "16px", textAlign: "center" }}
+            sx={{
+              alignItems: "center",
+              justifyContent: "center",
+              flex: 1,
+              p: "16px",
+              textAlign: "center",
+            }}
           >
             <Typography color="textSecondary" variant="body2" sx={{ fontWeight: 600 }}>
               {searchQuery ? "No automations found" : "No automations yet"}
@@ -284,7 +288,14 @@ const AutomationList: React.FC<AutomationListProps> = ({
         }}
       >
         <Stack spacing={4} sx={{ height: "100%" }}>
-          <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
+              alignItems: "center",
+              mb: 2,
+            }}
+          >
             <IconButton onClick={handleCloseHistory}>
               <ChevronLeft />
             </IconButton>

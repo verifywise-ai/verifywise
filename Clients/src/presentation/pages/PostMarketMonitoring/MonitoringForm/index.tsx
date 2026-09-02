@@ -233,7 +233,13 @@ const MonitoringForm: React.FC = () => {
 
   if (isLoading) {
     return (
-      <Stack alignItems="center" justifyContent="center" minHeight={400}>
+      <Stack
+        sx={{
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: 400,
+        }}
+      >
         <CircularProgress size={40} />
       </Stack>
     );
@@ -241,7 +247,13 @@ const MonitoringForm: React.FC = () => {
 
   if (!cycle) {
     return (
-      <Stack alignItems="center" justifyContent="center" minHeight={400}>
+      <Stack
+        sx={{
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: 400,
+        }}
+      >
         <Typography sx={{ fontSize: 14, color: theme.palette.other.icon }}>
           Monitoring cycle not found
         </Typography>
@@ -264,7 +276,12 @@ const MonitoringForm: React.FC = () => {
       )}
 
       {/* Header */}
-      <Stack spacing={1} mb={4}>
+      <Stack
+        spacing={1}
+        sx={{
+          mb: 4,
+        }}
+      >
         <Typography sx={{ fontSize: 16, fontWeight: 600, color: theme.palette.text.primary }}>
           Post-market monitoring
         </Typography>
@@ -275,10 +292,28 @@ const MonitoringForm: React.FC = () => {
 
       {/* Status Card */}
       <Box sx={{ ...cardStyle, mb: 3 }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Stack direction="row" spacing={4} alignItems="center">
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <Stack
+            direction="row"
+            spacing={4}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             {/* Status */}
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               {isCompleted ? (
                 <CheckCircle size={16} color={theme.palette.status.success.main} />
               ) : isOverdue ? (
@@ -329,7 +364,13 @@ const MonitoringForm: React.FC = () => {
             border: `1px solid ${theme.palette.status.success.light}`,
           }}
         >
-          <Stack direction="row" spacing={2} alignItems="center">
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             <CheckCircle size={20} color={theme.palette.status.success.main} />
             <Typography sx={{ fontSize: 13, color: theme.palette.status.success.text }}>
               This monitoring cycle was completed on{" "}
@@ -347,8 +388,19 @@ const MonitoringForm: React.FC = () => {
             <Box key={question.id} sx={cardStyle}>
               <Stack spacing={2}>
                 {/* Question header */}
-                <Stack direction="row" justifyContent="space-between">
-                  <Stack direction="row" spacing={1} alignItems="flex-start">
+                <Stack
+                  direction="row"
+                  sx={{
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{
+                      alignItems: "flex-start",
+                    }}
+                  >
                     <Typography sx={{ fontSize: 13, fontWeight: 500, minWidth: 24 }}>
                       {index + 1}.
                     </Typography>
@@ -518,7 +570,15 @@ const MonitoringForm: React.FC = () => {
 
       {/* Action buttons */}
       {!isCompleted && (
-        <Stack direction="row" justifyContent="flex-end" spacing={2} mt={4} mb={4}>
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{
+            justifyContent: "flex-end",
+            mt: 4,
+            mb: 4,
+          }}
+        >
           <CustomizableButton
             variant="outlined"
             text={isSaving ? "Saving..." : "Save draft"}

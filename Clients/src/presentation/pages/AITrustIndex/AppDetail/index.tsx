@@ -171,7 +171,14 @@ export default function AppDetail() {
       </Box>
 
       {/* Header */}
-      <Stack direction="row" alignItems="flex-start" gap="16px" sx={{ mb: "24px" }}>
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: "flex-start",
+          gap: "16px",
+          mb: "24px",
+        }}
+      >
         <Box
           sx={{
             width: 48,
@@ -203,7 +210,14 @@ export default function AppDetail() {
         </Box>
 
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Stack direction="row" alignItems="center" gap="8px" flexWrap="wrap">
+          <Stack
+            direction="row"
+            sx={{
+              alignItems: "center",
+              gap: "8px",
+              flexWrap: "wrap",
+            }}
+          >
             <Typography sx={{ fontSize: "20px", fontWeight: 600 }}>{app.name}</Typography>
             {displayedGrade && (
               <Chip label={displayedGrade} variant={gradeVariant(displayedGrade)} />
@@ -266,7 +280,11 @@ export default function AppDetail() {
         />
       </Stack>
 
-      <Stack gap="16px">
+      <Stack
+        sx={{
+          gap: "16px",
+        }}
+      >
         {/* Verdict */}
         {detail && <VerdictLine app={detail} />}
 
@@ -281,7 +299,11 @@ export default function AppDetail() {
         {/* Dealbreaker flags */}
         {detail?.dealbreakerFlags && detail.dealbreakerFlags.length > 0 && (
           <SectionCard title="Dealbreaker flags">
-            <Stack gap="8px">
+            <Stack
+              sx={{
+                gap: "8px",
+              }}
+            >
               {detail.dealbreakerFlags.map((flag, i) => (
                 <Box
                   key={`${flag}-${i}`}
@@ -313,7 +335,15 @@ export default function AppDetail() {
 
         {/* Grade scale */}
         {detail && (
-          <Stack direction="row" flexWrap="wrap" gap="8px" alignItems="center" sx={{ mt: "16px" }}>
+          <Stack
+            direction="row"
+            sx={{
+              flexWrap: "wrap",
+              gap: "8px",
+              alignItems: "center",
+              mt: "16px",
+            }}
+          >
             <Typography
               sx={{
                 fontSize: "11px",
@@ -426,9 +456,19 @@ export default function AppDetail() {
         {/* Policy details */}
         {detail && (
           <SectionCard title="Policy details">
-            <Stack gap="8px">
+            <Stack
+              sx={{
+                gap: "8px",
+              }}
+            >
               {detail.policyUrl && (
-                <Stack direction="row" alignItems="center" gap="8px">
+                <Stack
+                  direction="row"
+                  sx={{
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
                   <Typography
                     sx={{ fontSize: "13px", color: palette.text.tertiary, minWidth: 140 }}
                   >
@@ -444,7 +484,13 @@ export default function AppDetail() {
                   </VWLink>
                 </Stack>
               )}
-              <Stack direction="row" alignItems="center" gap="8px">
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
                 <Typography sx={{ fontSize: "13px", color: palette.text.tertiary, minWidth: 140 }}>
                   Policy last updated
                 </Typography>
@@ -453,20 +499,38 @@ export default function AppDetail() {
                 </Typography>
               </Stack>
               {detail.modalities && detail.modalities.length > 0 && (
-                <Stack direction="row" alignItems="center" gap="8px">
+                <Stack
+                  direction="row"
+                  sx={{
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                >
                   <Typography
                     sx={{ fontSize: "13px", color: palette.text.tertiary, minWidth: 140 }}
                   >
                     Modalities
                   </Typography>
-                  <Stack direction="row" gap="6px" flexWrap="wrap">
+                  <Stack
+                    direction="row"
+                    sx={{
+                      gap: "6px",
+                      flexWrap: "wrap",
+                    }}
+                  >
                     {detail.modalities.map((m, i) => (
                       <Chip key={`${m}-${i}`} label={m} variant="default" uppercase={false} />
                     ))}
                   </Stack>
                 </Stack>
               )}
-              <Stack direction="row" alignItems="center" gap="8px">
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
                 <Typography sx={{ fontSize: "13px", color: palette.text.tertiary, minWidth: 140 }}>
                   Processes biometrics
                 </Typography>

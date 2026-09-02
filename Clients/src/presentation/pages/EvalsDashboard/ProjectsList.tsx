@@ -394,12 +394,21 @@ export default function ProjectsList() {
       {/* Controls row */}
       <Stack
         direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-        sx={{ marginTop: "18px", marginBottom: "18px" }}
-        gap={2}
+        sx={{
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 2,
+          marginTop: "18px",
+          marginBottom: "18px",
+        }}
       >
-        <Stack direction="row" alignItems="center" gap={2}>
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "center",
+            gap: 2,
+          }}
+        >
           <FilterBy columns={filterColumns} onFilterChange={handleFilterChange} />
           <GroupBy options={[{ id: "useCase", label: "Use case" }]} onGroupChange={() => {}} />
           <SearchBox
@@ -746,7 +755,12 @@ export default function ProjectsList() {
           isOpen={deleteModalOpen}
           title="Delete this project?"
           body={
-            <Typography fontSize={13} color={palette.text.secondary}>
+            <Typography
+              color={palette.text.secondary}
+              sx={{
+                fontSize: 13,
+              }}
+            >
               This will remove the project and its experiments. This action cannot be undone.
             </Typography>
           }

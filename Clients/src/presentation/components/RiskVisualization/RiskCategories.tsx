@@ -220,7 +220,14 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
                     )}
                   </Box>
 
-                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    useFlexGap
+                    sx={{
+                      flexWrap: "wrap",
+                    }}
+                  >
                     {category.riskLevels.veryHigh > 0 && (
                       <Chip
                         size="small"

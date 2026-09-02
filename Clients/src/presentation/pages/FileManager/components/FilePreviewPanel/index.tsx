@@ -402,10 +402,12 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
       anchor="right"
       open={isOpen}
       onClose={onClose}
-      PaperProps={{
-        sx: {
-          width: { xs: "100%", sm: 520 },
-          maxWidth: "100%",
+      slotProps={{
+        paper: {
+          sx: {
+            width: { xs: "100%", sm: 520 },
+            maxWidth: "100%",
+          },
         },
       }}
     >

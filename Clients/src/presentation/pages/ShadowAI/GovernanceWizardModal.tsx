@@ -98,7 +98,11 @@ export default function GovernanceWizardModal({
       isSubmitting={submitting}
       maxWidth="520px"
     >
-      <Stack gap="16px">
+      <Stack
+        sx={{
+          gap: "16px",
+        }}
+      >
         {error && (
           <Alert severity="error" sx={{ fontSize: 13 }}>
             {error}
@@ -109,7 +113,12 @@ export default function GovernanceWizardModal({
         <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary }}>
           Model inventory
         </Typography>
-        <Stack direction="row" gap="16px">
+        <Stack
+          direction="row"
+          sx={{
+            gap: "16px",
+          }}
+        >
           <Box sx={{ flex: 1 }}>
             <Field
               label="Provider"
@@ -175,7 +184,14 @@ export default function GovernanceWizardModal({
         />
 
         {/* Lifecycle option */}
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mt: 1 }}>
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "center",
+            justifyContent: "space-between",
+            mt: 1,
+          }}
+        >
           <Stack>
             <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Start lifecycle review</Typography>
             <Typography sx={{ fontSize: 11, color: palette.text.disabled }}>

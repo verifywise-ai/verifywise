@@ -74,18 +74,27 @@ const LinkModelModal: React.FC<LinkModelModalProps> = ({
       anchor="right"
       open={isOpen}
       onClose={handleClose}
-      PaperProps={{
-        sx: { width: 400, backgroundColor: theme.palette.background.modal || "#FCFCFD" },
+      slotProps={{
+        paper: {
+          sx: { width: 400, backgroundColor: theme.palette.background.modal || "#FCFCFD" },
+        },
       }}
     >
       {/* Header */}
       <Stack
         direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-        sx={{ p: "16px 24px" }}
+        sx={{
+          justifyContent: "space-between",
+          alignItems: "center",
+          p: "16px 24px",
+        }}
       >
-        <Typography fontSize={16} fontWeight={600}>
+        <Typography
+          sx={{
+            fontSize: 16,
+            fontWeight: 600,
+          }}
+        >
           Link to model
         </Typography>
         <IconButton onClick={handleClose} size="small">
@@ -97,7 +106,12 @@ const LinkModelModal: React.FC<LinkModelModalProps> = ({
 
       {/* Content */}
       <Stack sx={{ p: "24px", gap: "20px", flex: 1 }}>
-        <Typography fontSize={13} color="text.secondary">
+        <Typography
+          sx={{
+            fontSize: 13,
+            color: "text.secondary",
+          }}
+        >
           Select a model from the inventory to link with this agent.
         </Typography>
 
@@ -114,7 +128,14 @@ const LinkModelModal: React.FC<LinkModelModalProps> = ({
 
       {/* Footer */}
       <Divider />
-      <Stack direction="row" justifyContent="flex-end" gap={1} sx={{ p: "16px 24px" }}>
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: "flex-end",
+          gap: 1,
+          p: "16px 24px",
+        }}
+      >
         <CustomizableButton
           variant="outlined"
           sx={{ border: "1px solid #d0d5dd" }}

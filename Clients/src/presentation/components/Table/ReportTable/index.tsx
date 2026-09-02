@@ -330,7 +330,6 @@ const ReportTable: React.FC<IReportTablePropsExtended> = ({
                     rowsPerPage={rowsPerPage}
                     rowsPerPageOptions={[5, 10, 15, 20, 25]}
                     onRowsPerPageChange={handleChangeRowsPerPage}
-                    ActionsComponent={(props) => <TablePaginationActions {...props} />}
                     labelRowsPerPage="Reports per page"
                     labelDisplayedRows={({ page, count }) =>
                       `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
@@ -340,18 +339,24 @@ const ReportTable: React.FC<IReportTablePropsExtended> = ({
                       select: {
                         MenuProps: {
                           keepMounted: true,
-                          PaperProps: {
-                            className: "pagination-dropdown",
-                            sx: paginationDropdown,
+
+                          slotProps: {
+                            paper: {
+                              className: "pagination-dropdown",
+                              sx: paginationDropdown,
+                            },
                           },
+
                           transformOrigin: {
                             vertical: "bottom",
                             horizontal: "left",
                           },
+
                           anchorOrigin: {
                             vertical: "top",
                             horizontal: "left",
                           },
+
                           sx: { mt: theme.spacing(-2) },
                         },
                         inputProps: { id: "pagination-dropdown" },
@@ -359,6 +364,7 @@ const ReportTable: React.FC<IReportTablePropsExtended> = ({
                         sx: paginationSelect,
                       },
                     }}
+                    ActionsComponent={(props) => <TablePaginationActions {...props} />}
                   />
                 </TableRow>
               </TableFooter>

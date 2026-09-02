@@ -161,7 +161,14 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
             const badgePath = getFrameworkBadgePath(fw.name);
             return (
               <Box key={fw.id} sx={frameworkCardStyle}>
-                <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    mb: 2,
+                  }}
+                >
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, minWidth: 0 }}>
                     {badgePath ? (
                       <Box
@@ -201,7 +208,13 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
                   )}
                 </Box>
                 <Typography sx={frameworkCardDescriptionStyle}>{fw.description}</Typography>
-                <Box display="flex" justifyContent="flex-end" mt={2}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    mt: 2,
+                  }}
+                >
                   {isAdded ? (
                     <Button
                       variant="outlined"
@@ -252,7 +265,11 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
           <ConfirmationModal
             title="Confirm framework removal"
             body={
-              <Typography fontSize={13}>
+              <Typography
+                sx={{
+                  fontSize: 13,
+                }}
+              >
                 Are you sure you want to remove {frameworkToRemove.name} from the project?
               </Typography>
             }

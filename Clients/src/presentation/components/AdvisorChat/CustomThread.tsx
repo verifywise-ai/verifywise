@@ -192,7 +192,11 @@ const CustomThreadComponent = ({
             padding: theme.spacing(2),
           }}
         >
-          <Stack gap="16px">
+          <Stack
+            sx={{
+              gap: "16px",
+            }}
+          >
             <ThreadPrimitive.Messages
               components={{
                 UserMessage: CustomMessage,

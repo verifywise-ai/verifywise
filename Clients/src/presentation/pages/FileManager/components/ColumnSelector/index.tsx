@@ -77,14 +77,16 @@ export const ColumnSelector: React.FC<ColumnSelectorProps> = ({
           vertical: "top",
           horizontal: "right",
         }}
-        PaperProps={{
-          sx: {
-            mt: 1,
-            minWidth: 220,
-            maxWidth: 280,
-            boxShadow: "0px 4px 16px rgba(0, 0, 0, 0.1)",
-            borderRadius: "4px",
-            border: "1px solid #E0E4E9",
+        slotProps={{
+          paper: {
+            sx: {
+              mt: 1,
+              minWidth: 220,
+              maxWidth: 280,
+              boxShadow: "0px 4px 16px rgba(0, 0, 0, 0.1)",
+              borderRadius: "4px",
+              border: "1px solid #E0E4E9",
+            },
           },
         }}
       >

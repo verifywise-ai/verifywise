@@ -195,7 +195,14 @@ const SuperAdmins = () => {
 
   return (
     <Stack sx={{ mt: 3 }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 3 }}>
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          mb: 3,
+        }}
+      >
         <Box>
           <Typography sx={{ fontSize: 15, fontWeight: 600, color: "text.primary" }}>
             Super Admins

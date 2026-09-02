@@ -70,7 +70,11 @@ export default function AIAppDetail() {
 
   return (
     <PageHeaderExtended title="AI app details" description="Approval center and governance">
-      <Stack gap="24px">
+      <Stack
+        sx={{
+          gap: "24px",
+        }}
+      >
         <Box sx={sectionCardStyle}>
           <AIAppApprovalCenter
             app={app}

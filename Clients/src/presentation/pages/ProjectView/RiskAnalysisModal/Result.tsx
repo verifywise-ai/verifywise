@@ -72,13 +72,35 @@ const Results: React.FC<ResultsDisplayProps> = ({ classification, onRestart, onS
           p: 3,
         }}
       >
-        <Stack direction="row" spacing={2} alignItems="center">
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{
+            alignItems: "center",
+          }}
+        >
           <Box sx={{ color: config.color }}>{config.icon}</Box>
-          <Stack flex={1}>
-            <Typography fontSize={15} fontWeight={700} color={config.color} mb={0.5}>
+          <Stack
+            sx={{
+              flex: 1,
+            }}
+          >
+            <Typography
+              color={config.color}
+              sx={{
+                fontSize: 15,
+                fontWeight: 700,
+                mb: 0.5,
+              }}
+            >
               {config.title}
             </Typography>
-            <Typography fontSize={13} color="text.primary">
+            <Typography
+              sx={{
+                fontSize: 13,
+                color: "text.primary",
+              }}
+            >
               {config.description}
             </Typography>
           </Stack>
@@ -86,7 +108,13 @@ const Results: React.FC<ResultsDisplayProps> = ({ classification, onRestart, onS
       </Box>
 
       {/* Action Buttons */}
-      <Stack direction="row" spacing={2} justifyContent="flex-end">
+      <Stack
+        direction="row"
+        spacing={2}
+        sx={{
+          justifyContent: "flex-end",
+        }}
+      >
         {onRestart && (
           <CustomizableButton
             variant="outlined"

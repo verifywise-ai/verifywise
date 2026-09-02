@@ -48,8 +48,10 @@ const InsertLinkModal: React.FC<InsertLinkModalProps> = ({
       fullWidth
       disablePortal={false}
       sx={{ zIndex: 1400 }}
-      PaperProps={{
-        sx: { borderRadius: 3, p: 1.5 },
+      slotProps={{
+        paper: {
+          sx: { borderRadius: 3, p: 1.5 },
+        },
       }}
     >
       <DialogTitle>Insert link</DialogTitle>

@@ -75,10 +75,28 @@ export default function TemplatePreviewDrawer({
         }}
       >
         {/* Header */}
-        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
-          <Stack direction="row" alignItems="center" spacing={1}>
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             <Database size={18} color={palette.brand.primary} />
-            <Typography fontWeight={600} color={theme.palette.text.primary}>
+            <Typography
+              color={theme.palette.text.primary}
+              sx={{
+                fontWeight: 600,
+              }}
+            >
               {templateName || "Template"}
             </Typography>
             {prompts.length > 0 && (

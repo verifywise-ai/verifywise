@@ -78,7 +78,13 @@ const StatusDropdown: React.FC<IStatusDropdownProps> = ({
       : "Not started";
 
     return (
-      <Stack direction="row" alignItems="center" gap={0.5}>
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: "center",
+          gap: 0.5,
+        }}
+      >
         {isUpdating && (
           <CircularProgress
             size={size === "small" ? 10 : 12}
@@ -126,21 +132,24 @@ const StatusDropdown: React.FC<IStatusDropdownProps> = ({
       )}
       MenuProps={{
         disableScrollLock: true,
-        PaperProps: {
-          sx: {
-            "borderRadius": theme.shape.borderRadius || 4,
-            "boxShadow": "0px 4px 12px rgba(0, 0, 0, 0.15)",
-            "mt": 0.5,
-            "& .MuiMenuItem-root": {
-              "fontSize": fontSize,
-              "color": theme.palette.text?.primary || `${text.black}`,
-              "&:hover": {
-                backgroundColor: theme.palette.action?.hover || `${background.surface}`,
-              },
-              "&.Mui-selected": {
-                "backgroundColor": theme.palette.action?.hover || `${background.surface}`,
+
+        slotProps: {
+          paper: {
+            sx: {
+              "borderRadius": theme.shape.borderRadius || 4,
+              "boxShadow": "0px 4px 12px rgba(0, 0, 0, 0.15)",
+              "mt": 0.5,
+              "& .MuiMenuItem-root": {
+                "fontSize": fontSize,
+                "color": theme.palette.text?.primary || `${text.black}`,
                 "&:hover": {
                   backgroundColor: theme.palette.action?.hover || `${background.surface}`,
+                },
+                "&.Mui-selected": {
+                  "backgroundColor": theme.palette.action?.hover || `${background.surface}`,
+                  "&:hover": {
+                    backgroundColor: theme.palette.action?.hover || `${background.surface}`,
+                  },
                 },
               },
             },

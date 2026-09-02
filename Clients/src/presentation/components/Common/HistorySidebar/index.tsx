@@ -287,7 +287,14 @@ export function HistorySidebar({
         }}
       >
         {/* Header */}
-        <Stack direction="row" gap="8px" alignItems="center" marginBottom="8px">
+        <Stack
+          direction="row"
+          sx={{
+            gap: "8px",
+            alignItems: "center",
+            marginBottom: "8px",
+          }}
+        >
           <VWAvatar
             user={{
               firstname: firstEntry.user_name || userName,
@@ -315,7 +322,13 @@ export function HistorySidebar({
                 `${userName} updated ${group.length} field${group.length > 1 ? "s" : ""}`}
               {firstEntry.action === "deleted" && `${userName} deleted this ${config.entityName}`}
             </Typography>
-            <Stack direction="row" gap="8px" alignItems="center">
+            <Stack
+              direction="row"
+              sx={{
+                gap: "8px",
+                alignItems: "center",
+              }}
+            >
               <Clock size={10} color={theme.palette.text.secondary} />
               <Typography
                 sx={{
@@ -367,7 +380,13 @@ export function HistorySidebar({
                   {renderTruncatedValue(entry.id, entry.new_value, "new")}
                 </Box>
               ) : (
-                <Stack direction="row" gap="8px" alignItems="center">
+                <Stack
+                  direction="row"
+                  sx={{
+                    gap: "8px",
+                    alignItems: "center",
+                  }}
+                >
                   {/* Old Value */}
                   {entry.old_value && entry.old_value !== "-" && (
                     <Box

@@ -25,9 +25,28 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ currentStep, totalSte
       }}
     >
       {/* Progress Stats */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-        <Stack direction="row" spacing={1} alignItems="baseline">
-          <Typography fontSize={14} fontWeight={600} color="text.primary">
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 2,
+        }}
+      >
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: "baseline",
+          }}
+        >
+          <Typography
+            sx={{
+              fontSize: 14,
+              fontWeight: 600,
+              color: "text.primary",
+            }}
+          >
             Question {currentStep} of {totalSteps}
           </Typography>
         </Stack>
@@ -43,9 +62,9 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ currentStep, totalSte
           }}
         >
           <Typography
-            fontSize={14}
-            fontWeight={700}
             sx={{
+              fontSize: 14,
+              fontWeight: 700,
               color: theme.palette.primary.main,
             }}
           >

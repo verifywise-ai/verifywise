@@ -39,10 +39,28 @@ const EntityDetailsSection: React.FC<EntityDetailsSectionProps> = ({ details }) 
   if (isEntityDeleted(details)) {
     return (
       <Stack spacing={8} sx={containerStyles}>
-        <Typography fontWeight={600} fontSize={14} color="#374151" mb={2}>
+        <Typography
+          sx={{
+            fontWeight: 600,
+            fontSize: 14,
+            color: "#374151",
+            mb: 2,
+          }}
+        >
           {config.title}
         </Typography>
-        <Typography fontSize={13} color="#C62828" fontStyle="italic" sx={deletedMessageStyles}>
+        <Typography
+          sx={[
+            {
+              fontSize: 13,
+              color: "#C62828",
+              fontStyle: "italic",
+            },
+            ...(Array.isArray(deletedMessageStyles)
+              ? deletedMessageStyles
+              : [deletedMessageStyles]),
+          ]}
+        >
           {config.deletedMessage}
         </Typography>
       </Stack>
@@ -54,7 +72,14 @@ const EntityDetailsSection: React.FC<EntityDetailsSectionProps> = ({ details }) 
 
   return (
     <Stack spacing={8} sx={containerStyles}>
-      <Typography fontWeight={600} fontSize={14} color="#374151" mb={2}>
+      <Typography
+        sx={{
+          fontWeight: 600,
+          fontSize: 14,
+          color: "#374151",
+          mb: 2,
+        }}
+      >
         {config.title}
       </Typography>
       {fieldsWithValues.length > 0 ? (
@@ -71,7 +96,13 @@ const EntityDetailsSection: React.FC<EntityDetailsSectionProps> = ({ details }) 
           />
         ))
       ) : (
-        <Typography fontSize={13} color={status.default.text} fontStyle="italic">
+        <Typography
+          color={status.default.text}
+          sx={{
+            fontSize: 13,
+            fontStyle: "italic",
+          }}
+        >
           {config.noDataMessage}
         </Typography>
       )}

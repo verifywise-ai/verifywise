@@ -52,7 +52,13 @@ export default function ModelLifecycleDetail({ modelId }: ModelLifecycleDetailPr
 
   if (loading) {
     return (
-      <Stack alignItems="center" justifyContent="center" sx={{ py: "64px" }}>
+      <Stack
+        sx={{
+          alignItems: "center",
+          justifyContent: "center",
+          py: "64px",
+        }}
+      >
         <CircularProgress />
       </Stack>
     );
@@ -60,7 +66,13 @@ export default function ModelLifecycleDetail({ modelId }: ModelLifecycleDetailPr
 
   if (!model) {
     return (
-      <Stack alignItems="center" justifyContent="center" sx={{ py: "64px" }}>
+      <Stack
+        sx={{
+          alignItems: "center",
+          justifyContent: "center",
+          py: "64px",
+        }}
+      >
         <Typography>Model not found</Typography>
       </Stack>
     );
@@ -102,10 +114,12 @@ export default function ModelLifecycleDetail({ modelId }: ModelLifecycleDetailPr
 
           <Stack
             direction="row"
-            alignItems="center"
-            justifyContent="space-between"
-            flexWrap="wrap"
-            sx={{ gap: "16px" }}
+            sx={{
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: "16px",
+            }}
           >
             <Stack sx={{ gap: "6px" }}>
               <Typography

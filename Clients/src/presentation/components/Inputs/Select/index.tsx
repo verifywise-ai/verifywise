@@ -116,7 +116,14 @@ function Select({
     }
 
     return (
-      <Stack direction="row" alignItems="center" spacing={1} sx={{ minWidth: 0 }}>
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: "center",
+          minWidth: 0,
+        }}
+      >
         {selectedItem?.icon && <selectedItem.icon color={selectedItem.color} size={16} />}
         <span
           style={{
@@ -137,9 +144,13 @@ function Select({
   return (
     <Stack
       data-testid={dataTestId}
-      gap={theme.spacing(2)}
       className="select-wrapper"
-      sx={extractedLayoutProps}
+      sx={[
+        {
+          gap: theme.spacing(2),
+        },
+        ...(Array.isArray(extractedLayoutProps) ? extractedLayoutProps : [extractedLayoutProps]),
+      ]}
     >
       {label && (
         <Typography
@@ -147,9 +158,9 @@ function Select({
           htmlFor={selectId}
           variant="body1"
           color={theme.palette.text.secondary}
-          fontWeight={500}
-          fontSize={"13px"}
           sx={{
+            fontWeight: 500,
+            fontSize: "13px",
             margin: 0,
             height: "22px",
             display: "flex",
@@ -158,17 +169,25 @@ function Select({
         >
           {label}
           {isRequired && (
-            <Typography component="span" ml={theme.spacing(1)} color={theme.palette.error.text}>
+            <Typography
+              component="span"
+              color={theme.palette.error.text}
+              sx={{
+                ml: theme.spacing(1),
+              }}
+            >
               *
             </Typography>
           )}
           {isOptional && (
             <Typography
               component="span"
-              fontSize="inherit"
-              fontWeight={400}
-              ml={theme.spacing(2)}
-              sx={{ opacity: 0.6 }}
+              sx={{
+                fontSize: "inherit",
+                fontWeight: 400,
+                ml: theme.spacing(2),
+                opacity: 0.6,
+              }}
             >
               {optionalLabel || "(optional)"}
             </Typography>
@@ -217,28 +236,31 @@ function Select({
         MenuProps={{
           disableScrollLock: true,
           style: { zIndex: 10001 },
-          PaperProps: {
-            sx: {
-              "borderRadius": theme.shape.borderRadius,
-              "boxShadow": theme.boxShadow,
-              "mt": 1,
-              "& .MuiMenuItem-root": {
-                "fontSize": 13,
-                "color": theme.palette.text.primary,
-                "transition": "color 0.2s ease, background-color 0.2s ease",
-                "&:hover": {
-                  backgroundColor: theme.palette.background.accent,
-                  color: theme.palette.primary.main,
-                },
-                "&.Mui-selected": {
-                  "backgroundColor": theme.palette.background.accent,
+
+          slotProps: {
+            paper: {
+              sx: {
+                "borderRadius": theme.shape.borderRadius,
+                "boxShadow": theme.boxShadow,
+                "mt": 1,
+                "& .MuiMenuItem-root": {
+                  "fontSize": 13,
+                  "color": theme.palette.text.primary,
+                  "transition": "color 0.2s ease, background-color 0.2s ease",
                   "&:hover": {
                     backgroundColor: theme.palette.background.accent,
                     color: theme.palette.primary.main,
                   },
-                },
-                "& .MuiTouchRipple-root": {
-                  display: "none",
+                  "&.Mui-selected": {
+                    "backgroundColor": theme.palette.background.accent,
+                    "&:hover": {
+                      backgroundColor: theme.palette.background.accent,
+                      color: theme.palette.primary.main,
+                    },
+                  },
+                  "& .MuiTouchRipple-root": {
+                    display: "none",
+                  },
                 },
               },
             },
@@ -280,7 +302,13 @@ function Select({
                   flexDirection: "row",
                 }}
               >
-                <Stack direction="row" alignItems="center" spacing={1}>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: "center",
+                  }}
+                >
                   {item.icon && <item.icon color={item.color} size={16} />}
                   <span>{`${item.name} ${item.surname ? item.surname : ""}`}</span>
                 </Stack>
@@ -353,8 +381,8 @@ function Select({
           role="alert"
           className="input-error"
           color={theme.palette.status.error.text}
-          mt={theme.spacing(2)}
           sx={{
+            mt: theme.spacing(2),
             opacity: 0.8,
             fontSize: 11,
           }}

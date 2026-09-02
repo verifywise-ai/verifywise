@@ -478,7 +478,12 @@ export function IntakeFormBuilder() {
   // ============================================================================
 
   return (
-    <Stack className="vwhome" gap="16px">
+    <Stack
+      className="vwhome"
+      sx={{
+        gap: "16px",
+      }}
+    >
       <PageBreadcrumbs
         items={[
           {
@@ -910,9 +915,11 @@ export function IntakeFormBuilder() {
                                     <Stack
                                       key={m.field}
                                       direction="row"
-                                      alignItems="center"
-                                      justifyContent="space-between"
-                                      sx={{ py: "2px" }}
+                                      sx={{
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        py: "2px",
+                                      }}
                                     >
                                       <Typography
                                         sx={{ fontSize: 12, color: theme.palette.text.secondary }}
@@ -984,9 +991,11 @@ export function IntakeFormBuilder() {
                                     <Stack
                                       key={m.field}
                                       direction="row"
-                                      alignItems="center"
-                                      justifyContent="space-between"
-                                      sx={{ py: "2px" }}
+                                      sx={{
+                                        alignItems: "center",
+                                        justifyContent: "space-between",
+                                        py: "2px",
+                                      }}
                                     >
                                       <Typography
                                         sx={{ fontSize: 12, color: theme.palette.text.secondary }}

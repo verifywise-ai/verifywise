@@ -410,7 +410,6 @@ const LinkRiskSelectorModal: React.FC<LinkRiskSelectorModalProps> = ({
                   rowsPerPage={rowsPerPage}
                   rowsPerPageOptions={[5, 10, 15, 25]}
                   onRowsPerPageChange={handleChangeRowsPerPage}
-                  ActionsComponent={(props) => <TablePaginationActions {...props} />}
                   labelRowsPerPage="Rows per page"
                   labelDisplayedRows={({ page, count }) =>
                     `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
@@ -426,6 +425,7 @@ const LinkRiskSelectorModal: React.FC<LinkRiskSelectorModalProps> = ({
                     },
                   }}
                   sx={paginationStyle(theme)}
+                  ActionsComponent={(props) => <TablePaginationActions {...props} />}
                 />
               </TableRow>
             </TableFooter>

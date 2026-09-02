@@ -397,8 +397,19 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Typography variant="h6" fontWeight={600}>
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: 600,
+            }}
+          >
             {title}
           </Typography>
           <IconButton onClick={handleClose} disabled={isUploading} size="small">
@@ -425,21 +436,46 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
             }}
             onClick={handleBrowseClick}
           >
-            <Stack spacing={2} alignItems="center">
+            <Stack
+              spacing={2}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <UploadIcon
                 size={48}
                 color={isDragging ? theme.palette.primary.main : theme.palette.text.disabled}
               />
-              <Typography variant="body1" fontWeight={500}>
+              <Typography
+                variant="body1"
+                sx={{
+                  fontWeight: 500,
+                }}
+              >
                 Drag and drop files here
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 or click to browse
               </Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 Supports: {getSupportedTypesText()}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 Maximum file size: {MAX_FILE_SIZE_MB}MB
               </Typography>
             </Stack>
@@ -456,7 +492,13 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
           {/* Approval Workflow Selector */}
           <Collapse in={showApprovalWorkflow}>
             {loadingWorkflows ? (
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: 13 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                  fontSize: 13,
+                }}
+              >
                 Loading approval workflows...
               </Typography>
             ) : approvalWorkflows.length > 0 ? (
@@ -525,7 +567,13 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
           {/* File List */}
           {fileList.length > 0 && (
             <Box>
-              <Typography variant="subtitle2" fontWeight={600} mb={1}>
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  fontWeight: 600,
+                  mb: 1,
+                }}
+              >
                 Selected Files ({fileList.length})
               </Typography>
               <List sx={{ maxHeight: "300px", overflow: "auto" }}>
@@ -553,13 +601,23 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
                   >
                     <ListItemText
                       primary={
-                        <Typography variant="body2" fontWeight={500}>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontWeight: 500,
+                          }}
+                        >
                           {item.file.name}
                         </Typography>
                       }
                       secondary={
                         <Stack spacing={0.5}>
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              color: "text.secondary",
+                            }}
+                          >
                             {formatBytes(item.file.size)}
                           </Typography>
                           {item.status === "uploading" && (
@@ -580,7 +638,9 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
                           )}
                         </Stack>
                       }
-                      secondaryTypographyProps={{ component: "div" }}
+                      slotProps={{
+                        secondary: { component: "div" },
+                      }}
                     />
                     <Box
                       sx={{
@@ -598,7 +658,13 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
           )}
 
           {/* Action Buttons */}
-          <Stack direction="row" spacing={2} justifyContent="flex-end">
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
+              justifyContent: "flex-end",
+            }}
+          >
             <Button variant="outlined" onClick={handleClose} disabled={isUploading}>
               Cancel
             </Button>

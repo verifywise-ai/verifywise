@@ -174,7 +174,14 @@ export default function SlackConfiguration() {
 
   return (
     <Box>
-      <Typography variant="body2" color="text.secondary" fontSize={13} sx={{ mb: 3 }}>
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.secondary",
+          fontSize: 13,
+          mb: 3,
+        }}
+      >
         Connect your Slack workspace and route VerifyWise notifications to specific channels.
       </Typography>
 
@@ -184,7 +191,14 @@ export default function SlackConfiguration() {
         </Alert>
       )}
 
-      <Stack direction="row" justifyContent="flex-end" spacing={2} sx={{ mb: 3 }}>
+      <Stack
+        direction="row"
+        spacing={2}
+        sx={{
+          justifyContent: "flex-end",
+          mb: 3,
+        }}
+      >
         <a
           href="#"
           onClick={(e) => {
@@ -222,7 +236,13 @@ export default function SlackConfiguration() {
       {loadingWorkspaces ? (
         <Box sx={{ display: "flex", alignItems: "center", gap: 2, py: 4 }}>
           <CircularProgress size={24} />
-          <Typography fontSize={13}>Loading workspaces...</Typography>
+          <Typography
+            sx={{
+              fontSize: 13,
+            }}
+          >
+            Loading workspaces...
+          </Typography>
         </Box>
       ) : (
         <TableContainer

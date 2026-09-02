@@ -165,7 +165,13 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({ risks, onRiskSelect, selecte
             {cell.risks.length > 0 && (
               <Box sx={{ mt: 1 }}>
                 {cell.risks.slice(0, 3).map((risk, idx) => (
-                  <Typography key={idx} variant="caption" display="block">
+                  <Typography
+                    key={idx}
+                    variant="caption"
+                    sx={{
+                      display: "block",
+                    }}
+                  >
                     • {risk.risk_name || `Risk ${risk.id}`}
                   </Typography>
                 ))}
@@ -246,7 +252,14 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({ risks, onRiskSelect, selecte
         minHeight: "500px",
       }}
     >
-      <Stack direction="row" spacing={4} alignItems="center" sx={{ width: "100%" }}>
+      <Stack
+        direction="row"
+        spacing={4}
+        sx={{
+          alignItems: "center",
+          width: "100%",
+        }}
+      >
         {/* Main Heat Map */}
         <Box
           sx={{
@@ -291,7 +304,14 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({ risks, onRiskSelect, selecte
 
               <Stack spacing={1}>
                 {heatMapData.map((row, rowIndex) => (
-                  <Stack key={rowIndex} direction="row" spacing={1} alignItems="center">
+                  <Stack
+                    key={rowIndex}
+                    direction="row"
+                    spacing={1}
+                    sx={{
+                      alignItems: "center",
+                    }}
+                  >
                     {/* Severity labels */}
                     <Box sx={{ minWidth: 80, textAlign: "right", pr: 1 }}>
                       <Typography
@@ -310,7 +330,13 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({ risks, onRiskSelect, selecte
                 ))}
 
                 {/* X-axis labels */}
-                <Stack direction="row" spacing={1} alignItems="center">
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: "center",
+                  }}
+                >
                   <Box sx={{ minWidth: 80 }} />
                   <Stack direction="row" spacing={1}>
                     {[1, 2, 3, 4, 5].map((likelihood) => (
@@ -329,7 +355,13 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({ risks, onRiskSelect, selecte
             </Box>
 
             {/* X-axis label */}
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <Box sx={{ minWidth: 80 }} />
               <Box
                 sx={{
@@ -404,7 +436,13 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({ risks, onRiskSelect, selecte
             boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
           }}
         >
-          <Stack direction="row" spacing={2} alignItems="center">
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             <Typography variant="caption" sx={{ color: "status.default.text", fontWeight: 500 }}>
               Risk Level:
             </Typography>

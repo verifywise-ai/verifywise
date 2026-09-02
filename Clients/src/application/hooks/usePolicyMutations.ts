@@ -30,7 +30,10 @@ export function useUpdatePolicy() {
     updateItem:
       ({ input }) =>
       (policy) =>
-        ({ ...policy, ...input }) as PolicyManagerModel,
+        ({
+          ...policy,
+          ...input,
+        }) as PolicyManagerModel,
     invalidateKeys: ({ id }) => [[...policyQueryKeys.list()], [...policyQueryKeys.detail(id)]],
   });
 }

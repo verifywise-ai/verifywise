@@ -58,9 +58,11 @@ const FileTable: React.FC<IFileTableProps> = ({
               name: (
                 <Stack
                   direction="row"
-                  alignItems="center"
                   onClick={() => handleSort(colKey as keyof FileModel)}
-                  sx={{ cursor: "pointer" }}
+                  sx={{
+                    alignItems: "center",
+                    cursor: "pointer",
+                  }}
                 >
                   {col.name}
                   {sortField === colKey && sortDirection === "asc" ? (

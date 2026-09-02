@@ -329,12 +329,24 @@ const ApprovalWorkflows: React.FC = () => {
       <Stack sx={workflowMainStack}>
         <Stack
           direction="row"
-          justifyContent="space-between"
-          alignItems="center"
           spacing={2}
-          sx={filterSearchContainer}
+          sx={[
+            {
+              justifyContent: "space-between",
+              alignItems: "center",
+            },
+            ...(Array.isArray(filterSearchContainer)
+              ? filterSearchContainer
+              : [filterSearchContainer]),
+          ]}
         >
-          <Stack direction="row" spacing={2} alignItems="center">
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             <FilterBy columns={workflowFilterColumns} onFilterChange={handleWorkflowFilterChange} />
             <ColumnSelector
               columns={allWorkflowColumns}

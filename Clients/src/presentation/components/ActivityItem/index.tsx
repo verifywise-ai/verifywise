@@ -15,11 +15,11 @@ const ActivityItem: React.FC<ActivityItemProps> = memo(
     return (
       <Stack
         direction="row"
-        alignItems="center"
-        justifyContent="space-between"
         role="listitem"
         aria-label={`${type}: ${title} at ${timestamp}`}
         sx={{
+          alignItems: "center",
+          justifyContent: "space-between",
           py: 1,
           borderBottom: isLast ? "none" : `1px solid ${theme.palette.divider}`,
         }}

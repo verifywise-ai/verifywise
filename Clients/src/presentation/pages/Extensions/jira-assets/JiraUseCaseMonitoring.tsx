@@ -17,7 +17,12 @@ interface JiraUseCaseMonitoringProps {
 export const JiraUseCaseMonitoring: React.FC<JiraUseCaseMonitoringProps> = () => {
   return (
     <Box sx={{ p: 4 }}>
-      <Stack alignItems="center" spacing={3}>
+      <Stack
+        spacing={3}
+        sx={{
+          alignItems: "center",
+        }}
+      >
         <Box
           sx={{
             width: 80,

@@ -71,13 +71,15 @@ export function PolicyEditorTitleArea({
               disabled={isSavingTitle}
               error={!!titleError}
               helperText={titleError}
-              inputProps={{ maxLength: 128 }}
               sx={{
                 "minWidth": "400px",
                 "& .MuiOutlinedInput-root": {
                   ...textStyles.cardTitle,
                   color: palette.text.secondary,
                 },
+              }}
+              slotProps={{
+                htmlInput: { maxLength: 128 },
               }}
             />
             <IconButton

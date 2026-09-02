@@ -93,18 +93,27 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
         anchor="right"
         open={isOpen}
         onClose={() => setIsOpen(false)}
-        PaperProps={{
-          sx: { width: 480, backgroundColor: theme.palette.background.modal || "#FCFCFD" },
+        slotProps={{
+          paper: {
+            sx: { width: 480, backgroundColor: theme.palette.background.modal || "#FCFCFD" },
+          },
         }}
       >
         {/* Header */}
         <Stack
           direction="row"
-          justifyContent="space-between"
-          alignItems="center"
-          sx={{ p: "16px 24px" }}
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "center",
+            p: "16px 24px",
+          }}
         >
-          <Typography fontSize={16} fontWeight={600}>
+          <Typography
+            sx={{
+              fontSize: 16,
+              fontWeight: 600,
+            }}
+          >
             Agent details
           </Typography>
           <IconButton onClick={() => setIsOpen(false)} size="small">
@@ -126,10 +135,23 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
 
           {/* Review status with audit info */}
           <Box>
-            <Typography fontSize={12} fontWeight={600} color="text.secondary" mb="4px">
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: "text.secondary",
+                mb: "4px",
+              }}
+            >
               Review status
             </Typography>
-            <Stack direction="row" alignItems="center" gap="8px">
+            <Stack
+              direction="row"
+              sx={{
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
               <VWChip
                 label={agent.review_status}
                 variant={
@@ -141,7 +163,12 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
                 }
               />
               {reviewedByName && (
-                <Typography fontSize={12} color="text.secondary">
+                <Typography
+                  sx={{
+                    fontSize: 12,
+                    color: "text.secondary",
+                  }}
+                >
                   by {reviewedByName} on {formatDate(agent.reviewed_at)}
                 </Typography>
               )}
@@ -155,16 +182,34 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
 
           {/* Permissions - Categories */}
           <Box>
-            <Typography fontSize={12} fontWeight={600} color="text.secondary" mb="4px">
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: "text.secondary",
+                mb: "4px",
+              }}
+            >
               Categories
             </Typography>
-            <Stack direction="row" flexWrap="wrap" gap="4px">
+            <Stack
+              direction="row"
+              sx={{
+                flexWrap: "wrap",
+                gap: "4px",
+              }}
+            >
               {(agent.permission_categories || []).length > 0 ? (
                 agent.permission_categories.map((cat: string) => (
                   <VWChip key={cat} label={cat} variant="info" size="small" />
                 ))
               ) : (
-                <Typography fontSize={13} color="text.secondary">
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                    color: "text.secondary",
+                  }}
+                >
                   None
                 </Typography>
               )}
@@ -173,10 +218,23 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
 
           {/* Permissions - Raw */}
           <Box>
-            <Typography fontSize={12} fontWeight={600} color="text.secondary" mb="4px">
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: "text.secondary",
+                mb: "4px",
+              }}
+            >
               Raw permissions
             </Typography>
-            <Stack direction="row" flexWrap="wrap" gap="4px">
+            <Stack
+              direction="row"
+              sx={{
+                flexWrap: "wrap",
+                gap: "4px",
+              }}
+            >
               {(agent.permissions || []).length > 0 ? (
                 agent.permissions.map((perm: any, idx: number) => (
                   <VWChip
@@ -186,7 +244,12 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
                   />
                 ))
               ) : (
-                <Typography fontSize={13} color="text.secondary">
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                    color: "text.secondary",
+                  }}
+                >
                   None
                 </Typography>
               )}
@@ -195,12 +258,31 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
 
           {/* Model link */}
           <Box>
-            <Typography fontSize={12} fontWeight={600} color="text.secondary" mb="8px">
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: "text.secondary",
+                mb: "8px",
+              }}
+            >
               Linked model
             </Typography>
             {agent.linked_model_inventory_id ? (
-              <Stack direction="row" alignItems="center" gap="8px">
-                <Typography fontSize={13}>Model #{agent.linked_model_inventory_id}</Typography>
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                  }}
+                >
+                  Model #{agent.linked_model_inventory_id}
+                </Typography>
                 <IconButton size="small" onClick={handleUnlink} title="Unlink model">
                   <Unlink size={14} strokeWidth={1.5} />
                 </IconButton>
@@ -219,7 +301,14 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
           {/* Metadata */}
           {Object.keys(agent.metadata || {}).length > 0 && (
             <Box>
-              <Typography fontSize={12} fontWeight={600} color="text.secondary" mb="8px">
+              <Typography
+                sx={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: "text.secondary",
+                  mb: "8px",
+                }}
+              >
                 Metadata
               </Typography>
               <Box
@@ -244,7 +333,14 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
 
         {/* Footer */}
         <Divider />
-        <Stack direction="row" justifyContent="flex-end" gap="8px" sx={{ p: "16px 24px" }}>
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "flex-end",
+            gap: "8px",
+            p: "16px 24px",
+          }}
+        >
           <CustomizableButton
             variant="outlined"
             sx={{ border: "1px solid #d0d5dd" }}
@@ -289,10 +385,23 @@ const DetailRow: React.FC<{
   value: string;
 }> = ({ label, value }) => (
   <Box>
-    <Typography fontSize={12} fontWeight={600} color="text.secondary" mb="4px">
+    <Typography
+      sx={{
+        fontSize: 12,
+        fontWeight: 600,
+        color: "text.secondary",
+        mb: "4px",
+      }}
+    >
       {label}
     </Typography>
-    <Typography fontSize={13}>{value}</Typography>
+    <Typography
+      sx={{
+        fontSize: 13,
+      }}
+    >
+      {value}
+    </Typography>
   </Box>
 );
 

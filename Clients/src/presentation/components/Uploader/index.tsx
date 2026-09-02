@@ -559,7 +559,13 @@ const Uploader: React.FC<UploaderProps> = ({
       >
         {/* Header */}
         <Box sx={{ p: 3, borderBottom: `1px solid #EAECF0` }}>
-          <Stack direction="row" alignItems="center" spacing={2}>
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             <Avatar
               sx={{
                 backgroundColor: `${singleTheme.buttons.primary.contained.backgroundColor}15`,
@@ -570,7 +576,11 @@ const Uploader: React.FC<UploaderProps> = ({
             >
               <UploadIcon size={20} />
             </Avatar>
-            <Box flex={1}>
+            <Box
+              sx={{
+                flex: 1,
+              }}
+            >
               <Typography
                 variant="body1"
                 sx={{
@@ -678,7 +688,14 @@ const Uploader: React.FC<UploaderProps> = ({
         {files.length > 0 && (
           <Fade in timeout={300}>
             <Box sx={{ px: 3, pb: 2 }}>
-              <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }}>
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{
+                  alignItems: "center",
+                  mb: 1,
+                }}
+              >
                 <Typography
                   variant="body2"
                   color={text.secondary}
@@ -732,7 +749,13 @@ const Uploader: React.FC<UploaderProps> = ({
                     <Fade key={file.id} in timeout={300 + index * 100}>
                       <Paper variant="outlined" sx={fileCardStyles}>
                         <Box sx={{ p: 2 }}>
-                          <Stack direction="row" alignItems="center" spacing={2}>
+                          <Stack
+                            direction="row"
+                            spacing={2}
+                            sx={{
+                              alignItems: "center",
+                            }}
+                          >
                             {/* File Icon */}
                             <Avatar
                               sx={{
@@ -755,7 +778,12 @@ const Uploader: React.FC<UploaderProps> = ({
                             </Avatar>
 
                             {/* File Info */}
-                            <Box flex={1} minWidth={0}>
+                            <Box
+                              sx={{
+                                flex: 1,
+                                minWidth: 0,
+                              }}
+                            >
                               <Typography
                                 variant="body2"
                                 sx={{
@@ -770,7 +798,13 @@ const Uploader: React.FC<UploaderProps> = ({
                               >
                                 {file.name}
                               </Typography>
-                              <Stack direction="row" alignItems="center" spacing={1}>
+                              <Stack
+                                direction="row"
+                                spacing={1}
+                                sx={{
+                                  alignItems: "center",
+                                }}
+                              >
                                 <Typography
                                   variant="caption"
                                   color={text.tertiary}
@@ -901,7 +935,13 @@ const Uploader: React.FC<UploaderProps> = ({
         {files.length > 0 && (
           <Fade in timeout={500}>
             <Box sx={{ p: 3, borderTop: `1px solid #EAECF0` }}>
-              <Stack direction="row" spacing={2} justifyContent="flex-end">
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{
+                  justifyContent: "flex-end",
+                }}
+              >
                 <CustomizableButton
                   variant="text"
                   onClick={handleClearAll}

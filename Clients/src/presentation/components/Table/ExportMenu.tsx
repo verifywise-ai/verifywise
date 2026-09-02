@@ -125,7 +125,16 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
             },
           }}
         >
-          <ListItemText primary="Print" primaryTypographyProps={{ fontSize: "13px" }} />
+          <ListItemText
+            primary="Print"
+            slotProps={{
+              primary: {
+                sx: {
+                  fontSize: "13px",
+                },
+              },
+            }}
+          />
         </MenuItem>
 
         {/* Export Option with Submenu */}
@@ -147,7 +156,16 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
             },
           }}
         >
-          <ListItemText primary="Export" primaryTypographyProps={{ fontSize: "13px" }} />
+          <ListItemText
+            primary="Export"
+            slotProps={{
+              primary: {
+                sx: {
+                  fontSize: "13px",
+                },
+              },
+            }}
+          />
           <ChevronRight size={16} color={status.default.text} />
         </MenuItem>
       </Menu>
@@ -187,8 +205,14 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
           <img src={pdfIcon} alt="PDF" width={16} height={16} style={{ flexShrink: 0 }} />
           <ListItemText
             primary="Export to PDF"
-            primaryTypographyProps={{ fontSize: "13px" }}
             sx={{ margin: 0 }}
+            slotProps={{
+              primary: {
+                sx: {
+                  fontSize: "13px",
+                },
+              },
+            }}
           />
         </MenuItem>
         <MenuItem
@@ -207,8 +231,14 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
           <img src={csvIcon} alt="CSV" width={16} height={16} style={{ flexShrink: 0 }} />
           <ListItemText
             primary="Export to CSV"
-            primaryTypographyProps={{ fontSize: "13px" }}
             sx={{ margin: 0 }}
+            slotProps={{
+              primary: {
+                sx: {
+                  fontSize: "13px",
+                },
+              },
+            }}
           />
         </MenuItem>
         <MenuItem
@@ -227,8 +257,14 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
           <img src={xlsIcon} alt="XLSX" width={16} height={16} style={{ flexShrink: 0 }} />
           <ListItemText
             primary="Export to XLSX"
-            primaryTypographyProps={{ fontSize: "13px" }}
             sx={{ margin: 0 }}
+            slotProps={{
+              primary: {
+                sx: {
+                  fontSize: "13px",
+                },
+              },
+            }}
           />
         </MenuItem>
       </Menu>

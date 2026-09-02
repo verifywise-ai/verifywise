@@ -221,8 +221,18 @@ function ApiKeysSection() {
 
   return (
     <Box sx={cardSx}>
-      <Stack gap="12px">
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
+      <Stack
+        sx={{
+          gap: "12px",
+        }}
+      >
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <Typography sx={sectionTitleSx}>API keys</Typography>
           <CustomizableButton
             text="Create API key"
@@ -256,14 +266,24 @@ function ApiKeysSection() {
             sx={{ mb: 2, fontSize: 13 }}
             onClose={() => setNewlyCreatedKey(null)}
           >
-            <Stack gap="8px">
+            <Stack
+              sx={{
+                gap: "8px",
+              }}
+            >
               <Typography sx={{ fontSize: 13, fontWeight: 600 }}>
                 API key created successfully
               </Typography>
               <Typography sx={{ fontSize: 12, color: palette.status.default.text }}>
                 Copy this key now. You won't be able to see it again.
               </Typography>
-              <Stack direction="row" alignItems="center" gap="8px">
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
                 <Box
                   sx={{
                     fontFamily: "monospace",
@@ -526,8 +546,18 @@ function SyslogConfigSection() {
 
   return (
     <Box sx={cardSx}>
-      <Stack gap="12px">
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
+      <Stack
+        sx={{
+          gap: "12px",
+        }}
+      >
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <Typography sx={sectionTitleSx}>Syslog sources</Typography>
           <CustomizableButton
             text="Add source"
@@ -602,7 +632,13 @@ function SyslogConfigSection() {
                       {c.created_at ? displayFormattedDate(c.created_at) : "—"}
                     </TableCell>
                     <TableCell align="right" sx={singleTheme.tableStyles.primary.body.cell}>
-                      <Stack direction="row" gap="4px" justifyContent="flex-end">
+                      <Stack
+                        direction="row"
+                        sx={{
+                          gap: "4px",
+                          justifyContent: "flex-end",
+                        }}
+                      >
                         <IconButton
                           size="small"
                           onClick={(e) => {
@@ -647,7 +683,11 @@ function SyslogConfigSection() {
           isSubmitting={creating}
           maxWidth="400px"
         >
-          <Stack gap="16px">
+          <Stack
+            sx={{
+              gap: "16px",
+            }}
+          >
             <Field
               label="Source identifier"
               value={formSource}
@@ -680,7 +720,11 @@ function SyslogConfigSection() {
           isSubmitting={editing}
           maxWidth="400px"
         >
-          <Stack gap="16px">
+          <Stack
+            sx={{
+              gap: "16px",
+            }}
+          >
             <Field
               label="Source identifier"
               value={editSource}
@@ -856,7 +900,11 @@ function DataFormatsSection() {
   const { open: openGuide } = useUserGuideSidebarContext();
   return (
     <Box sx={cardSx}>
-      <Stack gap="16px">
+      <Stack
+        sx={{
+          gap: "16px",
+        }}
+      >
         <Typography sx={sectionTitleSx}>Data formats</Typography>
         <Typography sx={{ fontSize: 13, color: palette.status.default.text, lineHeight: 1.5 }}>
           Reference for the exact data formats VerifyWise expects when ingesting Shadow AI events
@@ -925,7 +973,11 @@ function DataFormatsSection() {
           parser.
         </Typography>
 
-        <Stack gap="12px">
+        <Stack
+          sx={{
+            gap: "12px",
+          }}
+        >
           {SYSLOG_EXAMPLES.map((ex) => (
             <Box key={ex.format}>
               <Typography sx={{ fontSize: 13, fontWeight: 500, mb: 0.5 }}>{ex.label}</Typography>
@@ -1040,7 +1092,11 @@ function RateLimitSection({
 
   return (
     <Box sx={cardSx}>
-      <Stack gap="12px">
+      <Stack
+        sx={{
+          gap: "12px",
+        }}
+      >
         <Typography sx={sectionTitleSx}>Rate limiting</Typography>
         <Typography sx={{ fontSize: 13, color: palette.status.default.text }}>
           Limit the number of events that can be ingested per hour. Leave empty or set to 0 to allow
@@ -1050,7 +1106,13 @@ function RateLimitSection({
         {loading ? (
           <Skeleton variant="rectangular" height={40} sx={{ borderRadius: "4px", maxWidth: 300 }} />
         ) : (
-          <Stack direction="row" alignItems="flex-end" gap="12px">
+          <Stack
+            direction="row"
+            sx={{
+              alignItems: "flex-end",
+              gap: "12px",
+            }}
+          >
             <Field
               label="Max events per hour"
               value={rateLimit}
@@ -1182,7 +1244,11 @@ function DataRetentionSection({
 
   return (
     <Box sx={cardSx}>
-      <Stack gap="12px">
+      <Stack
+        sx={{
+          gap: "12px",
+        }}
+      >
         <Typography sx={sectionTitleSx}>Data retention</Typography>
         <Typography sx={{ fontSize: 13, color: palette.status.default.text }}>
           Configure how long Shadow AI data is retained. Set to 0 or leave empty to keep data
@@ -1192,9 +1258,20 @@ function DataRetentionSection({
         {loading ? (
           <Skeleton variant="rectangular" height={120} sx={{ borderRadius: "4px" }} />
         ) : (
-          <Stack gap="16px">
+          <Stack
+            sx={{
+              gap: "16px",
+            }}
+          >
             {RETENTION_FIELDS.map((field) => (
-              <Stack key={field.label} direction="row" alignItems="flex-end" gap="12px">
+              <Stack
+                key={field.label}
+                direction="row"
+                sx={{
+                  alignItems: "flex-end",
+                  gap: "12px",
+                }}
+              >
                 <Box sx={{ flex: 1, maxWidth: 280 }}>
                   <Field
                     label={`${field.label} (days)`}
@@ -1262,19 +1339,27 @@ function RiskScoreSection() {
   const cardSx = useCardSx();
   return (
     <Box sx={cardSx}>
-      <Stack gap="16px">
+      <Stack
+        sx={{
+          gap: "16px",
+        }}
+      >
         <Typography sx={sectionTitleSx}>Risk score calculation</Typography>
         <Typography sx={{ fontSize: 13, color: palette.status.default.text, lineHeight: 1.5 }}>
           Each AI tool receives a risk score from 0 to 100, recalculated nightly. The score is a
           weighted composite of four factors:
         </Typography>
-        <Stack gap="8px">
+        <Stack
+          sx={{
+            gap: "8px",
+          }}
+        >
           {RISK_WEIGHTS.map((w) => (
             <Stack
               key={w.factor}
               direction="row"
-              gap="12px"
               sx={{
+                gap: "12px",
                 p: "12px 16px",
                 border: `1px solid ${palette.border.dark}`,
                 borderRadius: "4px",
@@ -1286,7 +1371,11 @@ function RiskScoreSection() {
               >
                 {w.weight}
               </Typography>
-              <Stack gap="2px">
+              <Stack
+                sx={{
+                  gap: "2px",
+                }}
+              >
                 <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{w.factor}</Typography>
                 <Typography
                   sx={{ fontSize: 12, color: palette.status.default.text, lineHeight: 1.5 }}

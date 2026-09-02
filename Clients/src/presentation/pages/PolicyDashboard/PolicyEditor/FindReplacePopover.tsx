@@ -54,8 +54,18 @@ export function FindReplacePopover({
         },
       }}
     >
-      <Stack gap="12px">
-        <Stack direction="row" gap="8px" alignItems="center">
+      <Stack
+        sx={{
+          gap: "12px",
+        }}
+      >
+        <Stack
+          direction="row"
+          sx={{
+            gap: "8px",
+            alignItems: "center",
+          }}
+        >
           <Box sx={{ flex: 1 }}>
             <Field
               id="search-find-input"
@@ -118,7 +128,13 @@ export function FindReplacePopover({
           </Typography>
         )}
 
-        <Stack direction="row" gap="8px" alignItems="center">
+        <Stack
+          direction="row"
+          sx={{
+            gap: "8px",
+            alignItems: "center",
+          }}
+        >
           <Box sx={{ flex: 1 }}>
             <Field
               id="search-replace-input"

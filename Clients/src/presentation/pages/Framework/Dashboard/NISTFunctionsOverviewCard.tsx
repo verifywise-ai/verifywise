@@ -169,7 +169,12 @@ const NISTFunctionsOverviewCard = ({
           border: "1px solid #d0d5dd",
         }}
       >
-        <Typography variant="body1" color="text.secondary">
+        <Typography
+          variant="body1"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           No NIST AI RMF data available.
         </Typography>
       </Box>

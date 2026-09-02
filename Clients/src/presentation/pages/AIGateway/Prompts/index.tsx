@@ -171,7 +171,12 @@ export default function PromptsPage() {
     >
       <Stack spacing={6}>
         {formError && (
-          <Typography color="error" fontSize={13}>
+          <Typography
+            color="error"
+            sx={{
+              fontSize: 13,
+            }}
+          >
             {formError}
           </Typography>
         )}
@@ -202,7 +207,11 @@ export default function PromptsPage() {
       submitButtonColor="#c62828"
       maxWidth="480px"
     >
-      <Typography fontSize={13}>
+      <Typography
+        sx={{
+          fontSize: 13,
+        }}
+      >
         All versions will be removed and any endpoints using this prompt will be unlinked. This
         action cannot be undone.
       </Typography>
@@ -308,11 +317,23 @@ export default function PromptsPage() {
                   sx={body.row}
                 >
                   <TableCell style={body.cell}>
-                    <Typography fontSize={13} fontWeight={500}>
+                    <Typography
+                      sx={{
+                        fontSize: 13,
+                        fontWeight: 500,
+                      }}
+                    >
                       {p.name}
                     </Typography>
                     {p.description && (
-                      <Typography fontSize={12} color="text.secondary" sx={{ mt: "2px" }} noWrap>
+                      <Typography
+                        noWrap
+                        sx={{
+                          fontSize: 12,
+                          color: "text.secondary",
+                          mt: "2px",
+                        }}
+                      >
                         {p.description}
                       </Typography>
                     )}
@@ -336,7 +357,12 @@ export default function PromptsPage() {
                         ))}
                       </Box>
                     ) : (
-                      <Typography fontSize={12} color="text.secondary">
+                      <Typography
+                        sx={{
+                          fontSize: 12,
+                          color: "text.secondary",
+                        }}
+                      >
                         -
                       </Typography>
                     )}
@@ -344,7 +370,13 @@ export default function PromptsPage() {
                   <TableCell style={body.cell}>
                     <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
                       {provider && <ProviderIcon provider={provider} size={14} />}
-                      <Typography fontSize={12} color="text.secondary" noWrap>
+                      <Typography
+                        noWrap
+                        sx={{
+                          fontSize: 12,
+                          color: "text.secondary",
+                        }}
+                      >
                         {p.published_model || "-"}
                       </Typography>
                     </Box>
@@ -383,8 +415,8 @@ export default function PromptsPage() {
               setPage(0);
             }}
             rowsPerPageOptions={[5, 10, 25]}
-            ActionsComponent={TablePaginationActions}
             sx={{ borderTop: "1px solid", borderColor: "border.light" }}
+            ActionsComponent={TablePaginationActions}
           />
         )}
       </TableContainer>

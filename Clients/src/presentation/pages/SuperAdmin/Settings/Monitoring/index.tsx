@@ -152,7 +152,13 @@ const Monitoring: React.FC = () => {
   }
 
   return (
-    <Stack sx={{ pt: 4, maxWidth: 640 }} gap={theme.spacing(8)}>
+    <Stack
+      sx={{
+        gap: theme.spacing(8),
+        pt: 4,
+        maxWidth: 640,
+      }}
+    >
       {alert && (
         <Box sx={{ mb: 2 }}>
           <Alert
@@ -211,7 +217,11 @@ const Monitoring: React.FC = () => {
         width="100%"
       />
 
-      <Stack gap={theme.spacing(2)}>
+      <Stack
+        sx={{
+          gap: theme.spacing(2),
+        }}
+      >
         <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Push token</Typography>
         <Field
           id="monitoring-auth-header"

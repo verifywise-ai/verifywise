@@ -124,18 +124,20 @@ const VerifyWiseMultiSelect: React.FC<VerifyWiseMultiSelectProps> = ({
         open={isOpen}
         onClose={handleClose}
         disableScrollLock={true}
-        PaperProps={{
-          sx: {
-            borderRadius: theme.shape.borderRadius || 4,
-            boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
-            mt: 0.5,
-            width: buttonRef.current?.offsetWidth || minWidth,
-            py: 0.5,
+        slotProps={{
+          paper: {
+            sx: {
+              borderRadius: theme.shape.borderRadius || 4,
+              boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
+              mt: 0.5,
+              width: buttonRef.current?.offsetWidth || minWidth,
+              py: 0.5,
+            },
           },
-        }}
-        MenuListProps={{
-          sx: {
-            py: 0.5,
+          list: {
+            sx: {
+              py: 0.5,
+            },
           },
         }}
       >

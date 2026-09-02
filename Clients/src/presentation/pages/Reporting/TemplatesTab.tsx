@@ -216,7 +216,14 @@ export default function TemplatesTab({
 
   const renderCard = (t: any, { editable }: { editable: boolean }) => (
     <Stack key={t.id} sx={cardSx}>
-      <Stack direction="row" spacing="8px" flexWrap="wrap" useFlexGap>
+      <Stack
+        direction="row"
+        spacing="8px"
+        useFlexGap
+        sx={{
+          flexWrap: "wrap",
+        }}
+      >
         <Chip label={t.category} size="small" />
         {t.recommended_frequency && <Chip label={t.recommended_frequency} size="small" />}
         {/* Reads as "this card is deliberately read-only" rather than
@@ -234,7 +241,14 @@ export default function TemplatesTab({
       <Typography sx={{ fontSize: 13, lineHeight: 1.5, color: textColors.tertiary, flex: 1 }}>
         {t.description}
       </Typography>
-      <Stack direction="row" spacing="8px" flexWrap="wrap" useFlexGap>
+      <Stack
+        direction="row"
+        spacing="8px"
+        useFlexGap
+        sx={{
+          flexWrap: "wrap",
+        }}
+      >
         {/* No sx override: CustomizableButton's contained/primary default is
             already the 34px, 13px, #13715B spec. */}
         <CustomizableButton

@@ -51,8 +51,21 @@ export default function PromptEditDrawer({
         }}
       >
         {/* Drawer Header */}
-        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
-          <Typography fontWeight={600} color={theme.palette.text.primary} fontSize="16px">
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
+          <Typography
+            color={theme.palette.text.primary}
+            sx={{
+              fontWeight: 600,
+              fontSize: "16px",
+            }}
+          >
             Edit prompt
           </Typography>
           <Box onClick={onClose} sx={{ cursor: "pointer" }}>
@@ -154,11 +167,19 @@ export default function PromptEditDrawer({
                           >
                             <Stack
                               direction="row"
-                              justifyContent="space-between"
-                              alignItems="center"
-                              sx={{ mb: 1 }}
+                              sx={{
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                mb: 1,
+                              }}
                             >
-                              <Stack direction="row" alignItems="center" spacing={1}>
+                              <Stack
+                                direction="row"
+                                spacing={1}
+                                sx={{
+                                  alignItems: "center",
+                                }}
+                              >
                                 <Box
                                   sx={{
                                     width: 20,

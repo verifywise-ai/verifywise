@@ -24,11 +24,12 @@
  */
 
 import {
+  FormHelperTextProps,
   IconButton,
   InputAdornment,
+  InputBaseProps,
   Stack,
   TextField,
-  TextFieldProps,
   Typography,
   useTheme,
 } from "@mui/material";
@@ -43,8 +44,8 @@ import { getInputStyles } from "../../../utils/inputStyles";
 interface FieldProps extends OriginalFieldProps {
   rows?: number;
   helperText?: string;
-  InputProps?: TextFieldProps["InputProps"];
-  formHelperTextProps?: TextFieldProps["FormHelperTextProps"];
+  InputProps?: InputBaseProps;
+  formHelperTextProps?: FormHelperTextProps;
   autoFocus?: boolean;
   multiline?: boolean;
   minRows?: number;
@@ -109,9 +110,9 @@ const Field = forwardRef(
     return (
       <Stack
         data-testid={dataTestId}
-        gap={theme.spacing(2)}
         className={`field field-${type}${borderless ? " field-borderless" : ""}`}
         sx={{
+          gap: theme.spacing(2),
           ...getInputStyles(theme, { hasError: !!error }),
           width: width,
           ...(rootSx || {}),
@@ -123,23 +124,35 @@ const Field = forwardRef(
             htmlFor={fieldId}
             variant="body1"
             color={theme.palette.text.secondary}
-            fontWeight={500}
-            fontSize={"13px"}
-            sx={{ margin: 0, height: "22px", display: "block" }}
+            sx={{
+              fontWeight: 500,
+              fontSize: "13px",
+              margin: 0,
+              height: "22px",
+              display: "block",
+            }}
           >
             {label}
             {isRequired && (
-              <Typography component="span" ml={theme.spacing(1)} color={theme.palette.error.text}>
+              <Typography
+                component="span"
+                color={theme.palette.error.text}
+                sx={{
+                  ml: theme.spacing(1),
+                }}
+              >
                 *
               </Typography>
             )}
             {isOptional && (
               <Typography
                 component="span"
-                fontSize="inherit"
-                fontWeight={400}
-                ml={theme.spacing(2)}
-                sx={{ opacity: 0.6 }}
+                sx={{
+                  fontSize: "inherit",
+                  fontWeight: 400,
+                  ml: theme.spacing(2),
+                  opacity: 0.6,
+                }}
               >
                 {optionalLabel || "(optional)"}
               </Typography>
@@ -165,70 +178,74 @@ const Field = forwardRef(
           onKeyDown={onKeyDown}
           disabled={disabled}
           inputRef={ref}
-          inputProps={{
-            "min": min,
-            "max": max,
-            "aria-describedby": describedBy,
-            "sx": {
-              "color": theme.palette.text.secondary,
-              "&:-webkit-autofill": {
-                WebkitBoxShadow: `0 0 0 100px ${theme.palette.background.fill} inset`,
-                WebkitTextFillColor: theme.palette.text.secondary,
-              },
-              "overflowY": "auto",
-            },
-          }}
           sx={sx}
           helperText={helperText}
-          FormHelperTextProps={{
-            id: helperTextId,
-            ...formHelperTextProps,
-          }}
-          InputProps={{
-            ...inputPropsOverride,
-            startAdornment:
-              inputPropsOverride?.startAdornment ||
-              (type === "url" && (
-                <Stack
-                  direction="row"
-                  alignItems="center"
-                  height="100%"
-                  sx={{
-                    borderRight: `solid 1px ${theme.palette.border.dark}`,
-                    backgroundColor: theme.palette.background.accent,
-                    pl: theme.spacing(6),
-                  }}
-                >
-                  <Typography
-                    component="h5"
-                    color={theme.palette.text.secondary}
-                    sx={{ lineHeight: 1 }}
-                  >
-                    {https ? "https" : "http"}://
-                  </Typography>
-                </Stack>
-              )),
-            endAdornment:
-              inputPropsOverride?.endAdornment ||
-              (type === "password" && (
-                <InputAdornment position="end">
-                  <IconButton
-                    aria-label="toggle password visibility"
-                    onClick={() => setVisible((show) => !show)}
-                    tabIndex={-1}
+          slotProps={{
+            input: {
+              ...inputPropsOverride,
+              startAdornment:
+                inputPropsOverride?.startAdornment ||
+                (type === "url" && (
+                  <Stack
+                    direction="row"
                     sx={{
-                      "color": theme.palette.border.dark,
-                      "padding": theme.spacing(1),
-                      "& .MuiTouchRipple-root": {
-                        pointerEvents: "none",
-                        display: "none",
-                      },
+                      alignItems: "center",
+                      height: "100%",
+                      borderRight: `solid 1px ${theme.palette.border.dark}`,
+                      backgroundColor: theme.palette.background.accent,
+                      pl: theme.spacing(6),
                     }}
                   >
-                    {!isVisible ? <VisibilityOffIcon size={16} /> : <VisibilityIcon size={16} />}
-                  </IconButton>
-                </InputAdornment>
-              )),
+                    <Typography
+                      component="h5"
+                      color={theme.palette.text.secondary}
+                      sx={{ lineHeight: 1 }}
+                    >
+                      {https ? "https" : "http"}://
+                    </Typography>
+                  </Stack>
+                )),
+              endAdornment:
+                inputPropsOverride?.endAdornment ||
+                (type === "password" && (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="toggle password visibility"
+                      onClick={() => setVisible((show) => !show)}
+                      tabIndex={-1}
+                      sx={{
+                        "color": theme.palette.border.dark,
+                        "padding": theme.spacing(1),
+                        "& .MuiTouchRipple-root": {
+                          pointerEvents: "none",
+                          display: "none",
+                        },
+                      }}
+                    >
+                      {!isVisible ? <VisibilityOffIcon size={16} /> : <VisibilityIcon size={16} />}
+                    </IconButton>
+                  </InputAdornment>
+                )),
+            },
+
+            htmlInput: {
+              "min": min,
+              "max": max,
+              "aria-describedby": describedBy,
+              "sx": {
+                "color": theme.palette.text.secondary,
+                "&:-webkit-autofill": {
+                  WebkitBoxShadow: `0 0 0 100px ${theme.palette.background.fill} inset`,
+                  WebkitTextFillColor: theme.palette.text.secondary,
+                },
+                "overflowY": "auto",
+              },
+            },
+
+            formHelperText: {
+              id: helperTextId,
+              ...formHelperTextProps,
+            },
           }}
         />
         {error && (
@@ -238,8 +255,8 @@ const Field = forwardRef(
             role="alert"
             className="input-error"
             color={theme.palette.status.error.text}
-            mt={theme.spacing(2)}
             sx={{
+              mt: theme.spacing(2),
               opacity: 0.8,
               fontSize: 11,
             }}

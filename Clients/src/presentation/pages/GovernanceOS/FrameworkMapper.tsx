@@ -95,15 +95,31 @@ const FrameworkMapper = () => {
   });
 
   return (
-    <Stack gap="16px">
-      <Stack direction="row" justifyContent="space-between" alignItems="center">
+    <Stack
+      sx={{
+        gap: "16px",
+      }}
+    >
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
         <FrameworkSelector
           sourceId={sourceId}
           targetId={targetId}
           onSourceChange={setSourceId}
           onTargetChange={setTargetId}
         />
-        <Stack direction="row" gap="8px" alignItems="center">
+        <Stack
+          direction="row"
+          sx={{
+            gap: "8px",
+            alignItems: "center",
+          }}
+        >
           <GovernanceTooltip
             header="View mode"
             description="Switch between list and matrix views of mappings"
@@ -219,7 +235,12 @@ const FrameworkMapper = () => {
       )}
 
       {isLoading ? (
-        <Stack alignItems="center" sx={{ py: "48px" }}>
+        <Stack
+          sx={{
+            alignItems: "center",
+            py: "48px",
+          }}
+        >
           <CircularProgress size={32} />
         </Stack>
       ) : filteredMappings.length === 0 ? (
@@ -229,11 +250,19 @@ const FrameworkMapper = () => {
           showBorder
         />
       ) : (
-        <Stack gap="16px">
+        <Stack
+          sx={{
+            gap: "16px",
+          }}
+        >
           <Typography sx={{ fontSize: 12, color: text.muted }}>
             {filteredMappings.length} mapping(s) found
           </Typography>
-          <Stack gap="8px">
+          <Stack
+            sx={{
+              gap: "8px",
+            }}
+          >
             {filteredMappings.map((mapping) => (
               <MappingCard key={mapping.id} mapping={mapping} />
             ))}

@@ -214,24 +214,42 @@ export default function MCPApprovalsPage() {
                       backgroundColor={colors.bg}
                       textColor={colors.text}
                     />,
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: "text.secondary",
+                      }}
+                    >
                       {item.key_name || item.agent_key_name || `Key #${item.agent_key_id}`}
                     </Typography>,
                     <Typography
                       variant="body2"
-                      color="text.secondary"
-                      sx={{ fontFamily: "monospace", fontSize: 12 }}
+                      sx={{
+                        color: "text.secondary",
+                        fontFamily: "monospace",
+                        fontSize: 12,
+                      }}
                     >
                       {item.arguments && Object.keys(item.arguments).length > 0
                         ? JSON.stringify(item.arguments).slice(0, 120)
                         : "—"}
                     </Typography>,
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: "text.secondary",
+                      }}
+                    >
                       {item.decided_at
                         ? `${item.decided_by_name || `User #${item.decided_by}`} · ${displayFormattedDate(item.decided_at)}`
                         : "—"}
                     </Typography>,
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: "text.secondary",
+                      }}
+                    >
                       {item.decision_reason || "—"}
                     </Typography>,
                   ];
@@ -248,8 +266,20 @@ export default function MCPApprovalsPage() {
                   <Box key={item.id} sx={cardSx}>
                     <Stack spacing={1.5}>
                       {/* Top row: tool + status + actions */}
-                      <Stack direction="row" alignItems="center" justifyContent="space-between">
-                        <Stack direction="row" alignItems="center" spacing={2}>
+                      <Stack
+                        direction="row"
+                        sx={{
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <Stack
+                          direction="row"
+                          spacing={2}
+                          sx={{
+                            alignItems: "center",
+                          }}
+                        >
                           <Typography
                             sx={{
                               fontWeight: 600,
@@ -318,17 +348,32 @@ export default function MCPApprovalsPage() {
 
                       {/* Details row */}
                       <Stack direction="row" spacing={3}>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: "text.secondary",
+                          }}
+                        >
                           Agent:{" "}
                           <strong>
                             {item.key_name || item.agent_key_name || `Key #${item.agent_key_id}`}
                           </strong>
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: "text.secondary",
+                          }}
+                        >
                           Requested: {displayFormattedDate(item.created_at)}
                         </Typography>
                         {item.decided_at && (
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: "text.secondary",
+                            }}
+                          >
                             Decided by: {item.decided_by_name || `User #${item.decided_by}`} at{" "}
                             {displayFormattedDate(item.decided_at)}
                           </Typography>
@@ -356,7 +401,12 @@ export default function MCPApprovalsPage() {
 
                       {/* Decision reason */}
                       {item.decision_reason && (
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: "text.secondary",
+                          }}
+                        >
                           Reason: {item.decision_reason}
                         </Typography>
                       )}

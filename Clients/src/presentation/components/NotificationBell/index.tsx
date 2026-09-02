@@ -388,7 +388,13 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ sx }) => {
             borderBottom: "1px solid #e5e7eb",
           }}
         >
-          <Stack direction="row" alignItems="baseline" spacing={1}>
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: "baseline",
+            }}
+          >
             <Typography
               sx={{
                 fontSize: "14px",

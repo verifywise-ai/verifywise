@@ -135,7 +135,13 @@ const ForgotPassword: React.FC = () => {
           </Stack>
           <Stack sx={{ gap: theme.spacing(6), textAlign: "center" }}>
             <Typography sx={{ fontSize: 16, fontWeight: "bold" }}>Forgot password?</Typography>
-            <Typography fontSize={13}>No worries, we'll send you reset instructions.</Typography>
+            <Typography
+              sx={{
+                fontSize: 13,
+              }}
+            >
+              No worries, we'll send you reset instructions.
+            </Typography>
           </Stack>
           <Stack sx={{ gap: theme.spacing(12) }}>
             <Field

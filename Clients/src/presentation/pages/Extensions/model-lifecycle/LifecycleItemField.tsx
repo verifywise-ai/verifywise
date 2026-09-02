@@ -204,7 +204,12 @@ export default function LifecycleItemField({
       );
     default:
       return (
-        <Typography color="text.secondary" variant="body2">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           Unsupported field type: {item.item_type}
         </Typography>
       );
@@ -264,10 +269,12 @@ function TextFieldRenderer({
       size="small"
       fullWidth
       sx={vwInputSx}
-      InputProps={{
-        endAdornment: saving ? (
-          <CircularProgress size={14} sx={{ color: VW_COLORS.primary }} />
-        ) : undefined,
+      slotProps={{
+        input: {
+          endAdornment: saving ? (
+            <CircularProgress size={14} sx={{ color: VW_COLORS.primary }} />
+          ) : undefined,
+        },
       }}
     />
   );
@@ -347,8 +354,8 @@ function DocumentsFieldRenderer({
             <Stack
               key={file.id}
               direction="row"
-              alignItems="center"
               sx={{
+                alignItems: "center",
                 gap: "10px",
                 p: "10px 12px",
                 borderRadius: "4px",
@@ -503,7 +510,13 @@ function PeopleFieldRenderer({
   return (
     <Stack sx={{ gap: "10px" }}>
       {currentPeople.length > 0 && (
-        <Stack direction="row" flexWrap="wrap" sx={{ gap: "8px" }}>
+        <Stack
+          direction="row"
+          sx={{
+            flexWrap: "wrap",
+            gap: "8px",
+          }}
+        >
           {currentPeople.map((p) => (
             <Chip
               key={p.user_id}
@@ -722,7 +735,14 @@ function ChecklistFieldRenderer({
   return (
     <Stack sx={{ gap: "10px" }}>
       {items.map((it, index) => (
-        <Stack key={index} direction="row" alignItems="center" sx={{ gap: "10px" }}>
+        <Stack
+          key={index}
+          direction="row"
+          sx={{
+            alignItems: "center",
+            gap: "10px",
+          }}
+        >
           <Checkbox
             checked={it.checked}
             onChange={() => toggleItem(index)}
@@ -894,8 +914,8 @@ function ApprovalFieldRenderer({
         <Stack
           key={approval.user_id}
           direction="row"
-          alignItems="center"
           sx={{
+            alignItems: "center",
             gap: "10px",
             p: "12px 16px",
             borderRadius: "4px",

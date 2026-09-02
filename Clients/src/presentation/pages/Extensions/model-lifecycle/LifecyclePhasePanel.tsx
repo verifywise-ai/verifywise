@@ -75,7 +75,14 @@ export default function LifecyclePhasePanel({
           },
         }}
       >
-        <Stack direction="row" alignItems="center" sx={{ width: "100%", gap: "12px" }}>
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "center",
+            width: "100%",
+            gap: "12px",
+          }}
+        >
           <Stack sx={{ flex: 1 }}>
             <Typography sx={{ fontWeight: 600, color: "#344054", fontSize: "14px" }}>
               {phase.name}
@@ -99,7 +106,13 @@ export default function LifecyclePhasePanel({
         <Stack spacing={0} divider={<Box sx={{ borderTop: "1px solid #E0E4E9" }} />}>
           {items.map((item) => (
             <Stack key={item.id} sx={{ px: "16px", py: "16px", gap: "10px" }}>
-              <Stack direction="row" alignItems="center" sx={{ gap: "8px" }}>
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
                 <Typography sx={{ fontWeight: 500, color: "#344054", fontSize: "13px" }}>
                   {item.name}
                 </Typography>

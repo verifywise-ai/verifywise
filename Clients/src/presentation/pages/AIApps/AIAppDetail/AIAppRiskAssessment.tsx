@@ -69,12 +69,20 @@ export default function AIAppRiskAssessment({ appId, currentRiskScore }: AIAppRi
     <Box>
       <Stack
         direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        gap="12px"
-        sx={{ mb: "16px" }}
+        sx={{
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "12px",
+          mb: "16px",
+        }}
       >
-        <Stack direction="row" alignItems="center" gap="8px">
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
           <Gauge
             size={16}
             strokeWidth={1.5}
@@ -100,7 +108,14 @@ export default function AIAppRiskAssessment({ appId, currentRiskScore }: AIAppRi
           border: `1px solid ${palette.border.light}`,
         }}
       >
-        <Stack direction="row" alignItems="center" gap="16px" flexWrap="wrap">
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "center",
+            gap: "16px",
+            flexWrap: "wrap",
+          }}
+        >
           <Box>
             <Typography sx={{ fontSize: 12, color: palette.text.secondary, mb: "4px" }}>
               Current risk score

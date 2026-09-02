@@ -483,10 +483,12 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
       return (
         <Stack
           direction="row"
-          justifyContent="flex-end"
           spacing={8}
-          alignItems="center"
-          width="100%"
+          sx={{
+            justifyContent: "flex-end",
+            alignItems: "center",
+            width: "100%",
+          }}
         >
           <CustomizableButton
             onClick={handleReject}
@@ -612,8 +614,8 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
           ) : (
             <Stack direction="row" spacing={12} sx={{ height: "100%", flex: 1 }}>
               <Box
-                width="240px"
                 sx={{
+                  width: "240px",
                   ...sidebarContainer,
                   height: "100%",
                   overflowY: "auto",
@@ -624,16 +626,22 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
                   <Stack
                     component="aside"
                     className={`sidebar-menu expanded}`}
-                    py={theme.spacing(1)}
-                    gap={theme.spacing(1)}
-                    sx={sidebarMenuStyle(theme)}
+                    sx={[
+                      {
+                        py: theme.spacing(1),
+                        gap: theme.spacing(1),
+                      },
+                      sidebarMenuStyle(theme),
+                    ]}
                   >
                     <Stack sx={sidebarInnerStack(theme)}>
                       <Stack
                         direction="row"
-                        alignItems="center"
-                        gap={theme.spacing(4)}
                         className="app-title"
+                        sx={{
+                          alignItems: "center",
+                          gap: theme.spacing(4),
+                        }}
                       >
                         <List
                           component="nav"
@@ -712,7 +720,13 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
                                         <ListItemText
                                           sx={listItemTextStyle}
                                           primary={
-                                            <Stack direction="row" alignItems="center" spacing={1}>
+                                            <Stack
+                                              direction="row"
+                                              spacing={1}
+                                              sx={{
+                                                alignItems: "center",
+                                              }}
+                                            >
                                               <Typography
                                                 sx={{
                                                   fontSize: "13px",
@@ -762,10 +776,10 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
               </Box>
               <Divider orientation="vertical" flexItem sx={verticalDividerStyle(theme)} />
               <Stack
-                flex={1}
                 spacing={12}
                 direction="column"
                 sx={{
+                  flex: 1,
                   ...timelineContainer,
                   height: "100%",
                   overflowY: "auto",
@@ -773,8 +787,19 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
                 }}
               >
                 {/* Header with status */}
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                  <Typography fontWeight={600} fontSize={18}>
+                <Stack
+                  direction="row"
+                  sx={{
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      fontWeight: 600,
+                      fontSize: 18,
+                    }}
+                  >
                     Request details
                   </Typography>
                   <Chip {...(getWorkflowChipProps(getOverallStatus()) || {})} />
@@ -793,7 +818,14 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
                         padding: "16px",
                       }}
                     >
-                      <Typography fontWeight={600} fontSize={14} color="#374151" mb={2}>
+                      <Typography
+                        sx={{
+                          fontWeight: 600,
+                          fontSize: 14,
+                          color: "#374151",
+                          mb: 2,
+                        }}
+                      >
                         Request Information
                       </Typography>
                       {requestDetails.requester && (
@@ -820,7 +852,12 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
                 <Divider />
 
                 {/* Timeline header */}
-                <Typography fontWeight={600} fontSize={16}>
+                <Typography
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: 16,
+                  }}
+                >
                   Approval workflow
                 </Typography>
 
@@ -829,7 +866,13 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
                   {timelineData.map((step, stepIndex, steps) => (
                     <React.Fragment key={step.id}>
                       <Box>
-                        <Stack direction="row" spacing={8} alignItems="flex-start">
+                        <Stack
+                          direction="row"
+                          spacing={8}
+                          sx={{
+                            alignItems: "flex-start",
+                          }}
+                        >
                           <Box
                             sx={stepCircleStyle(
                               theme,
@@ -842,11 +885,23 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
                               <Check size={12} color="#CCCCCC" strokeWidth={3} />
                             )}
                           </Box>
-                          <Stack direction="column" sx={stepContainerStyle} flex={1}>
+                          <Stack
+                            direction="column"
+                            sx={[
+                              {
+                                flex: 1,
+                              },
+                              ...(Array.isArray(stepContainerStyle)
+                                ? stepContainerStyle
+                                : [stepContainerStyle]),
+                            ]}
+                          >
                             <Stack
                               direction="row"
-                              justifyContent="space-between"
-                              alignItems="center"
+                              sx={{
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                              }}
                             >
                               <Typography sx={stepTitleStyle}>{step.title}</Typography>
                               {step.status === ApprovalStepStatus.Completed && step.date && (
@@ -863,13 +918,34 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
                             )}
                           </Stack>
                         </Stack>
-                        <Stack direction="row" alignItems="stretch">
+                        <Stack
+                          direction="row"
+                          sx={{
+                            alignItems: "stretch",
+                          }}
+                        >
                           {stepIndex < steps.length - 1 && (
                             <Divider orientation="vertical" flexItem sx={stepDividerStyle} />
                           )}
-                          <Stack sx={stepDetailsStack} spacing={4} ml={2}>
+                          <Stack
+                            spacing={4}
+                            sx={[
+                              {
+                                ml: 2,
+                              },
+                              ...(Array.isArray(stepDetailsStack)
+                                ? stepDetailsStack
+                                : [stepDetailsStack]),
+                            ]}
+                          >
                             {step.approverName && (
-                              <Stack direction="row" spacing={4} alignItems="center">
+                              <Stack
+                                direction="row"
+                                spacing={4}
+                                sx={{
+                                  alignItems: "center",
+                                }}
+                              >
                                 <Typography sx={approverNameStyle}>
                                   Approver: {step.approverName}
                                 </Typography>

@@ -2035,13 +2035,13 @@ const ModelInventory: React.FC = () => {
         }}
       >
         <Stack
-          gap={theme.spacing(2)}
-          color={theme.palette.text.secondary}
           onClick={(e) => {
             e.stopPropagation();
             e.preventDefault();
           }}
           sx={{
+            "gap": theme.spacing(2),
+            "color": theme.palette.text.secondary,
             "position": "absolute",
             "top": "50%",
             "left": "50%",
@@ -2053,26 +2053,45 @@ const ModelInventory: React.FC = () => {
             "borderRadius": theme.shape.borderRadius,
             "boxShadow": 24,
             "p": theme.spacing(15),
+
             "&:focus": {
               outline: "none",
             },
           }}
         >
-          <Typography fontSize={16} fontWeight={600}>
+          <Typography
+            sx={{
+              fontSize: 16,
+              fontWeight: 600,
+            }}
+          >
             Replace Share Link?
           </Typography>
-          <Typography fontSize={13} textAlign={"left"}>
+          <Typography
+            sx={{
+              fontSize: 13,
+              textAlign: "left",
+            }}
+          >
             This will invalidate the current share link and generate a new one. Anyone with the old
             link will no longer be able to access the shared view.
           </Typography>
-          <Typography fontSize={13} textAlign={"left"} mt={theme.spacing(4)}>
+          <Typography
+            sx={{
+              fontSize: 13,
+              textAlign: "left",
+              mt: theme.spacing(4),
+            }}
+          >
             Do you want to continue?
           </Typography>
           <Stack
             direction="row"
-            gap={theme.spacing(4)}
-            mt={theme.spacing(12)}
-            justifyContent="flex-end"
+            sx={{
+              gap: theme.spacing(4),
+              mt: theme.spacing(12),
+              justifyContent: "flex-end",
+            }}
           >
             <CustomizableButton
               variant="text"
@@ -2124,7 +2143,11 @@ const ModelInventory: React.FC = () => {
         alert={
           alert && (
             <Fade in={showAlert} timeout={300} style={toastFadeStyle}>
-              <Box mb={2}>
+              <Box
+                sx={{
+                  mb: 2,
+                }}
+              >
                 <Alert
                   variant={alert.variant}
                   title={alert.title}
@@ -2198,12 +2221,24 @@ const ModelInventory: React.FC = () => {
           <>
             <Stack
               direction="row"
-              justifyContent="space-between"
-              alignItems="center"
-              sx={filterButtonRowStyle}
+              sx={[
+                {
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                },
+                ...(Array.isArray(filterButtonRowStyle)
+                  ? filterButtonRowStyle
+                  : [filterButtonRowStyle]),
+              ]}
             >
               {/* Left side: FilterBy + Search + GroupBy */}
-              <Stack direction="row" spacing={2} alignItems="center">
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <div data-joyride-id="model-status-filter">
                   <FilterBy columns={modelFilterColumns} onFilterChange={handleModelFilterChange} />
                 </div>
@@ -2241,7 +2276,13 @@ const ModelInventory: React.FC = () => {
               </Stack>
 
               {/* Right side: Share, Export, Analytics & Add Model buttons */}
-              <Stack direction="row" gap="8px" alignItems="center">
+              <Stack
+                direction="row"
+                sx={{
+                  gap: "8px",
+                  alignItems: "center",
+                }}
+              >
                 <ShareButton onClick={handleShareClick} size="medium" tooltip="Share view" />
                 <ExportMenu
                   data={exportData}
@@ -2308,11 +2349,23 @@ const ModelInventory: React.FC = () => {
             {/* Model Risks Tab Content */}
             <Stack
               direction="row"
-              justifyContent="space-between"
-              alignItems="center"
-              sx={filterButtonRowStyle}
+              sx={[
+                {
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                },
+                ...(Array.isArray(filterButtonRowStyle)
+                  ? filterButtonRowStyle
+                  : [filterButtonRowStyle]),
+              ]}
             >
-              <Stack direction="row" gap={2} alignItems="center">
+              <Stack
+                direction="row"
+                sx={{
+                  gap: 2,
+                  alignItems: "center",
+                }}
+              >
                 <div data-joyride-id="risk-category-filter">
                   <FilterBy
                     columns={modelRiskFilterColumns}
@@ -2352,7 +2405,13 @@ const ModelInventory: React.FC = () => {
                   }}
                 />
               </Stack>
-              <Stack direction="row" gap="8px" alignItems="center">
+              <Stack
+                direction="row"
+                sx={{
+                  gap: "8px",
+                  alignItems: "center",
+                }}
+              >
                 <ExportMenu
                   data={modelRisksExportData}
                   columns={modelRisksExportColumns}
@@ -2399,12 +2458,24 @@ const ModelInventory: React.FC = () => {
           <>
             <Stack
               direction="row"
-              justifyContent="space-between"
-              alignItems="center"
-              sx={filterButtonRowStyle}
+              sx={[
+                {
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                },
+                ...(Array.isArray(filterButtonRowStyle)
+                  ? filterButtonRowStyle
+                  : [filterButtonRowStyle]),
+              ]}
             >
               {/* Left side: FilterBy + Search + GroupBy */}
-              <Stack direction="row" spacing={2} alignItems="center">
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <div data-joyride-id="evidence-type-filter">
                   <FilterBy
                     columns={evidenceFilterColumns}
@@ -2440,7 +2511,13 @@ const ModelInventory: React.FC = () => {
               </Stack>
 
               {/* Right side: Export and Upload Evidence */}
-              <Stack direction="row" gap="8px" alignItems="center">
+              <Stack
+                direction="row"
+                sx={{
+                  gap: "8px",
+                  alignItems: "center",
+                }}
+              >
                 <ExportMenu
                   data={evidenceHubExportData}
                   columns={evidenceHubExportColumns}

@@ -182,12 +182,20 @@ export default function AIAppModelDependencies({ appId, models }: AIAppModelDepe
     <Box>
       <Stack
         direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        gap="12px"
-        sx={{ mb: "16px" }}
+        sx={{
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "12px",
+          mb: "16px",
+        }}
       >
-        <Stack direction="row" alignItems="center" gap="8px">
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
           <Cpu size={16} strokeWidth={1.5} color={palette.text.secondary} />
           <Typography sx={{ fontSize: 15, fontWeight: 600 }}>Model dependencies</Typography>
         </Stack>

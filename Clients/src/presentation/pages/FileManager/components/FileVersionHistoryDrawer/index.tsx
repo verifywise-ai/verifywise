@@ -187,10 +187,12 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
       anchor="right"
       open={isOpen}
       onClose={onClose}
-      PaperProps={{
-        sx: {
-          width: { xs: "100%", sm: 440 },
-          maxWidth: "100%",
+      slotProps={{
+        paper: {
+          sx: {
+            width: { xs: "100%", sm: 440 },
+            maxWidth: "100%",
+          },
         },
       }}
     >
@@ -318,7 +320,13 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
                     />
                   )}
 
-                  <Stack direction="row" alignItems="center" spacing={1.5}>
+                  <Stack
+                    direction="row"
+                    spacing={1.5}
+                    sx={{
+                      alignItems: "center",
+                    }}
+                  >
                     <Box
                       sx={{
                         width: 8,
@@ -329,7 +337,14 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
                       }}
                     />
                     <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.25 }}>
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        sx={{
+                          alignItems: "center",
+                          mb: 0.25,
+                        }}
+                      >
                         <Typography
                           sx={{
                             fontSize: 13,
@@ -359,7 +374,13 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
                           </Typography>
                         )}
                       </Stack>
-                      <Stack direction="row" alignItems="center" spacing={1}>
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        sx={{
+                          alignItems: "center",
+                        }}
+                      >
                         <Chip
                           label={`v${version.version || "1.0"}`}
                           variant={
@@ -375,7 +396,14 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
                           <StatusBadge status={version.review_status} size="small" />
                         )}
                       </Stack>
-                      <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mt: 0.5 }}>
+                      <Stack
+                        direction="row"
+                        spacing={0.5}
+                        sx={{
+                          alignItems: "center",
+                          mt: 0.5,
+                        }}
+                      >
                         <Clock size={10} color={text.muted} />
                         <Typography sx={{ fontSize: 11, color: "text.muted" }}>
                           {formatDate(version.upload_date)}
@@ -463,9 +491,11 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
                 >
                   <Stack
                     direction="row"
-                    justifyContent="space-between"
-                    alignItems="center"
-                    sx={{ mb: 0.5 }}
+                    sx={{
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mb: 0.5,
+                    }}
                   >
                     <Typography sx={{ fontSize: 12, fontWeight: 500, color: "text.secondary" }}>
                       {userName}
@@ -483,7 +513,14 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
                   {entry.action === "updated" && (
                     <Stack spacing={0.5}>
                       {group.map((change) => (
-                        <Stack key={change.id} direction="row" spacing={1} alignItems="center">
+                        <Stack
+                          key={change.id}
+                          direction="row"
+                          spacing={1}
+                          sx={{
+                            alignItems: "center",
+                          }}
+                        >
                           <Typography
                             sx={{
                               fontSize: 10,

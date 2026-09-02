@@ -437,9 +437,18 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
   const risksPanel = (
     <Stack spacing={6}>
       <Stack direction="row" spacing={6}>
-        <Stack flex={1} spacing={6}>
+        <Stack
+          spacing={6}
+          sx={{
+            flex: 1,
+          }}
+        >
           <Stack direction="row" spacing={6}>
-            <Box flex={1}>
+            <Box
+              sx={{
+                flex: 1,
+              }}
+            >
               <Select
                 items={VENDOR_OPTIONS}
                 label="Vendor"
@@ -455,7 +464,11 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
                 disabled={isEditingDisabled}
               />
             </Box>
-            <Box flex={1}>
+            <Box
+              sx={{
+                flex: 1,
+              }}
+            >
               <Select
                 items={formattedUsers}
                 label="Action owner"
@@ -489,7 +502,12 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
             />
           </Box>
         </Stack>
-        <Stack flex={1} spacing={6}>
+        <Stack
+          spacing={6}
+          sx={{
+            flex: 1,
+          }}
+        >
           <Box>
             <Field
               id="vendor-risk-action-plan-input"
@@ -527,10 +545,22 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
 
       {/* Applicable Frameworks */}
       <Stack>
-        <Typography fontWeight={600} fontSize={16} mb={2}>
+        <Typography
+          sx={{
+            fontWeight: 600,
+            fontSize: 16,
+            mb: 2,
+          }}
+        >
           Applicable frameworks
         </Typography>
-        <Typography fontSize={13} color="text.secondary" mb={2}>
+        <Typography
+          sx={{
+            fontSize: 13,
+            color: "text.secondary",
+            mb: 2,
+          }}
+        >
           Select the compliance frameworks this vendor risk applies to.
         </Typography>
         <Autocomplete
@@ -548,7 +578,13 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
             const { key, ...optionProps } = props;
             return (
               <Box key={key} component="li" {...optionProps}>
-                <Typography fontSize={13}>{option.name}</Typography>
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                  }}
+                >
+                  {option.name}
+                </Typography>
               </Box>
             );
           }}
@@ -589,10 +625,22 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
       <Stack>
         <Divider sx={{ mb: 4 }} />
         <Box>
-          <Typography fontWeight={600} fontSize={16} mb={2}>
+          <Typography
+            sx={{
+              fontWeight: 600,
+              fontSize: 16,
+              mb: 2,
+            }}
+          >
             Calculate risk level
           </Typography>
-          <Typography fontSize={13} color="text.secondary" mb={4}>
+          <Typography
+            sx={{
+              fontSize: 13,
+              color: "text.secondary",
+              mb: 4,
+            }}
+          >
             The Risk Level is calculated by multiplying the Likelihood and Severity scores. By
             assigning these scores, the risk level will be determined based on your inputs.
           </Typography>

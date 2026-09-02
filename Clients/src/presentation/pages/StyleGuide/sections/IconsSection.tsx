@@ -224,12 +224,14 @@ const IconsSection: React.FC = () => {
               borderRadius: "4px",
             },
           }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search size={16} color={theme.palette.text.tertiary} />
-              </InputAdornment>
-            ),
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={16} color={theme.palette.text.tertiary} />
+                </InputAdornment>
+              ),
+            },
           }}
         />
 

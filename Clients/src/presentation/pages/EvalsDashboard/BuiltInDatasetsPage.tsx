@@ -338,9 +338,12 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
           />
           <Stack
             direction="row"
-            alignItems="center"
-            justifyContent="space-between"
-            sx={{ mb: 2, mt: -2 }}
+            sx={{
+              alignItems: "center",
+              justifyContent: "space-between",
+              mb: 2,
+              mt: -2,
+            }}
           />
         </>
       )}
@@ -355,14 +358,25 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
             mb: 2,
           }}
         >
-          <Stack gap={theme.spacing(2)} className="select-wrapper" sx={{ mb: 0 }}>
+          <Stack
+            className="select-wrapper"
+            sx={{
+              gap: theme.spacing(2),
+              mb: 0,
+            }}
+          >
             <Typography
               component="p"
               variant="body1"
               color={theme.palette.text.secondary}
-              fontWeight={500}
-              fontSize="13px"
-              sx={{ margin: 0, height: "22px", display: "flex", alignItems: "center" }}
+              sx={{
+                fontWeight: 500,
+                fontSize: "13px",
+                margin: 0,
+                height: "22px",
+                display: "flex",
+                alignItems: "center",
+              }}
             >
               Project
             </Typography>
@@ -389,20 +403,23 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
               )}
               MenuProps={{
                 disableScrollLock: true,
-                PaperProps: {
-                  sx: {
-                    "borderRadius": theme.shape.borderRadius,
-                    "boxShadow": theme.boxShadow,
-                    "mt": 1,
-                    "& .MuiMenuItem-root": {
-                      "fontSize": 13,
-                      "color": theme.palette.text.primary,
-                      "&:hover": { backgroundColor: theme.palette.background.accent },
-                      "&.Mui-selected": {
-                        "backgroundColor": theme.palette.background.accent,
+
+                slotProps: {
+                  paper: {
+                    sx: {
+                      "borderRadius": theme.shape.borderRadius,
+                      "boxShadow": theme.boxShadow,
+                      "mt": 1,
+                      "& .MuiMenuItem-root": {
+                        "fontSize": 13,
+                        "color": theme.palette.text.primary,
                         "&:hover": { backgroundColor: theme.palette.background.accent },
+                        "&.Mui-selected": {
+                          "backgroundColor": theme.palette.background.accent,
+                          "&:hover": { backgroundColor: theme.palette.background.accent },
+                        },
+                        "& .MuiTouchRipple-root": { display: "none" },
                       },
-                      "& .MuiTouchRipple-root": { display: "none" },
                     },
                   },
                 },
@@ -530,7 +547,14 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
 
       {/* Title with back button when embedded */}
       {embed ? (
-        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: "center",
+            mb: 2,
+          }}
+        >
           <IconButton
             size="small"
             onClick={() => (_props.onBack ? _props.onBack() : window.history.back())}
@@ -556,9 +580,11 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
           <Box sx={{ mb: 3 }}>
             <Stack
               direction="row"
-              alignItems="center"
-              justifyContent="space-between"
-              sx={{ mb: 1 }}
+              sx={{
+                alignItems: "center",
+                justifyContent: "space-between",
+                mb: 1,
+              }}
             >
               <Typography variant="h6" sx={{ fontWeight: 600, fontSize: "16px" }}>
                 Datasets
@@ -574,7 +600,13 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                 {uploading ? "Uploading..." : "Upload JSON"}
               </Button>
             </Stack>
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: "13px" }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+                fontSize: "13px",
+              }}
+            >
               Use pre-built datasets for chatbot, RAG, and agent evaluations, or upload your own
               custom datasets in JSON format.
             </Typography>
@@ -589,7 +621,13 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
             <Typography variant="h6" sx={{ fontWeight: 600, fontSize: "16px", mb: 1 }}>
               Standard Benchmarks
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: "13px" }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+                fontSize: "13px",
+              }}
+            >
               Industry-standard benchmarks powered by DeepEval for comprehensive LLM evaluation.
             </Typography>
           </Box>
@@ -618,7 +656,13 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                 }}
                 onClick={() => navigate(`/evals/${projectId}?benchmark=${benchmark.id}`)}
               >
-                <Stack direction="row" alignItems="flex-start" justifyContent="space-between">
+                <Stack
+                  direction="row"
+                  sx={{
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                  }}
+                >
                   <Box>
                     <Typography
                       sx={{ fontWeight: 700, fontSize: "16px", color: palette.text.primary }}
@@ -821,7 +865,13 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
             <Box sx={{ flex: 1 }}>
               {loadingPreview ? (
                 <Paper variant="outlined" sx={{ p: 2, height: "70vh", overflow: "auto" }}>
-                  <Stack alignItems="center" justifyContent="center" sx={{ height: "100%" }}>
+                  <Stack
+                    sx={{
+                      alignItems: "center",
+                      justifyContent: "center",
+                      height: "100%",
+                    }}
+                  >
                     <CircularProgress size={24} />
                   </Stack>
                 </Paper>
@@ -830,9 +880,11 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                   <Box ref={viewerTopRef} />
                   <Stack
                     direction="row"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    sx={{ mb: 1 }}
+                    sx={{
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      mb: 1,
+                    }}
                   >
                     <Typography sx={{ fontWeight: 700, fontSize: "13px" }}>
                       {selected.name}
@@ -867,9 +919,11 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                           <Paper key={stp.id} variant="outlined" sx={{ p: 1.25 }}>
                             <Stack
                               direction="row"
-                              alignItems="center"
-                              justifyContent="space-between"
-                              sx={{ mb: 0.5 }}
+                              sx={{
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                mb: 0.5,
+                              }}
                             >
                               <Typography
                                 sx={{ fontWeight: 700, fontSize: "12px" }}
@@ -936,9 +990,11 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                           <Paper key={conv.id || idx} variant="outlined" sx={{ p: 1.25 }}>
                             <Stack
                               direction="row"
-                              alignItems="center"
-                              justifyContent="space-between"
-                              sx={{ mb: 0.5 }}
+                              sx={{
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                mb: 0.5,
+                              }}
                             >
                               <Typography
                                 sx={{ fontWeight: 700, fontSize: "12px" }}

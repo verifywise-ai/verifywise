@@ -608,12 +608,22 @@ const IncidentManagement: React.FC = () => {
         {/* Filters Row */}
         <Stack
           direction="row"
-          justifyContent="space-between"
-          alignItems="center"
           spacing={4}
-          sx={incidentFilterRow}
+          sx={[
+            {
+              justifyContent: "space-between",
+              alignItems: "center",
+            },
+            ...(Array.isArray(incidentFilterRow) ? incidentFilterRow : [incidentFilterRow]),
+          ]}
         >
-          <Stack direction="row" spacing={2} alignItems="center">
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             <FilterBy columns={incidentFilterColumns} onFilterChange={handleIncidentFilterChange} />
 
             <GroupBy
@@ -644,7 +654,13 @@ const IncidentManagement: React.FC = () => {
             </Box>
           </Stack>
 
-          <Stack direction="row" gap="8px" alignItems="center">
+          <Stack
+            direction="row"
+            sx={{
+              gap: "8px",
+              alignItems: "center",
+            }}
+          >
             <ExportMenu
               data={exportData}
               columns={exportColumns}

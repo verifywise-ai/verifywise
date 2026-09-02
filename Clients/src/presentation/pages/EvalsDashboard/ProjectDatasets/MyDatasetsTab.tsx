@@ -66,12 +66,20 @@ export default function MyDatasetsTab({
       {/* Filters + search + upload + create */}
       <Stack
         direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        gap={2}
-        sx={{ marginBottom: "18px" }}
+        sx={{
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 2,
+          marginBottom: "18px",
+        }}
       >
-        <Stack direction="row" alignItems="center" gap={2}>
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "center",
+            gap: 2,
+          }}
+        >
           <FilterBy columns={filterColumns} onFilterChange={onFilterChange} />
           <GroupBy
             options={[
@@ -118,7 +126,11 @@ export default function MyDatasetsTab({
       </Stack>
 
       {/* Table of user datasets */}
-      <Box mb={4}>
+      <Box
+        sx={{
+          mb: 4,
+        }}
+      >
         <GroupedTableView
           groupedData={groupedDatasets}
           ungroupedData={filteredDatasets}

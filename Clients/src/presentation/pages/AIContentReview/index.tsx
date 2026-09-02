@@ -54,7 +54,14 @@ export default function AIContentReview() {
   return (
     <Box>
       {/* Header — matches app design */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb="8px">
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: "8px",
+        }}
+      >
         <Box>
           <Typography
             sx={{
@@ -91,7 +98,13 @@ export default function AIContentReview() {
         ) : (
           <>
             <Stack sx={cardSx}>
-              <Stack direction="row" alignItems="center" spacing={0.75}>
+              <Stack
+                direction="row"
+                spacing={0.75}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <BarChart3 size={13} style={{ color: textColors.icon }} />
                 <Typography sx={{ fontSize: 12, color: textColors.secondary, fontWeight: 500 }}>
                   Total items
@@ -105,7 +118,13 @@ export default function AIContentReview() {
             </Stack>
 
             <Stack sx={cardSx}>
-              <Stack direction="row" alignItems="center" spacing={0.75}>
+              <Stack
+                direction="row"
+                spacing={0.75}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <CheckCircle size={13} style={{ color: textColors.icon }} />
                 <Typography sx={{ fontSize: 12, color: textColors.secondary, fontWeight: 500 }}>
                   Reviewed
@@ -119,7 +138,13 @@ export default function AIContentReview() {
             </Stack>
 
             <Stack sx={cardSx}>
-              <Stack direction="row" alignItems="center" spacing={0.75}>
+              <Stack
+                direction="row"
+                spacing={0.75}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <Clock size={13} style={{ color: textColors.icon }} />
                 <Typography sx={{ fontSize: 12, color: textColors.secondary, fontWeight: 500 }}>
                   Pending
@@ -133,7 +158,13 @@ export default function AIContentReview() {
             </Stack>
 
             <Stack sx={cardSx}>
-              <Stack direction="row" alignItems="center" spacing={0.75}>
+              <Stack
+                direction="row"
+                spacing={0.75}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <Sparkles size={13} style={{ color: textColors.icon }} />
                 <Typography sx={{ fontSize: 12, color: textColors.secondary, fontWeight: 500 }}>
                   Avg confidence
@@ -160,7 +191,13 @@ export default function AIContentReview() {
           {/* Progress card */}
           <Card elevation={0} sx={{ ...cardSx, padding: 0, flex: "2 1 300px" }}>
             <CardContent sx={{ "p": "16px", "&:last-child": { pb: "16px" } }}>
-              <Stack direction="row" justifyContent="space-between" mb={0.75}>
+              <Stack
+                direction="row"
+                sx={{
+                  justifyContent: "space-between",
+                  mb: 0.75,
+                }}
+              >
                 <Typography sx={{ fontSize: 12, color: textColors.secondary, fontWeight: 500 }}>
                   Review progress
                 </Typography>
@@ -198,7 +235,14 @@ export default function AIContentReview() {
                   if (!config || count === 0) return null;
                   const pct = stats.total > 0 ? Math.round((count / stats.total) * 100) : 0;
                   return (
-                    <Stack key={key} direction="row" alignItems="center" spacing={1}>
+                    <Stack
+                      key={key}
+                      direction="row"
+                      spacing={1}
+                      sx={{
+                        alignItems: "center",
+                      }}
+                    >
                       <Box
                         sx={{
                           width: 8,
@@ -227,7 +271,6 @@ export default function AIContentReview() {
       <Tabs
         value={tab}
         onChange={(_, v) => setTab(v)}
-        TabIndicatorProps={{ style: { backgroundColor: brand.primary } }}
         sx={{
           "mb": "8px",
           "minHeight": "20px",
@@ -241,10 +284,19 @@ export default function AIContentReview() {
           "& .Mui-selected": { color: brand.primary },
           "& .MuiTabs-flexContainer": { columnGap: "34px" },
         }}
+        slotProps={{
+          indicator: { style: { backgroundColor: brand.primary } },
+        }}
       >
         <Tab
           label={
-            <Stack direction="row" alignItems="center" spacing={0.75}>
+            <Stack
+              direction="row"
+              spacing={0.75}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <span>Pending review</span>
               {total > 0 && (
                 <Chip label={String(total)} size="small" variant="warning" uppercase={false} />

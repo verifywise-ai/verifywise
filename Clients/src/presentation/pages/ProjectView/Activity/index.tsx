@@ -222,7 +222,14 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
           },
         }}
       >
-        <Stack direction="row" gap="12px" alignItems="center" marginBottom="16px">
+        <Stack
+          direction="row"
+          sx={{
+            gap: "12px",
+            alignItems: "center",
+            marginBottom: "16px",
+          }}
+        >
           <VWAvatar
             user={{
               firstname: firstEntry.user_name || userName,
@@ -245,7 +252,13 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
                 `${userName} updated ${group.length} field${group.length > 1 ? "s" : ""}`}
               {firstEntry.action === "deleted" && `${userName} deleted this ${config.entityName}`}
             </Typography>
-            <Stack direction="row" gap="8px" alignItems="center">
+            <Stack
+              direction="row"
+              sx={{
+                gap: "8px",
+                alignItems: "center",
+              }}
+            >
               <Clock size={12} color={theme.palette.text.secondary} />
               <Typography
                 sx={{
@@ -295,7 +308,13 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
                   {renderTruncatedValue(entry.id, entry.new_value, "new")}
                 </Box>
               ) : (
-                <Stack direction="row" gap="12px" alignItems="center">
+                <Stack
+                  direction="row"
+                  sx={{
+                    gap: "12px",
+                    alignItems: "center",
+                  }}
+                >
                   {entry.old_value && entry.old_value !== "-" && (
                     <Box
                       sx={{

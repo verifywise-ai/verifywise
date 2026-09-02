@@ -440,7 +440,12 @@ const ISO27001Annex = ({
                           ))
                         ) : (
                           <Stack sx={{ p: 2, textAlign: "center" }}>
-                            <Typography variant="body2" color="text.secondary">
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                color: "text.secondary",
+                              }}
+                            >
                               No matching controls
                             </Typography>
                           </Stack>

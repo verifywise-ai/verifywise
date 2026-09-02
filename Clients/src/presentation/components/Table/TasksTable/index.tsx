@@ -419,7 +419,13 @@ const TasksTable: React.FC<ITasksTableProps> = ({
                   }}
                 >
                   {task.due_date ? (
-                    <Stack direction="row" spacing="8px" alignItems="center">
+                    <Stack
+                      direction="row"
+                      spacing="8px"
+                      sx={{
+                        alignItems: "center",
+                      }}
+                    >
                       <Typography
                         variant="body2"
                         sx={{
@@ -441,7 +447,13 @@ const TasksTable: React.FC<ITasksTableProps> = ({
                       )}
                     </Stack>
                   ) : (
-                    <Typography variant="body2" color="text.disabled" sx={{ fontSize: 13 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: "text.disabled",
+                        fontSize: 13,
+                      }}
+                    >
                       No due date
                     </Typography>
                   )}
@@ -509,7 +521,13 @@ const TasksTable: React.FC<ITasksTableProps> = ({
                       )}
                     </Stack>
                   ) : (
-                    <Typography variant="body2" color="text.disabled" sx={{ fontSize: 13 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: "text.disabled",
+                        fontSize: 13,
+                      }}
+                    >
                       Unassigned
                     </Typography>
                   )}
@@ -672,7 +690,11 @@ const TasksTable: React.FC<ITasksTableProps> = ({
           isOpen
           title={`Set categories for ${selectionCount} task${selectionCount === 1 ? "" : "s"}`}
           body={
-            <Stack gap={2}>
+            <Stack
+              sx={{
+                gap: 2,
+              }}
+            >
               <Typography variant="body2" sx={{ color: "text.secondary" }}>
                 These categories will replace the existing categories on every selected task. Leave
                 empty to clear them.

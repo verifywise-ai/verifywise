@@ -82,7 +82,11 @@ const CoverageChart = ({
   }
 
   return (
-    <Stack gap="16px">
+    <Stack
+      sx={{
+        gap: "16px",
+      }}
+    >
       <Alert severity="info" sx={{ fontSize: 12 }} icon={<Info size={18} />}>
         Coverage is calculated as distinct mapped source identifiers divided by the framework's full
         control inventory (sub-controls, sub-clauses, or sub-categories). This gives an honest
@@ -116,14 +120,22 @@ const CoverageChart = ({
             {/* Header row */}
             <Stack
               direction="row"
-              justifyContent="space-between"
-              alignItems="center"
-              sx={{ cursor: hasGaps || hasSynergies ? "pointer" : "default" }}
               onClick={() => {
                 if (hasGaps || hasSynergies) toggleExpand(fw.framework_id);
               }}
+              sx={{
+                justifyContent: "space-between",
+                alignItems: "center",
+                cursor: hasGaps || hasSynergies ? "pointer" : "default",
+              }}
             >
-              <Stack direction="row" gap="8px" alignItems="center">
+              <Stack
+                direction="row"
+                sx={{
+                  gap: "8px",
+                  alignItems: "center",
+                }}
+              >
                 <GovernanceTooltip
                   header="Framework coverage"
                   description="Overview of how well this framework is mapped to controls"
@@ -157,7 +169,13 @@ const CoverageChart = ({
                 )}
               </Stack>
 
-              <Stack direction="row" gap="8px" alignItems="center">
+              <Stack
+                direction="row"
+                sx={{
+                  gap: "8px",
+                  alignItems: "center",
+                }}
+              >
                 <Typography sx={{ fontSize: 13, fontWeight: 600, color: brand.primary }}>
                   {fw.coverage_percentage}%
                 </Typography>
@@ -190,7 +208,14 @@ const CoverageChart = ({
               />
             </GovernanceTooltip>
 
-            <Stack direction="row" gap="8px" justifyContent="space-between" alignItems="center">
+            <Stack
+              direction="row"
+              sx={{
+                gap: "8px",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
               <GovernanceTooltip
                 header="Coverage calculation"
                 description={
@@ -264,14 +289,21 @@ const CoverageChart = ({
                 <Box sx={{ mb: "16px" }}>
                   <Stack
                     direction="row"
-                    justifyContent="space-between"
-                    alignItems="center"
-                    sx={{ mb: "8px" }}
+                    sx={{
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mb: "8px",
+                    }}
                   >
                     <Typography sx={{ fontSize: 12, fontWeight: 600, color: status.warning.text }}>
                       Unmapped controls ({gapIds.length})
                     </Typography>
-                    <Stack direction="row" gap="4px">
+                    <Stack
+                      direction="row"
+                      sx={{
+                        gap: "4px",
+                      }}
+                    >
                       <GovernanceTooltip
                         header="Select all gaps"
                         description="Choose every unmapped control in this framework for bulk action"
@@ -327,7 +359,13 @@ const CoverageChart = ({
                               : background.main,
                           }}
                         >
-                          <Stack direction="row" gap="8px" alignItems="center">
+                          <Stack
+                            direction="row"
+                            sx={{
+                              gap: "8px",
+                              alignItems: "center",
+                            }}
+                          >
                             <Box
                               component="span"
                               sx={{ cursor: "pointer", display: "flex", alignItems: "center" }}
@@ -406,7 +444,13 @@ const CoverageChart = ({
                   >
                     Multi-framework controls ({synergyIds.length})
                   </Typography>
-                  <Stack direction="row" flexWrap="wrap" gap="6px">
+                  <Stack
+                    direction="row"
+                    sx={{
+                      flexWrap: "wrap",
+                      gap: "6px",
+                    }}
+                  >
                     {synergyIds.map((controlId) => (
                       <Box
                         key={controlId}

@@ -86,7 +86,11 @@ const Questions = ({
   }, [questionsData]);
 
   return (
-    <Stack mb={15}>
+    <Stack
+      sx={{
+        mb: 15,
+      }}
+    >
       <Typography sx={{ fontSize: 16, color: `${text.secondary}` }}>{subtopic.title}</Typography>
       {questionsData
         .sort((a: Question, b: Question) => (a.order_no ?? 0) - (b.order_no ?? 0))

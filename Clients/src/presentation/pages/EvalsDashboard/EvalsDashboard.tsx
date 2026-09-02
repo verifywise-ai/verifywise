@@ -1186,7 +1186,12 @@ export default function EvalsDashboard() {
         ];
 
   return (
-    <Stack className="vwhome" gap={"16px"}>
+    <Stack
+      className="vwhome"
+      sx={{
+        gap: "16px",
+      }}
+    >
       <PageBreadcrumbs items={breadcrumbItems} sx={{ "mb": 0, "& > hr": { mb: 0 } }} />
 
       {/* Server Connection Error Banner */}
@@ -1202,7 +1207,13 @@ export default function EvalsDashboard() {
             justifyContent: "space-between",
           }}
         >
-          <Stack direction="row" alignItems="center" spacing={2}>
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             <Box
               sx={{
                 width: 32,
@@ -1394,7 +1405,14 @@ export default function EvalsDashboard() {
                             transition: "opacity 0.3s ease, transform 0.3s ease",
                           }}
                         >
-                          <Stack direction="row" alignItems="center" spacing={2.5} sx={{ flex: 1 }}>
+                          <Stack
+                            direction="row"
+                            spacing={2.5}
+                            sx={{
+                              alignItems: "center",
+                              flex: 1,
+                            }}
+                          >
                             {/* Provider Logo */}
                             <Box
                               sx={{
@@ -1435,8 +1453,11 @@ export default function EvalsDashboard() {
                             <Box sx={{ flex: 1 }}>
                               <Stack
                                 direction="row"
-                                alignItems="center"
-                                sx={{ mb: 1.5, gap: "10px" }}
+                                sx={{
+                                  alignItems: "center",
+                                  mb: 1.5,
+                                  gap: "10px",
+                                }}
                               >
                                 <Typography
                                   sx={{
@@ -1449,7 +1470,13 @@ export default function EvalsDashboard() {
                                 </Typography>
                                 <VWChip label="Active" variant="success" size="small" />
                               </Stack>
-                              <Stack direction="row" alignItems="center" sx={{ gap: "48px" }}>
+                              <Stack
+                                direction="row"
+                                sx={{
+                                  alignItems: "center",
+                                  gap: "48px",
+                                }}
+                              >
                                 <Box>
                                   <Typography
                                     sx={{ fontSize: 11, color: palette.text.disabled, mb: 0.5 }}
@@ -1488,7 +1515,13 @@ export default function EvalsDashboard() {
                           </Stack>
 
                           {/* Action buttons */}
-                          <Stack direction="row" spacing={1} alignItems="center">
+                          <Stack
+                            direction="row"
+                            spacing={1}
+                            sx={{
+                              alignItems: "center",
+                            }}
+                          >
                             <IconButton
                               onClick={() => {
                                 setIsEditingApiKey(true);
@@ -1683,7 +1716,14 @@ export default function EvalsDashboard() {
                           alignItems: "center",
                         }}
                       >
-                        <Stack direction="row" alignItems="center" spacing={2.5} sx={{ flex: 1 }}>
+                        <Stack
+                          direction="row"
+                          spacing={2.5}
+                          sx={{
+                            alignItems: "center",
+                            flex: 1,
+                          }}
+                        >
                           <Box
                             sx={{
                               width: 56,
@@ -1710,8 +1750,11 @@ export default function EvalsDashboard() {
                           <Box sx={{ flex: 1 }}>
                             <Stack
                               direction="row"
-                              alignItems="center"
-                              sx={{ mb: 0.5, gap: "10px" }}
+                              sx={{
+                                alignItems: "center",
+                                mb: 0.5,
+                                gap: "10px",
+                              }}
                             >
                               <Typography
                                 sx={{ fontSize: 15, fontWeight: 600, color: palette.text.primary }}
@@ -1785,9 +1828,9 @@ export default function EvalsDashboard() {
                   {/* Row: Use case type */}
                   <Stack
                     direction="row"
-                    alignItems="center"
-                    justifyContent="space-between"
                     sx={{
+                      alignItems: "center",
+                      justifyContent: "space-between",
                       px: "20px",
                       py: "14px",
                       borderBottom: `1px solid ${palette.border.dark}`,
@@ -1843,10 +1886,13 @@ export default function EvalsDashboard() {
                   {/* Locked notice + save row */}
                   <Stack
                     direction="row"
-                    alignItems="center"
-                    justifyContent={experimentsCount > 0 ? "space-between" : "flex-end"}
-                    sx={{ px: "20px", py: "12px" }}
-                    gap={2}
+                    sx={{
+                      alignItems: "center",
+                      justifyContent: experimentsCount > 0 ? "space-between" : "flex-end",
+                      gap: 2,
+                      px: "20px",
+                      py: "12px",
+                    }}
                   >
                     {experimentsCount > 0 && (
                       <Typography sx={{ fontSize: 12, color: palette.status.warning.text }}>
@@ -2301,9 +2347,11 @@ export default function EvalsDashboard() {
             <Box>
               <Stack
                 direction="row"
-                justifyContent="space-between"
-                alignItems="center"
-                sx={{ mb: 1 }}
+                sx={{
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 1,
+                }}
               >
                 <Typography
                   sx={{ fontSize: "13px", fontWeight: 500, color: palette.text.secondary }}
@@ -2406,7 +2454,11 @@ export default function EvalsDashboard() {
         <ConfirmationModal
           title="Delete API key"
           body={
-            <Typography fontSize={13}>
+            <Typography
+              sx={{
+                fontSize: 13,
+              }}
+            >
               Are you sure you want to delete the {getProviderDisplayName(keyToDelete.provider)} API
               key? Any evaluations using this key will no longer be able to run.
             </Typography>
@@ -2736,7 +2788,12 @@ export default function EvalsDashboard() {
         submitButtonText="Delete project"
         isSubmitting={deleting}
       >
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           To confirm, you are about to delete the project:{" "}
           <strong>{allProjects.find((p) => p.id === deleteProjectId)?.name}</strong>
         </Typography>

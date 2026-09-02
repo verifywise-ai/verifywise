@@ -62,7 +62,13 @@ const ActiveScenarioPanel: React.FC<ActiveScenarioPanelProps> = ({
           background: background.main,
         }}
       >
-        <Stack direction="row" gap="16px" alignItems="center">
+        <Stack
+          direction="row"
+          sx={{
+            gap: "16px",
+            alignItems: "center",
+          }}
+        >
           <Target size={20} color={text.muted} />
           <Box>
             <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
@@ -104,11 +110,19 @@ const ActiveScenarioPanel: React.FC<ActiveScenarioPanelProps> = ({
     >
       <Stack
         direction={{ xs: "column", md: "row" }}
-        gap="16px"
-        justifyContent="space-between"
-        alignItems={{ xs: "flex-start", md: "center" }}
+        sx={{
+          gap: "16px",
+          justifyContent: "space-between",
+          alignItems: { xs: "flex-start", md: "center" },
+        }}
       >
-        <Stack direction="row" gap="16px" alignItems="flex-start">
+        <Stack
+          direction="row"
+          sx={{
+            gap: "16px",
+            alignItems: "flex-start",
+          }}
+        >
           <Box
             sx={{
               width: 36,
@@ -124,7 +138,14 @@ const ActiveScenarioPanel: React.FC<ActiveScenarioPanelProps> = ({
             <Target size={18} color={brand.primary} />
           </Box>
           <Box>
-            <Stack direction="row" gap="8px" alignItems="center" sx={{ mb: "4px" }}>
+            <Stack
+              direction="row"
+              sx={{
+                gap: "8px",
+                alignItems: "center",
+                mb: "4px",
+              }}
+            >
               <Typography sx={{ fontSize: 14, fontWeight: 600, color: text.primary }}>
                 Active scenario
               </Typography>
@@ -165,7 +186,14 @@ const ActiveScenarioPanel: React.FC<ActiveScenarioPanelProps> = ({
               header="Frameworks"
               description="Frameworks included in this scenario"
             >
-              <Stack direction="row" flexWrap="wrap" gap="6px" sx={{ mt: "12px" }}>
+              <Stack
+                direction="row"
+                sx={{
+                  flexWrap: "wrap",
+                  gap: "6px",
+                  mt: "12px",
+                }}
+              >
                 {frameworkIds.map((id) => {
                   const priority =
                     id === priorityOrder?.primary
@@ -187,7 +215,13 @@ const ActiveScenarioPanel: React.FC<ActiveScenarioPanelProps> = ({
           </Box>
         </Stack>
 
-        <Stack direction="row" gap="8px" sx={{ flexShrink: 0 }}>
+        <Stack
+          direction="row"
+          sx={{
+            gap: "8px",
+            flexShrink: 0,
+          }}
+        >
           <GovernanceTooltip
             header="View insights"
             description="Open Unified Insights for this active scenario"
@@ -253,7 +287,11 @@ const ActiveScenarioPanel: React.FC<ActiveScenarioPanelProps> = ({
               Task progress by framework
             </Typography>
           </GovernanceTooltip>
-          <Stack gap="12px">
+          <Stack
+            sx={{
+              gap: "12px",
+            }}
+          >
             {progress.map((fw: any) => {
               const percent =
                 fw.totalTasks > 0 ? Math.round((fw.completedTasks / fw.totalTasks) * 100) : 0;
@@ -261,9 +299,11 @@ const ActiveScenarioPanel: React.FC<ActiveScenarioPanelProps> = ({
                 <Box key={fw.frameworkId}>
                   <Stack
                     direction="row"
-                    justifyContent="space-between"
-                    alignItems="center"
-                    sx={{ mb: "4px" }}
+                    sx={{
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mb: "4px",
+                    }}
                   >
                     <Typography sx={{ fontSize: 12, color: text.primary }}>
                       {fw.frameworkName}
@@ -303,7 +343,14 @@ const ActiveScenarioPanel: React.FC<ActiveScenarioPanelProps> = ({
         <Typography sx={{ fontSize: 12, fontWeight: 600, color: text.primary, mb: "8px" }}>
           Continue your governance workflow
         </Typography>
-        <Stack direction="row" gap="8px" flexWrap="wrap" useFlexGap>
+        <Stack
+          direction="row"
+          useFlexGap
+          sx={{
+            gap: "8px",
+            flexWrap: "wrap",
+          }}
+        >
           <CustomizableButton
             size="small"
             variant="outlined"

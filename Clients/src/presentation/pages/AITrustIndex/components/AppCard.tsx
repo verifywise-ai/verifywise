@@ -87,7 +87,13 @@ export default function AppCard({
       }}
     >
       {/* Header: (optional select) + favicon + name/vendor + grade */}
-      <Stack direction="row" alignItems="flex-start" gap="8px">
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: "flex-start",
+          gap: "8px",
+        }}
+      >
         {selectable && (
           <Box
             component="span"
@@ -137,7 +143,13 @@ export default function AppCard({
         </Box>
 
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Stack direction="row" alignItems="center" gap="4px">
+          <Stack
+            direction="row"
+            sx={{
+              alignItems: "center",
+              gap: "4px",
+            }}
+          >
             <Typography
               sx={{
                 fontSize: "14px",
@@ -196,7 +208,15 @@ export default function AppCard({
       )}
 
       {/* Footer: category chip + score + status + actions */}
-      <Stack direction="row" alignItems="center" gap="8px" sx={{ mt: "12px", flexWrap: "wrap" }}>
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: "center",
+          gap: "8px",
+          mt: "12px",
+          flexWrap: "wrap",
+        }}
+      >
         {row.category && (
           <Chip label={row.category} variant={categoryVariant(row.category)} uppercase={false} />
         )}

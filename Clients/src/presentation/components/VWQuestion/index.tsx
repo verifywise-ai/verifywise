@@ -195,7 +195,12 @@ const QuestionFrame = ({ question, setRefreshKey, currentProjectId }: IQuestionP
   };
 
   return (
-    <Box key={question.question_id || "default"} mt={10}>
+    <Box
+      key={question.question_id || "default"}
+      sx={{
+        mt: 10,
+      }}
+    >
       <Box
         sx={{
           display: "flex",
@@ -212,7 +217,12 @@ const QuestionFrame = ({ question, setRefreshKey, currentProjectId }: IQuestionP
         <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
           {question.question || ""}
           {question.hint && (
-            <Box component="span" ml={2}>
+            <Box
+              component="span"
+              sx={{
+                ml: 2,
+              }}
+            >
               <Tooltip
                 title={question.hint || ""}
                 slotProps={{
@@ -228,7 +238,13 @@ const QuestionFrame = ({ question, setRefreshKey, currentProjectId }: IQuestionP
             </Box>
           )}
         </Typography>
-        <Stack direction="row" alignItems="center" gap={2}>
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "center",
+            gap: 2,
+          }}
+        >
           <Select
             items={STATUS_OPTIONS}
             isHidden={false}
@@ -456,10 +472,12 @@ const QuestionFrame = ({ question, setRefreshKey, currentProjectId }: IQuestionP
       <Dialog
         open={isLinkedRisksModalOpen}
         onClose={() => setIsLinkedRisksModalOpen(false)}
-        PaperProps={{
-          sx: {
-            width: "1500px",
-            maxWidth: "1500px",
+        slotProps={{
+          paper: {
+            sx: {
+              width: "1500px",
+              maxWidth: "1500px",
+            },
           },
         }}
       >
@@ -478,10 +496,12 @@ const QuestionFrame = ({ question, setRefreshKey, currentProjectId }: IQuestionP
       <Dialog
         open={auditedStatusModalOpen}
         onClose={() => setAuditedStatusModalOpen(false)}
-        PaperProps={{
-          sx: {
-            width: "800px",
-            maxWidth: "800px",
+        slotProps={{
+          paper: {
+            sx: {
+              width: "800px",
+              maxWidth: "800px",
+            },
           },
         }}
       >

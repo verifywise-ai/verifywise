@@ -117,8 +117,19 @@ const SortableQuestionItem: React.FC<SortableQuestionItemProps> = ({
       >
         <GripVertical size={16} color={theme.palette.other.icon} style={{ flexShrink: 0 }} />
       </Box>
-      <Stack flex={1} spacing={0.5}>
-        <Stack direction="row" alignItems="center" spacing={1}>
+      <Stack
+        spacing={0.5}
+        sx={{
+          flex: 1,
+        }}
+      >
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: "center",
+          }}
+        >
           <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
             {index + 1}. {question.question_text}
           </Typography>
@@ -511,7 +522,13 @@ const PostMarketMonitoring: React.FC = () => {
 
   if (isLoading) {
     return (
-      <Stack alignItems="center" justifyContent="center" minHeight={200}>
+      <Stack
+        sx={{
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: 200,
+        }}
+      >
         <CircularProgress size={32} />
       </Stack>
     );
@@ -531,7 +548,13 @@ const PostMarketMonitoring: React.FC = () => {
 
       {/* Enable/Disable Card */}
       <Box sx={cardStyle}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <Stack spacing={0.5}>
             <Typography sx={{ fontSize: 14, fontWeight: 600 }}>Post-market monitoring</Typography>
             <Typography sx={{ fontSize: 12, color: theme.palette.other.icon }}>
@@ -551,9 +574,22 @@ const PostMarketMonitoring: React.FC = () => {
             pointerEvents: isActive && canEdit ? "auto" : "none",
           }}
         >
-          <Stack direction="row" justifyContent="space-between" alignItems="center" mb="16px">
+          <Stack
+            direction="row"
+            sx={{
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: "16px",
+            }}
+          >
             <Stack spacing={0.5}>
-              <Stack direction="row" alignItems="center" spacing={2}>
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <Typography sx={{ ...sectionTitleStyle, marginBottom: 0 }}>
                   Monitoring schedule
                 </Typography>
@@ -588,7 +624,13 @@ const PostMarketMonitoring: React.FC = () => {
                 How often to run monitoring
               </Typography>
             </Box>
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <Field
                 id="frequency-value"
                 label=""
@@ -643,7 +685,13 @@ const PostMarketMonitoring: React.FC = () => {
                 Days before sending reminder
               </Typography>
             </Box>
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <Field
                 id="reminder-days"
                 label=""
@@ -666,7 +714,13 @@ const PostMarketMonitoring: React.FC = () => {
                 Days before escalating
               </Typography>
             </Box>
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <Field
                 id="escalation-days"
                 label=""
@@ -710,7 +764,13 @@ const PostMarketMonitoring: React.FC = () => {
           </Box>
 
           {/* Save button */}
-          <Stack direction="row" justifyContent="flex-end" mt={4}>
+          <Stack
+            direction="row"
+            sx={{
+              justifyContent: "flex-end",
+              mt: 4,
+            }}
+          >
             <CustomizableButton
               variant="contained"
               text="Save configuration"
@@ -731,9 +791,22 @@ const PostMarketMonitoring: React.FC = () => {
       {/* Questions Card - only show when config exists */}
       {config?.id && (
         <Box sx={{ ...cardStyle, opacity: isActive && canEdit ? 1 : 0.6 }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+          <Stack
+            direction="row"
+            sx={{
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 2,
+            }}
+          >
             <Stack spacing={0.5}>
-              <Stack direction="row" alignItems="center" spacing={2}>
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <Typography sx={sectionTitleStyle}>Monitoring questions</Typography>
                 {(!isActive || !canEdit) && (
                   <Chip

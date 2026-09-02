@@ -226,9 +226,23 @@ export default function MCPAuditLogPage() {
           )}
 
           {toolStats.length > 0 && (
-            <Stack direction={{ xs: "column", md: "row" }} gap="16px" sx={{ px: 3, pt: 2 }}>
+            <Stack
+              direction={{ xs: "column", md: "row" }}
+              sx={{
+                gap: "16px",
+                px: 3,
+                pt: 2,
+              }}
+            >
               <Box sx={{ ...cardSx, flex: 1 }}>
-                <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 1 }}>
+                <Stack
+                  direction="row"
+                  sx={{
+                    alignItems: "center",
+                    gap: 1,
+                    mb: 1,
+                  }}
+                >
                   <Typography sx={sectionTitleSx}>Top 10 tools by calls</Typography>
                   <MuiTooltip
                     title="Most frequently invoked tools in the selected period, ranked by total call count"
@@ -261,7 +275,14 @@ export default function MCPAuditLogPage() {
                 </ResponsiveContainer>
               </Box>
               <Box sx={{ ...cardSx, flex: 1 }}>
-                <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 1 }}>
+                <Stack
+                  direction="row"
+                  sx={{
+                    alignItems: "center",
+                    gap: 1,
+                    mb: 1,
+                  }}
+                >
                   <Typography sx={sectionTitleSx}>Avg latency, top 10 tools</Typography>
                   <MuiTooltip
                     title="Average round-trip time per tool call, useful for spotting slow tools"
@@ -304,7 +325,16 @@ export default function MCPAuditLogPage() {
             </Stack>
           )}
 
-          <Stack direction="row" spacing={2} sx={{ px: 3, pt: 3, pb: 1.5 }} alignItems="flex-end">
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
+              alignItems: "flex-end",
+              px: 3,
+              pt: 3,
+              pb: 1.5,
+            }}
+          >
             <Box sx={{ width: 240 }}>
               <Field
                 label="Filter by tool"
@@ -359,16 +389,37 @@ export default function MCPAuditLogPage() {
                         backgroundColor={colors.bg}
                         textColor={colors.text}
                       />,
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: "text.secondary",
+                        }}
+                      >
                         {log.latency_ms}ms
                       </Typography>,
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: "text.secondary",
+                        }}
+                      >
                         {log.result_summary || "—"}
                       </Typography>,
-                      <Typography variant="body2" color="text.tertiary" sx={{ fontSize: 12 }}>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: "text.tertiary",
+                          fontSize: 12,
+                        }}
+                      >
                         {log.agent_key_name || log.key_name || `Key #${log.agent_key_id}`}
                       </Typography>,
-                      <Typography color="text.disabled" sx={{ fontSize: 12 }}>
+                      <Typography
+                        sx={{
+                          color: "text.disabled",
+                          fontSize: 12,
+                        }}
+                      >
                         {displayFormattedDate(log.created_at)}
                       </Typography>,
                     ];
@@ -377,11 +428,18 @@ export default function MCPAuditLogPage() {
                 {total > 0 && (
                   <Stack
                     direction="row"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    sx={{ pt: 2 }}
+                    sx={{
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      pt: 2,
+                    }}
                   >
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: "text.secondary",
+                      }}
+                    >
                       Showing {(page - 1) * PAGE_SIZE + 1}&ndash;{Math.min(page * PAGE_SIZE, total)}{" "}
                       of {total}
                     </Typography>

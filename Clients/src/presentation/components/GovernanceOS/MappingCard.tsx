@@ -49,7 +49,15 @@ const MappingCard = ({ mapping, frameworkNames, onEdit, onDelete }: IMappingCard
           },
         }}
       >
-        <Stack direction="row" alignItems="center" gap="16px" flexWrap="wrap" useFlexGap>
+        <Stack
+          direction="row"
+          useFlexGap
+          sx={{
+            alignItems: "center",
+            gap: "16px",
+            flexWrap: "wrap",
+          }}
+        >
           <Box sx={{ minWidth: 140 }}>
             <Typography sx={{ fontSize: 11, color: text.muted }}>{sourceName}</Typography>
             <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
@@ -94,7 +102,14 @@ const MappingCard = ({ mapping, frameworkNames, onEdit, onDelete }: IMappingCard
             </Typography>
           )}
 
-          <Stack direction="row" gap="4px" alignItems="center" sx={{ ml: "auto" }}>
+          <Stack
+            direction="row"
+            sx={{
+              gap: "4px",
+              alignItems: "center",
+              ml: "auto",
+            }}
+          >
             {onEdit && (
               <GovernanceTooltip header="Edit mapping" description="Modify this control mapping">
                 <span>
@@ -158,13 +173,27 @@ const MappingCard = ({ mapping, frameworkNames, onEdit, onDelete }: IMappingCard
         description={`${sourceName} \u2192 ${targetName}`}
         hideFooter
       >
-        <Stack gap="16px">
+        <Stack
+          sx={{
+            gap: "16px",
+          }}
+        >
           {/* Source and Target */}
-          <Stack gap="16px">
+          <Stack
+            sx={{
+              gap: "16px",
+            }}
+          >
             <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
               Mapping relationship
             </Typography>
-            <Stack direction="row" gap="16px" alignItems="flex-start">
+            <Stack
+              direction="row"
+              sx={{
+                gap: "16px",
+                alignItems: "flex-start",
+              }}
+            >
               <Box
                 sx={{
                   flex: 1,
@@ -210,8 +239,18 @@ const MappingCard = ({ mapping, frameworkNames, onEdit, onDelete }: IMappingCard
           </Stack>
 
           {/* Mapping Strength Explanation */}
-          <Stack gap="16px">
-            <Stack direction="row" gap="8px" alignItems="center">
+          <Stack
+            sx={{
+              gap: "16px",
+            }}
+          >
+            <Stack
+              direction="row"
+              sx={{
+                gap: "8px",
+                alignItems: "center",
+              }}
+            >
               <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
                 Mapping strength
               </Typography>
@@ -224,7 +263,11 @@ const MappingCard = ({ mapping, frameworkNames, onEdit, onDelete }: IMappingCard
           </Stack>
 
           {/* What this means */}
-          <Stack gap="16px">
+          <Stack
+            sx={{
+              gap: "16px",
+            }}
+          >
             <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
               What this means for you
             </Typography>
@@ -239,11 +282,22 @@ const MappingCard = ({ mapping, frameworkNames, onEdit, onDelete }: IMappingCard
 
           {/* Domain & Confidence */}
           {(mapping.domain_tag || mapping.confidence_score !== undefined) && (
-            <Stack gap="16px">
+            <Stack
+              sx={{
+                gap: "16px",
+              }}
+            >
               <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
                 Additional details
               </Typography>
-              <Stack direction="row" gap="16px" flexWrap="wrap" useFlexGap>
+              <Stack
+                direction="row"
+                useFlexGap
+                sx={{
+                  gap: "16px",
+                  flexWrap: "wrap",
+                }}
+              >
                 {mapping.domain_tag && (
                   <Box>
                     <Typography sx={{ fontSize: 11, color: text.muted, mb: 0.5 }}>
@@ -284,7 +338,11 @@ const MappingCard = ({ mapping, frameworkNames, onEdit, onDelete }: IMappingCard
 
           {/* Rationale */}
           {mapping.rationale && (
-            <Stack gap="16px">
+            <Stack
+              sx={{
+                gap: "16px",
+              }}
+            >
               <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
                 Rationale
               </Typography>

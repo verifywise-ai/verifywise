@@ -46,7 +46,13 @@ export function PlaygroundComposer({ disabled }: PlaygroundComposerProps) {
         padding: "12px 16px",
       }}
     >
-      <Stack direction="row" gap="8px" alignItems="flex-end">
+      <Stack
+        direction="row"
+        sx={{
+          gap: "8px",
+          alignItems: "flex-end",
+        }}
+      >
         <ComposerPrimitive.Input
           asChild
           placeholder={

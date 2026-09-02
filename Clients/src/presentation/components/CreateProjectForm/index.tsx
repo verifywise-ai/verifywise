@@ -336,9 +336,13 @@ export function CreateProjectForm({ closePopup, onNewProject }: CreateProjectFor
                   placeholder="Select users"
                   error={memberRequired}
                   sx={createProjectFormStyles.autocompleteTextField}
-                  inputProps={{
-                    ...params.inputProps,
-                    "data-testid": testIds.createProject.membersAutocomplete,
+                  slotProps={{
+                    ...params.slotProps,
+
+                    htmlInput: {
+                      ...params.slotProps.htmlInput,
+                      "data-testid": testIds.createProject.membersAutocomplete,
+                    },
                   }}
                 />
               )}

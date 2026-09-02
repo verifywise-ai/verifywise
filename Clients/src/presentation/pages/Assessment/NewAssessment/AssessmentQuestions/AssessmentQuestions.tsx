@@ -59,17 +59,27 @@ const AssessmentQuestions = ({
   return (
     <>
       {assessmentsValues[activeTab]?.subtopics.map((subtopic) => (
-        <Stack key={subtopic.id} mb={15}>
+        <Stack
+          key={subtopic.id}
+          sx={{
+            mb: 15,
+          }}
+        >
           <Typography sx={{ fontSize: 16, color: `${text.secondary}` }}>{subtopic.name}</Typography>
           {subtopic.questions.map((question) => (
-            <Box key={question.id} mt={10}>
+            <Box
+              key={question.id}
+              sx={{
+                mt: 10,
+              }}
+            >
               <Box
                 className={"tiptap-header"}
-                p={5}
-                display="flex"
-                alignItems="center"
-                bgcolor={"#FBFAFA"}
                 sx={{
+                  p: 5,
+                  display: "flex",
+                  alignItems: "center",
+                  bgcolor: "#FBFAFA",
                   border: `1px solid ${borderPalette.dark}`,
                   borderBottom: "none",
                   borderRadius: "4px 4px 0 0",
@@ -80,11 +90,16 @@ const AssessmentQuestions = ({
                 <Typography sx={{ fontSize: 13, color: `${text.secondary}` }}>
                   {question.questionText}
                   {question.hint && (
-                    <Box component="span" ml={2}>
+                    <Box
+                      component="span"
+                      sx={{
+                        ml: 2,
+                      }}
+                    >
                       <Tooltip
                         title={question.hint}
                         sx={{ fontSize: 13 }}
-                        componentsProps={{
+                        slotProps={{
                           tooltip: {
                             sx: {
                               fontSize: 12,

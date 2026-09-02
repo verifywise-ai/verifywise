@@ -51,8 +51,19 @@ const AITrustCentreHeader: React.FC<AITrustCentreHeaderProps> = ({ data, hash })
         width: "80%",
       }}
     >
-      <Stack alignItems="center" spacing={2}>
-        <Stack direction="row" alignItems="center" spacing={1}>
+      <Stack
+        spacing={2}
+        sx={{
+          alignItems: "center",
+        }}
+      >
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: "center",
+          }}
+        >
           {loading ? (
             <CircularProgress size={28} />
           ) : (
@@ -60,14 +71,26 @@ const AITrustCentreHeader: React.FC<AITrustCentreHeaderProps> = ({ data, hash })
               {(logo || data?.info?.logo) && (
                 <img src={logo || data?.info?.logo} alt="Company Logo" style={{ height: 35 }} />
               )}
-              <Typography variant="h5" fontWeight="semibold" sx={{ color: "text.secondary" }}>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: "semibold",
+                  color: "text.secondary",
+                }}
+              >
                 {data?.info?.title}
               </Typography>
             </>
           )}
         </Stack>
         {data?.terms_and_contact && (
-          <Stack direction="row" spacing={2} alignItems="center">
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             {data?.terms_and_contact?.terms && (
               <VWLink url={data?.terms_and_contact?.terms} openInNewTab={true} showIcon={false}>
                 Terms of service

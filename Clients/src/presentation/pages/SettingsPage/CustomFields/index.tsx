@@ -197,7 +197,13 @@ const CustomFieldsTab: React.FC = () => {
                     {def.required ? "Yes" : "No"}
                   </TableCell>
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                    <Stack
+                      direction="row"
+                      spacing={0.5}
+                      sx={{
+                        flexWrap: "wrap",
+                      }}
+                    >
                       {(def.options ?? []).map((o) => (
                         <Chip
                           key={o}
@@ -212,7 +218,13 @@ const CustomFieldsTab: React.FC = () => {
                     </Stack>
                   </TableCell>
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell} align="right">
-                    <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                    <Stack
+                      direction="row"
+                      spacing={0.5}
+                      sx={{
+                        justifyContent: "flex-end",
+                      }}
+                    >
                       <IconButton
                         size="small"
                         disableRipple
@@ -300,7 +312,11 @@ const CustomFieldsTab: React.FC = () => {
           isOpen={true}
           title="Delete custom field"
           body={
-            <Typography fontSize={13}>
+            <Typography
+              sx={{
+                fontSize: 13,
+              }}
+            >
               This will permanently remove "{confirmDelete.label}" and all values stored on existing
               records. This action cannot be undone.
             </Typography>
@@ -456,7 +472,13 @@ const DefinitionFormModal: React.FC<DefinitionFormModalProps> = ({
           />
         )}
 
-        <Stack direction="row" alignItems="center" spacing={4}>
+        <Stack
+          direction="row"
+          spacing={4}
+          sx={{
+            alignItems: "center",
+          }}
+        >
           <Toggle checked={required} onChange={(_e, checked) => setRequired(checked)} />
           <Typography sx={{ fontSize: 13, color: "text.primary" }}>Required</Typography>
         </Stack>
@@ -476,7 +498,14 @@ const LabelWithInfo: React.FC<{
   info: string;
   required?: boolean;
 }> = ({ text, info, required }) => (
-  <Stack direction="row" alignItems="center" spacing={1} sx={{ height: "22px" }}>
+  <Stack
+    direction="row"
+    spacing={1}
+    sx={{
+      alignItems: "center",
+      height: "22px",
+    }}
+  >
     <Typography
       component="p"
       sx={{

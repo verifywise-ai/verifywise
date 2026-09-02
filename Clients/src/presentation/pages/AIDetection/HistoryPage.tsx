@@ -753,7 +753,14 @@ export default function HistoryPage() {
       }
     >
       {/* Toolbar with Filter, Group, Search */}
-      <Stack direction="row" gap={2} alignItems="center" sx={{ mb: 2 }}>
+      <Stack
+        direction="row"
+        sx={{
+          gap: 2,
+          alignItems: "center",
+          mb: 2,
+        }}
+      >
         <FilterBy columns={FILTER_COLUMNS} onFilterChange={handleFilterChange} />
         <GroupBy options={GROUP_BY_OPTIONS} onGroupChange={handleGroupChange} />
         <SearchBox
@@ -830,7 +837,6 @@ export default function HistoryPage() {
                       rowsPerPage={rowsPerPage}
                       rowsPerPageOptions={[5, 10, 15, 25]}
                       onRowsPerPageChange={handleChangeRowsPerPage}
-                      ActionsComponent={(props) => <TablePaginationActions {...props} />}
                       labelRowsPerPage="Rows per page"
                       labelDisplayedRows={({ page: currentPage, count }) =>
                         `Page ${currentPage + 1} of ${Math.max(1, Math.ceil(count / rowsPerPage))}`
@@ -839,21 +845,27 @@ export default function HistoryPage() {
                         select: {
                           MenuProps: {
                             keepMounted: true,
-                            PaperProps: {
-                              className: "pagination-dropdown",
-                              sx: {
-                                mt: 0,
-                                mb: theme.spacing(2),
+
+                            slotProps: {
+                              paper: {
+                                className: "pagination-dropdown",
+                                sx: {
+                                  mt: 0,
+                                  mb: theme.spacing(2),
+                                },
                               },
                             },
+
                             transformOrigin: {
                               vertical: "bottom",
                               horizontal: "left",
                             },
+
                             anchorOrigin: {
                               vertical: "top",
                               horizontal: "left",
                             },
+
                             sx: { mt: theme.spacing(-2) },
                           },
                           inputProps: { id: "pagination-dropdown" },
@@ -883,6 +895,7 @@ export default function HistoryPage() {
                           padding: theme.spacing(4),
                         },
                       }}
+                      ActionsComponent={(props) => <TablePaginationActions {...props} />}
                     />
                   </TableRow>
                 </TableFooter>
@@ -898,7 +911,12 @@ export default function HistoryPage() {
           isOpen={deleteModalOpen}
           title="Delete scan?"
           body={
-            <Typography fontSize={13} color={palette.text.secondary}>
+            <Typography
+              color={palette.text.secondary}
+              sx={{
+                fontSize: 13,
+              }}
+            >
               Are you sure you want to delete the scan for{" "}
               <strong>
                 {scanToDelete.repository_owner}/{scanToDelete.repository_name}

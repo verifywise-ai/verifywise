@@ -167,7 +167,15 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
               textTransform: "none",
             }}
           >
-            <Stack direction="row" spacing={0.5} justifyContent="center" flexWrap="wrap" gap={0.5}>
+            <Stack
+              direction="row"
+              spacing={0.5}
+              sx={{
+                justifyContent: "center",
+                flexWrap: "wrap",
+                gap: 0.5,
+              }}
+            >
               {row.contestants?.slice(0, 4).map((contestant, idx) => {
                 const name = getContestantName(contestant, idx);
                 return (

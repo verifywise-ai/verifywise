@@ -301,7 +301,13 @@ export default function UserActivityPage() {
   if (selectedEmail) {
     return (
       <PageHeaderExtended title="User activity" description={selectedEmail}>
-        <Stack direction="row" alignItems="center" gap="8px">
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
           <IconButton onClick={handleBack} size="small">
             <ArrowLeft size={16} strokeWidth={1.5} />
           </IconButton>
@@ -309,12 +315,20 @@ export default function UserActivityPage() {
         </Stack>
 
         {detailLoading ? (
-          <Stack gap="16px">
+          <Stack
+            sx={{
+              gap: "16px",
+            }}
+          >
             <Skeleton height={80} />
             <Skeleton height={200} />
           </Stack>
         ) : userDetail ? (
-          <Stack gap="16px">
+          <Stack
+            sx={{
+              gap: "16px",
+            }}
+          >
             <Box
               sx={{
                 "display": "flex",
@@ -503,7 +517,6 @@ export default function UserActivityPage() {
                     onPageChange={(_e, newPage) => setPage(newPage + 1)}
                     rowsPerPage={20}
                     rowsPerPageOptions={[20]}
-                    ActionsComponent={(props) => <TablePaginationActions {...props} />}
                     labelRowsPerPage=""
                     labelDisplayedRows={({ page: p, count }) =>
                       `Page ${p + 1} of ${Math.max(0, Math.ceil(count / 20))}`
@@ -512,10 +525,14 @@ export default function UserActivityPage() {
                       select: {
                         MenuProps: {
                           keepMounted: true,
-                          PaperProps: {
-                            className: "pagination-dropdown",
-                            sx: { mt: 0, mb: theme.spacing(2) },
+
+                          slotProps: {
+                            paper: {
+                              className: "pagination-dropdown",
+                              sx: { mt: 0, mb: theme.spacing(2) },
+                            },
                           },
+
                           transformOrigin: { vertical: "bottom", horizontal: "left" },
                           anchorOrigin: { vertical: "top", horizontal: "left" },
                           sx: { mt: theme.spacing(-2) },
@@ -544,6 +561,7 @@ export default function UserActivityPage() {
                         padding: theme.spacing(4),
                       },
                     }}
+                    ActionsComponent={(props) => <TablePaginationActions {...props} />}
                   />
                 </TableRow>
               </TableFooter>
@@ -612,7 +630,6 @@ export default function UserActivityPage() {
                     onPageChange={(_e, newPage) => setDeptPage(newPage)}
                     rowsPerPage={DEPT_PER_PAGE}
                     rowsPerPageOptions={[DEPT_PER_PAGE]}
-                    ActionsComponent={(props) => <TablePaginationActions {...props} />}
                     labelRowsPerPage=""
                     labelDisplayedRows={({ page: p, count }) =>
                       `Page ${p + 1} of ${Math.max(0, Math.ceil(count / DEPT_PER_PAGE))}`
@@ -621,10 +638,14 @@ export default function UserActivityPage() {
                       select: {
                         MenuProps: {
                           keepMounted: true,
-                          PaperProps: {
-                            className: "pagination-dropdown",
-                            sx: { mt: 0, mb: theme.spacing(2) },
+
+                          slotProps: {
+                            paper: {
+                              className: "pagination-dropdown",
+                              sx: { mt: 0, mb: theme.spacing(2) },
+                            },
                           },
+
                           transformOrigin: { vertical: "bottom", horizontal: "left" },
                           anchorOrigin: { vertical: "top", horizontal: "left" },
                           sx: { mt: theme.spacing(-2) },
@@ -653,6 +674,7 @@ export default function UserActivityPage() {
                         padding: theme.spacing(4),
                       },
                     }}
+                    ActionsComponent={(props) => <TablePaginationActions {...props} />}
                   />
                 </TableRow>
               </TableFooter>

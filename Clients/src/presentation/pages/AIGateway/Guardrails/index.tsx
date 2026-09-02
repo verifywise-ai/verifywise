@@ -869,16 +869,20 @@ export default function GuardrailsPage() {
     <Stack
       key={rule.id}
       direction="row"
-      justifyContent="space-between"
-      alignItems="center"
       sx={{
+        justifyContent: "space-between",
+        alignItems: "center",
         p: "12px 16px",
         border: `1px solid ${palette.border.dark}`,
         borderRadius: "4px",
         opacity: rule.is_active ? 1 : 0.6,
       }}
     >
-      <Stack gap="4px">
+      <Stack
+        sx={{
+          gap: "4px",
+        }}
+      >
         <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{rule.name}</Typography>
         <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
           {rule.guardrail_type === "pii"
@@ -891,7 +895,13 @@ export default function GuardrailsPage() {
           <Chip label={rule.action === "block" ? "Block" : "Mask"} size="small" />
         </Box>
       </Stack>
-      <Stack direction="row" alignItems="center" gap="8px">
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: "center",
+          gap: "8px",
+        }}
+      >
         <Toggle
           checked={rule.is_active}
           onChange={() => handleToggle(rule.id, rule.is_active)}
@@ -911,7 +921,12 @@ export default function GuardrailsPage() {
       tipBoxEntity="ai-gateway-guardrails"
       helpArticlePath="ai-gateway/guardrails"
       actionButton={
-        <Stack direction="row" gap="8px">
+        <Stack
+          direction="row"
+          sx={{
+            gap: "8px",
+          }}
+        >
           <CustomizableButton
             text="Add from catalog"
             variant="outlined"
@@ -953,14 +968,25 @@ export default function GuardrailsPage() {
             {/* ─── PII Detection tab ─────────────────────────────────────── */}
             {activeTab === "pii" && (
               <Box sx={cardSx}>
-                <Stack gap="12px">
+                <Stack
+                  sx={{
+                    gap: "12px",
+                  }}
+                >
                   <Stack
                     direction="row"
-                    justifyContent="space-between"
-                    alignItems="flex-start"
-                    gap="16px"
+                    sx={{
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      gap: "16px",
+                    }}
                   >
-                    <Box flex={1} minWidth={0}>
+                    <Box
+                      sx={{
+                        flex: 1,
+                        minWidth: 0,
+                      }}
+                    >
                       <Typography sx={sectionTitleSx}>PII detection</Typography>
                       <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "4px" }}>
                         Detect and protect personal data such as emails, phone numbers, credit
@@ -998,7 +1024,13 @@ export default function GuardrailsPage() {
                       />
                     </EmptyState>
                   ) : (
-                    <Stack gap="8px">{piiRules.map(renderRuleRow)}</Stack>
+                    <Stack
+                      sx={{
+                        gap: "8px",
+                      }}
+                    >
+                      {piiRules.map(renderRuleRow)}
+                    </Stack>
                   )}
                 </Stack>
               </Box>
@@ -1007,14 +1039,25 @@ export default function GuardrailsPage() {
             {/* ─── Content Filter tab ────────────────────────────────────── */}
             {activeTab === "content_filter" && (
               <Box sx={cardSx}>
-                <Stack gap="12px">
+                <Stack
+                  sx={{
+                    gap: "12px",
+                  }}
+                >
                   <Stack
                     direction="row"
-                    justifyContent="space-between"
-                    alignItems="flex-start"
-                    gap="16px"
+                    sx={{
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      gap: "16px",
+                    }}
                   >
-                    <Box flex={1} minWidth={0}>
+                    <Box
+                      sx={{
+                        flex: 1,
+                        minWidth: 0,
+                      }}
+                    >
                       <Typography sx={sectionTitleSx}>Content filter</Typography>
                       <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "4px" }}>
                         Block or mask content matching specific keywords or regex patterns. Use
@@ -1053,7 +1096,13 @@ export default function GuardrailsPage() {
                       />
                     </EmptyState>
                   ) : (
-                    <Stack gap="8px">{cfRules.map(renderRuleRow)}</Stack>
+                    <Stack
+                      sx={{
+                        gap: "8px",
+                      }}
+                    >
+                      {cfRules.map(renderRuleRow)}
+                    </Stack>
                   )}
                 </Stack>
               </Box>
@@ -1084,7 +1133,11 @@ export default function GuardrailsPage() {
         isSubmitting={piiSubmitting}
         maxWidth="480px"
       >
-        <Stack gap="16px">
+        <Stack
+          sx={{
+            gap: "16px",
+          }}
+        >
           <Field
             label="Rule name"
             placeholder="e.g., Block credit cards"
@@ -1136,7 +1189,11 @@ export default function GuardrailsPage() {
         isSubmitting={cfSubmitting}
         maxWidth="480px"
       >
-        <Stack gap="16px">
+        <Stack
+          sx={{
+            gap: "16px",
+          }}
+        >
           <Field
             label="Rule name"
             placeholder="e.g., Block competitor names"
@@ -1200,7 +1257,11 @@ export default function GuardrailsPage() {
         isSubmitting={testLoading}
         maxWidth="560px"
       >
-        <Stack gap="16px">
+        <Stack
+          sx={{
+            gap: "16px",
+          }}
+        >
           <Field
             label="Sample text"
             placeholder="e.g., My email is john@example.com and my credit card is 4111-1111-1111-1111"
@@ -1263,7 +1324,11 @@ export default function GuardrailsPage() {
         cancelButtonText="Done"
         maxWidth="640px"
       >
-        <Stack gap="12px">
+        <Stack
+          sx={{
+            gap: "12px",
+          }}
+        >
           <Field
             placeholder="Search guardrails..."
             value={catalogSearch}
@@ -1281,10 +1346,13 @@ export default function GuardrailsPage() {
               <Box key={cat.id}>
                 <Stack
                   direction="row"
-                  alignItems="center"
-                  gap="8px"
-                  sx={{ cursor: "pointer", p: "6px 0" }}
                   onClick={() => toggleCategory(cat.id)}
+                  sx={{
+                    alignItems: "center",
+                    gap: "8px",
+                    cursor: "pointer",
+                    p: "6px 0",
+                  }}
                 >
                   {isExpanded ? (
                     <ChevronDown size={14} strokeWidth={1.5} />
@@ -1299,7 +1367,12 @@ export default function GuardrailsPage() {
                 </Stack>
 
                 <Collapse in={isExpanded}>
-                  <Stack gap="0px" sx={{ ml: "28px" }}>
+                  <Stack
+                    sx={{
+                      gap: "0px",
+                      ml: "28px",
+                    }}
+                  >
                     {items.map((item) => {
                       const isEnabled = enabledCatalogIds.has(item.id);
                       const isEnabling = enablingId === item.id;
@@ -1307,16 +1380,28 @@ export default function GuardrailsPage() {
                         <Stack
                           key={item.id}
                           direction="row"
-                          justifyContent="space-between"
-                          alignItems="flex-start"
                           sx={{
+                            "justifyContent": "space-between",
+                            "alignItems": "flex-start",
                             "p": "8px 0",
                             "borderBottom": `1px solid ${palette.border.light}`,
                             "&:last-child": { borderBottom: "none" },
                           }}
                         >
-                          <Box flex={1} minWidth={0}>
-                            <Stack direction="row" alignItems="center" gap="6px" flexWrap="wrap">
+                          <Box
+                            sx={{
+                              flex: 1,
+                              minWidth: 0,
+                            }}
+                          >
+                            <Stack
+                              direction="row"
+                              sx={{
+                                alignItems: "center",
+                                gap: "6px",
+                                flexWrap: "wrap",
+                              }}
+                            >
                               <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                                 {item.name}
                               </Typography>
@@ -1358,7 +1443,14 @@ export default function GuardrailsPage() {
                               {item.description}
                             </Typography>
                             {item.detects && item.detects.length > 0 && (
-                              <Stack direction="row" gap="4px" mt="4px" flexWrap="wrap">
+                              <Stack
+                                direction="row"
+                                sx={{
+                                  gap: "4px",
+                                  mt: "4px",
+                                  flexWrap: "wrap",
+                                }}
+                              >
                                 {item.detects.map((d, di) => (
                                   <Typography
                                     key={di}
@@ -1438,7 +1530,11 @@ export default function GuardrailsPage() {
         isSubmitting={deleteSubmitting}
         maxWidth="480px"
       >
-        <Stack gap="8px">
+        <Stack
+          sx={{
+            gap: "8px",
+          }}
+        >
           <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
             This action takes effect immediately. Any requests currently being processed will no
             longer be checked against this rule.

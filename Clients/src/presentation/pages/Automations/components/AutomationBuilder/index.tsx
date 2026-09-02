@@ -174,7 +174,13 @@ const AutomationBuilder: React.FC<AutomationBuilderProps> = ({
       }}
       onClick={() => onSelectItem(action.id, "action")}
     >
-      <Stack direction="row" alignItems="center" spacing={1}>
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: "center",
+        }}
+      >
         <Mail size={16} strokeWidth={1.5} color={theme.palette.primary.main} />
         <Typography sx={{ fontSize: "13px", fontWeight: 500 }}>{action.name}</Typography>
       </Stack>
@@ -419,7 +425,13 @@ const AutomationBuilder: React.FC<AutomationBuilderProps> = ({
                 : handleTriggerMenuOpen
             }
           >
-            <Stack direction="row" alignItems="center" spacing={1}>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               {automation.trigger ? (
                 <>
                   {(() => {
@@ -476,14 +488,16 @@ const AutomationBuilder: React.FC<AutomationBuilderProps> = ({
             anchorEl={triggerMenuAnchor}
             open={Boolean(triggerMenuAnchor)}
             onClose={handleTriggerMenuClose}
-            PaperProps={{
-              sx: {
-                boxShadow: "none",
-                border: `1px solid ${theme.palette.border.light}`,
-                borderRadius: 2,
-                width: 320,
-                py: 2,
-                px: 1,
+            slotProps={{
+              paper: {
+                sx: {
+                  boxShadow: "none",
+                  border: `1px solid ${theme.palette.border.light}`,
+                  borderRadius: 2,
+                  width: 320,
+                  py: 2,
+                  px: 1,
+                },
               },
             }}
             transformOrigin={{
@@ -526,10 +540,14 @@ const AutomationBuilder: React.FC<AutomationBuilderProps> = ({
                 </ListItemIcon>
                 <ListItemText
                   primary={formatTriggerName(template)}
-                  primaryTypographyProps={{
-                    fontSize: "13px",
-                    fontWeight: 400,
-                    color: theme.palette.text.primary,
+                  slotProps={{
+                    primary: {
+                      sx: {
+                        fontSize: "13px",
+                        fontWeight: 400,
+                        color: theme.palette.text.primary,
+                      },
+                    },
                   }}
                 />
               </MenuItem>
@@ -614,14 +632,16 @@ const AutomationBuilder: React.FC<AutomationBuilderProps> = ({
                 anchorEl={actionMenuAnchor}
                 open={Boolean(actionMenuAnchor)}
                 onClose={handleActionMenuClose}
-                PaperProps={{
-                  sx: {
-                    boxShadow: "none",
-                    border: `1px solid ${theme.palette.border.light}`,
-                    borderRadius: 2,
-                    width: 320,
-                    py: 2,
-                    px: 1,
+                slotProps={{
+                  paper: {
+                    sx: {
+                      boxShadow: "none",
+                      border: `1px solid ${theme.palette.border.light}`,
+                      borderRadius: 2,
+                      width: 320,
+                      py: 2,
+                      px: 1,
+                    },
                   },
                 }}
                 transformOrigin={{
@@ -667,10 +687,14 @@ const AutomationBuilder: React.FC<AutomationBuilderProps> = ({
                       </ListItemIcon>
                       <ListItemText
                         primary={template.name}
-                        primaryTypographyProps={{
-                          fontSize: "13px",
-                          fontWeight: 400,
-                          color: theme.palette.text.primary,
+                        slotProps={{
+                          primary: {
+                            sx: {
+                              fontSize: "13px",
+                              fontWeight: 400,
+                              color: theme.palette.text.primary,
+                            },
+                          },
                         }}
                       />
                     </MenuItem>
@@ -716,9 +740,11 @@ const AutomationBuilder: React.FC<AutomationBuilderProps> = ({
                   <Stack
                     key={action.id}
                     direction="row"
-                    alignItems="center"
                     spacing={1}
-                    sx={{ mb: index < automation.actions.length - 1 ? 0.5 : 0 }}
+                    sx={{
+                      alignItems: "center",
+                      mb: index < automation.actions.length - 1 ? 0.5 : 0,
+                    }}
                   >
                     <Box sx={{ width: "24px", display: "flex", justifyContent: "flex-end" }}>
                       <CornerDownRight size={12} color={theme.palette.text.secondary} />

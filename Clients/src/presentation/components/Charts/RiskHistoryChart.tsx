@@ -216,7 +216,13 @@ export function RiskHistoryChart({
       }}
     >
       <Stack spacing={3}>
-        <Stack direction="row" justifyContent="flex-end" alignItems="center">
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "flex-end",
+            alignItems: "center",
+          }}
+        >
           <ButtonToggle
             options={TIMEFRAME_OPTIONS}
             value={timeframe}

@@ -162,7 +162,11 @@ const UnifiedInsights = () => {
   };
 
   return (
-    <Stack gap="16px">
+    <Stack
+      sx={{
+        gap: "16px",
+      }}
+    >
       {/* Active scenario banner */}
       {activeScenario && (
         <Box
@@ -173,7 +177,13 @@ const UnifiedInsights = () => {
             background: `linear-gradient(135deg, ${background.main} 0%, ${alpha(brand.primary, 0.06)} 100%)`,
           }}
         >
-          <Stack direction="row" gap="16px" alignItems="center">
+          <Stack
+            direction="row"
+            sx={{
+              gap: "16px",
+              alignItems: "center",
+            }}
+          >
             <Target size={18} color={brand.primary} />
             <Typography sx={{ fontSize: 13, color: text.primary }}>
               Coverage aligned with active scenario: <strong>{activeScenario.name}</strong>
@@ -188,7 +198,13 @@ const UnifiedInsights = () => {
         </Box>
       )}
 
-      <Stack direction="row" gap="16px" alignItems="flex-end">
+      <Stack
+        direction="row"
+        sx={{
+          gap: "16px",
+          alignItems: "flex-end",
+        }}
+      >
         <GovernanceTooltip
           header="Select project"
           description="Project to analyze for coverage and gaps"
@@ -259,13 +275,28 @@ const UnifiedInsights = () => {
           showBorder
         />
       ) : isLoading ? (
-        <Stack alignItems="center" sx={{ py: 6 }}>
+        <Stack
+          sx={{
+            alignItems: "center",
+            py: 6,
+          }}
+        >
           <CircularProgress size={32} />
         </Stack>
       ) : (
-        <Stack gap="16px">
+        <Stack
+          sx={{
+            gap: "16px",
+          }}
+        >
           {/* Summary cards */}
-          <Stack direction="row" gap="16px" sx={{ width: "100%" }}>
+          <Stack
+            direction="row"
+            sx={{
+              gap: "16px",
+              width: "100%",
+            }}
+          >
             <GovernanceTooltip
               header="Average coverage"
               description="Mean percentage of mapped controls across active frameworks"

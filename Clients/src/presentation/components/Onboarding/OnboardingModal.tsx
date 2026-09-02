@@ -256,7 +256,13 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
               <Stack spacing={1.5}>
                 <ProgressDots totalSteps={totalSteps} currentStep={currentStepIndex} />
 
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Stack
+                  direction="row"
+                  sx={{
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
                   <CustomizableButton
                     variant="text"
                     text="Skip onboarding"
@@ -270,7 +276,12 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
                     }}
                   />
 
-                  <Stack direction="row" gap={2}>
+                  <Stack
+                    direction="row"
+                    sx={{
+                      gap: 2,
+                    }}
+                  >
                     {!stepProps.isFirstStep && (
                       <CustomizableButton
                         variant="outlined"

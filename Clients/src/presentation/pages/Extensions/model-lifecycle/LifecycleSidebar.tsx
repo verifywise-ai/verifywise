@@ -66,18 +66,20 @@ export default function LifecycleSidebar({
             <Stack
               key={phase.id}
               direction="row"
-              alignItems="center"
               onClick={() => handleClick(phase.id)}
               sx={{
+                "alignItems": "center",
                 "px": "20px",
                 "py": "10px",
                 "gap": "12px",
                 "cursor": "pointer",
                 "borderLeft": isActive ? "3px solid #13715B" : "3px solid transparent",
                 "backgroundColor": isActive ? "rgba(19,113,91,0.06)" : "transparent",
+
                 "&:hover": {
                   backgroundColor: isActive ? "rgba(19,113,91,0.06)" : "#F9FAFB",
                 },
+
                 "transition": "background-color 0.15s ease",
               }}
             >

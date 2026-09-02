@@ -105,7 +105,14 @@ interface CreateScorerModalProps {
 // Section heading with an optional info tooltip
 function SectionHeading({ label, tooltip }: { label: string; tooltip: string }) {
   return (
-    <Stack direction="row" alignItems="center" gap={0.75} mb={1.5}>
+    <Stack
+      direction="row"
+      sx={{
+        alignItems: "center",
+        gap: 0.75,
+        mb: 1.5,
+      }}
+    >
       <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary }}>
         {label}
       </Typography>
@@ -300,7 +307,13 @@ function ModelSelector({
           },
         }}
       >
-        <Stack direction="row" alignItems="center" spacing={1.5}>
+        <Stack
+          direction="row"
+          spacing={1.5}
+          sx={{
+            alignItems: "center",
+          }}
+        >
           {renderProviderIcon(provider, 20)}
           <Typography
             sx={{
@@ -359,13 +372,6 @@ function ModelSelector({
                 onChange={(e) => setSearchQuery(e.target.value)}
                 autoFocus
                 autoComplete="off"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search size={16} color={palette.text.disabled} />
-                    </InputAdornment>
-                  ),
-                }}
                 sx={{
                   "& .MuiOutlinedInput-root": {
                     "fontSize": 13,
@@ -374,6 +380,15 @@ function ModelSelector({
                     "& fieldset": { borderColor: palette.border.dark },
                     "&:hover fieldset": { borderColor: palette.border.dark },
                     "&.Mui-focused fieldset": { borderColor: palette.brand.primary },
+                  },
+                }}
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Search size={16} color={palette.text.disabled} />
+                      </InputAdornment>
+                    ),
                   },
                 }}
               />
@@ -419,9 +434,12 @@ function ModelSelector({
                       >
                         <Stack
                           direction="row"
-                          alignItems="center"
                           spacing={1.5}
-                          sx={{ minWidth: 0, flex: 1 }}
+                          sx={{
+                            alignItems: "center",
+                            minWidth: 0,
+                            flex: 1,
+                          }}
                         >
                           {renderProviderIcon(p.provider, 20)}
                           <Stack spacing={0} sx={{ minWidth: 0 }}>
@@ -1174,9 +1192,22 @@ export default function CreateScorerModal({
     >
       <Stack spacing={0}>
         {/* ── Name & Slug ── */}
-        <Stack direction="row" spacing={2} mb={3}>
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{
+            mb: 3,
+          }}
+        >
           <Box sx={{ flex: 1 }}>
-            <Stack direction="row" alignItems="center" gap={0.75} mb={0.75}>
+            <Stack
+              direction="row"
+              sx={{
+                alignItems: "center",
+                gap: 0.75,
+                mb: 0.75,
+              }}
+            >
               <Typography sx={{ fontSize: 13, fontWeight: 500, color: palette.text.secondary }}>
                 Name <span style={{ color: palette.status.error.text }}>*</span>
               </Typography>
@@ -1196,7 +1227,14 @@ export default function CreateScorerModal({
             />
           </Box>
           <Box sx={{ flex: 1 }}>
-            <Stack direction="row" alignItems="center" gap={0.75} mb={0.75}>
+            <Stack
+              direction="row"
+              sx={{
+                alignItems: "center",
+                gap: 0.75,
+                mb: 0.75,
+              }}
+            >
               <Typography sx={{ fontSize: 13, fontWeight: 500, color: palette.text.secondary }}>
                 Slug <span style={{ color: palette.status.error.text }}>*</span>
               </Typography>
@@ -1220,13 +1258,24 @@ export default function CreateScorerModal({
         <Divider sx={{ mb: 3 }} />
 
         {/* ── Judge model ── */}
-        <Box mb={3}>
+        <Box
+          sx={{
+            mb: 3,
+          }}
+        >
           <SectionHeading
             label="Judge model"
             tooltip="The LLM that will act as the evaluator. It reads your prompt and returns one of the choice scores you define below."
           />
           {loadingProviders ? (
-            <Stack direction="row" alignItems="center" gap={1} sx={{ py: 1 }}>
+            <Stack
+              direction="row"
+              sx={{
+                alignItems: "center",
+                gap: 1,
+                py: 1,
+              }}
+            >
               <CircularProgress size={16} />
               <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
                 Loading providers...
@@ -1255,7 +1304,11 @@ export default function CreateScorerModal({
         <Divider sx={{ mb: 3 }} />
 
         {/* ── Prompt ── */}
-        <Box mb={3}>
+        <Box
+          sx={{
+            mb: 3,
+          }}
+        >
           <SectionHeading
             label="Prompt"
             tooltip="The messages sent to the judge LLM. Use {{input}}, {{output}}, and {{expected}} to inject test-case values. The judge should return one of your choice labels."
@@ -1290,9 +1343,9 @@ export default function CreateScorerModal({
               >
                 <Stack
                   direction="row"
-                  alignItems="center"
-                  justifyContent="space-between"
                   sx={{
+                    alignItems: "center",
+                    justifyContent: "space-between",
                     px: 1.5,
                     py: 0.75,
                     backgroundColor: palette.background.accent,
@@ -1368,7 +1421,11 @@ export default function CreateScorerModal({
         <Divider sx={{ mb: 3 }} />
 
         {/* ── Choice scores ── */}
-        <Box mb={3}>
+        <Box
+          sx={{
+            mb: 3,
+          }}
+        >
           <SectionHeading
             label="Choice scores"
             tooltip="The verdicts the judge can return, each mapped to a numeric score (0–1). The LLM is forced to pick exactly one choice via a tool schema — all labels and scores must be unique."
@@ -1386,7 +1443,14 @@ export default function CreateScorerModal({
               <Box sx={{ width: 32 }} />
             </Stack>
             {config.choiceScores.map((cs, index) => (
-              <Stack key={index} direction="row" spacing={2} alignItems="center">
+              <Stack
+                key={index}
+                direction="row"
+                spacing={2}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <Field
                   placeholder="e.g. PASS"
                   value={cs.label}
@@ -1437,7 +1501,14 @@ export default function CreateScorerModal({
             label="Pass threshold"
             tooltip="Samples with a score at or above this value will be marked as passing. Adjust based on how strict you want the evaluation to be."
           />
-          <Stack direction="row" alignItems="center" spacing={2} mb={2.5}>
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
+              alignItems: "center",
+              mb: 2.5,
+            }}
+          >
             <Slider
               value={config.passThreshold}
               onChange={(_, v) => setConfig((prev) => ({ ...prev, passThreshold: v as number }))}
@@ -1471,7 +1542,13 @@ export default function CreateScorerModal({
             label="Top P"
             tooltip="Controls the diversity of the judge's responses by sampling from the top-P probability mass. 1.0 = no restriction; lower values make output more focused."
           />
-          <Stack direction="row" alignItems="center" spacing={2}>
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             <Slider
               size="small"
               value={config.modelParams.topP}

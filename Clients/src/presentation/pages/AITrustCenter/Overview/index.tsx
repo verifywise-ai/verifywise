@@ -38,7 +38,13 @@ const SectionHeader: React.FC<{
   const formControlLabelStyles = getFormControlLabelStyles(theme);
 
   return (
-    <Stack direction="row" justifyContent="space-between" alignItems="center">
+    <Stack
+      direction="row"
+      sx={{
+        justifyContent: "space-between",
+        alignItems: "center",
+      }}
+    >
       <Typography sx={styles.sectionTitle}>{title}</Typography>
       <FormControlLabel
         control={<Toggle checked={checked} onChange={(_, checked) => onToggle(checked)} />}
@@ -224,7 +230,14 @@ const AITrustCenterOverview: React.FC = () => {
           checked={localFormData.info?.intro_visible || false}
           onToggle={(checked) => handleFieldChange("info", "intro_visible", checked)}
         />
-        <Box display="flex" flexWrap="wrap" gap={8} mt={2}>
+        <Box
+          sx={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 8,
+            mt: 2,
+          }}
+        >
           <ToggleCard
             label="Purpose of our trust center"
             checked={localFormData.intro?.purpose_visible || false}
@@ -314,12 +327,13 @@ const AITrustCenterOverview: React.FC = () => {
           27001, GDPR).
         </Typography>
         <Box
-          display="flex"
-          flexWrap="wrap"
-          gap={12}
-          mt={3}
           sx={{
+            "display": "flex",
+            "flexWrap": "wrap",
+            "gap": 12,
+            "mt": 3,
             "maxWidth": "100%",
+
             "& > *": {
               flex: "0 0 auto",
               minWidth: "fit-content",
@@ -349,7 +363,14 @@ const AITrustCenterOverview: React.FC = () => {
           checked={localFormData.info?.company_description_visible || false}
           onToggle={(checked) => handleFieldChange("info", "company_description_visible", checked)}
         />
-        <Box display="flex" flexWrap="wrap" gap={8} mt={2}>
+        <Box
+          sx={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 8,
+            mt: 2,
+          }}
+        >
           <ToggleCard
             label="Background"
             checked={localFormData.company_description?.background_visible || false}
@@ -451,7 +472,14 @@ const AITrustCenterOverview: React.FC = () => {
         </Typography>
         <PrivacyFields>
           <Stack direction="column" spacing={3} sx={{ width: "100%", mt: 3 }}>
-            <Stack direction="row" alignItems="center" spacing={2} sx={{ width: "100%" }}>
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{
+                alignItems: "center",
+                width: "100%",
+              }}
+            >
               <Box sx={{ minWidth: "160px" }}>
                 <Checkbox
                   id="terms-visible"
@@ -486,7 +514,14 @@ const AITrustCenterOverview: React.FC = () => {
                 sx={styles.privacyField}
               />
             </Stack>
-            <Stack direction="row" alignItems="center" spacing={2} sx={{ width: "100%" }}>
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{
+                alignItems: "center",
+                width: "100%",
+              }}
+            >
               <Box sx={{ minWidth: "160px" }}>
                 <Checkbox
                   id="privacy-visible"
@@ -521,7 +556,14 @@ const AITrustCenterOverview: React.FC = () => {
                 sx={styles.privacyField}
               />
             </Stack>
-            <Stack direction="row" alignItems="center" spacing={2} sx={{ width: "100%" }}>
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{
+                alignItems: "center",
+                width: "100%",
+              }}
+            >
               <Box sx={{ minWidth: "160px" }}>
                 <Checkbox
                   id="email-visible"

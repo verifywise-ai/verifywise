@@ -381,12 +381,20 @@ export default function ModelsPage({ orgId, openAddModal, onAddModalConsumed }: 
       {/* Controls row */}
       <Stack
         direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-        sx={{ marginBottom: "18px" }}
-        gap={2}
+        sx={{
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 2,
+          marginBottom: "18px",
+        }}
       >
-        <Stack direction="row" alignItems="center" gap={2}>
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "center",
+            gap: 2,
+          }}
+        >
           <FilterBy columns={filterColumns} onFilterChange={handleFilterChange} />
           <GroupBy
             options={[{ id: "modelProvider", label: "Provider" }]}
@@ -415,7 +423,11 @@ export default function ModelsPage({ orgId, openAddModal, onAddModalConsumed }: 
       </Stack>
 
       {/* Models table */}
-      <Box mb={4}>
+      <Box
+        sx={{
+          mb: 4,
+        }}
+      >
         <ModelsTable
           rows={modelRows}
           onDelete={canDeleteModel ? handleDelete : undefined}
@@ -598,7 +610,13 @@ export default function ModelsPage({ orgId, openAddModal, onAddModalConsumed }: 
                     >
                       Popular Models
                     </Typography>
-                    <Stack direction="row" flexWrap="wrap" gap={1}>
+                    <Stack
+                      direction="row"
+                      sx={{
+                        flexWrap: "wrap",
+                        gap: 1,
+                      }}
+                    >
                       {[
                         { id: "openai/gpt-4o", name: "GPT-4o" },
                         { id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet" },
@@ -671,7 +689,14 @@ export default function ModelsPage({ orgId, openAddModal, onAddModalConsumed }: 
                   </Box>
                 ) : loadingGatewayModels ? (
                   /* Loading models from gateway */
-                  <Stack direction="row" alignItems="center" gap={1.5} sx={{ py: 1 }}>
+                  <Stack
+                    direction="row"
+                    sx={{
+                      alignItems: "center",
+                      gap: 1.5,
+                      py: 1,
+                    }}
+                  >
                     <CircularProgress size={16} />
                     <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
                       Loading models...
@@ -723,7 +748,13 @@ export default function ModelsPage({ orgId, openAddModal, onAddModalConsumed }: 
                     border: `1px solid ${palette.status.success.border}`,
                   }}
                 >
-                  <Stack direction="row" alignItems="center" spacing={1}>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{
+                      alignItems: "center",
+                    }}
+                  >
                     <Check size={16} color={palette.status.success.text} />
                     <Typography sx={{ fontSize: "12px", color: palette.status.success.text }}>
                       API key configured — will be used for this model

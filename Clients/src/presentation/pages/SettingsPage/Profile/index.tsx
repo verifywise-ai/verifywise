@@ -609,13 +609,24 @@ const ProfileForm: React.FC = () => {
         {!loading && (
           <Box>
             <Stack>
-              <Typography fontWeight={"600"} gutterBottom sx={{ mb: 2, mt: 10 }}>
+              <Typography
+                gutterBottom
+                sx={{
+                  fontWeight: "600",
+                  mb: 2,
+                  mt: 10,
+                }}
+              >
                 Delete account
               </Typography>
               <Typography
-                fontWeight={"400"}
                 variant="body2"
-                sx={{ mb: 8, mt: 4, color: "text.icon" }}
+                sx={{
+                  fontWeight: "400",
+                  mb: 8,
+                  mt: 4,
+                  color: "text.icon",
+                }}
               >
                 Note that deleting your account will remove all data from our system. This is
                 permanent and non-recoverable.
@@ -652,7 +663,11 @@ const ProfileForm: React.FC = () => {
           <ConfirmationModal
             title="Confirm delete"
             body={
-              <Typography fontSize={13}>
+              <Typography
+                sx={{
+                  fontSize: 13,
+                }}
+              >
                 Are you sure you want to delete your account? This action is permanent and cannot be
                 undone.
               </Typography>
@@ -792,7 +807,11 @@ const ProfileForm: React.FC = () => {
         <ConfirmationModal
           title="Remove profile photo"
           body={
-            <Typography fontSize={13}>
+            <Typography
+              sx={{
+                fontSize: 13,
+              }}
+            >
               Are you sure you want to remove your profile photo?
             </Typography>
           }

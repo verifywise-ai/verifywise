@@ -21,8 +21,21 @@ function ToggleCard({ label, checked, onToggle, children, disabled }: ToggleCard
   const CardComponent = checked ? CardActive : CardDisabled;
 
   return (
-    <Stack minWidth={280} maxWidth="100%" flex={1} sx={{ overflow: "hidden" }}>
-      <Box display="flex" alignItems="center" mb={1}>
+    <Stack
+      sx={{
+        minWidth: 280,
+        maxWidth: "100%",
+        flex: 1,
+        overflow: "hidden",
+      }}
+    >
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          mb: 1,
+        }}
+      >
         <FormControlLabel
           control={<Toggle checked={checked} onChange={onToggle} disabled={disabled} />}
           label={label}

@@ -13,7 +13,12 @@ const WELCOME_FEATURES = [
 
 const WelcomeStep: React.FC<OnboardingStepProps> = () => {
   return (
-    <Stack spacing={4} alignItems="center">
+    <Stack
+      spacing={4}
+      sx={{
+        alignItems: "center",
+      }}
+    >
       <Box
         sx={{
           position: "relative",

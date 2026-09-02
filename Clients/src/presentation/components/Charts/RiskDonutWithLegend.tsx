@@ -24,9 +24,20 @@ export function RiskDonutWithLegend({
     <DashboardChartLayout
       chart={<StatusDonutChart data={data} total={total} size={size} />}
       sideContent={
-        <Stack gap={0.5}>
+        <Stack
+          sx={{
+            gap: 0.5,
+          }}
+        >
           {data.map((item) => (
-            <Stack key={item.label} direction="row" alignItems="center" gap="8px">
+            <Stack
+              key={item.label}
+              direction="row"
+              sx={{
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
               <Box
                 sx={{
                   width: 8,

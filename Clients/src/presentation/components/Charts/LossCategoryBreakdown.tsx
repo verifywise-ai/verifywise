@@ -40,7 +40,14 @@ export function LossCategoryBreakdown({
 
   if (total === 0) {
     return (
-      <Stack alignItems="center" justifyContent="center" sx={{ height: 120, opacity: 0.5 }}>
+      <Stack
+        sx={{
+          alignItems: "center",
+          justifyContent: "center",
+          height: 120,
+          opacity: 0.5,
+        }}
+      >
         <Typography sx={{ fontSize: 13, color: C.textSecondary }}>
           No loss data available
         </Typography>
@@ -55,7 +62,11 @@ export function LossCategoryBreakdown({
   };
 
   return (
-    <Stack gap="10px">
+    <Stack
+      sx={{
+        gap: "10px",
+      }}
+    >
       {/* Stacked bar */}
       <Stack direction="row" sx={{ height: 24, borderRadius: "4px", overflow: "hidden" }}>
         {categories
@@ -73,12 +84,29 @@ export function LossCategoryBreakdown({
       </Stack>
 
       {/* Legend with values */}
-      <Stack gap="6px">
+      <Stack
+        sx={{
+          gap: "6px",
+        }}
+      >
         {categories.map((c) => {
           const pct = total > 0 ? ((c.value / total) * 100).toFixed(0) : "0";
           return (
-            <Stack key={c.key} direction="row" alignItems="center" justifyContent="space-between">
-              <Stack direction="row" alignItems="center" gap="8px">
+            <Stack
+              key={c.key}
+              direction="row"
+              sx={{
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
                 <Box
                   sx={{
                     width: 8,

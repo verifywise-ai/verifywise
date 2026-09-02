@@ -75,7 +75,13 @@ const ScenarioCard = ({
           },
         }}
       >
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+          }}
+        >
           <Box sx={{ flex: 1 }}>
             <Typography sx={{ fontSize: 14, fontWeight: 600, color: text.primary }}>
               {scenario.name}
@@ -86,7 +92,13 @@ const ScenarioCard = ({
               </Typography>
             )}
           </Box>
-          <Stack direction="row" gap="8px" alignItems="center">
+          <Stack
+            direction="row"
+            sx={{
+              gap: "8px",
+              alignItems: "center",
+            }}
+          >
             <GovernanceTooltip
               header="Scenario details"
               description="View what selecting this scenario means for the project"
@@ -207,7 +219,15 @@ const ScenarioCard = ({
         )}
 
         {priorityOrder && (
-          <Stack direction="row" gap="8px" sx={{ mt: "16px" }} flexWrap="wrap" useFlexGap>
+          <Stack
+            direction="row"
+            useFlexGap
+            sx={{
+              gap: "8px",
+              flexWrap: "wrap",
+              mt: "16px",
+            }}
+          >
             {priorityOrder.primary && (
               <FrameworkChip
                 frameworkName={
@@ -236,7 +256,15 @@ const ScenarioCard = ({
           </Stack>
         )}
 
-        <Stack direction="row" gap="8px" sx={{ mt: "12px" }} flexWrap="wrap" useFlexGap>
+        <Stack
+          direction="row"
+          useFlexGap
+          sx={{
+            gap: "8px",
+            flexWrap: "wrap",
+            mt: "12px",
+          }}
+        >
           {scenario.industry && (
             <Box
               component="span"
@@ -320,9 +348,17 @@ const ScenarioCard = ({
         hideFooter
         fitContent
       >
-        <Stack gap="16px">
+        <Stack
+          sx={{
+            gap: "16px",
+          }}
+        >
           {/* What is this scenario */}
-          <Stack gap="16px">
+          <Stack
+            sx={{
+              gap: "16px",
+            }}
+          >
             <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
               What is this scenario?
             </Typography>
@@ -333,7 +369,11 @@ const ScenarioCard = ({
           </Stack>
 
           {/* What happens when you select it */}
-          <Stack gap="16px">
+          <Stack
+            sx={{
+              gap: "16px",
+            }}
+          >
             <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
               What happens when you select this scenario?
             </Typography>
@@ -361,7 +401,11 @@ const ScenarioCard = ({
           </Stack>
 
           {/* Next steps after selecting */}
-          <Stack gap="16px">
+          <Stack
+            sx={{
+              gap: "16px",
+            }}
+          >
             <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
               Next steps after selecting this scenario
             </Typography>
@@ -399,7 +443,14 @@ const ScenarioCard = ({
               </li>
             </Stack>
 
-            <Stack direction="row" gap="8px" flexWrap="wrap" useFlexGap>
+            <Stack
+              direction="row"
+              useFlexGap
+              sx={{
+                gap: "8px",
+                flexWrap: "wrap",
+              }}
+            >
               <CustomizableButton
                 size="small"
                 variant="outlined"
@@ -429,7 +480,11 @@ const ScenarioCard = ({
 
           {/* Framework priority breakdown */}
           {priorityOrder && (
-            <Stack gap="16px">
+            <Stack
+              sx={{
+                gap: "16px",
+              }}
+            >
               <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
                 Framework priority order
               </Typography>
@@ -504,11 +559,22 @@ const ScenarioCard = ({
 
           {/* Who is this for */}
           {(scenario.industry || scenario.region || scenario.use_case_type) && (
-            <Stack gap="16px">
+            <Stack
+              sx={{
+                gap: "16px",
+              }}
+            >
               <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
                 Best suited for
               </Typography>
-              <Stack direction="row" gap="16px" flexWrap="wrap" useFlexGap>
+              <Stack
+                direction="row"
+                useFlexGap
+                sx={{
+                  gap: "16px",
+                  flexWrap: "wrap",
+                }}
+              >
                 {scenario.industry && (
                   <Box>
                     <Typography sx={{ fontSize: 11, color: text.muted, mb: "4px" }}>
@@ -559,7 +625,11 @@ const ScenarioCard = ({
 
           {/* Match score explanation */}
           {score !== undefined && (
-            <Stack gap="16px">
+            <Stack
+              sx={{
+                gap: "16px",
+              }}
+            >
               <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
                 Recommendation match
               </Typography>
@@ -575,7 +645,11 @@ const ScenarioCard = ({
 
           {/* Rationale */}
           {scenario.rationale && (
-            <Stack gap="16px">
+            <Stack
+              sx={{
+                gap: "16px",
+              }}
+            >
               <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
                 Rationale
               </Typography>

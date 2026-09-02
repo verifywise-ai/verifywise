@@ -379,12 +379,20 @@ export default function ProjectScorers({ projectId, orgId }: ProjectScorersProps
       {/* Controls row */}
       <Stack
         direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-        sx={{ marginBottom: "18px" }}
-        gap={2}
+        sx={{
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 2,
+          marginBottom: "18px",
+        }}
       >
-        <Stack direction="row" alignItems="center" gap={2}>
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "center",
+            gap: 2,
+          }}
+        >
           <FilterBy columns={filterColumns} onFilterChange={handleFilterChange} />
           <GroupBy
             options={[
@@ -416,7 +424,11 @@ export default function ProjectScorers({ projectId, orgId }: ProjectScorersProps
       </Stack>
 
       {/* Scorers table */}
-      <Box mb={4}>
+      <Box
+        sx={{
+          mb: 4,
+        }}
+      >
         <ScorersTable
           rows={scorerRows}
           onRowClick={canEditScorer ? handleRowClick : undefined}

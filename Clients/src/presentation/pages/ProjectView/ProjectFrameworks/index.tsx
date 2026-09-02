@@ -313,7 +313,9 @@ const ProjectFrameworks = ({
           <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 1 }}>
             <TabList
               onChange={(_, v) => setTracker(v)}
-              TabIndicatorProps={{ style: { backgroundColor: "brand.primary" } }}
+              slotProps={{
+                indicator: { style: { backgroundColor: "brand.primary" } },
+              }}
               sx={tabListStyle}
             >
               {tabs.map((tab) => (

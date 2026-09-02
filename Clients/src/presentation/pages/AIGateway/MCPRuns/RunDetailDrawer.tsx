@@ -57,7 +57,14 @@ export default function RunDetailDrawer({ runId, onClose }: RunDetailDrawerProps
   const codeBlockSx = { whiteSpace: "pre-wrap" as const, fontSize: "12px", m: 0 };
 
   return (
-    <Drawer anchor="right" open onClose={onClose} PaperProps={{ sx: { width: 560, p: "16px" } }}>
+    <Drawer
+      anchor="right"
+      open
+      onClose={onClose}
+      slotProps={{
+        paper: { sx: { width: 560, p: "16px" } },
+      }}
+    >
       <Typography variant="h6" sx={{ mb: "8px" }}>
         Run {runId.slice(0, 12)}…
       </Typography>
@@ -83,7 +90,14 @@ export default function RunDetailDrawer({ runId, onClose }: RunDetailDrawerProps
                 p: "12px",
               }}
             >
-              <Stack direction="row" alignItems="center" sx={{ gap: "8px", mb: "6px" }}>
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: "center",
+                  gap: "8px",
+                  mb: "6px",
+                }}
+              >
                 <Chip
                   label={e.kind === "model" ? "Model call" : "Tool call"}
                   variant={e.kind === "model" ? "success" : "info"}
@@ -96,7 +110,12 @@ export default function RunDetailDrawer({ runId, onClose }: RunDetailDrawerProps
               </Stack>
               {e.kind === "model" ? (
                 <>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary",
+                    }}
+                  >
                     Prompt
                   </Typography>
                   <Box component="pre" sx={codeBlockSx}>
@@ -105,7 +124,12 @@ export default function RunDetailDrawer({ runId, onClose }: RunDetailDrawerProps
                       : "(no content captured)"}
                   </Box>
                   <Divider sx={{ my: "6px" }} />
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary",
+                    }}
+                  >
                     Response
                   </Typography>
                   <Box component="pre" sx={codeBlockSx}>

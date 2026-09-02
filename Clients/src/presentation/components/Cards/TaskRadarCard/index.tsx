@@ -58,7 +58,14 @@ export function TaskRadarCard({ overdue, due, upcoming }: TaskRadarCardProps) {
       onMouseLeave={() => setIsHovered(false)}
       onClick={() => navigate("/tasks")}
     >
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb="8px">
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: "8px",
+        }}
+      >
         <Typography
           sx={{
             fontSize: 14,

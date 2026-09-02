@@ -168,7 +168,12 @@ const GenericFrameworkOverviewCard = ({
           border: "1px solid #d0d5dd",
         }}
       >
-        <Typography variant="body1" color="text.secondary">
+        <Typography
+          variant="body1"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           No data available for {frameworkName}.
         </Typography>
       </Box>

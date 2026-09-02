@@ -488,7 +488,13 @@ export default function RepositoriesPage() {
                     {/* Last scan */}
                     <TableCell sx={bodyCellStyle}>
                       {repo.last_scan_at ? (
-                        <Stack direction="row" alignItems="center" gap="8px">
+                        <Stack
+                          direction="row"
+                          sx={{
+                            alignItems: "center",
+                            gap: "8px",
+                          }}
+                        >
                           <Typography sx={{ fontSize: "13px" }}>
                             {formatRelativeTime(repo.last_scan_at)}
                           </Typography>
@@ -522,7 +528,13 @@ export default function RepositoriesPage() {
                       {(() => {
                         const isScanning = scanningRepoIds.has(repo.id);
                         return (
-                          <Stack direction="row" justifyContent="flex-end" spacing={0.5}>
+                          <Stack
+                            direction="row"
+                            spacing={0.5}
+                            sx={{
+                              justifyContent: "flex-end",
+                            }}
+                          >
                             <Tooltip title={isScanning ? "Scanning..." : "Scan now"}>
                               <span>
                                 <IconButton
@@ -589,13 +601,13 @@ export default function RepositoriesPage() {
                     page={page}
                     onPageChange={handleChangePage}
                     onRowsPerPageChange={handleChangeRowsPerPage}
-                    ActionsComponent={TablePaginationActions}
                     sx={{
                       "borderBottom": 0,
                       "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows": {
                         fontSize: "13px",
                       },
                     }}
+                    ActionsComponent={TablePaginationActions}
                   />
                 </TableRow>
               </TableFooter>
@@ -625,7 +637,11 @@ export default function RepositoriesPage() {
         onProceed={handleDelete}
         title={`Delete "${deleteTarget?.repository_owner}/${deleteTarget?.repository_name}"?`}
         body={
-          <Typography fontSize={13}>
+          <Typography
+            sx={{
+              fontSize: 13,
+            }}
+          >
             This will remove the repository from monitoring. Existing scan history will not be
             deleted.
           </Typography>

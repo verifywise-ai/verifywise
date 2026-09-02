@@ -62,9 +62,20 @@ const MappingMatrixView: React.FC<MappingMatrixViewProps> = ({ mappings, onCellC
       </Typography>
 
       <Box sx={{ overflowX: "auto" }}>
-        <Stack direction="column" gap="4px">
+        <Stack
+          direction="column"
+          sx={{
+            gap: "4px",
+          }}
+        >
           {/* Header row */}
-          <Stack direction="row" gap="4px" alignItems="center">
+          <Stack
+            direction="row"
+            sx={{
+              gap: "4px",
+              alignItems: "center",
+            }}
+          >
             <Box sx={{ width: 140, flexShrink: 0 }} />
             {FRAMEWORKS.map((fw) => (
               <Box
@@ -107,7 +118,14 @@ const MappingMatrixView: React.FC<MappingMatrixViewProps> = ({ mappings, onCellC
 
           {/* Data rows */}
           {FRAMEWORKS.map((rowFw) => (
-            <Stack key={rowFw.id} direction="row" gap="4px" alignItems="center">
+            <Stack
+              key={rowFw.id}
+              direction="row"
+              sx={{
+                gap: "4px",
+                alignItems: "center",
+              }}
+            >
               {/* Row label */}
               <Box
                 sx={{
@@ -209,9 +227,22 @@ const MappingMatrixView: React.FC<MappingMatrixViewProps> = ({ mappings, onCellC
         header="Density legend"
         description="Color intensity shows the density of mappings"
       >
-        <Stack direction="row" gap="16px" alignItems="center" sx={{ mt: "16px" }}>
+        <Stack
+          direction="row"
+          sx={{
+            gap: "16px",
+            alignItems: "center",
+            mt: "16px",
+          }}
+        >
           <Typography sx={{ fontSize: 12, color: text.muted }}>Density:</Typography>
-          <Stack direction="row" gap="4px" alignItems="center">
+          <Stack
+            direction="row"
+            sx={{
+              gap: "4px",
+              alignItems: "center",
+            }}
+          >
             {[0, 0.25, 0.5, 0.75, 1].map((intensity, i) => (
               <Box
                 key={i}

@@ -122,7 +122,12 @@ const ResetPassword = () => {
         </Stack>
         <Stack sx={{ gap: theme.spacing(6), textAlign: "center" }}>
           <Typography sx={{ fontSize: 16, fontWeight: "bold" }}>Check your email</Typography>
-          <Typography fontSize={13} color={`${text.tertiary}`}>
+          <Typography
+            color={`${text.tertiary}`}
+            sx={{
+              fontSize: 13,
+            }}
+          >
             If an account exists with this email, we'll send a password reset link
           </Typography>
         </Stack>

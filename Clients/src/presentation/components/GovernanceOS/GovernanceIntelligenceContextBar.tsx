@@ -31,11 +31,21 @@ const GovernanceIntelligenceContextBar: React.FC<GovernanceIntelligenceContextBa
     >
       <Stack
         direction={{ xs: "column", md: "row" }}
-        gap="16px"
-        alignItems={{ xs: "flex-start", md: "center" }}
-        justifyContent="space-between"
+        sx={{
+          gap: "16px",
+          alignItems: { xs: "flex-start", md: "center" },
+          justifyContent: "space-between",
+        }}
       >
-        <Stack direction="row" gap="12px" alignItems="center" sx={{ flex: 1, minWidth: 0 }}>
+        <Stack
+          direction="row"
+          sx={{
+            gap: "12px",
+            alignItems: "center",
+            flex: 1,
+            minWidth: 0,
+          }}
+        >
           <Box
             sx={{
               width: 32,
@@ -62,7 +72,14 @@ const GovernanceIntelligenceContextBar: React.FC<GovernanceIntelligenceContextBa
           </Typography>
         </Stack>
 
-        <Stack direction="row" gap="8px" alignItems="center" sx={{ flexShrink: 0 }}>
+        <Stack
+          direction="row"
+          sx={{
+            gap: "8px",
+            alignItems: "center",
+            flexShrink: 0,
+          }}
+        >
           <CustomizableButton
             variant="outlined"
             size="small"

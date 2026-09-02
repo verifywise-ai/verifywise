@@ -185,14 +185,20 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, onEdit, onDelete, canEdit, ca
           <Stack
             direction="row"
             spacing={theme.spacing(1)}
-            alignItems="center"
-            sx={{ flex: 1, gap: 2 }}
+            sx={{
+              alignItems: "center",
+              flex: 1,
+              gap: 2,
+            }}
           >
             <Stack
               direction="row"
               spacing={theme.spacing(1)}
-              alignItems="center"
-              sx={{ flex: 1, gap: 2 }}
+              sx={{
+                alignItems: "center",
+                flex: 1,
+                gap: 2,
+              }}
             >
               <VWAvatar user={avatarUser} size="small" showBorder={false} />
 
@@ -212,8 +218,11 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, onEdit, onDelete, canEdit, ca
             <Stack
               direction="row"
               spacing={theme.spacing(0.5)}
-              alignItems="center"
-              sx={{ minWidth: "fit-content", ml: "auto" }}
+              sx={{
+                alignItems: "center",
+                minWidth: "fit-content",
+                ml: "auto",
+              }}
             >
               <Typography
                 sx={{
@@ -353,7 +362,12 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, onEdit, onDelete, canEdit, ca
         <ConfirmationModal
           title="Confirm delete"
           body={
-            <Typography fontSize={13} sx={{ color: theme.palette.text.secondary }}>
+            <Typography
+              sx={{
+                fontSize: 13,
+                color: theme.palette.text.secondary,
+              }}
+            >
               Are you sure you want to delete this note? This action cannot be undone.
             </Typography>
           }

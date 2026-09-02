@@ -180,7 +180,12 @@ const ReportsArchive: React.FC = () => {
       )}
 
       {/* Header */}
-      <Stack spacing={1} mb={4}>
+      <Stack
+        spacing={1}
+        sx={{
+          mb: 4,
+        }}
+      >
         <Typography sx={{ fontSize: 16, fontWeight: 600, color: theme.palette.text.primary }}>
           Monitoring reports
         </Typography>
@@ -193,14 +198,29 @@ const ReportsArchive: React.FC = () => {
       <Box sx={{ ...cardStyle, mb: 3 }}>
         <Stack
           direction="row"
-          alignItems="center"
-          justifyContent="space-between"
-          flexWrap="wrap"
-          gap={2}
+          sx={{
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 2,
+          }}
         >
-          <Stack direction="row" alignItems="center" spacing={3} flexWrap="wrap">
+          <Stack
+            direction="row"
+            spacing={3}
+            sx={{
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
             {/* Date range */}
-            <Stack direction="row" alignItems="center" spacing={1}>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <Calendar size={16} color={theme.palette.other.icon} />
               <Typography sx={{ fontSize: 13, color: theme.palette.other.icon }}>From:</Typography>
               <DatePicker
@@ -234,7 +254,13 @@ const ReportsArchive: React.FC = () => {
                 />
               }
               label={
-                <Stack direction="row" alignItems="center" spacing={0.5}>
+                <Stack
+                  direction="row"
+                  spacing={0.5}
+                  sx={{
+                    alignItems: "center",
+                  }}
+                >
                   <Flag size={14} color={theme.palette.status.error.text} />
                   <Typography sx={{ fontSize: 13 }}>Flagged only</Typography>
                 </Stack>
@@ -264,11 +290,23 @@ const ReportsArchive: React.FC = () => {
       {/* Reports table */}
       <Box sx={cardStyle}>
         {isLoading ? (
-          <Stack alignItems="center" justifyContent="center" py={8}>
+          <Stack
+            sx={{
+              alignItems: "center",
+              justifyContent: "center",
+              py: 8,
+            }}
+          >
             <CircularProgress size={32} />
           </Stack>
         ) : reports.length === 0 ? (
-          <Stack alignItems="center" justifyContent="center" py={8}>
+          <Stack
+            sx={{
+              alignItems: "center",
+              justifyContent: "center",
+              py: 8,
+            }}
+          >
             <Typography sx={{ fontSize: 13, color: theme.palette.other.icon }}>
               No reports found
               {hasActiveFilters && ". Try adjusting your filters."}

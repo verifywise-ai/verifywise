@@ -396,7 +396,14 @@ const IntegratedDashboard: React.FC = () => {
         )}
 
         {/* Header */}
-        <Stack direction="row" justifyContent="space-between" alignItems="center" mb="16px">
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: "16px",
+          }}
+        >
           <Typography
             variant="h5"
             sx={{
@@ -408,7 +415,13 @@ const IntegratedDashboard: React.FC = () => {
             Dashboard
           </Typography>
 
-          <Stack direction="row" alignItems="center" gap="16px">
+          <Stack
+            direction="row"
+            sx={{
+              alignItems: "center",
+              gap: "16px",
+            }}
+          >
             {dashboardTab === "overview" && (
               <ButtonToggle
                 options={[
@@ -535,7 +548,13 @@ const IntegratedDashboard: React.FC = () => {
                           actionPosition="center"
                           action={
                             hasMultipleViews ? (
-                              <Stack direction="row" alignItems="center" gap={0.5}>
+                              <Stack
+                                direction="row"
+                                sx={{
+                                  alignItems: "center",
+                                  gap: 0.5,
+                                }}
+                              >
                                 <IconButton
                                   size="small"
                                   onClick={(e) => {
@@ -815,7 +834,12 @@ const IntegratedDashboard: React.FC = () => {
                       return (
                         // ActivityItem carries role="listitem", which is only
                         // valid inside a list.
-                        <Stack gap={0} role="list">
+                        <Stack
+                          role="list"
+                          sx={{
+                            gap: 0,
+                          }}
+                        >
                           {sortedActivities.map((activity, index) => (
                             <ActivityItem
                               key={activity.id}
@@ -1183,7 +1207,12 @@ const IntegratedDashboard: React.FC = () => {
                       return (
                         // ActivityItem carries role="listitem", which is only
                         // valid inside a list.
-                        <Stack gap={0} role="list">
+                        <Stack
+                          role="list"
+                          sx={{
+                            gap: 0,
+                          }}
+                        >
                           {sortedActivities.map((activity, index) => (
                             <ActivityItem
                               key={activity.id}
@@ -1266,7 +1295,13 @@ const IntegratedDashboard: React.FC = () => {
                           actionPosition="center"
                           action={
                             hasMultipleViews ? (
-                              <Stack direction="row" alignItems="center" gap={0.5}>
+                              <Stack
+                                direction="row"
+                                sx={{
+                                  alignItems: "center",
+                                  gap: 0.5,
+                                }}
+                              >
                                 <IconButton
                                   size="small"
                                   onClick={(e) => {

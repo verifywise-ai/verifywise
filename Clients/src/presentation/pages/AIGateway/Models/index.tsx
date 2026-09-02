@@ -229,7 +229,13 @@ export default function ModelsPage() {
   // ─── Feature icon helper ──────────────────────────────────────────────────
 
   const featureIcons = (m: ModelInfo) => (
-    <Stack direction="row" gap="4px" alignItems="center">
+    <Stack
+      direction="row"
+      sx={{
+        gap: "4px",
+        alignItems: "center",
+      }}
+    >
       {m.supports_vision && (
         <Tooltip title="Vision" arrow>
           <span style={{ display: "inline-flex" }}>
@@ -278,9 +284,20 @@ export default function ModelsPage() {
         <Box sx={{ mt: "16px" }}>
           {/* ─── All Models tab ─────────────────────────────────────── */}
           {activeTab === "catalog" && (
-            <Stack gap="16px">
+            <Stack
+              sx={{
+                gap: "16px",
+              }}
+            >
               {/* Filters */}
-              <Stack direction="row" gap="8px" flexWrap="wrap" alignItems="flex-end">
+              <Stack
+                direction="row"
+                sx={{
+                  gap: "8px",
+                  flexWrap: "wrap",
+                  alignItems: "flex-end",
+                }}
+              >
                 <Box sx={{ width: "240px", minWidth: "160px" }}>
                   <Field
                     placeholder="Search models..."
@@ -427,7 +444,13 @@ export default function ModelsPage() {
 
                 {/* Rows */}
                 {error ? (
-                  <Stack alignItems="center" spacing={2} sx={{ py: 4 }}>
+                  <Stack
+                    spacing={2}
+                    sx={{
+                      alignItems: "center",
+                      py: 4,
+                    }}
+                  >
                     <MuiAlert severity="error" sx={{ width: "100%", maxWidth: 600 }}>
                       {error}
                     </MuiAlert>
@@ -447,20 +470,31 @@ export default function ModelsPage() {
                     showBorder={false}
                   />
                 ) : (
-                  <Stack gap="0px">
+                  <Stack
+                    sx={{
+                      gap: "0px",
+                    }}
+                  >
                     {pageModels.map((m) => (
                       <Stack
                         key={m.model || m.id}
                         direction="row"
-                        alignItems="center"
                         sx={{
+                          "alignItems": "center",
                           "p": "8px 0",
                           "borderBottom": `1px solid ${palette.border.light}`,
                           "&:last-child": { borderBottom: "none" },
                           "&:hover": { backgroundColor: palette.background.alt },
                         }}
                       >
-                        <Stack direction="row" alignItems="center" gap="6px" sx={{ flex: 0.8 }}>
+                        <Stack
+                          direction="row"
+                          sx={{
+                            alignItems: "center",
+                            gap: "6px",
+                            flex: 0.8,
+                          }}
+                        >
                           <ProviderIcon provider={m.provider} size={14} />
                           <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
                             {m.provider}
@@ -534,14 +568,21 @@ export default function ModelsPage() {
                 {pageCount > 1 && (
                   <Stack
                     direction="row"
-                    justifyContent="space-between"
-                    alignItems="center"
-                    sx={{ pt: "12px" }}
+                    sx={{
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      pt: "12px",
+                    }}
                   >
                     <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
                       Page {page + 1} of {pageCount}
                     </Typography>
-                    <Stack direction="row" gap="4px">
+                    <Stack
+                      direction="row"
+                      sx={{
+                        gap: "4px",
+                      }}
+                    >
                       <IconButton
                         size="small"
                         onClick={() => setPage(Math.max(0, page - 1))}
@@ -565,15 +606,29 @@ export default function ModelsPage() {
 
           {/* ─── Cost Calculator tab ───────────────────────────────── */}
           {activeTab === "calculator" && (
-            <Stack gap="16px">
+            <Stack
+              sx={{
+                gap: "16px",
+              }}
+            >
               <Box sx={cardSx}>
-                <Stack gap="12px">
+                <Stack
+                  sx={{
+                    gap: "12px",
+                  }}
+                >
                   <Typography sx={sectionTitleSx}>Cost calculator</Typography>
                   <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
                     Estimate monthly costs across models based on your expected usage. Only chat
                     models with known pricing are shown.
                   </Typography>
-                  <Stack direction="row" gap="8px" flexWrap="wrap">
+                  <Stack
+                    direction="row"
+                    sx={{
+                      gap: "8px",
+                      flexWrap: "wrap",
+                    }}
+                  >
                     <Box sx={{ width: "130px" }}>
                       <Field
                         label="Requests/day"
@@ -615,7 +670,11 @@ export default function ModelsPage() {
 
               {calcResultsVisible.length > 0 && (
                 <Box sx={cardSx}>
-                  <Stack gap="0px">
+                  <Stack
+                    sx={{
+                      gap: "0px",
+                    }}
+                  >
                     <Typography sx={{ ...sectionTitleSx, mb: "12px" }}>
                       Estimated costs ({Number(calcRequests).toLocaleString()} req/day)
                     </Typography>
@@ -721,10 +780,11 @@ export default function ModelsPage() {
                         <Stack
                           key={m.model || m.id}
                           direction="row"
-                          alignItems="center"
                           sx={{
+                            "alignItems": "center",
                             "p": "8px 12px",
                             "borderBottom": `1px solid ${palette.border.light}`,
+
                             "backgroundColor":
                               i === 0
                                 ? "#F0FDF4"
@@ -735,6 +795,7 @@ export default function ModelsPage() {
                                     : i < 10
                                       ? `${palette.background.alt}`
                                       : "transparent",
+
                             "&:last-child": { borderBottom: "none" },
                           }}
                         >
@@ -762,9 +823,13 @@ export default function ModelsPage() {
                           </Box>
                           <Stack
                             direction="row"
-                            alignItems="center"
-                            gap="6px"
-                            sx={{ flex: 2, minWidth: 0, overflow: "hidden" }}
+                            sx={{
+                              alignItems: "center",
+                              gap: "6px",
+                              flex: 2,
+                              minWidth: 0,
+                              overflow: "hidden",
+                            }}
                           >
                             <ProviderIcon provider={m.provider} size={13} />
                             <Typography
@@ -864,7 +929,13 @@ export default function ModelsPage() {
                       );
                     })}
                     {calcResultsTotal > 50 && (
-                      <Stack direction="row" justifyContent="center" sx={{ pt: "12px" }}>
+                      <Stack
+                        direction="row"
+                        sx={{
+                          justifyContent: "center",
+                          pt: "12px",
+                        }}
+                      >
                         <CustomizableButton
                           text={
                             calcShowAll
@@ -884,22 +955,40 @@ export default function ModelsPage() {
 
           {/* ─── Feature Comparison tab ────────────────────────────── */}
           {activeTab === "compare" && (
-            <Stack gap="16px">
+            <Stack
+              sx={{
+                gap: "16px",
+              }}
+            >
               <Box sx={cardSx}>
-                <Stack gap="12px">
+                <Stack
+                  sx={{
+                    gap: "12px",
+                  }}
+                >
                   <Typography sx={sectionTitleSx}>Feature comparison</Typography>
                   <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
                     Select up to 5 models to compare side by side.
                   </Typography>
 
                   {/* Popular models quick-select */}
-                  <Stack gap="4px">
+                  <Stack
+                    sx={{
+                      gap: "4px",
+                    }}
+                  >
                     <Typography
                       sx={{ fontSize: 11, color: palette.text.disabled, fontWeight: 600 }}
                     >
                       POPULAR MODELS
                     </Typography>
-                    <Stack direction="row" gap="6px" flexWrap="wrap">
+                    <Stack
+                      direction="row"
+                      sx={{
+                        gap: "6px",
+                        flexWrap: "wrap",
+                      }}
+                    >
                       {[
                         "gpt-4o",
                         "gpt-4o-mini",
@@ -948,28 +1037,41 @@ export default function ModelsPage() {
                     sx={{ minWidth: "unset" }}
                   />
                   {search && (
-                    <Stack gap="4px" sx={{ maxHeight: "200px", overflowY: "auto" }}>
+                    <Stack
+                      sx={{
+                        gap: "4px",
+                        maxHeight: "200px",
+                        overflowY: "auto",
+                      }}
+                    >
                       {filtered.slice(0, 20).map((m) => (
                         <Stack
                           key={m.model || m.id}
                           direction="row"
-                          justifyContent="space-between"
-                          alignItems="center"
                           onClick={() => {
                             toggleCompare(m.id);
                             setSearch("");
                           }}
                           sx={{
+                            "justifyContent": "space-between",
+                            "alignItems": "center",
                             "p": "6px 8px",
                             "borderRadius": "4px",
                             "cursor": "pointer",
                             "&:hover": { backgroundColor: palette.background.alt },
+
                             "backgroundColor": compareIds.includes(m.id)
                               ? `${palette.brand.primary}08`
                               : "transparent",
                           }}
                         >
-                          <Stack direction="row" gap="8px" alignItems="center">
+                          <Stack
+                            direction="row"
+                            sx={{
+                              gap: "8px",
+                              alignItems: "center",
+                            }}
+                          >
                             <ProviderIcon provider={m.provider} size={14} />
                             <Typography sx={{ fontSize: 12 }}>{m.id}</Typography>
                           </Stack>

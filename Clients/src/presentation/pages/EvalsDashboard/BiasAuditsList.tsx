@@ -217,9 +217,12 @@ export default function BiasAuditsList({ orgId, onViewAudit }: BiasAuditsListPro
       {/* Search + New bias audit button */}
       <Stack
         direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        sx={{ mt: "18px", mb: 3 }}
+        sx={{
+          alignItems: "center",
+          justifyContent: "space-between",
+          mt: "18px",
+          mb: 3,
+        }}
       >
         <Box sx={{ maxWidth: 320 }}>
           <SearchBox value={searchQuery} onChange={setSearchQuery} placeholder="Search audits..." />

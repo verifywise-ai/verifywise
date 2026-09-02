@@ -203,7 +203,13 @@ const StandardModal: React.FC<StandardModalProps> = ({
             zIndex: 0,
           }}
         >
-          <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+          <Stack
+            direction="row"
+            sx={{
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+            }}
+          >
             <Stack spacing={0.5}>
               <Typography
                 id={titleId}
@@ -232,7 +238,13 @@ const StandardModal: React.FC<StandardModalProps> = ({
                 {description}
               </Typography>
             </Stack>
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               {headerActions}
               {showCancelButton && (
                 <IconButton
@@ -311,9 +323,9 @@ const StandardModal: React.FC<StandardModalProps> = ({
         {!hideFooter && (
           <Stack
             direction="row"
-            justifyContent={customFooter ? "space-between" : "flex-end"}
             spacing={6}
             sx={{
+              justifyContent: customFooter ? "space-between" : "flex-end",
               background: "linear-gradient(180deg, #F3F5F8 0%, #F8FAFB 100%)",
               borderTop: children ? "1px solid #E0E4E9" : "none",
               padding: "12px 24px",

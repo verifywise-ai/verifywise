@@ -15,7 +15,13 @@ function DeleteFileModal({ isOpen, fileName, onClose, onDelete }: DeleteFileModa
     <ConfirmationModal
       title="Confirm delete"
       body={
-        <Typography fontSize={13}>Are you sure you want to delete the file {fileName}?</Typography>
+        <Typography
+          sx={{
+            fontSize: 13,
+          }}
+        >
+          Are you sure you want to delete the file {fileName}?
+        </Typography>
       }
       cancelText="Cancel"
       proceedText="Delete"

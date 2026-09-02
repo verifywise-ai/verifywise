@@ -540,7 +540,12 @@ const FrameworkDashboard = ({ organizationalProject, filteredFrameworks }: Dashb
           border: "1px solid #d0d5dd",
         }}
       >
-        <Typography variant="body1" color="text.secondary">
+        <Typography
+          variant="body1"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           No frameworks enabled for this organization.
         </Typography>
       </Box>
@@ -611,7 +616,9 @@ const FrameworkDashboard = ({ organizationalProject, filteredFrameworks }: Dashb
             <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
               <TabList
                 onChange={handleTabChange}
-                TabIndicatorProps={{ style: { backgroundColor: "brand.primary" } }}
+                slotProps={{
+                  indicator: { style: { backgroundColor: "brand.primary" } },
+                }}
                 sx={tabListStyle}
               >
                 {tabs.map((tab) => (

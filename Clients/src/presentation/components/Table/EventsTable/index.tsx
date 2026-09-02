@@ -386,9 +386,9 @@ const EventsTable: React.FC<IEventsTableProps> = ({
   if (!sortedData || sortedData.length === 0) {
     return (
       <Stack
-        alignItems="center"
-        justifyContent="center"
         sx={{
+          alignItems: "center",
+          justifyContent: "center",
           border: "1px solid #EEEEEE",
           borderRadius: "4px",
           padding: theme.spacing(15, 5),
@@ -425,7 +425,6 @@ const EventsTable: React.FC<IEventsTableProps> = ({
                 rowsPerPage={rowsPerPage}
                 rowsPerPageOptions={[5, 10, 15, 25]}
                 onRowsPerPageChange={handleChangeRowsPerPage}
-                ActionsComponent={(props) => <TablePaginationActions {...props} />}
                 labelRowsPerPage="Rows per page"
                 labelDisplayedRows={({ page, count }) =>
                   `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
@@ -434,21 +433,27 @@ const EventsTable: React.FC<IEventsTableProps> = ({
                   select: {
                     MenuProps: {
                       keepMounted: true,
-                      PaperProps: {
-                        className: "pagination-dropdown",
-                        sx: {
-                          mt: 0,
-                          mb: theme.spacing(2),
+
+                      slotProps: {
+                        paper: {
+                          className: "pagination-dropdown",
+                          sx: {
+                            mt: 0,
+                            mb: theme.spacing(2),
+                          },
                         },
                       },
+
                       transformOrigin: {
                         vertical: "bottom",
                         horizontal: "left",
                       },
+
                       anchorOrigin: {
                         vertical: "top",
                         horizontal: "left",
                       },
+
                       sx: { mt: theme.spacing(-2) },
                     },
                     inputProps: { id: "pagination-dropdown" },
@@ -488,6 +493,7 @@ const EventsTable: React.FC<IEventsTableProps> = ({
                     padding: theme.spacing(4),
                   },
                 }}
+                ActionsComponent={(props) => <TablePaginationActions {...props} />}
               />
             </TableRow>
           </TableBody>

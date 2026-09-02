@@ -112,8 +112,19 @@ const AdminSetupStep: React.FC<OnboardingStepProps> = () => {
               >
                 {task.icon}
               </Box>
-              <Box flex={1}>
-                <Stack direction="row" alignItems="center" spacing={1} marginBottom={0.5}>
+              <Box
+                sx={{
+                  flex: 1,
+                }}
+              >
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: "center",
+                    marginBottom: 0.5,
+                  }}
+                >
                   <Typography
                     sx={{
                       fontSize: "15px",

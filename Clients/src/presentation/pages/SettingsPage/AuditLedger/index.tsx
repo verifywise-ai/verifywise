@@ -210,9 +210,9 @@ export default function AuditLedger() {
           {/* Verification banner */}
           <Stack
             direction="row"
-            alignItems="center"
-            justifyContent="space-between"
             sx={{
+              alignItems: "center",
+              justifyContent: "space-between",
               px: "16px",
               py: "12px",
               borderRadius: "4px",
@@ -220,7 +220,13 @@ export default function AuditLedger() {
               backgroundColor: verifyBanner.bg,
             }}
           >
-            <Stack direction="row" alignItems="center" sx={{ gap: "8px" }}>
+            <Stack
+              direction="row"
+              sx={{
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
               <Box sx={{ color: verifyBanner.color, display: "flex" }}>{verifyBanner.icon}</Box>
               <Typography
                 sx={{
@@ -242,8 +248,20 @@ export default function AuditLedger() {
           </Stack>
 
           {/* Filters row */}
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Stack direction="row" alignItems="center" sx={{ gap: "8px" }}>
+          <Stack
+            direction="row"
+            sx={{
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Stack
+              direction="row"
+              sx={{
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
               <Select
                 id="audit-entity-type"
                 placeholder="All entity types"
@@ -275,7 +293,12 @@ export default function AuditLedger() {
 
           {/* Table */}
           {isLoading ? (
-            <Stack alignItems="center" sx={{ py: "64px" }}>
+            <Stack
+              sx={{
+                alignItems: "center",
+                py: "64px",
+              }}
+            >
               <CircularProgress size={28} />
             </Stack>
           ) : entries.length === 0 ? (
@@ -388,7 +411,6 @@ export default function AuditLedger() {
                       rowsPerPage={rowsPerPage}
                       rowsPerPageOptions={[5, 10, 15, 25, 50]}
                       onRowsPerPageChange={handleChangeRowsPerPage}
-                      ActionsComponent={(props) => <TablePaginationActions {...props} />}
                       labelRowsPerPage="Rows per page"
                       labelDisplayedRows={({ page: p, count }) =>
                         `Page ${p + 1} of ${Math.max(1, Math.ceil(count / rowsPerPage))}`
@@ -397,21 +419,27 @@ export default function AuditLedger() {
                         select: {
                           MenuProps: {
                             keepMounted: true,
-                            PaperProps: {
-                              className: "pagination-dropdown",
-                              sx: {
-                                mt: 0,
-                                mb: theme.spacing(2),
+
+                            slotProps: {
+                              paper: {
+                                className: "pagination-dropdown",
+                                sx: {
+                                  mt: 0,
+                                  mb: theme.spacing(2),
+                                },
                               },
                             },
+
                             transformOrigin: {
                               vertical: "bottom",
                               horizontal: "left",
                             },
+
                             anchorOrigin: {
                               vertical: "top",
                               horizontal: "left",
                             },
+
                             sx: { mt: theme.spacing(-2) },
                           },
                           inputProps: { id: "pagination-dropdown" },
@@ -441,6 +469,7 @@ export default function AuditLedger() {
                           padding: theme.spacing(4),
                         },
                       }}
+                      ActionsComponent={(props) => <TablePaginationActions {...props} />}
                     />
                   </TableRow>
                 </TableFooter>

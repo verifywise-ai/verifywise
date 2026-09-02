@@ -26,7 +26,14 @@ const FrameworkSelector = ({
 }: FrameworkSelectorProps) => {
   const theme = useTheme();
   return (
-    <Stack direction="row" spacing={3} sx={{ mb: 3 }} alignItems="flex-end">
+    <Stack
+      direction="row"
+      spacing={3}
+      sx={{
+        alignItems: "flex-end",
+        mb: 3,
+      }}
+    >
       <GovernanceTooltip
         header="Source framework"
         description="Choose the framework to map controls from"

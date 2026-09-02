@@ -211,7 +211,13 @@ const Organizations = () => {
       }
     >
       {/* Search bar */}
-      <Stack direction="row" alignItems="center" gap={1.5}>
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: "center",
+          gap: 1.5,
+        }}
+      >
         <SearchBox
           placeholder="Search organizations..."
           value={searchTerm}
@@ -263,7 +269,13 @@ const Organizations = () => {
                       }}
                       onClick={() => handleSort(field)}
                     >
-                      <Stack direction="row" alignItems="center" gap={0.5}>
+                      <Stack
+                        direction="row"
+                        sx={{
+                          alignItems: "center",
+                          gap: 0.5,
+                        }}
+                      >
                         {label}
                         <SortIcon size={12} style={{ opacity: isActive ? 1 : 0.3 }} />
                       </Stack>
@@ -290,7 +302,13 @@ const Organizations = () => {
                     {displayFormattedDate(org.created_at)}
                   </TableCell>
                   <TableCell sx={{ ...tableStyles.body.cell, textAlign: "right" }}>
-                    <Stack direction="row" justifyContent="flex-end" gap="8px">
+                    <Stack
+                      direction="row"
+                      sx={{
+                        justifyContent: "flex-end",
+                        gap: "8px",
+                      }}
+                    >
                       <Button
                         size="small"
                         variant="outlined"

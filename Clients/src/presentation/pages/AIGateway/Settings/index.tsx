@@ -541,8 +541,18 @@ export default function AIGatewaySettingsPage() {
             {/* ─── API Keys tab ─────────────────────────────────────────── */}
             {activeTab === "api-keys" && (
               <Box sx={cardSx}>
-                <Stack gap="12px">
-                  <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                <Stack
+                  sx={{
+                    gap: "12px",
+                  }}
+                >
+                  <Stack
+                    direction="row"
+                    sx={{
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                    }}
+                  >
                     <Box>
                       <Typography sx={sectionTitleSx}>API keys</Typography>
                       <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "4px" }}>
@@ -579,20 +589,30 @@ export default function AIGatewaySettingsPage() {
                       />
                     </EmptyState>
                   ) : (
-                    <Stack gap="8px">
+                    <Stack
+                      sx={{
+                        gap: "8px",
+                      }}
+                    >
                       {apiKeys.map((key) => (
                         <Stack
                           key={key.id}
                           direction="row"
-                          justifyContent="space-between"
-                          alignItems="center"
                           sx={{
+                            justifyContent: "space-between",
+                            alignItems: "center",
                             p: "12px 16px",
                             border: `1px solid ${palette.border.dark}`,
                             borderRadius: "4px",
                           }}
                         >
-                          <Stack direction="row" alignItems="center" gap="10px">
+                          <Stack
+                            direction="row"
+                            sx={{
+                              alignItems: "center",
+                              gap: "10px",
+                            }}
+                          >
                             <ProviderIcon provider={key.provider} size={20} />
                             <Box>
                               <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
@@ -603,7 +623,13 @@ export default function AIGatewaySettingsPage() {
                               </Typography>
                             </Box>
                           </Stack>
-                          <Stack direction="row" alignItems="center" gap="8px">
+                          <Stack
+                            direction="row"
+                            sx={{
+                              alignItems: "center",
+                              gap: "8px",
+                            }}
+                          >
                             <Typography
                               sx={{
                                 fontSize: 12,
@@ -634,8 +660,18 @@ export default function AIGatewaySettingsPage() {
             {/* ─── Budget tab ───────────────────────────────────────────── */}
             {activeTab === "budget" && (
               <Box sx={cardSx}>
-                <Stack gap="12px">
-                  <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                <Stack
+                  sx={{
+                    gap: "12px",
+                  }}
+                >
+                  <Stack
+                    direction="row"
+                    sx={{
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                    }}
+                  >
                     <Box>
                       <Typography sx={sectionTitleSx}>Budget</Typography>
                       <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "4px" }}>
@@ -651,8 +687,17 @@ export default function AIGatewaySettingsPage() {
                   </Stack>
 
                   {budget ? (
-                    <Stack gap="12px">
-                      <Stack direction="row" justifyContent="space-between">
+                    <Stack
+                      sx={{
+                        gap: "12px",
+                      }}
+                    >
+                      <Stack
+                        direction="row"
+                        sx={{
+                          justifyContent: "space-between",
+                        }}
+                      >
                         <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
                           Monthly limit
                         </Typography>
@@ -660,7 +705,12 @@ export default function AIGatewaySettingsPage() {
                           ${Number(budget.monthly_limit_usd).toFixed(2)}
                         </Typography>
                       </Stack>
-                      <Stack direction="row" justifyContent="space-between">
+                      <Stack
+                        direction="row"
+                        sx={{
+                          justifyContent: "space-between",
+                        }}
+                      >
                         <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
                           Current spend
                         </Typography>
@@ -694,7 +744,12 @@ export default function AIGatewaySettingsPage() {
                           />
                         </Box>
                       )}
-                      <Stack direction="row" justifyContent="space-between">
+                      <Stack
+                        direction="row"
+                        sx={{
+                          justifyContent: "space-between",
+                        }}
+                      >
                         <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
                           Alert threshold
                         </Typography>
@@ -702,7 +757,12 @@ export default function AIGatewaySettingsPage() {
                           {budget.alert_threshold_pct}%
                         </Typography>
                       </Stack>
-                      <Stack direction="row" justifyContent="space-between">
+                      <Stack
+                        direction="row"
+                        sx={{
+                          justifyContent: "space-between",
+                        }}
+                      >
                         <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
                           Hard limit
                         </Typography>
@@ -727,9 +787,18 @@ export default function AIGatewaySettingsPage() {
 
             {/* ─── Guardrail settings tab ───────────────────────────────── */}
             {activeTab === "guardrails" && (
-              <Stack gap="16px">
+              <Stack
+                sx={{
+                  gap: "16px",
+                }}
+              >
                 {/* Save button */}
-                <Stack direction="row" justifyContent="flex-end">
+                <Stack
+                  direction="row"
+                  sx={{
+                    justifyContent: "flex-end",
+                  }}
+                >
                   <CustomizableButton
                     text={gsSaving ? "Saving..." : "Save settings"}
                     onClick={handleSaveGuardrailSettings}
@@ -739,14 +808,28 @@ export default function AIGatewaySettingsPage() {
 
                 {/* Error behavior card */}
                 <Box sx={cardSx}>
-                  <Stack gap="8px">
+                  <Stack
+                    sx={{
+                      gap: "8px",
+                    }}
+                  >
                     <Typography sx={sectionTitleSx}>Error behavior</Typography>
                     <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
                       What happens when the guardrail scanner itself fails. "Fail-closed" blocks all
                       requests for safety. "Fail-open" allows requests through.
                     </Typography>
-                    <Stack direction="row" gap="16px" mt="8px">
-                      <Box flex={1}>
+                    <Stack
+                      direction="row"
+                      sx={{
+                        gap: "16px",
+                        mt: "8px",
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          flex: 1,
+                        }}
+                      >
                         <Select
                           id="pii-on-error"
                           label="PII scan on error"
@@ -761,7 +844,11 @@ export default function AIGatewaySettingsPage() {
                           getOptionValue={(item) => item._id}
                         />
                       </Box>
-                      <Box flex={1}>
+                      <Box
+                        sx={{
+                          flex: 1,
+                        }}
+                      >
                         <Select
                           id="cf-on-error"
                           label="Content filter on error"
@@ -785,15 +872,29 @@ export default function AIGatewaySettingsPage() {
 
                 {/* Replacement text card */}
                 <Box sx={cardSx}>
-                  <Stack gap="8px">
+                  <Stack
+                    sx={{
+                      gap: "8px",
+                    }}
+                  >
                     <Typography sx={sectionTitleSx}>Replacement text</Typography>
                     <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
                       When a guardrail masks content, this text replaces the detected value. Use
                       ENTITY_TYPE in the PII format to include the detected type (e.g.,
                       &lt;EMAIL_ADDRESS&gt;).
                     </Typography>
-                    <Stack direction="row" gap="16px" mt="8px">
-                      <Box flex={1}>
+                    <Stack
+                      direction="row"
+                      sx={{
+                        gap: "16px",
+                        mt: "8px",
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          flex: 1,
+                        }}
+                      >
                         <Field
                           label="PII replacement format"
                           placeholder="<ENTITY_TYPE>"
@@ -803,7 +904,11 @@ export default function AIGatewaySettingsPage() {
                           }
                         />
                       </Box>
-                      <Box flex={1}>
+                      <Box
+                        sx={{
+                          flex: 1,
+                        }}
+                      >
                         <Field
                           label="Content filter replacement"
                           placeholder="[REDACTED]"
@@ -819,7 +924,11 @@ export default function AIGatewaySettingsPage() {
 
                 {/* Audit log retention card */}
                 <Box sx={cardSx}>
-                  <Stack gap="8px">
+                  <Stack
+                    sx={{
+                      gap: "8px",
+                    }}
+                  >
                     <Typography sx={sectionTitleSx}>Audit log retention</Typography>
                     <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
                       How long to keep guardrail detection logs. These logs record every blocked or
@@ -853,15 +962,30 @@ export default function AIGatewaySettingsPage() {
 
                 {/* Request body logging card */}
                 <Box sx={cardSx}>
-                  <Stack gap="8px">
+                  <Stack
+                    sx={{
+                      gap: "8px",
+                    }}
+                  >
                     <Typography sx={sectionTitleSx}>Request body logging</Typography>
                     <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
                       When enabled, full request prompts and LLM responses are stored in the spend
                       logs. Disabled by default for privacy. Bodies are truncated to 2,048
                       characters.
                     </Typography>
-                    <Stack gap="12px" mt="8px">
-                      <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Stack
+                      sx={{
+                        gap: "12px",
+                        mt: "8px",
+                      }}
+                    >
+                      <Stack
+                        direction="row"
+                        sx={{
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
                         <Typography sx={{ fontSize: 13 }}>Log request body (prompts)</Typography>
                         <Toggle
                           checked={gsForm.log_request_body}
@@ -870,7 +994,13 @@ export default function AIGatewaySettingsPage() {
                           }
                         />
                       </Stack>
-                      <Stack direction="row" justifyContent="space-between" alignItems="center">
+                      <Stack
+                        direction="row"
+                        sx={{
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
                         <Typography sx={{ fontSize: 13 }}>
                           Log response body (LLM output)
                         </Typography>
@@ -887,7 +1017,11 @@ export default function AIGatewaySettingsPage() {
 
                 {/* Spend log cleanup card */}
                 <Box sx={cardSx}>
-                  <Stack gap="8px">
+                  <Stack
+                    sx={{
+                      gap: "8px",
+                    }}
+                  >
                     <Typography sx={sectionTitleSx}>Spend log cleanup</Typography>
                     <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
                       Delete old spend log entries based on the retention period above.
@@ -919,14 +1053,24 @@ export default function AIGatewaySettingsPage() {
                 </Box>
                 {/* Response cache settings card */}
                 <Box sx={cardSx}>
-                  <Stack gap="12px">
+                  <Stack
+                    sx={{
+                      gap: "12px",
+                    }}
+                  >
                     <Typography sx={sectionTitleSx}>Response caching</Typography>
                     <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
                       Cache identical LLM requests to reduce cost and latency. Enable caching
                       globally here, then toggle it per-endpoint in the Endpoints tab.
                     </Typography>
 
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Stack
+                      direction="row"
+                      sx={{
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
                       <Typography sx={{ fontSize: 13 }}>Enable caching globally</Typography>
                       <Toggle
                         checked={cacheSettings.cache_global_enabled}
@@ -939,7 +1083,12 @@ export default function AIGatewaySettingsPage() {
                       />
                     </Stack>
 
-                    <Stack direction="row" gap="16px">
+                    <Stack
+                      direction="row"
+                      sx={{
+                        gap: "16px",
+                      }}
+                    >
                       <Box sx={{ flex: 1 }}>
                         <Field
                           label="Default TTL (seconds)"
@@ -968,7 +1117,13 @@ export default function AIGatewaySettingsPage() {
                       </Box>
                     </Stack>
 
-                    <Stack direction="row" gap="8px" sx={{ mt: "8px" }}>
+                    <Stack
+                      direction="row"
+                      sx={{
+                        gap: "8px",
+                        mt: "8px",
+                      }}
+                    >
                       <CustomizableButton
                         text={cacheSaving ? "Saving..." : "Save cache settings"}
                         variant="contained"
@@ -1003,11 +1158,25 @@ export default function AIGatewaySettingsPage() {
 
             {/* ─── Suggested risks tab ──────────────────────────────────── */}
             {activeTab === "risks" && !riskLoading && !riskError && (
-              <Stack gap="16px">
+              <Stack
+                sx={{
+                  gap: "16px",
+                }}
+              >
                 {/* Detection settings card */}
                 <Box sx={cardSx}>
-                  <Stack gap="12px">
-                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                  <Stack
+                    sx={{
+                      gap: "12px",
+                    }}
+                  >
+                    <Stack
+                      direction="row"
+                      sx={{
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                      }}
+                    >
                       <Box>
                         <Typography sx={sectionTitleSx}>Risk detection settings</Typography>
                         <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "4px" }}>
@@ -1015,7 +1184,13 @@ export default function AIGatewaySettingsPage() {
                           or manually below.
                         </Typography>
                       </Box>
-                      <Stack direction="row" gap="8px" alignItems="center">
+                      <Stack
+                        direction="row"
+                        sx={{
+                          gap: "8px",
+                          alignItems: "center",
+                        }}
+                      >
                         {detectResult && (
                           <Typography
                             sx={{
@@ -1044,7 +1219,12 @@ export default function AIGatewaySettingsPage() {
                       </Stack>
                     </Stack>
 
-                    <Stack gap="0px" mt="4px">
+                    <Stack
+                      sx={{
+                        gap: "0px",
+                        mt: "4px",
+                      }}
+                    >
                       {riskSettings.map((s, idx) => {
                         const meta = CONDITION_META[s.condition_id];
                         const thresholdKeys = Object.keys(s.default_threshold);
@@ -1052,9 +1232,9 @@ export default function AIGatewaySettingsPage() {
                           <Stack
                             key={s.condition_id}
                             direction="row"
-                            alignItems="flex-start"
-                            gap="12px"
                             sx={{
+                              alignItems: "flex-start",
+                              gap: "12px",
                               p: "12px 0",
                               borderTop: idx > 0 ? `1px solid ${palette.border.light}` : "none",
                               opacity: s.is_enabled ? 1 : 0.55,
@@ -1068,7 +1248,12 @@ export default function AIGatewaySettingsPage() {
                                 }
                               />
                             </Box>
-                            <Box flex={1} minWidth={0}>
+                            <Box
+                              sx={{
+                                flex: 1,
+                                minWidth: 0,
+                              }}
+                            >
                               <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                                 {s.label}
                               </Typography>
@@ -1119,11 +1304,25 @@ export default function AIGatewaySettingsPage() {
                     <Typography sx={{ ...sectionTitleSx, mb: "12px" }}>
                       Pending suggestions ({pendingSuggestions.length})
                     </Typography>
-                    <Stack gap="12px">
+                    <Stack
+                      sx={{
+                        gap: "12px",
+                      }}
+                    >
                       {pendingSuggestions.map((s) => (
                         <Box key={s.id} sx={cardSx}>
-                          <Stack gap="8px">
-                            <Stack direction="row" alignItems="center" gap="8px">
+                          <Stack
+                            sx={{
+                              gap: "8px",
+                            }}
+                          >
+                            <Stack
+                              direction="row"
+                              sx={{
+                                alignItems: "center",
+                                gap: "8px",
+                              }}
+                            >
                               <Typography
                                 sx={{
                                   fontSize: 11,
@@ -1173,7 +1372,14 @@ export default function AIGatewaySettingsPage() {
                               </Typography>
                             )}
 
-                            <Stack direction="row" justifyContent="flex-end" gap="8px" mt="4px">
+                            <Stack
+                              direction="row"
+                              sx={{
+                                justifyContent: "flex-end",
+                                gap: "8px",
+                                mt: "4px",
+                              }}
+                            >
                               <CustomizableButton
                                 text="Dismiss"
                                 variant="outlined"
@@ -1204,10 +1410,13 @@ export default function AIGatewaySettingsPage() {
                   <Box>
                     <Stack
                       direction="row"
-                      alignItems="center"
-                      gap="4px"
-                      sx={{ cursor: "pointer", mb: "8px" }}
                       onClick={() => setShowHistory(!showHistory)}
+                      sx={{
+                        alignItems: "center",
+                        gap: "4px",
+                        cursor: "pointer",
+                        mb: "8px",
+                      }}
                     >
                       {showHistory ? (
                         <ChevronDown size={16} strokeWidth={1.5} />
@@ -1221,21 +1430,31 @@ export default function AIGatewaySettingsPage() {
                       </Typography>
                     </Stack>
                     <Collapse in={showHistory}>
-                      <Stack gap="8px">
+                      <Stack
+                        sx={{
+                          gap: "8px",
+                        }}
+                      >
                         {historySuggestions.map((s) => (
                           <Stack
                             key={s.id}
                             direction="row"
-                            justifyContent="space-between"
-                            alignItems="center"
                             sx={{
+                              justifyContent: "space-between",
+                              alignItems: "center",
                               p: "8px 12px",
                               border: `1px solid ${palette.border.light}`,
                               borderRadius: "4px",
                               opacity: 0.7,
                             }}
                           >
-                            <Stack direction="row" alignItems="center" gap="8px">
+                            <Stack
+                              direction="row"
+                              sx={{
+                                alignItems: "center",
+                                gap: "8px",
+                              }}
+                            >
                               <Typography
                                 sx={{
                                   fontSize: 11,
@@ -1251,7 +1470,13 @@ export default function AIGatewaySettingsPage() {
                               </Typography>
                               <Typography sx={{ fontSize: 13 }}>{s.title}</Typography>
                             </Stack>
-                            <Stack direction="row" alignItems="center" gap="8px">
+                            <Stack
+                              direction="row"
+                              sx={{
+                                alignItems: "center",
+                                gap: "8px",
+                              }}
+                            >
                               {s.reviewed_by_name && (
                                 <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
                                   by {s.reviewed_by_name}
@@ -1310,7 +1535,11 @@ export default function AIGatewaySettingsPage() {
         isSubmitting={keySubmitting}
         maxWidth="480px"
       >
-        <Stack gap="16px">
+        <Stack
+          sx={{
+            gap: "16px",
+          }}
+        >
           <Field
             label="Key name"
             placeholder="e.g., Production OpenAI key"
@@ -1358,7 +1587,11 @@ export default function AIGatewaySettingsPage() {
         isSubmitting={keyDeleting}
         maxWidth="480px"
       >
-        <Stack gap="8px">
+        <Stack
+          sx={{
+            gap: "8px",
+          }}
+        >
           <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
             This action takes effect immediately. Any endpoints using this key will lose their
             provider authentication and stop working.
@@ -1380,7 +1613,11 @@ export default function AIGatewaySettingsPage() {
         isSubmitting={budgetSubmitting}
         maxWidth="480px"
       >
-        <Stack gap="16px">
+        <Stack
+          sx={{
+            gap: "16px",
+          }}
+        >
           <Field
             label="Monthly limit (USD)"
             placeholder="e.g., 100.00"
@@ -1394,7 +1631,13 @@ export default function AIGatewaySettingsPage() {
             value={budgetForm.alert_threshold_pct}
             onChange={(e) => setBudgetForm((p) => ({ ...p, alert_threshold_pct: e.target.value }))}
           />
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Stack
+            direction="row"
+            sx={{
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <Box>
               <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Hard limit</Typography>
               <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
@@ -1423,7 +1666,11 @@ export default function AIGatewaySettingsPage() {
         isSubmitting={acceptSubmitting}
         maxWidth="560px"
       >
-        <Stack gap="16px">
+        <Stack
+          sx={{
+            gap: "16px",
+          }}
+        >
           <Field
             label="Risk name"
             value={acceptForm.risk_name}

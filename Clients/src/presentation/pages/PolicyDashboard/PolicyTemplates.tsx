@@ -186,7 +186,14 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
 
   return (
     <Stack>
-      <Stack direction="row" spacing={2} alignItems="center" mb={8}>
+      <Stack
+        direction="row"
+        spacing={2}
+        sx={{
+          alignItems: "center",
+          mb: 8,
+        }}
+      >
         {/* FilterBy */}
         <div data-joyride-id="policy-status-filter">
           <FilterBy
@@ -297,7 +304,13 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
                           : "inherit",
                       }}
                     >
-                      <Stack direction="row" gap={1} flexWrap="wrap">
+                      <Stack
+                        direction="row"
+                        sx={{
+                          gap: 1,
+                          flexWrap: "wrap",
+                        }}
+                      >
                         {policy.tags.map((tag: string, index: number) => (
                           <TagChip key={`${tag}-${index}`} tag={tag} />
                         ))}

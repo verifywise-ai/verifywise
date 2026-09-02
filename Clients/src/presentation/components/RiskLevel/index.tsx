@@ -69,7 +69,11 @@ const RiskLevel: FC<IRiskLevelProps> = ({
         sx={{ width: "325px", backgroundColor: theme.palette.background.main }}
         disabled={disabled}
       />
-      <Stack gap={theme.spacing(2)}>
+      <Stack
+        sx={{
+          gap: theme.spacing(2),
+        }}
+      >
         <Typography
           sx={{
             fontSize: "13px",

@@ -336,7 +336,14 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
                   minHeight: "150px",
                 }}
               >
-                <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    mb: 2,
+                  }}
+                >
                   <Typography sx={{ fontSize: 13, fontWeight: 500, color: "text.black" }}>
                     {fw.name}
                   </Typography>
@@ -365,7 +372,13 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
                   {fw.description}
                 </Typography>
 
-                <Box display="flex" justifyContent="flex-end" mt={2}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    mt: 2,
+                  }}
+                >
                   {isAdded ? (
                     <CustomizableButton
                       variant="outlined"
@@ -447,7 +460,11 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
         <ConfirmationModal
           title="Confirm delete"
           body={
-            <Typography fontSize={13}>
+            <Typography
+              sx={{
+                fontSize: 13,
+              }}
+            >
               Are you sure you want to delete the framework "{organizationalProject.project_title}"?
               This action cannot be undone and will remove all associated data.
             </Typography>
@@ -466,7 +483,11 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
         <ConfirmationModal
           title="Confirm framework removal"
           body={
-            <Typography fontSize={13}>
+            <Typography
+              sx={{
+                fontSize: 13,
+              }}
+            >
               Are you sure you want to remove {frameworkToRemove.name} from the framework?
             </Typography>
           }

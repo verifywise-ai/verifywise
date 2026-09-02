@@ -36,7 +36,14 @@ export function PortfolioTrendChart({ snapshots, height = 200 }: PortfolioTrendC
 
   if (snapshots.length === 0) {
     return (
-      <Stack alignItems="center" justifyContent="center" sx={{ height, opacity: 0.5 }}>
+      <Stack
+        sx={{
+          alignItems: "center",
+          justifyContent: "center",
+          height,
+          opacity: 0.5,
+        }}
+      >
         <Typography sx={{ fontSize: 13, color: C.textSecondary }}>
           No trend data available yet
         </Typography>

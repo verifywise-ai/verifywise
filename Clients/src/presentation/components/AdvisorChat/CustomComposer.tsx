@@ -53,7 +53,13 @@ export const CustomComposer: FC<CustomComposerProps> = ({ pageContext }) => {
         padding: "8px",
       }}
     >
-      <Stack direction="row" gap="8px" alignItems="flex-end">
+      <Stack
+        direction="row"
+        sx={{
+          gap: "8px",
+          alignItems: "flex-end",
+        }}
+      >
         <ComposerPrimitive.Input
           asChild
           autoFocus
@@ -98,8 +104,8 @@ export const CustomComposer: FC<CustomComposerProps> = ({ pageContext }) => {
 
       <Stack
         direction="row"
-        justifyContent="center"
         sx={{
+          justifyContent: "center",
           marginTop: theme.spacing(0.75),
           fontSize: theme.typography.caption.fontSize,
           color: theme.palette.text.accent ?? theme.palette.text.secondary,
@@ -110,8 +116,8 @@ export const CustomComposer: FC<CustomComposerProps> = ({ pageContext }) => {
       </Stack>
       <Stack
         direction="row"
-        justifyContent="center"
         sx={{
+          justifyContent: "center",
           paddingTop: "8px",
           paddingBottom: "0px",
           fontSize: 10,

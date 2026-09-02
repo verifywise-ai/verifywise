@@ -158,7 +158,13 @@ function DimensionCard({
 
   return (
     <Stack sx={{ ...cardStyles.base(theme), height: "100%" }} spacing="8px">
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
         <Typography sx={{ fontSize: 12, fontWeight: 500, color: textColors.tertiary }}>
           {label}
         </Typography>
@@ -322,7 +328,13 @@ export default function EvidenceAnalysisPanel({
 
       {/* Filename mismatch — single documented-color sentence, no box */}
       {filenameCheck?.mismatch && filenameCheck.suggested_filename && (
-        <Stack direction="row" spacing="16px" alignItems="flex-start">
+        <Stack
+          direction="row"
+          spacing="16px"
+          sx={{
+            alignItems: "flex-start",
+          }}
+        >
           <Box sx={{ color: status.warning.text, mt: "2px", flexShrink: 0 }}>
             <AlertTriangle size={16} />
           </Box>
@@ -336,7 +348,13 @@ export default function EvidenceAnalysisPanel({
 
       {/* Hero overall score panel */}
       <Card elevation={0} sx={cardStyles.base(theme)}>
-        <Stack direction="row" spacing="16px" alignItems="center">
+        <Stack
+          direction="row"
+          spacing="16px"
+          sx={{
+            alignItems: "center",
+          }}
+        >
           {/* Score circle */}
           <Box
             sx={{
@@ -359,7 +377,14 @@ export default function EvidenceAnalysisPanel({
 
           {/* Right text */}
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Stack direction="row" spacing="8px" alignItems="center" sx={{ mb: "8px" }}>
+            <Stack
+              direction="row"
+              spacing="8px"
+              sx={{
+                alignItems: "center",
+                mb: "8px",
+              }}
+            >
               <Typography sx={{ fontSize: 12, fontWeight: 500, color: textColors.tertiary }}>
                 Overall quality grade
               </Typography>
@@ -423,9 +448,11 @@ export default function EvidenceAnalysisPanel({
         <Card elevation={0} sx={cardStyles.base(theme)}>
           <Stack
             direction="row"
-            alignItems="center"
-            justifyContent="space-between"
-            sx={{ mb: "12px" }}
+            sx={{
+              alignItems: "center",
+              justifyContent: "space-between",
+              mb: "12px",
+            }}
           >
             <Typography sx={subsectionTitleSx}>
               Suggested control links ({suggestedLinks.length})
@@ -501,7 +528,13 @@ export default function EvidenceAnalysisPanel({
       {docSignals && (
         <Card elevation={0} sx={cardStyles.base(theme)}>
           <Typography sx={{ ...subsectionTitleSx, mb: "16px" }}>Document signals</Typography>
-          <Stack direction="row" flexWrap="wrap" gap="8px">
+          <Stack
+            direction="row"
+            sx={{
+              flexWrap: "wrap",
+              gap: "8px",
+            }}
+          >
             {(() => {
               const c = signalStatusColors({ positive: (docSignals.authority_signal ?? 0) >= 60 });
               return (
@@ -614,7 +647,13 @@ export default function EvidenceAnalysisPanel({
             Compliance areas ({complianceAreas.length})
           </Typography>
           {complianceAreas.length > 0 ? (
-            <Stack direction="row" flexWrap="wrap" gap="8px">
+            <Stack
+              direction="row"
+              sx={{
+                flexWrap: "wrap",
+                gap: "8px",
+              }}
+            >
               {complianceAreas.map((area, i) => (
                 <TagChip key={i} tag={area} />
               ))}
@@ -636,7 +675,14 @@ export default function EvidenceAnalysisPanel({
               {keyFindings.slice(0, 5).map((finding, i) => {
                 const fwq = findingsWithQuotes?.[i];
                 return (
-                  <Stack key={i} direction="row" spacing="8px" alignItems="flex-start">
+                  <Stack
+                    key={i}
+                    direction="row"
+                    spacing="8px"
+                    sx={{
+                      alignItems: "flex-start",
+                    }}
+                  >
                     <Box
                       sx={{
                         width: 20,

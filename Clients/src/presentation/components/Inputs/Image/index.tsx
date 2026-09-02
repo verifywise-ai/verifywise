@@ -37,8 +37,11 @@ function ImageField({ id, src, loading, onChange }: ImageFieldProps) {
         <>
           <Box
             className="image-field-wrapper"
-            mt={theme.spacing(8)}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDragLeave}
             sx={{
+              "mt": theme.spacing(8),
               "position": "relative",
               "height": "fit-content",
               "border": "dashed",
@@ -46,17 +49,24 @@ function ImageField({ id, src, loading, onChange }: ImageFieldProps) {
               "borderColor": isDragging ? theme.palette.primary.main : theme.palette.border.light,
               "borderWidth": "2px",
               "transition": "0.2s",
+
               "&:hover": {
                 borderColor: theme.palette.primary.main,
                 backgroundColor: "hsl(215, 87%, 51%, 0.05)",
               },
             }}
-            onDragEnter={handleDragEnter}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDragLeave}
           >
             <TextField id={id} type="file" onChange={onChange} sx={TextFieldStyles} />
-            <Stack className="custom-file-text" alignItems="center" gap="4px" sx={IconButtonStack}>
+            <Stack
+              className="custom-file-text"
+              sx={[
+                {
+                  alignItems: "center",
+                  gap: "4px",
+                },
+                ...(Array.isArray(IconButtonStack) ? IconButtonStack : [IconButtonStack]),
+              ]}
+            >
               <IconButton
                 sx={{
                   pointerEvents: "none",
@@ -70,9 +80,11 @@ function ImageField({ id, src, loading, onChange }: ImageFieldProps) {
               <Typography component="h2" color={theme.palette.text.tertiary}>
                 <Typography
                   component="span"
-                  fontSize="inherit"
                   color={theme.palette.primary.main}
-                  fontWeight={500}
+                  sx={{
+                    fontSize: "inherit",
+                    fontWeight: 500,
+                  }}
                 >
                   Click to upload
                 </Typography>{" "}
@@ -88,7 +100,12 @@ function ImageField({ id, src, loading, onChange }: ImageFieldProps) {
           </Typography>
         </>
       ) : (
-        <Stack direction="row" justifyContent="center">
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "center",
+          }}
+        >
           <Box
             sx={{
               width: "250px",

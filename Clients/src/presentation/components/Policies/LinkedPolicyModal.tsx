@@ -177,7 +177,12 @@ const LinkedPolicyModal: React.FC<LinkedPolicyModalProps> = ({ onClose, policyId
     <Box onWheel={(e) => e.stopPropagation()} sx={{ height: "100%", overflow: "auto" }}>
       <Stack spacing={3}>
         {/* ---------- ADD BUTTON ---------- */}
-        <Box display="flex" justifyContent="flex-end">
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "flex-end",
+          }}
+        >
           <CustomizableButton
             variant="contained"
             sx={addNewModelButtonStyle}
@@ -255,7 +260,11 @@ const LinkedPolicyModal: React.FC<LinkedPolicyModalProps> = ({ onClose, policyId
 
       {alert && (
         <Fade in={showAlert} timeout={300} style={toastFadeStyle}>
-          <Box mb={2}>
+          <Box
+            sx={{
+              mb: 2,
+            }}
+          >
             <Alert
               variant={alert.variant}
               title={alert.title}

@@ -34,7 +34,13 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
     <Stack spacing={2}>
       {/* Overall progress */}
       <Box>
-        <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "space-between",
+            mb: 0.5,
+          }}
+        >
           <Typography sx={{ fontSize: 13, fontWeight: 500, color: "text.secondary" }}>
             {isComplete ? "Upload complete" : `Uploading ${completed + 1} of ${totalFiles}...`}
           </Typography>
@@ -95,11 +101,12 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
           <Stack
             key={result.fileName}
             direction="row"
-            alignItems="center"
             spacing={1}
             sx={{
+              alignItems: "center",
               p: "10px 12px",
               borderRadius: "6px",
+
               backgroundColor:
                 result.status === "error"
                   ? "#F9ECED"
@@ -124,7 +131,13 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
             )}
             {result.status === "success" && <CheckCircle2 size={16} color="#079455" />}
             {result.status === "error" && (
-              <Stack direction="row" alignItems="center" spacing={0.5}>
+              <Stack
+                direction="row"
+                spacing={0.5}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <XCircle size={16} color="#F04438" />
                 <Typography sx={{ fontSize: 12, color: "#F04438" }}>
                   {result.error || "Failed"}

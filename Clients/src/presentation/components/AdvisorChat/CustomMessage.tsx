@@ -374,8 +374,8 @@ const ThinkingIndicator: FC = () => {
   return (
     <Stack
       direction="row"
-      gap={1.5}
       sx={{
+        gap: 1.5,
         alignSelf: "flex-start",
         maxWidth: "75%",
       }}
@@ -388,8 +388,19 @@ const ThinkingIndicator: FC = () => {
           borderTopLeftRadius: 1,
         }}
       >
-        <Stack direction="row" gap={1} alignItems="center">
-          <Stack direction="row" gap={0.75}>
+        <Stack
+          direction="row"
+          sx={{
+            gap: 1,
+            alignItems: "center",
+          }}
+        >
+          <Stack
+            direction="row"
+            sx={{
+              gap: 0.75,
+            }}
+          >
             {[0, 0.2, 0.4].map((delay, index) => (
               <Box
                 key={index}
@@ -453,7 +464,13 @@ const AssistantBody: FC<{
   }
 
   return (
-    <Stack gap={0.75} sx={{ flex: 1, minWidth: 0 }}>
+    <Stack
+      sx={{
+        gap: 0.75,
+        flex: 1,
+        minWidth: 0,
+      }}
+    >
       <Box
         ref={bubbleRef}
         sx={{
@@ -480,7 +497,13 @@ const AssistantBody: FC<{
           }}
         />
       </Box>
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
         <MessageTimestamp />
         <CopyButton bubbleRef={bubbleRef} />
       </Stack>
@@ -540,12 +563,14 @@ const CustomMessageComponent: FC = () => {
       <MessagePrimitive.If user>
         <Stack
           direction="row"
-          gap={1.5}
           sx={{
+            gap: 1.5,
             alignSelf: "flex-end",
+
             maxWidth: {
               xs: "100%",
             },
+
             justifyContent: "flex-end",
             paddingLeft: "8px",
             paddingRight: "8px",
@@ -578,8 +603,8 @@ const CustomMessageComponent: FC = () => {
       <MessagePrimitive.If assistant>
         <Stack
           direction="row"
-          gap={1.5}
           sx={{
+            gap: 1.5,
             alignSelf: "flex-start",
             width: "100%",
             paddingLeft: "8px",

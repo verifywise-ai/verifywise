@@ -157,8 +157,16 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ isOpen, setIsOpen, on
       submitButtonText="Send Invite"
       onSubmit={handleSendInvitation}
     >
-      <Stack gap="16px">
-        <Stack gap="8px">
+      <Stack
+        sx={{
+          gap: "16px",
+        }}
+      >
+        <Stack
+          sx={{
+            gap: "8px",
+          }}
+        >
           <Typography variant="body2" sx={{ fontWeight: 500, color: "rgba(0, 0, 0, 0.87)" }}>
             Name *
           </Typography>
@@ -171,7 +179,11 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ isOpen, setIsOpen, on
             error={errors.name}
           />
         </Stack>
-        <Stack gap="8px">
+        <Stack
+          sx={{
+            gap: "8px",
+          }}
+        >
           <Typography variant="body2" sx={{ fontWeight: 500, color: "rgba(0, 0, 0, 0.87)" }}>
             Surname *
           </Typography>
@@ -184,7 +196,11 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ isOpen, setIsOpen, on
             error={errors.surname}
           />
         </Stack>
-        <Stack gap="8px">
+        <Stack
+          sx={{
+            gap: "8px",
+          }}
+        >
           <Typography variant="body2" sx={{ fontWeight: 500, color: "rgba(0, 0, 0, 0.87)" }}>
             Email *
           </Typography>
@@ -197,7 +213,11 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ isOpen, setIsOpen, on
             error={errors.email}
           />
         </Stack>
-        <Stack gap="8px">
+        <Stack
+          sx={{
+            gap: "8px",
+          }}
+        >
           <Typography variant="body2" sx={{ fontWeight: 500, color: "rgba(0, 0, 0, 0.87)" }}>
             Role *
           </Typography>

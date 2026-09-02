@@ -102,7 +102,13 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
       }}
     >
       <CardContent sx={{ "p": "16px", "&:last-child": { pb: "16px" } }}>
-        <Stack direction="row" alignItems="flex-start" justifyContent="space-between">
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+          }}
+        >
           <Box
             sx={{
               display: "flex",
@@ -311,7 +317,11 @@ const GovernanceHub: React.FC = () => {
       title="Governance Intelligence"
       subtitle="Your central command center for cross-framework governance, compliance mapping, and coverage analysis."
     >
-      <Stack gap="16px">
+      <Stack
+        sx={{
+          gap: "16px",
+        }}
+      >
         {/* Active scenario preview */}
         {activeScenario ? (
           <Box
@@ -325,10 +335,18 @@ const GovernanceHub: React.FC = () => {
             <Stack
               direction={{ xs: "column", md: "row" }}
               spacing={2}
-              justifyContent="space-between"
-              alignItems={{ xs: "flex-start", md: "center" }}
+              sx={{
+                justifyContent: "space-between",
+                alignItems: { xs: "flex-start", md: "center" },
+              }}
             >
-              <Stack direction="row" spacing={2} alignItems="flex-start">
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{
+                  alignItems: "flex-start",
+                }}
+              >
                 <Box
                   sx={{
                     width: 40,
@@ -355,7 +373,14 @@ const GovernanceHub: React.FC = () => {
                       {activeScenario.description}
                     </Typography>
                   )}
-                  <Stack direction="row" flexWrap="wrap" gap={0.75} sx={{ mt: 1.5 }}>
+                  <Stack
+                    direction="row"
+                    sx={{
+                      flexWrap: "wrap",
+                      gap: 0.75,
+                      mt: 1.5,
+                    }}
+                  >
                     {activeFrameworkIds.map((id) => {
                       const priority =
                         id === activeScenarioPriority?.primary
@@ -416,7 +441,13 @@ const GovernanceHub: React.FC = () => {
               background: background.main,
             }}
           >
-            <Stack direction="row" spacing={2} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <Target size={20} color={text.muted} />
               <Box sx={{ flex: 1 }}>
                 <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
@@ -588,7 +619,13 @@ const GovernanceHub: React.FC = () => {
         )}
 
         {/* Quick actions */}
-        <Stack direction="row" gap="8px" flexWrap="wrap">
+        <Stack
+          direction="row"
+          sx={{
+            gap: "8px",
+            flexWrap: "wrap",
+          }}
+        >
           <GovernanceTooltip
             header="Get recommendations"
             description="Receive scenario suggestions tailored to the project context"
@@ -673,7 +710,14 @@ const GovernanceHub: React.FC = () => {
               header="Gap hotspots"
               description="Frameworks with the most unmapped controls"
             >
-              <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: "12px" }}>
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{
+                  alignItems: "center",
+                  mb: "12px",
+                }}
+              >
                 <AlertTriangle size={18} color={status.warning.text} />
                 <Typography sx={{ fontSize: 14, fontWeight: 600 }}>Gap Hotspots</Typography>
               </Stack>
@@ -682,7 +726,11 @@ const GovernanceHub: React.FC = () => {
               Frameworks with the most unmapped controls. Address these first for the biggest
               coverage improvement.
             </Typography>
-            <Stack gap="8px">
+            <Stack
+              sx={{
+                gap: "8px",
+              }}
+            >
               {coverageStats.topGapFrameworks.map((fw) => (
                 <Box
                   key={fw.framework_id}
@@ -697,7 +745,13 @@ const GovernanceHub: React.FC = () => {
                     "&:hover": { background: background.accent },
                   }}
                 >
-                  <Stack direction="row" spacing={2} alignItems="center">
+                  <Stack
+                    direction="row"
+                    spacing={2}
+                    sx={{
+                      alignItems: "center",
+                    }}
+                  >
                     <Typography sx={{ fontSize: 13, fontWeight: 500, color: text.primary }}>
                       {fw.framework_name || `Framework ${fw.framework_id}`}
                     </Typography>

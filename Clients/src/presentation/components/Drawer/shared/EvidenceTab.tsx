@@ -51,7 +51,12 @@ const EvidenceTab: React.FC<EvidenceTabProps> = ({
         Evidence files
       </Typography>
 
-      <Typography variant="body2" color="text.tertiary">
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.tertiary",
+        }}
+      >
         {bodyText}
       </Typography>
 
@@ -71,7 +76,13 @@ const EvidenceTab: React.FC<EvidenceTabProps> = ({
           }}
         />
 
-        <Stack direction="row" spacing={2} alignItems="center">
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{
+            alignItems: "center",
+          }}
+        >
           <CustomizableButton
             variant="outlined"
             onClick={() => document.getElementById(fileInputId)?.click()}

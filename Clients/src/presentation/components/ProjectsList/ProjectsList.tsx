@@ -335,7 +335,14 @@ const ProjectList = ({
           mb: "16px",
         }}
       >
-        <Stack direction="row" spacing={2} alignItems="center" sx={{ flex: 1 }}>
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{
+            alignItems: "center",
+            flex: 1,
+          }}
+        >
           <FilterBy columns={projectFilterColumns} onFilterChange={handleProjectFilterChange} />
 
           {viewMode === "table" && (

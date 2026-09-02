@@ -185,9 +185,21 @@ const PMMQuestionEditor: React.FC<PMMQuestionEditorProps> = ({
             <Typography sx={{ fontSize: 12, color: theme.palette.other.icon }}>
               Add at least 2 options for the user to choose from
             </Typography>
-            <Stack spacing={1} mt={1}>
+            <Stack
+              spacing={1}
+              sx={{
+                mt: 1,
+              }}
+            >
               {options.map((option, index) => (
-                <Stack key={index} direction="row" spacing={1} alignItems="center">
+                <Stack
+                  key={index}
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: "center",
+                  }}
+                >
                   <Field
                     id={`option-${index}`}
                     label=""
@@ -280,7 +292,13 @@ const PMMQuestionEditor: React.FC<PMMQuestionEditorProps> = ({
         </Stack>
 
         {/* Required toggle */}
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
           <Stack spacing={0.5}>
             <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Required question</Typography>
             <Typography sx={{ fontSize: 12, color: theme.palette.other.icon }}>
@@ -297,7 +315,13 @@ const PMMQuestionEditor: React.FC<PMMQuestionEditorProps> = ({
         </Stack>
 
         {/* Allow flag for concern toggle */}
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
           <Stack spacing={0.5}>
             <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Allow flag for concern</Typography>
             <Typography sx={{ fontSize: 12, color: theme.palette.other.icon }}>

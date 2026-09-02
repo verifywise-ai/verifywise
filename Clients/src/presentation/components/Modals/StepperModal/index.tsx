@@ -140,9 +140,21 @@ const StepperModal: React.FC<StepperModalProps> = ({
             zIndex: 0,
           }}
         >
-          <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+          <Stack
+            direction="row"
+            sx={{
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+            }}
+          >
             <Stack spacing={0.5}>
-              <Stack direction="row" alignItems="center" spacing={1.5}>
+              <Stack
+                direction="row"
+                spacing={1.5}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <Typography
                   sx={{
                     fontSize: 15,
@@ -245,9 +257,9 @@ const StepperModal: React.FC<StepperModalProps> = ({
         {/* Footer Section with Division Line - Compact */}
         <Stack
           direction="row"
-          justifyContent="space-between"
           spacing={6}
           sx={{
+            justifyContent: "space-between",
             background: "linear-gradient(180deg, #F3F5F8 0%, #F8FAFB 100%)",
             borderTop: "1px solid #E0E4E9",
             padding: "12px 24px",

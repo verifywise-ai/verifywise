@@ -463,8 +463,20 @@ const Datasets: React.FC = () => {
     >
       {/* Controls row */}
       <Stack spacing={2}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Stack direction="row" spacing={2} alignItems="center">
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             <FilterBy columns={DATASET_FILTER_COLUMNS} onFilterChange={handleDatasetFilterChange} />
             <GroupBy options={DATASET_GROUP_BY_OPTIONS} onGroupChange={handleGroupChange} />
             <ColumnSelector
@@ -480,7 +492,13 @@ const Datasets: React.FC = () => {
               fullWidth={false}
             />
           </Stack>
-          <Stack direction="row" gap="8px" alignItems="center">
+          <Stack
+            direction="row"
+            sx={{
+              gap: "8px",
+              alignItems: "center",
+            }}
+          >
             {isEnabled("dataset-bulk-upload") && (
               <BulkUploadButton onClick={() => setIsBulkUploadOpen(true)} />
             )}

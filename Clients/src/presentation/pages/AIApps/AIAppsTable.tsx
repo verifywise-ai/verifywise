@@ -131,7 +131,13 @@ export default function AIAppsTable({
                   onClick={() => onEditApp(app)}
                 >
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    <Stack direction="row" alignItems="center" gap="8px">
+                    <Stack
+                      direction="row"
+                      sx={{
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
                       <Bot size={16} strokeWidth={1.5} color={palette.text.secondary} />
                       {app.name}
                     </Stack>
@@ -151,9 +157,11 @@ export default function AIAppsTable({
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell} align="right">
                     <Stack
                       direction="row"
-                      justifyContent="flex-end"
-                      gap="4px"
                       onClick={(e) => e.stopPropagation()}
+                      sx={{
+                        justifyContent: "flex-end",
+                        gap: "4px",
+                      }}
                     >
                       <Tooltip title="Edit">
                         <IconButton

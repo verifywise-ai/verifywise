@@ -198,19 +198,35 @@ export const ProjectCard = React.memo(function ProjectCard({
     >
       {/* Header */}
       <Stack className="project-card-header" sx={{ gap: 2 }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+          }}
+        >
           <Typography className="project-card-title" sx={projectCardTitleStyle}>
             {project.uc_id ? `${project.uc_id}: ` : ""}
             {project.project_title}
           </Typography>
           <Stack direction="row" spacing={8} sx={{ ml: 2 }}>
-            <Stack className="project-card-spec-tile" alignItems="flex-end">
+            <Stack
+              className="project-card-spec-tile"
+              sx={{
+                alignItems: "flex-end",
+              }}
+            >
               <Typography sx={projectCardSpecKeyStyle}>Project owner</Typography>
               <Typography sx={projectCardSpecValueStyle}>
                 {ownerUser ? `${ownerUser.name} ${ownerUser.surname}` : "Unknown User"}
               </Typography>
             </Stack>
-            <Stack className="project-card-spec-tile" alignItems="flex-end">
+            <Stack
+              className="project-card-spec-tile"
+              sx={{
+                alignItems: "flex-end",
+              }}
+            >
               <Typography sx={projectCardSpecKeyStyle}>Last updated</Typography>
               <Typography sx={projectCardSpecValueStyle}>
                 {displayFormattedDate(project.last_updated.toString())}
@@ -236,7 +252,13 @@ export const ProjectCard = React.memo(function ProjectCard({
                   complianceProgressData?.allDonesubControls ?? 0
                 }/${complianceProgressData?.allsubControls ?? 0}`}
               />
-              <Stack direction="row" alignItems="center" spacing={0.5}>
+              <Stack
+                direction="row"
+                spacing={0.5}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <Typography sx={progressStyle}>
                   {`Requirements: ${
                     complianceProgressData?.allDonesubControls ?? 0
@@ -276,7 +298,13 @@ export const ProjectCard = React.memo(function ProjectCard({
                   assessmentProgressData?.answeredQuestions ?? 0
                 }/${assessmentProgressData?.totalQuestions ?? 0}`}
               />
-              <Stack direction="row" alignItems="center" spacing={0.5}>
+              <Stack
+                direction="row"
+                spacing={0.5}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <Typography sx={progressStyle}>
                   {`Controls: ${
                     assessmentProgressData?.answeredQuestions ?? 0
@@ -348,7 +376,13 @@ export const ProjectCard = React.memo(function ProjectCard({
                     complianceProgressData?.allDonesubControls ?? 0
                   }/${complianceProgressData?.allsubControls ?? 0}`}
                 />
-                <Stack direction="row" alignItems="center" spacing={0.5}>
+                <Stack
+                  direction="row"
+                  spacing={0.5}
+                  sx={{
+                    alignItems: "center",
+                  }}
+                >
                   <Typography sx={progressStyle}>
                     {`Requirements: ${
                       complianceProgressData?.allDonesubControls ?? 0
@@ -388,7 +422,13 @@ export const ProjectCard = React.memo(function ProjectCard({
                     assessmentProgressData?.answeredQuestions ?? 0
                   }/${assessmentProgressData?.totalQuestions ?? 0}`}
                 />
-                <Stack direction="row" alignItems="center" spacing={0.5}>
+                <Stack
+                  direction="row"
+                  spacing={0.5}
+                  sx={{
+                    alignItems: "center",
+                  }}
+                >
                   <Typography sx={progressStyle}>
                     {`Controls: ${
                       assessmentProgressData?.answeredQuestions ?? 0

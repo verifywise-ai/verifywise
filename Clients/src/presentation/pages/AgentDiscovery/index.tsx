@@ -387,8 +387,20 @@ const AgentDiscovery: React.FC = () => {
       {/* Controls row - show while loading or when agents exist */}
       {(hasAgents || isLoading) && (
         <Stack spacing={2}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Stack direction="row" gap={2} alignItems="center">
+          <Stack
+            direction="row"
+            sx={{
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <Stack
+              direction="row"
+              sx={{
+                gap: 2,
+                alignItems: "center",
+              }}
+            >
               <FilterBy columns={filterColumns} onFilterChange={handleFilterChange} />
               <GroupBy
                 options={[
@@ -412,7 +424,13 @@ const AgentDiscovery: React.FC = () => {
                 fullWidth={false}
               />
             </Stack>
-            <Stack direction="row" gap="8px" alignItems="center">
+            <Stack
+              direction="row"
+              sx={{
+                gap: "8px",
+                alignItems: "center",
+              }}
+            >
               <CustomizableButton
                 sx={syncButton}
                 variant="outlined"

@@ -803,7 +803,13 @@ const RiskManagement = () => {
       loadingToast={isLoading.loading && <CustomizableToast title={isLoading.message} />}
     >
       <Stack className="risk-management-row" sx={riskMainStackStyle}>
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-end">
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "flex-end",
+          }}
+        >
           <Box sx={riskFilterRowStyle}>
             <div data-joyride-id="risk-filters">
               <FilterBy columns={filterColumns} onFilterChange={handleFilterByChange} />
@@ -831,7 +837,13 @@ const RiskManagement = () => {
               fullWidth={false}
             />
           </Box>
-          <Stack direction="row" gap="8px" alignItems="center">
+          <Stack
+            direction="row"
+            sx={{
+              gap: "8px",
+              alignItems: "center",
+            }}
+          >
             <ExportMenu
               data={exportData}
               columns={exportColumns}

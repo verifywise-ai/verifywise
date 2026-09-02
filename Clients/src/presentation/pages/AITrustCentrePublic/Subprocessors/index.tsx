@@ -118,7 +118,11 @@ const Subprocessors = ({
     return <Typography>No subprocessors available.</Typography>;
 
   return (
-    <Box width="100%">
+    <Box
+      sx={{
+        width: "100%",
+      }}
+    >
       <Typography variant="subtitle2" color={brand.primary} sx={{ fontWeight: 600, mb: 2 }}>
         Subprocessors
       </Typography>

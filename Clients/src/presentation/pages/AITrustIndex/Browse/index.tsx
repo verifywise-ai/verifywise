@@ -207,7 +207,15 @@ export default function Browse() {
     >
       {AlertSlot}
       {/* Filters */}
-      <Stack direction="row" alignItems="center" gap="8px" flexWrap="wrap" sx={{ mb: "16px" }}>
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: "center",
+          gap: "8px",
+          flexWrap: "wrap",
+          mb: "16px",
+        }}
+      >
         <SearchBox
           placeholder="Search apps or vendors"
           value={searchInput}
@@ -320,7 +328,13 @@ export default function Browse() {
               />
             ))}
           </Box>
-          <Stack direction="row" alignItems="center" justifyContent="flex-end">
+          <Stack
+            direction="row"
+            sx={{
+              alignItems: "center",
+              justifyContent: "flex-end",
+            }}
+          >
             <TablePagination
               component="div"
               count={total}
@@ -328,9 +342,9 @@ export default function Browse() {
               onPageChange={(_, p) => setPage(p)}
               rowsPerPage={PAGE_SIZE}
               rowsPerPageOptions={[PAGE_SIZE]}
-              ActionsComponent={TablePaginationActions as any}
               labelRowsPerPage="Rows per page"
               sx={{ mt: "24px" }}
+              ActionsComponent={TablePaginationActions as any}
             />
           </Stack>
         </>

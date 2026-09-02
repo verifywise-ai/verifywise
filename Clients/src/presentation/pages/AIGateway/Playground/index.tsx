@@ -74,7 +74,14 @@ export default function PlaygroundPage() {
     >
       <Box sx={{ display: "flex", flexDirection: "column", minHeight: "calc(100vh - 280px)" }}>
         {/* Controls */}
-        <Stack direction="row" gap="8px" mb="8px" alignItems="center">
+        <Stack
+          direction="row"
+          sx={{
+            gap: "8px",
+            mb: "8px",
+            alignItems: "center",
+          }}
+        >
           <Box sx={{ minWidth: 320, maxWidth: 420 }}>
             <Select
               id="endpoint"
@@ -128,7 +135,11 @@ export default function PlaygroundPage() {
           fitContent
           maxWidth="400px"
         >
-          <Stack gap="16px">
+          <Stack
+            sx={{
+              gap: "16px",
+            }}
+          >
             <Box>
               <Typography sx={{ fontSize: 13, fontWeight: 500, mb: 0.5 }}>
                 Temperature: {tempTemperature}
@@ -197,10 +208,22 @@ export default function PlaygroundPage() {
                     style={{ flexShrink: 0, marginTop: 1 }}
                   />
                   <Box>
-                    <Typography fontSize={13} fontWeight={500} color="#B54708">
+                    <Typography
+                      sx={{
+                        fontSize: 13,
+                        fontWeight: 500,
+                        color: "#B54708",
+                      }}
+                    >
                       Setup required
                     </Typography>
-                    <Typography fontSize={12} color="#93370D" mt="2px">
+                    <Typography
+                      sx={{
+                        fontSize: 12,
+                        color: "#93370D",
+                        mt: "2px",
+                      }}
+                    >
                       The playground needs at least one active endpoint.{" "}
                       <Link to="/ai-gateway/settings" style={{ color: "#B54708", fontWeight: 500 }}>
                         Add an API key

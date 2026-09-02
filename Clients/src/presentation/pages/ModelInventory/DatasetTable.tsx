@@ -345,7 +345,12 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
                   }),
                 }}
               >
-                <Stack direction="row" alignItems="center">
+                <Stack
+                  direction="row"
+                  sx={{
+                    alignItems: "center",
+                  }}
+                >
                   {column.label}
                   {column.sortable && getSortIcon(column.id)}
                 </Stack>
@@ -424,7 +429,13 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
                 )}
                 {isVisible("actions") && (
                   <TableCell onClick={(e) => e.stopPropagation()}>
-                    <Stack direction="row" alignItems="center" gap={0.5}>
+                    <Stack
+                      direction="row"
+                      sx={{
+                        alignItems: "center",
+                        gap: 0.5,
+                      }}
+                    >
                       {(hasEditPermission || hasDeletePermission) && onEdit && onDelete && (
                         <CustomIconButton
                           id={dataset.id || 0}
@@ -469,7 +480,6 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
                   page={page}
                   onPageChange={handleChangePage}
                   onRowsPerPageChange={handleChangeRowsPerPage}
-                  ActionsComponent={TablePaginationActions}
                   slotProps={{
                     select: {
                       MenuProps: paginationMenuProps(theme),
@@ -477,6 +487,7 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
                     },
                   }}
                   sx={paginationStyle(theme)}
+                  ActionsComponent={TablePaginationActions}
                 />
               </TableCell>
             </TableRow>

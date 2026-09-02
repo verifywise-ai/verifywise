@@ -407,7 +407,13 @@ const RiskTable: React.FC<IRiskTableProps> = ({
                   }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <Stack direction="row" alignItems="center" gap={0.5}>
+                  <Stack
+                    direction="row"
+                    sx={{
+                      alignItems: "center",
+                      gap: 0.5,
+                    }}
+                  >
                     <ViewRelationshipsButton
                       entityId={(row.risk_id || 0) + 200000}
                       entityType="risk"

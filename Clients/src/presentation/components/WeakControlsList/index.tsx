@@ -142,11 +142,20 @@ export default function WeakControlsList({
                 {/* Top row: control info + score */}
                 <Stack
                   direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  sx={{ mb: "8px", gap: "8px" }}
+                  sx={{
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mb: "8px",
+                    gap: "8px",
+                  }}
                 >
-                  <Stack direction="row" alignItems="center" sx={{ gap: "8px" }}>
+                  <Stack
+                    direction="row"
+                    sx={{
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
                     {/* Priority icon */}
                     <Box
                       sx={{
@@ -180,7 +189,13 @@ export default function WeakControlsList({
                     </Box>
                   </Stack>
 
-                  <Stack direction="row" alignItems="center" sx={{ gap: "8px" }}>
+                  <Stack
+                    direction="row"
+                    sx={{
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
                     <Chip label={priority.label} size="small" uppercase={false} />
                     <Typography
                       sx={{
@@ -214,7 +229,14 @@ export default function WeakControlsList({
                 {recs.length > 0 && (
                   <Stack sx={{ gap: "4px" }}>
                     {recs.slice(0, 3).map((rec, j) => (
-                      <Stack key={j} direction="row" alignItems="flex-start" sx={{ gap: "4px" }}>
+                      <Stack
+                        key={j}
+                        direction="row"
+                        sx={{
+                          alignItems: "flex-start",
+                          gap: "4px",
+                        }}
+                      >
                         <Lightbulb
                           size={14}
                           style={{

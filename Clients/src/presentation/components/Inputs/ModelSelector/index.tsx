@@ -162,7 +162,13 @@ function ModelSelector({
           },
         }}
       >
-        <Stack direction="row" alignItems="center" spacing={1.5}>
+        <Stack
+          direction="row"
+          spacing={1.5}
+          sx={{
+            alignItems: "center",
+          }}
+        >
           {renderProviderIcon(provider, 20)}
           <Typography
             sx={{
@@ -223,13 +229,6 @@ function ModelSelector({
                 onChange={(e) => setSearchQuery(e.target.value)}
                 autoFocus
                 autoComplete="off"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search size={16} color={theme.palette.text.disabled} />
-                    </InputAdornment>
-                  ),
-                }}
                 sx={{
                   "& .MuiOutlinedInput-root": {
                     "fontSize": 13,
@@ -240,6 +239,15 @@ function ModelSelector({
                     "&.Mui-focused fieldset": {
                       borderColor: theme.palette.primary.main,
                     },
+                  },
+                }}
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Search size={16} color={theme.palette.text.disabled} />
+                      </InputAdornment>
+                    ),
                   },
                 }}
               />
@@ -285,9 +293,12 @@ function ModelSelector({
                       >
                         <Stack
                           direction="row"
-                          alignItems="center"
                           spacing={1.5}
-                          sx={{ minWidth: 0, flex: 1 }}
+                          sx={{
+                            alignItems: "center",
+                            minWidth: 0,
+                            flex: 1,
+                          }}
                         >
                           {renderProviderIcon(p.provider, 20)}
                           <Stack spacing={0} sx={{ minWidth: 0 }}>
@@ -609,7 +620,13 @@ function ModelSelector({
                           },
                         }}
                       >
-                        <Stack direction="row" alignItems="center" spacing={1.5}>
+                        <Stack
+                          direction="row"
+                          spacing={1.5}
+                          sx={{
+                            alignItems: "center",
+                          }}
+                        >
                           {isSelected && <Check size={16} color={theme.palette.primary.main} />}
                           {renderProviderIcon(provider, 18)}
                           <Typography

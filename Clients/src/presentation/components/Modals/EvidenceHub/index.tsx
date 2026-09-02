@@ -361,12 +361,14 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
                 {values.evidence_files.map((file) => (
                   <Box
                     key={file.id}
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    p={1.5}
-                    border={`1px solid ${theme.palette.border.dark}`}
-                    borderRadius={1}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      p: 1.5,
+                      border: `1px solid ${theme.palette.border.dark}`,
+                      borderRadius: 1,
+                    }}
                   >
                     <Box>
                       <Typography sx={{ fontSize: 13 }}>

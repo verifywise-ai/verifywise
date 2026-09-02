@@ -233,7 +233,13 @@ const WhereBadge: React.FC = () => (
 const FilterByHeader: React.FC<{
   onClose: () => void;
 }> = ({ onClose }) => (
-  <Stack direction="row" justifyContent="space-between" alignItems="center">
+  <Stack
+    direction="row"
+    sx={{
+      justifyContent: "space-between",
+      alignItems: "center",
+    }}
+  >
     <Typography
       sx={{
         fontSize: "11px",
@@ -322,7 +328,13 @@ const FilterRow: React.FC<{
   };
 
   return (
-    <Stack direction="row" gap="12px" alignItems="center">
+    <Stack
+      direction="row"
+      sx={{
+        gap: "12px",
+        alignItems: "center",
+      }}
+    >
       {/* Left side: WHERE badge or AND/OR toggle */}
       <Box sx={{ flexShrink: 0 }}>
         {isFirst ? <WhereBadge /> : <LogicToggle value={logic} onChange={onLogicChange} />}
@@ -547,7 +559,11 @@ export const FilterBy: React.FC<FilterByProps> = ({
           },
         }}
       >
-        <Stack gap="12px">
+        <Stack
+          sx={{
+            gap: "12px",
+          }}
+        >
           <FilterByHeader onClose={handleClose} />
 
           {/* Filter rows */}

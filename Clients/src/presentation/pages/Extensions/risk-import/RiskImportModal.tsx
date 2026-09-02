@@ -192,10 +192,12 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
       onClose={handleClose}
       maxWidth="md"
       fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: "4px",
-          maxHeight: "90vh",
+      slotProps={{
+        paper: {
+          sx: {
+            borderRadius: "4px",
+            maxHeight: "90vh",
+          },
         },
       }}
     >
@@ -211,7 +213,13 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
             Import Risks from Excel
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              mt: 0.5,
+            }}
+          >
             Download the template, fill it with your risk data, and upload to create risks in bulk
           </Typography>
         </Box>
@@ -267,7 +275,13 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
                   </Table>
                 </TableContainer>
                 {importResult.errors.length > 10 && (
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary",
+                      mt: 1,
+                    }}
+                  >
                     Showing first 10 of {importResult.errors.length} errors
                   </Typography>
                 )}
@@ -281,7 +295,13 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
             <Typography variant="h6" sx={{ mb: 2 }}>
               Step 1: Download Excel Template
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+                mb: 2,
+              }}
+            >
               Download the Excel template with dropdown menus for enum fields and sample data.
             </Typography>
             <Button
@@ -300,7 +320,13 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
             <Typography variant="h6" sx={{ mb: 2 }}>
               Step 2: Upload Filled Excel File
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+                mb: 2,
+              }}
+            >
               Upload your Excel file with risk data.
             </Typography>
 
@@ -362,8 +388,11 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
                 {excelData.length > 5 && (
                   <Typography
                     variant="caption"
-                    color="text.secondary"
-                    sx={{ mt: 1, display: "block" }}
+                    sx={{
+                      color: "text.secondary",
+                      mt: 1,
+                      display: "block",
+                    }}
                   >
                     Showing first 5 of {excelData.length} risks
                   </Typography>

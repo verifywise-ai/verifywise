@@ -328,7 +328,12 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
         drawerClassName="nist-ai-rmf-drawer-dialog"
       >
         <TabPanel value="details" sx={{ padding: 0 }}>
-          <Stack padding="15px 20px" gap="15px">
+          <Stack
+            sx={{
+              padding: "15px 20px",
+              gap: "15px",
+            }}
+          >
             <Stack
               sx={{
                 border: `1px solid ${theme.palette.border.light}`,
@@ -337,13 +342,22 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                 borderRadius: "4px",
               }}
             >
-              <Typography fontSize={13}>
+              <Typography
+                sx={{
+                  fontSize: 13,
+                }}
+              >
                 <strong>Description:</strong> {subcategory?.description}
               </Typography>
             </Stack>
           </Stack>
 
-          <Stack padding="15px 20px" gap="24px">
+          <Stack
+            sx={{
+              padding: "15px 20px",
+              gap: "24px",
+            }}
+          >
             <WorkflowFields
               formData={formData}
               onFieldChange={handleFieldChange}
@@ -357,7 +371,12 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
             />
 
             <Stack>
-              <Typography fontSize={13} sx={{ marginBottom: "5px" }}>
+              <Typography
+                sx={{
+                  fontSize: 13,
+                  marginBottom: "5px",
+                }}
+              >
                 Tags:
               </Typography>
               <ChipInput

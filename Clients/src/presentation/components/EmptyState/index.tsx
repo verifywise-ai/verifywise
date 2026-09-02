@@ -56,16 +56,20 @@ export const EmptyState: FC<EmptyStateProps> = ({
 
   return (
     <Stack
-      alignItems="center"
-      justifyContent={fillContainer ? "center" : undefined}
+      role="status"
+      aria-label={imageAlt}
       sx={{
+        alignItems: "center",
+        justifyContent: fillContainer ? "center" : undefined,
         width: "100%",
         ...(fillContainer && { height: "100%" }),
+
         ...(showBorder && {
           border: `1px dashed ${theme.palette.border.dark}`,
           borderRadius: "4px",
           backgroundColor: theme.palette.background.main,
         }),
+
         ...(fillContainer
           ? { py: children ? 0 : 12 }
           : {
@@ -73,8 +77,6 @@ export const EmptyState: FC<EmptyStateProps> = ({
               pb: children ? 0 : 12,
             }),
       }}
-      role="status"
-      aria-label={imageAlt}
     >
       <EmptyIllustration icon={icon} />
       <Typography

@@ -885,9 +885,11 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
               <Box>
                 <Stack
                   direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  sx={{ marginBottom: 1 }}
+                  sx={{
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 1,
+                  }}
                 >
                   <Typography
                     sx={{ fontSize: 13, fontWeight: 400, color: theme.palette.text.secondary }}
@@ -923,9 +925,11 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
               <Box>
                 <Stack
                   direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  sx={{ marginBottom: 1 }}
+                  sx={{
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: 1,
+                  }}
                 >
                   <Typography
                     sx={{ fontSize: 13, fontWeight: 400, color: theme.palette.text.secondary }}
@@ -973,9 +977,11 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
         <CardContent sx={{ "padding": 3, "&:last-child": { paddingBottom: 3 } }}>
           <Stack
             direction="row"
-            justifyContent="space-between"
-            alignItems="center"
-            sx={{ marginBottom: 2 }}
+            sx={{
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 2,
+            }}
           >
             <Typography
               sx={{
@@ -1365,7 +1371,13 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                 >
                   POLICIES LINKED TO EU AI ACT
                 </Typography>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Stack
+                  direction="row"
+                  sx={{
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
                   <Typography
                     sx={{ fontSize: 14, fontWeight: 400, color: theme.palette.text.primary }}
                   >
@@ -1387,7 +1399,13 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                 >
                   EVIDENCE LINKED TO EU AI ACT REQUIREMENTS
                 </Typography>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                <Stack
+                  direction="row"
+                  sx={{
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
                   <Typography
                     sx={{ fontSize: 14, fontWeight: 400, color: theme.palette.text.primary }}
                   >
@@ -1552,8 +1570,18 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
             </Box>
 
             <Box sx={{ flex: 1 }}>
-              <Stack gap={theme.spacing(2)}>
-                <Stack direction="row" alignItems="center" gap={0.5}>
+              <Stack
+                sx={{
+                  gap: theme.spacing(2),
+                }}
+              >
+                <Stack
+                  direction="row"
+                  sx={{
+                    alignItems: "center",
+                    gap: 0.5,
+                  }}
+                >
                   <Typography
                     component="p"
                     variant="body1"
@@ -1797,8 +1825,10 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                       <Stack
                         direction="row"
                         spacing={1}
-                        alignItems="center"
-                        sx={{ marginTop: 0.5 }}
+                        sx={{
+                          alignItems: "center",
+                          marginTop: 0.5,
+                        }}
                       >
                         <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
                           Status: {policy.status}
@@ -1882,8 +1912,10 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                       <Stack
                         direction="row"
                         spacing={1}
-                        alignItems="center"
-                        sx={{ marginTop: 0.5 }}
+                        sx={{
+                          alignItems: "center",
+                          marginTop: 0.5,
+                        }}
                       >
                         <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
                           Source: {evidence.source}
@@ -1977,8 +2009,10 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                       <Stack
                         direction="row"
                         spacing={1}
-                        alignItems="center"
-                        sx={{ marginTop: 0.5 }}
+                        sx={{
+                          alignItems: "center",
+                          marginTop: 0.5,
+                        }}
                       >
                         <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
                           Type: {incident.type}

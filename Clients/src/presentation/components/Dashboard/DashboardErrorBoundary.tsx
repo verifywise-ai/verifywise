@@ -90,7 +90,13 @@ class DashboardErrorBoundary extends Component<Props, State> {
                 Dashboard Error
               </Typography>
 
-              <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+              <Typography
+                variant="body1"
+                sx={{
+                  color: "text.secondary",
+                  mb: 3,
+                }}
+              >
                 Something went wrong while loading the dashboard. This could be due to a temporary
                 issue with one of the widgets.
               </Typography>

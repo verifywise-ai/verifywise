@@ -51,9 +51,22 @@ const GovernanceOSEnableCTA: React.FC<GovernanceOSEnableCTAProps> = ({ onEnabled
 
   return (
     <Box sx={{ py: "48px", px: { xs: "16px", md: "24px" } }}>
-      <Stack gap="16px" alignItems="center" maxWidth={720} mx="auto">
+      <Stack
+        sx={{
+          gap: "16px",
+          alignItems: "center",
+          maxWidth: 720,
+          mx: "auto",
+        }}
+      >
         {/* Header */}
-        <Stack gap="16px" alignItems="center" textAlign="center">
+        <Stack
+          sx={{
+            gap: "16px",
+            alignItems: "center",
+            textAlign: "center",
+          }}
+        >
           <Box
             sx={{
               width: 64,
@@ -90,7 +103,12 @@ const GovernanceOSEnableCTA: React.FC<GovernanceOSEnableCTAProps> = ({ onEnabled
         </Stack>
 
         {/* Feature cards */}
-        <Stack gap="16px" width="100%">
+        <Stack
+          sx={{
+            gap: "16px",
+            width: "100%",
+          }}
+        >
           {features.map((feature) => (
             <Paper
               key={feature.title}
@@ -102,9 +120,19 @@ const GovernanceOSEnableCTA: React.FC<GovernanceOSEnableCTAProps> = ({ onEnabled
                 background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
               }}
             >
-              <Stack direction="row" gap="16px" alignItems="flex-start">
+              <Stack
+                direction="row"
+                sx={{
+                  gap: "16px",
+                  alignItems: "flex-start",
+                }}
+              >
                 <Box sx={{ mt: "4px", flexShrink: 0 }}>{feature.icon}</Box>
-                <Stack gap="4px">
+                <Stack
+                  sx={{
+                    gap: "4px",
+                  }}
+                >
                   <Typography
                     sx={{
                       fontWeight: 600,
@@ -130,7 +158,13 @@ const GovernanceOSEnableCTA: React.FC<GovernanceOSEnableCTAProps> = ({ onEnabled
         </Stack>
 
         {/* CTA */}
-        <Stack gap="16px" alignItems="center" sx={{ mt: "8px" }}>
+        <Stack
+          sx={{
+            gap: "16px",
+            alignItems: "center",
+            mt: "8px",
+          }}
+        >
           <Tooltip
             title={!isAdmin ? "Contact your admin to enable Governance Intelligence" : ""}
             arrow

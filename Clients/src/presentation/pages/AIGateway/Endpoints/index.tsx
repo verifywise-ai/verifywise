@@ -292,10 +292,22 @@ export default function EndpointsPage() {
                 style={{ flexShrink: 0, marginTop: 1 }}
               />
               <Box>
-                <Typography fontSize={13} fontWeight={500} color="#B54708">
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                    fontWeight: 500,
+                    color: "#B54708",
+                  }}
+                >
                   No API keys configured
                 </Typography>
-                <Typography fontSize={12} color="#93370D" mt="2px">
+                <Typography
+                  sx={{
+                    fontSize: 12,
+                    color: "#93370D",
+                    mt: "2px",
+                  }}
+                >
                   You need at least one LLM provider API key before you can create an endpoint.{" "}
                   <Link to="/ai-gateway/settings" style={{ color: "#B54708", fontWeight: 500 }}>
                     Go to Settings
@@ -337,28 +349,44 @@ export default function EndpointsPage() {
         </EmptyState>
       ) : (
         <Box sx={cardSx}>
-          <Stack gap="8px">
+          <Stack
+            sx={{
+              gap: "8px",
+            }}
+          >
             {endpoints.map((ep) => {
               const boundPrompt = promptName(ep.prompt_id);
               return (
                 <Stack
                   key={ep.id}
                   direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
+                  onClick={() => openEditModal(ep)}
                   sx={{
+                    "justifyContent": "space-between",
+                    "alignItems": "center",
                     "p": "12px 16px",
                     "border": `1px solid ${palette.border.dark}`,
                     "borderRadius": "4px",
                     "cursor": "pointer",
                     "&:hover": { bgcolor: "action.hover" },
                   }}
-                  onClick={() => openEditModal(ep)}
                 >
-                  <Stack direction="row" alignItems="center" gap="10px">
+                  <Stack
+                    direction="row"
+                    sx={{
+                      alignItems: "center",
+                      gap: "10px",
+                    }}
+                  >
                     <ProviderIcon provider={ep.provider} size={20} />
                     <Box>
-                      <Stack direction="row" alignItems="center" gap="8px">
+                      <Stack
+                        direction="row"
+                        sx={{
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
                         <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                           {ep.display_name}
                         </Typography>
@@ -395,9 +423,11 @@ export default function EndpointsPage() {
                   </Stack>
                   <Stack
                     direction="row"
-                    alignItems="center"
-                    gap="8px"
                     onClick={(e) => e.stopPropagation()}
+                    sx={{
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
                   >
                     <Toggle
                       checked={ep.is_active}
@@ -437,7 +467,11 @@ export default function EndpointsPage() {
         isSubmitting={isSubmitting}
         maxWidth="480px"
       >
-        <Stack gap="16px">
+        <Stack
+          sx={{
+            gap: "16px",
+          }}
+        >
           <Field
             label="Endpoint name"
             placeholder="e.g., Production GPT-4o"
@@ -452,8 +486,17 @@ export default function EndpointsPage() {
             </Typography>
           )}
 
-          <Stack direction="row" gap="8px">
-            <Box flex={1}>
+          <Stack
+            direction="row"
+            sx={{
+              gap: "8px",
+            }}
+          >
+            <Box
+              sx={{
+                flex: 1,
+              }}
+            >
               <Select
                 id="provider"
                 label="Provider"
@@ -465,7 +508,11 @@ export default function EndpointsPage() {
                 isRequired
               />
             </Box>
-            <Box flex={2}>
+            <Box
+              sx={{
+                flex: 2,
+              }}
+            >
               <Select
                 id="model"
                 label="Model"
@@ -492,9 +539,9 @@ export default function EndpointsPage() {
           ) : (
             <Stack
               direction="row"
-              alignItems="flex-start"
-              gap="6px"
               sx={{
+                alignItems: "flex-start",
+                gap: "6px",
                 p: "8px 12px",
                 bgcolor: palette.background.accent,
                 borderRadius: "4px",
@@ -507,7 +554,12 @@ export default function EndpointsPage() {
             </Stack>
           )}
 
-          <Stack direction="row" gap="12px">
+          <Stack
+            direction="row"
+            sx={{
+              gap: "12px",
+            }}
+          >
             <Box sx={{ flex: 1 }}>
               <Field
                 label="Max tokens"
@@ -537,7 +589,12 @@ export default function EndpointsPage() {
           />
 
           {prompts.length > 0 && (
-            <Stack direction="row" gap="12px">
+            <Stack
+              direction="row"
+              sx={{
+                gap: "12px",
+              }}
+            >
               <Box sx={{ flex: 1 }}>
                 <Select
                   id="prompt_id"
@@ -567,7 +624,12 @@ export default function EndpointsPage() {
             </Stack>
           )}
 
-          <Stack direction="row" gap="12px">
+          <Stack
+            direction="row"
+            sx={{
+              gap: "12px",
+            }}
+          >
             <Box sx={{ flex: 1 }}>
               <Field
                 label="Rate limit (RPM)"
@@ -600,7 +662,13 @@ export default function EndpointsPage() {
           )}
 
           {/* Caching */}
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Stack
+            direction="row"
+            sx={{
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <Typography sx={{ fontSize: 13 }}>Enable response caching</Typography>
             <Toggle
               checked={form.cache_enabled}

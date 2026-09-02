@@ -27,15 +27,22 @@ function ChipInput({
   const theme = useTheme();
 
   return (
-    <Stack gap={theme.spacing(2)} sx={sx}>
+    <Stack
+      sx={[
+        {
+          gap: theme.spacing(2),
+        },
+        ...(Array.isArray(sx) ? sx : [sx]),
+      ]}
+    >
       {label && (
         <Typography
           component="p"
           variant="body1"
           color={theme.palette.text.secondary}
-          fontWeight={500}
-          fontSize={"13px"}
           sx={{
+            fontWeight: 500,
+            fontSize: "13px",
             margin: 0,
             height: "22px",
             display: "flex",
@@ -44,7 +51,13 @@ function ChipInput({
         >
           {label}
           {isRequired && (
-            <Typography component="span" ml={theme.spacing(1)} color={theme.palette.error.text}>
+            <Typography
+              component="span"
+              color={theme.palette.error.text}
+              sx={{
+                ml: theme.spacing(1),
+              }}
+            >
               *
             </Typography>
           )}

@@ -596,7 +596,14 @@ export default function PromptEditorPage() {
     <PageHeaderExtended
       title={
         (
-          <Stack direction="row" alignItems="center" gap="8px" flexWrap="wrap">
+          <Stack
+            direction="row"
+            sx={{
+              alignItems: "center",
+              gap: "8px",
+              flexWrap: "wrap",
+            }}
+          >
             {prompt.name}
             {currentVersion && <Chip label={`v${currentVersion}`} variant="info" />}
             <Chip label={currentStatus === "published" ? "Published" : "Draft"} />
@@ -616,7 +623,13 @@ export default function PromptEditorPage() {
       tipBoxEntity="ai-gateway-prompts"
       helpArticlePath="ai-gateway/prompts"
       actionButton={
-        <Stack direction="row" alignItems="center" gap="8px">
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
           <CustomizableButton
             text="Save draft"
             onClick={handleSave}
@@ -661,10 +674,23 @@ export default function PromptEditorPage() {
           }}
         >
           {/* Section header */}
-          <Typography fontSize={13} fontWeight={500} color="text.secondary" mb="4px">
+          <Typography
+            sx={{
+              fontSize: 13,
+              fontWeight: 500,
+              color: "text.secondary",
+              mb: "4px",
+            }}
+          >
             Messages
           </Typography>
-          <Typography fontSize={13} color="text.tertiary" mb="16px">
+          <Typography
+            sx={{
+              fontSize: 13,
+              color: "text.tertiary",
+              mb: "16px",
+            }}
+          >
             Define the message sequence sent to the model. Drag to reorder, use {"{{variables}}"}{" "}
             for dynamic values, and @prompt:slug to compose prompts.
           </Typography>
@@ -734,7 +760,12 @@ export default function PromptEditorPage() {
             }}
           >
             <Plus size={14} strokeWidth={1.5} />
-            <Typography fontSize={13} fontWeight={500}>
+            <Typography
+              sx={{
+                fontSize: 13,
+                fontWeight: 500,
+              }}
+            >
               Add message
             </Typography>
           </Box>
@@ -743,14 +774,26 @@ export default function PromptEditorPage() {
           {detectedVars.length > 0 && (
             <Box sx={{ mt: "16px" }}>
               <Box sx={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                <Typography fontSize={12} color="text.secondary" fontWeight={500}>
+                <Typography
+                  sx={{
+                    fontSize: 12,
+                    color: "text.secondary",
+                    fontWeight: 500,
+                  }}
+                >
                   Variables:
                 </Typography>
                 {detectedVars.map((v) => (
                   <Chip key={v} label={`{{${v}}}`} variant="info" />
                 ))}
               </Box>
-              <Typography fontSize={11} color="text.disabled" mt="4px">
+              <Typography
+                sx={{
+                  fontSize: 11,
+                  color: "text.disabled",
+                  mt: "4px",
+                }}
+              >
                 Variables are replaced with values at request time. Set values in the test panel on
                 the right.
               </Typography>
@@ -768,7 +811,13 @@ export default function PromptEditorPage() {
                 flexWrap: "wrap",
               }}
             >
-              <Typography fontSize={12} color="text.secondary" fontWeight={500}>
+              <Typography
+                sx={{
+                  fontSize: 12,
+                  color: "text.secondary",
+                  fontWeight: 500,
+                }}
+              >
                 Includes:
               </Typography>
               {detectedRefs.map((ref) => (
@@ -791,7 +840,13 @@ export default function PromptEditorPage() {
                   }}
                 >
                   <Link2 size={11} strokeWidth={1.5} color="#0284C7" />
-                  <Typography fontSize={11} color="#0284C7" fontWeight={500}>
+                  <Typography
+                    sx={{
+                      fontSize: 11,
+                      color: "#0284C7",
+                      fontWeight: 500,
+                    }}
+                  >
                     @{ref}
                   </Typography>
                 </Box>
@@ -851,17 +906,25 @@ export default function PromptEditorPage() {
                   sx={{ width: "100%" }}
                 />
                 <Typography
-                  fontSize={11}
-                  color="text.disabled"
-                  mt="4px"
-                  mb={detectedVars.length > 0 ? "16px" : 0}
+                  sx={{
+                    fontSize: 11,
+                    color: "text.disabled",
+                    mt: "4px",
+                    mb: detectedVars.length > 0 ? "16px" : 0,
+                  }}
                 >
                   Pick an endpoint to route test requests through. The model and API key come from
                   the endpoint configuration.
                 </Typography>
                 {detectedVars.length > 0 && (
                   <Stack spacing="8px">
-                    <Typography fontSize={12} fontWeight={600} color="text.secondary">
+                    <Typography
+                      sx={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: "text.secondary",
+                      }}
+                    >
                       Variables
                     </Typography>
                     {detectedVars.map((v) => (
@@ -888,10 +951,12 @@ export default function PromptEditorPage() {
                     showBorder={false}
                   >
                     <Typography
-                      fontSize={12}
-                      color="text.disabled"
-                      textAlign="center"
-                      sx={{ maxWidth: 320 }}
+                      sx={{
+                        fontSize: 12,
+                        color: "text.disabled",
+                        textAlign: "center",
+                        maxWidth: 320,
+                      }}
                     >
                       Your message blocks above will be prepended as context. Type a user message
                       below and the model will respond using your prompt template.
@@ -941,17 +1006,32 @@ export default function PromptEditorPage() {
                   }}
                 >
                   {lastMetrics.latency != null && (
-                    <Typography fontSize={11} color="text.secondary">
+                    <Typography
+                      sx={{
+                        fontSize: 11,
+                        color: "text.secondary",
+                      }}
+                    >
                       {lastMetrics.latency}ms
                     </Typography>
                   )}
                   {(lastMetrics.tokens ?? 0) > 0 && (
-                    <Typography fontSize={11} color="text.secondary">
+                    <Typography
+                      sx={{
+                        fontSize: 11,
+                        color: "text.secondary",
+                      }}
+                    >
                       {lastMetrics.tokens} tokens
                     </Typography>
                   )}
                   {(lastMetrics.cost ?? 0) > 0 && (
-                    <Typography fontSize={11} color="text.secondary">
+                    <Typography
+                      sx={{
+                        fontSize: 11,
+                        color: "text.secondary",
+                      }}
+                    >
                       ${lastMetrics.cost!.toFixed(4)}
                     </Typography>
                   )}
@@ -1051,10 +1131,22 @@ export default function PromptEditorPage() {
       >
         <Stack spacing="16px">
           <Box>
-            <Typography fontSize={13} fontWeight={500} mb="4px">
+            <Typography
+              sx={{
+                fontSize: 13,
+                fontWeight: 500,
+                mb: "4px",
+              }}
+            >
               Temperature: {tempConfig.temperature ?? 1.0}
             </Typography>
-            <Typography fontSize={12} color="text.secondary" mb="8px">
+            <Typography
+              sx={{
+                fontSize: 12,
+                color: "text.secondary",
+                mb: "8px",
+              }}
+            >
               Controls randomness. Lower values (0.0) make responses more focused and deterministic.
               Higher values (2.0) make output more random and creative.
             </Typography>
@@ -1081,7 +1173,13 @@ export default function PromptEditorPage() {
               placeholder="e.g. 4096"
               type="number"
             />
-            <Typography fontSize={12} color="text.secondary" mt="4px">
+            <Typography
+              sx={{
+                fontSize: 12,
+                color: "text.secondary",
+                mt: "4px",
+              }}
+            >
               Maximum number of tokens to generate in the response. Higher values allow longer
               outputs but increase cost and latency.
             </Typography>
@@ -1099,7 +1197,13 @@ export default function PromptEditorPage() {
               placeholder="0.0 - 1.0"
               type="number"
             />
-            <Typography fontSize={12} color="text.secondary" mt="4px">
+            <Typography
+              sx={{
+                fontSize: 12,
+                color: "text.secondary",
+                mt: "4px",
+              }}
+            >
               Nucleus sampling. The model considers tokens with top_p cumulative probability. Lower
               values (e.g. 0.1) make output more focused. Use either temperature or top P, not both.
             </Typography>
@@ -1169,7 +1273,9 @@ export default function PromptEditorPage() {
         anchor="right"
         open={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
-        PaperProps={{ sx: { width: 380 } }}
+        slotProps={{
+          paper: { sx: { width: 380 } },
+        }}
       >
         <Box sx={{ padding: "16px", height: "100%", display: "flex", flexDirection: "column" }}>
           {/* Header */}
@@ -1181,14 +1287,25 @@ export default function PromptEditorPage() {
               mb: "8px",
             }}
           >
-            <Typography fontSize={15} fontWeight={600}>
+            <Typography
+              sx={{
+                fontSize: 15,
+                fontWeight: 600,
+              }}
+            >
               Version history
             </Typography>
             <IconButton size="small" onClick={() => setIsHistoryOpen(false)}>
               <X size={16} strokeWidth={1.5} />
             </IconButton>
           </Box>
-          <Typography fontSize={12} color="text.secondary" mb="16px">
+          <Typography
+            sx={{
+              fontSize: 12,
+              color: "text.secondary",
+              mb: "16px",
+            }}
+          >
             Each save creates a new version. Publish a version to make it active on bound endpoints.
             Click any version to load it into the editor.
           </Typography>
@@ -1255,15 +1372,23 @@ export default function PromptEditorPage() {
                       />
                     )}
                   </Box>
-                  <Typography fontSize={12} color="text.secondary">
+                  <Typography
+                    sx={{
+                      fontSize: 12,
+                      color: "text.secondary",
+                    }}
+                  >
                     {v.created_by_name || "Unknown"} &middot; {displayFormattedDate(v.created_at)}
                   </Typography>
                   {/* Feature 6: Commit message */}
                   {v.commit_message && (
                     <Typography
-                      fontSize={11}
-                      color="text.secondary"
-                      sx={{ fontStyle: "italic", mt: "2px" }}
+                      sx={{
+                        fontSize: 11,
+                        color: "text.secondary",
+                        fontStyle: "italic",
+                        mt: "2px",
+                      }}
                     >
                       {v.commit_message}
                     </Typography>
@@ -1271,7 +1396,12 @@ export default function PromptEditorPage() {
                   {v.model && (
                     <Box sx={{ display: "flex", alignItems: "center", gap: "4px", mt: "4px" }}>
                       <ProviderIcon provider={v.model.split("/")[0] || ""} size={12} />
-                      <Typography fontSize={11} color="text.secondary">
+                      <Typography
+                        sx={{
+                          fontSize: 11,
+                          color: "text.secondary",
+                        }}
+                      >
                         {v.model}
                       </Typography>
                     </Box>

@@ -24,7 +24,13 @@ export default function LifecycleProgressBar({
 
   return (
     <Stack sx={{ gap: "12px" }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
         <Typography sx={{ fontWeight: 600, fontSize: "14px", color: "#344054" }}>
           Lifecycle Progress
         </Typography>

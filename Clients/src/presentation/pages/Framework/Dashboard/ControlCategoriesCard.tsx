@@ -482,7 +482,12 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
           border: "1px solid #d0d5dd",
         }}
       >
-        <Typography variant="body1" color="text.secondary">
+        <Typography
+          variant="body1"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           No ISO framework clauses data available.
         </Typography>
       </Box>

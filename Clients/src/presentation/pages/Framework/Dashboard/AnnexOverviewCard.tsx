@@ -468,7 +468,12 @@ const AnnexOverviewCard = ({ frameworksData, onNavigate }: AnnexOverviewCardProp
           border: "1px solid #d0d5dd",
         }}
       >
-        <Typography variant="body1" color="text.secondary">
+        <Typography
+          variant="body1"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           No ISO framework annexes data available.
         </Typography>
       </Box>

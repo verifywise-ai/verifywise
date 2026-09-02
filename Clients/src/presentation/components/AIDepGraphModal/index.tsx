@@ -79,9 +79,9 @@ const AIDepGraphModal: React.FC<AIDepGraphModalProps> = ({
         {/* Header */}
         <Stack
           direction="row"
-          alignItems="center"
-          justifyContent="space-between"
           sx={{
+            alignItems: "center",
+            justifyContent: "space-between",
             px: 3,
             py: 2,
             borderBottom: 1,
@@ -90,7 +90,13 @@ const AIDepGraphModal: React.FC<AIDepGraphModalProps> = ({
             flexShrink: 0,
           }}
         >
-          <Stack direction="row" alignItems="center" gap={1.5}>
+          <Stack
+            direction="row"
+            sx={{
+              alignItems: "center",
+              gap: 1.5,
+            }}
+          >
             <Network size={20} color={theme.palette.primary.main} />
             <Typography
               variant="h6"
@@ -123,7 +129,13 @@ const AIDepGraphModal: React.FC<AIDepGraphModalProps> = ({
             )}
           </Stack>
 
-          <Stack direction="row" alignItems="center" gap={1}>
+          <Stack
+            direction="row"
+            sx={{
+              alignItems: "center",
+              gap: 1,
+            }}
+          >
             <IconButton
               onClick={onClose}
               size="small"

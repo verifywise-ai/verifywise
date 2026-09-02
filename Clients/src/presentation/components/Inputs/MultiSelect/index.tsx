@@ -121,9 +121,11 @@ function MultiSelect({
           ...sxWithoutLayoutProps,
         }}
         MenuProps={{
-          PaperProps: {
-            style: {
-              maxHeight: 300,
+          slotProps: {
+            paper: {
+              style: {
+                maxHeight: 300,
+              },
             },
           },
         }}

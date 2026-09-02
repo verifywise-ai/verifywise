@@ -232,7 +232,13 @@ const GroupBy: React.FC<GroupByProps> = ({ options, onGroupChange }) => {
         }}
       >
         <Stack spacing={2}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Stack
+            direction="row"
+            sx={{
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <Typography
               sx={{
                 fontSize: "12px",
@@ -255,7 +261,13 @@ const GroupBy: React.FC<GroupByProps> = ({ options, onGroupChange }) => {
             </Box>
           </Stack>
 
-          <Stack direction="row" spacing={2} alignItems="center">
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             <FormControl size="small" sx={{ minWidth: 150 }}>
               <Select
                 value={selectedGroup}

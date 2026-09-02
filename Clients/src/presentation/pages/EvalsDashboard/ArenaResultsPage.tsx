@@ -300,7 +300,14 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
         <Typography sx={{ fontSize: 17, fontWeight: 700, color: palette.text.primary }}>
           {results.name}
         </Typography>
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: "center",
+            mb: 2,
+          }}
+        >
           <CustomizableButton
             variant="outlined"
             onClick={() => {
@@ -392,9 +399,21 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
           mb: 2,
         }}
       >
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
           {/* Winner Section */}
-          <Stack direction="row" alignItems="center" spacing={2}>
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             <Box>
               <Typography
                 sx={{
@@ -427,7 +446,13 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
           </Stack>
 
           {/* Battle Info Section */}
-          <Stack direction="row" spacing={3} alignItems="flex-start">
+          <Stack
+            direction="row"
+            spacing={3}
+            sx={{
+              alignItems: "flex-start",
+            }}
+          >
             <Box sx={{ textAlign: "center" }}>
               <Typography
                 sx={{
@@ -604,7 +629,13 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                   return (
                     <TableRow key={name} sx={{ backgroundColor: "transparent" }}>
                       <TableCell sx={{ py: 1, pl: 2, pr: 1 }}>
-                        <Stack direction="row" alignItems="center" spacing={1}>
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          sx={{
+                            alignItems: "center",
+                          }}
+                        >
                           <Box
                             sx={{
                               width: 24,
@@ -623,7 +654,13 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                               <Bot size={14} color={palette.text.tertiary} />
                             )}
                           </Box>
-                          <Stack direction="row" alignItems="center" spacing={1}>
+                          <Stack
+                            direction="row"
+                            spacing={1}
+                            sx={{
+                              alignItems: "center",
+                            }}
+                          >
                             <Typography
                               sx={{ fontSize: 13, fontWeight: 600, color: palette.text.primary }}
                             >
@@ -770,9 +807,11 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                         <Box key={name}>
                           <Stack
                             direction="row"
-                            justifyContent="space-between"
-                            alignItems="center"
-                            sx={{ mb: 0.25 }}
+                            sx={{
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              mb: 0.25,
+                            }}
                           >
                             <Typography
                               sx={{ fontSize: 11, fontWeight: 500, color: palette.text.tertiary }}
@@ -851,15 +890,23 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
               >
                 <Stack
                   direction="row"
-                  alignItems="center"
-                  justifyContent="space-between"
-                  sx={{ mb: 1 }}
+                  sx={{
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    mb: 1,
+                  }}
                 >
                   <Typography sx={{ fontSize: 12, fontWeight: 600, color: palette.text.primary }}>
                     Round {idx + 1}
                   </Typography>
                   {round.winner ? (
-                    <Stack direction="row" alignItems="center" spacing={0.5}>
+                    <Stack
+                      direction="row"
+                      spacing={0.5}
+                      sx={{
+                        alignItems: "center",
+                      }}
+                    >
                       <Trophy size={12} color={palette.status.warning.text} />
                       <Typography
                         sx={{
@@ -1043,11 +1090,19 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                       >
                         <Stack
                           direction="row"
-                          alignItems="center"
-                          justifyContent="space-between"
-                          sx={{ mb: "8px" }}
+                          sx={{
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            mb: "8px",
+                          }}
                         >
-                          <Stack direction="row" alignItems="center" spacing={1}>
+                          <Stack
+                            direction="row"
+                            spacing={1}
+                            sx={{
+                              alignItems: "center",
+                            }}
+                          >
                             <Box
                               sx={{
                                 width: 22,
@@ -1108,7 +1163,13 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                         {/* Scores per criterion */}
                         {c.scores && Object.keys(c.scores).length > 0 && (
                           <Box sx={{ mb: "8px" }}>
-                            <Stack direction="row" flexWrap="wrap" gap="8px">
+                            <Stack
+                              direction="row"
+                              sx={{
+                                flexWrap: "wrap",
+                                gap: "8px",
+                              }}
+                            >
                               {Object.entries(c.scores).map(([criterion, score]) => (
                                 <Box
                                   key={criterion}

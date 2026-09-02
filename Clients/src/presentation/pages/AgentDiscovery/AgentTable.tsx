@@ -319,7 +319,14 @@ const AgentTable: React.FC<AgentTableProps> = ({
           )}
           {isColVisible("permissions") && (
             <TableCell sx={cellStyle}>
-              <Stack direction="row" spacing={0.5} flexWrap="wrap" gap={0.5}>
+              <Stack
+                direction="row"
+                spacing={0.5}
+                sx={{
+                  flexWrap: "wrap",
+                  gap: 0.5,
+                }}
+              >
                 {(agent.permission_categories || []).slice(0, 3).map((cat) => (
                   <MuiChip key={cat} label={cat} size="small" sx={permissionChip} />
                 ))}
@@ -384,7 +391,6 @@ const AgentTable: React.FC<AgentTableProps> = ({
               rowsPerPage={rowsPerPage}
               rowsPerPageOptions={[5, 10, 15, 25]}
               onRowsPerPageChange={handleChangeRowsPerPage}
-              ActionsComponent={(props) => <TablePaginationActions {...props} />}
               labelRowsPerPage="Rows per page"
               labelDisplayedRows={({ page, count }) =>
                 `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
@@ -400,6 +406,7 @@ const AgentTable: React.FC<AgentTableProps> = ({
                 },
               }}
               sx={agentPagination(theme)}
+              ActionsComponent={(props) => <TablePaginationActions {...props} />}
             />
           </TableRow>
         </TableFooter>

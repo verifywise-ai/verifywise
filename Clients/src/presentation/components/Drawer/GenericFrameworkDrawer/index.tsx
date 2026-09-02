@@ -349,14 +349,23 @@ const GenericFrameworkDrawer: React.FC<GenericFrameworkDrawerProps> = ({
         drawerClassName={drawerClassName}
       >
         <TabPanel value="details" sx={{ padding: "15px 20px", gap: "15px" }}>
-          <Stack gap="15px">
+          <Stack
+            sx={{
+              gap: "15px",
+            }}
+          >
             <StructInfoPanels
               summary={summary}
               questions={questions}
               evidenceExamples={evidenceExamples}
             />
           </Stack>
-          <Stack gap="24px" sx={{ mt: "15px" }}>
+          <Stack
+            sx={{
+              gap: "24px",
+              mt: "15px",
+            }}
+          >
             <WorkflowFields
               formData={formData}
               onFieldChange={handleFieldChange}

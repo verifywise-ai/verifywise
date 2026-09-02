@@ -388,7 +388,11 @@ const ExperimentTableBody: React.FC<IExperimentTableBodyProps> = ({
         <ConfirmationModal
           title="Delete this experiment?"
           body={
-            <Typography fontSize={13}>
+            <Typography
+              sx={{
+                fontSize: 13,
+              }}
+            >
               Are you sure you want to delete experiment "{rowToDelete.name || rowToDelete.id}"?
               This action cannot be undone.
             </Typography>

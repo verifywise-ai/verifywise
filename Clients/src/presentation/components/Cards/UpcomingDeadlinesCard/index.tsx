@@ -64,7 +64,15 @@ export function UpcomingDeadlinesCard({ tasks }: UpcomingDeadlinesCardProps) {
               },
             }}
           >
-            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flex: 1, minWidth: 0 }}>
+            <Stack
+              direction="row"
+              spacing={1.5}
+              sx={{
+                alignItems: "center",
+                flex: 1,
+                minWidth: 0,
+              }}
+            >
               {/* Icon based on urgency */}
               {daysUntilDue < 0 ? (
                 <AlertTriangle size={14} color={DASHBOARD_COLORS.overdue} />
@@ -91,7 +99,13 @@ export function UpcomingDeadlinesCard({ tasks }: UpcomingDeadlinesCardProps) {
             </Stack>
 
             {/* Right side: Priority + Countdown */}
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               {/* Priority chip */}
               <VWTooltip content={`${task.priority} priority`} placement="top">
                 <span>

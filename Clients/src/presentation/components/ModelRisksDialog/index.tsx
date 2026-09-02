@@ -321,7 +321,6 @@ const ModelRisksDialog: React.FC<ModelRisksDialogProps> = ({
                         rowsPerPage={rowsPerPage}
                         rowsPerPageOptions={[5, 10, 15, 20, 25]}
                         onRowsPerPageChange={handleChangeRowsPerPage}
-                        ActionsComponent={(props) => <TablePaginationActions {...props} />}
                         labelRowsPerPage="Risks per page"
                         labelDisplayedRows={({ page, count }) =>
                           `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
@@ -331,18 +330,24 @@ const ModelRisksDialog: React.FC<ModelRisksDialogProps> = ({
                           select: {
                             MenuProps: {
                               keepMounted: true,
-                              PaperProps: {
-                                className: "pagination-dropdown",
-                                sx: paginationDropdown(theme),
+
+                              slotProps: {
+                                paper: {
+                                  className: "pagination-dropdown",
+                                  sx: paginationDropdown(theme),
+                                },
                               },
+
                               transformOrigin: {
                                 vertical: "bottom",
                                 horizontal: "left",
                               },
+
                               anchorOrigin: {
                                 vertical: "top",
                                 horizontal: "left",
                               },
+
                               sx: { mt: theme.spacing(-2) },
                             },
                             inputProps: { id: "pagination-dropdown" },
@@ -350,6 +355,7 @@ const ModelRisksDialog: React.FC<ModelRisksDialogProps> = ({
                             sx: paginationSelect(theme),
                           },
                         }}
+                        ActionsComponent={(props) => <TablePaginationActions {...props} />}
                       />
                     </TableRow>
                   </TableFooter>

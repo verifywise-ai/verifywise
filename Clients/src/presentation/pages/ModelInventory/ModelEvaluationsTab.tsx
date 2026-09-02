@@ -172,7 +172,13 @@ export default function ModelEvaluationsTab() {
                   />
                 </td>
                 <td>
-                  <Stack direction="row" alignItems="center" spacing={0.5}>
+                  <Stack
+                    direction="row"
+                    spacing={0.5}
+                    sx={{
+                      alignItems: "center",
+                    }}
+                  >
                     <Typography sx={{ fontSize: "13px" }}>{getKeyResult(e)}</Typography>
                     {hasFailedMetrics(e) && (
                       <AlertTriangle size={14} color="#f44336" strokeWidth={1.5} />

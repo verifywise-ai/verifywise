@@ -366,7 +366,14 @@ function ScoreDistributionView({ table }: { table: ScoreDistributionTable }) {
         <Stack spacing={2}>
           {table.groups.map((g, idx) => (
             <Box key={idx}>
-              <Stack direction="row" justifyContent="space-between" alignItems="baseline" mb={0.5}>
+              <Stack
+                direction="row"
+                sx={{
+                  justifyContent: "space-between",
+                  alignItems: "baseline",
+                  mb: 0.5,
+                }}
+              >
                 <Typography
                   sx={{ fontSize: 13, fontWeight: 500, color: theme.palette.text.primary }}
                 >
@@ -543,7 +550,14 @@ export default function BiasAuditDetail({ auditId, onBack }: BiasAuditDetailProp
   return (
     <Box sx={{ p: 3 }}>
       {/* Header */}
-      <Stack direction="row" alignItems="center" spacing={2} mb={3}>
+      <Stack
+        direction="row"
+        spacing={2}
+        sx={{
+          alignItems: "center",
+          mb: 3,
+        }}
+      >
         <Box
           onClick={onBack}
           sx={{
@@ -557,8 +571,19 @@ export default function BiasAuditDetail({ auditId, onBack }: BiasAuditDetailProp
         >
           <ArrowLeft size={18} color={theme.palette.text.secondary} strokeWidth={1.5} />
         </Box>
-        <Stack spacing={0.5} flex={1}>
-          <Stack direction="row" alignItems="center" sx={{ gap: "8px" }}>
+        <Stack
+          spacing={0.5}
+          sx={{
+            flex: 1,
+          }}
+        >
+          <Stack
+            direction="row"
+            sx={{
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
             <EditableText
               value={
                 (audit?.config?.systemName as string | undefined) ||
@@ -651,7 +676,13 @@ export default function BiasAuditDetail({ auditId, onBack }: BiasAuditDetailProp
             backgroundColor: palette.status.error.bg,
           }}
         >
-          <Stack direction="row" spacing={1.5} alignItems="flex-start">
+          <Stack
+            direction="row"
+            spacing={1.5}
+            sx={{
+              alignItems: "flex-start",
+            }}
+          >
             <XCircle size={18} color={palette.status.error.text} strokeWidth={1.5} />
             <Stack spacing={0.5}>
               <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.status.error.text }}>

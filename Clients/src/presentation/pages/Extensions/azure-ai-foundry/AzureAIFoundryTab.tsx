@@ -290,15 +290,19 @@ export default function AzureAIFoundryTab() {
         anchor="right"
         open={!!selectedModel}
         onClose={() => setSelectedModel(null)}
-        PaperProps={{ sx: { width: 480, backgroundColor: "#FCFCFD" } }}
+        slotProps={{
+          paper: { sx: { width: 480, backgroundColor: "#FCFCFD" } },
+        }}
       >
         {selectedModel && (
           <>
             <Stack
               direction="row"
-              justifyContent="space-between"
-              alignItems="center"
-              sx={{ p: "16px 24px" }}
+              sx={{
+                justifyContent: "space-between",
+                alignItems: "center",
+                p: "16px 24px",
+              }}
             >
               <Typography sx={{ fontSize: 16, fontWeight: 600 }}>
                 {selectedModel.deployment_name}
@@ -331,7 +335,13 @@ export default function AzureAIFoundryTab() {
                 >
                   Capabilities
                 </Typography>
-                <Stack direction="row" flexWrap="wrap" gap="4px">
+                <Stack
+                  direction="row"
+                  sx={{
+                    flexWrap: "wrap",
+                    gap: "4px",
+                  }}
+                >
                   {Object.entries(selectedModel.capabilities || {}).length > 0 ? (
                     Object.entries(selectedModel.capabilities).map(([key, value]) => (
                       <Chip

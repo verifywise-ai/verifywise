@@ -136,7 +136,13 @@ export default function AIApprovalRules() {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" py={8}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          py: 8,
+        }}
+      >
         <CircularProgress />
       </Box>
     );
@@ -144,10 +150,27 @@ export default function AIApprovalRules() {
 
   return (
     <Stack spacing={3} sx={{ py: 2 }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Stack direction="row" alignItems="center" spacing={1.5}>
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <Stack
+          direction="row"
+          spacing={1.5}
+          sx={{
+            alignItems: "center",
+          }}
+        >
           <Shield size={22} color={theme.palette.primary.main} />
-          <Typography variant="h6" fontWeight={600}>
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: 600,
+            }}
+          >
             AI Approval Rules
           </Typography>
         </Stack>
@@ -197,17 +220,46 @@ export default function AIApprovalRules() {
               transition: "all 0.2s",
             }}
           >
-            <Stack direction="row" alignItems="center" justifyContent="space-between">
-              <Stack direction="row" alignItems="center" spacing={1.5} flex={1}>
+            <Stack
+              direction="row"
+              sx={{
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <Stack
+                direction="row"
+                spacing={1.5}
+                sx={{
+                  alignItems: "center",
+                  flex: 1,
+                }}
+              >
                 <Chip
                   label={EVENT_TYPE_LABELS[rule.event_type] || rule.event_type}
                   color={EVENT_TYPE_COLORS[rule.event_type] || "default"}
                   size="small"
                   sx={{ fontWeight: 600, minWidth: 130 }}
                 />
-                <Stack spacing={0.25} flex={1}>
-                  <Stack direction="row" alignItems="center" spacing={1}>
-                    <Typography variant="subtitle2" fontWeight={600}>
+                <Stack
+                  spacing={0.25}
+                  sx={{
+                    flex: 1,
+                  }}
+                >
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{
+                      alignItems: "center",
+                    }}
+                  >
+                    <Typography
+                      variant="subtitle2"
+                      sx={{
+                        fontWeight: 600,
+                      }}
+                    >
                       {rule.name}
                     </Typography>
                     {rule.is_default && (
@@ -218,24 +270,43 @@ export default function AIApprovalRules() {
                         sx={{ height: 20, fontSize: 11 }}
                       />
                     )}
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: "text.secondary",
+                      }}
+                    >
                       Priority: {rule.priority}
                     </Typography>
                   </Stack>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: "text.secondary",
+                    }}
+                  >
                     {rule.description}
                   </Typography>
                   <Typography
                     variant="caption"
-                    color="text.secondary"
-                    sx={{ fontFamily: "monospace", fontSize: 11 }}
+                    sx={{
+                      color: "text.secondary",
+                      fontFamily: "monospace",
+                      fontSize: 11,
+                    }}
                   >
                     {formatConditions(rule.conditions)}
                   </Typography>
                 </Stack>
               </Stack>
 
-              <Stack direction="row" alignItems="center" spacing={0.5}>
+              <Stack
+                direction="row"
+                spacing={0.5}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 {!rule.is_default && (
                   <>
                     <Switch
@@ -257,7 +328,13 @@ export default function AIApprovalRules() {
         ))}
 
         {rules.length === 0 && (
-          <Typography color="text.secondary" textAlign="center" py={4}>
+          <Typography
+            sx={{
+              color: "text.secondary",
+              textAlign: "center",
+              py: 4,
+            }}
+          >
             No approval rules configured.
           </Typography>
         )}
@@ -336,13 +413,15 @@ export default function AIApprovalRules() {
               fullWidth
               multiline
               rows={6}
-              InputProps={{ sx: { fontFamily: "monospace", fontSize: 13 } }}
               helperText={
                 'Wrap conditions in {"all": [...]} (every condition must match) or {"any": [...]} (one match is enough). ' +
                 'Each condition is {"fact": ..., "operator": ..., "value": ...}. ' +
                 'Example: {"all": [{"fact": "risk_level", "operator": "equal", "value": "high"}]}. ' +
                 "Available facts: operation_type, risk_level, tool_category, user_role, entity_count, is_bulk."
               }
+              slotProps={{
+                input: { sx: { fontFamily: "monospace", fontSize: 13 } },
+              }}
             />
           </Stack>
         </DialogContent>

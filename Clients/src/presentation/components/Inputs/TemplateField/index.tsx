@@ -212,18 +212,21 @@ const TemplateField = forwardRef(
 
     return (
       <Stack
-        gap={theme.spacing(2)}
         className={`field field-${type}`}
         sx={{
+          "gap": theme.spacing(2),
           "position": "relative",
+
           "& fieldset": {
             borderColor: theme.palette.border.dark,
             borderRadius: theme.shape.borderRadius,
           },
+
           "&:not(:has(.Mui-disabled)):not(:has(.input-error)) .MuiOutlinedInput-root:hover:not(:has(input:focus)):not(:has(textarea:focus)) fieldset":
             {
               borderColor: theme.palette.border.dark,
             },
+
           ".Mui-focused .MuiOutlinedInput-notchedOutline": {
             border: `1px solid ${theme.palette.border.dark}!important`,
           },
@@ -234,13 +237,22 @@ const TemplateField = forwardRef(
             component="p"
             variant="body1"
             color={theme.palette.text.secondary}
-            fontWeight={500}
-            fontSize="13px"
-            sx={{ margin: 0, height: "22px" }}
+            sx={{
+              fontWeight: 500,
+              fontSize: "13px",
+              margin: 0,
+              height: "22px",
+            }}
           >
             {label}
             {isRequired && (
-              <Typography component="span" ml={theme.spacing(1)} color={theme.palette.error.text}>
+              <Typography
+                component="span"
+                color={theme.palette.error.text}
+                sx={{
+                  ml: theme.spacing(1),
+                }}
+              >
                 *
               </Typography>
             )}
@@ -259,14 +271,16 @@ const TemplateField = forwardRef(
           rows={type === "description" ? rows || 4 : 1}
           disabled={disabled}
           inputRef={setRefs}
-          inputProps={{
-            sx: {
-              "color": theme.palette.text.secondary,
-              "&:-webkit-autofill": {
-                WebkitBoxShadow: `0 0 0 100px ${theme.palette.background.fill} inset`,
-                WebkitTextFillColor: theme.palette.text.secondary,
+          slotProps={{
+            htmlInput: {
+              sx: {
+                "color": theme.palette.text.secondary,
+                "&:-webkit-autofill": {
+                  WebkitBoxShadow: `0 0 0 100px ${theme.palette.background.fill} inset`,
+                  WebkitTextFillColor: theme.palette.text.secondary,
+                },
+                "overflowY": "auto",
               },
-              "overflowY": "auto",
             },
           }}
         />

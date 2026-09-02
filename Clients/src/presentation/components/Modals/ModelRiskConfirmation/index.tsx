@@ -47,13 +47,13 @@ const ModelRiskConfirmation: React.FC<ModelRiskConfirmationProps> = ({
       }}
     >
       <Stack
-        gap={theme.spacing(2)}
-        color={theme.palette.text.secondary}
         onClick={(e) => {
           e.stopPropagation();
           e.preventDefault();
         }}
         sx={{
+          "gap": theme.spacing(2),
+          "color": theme.palette.text.secondary,
           "position": "absolute",
           "top": "50%",
           "left": "50%",
@@ -65,23 +65,38 @@ const ModelRiskConfirmation: React.FC<ModelRiskConfirmationProps> = ({
           "borderRadius": theme.shape.borderRadius,
           "boxShadow": 24,
           "p": theme.spacing(15),
+
           "&:focus": {
             outline: "none",
           },
         }}
       >
-        <Typography id="modal-risk-confirmation" fontSize={16} fontWeight={600}>
+        <Typography
+          id="modal-risk-confirmation"
+          sx={{
+            fontSize: 16,
+            fontWeight: 600,
+          }}
+        >
           Model has associated risks
         </Typography>
-        <Typography id="risk-confirmation-message" fontSize={13} textAlign={"justify"}>
+        <Typography
+          id="risk-confirmation-message"
+          sx={{
+            fontSize: 13,
+            textAlign: "justify",
+          }}
+        >
           This model has associated risks. What would you like to do with the risks when deleting
           this model?
         </Typography>
         <Stack
           direction="row"
-          gap={theme.spacing(4)}
-          mt={theme.spacing(12)}
-          justifyContent="flex-end"
+          sx={{
+            gap: theme.spacing(4),
+            mt: theme.spacing(12),
+            justifyContent: "flex-end",
+          }}
         >
           <CustomizableButton variant="text" onClick={handleCancel} text={"Cancel"} />
           <CustomizableButton

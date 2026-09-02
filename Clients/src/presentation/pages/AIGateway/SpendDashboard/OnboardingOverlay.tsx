@@ -120,7 +120,14 @@ function ArchDiagram() {
     label: string;
     colorScheme: { bg: string; color: string };
   }) => (
-    <Stack direction="row" alignItems="center" gap="6px" sx={{ py: "1px" }}>
+    <Stack
+      direction="row"
+      sx={{
+        alignItems: "center",
+        gap: "6px",
+        py: "1px",
+      }}
+    >
       <Box sx={{ ...featureIconBase, background: colorScheme.bg, color: colorScheme.color }}>
         {icon}
       </Box>
@@ -158,7 +165,13 @@ function ArchDiagram() {
   ];
 
   return (
-    <Stack direction="row" alignItems="stretch" justifyContent="center">
+    <Stack
+      direction="row"
+      sx={{
+        alignItems: "stretch",
+        justifyContent: "center",
+      }}
+    >
       <Box
         sx={{
           ...cardBase,
@@ -184,9 +197,9 @@ function ArchDiagram() {
         </Typography>
         <Stack
           direction="row"
-          alignItems="center"
-          gap="6px"
           sx={{
+            alignItems: "center",
+            gap: "6px",
             background: palette.background.accent,
             border: `0.5px solid ${palette.border.light}`,
             borderRadius: "4px",
@@ -296,9 +309,20 @@ function ArchDiagram() {
         <Typography sx={{ fontSize: 10, color: palette.text.disabled, mb: "8px" }}>
           100+ supported models
         </Typography>
-        <Stack gap="3px">
+        <Stack
+          sx={{
+            gap: "3px",
+          }}
+        >
           {PROVIDER_LABELS.map((name) => (
-            <Stack key={name} direction="row" alignItems="center" gap="6px">
+            <Stack
+              key={name}
+              direction="row"
+              sx={{
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
               <Box
                 sx={{
                   width: 20,
@@ -345,10 +369,10 @@ function ChecklistItem({ label, done, onClick }: ChecklistItemProps) {
   return (
     <Stack
       direction="row"
-      alignItems="center"
-      gap="8px"
       onClick={() => isClickable && onClick()}
       sx={{
+        "alignItems": "center",
+        "gap": "8px",
         "cursor": isClickable ? "pointer" : "default",
         "borderRadius": "4px",
         "px": "2px",
@@ -738,9 +762,11 @@ export default function OnboardingOverlay({
         <Box sx={{ width: "100%", maxWidth: 820 }}>
           <Stack
             direction="row"
-            justifyContent="space-between"
-            alignItems="flex-start"
-            sx={{ mb: "24px" }}
+            sx={{
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              mb: "24px",
+            }}
           >
             <Box>
               <Typography
@@ -757,7 +783,11 @@ export default function OnboardingOverlay({
               <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mb: "14px" }}>
                 Make your first request to see a real-time map of your model connections
               </Typography>
-              <Stack gap="2px">
+              <Stack
+                sx={{
+                  gap: "2px",
+                }}
+              >
                 {CHECKLIST_ITEMS.map((item) => (
                   <ChecklistItem key={item.label} {...item} />
                 ))}
@@ -786,7 +816,11 @@ export default function OnboardingOverlay({
         isSubmitting={keySubmitting}
         maxWidth="480px"
       >
-        <Stack gap="16px">
+        <Stack
+          sx={{
+            gap: "16px",
+          }}
+        >
           <Field
             label="Key name"
             placeholder="e.g., Production OpenAI key"
@@ -833,7 +867,11 @@ export default function OnboardingOverlay({
         isSubmitting={endpointSubmitting}
         maxWidth="480px"
       >
-        <Stack gap="16px">
+        <Stack
+          sx={{
+            gap: "16px",
+          }}
+        >
           <Field
             label="Endpoint name"
             placeholder="e.g., Production GPT-4o"
@@ -849,8 +887,17 @@ export default function OnboardingOverlay({
               Endpoint slug: <strong>{endpointForm.slug}</strong>
             </Typography>
           )}
-          <Stack direction="row" gap="8px">
-            <Box flex={1}>
+          <Stack
+            direction="row"
+            sx={{
+              gap: "8px",
+            }}
+          >
+            <Box
+              sx={{
+                flex: 1,
+              }}
+            >
               <Select
                 id="onboarding-provider"
                 label="Provider"
@@ -864,7 +911,11 @@ export default function OnboardingOverlay({
                 isRequired
               />
             </Box>
-            <Box flex={2}>
+            <Box
+              sx={{
+                flex: 2,
+              }}
+            >
               <Select
                 id="onboarding-model"
                 label="Model"
@@ -895,9 +946,9 @@ export default function OnboardingOverlay({
           ) : (
             <Stack
               direction="row"
-              alignItems="flex-start"
-              gap="6px"
               sx={{
+                alignItems: "flex-start",
+                gap: "6px",
                 p: "8px 12px",
                 bgcolor: palette.background.accent,
                 borderRadius: "4px",
@@ -928,7 +979,11 @@ export default function OnboardingOverlay({
         isSubmitting={vkeySubmitting}
         maxWidth="480px"
       >
-        <Stack gap="16px">
+        <Stack
+          sx={{
+            gap: "16px",
+          }}
+        >
           <Field
             label="Name"
             placeholder="e.g., Backend production key"
@@ -955,7 +1010,11 @@ export default function OnboardingOverlay({
         submitButtonText="I copied, continue"
         showCancelButton={false}
       >
-        <Stack gap="16px">
+        <Stack
+          sx={{
+            gap: "16px",
+          }}
+        >
           <Box
             sx={{
               p: "12px 16px",
@@ -1034,7 +1093,11 @@ response = client.chat.completions.create(
         maxWidth="560px"
         hideSubmitButton
       >
-        <Stack gap="16px">
+        <Stack
+          sx={{
+            gap: "16px",
+          }}
+        >
           <Box>
             <Typography sx={{ fontSize: 12, fontWeight: 500, mb: 1 }}>Code</Typography>
             <Box

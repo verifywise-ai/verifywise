@@ -645,7 +645,6 @@ const VWProjectRisksTable = ({
                             rowsPerPage={rowsPerPage}
                             rowsPerPageOptions={[5, 10, 15, 20, 25]}
                             onRowsPerPageChange={handleChangeRowsPerPage}
-                            ActionsComponent={(props) => <TablePaginationActions {...props} />}
                             labelRowsPerPage="Project risks per page"
                             labelDisplayedRows={({ page, count }) =>
                               `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
@@ -668,17 +667,22 @@ const VWProjectRisksTable = ({
                               select: {
                                 MenuProps: {
                                   keepMounted: true,
-                                  PaperProps: {
-                                    className: "pagination-dropdown",
-                                    sx: {
-                                      mt: 0,
-                                      mb: theme.spacing(2),
+
+                                  slotProps: {
+                                    paper: {
+                                      className: "pagination-dropdown",
+                                      sx: {
+                                        mt: 0,
+                                        mb: theme.spacing(2),
+                                      },
                                     },
                                   },
+
                                   transformOrigin: {
                                     vertical: "bottom",
                                     horizontal: "left",
                                   },
+
                                   anchorOrigin: { vertical: "top", horizontal: "left" },
                                   sx: { mt: theme.spacing(-2) },
                                 },
@@ -695,6 +699,7 @@ const VWProjectRisksTable = ({
                                 },
                               },
                             }}
+                            ActionsComponent={(props) => <TablePaginationActions {...props} />}
                           />
                         </Box>
                       </Box>
@@ -712,7 +717,11 @@ const VWProjectRisksTable = ({
           isOpen
           title={`Set owner on ${selectionCount} project risk${selectionCount === 1 ? "" : "s"}`}
           body={
-            <Stack gap={2}>
+            <Stack
+              sx={{
+                gap: 2,
+              }}
+            >
               <VWSelect
                 id="bulk-set-owner"
                 placeholder="Choose an owner…"
@@ -750,7 +759,11 @@ const VWProjectRisksTable = ({
             selectionCount === 1 ? "" : "s"
           }`}
           body={
-            <Stack gap={2}>
+            <Stack
+              sx={{
+                gap: 2,
+              }}
+            >
               <Typography variant="body2" sx={{ color: "text.secondary", fontSize: 12 }}>
                 Replaces existing categories. Leave empty to clear.
               </Typography>

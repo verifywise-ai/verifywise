@@ -36,7 +36,13 @@ const ActivationHistory: React.FC = () => {
           background: background.main,
         }}
       >
-        <Stack direction="row" gap="16px" alignItems="center">
+        <Stack
+          direction="row"
+          sx={{
+            gap: "16px",
+            alignItems: "center",
+          }}
+        >
           <History size={18} color={text.muted} />
           <Typography sx={{ fontSize: 13, color: text.muted }}>
             No activations yet. Activate a scenario to see its history here.
@@ -55,12 +61,23 @@ const ActivationHistory: React.FC = () => {
         background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
       }}
     >
-      <Stack direction="row" gap="16px" alignItems="center" sx={{ mb: "16px" }}>
+      <Stack
+        direction="row"
+        sx={{
+          gap: "16px",
+          alignItems: "center",
+          mb: "16px",
+        }}
+      >
         <History size={20} color={brand.primary} />
         <Typography sx={{ fontSize: 14, fontWeight: 600 }}>Activation History</Typography>
       </Stack>
 
-      <Stack gap="12px">
+      <Stack
+        sx={{
+          gap: "12px",
+        }}
+      >
         {activations.slice(0, 5).map((activation: any) => {
           const isActive = activation.status === "active";
           const date = activation.activated_at
@@ -80,7 +97,14 @@ const ActivationHistory: React.FC = () => {
                 background: isActive ? alpha(brand.primary, 0.04) : background.main,
               }}
             >
-              <Stack direction="row" gap="16px" alignItems="center" flexWrap="wrap">
+              <Stack
+                direction="row"
+                sx={{
+                  gap: "16px",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                }}
+              >
                 <Typography sx={{ fontSize: 13, fontWeight: 500, color: text.primary }}>
                   {activation.scenario_name || `Scenario #${activation.scenario_id}`}
                 </Typography>

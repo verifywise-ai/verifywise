@@ -51,9 +51,9 @@ export const FolderBreadcrumb: React.FC<FolderBreadcrumbProps> = ({
   return (
     <Stack
       direction="row"
-      alignItems="center"
       spacing={1}
       sx={{
+        alignItems: "center",
         padding: "8px 0",
         minHeight: "32px",
       }}

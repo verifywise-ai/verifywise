@@ -71,7 +71,12 @@ export default function ModelLifecycleTab({ modelId }: ModelLifecycleTabProps) {
   return (
     <Stack sx={{ gap: "16px" }}>
       {/* View toggle */}
-      <Stack direction="row" justifyContent="flex-end">
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: "flex-end",
+        }}
+      >
         <ToggleButtonGroup
           value={viewMode}
           exclusive

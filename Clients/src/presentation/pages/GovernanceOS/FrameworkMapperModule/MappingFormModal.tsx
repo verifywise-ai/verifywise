@@ -108,7 +108,14 @@ const MappingFormModal: React.FC<MappingFormModalProps> = ({
               Source Framework *
             </Typography>
           </GovernanceTooltip>
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          <Stack
+            direction="row"
+            spacing={1}
+            useFlexGap
+            sx={{
+              flexWrap: "wrap",
+            }}
+          >
             {FRAMEWORK_OPTIONS.map((fw) => (
               <Box
                 key={fw.id}
@@ -165,7 +172,14 @@ const MappingFormModal: React.FC<MappingFormModalProps> = ({
               Target Framework *
             </Typography>
           </GovernanceTooltip>
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          <Stack
+            direction="row"
+            spacing={1}
+            useFlexGap
+            sx={{
+              flexWrap: "wrap",
+            }}
+          >
             {FRAMEWORK_OPTIONS.map((fw) => (
               <Box
                 key={fw.id}
@@ -222,7 +236,14 @@ const MappingFormModal: React.FC<MappingFormModalProps> = ({
               Mapping Strength
             </Typography>
           </GovernanceTooltip>
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          <Stack
+            direction="row"
+            spacing={1}
+            useFlexGap
+            sx={{
+              flexWrap: "wrap",
+            }}
+          >
             {STRENGTH_OPTIONS.map((s) => (
               <Box
                 key={s}

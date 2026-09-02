@@ -535,7 +535,12 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
         parentFolder={createFolderParent}
       />
 
-      <Stack className="vwhome" gap={"16px"}>
+      <Stack
+        className="vwhome"
+        sx={{
+          gap: "16px",
+        }}
+      >
         {/* Policy by Status Cards */}
         <Box data-joyride-id="policy-status-cards">
           <PolicyStatusCard
@@ -548,13 +553,21 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
         {/* Filter + Search + Add Button row */}
         <Stack
           direction="row"
-          alignItems="center"
-          justifyContent="space-between"
           spacing={4}
-          sx={{ width: "100%" }}
+          sx={{
+            alignItems: "center",
+            justifyContent: "space-between",
+            width: "100%",
+          }}
         >
           {/* Left side: Filter + Group + Search together */}
-          <Stack direction="row" spacing={2} alignItems="center">
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             {/* FilterBy */}
             <div data-joyride-id="policy-status-filter">
               <FilterBy columns={policyFilterColumns} onFilterChange={handlePolicyFilterChange} />
@@ -590,7 +603,13 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
           </Stack>
 
           {/* Right side: Documents toggle, Export and Add Button */}
-          <Stack direction="row" gap="8px" alignItems="center">
+          <Stack
+            direction="row"
+            sx={{
+              gap: "8px",
+              alignItems: "center",
+            }}
+          >
             <Tooltip title="Documents" arrow>
               <IconButton
                 onClick={() => setFolderSidebarOpen((prev) => !prev)}

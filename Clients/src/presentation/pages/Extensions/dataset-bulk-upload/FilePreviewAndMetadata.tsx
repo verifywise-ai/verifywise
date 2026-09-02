@@ -99,7 +99,13 @@ export default function FilePreviewAndMetadata({
         >
           Batch defaults (apply to all files)
         </Typography>
-        <Stack direction="row" spacing={3} alignItems="flex-end">
+        <Stack
+          direction="row"
+          spacing={3}
+          sx={{
+            alignItems: "flex-end",
+          }}
+        >
           <Select
             id="batch-type"
             label="Type"
@@ -170,7 +176,14 @@ export default function FilePreviewAndMetadata({
             expandIcon={<ChevronDown size={18} color={theme.palette.text.tertiary} />}
             sx={{ padding: "8px 16px" }}
           >
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ flex: 1 }}>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: "center",
+                flex: 1,
+              }}
+            >
               <FileSpreadsheet size={18} color={theme.palette.primary.main} />
               <Typography
                 sx={{
@@ -354,7 +367,13 @@ export default function FilePreviewAndMetadata({
                   </Typography>
                   <Stack spacing={3}>
                     {/* Row 1: Name, Version */}
-                    <Stack direction="row" justifyContent="space-between" spacing={6}>
+                    <Stack
+                      direction="row"
+                      spacing={6}
+                      sx={{
+                        justifyContent: "space-between",
+                      }}
+                    >
                       <Field
                         id={`name-${index}`}
                         label="Name"
@@ -389,7 +408,13 @@ export default function FilePreviewAndMetadata({
                     />
 
                     {/* Row 2: Type, Classification, Format */}
-                    <Stack direction="row" justifyContent="space-between" spacing={6}>
+                    <Stack
+                      direction="row"
+                      spacing={6}
+                      sx={{
+                        justifyContent: "space-between",
+                      }}
+                    >
                       <Select
                         id={`type-${index}`}
                         label="Type"
@@ -425,7 +450,13 @@ export default function FilePreviewAndMetadata({
                     </Stack>
 
                     {/* Row 3: Owner, Source */}
-                    <Stack direction="row" justifyContent="space-between" spacing={6}>
+                    <Stack
+                      direction="row"
+                      spacing={6}
+                      sx={{
+                        justifyContent: "space-between",
+                      }}
+                    >
                       <Field
                         id={`owner-${index}`}
                         label="Owner"

@@ -20,7 +20,15 @@ export const EmptyStateMessage: FC<EmptyStateMessageProps> = ({
   const theme = useTheme();
 
   return (
-    <Stack alignItems="center" justifyContent="center" py={3} gap={1} role="status">
+    <Stack
+      role="status"
+      sx={{
+        alignItems: "center",
+        justifyContent: "center",
+        py: 3,
+        gap: 1,
+      }}
+    >
       {icon || <CheckCircle2 size={24} color={theme.palette.primary.main} />}
       <Typography sx={{ fontSize: theme.typography.fontSize, color: theme.palette.other.icon }}>
         {message}

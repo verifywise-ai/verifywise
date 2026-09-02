@@ -382,7 +382,13 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
               {field.label}{" "}
               {field.required && <span style={{ color: theme.palette.error.main }}>*</span>}
             </Typography>
-            <Stack direction="row" flexWrap="wrap" gap={1}>
+            <Stack
+              direction="row"
+              sx={{
+                flexWrap: "wrap",
+                gap: 1,
+              }}
+            >
               {field.options?.map((option) => (
                 <Chip
                   key={option.value}
@@ -440,8 +446,19 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
 
       case "boolean":
         return (
-          <Stack key={field.key} direction="row" alignItems="center" spacing={1}>
-            <Stack flex={1}>
+          <Stack
+            key={field.key}
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: "center",
+            }}
+          >
+            <Stack
+              sx={{
+                flex: 1,
+              }}
+            >
               <Typography variant="body2" sx={{ fontWeight: 500 }}>
                 {field.label}
               </Typography>
@@ -757,7 +774,13 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
             <Stack spacing={2}>
               <Typography variant="subtitle2" sx={{ fontWeight: 600, textTransform: "uppercase" }}>
                 Automation name
-                <Typography component="span" ml={1} color={theme.palette.error.text}>
+                <Typography
+                  component="span"
+                  color={theme.palette.error.text}
+                  sx={{
+                    ml: 1,
+                  }}
+                >
                   *
                 </Typography>
               </Typography>
@@ -816,7 +839,13 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
           <Stack spacing={2}>
             <Typography variant="subtitle2" sx={{ fontWeight: 600, textTransform: "uppercase" }}>
               Automation name
-              <Typography component="span" ml={1} color={theme.palette.error.text}>
+              <Typography
+                component="span"
+                color={theme.palette.error.text}
+                sx={{
+                  ml: 1,
+                }}
+              >
                 *
               </Typography>
             </Typography>

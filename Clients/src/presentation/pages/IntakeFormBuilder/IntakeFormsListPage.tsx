@@ -405,9 +405,11 @@ export function IntakeFormsListPage() {
           {/* Search + Create form button */}
           <Stack
             direction="row"
-            justifyContent="space-between"
-            alignItems="center"
-            sx={{ mb: "8px" }}
+            sx={{
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: "8px",
+            }}
           >
             <SearchBox
               placeholder="Search forms..."
@@ -557,7 +559,6 @@ export function IntakeFormsListPage() {
                       rowsPerPage={rowsPerPage}
                       rowsPerPageOptions={[5, 10, 15, 25]}
                       onRowsPerPageChange={handleChangeRowsPerPage}
-                      ActionsComponent={(props) => <TablePaginationActions {...props} />}
                       labelRowsPerPage="Rows per page"
                       labelDisplayedRows={({ page: p, count }) =>
                         `Page ${p + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
@@ -571,6 +572,7 @@ export function IntakeFormsListPage() {
                         },
                       }}
                       sx={paginationStyle(theme)}
+                      ActionsComponent={(props) => <TablePaginationActions {...props} />}
                     />
                   </TableRow>
                 </TableFooter>
@@ -588,9 +590,11 @@ export function IntakeFormsListPage() {
           {/* Filter + Search */}
           <Stack
             direction="row"
-            justifyContent="space-between"
-            alignItems="center"
-            sx={{ mb: "8px" }}
+            sx={{
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: "8px",
+            }}
           >
             <Select
               id="submission-status-filter"
@@ -688,7 +692,13 @@ export function IntakeFormsListPage() {
                           </Typography>
                         </TableCell>
                         <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                          <Stack direction="row" alignItems="center" gap="8px">
+                          <Stack
+                            direction="row"
+                            sx={{
+                              alignItems: "center",
+                              gap: "8px",
+                            }}
+                          >
                             <Chip label={submission.status} />
                             {submission.resubmissionCount > 0 &&
                               submission.status !== "superseded" && <Chip label="resubmitted" />}
@@ -740,10 +750,12 @@ export function IntakeFormsListPage() {
         anchorEl={menuAnchor}
         open={Boolean(menuAnchor)}
         onClose={handleMenuClose}
-        PaperProps={{
-          sx: {
-            minWidth: 160,
-            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+        slotProps={{
+          paper: {
+            sx: {
+              minWidth: 160,
+              boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+            },
           },
         }}
       >
@@ -751,26 +763,66 @@ export function IntakeFormsListPage() {
           <ListItemIcon>
             <Edit size={18} />
           </ListItemIcon>
-          <ListItemText primaryTypographyProps={{ fontSize: "13px" }}>Edit</ListItemText>
+          <ListItemText
+            slotProps={{
+              primary: {
+                sx: {
+                  fontSize: "13px",
+                },
+              },
+            }}
+          >
+            Edit
+          </ListItemText>
         </MenuItem>
         {selectedForm?.status === IntakeFormStatus.ACTIVE && [
           <MenuItem key="preview" onClick={handlePreview}>
             <ListItemIcon>
               <Eye size={18} />
             </ListItemIcon>
-            <ListItemText primaryTypographyProps={{ fontSize: "13px" }}>Preview</ListItemText>
+            <ListItemText
+              slotProps={{
+                primary: {
+                  sx: {
+                    fontSize: "13px",
+                  },
+                },
+              }}
+            >
+              Preview
+            </ListItemText>
           </MenuItem>,
           <MenuItem key="copy" onClick={handleCopyLink}>
             <ListItemIcon>
               <Copy size={18} />
             </ListItemIcon>
-            <ListItemText primaryTypographyProps={{ fontSize: "13px" }}>Copy link</ListItemText>
+            <ListItemText
+              slotProps={{
+                primary: {
+                  sx: {
+                    fontSize: "13px",
+                  },
+                },
+              }}
+            >
+              Copy link
+            </ListItemText>
           </MenuItem>,
           <MenuItem key="archive" onClick={handleArchiveClick}>
             <ListItemIcon>
               <Archive size={18} />
             </ListItemIcon>
-            <ListItemText primaryTypographyProps={{ fontSize: "13px" }}>Archive</ListItemText>
+            <ListItemText
+              slotProps={{
+                primary: {
+                  sx: {
+                    fontSize: "13px",
+                  },
+                },
+              }}
+            >
+              Archive
+            </ListItemText>
           </MenuItem>,
         ]}
         {(selectedForm?.status === IntakeFormStatus.DRAFT ||
@@ -779,7 +831,17 @@ export function IntakeFormsListPage() {
             <ListItemIcon>
               <Trash2 size={18} color={theme.palette.status.error.text} />
             </ListItemIcon>
-            <ListItemText primaryTypographyProps={{ fontSize: "13px" }}>Delete</ListItemText>
+            <ListItemText
+              slotProps={{
+                primary: {
+                  sx: {
+                    fontSize: "13px",
+                  },
+                },
+              }}
+            >
+              Delete
+            </ListItemText>
           </MenuItem>
         )}
       </Menu>
@@ -802,7 +864,11 @@ export function IntakeFormsListPage() {
         maxWidth="440px"
         fitContent
       >
-        <Stack gap="12px">
+        <Stack
+          sx={{
+            gap: "12px",
+          }}
+        >
           {[
             {
               type: IntakeEntityType.USE_CASE,

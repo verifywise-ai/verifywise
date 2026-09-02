@@ -367,8 +367,18 @@ export default function SpendDashboardPage() {
       {/* Cost over time chart */}
       {!loading && (
         <Box sx={cardSx}>
-          <Stack gap="12px">
-            <Stack direction="row" alignItems="center" gap="6px">
+          <Stack
+            sx={{
+              gap: "12px",
+            }}
+          >
+            <Stack
+              direction="row"
+              sx={{
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
               <Typography sx={sectionTitleSx}>
                 {period === "1d" ? "Cost by hour" : "Cost over time"}
               </Typography>
@@ -428,12 +438,27 @@ export default function SpendDashboardPage() {
 
       {/* Two-column: Cost by model + Cost per request */}
       {!loading && (
-        <Stack direction={{ xs: "column", md: "row" }} gap="16px">
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          sx={{
+            gap: "16px",
+          }}
+        >
           {/* Cost by model */}
           {
             <Box sx={{ ...cardSx, flex: 1 }}>
-              <Stack gap="12px">
-                <Stack direction="row" alignItems="center" gap="6px">
+              <Stack
+                sx={{
+                  gap: "12px",
+                }}
+              >
+                <Stack
+                  direction="row"
+                  sx={{
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
                   <Typography sx={sectionTitleSx}>Cost by model</Typography>
                   <MuiTooltip
                     title="Spend breakdown by LLM model — helps identify which models consume the most budget"
@@ -445,7 +470,13 @@ export default function SpendDashboardPage() {
                     </Box>
                   </MuiTooltip>
                 </Stack>
-                <Stack gap="6px" sx={{ maxHeight: 270, overflowY: "auto" }}>
+                <Stack
+                  sx={{
+                    gap: "6px",
+                    maxHeight: 270,
+                    overflowY: "auto",
+                  }}
+                >
                   {(() => {
                     const maxCost = Math.max(
                       ...byModel.map((m: any) => Number(m.total_cost)),
@@ -457,9 +488,9 @@ export default function SpendDashboardPage() {
                         <Stack
                           key={m.group_key}
                           direction="row"
-                          justifyContent="space-between"
-                          alignItems="center"
                           sx={{
+                            justifyContent: "space-between",
+                            alignItems: "center",
                             p: "22px 14px",
                             borderRadius: "4px",
                             border: `1px solid ${palette.border.light}`,
@@ -481,9 +512,14 @@ export default function SpendDashboardPage() {
                           />
                           <Stack
                             direction="row"
-                            alignItems="center"
-                            gap="8px"
-                            sx={{ flex: 1, minWidth: 0, position: "relative", zIndex: 1 }}
+                            sx={{
+                              alignItems: "center",
+                              gap: "8px",
+                              flex: 1,
+                              minWidth: 0,
+                              position: "relative",
+                              zIndex: 1,
+                            }}
                           >
                             <Box
                               sx={{
@@ -507,9 +543,13 @@ export default function SpendDashboardPage() {
                           </Stack>
                           <Stack
                             direction="row"
-                            gap="12px"
-                            alignItems="center"
-                            sx={{ flexShrink: 0, position: "relative", zIndex: 1 }}
+                            sx={{
+                              gap: "12px",
+                              alignItems: "center",
+                              flexShrink: 0,
+                              position: "relative",
+                              zIndex: 1,
+                            }}
                           >
                             <Typography sx={{ fontSize: 11, color: palette.text.tertiary }}>
                               {Number(m.total_requests).toLocaleString()} req
@@ -540,8 +580,18 @@ export default function SpendDashboardPage() {
           {/* Cost per request by model */}
           {
             <Box sx={{ ...cardSx, flex: 1 }}>
-              <Stack gap="12px">
-                <Stack direction="row" alignItems="center" gap="6px">
+              <Stack
+                sx={{
+                  gap: "12px",
+                }}
+              >
+                <Stack
+                  direction="row"
+                  sx={{
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
                   <Typography sx={sectionTitleSx}>Cost per request</Typography>
                   <MuiTooltip
                     title="Average cost per request by model — helps identify which models give the best value per call"
@@ -553,7 +603,13 @@ export default function SpendDashboardPage() {
                     </Box>
                   </MuiTooltip>
                 </Stack>
-                <Stack gap="6px" sx={{ maxHeight: 270, overflowY: "auto" }}>
+                <Stack
+                  sx={{
+                    gap: "6px",
+                    maxHeight: 270,
+                    overflowY: "auto",
+                  }}
+                >
                   {(() => {
                     const modelsWithCpr = byModel
                       .map((m: any) => ({
@@ -574,9 +630,9 @@ export default function SpendDashboardPage() {
                         <Stack
                           key={m.group_key}
                           direction="row"
-                          justifyContent="space-between"
-                          alignItems="center"
                           sx={{
+                            justifyContent: "space-between",
+                            alignItems: "center",
                             p: "22px 14px",
                             borderRadius: "4px",
                             border: `1px solid ${palette.border.light}`,
@@ -601,9 +657,14 @@ export default function SpendDashboardPage() {
                           />
                           <Stack
                             direction="row"
-                            alignItems="center"
-                            gap="8px"
-                            sx={{ flex: 1, minWidth: 0, position: "relative", zIndex: 1 }}
+                            sx={{
+                              alignItems: "center",
+                              gap: "8px",
+                              flex: 1,
+                              minWidth: 0,
+                              position: "relative",
+                              zIndex: 1,
+                            }}
                           >
                             <Box
                               sx={{
@@ -627,9 +688,13 @@ export default function SpendDashboardPage() {
                           </Stack>
                           <Stack
                             direction="row"
-                            gap="12px"
-                            alignItems="center"
-                            sx={{ flexShrink: 0, position: "relative", zIndex: 1 }}
+                            sx={{
+                              gap: "12px",
+                              alignItems: "center",
+                              flexShrink: 0,
+                              position: "relative",
+                              zIndex: 1,
+                            }}
                           >
                             <Typography sx={{ fontSize: 11, color: palette.text.tertiary }}>
                               {Number(m.total_requests).toLocaleString()} req
@@ -659,12 +724,27 @@ export default function SpendDashboardPage() {
 
       {/* Error rate + Tokens per request */}
       {!loading && (
-        <Stack direction={{ xs: "column", md: "row" }} gap="16px">
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          sx={{
+            gap: "16px",
+          }}
+        >
           {/* Error rate over time */}
           {
             <Box sx={{ ...cardSx, flex: 1 }}>
-              <Stack gap="12px">
-                <Stack direction="row" alignItems="center" gap="6px">
+              <Stack
+                sx={{
+                  gap: "12px",
+                }}
+              >
+                <Stack
+                  direction="row"
+                  sx={{
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
                   <Typography sx={sectionTitleSx}>Error rate</Typography>
                   <MuiTooltip
                     title="Percentage of non-200 responses per day — spikes indicate provider issues or misconfigured endpoints"
@@ -727,8 +807,18 @@ export default function SpendDashboardPage() {
           {/* Tokens per request by endpoint */}
           {
             <Box sx={{ ...cardSx, flex: 1 }}>
-              <Stack gap="12px">
-                <Stack direction="row" alignItems="center" gap="6px">
+              <Stack
+                sx={{
+                  gap: "12px",
+                }}
+              >
+                <Stack
+                  direction="row"
+                  sx={{
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
                   <Typography sx={sectionTitleSx}>Tokens per request</Typography>
                   <MuiTooltip
                     title="Average token usage per request by endpoint — helps identify chatty prompts or missing max_token limits"
@@ -798,12 +888,27 @@ export default function SpendDashboardPage() {
 
       {/* Cost by provider + Guardrail detections */}
       {!loading && (
-        <Stack direction={{ xs: "column", md: "row" }} gap="16px">
+        <Stack
+          direction={{ xs: "column", md: "row" }}
+          sx={{
+            gap: "16px",
+          }}
+        >
           {/* Cost by provider — donut chart */}
           {
             <Box sx={{ ...cardSx, flex: 1 }}>
-              <Stack gap="12px">
-                <Stack direction="row" alignItems="center" gap="6px">
+              <Stack
+                sx={{
+                  gap: "12px",
+                }}
+              >
+                <Stack
+                  direction="row"
+                  sx={{
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
                   <Typography sx={sectionTitleSx}>Cost by provider</Typography>
                   <MuiTooltip
                     title="Spend distribution across LLM providers — high concentration on a single provider increases vendor risk"
@@ -852,7 +957,12 @@ export default function SpendDashboardPage() {
                       value={`$${byProvider.reduce((s: number, p: any) => s + Number(p.total_cost), 0).toFixed(2)}`}
                     />
                   </Box>
-                  <Stack gap="6px" flex={1}>
+                  <Stack
+                    sx={{
+                      gap: "6px",
+                      flex: 1,
+                    }}
+                  >
                     {(() => {
                       const totalProviderCost = byProvider.reduce(
                         (s: number, pp: any) => s + Number(pp.total_cost),
@@ -867,10 +977,18 @@ export default function SpendDashboardPage() {
                           <Stack
                             key={p.group_key}
                             direction="row"
-                            justifyContent="space-between"
-                            alignItems="center"
+                            sx={{
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                            }}
                           >
-                            <Stack direction="row" alignItems="center" gap="8px">
+                            <Stack
+                              direction="row"
+                              sx={{
+                                alignItems: "center",
+                                gap: "8px",
+                              }}
+                            >
                               <Box
                                 sx={{
                                   width: 8,
@@ -882,7 +1000,13 @@ export default function SpendDashboardPage() {
                               />
                               <Typography sx={{ fontSize: 12 }}>{p.group_key}</Typography>
                             </Stack>
-                            <Stack direction="row" gap="8px" alignItems="center">
+                            <Stack
+                              direction="row"
+                              sx={{
+                                gap: "8px",
+                                alignItems: "center",
+                              }}
+                            >
                               <Typography sx={{ fontSize: 11, color: palette.text.tertiary }}>
                                 {pct}%
                               </Typography>
@@ -910,8 +1034,18 @@ export default function SpendDashboardPage() {
           {/* Guardrail detections trend */}
           {
             <Box sx={{ ...cardSx, flex: 1 }}>
-              <Stack gap="12px">
-                <Stack direction="row" alignItems="center" gap="6px">
+              <Stack
+                sx={{
+                  gap: "12px",
+                }}
+              >
+                <Stack
+                  direction="row"
+                  sx={{
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
                   <Typography sx={sectionTitleSx}>Guardrail detections</Typography>
                   <MuiTooltip
                     title="Daily trend of blocked and masked requests — rising detections may indicate increased PII exposure or attack attempts"
@@ -923,8 +1057,20 @@ export default function SpendDashboardPage() {
                     </Box>
                   </MuiTooltip>
                 </Stack>
-                <Stack direction="row" gap="12px" sx={{ mb: "4px" }}>
-                  <Stack direction="row" alignItems="center" gap="4px">
+                <Stack
+                  direction="row"
+                  sx={{
+                    gap: "12px",
+                    mb: "4px",
+                  }}
+                >
+                  <Stack
+                    direction="row"
+                    sx={{
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                  >
                     <Box
                       sx={{
                         width: 8,
@@ -937,7 +1083,13 @@ export default function SpendDashboardPage() {
                       Blocked
                     </Typography>
                   </Stack>
-                  <Stack direction="row" alignItems="center" gap="4px">
+                  <Stack
+                    direction="row"
+                    sx={{
+                      alignItems: "center",
+                      gap: "4px",
+                    }}
+                  >
                     <Box
                       sx={{
                         width: 8,
@@ -1004,8 +1156,18 @@ export default function SpendDashboardPage() {
       {/* Top users */}
       {!loading && (
         <Box sx={cardSx}>
-          <Stack gap="12px">
-            <Stack direction="row" alignItems="center" gap="6px">
+          <Stack
+            sx={{
+              gap: "12px",
+            }}
+          >
+            <Stack
+              direction="row"
+              sx={{
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
               <Typography sx={sectionTitleSx}>Top users</Typography>
               <MuiTooltip
                 title="Users ranked by total spend — shows request count, token usage, and cost"
@@ -1017,20 +1179,30 @@ export default function SpendDashboardPage() {
                 </Box>
               </MuiTooltip>
             </Stack>
-            <Stack gap="8px">
+            <Stack
+              sx={{
+                gap: "8px",
+              }}
+            >
               {byUser.slice(0, 10).map((user: any, i: number) => (
                 <Stack
                   key={user.group_key || `user-${i}`}
                   direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
                   sx={{
+                    justifyContent: "space-between",
+                    alignItems: "center",
                     p: "8px 12px",
                     borderRadius: "4px",
                     border: `1px solid ${palette.border.light}`,
                   }}
                 >
-                  <Stack direction="row" alignItems="center" gap="8px">
+                  <Stack
+                    direction="row"
+                    sx={{
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
                     <Typography
                       sx={{
                         fontSize: 12,
@@ -1043,7 +1215,13 @@ export default function SpendDashboardPage() {
                     </Typography>
                     <Typography sx={{ fontSize: 13 }}>{user.group_key}</Typography>
                   </Stack>
-                  <Stack direction="row" gap="16px" alignItems="center">
+                  <Stack
+                    direction="row"
+                    sx={{
+                      gap: "16px",
+                      alignItems: "center",
+                    }}
+                  >
                     <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
                       {Number(user.total_requests).toLocaleString()} req
                     </Typography>
@@ -1063,14 +1241,27 @@ export default function SpendDashboardPage() {
       {/* Guardrails activity — redesigned */}
       {!loading && (
         <Box sx={cardSx}>
-          <Stack gap="12px">
+          <Stack
+            sx={{
+              gap: "12px",
+            }}
+          >
             <Stack
               direction="row"
-              justifyContent="space-between"
-              alignItems="center"
-              sx={{ pb: "8px", borderBottom: `1px solid ${palette.border.light}` }}
+              sx={{
+                justifyContent: "space-between",
+                alignItems: "center",
+                pb: "8px",
+                borderBottom: `1px solid ${palette.border.light}`,
+              }}
             >
-              <Stack direction="row" alignItems="center" gap="6px">
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
                 <Typography sx={sectionTitleSx}>Guardrails activity</Typography>
                 <MuiTooltip
                   title="What your guardrails caught in this period"
@@ -1083,8 +1274,20 @@ export default function SpendDashboardPage() {
                 </MuiTooltip>
               </Stack>
               {/* Summary badges */}
-              <Stack direction="row" gap="12px" alignItems="center">
-                <Stack direction="row" alignItems="center" gap="4px">
+              <Stack
+                direction="row"
+                sx={{
+                  gap: "12px",
+                  alignItems: "center",
+                }}
+              >
+                <Stack
+                  direction="row"
+                  sx={{
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                >
                   <ShieldOff size={13} strokeWidth={1.5} color={GUARDRAIL_ACTION_COLORS.blocked} />
                   <Typography
                     sx={{ fontSize: 13, fontWeight: 600, color: GUARDRAIL_ACTION_COLORS.blocked }}
@@ -1095,7 +1298,13 @@ export default function SpendDashboardPage() {
                     blocked
                   </Typography>
                 </Stack>
-                <Stack direction="row" alignItems="center" gap="4px">
+                <Stack
+                  direction="row"
+                  sx={{
+                    alignItems: "center",
+                    gap: "4px",
+                  }}
+                >
                   <ShieldCheck size={13} strokeWidth={1.5} color={GUARDRAIL_ACTION_COLORS.masked} />
                   <Typography
                     sx={{ fontSize: 13, fontWeight: 600, color: GUARDRAIL_ACTION_COLORS.masked }}
@@ -1113,9 +1322,18 @@ export default function SpendDashboardPage() {
             </Stack>
 
             {/* Two-column: Top detections + By endpoint */}
-            <Stack direction={{ xs: "column", md: "row" }} gap="16px">
+            <Stack
+              direction={{ xs: "column", md: "row" }}
+              sx={{
+                gap: "16px",
+              }}
+            >
               {/* Top detections */}
-              <Box flex={1}>
+              <Box
+                sx={{
+                  flex: 1,
+                }}
+              >
                 <Typography
                   sx={{
                     fontSize: 11,
@@ -1127,7 +1345,11 @@ export default function SpendDashboardPage() {
                 >
                   Top detections
                 </Typography>
-                <Stack gap="4px">
+                <Stack
+                  sx={{
+                    gap: "4px",
+                  }}
+                >
                   {(guardrailStats?.topDetections || []).length === 0 ? (
                     <Typography sx={{ fontSize: 12, color: palette.text.disabled, py: "8px" }}>
                       No detections in this period
@@ -1137,15 +1359,21 @@ export default function SpendDashboardPage() {
                       <Stack
                         key={`${d.entity_type}-${d.action_taken}-${i}`}
                         direction="row"
-                        justifyContent="space-between"
-                        alignItems="center"
                         sx={{
+                          "justifyContent": "space-between",
+                          "alignItems": "center",
                           "p": "4px 8px",
                           "borderRadius": "4px",
                           "&:hover": { backgroundColor: palette.background.alt },
                         }}
                       >
-                        <Stack direction="row" alignItems="center" gap="6px">
+                        <Stack
+                          direction="row"
+                          sx={{
+                            alignItems: "center",
+                            gap: "6px",
+                          }}
+                        >
                           <Box
                             sx={{
                               width: 6,
@@ -1179,7 +1407,11 @@ export default function SpendDashboardPage() {
               </Box>
 
               {/* By endpoint */}
-              <Box flex={1}>
+              <Box
+                sx={{
+                  flex: 1,
+                }}
+              >
                 <Typography
                   sx={{
                     fontSize: 11,
@@ -1191,7 +1423,11 @@ export default function SpendDashboardPage() {
                 >
                   By endpoint
                 </Typography>
-                <Stack gap="4px">
+                <Stack
+                  sx={{
+                    gap: "4px",
+                  }}
+                >
                   {(guardrailStats?.byEndpoint || []).length === 0 ? (
                     <Typography sx={{ fontSize: 12, color: palette.text.disabled, py: "8px" }}>
                       No endpoint data
@@ -1201,16 +1437,22 @@ export default function SpendDashboardPage() {
                       <Stack
                         key={ep.endpoint_name}
                         direction="row"
-                        justifyContent="space-between"
-                        alignItems="center"
                         sx={{
+                          "justifyContent": "space-between",
+                          "alignItems": "center",
                           "p": "4px 8px",
                           "borderRadius": "4px",
                           "&:hover": { backgroundColor: palette.background.alt },
                         }}
                       >
                         <Typography sx={{ fontSize: 12 }}>{ep.endpoint_name}</Typography>
-                        <Stack direction="row" gap="8px" alignItems="center">
+                        <Stack
+                          direction="row"
+                          sx={{
+                            gap: "8px",
+                            alignItems: "center",
+                          }}
+                        >
                           {ep.blocked > 0 && (
                             <Typography
                               sx={{ fontSize: 11, color: GUARDRAIL_ACTION_COLORS.blocked }}

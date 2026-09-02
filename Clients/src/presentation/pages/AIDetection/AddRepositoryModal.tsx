@@ -257,7 +257,13 @@ export default function AddRepositoryModal({
         {/* Schedule section */}
         <Stack spacing={4}>
           <Stack spacing={1}>
-            <Stack direction="row" alignItems="center" spacing={4}>
+            <Stack
+              direction="row"
+              spacing={4}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <Toggle
                 checked={scheduleEnabled}
                 onChange={() => setScheduleEnabled(!scheduleEnabled)}
@@ -333,7 +339,13 @@ export default function AddRepositoryModal({
         {/* CI/CD Integration section */}
         <Stack spacing={4}>
           <Stack spacing={1}>
-            <Stack direction="row" alignItems="center" spacing={4}>
+            <Stack
+              direction="row"
+              spacing={4}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <Toggle checked={ciEnabled} onChange={() => setCiEnabled(!ciEnabled)} size="small" />
               <Typography
                 variant="subtitle2"
@@ -442,7 +454,13 @@ export default function AddRepositoryModal({
 
               {/* Toggles */}
               <Stack spacing={2}>
-                <Stack direction="row" alignItems="center" justifyContent="space-between">
+                <Stack
+                  direction="row"
+                  sx={{
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
                   <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>
                     Post PR comments
                   </Typography>
@@ -452,7 +470,13 @@ export default function AddRepositoryModal({
                     size="small"
                   />
                 </Stack>
-                <Stack direction="row" alignItems="center" justifyContent="space-between">
+                <Stack
+                  direction="row"
+                  sx={{
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
                   <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>
                     Post status checks
                   </Typography>

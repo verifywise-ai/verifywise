@@ -11,7 +11,15 @@ import { brand } from "../../../../themes/palette";
 // by the parent, which swaps this form out.
 const DownloadReportForm: React.FC<IStatusProps> = ({ aiEnhanced = false }) => {
   return (
-    <Stack sx={styles.container} spacing={2} alignItems="center">
+    <Stack
+      spacing={2}
+      sx={[
+        {
+          alignItems: "center",
+        },
+        styles.container,
+      ]}
+    >
       <CircularProgress size={32} sx={{ color: brand.primary }} />
       <Typography sx={styles.titleText}>Generating report...</Typography>
       <Typography sx={styles.baseText}>

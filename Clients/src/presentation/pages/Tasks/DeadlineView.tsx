@@ -271,7 +271,13 @@ const DeadlineView: React.FC<DeadlineViewProps> = ({
                 },
               }}
             >
-              <Stack direction="row" spacing={1.5} alignItems="center">
+              <Stack
+                direction="row"
+                spacing={1.5}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <IconButton
                   size="small"
                   sx={{ padding: 0 }}

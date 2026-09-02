@@ -155,7 +155,13 @@ export const FileUploadComponent = ({
             </Stack>
           )}
         </DragDropArea>
-        <Stack direction="row" justifyContent="space-between" sx={{ mt: 2 }}>
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "space-between",
+            mt: 2,
+          }}
+        >
           <Typography variant="caption" sx={{ fontSize: "12px" }}>
             Supported formats: PDF
           </Typography>

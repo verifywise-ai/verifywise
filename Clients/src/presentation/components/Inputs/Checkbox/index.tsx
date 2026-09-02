@@ -118,10 +118,6 @@ function Checkbox({
       onChange={onChange}
       onClick={onClick}
       disabled={isDisabled}
-      inputProps={{
-        "aria-label": ariaLabel || label || "controlled checkbox",
-        "id": id,
-      }}
       sx={{
         "borderRadius": theme.shape.borderRadius,
         "&:hover": { backgroundColor: "transparent" },
@@ -129,6 +125,12 @@ function Checkbox({
         ...customSx,
       }}
       size={size}
+      slotProps={{
+        input: {
+          "aria-label": ariaLabel || label || "controlled checkbox",
+          "id": id,
+        },
+      }}
     />
   );
 

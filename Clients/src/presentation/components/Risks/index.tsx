@@ -41,7 +41,14 @@ const Risks: FC<RiskData & { sx?: SxProps<Theme> | undefined }> = ({
   };
 
   return (
-    <Stack direction="row" justifyContent="space-between" sx={{ ...styles.stack, ...sx }}>
+    <Stack
+      direction="row"
+      sx={{
+        justifyContent: "space-between",
+        ...styles.stack,
+        ...sx,
+      }}
+    >
       <Stack sx={styles.stackItem}>
         <Typography sx={{ color: "#C63622", ...styles.stackItemText }}>Very high risks</Typography>
         <Typography sx={{ color: theme.palette.text.secondary, ...styles.stackItemText }}>

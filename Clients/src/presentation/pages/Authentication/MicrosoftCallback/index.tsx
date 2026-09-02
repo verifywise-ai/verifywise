@@ -69,19 +69,26 @@ const MicrosoftCallback: React.FC = () => {
 
   return (
     <Box
-      display="flex"
-      flexDirection="column"
-      justifyContent="center"
-      alignItems="center"
-      height="100vh"
-      gap={2}
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100vh",
+        gap: 2,
+      }}
     >
       {error ? (
         <>
           <Typography color="error" variant="h6">
             {error}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+            }}
+          >
             Redirecting to login...
           </Typography>
         </>

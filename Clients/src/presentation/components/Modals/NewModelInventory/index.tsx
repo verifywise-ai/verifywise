@@ -539,7 +539,13 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
   const modelDetailsSection = (
     <Stack spacing={3}>
       {/* First Row: Provider, Model, Version */}
-      <Stack direction={"row"} justifyContent={"space-between"} spacing={6}>
+      <Stack
+        direction={"row"}
+        spacing={6}
+        sx={{
+          justifyContent: "space-between",
+        }}
+      >
         <Field
           id="provider"
           label="Provider"
@@ -616,7 +622,13 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
       </Stack>
 
       {/* Second Row: Approver, Status, Status Date */}
-      <Stack direction={"row"} justifyContent={"space-between"} spacing={6}>
+      <Stack
+        direction={"row"}
+        spacing={6}
+        sx={{
+          justifyContent: "space-between",
+        }}
+      >
         <SelectComponent
           id="approver"
           label="Approver"
@@ -874,12 +886,14 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
               {values.security_assessment_data.map((file, index) => (
                 <Box
                   key={index}
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="space-between"
-                  p={1.5}
-                  border={`1px solid ${theme.palette.grey[300]}`}
-                  borderRadius={1}
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    p: 1.5,
+                    border: `1px solid ${theme.palette.grey[300]}`,
+                    borderRadius: 1,
+                  }}
                 >
                   {/* Left side: file info */}
                   <Box>
@@ -945,7 +959,13 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
     >
       <Stack spacing={3}>
         {/* ------------ ADD NEW EVIDENCE BUTTON ------------ */}
-        <Box display="flex" justifyContent="flex-end" sx={{ gap: 4 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: 4,
+          }}
+        >
           <CustomizableButton
             variant="contained"
             sx={addNewModelButtonStyle}

@@ -99,7 +99,13 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
           },
         }}
       >
-        <Stack direction="row" alignItems="center" spacing={1.5}>
+        <Stack
+          direction="row"
+          spacing={1.5}
+          sx={{
+            alignItems: "center",
+          }}
+        >
           <Box
             sx={{
               width: compact ? 28 : 32,
@@ -144,7 +150,14 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
               </Typography>
             )}
           </Box>
-          <Stack direction="row" alignItems="center" spacing={0.5} sx={{ flexShrink: 0 }}>
+          <Stack
+            direction="row"
+            spacing={0.5}
+            sx={{
+              alignItems: "center",
+              flexShrink: 0,
+            }}
+          >
             <Chip
               label={
                 template.category === "rag"
@@ -213,7 +226,14 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
           {/* Multi-turn templates */}
           {multiTurn.length > 0 && (
             <Box>
-              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  alignItems: "center",
+                  mb: 1,
+                }}
+              >
                 <Typography
                   sx={{
                     fontSize: "11px",
@@ -249,7 +269,14 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
           {singleTurn.length > 0 && (
             <Box>
               {multiTurn.length > 0 && <Divider sx={{ mb: 2 }} />}
-              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  alignItems: "center",
+                  mb: 1,
+                }}
+              >
                 <Typography
                   sx={{
                     fontSize: "11px",
@@ -285,7 +312,14 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
           {simulated.length > 0 && (
             <Box>
               {(multiTurn.length > 0 || singleTurn.length > 0) && <Divider sx={{ mb: 2 }} />}
-              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  alignItems: "center",
+                  mb: 1,
+                }}
+              >
                 <Typography
                   sx={{
                     fontSize: "11px",

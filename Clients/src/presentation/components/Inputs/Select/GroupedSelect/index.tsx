@@ -94,7 +94,13 @@ function GroupedSelect({
     if (!item) return placeholder;
 
     return (
-      <Stack direction="row" alignItems="center" spacing={1}>
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: "center",
+        }}
+      >
         {item.icon}
         <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{item.label}</Typography>
       </Stack>
@@ -102,15 +108,19 @@ function GroupedSelect({
   };
 
   return (
-    <Stack gap={theme.spacing(2)}>
+    <Stack
+      sx={{
+        gap: theme.spacing(2),
+      }}
+    >
       {label && (
         <Typography
           component="p"
           variant="body1"
           color={theme.palette.text.secondary}
-          fontWeight={500}
-          fontSize="13px"
           sx={{
+            fontWeight: 500,
+            fontSize: "13px",
             margin: 0,
             height: "22px",
             display: "flex",
@@ -119,7 +129,13 @@ function GroupedSelect({
         >
           {label}
           {isRequired && (
-            <Typography component="span" ml={theme.spacing(1)} color={theme.palette.error.text}>
+            <Typography
+              component="span"
+              color={theme.palette.error.text}
+              sx={{
+                ml: theme.spacing(1),
+              }}
+            >
               *
             </Typography>
           )}
@@ -147,30 +163,33 @@ function GroupedSelect({
         )}
         MenuProps={{
           disableScrollLock: true,
-          PaperProps: {
-            sx: {
-              "maxHeight": 280,
-              "overflowY": "auto",
-              "borderRadius": theme.shape.borderRadius,
-              "boxShadow": theme.boxShadow,
-              "mt": 1,
-              "& .MuiMenuItem-root": {
-                "fontSize": 13,
-                "color": theme.palette.text.primary,
-                "transition": "color 0.2s ease, background-color 0.2s ease",
-                "&:hover": {
-                  backgroundColor: theme.palette.background.accent,
-                  color: theme.palette.primary.main,
-                },
-                "&.Mui-selected": {
-                  "backgroundColor": theme.palette.background.accent,
+
+          slotProps: {
+            paper: {
+              sx: {
+                "maxHeight": 280,
+                "overflowY": "auto",
+                "borderRadius": theme.shape.borderRadius,
+                "boxShadow": theme.boxShadow,
+                "mt": 1,
+                "& .MuiMenuItem-root": {
+                  "fontSize": 13,
+                  "color": theme.palette.text.primary,
+                  "transition": "color 0.2s ease, background-color 0.2s ease",
                   "&:hover": {
                     backgroundColor: theme.palette.background.accent,
                     color: theme.palette.primary.main,
                   },
-                },
-                "& .MuiTouchRipple-root": {
-                  display: "none",
+                  "&.Mui-selected": {
+                    "backgroundColor": theme.palette.background.accent,
+                    "&:hover": {
+                      backgroundColor: theme.palette.background.accent,
+                      color: theme.palette.primary.main,
+                    },
+                  },
+                  "& .MuiTouchRipple-root": {
+                    display: "none",
+                  },
                 },
               },
             },
@@ -232,9 +251,11 @@ function GroupedSelect({
               >
                 <Stack
                   direction="row"
-                  alignItems="center"
-                  justifyContent="space-between"
-                  sx={{ width: "100%" }}
+                  sx={{
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    width: "100%",
+                  }}
                 >
                   <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{item.label}</Typography>
                   {item.description && (
@@ -263,8 +284,8 @@ function GroupedSelect({
         <Typography
           className="input-error"
           color={theme.palette.status.error.text}
-          mt={theme.spacing(2)}
           sx={{
+            mt: theme.spacing(2),
             opacity: 0.8,
             fontSize: 11,
           }}

@@ -53,7 +53,13 @@ export default function AIContentReviewPanel({
           borderBottom: `1px solid ${borderPalette.light}`,
         }}
       >
-        <Stack direction="row" alignItems="center" spacing={2}>
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{
+            alignItems: "center",
+          }}
+        >
           <Typography
             sx={{
               fontSize: 15,
@@ -75,9 +81,21 @@ export default function AIContentReviewPanel({
           )}
         </Stack>
 
-        <Stack direction="row" alignItems="center" spacing={1.5}>
+        <Stack
+          direction="row"
+          spacing={1.5}
+          sx={{
+            alignItems: "center",
+          }}
+        >
           {createdDate && (
-            <Stack direction="row" alignItems="center" spacing={0.5}>
+            <Stack
+              direction="row"
+              spacing={0.5}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <Clock size={13} style={{ color: textColors.muted }} />
               <Typography sx={{ fontSize: 12, color: textColors.muted }}>{createdDate}</Typography>
             </Stack>
@@ -101,9 +119,9 @@ export default function AIContentReviewPanel({
           {item.model_used && (
             <Stack
               direction="row"
-              alignItems="center"
               spacing={1}
               sx={{
+                alignItems: "center",
                 backgroundColor: accent.primary.bg,
                 border: `1px solid ${accent.primary.border}`,
                 borderRadius: "8px",
@@ -120,9 +138,9 @@ export default function AIContentReviewPanel({
           {item.model_provider && (
             <Stack
               direction="row"
-              alignItems="center"
               spacing={1}
               sx={{
+                alignItems: "center",
                 backgroundColor: accent.primary.bg,
                 border: `1px solid ${accent.primary.border}`,
                 borderRadius: "8px",
@@ -139,9 +157,9 @@ export default function AIContentReviewPanel({
           {item.tool_name && (
             <Stack
               direction="row"
-              alignItems="center"
               spacing={1}
               sx={{
+                alignItems: "center",
                 backgroundColor: accent.primary.bg,
                 border: `1px solid ${accent.primary.border}`,
                 borderRadius: "8px",
@@ -158,9 +176,9 @@ export default function AIContentReviewPanel({
           {item.confidence_score !== null && item.confidence_score !== undefined && (
             <Stack
               direction="row"
-              alignItems="center"
               spacing={1}
               sx={{
+                alignItems: "center",
                 backgroundColor: accent.primary.bg,
                 border: `1px solid ${accent.primary.border}`,
                 borderRadius: "8px",
@@ -205,9 +223,9 @@ export default function AIContentReviewPanel({
         {item.human_reviewed && item.review_action && (
           <Stack
             direction="row"
-            alignItems="center"
             spacing={1}
             sx={{
+              alignItems: "center",
               px: 2,
               py: 1.5,
               backgroundColor: accent.primary.bg,

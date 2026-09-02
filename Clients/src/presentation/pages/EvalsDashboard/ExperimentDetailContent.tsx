@@ -385,7 +385,14 @@ export default function ExperimentDetailContent({
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "400px",
+        }}
+      >
         <CircularProgress />
       </Box>
     );
@@ -393,7 +400,11 @@ export default function ExperimentDetailContent({
 
   if (!experiment) {
     return (
-      <Box p={4}>
+      <Box
+        sx={{
+          p: 4,
+        }}
+      >
         <Typography>Experiment not found</Typography>
       </Box>
     );
@@ -534,7 +545,14 @@ export default function ExperimentDetailContent({
         </Box>
 
         {/* Action buttons */}
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 3 }}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
           <CustomizableButton
             variant="outlined"
             onClick={async () => {
@@ -633,9 +651,21 @@ export default function ExperimentDetailContent({
           mb: 3,
         }}
       >
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
           {/* Status Section */}
-          <Stack direction="row" alignItems="center" spacing={2}>
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             <Box>
               <Typography
                 sx={{
@@ -736,7 +766,13 @@ export default function ExperimentDetailContent({
           </Stack>
 
           {/* Info Section */}
-          <Stack direction="row" spacing={5} alignItems="flex-start">
+          <Stack
+            direction="row"
+            spacing={5}
+            sx={{
+              alignItems: "flex-start",
+            }}
+          >
             <Box sx={{ textAlign: "center" }}>
               <Typography
                 sx={{
@@ -2042,9 +2078,11 @@ export default function ExperimentDetailContent({
                                   >
                                     <Stack
                                       direction="row"
-                                      justifyContent="space-between"
-                                      alignItems="center"
-                                      sx={{ mb: 0.75 }}
+                                      sx={{
+                                        justifyContent: "space-between",
+                                        alignItems: "center",
+                                        mb: 0.75,
+                                      }}
                                     >
                                       <Typography
                                         sx={{

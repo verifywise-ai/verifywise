@@ -110,7 +110,11 @@ const ActivationWizard: React.FC<ActivationWizardProps> = ({
 
     if (activeStep === 0) {
       return (
-        <Stack gap="16px">
+        <Stack
+          sx={{
+            gap: "16px",
+          }}
+        >
           <GovernanceTooltip
             header="Select projects"
             description="Choose the projects where activation tasks will be created"
@@ -184,7 +188,11 @@ const ActivationWizard: React.FC<ActivationWizardProps> = ({
 
     if (activeStep === 1) {
       return (
-        <Stack gap="16px">
+        <Stack
+          sx={{
+            gap: "16px",
+          }}
+        >
           <GovernanceTooltip
             header="Assign owners"
             description="Choose owners responsible for each framework in the activation"
@@ -206,7 +214,11 @@ const ActivationWizard: React.FC<ActivationWizardProps> = ({
               background: background.main,
             }}
           >
-            <Stack gap="16px">
+            <Stack
+              sx={{
+                gap: "16px",
+              }}
+            >
               {frameworkIds.map((fwId) => (
                 <Box key={fwId}>
                   <Typography
@@ -241,7 +253,11 @@ const ActivationWizard: React.FC<ActivationWizardProps> = ({
     }
 
     return (
-      <Stack gap="16px">
+      <Stack
+        sx={{
+          gap: "16px",
+        }}
+      >
         <GovernanceTooltip
           header="Review activation"
           description="Confirm the scenario activation details before creating tasks"
@@ -267,7 +283,11 @@ const ActivationWizard: React.FC<ActivationWizardProps> = ({
             Activation summary
           </Typography>
 
-          <Stack gap="16px">
+          <Stack
+            sx={{
+              gap: "16px",
+            }}
+          >
             <Box>
               <Typography sx={{ fontSize: 11, color: text.muted, mb: "4px" }}>Scenario</Typography>
               <Typography sx={{ fontSize: 13, color: text.primary }}>{scenario.name}</Typography>
@@ -286,7 +306,11 @@ const ActivationWizard: React.FC<ActivationWizardProps> = ({
               <Typography sx={{ fontSize: 11, color: text.muted, mb: "4px" }}>
                 Framework owners
               </Typography>
-              <Stack gap="4px">
+              <Stack
+                sx={{
+                  gap: "4px",
+                }}
+              >
                 {frameworkIds.map((fwId) => {
                   const user = users.find((u) => u.id === ownerAssignments[fwId]);
                   return (
@@ -303,7 +327,11 @@ const ActivationWizard: React.FC<ActivationWizardProps> = ({
               <Typography sx={{ fontSize: 11, color: text.muted, mb: "4px" }}>
                 Staggered due dates
               </Typography>
-              <Stack gap="4px">
+              <Stack
+                sx={{
+                  gap: "4px",
+                }}
+              >
                 <Typography sx={{ fontSize: 13, color: text.primary }}>
                   Primary framework: 14 days
                 </Typography>

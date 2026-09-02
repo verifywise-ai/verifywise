@@ -895,7 +895,13 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                     <TableCell
                       sx={{ ...singleTheme.tableStyles.primary.body.cell, minWidth: "80px" }}
                     >
-                      <Stack direction="row" alignItems="center" spacing="4px">
+                      <Stack
+                        direction="row"
+                        spacing="4px"
+                        sx={{
+                          alignItems: "center",
+                        }}
+                      >
                         {(() => {
                           const fid = Number(row.id);
                           const entry = analysisByFileId.get(fid);
@@ -1012,10 +1018,10 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                   rowsPerPage={rowsPerPage}
                   rowsPerPageOptions={[5, 10, 15, 20, 25]}
                   onRowsPerPageChange={handleChangeRowsPerPage}
-                  ActionsComponent={TablePaginationActions as React.ComponentType<any>}
                   labelRowsPerPage="Rows per page"
                   sx={{ mt: theme.spacing(6) }}
                   colSpan={visibleColumnKeys.length - 1}
+                  ActionsComponent={TablePaginationActions as React.ComponentType<any>}
                 />
               </TableRow>
             </TableFooter>
@@ -1039,7 +1045,11 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
           isOpen
           title={`Move ${selectionCount} file${selectionCount === 1 ? "" : "s"} to a folder`}
           body={
-            <Stack gap={2}>
+            <Stack
+              sx={{
+                gap: 2,
+              }}
+            >
               <Typography variant="body2" sx={{ color: "text.secondary", fontSize: 12 }}>
                 Adds to the chosen folder; existing assignments are preserved.
               </Typography>
@@ -1084,8 +1094,18 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
           isOpen
           title={`Edit tags on ${selectionCount} file${selectionCount === 1 ? "" : "s"}`}
           body={
-            <Stack gap={2}>
-              <Stack direction="row" alignItems="center" gap={2}>
+            <Stack
+              sx={{
+                gap: 2,
+              }}
+            >
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: "center",
+                  gap: 2,
+                }}
+              >
                 <Typography variant="body2" sx={{ color: "text.secondary", fontSize: 12 }}>
                   Mode
                 </Typography>

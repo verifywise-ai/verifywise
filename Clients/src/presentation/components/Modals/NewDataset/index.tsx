@@ -266,7 +266,13 @@ const NewDataset: FC<NewDatasetProps> = ({
   const formContent = (
     <Stack spacing={3}>
       {/* First Row: Name, Version */}
-      <Stack direction={"row"} justifyContent={"space-between"} spacing={6}>
+      <Stack
+        direction={"row"}
+        spacing={6}
+        sx={{
+          justifyContent: "space-between",
+        }}
+      >
         <Field
           id="name"
           label="Dataset name"
@@ -307,7 +313,13 @@ const NewDataset: FC<NewDatasetProps> = ({
       />
 
       {/* Second Row: Type, Classification, Status */}
-      <Stack direction={"row"} justifyContent={"space-between"} spacing={6}>
+      <Stack
+        direction={"row"}
+        spacing={6}
+        sx={{
+          justifyContent: "space-between",
+        }}
+      >
         {/* Editing a dataset saved without a type or classification: fall back
             to the placeholder and let the required-field rule ask for an
             explicit choice, rather than pre-selecting one the user never made. */}
@@ -347,7 +359,13 @@ const NewDataset: FC<NewDatasetProps> = ({
       </Stack>
 
       {/* Third Row: Owner, Status Date, Source */}
-      <Stack direction={"row"} justifyContent={"space-between"} spacing={6}>
+      <Stack
+        direction={"row"}
+        spacing={6}
+        sx={{
+          justifyContent: "space-between",
+        }}
+      >
         <Field
           id="owner"
           label="Owner"
@@ -397,7 +415,13 @@ const NewDataset: FC<NewDatasetProps> = ({
       />
 
       {/* Fourth Row: License, Format */}
-      <Stack direction={"row"} justifyContent={"space-between"} spacing={6}>
+      <Stack
+        direction={"row"}
+        spacing={6}
+        sx={{
+          justifyContent: "space-between",
+        }}
+      >
         <Field
           id="license"
           label="License"
@@ -453,7 +477,13 @@ const NewDataset: FC<NewDatasetProps> = ({
       )}
 
       {/* Biases Section */}
-      <Stack direction={"row"} justifyContent={"space-between"} spacing={6}>
+      <Stack
+        direction={"row"}
+        spacing={6}
+        sx={{
+          justifyContent: "space-between",
+        }}
+      >
         <Field
           id="known_biases"
           label="Known biases"
@@ -475,7 +505,13 @@ const NewDataset: FC<NewDatasetProps> = ({
       </Stack>
 
       {/* Collection and Preprocessing */}
-      <Stack direction={"row"} justifyContent={"space-between"} spacing={6}>
+      <Stack
+        direction={"row"}
+        spacing={6}
+        sx={{
+          justifyContent: "space-between",
+        }}
+      >
         <Field
           id="collection_method"
           label="Collection method"

@@ -178,15 +178,21 @@ const CustomizableBasicTable = ({
       {paginated && (
         <Stack
           direction="row"
-          alignItems="center"
-          justifyContent="space-between"
-          px={theme.spacing(4)}
           sx={{
+            alignItems: "center",
+            justifyContent: "space-between",
+            px: theme.spacing(4),
             width: "100%",
             display: "flex",
           }}
         >
-          <Typography px={theme.spacing(2)} fontSize={12} sx={{ opacity: 0.7 }}>
+          <Typography
+            sx={{
+              px: theme.spacing(2),
+              fontSize: 12,
+              opacity: 0.7,
+            }}
+          >
             Showing {page * rowsPerPage + 1} -{" "}
             {Math.min(page * rowsPerPage + rowsPerPage, data.rows.length)} of {data.rows.length}{" "}
             items
@@ -198,9 +204,9 @@ const CustomizableBasicTable = ({
             rowsPerPage={rowsPerPage}
             rowsPerPageOptions={[5, 10, 15, 25]}
             onRowsPerPageChange={handleChangeRowsPerPage}
-            ActionsComponent={TablePaginationActions as any}
             labelRowsPerPage="Rows per page"
             sx={{ mt: theme.spacing(6) }}
+            ActionsComponent={TablePaginationActions as any}
           />
         </Stack>
       )}

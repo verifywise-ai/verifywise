@@ -55,10 +55,21 @@ function Radio({ checked, value, id, size, onChange, title, desc }: RadioProps) 
       onChange={(event) => onChange(event as ChangeEvent<HTMLInputElement>)}
       label={
         <>
-          <Typography fontSize={13} color="text.tertiary">
+          <Typography
+            sx={{
+              fontSize: 13,
+              color: "text.tertiary",
+            }}
+          >
             {title}
           </Typography>
-          <Typography component="h6" mt={theme.spacing(1)} color={theme.palette.text.secondary}>
+          <Typography
+            component="h6"
+            color={theme.palette.text.secondary}
+            sx={{
+              mt: theme.spacing(1),
+            }}
+          >
             {desc}
           </Typography>
         </>

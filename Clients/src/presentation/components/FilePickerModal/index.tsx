@@ -166,13 +166,6 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
           placeholder="Search files..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search size={16} color={theme.palette.text.accent} />
-              </InputAdornment>
-            ),
-          }}
           sx={{
             "& .MuiOutlinedInput-root": {
               "backgroundColor": theme.palette.background.accent,
@@ -194,10 +187,25 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
               opacity: 1,
             },
           }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search size={16} color={theme.palette.text.accent} />
+                </InputAdornment>
+              ),
+            },
+          }}
         />
 
         {/* Header row with select all and count */}
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           {multiSelect && filteredFiles.length > 0 ? (
             <Typography
               onClick={handleSelectAll}
@@ -214,7 +222,13 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
           ) : (
             <Box />
           )}
-          <Stack direction="row" alignItems="center" spacing={1}>
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: "center",
+            }}
+          >
             {selectedIds.size > 0 && (
               <Chip
                 label={`${selectedIds.size} selected`}
@@ -246,11 +260,25 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
           }}
         >
           {loading ? (
-            <Box display="flex" justifyContent="center" alignItems="center" py={5}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                py: 5,
+              }}
+            >
               <CircularProgress size={24} sx={{ color: "#4C7BF4" }} />
             </Box>
           ) : error ? (
-            <Box display="flex" justifyContent="center" alignItems="center" py={4}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                py: 4,
+              }}
+            >
               <Typography
                 sx={{ fontSize: theme.typography.fontSize, color: theme.palette.status.error.text }}
               >
@@ -342,7 +370,14 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
                     >
                       {file.filename}
                     </Typography>
-                    <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: 0.25 }}>
+                    <Stack
+                      direction="row"
+                      spacing={0.5}
+                      sx={{
+                        alignItems: "center",
+                        mt: 0.25,
+                      }}
+                    >
                       {file.size && (
                         <Typography sx={{ fontSize: 11, color: theme.palette.other.icon }}>
                           {formatFileSize(file.size)}

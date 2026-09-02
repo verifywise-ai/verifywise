@@ -216,7 +216,13 @@ export default function ReadinessDashboard({
               >
                 {formatFrameworkName(fw.framework_type)}
               </Typography>
-              <Stack direction="row" alignItems="center" sx={{ gap: "8px" }}>
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
                 <Typography
                   sx={{
                     fontSize: 24,
@@ -274,9 +280,13 @@ export default function ReadinessDashboard({
       {/* Header — the controls share this row with the summary cards when scoped. */}
       <Stack
         direction="row"
-        justifyContent="space-between"
-        alignItems={isScoped ? "flex-start" : "center"}
-        sx={{ gap: "16px", flexWrap: "wrap", mb: "16px" }}
+        sx={{
+          justifyContent: "space-between",
+          alignItems: isScoped ? "flex-start" : "center",
+          gap: "16px",
+          flexWrap: "wrap",
+          mb: "16px",
+        }}
       >
         {isScoped ? (
           summaryCards
@@ -298,7 +308,14 @@ export default function ReadinessDashboard({
             </Typography>
           </Box>
         )}
-        <Stack direction="row" alignItems="center" sx={{ gap: "8px", flexShrink: 0 }}>
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "center",
+            gap: "8px",
+            flexShrink: 0,
+          }}
+        >
           <VisibilityChips value={visFilter} onChange={setVisFilter} />
           <CustomizableButton
             variant="contained"
@@ -319,9 +336,6 @@ export default function ReadinessDashboard({
         <Tabs
           value={selectedFramework}
           onChange={(_, v) => setSelectedFramework(v)}
-          TabIndicatorProps={{
-            style: { backgroundColor: brand.primary },
-          }}
           sx={{
             "mb": "16px",
             "minHeight": "20px",
@@ -334,6 +348,11 @@ export default function ReadinessDashboard({
             },
             "& .Mui-selected": { color: brand.primary },
             "& .MuiTabs-flexContainer": { columnGap: "34px" },
+          }}
+          slotProps={{
+            indicator: {
+              style: { backgroundColor: brand.primary },
+            },
           }}
         >
           {FRAMEWORK_TABS.map((tab) => (

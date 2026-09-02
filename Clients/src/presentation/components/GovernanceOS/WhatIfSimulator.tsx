@@ -130,7 +130,14 @@ const WhatIfSimulator: React.FC<WhatIfSimulatorProps> = ({
         background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
       }}
     >
-      <Stack direction="row" gap="16px" alignItems="center" sx={{ mb: "16px" }}>
+      <Stack
+        direction="row"
+        sx={{
+          gap: "16px",
+          alignItems: "center",
+          mb: "16px",
+        }}
+      >
         <Calculator size={20} color={brand.primary} />
         <Typography sx={{ fontSize: 14, fontWeight: 600 }}>Rough Estimate</Typography>
       </Stack>
@@ -145,7 +152,11 @@ const WhatIfSimulator: React.FC<WhatIfSimulatorProps> = ({
         coverage, and timeline before activating.
       </Typography>
 
-      <Stack gap="16px">
+      <Stack
+        sx={{
+          gap: "16px",
+        }}
+      >
         <GovernanceTooltip
           header="Base scenario"
           description="Starting point for the what-if simulation"
@@ -215,7 +226,13 @@ const WhatIfSimulator: React.FC<WhatIfSimulatorProps> = ({
                 Secondary
               </Typography>
             </GovernanceTooltip>
-            <Stack direction="row" flexWrap="wrap" gap="8px">
+            <Stack
+              direction="row"
+              sx={{
+                flexWrap: "wrap",
+                gap: "8px",
+              }}
+            >
               {availableForSecondary.map((fw) => (
                 <Box
                   key={fw.id}
@@ -272,7 +289,13 @@ const WhatIfSimulator: React.FC<WhatIfSimulatorProps> = ({
                 Supplementary
               </Typography>
             </GovernanceTooltip>
-            <Stack direction="row" flexWrap="wrap" gap="8px">
+            <Stack
+              direction="row"
+              sx={{
+                flexWrap: "wrap",
+                gap: "8px",
+              }}
+            >
               {availableForSupplementary.map((fw) => (
                 <Box
                   key={fw.id}
@@ -410,7 +433,12 @@ const WhatIfSimulator: React.FC<WhatIfSimulatorProps> = ({
             />
 
             {result.frameworkBreakdown?.length > 0 && (
-              <Stack gap="8px" sx={{ mt: "16px" }}>
+              <Stack
+                sx={{
+                  gap: "8px",
+                  mt: "16px",
+                }}
+              >
                 {result.frameworkBreakdown.map((fw) => (
                   <Box
                     key={fw.frameworkId}
@@ -424,7 +452,13 @@ const WhatIfSimulator: React.FC<WhatIfSimulatorProps> = ({
                     <Typography sx={{ fontSize: 13, color: text.primary }}>
                       {fw.frameworkName}
                     </Typography>
-                    <Stack direction="row" gap="8px" alignItems="center">
+                    <Stack
+                      direction="row"
+                      sx={{
+                        gap: "8px",
+                        alignItems: "center",
+                      }}
+                    >
                       <Box
                         component="span"
                         sx={{

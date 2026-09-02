@@ -25,13 +25,21 @@ const Overview = ({
 
   if (loading)
     return (
-      <Box p={4}>
+      <Box
+        sx={{
+          p: 4,
+        }}
+      >
         <CustomTextField loading label="Loading..." />
       </Box>
     );
   if (error)
     return (
-      <Box p={4}>
+      <Box
+        sx={{
+          p: 4,
+        }}
+      >
         <Typography color="error">{error}</Typography>
       </Box>
     );
@@ -43,10 +51,12 @@ const Overview = ({
       {data?.intro && (
         <Paper elevation={0} sx={{ background: "none", boxShadow: "none", maxWidth: "100%" }}>
           <Stack
-            justifyContent="flex-start"
-            alignItems="flex-start"
             direction={{ xs: "column", md: "row" }}
             spacing={4}
+            sx={{
+              justifyContent: "flex-start",
+              alignItems: "flex-start",
+            }}
           >
             {data.intro.purpose && (
               <CustomTextField label="Purpose of our trust center" value={data.intro.purpose} />
@@ -127,12 +137,20 @@ const Overview = ({
               {data.resources.map((resource: any, idx: number) => (
                 <Box
                   key={idx}
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="space-between"
-                  sx={{ py: 0.5 }}
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    py: 0.5,
+                  }}
                 >
-                  <Box display="flex" alignItems="center" gap={1}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                    }}
+                  >
                     <CheckCircleOutlineIcon size={24} style={{ color: "#10B981" }} />
                     <Typography variant="body2">{resource.name}</Typography>
                   </Box>
@@ -152,7 +170,11 @@ const Overview = ({
                   </Button>
                 </Box>
               ))}
-              <Box mt={1}>
+              <Box
+                sx={{
+                  mt: 1,
+                }}
+              >
                 <Button
                   variant="text"
                   color="primary"

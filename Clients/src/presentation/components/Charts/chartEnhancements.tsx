@@ -41,12 +41,19 @@ export const ChartCard: React.FC<ChartCardProps> = ({ title, tooltip, children, 
       ...sx,
     }}
   >
-    <Stack gap="12px">
+    <Stack
+      sx={{
+        gap: "12px",
+      }}
+    >
       <Stack
         direction="row"
-        alignItems="center"
-        gap="6px"
-        sx={{ pb: "8px", borderBottom: `1px solid ${palette.border.light}` }}
+        sx={{
+          alignItems: "center",
+          gap: "6px",
+          pb: "8px",
+          borderBottom: `1px solid ${palette.border.light}`,
+        }}
       >
         <Typography sx={{ fontWeight: 600, fontSize: 16 }}>{title}</Typography>
         {tooltip && (

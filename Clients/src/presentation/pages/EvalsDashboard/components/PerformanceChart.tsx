@@ -189,8 +189,18 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
 
   if (loading) {
     return (
-      <Box textAlign="center" py={4}>
-        <Typography variant="body2" color="text.secondary">
+      <Box
+        sx={{
+          textAlign: "center",
+          py: 4,
+        }}
+      >
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           Loading performance data...
         </Typography>
       </Box>
@@ -199,8 +209,18 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
 
   if (data.length === 0) {
     return (
-      <Box textAlign="center" py={4}>
-        <Typography variant="body2" color="text.secondary">
+      <Box
+        sx={{
+          textAlign: "center",
+          py: 4,
+        }}
+      >
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           No completed experiments in this time range.
         </Typography>
       </Box>

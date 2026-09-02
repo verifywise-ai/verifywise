@@ -22,7 +22,13 @@ interface MetricRowProps {
 
 function MetricRow({ label, value, color }: MetricRowProps) {
   return (
-    <Stack direction="row" justifyContent="space-between" alignItems="center">
+    <Stack
+      direction="row"
+      sx={{
+        justifyContent: "space-between",
+        alignItems: "center",
+      }}
+    >
       <Typography sx={{ fontSize: 13, color: C.textSecondary }}>{label}</Typography>
       <Typography sx={{ fontSize: 14, fontWeight: 600, color: color || C.textPrimary }}>
         {value}
@@ -42,7 +48,11 @@ export function PortfolioExposureCard({ portfolio }: PortfolioExposureCardProps)
       : "0";
 
   return (
-    <Stack gap="12px">
+    <Stack
+      sx={{
+        gap: "12px",
+      }}
+    >
       {/* Main ALE figure */}
       <Box sx={{ textAlign: "center", py: 1 }}>
         <Typography sx={{ fontSize: 11, color: C.textSecondary, mb: 0.5 }}>
@@ -56,7 +66,11 @@ export function PortfolioExposureCard({ portfolio }: PortfolioExposureCardProps)
       <Divider />
 
       {/* Breakdown */}
-      <Stack gap="8px">
+      <Stack
+        sx={{
+          gap: "8px",
+        }}
+      >
         <MetricRow
           label="Residual exposure"
           value={formatCurrency(portfolio.total_residual_ale)}
@@ -85,7 +99,14 @@ export function PortfolioExposureCard({ portfolio }: PortfolioExposureCardProps)
       <Divider />
 
       {/* Risk count */}
-      <Stack direction="row" justifyContent="center" alignItems="center" gap={1}>
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: "center",
+          alignItems: "center",
+          gap: 1,
+        }}
+      >
         <Typography sx={TEXT_STYLES.legendItem}>
           Based on {portfolio.risk_count} quantified risk{portfolio.risk_count !== 1 ? "s" : ""}
         </Typography>

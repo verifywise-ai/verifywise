@@ -375,13 +375,15 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
           anchorEl={anchorEl}
           open={Boolean(anchorEl)}
           onClose={() => setAnchorEl(null)}
-          PaperProps={{
-            sx: {
-              mt: "4px",
-              minWidth: 260,
-              borderRadius: "8px",
-              border: `1px solid ${palette.border.light}`,
-              boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+          slotProps={{
+            paper: {
+              sx: {
+                mt: "4px",
+                minWidth: 260,
+                borderRadius: "8px",
+                border: `1px solid ${palette.border.light}`,
+                boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+              },
             },
           }}
           transformOrigin={{ horizontal: "left", vertical: "top" }}
@@ -432,10 +434,21 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                   <Box sx={{ width: 16 }} />
                 )}
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography fontSize={13} fontWeight={isSelected ? 500 : 400} noWrap>
+                  <Typography
+                    noWrap
+                    sx={{
+                      fontSize: 13,
+                      fontWeight: isSelected ? 500 : 400,
+                    }}
+                  >
                     {m.name}
                   </Typography>
-                  <Typography fontSize={11} color={palette.text.tertiary}>
+                  <Typography
+                    color={palette.text.tertiary}
+                    sx={{
+                      fontSize: 11,
+                    }}
+                  >
                     {m.provider}
                   </Typography>
                 </Box>
@@ -462,7 +475,13 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
             sx={{ gap: "8px", py: "8px", px: "12px", color: palette.brand.primary }}
           >
             <Plus size={14} strokeWidth={1.5} />
-            <Typography fontSize={13} fontWeight={500} color={palette.brand.primary}>
+            <Typography
+              color={palette.brand.primary}
+              sx={{
+                fontSize: 13,
+                fontWeight: 500,
+              }}
+            >
               Add model
             </Typography>
           </MenuItem>
@@ -525,12 +544,25 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
               <Bot size={22} color={palette.text.tertiary} strokeWidth={1.2} />
             )}
           </Box>
-          <Typography fontSize={15} fontWeight={500} color={palette.text.secondary}>
+          <Typography
+            color={palette.text.secondary}
+            sx={{
+              fontSize: 15,
+              fontWeight: 500,
+            }}
+          >
             {savedModels.length === 0
               ? "Add a model first"
               : `Chat with ${selectedModel?.name ?? "your model"}`}
           </Typography>
-          <Typography fontSize={13} color={palette.text.tertiary} textAlign="center" maxWidth={320}>
+          <Typography
+            color={palette.text.tertiary}
+            sx={{
+              fontSize: 13,
+              textAlign: "center",
+              maxWidth: 320,
+            }}
+          >
             {savedModels.length === 0
               ? 'Click "Add model" above to save a model, then start chatting.'
               : "Send a message or attach a file below."}
@@ -679,9 +711,20 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                   <Bot size={14} color={palette.text.tertiary} strokeWidth={1.5} />
                 )}
               </Box>
-              <Stack direction="row" alignItems="center" gap="6px">
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
                 <CircularProgress size={12} sx={{ color: palette.brand.primary }} />
-                <Typography fontSize={12} color={palette.text.tertiary}>
+                <Typography
+                  color={palette.text.tertiary}
+                  sx={{
+                    fontSize: 12,
+                  }}
+                >
                   Thinking…
                 </Typography>
               </Stack>
@@ -699,7 +742,12 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                 backgroundColor: "#FFF5F5",
               }}
             >
-              <Typography fontSize={12} color="#DC2626">
+              <Typography
+                sx={{
+                  fontSize: 12,
+                  color: "#DC2626",
+                }}
+              >
                 {error}
               </Typography>
             </Box>
@@ -759,10 +807,12 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                       style={{ flexShrink: 0 }}
                     />
                     <Typography
-                      fontSize={11}
                       color={palette.text.secondary}
                       noWrap
-                      sx={{ maxWidth: 120 }}
+                      sx={{
+                        fontSize: 11,
+                        maxWidth: 120,
+                      }}
                     >
                       {att.name}
                     </Typography>

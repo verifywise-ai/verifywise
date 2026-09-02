@@ -22,11 +22,22 @@ export function PageHeaderExtended({
   actionButton = null,
 }: PageHeaderExtendedProps) {
   return (
-    <Stack className="vwhome" gap={0}>
+    <Stack
+      className="vwhome"
+      sx={{
+        gap: 0,
+      }}
+    >
       <PageBreadcrumbs items={breadcrumbItems} sx={{ "mb": 0, "& > hr": { mb: 0 } }} />
 
       <Box sx={{ mt: "16px" }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+          }}
+        >
           <PageHeader
             title={title}
             description={description}
@@ -48,7 +59,12 @@ export function PageHeaderExtended({
       {warningBanner && <Box sx={{ mt: "18px" }}>{warningBanner}</Box>}
 
       {(tipBoxEntity || summaryCards) && (
-        <Stack gap="18px" sx={{ mt: "18px" }}>
+        <Stack
+          sx={{
+            gap: "18px",
+            mt: "18px",
+          }}
+        >
           {tipBoxEntity && <TipBox entityName={tipBoxEntity} />}
           {summaryCards && (
             <Box data-joyride-id={summaryCardsJoyrideId} sx={pageHeaderSummaryCardsStyle}>
@@ -57,7 +73,12 @@ export function PageHeaderExtended({
           )}
         </Stack>
       )}
-      <Stack gap="16px" sx={{ mt: "16px" }}>
+      <Stack
+        sx={{
+          gap: "16px",
+          mt: "16px",
+        }}
+      >
         {children}
       </Stack>
     </Stack>

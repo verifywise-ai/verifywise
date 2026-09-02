@@ -178,7 +178,14 @@ const SsoConfigTab: React.FC = () => {
 
   if (isLoading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "400px",
+        }}
+      >
         <CircularProgress />
       </Box>
     );
@@ -199,7 +206,13 @@ const SsoConfigTab: React.FC = () => {
       <Box sx={{ height: "16px" }} />
 
       <Box sx={cardStyles}>
-        <Typography fontSize={15} fontWeight={700} gutterBottom>
+        <Typography
+          gutterBottom
+          sx={{
+            fontSize: 15,
+            fontWeight: 700,
+          }}
+        >
           Entra ID SSO configuration
         </Typography>
 
@@ -219,7 +232,14 @@ const SsoConfigTab: React.FC = () => {
                 isRequired
                 sx={{ width: "100%" }}
               />
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontSize: "12px" }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                  mt: 1,
+                  fontSize: "12px",
+                }}
+              >
                 Found in Azure Portal &gt; Microsoft Entra ID &gt; Overview &gt; Tenant ID
               </Typography>
             </Box>
@@ -233,7 +253,14 @@ const SsoConfigTab: React.FC = () => {
                 isRequired
                 sx={{ width: "100%" }}
               />
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontSize: "12px" }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                  mt: 1,
+                  fontSize: "12px",
+                }}
+              >
                 Found in Azure Portal &gt; App registrations &gt; [Your App] &gt; Application
                 (client) ID
               </Typography>
@@ -271,7 +298,13 @@ const SsoConfigTab: React.FC = () => {
           </Stack>
         </Stack>
 
-        <Stack direction="row" justifyContent="flex-end" spacing={2}>
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{
+            justifyContent: "flex-end",
+          }}
+        >
           <Button
             variant="contained"
             onClick={handleSave}
@@ -286,16 +319,33 @@ const SsoConfigTab: React.FC = () => {
       <Box sx={{ height: "16px" }} />
 
       <Box sx={cardStyles}>
-        <Typography fontSize={15} fontWeight={700} gutterBottom>
+        <Typography
+          gutterBottom
+          sx={{
+            fontSize: 15,
+            fontWeight: 700,
+          }}
+        >
           Enable Entra ID SSO
         </Typography>
         <Box sx={{ marginBottom: theme.spacing(3) }}>
-          <Typography variant="body2" color="text.secondary" sx={{ fontSize: "13px" }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: "text.secondary",
+              fontSize: "13px",
+            }}
+          >
             Enable SSO authentication for this organization. Configuration must be saved before
             enabling.
           </Typography>
         </Box>
-        <Stack direction="row" justifyContent="flex-end">
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "flex-end",
+          }}
+        >
           <Button
             variant={config.isEnabled ? "outlined" : "contained"}
             onClick={handleToggle}

@@ -269,7 +269,13 @@ export default function MCPAgentKeysPage() {
               const status = getStatusLabel(key);
               return [
                 <Box>
-                  <Stack direction="row" alignItems="center" gap="8px">
+                  <Stack
+                    direction="row"
+                    sx={{
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
                     <KeyRound size={14} strokeWidth={1.5} color={palette.text.tertiary} />
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{key.name}</Typography>
                   </Stack>
@@ -288,7 +294,13 @@ export default function MCPAgentKeysPage() {
                 <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
                   {key.rate_limit_rpm ? `${key.rate_limit_rpm} RPM` : "—"}
                 </Typography>,
-                <Stack direction="row" gap="6px" flexWrap="wrap">
+                <Stack
+                  direction="row"
+                  sx={{
+                    gap: "6px",
+                    flexWrap: "wrap",
+                  }}
+                >
                   {key.allowed_tools?.length > 0 && (
                     <Chip
                       label={`${key.allowed_tools.length} allowed`}
@@ -310,7 +322,14 @@ export default function MCPAgentKeysPage() {
                 <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
                   by {key.created_by_name} &middot; {displayFormattedDate(key.created_at)}
                 </Typography>,
-                <Stack direction="row" alignItems="center" justifyContent="flex-end" gap="4px">
+                <Stack
+                  direction="row"
+                  sx={{
+                    alignItems: "center",
+                    justifyContent: "flex-end",
+                    gap: "4px",
+                  }}
+                >
                   {key.is_active && !key.revoked_at && (
                     <IconButton
                       size="small"
@@ -349,7 +368,11 @@ export default function MCPAgentKeysPage() {
         isSubmitting={createSubmitting}
         maxWidth="480px"
       >
-        <Stack gap="16px">
+        <Stack
+          sx={{
+            gap: "16px",
+          }}
+        >
           <Field
             label="Name"
             placeholder="e.g., Production agent key"
@@ -412,7 +435,11 @@ export default function MCPAgentKeysPage() {
         hideSubmitButton
         cancelButtonText="I copied, continue"
       >
-        <Stack gap="16px">
+        <Stack
+          sx={{
+            gap: "16px",
+          }}
+        >
           <Box
             sx={{
               p: "12px 16px",

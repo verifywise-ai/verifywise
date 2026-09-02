@@ -111,7 +111,13 @@ const Overview: FC<OverviewProps> = memo(({ projectRisksSummary }) => {
       {/* Main Content */}
       <Stack sx={{ width: "100%" }}>
         {isLoading && (
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 12 }}>
+          <Typography
+            variant="body1"
+            sx={{
+              color: "text.secondary",
+              mb: 12,
+            }}
+          >
             Project are loading...
           </Typography>
         )}

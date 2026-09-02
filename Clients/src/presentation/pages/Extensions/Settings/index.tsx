@@ -201,7 +201,13 @@ export default function ExtensionSettingsPage() {
       </Box>
 
       {loading ? (
-        <Box display="flex" justifyContent="center" py="48px">
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            py: "48px",
+          }}
+        >
           <CircularProgress size={24} sx={{ color: theme.palette.primary.main }} />
         </Box>
       ) : error ? (
@@ -220,7 +226,13 @@ export default function ExtensionSettingsPage() {
       ) : extension ? (
         <Stack spacing="20px">
           {/* Identity strip: icon · name (already in page header) · status pill · meta */}
-          <Stack direction="row" alignItems="center" spacing="12px">
+          <Stack
+            direction="row"
+            spacing="12px"
+            sx={{
+              alignItems: "center",
+            }}
+          >
             {extension.iconPath && (
               <Box
                 component="img"
@@ -322,7 +334,14 @@ export default function ExtensionSettingsPage() {
           {extension.enabled && extension.key === "jira-assets" && <JiraAssetsConfiguration />}
 
           {/* Actions */}
-          <Stack direction="row" spacing="12px" flexWrap="wrap" sx={{ rowGap: "8px" }}>
+          <Stack
+            direction="row"
+            spacing="12px"
+            sx={{
+              flexWrap: "wrap",
+              rowGap: "8px",
+            }}
+          >
             {extension.enabled ? (
               <CustomizableButton
                 variant="outlined"

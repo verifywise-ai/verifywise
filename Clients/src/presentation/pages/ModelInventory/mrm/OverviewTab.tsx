@@ -204,7 +204,14 @@ const OverviewTab = ({ onError, onSuccess }: OverviewTabProps) => {
             </Table>
           </TableContainer>
 
-          <Stack direction="row" alignItems="center" sx={{ gap: "8px", marginTop: "16px" }}>
+          <Stack
+            direction="row"
+            sx={{
+              alignItems: "center",
+              gap: "8px",
+              marginTop: "16px",
+            }}
+          >
             <Typography sx={{ fontSize: "13px", color: "text.secondary" }}>
               Fleet attestation status
             </Typography>

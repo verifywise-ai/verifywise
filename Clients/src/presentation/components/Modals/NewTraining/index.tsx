@@ -412,7 +412,14 @@ const NewTraining: FC<NewTrainingProps> = ({
           {activeTab === "details" && formContent}
           {activeTab === "evidence" && (
             <Stack spacing={2}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
                 <Typography
                   sx={{
                     fontSize: 13,

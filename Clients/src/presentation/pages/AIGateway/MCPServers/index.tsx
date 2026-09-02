@@ -272,7 +272,13 @@ export default function MCPServersPage() {
             rowKey={(srv) => srv.id}
             onRowClick={(srv) => openEditModal(srv)}
             renderRow={(srv) => [
-              <Stack direction="row" alignItems="center" gap="8px">
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
                 <Server size={14} strokeWidth={1.5} color={palette.text.tertiary} />
                 <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{srv.name}</Typography>
               </Stack>,
@@ -310,10 +316,12 @@ export default function MCPServersPage() {
               </Box>,
               <Stack
                 direction="row"
-                alignItems="center"
-                justifyContent="flex-end"
-                gap="2px"
                 onClick={(e) => e.stopPropagation()}
+                sx={{
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                  gap: "2px",
+                }}
               >
                 <Tooltip title="Coming soon" arrow>
                   <span>
@@ -359,7 +367,11 @@ export default function MCPServersPage() {
         isSubmitting={isSubmitting}
         maxWidth="480px"
       >
-        <Stack gap="16px">
+        <Stack
+          sx={{
+            gap: "16px",
+          }}
+        >
           <Field
             label="Server name"
             placeholder="e.g., Production Search Server"

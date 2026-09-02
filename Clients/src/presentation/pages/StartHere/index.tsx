@@ -622,7 +622,13 @@ const StartHere = () => {
                   >
                     {card.title}
                   </Typography>
-                  <Stack direction="row" justifyContent="space-between" alignItems="flex-end">
+                  <Stack
+                    direction="row"
+                    sx={{
+                      justifyContent: "space-between",
+                      alignItems: "flex-end",
+                    }}
+                  >
                     <Typography
                       sx={{
                         fontSize: 12,
@@ -909,8 +915,12 @@ const StartHere = () => {
             <Typography sx={{ fontSize: 15, fontWeight: 600, mb: "12px" }}>Your experts</Typography>
             <Stack
               direction="row"
-              alignItems="flex-start"
-              sx={{ gap: "12px", position: "relative", width: "fit-content" }}
+              sx={{
+                alignItems: "flex-start",
+                gap: "12px",
+                position: "relative",
+                width: "fit-content",
+              }}
             >
               {[
                 {
@@ -929,16 +939,18 @@ const StartHere = () => {
                   onClick={() =>
                     window.open("https://verifywise.ai/contact", "_blank", "noopener,noreferrer")
                   }
-                  alignItems="center"
                   sx={{
+                    "alignItems": "center",
                     "gap": "8px",
                     "p": "16px",
                     "borderRadius": "8px",
                     "border": `1px solid ${theme.palette.border.light}`,
                     "minWidth": 160,
                     "cursor": "pointer",
+
                     "transition":
                       "border-color 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)",
+
                     "&:hover": {
                       borderColor: theme.palette.border.dark,
                       transform: "translateY(-2px)",
@@ -1032,8 +1044,12 @@ const StartHere = () => {
             </Typography>
             <Stack
               direction="row"
-              alignItems="center"
-              sx={{ gap: "16px", mb: "12px", position: "relative" }}
+              sx={{
+                alignItems: "center",
+                gap: "16px",
+                mb: "12px",
+                position: "relative",
+              }}
             >
               <Box sx={{ width: 56, height: 56, position: "relative", flexShrink: 0 }}>
                 <svg
@@ -1096,12 +1112,12 @@ const StartHere = () => {
                   <Stack
                     key={step.label}
                     direction="row"
-                    alignItems="center"
                     onClick={() => {
                       if (!done && step.path)
                         navigate(step.path, step.state ? { state: step.state } : undefined);
                     }}
                     sx={{
+                      "alignItems": "center",
                       "gap": "8px",
                       "animation": `${fadeInUp} 0.3s ease-out ${0.6 + i * 0.08}s both`,
                       "cursor": !done && step.path ? "pointer" : "default",
@@ -1159,12 +1175,12 @@ const StartHere = () => {
                 <Stack
                   key={r.label}
                   direction="row"
-                  alignItems="center"
                   component="a"
                   href={r.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   sx={{
+                    "alignItems": "center",
                     "gap": "8px",
                     "p": "8px",
                     "borderRadius": "6px",
@@ -1172,6 +1188,7 @@ const StartHere = () => {
                     "transition": "all 0.2s ease",
                     "textDecoration": "none",
                     "color": "inherit",
+
                     "&:hover": {
                       "background": "#F9F9F9",
                       "& .resource-icon svg": {
@@ -1222,14 +1239,15 @@ const StartHere = () => {
               <Stack
                 key={item.label}
                 direction="row"
-                alignItems="center"
                 onClick={() => window.open(item.url, "_blank", "noopener,noreferrer")}
                 sx={{
+                  "alignItems": "center",
                   "gap": "8px",
                   "p": "8px",
                   "borderRadius": "6px",
                   "cursor": "pointer",
                   "transition": "all 0.2s ease",
+
                   "&:hover": {
                     "background": "#F9F9F9",
                     "& .whatsnew-icon svg": {

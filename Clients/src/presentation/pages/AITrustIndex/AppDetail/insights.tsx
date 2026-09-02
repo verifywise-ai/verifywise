@@ -207,9 +207,9 @@ export function RelatedApps({
           >
             <Stack
               direction="row"
-              alignItems="center"
-              gap="8px"
               sx={{
+                "alignItems": "center",
+                "gap": "8px",
                 "border": `1px solid ${palette.border.dark}`,
                 "borderRadius": "4px",
                 "p": "8px",

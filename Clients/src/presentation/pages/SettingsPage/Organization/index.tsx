@@ -545,7 +545,11 @@ const Organization = () => {
         <ConfirmationModal
           title="Confirm logo removal"
           body={
-            <Typography fontSize={13}>
+            <Typography
+              sx={{
+                fontSize: 13,
+              }}
+            >
               Are you sure you want to remove the organization logo? This action cannot be undone.
             </Typography>
           }

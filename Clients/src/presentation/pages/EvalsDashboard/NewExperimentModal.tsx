@@ -1306,9 +1306,11 @@ export default function NewExperimentModal({
                   <Box>
                     <Stack
                       direction="row"
-                      alignItems="center"
-                      justifyContent="space-between"
-                      sx={{ mb: 1.5 }}
+                      sx={{
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        mb: 1.5,
+                      }}
                     >
                       <Typography
                         sx={{
@@ -1665,7 +1667,13 @@ export default function NewExperimentModal({
                           >
                             Popular Models
                           </Typography>
-                          <Stack direction="row" flexWrap="wrap" gap={1}>
+                          <Stack
+                            direction="row"
+                            sx={{
+                              flexWrap: "wrap",
+                              gap: 1,
+                            }}
+                          >
                             {[
                               { id: "openai/gpt-4o", name: "GPT-4o" },
                               { id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet" },
@@ -1753,9 +1761,11 @@ export default function NewExperimentModal({
                                 <MenuItem key={model.id} value={model.id}>
                                   <Stack
                                     direction="row"
-                                    alignItems="center"
-                                    justifyContent="space-between"
-                                    sx={{ width: "100%" }}
+                                    sx={{
+                                      alignItems: "center",
+                                      justifyContent: "space-between",
+                                      width: "100%",
+                                    }}
                                   >
                                     <Typography sx={{ fontSize: "13px" }}>{model.name}</Typography>
                                     {model.inputCost !== undefined && (
@@ -1858,9 +1868,11 @@ export default function NewExperimentModal({
                                         <MenuItem key={model.id} value={model.id}>
                                           <Stack
                                             direction="row"
-                                            alignItems="center"
-                                            justifyContent="space-between"
-                                            sx={{ width: "100%" }}
+                                            sx={{
+                                              alignItems: "center",
+                                              justifyContent: "space-between",
+                                              width: "100%",
+                                            }}
                                           >
                                             <Typography sx={{ fontSize: "13px" }}>
                                               {model.name}
@@ -1965,7 +1977,13 @@ export default function NewExperimentModal({
                               border: `1px solid ${palette.status.success.border}`,
                             }}
                           >
-                            <Stack direction="row" alignItems="center" spacing={1}>
+                            <Stack
+                              direction="row"
+                              spacing={1}
+                              sx={{
+                                alignItems: "center",
+                              }}
+                            >
                               <Check size={16} color={palette.status.success.text} />
                               <Typography
                                 sx={{ fontSize: "12px", color: palette.status.success.text }}
@@ -2020,8 +2038,11 @@ export default function NewExperimentModal({
                 </Typography>
                 <Typography
                   variant="body2"
-                  color="text.secondary"
-                  sx={{ maxWidth: 400, mx: "auto" }}
+                  sx={{
+                    color: "text.secondary",
+                    maxWidth: 400,
+                    mx: "auto",
+                  }}
                 >
                   Standard metrics require a Judge LLM.
                   <br /> Your custom scorer will be used instead.
@@ -2071,7 +2092,12 @@ export default function NewExperimentModal({
         return (
           <Stack spacing="16px">
             <Box>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: "text.secondary",
+                }}
+              >
                 {isMultiTurnDataset
                   ? "Select metrics for your multi-turn conversation evaluation."
                   : "Select metrics for your evaluation. Universal core metrics run for all use cases."}
@@ -2172,8 +2198,8 @@ export default function NewExperimentModal({
                         />
                         <Typography
                           variant="caption"
-                          color="text.secondary"
                           sx={{
+                            color: "text.secondary",
                             ml: 3.5,
                             mt: 0.5,
                             pr: 2,
@@ -2278,8 +2304,11 @@ export default function NewExperimentModal({
                     </Typography>
                     <Typography
                       variant="caption"
-                      color="text.secondary"
-                      sx={{ mt: 0.5, display: "block" }}
+                      sx={{
+                        color: "text.secondary",
+                        mt: 0.5,
+                        display: "block",
+                      }}
                     >
                       Runs for every use case (Chatbot, RAG, Agent)
                     </Typography>
@@ -2336,8 +2365,8 @@ export default function NewExperimentModal({
                         />
                         <Typography
                           variant="caption"
-                          color="text.secondary"
                           sx={{
+                            color: "text.secondary",
                             ml: 3.5,
                             mt: 0.5,
                             pr: 2,
@@ -2365,8 +2394,11 @@ export default function NewExperimentModal({
                 </Typography>
                 <Typography
                   variant="caption"
-                  color="text.secondary"
-                  sx={{ display: "block", mb: 2 }}
+                  sx={{
+                    color: "text.secondary",
+                    display: "block",
+                    mb: 2,
+                  }}
                 >
                   Requires retrieval_context in your dataset
                 </Typography>
@@ -2408,8 +2440,13 @@ export default function NewExperimentModal({
                       />
                       <Typography
                         variant="caption"
-                        color="text.secondary"
-                        sx={{ ml: 4, pr: 2, display: "block", fontSize: "12px" }}
+                        sx={{
+                          color: "text.secondary",
+                          ml: 4,
+                          pr: 2,
+                          display: "block",
+                          fontSize: "12px",
+                        }}
                       >
                         {(meta as { desc: string }).desc}
                       </Typography>
@@ -2429,8 +2466,11 @@ export default function NewExperimentModal({
                 </Typography>
                 <Typography
                   variant="caption"
-                  color="text.secondary"
-                  sx={{ display: "block", mb: 2 }}
+                  sx={{
+                    color: "text.secondary",
+                    display: "block",
+                    mb: 2,
+                  }}
                 >
                   Comprehensive agent evaluation based on{" "}
                   <a
@@ -2485,8 +2525,13 @@ export default function NewExperimentModal({
                       />
                       <Typography
                         variant="caption"
-                        color="text.secondary"
-                        sx={{ ml: 4, pr: 2, display: "block", fontSize: "12px" }}
+                        sx={{
+                          color: "text.secondary",
+                          ml: 4,
+                          pr: 2,
+                          display: "block",
+                          fontSize: "12px",
+                        }}
                       >
                         {(meta as { desc: string }).desc}
                       </Typography>
@@ -2540,8 +2585,13 @@ export default function NewExperimentModal({
                       />
                       <Typography
                         variant="caption"
-                        color="text.secondary"
-                        sx={{ ml: 4, pr: 2, display: "block", fontSize: "12px" }}
+                        sx={{
+                          color: "text.secondary",
+                          ml: 4,
+                          pr: 2,
+                          display: "block",
+                          fontSize: "12px",
+                        }}
                       >
                         {(meta as { desc: string }).desc}
                       </Typography>
@@ -2595,8 +2645,13 @@ export default function NewExperimentModal({
                       />
                       <Typography
                         variant="caption"
-                        color="text.secondary"
-                        sx={{ ml: 4, pr: 2, display: "block", fontSize: "12px" }}
+                        sx={{
+                          color: "text.secondary",
+                          ml: 4,
+                          pr: 2,
+                          display: "block",
+                          fontSize: "12px",
+                        }}
                       >
                         {(meta as { desc: string }).desc}
                       </Typography>

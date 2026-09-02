@@ -70,8 +70,11 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         <Stack sx={{ gap: 8 }}>
           <Typography
             id="confirmation-modal-title"
-            fontSize={TitleFontSize}
-            sx={{ color: "text.secondary", fontWeight: "bolder" }}
+            sx={{
+              fontSize: TitleFontSize,
+              color: "text.secondary",
+              fontWeight: "bolder",
+            }}
           >
             {title}
           </Typography>

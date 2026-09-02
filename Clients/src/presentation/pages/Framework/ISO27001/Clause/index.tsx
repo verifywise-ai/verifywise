@@ -372,9 +372,9 @@ const ISO27001Clause = ({
                   }}
                 >
                   <Typography
-                    fontSize={11}
-                    fontWeight={600}
                     sx={{
+                      fontSize: 11,
+                      fontWeight: 600,
                       color: "#57606a",
                       textTransform: "uppercase",
                       letterSpacing: "0.04em",
@@ -412,7 +412,11 @@ const ISO27001Clause = ({
                     : {}),
                 }}
               >
-                <Typography fontSize={13}>
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                  }}
+                >
                   {subClause.subclause_id ?? `${clause.order_no}.${index + 1}`}{" "}
                   {subClause.title ?? "Untitled"}
                 </Typography>

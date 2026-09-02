@@ -184,10 +184,13 @@ const RisksView: FC<RisksViewProps> = memo(({ risksSummary, risksData, title, pr
         size="small"
       />
       <Stack
-        sx={{ mt: "32px", mb: "28px" }}
         direction="row"
-        justifyContent="space-between"
-        alignItems="flex-end"
+        sx={{
+          justifyContent: "space-between",
+          alignItems: "flex-end",
+          mt: "32px",
+          mb: "28px",
+        }}
       >
         <Typography component="h2" sx={{ fontSize: 16, fontWeight: 600, color: "text.primary" }}>
           {title} risks
@@ -202,7 +205,12 @@ const RisksView: FC<RisksViewProps> = memo(({ risksSummary, risksData, title, pr
           backgroundColor: "action.hover",
         }}
       >
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           This is a read-only view. To add or edit {title.toLowerCase()} risks, go to the{" "}
           <Typography
             component="a"

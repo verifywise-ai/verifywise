@@ -1644,7 +1644,12 @@ This notification was sent on {{date_and_time}}.`,
   const showConfigurationPanel = automations.length > 0 && (selectedItem || selectedAutomation);
 
   return (
-    <Stack className="vwhome" gap={"16px"}>
+    <Stack
+      className="vwhome"
+      sx={{
+        gap: "16px",
+      }}
+    >
       {/* Breadcrumbs with integrated action buttons and divider */}
       <PageBreadcrumbs />
 

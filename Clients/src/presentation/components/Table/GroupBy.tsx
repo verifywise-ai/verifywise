@@ -44,7 +44,13 @@ const GroupByHeader: React.FC<{
   onClear: () => void;
   onClose: () => void;
 }> = ({ selectedGroup, onClear, onClose }) => (
-  <Stack direction="row" justifyContent="space-between" alignItems="center">
+  <Stack
+    direction="row"
+    sx={{
+      justifyContent: "space-between",
+      alignItems: "center",
+    }}
+  >
     <Typography
       sx={{
         fontSize: "11px",
@@ -78,7 +84,13 @@ const GroupByControls: React.FC<{
   onGroupChange: (event: any) => void;
   onSortChange: (value: string) => void;
 }> = ({ selectedGroup, selectItems, sortOrder, onGroupChange, onSortChange }) => (
-  <Stack direction="row" spacing={2} alignItems="center">
+  <Stack
+    direction="row"
+    spacing={2}
+    sx={{
+      alignItems: "center",
+    }}
+  >
     <Box sx={{ flex: "0 0 35%" }}>
       <Select
         id="group-by-field"

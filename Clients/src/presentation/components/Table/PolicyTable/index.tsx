@@ -314,9 +314,9 @@ const CustomizablePolicyTable = ({
     <>
       {!sortedData.length ? (
         <Stack
-          alignItems="center"
-          justifyContent="center"
           sx={{
+            alignItems: "center",
+            justifyContent: "center",
             border: "1px solid #EEEEEE",
             borderRadius: "4px",
             padding: theme.spacing(15, 5),
@@ -364,28 +364,33 @@ const CustomizablePolicyTable = ({
                     rowsPerPage={rowsPerPage}
                     rowsPerPageOptions={[5, 10, 15, 25]}
                     onRowsPerPageChange={handleChangeRowsPerPage}
-                    ActionsComponent={TablePaginationActions as React.ComponentType<any>}
                     labelRowsPerPage="Rows per page"
                     colSpan={data.cols.length - 1}
                     slotProps={{
                       select: {
                         MenuProps: {
                           keepMounted: true,
-                          PaperProps: {
-                            className: "pagination-dropdown",
-                            sx: {
-                              mt: 0,
-                              mb: theme.spacing(2),
+
+                          slotProps: {
+                            paper: {
+                              className: "pagination-dropdown",
+                              sx: {
+                                mt: 0,
+                                mb: theme.spacing(2),
+                              },
                             },
                           },
+
                           transformOrigin: {
                             vertical: "bottom",
                             horizontal: "left",
                           },
+
                           anchorOrigin: {
                             vertical: "top",
                             horizontal: "left",
                           },
+
                           sx: { mt: theme.spacing(-2) },
                         },
                         inputProps: { id: "pagination-dropdown" },
@@ -415,6 +420,7 @@ const CustomizablePolicyTable = ({
                         padding: theme.spacing(4),
                       },
                     }}
+                    ActionsComponent={TablePaginationActions as React.ComponentType<any>}
                   />
                 </TableRow>
               </TableFooter>

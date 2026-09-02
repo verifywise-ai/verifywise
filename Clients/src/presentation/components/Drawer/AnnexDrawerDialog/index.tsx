@@ -370,7 +370,11 @@ const VWISO42001AnnexDrawerDialog = ({
         drawerId={`vw-iso-42001-annex-drawer-dialog-${annex?.id}`}
       >
         <TabPanel value="details" sx={{ padding: "15px 20px" }}>
-          <Stack gap="15px">
+          <Stack
+            sx={{
+              gap: "15px",
+            }}
+          >
             <Stack
               sx={{
                 border: "1px solid #eee",
@@ -379,13 +383,23 @@ const VWISO42001AnnexDrawerDialog = ({
                 borderRadius: "4px",
               }}
             >
-              <Typography fontSize={13}>
+              <Typography
+                sx={{
+                  fontSize: 13,
+                }}
+              >
                 <strong>Guidance:</strong> {formData.guidance}
               </Typography>
             </Stack>
 
             <Stack sx={{ gap: "15px" }}>
-              <Typography fontSize={13}>Applicability:</Typography>
+              <Typography
+                sx={{
+                  fontSize: 13,
+                }}
+              >
+                Applicability:
+              </Typography>
               <Stack sx={{ display: "flex", flexDirection: "row", gap: 10 }}>
                 <Checkbox
                   id={`${control?.id}-iso-42001-applicable`}
@@ -415,7 +429,12 @@ const VWISO42001AnnexDrawerDialog = ({
             </Stack>
 
             <Stack sx={inverseApplicableSx}>
-              <Typography fontSize={13} sx={{ marginBottom: "5px" }}>
+              <Typography
+                sx={{
+                  fontSize: 13,
+                  marginBottom: "5px",
+                }}
+              >
                 Justification for Exclusion (if Not Applicable):
               </Typography>
               <Field
@@ -435,7 +454,14 @@ const VWISO42001AnnexDrawerDialog = ({
               />
             </Stack>
 
-            <Stack sx={applicableSx} gap="24px">
+            <Stack
+              sx={[
+                {
+                  gap: "24px",
+                },
+                ...(Array.isArray(applicableSx) ? applicableSx : [applicableSx]),
+              ]}
+            >
               <WorkflowFields
                 formData={formData}
                 onFieldChange={handleWorkflowFieldChange}
@@ -479,7 +505,9 @@ const VWISO42001AnnexDrawerDialog = ({
       <Dialog
         open={auditedStatusModalOpen}
         onClose={() => setAuditedStatusModalOpen(false)}
-        PaperProps={{ sx: { width: "800px", maxWidth: "800px" } }}
+        slotProps={{
+          paper: { sx: { width: "800px", maxWidth: "800px" } },
+        }}
       >
         <AuditRiskPopup
           onClose={() => setAuditedStatusModalOpen(false)}

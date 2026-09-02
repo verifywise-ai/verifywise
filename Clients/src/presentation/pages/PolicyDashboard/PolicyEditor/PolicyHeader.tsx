@@ -23,9 +23,12 @@ export function PolicyHeader(props: PolicyHeaderProps) {
   return (
     <Stack
       direction="row"
-      justifyContent="space-between"
-      alignItems="center"
-      sx={{ mb: "8px", flexShrink: 0 }}
+      sx={{
+        justifyContent: "space-between",
+        alignItems: "center",
+        mb: "8px",
+        flexShrink: 0,
+      }}
     >
       <PolicyEditorTitleArea
         pageTitle={pageTitle}

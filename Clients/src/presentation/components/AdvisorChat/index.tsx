@@ -79,10 +79,13 @@ const AdvisorChatInner = ({
         <AssistantRuntimeProvider runtime={runtime}>
           <Stack
             direction="row"
-            alignItems="center"
-            justifyContent="flex-end"
             spacing="4px"
-            sx={{ px: "12px", py: "4px" }}
+            sx={{
+              alignItems: "center",
+              justifyContent: "flex-end",
+              px: "12px",
+              py: "4px",
+            }}
           >
             <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
               Parallel agents
@@ -90,7 +93,7 @@ const AdvisorChatInner = ({
             <Toggle
               checked={parallelAgents}
               onChange={(e) => setParallelAgents(e.target.checked)}
-              inputProps={{ "aria-label": "parallel-agents-toggle" }}
+              ariaLabel="parallel-agents-toggle"
             />
           </Stack>
           <CustomThread

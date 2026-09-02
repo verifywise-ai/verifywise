@@ -408,7 +408,12 @@ export default function PolicyEditorPage() {
   // ── Loading / error states ────────────────────────────────────────
   if (isLoading) {
     return (
-      <Stack gap={2} sx={{ p: 0 }}>
+      <Stack
+        sx={{
+          gap: 2,
+          p: 0,
+        }}
+      >
         <Skeleton variant="rectangular" height={32} width={300} />
         <Skeleton variant="rectangular" height={80} />
         <Skeleton variant="rectangular" height={40} />
@@ -419,7 +424,12 @@ export default function PolicyEditorPage() {
 
   if (loadError) {
     return (
-      <Stack gap={2} sx={{ p: 0 }}>
+      <Stack
+        sx={{
+          gap: 2,
+          p: 0,
+        }}
+      >
         <PageBreadcrumbs />
         <Box
           sx={{
@@ -450,7 +460,12 @@ export default function PolicyEditorPage() {
 
   return (
     <>
-      <Stack className="vwhome" gap="16px">
+      <Stack
+        className="vwhome"
+        sx={{
+          gap: "16px",
+        }}
+      >
         {/* ── Breadcrumbs ──────────────────────────────────────────── */}
         <PageBreadcrumbs />
 

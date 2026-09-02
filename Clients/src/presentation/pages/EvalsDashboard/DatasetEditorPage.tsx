@@ -210,11 +210,20 @@ export default function DatasetEditorPage() {
       {/* Header with back button and save */}
       <Stack
         direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        sx={{ mb: 3, mt: 2 }}
+        sx={{
+          alignItems: "center",
+          justifyContent: "space-between",
+          mb: 3,
+          mt: 2,
+        }}
       >
-        <Stack direction="row" alignItems="center" spacing={1}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: "center",
+          }}
+        >
           <IconButton size="small" onClick={handleBack} aria-label="Back">
             <ArrowLeft size={18} />
           </IconButton>
@@ -280,7 +289,13 @@ export default function DatasetEditorPage() {
               borderColor: palette.border.dark,
             }}
           >
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+                mb: 2,
+              }}
+            >
               No prompts in this dataset yet.
             </Typography>
             <Button
@@ -306,7 +321,15 @@ export default function DatasetEditorPage() {
             return (
               <Accordion key={stp.id || idx} disableGutters defaultExpanded={!stp.prompt}>
                 <AccordionSummary expandIcon={<ChevronDown size={16} />}>
-                  <Stack direction="row" alignItems="center" spacing={1} sx={{ flex: 1, mr: 1 }}>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{
+                      alignItems: "center",
+                      flex: 1,
+                      mr: 1,
+                    }}
+                  >
                     <Typography
                       sx={{ fontWeight: 700, fontSize: "13px" }}
                     >{`Prompt ${idx + 1}`}</Typography>

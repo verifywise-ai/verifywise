@@ -87,8 +87,21 @@ export default function DatasetInlineEditor({
       {alert && <Alert variant={alert.variant} body={alert.body} />}
 
       {/* Header with back button and save */}
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
-        <Stack direction="row" alignItems="center" spacing={1}>
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: "center",
+          justifyContent: "space-between",
+          mb: 3,
+        }}
+      >
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: "center",
+          }}
+        >
           <IconButton size="small" onClick={onCloseEditor} aria-label="Back">
             <ArrowLeft size={18} />
           </IconButton>
@@ -241,7 +254,13 @@ export default function DatasetInlineEditor({
             {editablePrompts.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} sx={{ textAlign: "center", py: 4 }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: "text.secondary",
+                      mb: 2,
+                    }}
+                  >
                     No prompts in this dataset yet.
                   </Typography>
                   <CustomizableButton

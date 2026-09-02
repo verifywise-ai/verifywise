@@ -505,14 +505,21 @@ const ApiKeys = () => {
                 sx={{ backgroundColor: "background.main" }}
                 isRequired
               />
-              <Stack gap={theme.spacing(2)}>
+              <Stack
+                sx={{
+                  gap: theme.spacing(2),
+                }}
+              >
                 <Typography
                   component="p"
                   variant="body1"
                   color={theme.palette.text.secondary}
-                  fontWeight={500}
-                  fontSize="13px"
-                  sx={{ margin: 0, height: "22px" }}
+                  sx={{
+                    fontWeight: 500,
+                    fontSize: "13px",
+                    margin: 0,
+                    height: "22px",
+                  }}
                 >
                   Expiration
                 </Typography>
@@ -682,7 +689,11 @@ const ApiKeys = () => {
         <ConfirmationModal
           title="Delete API Key"
           body={
-            <Typography fontSize={13}>
+            <Typography
+              sx={{
+                fontSize: 13,
+              }}
+            >
               Are you sure you want to delete the API key "{tokenToDelete.name}
               "? This action cannot be undone and any applications using this key will lose access.
             </Typography>
@@ -705,7 +716,11 @@ const ApiKeys = () => {
         <ConfirmationModal
           title="Revoke API Key"
           body={
-            <Typography fontSize={13}>
+            <Typography
+              sx={{
+                fontSize: 13,
+              }}
+            >
               Are you sure you want to revoke the API key "{tokenToRevoke.name}"? It will stop
               working immediately and any applications using it will lose access. The key stays
               listed as revoked for your records.

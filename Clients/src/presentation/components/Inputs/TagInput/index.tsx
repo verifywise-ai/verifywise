@@ -152,15 +152,17 @@ function TagInput({
           }}
           onKeyDown={handleKeyDown}
           placeholder={value.length === 0 ? placeholder : ""}
-          InputProps={{
-            disableUnderline: true,
-            sx: {
-              fontSize: 13,
-              padding: 0,
-              minWidth: "120px",
+          sx={{ flex: 1, minWidth: "120px" }}
+          slotProps={{
+            input: {
+              disableUnderline: true,
+              sx: {
+                fontSize: 13,
+                padding: 0,
+                minWidth: "120px",
+              },
             },
           }}
-          sx={{ flex: 1, minWidth: "120px" }}
         />
       </Box>
 

@@ -489,12 +489,26 @@ export const JiraAssetsConfiguration: React.FC = () => {
 
   return (
     <Box>
-      <Typography variant="body2" color="text.secondary" fontSize={13} sx={{ mb: 3 }}>
+      <Typography
+        variant="body2"
+        sx={{
+          color: "text.secondary",
+          fontSize: 13,
+          mb: 3,
+        }}
+      >
         Connect to your Jira Service Management Assets to import AI Systems as use-cases.
       </Typography>
 
       {/* Step 1: Connection Settings */}
-      <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 2, color: "#344054" }}>
+      <Typography
+        variant="subtitle2"
+        sx={{
+          fontWeight: 600,
+          mb: 2,
+          color: "#344054",
+        }}
+      >
         Step 1: Connection Settings
       </Typography>
 
@@ -511,7 +525,14 @@ export const JiraAssetsConfiguration: React.FC = () => {
               { _id: "datacenter", name: "JIRA Data Center / Server (Self-hosted)" },
             ]}
           />
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+              mt: 0.5,
+              display: "block",
+            }}
+          >
             Select Cloud for *.atlassian.net, or Data Center for self-hosted JIRA
           </Typography>
         </Box>
@@ -548,7 +569,14 @@ export const JiraAssetsConfiguration: React.FC = () => {
             value={localConfig.workspace_id || ""}
             onChange={(e) => handleChange("workspace_id", e.target.value)}
           />
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+              mt: 0.5,
+              display: "block",
+            }}
+          >
             {localConfig.deployment_type === "datacenter"
               ? "For Data Center: Use object schema ID from Insight settings"
               : "Found in Assets settings or the URL when viewing Assets"}
@@ -587,7 +615,14 @@ export const JiraAssetsConfiguration: React.FC = () => {
             value={localConfig.api_token || ""}
             onChange={(e) => handleChange("api_token", e.target.value)}
           />
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: "block" }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: "text.secondary",
+              mt: 0.5,
+              display: "block",
+            }}
+          >
             {localConfig.has_api_token && !localConfig.api_token
               ? "API token is saved. Leave empty to keep current token, or enter a new value to update."
               : localConfig.deployment_type === "datacenter"
@@ -692,7 +727,14 @@ export const JiraAssetsConfiguration: React.FC = () => {
       <Divider sx={{ my: 3 }} />
 
       {/* Step 2: Schema & Object Type Selection */}
-      <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 2, color: "#344054" }}>
+      <Typography
+        variant="subtitle2"
+        sx={{
+          fontWeight: 600,
+          mb: 2,
+          color: "#344054",
+        }}
+      >
         Step 2: Select Schema & Object Type
       </Typography>
 
@@ -734,7 +776,14 @@ export const JiraAssetsConfiguration: React.FC = () => {
       <Divider sx={{ my: 3 }} />
 
       {/* Step 3: Sync Settings */}
-      <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 2, color: "#344054" }}>
+      <Typography
+        variant="subtitle2"
+        sx={{
+          fontWeight: 600,
+          mb: 2,
+          color: "#344054",
+        }}
+      >
         Step 3: Sync Settings
       </Typography>
 
@@ -787,10 +836,22 @@ export const JiraAssetsConfiguration: React.FC = () => {
           {/* Import & Sync */}
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <Box>
-              <Typography variant="subtitle2" fontWeight={600} sx={{ color: "#344054" }}>
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  fontWeight: 600,
+                  color: "#344054",
+                }}
+              >
                 Import & Sync
               </Typography>
-              <Typography variant="body2" fontSize={12} color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  fontSize: 12,
+                  color: "text.secondary",
+                }}
+              >
                 {importedUseCases.length} use cases imported
                 {localConfig.last_sync_at &&
                   ` • Last sync: ${new Date(localConfig.last_sync_at).toLocaleString()}`}
@@ -882,7 +943,12 @@ export const JiraAssetsConfiguration: React.FC = () => {
                     />
                   }
                   label={
-                    <Typography variant="body2" fontSize={13}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontSize: 13,
+                      }}
+                    >
                       Select All ({jiraObjects.length} available)
                     </Typography>
                   }
@@ -948,7 +1014,14 @@ export const JiraAssetsConfiguration: React.FC = () => {
           {/* Imported Use Cases Table */}
           {importedUseCases.length > 0 && (
             <Box sx={{ mt: 3 }}>
-              <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5, color: "#344054" }}>
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  fontWeight: 600,
+                  mb: 1.5,
+                  color: "#344054",
+                }}
+              >
                 Imported Use Cases
               </Typography>
               <TableContainer

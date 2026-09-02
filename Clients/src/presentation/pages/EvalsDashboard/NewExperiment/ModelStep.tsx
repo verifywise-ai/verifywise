@@ -85,7 +85,12 @@ export default function ModelStep({
   return (
     <Stack spacing={4}>
       <Box>
-        <Typography variant="body2" color="text.secondary">
+        <Typography
+          variant="body2"
+          sx={{
+            color: "text.secondary",
+          }}
+        >
           Select the model you want to evaluate.
         </Typography>
       </Box>
@@ -237,7 +242,13 @@ export default function ModelStep({
                     },
                   }}
                 >
-                  <Stack direction="row" alignItems="center" spacing={1.5}>
+                  <Stack
+                    direction="row"
+                    spacing={1.5}
+                    sx={{
+                      alignItems: "center",
+                    }}
+                  >
                     {ProviderLogo && (
                       <Box
                         sx={{
@@ -339,7 +350,13 @@ export default function ModelStep({
             </MenuItem>
             {modelInventories.map((m) => (
               <MenuItem key={m.id} value={m.id}>
-                <Stack direction="row" spacing={1} alignItems="center">
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: "center",
+                  }}
+                >
                   <Typography sx={{ fontSize: "13px" }}>
                     {m.provider} — {m.model}
                   </Typography>

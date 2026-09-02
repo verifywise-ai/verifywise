@@ -425,7 +425,11 @@ export default function RulesPage() {
               />
             </EmptyState>
           ) : (
-            <Stack gap="12px">
+            <Stack
+              sx={{
+                gap: "12px",
+              }}
+            >
               {rules.map((rule) => (
                 <Paper
                   key={rule.id}
@@ -438,9 +442,25 @@ export default function RulesPage() {
                     transition: "opacity 0.2s ease",
                   }}
                 >
-                  <Stack gap="12px">
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                      <Stack direction="row" alignItems="center" gap="8px">
+                  <Stack
+                    sx={{
+                      gap: "12px",
+                    }}
+                  >
+                    <Stack
+                      direction="row"
+                      sx={{
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Stack
+                        direction="row"
+                        sx={{
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
                         <Typography sx={{ fontSize: 15, fontWeight: 600 }}>{rule.name}</Typography>
                         <Chip
                           label={TRIGGER_LABELS[rule.trigger_type] || rule.trigger_type}
@@ -449,7 +469,13 @@ export default function RulesPage() {
                           uppercase={false}
                         />
                       </Stack>
-                      <Stack direction="row" alignItems="center" gap="4px">
+                      <Stack
+                        direction="row"
+                        sx={{
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                      >
                         <Toggle
                           checked={rule.is_active}
                           onChange={() => handleToggleActive(rule)}
@@ -497,7 +523,14 @@ export default function RulesPage() {
                       </Typography>
                     )}
                     {/* Cooldown & notification */}
-                    <Stack direction="row" alignItems="center" gap="8px" flexWrap="wrap">
+                    <Stack
+                      direction="row"
+                      sx={{
+                        alignItems: "center",
+                        gap: "8px",
+                        flexWrap: "wrap",
+                      }}
+                    >
                       {rule.cooldown_minutes != null && (
                         <Typography sx={{ fontSize: 12, color: palette.text.disabled }}>
                           Cooldown:{" "}
@@ -591,7 +624,6 @@ export default function RulesPage() {
                     onPageChange={(_e, newPage) => setAlertsPage(newPage)}
                     rowsPerPage={ALERTS_PER_PAGE}
                     rowsPerPageOptions={[ALERTS_PER_PAGE]}
-                    ActionsComponent={(props) => <TablePaginationActions {...props} />}
                     labelRowsPerPage=""
                     labelDisplayedRows={({ page, count }) =>
                       `Page ${page + 1} of ${Math.max(0, Math.ceil(count / ALERTS_PER_PAGE))}`
@@ -600,10 +632,14 @@ export default function RulesPage() {
                       select: {
                         MenuProps: {
                           keepMounted: true,
-                          PaperProps: {
-                            className: "pagination-dropdown",
-                            sx: { mt: 0, mb: theme.spacing(2) },
+
+                          slotProps: {
+                            paper: {
+                              className: "pagination-dropdown",
+                              sx: { mt: 0, mb: theme.spacing(2) },
+                            },
                           },
+
                           transformOrigin: { vertical: "bottom", horizontal: "left" },
                           anchorOrigin: { vertical: "top", horizontal: "left" },
                           sx: { mt: theme.spacing(-2) },
@@ -632,6 +668,7 @@ export default function RulesPage() {
                         padding: theme.spacing(4),
                       },
                     }}
+                    ActionsComponent={(props) => <TablePaginationActions {...props} />}
                   />
                 </TableRow>
               </TableFooter>
@@ -653,7 +690,11 @@ export default function RulesPage() {
           isSubmitting={creating}
           maxWidth="480px"
         >
-          <Stack gap="16px">
+          <Stack
+            sx={{
+              gap: "16px",
+            }}
+          >
             <Typography sx={{ fontSize: 13, color: palette.status.default.text, lineHeight: 1.5 }}>
               Create a rule to receive alerts when specific Shadow AI activity is detected. Choose a
               trigger type and the system will notify you when the condition is met.
@@ -690,7 +731,11 @@ export default function RulesPage() {
 
             {/* Trigger-specific config fields */}
             {formTrigger === "risk_score_exceeded" && (
-              <Stack gap="6px">
+              <Stack
+                sx={{
+                  gap: "6px",
+                }}
+              >
                 <Field
                   label="Minimum risk score"
                   type="number"
@@ -705,9 +750,9 @@ export default function RulesPage() {
                 />
                 <Stack
                   direction="row"
-                  alignItems="flex-start"
-                  gap="6px"
                   sx={{
+                    alignItems: "flex-start",
+                    gap: "6px",
                     p: "8px 12px",
                     bgcolor: palette.background.accent,
                     borderRadius: "4px",
@@ -732,7 +777,11 @@ export default function RulesPage() {
               </Stack>
             )}
             {formTrigger === "usage_threshold_exceeded" && (
-              <Stack gap="6px">
+              <Stack
+                sx={{
+                  gap: "6px",
+                }}
+              >
                 <Field
                   label="Event count threshold"
                   type="number"
@@ -747,9 +796,9 @@ export default function RulesPage() {
                 />
                 <Stack
                   direction="row"
-                  alignItems="flex-start"
-                  gap="6px"
                   sx={{
+                    alignItems: "flex-start",
+                    gap: "6px",
                     p: "8px 12px",
                     bgcolor: palette.background.accent,
                     borderRadius: "4px",
@@ -820,7 +869,13 @@ export default function RulesPage() {
               sx={{ m: 0 }}
             />
 
-            <Stack direction="row" alignItems="center" gap="8px">
+            <Stack
+              direction="row"
+              sx={{
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
               <Typography sx={{ fontSize: 13 }}>Active</Typography>
               <Toggle
                 checked={formActive}

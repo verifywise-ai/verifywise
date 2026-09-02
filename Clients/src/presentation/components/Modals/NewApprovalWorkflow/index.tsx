@@ -221,7 +221,13 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
           <Stack key={stepIndex} spacing={8}>
             {/* STEPS */}
             <Stack spacing={4} sx={stepContainerStyle()}>
-              <Stack direction="row" spacing={8} alignItems="center">
+              <Stack
+                direction="row"
+                spacing={8}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <Box sx={stepNumberStyle}>{stepIndex + 1}</Box>
                 <Typography sx={stepTitleStyle}>{"STEP " + (stepIndex + 1)}</Typography>
                 <Box sx={removeStepLinkContainer}>
@@ -233,7 +239,12 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
                   />
                 </Box>
               </Stack>
-              <Stack direction="row" alignItems="stretch">
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: "stretch",
+                }}
+              >
                 <Divider orientation="vertical" flexItem sx={verticalStepDividerStyle} />
                 <Stack sx={stepFieldsContainer} spacing={6}>
                   <Field

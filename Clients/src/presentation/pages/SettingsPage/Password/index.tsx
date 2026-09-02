@@ -281,7 +281,15 @@ const PasswordForm: React.FC = () => {
       {isConfirmationModalOpen && (
         <ConfirmationModal
           title="Confirm save"
-          body={<Typography fontSize={13}>Are you sure you want to save the changes?</Typography>}
+          body={
+            <Typography
+              sx={{
+                fontSize: 13,
+              }}
+            >
+              Are you sure you want to save the changes?
+            </Typography>
+          }
           cancelText="Cancel"
           proceedText="Save"
           onCancel={handleCloseConfirmationModal}

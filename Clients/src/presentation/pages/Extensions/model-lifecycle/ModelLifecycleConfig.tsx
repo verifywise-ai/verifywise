@@ -406,7 +406,12 @@ export default function ModelLifecycleConfig() {
       <Stack sx={{ gap: "16px" }}>
         {/* Phases Summary */}
         {loading ? (
-          <Stack alignItems="center" sx={{ py: 2 }}>
+          <Stack
+            sx={{
+              alignItems: "center",
+              py: 2,
+            }}
+          >
             <CircularProgress size={24} sx={{ color: VW_COLORS.primary }} />
           </Stack>
         ) : phases.length === 0 ? (
@@ -517,7 +522,9 @@ export default function ModelLifecycleConfig() {
         maxWidth="md"
         fullWidth
         sx={vwDialog}
-        PaperProps={{ sx: { maxHeight: "85vh" } }}
+        slotProps={{
+          paper: { sx: { maxHeight: "85vh" } },
+        }}
       >
         <DialogTitle
           sx={{
@@ -551,7 +558,12 @@ export default function ModelLifecycleConfig() {
 
         <DialogContent sx={{ p: "20px" }}>
           {loading && phases.length === 0 ? (
-            <Stack alignItems="center" sx={{ py: 4 }}>
+            <Stack
+              sx={{
+                alignItems: "center",
+                py: 4,
+              }}
+            >
               <CircularProgress sx={{ color: VW_COLORS.primary }} />
             </Stack>
           ) : (
@@ -579,9 +591,13 @@ export default function ModelLifecycleConfig() {
                     {editingPhaseId === phase.id ? (
                       <Stack
                         direction="row"
-                        alignItems="center"
-                        sx={{ flex: 1, gap: "6px", mr: "8px" }}
                         onClick={(e) => e.stopPropagation()}
+                        sx={{
+                          alignItems: "center",
+                          flex: 1,
+                          gap: "6px",
+                          mr: "8px",
+                        }}
                       >
                         <TextField
                           value={editingPhaseName}
@@ -608,8 +624,12 @@ export default function ModelLifecycleConfig() {
                     ) : (
                       <Stack
                         direction="row"
-                        alignItems="center"
-                        sx={{ "flex": 1, "gap": "6px", "&:hover .phase-edit-icon": { opacity: 1 } }}
+                        sx={{
+                          "alignItems": "center",
+                          "flex": 1,
+                          "gap": "6px",
+                          "&:hover .phase-edit-icon": { opacity: 1 },
+                        }}
                       >
                         <Typography
                           sx={{
@@ -728,8 +748,8 @@ export default function ModelLifecycleConfig() {
                         <Stack
                           key={item.id}
                           direction="row"
-                          alignItems="center"
                           sx={{
+                            alignItems: "center",
                             gap: "12px",
                             py: "10px",
                             borderBottom: `1px solid ${VW_COLORS.borderLight}`,
@@ -790,8 +810,8 @@ export default function ModelLifecycleConfig() {
                           />
                           <Stack
                             direction="row"
-                            alignItems="center"
                             sx={{
+                              alignItems: "center",
                               gap: "4px",
                               pl: "12px",
                               borderLeft: `1px solid ${VW_COLORS.borderLight}`,
@@ -838,7 +858,14 @@ export default function ModelLifecycleConfig() {
                       ))}
 
                       {addingItemForPhase === phase.id ? (
-                        <Stack direction="row" sx={{ gap: "8px", pt: "12px" }} alignItems="center">
+                        <Stack
+                          direction="row"
+                          sx={{
+                            alignItems: "center",
+                            gap: "8px",
+                            pt: "12px",
+                          }}
+                        >
                           <TextField
                             placeholder="Item name"
                             value={newItemName}

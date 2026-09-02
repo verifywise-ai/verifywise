@@ -89,7 +89,12 @@ export default function InsightsPage() {
       tipBoxEntity="shadow-ai-insights"
     >
       {/* Period selector */}
-      <Stack direction="row" justifyContent="flex-end">
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: "flex-end",
+        }}
+      >
         <Select
           id="insights-period-select"
           value={period}
@@ -134,23 +139,45 @@ export default function InsightsPage() {
       </Box>
 
       {/* Main content: left = risk list + dept chart, right = bar charts */}
-      <Stack direction={{ xs: "column", md: "row" }} gap="16px">
+      <Stack
+        direction={{ xs: "column", md: "row" }}
+        sx={{
+          gap: "16px",
+        }}
+      >
         {/* Left column */}
-        <Stack gap="16px" sx={{ flex: 1 }}>
+        <Stack
+          sx={{
+            gap: "16px",
+            flex: 1,
+          }}
+        >
           {/* Accessed tools with highest risk */}
           <DashboardCard title="Accessed tools with highest risk">
             {loading ? (
               <Skeleton variant="rectangular" height={200} sx={{ borderRadius: "4px" }} />
             ) : topRiskTools.length > 0 ? (
-              <Stack gap="12px">
+              <Stack
+                sx={{
+                  gap: "12px",
+                }}
+              >
                 {topRiskTools.map((tool) => (
                   <Stack
                     key={tool.id}
                     direction="row"
-                    alignItems="center"
-                    justifyContent="space-between"
+                    sx={{
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
                   >
-                    <Stack direction="row" alignItems="center" gap="12px">
+                    <Stack
+                      direction="row"
+                      sx={{
+                        alignItems: "center",
+                        gap: "12px",
+                      }}
+                    >
                       <Typography
                         sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary }}
                       >
@@ -183,7 +210,14 @@ export default function InsightsPage() {
             {loading ? (
               <Skeleton variant="rectangular" height={250} sx={{ borderRadius: "4px" }} />
             ) : departments.length > 0 ? (
-              <Stack direction="row" alignItems="center" justifyContent="center" gap="24px">
+              <Stack
+                direction="row"
+                sx={{
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "24px",
+                }}
+              >
                 <VWDonutChart
                   data={departments}
                   dataKey="user_count"
@@ -194,9 +228,20 @@ export default function InsightsPage() {
                   outerRadius={90}
                   tooltipFormatter={(value, name) => [String(value), name]}
                 />
-                <Stack gap="8px">
+                <Stack
+                  sx={{
+                    gap: "8px",
+                  }}
+                >
                   {departments.map((dept, index) => (
-                    <Stack key={dept.department} direction="row" alignItems="center" gap="8px">
+                    <Stack
+                      key={dept.department}
+                      direction="row"
+                      sx={{
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
                       <Box
                         sx={{
                           width: 10,
@@ -220,7 +265,12 @@ export default function InsightsPage() {
         </Stack>
 
         {/* Right column - bar charts */}
-        <Stack gap="16px" sx={{ flex: 1 }}>
+        <Stack
+          sx={{
+            gap: "16px",
+            flex: 1,
+          }}
+        >
           {/* Most accessed tools by events */}
           <DashboardCard title="Most accessed tools by events">
             {loading ? (

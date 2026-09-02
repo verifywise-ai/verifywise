@@ -241,7 +241,13 @@ export default function MCPGuardrailsPage() {
   // ─── Render helpers ────────────────────────────────────────────────────────
 
   const renderToolBadges = (tools: string[]) => (
-    <Stack direction="row" gap="4px" flexWrap="wrap">
+    <Stack
+      direction="row"
+      sx={{
+        gap: "4px",
+        flexWrap: "wrap",
+      }}
+    >
       {tools.map((tool) => (
         <Box
           key={tool}
@@ -367,10 +373,12 @@ export default function MCPGuardrailsPage() {
               </Box>,
               <Stack
                 direction="row"
-                alignItems="center"
-                justifyContent="flex-end"
-                gap="2px"
                 onClick={(e) => e.stopPropagation()}
+                sx={{
+                  alignItems: "center",
+                  justifyContent: "flex-end",
+                  gap: "2px",
+                }}
               >
                 <IconButton
                   size="small"
@@ -409,7 +417,11 @@ export default function MCPGuardrailsPage() {
         isSubmitting={isSubmitting}
         maxWidth="480px"
       >
-        <Stack gap="16px">
+        <Stack
+          sx={{
+            gap: "16px",
+          }}
+        >
           <Field
             label="Name"
             placeholder="e.g., Block PII in database queries"
@@ -492,7 +504,13 @@ export default function MCPGuardrailsPage() {
             Optional JSON configuration for advanced rule settings.
           </Typography>
 
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
+          <Stack
+            direction="row"
+            sx={{
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <Typography sx={{ fontSize: 13 }}>Active</Typography>
             <Toggle
               checked={form.is_active}
@@ -533,7 +551,11 @@ export default function MCPGuardrailsPage() {
         isSubmitting={deleteSubmitting}
         maxWidth="480px"
       >
-        <Stack gap="8px">
+        <Stack
+          sx={{
+            gap: "8px",
+          }}
+        >
           <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
             This action takes effect immediately. Agent tool calls will no longer be checked against
             this rule.

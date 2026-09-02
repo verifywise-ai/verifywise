@@ -45,7 +45,14 @@ export default function TemplatesTab({
   return (
     <Box>
       {/* Filter + search toolbar */}
-      <Stack direction="row" alignItems="center" gap={2} sx={{ marginBottom: "18px" }}>
+      <Stack
+        direction="row"
+        sx={{
+          alignItems: "center",
+          gap: 2,
+          marginBottom: "18px",
+        }}
+      >
         <FilterBy columns={filterColumns} onFilterChange={onFilterChange} />
         <GroupBy
           options={[

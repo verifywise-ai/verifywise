@@ -134,7 +134,13 @@ const RiskDatabaseModal = ({
       maxWidth={`${MODAL_CONFIG.MAX_WIDTH}px`}
     >
       <Stack spacing={6}>
-        <Stack direction="row" alignItems="center" gap={2}>
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "center",
+            gap: 2,
+          }}
+        >
           <Typography
             component="label"
             htmlFor="risk-search-input"

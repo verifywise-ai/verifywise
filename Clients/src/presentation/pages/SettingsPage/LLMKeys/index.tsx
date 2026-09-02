@@ -854,7 +854,11 @@ const LLMKeys = () => {
         <ConfirmationModal
           title="Delete API key"
           body={
-            <Typography fontSize={13}>
+            <Typography
+              sx={{
+                fontSize: 13,
+              }}
+            >
               Are you sure you want to delete the API key "
               {keyToDelete.name === "Custom" ? "Custom endpoint" : keyToDelete.name}"? This action
               cannot be undone and any advisor using this key will lose access.

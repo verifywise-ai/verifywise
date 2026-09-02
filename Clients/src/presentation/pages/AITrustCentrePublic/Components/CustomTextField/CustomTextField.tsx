@@ -29,7 +29,6 @@ const CustomTextField: React.FC<CustomTextFieldProps> = ({ label, value, loading
       ) : (
         <TextField
           value={value || ""}
-          InputProps={{ readOnly: true, disableUnderline: true }}
           variant="standard"
           multiline
           minRows={3}
@@ -43,6 +42,9 @@ const CustomTextField: React.FC<CustomTextFieldProps> = ({ label, value, loading
               fontSize: 13,
               lineHeight: 1.5,
             },
+          }}
+          slotProps={{
+            input: { readOnly: true, disableUnderline: true },
           }}
         />
       )}

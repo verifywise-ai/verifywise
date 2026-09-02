@@ -218,7 +218,12 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
               },
             }}
           >
-            <Stack alignItems="center" spacing={2}>
+            <Stack
+              spacing={2}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <Box
                 sx={{
                   width: 48,
@@ -236,7 +241,12 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
                   <Database size={24} color={brand.primary} />
                 )}
               </Box>
-              <Stack spacing={0.5} alignItems="center">
+              <Stack
+                spacing={0.5}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <Typography
                   sx={{
                     fontSize: 15,
@@ -277,7 +287,12 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
               },
             }}
           >
-            <Stack alignItems="center" spacing={2}>
+            <Stack
+              spacing={2}
+              sx={{
+                alignItems: "center",
+              }}
+            >
               <Box
                 sx={{
                   width: 48,
@@ -295,7 +310,12 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
                   <LayoutDashboard size={24} color={text.tertiary} />
                 )}
               </Box>
-              <Stack spacing={0.5} alignItems="center">
+              <Stack
+                spacing={0.5}
+                sx={{
+                  alignItems: "center",
+                }}
+              >
                 <Typography
                   sx={{
                     fontSize: 15,
@@ -328,7 +348,12 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
             backgroundColor: `${background.accent}`,
           }}
         >
-          <Stack direction="row" justifyContent="flex-end">
+          <Stack
+            direction="row"
+            sx={{
+              justifyContent: "flex-end",
+            }}
+          >
             <CustomizableButton
               variant="text"
               text="Skip for now"

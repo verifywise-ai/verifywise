@@ -273,7 +273,11 @@ export default function ConfigureReportWizard({
               Namespaced ids ("native:2") are what the backend accepts; a bare
               number or a mis-cased prefix is a 400. An empty selection is
               valid and means every framework in scope. */}
-          <Stack gap={theme.spacing(2)}>
+          <Stack
+            sx={{
+              gap: theme.spacing(2),
+            }}
+          >
             <Typography
               id={FRAMEWORKS_LABEL_ID}
               component="label"
@@ -305,7 +309,14 @@ export default function ConfigureReportWizard({
               displayEmpty
               renderValue={(selected) =>
                 (selected as string[]).length ? (
-                  <Stack direction="row" spacing="8px" flexWrap="wrap" useFlexGap>
+                  <Stack
+                    direction="row"
+                    spacing="8px"
+                    useFlexGap
+                    sx={{
+                      flexWrap: "wrap",
+                    }}
+                  >
                     {(selected as string[]).map((value) => (
                       <Chip
                         key={value}
@@ -340,17 +351,20 @@ export default function ConfigureReportWizard({
               MenuProps={{
                 disableScrollLock: true,
                 style: { zIndex: 10001 },
-                PaperProps: {
-                  sx: {
-                    "borderRadius": theme.shape.borderRadius,
-                    "boxShadow": theme.boxShadow,
-                    "mt": 1,
-                    "& .MuiMenuItem-root": {
-                      "fontSize": 13,
-                      "color": theme.palette.text.primary,
-                      "&:hover": {
-                        backgroundColor: theme.palette.background.accent,
-                        color: theme.palette.primary.main,
+
+                slotProps: {
+                  paper: {
+                    sx: {
+                      "borderRadius": theme.shape.borderRadius,
+                      "boxShadow": theme.boxShadow,
+                      "mt": 1,
+                      "& .MuiMenuItem-root": {
+                        "fontSize": 13,
+                        "color": theme.palette.text.primary,
+                        "&:hover": {
+                          backgroundColor: theme.palette.background.accent,
+                          color: theme.palette.primary.main,
+                        },
                       },
                     },
                   },

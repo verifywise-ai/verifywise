@@ -36,6 +36,7 @@ export const styles = {
       "cursor": "pointer",
       "fontSize": 13,
       "animation": isFlashing ? `${flashAnimation} 2s ease-in-out` : "none",
+
       "&:hover": {
         backgroundColor: isFlashing ? "transparent" : "background.surface",
       },

@@ -184,7 +184,11 @@ const ISO42001Clauses = ({
                   flashingRowId === subClause.id,
                 )}
               >
-                <Typography fontSize={13}>
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                  }}
+                >
                   {clause.clause_no + "." + (index + 1)} {subClause.title ?? "Untitled"}
                 </Typography>
                 <Chip label={subClause.status ?? "Not started"} />

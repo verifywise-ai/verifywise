@@ -422,7 +422,6 @@ const LinkedPolicyObjectsTable: React.FC<LinkedPolicyObjectsTableProps> = ({
                 onPageChange={handleChangePage}
                 onRowsPerPageChange={handleChangeRowsPerPage}
                 rowsPerPageOptions={[5, 10, 15, 25]}
-                ActionsComponent={(props) => <TablePaginationActions {...props} />}
                 sx={paginationStyle(theme)}
                 slotProps={{
                   select: {
@@ -431,6 +430,7 @@ const LinkedPolicyObjectsTable: React.FC<LinkedPolicyObjectsTableProps> = ({
                     sx: paginationSelectStyle(theme),
                   },
                 }}
+                ActionsComponent={(props) => <TablePaginationActions {...props} />}
               />
             </TableRow>
           </TableFooter>

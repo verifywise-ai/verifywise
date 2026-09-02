@@ -37,8 +37,10 @@ const BottomChip: React.FC<BottomChipProps> = ({ children, role, ariaLabel, sx }
         role={role}
         aria-label={ariaLabel}
         direction="row"
-        alignItems="center"
         sx={[
+          {
+            alignItems: "center",
+          },
           {
             pointerEvents: "auto",
             gap: theme.spacing(3),

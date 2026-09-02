@@ -140,7 +140,14 @@ export default function ComparePanel({
             getOptionValue={(item) => item._id}
           />
         </Box>
-        <Typography fontSize={13} fontWeight={500} color="text.secondary" mt="8px">
+        <Typography
+          sx={{
+            fontSize: 13,
+            fontWeight: 500,
+            color: "text.secondary",
+            mt: "8px",
+          }}
+        >
           Endpoint
         </Typography>
         <Select
@@ -152,7 +159,13 @@ export default function ComparePanel({
           sx={{ width: "100%" }}
           getOptionValue={(item) => item._id}
         />
-        <Typography fontSize={11} color="text.disabled" mt="4px">
+        <Typography
+          sx={{
+            fontSize: 11,
+            color: "text.disabled",
+            mt: "4px",
+          }}
+        >
           {detectedVars.length > 0
             ? "Variable values from the chat tab will be used for both versions."
             : "Pick two prompt versions to compare their responses to the same input."}
@@ -170,7 +183,14 @@ export default function ComparePanel({
             p: "16px",
           }}
         >
-          <Typography fontSize={11} fontWeight={600} color="text.secondary" mb="8px">
+          <Typography
+            sx={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: "text.secondary",
+              mb: "8px",
+            }}
+          >
             {versionA ? `v${versionA}` : "Version A"}
           </Typography>
           {resultA ? (
@@ -189,16 +209,31 @@ export default function ComparePanel({
               </Box>
               {resultA.latency > 0 && (
                 <Box sx={{ display: "flex", gap: "16px", mt: "8px" }}>
-                  <Typography fontSize={11} color="text.secondary">
+                  <Typography
+                    sx={{
+                      fontSize: 11,
+                      color: "text.secondary",
+                    }}
+                  >
                     {resultA.latency}ms
                   </Typography>
                   {resultA.tokens > 0 && (
-                    <Typography fontSize={11} color="text.secondary">
+                    <Typography
+                      sx={{
+                        fontSize: 11,
+                        color: "text.secondary",
+                      }}
+                    >
                       {resultA.tokens} tokens
                     </Typography>
                   )}
                   {resultA.cost > 0 && (
-                    <Typography fontSize={11} color="text.secondary">
+                    <Typography
+                      sx={{
+                        fontSize: 11,
+                        color: "text.secondary",
+                      }}
+                    >
                       ${resultA.cost.toFixed(4)}
                     </Typography>
                   )}
@@ -213,7 +248,12 @@ export default function ComparePanel({
                 color={palette.border.dark}
                 style={{ marginBottom: 8 }}
               />
-              <Typography fontSize={12} color="text.disabled">
+              <Typography
+                sx={{
+                  fontSize: 12,
+                  color: "text.disabled",
+                }}
+              >
                 Select versions and send a message
               </Typography>
             </Box>
@@ -222,7 +262,14 @@ export default function ComparePanel({
 
         {/* Column B */}
         <Box sx={{ flex: 1, overflow: "auto", p: "16px" }}>
-          <Typography fontSize={11} fontWeight={600} color="text.secondary" mb="8px">
+          <Typography
+            sx={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: "text.secondary",
+              mb: "8px",
+            }}
+          >
             {versionB ? `v${versionB}` : "Version B"}
           </Typography>
           {resultB ? (
@@ -241,16 +288,31 @@ export default function ComparePanel({
               </Box>
               {resultB.latency > 0 && (
                 <Box sx={{ display: "flex", gap: "16px", mt: "8px" }}>
-                  <Typography fontSize={11} color="text.secondary">
+                  <Typography
+                    sx={{
+                      fontSize: 11,
+                      color: "text.secondary",
+                    }}
+                  >
                     {resultB.latency}ms
                   </Typography>
                   {resultB.tokens > 0 && (
-                    <Typography fontSize={11} color="text.secondary">
+                    <Typography
+                      sx={{
+                        fontSize: 11,
+                        color: "text.secondary",
+                      }}
+                    >
                       {resultB.tokens} tokens
                     </Typography>
                   )}
                   {resultB.cost > 0 && (
-                    <Typography fontSize={11} color="text.secondary">
+                    <Typography
+                      sx={{
+                        fontSize: 11,
+                        color: "text.secondary",
+                      }}
+                    >
                       ${resultB.cost.toFixed(4)}
                     </Typography>
                   )}
@@ -259,7 +321,12 @@ export default function ComparePanel({
             </>
           ) : !isSending ? (
             <Box sx={{ textAlign: "center", py: "32px" }}>
-              <Typography fontSize={12} color="text.disabled">
+              <Typography
+                sx={{
+                  fontSize: 12,
+                  color: "text.disabled",
+                }}
+              >
                 Output appears here
               </Typography>
             </Box>

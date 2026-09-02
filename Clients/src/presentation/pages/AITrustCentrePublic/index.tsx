@@ -56,8 +56,8 @@ const AITrustCentrePublic: React.FC = () => {
 
   return (
     <Stack
-      overflow={"hidden"}
       sx={{
+        overflow: "hidden",
         backgroundColor: "#FCFCFD",
         minHeight: "100vh",
         display: "flex",
@@ -89,7 +89,13 @@ const AITrustCentrePublic: React.FC = () => {
         </Box>
       </Box>
       {/* Tabs */}
-      <Stack alignItems="start" sx={{ mt: 16, width: "80%" }}>
+      <Stack
+        sx={{
+          alignItems: "start",
+          mt: 16,
+          width: "80%",
+        }}
+      >
         <TabContext value={tabValue}>
           <Box
             sx={{
@@ -103,7 +109,9 @@ const AITrustCentrePublic: React.FC = () => {
           >
             <TabList
               onChange={handleTabChange}
-              TabIndicatorProps={{ style: { backgroundColor: "brand.primary" } }}
+              slotProps={{
+                indicator: { style: { backgroundColor: "brand.primary" } },
+              }}
               aria-label="AI Trust Center Public Tabs"
               sx={aiTrustCenterTabListStyle}
             >

@@ -542,7 +542,7 @@ export default function ScanDetailsPage() {
             size="small"
             checked={showSuppressed}
             onChange={(_, checked) => setShowSuppressed(checked)}
-            inputProps={{ "aria-label": "Show suppressed findings" }}
+            ariaLabel="Show suppressed findings"
           />
         </Box>
 

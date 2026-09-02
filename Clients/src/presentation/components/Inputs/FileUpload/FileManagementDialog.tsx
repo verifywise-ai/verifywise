@@ -50,9 +50,9 @@ function FileListItem({
   return (
     <Stack
       direction="row"
-      justifyContent="space-between"
-      alignItems="center"
       sx={{
+        justifyContent: "space-between",
+        alignItems: "center",
         ...styles.fileItem,
         backgroundColor: isPending ? theme.palette.warning.light : "transparent",
         border: isPending ? `1px solid ${theme.palette.warning.main}` : undefined,
@@ -60,7 +60,15 @@ function FileListItem({
         padding: isPending ? "8px 12px" : styles.fileItem.padding,
       }}
     >
-      <Stack direction="row" alignItems="center" spacing={1} sx={{ flex: 1, minWidth: 0 }}>
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: "center",
+          flex: 1,
+          minWidth: 0,
+        }}
+      >
         <FileIcon
           size={16}
           color={isPending ? theme.palette.warning.dark : theme.palette.text.disabled}
@@ -189,9 +197,12 @@ function FileManagementDialog({
       {/* Header */}
       <Stack
         direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-        sx={{ width: "100%", mb: 2 }}
+        sx={{
+          justifyContent: "space-between",
+          alignItems: "center",
+          width: "100%",
+          mb: 2,
+        }}
       >
         <Typography variant="h6" sx={{ fontSize: 16, fontWeight: 600 }}>
           Manage Evidence Files

@@ -105,7 +105,14 @@ const AnalyticsDrawer: React.FC<AnalyticsDrawerProps> = ({
     >
       <Box>
         {/* Header */}
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
           <Box>
             <Typography
               sx={{
@@ -151,7 +158,12 @@ const AnalyticsDrawer: React.FC<AnalyticsDrawerProps> = ({
           >
             Historical trend: {entityName} {selectedParameterLabel.toLowerCase()} over time
           </Typography>
-          <Box display="flex" justifyContent="flex-end">
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "flex-end",
+            }}
+          >
             <ButtonToggle
               options={availableParameters}
               value={selectedParameter}

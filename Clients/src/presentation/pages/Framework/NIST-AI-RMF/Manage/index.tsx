@@ -360,13 +360,19 @@ const NISTAIRMFManage = ({
               )}
             >
               <Stack sx={{ flex: 1, pr: 2 }}>
-                <Typography fontSize={13} fontWeight={600} color="#1a1a1a">
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: "#1a1a1a",
+                  }}
+                >
                   {category.title} {category.index}.{index + 1}
                 </Typography>
                 {subcategory.description && (
                   <Typography
-                    fontSize={12}
                     sx={{
+                      fontSize: 12,
                       mt: 1,
                       color: "#666",
                       lineHeight: 1.4,
@@ -466,10 +472,12 @@ const NISTAIRMFManage = ({
                 />
                 <Stack sx={{ paddingLeft: "2.5px", flex: 1 }}>
                   <Typography
-                    fontSize={13}
-                    fontWeight={600}
-                    color="#1a1a1a"
-                    sx={{ lineHeight: 1.3 }}
+                    sx={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: "#1a1a1a",
+                      lineHeight: 1.3,
+                    }}
                   >
                     {category.title}
                     {category.index !== undefined && category.index !== null
@@ -478,8 +486,8 @@ const NISTAIRMFManage = ({
                   </Typography>
                   {category.description && (
                     <Typography
-                      fontSize={12}
                       sx={{
+                        fontSize: 12,
                         mt: 1,
                         color: "#666",
                         lineHeight: 1.4,

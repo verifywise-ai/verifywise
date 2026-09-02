@@ -700,17 +700,38 @@ export default function ProjectExperiments({
       )}
 
       {/* Header + description */}
-      <Stack spacing={1} mb={4}>
-        <Box display="flex" alignItems="center" gap={1}>
-          <Typography variant="h6" fontSize={15} fontWeight="600" color="#111827">
+      <Stack
+        spacing={1}
+        sx={{
+          mb: 4,
+        }}
+      >
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+          }}
+        >
+          <Typography
+            variant="h6"
+            sx={{
+              fontSize: 15,
+              fontWeight: "600",
+              color: "#111827",
+            }}
+          >
             Experiments
           </Typography>
           <HelperIcon articlePath="llm-evals/running-experiments" />
         </Box>
         <Typography
           variant="body2"
-          color="text.secondary"
-          sx={{ lineHeight: 1.6, fontSize: "14px" }}
+          sx={{
+            color: "text.secondary",
+            lineHeight: 1.6,
+            fontSize: "14px",
+          }}
         >
           Experiments run evaluations on your models using datasets and scorers. Track performance
           metrics over time and compare different model configurations.
@@ -728,7 +749,11 @@ export default function ProjectExperiments({
         }}
       >
         <CardContent sx={{ py: 2 }}>
-          <Box mb={1}>
+          <Box
+            sx={{
+              mb: 1,
+            }}
+          >
             <Typography variant="h6" sx={{ fontSize: "14px", fontWeight: 600 }}>
               Performance tracking
             </Typography>
@@ -736,7 +761,13 @@ export default function ProjectExperiments({
           <Box
             sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}
           >
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: "13px" }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+                fontSize: "13px",
+              }}
+            >
               Track metric scores across eval runs
             </Typography>
             <FormControl size="small">
@@ -809,12 +840,20 @@ export default function ProjectExperiments({
       {/* Filters + Search + Group directly above the table */}
       <Stack
         direction="row"
-        justifyContent="space-between"
-        alignItems="center"
-        sx={{ marginBottom: "18px" }}
-        gap={2}
+        sx={{
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 2,
+          marginBottom: "18px",
+        }}
       >
-        <Stack direction="row" alignItems="center" gap={2}>
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "center",
+            gap: 2,
+          }}
+        >
           <FilterBy columns={experimentFilterColumns} onFilterChange={handleFilterChange} />
           <GroupBy
             options={[
@@ -847,7 +886,11 @@ export default function ProjectExperiments({
       </Stack>
 
       {/* Experiments Table with Pagination */}
-      <Box mb={4}>
+      <Box
+        sx={{
+          mb: 4,
+        }}
+      >
         <GroupedTableView
           groupedData={groupedRows}
           ungroupedData={tableRows}

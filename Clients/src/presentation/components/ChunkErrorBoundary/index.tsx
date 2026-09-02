@@ -63,12 +63,29 @@ class ChunkErrorBoundary extends Component<Props, State> {
             p: 4,
           }}
         >
-          <Stack alignItems="center" spacing={2} sx={{ maxWidth: 420, textAlign: "center" }}>
+          <Stack
+            spacing={2}
+            sx={{
+              alignItems: "center",
+              maxWidth: 420,
+              textAlign: "center",
+            }}
+          >
             <AlertCircle size={48} color="#1976d2" />
-            <Typography variant="h6" fontWeight={600}>
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 600,
+              }}
+            >
               A new version is available
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: "text.secondary",
+              }}
+            >
               The application has been updated since you last loaded the page. Please reload to get
               the latest version.
             </Typography>

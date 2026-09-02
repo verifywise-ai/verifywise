@@ -453,7 +453,13 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                         sortConfig.key === "scorecard" ? "background.surface" : "inherit",
                     }}
                   >
-                    <Box display="flex" alignItems="center" gap={1}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                      }}
+                    >
                       {(() => {
                         // Use only backend provided risk_score, no client-side calculations
                         const riskScore = row.risk_score ?? 0;
@@ -523,7 +529,13 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                   }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <Stack direction="row" alignItems="center" gap={0.5}>
+                  <Stack
+                    direction="row"
+                    sx={{
+                      alignItems: "center",
+                      gap: 0.5,
+                    }}
+                  >
                     <ViewRelationshipsButton
                       entityId={row.id || 0}
                       entityType="vendor"
@@ -633,7 +645,6 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                     rowsPerPage={rowsPerPage}
                     rowsPerPageOptions={[5, 10, 15, 25]}
                     onRowsPerPageChange={handleChangeRowsPerPage}
-                    ActionsComponent={(props) => <TablePaginationActions {...props} />}
                     labelRowsPerPage="Rows per page"
                     labelDisplayedRows={({ page, count }) =>
                       `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
@@ -642,21 +653,27 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                       select: {
                         MenuProps: {
                           keepMounted: true,
-                          PaperProps: {
-                            className: "pagination-dropdown",
-                            sx: {
-                              mt: 0,
-                              mb: theme.spacing(2),
+
+                          slotProps: {
+                            paper: {
+                              className: "pagination-dropdown",
+                              sx: {
+                                mt: 0,
+                                mb: theme.spacing(2),
+                              },
                             },
                           },
+
                           transformOrigin: {
                             vertical: "bottom",
                             horizontal: "left",
                           },
+
                           anchorOrigin: {
                             vertical: "top",
                             horizontal: "left",
                           },
+
                           sx: { mt: theme.spacing(-2) },
                         },
                         inputProps: { id: "pagination-dropdown" },
@@ -686,6 +703,7 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                         padding: theme.spacing(4),
                       },
                     }}
+                    ActionsComponent={(props) => <TablePaginationActions {...props} />}
                   />
                 </TableRow>
               </TableFooter>

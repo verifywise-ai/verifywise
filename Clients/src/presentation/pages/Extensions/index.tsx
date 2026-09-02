@@ -79,8 +79,23 @@ function ExtensionCard({
         p: "16px",
       }}
     >
-      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap="8px">
-        <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0, flex: 1 }}>
+      <Stack
+        direction="row"
+        sx={{
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: "8px",
+        }}
+      >
+        <Stack
+          direction="row"
+          spacing={1.5}
+          sx={{
+            alignItems: "center",
+            minWidth: 0,
+            flex: 1,
+          }}
+        >
           {extension.iconPath && (
             <Box
               component="img"
@@ -215,7 +230,13 @@ export default function ExtensionsPage() {
       description="Enable and configure integrations for your organization."
     >
       {loading ? (
-        <Box display="flex" justifyContent="center" py={6}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            py: 6,
+          }}
+        >
           <CircularProgress size={24} sx={{ color: theme.palette.primary.main }} />
         </Box>
       ) : error ? (
@@ -224,13 +245,17 @@ export default function ExtensionsPage() {
         </Typography>
       ) : (
         <Box
-          display="grid"
-          gridTemplateColumns={{
-            xs: "1fr",
-            sm: "repeat(2, 1fr)",
-            lg: "repeat(3, 1fr)",
+          sx={{
+            display: "grid",
+
+            gridTemplateColumns: {
+              xs: "1fr",
+              sm: "repeat(2, 1fr)",
+              lg: "repeat(3, 1fr)",
+            },
+
+            gap: "16px",
           }}
-          gap="16px"
         >
           {extensions.map((ext) => (
             <ExtensionCard

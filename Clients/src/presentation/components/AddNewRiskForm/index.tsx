@@ -103,8 +103,10 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = (props) => {
           <TabList
             onChange={handleTabChange}
             aria-label="Add new risk tabs"
-            TabIndicatorProps={{
-              style: { backgroundColor: theme.palette.primary.main },
+            slotProps={{
+              indicator: {
+                style: { backgroundColor: theme.palette.primary.main },
+              },
             }}
             sx={{
               "minHeight": COMPONENT_CONSTANTS.MIN_TAB_HEIGHT,
