@@ -40,6 +40,7 @@ function isRecordSx(sx: SxProps<Theme>): sx is Record<string, unknown> {
 function Select({
   id,
   label,
+  ariaLabel,
   placeholder,
   value,
   items,
@@ -180,9 +181,22 @@ function Select({
         onChange={onChange}
         onBlur={onBlur}
         displayEmpty
+        // The visible label is tied to the hidden native input via htmlFor, but
+        // assistive technology reads the div[role="combobox"] that MUI renders,
+        // and that element gets no name of its own. SelectDisplayProps puts one
+        // there for selects with no visible label — an in-table select, say,
+        // whose column header does not name it.
+        //
+        // Selects that *do* have a visible label are deliberately left alone:
+        // naming the display element as well would associate the same text with
+        // two nodes, which is valid ARIA but makes getByLabelText ambiguous
+        // across the existing suite. See the plan's Phase 3 follow-up.
+        SelectDisplayProps={{
+          "aria-label": label ? undefined : (ariaLabel ?? placeholder),
+        }}
         inputProps={{
           "id": selectId,
-          "aria-label": label ? undefined : placeholder,
+          "aria-label": label ? undefined : (ariaLabel ?? placeholder),
           "aria-describedby": describedBy,
         }}
         renderValue={renderValue}
