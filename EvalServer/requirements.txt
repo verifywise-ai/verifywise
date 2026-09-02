@@ -70,7 +70,7 @@ pyasn1==0.6.4
 pyasn1_modules==0.4.2
 pydantic==2.13.5
 pydantic-settings==2.11.0
-pydantic_core==2.41.4
+pydantic_core==2.46.5
 Pygments==2.20.0
 PyJWT==2.13.0
 pyparsing==3.3.2
