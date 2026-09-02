@@ -6,12 +6,35 @@ import Checkbox from "../../components/Inputs/Checkbox";
 import { FormField } from "../IntakeFormBuilder/types";
 
 /**
- * Renders a field label
+ * Renders a field label.
+ *
+ * Pass `htmlFor` when the label names a single control: it renders a real
+ * <label>, which is what gives the input an accessible name. Without it the
+ * text is only visually adjacent to the control and screen readers announce
+ * the input as unnamed.
+ *
+ * Pass `id` instead for a group of controls — a multiselect's option list —
+ * where the label names the group via aria-labelledby rather than one input.
  */
-function FieldLabel({ label, required }: { label: string; required?: boolean }) {
+function FieldLabel({
+  label,
+  required,
+  htmlFor,
+  id,
+}: {
+  label: string;
+  required?: boolean;
+  htmlFor?: string;
+  id?: string;
+}) {
   return (
     <Box sx={{ mb: "6px" }}>
-      <Typography sx={{ fontSize: "14px", color: "#334155", fontWeight: 500 }}>
+      <Typography
+        id={id}
+        component={htmlFor ? "label" : "span"}
+        htmlFor={htmlFor}
+        sx={{ fontSize: "14px", color: "#334155", fontWeight: 500, display: "block" }}
+      >
         {label}
         {required && <span style={{ color: "#ef4444" }}> *</span>}
       </Typography>
@@ -85,6 +108,9 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
   const error = errors[field.id];
   const errorMessage = error?.message as string | undefined;
   const isRequired = field.validation?.required;
+  // Field/Select put this id on the rendered input, so the label can point at it.
+  const controlId = `field-${field.id}`;
+  const labelId = `${controlId}-label`;
 
   const renderField = () => {
     switch (field.type) {
@@ -93,7 +119,7 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
       case "url":
         return (
           <>
-            <FieldLabel label={field.label} required={isRequired} />
+            <FieldLabel label={field.label} required={isRequired} htmlFor={controlId} />
             <Controller
               name={field.id}
               control={control}
@@ -127,7 +153,7 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
               render={({ field: fieldProps }) => (
                 <>
                   <Field
-                    id={`field-${field.id}`}
+                    id={controlId}
                     label=""
                     {...fieldProps}
                     value={fieldProps.value as string}
@@ -146,7 +172,7 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
       case "textarea":
         return (
           <>
-            <FieldLabel label={field.label} required={isRequired} />
+            <FieldLabel label={field.label} required={isRequired} htmlFor={controlId} />
             <Controller
               name={field.id}
               control={control}
@@ -169,7 +195,7 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
               render={({ field: fieldProps }) => (
                 <>
                   <Field
-                    id={`field-${field.id}`}
+                    id={controlId}
                     label=""
                     {...fieldProps}
                     value={fieldProps.value as string}
@@ -188,7 +214,7 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
       case "number":
         return (
           <>
-            <FieldLabel label={field.label} required={isRequired} />
+            <FieldLabel label={field.label} required={isRequired} htmlFor={controlId} />
             <Controller
               name={field.id}
               control={control}
@@ -213,7 +239,7 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
               render={({ field: fieldProps }) => (
                 <>
                   <Field
-                    id={`field-${field.id}`}
+                    id={controlId}
                     label=""
                     {...fieldProps}
                     value={fieldProps.value as string | number}
@@ -232,7 +258,7 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
       case "date":
         return (
           <>
-            <FieldLabel label={field.label} required={isRequired} />
+            <FieldLabel label={field.label} required={isRequired} htmlFor={controlId} />
             <Controller
               name={field.id}
               control={control}
@@ -243,7 +269,7 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
               render={({ field: fieldProps }) => (
                 <>
                   <Field
-                    id={`field-${field.id}`}
+                    id={controlId}
                     label=""
                     {...fieldProps}
                     value={fieldProps.value as string}
@@ -261,7 +287,7 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
       case "select":
         return (
           <>
-            <FieldLabel label={field.label} required={isRequired} />
+            <FieldLabel label={field.label} required={isRequired} htmlFor={controlId} />
             <Controller
               name={field.id}
               control={control}
@@ -272,8 +298,12 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
               render={({ field: fieldProps }) => (
                 <Box>
                   <Select
-                    id={`field-${field.id}`}
+                    id={controlId}
                     label=""
+                    // htmlFor on the visible label reaches the hidden native
+                    // input; the div[role="combobox"] a screen reader actually
+                    // reads needs the name passed to it directly.
+                    ariaLabel={field.label}
                     placeholder="Select an option"
                     value={fieldProps.value as string}
                     onChange={(e) => fieldProps.onChange(e.target.value)}
@@ -301,7 +331,7 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
       case "multiselect":
         return (
           <>
-            <FieldLabel label={field.label} required={isRequired} />
+            <FieldLabel label={field.label} required={isRequired} id={labelId} />
             <Controller
               name={field.id}
               control={control}
@@ -350,6 +380,8 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
                     )}
                     {/* Options list */}
                     <Box
+                      role="group"
+                      aria-labelledby={labelId}
                       sx={{
                         border: error ? "1px solid #ef4444" : "1px solid #e2e8f0",
                         borderRadius: "8px",
@@ -359,16 +391,15 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
                     >
                       {(field.options || []).map((option) => {
                         const isChecked = selectedArr.includes(option.value);
+                        const optionId = `${controlId}-${option.value}`;
                         return (
+                          // A real <label> rather than a click handler on a div:
+                          // clicking anywhere in the row reaches the checkbox
+                          // natively, and the option stops being mouse-only.
                           <Box
                             key={option.value}
-                            onClick={() => {
-                              if (isChecked) {
-                                fieldProps.onChange(selectedArr.filter((v) => v !== option.value));
-                              } else {
-                                fieldProps.onChange([...selectedArr, option.value]);
-                              }
-                            }}
+                            component="label"
+                            htmlFor={optionId}
                             sx={{
                               "display": "flex",
                               "alignItems": "center",
@@ -385,13 +416,25 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
                             }}
                           >
                             <Checkbox
-                              id={`field-${field.id}-${option.value}`}
+                              id={optionId}
+                              ariaLabel={option.label}
                               isChecked={isChecked}
                               value={option.value}
-                              onChange={() => {}}
+                              onChange={() => {
+                                if (isChecked) {
+                                  fieldProps.onChange(
+                                    selectedArr.filter((v) => v !== option.value),
+                                  );
+                                } else {
+                                  fieldProps.onChange([...selectedArr, option.value]);
+                                }
+                              }}
                               size="small"
                             />
-                            <Typography sx={{ fontSize: "14px", color: "#334155" }}>
+                            <Typography
+                              component="span"
+                              sx={{ fontSize: "14px", color: "#334155" }}
+                            >
                               {option.label}
                             </Typography>
                           </Box>
@@ -419,7 +462,7 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
             render={({ field: fieldProps }) => (
               <Box>
                 <Checkbox
-                  id={`field-${field.id}`}
+                  id={controlId}
                   isChecked={!!fieldProps.value}
                   value={field.id}
                   onChange={(e) => fieldProps.onChange((e.target as HTMLInputElement).checked)}

@@ -15,6 +15,11 @@ dotenv.config({ quiet: true });
 
 const CRITICAL_PATH_SPECS = /(use-cases|risk-management|tasks|critical-journey)\.spec\.ts/;
 const SUPER_ADMIN_SPECS = /super-admin\.spec\.ts/;
+// Accessibility scans for the key pages. These spec files are not matched by
+// any other project, so without this their axe tests never execute at all.
+// Tasks is deliberately absent: its scan already runs under the `admin`
+// project, and matching it here would run it twice.
+const A11Y_SCAN_SPECS = /[\\/](dashboard|model-inventory|vendors|policies)\.spec\.ts$/;
 
 // When Playwright's bundled Chromium is not available (e.g. restricted CDN),
 // set PLAYWRIGHT_USE_SYSTEM_CHROME=1 to use the locally installed Google Chrome.
@@ -70,6 +75,19 @@ export default defineConfig({
     {
       name: "admin",
       testMatch: CRITICAL_PATH_SPECS,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        channel: browserChannel,
+        storageState: "e2e/.auth/admin.json",
+      },
+    },
+    // Accessibility scans only. `grep` keeps this to the axe tests rather than
+    // switching on the rest of each spec file at the same time.
+    {
+      name: "a11y",
+      testMatch: A11Y_SCAN_SPECS,
+      grep: /accessibility violations/,
       dependencies: ["setup"],
       use: {
         ...devices["Desktop Chrome"],

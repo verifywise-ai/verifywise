@@ -42,6 +42,7 @@ function CustomSelectInner({
   disabled = false,
   size = "small",
   sx = {},
+  ariaLabel,
 }: CustomSelectProps) {
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -81,6 +82,7 @@ function CustomSelectInner({
   return (
     <Select
       id={`custom-select-${Date.now()}`}
+      ariaLabel={ariaLabel}
       value={currentValue}
       items={selectItems}
       onChange={handleChange}

@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures/auth.fixture";
-import { analyzeCriticalAndSeriousViolations } from "./helpers/axe";
+import { analyzeCriticalAndSeriousViolations, summarizeViolations } from "./helpers/axe";
 
 test.describe("Tasks", () => {
   test.beforeEach(async ({ authedPage: page }) => {
@@ -21,7 +21,7 @@ test.describe("Tasks", () => {
     await expect(page.getByText(/task/i).first()).toBeVisible({ timeout: 10_000 });
 
     const violations = await analyzeCriticalAndSeriousViolations(page);
-    expect(violations).toEqual([]);
+    expect(summarizeViolations(violations)).toEqual([]);
   });
 
   test("task list or empty state is visible", async ({ authedPage: page }) => {

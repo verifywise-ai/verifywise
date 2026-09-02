@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures/auth.fixture";
-import { analyzeCriticalAndSeriousViolations } from "./helpers/axe";
+import { analyzeCriticalAndSeriousViolations, summarizeViolations } from "./helpers/axe";
 
 test.describe("Dashboard", () => {
   test("renders the dashboard with key widgets", async ({ authedPage: page }) => {
@@ -21,7 +21,7 @@ test.describe("Dashboard", () => {
     await page.waitForLoadState("domcontentloaded");
 
     const violations = await analyzeCriticalAndSeriousViolations(page);
-    expect(violations).toEqual([]);
+    expect(summarizeViolations(violations)).toEqual([]);
   });
 
   test("sidebar navigation is visible", async ({ authedPage: page }) => {
