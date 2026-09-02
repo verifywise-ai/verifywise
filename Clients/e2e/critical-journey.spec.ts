@@ -104,6 +104,23 @@ test.describe("Critical end-to-end journey", () => {
     const calendarPopup = page.locator(".MuiPickerPopper-root, .MuiPickersPopper-root");
     await expect(calendarPopup.first()).toBeVisible({ timeout: 5_000 });
 
+    // The calendar opens on the current month. When today + 3 rolls over
+    // into the next month, advance the calendar first — otherwise the
+    // numbered day cell matches a PAST date in the displayed month and the
+    // task is created overdue (month-boundary flake).
+    const targetMonthYear = dueSoonDate.toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    });
+    for (let i = 0; i < 2; i++) {
+      const visibleMonthYear = await calendarPopup
+        .locator(".MuiPickersCalendarHeader-label")
+        .first()
+        .textContent();
+      if (visibleMonthYear?.trim() === targetMonthYear) break;
+      await calendarPopup.getByRole("button", { name: /next month/i }).click();
+    }
+
     const dayCell = page
       .locator('[role="gridcell"]')
       .filter({ hasText: new RegExp(`^${dayOfMonth}$`) })
