@@ -108,6 +108,7 @@ import { toolsDefinition as frameworkLookupToolsDefinition } from "../advisor/to
 import { translateError } from "../utils/i18n.utils";
 import { aiActionToolDefinitions, aiActionFilers } from "../advisor/aiActions";
 import { orchestrate } from "../advisor/orchestrator";
+import { buildToolsRoadmap } from "../advisor/roadmap/roadmapService";
 
 const fileName = "advisor.ctrl.ts";
 
@@ -1082,5 +1083,41 @@ export async function adminListAgentMessages(req: Request, res: Response) {
     logStructured("error", "admin list failed", functionName, fileName);
     logger.error("Error in adminListAgentMessages:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Tools roadmap — read-only plan-vs-implementation tracker            */
+/* ------------------------------------------------------------------ */
+
+/**
+ * GET /api/advisor/tools/roadmap
+ *
+ * Read-only roadmap of planned vs. implemented advisor tools. Planned tools
+ * come from the static manifest derived from the AI Implementation Plan
+ * catalogue; implemented tools are the keys of `availableTools` plus the
+ * native `generate_chart` tool (which has no filer entry).
+ *
+ * Read access is restricted to Admin, Editor, Reviewer, and Auditor at the
+ * route level via `authorize`. The payload contains roadmap metadata only —
+ * never tool definitions, JSON schemas, handlers, or any other write-action
+ * implementation detail.
+ */
+export async function getToolsRoadmap(req: Request, res: Response) {
+  const functionName = "getToolsRoadmap";
+  try {
+    const implementedNames = new Set([...Object.keys(availableTools), "generate_chart"]);
+    const roadmap = buildToolsRoadmap(implementedNames);
+    logStructured(
+      "successful",
+      `tools roadmap served (${roadmap.summary.implemented + roadmap.summary.renamed}/${roadmap.summary.planned} planned tools delivered)`,
+      functionName,
+      fileName,
+    );
+    return res.status(200).json(STATUS_CODE[200](roadmap));
+  } catch (error) {
+    logStructured("error", "tools roadmap failed", functionName, fileName);
+    logger.error("Error in getToolsRoadmap:", error);
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
