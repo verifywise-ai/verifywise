@@ -7,7 +7,7 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
-  Popover,
+  Menu,
 } from "@mui/material";
 import { useContext, useEffect, useState, useMemo, useRef } from "react";
 import {
@@ -833,7 +833,7 @@ const Framework = () => {
                     },
                   }}
                 />
-                <Popover
+                <Menu
                   anchorEl={anchorEl}
                   open={isMenuOpen}
                   onClose={closeFrameworkMenu}
@@ -932,7 +932,7 @@ const Framework = () => {
                       }}
                     />
                   </MenuItem>
-                </Popover>
+                </Menu>
               </>
             ) : (
               <CustomizableButton
