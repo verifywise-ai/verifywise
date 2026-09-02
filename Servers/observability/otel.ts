@@ -144,7 +144,9 @@ export async function initObservability(): Promise<boolean> {
   loggerProvider = new LoggerProvider({
     resource,
     processors: [
-      new BatchLogRecordProcessor(new OTLPLogExporter({ url: `${base}/v1/logs`, headers })),
+      new BatchLogRecordProcessor({
+        exporter: new OTLPLogExporter({ url: `${base}/v1/logs`, headers }),
+      }),
     ],
   });
   logs.setGlobalLoggerProvider(loggerProvider);
