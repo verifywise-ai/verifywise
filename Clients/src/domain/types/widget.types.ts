@@ -71,6 +71,11 @@ export interface SelectCorProps {
     icon?: React.ComponentType<{ color?: string; size?: number }>;
     color?: string;
   }[];
+  /**
+   * Accessible name for selects with no visible label. Without it the
+   * combobox MUI renders has no name at all for assistive technology.
+   */
+  ariaLabel?: string;
   isRequired?: boolean;
   isOptional?: boolean;
   optionalLabel?: string;
@@ -173,6 +178,11 @@ export interface CustomSelectProps {
   size?: "small" | "medium";
   /** Additional styling */
   sx?: object;
+  /**
+   * Accessible name. Required in practice for in-table selects, which have no
+   * visible label of their own — the column header does not name them.
+   */
+  ariaLabel?: string;
 }
 
 // Note: React-dependent interfaces (IconButtonProps, CheckboxCoreProps, FieldCoreProps,

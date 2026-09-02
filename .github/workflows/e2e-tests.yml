@@ -319,6 +319,19 @@ jobs:
           path: Clients/playwright-report/
           retention-days: 14
 
+      # One JSON file per scanned page, written by e2e/helpers/axe.ts as each
+      # scan runs. It records the rules that were disabled, and why, alongside
+      # the results — a report claiming zero violations is only meaningful next
+      # to the list of what was not checked. Written directly by the helper
+      # rather than by a reporter, so it exists whatever the reporter config is.
+      - name: Upload accessibility report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: accessibility-report
+          path: Clients/accessibility-report/
+          retention-days: 14
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v7

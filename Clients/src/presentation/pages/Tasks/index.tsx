@@ -865,6 +865,7 @@ const Tasks: React.FC = () => {
                   <Toggle
                     checked={showMyTasksOnly}
                     onChange={(_, checked) => setShowMyTasksOnly(checked)}
+                    ariaLabel="My tasks only"
                   />
                 </Stack>
               )}
@@ -882,6 +883,7 @@ const Tasks: React.FC = () => {
                 <Toggle
                   checked={includeArchived}
                   onChange={(_, checked) => setIncludeArchived(checked)}
+                  ariaLabel="Include archived"
                 />
               </Stack>
             </Stack>

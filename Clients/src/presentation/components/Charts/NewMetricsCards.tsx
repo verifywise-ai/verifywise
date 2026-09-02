@@ -163,6 +163,9 @@ export function EvidenceCoverageCard({
       <LinearProgress
         variant="determinate"
         value={coveragePercentage}
+        // Matches the caption rendered beside the bar, which is already in the
+        // translation dictionary — a new capitalised variant would not be.
+        aria-label="model coverage"
         sx={{
           "height": 8,
           "borderRadius": 4,
