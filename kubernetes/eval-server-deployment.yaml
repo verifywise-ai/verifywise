@@ -24,7 +24,7 @@ spec:
           type: RuntimeDefault
       containers:
       - name: eval-server
-        image: ghcr.io/verifywise-ai/verifywise-eval-server:1.7.0
+        image: ghcr.io/verifywise-ai/verifywise-eval-server:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000
@@ -71,6 +71,13 @@ spec:
             configMapKeyRef:
               name: verifywise-config
               key: REDIS_URL
+
+        # Shared internal key with backend for authenticating calls
+        - name: EVAL_SERVER_INTERNAL_KEY
+          valueFrom:
+            secretKeyRef:
+              name: verifywise-secrets
+              key: EVAL_SERVER_INTERNAL_KEY
 
         livenessProbe:
           httpGet:

@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verifywise-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "verifywise.labels" . | nindent 4 }}
+data:
+  # Application
+  NODE_ENV: {{ .Values.config.nodeEnv | quote }}
+  BACKEND_PORT: "3000"
+  FRONTEND_PORT: "80"
+
+  # In-cluster service URLs (Service DNS names)
+  BACKEND_URL: "http://backend:3000"
+  LLM_EVALS_URL: "http://eval-server:8000"
+  AI_GATEWAY_URL: "http://ai-gateway:8100"
+  AI_GATEWAY_PORT: "8100"
+  EXPRESS_BACKEND_URL: "http://backend:3000"
+
+  # Public frontend URL — used in invite emails, notifications.
+  # Must be browser-reachable, NOT a cluster-internal name.
+  FRONTEND_URL: {{ .Values.frontendUrl | quote }}
+
+  # Database
+  DB_HOST: "postgresdb"
+  DB_PORT: "5432"
+  DB_SSL: "false"
+
+  # Redis
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  REDIS_URL: "redis://redis:6379/0"
+
+  # Feature flags
+  MOCK_DATA_ON: {{ .Values.config.mockDataOn | quote }}
+  MULTI_TENANCY_ENABLED: {{ .Values.config.multiTenancyEnabled | quote }}
+
+  # Email
+  EMAIL_PROVIDER: {{ .Values.config.email.provider | quote }}
+  EMAIL_ID: {{ .Values.config.email.emailId | quote }}
+  SMTP_HOST: {{ .Values.config.email.smtp.host | quote }}
+  SMTP_PORT: {{ .Values.config.email.smtp.port | quote }}
+  SMTP_SECURE: {{ .Values.config.email.smtp.secure | quote }}
+  SMTP_USER: {{ .Values.config.email.smtp.user | quote }}
+  EXCHANGE_ONLINE_USER: {{ .Values.config.email.exchangeOnline.user | quote }}
+
+  # Slack
+  SLACK_CLIENT_ID: {{ .Values.config.slack.clientId | quote }}
+  SLACK_URL: {{ .Values.config.slack.url | quote }}
+  SLACK_API_URL: {{ .Values.config.slack.apiUrl | quote }}

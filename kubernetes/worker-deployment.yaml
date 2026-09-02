@@ -24,7 +24,7 @@ spec:
           type: RuntimeDefault
       containers:
       - name: worker
-        image: ghcr.io/verifywise-ai/verifywise-backend:1.7.0
+        image: ghcr.io/verifywise-ai/verifywise-backend:latest
         imagePullPolicy: IfNotPresent
         # Override the default command to run the worker
         command: ["node", "dist/jobs/worker.js"]
