@@ -94,6 +94,7 @@ const LABEL_TO_VARIANT: Record<string, ChipVariant> = {
   "blocked": "error",
   "rejected": "error",
   "restricted": "error",
+  "retired": "default",
   "no": "no",
   "open": "error",
   "closed": "info",

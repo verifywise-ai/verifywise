@@ -113,6 +113,7 @@ const statusOptions = [
   { _id: ModelInventoryStatus.RESTRICTED, name: "Restricted" },
   { _id: ModelInventoryStatus.PENDING, name: "Pending" },
   { _id: ModelInventoryStatus.BLOCKED, name: "Blocked" },
+  { _id: ModelInventoryStatus.RETIRED, name: "Retired" },
 ];
 
 const capabilityOptions = [

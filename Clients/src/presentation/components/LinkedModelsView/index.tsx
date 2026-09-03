@@ -35,6 +35,7 @@ function StatusBadge({ status }: { status: ModelInventoryStatus }) {
     [ModelInventoryStatus.RESTRICTED]: { bg: "#FFE5D0", color: "#E64A19" },
     [ModelInventoryStatus.BLOCKED]: { bg: "#FFD6D6", color: "#D32F2F" },
     [ModelInventoryStatus.REJECTED]: { bg: "#F5F5F5", color: "#616161" },
+    [ModelInventoryStatus.RETIRED]: { bg: "#ECEFF1", color: "#546E7A" },
   };
 
   const style = statusStyles[status] || { bg: "#E0E0E0", color: "#424242" };

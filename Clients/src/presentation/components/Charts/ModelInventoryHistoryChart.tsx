@@ -19,6 +19,7 @@ const STATUS_COLORS: Record<string, string> = {
   [ModelInventoryStatus.PENDING]: "#F59E0B",
   [ModelInventoryStatus.RESTRICTED]: "#EF4444",
   [ModelInventoryStatus.BLOCKED]: "#DC2626",
+  [ModelInventoryStatus.RETIRED]: "#9E9E9E",
 };
 
 const TIMEFRAME_OPTIONS = [
