@@ -8,6 +8,16 @@ import {
   getEvidenceById,
   updateEvidenceById,
 } from "../controllers/evidenceHub.ctrl";
+import {
+  getEvidenceHubSettingsHandler,
+  updateEvidenceHubSettingsHandler,
+} from "../controllers/evidenceHubSettings.ctrl";
+
+// GET org-level Evidence Hub settings (must precede /:id)
+router.get("/settings", authenticateJWT, getEvidenceHubSettingsHandler);
+
+// PUT org-level Evidence Hub settings
+router.put("/settings", authenticateJWT, updateEvidenceHubSettingsHandler);
 
 // GET all evidences
 router.get("/", authenticateJWT, getAllEvidences);
