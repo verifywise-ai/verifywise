@@ -38,4 +38,3 @@ export async function updateEvidenceHubSettings(
   const response = await apiServices.put("/evidenceHub/settings", update);
   return (response.data as { data: EvidenceHubOrgSettings }).data;
 }
-

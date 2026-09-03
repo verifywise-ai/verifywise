@@ -72,13 +72,11 @@ const EvidenceRetentionSection = ({
 
   return (
     <Box sx={{ mt: 6 }}>
-      <Typography sx={{ fontSize: 15, fontWeight: 600, mb: 1 }}>
-        Evidence Hub retention
-      </Typography>
+      <Typography sx={{ fontSize: 15, fontWeight: 600, mb: 1 }}>Evidence Hub retention</Typography>
       <Typography sx={{ fontSize: 13, color: "text.secondary", mb: 3, maxWidth: 560 }}>
-        Applied to new evidence that has no explicit expiry date or retention policy of its
-        own. A daily job flags records past their expiry date and notifies the reviewer or
-        organization admins.
+        Applied to new evidence that has no explicit expiry date or retention policy of its own. A
+        daily job flags records past their expiry date and notifies the reviewer or organization
+        admins.
       </Typography>
 
       <Box sx={{ maxWidth: "360px", mb: 3 }}>
@@ -104,8 +102,8 @@ const EvidenceRetentionSection = ({
         <Typography sx={{ fontSize: 13 }}>Archive expired evidence</Typography>
       </Stack>
       <Typography sx={{ fontSize: 12, color: "text.secondary", mb: 3, maxWidth: 560 }}>
-        Archived evidence is hidden from the Evidence Hub list but never deleted. Archival
-        also requires the server flag EVIDENCE_RETENTION_ARCHIVE_ENABLED.
+        Archived evidence is hidden from the Evidence Hub list but never deleted. Archival also
+        requires the server flag EVIDENCE_RETENTION_ARCHIVE_ENABLED.
       </Typography>
 
       <CustomizableButton

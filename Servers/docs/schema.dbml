@@ -676,12 +676,25 @@ Table topics {
 
 Table evidence_hub {
   id integer [pk, increment]
+  organization_id integer [ref: > organizations.id]
   evidence_name varchar [not null]
   evidence_type varchar [not null]
   description text
-  evidence_files json [not null, default: '[]']
-  expiry_date timestamp
-  mapped_model_ids text[]
+  expiry_date timestamp [note: 'null = no expiry; computed from retention_policy or org default when not explicit']
+  retention_policy varchar [note: '30_days | 90_days | 6_months | 1_year | 3_years | 5_years | 7_years | indefinite']
+  expired_at timestamp [note: 'set by daily evidence_expiry_sweep job; null = not expired']
+  expiry_notified_at timestamp [note: 'notification dedup; reset when expiry_date changes']
+  archived_at timestamp [note: 'soft archive only, never deleted; double-gated by EVIDENCE_RETENTION_ARCHIVE_ENABLED env + org archive_on_expiry']
+  mapped_model_ids integer[]
+  mapped_training_ids integer[]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table evidence_hub_org_settings {
+  organization_id integer [pk, ref: > organizations.id]
+  default_retention_period varchar [note: 'null = no org default; same enum as evidence_hub.retention_policy']
+  archive_on_expiry boolean [not null, default: false]
   created_at timestamp
   updated_at timestamp
 }
