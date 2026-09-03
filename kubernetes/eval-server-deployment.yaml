@@ -1,0 +1,135 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eval-server
+  namespace: verifywise
+  labels:
+    app: verifywise
+    component: eval-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: verifywise
+      component: eval-server
+  template:
+    metadata:
+      labels:
+        app: verifywise
+        component: eval-server
+    spec:
+      # Pod-level security context (KSV-0118): runtime-default seccomp profile.
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: eval-server
+        image: ghcr.io/verifywise-ai/verifywise-eval-server:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        env:
+        # Database Configuration
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: verifywise-config
+              key: DB_HOST
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: verifywise-config
+              key: DB_PORT
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: verifywise-secrets
+              key: DB_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: verifywise-secrets
+              key: DB_PASSWORD
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: verifywise-secrets
+              key: DB_NAME
+
+        # Backend URL
+        - name: BACKEND_URL
+          valueFrom:
+            configMapKeyRef:
+              name: verifywise-config
+              key: BACKEND_URL
+
+        # Redis Configuration
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: verifywise-config
+              key: REDIS_URL
+
+        # Shared internal key with backend for authenticating calls
+        - name: EVAL_SERVER_INTERNAL_KEY
+          valueFrom:
+            secretKeyRef:
+              name: verifywise-secrets
+              key: EVAL_SERVER_INTERNAL_KEY
+
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: eval-uploads
+          mountPath: /app/data/uploads
+      volumes:
+      - name: eval-uploads
+        persistentVolumeClaim:
+          claimName: eval-server-uploads
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: eval-server
+  namespace: verifywise
+  labels:
+    app: verifywise
+    component: eval-server
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: verifywise
+    component: eval-server

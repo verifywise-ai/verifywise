@@ -1,0 +1,148 @@
+# VerifyWise Helm chart values.
+#
+# Anything not exposed here is intentionally locked down. Fork if you need to
+# change probes, resources, or security contexts.
+
+# ---------------------------------------------------------------------------
+# Container images
+# ---------------------------------------------------------------------------
+# `tag` applies to backend, worker, frontend, aiGateway, evalServer.
+# Postgres and Redis are pinned to full image references.
+#
+# Leave `tag` empty to use the chart's appVersion (see Chart.yaml). This is
+# what you want in almost every case: upgrading the chart bumps the images
+# too. Set explicitly (e.g. `--set images.tag=2.6.0`) only if you need to
+# pin to a version that differs from the chart's appVersion.
+images:
+  backend: ghcr.io/verifywise-ai/verifywise-backend
+  frontend: ghcr.io/verifywise-ai/verifywise-frontend
+  aiGateway: ghcr.io/verifywise-ai/verifywise-ai-gateway
+  evalServer: ghcr.io/verifywise-ai/verifywise-eval-server
+  postgres: postgres:16.8
+  redis: redis:7-alpine
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# ---------------------------------------------------------------------------
+# Replica counts
+# ---------------------------------------------------------------------------
+replicas:
+  backend: 2
+  frontend: 2
+  worker: 1
+  aiGateway: 1
+  evalServer: 1
+
+# ---------------------------------------------------------------------------
+# Public frontend URL
+# ---------------------------------------------------------------------------
+# The URL the user's browser hits (used in invite emails, notifications).
+# NOT a cluster-internal name.
+#   • minikube local: http://localhost   (with `minikube tunnel` running)
+#   • cloud HTTP:     http://<ingress-external-ip>
+#   • cloud HTTPS:    https://your-domain.com
+frontendUrl: http://localhost
+
+# ---------------------------------------------------------------------------
+# Ingress
+# ---------------------------------------------------------------------------
+ingress:
+  enabled: true
+  className: nginx
+  # Leave host empty for a catch-all rule (fine for minikube). Set to a real
+  # domain for cloud (required if tls.enabled: true).
+  host: ""
+  tls:
+    enabled: false
+    secretName: verifywise-tls
+    # Automatic cert via cert-manager. Requires cert-manager installed and a
+    # ClusterIssuer with this name to exist in the cluster.
+    clusterIssuer: letsencrypt-prod
+
+# ---------------------------------------------------------------------------
+# Persistent storage
+# ---------------------------------------------------------------------------
+persistence:
+  postgres:
+    size: 10Gi
+    # Empty = cluster default StorageClass. Examples: "standard" (minikube),
+    # "gp2" (EKS), "pd-standard" (GKE).
+    storageClass: ""
+  evalServer:
+    size: 5Gi
+    storageClass: ""
+
+# ---------------------------------------------------------------------------
+# Non-secret application config (rendered into the ConfigMap)
+# ---------------------------------------------------------------------------
+config:
+  nodeEnv: production
+  mockDataOn: "false"
+  multiTenancyEnabled: "false"
+
+  # Email — provider: resend | smtp | exchange-online | amazon-ses
+  email:
+    provider: resend
+    emailId: no-reply@app.verifywise.ai
+    smtp:
+      host: smtp.gmail.com
+      port: "587"
+      secure: "false"
+      user: ""
+    exchangeOnline:
+      user: ""
+
+  # Slack integration. Leave clientId empty to disable.
+  slack:
+    clientId: ""
+    url: "https://slack.com/oauth/v2/authorize"
+    apiUrl: "https://slack.com/api/oauth.v2.access"
+
+# ---------------------------------------------------------------------------
+# Secrets
+# ---------------------------------------------------------------------------
+# Two modes:
+#   1. create: true (default) — chart renders a Secret. Any value left empty
+#      below is auto-generated on first install and preserved across upgrades
+#      (via `lookup` on the existing Secret). Override any value by setting
+#      it explicitly with `--set` or `-f myvals.yaml`.
+#   2. existingSecret: <name> — chart mounts a Secret you manage yourself
+#      (external-secrets, Vault, sealed-secrets, etc.). Values below are
+#      ignored in this mode. The Secret must contain all the keys the app
+#      needs (see templates/secret.yaml for the full list).
+#
+# After install, retrieve auto-generated superadmin password with:
+#   kubectl get secret -n <namespace> verifywise-secrets \
+#     -o jsonpath='{.data.SUPERADMIN_PASSWORD}' | base64 -d
+secrets:
+  create: true
+  existingSecret: ""
+
+  # Super-admin credentials (seeded on first boot). Password auto-generated
+  # if empty — surfaces via `helm status` NOTES and the Secret in cluster.
+  superadmin:
+    email: admin@verifywise.com
+    password: ""
+
+  # Database. Password auto-generated if empty.
+  db:
+    user: postgres
+    password: ""
+    name: verifywise
+
+  # Auto-generated if empty. Do not rotate on upgrade unless you understand the
+  # consequences (rotating JWT_SECRET invalidates all active sessions, etc.).
+  jwtSecret: ""
+  refreshTokenSecret: ""
+  encryptionAlgorithm: aes-256-cbc
+  encryptionPassword: ""
+  encryptionKey: ""
+  aiGatewayInternalKey: ""
+  evalServerInternalKey: ""
+
+  # Optional integrations — set only if you use them
+  resendApiKey: ""
+  smtpPass: ""
+  exchangeOnlinePass: ""
+  slackClientSecret: ""
+  slackBotToken: ""

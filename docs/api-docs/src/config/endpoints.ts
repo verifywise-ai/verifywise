@@ -255,6 +255,17 @@ export const aiAdvisorEndpoints: Endpoint[] = [
   },
   {
     method: 'GET',
+    path: '/advisor/tools/roadmap',
+    summary: "Get Tools Roadmap",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Advisor",
+  },
+  {
+    method: 'GET',
     path: '/advisor/conversations/{domain}',
     summary: "List conversations for a domain",
     description: "Returns all conversations the current user has in the given advisor domain, most recent first. Lightweight summaries only — no message bodies.",

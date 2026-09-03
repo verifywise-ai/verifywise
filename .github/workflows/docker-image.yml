@@ -10,7 +10,7 @@ jobs:
     environment: Build
 
     permissions:
-      contents: read
+      contents: write         # push chart tarballs to gh-pages branch
       packages: write
       security-events: write
 
@@ -24,6 +24,23 @@ jobs:
       - name: Extract Tag Name
         id: get_tag
         run: echo "TAG=${GITHUB_REF##*/}" >> $GITHUB_ENV
+
+      # Fail fast if the developer forgot to bump the Helm chart's appVersion
+      # to match the release tag. The chart's appVersion drives the image tag
+      # rendered into every Deployment, so it must track the release.
+      - name: Verify Helm chart appVersion matches release tag
+        run: |
+          CHART_FILE=kubernetes/helm/verifywise/Chart.yaml
+          CHART_APPVERSION=$(grep '^appVersion:' "$CHART_FILE" | awk '{print $2}' | tr -d '"' | tr -d "'")
+          # Normalize by stripping an optional leading "v" from both sides,
+          # so a release tag of either "v2.5.0" or "2.5.0" is accepted.
+          TAG_NORM="${TAG#v}"
+          APP_NORM="${CHART_APPVERSION#v}"
+          if [ "$TAG_NORM" != "$APP_NORM" ]; then
+            echo "::error file=$CHART_FILE::Chart appVersion ($CHART_APPVERSION) does not match release tag ($TAG). Bump appVersion in $CHART_FILE before publishing the release."
+            exit 1
+          fi
+          echo "Chart appVersion ($CHART_APPVERSION) matches release tag ($TAG)"
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v4
@@ -214,3 +231,70 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/verifywise-ai-gateway:${{ env.TAG }}
             ghcr.io/${{ github.repository_owner }}/verifywise-ai-gateway:latest
+
+      # ---- Helm chart publish (GitHub Pages) ---------------------------------
+      # Runs only after every image has been built, scanned, and pushed.
+      # Publishes the chart to the gh-pages branch, which GitHub Pages serves at
+      #   https://<owner>.github.io/<repo>/
+      # so users can install without pinning a version:
+      #   helm repo add verifywise https://verifywise-ai.github.io/verifywise
+      #   helm repo update
+      #   helm install verifywise verifywise/verifywise ...
+      # Traditional (HTTP) Helm repos auto-resolve the latest version when
+      # --version is omitted; OCI registries do not, which is why we're not
+      # publishing to GHCR here.
+      #
+      # One-time setup: enable GitHub Pages on the gh-pages branch in repo
+      # settings. The branch is created automatically by the first run of
+      # this step.
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Package Helm chart
+        run: |
+          mkdir -p dist
+          # Chart `--version` requires semver-2 (X.Y.Z). Release tags like
+          # v2.5 (two segments) are accepted here by expanding them to X.Y.0.
+          # `--app-version` stays as-is because it's an arbitrary string,
+          # and it must match what the images are actually tagged with on GHCR.
+          TAG_NO_V="${TAG#v}"
+          SEMVER="$TAG_NO_V"
+          if [[ ! "$SEMVER" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-].*)?$ ]]; then
+            SEMVER="${SEMVER}.0"
+          fi
+          helm package kubernetes/helm/verifywise \
+            --version "$SEMVER" \
+            --app-version "$TAG" \
+            --destination ./dist
+
+      - name: Publish chart to gh-pages branch
+        env:
+          GH_PAGES_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Fetch or initialize gh-pages
+          if git ls-remote --exit-code --heads origin gh-pages >/dev/null 2>&1; then
+            git fetch origin gh-pages
+            git worktree add /tmp/gh-pages gh-pages
+          else
+            git worktree add --orphan -b gh-pages /tmp/gh-pages
+          fi
+
+          # Drop the new chart tarball in
+          cp ./dist/verifywise-*.tgz /tmp/gh-pages/
+
+          # Rebuild the index. --merge preserves prior chart versions so users
+          # can still install older releases.
+          cd /tmp/gh-pages
+          if [ -f index.yaml ]; then
+            helm repo index . --url "$GH_PAGES_URL" --merge index.yaml
+          else
+            helm repo index . --url "$GH_PAGES_URL"
+          fi
+
+          git add .
+          git commit -m "Publish chart verifywise ${TAG}"
+          git push origin gh-pages

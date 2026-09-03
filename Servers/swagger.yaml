@@ -18014,6 +18014,20 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+  /advisor/tools/roadmap:
+    get:
+      summary: 'Get Tools Roadmap'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'AI Advisor'
+      operationId: getToolsRoadmap
+      security:
+        -
+          bearerAuth: []
   '/advisor/conversations/{domain}':
     get:
       tags:

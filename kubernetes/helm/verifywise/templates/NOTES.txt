@@ -1,0 +1,42 @@
+VerifyWise has been installed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+
+1. Wait for all pods to be ready (first boot: 2-5 minutes for image pulls + migrations):
+
+     kubectl get pods -n {{ .Release.Namespace }} -w
+
+2. Access the app:
+
+{{- if .Values.ingress.enabled }}
+{{- if .Values.ingress.tls.enabled }}
+     Open https://{{ .Values.ingress.host }}/
+{{- else if .Values.ingress.host }}
+     Open http://{{ .Values.ingress.host }}/
+{{- else }}
+     • minikube:  run `minikube tunnel` in a separate terminal, then open http://localhost/
+     • cloud:     get the ingress IP with `kubectl get svc -n ingress-nginx ingress-nginx-controller`,
+                  then open http://<EXTERNAL-IP>/
+{{- end }}
+{{- else }}
+     Ingress is disabled. Port-forward to reach the app:
+     kubectl port-forward -n {{ .Release.Namespace }} svc/frontend 8080:80
+{{- end }}
+
+3. Log in as super-admin:
+
+{{- if .Values.secrets.existingSecret }}
+     Credentials are in the Secret "{{ .Values.secrets.existingSecret }}" that you provided.
+{{- else }}
+     Email:    {{ .Values.secrets.superadmin.email }}
+     Password: kubectl get secret -n {{ .Release.Namespace }} verifywise-secrets \
+                 -o jsonpath='{.data.SUPERADMIN_PASSWORD}' | base64 -d
+
+     (First install auto-generates a strong password. Override at install time
+     with --set secrets.superadmin.password=YourPassword)
+{{- end }}
+
+4. Useful commands:
+
+     helm status {{ .Release.Name }} -n {{ .Release.Namespace }}
+     helm upgrade {{ .Release.Name }} ./kubernetes/helm/verifywise -n {{ .Release.Namespace }} --reuse-values
+     helm rollback {{ .Release.Name }} <REVISION> -n {{ .Release.Namespace }}
+     helm uninstall {{ .Release.Name }} -n {{ .Release.Namespace }}
