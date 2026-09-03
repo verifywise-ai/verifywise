@@ -1,0 +1,87 @@
+# trivy:ignore:AVD-KSV-0106 nginx-unprivileged entrypoint requires
+# CHOWN/SETUID/SETGID/DAC_OVERRIDE (in addition to NET_BIND_SERVICE) to
+# chown its cache dirs and drop from root to uid 101 before binding
+# port 80. Removing any of these makes the container crash on startup
+# with `chown() failed (Operation not permitted)`. Accepting the finding
+# with justification since the workaround (privileged container or a
+# different image) would be worse for security.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "verifywise.labels" . | nindent 4 }}
+    component: frontend
+spec:
+  replicas: {{ .Values.replicas.frontend }}
+  selector:
+    matchLabels:
+      {{- include "verifywise.selectorLabels" . | nindent 6 }}
+      component: frontend
+  template:
+    metadata:
+      labels:
+        {{- include "verifywise.selectorLabels" . | nindent 8 }}
+        component: frontend
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: frontend
+        image: "{{ .Values.images.frontend }}:{{ include "verifywise.imageTag" . }}"
+        imagePullPolicy: {{ .Values.images.pullPolicy }}
+        ports:
+        - containerPort: 80
+          name: http
+          protocol: TCP
+        livenessProbe:
+          httpGet: { path: /, port: 80 }
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet: { path: /, port: 80 }
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+            add:
+              - NET_BIND_SERVICE  # bind port 80
+              - CHOWN             # entrypoint chowns /var/cache/nginx
+              - SETUID            # nginx drops to uid 101
+              - SETGID            # nginx drops to gid 101
+              - DAC_OVERRIDE      # write to cache dirs owned by nginx user
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "verifywise.labels" . | nindent 4 }}
+    component: frontend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "verifywise.selectorLabels" . | nindent 4 }}
+    component: frontend

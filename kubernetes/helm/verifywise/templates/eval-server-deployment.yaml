@@ -1,0 +1,128 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: eval-server-uploads
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "verifywise.labels" . | nindent 4 }}
+    component: eval-server
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.persistence.evalServer.size | quote }}
+  {{- with .Values.persistence.evalServer.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eval-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "verifywise.labels" . | nindent 4 }}
+    component: eval-server
+spec:
+  replicas: {{ .Values.replicas.evalServer }}
+  selector:
+    matchLabels:
+      {{- include "verifywise.selectorLabels" . | nindent 6 }}
+      component: eval-server
+  template:
+    metadata:
+      labels:
+        {{- include "verifywise.selectorLabels" . | nindent 8 }}
+        component: eval-server
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: eval-server
+        image: "{{ .Values.images.evalServer }}:{{ include "verifywise.imageTag" . }}"
+        imagePullPolicy: {{ .Values.images.pullPolicy }}
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        env:
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: DB_HOST }
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: DB_PORT }
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: DB_USER }
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: DB_PASSWORD }
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: DB_NAME }
+
+        - name: BACKEND_URL
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: BACKEND_URL }
+
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: REDIS_URL }
+
+        - name: EVAL_SERVER_INTERNAL_KEY
+          valueFrom:
+            secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: EVAL_SERVER_INTERNAL_KEY }
+
+        livenessProbe:
+          httpGet: { path: /health, port: 8000 }
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet: { path: /health, port: 8000 }
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: eval-uploads
+          mountPath: /app/data/uploads
+      volumes:
+      - name: eval-uploads
+        persistentVolumeClaim:
+          claimName: eval-server-uploads
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: eval-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "verifywise.labels" . | nindent 4 }}
+    component: eval-server
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "verifywise.selectorLabels" . | nindent 4 }}
+    component: eval-server
