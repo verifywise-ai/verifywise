@@ -6325,6 +6325,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Experimental research only, not deployed to users":
       "Nur experimentelle Forschung, nicht für Nutzer bereitgestellt",
     "Expired": "Abgelaufen",
+    "Expiring soon": "Läuft bald ab",
     "Expires": "Läuft ab",
     "Explain AI models to ensure responsible use and maintain an AI systems repository.":
       "Erklären Sie KI-Modelle, um eine verantwortungsvolle Nutzung sicherzustellen, und pflegen Sie ein Repository für KI-Systeme.",
@@ -15522,6 +15523,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Experimental research only, not deployed to users":
       "Recherche expérimentale uniquement, non déployé aux utilisateurs",
     "Expired": "Expiré",
+    "Expiring soon": "Expire bientôt",
     "Expires": "Expire",
     "Explain AI models to ensure responsible use and maintain an AI systems repository.":
       "Expliquez les modèles IA pour assurer une utilisation responsable et maintenez un référentiel des systèmes IA.",
@@ -22300,6 +22302,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Experiment name": "Nombre del experimento",
     "Experiment results downloaded": "Resultados del experimento descargados",
     "Expired": "Caducado",
+    "Expiring soon": "Caduca pronto",
     "Expires": "Caduca",
     "Explainability": "Explicabilidad",
     "Exposed API keys and credentials": "Claves de API y credenciales expuestas",

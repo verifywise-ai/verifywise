@@ -19,6 +19,7 @@ import {
 import TablePaginationActions from "../../components/TablePagination";
 import CustomizableSkeleton from "../../components/Skeletons";
 import CustomIconButton from "../../components/IconButton";
+import StatusChip from "../../components/Chip";
 import {
   ChevronsUpDown,
   ChevronUp,
@@ -52,6 +53,25 @@ import { EvidenceHubTableProps } from "../../../domain/interfaces/i.modelInvento
 dayjs.extend(utc);
 
 const EVIDENCE_HUB_SORTING_KEY = "verifywise_evidence_hub_sorting";
+
+/** Records expiring within this window are flagged "expiring soon". */
+const EXPIRING_SOON_DAYS = 30;
+
+type ExpiryStatus = "expired" | "expiring_soon" | null;
+
+// Derived client-side from expiry_date; null/invalid dates mean "no expiry".
+const getExpiryStatus = (
+  expiryDate: Date | string | null | undefined,
+): ExpiryStatus => {
+  if (!expiryDate) return null;
+  const expiry = new Date(expiryDate);
+  if (isNaN(expiry.getTime())) return null;
+  const now = new Date();
+  if (expiry.getTime() < now.getTime()) return "expired";
+  const soonThreshold = new Date(now);
+  soonThreshold.setDate(soonThreshold.getDate() + EXPIRING_SOON_DAYS);
+  return expiry.getTime() <= soonThreshold.getTime() ? "expiring_soon" : null;
+};
 
 type SortDirection = "asc" | "desc" | null;
 type SortConfig = {
@@ -567,7 +587,19 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
               )}
               {isColVisible("expiry_date") && (
                 <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                  {evidence.expiry_date ? displayFormattedDate(evidence.expiry_date) : "-"}
+                  {evidence.expiry_date ? (
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <span>{displayFormattedDate(evidence.expiry_date)}</span>
+                      {getExpiryStatus(evidence.expiry_date) === "expired" && (
+                        <StatusChip label="Expired" variant="error" />
+                      )}
+                      {getExpiryStatus(evidence.expiry_date) === "expiring_soon" && (
+                        <StatusChip label="Expiring soon" variant="warning" />
+                      )}
+                    </Stack>
+                  ) : (
+                    "-"
+                  )}
                 </TableCell>
               )}
               <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
