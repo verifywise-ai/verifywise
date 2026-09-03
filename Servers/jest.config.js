@@ -11,10 +11,14 @@ module.exports = {
   transform: {
     ...tsJestTransformCfg,
     // ai >= 7 and its transitive deps ship ESM-only builds, so Jest must
-    // transform them. transformIgnorePatterns below allowlists those packages.
+    // transform them. sanitize-html >= 2.17.7 pulls in ESM-only builds of
+    // htmlparser2 v12 and its dom* / entities deps, so those need the same
+    // treatment. transformIgnorePatterns below allowlists those packages.
     "node_modules[\\\\/].+\\.js$": ["ts-jest", { diagnostics: false }],
   },
-  transformIgnorePatterns: ["/node_modules/(?!(ai|@ai-sdk|@workflow|@standard-schema)/)"],
+  transformIgnorePatterns: [
+    "/node_modules/(?!(ai|@ai-sdk|@workflow|@standard-schema|sanitize-html|htmlparser2|domhandler|domutils|dom-serializer|entities|domelementtype)/)",
+  ],
   modulePathIgnorePatterns: ["<rootDir>/dist/"],
   testPathIgnorePatterns: ["/helpers/"],
   moduleNameMapper: {
