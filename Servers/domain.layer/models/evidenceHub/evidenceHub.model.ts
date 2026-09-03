@@ -54,6 +54,30 @@ export class EvidenceHubModel extends Model<EvidenceHubModel> {
   expiry_date?: Date;
 
   @Column({
+    type: DataType.STRING(100),
+    allowNull: true,
+  })
+  retention_policy?: string | null;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+  })
+  expired_at?: Date | null;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+  })
+  expiry_notified_at?: Date | null;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+  })
+  archived_at?: Date | null;
+
+  @Column({
     type: DataType.ARRAY(DataType.INTEGER),
     allowNull: true,
   })
@@ -86,6 +110,9 @@ export class EvidenceHubModel extends Model<EvidenceHubModel> {
       description: this.description,
       evidence_files: this.evidence_files,
       expiry_date: this.expiry_date?.toISOString() || null,
+      retention_policy: this.retention_policy ?? null,
+      expired_at: this.expired_at?.toISOString() || null,
+      archived_at: this.archived_at?.toISOString() || null,
       mapped_model_ids: this.mapped_model_ids,
       mapped_training_ids: this.mapped_training_ids,
       created_at: (this.createdAt ?? this.created_at)?.toISOString(),
@@ -105,6 +132,9 @@ export class EvidenceHubModel extends Model<EvidenceHubModel> {
       description: this.description,
       evidence_files: this.evidence_files,
       expiry_date: this.expiry_date?.toISOString() || null,
+      retention_policy: this.retention_policy ?? null,
+      expired_at: this.expired_at?.toISOString() || null,
+      archived_at: this.archived_at?.toISOString() || null,
       mapped_model_ids: this.mapped_model_ids,
       mapped_training_ids: this.mapped_training_ids,
       created_at: (this.createdAt ?? this.created_at)?.toISOString(),
@@ -122,6 +152,7 @@ export class EvidenceHubModel extends Model<EvidenceHubModel> {
       description: data.description ?? existingEvidence.description,
       evidence_files: data.evidence_files ?? existingEvidence.evidence_files,
       expiry_date: data.expiry_date ?? existingEvidence.expiry_date,
+      retention_policy: data.retention_policy ?? existingEvidence.retention_policy,
       mapped_model_ids: data.mapped_model_ids ?? existingEvidence.mapped_model_ids,
       mapped_training_ids: data.mapped_training_ids ?? existingEvidence.mapped_training_ids,
       updated_at: new Date(),

@@ -17,6 +17,7 @@ import {
   recordEvidenceRemovedFromModel,
   recordEvidenceFieldChangeForModel,
 } from "../utils/modelInventoryChangeHistory.utils";
+import { resolveEvidenceExpiryDate } from "../utils/evidenceRetention.utils";
 
 export async function getAllEvidences(req: Request, res: Response) {
   logStructured(
@@ -209,8 +210,24 @@ export async function updateEvidenceById(req: Request, res: Response) {
     // Track field changes for models that remain mapped
     const continuingModels = newMappedModels.filter((id: number) => oldMappedModels.includes(id));
 
+    // An explicit expiry_date always wins. When the request changes
+    // retention_policy without an expiry_date, recompute expiry from the
+    // policy (falling back to the org default); "indefinite"/null clears
+    // expiry (null = "no expiry"). Untouched requests keep the stored value.
+    const updateBody: Record<string, any> = { ...req.body };
+    if (
+      updateBody.expiry_date === undefined &&
+      updateBody.retention_policy !== undefined
+    ) {
+      updateBody.expiry_date = await resolveEvidenceExpiryDate(
+        req.organizationId!,
+        null,
+        updateBody.retention_policy,
+      );
+    }
+
     Object.assign(existingEvidence, {
-      ...req.body,
+      ...updateBody,
       ...(req.body?.description !== undefined && {
         description: sanitizeUserHtml(req.body.description),
       }),
