@@ -859,6 +859,7 @@ components:
         - Pending
         - Blocked
         - Rejected
+        - Retired
       description: 'Current approval/review status of the model'
     Filedata:
       type: object
@@ -5666,6 +5667,7 @@ components:
                 - Restricted
                 - Pending
                 - Blocked
+                - Retired
         governance_owner_id:
           type: integer
           minimum: 1

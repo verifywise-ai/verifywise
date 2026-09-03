@@ -20,9 +20,9 @@ export const toolsDefinition: any[] = [
           },
           status: {
             type: "string",
-            enum: ["Approved", "Restricted", "Pending", "Blocked"],
+            enum: ["Approved", "Restricted", "Pending", "Blocked", "Retired"],
             description:
-              "Filter by model approval status. 'Approved' means ready for use, 'Restricted' has limitations, 'Pending' awaiting approval, 'Blocked' should not be used.",
+              "Filter by model approval status. 'Approved' means ready for use, 'Restricted' has limitations, 'Pending' awaiting approval, 'Blocked' should not be used, 'Retired' means decommissioned (terminal state).",
           },
           security_assessment: {
             type: "boolean",
@@ -123,7 +123,7 @@ export const toolsDefinition: any[] = [
           },
           status: {
             type: "string",
-            enum: ["Approved", "Restricted", "Pending", "Blocked"],
+            enum: ["Approved", "Restricted", "Pending", "Blocked", "Retired"],
             description: "Updated approval status.",
           },
           hosting_provider: {
@@ -155,7 +155,7 @@ export const toolsDefinition: any[] = [
           },
           lifecycle_phase: {
             type: "string",
-            enum: ["Approved", "Restricted", "Pending", "Blocked"],
+            enum: ["Approved", "Restricted", "Pending", "Blocked", "Retired"],
             description: "The new lifecycle phase/status for the model.",
           },
         },

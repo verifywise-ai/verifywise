@@ -100,7 +100,7 @@ export const SECTION_INSTRUCTIONS: Record<string, string> = {
 - Do the unreviewed ones concentrate among the vendors with no assignee, or are the two independent?`,
 
   // model_inventories.status is Approved | Restricted | Pending | Blocked |
-  // Rejected (model-inventory-status.enum.ts) — no "reviewed" state to ask for.
+  // Rejected | Retired (model-inventory-status.enum.ts) — no "reviewed" state to ask for.
   // The table carries an `approver` FK and no owner column at all, so nothing
   // here may ask who owns a model: a missing approver is an unsigned-off model,
   // not an unowned one, and the two are different findings.

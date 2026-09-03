@@ -659,7 +659,7 @@ export async function startGovernance(req: Request, res: Response) {
             model: model_inventory.model,
             provider_model: `${model_inventory.provider} / ${model_inventory.model}`,
             version: model_inventory.version || "N/A",
-            status: ["Approved", "Restricted", "Pending", "Blocked"].includes(
+            status: ["Approved", "Restricted", "Pending", "Blocked", "Retired"].includes(
               model_inventory.status,
             )
               ? model_inventory.status

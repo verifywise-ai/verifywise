@@ -34,12 +34,14 @@ export const MODEL_INVENTORY_VALIDATION_LIMITS = {
  * - Approved: Models that have passed all security and compliance checks (security_assessment = true required)
  * - Restricted: Models approved with limited usage restrictions (security_assessment = true required)
  * - Blocked: Models that have failed review or pose security risks (security_assessment may be false)
+ * - Retired: Models that have been decommissioned and are no longer in use (terminal state)
  */
 export const MODEL_INVENTORY_STATUS_ENUM = [
   "Approved",
   "Restricted",
   "Pending",
   "Blocked",
+  "Retired",
 ] as const;
 
 /**
