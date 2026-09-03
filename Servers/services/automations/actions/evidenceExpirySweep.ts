@@ -2,6 +2,7 @@ import { QueryTypes } from "sequelize";
 import { sequelize } from "../../../database/db";
 import { getAllOrganizationsQuery } from "../../../utils/organization.utils";
 import { getAllUsersQuery } from "../../../utils/user.utils";
+import { getEvidenceHubOrgSettings } from "../../../utils/evidenceHubSettings.utils";
 import { notifyEvidenceExpired } from "../../inAppNotification.service";
 import logger from "../../../utils/logger/fileLogger";
 
@@ -30,6 +31,7 @@ export interface EvidenceExpirySweepSummary {
   organization_id: number;
   newly_expired: number;
   notified: number;
+  archived: number;
 }
 
 /** Flag newly expired records for one org; returns them for notification. */
@@ -52,7 +54,12 @@ export async function runEvidenceExpirySweep(
   )) as ExpiredEvidenceRecord[];
 
   return {
-    summary: { organization_id: organizationId, newly_expired: records.length, notified: 0 },
+    summary: {
+      organization_id: organizationId,
+      newly_expired: records.length,
+      notified: 0,
+      archived: 0,
+    },
     records,
   };
 }
@@ -137,6 +144,34 @@ async function notifyUnnotifiedExpiredEvidence(
 }
 
 /**
+ * Soft-archive expired records for one org — sets archived_at only; records
+ * are NEVER deleted. Double-gated: requires the environment flag
+ * EVIDENCE_RETENTION_ARCHIVE_ENABLED=true AND the org's
+ * evidence_hub_org_settings.archive_on_expiry=true. Both default off.
+ */
+async function archiveExpiredEvidence(organizationId: number): Promise<number> {
+  if (process.env.EVIDENCE_RETENTION_ARCHIVE_ENABLED !== "true") return 0;
+
+  const settings = await getEvidenceHubOrgSettings(organizationId);
+  if (!settings.archive_on_expiry) return 0;
+
+  const records = (await sequelize.query(
+    `UPDATE evidence_hub
+        SET archived_at = now()
+      WHERE organization_id = :organizationId
+        AND expired_at IS NOT NULL
+        AND archived_at IS NULL
+      RETURNING id`,
+    {
+      replacements: { organizationId },
+      type: QueryTypes.SELECT,
+    },
+  )) as { id: number }[];
+
+  return records.length;
+}
+
+/**
  * Sweep every org — the BullMQ daily job entry point. Isolated per org so
  * one org's failure cannot block the others (mirrors runRetentionPruneAllOrgs).
  */
@@ -147,9 +182,10 @@ export async function runEvidenceExpirySweepAllOrgs(): Promise<void> {
     try {
       const { summary } = await runEvidenceExpirySweep(org.id);
       summary.notified = await notifyUnnotifiedExpiredEvidence(org.id);
-      if (summary.newly_expired > 0 || summary.notified > 0) {
+      summary.archived = await archiveExpiredEvidence(org.id);
+      if (summary.newly_expired > 0 || summary.notified > 0 || summary.archived > 0) {
         logger.info(
-          `Evidence expiry sweep org ${org.id}: newly_expired=${summary.newly_expired} notified=${summary.notified}`,
+          `Evidence expiry sweep org ${org.id}: newly_expired=${summary.newly_expired} notified=${summary.notified} archived=${summary.archived}`,
         );
       }
     } catch (error) {

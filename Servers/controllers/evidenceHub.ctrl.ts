@@ -29,7 +29,8 @@ export async function getAllEvidences(req: Request, res: Response) {
   logger.debug("🔍 Fetching all evidences");
 
   try {
-    const evidences = await getAllEvidencesQuery(req.organizationId!);
+    const includeArchived = req.query.includeArchived === "true";
+    const evidences = await getAllEvidencesQuery(req.organizationId!, includeArchived);
 
     if (evidences && evidences.length > 0) {
       logStructured(

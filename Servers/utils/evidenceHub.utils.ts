@@ -17,12 +17,20 @@ const toISO = (d: any): string | null => {
 };
 
 // Get all evidences (includes evidence_hub records + NIST AI RMF virtual records)
-export const getAllEvidencesQuery = async (organizationId: number) => {
+// Archived records (archived_at set by the retention sweep) are hidden unless
+// includeArchived is true. NIST virtual records are never archived.
+export const getAllEvidencesQuery = async (
+  organizationId: number,
+  includeArchived: boolean = false,
+) => {
   // 1. Fetch evidence_hub records as plain objects
   const evidenceHubRecords = (await sequelize.query(
-    `SELECT * FROM evidence_hub WHERE organization_id = :organizationId ORDER BY created_at DESC, id ASC`,
+    `SELECT * FROM evidence_hub
+      WHERE organization_id = :organizationId
+        AND (:includeArchived OR archived_at IS NULL)
+      ORDER BY created_at DESC, id ASC`,
     {
-      replacements: { organizationId },
+      replacements: { organizationId, includeArchived },
       type: QueryTypes.SELECT,
     },
   )) as any[];
