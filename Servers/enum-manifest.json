@@ -7,10 +7,7 @@
     "GPAI",
     "General Risk"
   ],
-  "highRiskRole": [
-    "Deployer",
-    "Provider"
-  ],
+  "highRiskRole": ["Deployer", "Provider"],
   "projectStatus": [
     "Not started",
     "In progress",
@@ -20,32 +17,10 @@
     "On hold",
     "Rejected"
   ],
-  "taskStatus": [
-    "Open",
-    "In Progress",
-    "Completed",
-    "Overdue",
-    "Deleted"
-  ],
-  "taskPriority": [
-    "Low",
-    "Medium",
-    "High"
-  ],
-  "dataClassification": [
-    "Public",
-    "Internal",
-    "Confidential",
-    "Restricted"
-  ],
-  "modelInventoryStatus": [
-    "Approved",
-    "Restricted",
-    "Pending",
-    "Blocked",
-    "Rejected",
-    "Retired"
-  ],
+  "taskStatus": ["Open", "In Progress", "Completed", "Overdue", "Deleted"],
+  "taskPriority": ["Low", "Medium", "High"],
+  "dataClassification": ["Public", "Internal", "Confidential", "Restricted"],
+  "modelInventoryStatus": ["Approved", "Restricted", "Pending", "Blocked", "Rejected", "Retired"],
   "aiLifecyclePhase": [
     "Problem definition & planning",
     "Data collection & processing",
@@ -55,27 +30,9 @@
     "Monitoring & maintenance",
     "Decommissioning & retirement"
   ],
-  "riskLikelihood": [
-    "Rare",
-    "Unlikely",
-    "Possible",
-    "Likely",
-    "Almost Certain"
-  ],
-  "riskSeverity": [
-    "Negligible",
-    "Minor",
-    "Moderate",
-    "Major",
-    "Catastrophic"
-  ],
-  "riskSeverityAlt": [
-    "Negligible",
-    "Minor",
-    "Moderate",
-    "Major",
-    "Critical"
-  ],
+  "riskLikelihood": ["Rare", "Unlikely", "Possible", "Likely", "Almost Certain"],
+  "riskSeverity": ["Negligible", "Minor", "Moderate", "Major", "Catastrophic"],
+  "riskSeverityAlt": ["Negligible", "Minor", "Moderate", "Major", "Critical"],
   "mitigationStatus": [
     "Not Started",
     "In Progress",
