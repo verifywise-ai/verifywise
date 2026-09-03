@@ -427,6 +427,25 @@ export async function scheduleMrmRetentionPrune() {
   );
 }
 
+export async function scheduleEvidenceExpirySweep() {
+  logger.info("Adding Evidence Hub expiry sweep job to the queue...");
+  // Daily at 4:30 AM (2/3/4 AM slots are taken by other jobs — kept distinct).
+  // Flags evidence_hub records past their expiry_date as expired and notifies.
+  // No obliterate here — the repeatable add is idempotent by repeat key.
+  await automationQueue.upsertJobScheduler(
+    "evidence_expiry_sweep",
+    { pattern: "30 4 * * *" },
+    {
+      name: "evidence_expiry_sweep",
+      data: { type: "evidence_retention" },
+      opts: {
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
+    },
+  );
+}
+
 export async function scheduleAiTrustIndexSync() {
   logger.info("Adding AI Trust Index weekly sync job to the queue...");
   // Monday 06:00 UTC. jobId keyed weekly is set at runtime is not needed here;
