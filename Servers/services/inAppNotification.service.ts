@@ -40,6 +40,8 @@ const buildEntityUrl = (entityType: NotificationEntityType, entityId: number): s
       return `/project-view?projectId=${entityId}`;
     case NotificationEntityType.FILE:
       return `/file-manager?fileId=${entityId}`;
+    case NotificationEntityType.EVIDENCE:
+      return `/model-inventory/evidence-hub?evidenceId=${entityId}`;
     case NotificationEntityType.SHADOW_AI_TOOL:
       return `/shadow-ai/tools/${entityId}`;
     case NotificationEntityType.AI_GATEWAY:
@@ -942,6 +944,47 @@ export const notifyPolicyDueSoon = async (
         project_name: policy.projectName,
         due_date: policy.dueDate,
         policy_url: `${baseUrl}${buildEntityUrl(NotificationEntityType.POLICY, policy.id)}`,
+      },
+    },
+  );
+};
+
+/**
+ * Notify evidence expired (Evidence Hub retention sweep)
+ */
+export const notifyEvidenceExpired = async (
+  organizationId: number,
+  recipientId: number,
+  evidence: {
+    id: number;
+    name: string;
+    expiryDate: string;
+  },
+  baseUrl: string,
+): Promise<void> => {
+  const recipient = await getUserById(recipientId);
+
+  await sendInAppNotification(
+    organizationId,
+    {
+      user_id: recipientId,
+      type: NotificationType.EVIDENCE_EXPIRED,
+      title: "Evidence expired",
+      message: `Evidence "${evidence.name}" expired on ${evidence.expiryDate}`,
+      entity_type: NotificationEntityType.EVIDENCE,
+      entity_id: evidence.id,
+      entity_name: evidence.name,
+      action_url: buildEntityUrl(NotificationEntityType.EVIDENCE, evidence.id),
+    },
+    true,
+    {
+      template: EMAIL_TEMPLATES.EVIDENCE_EXPIRED,
+      subject: `Evidence expired: ${evidence.name}`,
+      variables: {
+        recipient_name: recipient ? `${recipient.name}` : "there",
+        evidence_name: evidence.name,
+        expiry_date: evidence.expiryDate,
+        evidence_url: `${baseUrl}${buildEntityUrl(NotificationEntityType.EVIDENCE, evidence.id)}`,
       },
     },
   );
