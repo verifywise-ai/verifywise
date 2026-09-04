@@ -6,6 +6,7 @@ import {
   formatDate,
   formatDateTime,
 } from "../isoDateToString";
+import { UserDateFormat } from "../../../domain/enums/userDateFormat.enum";
 
 describe("formatDate", () => {
   beforeEach(() => {
@@ -75,6 +76,11 @@ describe("displayFormattedDate", () => {
     const result = displayFormattedDate("2024-11-01");
     expect(result).toBe("01-11-2024");
   });
+
+  it("uses an explicit dateFormat argument over localStorage", () => {
+    localStorage.setItem("verifywise_preferences", JSON.stringify({ date_format: "MM-DD-YYYY" }));
+    expect(displayFormattedDate("2024-11-01", UserDateFormat.DD_MM_YY_SLASH)).toBe("01/11/24");
+  });
 });
 
 describe("displayFormattedTime", () => {
@@ -107,6 +113,15 @@ describe("displayFormattedDateTime", () => {
     expect(displayFormattedDateTime("2024-11-01T14:30:25", { separator: " at " })).toBe(
       "01-11-2024 at 14:30",
     );
+  });
+
+  it("uses an explicit dateFormat option over localStorage", () => {
+    localStorage.setItem("verifywise_preferences", JSON.stringify({ date_format: "DD-MM-YYYY" }));
+    expect(
+      displayFormattedDateTime("2024-11-01T14:30:25", {
+        dateFormat: UserDateFormat.MM_DD_YY_SLASH,
+      }),
+    ).toBe("11/01/24, 14:30");
   });
 });
 

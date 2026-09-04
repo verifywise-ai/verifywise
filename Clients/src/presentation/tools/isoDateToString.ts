@@ -18,6 +18,13 @@ const getPreferredDateFormat = (): string => {
     : DATE_FORMAT_MAP[UserDateFormat.DD_MM_YYYY_DASH];
 };
 
+const resolveDateFnsPattern = (dateFormat?: UserDateFormat): string => {
+  if (dateFormat && DATE_FORMAT_MAP[dateFormat]) {
+    return DATE_FORMAT_MAP[dateFormat];
+  }
+  return getPreferredDateFormat();
+};
+
 const parseDateValue = (value: string | Date): Date | null => {
   if (value instanceof Date) {
     return isValid(value) ? value : null;
@@ -37,7 +44,10 @@ const parseDateValue = (value: string | Date): Date | null => {
  * @param {string} isoDate - The ISO date string to be converted.
  * @returns {string} The formatted date string in the format (default: DD-MM-YYYY).
  */
-export const displayFormattedDate = (isoDate: string | Date): string => {
+export const displayFormattedDate = (
+  isoDate: string | Date,
+  dateFormat?: UserDateFormat,
+): string => {
   const date = parseDateValue(isoDate);
 
   if (!date) {
@@ -45,7 +55,7 @@ export const displayFormattedDate = (isoDate: string | Date): string => {
     return String(isoDate);
   }
 
-  return format(date, getPreferredDateFormat());
+  return format(date, resolveDateFnsPattern(dateFormat));
 };
 
 /**
@@ -83,7 +93,11 @@ export function displayFormattedTime(
  */
 export function displayFormattedDateTime(
   isoDate: string | Date,
-  options: { includeSeconds?: boolean; separator?: string } = {},
+  options: {
+    includeSeconds?: boolean;
+    separator?: string;
+    dateFormat?: UserDateFormat;
+  } = {},
 ): string {
   const date = parseDateValue(isoDate);
 
@@ -93,7 +107,7 @@ export function displayFormattedDateTime(
   }
 
   const separator = options.separator ?? ", ";
-  return `${format(date, getPreferredDateFormat())}${separator}${format(
+  return `${format(date, resolveDateFnsPattern(options.dateFormat))}${separator}${format(
     date,
     options.includeSeconds ? "HH:mm:ss" : "HH:mm",
   )}`;
