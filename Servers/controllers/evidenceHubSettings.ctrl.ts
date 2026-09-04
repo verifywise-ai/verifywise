@@ -52,13 +52,9 @@ export async function updateEvidenceHubSettingsHandler(req: Request, res: Respon
     if (
       has("default_retention_period") &&
       body.default_retention_period !== null &&
-      !(EVIDENCE_RETENTION_PERIODS as readonly string[]).includes(
-        body.default_retention_period,
-      )
+      !(EVIDENCE_RETENTION_PERIODS as readonly string[]).includes(body.default_retention_period)
     ) {
-      return res
-        .status(400)
-        .json(STATUS_CODE[400](req.t!("Invalid default retention period")));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid default retention period")));
     }
 
     if (has("archive_on_expiry") && typeof body.archive_on_expiry !== "boolean") {

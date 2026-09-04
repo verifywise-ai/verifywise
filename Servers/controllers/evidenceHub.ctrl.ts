@@ -216,10 +216,7 @@ export async function updateEvidenceById(req: Request, res: Response) {
     // policy (falling back to the org default); "indefinite"/null clears
     // expiry (null = "no expiry"). Untouched requests keep the stored value.
     const updateBody: Record<string, any> = { ...req.body };
-    if (
-      updateBody.expiry_date === undefined &&
-      updateBody.retention_policy !== undefined
-    ) {
+    if (updateBody.expiry_date === undefined && updateBody.retention_policy !== undefined) {
       updateBody.expiry_date = await resolveEvidenceExpiryDate(
         req.organizationId!,
         null,

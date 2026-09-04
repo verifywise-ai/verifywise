@@ -79,9 +79,7 @@ const formatExpiryDate = (value: unknown): string => {
  * expiry_notified_at only after a record's notifications succeed, so a
  * failure is retried on the next daily run.
  */
-async function notifyUnnotifiedExpiredEvidence(
-  organizationId: number,
-): Promise<number> {
+async function notifyUnnotifiedExpiredEvidence(organizationId: number): Promise<number> {
   const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
 
   const records = (await sequelize.query(

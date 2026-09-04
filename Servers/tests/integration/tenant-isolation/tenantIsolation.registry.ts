@@ -78,6 +78,11 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     baseRoute: "/api/evidenceHub",
   },
   {
+    name: "evidence_hub_org_settings",
+    tables: ["evidence_hub_org_settings"],
+    baseRoute: "/api/evidenceHub/settings",
+  },
+  {
     name: "audit_ledger",
     tables: ["audit_ledger"],
     baseRoute: "/api/audit-ledger",

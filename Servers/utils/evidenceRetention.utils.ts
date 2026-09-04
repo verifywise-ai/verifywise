@@ -75,7 +75,6 @@ export const resolveEvidenceExpiryDate = async (
   }
 
   const period =
-    retentionPolicy ??
-    (await getEvidenceHubOrgSettings(organizationId)).default_retention_period;
+    retentionPolicy ?? (await getEvidenceHubOrgSettings(organizationId)).default_retention_period;
   return computeExpiryDate(period, baseDate);
 };

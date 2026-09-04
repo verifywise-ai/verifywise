@@ -60,9 +60,7 @@ const EXPIRING_SOON_DAYS = 30;
 type ExpiryStatus = "expired" | "expiring_soon" | null;
 
 // Derived client-side from expiry_date; null/invalid dates mean "no expiry".
-const getExpiryStatus = (
-  expiryDate: Date | string | null | undefined,
-): ExpiryStatus => {
+const getExpiryStatus = (expiryDate: Date | string | null | undefined): ExpiryStatus => {
   if (!expiryDate) return null;
   const expiry = new Date(expiryDate);
   if (isNaN(expiry.getTime())) return null;

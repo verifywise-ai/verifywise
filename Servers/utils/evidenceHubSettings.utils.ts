@@ -13,10 +13,7 @@ export interface EvidenceHubOrgSettings {
   archive_on_expiry: boolean;
 }
 
-export const DEFAULT_EVIDENCE_HUB_ORG_SETTINGS: Omit<
-  EvidenceHubOrgSettings,
-  "organization_id"
-> = {
+export const DEFAULT_EVIDENCE_HUB_ORG_SETTINGS: Omit<EvidenceHubOrgSettings, "organization_id"> = {
   default_retention_period: null, // no org-level default retention
   archive_on_expiry: false, // archival is opt-in, never on by default
 };
