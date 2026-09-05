@@ -372,18 +372,18 @@ network — `filterProposedGroups` is pure and exported for exactly this reason.
 
 **`getSharedProjectCandidatesQuery`**
 
-*. A vendor candidate carries the first 80 characters of its description as its
+9. A vendor candidate carries the first 80 characters of its description as its
    name, and a model candidate carries `risk_name` (§5.7).
 
 **`buildDirectionUserPrompt`**
 
-9. Candidates are listed with entity type, name, shared risk ids, and project
-   titles.
-10. With no candidates the prompt is unchanged from today's output.
+10. Candidates are listed with entity type, name, shared risk ids, and project
+    titles.
+11. With no candidates the prompt is unchanged from today's output.
 
 **`suggestDirectionForComponent`**
 
-11. Past `MAX_CROSS_ENTITY_CANDIDATES`, no candidate block reaches the prompt and
+12. Past `MAX_CROSS_ENTITY_CANDIDATES`, no candidate block reaches the prompt and
     the project-risk grouping still runs and still writes.
-12. A model answer naming a vendor parent produces one row with
+13. A model answer naming a vendor parent produces one row with
     `target_vendor_risk_id` set.
