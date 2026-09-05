@@ -9251,6 +9251,26 @@ export const translations: Record<string, Record<string, string>> = {
     "View lifecycle": "Lebenszyklus anzeigen",
     "Workspace disconnected successfully!": "Workspace erfolgreich getrennt!",
     "Workspace status updated successfully!": "Workspace-Status erfolgreich aktualisiert!",
+    // AI Advisor roadmap
+    "AI Advisor roadmap": "KI-Berater-Roadmap",
+    "All domains": "Alle Domänen",
+    "All kinds": "Alle Typen",
+    "All phases": "Alle Phasen",
+    "Failed to load the advisor tools roadmap. Please try again.":
+      "Die Advisor-Tool-Roadmap konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
+    "Implemented under a different name": "Unter einem anderen Namen implementiert",
+    "No tools match your search or filter criteria.":
+      "Keine Tools entsprechen Ihren Such- oder Filterkriterien.",
+    "Overall progress": "Gesamtfortschritt",
+    "Planned tools": "Geplante Tools",
+    "Planned vs. implemented AI Advisor tools from the AI Implementation Plan.":
+      "Geplante vs. implementierte KI-Berater-Tools aus dem KI-Implementierungsplan.",
+    "Progress by domain": "Fortschritt nach Domäne",
+    "Progress by phase": "Fortschritt nach Phase",
+    "Read": "Lesen",
+    "Renamed": "Umbenannt",
+    "Search tools": "Tools suchen",
+    "Write": "Schreiben",
   },
 
   fr: {
@@ -18432,6 +18452,26 @@ export const translations: Record<string, Record<string, string>> = {
     "Workspace disconnected successfully!": "Espace de travail déconnecté avec succès !",
     "Workspace status updated successfully!":
       "Statut de l'espace de travail mis à jour avec succès !",
+    // AI Advisor roadmap
+    "AI Advisor roadmap": "Feuille de route du conseiller IA",
+    "All domains": "Tous les domaines",
+    "All kinds": "Tous les types",
+    "All phases": "Toutes les phases",
+    "Failed to load the advisor tools roadmap. Please try again.":
+      "Échec du chargement de la feuille de route des outils du conseiller. Veuillez réessayer.",
+    "Implemented under a different name": "Implémenté sous un nom différent",
+    "No tools match your search or filter criteria.":
+      "Aucun outil ne correspond à vos critères de recherche ou de filtrage.",
+    "Overall progress": "Progression globale",
+    "Planned tools": "Outils planifiés",
+    "Planned vs. implemented AI Advisor tools from the AI Implementation Plan.":
+      "Outils du conseiller IA planifiés vs implémentés, issus du plan d'implémentation IA.",
+    "Progress by domain": "Progression par domaine",
+    "Progress by phase": "Progression par phase",
+    "Read": "Lecture",
+    "Renamed": "Renommé",
+    "Search tools": "Rechercher des outils",
+    "Write": "Écriture",
   },
   es: {
     "Deployment name": "Nombre del despliegue",
@@ -27532,5 +27572,25 @@ export const translations: Record<string, Record<string, string>> = {
     "Workspace disconnected successfully!": "¡Espacio de trabajo desconectado correctamente!",
     "Workspace status updated successfully!":
       "¡Estado del espacio de trabajo actualizado correctamente!",
+    // AI Advisor roadmap
+    "AI Advisor roadmap": "Hoja de ruta del asesor de IA",
+    "All domains": "Todos los dominios",
+    "All kinds": "Todos los tipos",
+    "All phases": "Todas las fases",
+    "Failed to load the advisor tools roadmap. Please try again.":
+      "No se pudo cargar la hoja de ruta de herramientas del asesor. Inténtelo de nuevo.",
+    "Implemented under a different name": "Implementado con un nombre diferente",
+    "No tools match your search or filter criteria.":
+      "Ninguna herramienta coincide con sus criterios de búsqueda o filtrado.",
+    "Overall progress": "Progreso general",
+    "Planned tools": "Herramientas planificadas",
+    "Planned vs. implemented AI Advisor tools from the AI Implementation Plan.":
+      "Herramientas del asesor de IA planificadas frente a implementadas del Plan de Implementación de IA.",
+    "Progress by domain": "Progreso por dominio",
+    "Progress by phase": "Progreso por fase",
+    "Read": "Lectura",
+    "Renamed": "Renombrado",
+    "Search tools": "Buscar herramientas",
+    "Write": "Escritura",
   },
 };

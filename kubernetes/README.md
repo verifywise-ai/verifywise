@@ -1,377 +1,283 @@
-# VerifyWise Kubernetes Deployment
+# Deploying VerifyWise on Kubernetes
 
-This directory contains Kubernetes manifests for deploying the VerifyWise application using Kustomize.
+This folder contains the Kubernetes manifests for VerifyWise. Two paths to get
+it running: **local** (minikube, for testing) and **cloud** (EKS, for real use).
 
-## Architecture
+Prefer the `docker-compose.yml` at the repo root if you're not already invested
+in Kubernetes.
 
-The application consists of the following components:
-- **Backend API** (Node.js) - Main application server on port 3000
-- **Worker** - Background job processor
-- **Frontend** (React) - Web interface on port 80
-- **PostgreSQL** - Database on port 5432
-- **Redis** - Cache and queue on port 6379
-- **Eval Server** (Python) - LLM Eval service on port 8000
+---
 
 ## Prerequisites
 
-- Kubernetes cluster (Minikube for local, or cloud provider for production)
-- kubectl CLI tool
-- Kustomize (built into kubectl v1.14+)
-- Docker images available at `ghcr.io/verifywise-ai/verifywise-*`
-
-### For Local Development
-- [Minikube](https://minikube.sigs.k8s.io/docs/start/) installed
-- Minimum 4GB RAM allocated to Minikube
-
-## Directory Structure
-
-```
-kubernetes/
-      base/                    # Base configurations
-          deployment.yaml      # Main deployment with all containers
-          service.yaml         # Service definition
-          configmap.yaml       # Base ConfigMap
-          postgres-pvc.yaml    # PostgreSQL persistent volume
-          kustomization.yaml   # Base kustomization
-      dev/                     # Development overlay
-          ingress.yaml         # Ingress rules
-          configmap.yaml       # Dev-specific config
-          secrets.env          # Environment secrets
-          kustomization.yaml   # Dev kustomization
-```
-
-## Configuration
-
-### Step 1: Configure Secrets
-
-Create or update `dev/secrets.env` with your actual values:
+Install these locally, once:
 
 ```bash
-DB_PASSWORD=your-secure-password
-JWT_SECRET=your-jwt-secret-key
-SMTP_USER=your-smtp-username
-SMTP_PASS=your-smtp-password
-OPENAI_API_KEY=your-openai-api-key
+# kubectl — talk to any Kubernetes cluster
+brew install kubectl              # macOS
+# or: https://kubernetes.io/docs/tasks/tools/
+
+# helm — install cluster add-ons (ingress, cert-manager)
+brew install helm
 ```
 
-### Step 2: Update ConfigMap (Optional)
-
-Edit `dev/configmap.yaml` to customize environment variables:
-- `BACKEND_URL`: Backend API URL
-- `FRONTEND_URL`: Frontend URL
-- `DB_NAME`, `DB_USER`: Database credentials
-- `MOCK_DATA_ON`: Set to "true" for demo data
-
-## Deployment Options
-
-### Option 1: Local Development with Minikube
-
-This option uses Minikube's service command to expose the application locally without requiring Ingress setup.
-
-#### 1. Start Minikube
+Verify:
 
 ```bash
-minikube start --memory=4096 --cpus=2
+kubectl version --client
+helm version
 ```
 
-#### 2. Deploy the Application
+---
+
+## Path A: Local cluster (minikube)
+
+For laptops. Everything on one machine, no cloud costs.
+
+### 1. Install and start minikube
 
 ```bash
-# From the kubernetes directory
-kubectl apply -k dev/
+brew install minikube
+minikube start --cpus=4 --memory=6g
+minikube addons enable ingress     # gives you ingress-nginx, no Helm needed
 ```
 
-#### 3. Wait for Pods to be Ready
+Skip cert-manager on local — you don't need HTTPS.
+
+### 2. Jump to "Install VerifyWise" below.
+
+To reach the app, use `minikube tunnel` (keeps running in a terminal) and then
+hit `http://<minikube-ip>/` — get the IP with `minikube ip`.
+
+---
+
+## Path B: Cloud cluster (AWS EKS)
+
+For real deployments. Costs money — check the AWS EKS pricing page before running.
+
+### 1. Install eksctl and AWS CLI
 
 ```bash
-kubectl get pods -w
+brew install eksctl awscli
+aws configure                     # your AWS access key + region
 ```
 
-Wait until all containers in the `verifywise` pod show `Running` status.
-
-#### 4. Access the Application
-
-Use Minikube's service command to expose and access the application:
+### 2. Create a cluster
 
 ```bash
-minikube service verifywise-svc
+eksctl create cluster \
+  --name verifywise \
+  --region us-east-1 \
+  --nodes 2 \
+  --node-type t3.large \
+  --managed
 ```
 
-This will:
-- Tunnel to the service
-- Automatically open your browser to the application
-- Display the URL (typically `http://127.0.0.1:<random-port>`)
+Takes 15–20 minutes. When done, `kubectl` is already pointed at the cluster.
 
-**Alternative**: Get the URL without opening browser:
+**Picking `--nodes` and `--node-type`:** the app's pods request ~2.3 vCPU and
+~2.4 GiB RAM total. Add ~500m CPU / 500Mi RAM for kube-system overhead.
+
+- **1 × `t3.large`** (2 vCPU / 8 GiB) — fits, but one node failure = full outage.
+- **2 × `t3.large`** — recommended starting point. Survives one node down.
+- **3+ nodes** — add when traffic grows or you want multi-AZ. Not required by the
+  app itself.
+
+### 3. Install ingress-nginx
 
 ```bash
-minikube service verifywise-svc --url
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
+helm install ingress-nginx ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx --create-namespace
 ```
 
-#### 5. Access Different Services
-
-The main service exposes port 80 for the frontend. To access the API directly:
+Get the public IP (used for DNS):
 
 ```bash
-# Port forward to backend
-kubectl port-forward svc/verifywise-svc 3000:3000
-# Access at http://localhost:3000
+kubectl get svc -n ingress-nginx ingress-nginx-controller
+# Look at EXTERNAL-IP — that's what your DNS points at
 ```
 
-#### 6. View Logs
+### 4. Install cert-manager (only if you want HTTPS)
 
 ```bash
-# View all containers
-kubectl logs -l app=verifywise --all-containers=true
-
-# View specific container
-kubectl logs -l app=verifywise -c verifywise-backend
-kubectl logs -l app=verifywise -c verifywise-frontend
-kubectl logs -l app=verifywise -c verifywise-postgres-temp
+helm repo add jetstack https://charts.jetstack.io
+helm repo update
+helm install cert-manager jetstack/cert-manager \
+  --namespace cert-manager --create-namespace \
+  --set installCRDs=true
 ```
 
-#### 7. Stop and Cleanup
+Create a Let's Encrypt issuer (replace the email):
 
 ```bash
-kubectl delete -k dev/
-minikube stop
-# Optional: delete cluster
-minikube delete
-```
-
-### Option 2: Production with Ingress
-
-This option uses Kubernetes Ingress for production deployments with proper domain routing and SSL termination.
-
-#### 1. Prerequisites
-
-Ensure you have an Ingress Controller installed. For cloud providers:
-- **GKE**: Use GCE Ingress Controller (default)
-- **EKS**: Install AWS ALB Ingress Controller
-- **AKS**: Install nginx-ingress or Application Gateway
-- **Minikube** (testing): Enable ingress addon
-
-For Minikube testing:
-```bash
-minikube addons enable ingress
-```
-
-#### 2. Configure Domain
-
-The default configuration uses `verifywise.local` as the hostname. Update `dev/ingress.yaml` for your domain:
-
-```yaml
-spec:
-  rules:
-    - host: verifywise.yourdomain.com  # Change this
-```
-
-#### 3. Update ConfigMap URLs
-
-Update `dev/configmap.yaml` with your production domain:
-
-```yaml
-data:
-  BACKEND_URL: "https://verifywise.yourdomain.com/api"
-  FRONTEND_URL: "https://verifywise.yourdomain.com"
-  HOST: "verifywise.yourdomain.com"
-```
-
-#### 4. Deploy the Application
-
-```bash
-kubectl apply -k dev/
-```
-
-#### 5. Configure DNS
-
-Point your domain to the Ingress IP address:
-
-```bash
-# Get Ingress IP
-kubectl get ingress verifywise-config-rule
-
-# Example output:
-# NAME                      CLASS    HOSTS              ADDRESS          PORTS
-# verifywise-config-rule    <none>   verifywise.local   192.168.49.2    80
-```
-
-For production: Create an A record pointing to the ADDRESS
-For local testing with Minikube: Add to `/etc/hosts`:
-
-```bash
-# Get Minikube IP
-minikube ip
-
-# Add to /etc/hosts
-echo "$(minikube ip) verifywise.local" | sudo tee -a /etc/hosts
-```
-
-#### 6. Access the Application
-
-Visit your configured domain:
-- Frontend: `http://verifywise.local` or `https://verifywise.yourdomain.com`
-- API: `http://verifywise.local/api` or `https://verifywise.yourdomain.com/api`
-
-#### 7. Enable HTTPS (Production)
-
-Uncomment the SSL annotations in `dev/ingress.yaml`:
-
-```yaml
+kubectl apply -f - <<EOF
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
 metadata:
-  annotations:
-    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"  # If using cert-manager
-```
-
-Add TLS configuration:
-
-```yaml
+  name: letsencrypt-prod
 spec:
-  tls:
-    - hosts:
-        - verifywise.yourdomain.com
-      secretName: verifywise-tls
-  rules:
-    - host: verifywise.yourdomain.com
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: you@example.com
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    solvers:
+      - http01:
+          ingress:
+            class: nginx
+EOF
 ```
 
-Install [cert-manager](https://cert-manager.io/) for automatic SSL certificate management.
+### 5. Point your DNS at the ingress IP
 
-#### 8. Monitor the Deployment
+Add an A record: `your-domain.com` → `<EXTERNAL-IP from step 3>`.
+
+### 6. Enable HTTPS in `ingress.yaml`
+
+Follow the comments at the top of `kubernetes/ingress.yaml` — uncomment three
+blocks and replace `verifywise.example.com` with your domain.
+
+### 7. Jump to "Install VerifyWise" below.
+
+---
+
+## Install VerifyWise
+
+Same on local and cloud once the cluster is ready. Two paths:
+
+- **Helm (recommended)** — one command, secrets auto-generated, easy upgrades.
+- **Raw manifests** — `kubectl apply -f kubernetes/`, hand-edit secrets.
+
+### Path 1: Helm (recommended)
+
+Add the VerifyWise chart repo once:
 
 ```bash
-# Check all resources
-kubectl get all -l app=verifywise
-
-# Check Ingress status
-kubectl describe ingress verifywise-config-rule
-
-# View logs
-kubectl logs -l app=verifywise --all-containers=true -f
+helm repo add verifywise https://verifywise-ai.github.io/verifywise
+helm repo update
 ```
 
-## Resource Management
-
-The deployment includes resource limits in `dev/set-resources.yaml`. Adjust based on your needs:
+Install:
 
 ```bash
-kubectl edit -k dev/
+# Local (minikube)
+helm install verifywise verifywise/verifywise \
+  --namespace verifywise --create-namespace \
+  --set frontendUrl=http://localhost
+
+# Cloud with HTTPS
+helm install verifywise verifywise/verifywise \
+  --namespace verifywise --create-namespace \
+  --set frontendUrl=https://your-domain.com \
+  --set ingress.host=your-domain.com \
+  --set ingress.tls.enabled=true
 ```
 
-## Database Persistence
+All secrets (superadmin password, DB password, JWT, encryption keys, service
+keys) are auto-generated on first install and preserved across upgrades.
+Retrieve the auto-generated superadmin password:
 
-PostgreSQL data is stored in a persistent volume defined in `base/postgres-pvc.yaml`. In production, ensure:
-- Adequate storage allocation
-- Backup strategy in place
-- Consider using managed database services for production
+```bash
+kubectl get secret -n verifywise verifywise-secrets \
+  -o jsonpath='{.data.SUPERADMIN_PASSWORD}' | base64 -d ; echo
+```
+
+To upgrade to the latest release later:
+
+```bash
+helm repo update
+helm upgrade verifywise verifywise/verifywise -n verifywise --reuse-values
+```
+
+Full chart docs (values, `existingSecret` mode, install from a local checkout):
+see `kubernetes/helm/verifywise/README.md`.
+
+### Path 2: Raw manifests
+
+1. **Create your secrets file:**
+
+   ```bash
+   cp kubernetes/secrets-example.yaml kubernetes/secrets.yaml
+   ```
+
+   Edit `kubernetes/secrets.yaml` — replace every placeholder base64 value with
+   a real one. `secrets.yaml` is gitignored, so it won't be committed.
+
+2. **Review the ConfigMap:** open `kubernetes/configmap.yaml` and set email
+   provider, Slack IDs, etc. Defaults are fine to start.
+
+3. **Apply:**
+
+   ```bash
+   kubectl apply -f kubernetes/namespace.yaml
+   kubectl apply -f kubernetes/
+   ```
+
+   The namespace has to exist first — that's the only ordering constraint.
+
+### Wait for pods (both paths)
+
+```bash
+kubectl get pods -n verifywise -w
+```
+
+All pods should reach `Running`. First boot takes a few minutes (image pulls +
+database migrations).
+
+### Access (both paths)
+
+- **Local (minikube):** `minikube tunnel` in a separate terminal, then open
+  `http://localhost/` in the browser.
+- **Cloud, HTTP only:** open `http://<EXTERNAL-IP>/`.
+- **Cloud with HTTPS:** open `https://your-domain.com/`.
+
+---
+
+## Uninstall
+
+Helm:
+
+```bash
+helm uninstall verifywise -n verifywise
+kubectl delete pvc -n verifywise --all         # optional, deletes data
+kubectl delete namespace verifywise
+```
+
+Raw manifests:
+
+```bash
+kubectl delete -f kubernetes/
+kubectl delete namespace verifywise
+```
+
+For EKS: `eksctl delete cluster --name verifywise --region us-east-1`.
+
+---
 
 ## Troubleshooting
 
-### Pods Not Starting
+**Pods stuck in `Pending`:** not enough CPU/RAM on the cluster. Scale nodes up
+or use bigger instance types.
 
-```bash
-# Check pod status
-kubectl get pods
-kubectl describe pod <pod-name>
+**Pods stuck in `ImagePullBackOff`:** the image tag doesn't exist. Check
+`kubectl describe pod <name>` and verify the image tag in the deployment YAML.
 
-# Check events
-kubectl get events --sort-by='.lastTimestamp'
-```
+**Backend crash-looping:** almost always missing secrets. Check
+`kubectl logs -n verifywise deploy/backend` — look for "missing environment
+variable" errors. Verify `kubectl get secret -n verifywise verifywise-secrets`
+has all the expected keys.
 
-### Image Pull Errors
+**HTTPS not working:** cert-manager issues take a few minutes. Check
+`kubectl get certificate -n verifywise` — `READY: True` means Let's Encrypt
+issued the cert. If it's `False`, `kubectl describe certificate ...` shows why.
 
-Ensure the GitHub Container Registry images are accessible:
+---
 
-```bash
-# Images should be public or authenticated
-kubectl get pods -o jsonpath='{.items[*].spec.containers[*].image}' | tr ' ' '\n'
-```
+## What this repo doesn't manage
 
-### Database Connection Issues
-
-```bash
-# Check PostgreSQL logs
-kubectl logs -l app=verifywise -c verifywise-postgres-temp
-
-# Verify database is ready
-kubectl exec -it <pod-name> -c verifywise-backend -- nc -zv localhost 5432
-```
-
-### Service Not Accessible (Minikube)
-
-```bash
-# Check service
-kubectl get svc verifywise-svc
-
-# Try direct port-forward
-kubectl port-forward svc/verifywise-svc 8080:80
-
-# Check Minikube service list
-minikube service list
-```
-
-### Ingress Not Working
-
-```bash
-# Check Ingress controller is running
-kubectl get pods -n ingress-nginx
-
-# Verify Ingress resource
-kubectl describe ingress verifywise-config-rule
-
-# Check Ingress controller logs
-kubectl logs -n ingress-nginx -l app.kubernetes.io/name=ingress-nginx
-```
-
-## Updating the Application
-
-```bash
-# Update deployment with new image versions
-kubectl rollout restart deployment/verifywise
-
-# Check rollout status
-kubectl rollout status deployment/verifywise
-
-# Rollback if needed
-kubectl rollout undo deployment/verifywise
-```
-
-## Scaling
-
-```bash
-# Scale replicas (note: StatefulSet might be needed for multi-replica with shared DB)
-kubectl scale deployment verifywise --replicas=3
-
-# Current setup uses single pod with sidecar containers
-# For true horizontal scaling, separate the services
-```
-
-## Development Workflow
-
-1. Make changes to manifests
-2. Apply updates: `kubectl apply -k dev/`
-3. Watch rollout: `kubectl rollout status deployment/verifywise`
-4. Test changes
-5. Check logs: `kubectl logs -l app=verifywise -c <container-name> -f`
-
-## Production Checklist
-
-- [ ] Update `secrets.env` with production credentials from `.env.prod`
-- [ ] Configure production domain in Ingress
-- [ ] Set up SSL/TLS certificates
-- [ ] Configure resource limits appropriately
-- [ ] Set up monitoring and logging
-- [ ] Configure backup strategy for PostgreSQL
-- [ ] Review security settings (RBAC, Network Policies)
-- [ ] Set up horizontal pod autoscaling if needed
-- [ ] Configure proper health checks
-- [ ] Set `MOCK_DATA_ON=false` in production
-
-## Additional Resources
-
-- [Kubernetes Documentation](https://kubernetes.io/docs/)
-- [Kustomize Documentation](https://kustomize.io/)
-- [Minikube Documentation](https://minikube.sigs.k8s.io/docs/)
-- [Ingress NGINX Documentation](https://kubernetes.github.io/ingress-nginx/)
+- The cluster itself (nodes, VPC, IAM) — that's your infra.
+- ingress-nginx and cert-manager installs — you install these once per cluster.
+- DNS — your registrar or Route53/Cloud DNS.
+- Backups — set up postgres backups separately (managed RDS is the easy path).

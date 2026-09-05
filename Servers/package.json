@@ -101,7 +101,7 @@
     "reflect-metadata": "^0.2.2",
     "resend": "^6.12.3",
     "sanitize-filename": "^1.6.4",
-    "sanitize-html": "2.17.5",
+    "sanitize-html": "2.17.7",
     "sequelize": "^6.37.8",
     "sequelize-typescript": "^2.1.6",
     "striptags": "^3.2.0",
@@ -192,7 +192,7 @@
     "brace-expansion@3": "^3.0.6",
     "brace-expansion@4": "^5.0.9",
     "brace-expansion@5": "^5.0.9",
-    "fast-uri": "^3.1.5",
+    "fast-uri": "^3.1.7",
     "ip-address": ">10.3.0",
     "undici@6": "^6.28.0",
     "undici@7": "^7.29.0"

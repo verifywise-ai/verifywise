@@ -13,6 +13,7 @@
         encryption_key: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
         ai_gateway_internal_key: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
         eval_server_internal_key: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
+        encryption_password: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
 
     - name: Install curl
       ansible.builtin.apt:
