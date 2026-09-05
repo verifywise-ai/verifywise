@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@mui/material";
@@ -13,7 +13,8 @@ const mockMutateSuggest = vi.fn();
 const mockIsAdmin = vi.fn();
 
 vi.mock("../../../../application/hooks/useRiskLinks", () => ({
-  useRiskLinks: (riskId: number, status?: string) => mockUseRiskLinks(riskId, status),
+  useRiskLinks: (riskId: number, status?: string, refetchInterval?: number | false) =>
+    mockUseRiskLinks(riskId, status, refetchInterval),
   useUpdateRiskLinkStatus: () => ({ mutate: mockMutateStatus, isPending: false }),
   useRecomputeRiskLinks: () => ({ mutate: mockMutateRecompute, isPending: false }),
   useCreateRiskLink: () => ({ mutate: vi.fn(), isPending: false, error: null, reset: vi.fn() }),
@@ -61,6 +62,10 @@ const queryResult = (links: RiskLink[], extra: any = {}) => ({
   isError: false,
   refetch: vi.fn(),
   ...extra,
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 beforeEach(() => {
@@ -228,11 +233,13 @@ describe("LinkedRisksPanel dismissed toggle", () => {
   it("re-queries with the dismissed status", async () => {
     mockUseRiskLinks.mockReturnValue(queryResult([link()]));
     render(<LinkedRisksPanel riskId={42} />);
-    expect(mockUseRiskLinks).toHaveBeenLastCalledWith(42, undefined);
+    expect(mockUseRiskLinks).toHaveBeenLastCalledWith(42, undefined, false);
 
     await userEvent.click(screen.getByRole("button", { name: "Show dismissed" }));
 
-    await waitFor(() => expect(mockUseRiskLinks).toHaveBeenLastCalledWith(42, "dismissed"));
+    await waitFor(() =>
+      expect(mockUseRiskLinks).toHaveBeenLastCalledWith(42, "dismissed", false),
+    );
     expect(screen.getByRole("button", { name: "Hide dismissed" })).toBeInTheDocument();
   });
 });
@@ -247,6 +254,85 @@ describe("LinkedRisksPanel empty state", () => {
     await userEvent.click(screen.getByRole("button", { name: "Scan for related risks" }));
 
     expect(mockMutateRecompute).toHaveBeenCalled();
+  });
+
+  // The scan returns 202 the moment the jobs are queued; the worker commits a
+  // second or two later. Without a poll the panel keeps showing the pre-scan
+  // list and the "Scanning..." notice never goes away.
+  it("polls while the scan runs, then drops the notice once the links land", async () => {
+    mockIsAdmin.mockReturnValue(true);
+    mockUseRiskLinks.mockReturnValue(queryResult([]));
+    mockMutateRecompute.mockImplementation((_vars: unknown, opts: any) =>
+      opts?.onSuccess?.({ enqueued: 4 }),
+    );
+    const { rerender } = render(<LinkedRisksPanel riskId={42} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Scan for related risks" }));
+
+    expect(screen.getByText(/Scanning 4 risks/)).toBeInTheDocument();
+    expect(mockUseRiskLinks).toHaveBeenLastCalledWith(42, undefined, 2000);
+    // A second click would queue the same jobs again while the first pass runs.
+    expect(screen.getByRole("button", { name: "Scan for related risks" })).toBeDisabled();
+
+    // The worker commits and the next poll returns the link.
+    mockUseRiskLinks.mockReturnValue(queryResult([link()]));
+    rerender(<LinkedRisksPanel riskId={42} />);
+
+    await waitFor(() =>
+      expect(screen.queryByText(/Scanning 4 risks/)).not.toBeInTheDocument(),
+    );
+    expect(mockUseRiskLinks).toHaveBeenLastCalledWith(42, undefined, false);
+  });
+
+  // Nothing scoring above the threshold is a normal answer, not a hang. Say so
+  // instead of polling forever. fireEvent rather than userEvent: userEvent's own
+  // delay runs on the timers this test is faking.
+  it("stops polling and says so when the scan turns up nothing", async () => {
+    vi.useFakeTimers();
+    mockIsAdmin.mockReturnValue(true);
+    mockUseRiskLinks.mockReturnValue(queryResult([]));
+    mockMutateRecompute.mockImplementation((_vars: unknown, opts: any) =>
+      opts?.onSuccess?.({ enqueued: 4 }),
+    );
+    render(<LinkedRisksPanel riskId={42} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Scan for related risks" }));
+    expect(screen.getByText(/Scanning 4 risks/)).toBeInTheDocument();
+
+    await act(async () => {
+      vi.advanceTimersByTime(30000);
+    });
+
+    expect(screen.getByText("Scan finished. No related risks found.")).toBeInTheDocument();
+    expect(mockUseRiskLinks).toHaveBeenLastCalledWith(42, undefined, false);
+    expect(screen.getByRole("button", { name: "Scan for related risks" })).toBeEnabled();
+  });
+
+  // A reasoning model takes minutes on one cluster, not seconds. Giving up at the
+  // scan's 30s would put the timeout notice on screen every single time, while
+  // the job that is about to answer is still running.
+  it("keeps grouping well past the scan's window", async () => {
+    vi.useFakeTimers();
+    mockIsAdmin.mockReturnValue(true);
+    mockUseRiskLinks.mockReturnValue(queryResult([link()]));
+    mockMutateSuggest.mockImplementation((_vars: unknown, opts: any) =>
+      opts?.onSuccess?.({ enqueued: 1, skipped: 0 }),
+    );
+    render(<LinkedRisksPanel riskId={42} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Suggest hierarchy" }));
+
+    await act(async () => {
+      vi.advanceTimersByTime(30000);
+    });
+    expect(screen.getByText(/Grouping 1 clusters/)).toBeInTheDocument();
+
+    await act(async () => {
+      vi.advanceTimersByTime(150000);
+    });
+    expect(
+      screen.getByText("Still grouping. Reopen this tab to check for new suggestions."),
+    ).toBeInTheDocument();
   });
 
   it("shows no scan button to a non-admin", () => {

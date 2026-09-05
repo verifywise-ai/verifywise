@@ -68,6 +68,24 @@ describe("useRiskLinks", () => {
     rerender({ status: "dismissed" });
     await waitFor(() => expect(mockGet).toHaveBeenCalledTimes(2));
   });
+
+  // The panel's poll is only a promise until React Query acts on it: this is the
+  // one test that exercises the interval itself rather than the argument.
+  it("keeps re-fetching while an interval is set and stops when it is cleared", async () => {
+    mockGet.mockResolvedValue([]);
+    const { wrapper } = createHarness();
+    const { rerender, result } = renderHook(
+      ({ interval }: { interval: number | false }) => useRiskLinks(42, undefined, interval),
+      { wrapper, initialProps: { interval: 50 as number | false } },
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    await waitFor(() => expect(mockGet.mock.calls.length).toBeGreaterThan(1));
+
+    rerender({ interval: false });
+    const settled = mockGet.mock.calls.length;
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(mockGet).toHaveBeenCalledTimes(settled);
+  });
 });
 
 describe("risk link mutations", () => {

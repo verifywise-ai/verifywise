@@ -22,11 +22,21 @@ const linksKey = (riskId: number) => ["riskLinks", riskId] as const;
  * different query rather than a filter over one cached list. `status` is part of
  * the key for that reason.
  */
-export function useRiskLinks(riskId: number, status?: RiskLinkStatus) {
+export function useRiskLinks(
+  riskId: number,
+  status?: RiskLinkStatus,
+  /**
+   * The scan and the hierarchy pass answer 202 the moment their jobs are
+   * queued, so the invalidation that follows reads the state from before the
+   * worker ran. The caller polls for the bounded window it is willing to wait.
+   */
+  refetchInterval: number | false = false,
+) {
   return useQuery<RiskLink[]>({
     queryKey: [...linksKey(riskId), status ?? "default"],
     queryFn: () => getRiskLinks(riskId, status),
     enabled: Number.isFinite(riskId),
+    refetchInterval,
   });
 }
 
