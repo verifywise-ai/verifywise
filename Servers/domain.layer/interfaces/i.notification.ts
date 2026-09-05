@@ -44,6 +44,9 @@ export enum NotificationType {
   MRM_METRIC_BREACH = "mrm_metric_breach",
   MRM_REVALIDATION_DUE = "mrm_revalidation_due",
 
+  // Evidence Hub notifications
+  EVIDENCE_EXPIRED = "evidence_expired",
+
   // AI Gateway notifications
   AI_GATEWAY_BUDGET_WARNING = "ai_gateway_budget_warning",
   AI_GATEWAY_BUDGET_EXHAUSTED = "ai_gateway_budget_exhausted",
@@ -84,6 +87,7 @@ export enum NotificationEntityType {
   SHADOW_AI_TOOL = "shadow_ai_tool",
   AI_GATEWAY = "ai_gateway",
   AI_ACTION = "ai_action",
+  EVIDENCE = "evidence",
 }
 
 /**

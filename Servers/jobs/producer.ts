@@ -21,6 +21,7 @@ import {
   scheduleReportSchedulerTick,
   scheduleMrmRevalidationSweep,
   scheduleMrmRetentionPrune,
+  scheduleEvidenceExpirySweep,
   scheduleAiTrustIndexSync,
 } from "../services/automations/automationProducer";
 
@@ -57,6 +58,7 @@ export async function addAllJobs(): Promise<void> {
   await safeSchedule("report-scheduler-tick", scheduleReportSchedulerTick);
   await safeSchedule("mrm-revalidation-sweep", scheduleMrmRevalidationSweep); // non-obliterating — safe to run after the obliterating schedulers
   await safeSchedule("mrm-retention-prune", scheduleMrmRetentionPrune); // non-obliterating — safe to run after the obliterating schedulers
+  await safeSchedule("evidence-expiry-sweep", scheduleEvidenceExpirySweep); // non-obliterating — safe to run after the obliterating schedulers
   await safeSchedule("ai-trust-index-sync", scheduleAiTrustIndexSync);
   // Ordering constraint: obliterate-using schedulers (e.g. vendor-review,
   // report-notification) must run BEFORE all non-obliterating ones, or they wipe

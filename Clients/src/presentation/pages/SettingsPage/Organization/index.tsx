@@ -27,6 +27,7 @@ import { getAuthToken } from "../../../../application/redux/auth/getAuthToken";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import { useLogoFetch } from "../../../../application/hooks/useLogoFetch";
 import { OrganizationModel } from "../../../../domain/models/Common/organization/organization.model";
+import EvidenceRetentionSection from "./EvidenceRetentionSection";
 
 interface AlertState {
   variant: "success" | "info" | "warning" | "error";
@@ -539,6 +540,13 @@ const Organization = () => {
           </Stack>
         </Box>
       </Stack>
+
+      {/* Evidence Hub retention settings */}
+      <EvidenceRetentionSection
+        isDisabled={isEditingDisabled}
+        onError={(message) => showAlert("error", "Error", message)}
+        onSuccess={(message) => showAlert("success", "Success", message)}
+      />
 
       {/* Remove Logo Confirmation Modal */}
       {isRemoveLogoModalOpen && (

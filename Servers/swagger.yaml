@@ -17120,6 +17120,53 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+  /evidenceHub/settings:
+    get:
+      tags:
+        - Evidence
+      summary: 'Get Evidence Hub Org Settings'
+      description: 'Org-level Evidence Hub retention settings. A missing settings row resolves to defaults (no default retention period, archival off).'
+      operationId: getEvidenceHubSettingsHandler
+      security:
+        -
+          bearerAuth: []
+      responses:
+        '200':
+          description: Success
+        '401':
+          description: Unauthorized
+        '500':
+          description: 'Internal server error'
+    put:
+      tags:
+        - Evidence
+      summary: 'Update Evidence Hub Org Settings'
+      description: 'PARTIAL update. default_retention_period: one of 30_days, 90_days, 6_months, 1_year, 3_years, 5_years, 7_years, indefinite, or null to clear. archive_on_expiry only takes effect when the server also sets EVIDENCE_RETENTION_ARCHIVE_ENABLED=true; archival is a soft archive, never a delete.'
+      operationId: updateEvidenceHubSettingsHandler
+      security:
+        -
+          bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                default_retention_period:
+                  type: string
+                  nullable: true
+                  enum: [30_days, 90_days, 6_months, 1_year, 3_years, 5_years, 7_years, indefinite]
+                archive_on_expiry:
+                  type: boolean
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: 'Bad request'
+        '401':
+          description: Unauthorized
+        '500':
+          description: 'Internal server error'
   /evidenceHub:
     get:
       tags:
@@ -17129,6 +17176,14 @@ paths:
       security:
         -
           bearerAuth: []
+      parameters:
+        -
+          name: includeArchived
+          in: query
+          required: false
+          description: 'Include archived (soft-archived expired) records. Default false.'
+          schema:
+            type: boolean
       responses:
         '200':
           description: Success

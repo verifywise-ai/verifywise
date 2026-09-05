@@ -41,6 +41,7 @@ import {
   scheduleAiGatewayRiskDetection,
   scheduleAiGatewayCacheCleanup,
   scheduleMcpGatewayCleanup,
+  scheduleEvidenceExpirySweep,
 } from "../automationProducer";
 
 const mockAdd = automationQueue.add as jest.MockedFunction<typeof automationQueue.add>;
@@ -198,6 +199,15 @@ describe("automationProducer", () => {
       await scheduleMcpGatewayCleanup();
 
       expectSchedulerCall("mcp_audit_cleanup", { type: "mcp_gateway" }, "0 3 * * *");
+    });
+  });
+
+  describe("scheduleEvidenceExpirySweep", () => {
+    it("should add a repeating job at 4:30 AM daily without obliterating", async () => {
+      await scheduleEvidenceExpirySweep();
+
+      expect(mockObliterate).not.toHaveBeenCalled();
+      expectSchedulerCall("evidence_expiry_sweep", { type: "evidence_retention" }, "30 4 * * *");
     });
   });
 });

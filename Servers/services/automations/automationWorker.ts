@@ -25,6 +25,7 @@ import { processScheduledAiDetectionScans } from "../aiDetection/scheduledScanPr
 import { syncAiTrustIndex } from "./actions/syncAiTrustIndex";
 import { runRevalidationSweepAllOrgs } from "./actions/mrmRevalidationSweep";
 import { runRetentionPruneAllOrgs } from "./actions/mrmRetentionPrune";
+import { runEvidenceExpirySweepAllOrgs } from "./actions/evidenceExpirySweep";
 // AI Gateway budget/risk jobs — call AIGateway HTTP endpoints via internal API
 const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || "http://127.0.0.1:8100";
 const AI_GATEWAY_KEY = process.env.AI_GATEWAY_INTERNAL_KEY || "";
@@ -683,6 +684,8 @@ export const createAutomationWorker = () => {
           await runRevalidationSweepAllOrgs();
         } else if (name === "mrm_retention_prune") {
           await runRetentionPruneAllOrgs();
+        } else if (name === "evidence_expiry_sweep") {
+          await runEvidenceExpirySweepAllOrgs();
         } else if (name === "mcp_audit_cleanup") {
           try {
             const [auditResult, approvalResult] = await Promise.all([

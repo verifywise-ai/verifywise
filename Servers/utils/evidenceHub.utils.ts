@@ -7,6 +7,7 @@ import {
   createFileEntityLink,
   deleteFileEntityLink,
 } from "./files/evidenceFiles.utils";
+import { resolveEvidenceExpiryDate } from "./evidenceRetention.utils";
 
 // Helper to normalize a date value to an ISO string or null
 const toISO = (d: any): string | null => {
@@ -16,12 +17,20 @@ const toISO = (d: any): string | null => {
 };
 
 // Get all evidences (includes evidence_hub records + NIST AI RMF virtual records)
-export const getAllEvidencesQuery = async (organizationId: number) => {
+// Archived records (archived_at set by the retention sweep) are hidden unless
+// includeArchived is true. NIST virtual records are never archived.
+export const getAllEvidencesQuery = async (
+  organizationId: number,
+  includeArchived: boolean = false,
+) => {
   // 1. Fetch evidence_hub records as plain objects
   const evidenceHubRecords = (await sequelize.query(
-    `SELECT * FROM evidence_hub WHERE organization_id = :organizationId ORDER BY created_at DESC, id ASC`,
+    `SELECT * FROM evidence_hub
+      WHERE organization_id = :organizationId
+        AND (:includeArchived OR archived_at IS NULL)
+      ORDER BY created_at DESC, id ASC`,
     {
-      replacements: { organizationId },
+      replacements: { organizationId, includeArchived },
       type: QueryTypes.SELECT,
     },
   )) as any[];
@@ -86,6 +95,8 @@ export const getAllEvidencesQuery = async (organizationId: number) => {
       evidence_type: record.evidence_type,
       description: record.description,
       expiry_date: toISO(record.expiry_date),
+      expired_at: toISO(record.expired_at),
+      archived_at: toISO(record.archived_at),
       mapped_model_ids: record.mapped_model_ids,
       mapped_training_ids: record.mapped_training_ids,
       tags: record.tags,
@@ -106,6 +117,8 @@ export const getAllEvidencesQuery = async (organizationId: number) => {
       evidence_type: "NIST AI RMF",
       description: record.description,
       expiry_date: null,
+      expired_at: null,
+      archived_at: null,
       mapped_model_ids: null,
       mapped_training_ids: null,
       tags: [],
@@ -153,6 +166,15 @@ export const createNewEvidenceQuery = async (
 ) => {
   const created_at = new Date();
   try {
+    // expiry_date precedence: explicit value > per-evidence retention_policy
+    // > org default retention. All-absent resolves to null = "no expiry".
+    const expiry_date = await resolveEvidenceExpiryDate(
+      organizationId,
+      evidence.expiry_date ?? null,
+      evidence.retention_policy ?? null,
+      created_at,
+    );
+
     // Insert without evidence_files (now managed via file_entity_links)
     const result = await sequelize.query(
       `INSERT INTO evidence_hub (
@@ -161,6 +183,7 @@ export const createNewEvidenceQuery = async (
                 evidence_type,
                 description,
                 expiry_date,
+                retention_policy,
                 mapped_model_ids,
                 mapped_training_ids,
                 created_at,
@@ -171,6 +194,7 @@ export const createNewEvidenceQuery = async (
                 :evidence_type,
                 :description,
                 :expiry_date,
+                :retention_policy,
                 :mapped_model_ids,
                 :mapped_training_ids,
                 :created_at,
@@ -182,7 +206,8 @@ export const createNewEvidenceQuery = async (
           evidence_name: evidence.evidence_name,
           evidence_type: evidence.evidence_type,
           description: evidence.description ?? null,
-          expiry_date: evidence.expiry_date ?? null,
+          expiry_date,
+          retention_policy: evidence.retention_policy ?? null,
           mapped_model_ids: evidence.mapped_model_ids
             ? `{${evidence.mapped_model_ids.join(",")}}`
             : null,
@@ -246,13 +271,19 @@ export const updateEvidenceByIdQuery = async (
   const updated_at = new Date();
 
   try {
-    // Update without evidence_files (now managed via file_entity_links)
+    // Update without evidence_files (now managed via file_entity_links).
+    // When expiry_date changes, clear the sweep flags so a re-dated record
+    // is un-flagged/un-archived and eligible for a fresh expiry evaluation.
     await sequelize.query(
       `UPDATE evidence_hub SET
                 evidence_name = :evidence_name,
                 evidence_type = :evidence_type,
                 description = :description,
                 expiry_date = :expiry_date,
+                retention_policy = :retention_policy,
+                expired_at = CASE WHEN expiry_date IS DISTINCT FROM :expiry_date THEN NULL ELSE expired_at END,
+                expiry_notified_at = CASE WHEN expiry_date IS DISTINCT FROM :expiry_date THEN NULL ELSE expiry_notified_at END,
+                archived_at = CASE WHEN expiry_date IS DISTINCT FROM :expiry_date THEN NULL ELSE archived_at END,
                 mapped_model_ids = :mapped_model_ids,
                 mapped_training_ids = :mapped_training_ids,
                 updated_at = :updated_at
@@ -264,7 +295,8 @@ export const updateEvidenceByIdQuery = async (
           evidence_name: evidence.evidence_name,
           evidence_type: evidence.evidence_type,
           description: evidence.description,
-          expiry_date: evidence.expiry_date,
+          expiry_date: evidence.expiry_date ?? null,
+          retention_policy: evidence.retention_policy ?? null,
           mapped_model_ids: evidence.mapped_model_ids
             ? `{${evidence.mapped_model_ids.join(",")}}`
             : null,
