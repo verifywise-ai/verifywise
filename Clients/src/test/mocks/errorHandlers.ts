@@ -120,3 +120,106 @@ export const bulkErrors = {
   aiTrustIndex: variantsFor("post", "/api/ai-trust-index/tracked/bulk"),
   governanceOs: variantsFor("post", "/api/governance-os/mappings/bulk"),
 };
+
+// ─── Advisor ─────────────────────────────────────────────────────────
+
+// Note the asymmetry in what the advisor controller returns: the conversation
+// CRUD handlers send a RAW body on success (`{ domain, conversations }`) but a
+// STATUS_CODE-wrapped body on error. Only the error side is modelled here, and
+// it is wrapped — matching Servers/controllers/advisor.ctrl.ts.
+export const advisorErrors = {
+  ...variantsFor("get", "/api/advisor/conversations/:domain"),
+  createConversation: variantsFor("post", "/api/advisor/conversations/:domain"),
+  conversation: variantsFor("get", "/api/advisor/conversations/:domain/:id"),
+  updateConversation: variantsFor("put", "/api/advisor/conversations/:domain/:id"),
+  deleteConversation: variantsFor("delete", "/api/advisor/conversations/:domain/:id"),
+  roadmap: variantsFor("get", "/api/advisor/tools/roadmap"),
+  memory: variantsFor("get", "/api/advisor/memory"),
+  deleteMemory: variantsFor("delete", "/api/advisor/memory"),
+};
+
+// ─── Approval requests ───────────────────────────────────────────────
+
+// The three list endpoints are separate paths rather than one path with a
+// query param, so each needs its own override.
+export const approvalRequestErrors = {
+  ...variantsFor("get", "/api/approval-requests/my-requests"),
+  pending: variantsFor("get", "/api/approval-requests/pending-approvals"),
+  all: variantsFor("get", "/api/approval-requests/all"),
+  byId: variantsFor("get", "/api/approval-requests/:id"),
+  create: variantsFor("post", "/api/approval-requests"),
+  approve: variantsFor("post", "/api/approval-requests/:id/approve"),
+  reject: variantsFor("post", "/api/approval-requests/:id/reject"),
+  withdraw: variantsFor("post", "/api/approval-requests/:id/withdraw"),
+};
+
+// ─── Automations ─────────────────────────────────────────────────────
+
+// Update is PUT, not PATCH — the bulk-update comment above applies here too.
+export const automationsErrors = {
+  ...variantsFor("get", "/api/automations"),
+  triggers: variantsFor("get", "/api/automations/triggers"),
+  byId: variantsFor("get", "/api/automations/:id"),
+  history: variantsFor("get", "/api/automations/:id/history"),
+  stats: variantsFor("get", "/api/automations/:id/stats"),
+  create: variantsFor("post", "/api/automations"),
+  update: variantsFor("put", "/api/automations/:id"),
+  remove: variantsFor("delete", "/api/automations/:id"),
+};
+
+// ─── File manager ────────────────────────────────────────────────────
+
+// Upload and list share the "/api/file-manager" path and differ only by verb.
+// Metadata update is PATCH.
+export const fileManagerErrors = {
+  ...variantsFor("get", "/api/file-manager"),
+  upload: variantsFor("post", "/api/file-manager"),
+  search: variantsFor("get", "/api/file-manager/search"),
+  withMetadata: variantsFor("get", "/api/file-manager/with-metadata"),
+  download: variantsFor("get", "/api/file-manager/:id"),
+  remove: variantsFor("delete", "/api/file-manager/:id"),
+  metadata: variantsFor("get", "/api/file-manager/:id/metadata"),
+  updateMetadata: variantsFor("patch", "/api/file-manager/:id/metadata"),
+  preview: variantsFor("get", "/api/file-manager/:id/preview"),
+  versions: variantsFor("get", "/api/file-manager/:id/versions"),
+};
+
+// ─── AI Trust Centre ─────────────────────────────────────────────────
+
+// Overview updates are PUT. The camelCase segment is the real route
+// ("/api/aiTrustCentre"), not a typo for the kebab-case used elsewhere.
+export const aiTrustCentreErrors = {
+  ...variantsFor("get", "/api/aiTrustCentre/overview"),
+  updateOverview: variantsFor("put", "/api/aiTrustCentre/overview"),
+  resources: variantsFor("get", "/api/aiTrustCentre/resources"),
+  createResource: variantsFor("post", "/api/aiTrustCentre/resources"),
+  updateResource: variantsFor("put", "/api/aiTrustCentre/resources/:id"),
+  deleteResource: variantsFor("delete", "/api/aiTrustCentre/resources/:id"),
+  subprocessors: variantsFor("get", "/api/aiTrustCentre/subprocessors"),
+  createSubprocessor: variantsFor("post", "/api/aiTrustCentre/subprocessors"),
+  updateSubprocessor: variantsFor("put", "/api/aiTrustCentre/subprocessors/:id"),
+  deleteSubprocessor: variantsFor("delete", "/api/aiTrustCentre/subprocessors/:id"),
+  uploadLogo: variantsFor("post", "/api/aiTrustCentre/logo"),
+  deleteLogo: variantsFor("delete", "/api/aiTrustCentre/logo"),
+};
+
+// ─── Post-market monitoring ──────────────────────────────────────────
+
+// Config is addressed by projectId on read but configId on write, so the two
+// are separate entries even though both render as "/api/pmm/config/:x".
+export const postMarketMonitoringErrors = {
+  ...variantsFor("get", "/api/pmm/config/:projectId"),
+  createConfig: variantsFor("post", "/api/pmm/config"),
+  updateConfig: variantsFor("put", "/api/pmm/config/:configId"),
+  deleteConfig: variantsFor("delete", "/api/pmm/config/:configId"),
+  questions: variantsFor("get", "/api/pmm/config/:configId/questions"),
+  orgQuestions: variantsFor("get", "/api/pmm/org/questions"),
+  addQuestion: variantsFor("post", "/api/pmm/config/:configId/questions"),
+  updateQuestion: variantsFor("put", "/api/pmm/questions/:questionId"),
+  deleteQuestion: variantsFor("delete", "/api/pmm/questions/:questionId"),
+  activeCycle: variantsFor("get", "/api/pmm/active-cycle/:projectId"),
+  responses: variantsFor("get", "/api/pmm/cycles/:cycleId/responses"),
+  saveResponses: variantsFor("post", "/api/pmm/cycles/:cycleId/responses"),
+  submitCycle: variantsFor("post", "/api/pmm/cycles/:cycleId/submit"),
+  reports: variantsFor("get", "/api/pmm/reports"),
+};
