@@ -222,7 +222,7 @@ describe("advisor.ctrl", () => {
     });
 
     it("returns 500 when the query throws", async () => {
-      mockListConversationsQuery.mockRejectedValue(boom);
+      mockListConversationsQuery.mockRejectedValueOnce(boom);
 
       const req = createMockReq({ params: { domain: "risks" } }) as Request;
       const res = createMockRes() as Response;
@@ -317,7 +317,7 @@ describe("advisor.ctrl", () => {
     });
 
     it("returns 500 when the query throws", async () => {
-      mockGetConversationByIdQuery.mockRejectedValue(boom);
+      mockGetConversationByIdQuery.mockRejectedValueOnce(boom);
 
       const req = createMockReq({ params: { domain: "risks", id: "7" } }) as Request;
       const res = createMockRes() as Response;
@@ -365,7 +365,7 @@ describe("advisor.ctrl", () => {
     });
 
     it("returns 500 when the query throws", async () => {
-      mockCreateConversationQuery.mockRejectedValue(boom);
+      mockCreateConversationQuery.mockRejectedValueOnce(boom);
 
       const req = createMockReq({ params: { domain: "risks" } }) as Request;
       const res = createMockRes() as Response;
@@ -501,7 +501,7 @@ describe("advisor.ctrl", () => {
     });
 
     it("returns 500 when the query throws", async () => {
-      mockGetConversationByIdQuery.mockRejectedValue(boom);
+      mockGetConversationByIdQuery.mockRejectedValueOnce(boom);
 
       const req = createMockReq({
         params: { domain: "risks", id: "7" },
@@ -589,7 +589,7 @@ describe("advisor.ctrl", () => {
     });
 
     it("returns 500 when the query throws", async () => {
-      mockGetConversationByIdQuery.mockRejectedValue(boom);
+      mockGetConversationByIdQuery.mockRejectedValueOnce(boom);
 
       const req = createMockReq({ params: { domain: "risks", id: "7" } }) as Request;
       const res = createMockRes() as Response;
@@ -643,7 +643,7 @@ describe("advisor.ctrl", () => {
     });
 
     it("returns 500 with the raw error message when the lookup throws", async () => {
-      mockGetUserMemorySummary.mockRejectedValue(boom);
+      mockGetUserMemorySummary.mockRejectedValueOnce(boom);
 
       const req = createMockReq() as Request;
       const res = createMockRes() as Response;
@@ -731,7 +731,7 @@ describe("advisor.ctrl", () => {
     });
 
     it("returns 500 when the purge throws", async () => {
-      mockClearUserMemory.mockRejectedValue(boom);
+      mockClearUserMemory.mockRejectedValueOnce(boom);
 
       const req = createMockReq({ query: {} }) as Request;
       const res = createMockRes() as Response;
@@ -804,7 +804,7 @@ describe("advisor.ctrl", () => {
     });
 
     it("returns 500 when the clear throws", async () => {
-      mockClearAgentMemory.mockRejectedValue(boom);
+      mockClearAgentMemory.mockRejectedValueOnce(boom);
 
       const req = createMockReq({ params: { agentName: "advisor" } }) as Request;
       const res = createMockRes() as Response;
@@ -894,7 +894,7 @@ describe("advisor.ctrl", () => {
     });
 
     it("returns 500 when the lookup throws", async () => {
-      mockGetAgentMessages.mockRejectedValue(boom);
+      mockGetAgentMessages.mockRejectedValueOnce(boom);
 
       const req = createMockReq({ params: { agentName: "advisor" }, query: {} }) as Request;
       const res = createMockRes() as Response;
