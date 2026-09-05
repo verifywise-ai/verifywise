@@ -263,6 +263,25 @@ index closes the race, in which case `ON CONFLICT DO NOTHING` is not the
 mechanism that fires. A single-parent violation from a concurrent component
 raises and the job's existing catch logs it.
 
+### 5.7 `utils/riskLink.utils.ts` — `getSharedProjectCandidatesQuery` returns a name
+
+`SharedProjectCandidate` is `{ entityType, id, projects }`. C5 could stop there
+because its consumer, `LinkRiskForm`, uses the result only as an id-to-projects
+lookup and already holds the names from the list it is decorating. A prompt has
+no such list: "vendor_risk 9" with no name is not something a model can judge.
+
+The query gains a `name` column, taking the display expressions
+`getRiskLinksForRiskQuery` already settled on — `model_risks.risk_name`, and
+`LEFT(vendorrisks.risk_description, 80)` because `vendorrisks` has no name
+column.
+
+Additive, so C5's path is untouched: `LinkRiskForm` ignores the extra key, and
+the `/shared-projects` response gains a field without changing its shape. The
+generated Swagger describes operations rather than response bodies, so
+`check:api-drift` is unaffected.
+
+---
+
 ---
 
 ## 6. Measurement
@@ -351,9 +370,15 @@ network — `filterProposedGroups` is pure and exported for exactly this reason.
 8. A plain risk parent still writes `target_risk_id` under the `hierarchy`
    signal, with both cross-entity columns null — the regression guard on C2.
 
+**`getSharedProjectCandidatesQuery`**
+
+*. A vendor candidate carries the first 80 characters of its description as its
+   name, and a model candidate carries `risk_name` (§5.7).
+
 **`buildDirectionUserPrompt`**
 
-9. Candidates are listed with entity type, shared risk ids, and project titles.
+9. Candidates are listed with entity type, name, shared risk ids, and project
+   titles.
 10. With no candidates the prompt is unchanged from today's output.
 
 **`suggestDirectionForComponent`**
