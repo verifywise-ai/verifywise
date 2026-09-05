@@ -38,7 +38,7 @@ export const getSSOConfig = async (req: Request, res: Response) => {
     }
     return res.status(200).json(
       STATUS_CODE[200]({
-        ...config.toJSON(),
+        ...config,
         config_data: maskConfig(config.config_data),
       }),
     );
@@ -65,7 +65,7 @@ export const saveSSOConfig = async (req: Request, res: Response) => {
     const saved = await saveSSOConfigQuery(organizationId, provider, body);
     return res.status(201).json(
       STATUS_CODE[201]({
-        ...saved.toJSON(),
+        ...saved,
         config_data: maskConfig(saved.config_data),
       }),
     );
