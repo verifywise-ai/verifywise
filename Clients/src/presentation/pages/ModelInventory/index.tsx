@@ -298,6 +298,7 @@ const ModelInventory: React.FC = () => {
           { value: ModelInventoryStatus.RESTRICTED, label: "Restricted" },
           { value: ModelInventoryStatus.PENDING, label: "Pending" },
           { value: ModelInventoryStatus.BLOCKED, label: "Blocked" },
+          { value: ModelInventoryStatus.RETIRED, label: "Retired" },
         ],
       },
       {

@@ -171,6 +171,7 @@ describe("Domain Enums", () => {
         "PENDING",
         "BLOCKED",
         "REJECTED",
+        "RETIRED",
       ]);
     });
   });

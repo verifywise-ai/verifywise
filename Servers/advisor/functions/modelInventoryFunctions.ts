@@ -14,7 +14,7 @@ import logger from "../../utils/logger/fileLogger";
 export interface FetchModelInventoriesParams {
   projectId?: number;
   frameworkId?: number;
-  status?: "Approved" | "Restricted" | "Pending" | "Blocked";
+  status?: "Approved" | "Restricted" | "Pending" | "Blocked" | "Retired";
   security_assessment?: boolean;
   provider?: string;
   hosting_provider?: string;
