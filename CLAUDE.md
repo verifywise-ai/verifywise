@@ -1,6 +1,6 @@
 # VerifyWise - Development Guide
 
-> **Last Updated:** 2026-08-13
+> **Last Updated:** 2026-09-02
 
 This document contains cross-cutting rules for the VerifyWise codebase. Directory-scoped guides load automatically when working in each area:
 
@@ -92,9 +92,9 @@ interface TokenPayload {
 ### Starting Development
 
 ```bash
-cd Servers && npm install && npm run watch    # Backend (Terminal 1)
+cd Servers && npm install && npm run watch    # Backend + BullMQ worker (Terminal 1)
 cd Clients && npm install && npm run dev      # Frontend (Terminal 2)
-cd Servers && npm run worker                  # BullMQ Worker (Terminal 3, optional)
+cd Servers && npm run worker                  # BullMQ worker alone (only if not using `watch`)
 cd EvalServer/src && alembic upgrade head && uvicorn app:app --port 8000 --workers 4  # EvalServer (Terminal 4, optional)
 ```
 

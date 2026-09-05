@@ -15,7 +15,7 @@
     "postinstall": "patch-package",
     "migrate-db": "npx sequelize db:migrate --debug",
     "worker": "node dist/jobs/worker.js",
-    "watch": "tsc-watch --noClear --onSuccess \"npm-run-all postbuild start\"",
+    "watch": "tsc-watch --noClear --onSuccess \"npm-run-all postbuild --parallel start worker\"",
     "reset-db": "ts-node scripts/resetDatabase.ts",
     "generate-dbml": "node scripts/generateDbml.js",
     "generate:swagger": "ts-node scripts/generateSwagger.ts",
