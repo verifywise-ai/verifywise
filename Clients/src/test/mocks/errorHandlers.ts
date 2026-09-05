@@ -25,24 +25,41 @@ import { http, HttpResponse, type HttpHandler } from "msw";
 
 type Method = "get" | "post" | "patch" | "put" | "delete";
 
-function envelope(message: string) {
-  return { message, data: null };
+/**
+ * `STATUS_CODE[n](x)` puts the HTTP reason phrase in `message` and the
+ * human-readable detail in `data` — e.g. 403 sends
+ * `{ message: "Forbidden", data: "Access denied" }`.
+ *
+ * That ordering matters: `extractErrorMessage` in networkServices.ts reads
+ * `data` FIRST and only falls back to `message`. An envelope that puts the
+ * detail in `message` with `data: null` therefore exercises the fallback
+ * branch rather than the one real responses take, and any component that
+ * reads the detail would see the reason phrase instead.
+ */
+const REASON: Record<number, string> = {
+  400: "Bad Request",
+  403: "Forbidden",
+  500: "Internal Server Error",
+};
+
+function envelope(status: number, detail: string) {
+  return { message: REASON[status], data: detail };
 }
 
 /** Build the four standard variants for one path+method. */
 function variantsFor(method: Method, path: string) {
   return {
     /** 400 — validation rejected the request body or query. */
-    validation: (message = "Bad request"): HttpHandler =>
-      http[method](path, () => HttpResponse.json(envelope(message), { status: 400 })),
+    validation: (detail = "Bad request"): HttpHandler =>
+      http[method](path, () => HttpResponse.json(envelope(400, detail), { status: 400 })),
 
     /** 403 — authenticated but not permitted (wrong role, other tenant). */
-    forbidden: (message = "Forbidden"): HttpHandler =>
-      http[method](path, () => HttpResponse.json(envelope(message), { status: 403 })),
+    forbidden: (detail = "Forbidden"): HttpHandler =>
+      http[method](path, () => HttpResponse.json(envelope(403, detail), { status: 403 })),
 
     /** 500 — the server answered, but failed. */
-    serverError: (message = "Internal server error"): HttpHandler =>
-      http[method](path, () => HttpResponse.json(envelope(message), { status: 500 })),
+    serverError: (detail = "Internal server error"): HttpHandler =>
+      http[method](path, () => HttpResponse.json(envelope(500, detail), { status: 500 })),
 
     /** Transport failure — no response at all. */
     transport: (): HttpHandler => http[method](path, () => HttpResponse.error()),
@@ -218,6 +235,7 @@ export const postMarketMonitoringErrors = {
   updateQuestion: variantsFor("put", "/api/pmm/questions/:questionId"),
   deleteQuestion: variantsFor("delete", "/api/pmm/questions/:questionId"),
   activeCycle: variantsFor("get", "/api/pmm/active-cycle/:projectId"),
+  cycleById: variantsFor("get", "/api/pmm/cycles/:cycleId"),
   responses: variantsFor("get", "/api/pmm/cycles/:cycleId/responses"),
   saveResponses: variantsFor("post", "/api/pmm/cycles/:cycleId/responses"),
   submitCycle: variantsFor("post", "/api/pmm/cycles/:cycleId/submit"),
