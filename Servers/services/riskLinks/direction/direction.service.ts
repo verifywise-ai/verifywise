@@ -1,5 +1,7 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
+import type { LanguageModelV3Middleware } from "@ai-sdk/provider";
+import { wrapLanguageModel } from "ai";
 import { generateObjectWithSelfCorrection } from "../../../advisor/llmSelfCorrect";
 import { getLLMKeysWithKeyQuery } from "../../../utils/llmKey.utils";
 import logger from "../../../utils/logger/fileLogger";
@@ -13,6 +15,46 @@ import { hierarchyOutputSchema } from "./schema";
 import { HierarchyEdge, validateTwoLevel } from "../hierarchy";
 import { canonicalPair } from "../types";
 import { HierarchyGroup } from "./schema";
+
+/**
+ * Turns a structured-output call into a plain JSON-mode call.
+ *
+ * `generateObject` always sends the schema, and the OpenAI provider turns a
+ * non-null schema into `response_format: {type: "json_schema"}`. Most
+ * OpenAI-compatible providers behind a custom baseURL do not implement that —
+ * DeepSeek answers "This response_format type is unavailable now" and the whole
+ * pass fails. Dropping the schema makes the provider send
+ * `{type: "json_object"}`, which they do implement.
+ *
+ * The schema then has to travel in the system prompt, because the SDK injects
+ * nothing of its own: without it the model guesses field names and the strict
+ * Zod parse rejects every answer.
+ */
+export const jsonObjectFallback: LanguageModelV3Middleware = {
+  specificationVersion: "v3",
+  transformParams: async ({ params }) => {
+    if (params.responseFormat?.type !== "json" || !params.responseFormat.schema) {
+      return params;
+    }
+
+    const instruction = [
+      "Respond with a JSON object matching this schema exactly.",
+      "Output only the JSON object, with no prose and no code fences:",
+      JSON.stringify(params.responseFormat.schema),
+    ].join("\n");
+
+    const prompt = [...params.prompt];
+    const index = prompt.findIndex((message) => message.role === "system");
+    if (index === -1) {
+      prompt.unshift({ role: "system", content: instruction });
+    } else {
+      const system = prompt[index] as { role: "system"; content: string };
+      prompt[index] = { ...system, content: `${system.content}\n\n${instruction}` };
+    }
+
+    return { ...params, responseFormat: { type: "json" }, prompt };
+  },
+};
 
 /**
  * The org's first configured LLM key, as an AI SDK model.
@@ -45,8 +87,14 @@ async function getOrgModel(organizationId: number) {
   const openai = createOpenAI({ apiKey: llmKey.key, baseURL });
   const modelId = llmKey.model || "gpt-4o-mini";
   // Only native OpenAI implements the Responses API. Any custom baseURL
-  // (OpenRouter, vLLM, Together) must use Chat Completions.
-  return baseURL ? openai.chat(modelId) : openai(modelId);
+  // (OpenRouter, vLLM, Together) must use Chat Completions, and mostly cannot
+  // take a json_schema response format either — hence the fallback.
+  return baseURL
+    ? wrapLanguageModel({
+        model: openai.chat(modelId),
+        middleware: jsonObjectFallback,
+      })
+    : openai(modelId);
 }
 
 /**
@@ -212,7 +260,14 @@ export async function suggestDirectionForComponent(
     blockingEdges,
     pairsWithExistingHierarchy,
   );
-  if (edges.length === 0) return 0;
+  if (edges.length === 0) {
+    // "The model found no umbrella" and "the job blew up" both used to leave the
+    // same trace: none. Say which one happened.
+    logger.info(
+      `risk link direction: org ${organizationId}, component [${liveIds.join(",")}] has no hierarchy to store`,
+    );
+    return 0;
+  }
 
   // Keyed on the pair, not on the child alone. A child can appear in a group
   // the filter rejected and in one it kept; keyed on the child, the rejected
