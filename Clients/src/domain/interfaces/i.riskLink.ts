@@ -75,3 +75,34 @@ export interface SharedProjectCandidate {
   id: number;
   projects: string[];
 }
+
+/** `${entityType}:${id}` — stable across the three risk tables, which share an id space. */
+export type RiskGraphNodeKey = string;
+
+export interface RiskGraphNode {
+  key: RiskGraphNodeKey;
+  entityType: RiskLinkEntityType;
+  id: number;
+  name: string | null;
+  riskLevel: string | null;
+}
+
+/** Mirrors `getRiskGraph` in Servers/controllers/riskLinks.ctrl.ts. */
+export interface RiskGraphEdge {
+  id: number;
+  /** For `inherits_from` this is the CHILD. Always a project risk. */
+  sourceKey: RiskGraphNodeKey;
+  /** For `inherits_from` this is the PARENT. */
+  targetKey: RiskGraphNodeKey;
+  relationType: RiskLinkRelationType;
+  status: Exclude<RiskLinkStatus, "dismissed">;
+  score: number;
+  parentLevelChangedAt: string | null;
+}
+
+export interface RiskGraph {
+  nodes: RiskGraphNode[];
+  edges: RiskGraphEdge[];
+  /** True when the org has more edges than the server will return. */
+  truncated: boolean;
+}

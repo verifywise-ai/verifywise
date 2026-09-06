@@ -3,6 +3,7 @@ import { APIError } from "../tools/error";
 import {
   CreateRiskLinkInput,
   DismissReason,
+  RiskGraph,
   RiskLink,
   RiskLinkStatus,
   SharedProjectCandidate,
@@ -96,6 +97,18 @@ export async function suggestRiskHierarchy(): Promise<{
     return extractData<{ enqueued: number; skipped: number }>(response);
   } catch (error: any) {
     throw toAPIError(error, "Failed to start the hierarchy suggestions");
+  }
+}
+
+export async function getRiskGraph(status?: RiskLinkStatus): Promise<RiskGraph> {
+  try {
+    const query = status ? `?status=${status}` : "";
+    const response = await apiServices.get<{ message: string; data: RiskGraph }>(
+      `/riskLinks${query}`,
+    );
+    return extractData<RiskGraph>(response);
+  } catch (error: any) {
+    throw toAPIError(error, "Failed to fetch the risk graph");
   }
 }
 
