@@ -55,6 +55,7 @@ const toLinkRow = (row: any): RiskLinkRow => ({
   last_computed_at: row.last_computed_at ?? null,
   dismiss_reason: row.dismiss_reason ?? null,
   dismiss_note: row.dismiss_note ?? null,
+  parent_level_changed_at: row.parent_level_changed_at ?? null,
 });
 
 /**

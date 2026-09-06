@@ -101,6 +101,7 @@ const toResponse = (link: RiskLinkWithRelated, riskId: number) => ({
   // makes a stale reason on a confirmed row visible instead of silent.
   dismissReason: link.dismiss_reason,
   dismissNote: link.dismiss_note,
+  parentLevelChangedAt: link.parent_level_changed_at,
   relatedRisk: {
     id: link.related_id,
     entityType: link.related_entity_type,

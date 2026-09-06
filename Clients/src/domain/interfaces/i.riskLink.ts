@@ -43,6 +43,7 @@ export interface RiskLink {
   /** Set only on a link dismissed from `suggested`, and only if the user said why. */
   dismissReason: DismissReason | null;
   dismissNote: string | null;
+  parentLevelChangedAt: string | null;
   relatedRisk: {
     id: number;
     entityType: RiskLinkEntityType;

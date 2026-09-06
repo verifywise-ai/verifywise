@@ -79,6 +79,8 @@ export interface RiskLinkRow {
   /** Why a SUGGESTED link was thrown away. Null on every other status — see C3 §3.5. */
   dismiss_reason: DismissReason | null;
   dismiss_note: string | null;
+  /** When the parent's displayed risk level last moved. Null once the child is edited. */
+  parent_level_changed_at: string | null;
 }
 
 /**

@@ -46,6 +46,7 @@ const link = (overrides: Partial<RiskLink> = {}): RiskLink => ({
   lastComputedAt: null,
   dismissReason: null,
   dismissNote: null,
+  parentLevelChangedAt: null,
   relatedRisk: {
     id: 9,
     entityType: "risk",
