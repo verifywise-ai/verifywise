@@ -8233,6 +8233,17 @@ export const risklinksEndpoints: Endpoint[] = [
   },
   {
     method: 'GET',
+    path: '/riskLinks/dismissals',
+    summary: "Get Dismissal Analytics",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+  {
+    method: 'GET',
     path: '/riskLinks/{riskId}',
     summary: "Get Risk Links",
     requiresAuth: true,

@@ -16,6 +16,7 @@ import {
   getConfirmedHierarchyEdgesQuery,
   getLiveCrossEntityParentQuery,
   getLiveRiskIdsQuery,
+  getDismissalAnalyticsQuery,
   getRelatedPairsQuery,
   getRiskGraphQuery,
   getRiskLinkByIdQuery,
@@ -305,6 +306,49 @@ export async function getRiskGraph(req: Request, res: Response): Promise<any> {
       eventType: "Read",
       description: "failed to fetch risk graph",
       functionName: "getRiskGraph",
+      fileName: FILE_NAME,
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+/**
+ * Dismissal analytics for tuning the suggester: which engine signal humans
+ * throw away, why, and what they wrote about it. Read-only, org-scoped, no
+ * parameters. The query already returns camelCase rows, so there is no
+ * per-row mapping here — unlike getRiskLinks, whose toResponse rewrites
+ * subject-relative fields.
+ */
+export async function getDismissalAnalytics(req: Request, res: Response): Promise<any> {
+  logProcessing({
+    description: "starting getDismissalAnalytics",
+    functionName: "getDismissalAnalytics",
+    fileName: FILE_NAME,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+
+  try {
+    const analytics = await getDismissalAnalyticsQuery(req.organizationId!);
+
+    logSuccess({
+      eventType: "Read",
+      description: `fetched dismissal analytics with ${analytics.signals.length} signals`,
+      functionName: "getDismissalAnalytics",
+      fileName: FILE_NAME,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+
+    return res.status(200).json(STATUS_CODE[200](analytics));
+  } catch (error) {
+    logFailure({
+      eventType: "Read",
+      description: "failed to fetch dismissal analytics",
+      functionName: "getDismissalAnalytics",
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,

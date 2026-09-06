@@ -10119,6 +10119,20 @@ paths:
       security:
         -
           bearerAuth: []
+  /riskLinks/dismissals:
+    get:
+      summary: 'Get Dismissal Analytics'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: getDismissalAnalytics
+      security:
+        -
+          bearerAuth: []
   '/riskLinks/{riskId}':
     get:
       summary: 'Get Risk Links'

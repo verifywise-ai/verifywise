@@ -5,6 +5,7 @@ import authenticateJWT from "../middleware/auth.middleware";
 import authorize from "../middleware/accessControl.middleware";
 import {
   createRiskLink,
+  getDismissalAnalytics,
   getRiskGraph,
   getRiskLinks,
   getSharedProjects,
@@ -25,6 +26,7 @@ router.post(
 
 router.post("/", authenticateJWT, createRiskLink);
 router.get("/", authenticateJWT, getRiskGraph);
+router.get("/dismissals", authenticateJWT, getDismissalAnalytics);
 router.get("/:riskId", authenticateJWT, getRiskLinks);
 router.get("/:riskId/shared-projects", authenticateJWT, getSharedProjects);
 router.patch("/:id", authenticateJWT, updateRiskLinkStatus);
