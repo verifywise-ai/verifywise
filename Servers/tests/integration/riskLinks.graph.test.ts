@@ -35,7 +35,7 @@ describe("GET /riskLinks (graph)", () => {
     await linkProjectParent(owner.orgId, other, parent, "suggested");
     await linkProjectParent(owner.orgId, child, other, "dismissed");
 
-    const res = await owner.request.get("/riskLinks");
+    const res = await owner.request.get("/api/riskLinks");
 
     expect(res.status).toBe(200);
     const statuses = (res.body.data.edges as any[]).map((e) => e.status).sort();
@@ -51,7 +51,7 @@ describe("GET /riskLinks (graph)", () => {
     await linkProjectParent(owner.orgId, child, parent, "confirmed");
     await linkProjectParent(owner.orgId, other, parent, "suggested");
 
-    const res = await owner.request.get("/riskLinks?status=confirmed");
+    const res = await owner.request.get("/api/riskLinks?status=confirmed");
 
     expect(res.status).toBe(200);
     expect(res.body.data.edges).toHaveLength(1);
@@ -61,7 +61,7 @@ describe("GET /riskLinks (graph)", () => {
   it("rejects a bogus status with 400", async () => {
     const { owner } = await seedTwoTenantContexts();
 
-    const res = await owner.request.get("/riskLinks?status=bogus");
+    const res = await owner.request.get("/api/riskLinks?status=bogus");
 
     expect(res.status).toBe(400);
   });
@@ -72,7 +72,7 @@ describe("GET /riskLinks (graph)", () => {
     const parent = await createTestRisk(attacker.orgId, {});
     await linkProjectParent(attacker.orgId, child, parent, "confirmed");
 
-    const res = await owner.request.get("/riskLinks");
+    const res = await owner.request.get("/api/riskLinks");
 
     expect(res.status).toBe(200);
     expect(res.body.data.edges).toEqual([]);
@@ -88,7 +88,7 @@ describe("GET /riskLinks (graph)", () => {
       replacements: { parent },
     });
 
-    const res = await owner.request.get("/riskLinks");
+    const res = await owner.request.get("/api/riskLinks");
 
     expect(res.status).toBe(200);
     expect(res.body.data.edges).toEqual([]);
@@ -103,7 +103,7 @@ describe("GET /riskLinks (graph)", () => {
       replacements: { child },
     });
 
-    const res = await owner.request.get("/riskLinks");
+    const res = await owner.request.get("/api/riskLinks");
 
     expect(res.status).toBe(200);
     expect(res.body.data.edges).toEqual([]);
@@ -134,7 +134,7 @@ describe("GET /riskLinks (graph)", () => {
       { replacements: { orgId: owner.orgId, child, vendorRisk } },
     );
 
-    const res = await owner.request.get("/riskLinks");
+    const res = await owner.request.get("/api/riskLinks");
 
     expect(res.status).toBe(200);
     const nodes = res.body.data.nodes as any[];
@@ -162,7 +162,7 @@ describe("GET /riskLinks (graph)", () => {
     await linkProjectParent(owner.orgId, childA, parent, "confirmed");
     await linkProjectParent(owner.orgId, childB, parent, "confirmed");
 
-    const res = await owner.request.get("/riskLinks");
+    const res = await owner.request.get("/api/riskLinks");
 
     expect(res.status).toBe(200);
     expect(res.body.data.edges).toHaveLength(2);
