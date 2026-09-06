@@ -10,6 +10,14 @@ import { z } from "zod";
 export const hierarchyGroupSchema = z
   .object({
     parent_risk_id: z.number().int(),
+    /**
+     * Which table `parent_risk_id` points at. Required, with no default:
+     * `risks.id = 7`, `model_risks.id = 7` and `vendorrisks.id = 7` all exist,
+     * so a default would silently write the link to the wrong table. A missing
+     * field becomes a Zod issue instead, which the self-correction loop feeds
+     * back for a second attempt.
+     */
+    parent_entity_type: z.enum(["risk", "model_risk", "vendor_risk"]),
     child_risk_ids: z.array(z.number().int()).min(1).max(12),
     reason: z.string().min(15).max(120),
   })

@@ -4,6 +4,7 @@ import { RiskPromptRow } from "../../../utils/riskLink.utils";
 
 const group = (overrides: Record<string, unknown> = {}) => ({
   parent_risk_id: 1,
+  parent_entity_type: "risk",
   child_risk_ids: [2, 3],
   reason: "Both are instances of the same drift problem.",
   ...overrides,
@@ -54,6 +55,36 @@ describe("hierarchyOutputSchema", () => {
   it("rejects a reason too long to sit in a chip", () => {
     expect(
       hierarchyOutputSchema.safeParse({ groups: [group({ reason: "x".repeat(121) })] }).success,
+    ).toBe(false);
+  });
+});
+
+describe("parent_entity_type", () => {
+  const base = {
+    parent_risk_id: 1,
+    child_risk_ids: [2],
+    reason: "They are instances of the same underlying problem.",
+  };
+
+  it("accepts each of the three parent tables", () => {
+    for (const parent_entity_type of ["risk", "model_risk", "vendor_risk"] as const) {
+      expect(
+        hierarchyOutputSchema.safeParse({ groups: [{ ...base, parent_entity_type }] }).success,
+      ).toBe(true);
+    }
+  });
+
+  // risks.id = 7, model_risks.id = 7 and vendorrisks.id = 7 all exist. A
+  // default would send the row to the wrong table with no error anywhere.
+  it("rejects a group that omits it, rather than defaulting to risk", () => {
+    expect(hierarchyOutputSchema.safeParse({ groups: [base] }).success).toBe(false);
+  });
+
+  it("rejects a table name it invented", () => {
+    expect(
+      hierarchyOutputSchema.safeParse({
+        groups: [{ ...base, parent_entity_type: "incident" }],
+      }).success,
     ).toBe(false);
   });
 });

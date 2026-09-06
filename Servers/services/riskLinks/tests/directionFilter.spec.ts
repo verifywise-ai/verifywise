@@ -14,8 +14,13 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
 import { filterProposedGroups, hierarchyPairKey } from "../direction/direction.service";
 import { HierarchyGroup } from "../direction/schema";
 
-const group = (parent: number, children: number[]): HierarchyGroup => ({
+const group = (
+  parent: number,
+  children: number[],
+  parentEntityType: HierarchyGroup["parent_entity_type"] = "risk",
+): HierarchyGroup => ({
   parent_risk_id: parent,
+  parent_entity_type: parentEntityType,
   child_risk_ids: children,
   reason: "They are instances of the same underlying problem.",
 });
