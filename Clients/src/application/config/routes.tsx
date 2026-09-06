@@ -55,6 +55,9 @@ const PolicyEditorPage = lazyRoute(
 );
 const WatchTower = lazyRoute(() => import("../../presentation/pages/WatchTower"));
 const RiskManagement = lazyRoute(() => import("../../presentation/pages/RiskManagement"));
+const RiskInheritanceGraph = lazyRoute(
+  () => import("../../presentation/pages/RiskInheritanceGraph"),
+);
 const Tasks = lazyRoute(() => import("../../presentation/pages/Tasks"));
 const AutomationsPage = lazyRoute(() => import("../../presentation/pages/Automations"));
 const ApprovalWorkflows = lazyRoute(() => import("../../presentation/pages/ApprovalWorkflows"));
@@ -682,6 +685,14 @@ export const createRoutes = (
       element={
         <Suspense fallback={<LazyFallback />}>
           <RiskManagement />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/risk-inheritance"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <RiskInheritanceGraph />
         </Suspense>
       }
     />

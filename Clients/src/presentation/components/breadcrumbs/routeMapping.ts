@@ -52,6 +52,7 @@ import {
   Gauge,
   Compass,
   Star,
+  Network,
 } from "lucide-react";
 
 /**
@@ -88,6 +89,9 @@ export const routeMapping: Record<string, string> = {
 
   // Reporting
   "/reporting": "Reporting dashboard",
+
+  // Risk management
+  "/risk-inheritance": "Risk inheritance",
 
   // AI Trust Center
   "/ai-trust-center": "AI trust center",
@@ -237,6 +241,7 @@ export const routeIconMapping: Record<string, () => React.ReactNode> = {
 
   // Risk management
   "/risk-management": () => React.createElement(AlertTriangle, { size: 14, strokeWidth: 1.5 }),
+  "/risk-inheritance": () => React.createElement(Network, { size: 14, strokeWidth: 1.5 }),
 
   // Settings
   "/settings": () => React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
