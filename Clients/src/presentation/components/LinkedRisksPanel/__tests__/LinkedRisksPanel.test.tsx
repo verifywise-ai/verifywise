@@ -617,3 +617,42 @@ describe("LinkedRisksPanel entity type labels", () => {
     expect(screen.queryByText("Project risk")).not.toBeInTheDocument();
   });
 });
+
+describe("LinkedRisksPanel stale-inheritance badge", () => {
+  const flagged = (overrides: Partial<RiskLink> = {}) =>
+    link({
+      relationType: "inherits_from",
+      status: "confirmed",
+      direction: "outgoing",
+      parentLevelChangedAt: "2026-09-06T11:00:00.000Z",
+      relatedRisk: {
+        id: 3,
+        entityType: "risk",
+        name: "Upstream risk",
+        riskLevel: "High risk",
+        ownerId: null,
+      },
+      ...overrides,
+    });
+
+  it("badges an outgoing link whose parent level moved", () => {
+    mockUseRiskLinks.mockReturnValue(queryResult([flagged()]));
+    render(<LinkedRisksPanel riskId={42} />);
+
+    expect(screen.getByText("Parent level changed")).toBeInTheDocument();
+  });
+
+  it("hides the badge on an incoming link with the same value", () => {
+    mockUseRiskLinks.mockReturnValue(queryResult([flagged({ direction: "incoming" })]));
+    render(<LinkedRisksPanel riskId={42} />);
+
+    expect(screen.queryByText("Parent level changed")).not.toBeInTheDocument();
+  });
+
+  it("hides the badge when the flag is null", () => {
+    mockUseRiskLinks.mockReturnValue(queryResult([flagged({ parentLevelChangedAt: null })]));
+    render(<LinkedRisksPanel riskId={42} />);
+
+    expect(screen.queryByText("Parent level changed")).not.toBeInTheDocument();
+  });
+});

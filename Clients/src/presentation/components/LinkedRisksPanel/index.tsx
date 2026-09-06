@@ -321,6 +321,19 @@ export default function LinkedRisksPanel({ riskId }: LinkedRisksPanelProps) {
                       />
                     )}
                     {/*
+                      Only on the child's own view. The same link row appears in the parent's
+                      panel as an incoming link, where "parent level changed" would read as a
+                      statement about the child.
+                    */}
+                    {link.direction === "outgoing" && link.parentLevelChangedAt && (
+                      <Chip
+                        size="small"
+                        color="warning"
+                        label="Parent level changed"
+                        title={new Date(link.parentLevelChangedAt).toLocaleString()}
+                      />
+                    )}
+                    {/*
                       score is 0 by column default on a user link and on an agent
                       link, and means nothing on either. Only the scoring engine
                       produces a number worth showing.
