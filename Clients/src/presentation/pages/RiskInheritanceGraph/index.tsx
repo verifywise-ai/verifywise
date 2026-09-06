@@ -36,6 +36,7 @@ import { APIError } from "../../../application/tools/error";
 import type { RiskGraph } from "../../../domain/interfaces/i.riskLink";
 import RiskNode from "./RiskNode";
 import type { RiskInheritanceNodeData } from "./types";
+import DismissalAnalytics from "./DismissalAnalytics";
 import { ENTITY_TYPE_COLORS, EDGE_LABELS } from "./types";
 import { layoutRiskGraph } from "./layout";
 import {
@@ -181,26 +182,23 @@ const RiskInheritanceGraphInner: React.FC = () => {
     );
   }, [graph, layout, staleByNode, setNodes, setEdges, theme]);
 
+  let graphArea: React.ReactNode;
   if (loading) {
-    return (
+    graphArea = (
       <Box sx={loadingContainerSx}>
         <CircularProgress size={32} sx={{ color: theme.palette.primary.main }} />
         <Typography sx={loadingTextSx}>Loading risk inheritance graph...</Typography>
       </Box>
     );
-  }
-
-  if (error) {
-    return (
+  } else if (error) {
+    graphArea = (
       <Box sx={errorContainerSx}>
         <AlertTriangle size={32} color={theme.palette.error.main} />
         <Typography sx={errorTextSx}>{error}</Typography>
       </Box>
     );
-  }
-
-  if (!graph || graph.nodes.length === 0) {
-    return (
+  } else if (!graph || graph.nodes.length === 0) {
+    graphArea = (
       <Box sx={emptyStateContainerSx}>
         <Network size={48} color={theme.palette.text.disabled} />
         <Typography sx={emptyStateTitleSx}>No risk links yet</Typography>
@@ -209,10 +207,9 @@ const RiskInheritanceGraphInner: React.FC = () => {
         </Typography>
       </Box>
     );
-  }
-
-  return (
-    <Box sx={pageContainerSx}>
+  } else {
+    graphArea = (
+      <>
       {graph.truncated && showTruncated && (
         <Alert severity="info" onClose={() => setShowTruncated(false)}>
           Showing the first 500 links. Filter by status to narrow the graph.
@@ -267,6 +264,14 @@ const RiskInheritanceGraphInner: React.FC = () => {
           </ReactFlow>
         </div>
       </Box>
+      </>
+    );
+  }
+
+  return (
+    <Box sx={pageContainerSx}>
+      {graphArea}
+      <DismissalAnalytics />
     </Box>
   );
 };
