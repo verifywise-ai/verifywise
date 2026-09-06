@@ -10,6 +10,16 @@ import { RelatedPair } from "../types";
 export const MAX_COMPONENT_SIZE = 25;
 
 /**
+ * How many distinct vendor / model risks one component may offer the model.
+ *
+ * Past this the cross-entity half is skipped entirely rather than truncated:
+ * every candidate shares a project by construction, so they are all equally
+ * justified and cutting by id order picks winners for no reason. Same
+ * fail-closed choice the controller makes for oversized components.
+ */
+export const MAX_CROSS_ENTITY_CANDIDATES = 25;
+
+/**
  * Partitions the `related_to` edge list into connected components by
  * union-find. A component is the unit of work for a direction pass: see §3 of
  * the C2 design for why the component, and not the risk or the pair, is what

@@ -15,7 +15,8 @@ import {
 import { buildDirectionSystemPrompt, buildDirectionUserPrompt } from "./prompts";
 import { hierarchyOutputSchema } from "./schema";
 
-import { candidateKey, CrossEntityCandidate } from "./candidates";
+import { candidateKey, CrossEntityCandidate, gatherCrossEntityCandidates } from "./candidates";
+import { MAX_CROSS_ENTITY_CANDIDATES } from "./components";
 
 export { candidateKey } from "./candidates";
 export type { CrossEntityCandidate } from "./candidates";
@@ -294,13 +295,23 @@ export async function suggestDirectionForComponent(
     .filter((pair) => pair.status === "confirmed")
     .map((pair) => toHierarchyEdge(pair));
 
+  const candidates = await gatherCrossEntityCandidates(organizationId, liveIds);
+  if (candidates.size > MAX_CROSS_ENTITY_CANDIDATES) {
+    logger.info(
+      `risk link direction: org ${organizationId}, component [${liveIds.join(",")}] reaches ` +
+        `${candidates.size} cross-entity candidates, over the cap of ` +
+        `${MAX_CROSS_ENTITY_CANDIDATES} — grouping project risks only`,
+    );
+    candidates.clear();
+  }
+
   let groups;
   try {
     const result = await generateObjectWithSelfCorrection({
       model,
       schema: hierarchyOutputSchema,
       system: buildDirectionSystemPrompt(),
-      prompt: buildDirectionUserPrompt(risks, confirmedEdges),
+      prompt: buildDirectionUserPrompt(risks, confirmedEdges, [...candidates.values()]),
       temperature: 0,
       innerMaxRetries: 2,
       maxSelfCorrectionAttempts: 2,
@@ -318,7 +329,7 @@ export async function suggestDirectionForComponent(
     liveIds,
     blockingEdges,
     pairsWithExistingHierarchy,
-    new Map(),
+    candidates,
   );
   if (edges.length === 0) {
     // "The model found no umbrella" and "the job blew up" both used to leave the
