@@ -164,12 +164,16 @@ describe("getSharedProjectCandidatesQuery", () => {
 
     const candidates = await getSharedProjectCandidatesQuery(owner.orgId, subject);
 
-    expect(candidates.find((c) => c.id === modelRisk)?.name).toBe(
-      "Fairness degradation in production",
-    );
-    expect(candidates.find((c) => c.id === vendorRisk)?.name).toBe(
-      "The vendor cannot evidence its own model validation.",
-    );
+    // Matched on entity type as well as id, because the two id spaces collide:
+    // a fresh model_risk and a fresh vendorrisk both start at 1. Finding by id
+    // alone returns whichever came first, which is the exact bug C6's required
+    // parent_entity_type exists to prevent.
+    expect(
+      candidates.find((c) => c.entityType === "model_risk" && c.id === modelRisk)?.name,
+    ).toBe("Fairness degradation in production");
+    expect(
+      candidates.find((c) => c.entityType === "vendor_risk" && c.id === vendorRisk)?.name,
+    ).toBe("The vendor cannot evidence its own model validation.");
   });
 
   it("omits a soft-deleted vendor risk", async () => {
