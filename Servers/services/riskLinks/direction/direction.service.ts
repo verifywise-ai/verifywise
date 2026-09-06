@@ -10,9 +10,15 @@ import {
   getHierarchyPairsQuery,
   getRiskPromptRowsQuery,
   HierarchyPairRow,
+  HierarchyParent,
 } from "../../../utils/riskLink.utils";
 import { buildDirectionSystemPrompt, buildDirectionUserPrompt } from "./prompts";
 import { hierarchyOutputSchema } from "./schema";
+
+import { candidateKey, CrossEntityCandidate } from "./candidates";
+
+export { candidateKey } from "./candidates";
+export type { CrossEntityCandidate } from "./candidates";
 import { HierarchyEdge, validateTwoLevel } from "../hierarchy";
 import { canonicalPair } from "../types";
 import { HierarchyGroup } from "./schema";
@@ -99,12 +105,21 @@ async function getOrgModel(organizationId: number) {
 }
 
 /**
- * The unordered key two risks share regardless of which is proposed as parent.
- * Rule 4 is deliberately direction-blind, so the key must be too.
+ * The key rule 4 dedupes on.
+ *
+ * Between two project risks it is direction-blind, because rule 4 is: a stored
+ * `inherits_from` row in either direction means the pair has been proposed
+ * already. Across tables it cannot be — `canonicalPair` orders two numbers, and
+ * a project risk's id and a vendor risk's id are not from the same space. A
+ * cross-entity edge has exactly one legal direction anyway (C4 §3.3), so the
+ * child-first key loses nothing.
  */
-export function hierarchyPairKey(a: number, b: number): string {
-  const [low, high] = canonicalPair(a, b);
-  return `${low}:${high}`;
+export function hierarchyPairKey(childRiskId: number, parent: HierarchyParent): string {
+  if (parent.entityType === "risk") {
+    const [low, high] = canonicalPair(childRiskId, parent.id);
+    return `risk:${low}:${high}`;
+  }
+  return `${parent.entityType}:${childRiskId}:${parent.id}`;
 }
 
 /**
@@ -139,6 +154,16 @@ export function hierarchyPairKey(a: number, b: number): string {
  * proposal guaranteed to fail on confirm. Widening at this call site is the
  * intended asymmetry, not a misuse.
  *
+ * Cross-entity notes:
+ *
+ * - Rule 2's duplicate-id check moved from `[parent, ...children]` to
+ *   `children` alone. A cross-entity parent's id appearing in `child_risk_ids`
+ *   is not a duplicate; it is a different table's row that happens to share a
+ *   number.
+ * - The old rule-3 clause `usedAsParent.has(id)` for children now compares
+ *   `risk:<id>`, so a child is only rejected for being a *project-risk* parent
+ *   elsewhere. A child whose number matches a vendor parent's is untouched.
+ *
  * Pure and exported so it can be tested without a paid network call.
  */
 export function filterProposedGroups(
@@ -146,37 +171,53 @@ export function filterProposedGroups(
   componentRiskIds: number[],
   blockingEdges: HierarchyEdge[],
   pairsWithExistingHierarchy: Set<string>,
+  candidates: Map<string, CrossEntityCandidate>,
 ): HierarchyEdge[] {
   const inComponent = new Set(componentRiskIds);
-  // Two sets, not one. A child may be claimed once; a parent may repeat as a
-  // parent but must never cross over to the other set.
+  // Children are always project risks, so this set stays numeric. Parents are
+  // not, so theirs is keyed by table — `vendor_risk:7` and `risk:7` are two
+  // different rows and must not collide.
   const claimedAsChild = new Set<number>();
-  const usedAsParent = new Set<number>();
+  const usedAsParent = new Set<string>();
   const accepted: HierarchyEdge[] = [];
 
   for (const group of groups) {
-    const ids = [group.parent_risk_id, ...group.child_risk_ids];
+    const parent: HierarchyParent = {
+      id: group.parent_risk_id,
+      entityType: group.parent_entity_type,
+    };
+    const candidate = parent.entityType === "risk" ? null : candidates.get(candidateKey(parent));
 
-    // 1
-    if (ids.some((id) => !inComponent.has(id))) continue;
-    // 2
-    if (group.child_risk_ids.includes(group.parent_risk_id)) continue;
+    // 1. A project-risk parent must be in the component; a cross-entity parent
+    //    must be one we actually offered. Either way the model cannot name a
+    //    row it was never shown.
+    if (parent.entityType === "risk" && !inComponent.has(parent.id)) continue;
+    if (parent.entityType !== "risk" && !candidate) continue;
+    if (group.child_risk_ids.some((id) => !inComponent.has(id))) continue;
+
+    // 2. Only a project-risk parent can appear among its own children; a
+    //    cross-entity id in that list is a different row entirely.
+    if (parent.entityType === "risk" && group.child_risk_ids.includes(parent.id)) continue;
+
     // 3
-    if (claimedAsChild.has(group.parent_risk_id)) continue;
-    if (group.child_risk_ids.some((id) => claimedAsChild.has(id) || usedAsParent.has(id))) {
+    if (parent.entityType === "risk" && claimedAsChild.has(parent.id)) continue;
+    if (group.child_risk_ids.some((id) => claimedAsChild.has(id))) continue;
+    if (group.child_risk_ids.some((id) => usedAsParent.has(candidateKey({ id, entityType: "risk" }))))
       continue;
-    }
-    // A duplicate id inside one group would break rule 3 on its second
-    // occurrence; catching it here keeps the whole group atomic.
-    if (new Set(ids).size !== ids.length) continue;
+    if (new Set(group.child_risk_ids).size !== group.child_risk_ids.length) continue;
 
     const groupEdges: HierarchyEdge[] = [];
     for (const childRiskId of group.child_risk_ids) {
+      // C6 §4.2. The shared project is the whole justification for a
+      // cross-entity link; without it the link says nothing.
+      if (candidate && !candidate.childRiskIds.has(childRiskId)) continue;
       // 4
-      if (pairsWithExistingHierarchy.has(hierarchyPairKey(childRiskId, group.parent_risk_id))) {
-        continue;
-      }
-      const edge = { childRiskId, parentRiskId: group.parent_risk_id };
+      if (pairsWithExistingHierarchy.has(hierarchyPairKey(childRiskId, parent))) continue;
+
+      const edge: HierarchyEdge =
+        parent.entityType === "risk"
+          ? { childRiskId, parentRiskId: parent.id }
+          : { childRiskId, parentRiskId: parent.id, parentEntityType: parent.entityType };
       // 5
       if (validateTwoLevel(edge, [...blockingEdges, ...accepted, ...groupEdges])) continue;
       groupEdges.push(edge);
@@ -185,10 +226,8 @@ export function filterProposedGroups(
     if (groupEdges.length === 0) continue;
 
     accepted.push(...groupEdges);
-    for (const edge of groupEdges) {
-      claimedAsChild.add(edge.childRiskId);
-    }
-    usedAsParent.add(group.parent_risk_id);
+    for (const edge of groupEdges) claimedAsChild.add(edge.childRiskId);
+    usedAsParent.add(candidateKey(parent));
   }
 
   return accepted;
@@ -241,7 +280,12 @@ export async function suggestDirectionForComponent(
 
   const storedPairs = await getHierarchyPairsQuery(organizationId, liveIds);
   const pairsWithExistingHierarchy = new Set(
-    storedPairs.map((pair) => hierarchyPairKey(pair.childRiskId, pair.parentRiskId)),
+    storedPairs.map((pair) =>
+      hierarchyPairKey(pair.childRiskId, {
+        id: pair.parentRiskId,
+        entityType: pair.parentEntityType,
+      }),
+    ),
   );
   const blockingEdges = storedPairs
     .filter((pair) => pair.status === "confirmed" || pair.status === "suggested")
@@ -274,6 +318,7 @@ export async function suggestDirectionForComponent(
     liveIds,
     blockingEdges,
     pairsWithExistingHierarchy,
+    new Map(),
   );
   if (edges.length === 0) {
     // "The model found no umbrella" and "the job blew up" both used to leave the
@@ -290,7 +335,13 @@ export async function suggestDirectionForComponent(
   const reasonByEdge = new Map<string, string>();
   for (const group of groups) {
     for (const childRiskId of group.child_risk_ids) {
-      reasonByEdge.set(hierarchyPairKey(childRiskId, group.parent_risk_id), group.reason);
+      reasonByEdge.set(
+        hierarchyPairKey(childRiskId, {
+          id: group.parent_risk_id,
+          entityType: group.parent_entity_type,
+        }),
+        group.reason,
+      );
     }
   }
 
@@ -304,8 +355,12 @@ export async function suggestDirectionForComponent(
         entityType: edge.parentEntityType ?? "risk",
       },
       reason:
-        reasonByEdge.get(hierarchyPairKey(edge.childRiskId, edge.parentRiskId)) ??
-        "Grouped by the direction agent.",
+        reasonByEdge.get(
+          hierarchyPairKey(edge.childRiskId, {
+            id: edge.parentRiskId,
+            entityType: edge.parentEntityType ?? "risk",
+          }),
+        ) ?? "Grouped by the direction agent.",
     });
     if (id !== null) written += 1;
   }
