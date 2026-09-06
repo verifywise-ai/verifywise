@@ -299,7 +299,10 @@ export async function suggestDirectionForComponent(
     const id = await createAgentHierarchyLinkQuery({
       organizationId,
       childRiskId: edge.childRiskId,
-      parentRiskId: edge.parentRiskId,
+      parent: {
+        id: edge.parentRiskId,
+        entityType: edge.parentEntityType ?? "risk",
+      },
       reason:
         reasonByEdge.get(hierarchyPairKey(edge.childRiskId, edge.parentRiskId)) ??
         "Grouped by the direction agent.",

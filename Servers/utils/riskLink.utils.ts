@@ -512,7 +512,8 @@ export async function getHierarchyPairsQuery(
 export interface CreateAgentHierarchyLinkInput {
   organizationId: number;
   childRiskId: number;
-  parentRiskId: number;
+  /** C4 made parents polymorphic; C6 made the agent path able to write one. */
+  parent: HierarchyParent;
   /** The model's own one-line justification, 15-120 chars by schema. */
   reason: string;
 }
@@ -535,25 +536,47 @@ export interface CreateAgentHierarchyLinkInput {
  * this relation type. That should not happen — rule 4 of the filter drops those
  * before they get here — but two components can only be processed concurrently,
  * so the constraint stays the last word.
+ *
+ * A cross-entity parent goes to its own target column and carries its own
+ * signal (`cross_entity_hierarchy`); a plain risk parent is unchanged.
  */
 export async function createAgentHierarchyLinkQuery(
   input: CreateAgentHierarchyLinkInput,
 ): Promise<number | null> {
+  const targetColumn =
+    input.parent.entityType === "model_risk"
+      ? "target_model_risk_id"
+      : input.parent.entityType === "vendor_risk"
+        ? "target_vendor_risk_id"
+        : "target_risk_id";
+  const conflictTarget =
+    input.parent.entityType === "risk"
+      ? "(source_risk_id, target_risk_id, relation_type)"
+      : `(source_risk_id, ${targetColumn}, relation_type) WHERE ${targetColumn} IS NOT NULL`;
+
+  // C6 §4.3: the signal is what lets the precision report tell a cross-entity
+  // suggestion from a project-risk one. Both land in the same source/relation
+  // bucket, so without it neither can be measured.
   const reasons: LinkSignal[] = [
-    { signal: "hierarchy", weight: 0, detail: input.reason },
+    {
+      signal: input.parent.entityType === "risk" ? "hierarchy" : "cross_entity_hierarchy",
+      weight: 0,
+      detail: input.reason,
+    },
   ];
+
   const rows = await sequelize.query(
-    `INSERT INTO risk_links (organization_id, source_risk_id, target_risk_id,
+    `INSERT INTO risk_links (organization_id, source_risk_id, ${targetColumn},
                              relation_type, status, source, reasons, created_at)
-     VALUES (:organizationId, :childRiskId, :parentRiskId,
+     VALUES (:organizationId, :childRiskId, :parentId,
              'inherits_from', 'suggested', 'agent', CAST(:reasons AS JSONB), NOW())
-     ON CONFLICT (source_risk_id, target_risk_id, relation_type) DO NOTHING
+     ON CONFLICT ${conflictTarget} DO NOTHING
      RETURNING id`,
     {
       replacements: {
         organizationId: input.organizationId,
         childRiskId: input.childRiskId,
-        parentRiskId: input.parentRiskId,
+        parentId: input.parent.id,
         reasons: JSON.stringify(reasons),
       },
       type: QueryTypes.SELECT,

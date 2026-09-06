@@ -1,9 +1,10 @@
 jest.setTimeout(60000);
 
+import { QueryTypes } from "sequelize";
 import { cleanupDatabase } from "./helpers";
 import { sequelize } from "../../database/db";
 import { seedTwoTenantContexts } from "./tenant-isolation/tenantIsolation.harness";
-import { createTestRisk, createTestVendorRisk } from "../factories";
+import { createTestModelRisk, createTestRisk, createTestVendorRisk } from "../factories";
 import {
   createAgentHierarchyLinkQuery,
   getHierarchyPairsQuery,
@@ -138,7 +139,7 @@ describe("createAgentHierarchyLinkQuery", () => {
     const input = {
       organizationId: owner.orgId,
       childRiskId: child,
-      parentRiskId: parent,
+      parent: { id: parent, entityType: "risk" as const },
       reason: "Both describe drift in the same deployed model.",
     };
 
@@ -166,5 +167,102 @@ describe("createAgentHierarchyLinkQuery", () => {
     expect((rows[0] as any).reasons).toEqual([
       { signal: "hierarchy", weight: 0, detail: "Both describe drift in the same deployed model." },
     ]);
+  });
+});
+
+describe("createAgentHierarchyLinkQuery cross-entity parents", () => {
+  it("writes a model risk parent to target_model_risk_id with its own signal", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const modelRisk = await createTestModelRisk(owner.orgId, {});
+
+    const id = await createAgentHierarchyLinkQuery({
+      organizationId: owner.orgId,
+      childRiskId: child,
+      parent: { id: modelRisk, entityType: "model_risk" },
+      reason: "The model risk is the upstream cause of this project risk.",
+    });
+
+    const [row]: any[] = await sequelize.query(
+      `SELECT target_risk_id, target_model_risk_id, target_vendor_risk_id,
+              relation_type, status, source, reasons
+         FROM risk_links WHERE id = :id`,
+      { replacements: { id }, type: QueryTypes.SELECT },
+    );
+    expect(row).toMatchObject({
+      target_risk_id: null,
+      target_model_risk_id: modelRisk,
+      target_vendor_risk_id: null,
+      relation_type: "inherits_from",
+      status: "suggested",
+      source: "agent",
+    });
+    expect(row.reasons).toEqual([
+      {
+        signal: "cross_entity_hierarchy",
+        weight: 0,
+        detail: "The model risk is the upstream cause of this project risk.",
+      },
+    ]);
+  });
+
+  it("writes a vendor risk parent to target_vendor_risk_id", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const vendorRisk = await createTestVendorRisk(owner.orgId, {});
+
+    const id = await createAgentHierarchyLinkQuery({
+      organizationId: owner.orgId,
+      childRiskId: child,
+      parent: { id: vendorRisk, entityType: "vendor_risk" },
+      reason: "The vendor's own risk is the umbrella over this one.",
+    });
+
+    const [row]: any[] = await sequelize.query(
+      `SELECT target_vendor_risk_id FROM risk_links WHERE id = :id`,
+      { replacements: { id }, type: QueryTypes.SELECT },
+    );
+    expect(row.target_vendor_risk_id).toBe(vendorRisk);
+  });
+
+  // The C2 regression guard: a plain risk parent must be untouched by this change.
+  it("still writes a plain risk parent under the hierarchy signal", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const parent = await createTestRisk(owner.orgId, {});
+
+    const id = await createAgentHierarchyLinkQuery({
+      organizationId: owner.orgId,
+      childRiskId: child,
+      parent: { id: parent, entityType: "risk" },
+      reason: "Both are instances of the same underlying failure.",
+    });
+
+    const [row]: any[] = await sequelize.query(
+      `SELECT target_risk_id, target_model_risk_id, target_vendor_risk_id, reasons
+         FROM risk_links WHERE id = :id`,
+      { replacements: { id }, type: QueryTypes.SELECT },
+    );
+    expect(row).toMatchObject({
+      target_risk_id: parent,
+      target_model_risk_id: null,
+      target_vendor_risk_id: null,
+    });
+    expect(row.reasons[0].signal).toBe("hierarchy");
+  });
+
+  it("returns null rather than raising when the same pair is written twice", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const vendorRisk = await createTestVendorRisk(owner.orgId, {});
+    const input = {
+      organizationId: owner.orgId,
+      childRiskId: child,
+      parent: { id: vendorRisk, entityType: "vendor_risk" as const },
+      reason: "The vendor's own risk is the umbrella over this one.",
+    };
+
+    expect(await createAgentHierarchyLinkQuery(input)).not.toBeNull();
+    expect(await createAgentHierarchyLinkQuery(input)).toBeNull();
   });
 });
