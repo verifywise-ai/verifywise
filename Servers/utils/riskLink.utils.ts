@@ -4,6 +4,7 @@ import {
   LinkSignal,
   RiskLinkRelationType,
   RiskLinkRow,
+  RiskLinkSource,
   RiskLinkStatus,
   RiskScoringRow,
   StructuralNeighbourRow,
@@ -850,6 +851,127 @@ export async function getRiskGraphQuery(
   // `score` is numeric(6,3) and pg hands it back as a string. This file's own
   // rule (see `toNumber` at the top) is that nothing leaves here uncoerced.
   return (rows as any[]).map((row) => ({ ...row, score: toNumber(row.score) }));
+}
+
+export interface DismissalSignalRow {
+  signal: string;
+  decided: number;
+  dismissed: number;
+  /** "none" when most dismissals of this signal gave no reason. */
+  topReason: string | null;
+}
+
+export interface DismissalReasonRow {
+  relationType: RiskLinkRelationType;
+  source: RiskLinkSource;
+  status: "confirmed" | "dismissed";
+  /** Null is a legitimate value: dismissed without giving a reason. */
+  dismissReason: DismissReason | null;
+  count: number;
+}
+
+export interface DismissalNote {
+  id: number;
+  relationType: RiskLinkRelationType;
+  source: RiskLinkSource;
+  dismissReason: DismissReason | null;
+  dismissNote: string;
+  decidedAt: string | null;
+  sourceName: string | null;
+}
+
+export interface DismissalAnalytics {
+  signals: DismissalSignalRow[];
+  reasons: DismissalReasonRow[];
+  notes: DismissalNote[];
+}
+
+/**
+ * Three plain aggregates over decided links, for tuning the suggester: which
+ * engine signal humans throw away, why, and what they wrote about it.
+ *
+ * Deliberately three queries, not one CTE: each reads risk_links once and a
+ * seq scan is the correct plan at this row count (see the dismiss-reason
+ * migration comment). No score anywhere: inherits_from agent rows all carry
+ * score 0 and related_to scores are unbounded, so there is no range to band.
+ */
+export async function getDismissalAnalyticsQuery(
+  organizationId: number,
+): Promise<DismissalAnalytics> {
+  const signalRows = (await sequelize.query(
+    `SELECT e.obj->>'signal'                          AS signal,
+            COUNT(*)::int                             AS decided,
+            COUNT(*) FILTER (WHERE l.status = 'dismissed')::int AS dismissed,
+            mode() WITHIN GROUP (ORDER BY COALESCE(l.dismiss_reason, 'none'))
+              FILTER (WHERE l.status = 'dismissed')   AS top_reason
+     FROM risk_links l
+     JOIN risks src ON src.id = l.source_risk_id
+                   AND src.organization_id = :organizationId
+                   AND src.is_deleted = false
+     CROSS JOIN LATERAL jsonb_array_elements(
+       CASE WHEN jsonb_typeof(l.reasons) = 'array' THEN l.reasons ELSE '[]'::jsonb END
+     ) AS e(obj)
+     WHERE l.organization_id = :organizationId
+       AND l.status IN ('confirmed', 'dismissed')
+       AND e.obj->>'signal' IS NOT NULL
+     GROUP BY 1
+     ORDER BY dismissed DESC, 1`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
+  )) as any[];
+
+  const reasonRows = (await sequelize.query(
+    `SELECT l.relation_type, l.source, l.status, l.dismiss_reason, COUNT(*)::int AS count
+     FROM risk_links l
+     JOIN risks src ON src.id = l.source_risk_id
+                   AND src.organization_id = :organizationId
+                   AND src.is_deleted = false
+     WHERE l.organization_id = :organizationId
+       AND l.status IN ('confirmed', 'dismissed')
+     GROUP BY 1, 2, 3, 4
+     ORDER BY 1, 2, 3, count DESC`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
+  )) as any[];
+
+  const noteRows = (await sequelize.query(
+    `SELECT l.id, l.relation_type, l.source, l.dismiss_reason, l.dismiss_note,
+            l.decided_at, src.risk_name AS source_name
+     FROM risk_links l
+     JOIN risks src ON src.id = l.source_risk_id
+                   AND src.organization_id = :organizationId
+                   AND src.is_deleted = false
+     WHERE l.organization_id = :organizationId
+       AND l.status = 'dismissed'
+       AND l.dismiss_note IS NOT NULL
+       AND l.dismiss_note <> ''
+     ORDER BY l.decided_at DESC NULLS LAST, l.id DESC
+     LIMIT 20`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
+  )) as any[];
+
+  return {
+    signals: signalRows.map((row) => ({
+      signal: row.signal,
+      decided: toNumber(row.decided),
+      dismissed: toNumber(row.dismissed),
+      topReason: row.top_reason ?? null,
+    })),
+    reasons: reasonRows.map((row) => ({
+      relationType: row.relation_type,
+      source: row.source,
+      status: row.status,
+      dismissReason: row.dismiss_reason ?? null,
+      count: toNumber(row.count),
+    })),
+    notes: noteRows.map((row) => ({
+      id: toNumber(row.id),
+      relationType: row.relation_type,
+      source: row.source,
+      dismissReason: row.dismiss_reason ?? null,
+      dismissNote: row.dismiss_note,
+      decidedAt: row.decided_at ?? null,
+      sourceName: row.source_name ?? null,
+    })),
+  };
 }
 
 export async function getRiskLinkByIdQuery(
