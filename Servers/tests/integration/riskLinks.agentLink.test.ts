@@ -3,7 +3,7 @@ jest.setTimeout(60000);
 import { cleanupDatabase } from "./helpers";
 import { sequelize } from "../../database/db";
 import { seedTwoTenantContexts } from "./tenant-isolation/tenantIsolation.harness";
-import { createTestRisk } from "../factories";
+import { createTestRisk, createTestVendorRisk } from "../factories";
 import {
   createAgentHierarchyLinkQuery,
   getHierarchyPairsQuery,
@@ -77,14 +77,56 @@ describe("getHierarchyPairsQuery", () => {
     // The `untouched -> child` edge is in because it touches `child`, and it
     // must be: it is exactly what makes `child` ineligible as someone's child.
     expect(pairs).toHaveLength(3);
-    expect(pairs).toContainEqual({ childRiskId: child, parentRiskId: parent, status: "suggested" });
-    expect(pairs).toContainEqual({ childRiskId: outsider, parentRiskId: parent, status: "dismissed" });
-    expect(pairs).toContainEqual({ childRiskId: untouched, parentRiskId: child, status: "confirmed" });
+    expect(pairs).toContainEqual({ childRiskId: child, parentRiskId: parent, parentEntityType: "risk", status: "suggested" });
+    expect(pairs).toContainEqual({ childRiskId: outsider, parentRiskId: parent, parentEntityType: "risk", status: "dismissed" });
+    expect(pairs).toContainEqual({ childRiskId: untouched, parentRiskId: child, parentEntityType: "risk", status: "confirmed" });
   });
 
   it("returns nothing for an empty id list", async () => {
     const { owner } = await seedTwoTenantContexts();
     expect(await getHierarchyPairsQuery(owner.orgId, [])).toEqual([]);
+  });
+
+  it("returns a cross-entity parent with its entity type, not a null id", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const vendorRisk = await createTestVendorRisk(owner.orgId, {});
+    await sequelize.query(
+      `INSERT INTO risk_links (organization_id, source_risk_id, target_vendor_risk_id,
+                               relation_type, status, source)
+       VALUES (:orgId, :child, :vendorRisk, 'inherits_from', 'dismissed', 'agent')`,
+      { replacements: { orgId: owner.orgId, child, vendorRisk } },
+    );
+
+    expect(await getHierarchyPairsQuery(owner.orgId, [child])).toEqual([
+      {
+        childRiskId: child,
+        parentRiskId: vendorRisk,
+        parentEntityType: "vendor_risk",
+        status: "dismissed",
+      },
+    ]);
+  });
+
+  it("still reports a plain risk parent as entity type risk", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const parent = await createTestRisk(owner.orgId, {});
+    await sequelize.query(
+      `INSERT INTO risk_links (organization_id, source_risk_id, target_risk_id,
+                               relation_type, status, source)
+       VALUES (:orgId, :child, :parent, 'inherits_from', 'suggested', 'agent')`,
+      { replacements: { orgId: owner.orgId, child, parent } },
+    );
+
+    expect(await getHierarchyPairsQuery(owner.orgId, [child])).toEqual([
+      {
+        childRiskId: child,
+        parentRiskId: parent,
+        parentEntityType: "risk",
+        status: "suggested",
+      },
+    ]);
   });
 });
 

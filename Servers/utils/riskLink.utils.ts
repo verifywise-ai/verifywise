@@ -454,6 +454,13 @@ export async function getRiskPromptRowsQuery(
 export interface HierarchyPairRow {
   childRiskId: number;
   parentRiskId: number;
+  /**
+   * Which table `parentRiskId` points at. Required here, unlike on
+   * `HierarchyEdge`: a stored row always knows which of the three target
+   * columns held its parent, and defaulting would let a vendor risk's id be
+   * compared against a project risk's.
+   */
+  parentEntityType: ParentEntityType;
   status: RiskLinkStatus;
 }
 
@@ -474,7 +481,8 @@ export async function getHierarchyPairsQuery(
 ): Promise<HierarchyPairRow[]> {
   if (riskIds.length === 0) return [];
   const rows = await sequelize.query(
-    `SELECT source_risk_id, target_risk_id, status
+    `SELECT source_risk_id, target_risk_id, target_model_risk_id,
+            target_vendor_risk_id, status
        FROM risk_links
       WHERE organization_id = :organizationId
         AND relation_type = 'inherits_from'
@@ -482,11 +490,23 @@ export async function getHierarchyPairsQuery(
     { replacements: { organizationId, riskIds }, type: QueryTypes.SELECT },
   );
 
-  return (rows as any[]).map((row) => ({
-    childRiskId: toNumber(row.source_risk_id),
-    parentRiskId: toNumber(row.target_risk_id),
-    status: row.status as RiskLinkStatus,
-  }));
+  // The `risk_links_one_target` CHECK guarantees exactly one of the three is
+  // non-null, so the first match is the only match.
+  return (rows as any[]).map((row) => {
+    const [parentRiskId, parentEntityType]: [unknown, ParentEntityType] =
+      row.target_model_risk_id != null
+        ? [row.target_model_risk_id, "model_risk"]
+        : row.target_vendor_risk_id != null
+          ? [row.target_vendor_risk_id, "vendor_risk"]
+          : [row.target_risk_id, "risk"];
+
+    return {
+      childRiskId: toNumber(row.source_risk_id),
+      parentRiskId: toNumber(parentRiskId),
+      parentEntityType,
+      status: row.status as RiskLinkStatus,
+    };
+  });
 }
 
 export interface CreateAgentHierarchyLinkInput {

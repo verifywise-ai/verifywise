@@ -9,6 +9,7 @@ import {
   createAgentHierarchyLinkQuery,
   getHierarchyPairsQuery,
   getRiskPromptRowsQuery,
+  HierarchyPairRow,
 } from "../../../utils/riskLink.utils";
 import { buildDirectionSystemPrompt, buildDirectionUserPrompt } from "./prompts";
 import { hierarchyOutputSchema } from "./schema";
@@ -194,6 +195,20 @@ export function filterProposedGroups(
 }
 
 /**
+ * A stored pair as a rule input. `parentEntityType` is dropped for plain risk
+ * parents rather than passed as "risk": `HierarchyEdge` documents absent as
+ * meaning `risks`, and every C1-C3 caller compares edges by exact shape.
+ */
+const toHierarchyEdge = (pair: HierarchyPairRow): HierarchyEdge =>
+  pair.parentEntityType === "risk"
+    ? { childRiskId: pair.childRiskId, parentRiskId: pair.parentRiskId }
+    : {
+        childRiskId: pair.childRiskId,
+        parentRiskId: pair.parentRiskId,
+        parentEntityType: pair.parentEntityType,
+      };
+
+/**
  * One direction pass over one connected component.
  *
  * Returns how many rows were written. Every failure path returns 0 rather than
@@ -230,10 +245,10 @@ export async function suggestDirectionForComponent(
   );
   const blockingEdges = storedPairs
     .filter((pair) => pair.status === "confirmed" || pair.status === "suggested")
-    .map((pair) => ({ childRiskId: pair.childRiskId, parentRiskId: pair.parentRiskId }));
+    .map((pair) => toHierarchyEdge(pair));
   const confirmedEdges = storedPairs
     .filter((pair) => pair.status === "confirmed")
-    .map((pair) => ({ childRiskId: pair.childRiskId, parentRiskId: pair.parentRiskId }));
+    .map((pair) => toHierarchyEdge(pair));
 
   let groups;
   try {
