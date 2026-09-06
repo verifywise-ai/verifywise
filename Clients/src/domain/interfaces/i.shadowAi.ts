@@ -3,7 +3,12 @@
 // ─── Tool Status ─────────────────────────────────────────────────────
 
 export type ShadowAiToolStatus =
-  "detected" | "under_review" | "approved" | "restricted" | "blocked" | "dismissed";
+  | "detected"
+  | "under_review"
+  | "approved"
+  | "restricted"
+  | "blocked"
+  | "dismissed";
 
 // ─── Tools ───────────────────────────────────────────────────────────
 
@@ -40,7 +45,10 @@ export type ShadowAiTriggerType =
   | "new_user_detected";
 
 export type ShadowAiActionType =
-  "send_alert" | "create_task" | "start_governance_review" | "create_risk_entry";
+  | "send_alert"
+  | "create_task"
+  | "start_governance_review"
+  | "create_risk_entry";
 
 export interface IShadowAiRuleAction {
   type: ShadowAiActionType;

@@ -104,7 +104,13 @@ const MODEL_INVENTORY_COLUMNS: ColumnConfig<ModelInventoryColumn>[] = [
 
 // Column visibility management for Model Risks tab
 type ModelRiskColumn =
-  "risk_name" | "model_name" | "risk_level" | "status" | "owner" | "target_date" | "actions";
+  | "risk_name"
+  | "model_name"
+  | "risk_level"
+  | "status"
+  | "owner"
+  | "target_date"
+  | "actions";
 
 const MODEL_RISK_COLUMNS: ColumnConfig<ModelRiskColumn>[] = [
   { key: "risk_name", label: "Risk name", defaultVisible: true, alwaysVisible: true },

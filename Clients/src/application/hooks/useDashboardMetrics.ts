@@ -742,7 +742,10 @@ export const useDashboardMetrics = () => {
           id: risk.id || index + 1,
           title: risk.risk_name || "Untitled Risk",
           severity: (risk.risk_level || "medium").toLowerCase() as
-            "critical" | "high" | "medium" | "low",
+            | "critical"
+            | "high"
+            | "medium"
+            | "low",
           created_at: risk.created_at || risk.createdAt,
           model_name: risk.model_name || undefined,
         })),

@@ -124,19 +124,21 @@ export default function MyDatasetsTab({
           ungroupedData={filteredDatasets}
           renderTable={(data, options) => (
             <DatasetsTable
-              rows={data.map((dataset): DatasetRow => ({
-                key: dataset.path,
-                name: dataset.name,
-                path: dataset.path,
-                type: dataset.turnType,
-                useCase: dataset.use_case || dataset.datasetType,
-                createdAt: dataset.createdAt,
-                metadata: {
-                  promptCount: dataset.promptCount ?? 0,
-                  avgDifficulty: "Medium", // Default - only shown for user datasets
-                  loading: false,
-                },
-              }))}
+              rows={data.map(
+                (dataset): DatasetRow => ({
+                  key: dataset.path,
+                  name: dataset.name,
+                  path: dataset.path,
+                  type: dataset.turnType,
+                  useCase: dataset.use_case || dataset.datasetType,
+                  createdAt: dataset.createdAt,
+                  metadata: {
+                    promptCount: dataset.promptCount ?? 0,
+                    avgDifficulty: "Medium", // Default - only shown for user datasets
+                    loading: false,
+                  },
+                }),
+              )}
               onRowClick={
                 canUploadDataset
                   ? (row) => {

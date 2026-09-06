@@ -1,7 +1,13 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export type AppModule =
-  "main" | "evals" | "ai-detection" | "shadow-ai" | "ai-gateway" | "ai-trust-index" | "super-admin";
+  | "main"
+  | "evals"
+  | "ai-detection"
+  | "shadow-ai"
+  | "ai-gateway"
+  | "ai-trust-index"
+  | "super-admin";
 
 const initialState = {
   sidebar: {

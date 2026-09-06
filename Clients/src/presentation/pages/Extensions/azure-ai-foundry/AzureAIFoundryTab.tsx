@@ -107,7 +107,8 @@ export default function AzureAIFoundryTab() {
     try {
       const response = await apiServices.get("/extensions/azure-ai-foundry/models");
       const payload = (response.data as any)?.data as
-        { configured?: boolean; models?: AzureModel[]; message?: string } | undefined;
+        | { configured?: boolean; models?: AzureModel[]; message?: string }
+        | undefined;
       if (payload?.models) {
         setModels(payload.models);
         if (!payload.configured) {

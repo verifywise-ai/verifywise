@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, NextFunction } from "express";
 
 export interface MockRequestOverrides {
   userId?: number;

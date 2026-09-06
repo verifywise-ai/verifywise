@@ -76,13 +76,18 @@ import {
   uploadOrganizationFile,
 } from "../../repositories/file.repository";
 import { extractText, normalizeText } from "../../services/fileIngestion/textExtractor";
-import { notifyRequesterRejected, notifyStepApprovers } from "../../services/notification.service";
+import { notifyRequesterRejected } from "../../services/notification.service";
 import {
   createApprovalRequestQuery,
   rejectApprovalRequestOnEntityDelete,
 } from "../../utils/approvalRequest.utils";
 import { getProjectByIdQuery } from "../../utils/project.utils";
 import { getUserProjects } from "../../utils/user.utils";
+import { logFailure } from "../../utils/logger/logHelper";
+import {
+  recordMultipleFieldChanges,
+  trackEntityChanges,
+} from "../../utils/changeHistory.base.utils";
 import {
   formatFileSize,
   validateFileUpload,
@@ -124,12 +129,16 @@ const mockCreateApprovalReq = createApprovalRequestQuery as jest.MockedFunction<
 const mockRejectApproval = rejectApprovalRequestOnEntityDelete as jest.MockedFunction<
   typeof rejectApprovalRequestOnEntityDelete
 >;
-const mockNotifyApprovers = notifyStepApprovers as jest.MockedFunction<typeof notifyStepApprovers>;
 const mockNotifyRejected = notifyRequesterRejected as jest.MockedFunction<
   typeof notifyRequesterRejected
 >;
 const mockGetUserProjects = getUserProjects as jest.MockedFunction<typeof getUserProjects>;
 const mockGetProject = getProjectByIdQuery as jest.MockedFunction<typeof getProjectByIdQuery>;
+const mockLogFailure = logFailure as jest.MockedFunction<typeof logFailure>;
+const mockTrackChanges = trackEntityChanges as jest.MockedFunction<typeof trackEntityChanges>;
+const mockRecordChanges = recordMultipleFieldChanges as jest.MockedFunction<
+  typeof recordMultipleFieldChanges
+>;
 const mockExtractText = extractText as jest.MockedFunction<typeof extractText>;
 const mockNormalizeText = normalizeText as jest.MockedFunction<typeof normalizeText>;
 
@@ -256,6 +265,66 @@ describe("fileManager.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(201);
     });
 
+    // Full-text indexing is best-effort: it runs after the row is written and
+    // must never turn a successful upload into a failure.
+    describe("search-text extraction", () => {
+      const uploaded = {
+        id: 1,
+        filename: "test.pdf",
+        size: 1024,
+        mimetype: "application/pdf",
+        upload_date: new Date().toISOString(),
+        uploaded_by: 1,
+        model_id: null,
+      };
+
+      const contentSearchUpdates = () =>
+        (sequelize.query as jest.Mock<any>).mock.calls.filter(
+          (c: any[]) => typeof c[0] === "string" && c[0].includes("content_search"),
+        );
+
+      beforeEach(() => {
+        mockValidateUpload.mockReturnValue({ valid: true });
+        mockUploadOrgFile.mockResolvedValue(uploaded as any);
+      });
+
+      it("indexes the extracted text on a successful extraction", async () => {
+        mockExtractText.mockResolvedValue("Some Extracted Text" as any);
+        mockNormalizeText.mockReturnValue("some extracted text" as any);
+
+        const req = createReq({ file: makeFile() });
+        const res = createRes();
+        await uploadFile(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(201);
+        expect(contentSearchUpdates()).toHaveLength(1);
+      });
+
+      it("still returns 201 when extraction throws", async () => {
+        mockExtractText.mockRejectedValueOnce(new Error("unreadable pdf"));
+
+        const req = createReq({ file: makeFile() });
+        const res = createRes();
+        await uploadFile(req, res);
+
+        // The upload itself succeeded; only the indexing side-effect failed.
+        expect(res.status).toHaveBeenCalledWith(201);
+        expect(contentSearchUpdates()).toHaveLength(0);
+      });
+
+      it("skips the index write when extraction yields nothing", async () => {
+        mockExtractText.mockResolvedValue("" as any);
+
+        const req = createReq({ file: makeFile() });
+        const res = createRes();
+        await uploadFile(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(201);
+        expect(mockNormalizeText).not.toHaveBeenCalled();
+        expect(contentSearchUpdates()).toHaveLength(0);
+      });
+    });
+
     it("should return 400 when approval workflow ID is invalid", async () => {
       mockValidateUpload.mockReturnValue({ valid: true });
       const req = createReq({
@@ -319,7 +388,10 @@ describe("fileManager.ctrl", () => {
     });
 
     it("should return 500 on error", async () => {
-      mockUploadOrgFile.mockRejectedValue(new Error("DB error"));
+      // Set explicitly: without this the test only passes when a prior test
+      // happens to have left validateFileUpload returning valid.
+      mockValidateUpload.mockReturnValue({ valid: true });
+      mockUploadOrgFile.mockRejectedValueOnce(new Error("DB error"));
       const req = createReq({ file: makeFile() });
       const res = createRes();
       await uploadFile(req, res);
@@ -525,6 +597,86 @@ describe("fileManager.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(403);
     });
 
+    // Project-level files (project_id IS NOT NULL) take a different branch from
+    // the organization-file check above. Access is granted by ANY of three
+    // independent conditions, so each is exercised in isolation - a test that
+    // satisfied two at once could not tell which one actually granted access.
+    describe("project-file authorization", () => {
+      const projectFile = (overrides?: any) =>
+        makeDbFile({ project_id: 9, uploaded_by: 99, ...overrides });
+
+      beforeEach(() => {
+        mockDeleteFile.mockResolvedValue(true as any);
+      });
+
+      it("allows deletion when the user is only a member of the project", async () => {
+        mockGetFileById.mockResolvedValue(projectFile() as any);
+        mockGetUserProjects.mockResolvedValue([{ id: 9 }] as any);
+        mockGetProject.mockResolvedValue({ id: 9, owner: 99 } as any);
+
+        const req = createReq({ params: { id: "1" } });
+        const res = createRes();
+        await removeFile(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(200);
+      });
+
+      it("allows deletion when the user is only the project owner", async () => {
+        mockGetFileById.mockResolvedValue(projectFile() as any);
+        mockGetUserProjects.mockResolvedValue([] as any);
+        mockGetProject.mockResolvedValue({ id: 9, owner: 1 } as any);
+
+        const req = createReq({ params: { id: "1" } });
+        const res = createRes();
+        await removeFile(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(200);
+      });
+
+      it("allows deletion when the user only uploaded the file", async () => {
+        mockGetFileById.mockResolvedValue(projectFile({ uploaded_by: 1 }) as any);
+        mockGetUserProjects.mockResolvedValue([] as any);
+        mockGetProject.mockResolvedValue({ id: 9, owner: 99 } as any);
+
+        const req = createReq({ params: { id: "1" } });
+        const res = createRes();
+        await removeFile(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(200);
+      });
+
+      it("returns 403 and logs when none of the three conditions hold", async () => {
+        mockGetFileById.mockResolvedValue(projectFile() as any);
+        mockGetUserProjects.mockResolvedValue([{ id: 42 }] as any);
+        mockGetProject.mockResolvedValue({ id: 9, owner: 99 } as any);
+
+        const req = createReq({ params: { id: "1" } });
+        const res = createRes();
+        await removeFile(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(403);
+        expect(res.json).toHaveBeenCalledWith({ message: "Forbidden", data: "Access denied" });
+        expect(mockDeleteFile).not.toHaveBeenCalled();
+        expect(mockLogFailure).toHaveBeenCalledWith(
+          expect.objectContaining({ functionName: "removeFile" }),
+        );
+      });
+
+      it("returns 403 when the project lookup finds nothing", async () => {
+        mockGetFileById.mockResolvedValue(projectFile() as any);
+        mockGetUserProjects.mockResolvedValue([] as any);
+        // A missing project must not be treated as ownership.
+        mockGetProject.mockResolvedValue(null as any);
+
+        const req = createReq({ params: { id: "1" } });
+        const res = createRes();
+        await removeFile(req, res);
+
+        expect(res.status).toHaveBeenCalledWith(403);
+        expect(mockDeleteFile).not.toHaveBeenCalled();
+      });
+    });
+
     it("should reject pending approval on delete and notify requester", async () => {
       mockGetFileById.mockResolvedValue(makeDbFile({ approval_request_id: 50 }) as any);
       mockRejectApproval.mockResolvedValue({
@@ -571,6 +723,21 @@ describe("fileManager.ctrl", () => {
   });
 
   describe("getFileMetadata", () => {
+    // Same three-way project grant as removeFile; here only the deny path is
+    // pinned, since the grants are exercised in full in removeFile's matrix.
+    it("returns 403 for a project file the user has no claim on", async () => {
+      mockGetFileMeta.mockResolvedValue(makeDbFile({ project_id: 9, uploaded_by: 99 }) as any);
+      mockGetUserProjects.mockResolvedValue([{ id: 42 }] as any);
+      mockGetProject.mockResolvedValue({ id: 9, owner: 99 } as any);
+
+      const req = createReq({ params: { id: "1" } });
+      const res = createRes();
+      await getFileMetadata(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({ message: "Forbidden", data: "Access denied" });
+    });
+
     it("should return 400 for invalid file ID", async () => {
       const req = createReq({ params: { id: "abc" } });
       const res = createRes();
@@ -619,6 +786,113 @@ describe("fileManager.ctrl", () => {
   });
 
   describe("updateMetadata", () => {
+    describe("tag validation", () => {
+      const withTags = (tags: unknown) => createReq({ params: { id: "1" }, body: { tags } });
+
+      beforeEach(() => {
+        mockGetFileById.mockResolvedValue(makeDbFile() as any);
+      });
+
+      it.each([
+        ["more than 50 tags", Array.from({ length: 51 }, (_, i) => `t${i}`)],
+        ["a non-string tag", ["ok", 5]],
+        ["a tag over 100 characters", ["a".repeat(101)]],
+        ["a tag with disallowed characters", ["not/allowed"]],
+      ])("returns 400 for %s", async (_label, tags) => {
+        const res = createRes();
+        await updateMetadata(withTags(tags), res);
+
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(mockUpdateMeta).not.toHaveBeenCalled();
+      });
+
+      it("accepts a tag list once blank entries are dropped", async () => {
+        mockGetFileMeta.mockResolvedValue(makeDbFile() as any);
+        mockUpdateMeta.mockResolvedValue(makeDbFile() as any);
+
+        const res = createRes();
+        await updateMetadata(withTags(["  keep  ", "   ", ""]), res);
+
+        // Empty tags are skipped rather than rejected.
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(mockUpdateMeta).toHaveBeenCalledWith(
+          1,
+          expect.objectContaining({ tags: ["keep"] }),
+          1,
+        );
+      });
+    });
+
+    it("returns 400 when expiry_date is not in YYYY-MM-DD form", async () => {
+      mockGetFileById.mockResolvedValue(makeDbFile() as any);
+
+      const req = createReq({ params: { id: "1" }, body: { expiry_date: "not-a-date" } });
+      const res = createRes();
+      await updateMetadata(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "Bad Request",
+        data: "Invalid date format. Use YYYY-MM-DD",
+      });
+    });
+
+    it("returns 400 when expiry_date is well-formed but not a real date", async () => {
+      mockGetFileById.mockResolvedValue(makeDbFile() as any);
+
+      // Passes the shape regex, so this reaches the separate value check.
+      const req = createReq({ params: { id: "1" }, body: { expiry_date: "2026-13-45" } });
+      const res = createRes();
+      await updateMetadata(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "Bad Request",
+        data: "Invalid date value",
+      });
+    });
+
+    it("returns 404 when the update matches no row", async () => {
+      mockGetFileById.mockResolvedValue(makeDbFile() as any);
+      mockGetFileMeta.mockResolvedValue(makeDbFile() as any);
+      mockUpdateMeta.mockResolvedValue(null as any);
+
+      const req = createReq({ params: { id: "1" }, body: { description: "x" } });
+      const res = createRes();
+      await updateMetadata(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    it("still returns 200 when change-history recording throws", async () => {
+      mockGetFileById.mockResolvedValue(makeDbFile() as any);
+      mockGetFileMeta.mockResolvedValue(makeDbFile() as any);
+      mockUpdateMeta.mockResolvedValue(makeDbFile() as any);
+      mockTrackChanges.mockResolvedValue([{ field: "description" }] as any);
+      mockRecordChanges.mockRejectedValueOnce(new Error("history down"));
+
+      const req = createReq({ params: { id: "1" }, body: { description: "x" } });
+      const res = createRes();
+      await updateMetadata(req, res);
+
+      // History is a side-effect; losing it must not fail the update.
+      expect(mockRecordChanges).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it("returns 403 for a project file the user has no claim on", async () => {
+      mockGetFileById.mockResolvedValue(makeDbFile({ project_id: 9, uploaded_by: 99 }) as any);
+      mockGetUserProjects.mockResolvedValue([{ id: 42 }] as any);
+      mockGetProject.mockResolvedValue({ id: 9, owner: 99 } as any);
+
+      const req = createReq({ params: { id: "1" }, body: { description: "x" } });
+      const res = createRes();
+      await updateMetadata(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(mockUpdateMeta).not.toHaveBeenCalled();
+    });
+
     it("should return 400 for invalid file ID", async () => {
       const req = createReq({ params: { id: "abc" } });
       const res = createRes();
@@ -809,6 +1083,18 @@ describe("fileManager.ctrl", () => {
   });
 
   describe("previewFile", () => {
+    it("returns 403 for a project file the user has no claim on", async () => {
+      mockGetFileById.mockResolvedValue(makeDbFile({ project_id: 9, uploaded_by: 99 }) as any);
+      mockGetUserProjects.mockResolvedValue([{ id: 42 }] as any);
+      mockGetProject.mockResolvedValue({ id: 9, owner: 99 } as any);
+
+      const req = createReq({ params: { id: "1" } });
+      const res = createRes();
+      await previewFile(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+
     it("should return 400 for invalid file ID", async () => {
       const req = createReq({ params: { id: "abc" } });
       const res = createRes();
