@@ -2,6 +2,7 @@ import { apiServices } from "../../infrastructure/api/networkServices";
 import { APIError } from "../tools/error";
 import {
   CreateRiskLinkInput,
+  DismissalAnalytics,
   DismissReason,
   RiskGraph,
   RiskLink,
@@ -109,6 +110,17 @@ export async function getRiskGraph(status?: RiskLinkStatus): Promise<RiskGraph> 
     return extractData<RiskGraph>(response);
   } catch (error: any) {
     throw toAPIError(error, "Failed to fetch the risk graph");
+  }
+}
+
+export async function getDismissalAnalytics(): Promise<DismissalAnalytics> {
+  try {
+    const response = await apiServices.get<{ message: string; data: DismissalAnalytics }>(
+      "/riskLinks/dismissals",
+    );
+    return extractData<DismissalAnalytics>(response);
+  } catch (error: any) {
+    throw toAPIError(error, "Failed to fetch dismissal analytics");
   }
 }
 

@@ -106,3 +106,36 @@ export interface RiskGraph {
   /** True when the org has more edges than the server will return. */
   truncated: boolean;
 }
+
+export interface DismissalSignalRow {
+  signal: string;
+  decided: number;
+  dismissed: number;
+  /** "none" when most dismissals of this signal gave no reason. */
+  topReason: string | null;
+}
+
+export interface DismissalReasonRow {
+  relationType: RiskLinkRelationType;
+  source: RiskLinkSource;
+  status: "confirmed" | "dismissed";
+  /** Null is a legitimate value: dismissed without giving a reason. */
+  dismissReason: DismissReason | null;
+  count: number;
+}
+
+export interface DismissalNote {
+  id: number;
+  relationType: RiskLinkRelationType;
+  source: RiskLinkSource;
+  dismissReason: DismissReason | null;
+  dismissNote: string;
+  decidedAt: string | null;
+  sourceName: string | null;
+}
+
+export interface DismissalAnalytics {
+  signals: DismissalSignalRow[];
+  reasons: DismissalReasonRow[];
+  notes: DismissalNote[];
+}
