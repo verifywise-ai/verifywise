@@ -23,6 +23,7 @@ import * as utils from "../../utils/riskLink.utils";
 import { enqueueRiskLinkRecompute } from "../../services/automations/automationProducer";
 import {
   getRiskLinks,
+  getRiskGraph,
   updateRiskLinkStatus,
   recomputeAllRiskLinks,
   createRiskLink,
@@ -643,5 +644,72 @@ describe("createRiskLink", () => {
     const r = res();
     await createRiskLink(req({ body: body() }) as any, r as any);
     expect(r.status).toHaveBeenCalledWith(500);
+  });
+});
+
+describe("getRiskGraph", () => {
+  const row = (overrides: any = {}) => ({
+    id: 1,
+    relation_type: "inherits_from",
+    status: "confirmed",
+    score: 0,
+    parent_level_changed_at: null,
+    source_risk_id: 3,
+    target_entity_type: "risk",
+    target_id: 9,
+    source_name: "Child risk",
+    source_level: "Low risk",
+    target_name: "Parent risk",
+    target_level: "High risk",
+    ...overrides,
+  });
+
+  it("defaults to suggested and confirmed and dedupes shared nodes", async () => {
+    mockUtils.getRiskGraphQuery.mockResolvedValue([
+      row({ id: 1, source_risk_id: 3 }),
+      row({ id: 2, source_risk_id: 4, status: "suggested" }),
+    ]);
+    const r = res();
+    await getRiskGraph(req() as any, r as any);
+
+    expect(mockUtils.getRiskGraphQuery).toHaveBeenCalledWith(7, ["suggested", "confirmed"]);
+    expect(r.status).toHaveBeenCalledWith(200);
+    const payload = r.json.mock.calls[0][0].data;
+    expect(payload.edges).toHaveLength(2);
+    expect(payload.truncated).toBe(false);
+    // Two children, one shared parent: three nodes, not four.
+    expect(payload.nodes).toHaveLength(3);
+    expect(payload.nodes).toContainEqual({
+      key: "risk:9",
+      entityType: "risk",
+      id: 9,
+      name: "Parent risk",
+      riskLevel: "High risk",
+    });
+  });
+
+  it("honours ?status=confirmed", async () => {
+    mockUtils.getRiskGraphQuery.mockResolvedValue([]);
+    await getRiskGraph(req({ query: { status: "confirmed" } }) as any, res() as any);
+    expect(mockUtils.getRiskGraphQuery).toHaveBeenCalledWith(7, ["confirmed"]);
+  });
+
+  it("rejects an unknown status with 400", async () => {
+    const r = res();
+    await getRiskGraph(req({ query: { status: "banana" } }) as any, r as any);
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(mockUtils.getRiskGraphQuery).not.toHaveBeenCalled();
+  });
+
+  it("slices past the cap and reports truncation", async () => {
+    (mockUtils as any).RISK_GRAPH_EDGE_CAP = 1;
+    mockUtils.getRiskGraphQuery.mockResolvedValue([row({ id: 1 }), row({ id: 2 })]);
+    const r = res();
+    await getRiskGraph(req() as any, r as any);
+    const payload = r.json.mock.calls[0][0].data;
+    expect(payload.edges).toHaveLength(1);
+    expect(payload.edges[0].id).toBe(1);
+    expect(payload.truncated).toBe(true);
+    (mockUtils as any).RISK_GRAPH_EDGE_CAP = 500;
   });
 });
