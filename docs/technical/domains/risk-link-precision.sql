@@ -99,7 +99,21 @@ SELECT
                                                                           AS confirm_pct
 FROM risk_links
 WHERE source = 'agent'
-  AND relation_type = 'inherits_from';
+  AND relation_type = 'inherits_from'
+  AND target_risk_id IS NOT NULL;
+
+\echo ''
+\echo '--- 4b. Cross-entity agent hierarchy (C6) ---'
+\echo 'Vendor and model risks the direction pass proposed as parents.'
+\echo 'Kept separate from query 4 because both land in the same source and'
+\echo 'relation_type; without the split neither feature can be measured.'
+SELECT count(*) FILTER (WHERE status = 'confirmed') AS confirmed,
+       count(*) FILTER (WHERE status = 'dismissed') AS dismissed,
+       count(*) FILTER (WHERE status = 'suggested') AS undecided
+  FROM risk_links
+ WHERE source = 'agent'
+   AND relation_type = 'inherits_from'
+   AND (target_model_risk_id IS NOT NULL OR target_vendor_risk_id IS NOT NULL);
 
 \echo
 \echo === 5. Wrong way round -- right pair, backwards arrow ===
@@ -159,7 +173,10 @@ SELECT
   coalesce(l.dismiss_reason, '(none given)')                       AS dismiss_reason,
   count(*)                                                         AS dismissals,
   round(100.0 * count(*)
-        / sum(count(*)) OVER (PARTITION BY l.relation_type), 1)    AS pct_of_type
+        / sum(count(*)) OVER (PARTITION BY l.relation_type), 1)    AS pct_of_type,
+       count(*) FILTER (
+         WHERE reasons @> '[{"signal":"cross_entity_hierarchy"}]'::jsonb
+       ) AS cross_entity
 FROM risk_links l
 WHERE l.status = 'dismissed'
   AND l.source <> 'user'

@@ -1,6 +1,6 @@
 # Risk Management Domain
 
-**Last Updated:** 2026-08-30
+**Last Updated:** 2026-09-05
 
 ## Overview
 
@@ -527,8 +527,17 @@ one-parent guarantee applies across all parent entity types.
 Cross-entity links use `inherits_from` only. A manual `POST /api/riskLinks`
 request must provide exactly one of `targetRiskId`, `targetModelRiskId`, or
 `targetVendorRiskId`; these fields are mutually exclusive. Cross-entity links
-are created as confirmed user links and appear in the project risk's Parent risk
+are created either as confirmed user links or as agent suggestions and appear
+in the project risk's Parent risk
 group with a label identifying the model or vendor parent.
+
+Since C6 the direction pass (`POST /api/riskLinks/suggest-hierarchy`) also
+proposes vendor and model risks as parents, when they share a project with a
+risk in the cluster. They arrive as `suggested` / `agent` rows and are
+confirmed or dismissed like any other suggestion. They carry the
+`cross_entity_hierarchy` reason signal rather than `hierarchy`, which is how
+query 4b of `risk-link-precision.sql` reports them apart from project-risk
+suggestions.
 
 **Scoring.** `Servers/services/riskLinks/` holds a `LinkSignalProvider`
 interface and two providers: `field_overlap` (tier 0) and `structural_graph`
