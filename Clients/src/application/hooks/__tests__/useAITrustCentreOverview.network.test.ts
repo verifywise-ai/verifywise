@@ -21,6 +21,21 @@ import { aiTrustCentreErrors } from "../../../test/mocks/errorHandlers";
 import { useAITrustCentreOverview } from "../useAITrustCentreOverview";
 
 describe("useAITrustCentreOverview (network-backed)", () => {
+  // The hook fetches on mount and `fetchOverview` RETHROWS after setting
+  // `error`, so the promise the mount effect creates has no catch. Any test
+  // whose GET fails therefore produces an unhandled rejection that vitest
+  // reports as a suite-level error even though the test itself passes.
+  // The sibling useAITrustCentreOverview.test.ts absorbs it the same way.
+  const swallowUnhandledRejection = () => {};
+
+  beforeAll(() => {
+    process.on("unhandledRejection", swallowUnhandledRejection);
+  });
+
+  afterAll(() => {
+    process.off("unhandledRejection", swallowUnhandledRejection);
+  });
+
   beforeEach(() => {
     vi.spyOn(console, "error").mockImplementation(() => {});
   });

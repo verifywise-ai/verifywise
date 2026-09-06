@@ -155,7 +155,8 @@ function computeRightsDiffs(
     const key = newRight.right_key as string;
     const title = (newRight.right_title as string) || key;
     const oldRight = oldRights?.find((r) => r.right_key === key) as
-      Record<string, unknown> | undefined;
+      | Record<string, unknown>
+      | undefined;
 
     const newFlagged = Boolean(newRight.flagged);
     const oldFlagged = oldRight ? Boolean(oldRight.flagged) : false;
@@ -251,7 +252,8 @@ const FriaVersionHistory = ({
     // Rights diffs
     const newRights = (snapshot.snapshot_data.rights || []) as Record<string, unknown>[];
     const oldRights = (previousSnapshot?.snapshot_data?.rights || null) as
-      Record<string, unknown>[] | null;
+      | Record<string, unknown>[]
+      | null;
     const rightsDiffs = computeRightsDiffs(oldRights, newRights);
 
     // Risk items count change

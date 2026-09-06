@@ -53,7 +53,13 @@ import { Project } from "../../../domain/types/Project";
 const REDIRECT_DELAY_MS = 2000;
 
 type VendorColumnKey =
-  "vendor_name" | "assignee" | "review_status" | "risk" | "scorecard" | "review_date" | "actions";
+  | "vendor_name"
+  | "assignee"
+  | "review_status"
+  | "risk"
+  | "scorecard"
+  | "review_date"
+  | "actions";
 type VendorRiskColumnKey =
   | "risk_description"
   | "vendor_name"

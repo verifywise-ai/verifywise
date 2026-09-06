@@ -310,7 +310,8 @@ const GenericFramework = ({
   const renderL2 = (l1: L1Node) => {
     const isThreeLevel = data?.framework.hierarchy_type === "three_level";
     type RenderRow =
-      { kind: "l2"; node: TreeNode; label: string } | { kind: "l3"; node: TreeNode; label: string };
+      | { kind: "l2"; node: TreeNode; label: string }
+      | { kind: "l3"; node: TreeNode; label: string };
     const rows: RenderRow[] = [];
     const l1Prefix = l1.order_no ?? "";
 

@@ -69,7 +69,8 @@ function CustomizableMultiSelect({
   const handleChipDelete = (id: string | number) => {
     const idStr = String(id);
     const current = (Array.isArray(value) ? value : [value]).filter((v) => String(v) !== idStr) as (
-      string | number
+      | string
+      | number
     )[];
     const syntheticEvent = {
       target: { value: current, name: "vw-multi-select" },
