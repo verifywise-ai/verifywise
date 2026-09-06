@@ -22,6 +22,7 @@ jest.mock("../../utils/statusCode.utils", () => ({
 import * as utils from "../../utils/riskLink.utils";
 import { enqueueRiskLinkRecompute } from "../../services/automations/automationProducer";
 import {
+  getDismissalAnalytics,
   getRiskLinks,
   getRiskGraph,
   updateRiskLinkStatus,
@@ -711,5 +712,90 @@ describe("getRiskGraph", () => {
     expect(payload.edges[0].id).toBe(1);
     expect(payload.truncated).toBe(true);
     (mockUtils as any).RISK_GRAPH_EDGE_CAP = 500;
+  });
+});
+
+describe("getDismissalAnalytics", () => {
+  const { logFailure } = jest.requireMock("../../utils/logger/logHelper") as {
+    logFailure: jest.Mock;
+  };
+
+  it("maps snake_case rows to the camelCase payload", async () => {
+    mockUtils.getDismissalAnalyticsQuery.mockResolvedValue({
+      signals: [{ signal: "shared_category", decided: 10, dismissed: 4, topReason: "too_weak" }],
+      reasons: [
+        {
+          relationType: "related_to",
+          source: "derived",
+          status: "dismissed",
+          dismissReason: "too_weak",
+          count: 4,
+        },
+      ],
+      notes: [
+        {
+          id: 9,
+          relationType: "related_to",
+          source: "derived",
+          dismissReason: "too_weak",
+          dismissNote: "Same vendor, different failure.",
+          decidedAt: "2026-09-01T10:00:00.000Z",
+          sourceName: "Model drift",
+        },
+      ],
+    });
+    const r = res();
+    await getDismissalAnalytics(req() as any, r as any);
+
+    expect(mockUtils.getDismissalAnalyticsQuery).toHaveBeenCalledWith(7);
+    expect(r.status).toHaveBeenCalledWith(200);
+    const payload = r.json.mock.calls[0][0].data;
+    expect(payload.signals).toEqual([
+      { signal: "shared_category", decided: 10, dismissed: 4, topReason: "too_weak" },
+    ]);
+    expect(payload.notes[0]).toMatchObject({
+      dismissNote: "Same vendor, different failure.",
+      decidedAt: "2026-09-01T10:00:00.000Z",
+      sourceName: "Model drift",
+    });
+  });
+
+  it("keeps a null dismiss reason as null, not undefined", async () => {
+    mockUtils.getDismissalAnalyticsQuery.mockResolvedValue({
+      signals: [],
+      reasons: [
+        {
+          relationType: "inherits_from",
+          source: "agent",
+          status: "dismissed",
+          dismissReason: null,
+          count: 3,
+        },
+      ],
+      notes: [],
+    });
+    const r = res();
+    await getDismissalAnalytics(req() as any, r as any);
+
+    const payload = r.json.mock.calls[0][0].data;
+    expect(payload.reasons).toEqual([
+      {
+        relationType: "inherits_from",
+        source: "agent",
+        status: "dismissed",
+        dismissReason: null,
+        count: 3,
+      },
+    ]);
+    expect("dismissReason" in payload.reasons[0]).toBe(true);
+  });
+
+  it("answers 500 and logs the failure when the query rejects", async () => {
+    mockUtils.getDismissalAnalyticsQuery.mockRejectedValue(new Error("boom"));
+    const r = res();
+    await getDismissalAnalytics(req() as any, r as any);
+
+    expect(r.status).toHaveBeenCalledWith(500);
+    expect(logFailure).toHaveBeenCalled();
   });
 });
