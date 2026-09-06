@@ -17,9 +17,11 @@ import {
   getLiveCrossEntityParentQuery,
   getLiveRiskIdsQuery,
   getRelatedPairsQuery,
+  getRiskGraphQuery,
   getRiskLinkByIdQuery,
   getRiskLinksForRiskQuery,
   getSharedProjectCandidatesQuery,
+  RISK_GRAPH_EDGE_CAP,
   HierarchyParent,
   RiskLinkWithRelated,
   updateRiskLinkStatusQuery,
@@ -219,6 +221,90 @@ export async function getRiskLinks(req: Request, res: Response): Promise<any> {
       eventType: "Read",
       description: "failed to fetch risk links",
       functionName: "getRiskLinks",
+      fileName: FILE_NAME,
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+/**
+ * The whole org's link graph in one payload. Nodes are deduped here so the page
+ * does not have to fetch three risk endpoints and re-join them client-side.
+ *
+ * Capped: a graph page that renders five thousand nodes locks the browser. The
+ * query asks for CAP+1 rows so truncation is detectable without a second COUNT.
+ */
+export async function getRiskGraph(req: Request, res: Response): Promise<any> {
+  logProcessing({
+    description: "starting getRiskGraph",
+    functionName: "getRiskGraph",
+    fileName: FILE_NAME,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+
+  try {
+    const requested = req.query.status;
+    if (requested !== undefined && !isRiskLinkStatus(requested)) {
+      return res.status(400).json(STATUS_CODE[400]("Invalid status filter"));
+    }
+    const statuses = requested ? [requested] : DEFAULT_STATUSES;
+
+    const rows = await getRiskGraphQuery(req.organizationId!, statuses);
+    const truncated = rows.length > RISK_GRAPH_EDGE_CAP;
+    const kept = truncated ? rows.slice(0, RISK_GRAPH_EDGE_CAP) : rows;
+
+    const nodes = new Map<string, {
+      key: string;
+      entityType: ParentEntityType;
+      id: number;
+      name: string | null;
+      riskLevel: string | null;
+    }>();
+    const addNode = (
+      entityType: ParentEntityType,
+      id: number,
+      name: string | null,
+      riskLevel: string | null,
+    ) => {
+      const key = `${entityType}:${id}`;
+      if (!nodes.has(key)) nodes.set(key, { key, entityType, id, name, riskLevel });
+    };
+
+    const edges = kept.map((row) => {
+      addNode("risk", row.source_risk_id, row.source_name, row.source_level);
+      addNode(row.target_entity_type, row.target_id, row.target_name, row.target_level);
+      return {
+        id: row.id,
+        sourceKey: `risk:${row.source_risk_id}`,
+        targetKey: `${row.target_entity_type}:${row.target_id}`,
+        relationType: row.relation_type,
+        status: row.status,
+        score: row.score,
+        parentLevelChangedAt: row.parent_level_changed_at,
+      };
+    });
+
+    logSuccess({
+      eventType: "Read",
+      description: `fetched ${edges.length} graph edges`,
+      functionName: "getRiskGraph",
+      fileName: FILE_NAME,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+
+    return res
+      .status(200)
+      .json(STATUS_CODE[200]({ nodes: [...nodes.values()], edges, truncated }));
+  } catch (error) {
+    logFailure({
+      eventType: "Read",
+      description: "failed to fetch risk graph",
+      functionName: "getRiskGraph",
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,

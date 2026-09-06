@@ -771,6 +771,87 @@ export async function getRiskLinksForRiskQuery(
   }));
 }
 
+/** Hard ceiling on edges returned to the graph page. */
+export const RISK_GRAPH_EDGE_CAP = 500;
+
+export interface RiskGraphEdgeRow {
+  id: number;
+  relation_type: RiskLinkRelationType;
+  status: RiskLinkStatus;
+  score: number;
+  parent_level_changed_at: string | null;
+  source_risk_id: number;
+  target_entity_type: ParentEntityType;
+  target_id: number;
+  source_name: string | null;
+  source_level: string | null;
+  target_name: string | null;
+  target_level: string | null;
+}
+
+/**
+ * Every visible edge in the org, both endpoints named.
+ *
+ * Ordered so `inherits_from` sorts before `related_to`: if an org ever exceeds
+ * the cap, the inheritance skeleton is what survives truncation.
+ *
+ * Like getRiskLinksForRiskQuery, the read is what hides a soft-deleted risk —
+ * edges outlive the rows they point at.
+ */
+export async function getRiskGraphQuery(
+  organizationId: number,
+  statuses: RiskLinkStatus[],
+): Promise<RiskGraphEdgeRow[]> {
+  const rows = await sequelize.query(
+    `SELECT l.id, l.relation_type, l.status, l.score, l.parent_level_changed_at,
+            l.source_risk_id,
+            CASE
+              WHEN l.target_model_risk_id  IS NOT NULL THEN 'model_risk'
+              WHEN l.target_vendor_risk_id IS NOT NULL THEN 'vendor_risk'
+              ELSE 'risk'
+            END AS target_entity_type,
+            COALESCE(l.target_model_risk_id, l.target_vendor_risk_id, l.target_risk_id) AS target_id,
+            src.risk_name AS source_name,
+            src.risk_level_autocalculated::text AS source_level,
+            COALESCE(
+              tgt.risk_name,
+              NULLIF(mr.risk_name, ''),
+              NULLIF(LEFT(vr.risk_description, 80), ''),
+              CASE
+                WHEN l.target_model_risk_id  IS NOT NULL THEN 'Untitled model risk'
+                WHEN l.target_vendor_risk_id IS NOT NULL THEN 'Untitled vendor risk'
+              END
+            ) AS target_name,
+            COALESCE(tgt.risk_level_autocalculated::text, mr.risk_level::text, vr.risk_level)
+              AS target_level
+     FROM risk_links l
+     JOIN risks src           ON src.id = l.source_risk_id
+                             AND src.organization_id = :organizationId
+                             AND src.is_deleted = false
+     LEFT JOIN risks tgt      ON tgt.id = l.target_risk_id
+                             AND tgt.organization_id = :organizationId
+                             AND tgt.is_deleted = false
+     LEFT JOIN model_risks mr ON mr.id = l.target_model_risk_id
+                             AND mr.organization_id = :organizationId
+                             AND mr.is_deleted = false
+     LEFT JOIN vendorrisks vr ON vr.id = l.target_vendor_risk_id
+                             AND vr.organization_id = :organizationId
+                             AND vr.is_deleted = false
+     WHERE l.organization_id = :organizationId
+       AND l.status IN (:statuses)
+       AND COALESCE(tgt.id, mr.id, vr.id) IS NOT NULL
+     ORDER BY l.relation_type, l.id
+     LIMIT :limit`,
+    {
+      replacements: { organizationId, statuses, limit: RISK_GRAPH_EDGE_CAP + 1 },
+      type: QueryTypes.SELECT,
+    },
+  );
+  // `score` is numeric(6,3) and pg hands it back as a string. This file's own
+  // rule (see `toNumber` at the top) is that nothing leaves here uncoerced.
+  return (rows as any[]).map((row) => ({ ...row, score: toNumber(row.score) }));
+}
+
 export async function getRiskLinkByIdQuery(
   id: number,
   organizationId: number,

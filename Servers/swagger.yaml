@@ -10106,6 +10106,19 @@ paths:
       security:
         -
           bearerAuth: []
+    get:
+      summary: 'Get Risk Graph'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: getRiskGraph
+      security:
+        -
+          bearerAuth: []
   '/riskLinks/{riskId}':
     get:
       summary: 'Get Risk Links'
@@ -10120,20 +10133,6 @@ paths:
       security:
         -
           bearerAuth: []
-  '/riskLinks/{id}':
-    patch:
-      summary: 'Update Risk Link Status'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - RiskLinks
-      operationId: updateRiskLinkStatus
-      security:
-        -
-          bearerAuth: []
   '/riskLinks/{riskId}/shared-projects':
     get:
       summary: 'Get Shared Projects'
@@ -10145,6 +10144,20 @@ paths:
       tags:
         - RiskLinks
       operationId: getSharedProjects
+      security:
+        -
+          bearerAuth: []
+  '/riskLinks/{id}':
+    patch:
+      summary: 'Update Risk Link Status'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: updateRiskLinkStatus
       security:
         -
           bearerAuth: []

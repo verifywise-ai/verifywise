@@ -8210,6 +8210,17 @@ export const risklinksEndpoints: Endpoint[] = [
     tag: "RiskLinks",
   },
   {
+    method: 'GET',
+    path: '/riskLinks',
+    summary: "Get Risk Graph",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+  {
     method: 'POST',
     path: '/riskLinks',
     summary: "Create Risk Link",
@@ -8224,6 +8235,17 @@ export const risklinksEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/riskLinks/{riskId}',
     summary: "Get Risk Links",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+  {
+    method: 'GET',
+    path: '/riskLinks/{riskId}/shared-projects',
+    summary: "Get Shared Projects",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
