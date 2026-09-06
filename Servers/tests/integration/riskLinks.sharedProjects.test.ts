@@ -37,7 +37,7 @@ describe("getSharedProjectCandidatesQuery", () => {
     const result = await getSharedProjectCandidatesQuery(owner.orgId, subject);
 
     expect(result).toEqual([
-      { entityType: "vendor_risk", id: vendorRisk, projects: ["Fraud Detection"] },
+      { entityType: "vendor_risk", id: vendorRisk, name: expect.any(String), projects: ["Fraud Detection"] },
     ]);
   });
 
@@ -75,7 +75,7 @@ describe("getSharedProjectCandidatesQuery", () => {
     const result = await getSharedProjectCandidatesQuery(owner.orgId, subject);
 
     expect(result).toEqual([
-      { entityType: "model_risk", id: modelRisk, projects: ["Fraud Detection"] },
+      { entityType: "model_risk", id: modelRisk, name: expect.any(String), projects: ["Fraud Detection"] },
     ]);
   });
 
@@ -98,7 +98,7 @@ describe("getSharedProjectCandidatesQuery", () => {
 
     // ORDER BY project_title puts "Fraud Detection" before "KYC".
     expect(result).toEqual([
-      { entityType: "vendor_risk", id: vendorRisk, projects: ["Fraud Detection", "KYC"] },
+      { entityType: "vendor_risk", id: vendorRisk, name: expect.any(String), projects: ["Fraud Detection", "KYC"] },
     ]);
   });
 
@@ -138,6 +138,38 @@ describe("getSharedProjectCandidatesQuery", () => {
     const subject = await createTestRisk(owner.orgId, {});
 
     expect(await getSharedProjectCandidatesQuery(owner.orgId, subject)).toEqual([]);
+  });
+
+  it("carries a display name for each candidate", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const project = await createTestProject(owner.orgId, owner.userId, {
+      project_title: "Fraud Detection",
+    });
+    const subject = await createTestRisk(owner.orgId, {});
+    await linkRiskToProject(owner.orgId, subject, project);
+
+    const model = await createTestModelInventory(owner.orgId, {});
+    await linkModelToProject(owner.orgId, model, project, 1);
+    const modelRisk = await createTestModelRisk(owner.orgId, {
+      model_id: model,
+      risk_name: "Fairness degradation in production",
+    });
+
+    const vendor = await createTestVendor(owner.orgId, {});
+    await linkVendorToProject(owner.orgId, vendor, project);
+    const vendorRisk = await createTestVendorRisk(owner.orgId, {
+      vendor_id: vendor,
+      risk_description: "The vendor cannot evidence its own model validation.",
+    });
+
+    const candidates = await getSharedProjectCandidatesQuery(owner.orgId, subject);
+
+    expect(candidates.find((c) => c.id === modelRisk)?.name).toBe(
+      "Fairness degradation in production",
+    );
+    expect(candidates.find((c) => c.id === vendorRisk)?.name).toBe(
+      "The vendor cannot evidence its own model validation.",
+    );
   });
 
   it("omits a soft-deleted vendor risk", async () => {
@@ -180,7 +212,7 @@ describe("GET /api/riskLinks/:riskId/shared-projects", () => {
 
     expect(response.status).toBe(200);
     expect(response.body.data).toEqual([
-      { entityType: "vendor_risk", id: vendorRisk, projects: ["Fraud Detection"] },
+      { entityType: "vendor_risk", id: vendorRisk, name: expect.any(String), projects: ["Fraud Detection"] },
     ]);
   });
 

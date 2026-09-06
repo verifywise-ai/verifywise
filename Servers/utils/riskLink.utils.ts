@@ -791,6 +791,13 @@ export async function getRiskLinkByIdQuery(
 export interface SharedProjectCandidate {
   entityType: Exclude<ParentEntityType, "risk">;
   id: number;
+  /**
+   * What to show for it. C5's consumer already held the names it was
+   * decorating; C6's prompt does not, and an id alone is not something a model
+   * can judge. Same display expressions getRiskLinksForRiskQuery settled on —
+   * `vendorrisks` has no name column.
+   */
+  name: string;
   projects: string[];
 }
 
@@ -824,7 +831,8 @@ export async function getSharedProjectCandidatesQuery(
         WHERE pr.risk_id = :riskId
           AND pr.organization_id = :organizationId
      )
-     SELECT DISTINCT 'vendor_risk' AS entity_type, vr.id AS id, p.project_title AS project_title
+     SELECT DISTINCT 'vendor_risk' AS entity_type, vr.id AS id,
+            LEFT(vr.risk_description, 80) AS name, p.project_title AS project_title
        FROM vendorrisks vr
        JOIN vendors_projects vp
          ON vp.vendor_id = vr.vendor_id
@@ -836,7 +844,7 @@ export async function getSharedProjectCandidatesQuery(
 
      UNION ALL
 
-     SELECT DISTINCT 'model_risk', mr.id, p.project_title
+     SELECT DISTINCT 'model_risk', mr.id, mr.risk_name, p.project_title
        FROM model_risks mr
        JOIN model_inventories_projects_frameworks mp
          ON mp.model_inventory_id = mr.model_id
@@ -866,6 +874,7 @@ export async function getSharedProjectCandidatesQuery(
       grouped.set(key, {
         entityType: row.entity_type,
         id: row.id,
+        name: row.name,
         projects: [row.project_title],
       });
     }
