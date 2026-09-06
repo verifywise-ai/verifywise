@@ -57,9 +57,16 @@ export function buildDirectionUserPrompt(
     return lines.join("\n");
   });
 
+  // The parent's table has to be named. C6 made these edges carry real vendor
+  // and model risk ids, and those id spaces collide with risks(id) — printing a
+  // bare "risk 9" would point the model at a different, real risk.
   const hierarchy = confirmedEdges.length
     ? confirmedEdges
-        .map((edge) => `- risk ${edge.childRiskId} is already under risk ${edge.parentRiskId}`)
+        .map(
+          (edge) =>
+            `- risk ${edge.childRiskId} is already under ` +
+            `${edge.parentEntityType ?? "risk"} ${edge.parentRiskId}`,
+        )
         .join("\n")
     : "- none";
 

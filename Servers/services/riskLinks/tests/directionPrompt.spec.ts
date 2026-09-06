@@ -43,6 +43,22 @@ describe("buildDirectionUserPrompt", () => {
     expect(buildDirectionUserPrompt(risks, [], [])).toBe(buildDirectionUserPrompt(risks, []));
     expect(buildDirectionUserPrompt(risks, [], [])).not.toContain("shares a project");
   });
+
+  // vendorrisks(9) and risks(9) both exist. Naming only the id would tell the
+  // model risk 3 sits under a project risk that is in this very component.
+  it("names the parent's table on a confirmed cross-entity edge", () => {
+    const prompt = buildDirectionUserPrompt(risks, [
+      { childRiskId: 3, parentRiskId: 9, parentEntityType: "vendor_risk" },
+    ]);
+
+    expect(prompt).toContain("risk 3 is already under vendor_risk 9");
+  });
+
+  it("still says plain 'risk' for a risk parent", () => {
+    const prompt = buildDirectionUserPrompt(risks, [{ childRiskId: 3, parentRiskId: 4 }]);
+
+    expect(prompt).toContain("risk 3 is already under risk 4");
+  });
 });
 
 describe("buildDirectionSystemPrompt", () => {
