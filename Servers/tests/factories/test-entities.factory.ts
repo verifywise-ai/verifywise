@@ -12,12 +12,16 @@ export interface CreateTestProjectOptions {
   uc_id?: string;
 }
 
+// projects has a UNIQUE (organization_id, uc_id); two calls in the same
+// millisecond collide, so the counter — not the clock — makes uc_id unique.
+let projectSeq = 0;
+
 export async function createTestProject(
   orgId: number,
   ownerId: number,
   options: CreateTestProjectOptions = {},
 ): Promise<number> {
-  const suffix = Date.now();
+  const suffix = `${Date.now()}-${++projectSeq}`;
   const title = options.project_title ?? `Test Project ${suffix}`;
   const ucId = options.uc_id ?? `UC-${suffix}`;
   const [result] = await sequelize.query(
