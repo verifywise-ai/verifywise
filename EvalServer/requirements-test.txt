@@ -6,5 +6,5 @@
 pytest==8.4.2
 pytest-asyncio==1.4.0
 pytest-httpx==0.35.0
-respx==0.22.0
+respx==0.23.1
 httpx==0.28.1
