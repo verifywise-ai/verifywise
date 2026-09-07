@@ -7,7 +7,7 @@
  * @see docs/technical/security/tenant-isolation.md
  */
 
-import { Application } from "express";
+import http from "http";
 import { Response, Agent } from "supertest";
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../../database/db";
@@ -26,7 +26,7 @@ export interface TenantContext {
   orgId: number;
   userId: number;
   roleName: "Admin" | "Editor" | "SuperAdmin";
-  app: Application;
+  app: http.Server;
   request: Agent;
 }
 
@@ -67,7 +67,7 @@ export async function buildTenantContext(
   const email = `tenant-${roleId}-${suffix}@test.com`;
   const userId = await createTestUser(orgId, roleId, email, "Password123!");
   const roleName = roleNameFromId(roleId);
-  const app = createTestApp({
+  const app = await createTestApp({
     bypassAuth: true,
     mockUser: { userId, organizationId: orgId, role: roleName },
   });
@@ -81,7 +81,7 @@ export async function seedTwoTenantContexts(
   roleId: number = 1,
 ): Promise<{ owner: TenantContext; attacker: TenantContext }> {
   const seed = await seedTwoOrgsAndUsersHelper(roleId);
-  const ownerApp = createTestApp({
+  const ownerApp = await createTestApp({
     bypassAuth: true,
     mockUser: {
       userId: seed.userA,
@@ -89,7 +89,7 @@ export async function seedTwoTenantContexts(
       role: roleNameFromId(roleId),
     },
   });
-  const attackerApp = createTestApp({
+  const attackerApp = await createTestApp({
     bypassAuth: true,
     mockUser: {
       userId: seed.userB,

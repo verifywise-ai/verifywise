@@ -42,7 +42,7 @@ describe("Governance OS cross-tenant isolation", () => {
     targetId: string,
     domain: string,
   ) => {
-    const app = createTestApp({
+    const app = await createTestApp({
       bypassAuth: true,
       mockUser: { userId: 1, organizationId: orgId, role: "Admin" },
     });
@@ -61,7 +61,7 @@ describe("Governance OS cross-tenant isolation", () => {
 
   describe("GET /api/governance-os/mappings", () => {
     it("returns only mappings belonging to the caller's organization", async () => {
-      const app = createTestApp({
+      const app = await createTestApp({
         bypassAuth: true,
         mockUser: { userId: userA, organizationId: orgA, role: "Admin" },
       });
@@ -74,7 +74,7 @@ describe("Governance OS cross-tenant isolation", () => {
     });
 
     it("does not return mappings from another organization", async () => {
-      const app = createTestApp({
+      const app = await createTestApp({
         bypassAuth: true,
         mockUser: { userId: userB, organizationId: orgB, role: "Admin" },
       });
@@ -88,14 +88,14 @@ describe("Governance OS cross-tenant isolation", () => {
 
   describe("PUT /api/governance-os/mappings/:id", () => {
     it("prevents org B from updating org A's mapping", async () => {
-      const appA = createTestApp({
+      const appA = await createTestApp({
         bypassAuth: true,
         mockUser: { userId: userA, organizationId: orgA, role: "Admin" },
       });
       const listRes = await testRequest(appA).get("/api/governance-os/mappings");
       const mappingId = listRes.body.data[0].id;
 
-      const appB = createTestApp({
+      const appB = await createTestApp({
         bypassAuth: true,
         mockUser: { userId: userB, organizationId: orgB, role: "Admin" },
       });
@@ -109,14 +109,14 @@ describe("Governance OS cross-tenant isolation", () => {
 
   describe("DELETE /api/governance-os/mappings/:id", () => {
     it("prevents org B from deleting org A's mapping", async () => {
-      const appA = createTestApp({
+      const appA = await createTestApp({
         bypassAuth: true,
         mockUser: { userId: userA, organizationId: orgA, role: "Admin" },
       });
       const listRes = await testRequest(appA).get("/api/governance-os/mappings");
       const mappingId = listRes.body.data[0].id;
 
-      const appB = createTestApp({
+      const appB = await createTestApp({
         bypassAuth: true,
         mockUser: { userId: userB, organizationId: orgB, role: "Admin" },
       });
@@ -132,7 +132,7 @@ describe("Governance OS cross-tenant isolation", () => {
 
   describe("POST /api/governance-os/mappings/bulk", () => {
     it("stamps bulk mappings with the caller's organization_id", async () => {
-      const app = createTestApp({
+      const app = await createTestApp({
         bypassAuth: true,
         mockUser: { userId: userB, organizationId: orgB, role: "Admin" },
       });
@@ -161,7 +161,7 @@ describe("Governance OS cross-tenant isolation", () => {
       expect(orgBRes.body.data[0].organization_id).toBe(orgB);
       expect(orgBRes.body.data[0].source_control_identifier).toBe("Art.10");
 
-      const appA = createTestApp({
+      const appA = await createTestApp({
         bypassAuth: true,
         mockUser: { userId: userA, organizationId: orgA, role: "Admin" },
       });
@@ -173,7 +173,7 @@ describe("Governance OS cross-tenant isolation", () => {
 
   describe("POST /api/governance-os/scenarios/:id/activate", () => {
     it("prevents activating another organization's custom scenario", async () => {
-      const appA = createTestApp({
+      const appA = await createTestApp({
         bypassAuth: true,
         mockUser: { userId: userA, organizationId: orgA, role: "Admin" },
       });
@@ -190,7 +190,7 @@ describe("Governance OS cross-tenant isolation", () => {
       expect(createRes.status).toBe(201);
       const scenarioId = createRes.body.data.id;
 
-      const appB = createTestApp({
+      const appB = await createTestApp({
         bypassAuth: true,
         mockUser: { userId: userB, organizationId: orgB, role: "Admin" },
       });

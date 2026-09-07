@@ -53,7 +53,8 @@ jest.mock("bullmq", () => {
   return { Queue: MockQueue, Worker: MockWorker, Job: MockJob };
 });
 
-import { Application, Request, Response, NextFunction } from "express";
+import http from "http";
+import { Request, Response, NextFunction } from "express";
 import supertest, { Agent } from "supertest";
 import { createApp } from "../../app";
 import { getTenantHash } from "../../tools/getTenantHash";
@@ -75,7 +76,27 @@ const DEFAULT_MOCK_USER = {
   isSuperAdmin: false,
 };
 
-export function createTestApp(options?: TestAppOptions): Application {
+/**
+ * Test servers are bound to 127.0.0.1 explicitly, never to the wildcard
+ * address. supertest hardcodes its request URL as `http://127.0.0.1:<port>`
+ * (see supertest/lib/test.js `serverAddress`), and on BSD/macOS a wildcard
+ * bind can be granted an ephemeral port that some unrelated process already
+ * holds as a 127.0.0.1-specific listener — the more specific bind then wins
+ * the connection and the test's request is answered by that foreign process.
+ * A loopback-specific bind cannot be handed such a port: the OS refuses it
+ * with EADDRINUSE. Binding here also means supertest finds `address()`
+ * already populated and never calls `listen(0)` itself.
+ */
+const testServers: http.Server[] = [];
+
+afterAll(() => {
+  for (const server of testServers.splice(0)) {
+    server.closeAllConnections();
+    server.close();
+  }
+});
+
+export async function createTestApp(options?: TestAppOptions): Promise<http.Server> {
   const mockUser = { ...DEFAULT_MOCK_USER, ...options?.mockUser };
 
   const preRoutesMiddleware: Array<(req: Request, res: Response, next: NextFunction) => void> = [];
@@ -92,9 +113,15 @@ export function createTestApp(options?: TestAppOptions): Application {
     });
   }
 
-  return createApp(preRoutesMiddleware);
+  const server = http.createServer(createApp(preRoutesMiddleware));
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
+  testServers.push(server);
+  return server;
 }
 
-export function testRequest(app: Application): Agent {
+export function testRequest(app: http.Server): Agent {
   return supertest.agent(app);
 }

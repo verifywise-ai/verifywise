@@ -15,7 +15,7 @@ describe("POST /api/users/login", () => {
   });
 
   it("returns 202 + token for valid credentials", async () => {
-    const app = createTestApp();
+    const app = await createTestApp();
     const res = await testRequest(app)
       .post("/api/users/login")
       .send({ email: TEST_EMAIL, password: TEST_PASSWORD });
@@ -26,7 +26,7 @@ describe("POST /api/users/login", () => {
   });
 
   it("returns 401 for wrong password", async () => {
-    const app = createTestApp();
+    const app = await createTestApp();
     const res = await testRequest(app)
       .post("/api/users/login")
       .send({ email: TEST_EMAIL, password: "WrongPass999!" });
@@ -35,7 +35,7 @@ describe("POST /api/users/login", () => {
   });
 
   it("returns 401 for nonexistent email", async () => {
-    const app = createTestApp();
+    const app = await createTestApp();
     const res = await testRequest(app)
       .post("/api/users/login")
       .send({ email: "ghost@test.com", password: TEST_PASSWORD });

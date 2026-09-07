@@ -12,8 +12,8 @@ import type { TenantContext } from "./tenantIsolation.harness";
  * SuperAdmin auth flow, while the mock auth middleware is rebuilt for that
  * target organization (the test bypass harness does not itself parse headers).
  */
-function superAdminScope(superAdmin: TenantContext, orgId: number) {
-  const app = createTestApp({
+async function superAdminScope(superAdmin: TenantContext, orgId: number) {
+  const app = await createTestApp({
     bypassAuth: true,
     mockUser: {
       userId: superAdmin.userId,
@@ -34,15 +34,13 @@ describe("Super-admin tenant isolation", () => {
     const { owner } = await seedTwoTenantContexts(1);
     const superAdmin = await buildTenantContext(5);
 
-    const userRes = await superAdminScope(superAdmin, owner.orgId).get(
-      `/api/users/${owner.userId}`,
-    );
+    const userScope = await superAdminScope(superAdmin, owner.orgId);
+    const userRes = await userScope.get(`/api/users/${owner.userId}`);
     expect(userRes.status).toBe(200);
 
     const projectId = await createTestProject(owner.orgId, owner.userId);
-    const projectRes = await superAdminScope(superAdmin, owner.orgId).get(
-      `/api/projects/${projectId}`,
-    );
+    const projectScope = await superAdminScope(superAdmin, owner.orgId);
+    const projectRes = await projectScope.get(`/api/projects/${projectId}`);
     expect(projectRes.status).toBe(200);
   });
 
