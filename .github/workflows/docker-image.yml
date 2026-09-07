@@ -248,7 +248,7 @@ jobs:
       # settings. The branch is created automatically by the first run of
       # this step.
       - name: Install Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5
 
       - name: Package Helm chart
         run: |
