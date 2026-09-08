@@ -12,16 +12,20 @@ export interface CreateTestProjectOptions {
   uc_id?: string;
 }
 
-// projects has a UNIQUE (organization_id, uc_id); two calls in the same
-// millisecond collide, so the counter — not the clock — makes uc_id unique.
-let projectSeq = 0;
+// Any generated value that lands in a UNIQUE column must not come from the
+// clock alone: two calls in the same millisecond produce the same value, and
+// the resulting error is close to undiagnosable — sequelize's ValidationError
+// assigns this.message after super(), so the stack it bakes reads "Error: "
+// and jest, which renders from the stack, prints a blank message.
+let seq = 0;
+const uniqueSuffix = (): string => `${Date.now()}-${++seq}`;
 
 export async function createTestProject(
   orgId: number,
   ownerId: number,
   options: CreateTestProjectOptions = {},
 ): Promise<number> {
-  const suffix = `${Date.now()}-${++projectSeq}`;
+  const suffix = uniqueSuffix();
   const title = options.project_title ?? `Test Project ${suffix}`;
   const ucId = options.uc_id ?? `UC-${suffix}`;
   const [result] = await sequelize.query(
@@ -612,7 +616,7 @@ export async function createTestMrmMetricKey(
   orgId: number,
   options: CreateTestMrmMetricKeyOptions = {},
 ): Promise<number> {
-  const suffix = Date.now();
+  const suffix = uniqueSuffix();
   const [result] = await sequelize.query(
     `INSERT INTO mrm_metric_keys (organization_id, key, display_name, created_at)
      VALUES (:orgId, :key, :displayName, NOW()) RETURNING id`,
@@ -684,7 +688,7 @@ export async function createTestMrmIngestionToken(
   orgId: number,
   options: CreateTestMrmIngestionTokenOptions = {},
 ): Promise<number> {
-  const suffix = Date.now();
+  const suffix = uniqueSuffix();
   const [result] = await sequelize.query(
     `INSERT INTO mrm_ingestion_tokens
        (organization_id, name, token_hash, model_inventory_id, revoked_at, created_by, created_at)
