@@ -241,6 +241,22 @@ the client-side risk type need the field added.
 
 ---
 
+## Making it observable
+
+A nightly job is invisible for a day and untestable by hand, so the feature ships
+with two things that exist only to make it verifiable:
+
+- **`POST /evidenceHub/freshness-sweep`** (Admin) runs the sweep for the caller's
+  organization and returns the summary. This mirrors `POST /riskLinks/recompute`,
+  which exists for the same reason. The sweep is idempotent, so a hand-run is
+  safe and a second run must report zero transitions.
+- **Demo evidence rows** in the `9700` id block of `seed_risk_links_demo.sql`,
+  mapped to the existing demo risks: one past `expiry_date`, one untouched for 91
+  days, one untouched for 89 days (the control that must stay clean), and one
+  stale row mapped to two risks. `evidence_hub` has no `is_demo` column and none
+  of the cascade coverage `risk_links` has, so the seed's delete block needs its
+  own `DELETE FROM evidence_hub WHERE id BETWEEN 9700 AND 9799;`.
+
 ## Testing
 
 **Unit (`Servers`, jest):** the sweep with a fabricated stale-evidence query —
