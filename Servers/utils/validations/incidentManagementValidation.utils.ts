@@ -167,28 +167,50 @@ export const validateApprover = (value: any): ValidationResult => {
 };
 
 /**
+ * Validates an optional incident reference FK (issue #4583).
+ * Accepts undefined/null/"" (no link) but rejects non-integers and 0
+ * (0 is not a valid primary key and would fail the FK constraint).
+ */
+export const validateOptionalIncidentReference = (value: any, field: string): ValidationResult => {
+  if (value === undefined || value === null || value === "") {
+    return { isValid: true };
+  }
+  const numValue = Number(value);
+  if (isNaN(numValue) || !Number.isInteger(numValue) || numValue < 1) {
+    return {
+      isValid: false,
+      message: `${field} must be a positive integer ID`,
+      code: "INVALID_ID",
+    };
+  }
+  return { isValid: true };
+};
+
+export const validateModelInventoryId = (value: any): ValidationResult =>
+  validateOptionalIncidentReference(value, "Model inventory ID");
+
+export const validateProjectId = (value: any): ValidationResult =>
+  validateOptionalIncidentReference(value, "Project ID");
+
+export const validateAssigneeId = (value: any): ValidationResult =>
+  validateOptionalIncidentReference(value, "Assignee ID");
+
+/**
  * Validation schema for creating an incident
  */
 export const createIncidentSchema = {
-  // description: validateDescription,
-  // date_occurred: validateDateOccurred,
-  // date_detected: validateDateDetected,
+  model_inventory_id: validateModelInventoryId,
+  project_id: validateProjectId,
+  assignee_id: validateAssigneeId,
 };
 
 /**
  * Validation schema for updating an incident
  */
 export const updateIncidentSchema = {
-  // description: validateDescription,
-  // categories_of_harm: validateCategoriesOfHarm,
-  // relationship_to_ai_system: validateRelationship,
-  // ai_project: validateAIProject,
-  // severity: validateSeverity,
-  // status: validateStatus,
-  // date_occurred: validateDateOccurred,
-  // date_detected: validateDateDetected,
-  // reporter: validateReporter,
-  // approval_status: validateApprovalStatus,
+  model_inventory_id: validateModelInventoryId,
+  project_id: validateProjectId,
+  assignee_id: validateAssigneeId,
 };
 
 export const validateIncidentIdParam = (id: any): ValidationResult => {
