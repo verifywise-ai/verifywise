@@ -261,6 +261,7 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       "biases",
       "limitations",
       "hosting_provider",
+      "intended_use",
     ],
     fieldLabels: {
       provider: "Provider",
@@ -275,6 +276,7 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       biases: "Biases",
       limitations: "Limitations",
       hosting_provider: "Hosting provider",
+      intended_use: "Intended use",
     },
     fieldFormatters: {
       security_assessment: GENERIC_FORMATTERS.boolean,
