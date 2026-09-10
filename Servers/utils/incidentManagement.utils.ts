@@ -9,11 +9,56 @@ import {
 import { replaceTemplateVariables } from "./automation/automation.utils";
 import { enqueueAutomationAction } from "../services/automations/automationProducer";
 
-export const getAllIncidentsQuery = async (organizationId: number) => {
+/**
+ * Base SELECT for incident queries. LEFT JOINs resolve the issue #4583
+ * foreign keys (model_inventory_id / project_id / assignee_id) into
+ * display names for API consumers. CONCAT_WS skips NULL parts.
+ */
+const INCIDENT_SELECT = `
+  SELECT i.*,
+    CONCAT_WS(' ', mi.provider, mi.model) AS model_inventory_name,
+    p.project_title AS project_title,
+    CONCAT_WS(' ', u.name, u.surname) AS assignee_name
+  FROM ai_incident_managements i
+  LEFT JOIN model_inventories mi ON mi.id = i.model_inventory_id
+  LEFT JOIN projects p ON p.id = i.project_id
+  LEFT JOIN users u ON u.id = i.assignee_id`;
+
+/** Optional server-side filters for the incident list (issue #4583). */
+export interface IncidentListFilters {
+  model_inventory_id?: number;
+  project_id?: number;
+  assignee_id?: number;
+}
+
+export const getAllIncidentsQuery = async (
+  organizationId: number,
+  filters?: IncidentListFilters,
+) => {
+  const conditions: string[] = [];
+  const replacements: Record<string, unknown> = { organizationId };
+
+  if (filters?.model_inventory_id) {
+    conditions.push("i.model_inventory_id = :modelInventoryId");
+    replacements.modelInventoryId = filters.model_inventory_id;
+  }
+  if (filters?.project_id) {
+    conditions.push("i.project_id = :projectId");
+    replacements.projectId = filters.project_id;
+  }
+  if (filters?.assignee_id) {
+    conditions.push("i.assignee_id = :assigneeId");
+    replacements.assigneeId = filters.assignee_id;
+  }
+
+  const extraWhere = conditions.length ? ` AND ${conditions.join(" AND ")}` : "";
+
   const incidents = await sequelize.query(
-    `SELECT * FROM ai_incident_managements WHERE organization_id = :organizationId ORDER BY created_at DESC, id ASC`,
+    `${INCIDENT_SELECT}
+     WHERE i.organization_id = :organizationId${extraWhere}
+     ORDER BY i.created_at DESC, i.id ASC`,
     {
-      replacements: { organizationId },
+      replacements,
       mapToModel: true,
       model: AIIncidentManagementModel,
     },
@@ -23,7 +68,8 @@ export const getAllIncidentsQuery = async (organizationId: number) => {
 
 export const getIncidentByIdQuery = async (id: number, organizationId: number) => {
   const incidents = await sequelize.query(
-    `SELECT * FROM ai_incident_managements WHERE organization_id = :organizationId AND id = :id`,
+    `${INCIDENT_SELECT}
+     WHERE i.organization_id = :organizationId AND i.id = :id`,
     {
       replacements: { organizationId, id },
       mapToModel: true,
@@ -43,13 +89,13 @@ export const createNewIncidentQuery = async (
   try {
     const result = await sequelize.query(
       `INSERT INTO ai_incident_managements (
-        organization_id, ai_project, type,
+        organization_id, ai_project, model_inventory_id, project_id, assignee_id, type,
         severity, status, occurred_date, date_detected, reporter, approval_status,
         approved_by, categories_of_harm, affected_persons_groups, description, relationship_causality,
         immediate_mitigations, planned_corrective_actions, model_system_version, interim_report, approval_date, approval_notes,
         created_at, updated_at, archived
       ) VALUES (
-        :organization_id, :ai_project, :type,
+        :organization_id, :ai_project, :model_inventory_id, :project_id, :assignee_id, :type,
         :severity, :status, :occurred_date, :date_detected, :reporter, :approval_status,
         :approved_by, :categories_of_harm, :affected_persons_groups, :description, :relationship_causality,
         :immediate_mitigations, :planned_corrective_actions, :model_system_version, :interim_report, :approval_date, :approval_notes,
@@ -59,6 +105,9 @@ export const createNewIncidentQuery = async (
         replacements: {
           organization_id: organizationId,
           ai_project: incident.ai_project || "",
+          model_inventory_id: incident.model_inventory_id ?? null,
+          project_id: incident.project_id ?? null,
+          assignee_id: incident.assignee_id ?? null,
           type: incident.type,
           severity: incident.severity,
           status: incident.status,
@@ -149,6 +198,9 @@ export const updateIncidentByIdQuery = async (
     await sequelize.query(
       `UPDATE ai_incident_managements SET
         ai_project = :ai_project,
+        model_inventory_id = :model_inventory_id,
+        project_id = :project_id,
+        assignee_id = :assignee_id,
         type = :type,
         severity = :severity,
         status = :status,
@@ -175,6 +227,9 @@ export const updateIncidentByIdQuery = async (
           organizationId,
           id,
           ai_project: incident.ai_project,
+          model_inventory_id: incident.model_inventory_id ?? null,
+          project_id: incident.project_id ?? null,
+          assignee_id: incident.assignee_id ?? null,
           type: incident.type,
           severity: incident.severity,
           status: incident.status,
@@ -201,7 +256,8 @@ export const updateIncidentByIdQuery = async (
     );
 
     const result = await sequelize.query(
-      `SELECT * FROM ai_incident_managements WHERE organization_id = :organizationId AND id = :id`,
+      `${INCIDENT_SELECT}
+       WHERE i.organization_id = :organizationId AND i.id = :id`,
       {
         replacements: { organizationId, id },
         mapToModel: true,
@@ -347,7 +403,8 @@ export const archiveIncidentByIdQuery = async (
     );
 
     const result = await sequelize.query(
-      `SELECT * FROM ai_incident_managements WHERE organization_id = :organizationId AND id = :id`,
+      `${INCIDENT_SELECT}
+       WHERE i.organization_id = :organizationId AND i.id = :id`,
       {
         replacements: { organizationId, id },
         mapToModel: true,
@@ -361,4 +418,40 @@ export const archiveIncidentByIdQuery = async (
     console.error("Error archiving incident:", error);
     throw error;
   }
+};
+
+/**
+ * Verify that referenced entities (issue #4583 FKs) exist and belong to the
+ * caller's organization. Prevents cross-org linkage (IDOR) that a bare FK
+ * constraint cannot catch. Returns the list of invalid field names.
+ */
+export const validateIncidentReferences = async (
+  refs: {
+    model_inventory_id?: number | null;
+    project_id?: number | null;
+    assignee_id?: number | null;
+  },
+  organizationId: number,
+): Promise<string[]> => {
+  const invalidFields: string[] = [];
+  const checks: Array<{
+    field: string;
+    id: number | null | undefined;
+    table: string;
+  }> = [
+    { field: "model_inventory_id", id: refs.model_inventory_id, table: "model_inventories" },
+    { field: "project_id", id: refs.project_id, table: "projects" },
+    { field: "assignee_id", id: refs.assignee_id, table: "users" },
+  ];
+
+  for (const check of checks) {
+    if (check.id == null) continue;
+    const result = (await sequelize.query(
+      `SELECT id FROM ${check.table} WHERE id = :id AND organization_id = :organizationId`,
+      { replacements: { id: check.id, organizationId } },
+    )) as [Array<{ id: number }>, number];
+    if (!result[0].length) invalidFields.push(check.field);
+  }
+
+  return invalidFields;
 };
