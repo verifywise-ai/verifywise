@@ -98,6 +98,12 @@ export class ModelInventoryModel extends Model<ModelInventoryModel> implements I
   hosting_provider!: string;
 
   @Column({
+    type: DataType.TEXT,
+    allowNull: true,
+  })
+  intended_use?: string;
+
+  @Column({
     type: DataType.JSONB,
     allowNull: true, // Optional
     defaultValue: [], // Initialize as empty array
@@ -327,6 +333,7 @@ export class ModelInventoryModel extends Model<ModelInventoryModel> implements I
       biases: this.biases,
       limitations: this.limitations,
       hosting_provider: this.hosting_provider,
+      intended_use: this.intended_use ?? null,
       security_assessment_data:
         this.security_assessment_data != undefined ? this.security_assessment_data : [],
       is_demo: this.is_demo,
@@ -367,6 +374,7 @@ export class ModelInventoryModel extends Model<ModelInventoryModel> implements I
       biases: this.biases,
       limitations: this.limitations,
       hosting_provider: this.hosting_provider,
+      intended_use: this.intended_use ?? null,
       security_assessment_data:
         this.security_assessment_data != undefined ? this.security_assessment_data : [],
       is_demo: this.is_demo,
@@ -443,6 +451,7 @@ export class ModelInventoryModel extends Model<ModelInventoryModel> implements I
       biases: data.biases || "",
       limitations: data.limitations || "",
       hosting_provider: data.hosting_provider || "",
+      intended_use: data.intended_use ?? undefined,
       security_assessment_data: data.security_assessment_data || [],
       is_demo: data.is_demo || false,
       external_key: data.external_key ?? undefined,
@@ -501,6 +510,9 @@ export class ModelInventoryModel extends Model<ModelInventoryModel> implements I
     }
     if (data.hosting_provider !== undefined) {
       existingModel.hosting_provider = data.hosting_provider;
+    }
+    if (data.intended_use !== undefined) {
+      existingModel.intended_use = data.intended_use;
     }
     if (data.security_assessment_data !== undefined) {
       existingModel.security_assessment_data = data.security_assessment_data;

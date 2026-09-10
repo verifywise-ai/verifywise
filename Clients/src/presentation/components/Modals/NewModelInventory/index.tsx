@@ -82,6 +82,7 @@ interface NewModelInventoryFormValues {
   biases: string;
   limitations: string;
   hosting_provider: string;
+  intended_use: string;
   external_key?: string;
   projects: number[];
   frameworks: number[];
@@ -102,6 +103,7 @@ const initialState: NewModelInventoryFormValues = {
   biases: "",
   limitations: "",
   hosting_provider: "",
+  intended_use: "",
   external_key: "",
   projects: [],
   frameworks: [],
@@ -801,6 +803,23 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
           placeholder="eg. credit-scoring-v3"
         />
       </Stack>
+
+      {/* Intended Use Section */}
+      <Field
+        id="intended_use"
+        label="Intended use"
+        type="description"
+        rows={2}
+        value={values.intended_use ?? ""}
+        onChange={handleOnTextFieldChange("intended_use")}
+        placeholder="Intended use of the model"
+        sx={{
+          "width": "100%",
+          "& #intended_use": {
+            maxHeight: 120,
+          },
+        }}
+      />
 
       {/* Security Assessment Section */}
       <Stack>
