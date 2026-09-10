@@ -8,6 +8,8 @@ import {
   updateIncidentByIdQuery,
   deleteIncidentByIdQuery,
   archiveIncidentByIdQuery,
+  validateIncidentReferences,
+  IncidentListFilters,
 } from "../utils/incidentManagement.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import logger, { logStructured } from "../utils/logger/fileLogger";
@@ -17,6 +19,9 @@ import {
   validateCompleteIncidentCreation,
   validateCompleteIncidentUpdate,
   validateIncidentIdParam,
+  validateModelInventoryId,
+  validateProjectId,
+  validateAssigneeId,
 } from "../utils/validations/incidentManagementValidation.utils";
 import {
   recordIncidentCreation,
@@ -27,6 +32,33 @@ import { triggerIncidentResponse } from "../services/workflows/triggers";
 
 /** Severity values that launch the critical incident_response workflow. */
 const CRITICAL_INCIDENT_SEVERITIES = new Set(["very serious", "critical"]);
+
+/** Parse and validate optional list filters (issue #4583). Returns an error message or the filters. */
+const parseIncidentListFilters = (
+  query: Request["query"],
+): {
+  filters?: IncidentListFilters;
+  error?: string;
+} => {
+  const filters: IncidentListFilters = {};
+  const checks: Array<[keyof IncidentListFilters, any, string]> = [
+    ["model_inventory_id", query.model_inventory_id, "model_inventory_id"],
+    ["project_id", query.project_id, "project_id"],
+    ["assignee_id", query.assignee_id, "assignee_id"],
+  ];
+  for (const [key, raw, field] of checks) {
+    if (raw === undefined || raw === null || raw === "") continue;
+    const result =
+      key === "model_inventory_id"
+        ? validateModelInventoryId(raw)
+        : key === "project_id"
+          ? validateProjectId(raw)
+          : validateAssigneeId(raw);
+    if (!result.isValid) return { error: `${field}: ${result.message}` };
+    filters[key] = Number(raw);
+  }
+  return { filters };
+};
 
 /**
  * Get all incidents
@@ -41,8 +73,21 @@ export async function getAllIncidents(req: Request, res: Response) {
   logger.debug("🔍 Fetching all incidents");
 
   try {
+    const { filters, error } = parseIncidentListFilters(req.query);
+    if (error) {
+      return res.status(400).json(
+        STATUS_CODE[400]({
+          status: "error",
+          message: "Invalid filter parameter",
+          code: "INVALID_PARAMETER",
+          details: error,
+        }),
+      );
+    }
+
     const incidents = (await getAllIncidentsQuery(
       req.organizationId!,
+      filters,
     )) as AIIncidentManagementModel[];
 
     if (incidents && incidents.length > 0) {
@@ -166,10 +211,35 @@ export async function createNewIncident(req: Request, res: Response) {
     );
   }
 
+  const invalidRefs = await validateIncidentReferences(
+    {
+      model_inventory_id: req.body.model_inventory_id,
+      project_id: req.body.project_id,
+      assignee_id: req.body.assignee_id,
+    },
+    req.organizationId!,
+  );
+  if (invalidRefs.length > 0) {
+    return res.status(400).json(
+      STATUS_CODE[400]({
+        status: "error",
+        message: "Incident creation validation failed",
+        errors: invalidRefs.map((field) => ({
+          field,
+          message: `${field} does not reference an entity in your organization`,
+          code: "INVALID_REFERENCE",
+        })),
+      }),
+    );
+  }
+
   const transaction = await sequelize.transaction();
   try {
     const incident = new AIIncidentManagementModel({
       ai_project: req.body.ai_project,
+      model_inventory_id: req.body.model_inventory_id ?? null,
+      project_id: req.body.project_id ?? null,
+      assignee_id: req.body.assignee_id ?? null,
       type: req.body.type,
       severity: req.body.severity,
       status: req.body.status,
@@ -294,6 +364,34 @@ export async function updateIncidentById(req: Request, res: Response) {
         status: "error",
         message: "Incident update validation failed",
         errors: errorDetails,
+      }),
+    );
+  }
+
+  // Issue #4583 — referenced entities must exist within the caller's organization.
+  const invalidRefs = await validateIncidentReferences(
+    {
+      model_inventory_id:
+        req.body.model_inventory_id !== undefined
+          ? req.body.model_inventory_id
+          : existingIncident?.model_inventory_id,
+      project_id:
+        req.body.project_id !== undefined ? req.body.project_id : existingIncident?.project_id,
+      assignee_id:
+        req.body.assignee_id !== undefined ? req.body.assignee_id : existingIncident?.assignee_id,
+    },
+    req.organizationId!,
+  );
+  if (invalidRefs.length > 0) {
+    return res.status(400).json(
+      STATUS_CODE[400]({
+        status: "error",
+        message: "Incident update validation failed",
+        errors: invalidRefs.map((field) => ({
+          field,
+          message: `${field} does not reference an entity in your organization`,
+          code: "INVALID_REFERENCE",
+        })),
       }),
     );
   }
