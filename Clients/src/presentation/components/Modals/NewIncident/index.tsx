@@ -53,11 +53,11 @@ export interface NewIncidentFormValues {
   incident_id?: string;
   ai_project: string;
   /** FK to projects — set alongside ai_project when a use case is picked (issue #4583). */
-  project_id?: number | string;
+  project_id?: number | string | null;
   /** FK to model_inventories — affected model (issue #4583). */
-  model_inventory_id?: number | string;
+  model_inventory_id?: number | string | null;
   /** FK to users — responsible owner (issue #4583). */
-  assignee_id?: number | string;
+  assignee_id?: number | string | null;
   type: string;
   severity: Severity;
   status: IncidentManagementStatus;
