@@ -16,6 +16,7 @@ export interface IModelInventory {
   biases?: string;
   limitations?: string;
   hosting_provider?: string;
+  intended_use?: string;
   security_assessment_data: Filedata[];
   is_demo?: boolean;
   // MRM (Model Risk Management) — manual tiering + external key (all nullable)
