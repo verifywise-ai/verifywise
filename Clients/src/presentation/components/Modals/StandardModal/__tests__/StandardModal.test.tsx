@@ -1,5 +1,6 @@
-import { screen, within, fireEvent } from "@testing-library/react";
+import { screen, within, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { vi } from "vitest";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import StandardModal from "../index";
@@ -427,6 +428,77 @@ describe("StandardModal", () => {
 
       const modal = baseElement.querySelector("[role='presentation']") as HTMLElement;
       expect(modal.contains(document.activeElement)).toBe(true);
+    });
+
+    it("exposes a modal dialog for assistive technology", () => {
+      renderWithProviders(
+        <StandardModal {...baseProps} onClose={vi.fn()}>
+          <div>Modal content</div>
+        </StandardModal>,
+      );
+
+      const dialog = screen.getByRole("dialog", { name: "Test Modal" });
+      expect(dialog).toHaveAttribute("aria-modal", "true");
+    });
+
+    it("keeps Tab focus inside the dialog", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(
+        <>
+          <button type="button">Outside</button>
+          <StandardModal {...baseProps} onClose={vi.fn()} onSubmit={vi.fn()}>
+            <input aria-label="Name" />
+          </StandardModal>
+        </>,
+      );
+
+      const dialog = screen.getByRole("dialog", { name: "Test Modal" });
+      const outside = screen.getByRole("button", { name: "Outside", hidden: true });
+
+      expect(outside.closest("[aria-hidden='true']")).not.toBeNull();
+
+      for (let i = 0; i < 12; i++) {
+        await user.tab();
+        expect(outside).not.toHaveFocus();
+        expect(dialog.contains(document.activeElement)).toBe(true);
+      }
+    });
+
+    it("returns focus to the trigger when closed with Escape", async () => {
+      const user = userEvent.setup();
+
+      function Harness() {
+        const [open, setOpen] = useState(false);
+        return (
+          <>
+            <button type="button" onClick={() => setOpen(true)}>
+              Open modal
+            </button>
+            <StandardModal
+              {...baseProps}
+              isOpen={open}
+              onClose={() => setOpen(false)}
+              onSubmit={vi.fn()}
+            >
+              <input aria-label="Name" />
+            </StandardModal>
+          </>
+        );
+      }
+
+      renderWithProviders(<Harness />);
+
+      const trigger = screen.getByRole("button", { name: "Open modal" });
+      await user.click(trigger);
+
+      expect(screen.getByRole("dialog", { name: "Test Modal" })).toBeInTheDocument();
+
+      await user.keyboard("{Escape}");
+
+      await waitFor(() => {
+        expect(screen.queryByRole("dialog", { name: "Test Modal" })).not.toBeInTheDocument();
+      });
+      expect(trigger).toHaveFocus();
     });
 
     it("hides the Enter-key helper submit button from assistive technology", () => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo } from "react";
+import React, { useState, useEffect, useId, memo } from "react";
 import { Drawer, Box, Typography, Stack, IconButton, useTheme } from "@mui/material";
 import { X as CloseIcon } from "lucide-react";
 import { ModelInventoryHistoryChart } from "../Charts/ModelInventoryHistoryChart";
@@ -63,6 +63,7 @@ const AnalyticsDrawer: React.FC<AnalyticsDrawerProps> = ({
   chartType = "model", // Default to model chart for backward compatibility
 }) => {
   const theme = useTheme();
+  const titleId = useId();
   // Create localStorage key based on chartType for persistence
   const storageKey = `analytics_parameter_${chartType}`;
 
@@ -95,7 +96,13 @@ const AnalyticsDrawer: React.FC<AnalyticsDrawerProps> = ({
       anchor="right"
       open={open}
       onClose={onClose}
-      aria-label={`${title} drawer`}
+      slotProps={{
+        paper: {
+          "role": "dialog",
+          "aria-modal": "true",
+          "aria-labelledby": titleId,
+        },
+      }}
       sx={{
         "& .MuiDrawer-paper": {
           width: { xs: "100%", sm: "600px", md: "800px" },
@@ -108,6 +115,8 @@ const AnalyticsDrawer: React.FC<AnalyticsDrawerProps> = ({
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
           <Box>
             <Typography
+              id={titleId}
+              component="h2"
               sx={{
                 fontSize: theme.typography.body1.fontSize,
                 fontWeight: 700,

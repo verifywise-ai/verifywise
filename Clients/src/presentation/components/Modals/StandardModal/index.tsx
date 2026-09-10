@@ -181,6 +181,11 @@ const StandardModal: React.FC<StandardModalProps> = ({
       }}
     >
       <Stack
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+        tabIndex={-1}
         sx={{
           width: maxWidth,
           minWidth: "min(600px, 100%)",

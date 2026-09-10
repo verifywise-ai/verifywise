@@ -38,6 +38,7 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({ src, alt, caption, onClos
         role="dialog"
         aria-modal="true"
         aria-labelledby="image-lightbox-title"
+        aria-describedby={caption ? "image-lightbox-caption" : undefined}
         sx={{
           maxWidth: "90vw",
           maxHeight: "90vh",
@@ -54,6 +55,7 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({ src, alt, caption, onClos
 
         <IconButton
           onClick={onClose}
+          autoFocus
           aria-label="Close image lightbox"
           sx={{
             "position": "absolute",
