@@ -52,6 +52,12 @@ interface SideDrawerIncidentProps {
 export interface NewIncidentFormValues {
   incident_id?: string;
   ai_project: string;
+  /** FK to projects — set alongside ai_project when a use case is picked (issue #4583). */
+  project_id?: number | string;
+  /** FK to model_inventories — affected model (issue #4583). */
+  model_inventory_id?: number | string;
+  /** FK to users — responsible owner (issue #4583). */
+  assignee_id?: number | string;
   type: string;
   severity: Severity;
   status: IncidentManagementStatus;
@@ -74,6 +80,9 @@ export interface NewIncidentFormValues {
 
 const initialState: NewIncidentFormValues = {
   ai_project: "",
+  project_id: "",
+  model_inventory_id: "",
+  assignee_id: "",
   type: "",
   severity: Severity.MINOR,
   status: IncidentManagementStatus.OPEN,
@@ -133,6 +142,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
   const [values, setValues] = useState<NewIncidentFormValues>(initialData || initialState);
   const [users, setUsers] = useState<User[]>([]);
   const [, setIsLoadingUsers] = useState(false);
+  const [modelInventories, setModelInventories] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("details");
 
   const validators = useMemo(
@@ -164,6 +174,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
   useEffect(() => {
     if (isOpen) {
       fetchUsers();
+      fetchModelInventories();
     }
   }, [isOpen]);
 
@@ -185,6 +196,16 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
       console.error("Error fetching users:", error);
     } finally {
       setIsLoadingUsers(false);
+    }
+  };
+
+  // Fetch model inventory for the affected-model picker (issue #4583)
+  const fetchModelInventories = async () => {
+    try {
+      const response = await getAllEntities({ routeUrl: "/modelInventory" });
+      if (response?.data) setModelInventories(response.data);
+    } catch (error) {
+      console.error("Error fetching model inventory:", error);
     }
   };
 
@@ -210,6 +231,38 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
   const userOptions = useMemo(
     () => users.map((u) => ({ _id: u.name, name: `${u.name} ${u.surname}` })),
     [users],
+  );
+
+  // Owner/assignee options keyed by user id (issue #4583)
+  const assigneeOptions = useMemo(
+    () => users.map((u) => ({ _id: u.id, name: `${u.name} ${u.surname}` })),
+    [users],
+  );
+
+  // Affected-model options keyed by model inventory id (issue #4583)
+  const modelInventoryOptions = useMemo(
+    () =>
+      modelInventories.map((m) => ({
+        _id: m.id,
+        name: [m.provider, m.model].filter(Boolean).join(" "),
+      })),
+    [modelInventories],
+  );
+
+  // Use-case select keeps the free-text ai_project (backward compatible) and
+  // also records the project FK (issue #4583).
+  const handleProjectChange = useCallback(
+    (e: any) => {
+      const title = e.target.value;
+      const project = (approvedProjects as any[]).find((p) => p.project_title === title);
+      setValues((prev) => ({
+        ...prev,
+        ai_project: title,
+        project_id: project?.id ?? "",
+      }));
+      clearFieldError("ai_project");
+    },
+    [approvedProjects, clearFieldError],
   );
 
   const handleFieldChange = useCallback(
@@ -262,7 +315,15 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
   const handleSaveIncident = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (validateAll(values)) {
-      onSuccess?.(values);
+      // Normalize optional FK pickers to integer ids or null (issue #4583)
+      const toId = (v: unknown) =>
+        v === undefined || v === null || v === "" ? null : Number(v);
+      onSuccess?.({
+        ...values,
+        project_id: toId(values.project_id),
+        model_inventory_id: toId(values.model_inventory_id),
+        assignee_id: toId(values.assignee_id),
+      });
       handleClose();
     }
   };
@@ -377,7 +438,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                       placeholder="Select AI use case or framework"
                       items={projectOptions}
                       value={values.ai_project}
-                      onChange={handleFieldChange("ai_project")}
+                      onChange={handleProjectChange}
                       error={errors.ai_project}
                       isRequired
                       sx={{ flex: 1 }}
@@ -426,6 +487,36 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                       value={values.status}
                       onChange={handleFieldChange("status")}
                       error={errors.status}
+                      sx={{ flex: 1 }}
+                      disabled={isViewMode}
+                    />
+                  </Stack>
+                </Stack>
+
+                {/* Row: Affected model + Owner (issue #4583 FK pickers) */}
+                <Stack direction={"row"} gap={theme.spacing(8)} sx={{ mt: 2 }}>
+                  <Stack sx={{ gap: 3, width: "50%" }}>
+                    <SelectComponent
+                      id="model_inventory_id"
+                      label="Affected model"
+                      placeholder="Select model from inventory"
+                      items={modelInventoryOptions}
+                      value={values.model_inventory_id ?? ""}
+                      onChange={handleFieldChange("model_inventory_id")}
+                      isOptional
+                      sx={{ flex: 1 }}
+                      disabled={isViewMode}
+                    />
+                  </Stack>
+                  <Stack sx={{ gap: 3, width: "50%" }}>
+                    <SelectComponent
+                      id="assignee_id"
+                      label="Owner"
+                      placeholder="Select owner"
+                      items={assigneeOptions}
+                      value={values.assignee_id ?? ""}
+                      onChange={handleFieldChange("assignee_id")}
+                      isOptional
                       sx={{ flex: 1 }}
                       disabled={isViewMode}
                     />
