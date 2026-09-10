@@ -53,6 +53,11 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     baseRoute: "/api/tasks",
   },
   {
+    name: "ai_incidents",
+    tables: ["ai_incident_managements"],
+    baseRoute: "/api/ai-incident-managements",
+  },
+  {
     name: "vendors",
     tables: ["vendors", "vendors_projects"],
     baseRoute: "/api/vendors",

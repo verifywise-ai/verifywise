@@ -707,3 +707,47 @@ export async function createTestMrmRevalidationEvent(
   );
   return (result as any[])[0].id;
 }
+
+// ---------------------------------------------------------------------------
+// AI incident management factories (issue #4583)
+// ---------------------------------------------------------------------------
+
+export interface CreateTestIncidentOptions {
+  ai_project?: string;
+  model_inventory_id?: number | null;
+  project_id?: number | null;
+  assignee_id?: number | null;
+}
+
+export async function createTestIncident(
+  orgId: number,
+  userId: number,
+  options: CreateTestIncidentOptions = {},
+): Promise<number> {
+  const suffix = Date.now();
+  const [result] = await sequelize.query(
+    `INSERT INTO ai_incident_managements (
+       organization_id, ai_project, model_inventory_id, project_id, assignee_id,
+       type, severity, status, occurred_date, date_detected, reporter,
+       approval_status, categories_of_harm, description, relationship_causality,
+       created_at, updated_at
+     )
+     VALUES (
+       :orgId, :aiProject, :modelInventoryId, :projectId, :assigneeId,
+       'Malfunction', 'Minor', 'Open', NOW(), NOW(), :reporter,
+       'Pending', '[]'::json, :description, 'Test causality', NOW(), NOW()
+     ) RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        aiProject: options.ai_project ?? `Test AI Project ${suffix}`,
+        modelInventoryId: options.model_inventory_id ?? null,
+        projectId: options.project_id ?? null,
+        assigneeId: options.assignee_id ?? userId,
+        reporter: `Reporter ${suffix}`,
+        description: "Test incident description",
+      },
+    },
+  );
+  return (result as any[])[0].id;
+}
