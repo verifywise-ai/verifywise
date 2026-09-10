@@ -41,6 +41,8 @@ import Alert from "../../components/Alert";
 type IncidentColumnKey =
   | "incident_id"
   | "ai_project"
+  | "model_inventory_name"
+  | "assignee_name"
   | "type"
   | "severity"
   | "status"
@@ -51,6 +53,8 @@ type IncidentColumnKey =
 const INCIDENT_TABLE_COLUMNS: ColumnConfig<IncidentColumnKey>[] = [
   { key: "incident_id", label: "Incident ID", defaultVisible: true, alwaysVisible: true },
   { key: "ai_project", label: "AI project", defaultVisible: true },
+  { key: "model_inventory_name", label: "Affected model", defaultVisible: true },
+  { key: "assignee_name", label: "Owner", defaultVisible: true },
   { key: "type", label: "Type", defaultVisible: true },
   { key: "severity", label: "Severity", defaultVisible: true },
   { key: "status", label: "Status", defaultVisible: true },
@@ -148,6 +152,38 @@ const IncidentManagement: React.FC = () => {
       }));
   }, [incidentsData]);
 
+  // Unique affected models for the FilterBy dropdown (issue #4583)
+  const getUniqueModels = useCallback(() => {
+    const models = new Set<string>();
+    incidentsData.forEach((incident) => {
+      if (incident.model_inventory_name) {
+        models.add(incident.model_inventory_name);
+      }
+    });
+    return Array.from(models)
+      .sort()
+      .map((model) => ({
+        value: model,
+        label: model,
+      }));
+  }, [incidentsData]);
+
+  // Unique owners for the FilterBy dropdown (issue #4583)
+  const getUniqueOwners = useCallback(() => {
+    const owners = new Set<string>();
+    incidentsData.forEach((incident) => {
+      if (incident.assignee_name) {
+        owners.add(incident.assignee_name);
+      }
+    });
+    return Array.from(owners)
+      .sort()
+      .map((owner) => ({
+        value: owner,
+        label: owner,
+      }));
+  }, [incidentsData]);
+
   // FilterBy - Filter columns configuration
   const incidentFilterColumns: FilterColumn[] = useMemo(
     () => [
@@ -161,6 +197,18 @@ const IncidentManagement: React.FC = () => {
         label: "AI project",
         type: "select" as const,
         options: getUniqueProjects(),
+      },
+      {
+        id: "model_inventory_name",
+        label: "Affected model",
+        type: "select" as const,
+        options: getUniqueModels(),
+      },
+      {
+        id: "assignee_name",
+        label: "Owner",
+        type: "select" as const,
+        options: getUniqueOwners(),
       },
       {
         id: "type",
@@ -198,7 +246,7 @@ const IncidentManagement: React.FC = () => {
         type: "date" as const,
       },
     ],
-    [getUniqueProjects, getUniqueTypes],
+    [getUniqueProjects, getUniqueTypes, getUniqueModels, getUniqueOwners],
   );
 
   // FilterBy - Field value getter
@@ -212,6 +260,10 @@ const IncidentManagement: React.FC = () => {
           return item.incident_id;
         case "ai_project":
           return item.ai_project;
+        case "model_inventory_name":
+          return item.model_inventory_name;
+        case "assignee_name":
+          return item.assignee_name;
         case "type":
           return item.type;
         case "severity":
@@ -494,6 +546,8 @@ const IncidentManagement: React.FC = () => {
     return [
       { id: "incident_id", label: "Incident ID" },
       { id: "ai_project", label: "AI project" },
+      { id: "model_inventory_name", label: "Affected model" },
+      { id: "assignee_name", label: "Owner" },
       { id: "type", label: "Type" },
       { id: "severity", label: "Severity" },
       { id: "status", label: "Status" },
@@ -509,6 +563,8 @@ const IncidentManagement: React.FC = () => {
       return {
         incident_id: incident.incident_id || "-",
         ai_project: incident.ai_project || "-",
+        model_inventory_name: incident.model_inventory_name || "-",
+        assignee_name: incident.assignee_name || "-",
         type: incident.type || "-",
         severity: incident.severity || "-",
         status: incident.status || "-",
@@ -692,6 +748,9 @@ const IncidentManagement: React.FC = () => {
             ? {
                 incident_id: selectedIncident.incident_id || "",
                 ai_project: selectedIncident.ai_project || "",
+                project_id: selectedIncident.project_id ?? "",
+                model_inventory_id: selectedIncident.model_inventory_id ?? "",
+                assignee_id: selectedIncident.assignee_id ?? "",
                 type: selectedIncident.type || "",
                 severity: selectedIncident.severity || "",
                 status: selectedIncident.status || "",
