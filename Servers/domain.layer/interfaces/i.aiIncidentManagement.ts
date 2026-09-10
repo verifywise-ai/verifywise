@@ -10,6 +10,12 @@ export interface IAIIncidentManagement {
   id?: number;
   incident_id?: string; // For UI/display
   ai_project: string;
+  /** FK to model_inventories — source of truth for the affected model (issue #4583). */
+  model_inventory_id?: number | null;
+  /** FK to projects — source of truth for the affected use case (issue #4583). */
+  project_id?: number | null;
+  /** FK to users — responsible owner/assignee of the incident (issue #4583). */
+  assignee_id?: number | null;
   type: IncidentType;
   severity: Severity;
   status: AIIncidentManagementStatus;
