@@ -37,6 +37,24 @@ export class AIIncidentManagementModel
   ai_project!: string;
 
   @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+  })
+  model_inventory_id?: number;
+
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+  })
+  project_id?: number;
+
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+  })
+  assignee_id?: number;
+
+  @Column({
     type: DataType.ENUM(...Object.values(IncidentType)),
     allowNull: false,
   })
@@ -211,6 +229,13 @@ export class AIIncidentManagementModel
       id: this.id,
       incident_id: this.incident_id,
       ai_project: this.ai_project,
+      model_inventory_id: this.model_inventory_id ?? null,
+      project_id: this.project_id ?? null,
+      assignee_id: this.assignee_id ?? null,
+      model_inventory_name:
+        (this.getDataValue("model_inventory_name") as string | undefined) ?? null,
+      project_title: (this.getDataValue("project_title") as string | undefined) ?? null,
+      assignee_name: (this.getDataValue("assignee_name") as string | undefined) ?? null,
       type: this.type,
       severity: this.severity,
       status: this.status,
@@ -251,6 +276,13 @@ export class AIIncidentManagementModel
       id: this.id,
       incident_id: this.incident_id,
       ai_project: this.ai_project,
+      model_inventory_id: this.model_inventory_id ?? null,
+      project_id: this.project_id ?? null,
+      assignee_id: this.assignee_id ?? null,
+      model_inventory_name:
+        (this.getDataValue("model_inventory_name") as string | undefined) ?? null,
+      project_title: (this.getDataValue("project_title") as string | undefined) ?? null,
+      assignee_name: (this.getDataValue("assignee_name") as string | undefined) ?? null,
       type: this.type,
       severity: this.severity,
       status: this.status,
@@ -281,6 +313,9 @@ export class AIIncidentManagementModel
   static createNewIncident(data: Partial<IAIIncidentManagement>): AIIncidentManagementModel {
     const incident = new AIIncidentManagementModel({
       ai_project: data.ai_project || "",
+      model_inventory_id: data.model_inventory_id ?? null,
+      project_id: data.project_id ?? null,
+      assignee_id: data.assignee_id ?? null,
       type: data.type!,
       severity: data.severity!,
       status: data.status || AIIncidentManagementStatus.OPEN,
@@ -315,6 +350,9 @@ export class AIIncidentManagementModel
   ): AIIncidentManagementModel {
     Object.assign(existingIncident, {
       ai_project: data.ai_project ?? existingIncident.ai_project,
+      model_inventory_id: data.model_inventory_id ?? existingIncident.model_inventory_id,
+      project_id: data.project_id ?? existingIncident.project_id,
+      assignee_id: data.assignee_id ?? existingIncident.assignee_id,
       type: data.type ?? existingIncident.type,
       severity: data.severity ?? existingIncident.severity,
       status: data.status ?? existingIncident.status,
