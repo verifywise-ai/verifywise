@@ -316,8 +316,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
     if (e) e.preventDefault();
     if (validateAll(values)) {
       // Normalize optional FK pickers to integer ids or null (issue #4583)
-      const toId = (v: unknown) =>
-        v === undefined || v === null || v === "" ? null : Number(v);
+      const toId = (v: unknown) => (v === undefined || v === null || v === "" ? null : Number(v));
       onSuccess?.({
         ...values,
         project_id: toId(values.project_id),
