@@ -54,6 +54,11 @@ export class AIIncidentManagementModel
   })
   assignee_id?: number;
 
+  /** Joined display names (query aliases, not table columns — issue #4583). */
+  declare model_inventory_name?: string;
+  declare project_title?: string;
+  declare assignee_name?: string;
+
   @Column({
     type: DataType.ENUM(...Object.values(IncidentType)),
     allowNull: false,
@@ -232,10 +237,9 @@ export class AIIncidentManagementModel
       model_inventory_id: this.model_inventory_id ?? null,
       project_id: this.project_id ?? null,
       assignee_id: this.assignee_id ?? null,
-      model_inventory_name:
-        (this.getDataValue("model_inventory_name") as string | undefined) ?? null,
-      project_title: (this.getDataValue("project_title") as string | undefined) ?? null,
-      assignee_name: (this.getDataValue("assignee_name") as string | undefined) ?? null,
+      model_inventory_name: this.getDataValue("model_inventory_name") ?? null,
+      project_title: this.getDataValue("project_title") ?? null,
+      assignee_name: this.getDataValue("assignee_name") ?? null,
       type: this.type,
       severity: this.severity,
       status: this.status,
