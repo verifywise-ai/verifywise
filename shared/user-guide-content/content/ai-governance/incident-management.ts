@@ -161,6 +161,11 @@ export const incidentManagementContent: ArticleContent = {
         { bold: 'Investigating', text: 'Team is actively analyzing the root cause' },
         { bold: 'Mitigated', text: 'Immediate actions have been taken to address the issue' },
         { bold: 'Closed', text: 'Incident has been fully resolved and documented' },
+        { bold: 'Suspended', text: 'Incident is temporarily put on hold pending further review' },
+        {
+          bold: 'Emergency action',
+          text: 'Incident requires immediate emergency response measures',
+        },
       ],
     },
     {
