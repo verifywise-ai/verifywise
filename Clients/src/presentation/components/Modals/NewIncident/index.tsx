@@ -105,6 +105,8 @@ const statusOptions = [
   { _id: IncidentManagementStatus.INVESTIGATED, name: "Investigating" },
   { _id: IncidentManagementStatus.MITIGATED, name: "Mitigated" },
   { _id: IncidentManagementStatus.CLOSED, name: "Closed" },
+  { _id: IncidentManagementStatus.SUSPENDED, name: "Suspended" },
+  { _id: IncidentManagementStatus.EMERGENCY_ACTION, name: "Emergency action" },
 ];
 
 const approvalStatusOptions = [
