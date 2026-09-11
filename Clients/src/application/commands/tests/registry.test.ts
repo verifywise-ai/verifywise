@@ -444,4 +444,57 @@ describe("commandRegistry (registry.ts)", () => {
       expect(commandRegistry.commands.length).toBe(initialCount);
     });
   });
+
+  describe("stable command contracts", () => {
+    const STABLE_COMMANDS: Record<string, string> = {
+      "nav-dashboard": "Dashboard",
+      "nav-tasks": "Tasks",
+      "nav-project-view": "Project oriented view",
+      "nav-framework": "Organizational view",
+      "nav-vendors": "Vendors",
+      "nav-model-inventory": "Model Inventory",
+      "nav-risk-management": "Risk Management",
+      "nav-training": "Training Registry",
+      "nav-file-manager": "Evidence",
+      "nav-reporting": "Reporting",
+      "nav-ai-trust": "AI Trust Center",
+      "nav-policies": "Policy Manager",
+      "nav-event-tracker": "Event Tracker",
+      "nav-settings": "Settings",
+      "nav-incident-management": "Incident Management",
+      "admin-team": "Manage Team",
+    };
+
+    it("keeps built-in command IDs and labels stable for Wise Search", async () => {
+      const { commandRegistry } = await loadRegistryModule();
+      const byId = Object.fromEntries(commandRegistry.commands.map((c) => [c.id, c.label]));
+
+      expect(Object.keys(byId)).toEqual(expect.arrayContaining(Object.keys(STABLE_COMMANDS)));
+
+      for (const [id, label] of Object.entries(STABLE_COMMANDS)) {
+        expect(byId[id]).toBe(label);
+      }
+    });
+
+    it("keeps command IDs unique and non-empty", async () => {
+      const { commandRegistry } = await loadRegistryModule();
+      const ids = commandRegistry.commands.map((c) => c.id);
+
+      expect(ids.every((id) => id.trim().length > 0)).toBe(true);
+      expect(new Set(ids).size).toBe(ids.length);
+    });
+
+    it("keeps command group IDs stable", async () => {
+      const { COMMAND_GROUPS } = await loadRegistryModule();
+
+      expect(COMMAND_GROUPS.map((g) => g.id)).toEqual([
+        "navigation",
+        "actions",
+        "search",
+        "filters",
+        "admin",
+        "help",
+      ]);
+    });
+  });
 });
