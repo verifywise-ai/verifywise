@@ -4,6 +4,8 @@ export enum AIIncidentManagementStatus {
   INVESTIGATING = "Investigating",
   MITIGATED = "Mitigated",
   CLOSED = "Closed",
+  SUSPENDED = "Suspended",
+  EMERGENCY_ACTION = "Emergency action",
 }
 
 export enum AIIncidentManagementApprovalStatus {

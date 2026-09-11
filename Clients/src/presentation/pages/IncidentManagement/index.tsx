@@ -190,6 +190,11 @@ const IncidentManagement: React.FC = () => {
           },
           { value: IncidentManagementStatus.MITIGATED, label: "Mitigated" },
           { value: IncidentManagementStatus.CLOSED, label: "Closed" },
+          { value: IncidentManagementStatus.SUSPENDED, label: "Suspended" },
+          {
+            value: IncidentManagementStatus.EMERGENCY_ACTION,
+            label: "Emergency action",
+          },
         ],
       },
       {
@@ -576,6 +581,22 @@ const IncidentManagement: React.FC = () => {
                     (i) => i.status === IncidentManagementStatus.CLOSED && !i.archived,
                   ).length,
                 },
+                {
+                  key: IncidentManagementStatus.SUSPENDED,
+                  label: "Suspended",
+                  color: "#7B1FA2",
+                  count: incidentsData.filter(
+                    (i) => i.status === IncidentManagementStatus.SUSPENDED && !i.archived,
+                  ).length,
+                },
+                {
+                  key: IncidentManagementStatus.EMERGENCY_ACTION,
+                  label: "Emergency action",
+                  color: "#C62828",
+                  count: incidentsData.filter(
+                    (i) => i.status === IncidentManagementStatus.EMERGENCY_ACTION && !i.archived,
+                  ).length,
+                },
               ]}
               entityName="incident"
               size="small"
@@ -591,6 +612,8 @@ const IncidentManagement: React.FC = () => {
                       { key: IncidentManagementStatus.INVESTIGATED, label: "Investigating" },
                       { key: IncidentManagementStatus.MITIGATED, label: "Mitigated" },
                       { key: IncidentManagementStatus.CLOSED, label: "Closed" },
+                      { key: IncidentManagementStatus.SUSPENDED, label: "Suspended" },
+                      { key: IncidentManagementStatus.EMERGENCY_ACTION, label: "Emergency action" },
                     ].find((s) => s.key === key)?.label || key;
                   setAlert({
                     variant: "info",

@@ -31,7 +31,14 @@ export const INCIDENT_SEVERITY_ENUM = ["Minor", "Serious", "Very Serious"] as co
 /**
  * Incident status values
  */
-export const INCIDENT_STATUS_ENUM = ["Open", "Investigating", "Mitigated", "Closed"] as const;
+export const INCIDENT_STATUS_ENUM = [
+  "Open",
+  "Investigating",
+  "Mitigated",
+  "Closed",
+  "Suspended",
+  "Emergency action",
+] as const;
 
 /**
  * Approval status values

@@ -214,7 +214,14 @@ describe("Domain Enums", () => {
 
   describe("AI Incident Management enums", () => {
     it("AIIncidentManagementStatus should have expected values", () => {
-      verifyEnum(AIIncidentManagementStatus, ["OPEN", "INVESTIGATING", "MITIGATED", "CLOSED"]);
+      verifyEnum(AIIncidentManagementStatus, [
+        "OPEN",
+        "INVESTIGATING",
+        "MITIGATED",
+        "CLOSED",
+        "SUSPENDED",
+        "EMERGENCY_ACTION",
+      ]);
     });
 
     it("AIIncidentManagementApprovalStatus should have expected values", () => {

@@ -724,6 +724,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Implemented": "Umgesetzt",
     "Investigating": "In Untersuchung",
     "Mitigated": "Gemindert",
+    "Emergency action": "Notfallmaßnahme",
+    "Suspended": "Ausgesetzt",
     "Planned": "Geplant",
     "Planning": "Planung",
     "Production": "Produktion",
@@ -7022,8 +7024,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Monitor": "Überwachen",
     "Monitor and respond to incidents involving third-party components.":
       "Überwachen und reagieren Sie auf Vorfälle mit Drittanbieterkomponenten.",
-    "Monitor incidents across their lifecycle: Open, Investigating, Mitigated, and Closed. Track resolution progress and identify incidents requiring immediate attention.":
-      "Überwachen Sie Vorfälle über ihren Lebenszyklus: Offen, In Untersuchung, Gemildert und Geschlossen. Verfolgen Sie den Behebungsfortschritt und identifizieren Sie Vorfälle, die sofortige Aufmerksamkeit erfordern.",
+    "Monitor incidents across their lifecycle: Open, Investigating, Mitigated, Closed, Suspended, and Emergency action. Track resolution progress and identify incidents requiring immediate attention.":
+      "Überwachen Sie Vorfälle über ihren Lebenszyklus: Offen, In Untersuchung, Gemildert, Geschlossen, Ausgesetzt und Notfallmaßnahme. Verfolgen Sie den Behebungsfortschritt und identifizieren Sie Vorfälle, die sofortige Aufmerksamkeit erfordern.",
     "Monitor incidents related to AI systems and respond post-deployment.":
       "Überwachen Sie Vorfälle im Zusammenhang mit KI-Systemen und reagieren Sie nach der Bereitstellung.",
     "Monitor mitigation efforts in real-time": "Minderungsbemühungen in Echtzeit überwachen",
@@ -9953,6 +9955,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Implemented": "Mis en œuvre",
     "Investigating": "En cours d'investigation",
     "Mitigated": "Atténué",
+    "Emergency action": "Action d'urgence",
+    "Suspended": "Suspendu",
     "Planned": "Planifié",
     "Planning": "Planification",
     "Production": "Production",
@@ -16218,8 +16222,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Monitor": "Surveiller",
     "Monitor and respond to incidents involving third-party components.":
       "Surveillez et répondez aux incidents impliquant des composants tiers.",
-    "Monitor incidents across their lifecycle: Open, Investigating, Mitigated, and Closed. Track resolution progress and identify incidents requiring immediate attention.":
-      "Surveillez les incidents tout au long de leur cycle de vie : ouverts, en cours d'enquête, atténués et clôturés. Suivez la progression de la résolution et identifiez les incidents nécessitant une attention immédiate.",
+    "Monitor incidents across their lifecycle: Open, Investigating, Mitigated, Closed, Suspended, and Emergency action. Track resolution progress and identify incidents requiring immediate attention.":
+      "Surveillez les incidents tout au long de leur cycle de vie : Ouverts, En cours d'investigation, Atténués, Clôturés, Suspendus et Action d'urgence. Suivez la progression de la résolution et identifiez les incidents nécessitant une attention immédiate.",
     "Monitor incidents related to AI systems and respond post-deployment.":
       "Surveillez les incidents liés aux systèmes IA et réagissez après le déploiement.",
     "Monitor mitigation efforts in real-time": "Surveiller les efforts d'atténuation en temps réel",
@@ -18938,6 +18942,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Implemented": "Implementado",
     "Investigating": "Investigando",
     "Mitigated": "Mitigado",
+    "Emergency action": "Acción de emergencia",
+    "Suspended": "Suspendido",
     "Planned": "Planificado",
     "Planning": "Planificación",
     "Production": "Producción",
@@ -25906,8 +25912,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Restricciones moderadas (LGPL, MPL, CC-BY-SA). Algunas obligaciones, pero por lo general permite el uso comercial.",
     "Monitor and respond to incidents involving third-party components.":
       "Supervise y responda a los incidentes que afecten a componentes de terceros.",
-    "Monitor incidents across their lifecycle: Open, Investigating, Mitigated, and Closed. Track resolution progress and identify incidents requiring immediate attention.":
-      "Supervise los incidentes a lo largo de su ciclo de vida: Abierto, En investigación, Mitigado y Cerrado. Haga seguimiento del progreso de resolución e identifique los incidentes que requieren atención inmediata.",
+    "Monitor incidents across their lifecycle: Open, Investigating, Mitigated, Closed, Suspended, and Emergency action. Track resolution progress and identify incidents requiring immediate attention.":
+      "Supervise los incidentes a lo largo de su ciclo de vida: Abierto, En investigación, Mitigado, Cerrado, Suspendido y Acción de emergencia. Haga seguimiento del progreso de resolución e identifique los incidentes que requieren atención inmediata.",
     "Monitor incidents related to AI systems and respond post-deployment.":
       "Supervise los incidentes relacionados con los sistemas de IA y responda tras el despliegue.",
     "Monitor progress from initiation to completion with real-time status updates.":

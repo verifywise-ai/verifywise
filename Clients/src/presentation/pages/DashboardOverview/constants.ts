@@ -29,6 +29,8 @@ export const COLORS = {
   investigating: palette.status.warning.text,
   mitigated: palette.status.info.text,
   closed: palette.status.success.text,
+  suspended: palette.accent.purple.text,
+  emergencyAction: palette.risk.high.text,
 
   // Model lifecycle colors
   restricted: palette.accent.orange.text,
@@ -146,11 +148,19 @@ export const getIncidentStatusData = (distribution: {
   investigating: number;
   mitigated: number;
   closed: number;
+  suspended: number;
+  emergencyAction: number;
 }) => [
   { label: "Open", value: distribution.open, color: COLORS.open },
   { label: "Investigating", value: distribution.investigating, color: COLORS.investigating },
   { label: "Mitigated", value: distribution.mitigated, color: COLORS.mitigated },
   { label: "Closed", value: distribution.closed, color: COLORS.closed },
+  { label: "Suspended", value: distribution.suspended, color: COLORS.suspended },
+  {
+    label: "Emergency action",
+    value: distribution.emergencyAction,
+    color: COLORS.emergencyAction,
+  },
 ];
 
 // Model lifecycle data

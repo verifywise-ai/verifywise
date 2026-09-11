@@ -16,7 +16,7 @@ const IncidentManagementSteps: IPageTourStep[] = [
     target: '[data-joyride-id="incident-status-cards"]',
     content: {
       header: "Incident lifecycle overview",
-      body: "Monitor incidents across their lifecycle: Open, Investigating, Mitigated, and Closed. Track resolution progress and identify incidents requiring immediate attention.",
+      body: "Monitor incidents across their lifecycle: Open, Investigating, Mitigated, Closed, Suspended, and Emergency action. Track resolution progress and identify incidents requiring immediate attention.",
       icon: <BarChart3 size={20} color={background.main} />,
     },
     placement: "bottom",
