@@ -161,12 +161,6 @@ const Sidebar: React.FC<SidebarProps> = ({
           path: "/risk-management",
         },
         {
-          id: "risk-inheritance",
-          label: "Risk inheritance",
-          icon: <Network size={16} strokeWidth={1.5} />,
-          path: "/risk-inheritance",
-        },
-        {
           id: "training-registry",
           label: "Training registry",
           icon: <GraduationCap size={16} strokeWidth={1.5} />,

@@ -893,6 +893,123 @@ export const notifyVendorReviewDue = async (
   );
 };
 
+/** "due on 12 Sep" / "3 days overdue" — shared by both deadline notifiers. */
+const deadlineDistanceText = (deadline: Date): string => {
+  const daysLeft = Math.ceil((deadline.getTime() - Date.now()) / 86400000);
+  if (daysLeft > 1) return `in ${daysLeft} days`;
+  if (daysLeft === 1) return "tomorrow";
+  if (daysLeft === 0) return "today";
+  return `${-daysLeft} days overdue`;
+};
+
+const deadlineDateText = (deadline: Date): string =>
+  deadline.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
+/**
+ * Notify one recipient that a project risk's deadline is approaching.
+ * In-app + email (email skippable via sendEmail=false for legs that only need
+ * the in-app row as their dedup record). The in-app row's metadata carries
+ * threshold_days — without it the notice would re-send every night forever.
+ */
+export const notifyRiskDeadlineDueSoon = async (
+  organizationId: number,
+  recipientId: number,
+  risk: { id: number; name: string; deadline: Date },
+  thresholdDays: number,
+  baseUrl: string,
+  sendEmail = true,
+): Promise<void> => {
+  const recipient = await getUserById(recipientId);
+  const distance = deadlineDistanceText(risk.deadline);
+
+  await sendInAppNotification(
+    organizationId,
+    {
+      user_id: recipientId,
+      type: NotificationType.RISK_DEADLINE_DUE_SOON,
+      title: "Risk deadline approaching",
+      message: `Risk "${risk.name}" is due ${distance} (${deadlineDateText(risk.deadline)}).`,
+      entity_type: NotificationEntityType.RISK,
+      entity_id: risk.id,
+      entity_name: risk.name,
+      action_url: buildEntityUrl(NotificationEntityType.RISK, risk.id),
+      metadata: { threshold_days: thresholdDays },
+    },
+    sendEmail,
+    sendEmail
+      ? {
+          template: EMAIL_TEMPLATES.RISK_DEADLINE_DUE,
+          subject: `Risk deadline approaching: ${risk.name}`,
+          variables: {
+            recipient_name: recipient ? `${recipient.name}` : "there",
+            entity_kind: "Risk",
+            entity_name: risk.name,
+            deadline_label: "Deadline",
+            deadline_date: deadlineDateText(risk.deadline),
+            days_text: distance,
+            entity_url: `${baseUrl}${buildEntityUrl(NotificationEntityType.RISK, risk.id)}`,
+          },
+        }
+      : undefined,
+  );
+};
+
+/**
+ * Notify one recipient that a model risk's target date is approaching.
+ * Same shape as notifyRiskDeadlineDueSoon, except the action URL: entity_id
+ * is the MODEL-RISK id (that granularity is what the dedup needs — two risks
+ * on one model must each produce a notice), while the URL must point at the
+ * MODEL, built from model_risks.model_id. Do not "fix" the disagreement by
+ * feeding the model-risk id to buildEntityUrl(MODEL, …) — that links to a
+ * model that does not exist. model_id is nullable: fall back to the list.
+ */
+export const notifyModelRiskDueSoon = async (
+  organizationId: number,
+  recipientId: number,
+  modelRisk: { id: number; name: string; deadline: Date; model_id: number | null },
+  thresholdDays: number,
+  baseUrl: string,
+  sendEmail = true,
+): Promise<void> => {
+  const recipient = await getUserById(recipientId);
+  const distance = deadlineDistanceText(modelRisk.deadline);
+  const modelPath =
+    modelRisk.model_id != null
+      ? `/model-inventory/models/${modelRisk.model_id}`
+      : `/model-inventory`;
+
+  await sendInAppNotification(
+    organizationId,
+    {
+      user_id: recipientId,
+      type: NotificationType.MODEL_RISK_DUE_SOON,
+      title: "Model risk target date approaching",
+      message: `Model risk "${modelRisk.name}" is due ${distance} (${deadlineDateText(modelRisk.deadline)}).`,
+      entity_type: NotificationEntityType.MODEL,
+      entity_id: modelRisk.id,
+      entity_name: modelRisk.name,
+      action_url: modelPath,
+      metadata: { threshold_days: thresholdDays },
+    },
+    sendEmail,
+    sendEmail
+      ? {
+          template: EMAIL_TEMPLATES.RISK_DEADLINE_DUE,
+          subject: `Model risk target date approaching: ${modelRisk.name}`,
+          variables: {
+            recipient_name: recipient ? `${recipient.name}` : "there",
+            entity_kind: "Model risk",
+            entity_name: modelRisk.name,
+            deadline_label: "Target date",
+            deadline_date: deadlineDateText(modelRisk.deadline),
+            days_text: distance,
+            entity_url: `${baseUrl}${modelPath}`,
+          },
+        }
+      : undefined,
+  );
+};
+
 /**
  * Notify policy due soon
  */
@@ -933,6 +1050,68 @@ export const notifyPolicyDueSoon = async (
         policy_url: `${baseUrl}${buildEntityUrl(NotificationEntityType.POLICY, policy.id)}`,
       },
     },
+  );
+};
+
+/**
+ * Notify risk owner that linked evidence has gone stale.
+ *
+ * In-app only: the sweep runs nightly and the flag clears itself, so email
+ * would be noise. A risk with no owner is flagged but not notified — return
+ * early, do not fall back to org admins.
+ */
+export const notifyEvidenceStale = async (
+  organizationId: number,
+  risk: {
+    id: number;
+    risk_name: string;
+    risk_owner: number | null;
+  },
+): Promise<void> => {
+  if (risk.risk_owner == null) return;
+
+  await sendInAppNotification(
+    organizationId,
+    {
+      user_id: risk.risk_owner,
+      type: NotificationType.EVIDENCE_STALE,
+      title: "Evidence stale",
+      message: `Risk "${risk.risk_name}" has stale linked evidence. Review and refresh it.`,
+      entity_type: NotificationEntityType.RISK,
+      entity_id: risk.id,
+      entity_name: risk.risk_name,
+      action_url: buildEntityUrl(NotificationEntityType.RISK, risk.id),
+    },
+    false,
+  );
+};
+
+// Named `notifyRiskOfModelCandidates`, NOT `notifyModelRiskCandidates` —
+// the latter is the orchestrating service in services/riskLinks/modelCandidates.ts,
+// which calls this once per risk. Two different functions; do not merge the names.
+export const notifyRiskOfModelCandidates = async (
+  organizationId: number,
+  risk: { id: number; risk_name: string; risk_owner: number | null },
+  model: { id: number; name: string },
+  candidateCount: number,
+): Promise<void> => {
+  if (risk.risk_owner == null) return;
+  await sendInAppNotification(
+    organizationId,
+    {
+      user_id: risk.risk_owner,
+      type: NotificationType.MODEL_RISK_CANDIDATES,
+      title: "New model risks to review",
+      message:
+        `Risk "${risk.risk_name}" now shares a project with ` +
+        `${candidateCount} model risk${candidateCount === 1 ? "" : "s"} ` +
+        `from "${model.name}". Review the suggested links.`,
+      entity_type: NotificationEntityType.RISK,
+      entity_id: risk.id,
+      entity_name: risk.risk_name,
+      action_url: buildEntityUrl(NotificationEntityType.RISK, risk.id),
+    },
+    false,
   );
 };
 

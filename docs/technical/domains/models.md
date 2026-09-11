@@ -397,6 +397,8 @@ security_assessment_data: [
 | `model_updated` | Model modified |
 | `model_deleted` | Model deleted |
 
+Creating a model, attaching a model to a new project, and creating a model risk each notify (`model_risk_candidates`, in-app) the owners of project risks sharing those projects when the risks have model-risk link candidates they have never seen. No `risk_links` rows are written; the owner reviews candidates in the existing link picker.
+
 ## Key Files
 
 ### Backend

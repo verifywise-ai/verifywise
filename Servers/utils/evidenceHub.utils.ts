@@ -8,6 +8,9 @@ import {
   deleteFileEntityLink,
 } from "./files/evidenceFiles.utils";
 
+/** Days without an update after which mapped evidence counts as stale. */
+export const EVIDENCE_FRESHNESS_DAYS = 90;
+
 // Helper to normalize a date value to an ISO string or null
 const toISO = (d: any): string | null => {
   if (!d) return null;
@@ -88,6 +91,7 @@ export const getAllEvidencesQuery = async (organizationId: number) => {
       expiry_date: toISO(record.expiry_date),
       mapped_model_ids: record.mapped_model_ids,
       mapped_training_ids: record.mapped_training_ids,
+      mapped_risk_ids: record.mapped_risk_ids,
       tags: record.tags,
       framework_ids: record.framework_ids,
       reviewer_id: record.reviewer_id,
@@ -108,6 +112,7 @@ export const getAllEvidencesQuery = async (organizationId: number) => {
       expiry_date: null,
       mapped_model_ids: null,
       mapped_training_ids: null,
+      mapped_risk_ids: null,
       tags: [],
       framework_ids: ["nist_ai_rmf"],
       reviewer_id: record.reviewer,
@@ -163,6 +168,7 @@ export const createNewEvidenceQuery = async (
                 expiry_date,
                 mapped_model_ids,
                 mapped_training_ids,
+                mapped_risk_ids,
                 created_at,
                 updated_at
             ) VALUES (
@@ -173,6 +179,7 @@ export const createNewEvidenceQuery = async (
                 :expiry_date,
                 :mapped_model_ids,
                 :mapped_training_ids,
+                :mapped_risk_ids,
                 :created_at,
                 :updated_at
             ) RETURNING *`,
@@ -188,6 +195,9 @@ export const createNewEvidenceQuery = async (
             : null,
           mapped_training_ids: evidence.mapped_training_ids
             ? `{${evidence.mapped_training_ids.join(",")}}`
+            : null,
+          mapped_risk_ids: evidence.mapped_risk_ids
+            ? `{${evidence.mapped_risk_ids.join(",")}}`
             : null,
           created_at,
           updated_at: created_at,
@@ -255,6 +265,7 @@ export const updateEvidenceByIdQuery = async (
                 expiry_date = :expiry_date,
                 mapped_model_ids = :mapped_model_ids,
                 mapped_training_ids = :mapped_training_ids,
+                mapped_risk_ids = :mapped_risk_ids,
                 updated_at = :updated_at
              WHERE organization_id = :organizationId AND id = :id`,
       {
@@ -270,6 +281,9 @@ export const updateEvidenceByIdQuery = async (
             : null,
           mapped_training_ids: evidence.mapped_training_ids
             ? `{${evidence.mapped_training_ids.join(",")}}`
+            : null,
+          mapped_risk_ids: evidence.mapped_risk_ids
+            ? `{${evidence.mapped_risk_ids.join(",")}}`
             : null,
           updated_at,
         },
@@ -365,4 +379,23 @@ export const deleteEvidenceByIdQuery = async (
     console.error("Error deleting evidence:", error);
     throw error;
   }
+};
+
+/** Risks with at least one stale mapped evidence. Stale = past its explicit
+ *  expiry date, or untouched for EVIDENCE_FRESHNESS_DAYS. */
+export const getStaleEvidenceRiskIdsQuery = async (
+  organizationId: number,
+  now: Date,
+): Promise<number[]> => {
+  const cutoff = new Date(now.getTime() - EVIDENCE_FRESHNESS_DAYS * 86400000);
+  const rows = (await sequelize.query(
+    `SELECT DISTINCT unnest(e.mapped_risk_ids) AS risk_id
+       FROM evidence_hub e
+      WHERE e.organization_id = :organizationId
+        AND e.mapped_risk_ids IS NOT NULL
+        AND array_length(e.mapped_risk_ids, 1) > 0
+        AND (e.expiry_date < :now OR e.updated_at < :cutoff)`,
+    { replacements: { organizationId, now, cutoff }, type: QueryTypes.SELECT },
+  )) as { risk_id: number }[];
+  return rows.map((r) => r.risk_id);
 };

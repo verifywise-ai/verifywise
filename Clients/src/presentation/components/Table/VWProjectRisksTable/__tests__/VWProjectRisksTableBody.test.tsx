@@ -311,4 +311,22 @@ describe("VWProjectRisksTableBody", () => {
     renderWithContext(<VWProjectRisksTableBody {...defaultProps} rows={rowsWithUnknownOwner} />);
     expect(screen.getByText("-")).toBeInTheDocument();
   });
+
+  it("renders the Evidence stale chip with a timestamp tooltip when evidence_stale_at is set", () => {
+    const staleAt = "2026-09-08T05:00:00.000Z";
+    const rowsStale = [
+      { ...mockRows[0], id: 101, evidence_stale_at: staleAt },
+    ] as unknown as RiskModel[];
+    renderWithContext(<VWProjectRisksTableBody {...defaultProps} rows={rowsStale} />);
+    const chip = screen.getByText("Evidence stale");
+    expect(chip).toBeInTheDocument();
+    expect(chip.closest("[title]")?.getAttribute("title")).toBe(
+      new Date(staleAt).toLocaleString(),
+    );
+  });
+
+  it("omits the Evidence stale chip when evidence_stale_at is null", () => {
+    renderWithContext(<VWProjectRisksTableBody {...defaultProps} />);
+    expect(screen.queryByText("Evidence stale")).not.toBeInTheDocument();
+  });
 });

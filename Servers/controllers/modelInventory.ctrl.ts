@@ -11,7 +11,9 @@ import {
   deleteModelInventoryByIdQuery,
   getModelByProjectIdQuery,
   getModelByFrameworkIdQuery,
+  getModelInventoryProjectIdsQuery,
 } from "../utils/modelInventory.utils";
+import { notifyModelRiskCandidates } from "../services/riskLinks/modelCandidates";
 import {
   recordModelInventoryCreation,
   recordModelInventoryDeletion,
@@ -323,6 +325,15 @@ export async function createNewModelInventory(req: Request, res: Response) {
       ).catch((err) => console.error("Failed to send approver notification:", err));
     }
 
+    // F6: a new model normally has no model risks yet, so this usually finds
+    // nothing and sends nothing. Fire-and-forget — the response must not wait.
+    notifyModelRiskCandidates({
+      organizationId: req.organizationId!,
+      modelInventoryId: savedModelInventory.id!,
+      modelName: savedModelInventory.model || `Model #${savedModelInventory.id}`,
+      projectIds: projects || [],
+    }).catch((err) => logger.error("Model risk candidate notice failed:", err));
+
     logStructured(
       "successful",
       "new model inventory created",
@@ -474,6 +485,20 @@ export async function updateModelInventoryById(req: Request, res: Response) {
       external_key,
     });
 
+    // F6: capture the project list before the full-replacement update below
+    // overwrites it, so only newly added projects notify afterwards. A failed
+    // read falls back to the incoming list (empty diff, nothing fires) — an
+    // auxiliary read must never break the update.
+    let projectIdsBefore: number[] = projects || [];
+    try {
+      projectIdsBefore = await getModelInventoryProjectIdsQuery(
+        modelInventoryId,
+        req.organizationId!,
+      );
+    } catch (error) {
+      logger.error("Model risk candidate notice diff failed:", error);
+    }
+
     // Use the existing database query approach for updating
     transaction = await sequelize.transaction();
     const savedModelInventory = await updateModelInventoryByIdQuery(
@@ -530,6 +555,20 @@ export async function updateModelInventoryById(req: Request, res: Response) {
           description: modelDetails || undefined,
         },
       ).catch((err) => console.error("Failed to send approver notification:", err));
+    }
+
+    // F6: notify only for newly added projects. A plain field edit sends
+    // projects: undefined, so the diff is empty and nothing fires.
+    const addedProjectIds = (projects || []).filter(
+      (id: number) => !projectIdsBefore.includes(id),
+    );
+    if (addedProjectIds.length > 0) {
+      notifyModelRiskCandidates({
+        organizationId: req.organizationId!,
+        modelInventoryId,
+        modelName: savedModelInventory.model || `Model #${modelInventoryId}`,
+        projectIds: addedProjectIds,
+      }).catch((err) => logger.error("Model risk candidate notice failed:", err));
     }
 
     logStructured(

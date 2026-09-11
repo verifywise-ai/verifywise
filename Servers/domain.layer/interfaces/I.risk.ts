@@ -45,6 +45,8 @@ export interface IRisk {
   approval_status: string;
   date_of_assessment: Date;
   is_demo?: boolean;
+  /** Set by the nightly evidence-freshness sweep; NULL = fresh. Never hand-edited. */
+  evidence_stale_at?: string | null;
   created_at?: Date;
   deletedLinkedProject?: boolean;
   deletedLinkedFrameworks?: boolean;

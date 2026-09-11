@@ -8997,6 +8997,20 @@ paths:
                   message: {type: string, example: 'Internal Server Error'}
                   error: {type: string}
       operationId: deleteVendorById
+  '/vendors/{id}/riskSuggestions':
+    get:
+      summary: 'Get Vendor Risk Suggestions'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Vendors
+      operationId: getVendorRiskSuggestions
+      security:
+        -
+          bearerAuth: []
   '/vendor-change-history/{id}':
     get:
       tags:
@@ -10130,6 +10144,34 @@ paths:
       tags:
         - RiskLinks
       operationId: getDismissalAnalytics
+      security:
+        -
+          bearerAuth: []
+  /riskLinks/duplicates:
+    get:
+      summary: 'Get Duplicate Candidates'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: getDuplicateCandidates
+      security:
+        -
+          bearerAuth: []
+  /riskLinks/coverage:
+    get:
+      summary: 'Get Control Coverage'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: getControlCoverage
       security:
         -
           bearerAuth: []
@@ -16141,6 +16183,21 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+  /evidenceHub/freshness-sweep:
+    post:
+      summary: 'Run Freshness Sweep'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Evidence
+      operationId: runFreshnessSweep
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin'
   /evidenceHub:
     get:
       tags:

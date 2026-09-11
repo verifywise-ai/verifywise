@@ -17,6 +17,7 @@ import {
   recordEvidenceRemovedFromModel,
   recordEvidenceFieldChangeForModel,
 } from "../utils/modelInventoryChangeHistory.utils";
+import { runEvidenceFreshnessSweep } from "../services/automations/actions/evidenceFreshnessSweep";
 
 export async function getAllEvidences(req: Request, res: Response) {
   logStructured(
@@ -291,6 +292,41 @@ export async function updateEvidenceById(req: Request, res: Response) {
     await transaction.rollback();
     logger.error("❌ Error in updateEvidenceById:", error);
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * Run the evidence-freshness sweep for the caller's organization, synchronously.
+ * Manual trigger for the 05:00 job — mirrors POST /riskLinks/recompute. The
+ * sweep is idempotent, so a hand-run is safe and a second run reports zero
+ * transitions.
+ */
+export async function runFreshnessSweep(req: Request, res: Response): Promise<any> {
+  logStructured(
+    "processing",
+    "starting runFreshnessSweep",
+    "runFreshnessSweep",
+    "evidenceHub.controller.ts",
+  );
+
+  try {
+    const summary = await runEvidenceFreshnessSweep(req.organizationId!);
+    logStructured(
+      "successful",
+      "freshness sweep completed",
+      "runFreshnessSweep",
+      "evidenceHub.controller.ts",
+    );
+    return res.status(200).json(STATUS_CODE[200](summary));
+  } catch (error) {
+    logStructured(
+      "error",
+      "failed to run freshness sweep",
+      "runFreshnessSweep",
+      "evidenceHub.controller.ts",
+    );
+    logger.error("❌ Error in runFreshnessSweep:", error);
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
 

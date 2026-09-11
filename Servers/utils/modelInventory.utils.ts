@@ -567,3 +567,40 @@ export const deleteModelInventoryByIdQuery = async (
     throw error;
   }
 };
+
+/**
+ * Distinct project ids a model inventory is attached to. Same SELECT as the
+ * inline project lookups above, factored out for the two callers that need it
+ * without a model row: the update-trigger project diff and the new-model-risk
+ * trigger's project scope.
+ */
+export async function getModelInventoryProjectIdsQuery(
+  modelInventoryId: number,
+  organizationId: number,
+): Promise<number[]> {
+  const rows = (await sequelize.query(
+    `SELECT DISTINCT project_id FROM model_inventories_projects_frameworks
+      WHERE organization_id = :organizationId
+        AND model_inventory_id = :modelInventoryId
+        AND project_id IS NOT NULL`,
+    { replacements: { organizationId, modelInventoryId } },
+  )) as [{ project_id: number }[], number];
+  return rows[0].map((row) => row.project_id);
+}
+
+/**
+ * Display name of one model inventory, for notification messages. Null when
+ * the row is gone — callers fall back to `Model #<id>` so the message never
+ * renders a blank name.
+ */
+export async function getModelInventoryNameQuery(
+  modelInventoryId: number,
+  organizationId: number,
+): Promise<string | null> {
+  const rows = (await sequelize.query(
+    `SELECT model FROM model_inventories
+      WHERE id = :modelInventoryId AND organization_id = :organizationId`,
+    { replacements: { modelInventoryId, organizationId } },
+  )) as [{ model: string | null }[], number];
+  return rows[0][0]?.model ?? null;
+}

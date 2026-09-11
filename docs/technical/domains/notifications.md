@@ -134,6 +134,28 @@ Before delivering notifications:
 | `role_changed_to_admin` | Role promoted | Email |
 | `project_created` | New project | Email |
 
+### Risk Notifications
+
+| Type | Trigger | Delivery |
+|------|---------|----------|
+| `model_risk_candidates` | Model gained a project, or a new model risk, leaving unseen shared-project candidates for a project risk | In-app |
+| `risk_deadline_due_soon` | Project risk deadline within 7 days (in-app + email) or 1 day (Slack) | In-app + Email / Slack |
+| `model_risk_due_soon` | Model risk target date within 7 days (in-app + email) or 1 day (Slack) | In-app + Email / Slack |
+
+#### Deadline escalation dedup
+
+The nightly deadline sweep notifies the owner plus every org admin, so the
+sent-record is per recipient per entity per threshold: `organization_id`,
+`user_id`, `type`, `entity_type`, `entity_id` plus
+`metadata->>'threshold_days'`. The threshold clause is what lets the 7-day and
+1-day notices coexist on the same risk. A failed write leaves no record, so
+the next night retries exactly that recipient.
+
+The one thing that re-arms a notice is a user deleting the notification
+themselves — the dedup row is the notification row, so deleting it looks
+exactly like "never sent". There is no scheduled purge (both bulk-delete
+helpers in `utils/notification.utils.ts` have no callers).
+
 ### Slack Routing Categories
 
 ```typescript
@@ -372,6 +394,8 @@ enum NotificationType {
   APPROVAL_COMPLETE = "approval_complete",
   VENDOR_REVIEW_DUE = "vendor_review_due",
   POLICY_DUE_SOON = "policy_due_soon",
+  EVIDENCE_STALE = "evidence_stale",
+  MODEL_RISK_CANDIDATES = "model_risk_candidates",
   TRAINING_ASSIGNED = "training_assigned",
   // ... more types
 }

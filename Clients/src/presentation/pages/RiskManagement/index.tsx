@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState, useMemo, useRef } from "react";
-import { Box, Stack, Popover, Typography, IconButton } from "@mui/material";
+import { Box, Stack, Popover, Typography, IconButton, Tooltip } from "@mui/material";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { StatusTileCards, StatusTileItem } from "../../components/Cards/StatusTileCards";
 import { CustomizableButton } from "../../components/button/customizable-button";
-import { BarChart3, ChevronDown } from "lucide-react";
+import { BarChart3, ChevronDown, Network } from "lucide-react";
 import ibmLogo from "../../assets/ibm_logo.svg";
 import mitLogo from "../../assets/mit_logo.svg";
 import VWProjectRisksTable from "../../components/Table/VWProjectRisksTable";
@@ -840,6 +840,15 @@ const RiskManagement = () => {
               filename="risk-management"
               title="Risk Management"
             />
+            <Tooltip title="Risk inheritance graph">
+              <IconButton
+                onClick={() => navigate("/risk-inheritance")}
+                aria-label="Risk inheritance graph"
+                sx={analyticsIconButtonStyle}
+              >
+                <Network size={16} color={text.secondary} />
+              </IconButton>
+            </Tooltip>
             <div data-joyride-id="analytics-button">
               <IconButton
                 onClick={() => setIsAnalyticsDrawerOpen(true)}

@@ -27,6 +27,8 @@ import {
   RiskLinkWithRelated,
   updateRiskLinkStatusQuery,
 } from "../utils/riskLink.utils";
+import { findDuplicateCandidates } from "../services/riskLinks/duplicates";
+import { findControlCoverage } from "../services/riskLinks/coverage";
 import { HierarchyViolation, ParentEntityType, validateTwoLevel } from "../services/riskLinks/hierarchy";
 import {
   DismissReasonRejection,
@@ -349,6 +351,89 @@ export async function getDismissalAnalytics(req: Request, res: Response): Promis
       eventType: "Read",
       description: "failed to fetch dismissal analytics",
       functionName: "getDismissalAnalytics",
+      fileName: FILE_NAME,
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+/**
+ * Duplicate candidate report: pairs of risks that look like the same risk
+ * entered twice, ranked by text similarity. Read-only, org-scoped, no
+ * parameters — same shape as getDismissalAnalytics. Writes nothing.
+ */
+export async function getDuplicateCandidates(req: Request, res: Response): Promise<any> {
+  logProcessing({
+    description: "starting getDuplicateCandidates",
+    functionName: "getDuplicateCandidates",
+    fileName: FILE_NAME,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+
+  try {
+    const report = await findDuplicateCandidates(req.organizationId!);
+
+    logSuccess({
+      eventType: "Read",
+      description: `fetched duplicate report with ${report.candidates.length} candidates`,
+      functionName: "getDuplicateCandidates",
+      fileName: FILE_NAME,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+
+    return res.status(200).json(STATUS_CODE[200](report));
+  } catch (error) {
+    logFailure({
+      eventType: "Read",
+      description: "failed to fetch duplicate candidates",
+      functionName: "getDuplicateCandidates",
+      fileName: FILE_NAME,
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+/**
+ * Control coverage gap report: which risk is not mitigated by any control,
+ * separated from risks whose projects have no framework attached. Read-only,
+ * org-scoped, no parameters — same shape as getDismissalAnalytics. Writes
+ * nothing.
+ */
+export async function getControlCoverage(req: Request, res: Response): Promise<any> {
+  logProcessing({
+    description: "starting getControlCoverage",
+    functionName: "getControlCoverage",
+    fileName: FILE_NAME,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+
+  try {
+    const report = await findControlCoverage(req.organizationId!);
+
+    logSuccess({
+      eventType: "Read",
+      description: `fetched coverage report with ${report.gaps.length} gaps`,
+      functionName: "getControlCoverage",
+      fileName: FILE_NAME,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+
+    return res.status(200).json(STATUS_CODE[200](report));
+  } catch (error) {
+    logFailure({
+      eventType: "Read",
+      description: "failed to fetch control coverage",
+      functionName: "getControlCoverage",
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,

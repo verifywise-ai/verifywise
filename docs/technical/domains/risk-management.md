@@ -288,6 +288,48 @@ Each control link stores:
 }
 ```
 
+## Duplicate Detection
+
+`GET /api/riskLinks/duplicates` returns pairs of risks that look like the same
+risk entered twice, ranked by text similarity, with the reasons attached. A
+human reads the report and cleans up by hand.
+
+**Similarity rule.** Each risk becomes a token set from `risk_name + " " +
+risk_description` (lowercase, strip everything but `[a-z0-9 ]`, split on
+whitespace, drop tokens of length 2 or fewer). Only risks sharing at least one
+`risk_category` value are compared; pairs score Jaccard similarity and are
+reported at or above `DUPLICATE_SIMILARITY_THRESHOLD = 0.25`, sorted by
+similarity descending. Each reported pair also carries `also_shares` context
+(shared categories, shared project, same lifecycle phase), which never decides
+inclusion.
+
+**It writes nothing.** No migration, no new `relation_type`, no `risk_links`
+rows — exact match finds zero pairs on real data and the link scorer has no
+text signal, so neither mechanism was reused.
+
+## Control Coverage Gaps
+
+`GET /api/riskLinks/coverage` answers "which risk is not mitigated by any
+control?" Every active risk lands in exactly one state:
+
+| State | Rule | Meaning |
+|---|---|---|
+| `covered` | ≥ 1 control-side link | Fine. Counted, never listed. |
+| `gap` | 0 control-side links, but ≥ 1 of its projects has a framework attached | **The finding.** Someone can fix this today. |
+| `no_framework` | 0 control-side links and no project with a framework | Not a finding. Nothing to map to yet. |
+
+`no_framework` stays separate from `gap` because a project with no framework
+attached has no controls at all — reporting its risks as uncontrolled would be
+a false audit finding (on the dev org, the naive two-state version reports all
+37 risks uncontrolled for exactly this reason).
+
+An assessment answer is not a control: `assessment_link_count` rides along in
+each listed risk for context ("0 controls but 3 assessment answers" is a
+different conversation from "0 of everything") and never affects the state. A
+risk linked only via `answers_eu__risks` is still a `gap`.
+
+**It writes nothing.** No migration, no `risk_links` rows, no cache rows.
+
 ## API Endpoints
 
 ### Project Risks
@@ -619,6 +661,8 @@ risk from silently ending up with no links.
 | POST | `/api/riskLinks` | any authenticated | Create a link by hand. Lands `confirmed`/`user` straight away. |
 | POST | `/api/riskLinks/recompute` | Admin | Backfill the whole org. |
 | POST | `/api/riskLinks/suggest-hierarchy` | Admin | Queue one direction-agent pass per connected component. |
+| GET | `/api/riskLinks/duplicates` | any authenticated | Duplicate candidate report. Ranked pairs with reasons; writes nothing. |
+| GET | `/api/riskLinks/coverage` | any authenticated | Control coverage gap report. Three states; writes nothing. |
 
 There is no delete endpoint: a hard delete would be recreated by the next
 recompute, so dismissal is the durable way to remove a link.

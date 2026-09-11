@@ -7,6 +7,7 @@ import {
   useTheme,
   Typography,
   Stack,
+  Chip as MuiChip,
 } from "@mui/material";
 import { VWLink } from "../../Link";
 import singleTheme from "../../../themes/v1SingleTheme";
@@ -213,6 +214,15 @@ const VWProjectRisksTableBody = ({
                       ? `${row.risk_name.slice(0, 30)}...`
                       : row.risk_name
                     : "-"}
+                  {row.evidence_stale_at && (
+                    <MuiChip
+                      size="small"
+                      color="warning"
+                      label="Evidence stale"
+                      title={new Date(row.evidence_stale_at).toLocaleString()}
+                      sx={{ ml: 2 }}
+                    />
+                  )}
                 </TableCell>
                 {isColVisible("risk_owner") && (
                   <TableCell

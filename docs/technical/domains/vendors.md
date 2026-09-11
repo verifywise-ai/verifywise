@@ -159,6 +159,7 @@ enum Likelihood {
 | GET | `/vendors/` | Get all vendors |
 | GET | `/vendors/:id` | Get vendor by ID |
 | GET | `/vendors/project-id/:id` | Get vendors by project |
+| GET | `/vendors/:id/riskSuggestions` | Read-only vendor risk suggestions derived from the questionnaire |
 | POST | `/vendors/` | Create vendor |
 | PATCH | `/vendors/:id` | Update vendor |
 | DELETE | `/vendors/:id` | Delete vendor |
@@ -275,6 +276,45 @@ Vendor risks support soft delete:
 - `deleted_at` timestamp recorded
 - Risk hidden from default queries
 - Can be restored or permanently deleted
+
+## Vendor Risk Suggestions
+
+`GET /vendors/:id/riskSuggestions` is a **read-only report**. For one vendor it reads the four
+questionnaire columns (`data_sensitivity`, `business_criticality`, `past_issues`,
+`regulatory_exposure`), derives the vendor risks those answers imply, and returns them with the
+field and raw value that produced each (`reasons`) and a derived `risk_level`. It **writes
+nothing** — no `vendorrisks` row, no migration, no status column. The project link is a property
+of the vendor (`vendors_projects`), not of a risk row, so nothing is bound to a project here.
+
+A response reports `questionnaire_complete` (all four columns non-null), `existing_risk_count`,
+the `suggestions`, and any `suppressed` archetypes. An unassessed vendor answers
+`questionnaire_complete: false` with zero suggestions, which is deliberately distinct from a
+fully answered "no exposure" vendor (`true`, zero suggestions). Suggestions are ordered worst
+`risk_level` first, then by archetype.
+
+### Archetypes
+
+| # | Trigger | `risk_severity` | `likelihood` |
+|---|---------|-----------------|--------------|
+| A `data_sensitivity` | Any value except `None` and `Internal only`. `Health data (e.g. HIPAA)` → `Catastrophic`; `Financial data` / `Personally identifiable information (PII)` / `Model weights or AI assets` → `Major`; `Other sensitive data` → `Moderate` | per value | `Possible` |
+| B `business_criticality` | `High (critical to core services or products)` | `Major` | `Unlikely` |
+| C `past_issues` | `Minor incident (e.g. small delay, minor bug)` → `Minor`; `Major incident (e.g. data breach, legal issue)` → `Major` | per value | `Likely` |
+| D `regulatory_exposure` | Any value except `None` | `Moderate` | `Possible` |
+
+`risk_level` is derived with `calculateRiskLevel` from
+`utils/validations/vendorRiskValidation.utils.ts` and stored in the report with the ` Risk`
+suffix used by `vendorrisks.risk_level` (for example `High Risk`). Suggestion text names the
+answer through a short display label, not the raw enum value; `reasons` keeps the raw enum value.
+
+### Suppression
+
+Before returning, each archetype's `risk_description` is compared against the vendor's existing
+active risks (`getVendorRisksByVendorIdQuery`, sliced to 200 in the service) using Jaccard
+similarity over word tokens. Tokens are lowercased, stripped to `[a-z0-9 ]`, and any token of
+length ≤ 2 is dropped. An archetype scoring **at or above
+`VENDOR_SUGGESTION_SUPPRESS_THRESHOLD = 0.25`** is removed from `suggestions` and reported in
+`suppressed` with the `matched_vendor_risk_id` — so a user can see which existing risk absorbed
+it rather than watching it vanish.
 
 ## Change History
 

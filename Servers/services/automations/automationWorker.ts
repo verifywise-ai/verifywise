@@ -25,6 +25,8 @@ import { processScheduledAiDetectionScans } from "../aiDetection/scheduledScanPr
 import { syncAiTrustIndex } from "./actions/syncAiTrustIndex";
 import { runRevalidationSweepAllOrgs } from "./actions/mrmRevalidationSweep";
 import { runRetentionPruneAllOrgs } from "./actions/mrmRetentionPrune";
+import { runEvidenceFreshnessSweepAllOrgs } from "./actions/evidenceFreshnessSweep";
+import { runDeadlineEscalationSweepAllOrgs } from "./actions/deadlineEscalationSweep";
 import { recomputeRiskLinks } from "../riskLinks/recompute";
 import { suggestDirectionForComponent } from "../riskLinks/direction/direction.service";
 // AI Gateway budget/risk jobs — call AIGateway HTTP endpoints via internal API
@@ -528,6 +530,10 @@ export const createAutomationWorker = () => {
           await runRevalidationSweepAllOrgs();
         } else if (name === "mrm_retention_prune") {
           await runRetentionPruneAllOrgs();
+        } else if (name === "evidence_freshness_sweep") {
+          await runEvidenceFreshnessSweepAllOrgs();
+        } else if (name === "deadline_escalation_sweep") {
+          await runDeadlineEscalationSweepAllOrgs();
         } else if (name === "risk_link_recompute") {
           const { organizationId, riskId } = job.data as {
             organizationId: number;

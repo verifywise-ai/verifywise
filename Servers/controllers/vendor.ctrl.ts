@@ -22,6 +22,7 @@ import {
   recordMultipleFieldChanges,
 } from "../utils/vendorChangeHistory.utils";
 import { notifyUserAssigned } from "../services/inAppNotification.service";
+import { getVendorRiskSuggestions as getVendorRiskSuggestionsService } from "../services/vendors/riskSuggestions";
 import { QueryTypes } from "sequelize";
 
 import { translateError } from "../utils/i18n.utils";
@@ -179,6 +180,60 @@ export async function getVendorByProjectId(req: Request, res: Response): Promise
       organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * Read-only report: the vendor risks this vendor's questionnaire answers imply,
+ * minus the ones it already has. Writes nothing and opens no transaction.
+ */
+export async function getVendorRiskSuggestions(req: Request, res: Response): Promise<any> {
+  const vendorId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+
+  logProcessing({
+    description: `starting getVendorRiskSuggestions for ID ${vendorId}`,
+    functionName: "getVendorRiskSuggestions",
+    fileName: "vendor.ctrl.ts",
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+
+  try {
+    const report = await getVendorRiskSuggestionsService(vendorId, req.organizationId!);
+
+    if (!report) {
+      await logSuccess({
+        eventType: "Read",
+        description: `Vendor not found for risk suggestions: ID ${vendorId}`,
+        functionName: "getVendorRiskSuggestions",
+        fileName: "vendor.ctrl.ts",
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
+      return res.status(404).json(STATUS_CODE[404]({}));
+    }
+
+    await logSuccess({
+      eventType: "Read",
+      description: `Derived ${report.suggestions.length} risk suggestions for vendor ID ${vendorId}`,
+      functionName: "getVendorRiskSuggestions",
+      fileName: "vendor.ctrl.ts",
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+
+    return res.status(200).json(STATUS_CODE[200](report));
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: "failed to fetch vendor risk suggestions",
+      functionName: "getVendorRiskSuggestions",
+      fileName: "vendor.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
 

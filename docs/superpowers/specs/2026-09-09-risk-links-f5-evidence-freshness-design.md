@@ -98,23 +98,42 @@ row, not an env var — one number, one caller.
 
 ---
 
-## What the sweep does NOT do
+## What the sweep does to `mitigation_status`
 
-**It does not touch `mitigation_status`.** The original note offered either
-branch — "mitigation_status düşer **/** uyarı atar" — and this design takes the
-second. `enum_projectrisks_mitigation_status` does already contain
-`Requires review`, so the destructive branch needs no migration and stays
-available later. It is left out because:
+> **Amended 2026-09-09.** The first cut of this design shipped only the "uyarı
+> atar" half of the original note and left the destructive half as an open
+> question. The user closed it: both halves are in.
 
-- the value it overwrites is one a human typed, and there is no undo;
-- the risk form lets that human set it straight back, so the nightly sweep and
-  the user would overwrite each other indefinitely;
-- the flag plus the notification already deliver the signal without destroying
-  anything.
+The original note offered either branch — "mitigation_status düşer **/** uyarı
+atar" — and the sweep now does both. `enum_projectrisks_mitigation_status`
+already contains `Requires review`, so this needed no migration and no frontend
+change (the status is already in the dropdown, the colour map and the chart).
 
-If the destructive branch is wanted, it is an additive change on top of this
-design (one `UPDATE` in the same transition branch that fires the notification),
-not a redesign. **Open question for the user.**
+**Only `'Completed'` drops.** Stale evidence contradicts a completed
+mitigation, and `'Completed'` is the only status that claim is made from —
+`In Progress`, `On Hold`, `Deferred`, `Canceled` and `Not Started` are already
+open or parked, so there is nothing to walk back. The downgrade is scoped to
+the rows the flag UPDATE just returned, so it fires once per transition, not
+once per night.
+
+**Clearing the flag does not restore `'Completed'`.** This asymmetry is
+deliberate. Re-attesting a mitigation as complete is a human act; an unattended
+05:00 job silently promoting a risk back to `'Completed'` is a far more
+dangerous write in a compliance product than leaving a review flag up one day
+too long. It also means no "previous status" column is needed.
+
+**Implementation note.** The downgrade is a second, separate `UPDATE` rather
+than a `CASE` folded into the flag UPDATE: Postgres `RETURNING` hands back the
+new value, not the old one, so an exact `downgraded` count is only obtainable
+this way. Because the write is raw SQL it bypasses the snapshot call the normal
+risk create/update paths make, so the sweep calls
+`recordSnapshotIfChanged("mitigation_status", organizationId)` itself (in a
+try/catch — a history failure must not fail the sweep); that function is
+self-guarding and no-ops when the distribution is unchanged.
+
+The sweep summary is therefore
+`{ organization_id, stale, downgraded, cleared, notified }`, returned verbatim
+as the body of `POST /api/evidenceHub/freshness-sweep`.
 
 ---
 
@@ -255,7 +274,11 @@ with two things that exist only to make it verifiable:
   days, one untouched for 89 days (the control that must stay clean), and one
   stale row mapped to two risks. `evidence_hub` has no `is_demo` column and none
   of the cascade coverage `risk_links` has, so the seed's delete block needs its
-  own `DELETE FROM evidence_hub WHERE id BETWEEN 9700 AND 9799;`.
+  own `DELETE FROM evidence_hub WHERE id BETWEEN 9700 AND 9799;`. Two of the
+  demo risks (9502, 9503) seed as `'Completed'` so the downgrade has something
+  to act on: 9502's evidence is stale (it drops to `'Requires review'`), 9503's
+  is fresh (it stays `'Completed'` — the control). A hand-run over the demo data
+  therefore reports `{ stale: 4, downgraded: 1, cleared: 0, notified: 4 }`.
 
 ## Testing
 

@@ -16,6 +16,8 @@ import {
   scheduleMrmRevalidationSweep,
   scheduleMrmRetentionPrune,
   scheduleAiTrustIndexSync,
+  scheduleEvidenceFreshnessSweep,
+  scheduleDeadlineEscalationSweep,
 } from "../services/automations/automationProducer";
 
 export async function addAllJobs(): Promise<void> {
@@ -32,6 +34,8 @@ export async function addAllJobs(): Promise<void> {
   await scheduleMcpGatewayCleanup();
   await scheduleMrmRevalidationSweep(); // non-obliterating — safe to run after the obliterating schedulers
   await scheduleMrmRetentionPrune(); // non-obliterating — safe to run after the obliterating schedulers
+  await scheduleEvidenceFreshnessSweep(); // non-obliterating — safe to run after the obliterating schedulers
+  await scheduleDeadlineEscalationSweep(); // non-obliterating — safe to run after the obliterating schedulers
   await scheduleAiTrustIndexSync();
   // Ordering constraint: obliterate-using schedulers (e.g. vendor-review,
   // report-notification) must run BEFORE all non-obliterating ones, or they wipe

@@ -33,6 +33,7 @@ export class RiskModel {
   approval_status!: string;
   date_of_assessment!: Date;
   is_demo?: boolean;
+  evidence_stale_at?: string | null;
   projects?: number[];
   created_at?: Date;
   updated_at?: Date;
@@ -91,6 +92,7 @@ export class RiskModel {
     this.approval_status = data.approval_status;
     this.date_of_assessment = data.date_of_assessment;
     this.is_demo = data.is_demo;
+    this.evidence_stale_at = data.evidence_stale_at;
     this.created_at = data.created_at;
     this.updated_at = data.updated_at;
     this.is_deleted = data.is_deleted;

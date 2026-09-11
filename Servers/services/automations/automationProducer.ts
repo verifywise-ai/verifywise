@@ -306,6 +306,38 @@ export async function scheduleMrmRetentionPrune() {
   );
 }
 
+export async function scheduleEvidenceFreshnessSweep() {
+  logger.info("Adding evidence freshness sweep job to the queue...");
+  // Daily at 5 AM -- 3 AM is the MRM retention prune and 4 AM the revalidation
+  // sweep, so this slot is free. No obliterate here -- the repeatable add is
+  // idempotent by repeat key.
+  await automationQueue.add(
+    "evidence_freshness_sweep",
+    {},
+    {
+      repeat: { pattern: "0 5 * * *" },
+      removeOnComplete: true,
+      removeOnFail: false,
+    },
+  );
+}
+
+export async function scheduleDeadlineEscalationSweep() {
+  logger.info("Adding deadline escalation sweep job to the queue...");
+  // Daily at 7 AM -- 6 AM is the AI detection scan check and 8 AM the report
+  // notification, so this slot is free. No obliterate here -- the repeatable
+  // add is idempotent by repeat key.
+  await automationQueue.add(
+    "deadline_escalation_sweep",
+    {},
+    {
+      repeat: { pattern: "0 7 * * *" },
+      removeOnComplete: true,
+      removeOnFail: false,
+    },
+  );
+}
+
 export async function scheduleAiTrustIndexSync() {
   logger.info("Adding AI Trust Index weekly sync job to the queue...");
   // Monday 06:00 UTC. jobId keyed weekly is set at runtime is not needed here;

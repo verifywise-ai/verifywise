@@ -11,6 +11,12 @@ import {
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { translateError } from "../utils/i18n.utils";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
+import logger from "../utils/logger/fileLogger";
+import {
+  getModelInventoryProjectIdsQuery,
+  getModelInventoryNameQuery,
+} from "../utils/modelInventory.utils";
+import { notifyModelRiskCandidates } from "../services/riskLinks/modelCandidates";
 import {
   recordEntityCreation,
   trackEntityChanges,
@@ -145,6 +151,29 @@ export async function createNewModelRisk(req: Request, res: Response) {
     }
 
     await transaction.commit();
+
+    // F6: a new model risk on a model with projects is the most direct cause
+    // of genuinely new candidates — restrict to this model risk, scoped to all
+    // of the model's projects. Guarded on model_id: a model risk with no model
+    // has no projects and therefore no candidates. Fire-and-forget.
+    if (modelRisk.model_id) {
+      const modelId = modelRisk.model_id;
+      getModelInventoryProjectIdsQuery(modelId, req.organizationId!)
+        .then(async (candidateProjectIds) => {
+          if (candidateProjectIds.length === 0) return;
+          const modelName =
+            (await getModelInventoryNameQuery(modelId, req.organizationId!)) ??
+            `Model #${modelId}`;
+          await notifyModelRiskCandidates({
+            organizationId: req.organizationId!,
+            modelInventoryId: modelId,
+            modelName,
+            projectIds: candidateProjectIds,
+            modelRiskIds: [modelRisk.id!],
+          });
+        })
+        .catch((err) => logger.error("Model risk candidate notice failed:", err));
+    }
 
     await logSuccess({
       eventType: "Create",

@@ -27,6 +27,7 @@ evidence_hub
 ├── evidence_files (JSONB, default=[])
 ├── expiry_date (TIMESTAMP, nullable)
 ├── mapped_model_ids (INTEGER[], nullable)
+├── mapped_risk_ids (INTEGER[], nullable)
 ├── created_at (TIMESTAMP)
 └── updated_at (TIMESTAMP)
 ```
@@ -205,6 +206,7 @@ interface IEvidenceHub {
   evidence_files: FileResponse[];
   expiry_date?: Date | string;
   mapped_model_ids?: number[] | null;
+  mapped_risk_ids?: number[] | null;
   created_at?: Date;
   updated_at?: Date;
 }
@@ -254,7 +256,8 @@ POST /evidenceHub/
     }
   ],
   expiry_date: "2026-01-15",
-  mapped_model_ids: [1, 3, 5]
+  mapped_model_ids: [1, 3, 5],
+  mapped_risk_ids: [12]
 }
 ```
 
@@ -321,6 +324,26 @@ Evidence ──── mapped_model_ids ──── Model Inventory
 ```
 
 Evidence linked via `mapped_model_ids` array. Changes tracked in model change history.
+
+### Risks
+
+```
+Evidence ──── mapped_risk_ids ──── Risks
+```
+
+Evidence linked via `mapped_risk_ids` array (set from the "Mapped risks"
+multi-select in the evidence modal). The nightly evidence-freshness sweep
+(`evidence_freshness_sweep`, 05:00) flags risks whose mapped evidence is past
+its `expiry_date` or untouched for 90 days by setting
+`risks.evidence_stale_at`, and notifies the risk owner in-app
+(`evidence_stale`). A freshly flagged risk still sitting at
+`mitigation_status = 'Completed'` is knocked down to `'Requires review'` —
+stale evidence contradicts a completed mitigation, and `'Completed'` is the
+only status that claim is made from. Clearing the flag deliberately does not
+restore it: re-attesting a mitigation as complete is a human act. The sweep
+owns both the set and the clear, and its summary
+(`{ organization_id, stale, downgraded, cleared, notified }`) is the response
+body of `POST /api/evidenceHub/freshness-sweep`.
 
 ### Policies
 
@@ -399,6 +422,7 @@ Evidence files attached to assessment answers via:
 - description (textarea)
 - evidence_files (file upload)
 - mapped_model_ids (multi-select)
+- mapped_risk_ids (multi-select)
 - expiry_date (date picker)
 
 ### Link Evidence Selector Modal

@@ -1126,3 +1126,253 @@ export async function updateRiskLinkStatusQuery(
     },
   );
 }
+
+/**
+ * Project risks that have model-risk link candidates they have never seen.
+ *
+ * A (risk, model_risk) pair is a candidate when the two share a project via
+ * the model inventory and no `risk_links` row exists for the pair yet. The
+ * NOT EXISTS is status-agnostic on purpose: a dismissed link is a human saying
+ * no, and re-proposing it is exactly what the dismissal analytics discourage.
+ *
+ * `COUNT(DISTINCT mr.id)` absorbs the two row shapes of
+ * `model_inventories_projects_frameworks` (with and without framework_id); a
+ * naive COUNT(*) would double-count. `risk_owner` is selected but not filtered
+ * — an ownerless risk is a real candidate, it just cannot be notified.
+ */
+export interface ModelRiskCandidateRow {
+  risk_id: number;
+  risk_name: string;
+  risk_owner: number | null;
+  candidate_count: number;
+}
+
+export async function getModelRiskCandidatesQuery(input: {
+  organizationId: number;
+  modelInventoryId: number;
+  projectIds: number[];
+  modelRiskIds?: number[];
+  limit: number;
+}): Promise<ModelRiskCandidateRow[]> {
+  const { organizationId, modelInventoryId, projectIds, modelRiskIds, limit } = input;
+  // IN () is a syntax error in Postgres and Sequelize renders an empty array
+  // as IN (NULL): never reach the database with an empty project list.
+  if (projectIds.length === 0) return [];
+
+  // Appended by concatenation, only when non-empty — never a toggle in SQL.
+  const modelRiskFilter =
+    modelRiskIds && modelRiskIds.length > 0 ? `AND mr.id IN (:modelRiskIds)` : "";
+
+  const rows = await sequelize.query(
+    `SELECT r.id                  AS risk_id,
+            r.risk_name           AS risk_name,
+            r.risk_owner          AS risk_owner,
+            COUNT(DISTINCT mr.id) AS candidate_count
+       FROM projects_risks pr
+       JOIN risks r
+         ON r.id = pr.risk_id
+        AND r.organization_id = :organizationId
+        AND r.is_deleted = false
+       JOIN model_inventories_projects_frameworks mp
+         ON mp.project_id = pr.project_id
+        AND mp.organization_id = :organizationId
+        AND mp.model_inventory_id = :modelInventoryId
+       JOIN model_risks mr
+         ON mr.model_id = mp.model_inventory_id
+        AND mr.organization_id = :organizationId
+        AND mr.is_deleted = false
+      WHERE pr.organization_id = :organizationId
+        AND pr.project_id IN (:projectIds)
+        ${modelRiskFilter}
+        AND NOT EXISTS (
+              SELECT 1
+                FROM risk_links l
+               WHERE l.organization_id      = :organizationId
+                 AND l.source_risk_id       = r.id
+                 AND l.target_model_risk_id = mr.id
+            )
+      GROUP BY r.id, r.risk_name, r.risk_owner
+      ORDER BY r.id
+      LIMIT :limit`,
+    {
+      replacements: { organizationId, modelInventoryId, projectIds, modelRiskIds, limit },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  return (rows as any[]).map((row) => ({
+    risk_id: row.risk_id,
+    risk_name: row.risk_name,
+    risk_owner: row.risk_owner ?? null,
+    candidate_count: toNumber(row.candidate_count),
+  }));
+}
+
+/**
+ * Scan rows for the duplicate candidate report (F7). One read, no joins into
+ * the link tables — projects ride along for the `also_shares` context.
+ *
+ * Casts are load-bearing: `ai_lifecycle_phase` is a Postgres enum (trim/lower
+ * fail on it without `::text`) and `risk_category` is an array column (map it
+ * as an array in JS, never a string — category blocking depends on it).
+ */
+export interface DuplicateScanRow {
+  id: number;
+  risk_name: string;
+  risk_description: string | null;
+  risk_category: string[];
+  ai_lifecycle_phase: string | null;
+  risk_owner: number | null;
+  projects: number[];
+}
+
+export async function getDuplicateScanRowsQuery(
+  organizationId: number,
+  limit: number,
+): Promise<DuplicateScanRow[]> {
+  const rows = await sequelize.query(
+    `SELECT r.id,
+            r.risk_name,
+            r.risk_description,
+            r.risk_category::text[]         AS risk_category,
+            r.ai_lifecycle_phase::text      AS ai_lifecycle_phase,
+            r.risk_owner,
+            COALESCE(
+              (SELECT array_agg(DISTINCT pr.project_id)
+                 FROM projects_risks pr
+                WHERE pr.risk_id = r.id
+                  AND pr.organization_id = :organizationId),
+              ARRAY[]::integer[]
+            )                               AS projects
+       FROM risks r
+      WHERE r.organization_id = :organizationId
+        AND r.is_deleted = false
+      ORDER BY r.id
+      LIMIT :limit`,
+    {
+      replacements: { organizationId, limit },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  return (rows as any[]).map((row) => ({
+    id: row.id,
+    risk_name: row.risk_name,
+    risk_description: row.risk_description ?? null,
+    risk_category: Array.isArray(row.risk_category) ? row.risk_category : [],
+    ai_lifecycle_phase: row.ai_lifecycle_phase ?? null,
+    risk_owner: row.risk_owner ?? null,
+    projects: Array.isArray(row.projects) ? row.projects : [],
+  }));
+}
+
+/**
+ * Scan rows for the control coverage gap report (F8): per active risk, how
+ * many control-side links, how many assessment-side links, and how many of
+ * its projects have a framework attached.
+ *
+ * The two link CTEs are getStructuralNeighboursQuery's `element_links` CTE
+ * (above) split in two, minus nothing on the control side except
+ * `answers_eu__risks`, which rides alone and never counts as coverage. The
+ * column-name split (`projects_risks_id` holding a `risks.id`, except the two
+ * `custom_framework_*` tables using `risk_id`) is copied from there, not
+ * re-derived.
+ *
+ * ORDER BY uses the raw `risk_level_autocalculated` enum (declared in
+ * severity order, so DESC is worst-first with no CASE); `::text` appears only
+ * in the SELECT list, where an alphabetical sort would read
+ * High < Low < Medium < No < Very high.
+ */
+export interface CoverageScanRow {
+  id: number;
+  risk_name: string;
+  risk_owner: number | null;
+  risk_level: string | null;
+  mitigation_status: string | null;
+  control_link_count: number;
+  assessment_link_count: number;
+  project_count: number;
+  framework_project_count: number;
+  projects: { id: number; name: string; has_framework: boolean }[];
+}
+
+export async function getCoverageScanRowsQuery(
+  organizationId: number,
+): Promise<CoverageScanRow[]> {
+  const rows = await sequelize.query(
+    `WITH control_links AS (
+       SELECT projects_risks_id AS risk_id FROM subcontrols_eu__risks             WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT projects_risks_id         FROM controls_eu__risks                 WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT projects_risks_id         FROM subclauses_iso__risks              WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT projects_risks_id         FROM subclauses_iso27001__risks         WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT projects_risks_id         FROM annexcategories_iso__risks         WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT projects_risks_id         FROM annexcontrols_iso27001__risks      WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT projects_risks_id         FROM nist_ai_rmf_subcategories__risks   WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT risk_id                   FROM custom_framework_level2_risks      WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT risk_id                   FROM custom_framework_level3_risks      WHERE organization_id = :organizationId
+     ),
+     assessment_links AS (
+       SELECT projects_risks_id AS risk_id FROM answers_eu__risks WHERE organization_id = :organizationId
+     )
+     SELECT r.id,
+            r.risk_name,
+            r.risk_owner,
+            r.risk_level_autocalculated::text AS risk_level,
+            r.mitigation_status::text         AS mitigation_status,
+            (SELECT COUNT(*) FROM control_links cl WHERE cl.risk_id = r.id) AS control_link_count,
+            (SELECT COUNT(*) FROM assessment_links al WHERE al.risk_id = r.id) AS assessment_link_count,
+            (SELECT COUNT(*)
+               FROM projects_risks pr
+              WHERE pr.risk_id = r.id AND pr.organization_id = :organizationId) AS project_count,
+            (SELECT COUNT(DISTINCT pr.project_id)
+               FROM projects_risks pr
+               JOIN projects_frameworks pf
+                 ON pf.project_id = pr.project_id AND pf.organization_id = :organizationId
+              WHERE pr.risk_id = r.id AND pr.organization_id = :organizationId) AS framework_project_count,
+            -- INNER, deliberately: no LEFT JOIN anywhere, so a project-less
+            -- risk resolves to '[]' and lands in no_framework instead of
+            -- inheriting an outer join's NULLs.
+            COALESCE((
+              SELECT json_agg(json_build_object(
+                'id', p.id,
+                'name', p.project_title,
+                'has_framework', EXISTS (
+                  SELECT 1 FROM projects_frameworks pf
+                  WHERE pf.project_id = p.id AND pf.organization_id = :organizationId
+                )
+              ) ORDER BY p.id)
+              FROM projects_risks pr
+              JOIN projects p ON p.id = pr.project_id AND p.organization_id = :organizationId
+              WHERE pr.risk_id = r.id AND pr.organization_id = :organizationId
+            ), '[]') AS projects
+       FROM risks r
+      WHERE r.organization_id = :organizationId
+        AND r.is_deleted = false
+      ORDER BY r.risk_level_autocalculated DESC, r.id ASC`,
+    {
+      replacements: { organizationId },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  return (rows as any[]).map((row) => ({
+    id: row.id,
+    risk_name: row.risk_name,
+    risk_owner: row.risk_owner ?? null,
+    risk_level: row.risk_level ?? null,
+    mitigation_status: row.mitigation_status ?? null,
+    control_link_count: toNumber(row.control_link_count),
+    assessment_link_count: toNumber(row.assessment_link_count),
+    project_count: toNumber(row.project_count),
+    framework_project_count: toNumber(row.framework_project_count),
+    projects: Array.isArray(row.projects) ? row.projects : [],
+  }));
+}

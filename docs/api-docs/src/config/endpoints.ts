@@ -3196,6 +3196,18 @@ export const evidenceAiEndpoints: Endpoint[] = [
 // Evidence endpoints
 export const evidenceHubEndpoints: Endpoint[] = [
   {
+    method: 'POST',
+    path: '/evidenceHub/freshness-sweep',
+    summary: "Run Freshness Sweep",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Evidence",
+  },
+  {
     method: 'GET',
     path: '/evidenceHub',
     summary: "Get All Evidences",
@@ -8244,6 +8256,28 @@ export const risklinksEndpoints: Endpoint[] = [
   },
   {
     method: 'GET',
+    path: '/riskLinks/duplicates',
+    summary: "Get Duplicate Candidates",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+  {
+    method: 'GET',
+    path: '/riskLinks/coverage',
+    summary: "Get Control Coverage",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+  {
+    method: 'GET',
     path: '/riskLinks/{riskId}',
     summary: "Get Risk Links",
     requiresAuth: true,
@@ -9813,6 +9847,17 @@ export const vendorEndpoints: Endpoint[] = [
       { status: 202, description: "Vendor deleted successfully" },
       { status: 401, description: "Unauthorized - missing or invalid JWT" },
       { status: 404, description: "Vendor not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Vendors",
+  },
+  {
+    method: 'GET',
+    path: '/vendors/{id}/riskSuggestions',
+    summary: "Get Vendor Risk Suggestions",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Vendors",

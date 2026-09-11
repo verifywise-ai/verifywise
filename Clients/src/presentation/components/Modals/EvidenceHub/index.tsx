@@ -45,6 +45,7 @@ interface NewEvidenceHubFormErrors {
   evidence_name?: string;
   evidence_type?: string;
   mapped_model_ids?: string;
+  mapped_risk_ids?: string;
   files?: string;
   description?: string;
   expiry_date?: string;
@@ -120,6 +121,7 @@ const initialState: EvidenceHubModel = {
   evidence_type: "",
   description: "",
   mapped_model_ids: [],
+  mapped_risk_ids: [],
   expiry_date: null,
   evidence_files: [] as FileResponse[],
   tags: [],
@@ -142,6 +144,7 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
+  const [riskOptions, setRiskOptions] = useState<{ _id: number; name: string }[]>([]);
   const [userOptions, setUserOptions] = useState<{ _id: number; name: string }[]>([]);
   const [activeStep, setActiveStep] = useState(0);
 
@@ -162,6 +165,7 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
       setIsSubmitting(false);
       setActiveStep(0);
       fetchModels();
+      fetchRisks();
       fetchUsers();
     } else {
       setValues(initialState);
@@ -184,6 +188,19 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
       }
     } catch (err) {
       console.error("Error fetching models:", err);
+    }
+  };
+
+  const fetchRisks = async () => {
+    try {
+      const response = await getAllEntities({ routeUrl: "/projectRisks" });
+      if (response?.data) {
+        setRiskOptions(
+          response.data.map((r: any) => ({ _id: r.id, name: r.risk_name })),
+        );
+      }
+    } catch (err) {
+      console.error("Error fetching risks:", err);
     }
   };
 
@@ -562,6 +579,22 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
                 items={modelOptions}
                 placeholder="Select models"
                 error={errors.mapped_model_ids}
+                sx={{ width: "100%" }}
+              />
+            </Suspense>
+            <Suspense fallback={<div>Loading...</div>}>
+              <CustomizableMultiSelect
+                label="Mapped risks"
+                value={values.mapped_risk_ids || []}
+                onChange={(event) => {
+                  setValues({
+                    ...values,
+                    mapped_risk_ids: event.target.value as number[],
+                  });
+                }}
+                items={riskOptions}
+                placeholder="Select risks"
+                error={errors.mapped_risk_ids}
                 sx={{ width: "100%" }}
               />
             </Suspense>
