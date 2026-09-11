@@ -332,7 +332,18 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
   useModalKeyHandling({ isOpen, onClose: handleClose });
 
   return (
-    <Drawer anchor="right" open={isOpen} onClose={handleClose}>
+    <Drawer
+      anchor="right"
+      open={isOpen}
+      onClose={handleClose}
+      sx={{
+        "margin": 0,
+        "& .MuiDrawer-paper": {
+          margin: 0,
+          borderRadius: 0,
+        },
+      }}
+    >
       <Stack
         sx={{
           width: 700,
@@ -494,7 +505,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
 
                 {/* Row: Affected model + Owner (issue #4583 FK pickers) */}
                 <Stack direction={"row"} gap={theme.spacing(8)} sx={{ mt: 2 }}>
-                  <Stack sx={{ gap: 3, width: "50%" }}>
+                  <Stack sx={{ gap: 3, width: "50%", minWidth: 0 }}>
                     <SelectComponent
                       id="model_inventory_id"
                       label="Affected model"
@@ -507,7 +518,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                       disabled={isViewMode}
                     />
                   </Stack>
-                  <Stack sx={{ gap: 3, width: "50%" }}>
+                  <Stack sx={{ gap: 3, width: "50%", minWidth: 0 }}>
                     <SelectComponent
                       id="assignee_id"
                       label="Owner"
