@@ -108,6 +108,9 @@ interface StandardModalProps {
   /** When true, disables the submit button (useful during API calls) */
   isSubmitting?: boolean;
 
+  /** When true, disables the submit button without showing a loading state (e.g. required fields missing) */
+  isSubmitDisabled?: boolean;
+
   /** Maximum width of the modal (default: "760px"). Use "800px" for wider forms, "1000px" for two-column layouts */
   maxWidth?: string;
 
@@ -146,6 +149,7 @@ const StandardModal: React.FC<StandardModalProps> = ({
   submitButtonText = "Save",
   cancelButtonText = "Cancel",
   isSubmitting = false,
+  isSubmitDisabled = false,
   maxWidth = "760px",
   customFooter,
   hideFooter = false,
@@ -267,7 +271,7 @@ const StandardModal: React.FC<StandardModalProps> = ({
             component="form"
             onSubmit={(e: React.FormEvent) => {
               e.preventDefault();
-              if (onSubmit && !isSubmitting) {
+              if (onSubmit && !isSubmitting && !isSubmitDisabled) {
                 onSubmit();
               }
             }}
@@ -349,7 +353,7 @@ const StandardModal: React.FC<StandardModalProps> = ({
                     variant="contained"
                     text={submitButtonText}
                     onClick={onSubmit}
-                    isDisabled={isSubmitting}
+                    isDisabled={isSubmitting || isSubmitDisabled}
                     sx={{
                       "minWidth": "80px",
                       "height": "34px",

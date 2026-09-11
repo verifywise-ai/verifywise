@@ -16,19 +16,33 @@ import {
   getOrgUsers,
   getOrgInvitations,
   inviteUserToOrg,
+  createUserInOrg,
   removeUser,
   OrgUser,
   OrgInvitation,
 } from "../../../../application/repository/superAdmin.repository";
 import { useParams } from "react-router";
 import StandardModal from "../../../components/Modals/StandardModal";
-import Field from "../../../components/Inputs/Field";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import SearchBox from "../../../components/Search/SearchBox";
 import { EmptyState } from "../../../components/EmptyState";
-import { ROLE_OPTIONS, ROLE_COLORS } from "../../../../application/constants/roles";
+import { ROLE_COLORS } from "../../../../application/constants/roles";
+import UserFormFields, {
+  UserFormMode,
+  UserFormValues,
+} from "../../../components/SuperAdmin/UserFormFields";
+import { passwordValidation } from "../../../../application/validations/passwordValidation";
+import { EmailAvailabilityStatus } from "../../../../application/hooks/useEmailAvailability";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { displayFormattedDate } from "../../../tools/isoDateToString";
+
+const EMPTY_USER_FORM: UserFormValues = {
+  email: "",
+  name: "",
+  surname: "",
+  roleId: 3,
+  password: "",
+};
 
 const Users = () => {
   const { id: orgId } = useParams<{ id: string }>();
@@ -37,14 +51,13 @@ const Users = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Invite modal
-  const [inviteOpen, setInviteOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteName, setInviteName] = useState("");
-  const [inviteSurname, setInviteSurname] = useState("");
-  const [inviteRoleId, setInviteRoleId] = useState(3);
-  const [inviting, setInviting] = useState(false);
-  const [inviteError, setInviteError] = useState("");
+  // Add-user modal (invite or direct create)
+  const [addOpen, setAddOpen] = useState(false);
+  const [addMode, setAddMode] = useState<UserFormMode>("invite");
+  const [userForm, setUserForm] = useState<UserFormValues>(EMPTY_USER_FORM);
+  const [emailStatus, setEmailStatus] = useState<EmailAvailabilityStatus>("idle");
+  const [submitting, setSubmitting] = useState(false);
+  const [addError, setAddError] = useState("");
 
   // Delete modal
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -83,27 +96,43 @@ const Users = () => {
     );
   }, [users, searchTerm]);
 
-  const handleInvite = async () => {
-    if (!orgId || !inviteEmail.trim() || !inviteName.trim()) return;
-    setInviting(true);
-    setInviteError("");
+  const canSubmitAdd = useMemo(() => {
+    if (!userForm.name.trim()) return false;
+    if (emailStatus !== "available") return false;
+    if (addMode === "direct") {
+      if (userForm.surname.trim().length < 2) return false;
+      if (!passwordValidation(userForm.password).isValid) return false;
+    }
+    return true;
+  }, [addMode, userForm, emailStatus]);
+
+  const handleAddSubmit = async () => {
+    if (!orgId || !canSubmitAdd) return;
+    setSubmitting(true);
+    setAddError("");
     try {
-      await inviteUserToOrg(parseInt(orgId), {
-        email: inviteEmail.trim(),
-        name: inviteName.trim(),
-        surname: inviteSurname.trim() || undefined,
-        roleId: inviteRoleId,
-      });
-      setInviteOpen(false);
-      setInviteEmail("");
-      setInviteName("");
-      setInviteSurname("");
-      setInviteRoleId(3);
+      const shared = {
+        email: userForm.email.trim(),
+        name: userForm.name.trim(),
+        surname: userForm.surname.trim() || undefined,
+        roleId: userForm.roleId,
+      };
+      if (addMode === "invite") {
+        await inviteUserToOrg(parseInt(orgId), shared);
+      } else {
+        await createUserInOrg(parseInt(orgId), { ...shared, password: userForm.password });
+      }
+      setAddOpen(false);
+      setUserForm(EMPTY_USER_FORM);
+      setAddMode("invite");
       await fetchUsers();
     } catch (error: any) {
-      setInviteError(error?.message || "Failed to invite user");
+      setAddError(
+        error?.message ||
+          (addMode === "invite" ? "Failed to invite user" : "Failed to create user"),
+      );
     } finally {
-      setInviting(false);
+      setSubmitting(false);
     }
   };
 
@@ -134,7 +163,7 @@ const Users = () => {
           variant="contained"
           disableElevation
           startIcon={<UserPlus size={14} />}
-          onClick={() => setInviteOpen(true)}
+          onClick={() => setAddOpen(true)}
           sx={{
             textTransform: "none",
             height: 34,
@@ -142,7 +171,7 @@ const Users = () => {
             borderRadius: "4px",
           }}
         >
-          Invite User
+          Add user
         </Button>
       }
     >
@@ -358,70 +387,36 @@ const Users = () => {
         </Stack>
       )}
 
-      {/* Invite User Modal */}
+      {/* Add User Modal (invite or create directly) */}
       <StandardModal
-        isOpen={inviteOpen}
+        isOpen={addOpen}
         onClose={() => {
-          setInviteOpen(false);
-          setInviteError("");
+          setAddOpen(false);
+          setAddError("");
+          setUserForm(EMPTY_USER_FORM);
+          setAddMode("invite");
         }}
-        title="Invite User"
-        description="Send an invitation email to a new user"
-        submitButtonText="Send Invite"
-        onSubmit={handleInvite}
-        isSubmitting={inviting}
+        title="Add user"
+        description={
+          addMode === "invite"
+            ? "Send an invitation to a new user"
+            : "Create a user with a password you set"
+        }
+        submitButtonText={addMode === "invite" ? "Send invite" : "Create user"}
+        onSubmit={handleAddSubmit}
+        isSubmitting={submitting}
+        isSubmitDisabled={!canSubmitAdd}
         maxWidth="480px"
       >
         <Stack spacing={2}>
-          <Field
-            label="Email"
-            isRequired
-            placeholder="user@example.com"
-            type="email"
-            value={inviteEmail}
-            onChange={(e) => setInviteEmail(e.target.value)}
-            sx={{ width: "100%" }}
+          <UserFormFields
+            mode={addMode}
+            onModeChange={setAddMode}
+            values={userForm}
+            onChange={(patch) => setUserForm((prev) => ({ ...prev, ...patch }))}
+            onEmailStatusChange={setEmailStatus}
           />
-          <Field
-            label="First Name"
-            isRequired
-            placeholder="First name"
-            value={inviteName}
-            onChange={(e) => setInviteName(e.target.value)}
-            sx={{ width: "100%" }}
-          />
-          <Field
-            label="Last Name"
-            placeholder="Last name"
-            value={inviteSurname}
-            onChange={(e) => setInviteSurname(e.target.value)}
-            sx={{ width: "100%" }}
-          />
-          <Stack spacing={0.5}>
-            <Typography variant="body2" fontWeight={500}>
-              Role
-            </Typography>
-            <select
-              value={inviteRoleId}
-              onChange={(e) => setInviteRoleId(parseInt(e.target.value))}
-              style={{
-                height: 34,
-                borderRadius: 4,
-                border: "1px solid #d0d5dd",
-                padding: "0 8px",
-                fontSize: 13,
-              }}
-            >
-              {ROLE_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </Stack>
-          {inviteError && (
-            <Typography sx={{ fontSize: 13, color: "#D32F2F" }}>{inviteError}</Typography>
-          )}
+          {addError && <Typography sx={{ fontSize: 13, color: "#D32F2F" }}>{addError}</Typography>}
         </Stack>
       </StandardModal>
 

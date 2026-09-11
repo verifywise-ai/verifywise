@@ -85,6 +85,40 @@ export async function inviteUserToOrg(
   return apiServices.post(`/super-admin/organizations/${orgId}/invite`, data);
 }
 
+export async function createUserInOrg(
+  orgId: number,
+  data: { email: string; name: string; surname?: string; password: string; roleId: number },
+) {
+  return apiServices.post<ServerResponse<OrgUser>>(
+    `/super-admin/organizations/${orgId}/users`,
+    data,
+  );
+}
+
+export async function createOrgWithUser(data: {
+  orgName: string;
+  logo?: string;
+  mode: "invite" | "direct";
+  user: {
+    email: string;
+    name: string;
+    surname: string;
+    roleId: number;
+    password?: string;
+  };
+}) {
+  return apiServices.post<ServerResponse<{ organizationId: number }>>(
+    `/super-admin/organizations-with-user`,
+    data,
+  );
+}
+
+export async function checkEmailExists(email: string) {
+  return apiServices.get<ServerResponse<{ exists: boolean }>>(
+    `/super-admin/users/exists?email=${encodeURIComponent(email)}`,
+  );
+}
+
 export async function updateUser(
   userId: number,
   data: { name?: string; surname?: string; email?: string; roleId?: number },

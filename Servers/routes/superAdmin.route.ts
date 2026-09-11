@@ -4,6 +4,7 @@ import superAdminOnly from "../middleware/superAdminOnly.middleware";
 import {
   listOrganizations,
   createOrg,
+  createOrgWithUser,
   deleteOrg,
   updateOrg,
   getUserCount,
@@ -11,6 +12,8 @@ import {
   listOrgUsers,
   listOrgInvitations,
   inviteUserToOrg,
+  createUserInOrg,
+  emailExists,
   updateUser,
   removeUser,
   getMonitoring,
@@ -28,13 +31,16 @@ router.use(authenticateJWT, superAdminOnly);
 
 router.get("/organizations", listOrganizations);
 router.post("/organizations", createOrg);
+router.post("/organizations-with-user", createOrgWithUser);
 router.delete("/organizations/:id", deleteOrg);
 router.patch("/organizations/:id", updateOrg);
 router.get("/users/count", getUserCount);
+router.get("/users/exists", emailExists);
 router.get("/users", listAllUsers);
 router.get("/organizations/:id/users", listOrgUsers);
 router.get("/organizations/:id/invitations", listOrgInvitations);
 router.post("/organizations/:id/invite", inviteUserToOrg);
+router.post("/organizations/:id/users", createUserInOrg);
 router.patch("/users/:id", updateUser);
 router.delete("/users/:id", removeUser);
 

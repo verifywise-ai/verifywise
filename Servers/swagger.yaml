@@ -24054,6 +24054,21 @@ paths:
           description: 'Forbidden - insufficient role'
         '500':
           description: 'Internal server error'
+  /super-admin/organizations-with-user:
+    post:
+      summary: 'Create Org With User'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Super Admin'
+      operationId: createOrgWithUser
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Super Admin'
   '/super-admin/organizations/{id}':
     delete:
       tags:
@@ -24129,6 +24144,21 @@ paths:
           description: 'Forbidden - insufficient role'
         '500':
           description: 'Internal server error'
+  /super-admin/users/exists:
+    get:
+      summary: 'Email Exists'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Super Admin'
+      operationId: emailExists
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Super Admin'
   /super-admin/users:
     get:
       tags:
@@ -24174,6 +24204,20 @@ paths:
           description: 'Forbidden - insufficient role'
         '500':
           description: 'Internal server error'
+    post:
+      summary: 'Create User In Org'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Super Admin'
+      operationId: createUserInOrg
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Super Admin'
   '/super-admin/organizations/{id}/invitations':
     get:
       summary: 'List Org Invitations'

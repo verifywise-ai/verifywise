@@ -9265,6 +9265,13 @@ export const translations: Record<string, Record<string, string>> = {
     "View lifecycle": "Lebenszyklus anzeigen",
     "Workspace disconnected successfully!": "Workspace erfolgreich getrennt!",
     "Workspace status updated successfully!": "Workspace-Status erfolgreich aktualisiert!",
+    "Add first user": "Ersten Benutzer hinzufügen",
+    "Add user": "Benutzer hinzufügen",
+    "Create directly": "Direkt erstellen",
+    "Enter or generate": "Eingeben oder generieren",
+    "Invite via email": "Per E-Mail einladen",
+    "Must include an uppercase letter, a lowercase letter, and a digit. Minimum 8 characters.":
+      "Muss einen Großbuchstaben, einen Kleinbuchstaben und eine Ziffer enthalten. Mindestens 8 Zeichen.",
   },
 
   fr: {
@@ -18460,6 +18467,13 @@ export const translations: Record<string, Record<string, string>> = {
     "Workspace disconnected successfully!": "Espace de travail déconnecté avec succès !",
     "Workspace status updated successfully!":
       "Statut de l'espace de travail mis à jour avec succès !",
+    "Add first user": "Ajouter le premier utilisateur",
+    "Add user": "Ajouter un utilisateur",
+    "Create directly": "Créer directement",
+    "Enter or generate": "Saisir ou générer",
+    "Invite via email": "Inviter par e-mail",
+    "Must include an uppercase letter, a lowercase letter, and a digit. Minimum 8 characters.":
+      "Doit contenir une majuscule, une minuscule et un chiffre. Minimum 8 caractères.",
   },
   es: {
     "Deployment name": "Nombre del despliegue",
@@ -27574,5 +27588,12 @@ export const translations: Record<string, Record<string, string>> = {
     "Workspace disconnected successfully!": "¡Espacio de trabajo desconectado correctamente!",
     "Workspace status updated successfully!":
       "¡Estado del espacio de trabajo actualizado correctamente!",
+    "Add first user": "Añadir primer usuario",
+    "Add user": "Añadir usuario",
+    "Create directly": "Crear directamente",
+    "Enter or generate": "Introducir o generar",
+    "Invite via email": "Invitar por correo",
+    "Must include an uppercase letter, a lowercase letter, and a digit. Minimum 8 characters.":
+      "Debe incluir una mayúscula, una minúscula y un dígito. Mínimo 8 caracteres.",
   },
 };
