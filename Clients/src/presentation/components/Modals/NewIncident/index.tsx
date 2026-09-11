@@ -235,17 +235,24 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
 
   // Owner/assignee options keyed by user id (issue #4583)
   const assigneeOptions = useMemo(
-    () => users.map((u) => ({ _id: u.id, name: `${u.name} ${u.surname}` })),
+    () => [
+      // "(none)" clears the owner FK — '' is normalised to null on save (issue #4583)
+      { _id: "" as string | number, name: "(none)" },
+      ...users.map((u) => ({ _id: u.id, name: `${u.name} ${u.surname}` })),
+    ],
     [users],
   );
 
   // Affected-model options keyed by model inventory id (issue #4583)
   const modelInventoryOptions = useMemo(
-    () =>
-      modelInventories.map((m) => ({
+    () => [
+      // "(none)" clears the affected-model FK — '' is normalised to null on save (issue #4583)
+      { _id: "" as string | number, name: "(none)" },
+      ...modelInventories.map((m) => ({
         _id: m.id,
         name: [m.provider, m.model].filter(Boolean).join(" "),
       })),
+    ],
     [modelInventories],
   );
 
