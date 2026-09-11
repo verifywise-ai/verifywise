@@ -29,6 +29,8 @@ export const DASHBOARD_COLORS = {
   investigating: status.warning.text,
   mitigated: status.info.text,
   closed: status.success.text,
+  suspended: "#5E35B1",
+  emergencyAction: risk.high.text,
 
   // Model lifecycle colors
   restricted: "#F97316",

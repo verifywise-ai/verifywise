@@ -124,7 +124,14 @@ export function PolicyStatusCard({ total, distribution }: PolicyStatusProps) {
 // Incident Status Card - Bar chart
 interface IncidentStatusProps {
   total: number;
-  distribution: { open: number; investigating: number; mitigated: number; closed: number };
+  distribution: {
+    open: number;
+    investigating: number;
+    mitigated: number;
+    closed: number;
+    suspended: number;
+    emergencyAction: number;
+  };
 }
 
 export function IncidentStatusCard({ distribution }: IncidentStatusProps) {
@@ -133,6 +140,8 @@ export function IncidentStatusCard({ distribution }: IncidentStatusProps) {
     { name: "Investigating", value: distribution.investigating, color: C.investigating },
     { name: "Mitigated", value: distribution.mitigated, color: C.mitigated },
     { name: "Closed", value: distribution.closed, color: C.closed },
+    { name: "Suspended", value: distribution.suspended, color: C.suspended },
+    { name: "Emergency action", value: distribution.emergencyAction, color: C.emergencyAction },
   ];
 
   return <MetricBarChart data={data} />;

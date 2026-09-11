@@ -275,6 +275,8 @@ export interface IncidentStatusMetrics {
     investigating: number;
     mitigated: number;
     closed: number;
+    suspended: number;
+    emergencyAction: number;
   };
 }
 
@@ -676,7 +678,14 @@ export const useDashboardMetrics = () => {
       setCachedValue("incidentMetrics", metrics);
 
       // Also calculate incident status distribution (avoids duplicate API call)
-      const statusDistribution = { open: 0, investigating: 0, mitigated: 0, closed: 0 };
+      const statusDistribution = {
+        open: 0,
+        investigating: 0,
+        mitigated: 0,
+        closed: 0,
+        suspended: 0,
+        emergencyAction: 0,
+      };
 
       incidentsArray.forEach((incident: any) => {
         const status = (incident.status || "").toLowerCase();
@@ -689,6 +698,10 @@ export const useDashboardMetrics = () => {
           statusDistribution.mitigated++;
         } else if (status === "closed") {
           statusDistribution.closed++;
+        } else if (status === "suspended") {
+          statusDistribution.suspended++;
+        } else if (status === "emergency action") {
+          statusDistribution.emergencyAction++;
         } else {
           statusDistribution.open++; // Default to open
         }

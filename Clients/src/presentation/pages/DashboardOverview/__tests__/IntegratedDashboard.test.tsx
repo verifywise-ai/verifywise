@@ -217,7 +217,14 @@ let mockMetricsData: any = {
   },
   incidentStatusMetrics: {
     total: 2,
-    distribution: { open: 1, investigating: 1, mitigated: 0, closed: 0 },
+    distribution: {
+      open: 1,
+      investigating: 1,
+      mitigated: 0,
+      closed: 0,
+      suspended: 0,
+      emergencyAction: 0,
+    },
   },
   evidenceHubMetrics: {
     total: 10,
