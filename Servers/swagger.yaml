@@ -3569,6 +3569,8 @@ components:
         - Investigating
         - Mitigated
         - Closed
+        - Suspended
+        - 'Emergency action'
     IncidentApprovalStatus:
       type: string
       enum:

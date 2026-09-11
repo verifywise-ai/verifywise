@@ -21,7 +21,7 @@ export const toolsDefinition: any[] = [
           status: {
             type: "string",
             description:
-              "ONLY include if user explicitly asks for this status. Valid values: Open, Investigating, Mitigated, Closed. Omit this field entirely to get all statuses.",
+              "ONLY include if user explicitly asks for this status. Valid values: Open, Investigating, Mitigated, Closed, Suspended, Emergency action. Omit this field entirely to get all statuses.",
           },
           approval_status: {
             type: "string",
@@ -164,7 +164,7 @@ export const toolsDefinition: any[] = [
           },
           status: {
             type: "string",
-            enum: ["Open", "Investigating", "Mitigated", "Closed"],
+            enum: ["Open", "Investigating", "Mitigated", "Closed", "Suspended", "Emergency action"],
             description: "Updated status.",
           },
         },
@@ -187,7 +187,7 @@ export const toolsDefinition: any[] = [
           },
           status: {
             type: "string",
-            enum: ["Open", "Investigating", "Mitigated", "Closed"],
+            enum: ["Open", "Investigating", "Mitigated", "Closed", "Suspended", "Emergency action"],
             description: "New status for the incident.",
           },
         },

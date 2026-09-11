@@ -27,7 +27,7 @@ export interface FetchIncidentsParams {
     | "Security breach"
     | "Performance degradation";
   severity?: "Minor" | "Serious" | "Very serious";
-  status?: "Open" | "Investigating" | "Mitigated" | "Closed";
+  status?: "Open" | "Investigating" | "Mitigated" | "Closed" | "Suspended" | "Emergency action";
   approval_status?: "Approved" | "Rejected" | "Pending" | "Not required";
   ai_project?: string;
   archived?: boolean;
@@ -68,6 +68,8 @@ const fetchIncidents = async (
       investigating: "Investigating",
       mitigated: "Mitigated",
       closed: "Closed",
+      suspended: "Suspended",
+      "emergency action": "Emergency action",
       resolved: "Mitigated",
     };
 
