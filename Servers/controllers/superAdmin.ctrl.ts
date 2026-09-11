@@ -6,9 +6,19 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
 import { createOrganizationQuery } from "../utils/organization.utils";
 import { deleteUserByIdQuery } from "../utils/user.utils";
 import { invite } from "./vwmailer.ctrl";
+import { createNewUserWrapper } from "./user.ctrl";
 import { OrganizationModel } from "../domain.layer/models/organization/organization.model";
 import { getMonitoringConfig, upsertMonitoringConfig } from "../utils/monitoringConfig.utils";
-import { getInvitationsByOrganizationQuery } from "../utils/invitation.utils";
+import {
+  createInvitationQuery,
+  getInvitationsByOrganizationQuery,
+} from "../utils/invitation.utils";
+import { sendInviteEmail } from "../utils/inviteEmail.utils";
+import { ONE_WEEK_MS } from "../utils/jwt.utils";
+import {
+  ConflictException,
+  ValidationException,
+} from "../domain.layer/exceptions/custom.exception";
 import {
   countSuperAdmins,
   grantSuperAdmin as grantSuperAdminUtil,
@@ -89,6 +99,133 @@ export async function createOrg(req: Request, res: Response) {
     await transaction.rollback();
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
+}
+
+/**
+ * Create an org and its first user (invite or direct) in a single transaction.
+ * Either both persist or neither does — prevents orphan orgs when the user
+ * step fails. For invite mode the email is sent after commit; delivery failure
+ * still leaves the invitation record intact (206 partial-success response).
+ */
+export async function createOrgWithUser(req: Request, res: Response) {
+  const { orgName, logo, mode, user } = req.body as {
+    orgName?: string;
+    logo?: string;
+    mode?: "invite" | "direct";
+    user?: {
+      email?: string;
+      name?: string;
+      surname?: string;
+      roleId?: number;
+      password?: string;
+    };
+  };
+
+  if (!orgName?.trim()) {
+    return res
+      .status(400)
+      .json(STATUS_CODE[400]({ message: req.t!("Organization name is required") }));
+  }
+  if (mode !== "invite" && mode !== "direct") {
+    return res
+      .status(400)
+      .json(STATUS_CODE[400]({ message: req.t!("mode must be invite or direct") }));
+  }
+  if (!user?.email || !user.name || !user.roleId) {
+    return res
+      .status(400)
+      .json(STATUS_CODE[400]({ message: req.t!("user email, name, and roleId are required") }));
+  }
+  if (mode === "direct" && !user.surname) {
+    return res
+      .status(400)
+      .json(STATUS_CODE[400]({ message: req.t!("surname is required for direct creation") }));
+  }
+  if (mode === "direct" && !user.password) {
+    return res
+      .status(400)
+      .json(STATUS_CODE[400]({ message: req.t!("password is required for direct creation") }));
+  }
+
+  const transaction = await sequelize.transaction();
+  let orgId: number | undefined;
+  let invitationExpiresAt: Date | undefined;
+
+  try {
+    const orgModel = await OrganizationModel.createNewOrganization(orgName.trim(), logo);
+    const createdOrg = await createOrganizationQuery(orgModel, transaction);
+    orgId = createdOrg.id!;
+
+    if (mode === "direct") {
+      await createNewUserWrapper(
+        {
+          name: user.name,
+          surname: user.surname!,
+          email: user.email,
+          password: user.password!,
+          roleId: user.roleId,
+          organizationId: orgId,
+        },
+        transaction,
+      );
+    } else {
+      invitationExpiresAt = new Date(Date.now() + ONE_WEEK_MS);
+      await createInvitationQuery(
+        orgId,
+        user.email,
+        user.name,
+        user.surname ?? "",
+        user.roleId,
+        req.userId!,
+        invitationExpiresAt,
+        transaction,
+      );
+    }
+
+    await transaction.commit();
+  } catch (error: any) {
+    await transaction.rollback();
+    if (error instanceof ConflictException) {
+      return res.status(409).json(STATUS_CODE[409](error.message));
+    }
+    if (error instanceof ValidationException) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400]({ message: error.message, field: error.metadata?.field }));
+    }
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+
+  if (mode === "invite") {
+    try {
+      const { link, info } = await sendInviteEmail({
+        email: user.email,
+        name: user.name,
+        surname: user.surname ?? "",
+        roleId: user.roleId,
+        organizationId: orgId,
+        lang: req.lang,
+      });
+      if (info.error) {
+        return res.status(206).json(
+          STATUS_CODE[206]({
+            organizationId: orgId,
+            error: `${info.error.name}: ${info.error.message}`,
+            link,
+          }),
+        );
+      }
+    } catch (emailErr: any) {
+      return res.status(206).json(
+        STATUS_CODE[206]({
+          organizationId: orgId,
+          error: emailErr?.message || "Failed to send invitation email",
+        }),
+      );
+    }
+  }
+
+  return res.status(201).json(STATUS_CODE[201]({ organizationId: orgId }));
 }
 
 /**
@@ -272,6 +409,69 @@ export async function inviteUserToOrg(req: Request, res: Response) {
     roleId,
     organizationId: orgId,
   });
+}
+
+/**
+ * Check whether a user with the given email already exists.
+ * Used by SuperAdmin flows to pre-validate before creating an org + user pair,
+ * so we don't leave an orphan org when the user step would 409.
+ */
+export async function emailExists(req: Request, res: Response) {
+  const email = typeof req.query.email === "string" ? req.query.email.trim() : "";
+  if (!email) {
+    return res.status(400).json(STATUS_CODE[400]({ message: req.t!("email is required") }));
+  }
+  try {
+    const rows: any[] = await sequelize.query(
+      `SELECT 1 FROM users WHERE LOWER(email) = LOWER(:email) LIMIT 1`,
+      { replacements: { email }, type: "SELECT" as any },
+    );
+    return res.status(200).json(STATUS_CODE[200]({ exists: rows.length > 0 }));
+  } catch (error) {
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * Create a user directly inside an organization (no invitation email).
+ * Password is set by the SuperAdmin; user is active immediately.
+ */
+export async function createUserInOrg(req: Request, res: Response) {
+  const orgId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  if (isNaN(orgId)) {
+    return res.status(400).json(STATUS_CODE[400]({ message: req.t!("Invalid organization ID") }));
+  }
+
+  const { email, name, surname, password, roleId } = req.body;
+  if (!email || !name || !surname || !password || !roleId) {
+    return res.status(400).json(
+      STATUS_CODE[400]({
+        message: req.t!("email, name, surname, password, and roleId are required"),
+      }),
+    );
+  }
+
+  const transaction = await sequelize.transaction();
+  try {
+    const user = await createNewUserWrapper(
+      { name, surname, email, password, roleId, organizationId: orgId },
+      transaction,
+    );
+    await transaction.commit();
+    const { password_hash, ...safeUser } = user.toJSON() as any;
+    return res.status(201).json(STATUS_CODE[201](safeUser));
+  } catch (error: any) {
+    await transaction.rollback();
+    if (error instanceof ConflictException) {
+      return res.status(409).json(STATUS_CODE[409](error.message));
+    }
+    if (error instanceof ValidationException) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400]({ message: error.message, field: error.metadata?.field }));
+    }
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
 }
 
 /**

@@ -1,3 +1,4 @@
+import { Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 
 interface InvitationRow {
@@ -26,6 +27,7 @@ export const createInvitationQuery = async (
   roleId: number,
   invitedBy: number,
   expiresAt: Date,
+  transaction?: Transaction,
 ): Promise<InvitationRow> => {
   const result = (await sequelize.query(
     `INSERT INTO invitations (organization_id, email, name, surname, role_id, status, invited_by, expires_at)
@@ -50,6 +52,7 @@ export const createInvitationQuery = async (
         invitedBy,
         expiresAt: expiresAt.toISOString(),
       },
+      transaction,
     },
   )) as [InvitationRow[], number];
 

@@ -10,11 +10,14 @@ import {
   TableHead,
   TableRow,
   Box,
+  FormControlLabel,
+  Checkbox,
 } from "@mui/material";
 import { Building, Plus, ArrowUp, ArrowDown } from "lucide-react";
 import {
   getOrganizations,
   createOrganization,
+  createOrgWithUser,
   deleteOrganization,
   Organization,
 } from "../../../../application/repository/superAdmin.repository";
@@ -24,10 +27,28 @@ import Field from "../../../components/Inputs/Field";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import SearchBox from "../../../components/Search/SearchBox";
 import { EmptyState } from "../../../components/EmptyState";
+import UserFormFields, {
+  UserFormMode,
+  UserFormValues,
+} from "../../../components/SuperAdmin/UserFormFields";
+import { passwordValidation } from "../../../../application/validations/passwordValidation";
+import { EmailAvailabilityStatus } from "../../../../application/hooks/useEmailAvailability";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { displayFormattedDate } from "../../../tools/isoDateToString";
 
-/** Isolated create modal — its input state won't re-render the parent table */
+const EMPTY_USER_FORM: UserFormValues = {
+  email: "",
+  name: "",
+  surname: "",
+  roleId: 3,
+  password: "",
+};
+
+/**
+ * Create-org modal. Optionally also invites or directly creates the first user
+ * in the same submit — org first, then user (two calls). On user-step failure
+ * the org survives and the SuperAdmin can retry from the org's Users page.
+ */
 const CreateOrgModal = ({
   isOpen,
   onClose,
@@ -39,17 +60,59 @@ const CreateOrgModal = ({
 }) => {
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [error, setError] = useState("");
+
+  const [addUser, setAddUser] = useState(false);
+  const [userMode, setUserMode] = useState<UserFormMode>("invite");
+  const [userForm, setUserForm] = useState<UserFormValues>(EMPTY_USER_FORM);
+  const [emailStatus, setEmailStatus] = useState<EmailAvailabilityStatus>("idle");
+
+  const reset = () => {
+    setName("");
+    setError("");
+    setAddUser(false);
+    setUserMode("invite");
+    setUserForm(EMPTY_USER_FORM);
+    setEmailStatus("idle");
+  };
+
+  const userFieldsValid = useMemo(() => {
+    if (!userForm.name.trim()) return false;
+    if (emailStatus !== "available") return false;
+    if (userMode === "direct") {
+      if (userForm.surname.trim().length < 2) return false;
+      if (!passwordValidation(userForm.password).isValid) return false;
+    }
+    return true;
+  }, [userMode, userForm, emailStatus]);
+
+  const canSubmit = name.trim().length > 0 && (!addUser || userFieldsValid);
 
   const handleSubmit = async () => {
-    if (!name.trim()) return;
+    if (!canSubmit) return;
     setCreating(true);
+    setError("");
     try {
-      await createOrganization({ name: name.trim() });
-      setName("");
+      if (addUser) {
+        await createOrgWithUser({
+          orgName: name.trim(),
+          mode: userMode,
+          user: {
+            email: userForm.email.trim(),
+            name: userForm.name.trim(),
+            surname: userForm.surname.trim(),
+            roleId: userForm.roleId,
+            ...(userMode === "direct" ? { password: userForm.password } : {}),
+          },
+        });
+      } else {
+        await createOrganization({ name: name.trim() });
+      }
+      reset();
       onClose();
       onCreated();
-    } catch (error) {
-      console.error("Failed to create organization:", error);
+    } catch (err: any) {
+      setError(err?.message || "Failed to create organization");
     } finally {
       setCreating(false);
     }
@@ -59,7 +122,7 @@ const CreateOrgModal = ({
     <StandardModal
       isOpen={isOpen}
       onClose={() => {
-        setName("");
+        reset();
         onClose();
       }}
       title="Create Organization"
@@ -67,6 +130,7 @@ const CreateOrgModal = ({
       submitButtonText="Create"
       onSubmit={handleSubmit}
       isSubmitting={creating}
+      isSubmitDisabled={!canSubmit}
       maxWidth="480px"
     >
       <Stack spacing={2}>
@@ -78,6 +142,27 @@ const CreateOrgModal = ({
           onChange={(e) => setName(e.target.value)}
           sx={{ width: "100%" }}
         />
+        <FormControlLabel
+          control={
+            <Checkbox
+              size="small"
+              checked={addUser}
+              onChange={(e) => setAddUser(e.target.checked)}
+            />
+          }
+          label={<Typography sx={{ fontSize: 13 }}>Add first user</Typography>}
+          sx={{ mt: 1, ml: -0.5 }}
+        />
+        {addUser && (
+          <UserFormFields
+            mode={userMode}
+            onModeChange={setUserMode}
+            values={userForm}
+            onChange={(patch) => setUserForm((prev) => ({ ...prev, ...patch }))}
+            onEmailStatusChange={setEmailStatus}
+          />
+        )}
+        {error && <Typography sx={{ fontSize: 13, color: "#D32F2F" }}>{error}</Typography>}
       </Stack>
     </StandardModal>
   );
