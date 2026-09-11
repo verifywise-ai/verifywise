@@ -54,10 +54,25 @@ export class AIIncidentManagementModel
   })
   assignee_id?: number;
 
-  /** Joined display names (query aliases, not table columns — issue #4583). */
-  declare model_inventory_name?: string;
-  declare project_title?: string;
-  declare assignee_name?: string;
+  /**
+   * Joined display names (query aliases, not table columns — issue #4583).
+   * Declared as VIRTUAL attributes so raw-query `mapToModel` carries the
+   * aliased columns into dataValues; a plain `declare`d field is dropped.
+   */
+  @Column({
+    type: DataType.VIRTUAL,
+  })
+  model_inventory_name?: string;
+
+  @Column({
+    type: DataType.VIRTUAL,
+  })
+  project_title?: string;
+
+  @Column({
+    type: DataType.VIRTUAL,
+  })
+  assignee_name?: string;
 
   @Column({
     type: DataType.ENUM(...Object.values(IncidentType)),
