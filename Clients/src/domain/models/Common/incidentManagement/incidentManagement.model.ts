@@ -8,6 +8,16 @@ export class AIIncidentManagementModel {
   id!: number;
   incident_id!: string;
   ai_project!: string;
+  /** FK to model_inventories (issue #4583). */
+  model_inventory_id?: number | null;
+  /** FK to projects (issue #4583). */
+  project_id?: number | null;
+  /** FK to users — responsible owner (issue #4583). */
+  assignee_id?: number | null;
+  /** Joined display names (populated by the API). */
+  model_inventory_name?: string | null;
+  project_title?: string | null;
+  assignee_name?: string | null;
   type!: string;
   severity!: Severity;
   status!: IncidentManagementStatus;
@@ -34,6 +44,12 @@ export class AIIncidentManagementModel {
     this.id = data.id;
     this.incident_id = data.incident_id;
     this.ai_project = data.ai_project;
+    this.model_inventory_id = data.model_inventory_id ?? null;
+    this.project_id = data.project_id ?? null;
+    this.assignee_id = data.assignee_id ?? null;
+    this.model_inventory_name = data.model_inventory_name ?? null;
+    this.project_title = data.project_title ?? null;
+    this.assignee_name = data.assignee_name ?? null;
     this.type = data.type;
     this.severity = data.severity;
     this.status = data.status;

@@ -99,6 +99,8 @@ export async function cleanupDatabase(): Promise<void> {
           audit_ledger,
           event_logs,
           task_assignees,
+          ai_incident_managements,
+          model_inventories,
           projects_risks,
           vendors_projects,
           projects_members,
