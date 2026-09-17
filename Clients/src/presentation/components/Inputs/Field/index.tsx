@@ -129,7 +129,11 @@ const Field = forwardRef(
           >
             {label}
             {isRequired && (
-              <Typography component="span" ml={theme.spacing(1)} color={theme.palette.error.text}>
+              <Typography
+                component="span"
+                ml={theme.spacing(1)}
+                color={theme.palette.status.error.text}
+              >
                 *
               </Typography>
             )}

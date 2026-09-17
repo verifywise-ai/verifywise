@@ -15,7 +15,9 @@ describe("Field Component", () => {
     renderWithProviders(<Field label="Email" isRequired />);
 
     expect(screen.getByText("Email")).toBeInTheDocument();
-    expect(screen.getByText("*")).toBeInTheDocument();
+    const asterisk = screen.getByText("*");
+    expect(asterisk).toBeInTheDocument();
+    expect(asterisk).toHaveStyle({ color: "#D32F2F" });
   });
 
   it("shows (optional) label when isOptional is true", () => {

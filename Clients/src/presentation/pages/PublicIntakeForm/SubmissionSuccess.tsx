@@ -47,6 +47,7 @@ export function SubmissionSuccess() {
 
   return (
     <Box
+      component="main"
       sx={{
         minHeight: "100vh",
         backgroundColor: "#fafafa",
@@ -69,7 +70,10 @@ export function SubmissionSuccess() {
             textAlign: "center",
           }}
         >
-          <Typography sx={{ fontSize: "22px", fontWeight: 700, color: "#1e293b", mb: 1 }}>
+          <Typography
+            component="h1"
+            sx={{ fontSize: "22px", fontWeight: 700, color: "#1e293b", mb: 1 }}
+          >
             Submission received
           </Typography>
           <Typography sx={{ fontSize: "14px", color: "#94a3b8", mb: 0 }}>
