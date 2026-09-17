@@ -30,6 +30,11 @@ export const uploadFile = async (
         ...(transaction && { transaction }),
       },
     );
+    // Defense-in-depth: never attach a file to a project outside the caller's org,
+    // even if a controller forgets to validate project membership first.
+    if (projectIsDemo.length === 0) {
+      throw new Error("Project not found in organization");
+    }
     is_demo = projectIsDemo[0]?.is_demo || false;
   }
   const query = `INSERT INTO files
