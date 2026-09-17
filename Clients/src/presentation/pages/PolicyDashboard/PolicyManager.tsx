@@ -55,7 +55,13 @@ import type {
 } from "../../../domain/interfaces/i.virtualFolder";
 
 type PolicyColumnKey =
-  "title" | "status" | "next_review" | "author" | "last_updated" | "updated_by" | "actions";
+  | "title"
+  | "status"
+  | "next_review"
+  | "author"
+  | "last_updated"
+  | "updated_by"
+  | "actions";
 
 const POLICY_TABLE_COLUMNS: ColumnConfig<PolicyColumnKey>[] = [
   { key: "title", label: "Title", defaultVisible: true, alwaysVisible: true },

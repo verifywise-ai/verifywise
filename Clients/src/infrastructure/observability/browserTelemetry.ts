@@ -60,7 +60,8 @@ export function initBrowserTelemetry(): void {
 
   window.addEventListener("load", () => {
     const nav = performance.getEntriesByType("navigation")[0] as
-      PerformanceNavigationTiming | undefined;
+      | PerformanceNavigationTiming
+      | undefined;
     if (nav && nav.loadEventEnd > 0) {
       enqueue({ type: "web-vital", name: "page_load", value: Math.round(nav.loadEventEnd) });
     }

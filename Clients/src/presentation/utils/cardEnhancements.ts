@@ -18,7 +18,13 @@ export const getDistributionSummary = (statusData: IStatusData[]): string => {
 // Generate quick stats based on entity type and data
 export const getQuickStats = (
   entityType:
-    "models" | "vendors" | "policies" | "trainings" | "vendorRisks" | "incidents" | undefined,
+    | "models"
+    | "vendors"
+    | "policies"
+    | "trainings"
+    | "vendorRisks"
+    | "incidents"
+    | undefined,
   total: number,
   statusData?: IStatusData[],
 ): string => {
@@ -84,7 +90,13 @@ export const getQuickStats = (
 // Determine if entity has critical items requiring quick actions
 export const hasCriticalItems = (
   entityType:
-    "models" | "vendors" | "policies" | "trainings" | "vendorRisks" | "incidents" | undefined,
+    | "models"
+    | "vendors"
+    | "policies"
+    | "trainings"
+    | "vendorRisks"
+    | "incidents"
+    | undefined,
   statusData?: IStatusData[],
 ): { hasCritical: boolean; actionLabel: string; actionRoute: string } => {
   if (!entityType || !statusData) {
@@ -159,7 +171,13 @@ export const hasCriticalItems = (
 // Determine priority visual cues
 export const getPriorityLevel = (
   entityType:
-    "models" | "vendors" | "policies" | "trainings" | "vendorRisks" | "incidents" | undefined,
+    | "models"
+    | "vendors"
+    | "policies"
+    | "trainings"
+    | "vendorRisks"
+    | "incidents"
+    | undefined,
   total: number,
   statusData?: IStatusData[],
 ): "none" | "medium" | "high" => {

@@ -24,7 +24,11 @@ import {
 } from "../../../application/repository/approvalWorkflow.repository";
 
 type ApprovalWorkflowColumnKey =
-  "workflow_title" | "entity_name" | "steps" | "date_updated" | "actions";
+  | "workflow_title"
+  | "entity_name"
+  | "steps"
+  | "date_updated"
+  | "actions";
 
 const APPROVAL_WORKFLOW_TABLE_COLUMNS: ColumnConfig<ApprovalWorkflowColumnKey>[] = [
   { key: "workflow_title", label: "Title", defaultVisible: true, alwaysVisible: true },

@@ -24,6 +24,7 @@ import {
 } from "../../../application/repository/file.repository";
 import { FileData } from "../../../domain/types/File";
 import { displayFormattedDate } from "../../tools/isoDateToString";
+import { FileExpiryChip } from "../FileExpiryChip";
 
 interface FilePickerModalProps {
   open: boolean;
@@ -328,20 +329,24 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
                   </Box>
 
                   <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography
-                      sx={{
-                        fontSize: theme.typography.fontSize,
-                        fontWeight: 500,
-                        color: theme.palette.text.primary,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                        lineHeight: 1.4,
-                      }}
-                      title={file.filename}
-                    >
-                      {file.filename}
-                    </Typography>
+                    <Stack direction="row" alignItems="center" spacing={1} sx={{ minWidth: 0 }}>
+                      <Typography
+                        sx={{
+                          fontSize: theme.typography.fontSize,
+                          fontWeight: 500,
+                          color: theme.palette.text.primary,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          lineHeight: 1.4,
+                          minWidth: 0,
+                        }}
+                        title={file.filename}
+                      >
+                        {file.filename}
+                      </Typography>
+                      <FileExpiryChip expiryDate={file.expiry_date} />
+                    </Stack>
                     <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: 0.25 }}>
                       {file.size && (
                         <Typography sx={{ fontSize: 11, color: theme.palette.other.icon }}>

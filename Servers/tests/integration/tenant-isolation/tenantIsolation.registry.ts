@@ -106,12 +106,6 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     baseRoute: "/api/evidenceHub",
   },
   {
-    name: "evidence_hub_org_settings",
-    tables: ["evidence_hub_org_settings"],
-    baseRoute: "/api/evidenceHub/settings",
-    testFile: "evidence-hub-retention.isolation.test.ts",
-  },
-  {
     name: "audit_ledger",
     tables: ["audit_ledger"],
     baseRoute: "/api/audit-ledger",
@@ -125,6 +119,12 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     name: "file_entity_links",
     tables: ["file_entity_links"],
     baseRoute: "/api/files",
+  },
+  {
+    name: "file_org_settings",
+    tables: ["file_org_settings"],
+    baseRoute: "/api/file-manager/org-settings",
+    testFile: "file-org-settings.isolation.test.ts",
   },
   {
     name: "file_change_history",

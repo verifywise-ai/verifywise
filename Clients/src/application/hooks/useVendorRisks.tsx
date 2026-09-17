@@ -70,7 +70,11 @@ const useVendorRisks = ({
         const key = `${_risk.replace(/risks?$/i, "")}Risks`;
         if (key in acc && key !== "total") {
           const riskKey = key as
-            "veryHighRisks" | "highRisks" | "mediumRisks" | "lowRisks" | "veryLowRisks";
+            | "veryHighRisks"
+            | "highRisks"
+            | "mediumRisks"
+            | "lowRisks"
+            | "veryLowRisks";
           acc[riskKey] = acc[riskKey] + 1;
         }
         acc.total = acc.total + 1;

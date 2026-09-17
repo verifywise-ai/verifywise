@@ -6,7 +6,14 @@ export interface IPageTourStep {
     icon?: React.ReactNode;
   };
   placement?:
-    "left" | "right" | "top" | "bottom" | "top-start" | "bottom-start" | "bottom-end" | "top-end";
+    | "left"
+    | "right"
+    | "top"
+    | "bottom"
+    | "top-start"
+    | "bottom-start"
+    | "bottom-end"
+    | "top-end";
 }
 
 export interface IPageTourProps {

@@ -43,7 +43,12 @@ export interface ExportPayload {
 }
 
 export type CommandPayload =
-  NavigatePayload | ModalPayload | FunctionPayload | FilterPayload | ExportPayload | string;
+  | NavigatePayload
+  | ModalPayload
+  | FunctionPayload
+  | FilterPayload
+  | ExportPayload
+  | string;
 
 export interface CommandAction {
   type: "navigate" | "modal" | "function" | "filter" | "export";

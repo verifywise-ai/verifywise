@@ -1,9 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { apiServices } from "../../infrastructure/api/networkServices";
+import type { RetentionPolicy } from "../../domain/enums/retention.enum";
+
+export type { RetentionPolicy };
 
 // Review status type
 export type ReviewStatus =
-  "draft" | "pending_review" | "approved" | "rejected" | "expired" | "superseded";
+  | "draft"
+  | "pending_review"
+  | "approved"
+  | "rejected"
+  | "expired"
+  | "superseded";
 
 // Type definitions for API responses
 export interface FileMetadata {
@@ -43,6 +51,7 @@ export interface FileMetadata {
   review_status?: ReviewStatus;
   version?: string;
   expiry_date?: string;
+  retention_policy?: RetentionPolicy | null;
   last_modified_by?: number;
   last_modifier_name?: string;
   last_modifier_surname?: string;
@@ -63,6 +72,7 @@ export interface UpdateFileMetadataInput {
   review_status?: ReviewStatus;
   version?: string;
   expiry_date?: string | null;
+  retention_policy?: RetentionPolicy | null;
   description?: string | null;
 }
 
@@ -154,6 +164,7 @@ export async function getUserFilesMetaData({
     review_status: f?.review_status,
     version: f?.version,
     expiry_date: f?.expiry_date,
+    retention_policy: f?.retention_policy,
     description: f?.description,
     file_group_id: f?.file_group_id,
     approval_workflow_id: f?.approval_workflow_id,
@@ -349,6 +360,7 @@ export async function getFilesWithMetadata({
       review_status: f?.review_status,
       version: f?.version,
       expiry_date: f?.expiry_date,
+      retention_policy: f?.retention_policy,
       last_modified_by: f?.last_modified_by,
       last_modifier_name: f?.last_modifier_name,
       last_modifier_surname: f?.last_modifier_surname,
@@ -395,6 +407,7 @@ export async function getFileMetadata({
     review_status: f?.review_status,
     version: f?.version,
     expiry_date: f?.expiry_date,
+    retention_policy: f?.retention_policy,
     last_modified_by: f?.last_modified_by,
     last_modifier_name: f?.last_modifier_name,
     last_modifier_surname: f?.last_modifier_surname,
@@ -441,6 +454,7 @@ export async function updateFileMetadata({
     review_status: f?.review_status,
     version: f?.version,
     expiry_date: f?.expiry_date,
+    retention_policy: f?.retention_policy,
     last_modified_by: f?.last_modified_by,
     last_modifier_name: f?.last_modifier_name,
     last_modifier_surname: f?.last_modifier_surname,
@@ -551,7 +565,12 @@ export async function getFileVersionHistory({
 
 export type FrameworkType = "eu_ai_act" | "nist_ai" | "iso_27001" | "iso_42001" | string;
 export type EntityType =
-  "assessment" | "subcontrol" | "subclause" | "annex_control" | "annex_category" | string;
+  | "assessment"
+  | "subcontrol"
+  | "subclause"
+  | "annex_control"
+  | "annex_category"
+  | string;
 export type LinkType = "evidence" | "feedback" | "attachment" | "reference";
 
 export interface FileEntityLink {

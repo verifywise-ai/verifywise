@@ -1,5 +1,11 @@
 export type CustomFieldType =
-  "text" | "number" | "date" | "boolean" | "select" | "multiselect" | "user";
+  | "text"
+  | "number"
+  | "date"
+  | "boolean"
+  | "select"
+  | "multiselect"
+  | "user";
 
 export type CustomFieldEntityType =
   | "vendor"

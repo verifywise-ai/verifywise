@@ -47,6 +47,7 @@ import AssignToFolderModal from "./components/AssignToFolderModal";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import Alert from "../../components/Alert";
 import { AlertProps } from "../../types/alert.types";
+import { isFileExpired } from "../../../application/utils/fileExpiry";
 
 // File metadata enhancement imports
 import { useFileColumnVisibility } from "../../../application/hooks/useFileColumnVisibility";
@@ -592,9 +593,15 @@ const FileManager: React.FC = (): JSX.Element => {
     };
 
     // When viewing "all", use the original filesData
+    // When viewing "expired", filter filesData client-side by isFileExpired
+    //   (matches the Expired chip's derivation — no backend endpoint needed)
     // When viewing a folder or "uncategorized", use folderFiles converted to FileModel format
     if (selectedFolder === "all") {
       return filesData.map(enrichWithMetadata);
+    }
+
+    if (selectedFolder === "expired") {
+      return filesData.filter((f) => isFileExpired(f.expiryDate)).map(enrichWithMetadata);
     }
 
     // Convert folder files to FileModel instances for compatibility with existing table
@@ -978,6 +985,11 @@ const FileManager: React.FC = (): JSX.Element => {
                       onBulkActionSuccess={() => {
                         refetch();
                       }}
+                      emptyMessage={
+                        selectedFolder === "expired"
+                          ? "No expired files. Files past their expiry date will appear here."
+                          : undefined
+                      }
                     />
                   )}
                 />

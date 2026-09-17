@@ -49,6 +49,8 @@ export const transformFileData = (file: any): FileModel => {
     fileGroupId: file.file_group_id,
     entityLinks: file.entity_links ?? [],
     linkGroups: file.link_groups ?? [],
+    expiryDate: file.expiry_date ?? null,
+    retentionPolicy: file.retention_policy ?? null,
   });
 };
 

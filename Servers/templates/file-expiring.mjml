@@ -15,7 +15,7 @@
     .email-footer { color: #838c99; font-size: 13px; line-height: 20px; text-align: center; }
     a { color: #13715B; text-decoration: none; }
     .btn { display: inline-block; padding: 12px 24px; border-radius: 4px; text-decoration: none; font-size: 14px; font-weight: 500; color: #ffffff; }
-    .btn-info { background-color: #1565C0; }
+    .btn-warn { background-color: #B54708; }
   </mj-style>
 </mj-head>
   <mj-body background-color="#f4f6f8">
@@ -30,7 +30,7 @@
       <mj-section>
         <mj-column width="100%">
           <mj-text>
-                <h2 class="email-heading">Evidence "{{evidence_name}}" has expired</h2><p class="email-body">Hi {{recipient_name}},</p><p class="email-body">The evidence <strong>{{evidence_name}}</strong> passed its expiry date on <strong>{{expiry_date}}</strong> and has been flagged as expired in the Evidence Hub.</p><p class="email-body"><strong>Recommended next steps:</strong></p><ul><li>Review the evidence and upload a refreshed version, or</li><li>Extend the expiry date / update the retention policy if still valid</li></ul><p style="margin: 28px 0 24px 0;"><a href="{{evidence_url}}" class="btn btn-info">Open Evidence Hub</a></p>
+                <h2 class="email-heading">"{{file_name}}" is expiring soon</h2><p class="email-body">Hi {{recipient_name}},</p><p class="email-body">The file <strong>{{file_name}}</strong> is set to expire on <strong>{{expiry_date}}</strong> ({{days_remaining}} remaining).</p><p class="email-body"><strong>Recommended next steps:</strong></p><ul><li>Upload a refreshed version, or</li><li>Extend the expiry date / update the retention policy if the file is still valid</li></ul><p style="margin: 28px 0 24px 0;"><a href="{{file_url}}" class="btn btn-warn">Open File</a></p>
           </mj-text>
         </mj-column>
       </mj-section>

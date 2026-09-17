@@ -127,7 +127,8 @@ export default function AIApprovalRules() {
 
   const formatConditions = (conditions: Record<string, unknown>): string => {
     const arr = (conditions.all || conditions.any) as
-      Array<{ fact: string; operator: string; value: unknown }> | undefined;
+      | Array<{ fact: string; operator: string; value: unknown }>
+      | undefined;
     if (!arr || !Array.isArray(arr)) return "No conditions";
     return arr
       .map((c) => `${c.fact} ${c.operator} ${JSON.stringify(c.value)}`)

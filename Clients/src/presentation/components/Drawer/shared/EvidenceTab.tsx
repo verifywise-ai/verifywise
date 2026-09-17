@@ -11,6 +11,7 @@ import { CustomizableButton } from "../../button/customizable-button";
 import { FilePickerModal } from "../../FilePickerModal";
 import { text } from "../../../themes/palette";
 import { UseEvidenceFilesReturn } from "./useEvidenceFiles";
+import { FileExpiryChip } from "../../FileExpiryChip";
 
 interface EvidenceTabProps {
   evidence: UseEvidenceFilesReturn;
@@ -133,18 +134,21 @@ const EvidenceTab: React.FC<EvidenceTabProps> = ({
               <Box sx={{ display: "flex", gap: 1.5, flex: 1, minWidth: 0 }}>
                 <FileIcon size={18} color={theme.palette.text.tertiary} />
                 <Box sx={{ minWidth: 0, flex: 1 }}>
-                  <Typography
-                    sx={{
-                      fontSize: 13,
-                      fontWeight: 500,
-                      color: "#1F2937",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {file.fileName}
-                  </Typography>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}>
+                    <Typography
+                      sx={{
+                        fontSize: 13,
+                        fontWeight: 500,
+                        color: "#1F2937",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {file.fileName}
+                    </Typography>
+                    <FileExpiryChip expiryDate={(file as any).expiry_date} />
+                  </Box>
                   <Typography sx={{ fontSize: 11, color: "status.default.text" }}>
                     {file.size ? `${(file.size / 1024).toFixed(1)} KB` : ""}
                     {file.size && file.source ? " • " : ""}

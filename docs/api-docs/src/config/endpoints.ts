@@ -3216,37 +3216,6 @@ export const evidenceAiEndpoints: Endpoint[] = [
 export const evidenceHubEndpoints: Endpoint[] = [
   {
     method: 'GET',
-    path: '/evidenceHub/settings',
-    summary: "Get Evidence Hub Org Settings",
-    description: "Org-level Evidence Hub retention settings. A missing settings row resolves to defaults (no default retention period, archival off).",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 401, description: "Unauthorized" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Evidence",
-  },
-  {
-    method: 'PUT',
-    path: '/evidenceHub/settings',
-    summary: "Update Evidence Hub Org Settings",
-    description: "PARTIAL update. default_retention_period: one of 30_days, 90_days, 6_months, 1_year, 3_years, 5_years, 7_years, indefinite, or null to clear. archive_on_expiry only takes effect when the server also sets EVIDENCE_RETENTION_ARCHIVE_ENABLED=true; archival is a soft archive, never a delete.",
-    requiresAuth: true,
-    requestBody: {
-      "default_retention_period": "30_days | 90_days | 6_months | 1_year | 3_years | 5_years | 7_years | indefinite (optional, nullable)",
-      "archive_on_expiry": "boolean (optional)",
-    },
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 400, description: "Bad request" },
-      { status: 401, description: "Unauthorized" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Evidence",
-  },
-  {
-    method: 'GET',
     path: '/evidenceHub',
     summary: "Get All Evidences",
     requiresAuth: true,
@@ -4133,6 +4102,29 @@ export const fileEndpoints: Endpoint[] = [
     responses: [
       { status: 200, description: "Success" },
       { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'GET',
+    path: '/file-manager/org-settings',
+    summary: "Get File Org Settings Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'PUT',
+    path: '/file-manager/org-settings',
+    summary: "Update File Org Settings Handler",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Files",

@@ -53,7 +53,11 @@ export type ProjectRisk = {
   likelihood: "Rare" | "Unlikely" | "Possible" | "Likely" | "Almost Certain";
   severity: "Negligible" | "Minor" | "Moderate" | "Major" | "Critical";
   risk_level_autocalculated:
-    "No risk" | "Low risk" | "Medium risk" | "High risk" | "Very high risk";
+    | "No risk"
+    | "Low risk"
+    | "Medium risk"
+    | "High risk"
+    | "Very high risk";
   review_notes: string;
   mitigation_status:
     | "Not Started"

@@ -137,9 +137,13 @@ export const FOLDER_COLORS = [
 export type FolderColor = (typeof FOLDER_COLORS)[number];
 
 /**
- * Special folder view identifiers
+ * Special folder view identifiers.
+ * - "all": every file in the org
+ * - "uncategorized": files not assigned to any virtual folder
+ * - "expired": files whose expiry_date is strictly before today (client-side
+ *   derived via isFileExpired — no backend endpoint)
  */
-export type SpecialFolderView = "all" | "uncategorized";
+export type SpecialFolderView = "all" | "uncategorized" | "expired";
 
 /**
  * Selected folder state (can be a folder ID or special view)

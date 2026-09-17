@@ -35,6 +35,10 @@ import {
   previewFile,
   getFileVersionHistory,
 } from "../controllers/fileManager.ctrl";
+import {
+  getFileOrgSettingsHandler,
+  updateFileOrgSettingsHandler,
+} from "../controllers/fileOrgSettings.ctrl";
 import authenticateJWT from "../middleware/auth.middleware";
 import authorize from "../middleware/accessControl.middleware";
 import { fileOperationsLimiter } from "../middleware/rateLimit.middleware";
@@ -178,6 +182,27 @@ router.get(
   validatePaginationQuery,
   listFilesWithMetadata,
 );
+
+/**
+ * @route   GET /file-manager/org-settings
+ * @desc    Get org-wide default retention policy for file uploads
+ * @access  All authenticated users
+ * @returns {200} Org file settings
+ * @returns {500} Server error
+ */
+router.get("/org-settings", authenticateJWT, getFileOrgSettingsHandler);
+
+/**
+ * @route   PUT /file-manager/org-settings
+ * @desc    Set org-wide default retention policy for file uploads
+ * @access  Admin only
+ * @body    { default_retention_policy: RetentionPolicy | null }
+ * @returns {200} Updated org file settings
+ * @returns {400} Invalid retention policy
+ * @returns {403} Access denied
+ * @returns {500} Server error
+ */
+router.put("/org-settings", authenticateJWT, authorize(["Admin"]), updateFileOrgSettingsHandler);
 
 /**
  * @route   GET /file-manager/:id

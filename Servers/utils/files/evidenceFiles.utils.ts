@@ -22,6 +22,8 @@ export interface EvidenceFile {
   uploaded_by: number;
   uploaded_time: string;
   source?: string;
+  expiry_date?: string | null;
+  retention_policy?: string | null;
 }
 
 /**
@@ -44,7 +46,9 @@ export async function getEvidenceFilesForEntity(
       f.project_id,
       f.uploaded_by,
       f.uploaded_time::text AS uploaded_time,
-      COALESCE(f.source, 'File Manager') AS source
+      COALESCE(f.source, 'File Manager') AS source,
+      f.expiry_date::text AS expiry_date,
+      f.retention_policy::text AS retention_policy
     FROM file_entity_links fel
     JOIN files f ON f.id = fel.file_id AND f.organization_id = fel.organization_id
     WHERE fel.organization_id = :organizationId
@@ -87,7 +91,9 @@ export async function getEvidenceFilesForEntities(
       f.project_id,
       f.uploaded_by,
       f.uploaded_time::text AS uploaded_time,
-      COALESCE(f.source, 'File Manager') AS source
+      COALESCE(f.source, 'File Manager') AS source,
+      f.expiry_date::text AS expiry_date,
+      f.retention_policy::text AS retention_policy
     FROM file_entity_links fel
     JOIN files f ON f.id = fel.file_id AND f.organization_id = fel.organization_id
     WHERE fel.organization_id = :organizationId
@@ -118,6 +124,8 @@ export async function getEvidenceFilesForEntities(
       uploaded_by: row.uploaded_by,
       uploaded_time: row.uploaded_time,
       source: row.source,
+      expiry_date: row.expiry_date,
+      retention_policy: row.retention_policy,
     });
   }
 
@@ -206,7 +214,9 @@ export async function getEvidenceFilesForEntityTypes(
       f.project_id,
       f.uploaded_by,
       f.uploaded_time::text AS uploaded_time,
-      COALESCE(f.source, 'File Manager') AS source
+      COALESCE(f.source, 'File Manager') AS source,
+      f.expiry_date::text AS expiry_date,
+      f.retention_policy::text AS retention_policy
     FROM file_entity_links fel
     JOIN files f ON f.id = fel.file_id AND f.organization_id = fel.organization_id
     WHERE fel.organization_id = :organizationId
@@ -235,6 +245,8 @@ export async function getEvidenceFilesForEntityTypes(
       uploaded_by: row.uploaded_by,
       uploaded_time: row.uploaded_time,
       source: row.source,
+      expiry_date: row.expiry_date,
+      retention_policy: row.retention_policy,
     });
   }
 

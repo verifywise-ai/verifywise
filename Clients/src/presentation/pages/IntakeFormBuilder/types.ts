@@ -5,7 +5,15 @@ import { brand } from "../../themes/palette";
  * Field types supported in the intake form builder
  */
 export type FieldType =
-  "text" | "textarea" | "select" | "multiselect" | "checkbox" | "date" | "email" | "url" | "number";
+  | "text"
+  | "textarea"
+  | "select"
+  | "multiselect"
+  | "checkbox"
+  | "date"
+  | "email"
+  | "url"
+  | "number";
 
 /**
  * Validation rules for form fields

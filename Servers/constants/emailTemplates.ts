@@ -59,8 +59,8 @@ export const EMAIL_TEMPLATES = {
   MRM_BREACH_ALERT: "mrm-breach-alert.mjml",
   MRM_REVALIDATION_DUE: "mrm-revalidation-due.mjml",
 
-  // Evidence Hub templates
-  EVIDENCE_EXPIRED: "evidence-expired.mjml",
+  // File lifecycle templates
+  FILE_EXPIRING: "file-expiring.mjml",
 
   // AI Gateway templates
   AI_GATEWAY_BUDGET_WARNING: "ai-gateway-budget-warning.mjml",

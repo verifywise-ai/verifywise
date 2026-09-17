@@ -427,17 +427,18 @@ export async function scheduleMrmRetentionPrune() {
   );
 }
 
-export async function scheduleEvidenceExpirySweep() {
-  logger.info("Adding Evidence Hub expiry sweep job to the queue...");
+export async function scheduleFileExpirySweep() {
+  logger.info("Adding file expiry sweep job to the queue...");
   // Daily at 4:30 AM (2/3/4 AM slots are taken by other jobs — kept distinct).
-  // Flags evidence_hub records past their expiry_date as expired and notifies.
+  // Notifies uploaders when files.expiry_date is within the 7-day pre-expiry
+  // window (T-6..T-0). No state written back — the window itself is the dedup.
   // No obliterate here — the repeatable add is idempotent by repeat key.
   await automationQueue.upsertJobScheduler(
-    "evidence_expiry_sweep",
+    "file_expiry_sweep",
     { pattern: "30 4 * * *" },
     {
-      name: "evidence_expiry_sweep",
-      data: { type: "evidence_retention" },
+      name: "file_expiry_sweep",
+      data: { type: "file_expiry" },
       opts: {
         removeOnComplete: true,
         removeOnFail: false,

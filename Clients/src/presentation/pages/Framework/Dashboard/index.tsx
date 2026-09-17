@@ -204,10 +204,12 @@ const FrameworkDashboard = ({ organizationalProject, filteredFrameworks }: Dashb
           fw.name.toLowerCase().includes("nist ai rmf"),
         );
         let sharedNistProgress:
-          { totalSubcategories: number; doneSubcategories: number } | undefined;
+          | { totalSubcategories: number; doneSubcategories: number }
+          | undefined;
         let sharedNistProgressByFunction: FrameworkData["nistProgressByFunction"];
         let sharedNistAssignments:
-          { totalSubcategories: number; assignedSubcategories: number } | undefined;
+          | { totalSubcategories: number; assignedSubcategories: number }
+          | undefined;
         let sharedNistAssignmentsByFunction: FrameworkData["nistAssignmentsByFunction"];
         let sharedNistStatusBreakdown: FrameworkData["nistStatusBreakdown"];
         if (hasNISTAIRMF) {

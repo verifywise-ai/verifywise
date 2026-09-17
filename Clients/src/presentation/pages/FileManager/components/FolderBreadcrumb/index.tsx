@@ -14,9 +14,10 @@ import {
   Folder as FolderIcon,
   Files as FilesIcon,
   FileQuestion as UncategorizedIcon,
+  AlertCircle as ExpiredIcon,
 } from "lucide-react";
 import { IVirtualFolder, SelectedFolder } from "../../../../../domain/interfaces/i.virtualFolder";
-import { text, background, border as borderPalette } from "../../../../themes/palette";
+import { text, background, border as borderPalette, status } from "../../../../themes/palette";
 
 interface FolderBreadcrumbProps {
   selectedFolder: SelectedFolder;
@@ -38,6 +39,7 @@ export const FolderBreadcrumb: React.FC<FolderBreadcrumbProps> = ({
   const getDisplayName = (folder: SelectedFolder): string => {
     if (folder === "all") return "All files";
     if (folder === "uncategorized") return "Uncategorized";
+    if (folder === "expired") return "Expired files";
     return "";
   };
 
@@ -45,6 +47,7 @@ export const FolderBreadcrumb: React.FC<FolderBreadcrumbProps> = ({
   const getIcon = (folder: SelectedFolder) => {
     if (folder === "all") return <FilesIcon size={14} />;
     if (folder === "uncategorized") return <UncategorizedIcon size={14} />;
+    if (folder === "expired") return <ExpiredIcon size={14} color={status.error.text} />;
     return <FolderIcon size={14} />;
   };
 
