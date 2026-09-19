@@ -24634,3 +24634,14 @@ paths:
       security:
         -
           bearerAuth: []
+  /health:
+    get:
+      summary: 'Health Check'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - System
+      operationId: healthCheck
