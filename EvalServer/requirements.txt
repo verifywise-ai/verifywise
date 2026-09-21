@@ -47,7 +47,7 @@ Mako==1.4.1
 markdown-it-py==4.0.0
 MarkupSafe==3.0.3
 mdurl==0.1.2
-mistralai==2.10.0
+mistralai==2.10.1
 mpmath==1.3.0
 multidict==6.7.1
 narwhals==2.10.2
