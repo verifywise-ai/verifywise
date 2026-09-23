@@ -2,7 +2,7 @@ import React, { useCallback } from "react";
 import { TableBody, TableCell, TableRow, Chip, Box } from "@mui/material";
 import { Sparkles } from "lucide-react";
 import IconButton from "../../../IconButton";
-import { displayFormattedDate } from "../../../../tools/isoDateToString";
+import useFormattedDate from "../../../../../application/hooks/useFormattedDate";
 import singleTheme from "../../../../themes/v1SingleTheme";
 import { styles } from "./styles";
 import { handleDownload } from "../../../../../application/tools/fileDownload";
@@ -17,6 +17,7 @@ const ReportTableBody: React.FC<IReportTableProps> = ({
   sortConfig,
   visibleColumns,
 }) => {
+  const formatDate = useFormattedDate();
   const cellStyle = singleTheme.tableStyles.primary.body.cell;
 
   const isColumnVisible = useCallback(
@@ -138,7 +139,7 @@ const ReportTableBody: React.FC<IReportTableProps> = ({
                         : "inherit",
                   }}
                 >
-                  {row.uploaded_time ? displayFormattedDate(row.uploaded_time.toString()) : "NA"}
+                  {row.uploaded_time ? formatDate(row.uploaded_time.toString()) : "NA"}
                 </TableCell>
               )}
               {isColumnVisible("generatedBy") && (

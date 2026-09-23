@@ -8,7 +8,7 @@ import {
   useDeleteShareLink,
 } from "../../../application/hooks/useShare";
 import { brand, text, background } from "../../themes/palette";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 /**
  * Props for the ManageShareLinks component
@@ -48,6 +48,7 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
   onCopyLink,
   onOpenLink,
 }) => {
+  const formatDate = useFormattedDate();
   const [copySuccess, setCopySuccess] = useState<number | null>(null);
 
   const { data: shareLinks = [], isLoading, refetch } = useShareLinks(resourceType, resourceId);
@@ -193,7 +194,7 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
                     mb: 0.5,
                   }}
                 >
-                  Created: {displayFormattedDate(shareLink.created_at)}
+                  Created: {formatDate(shareLink.created_at)}
                 </Typography>
                 <Typography
                   variant="body2"

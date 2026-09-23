@@ -43,7 +43,7 @@ import { FileMetadata } from "../../../application/repository/file.repository";
 import { User } from "../../../domain/types/User";
 
 import Alert from "../../../presentation/components/Alert";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 // Types (Type Safety)
 type AlertVariant = "success" | "info" | "warning" | "error";
@@ -131,6 +131,7 @@ const getTabFromPath = (pathname: string): TrainingTab => {
 };
 
 const Training: React.FC = () => {
+  const formatDate = useFormattedDate();
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -850,9 +851,9 @@ const Training: React.FC = () => {
       mapped_trainings: e.mapped_training_ids?.length
         ? e.mapped_training_ids.map((id) => trainingNameById.get(id) || `Training ${id}`).join(", ")
         : "-",
-      expiry_date: e.expiry_date ? displayFormattedDate(e.expiry_date as any) : "-",
+      expiry_date: e.expiry_date ? formatDate(e.expiry_date as any) : "-",
     }));
-  }, [filteredEvidence, trainingNameById]);
+  }, [filteredEvidence, trainingNameById, formatDate]);
 
   return (
     <PageHeaderExtended

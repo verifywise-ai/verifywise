@@ -4,7 +4,7 @@ import { status, text as textColors, background } from "../../themes/palette";
 import CustomizableSkeleton from "../Skeletons";
 import { EmptyState } from "../EmptyState";
 import type { FrameworkReadinessScore } from "../../../domain/interfaces/i.readiness";
-import { displayFormattedDateTime } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 interface ReadinessTrendProps {
   data: FrameworkReadinessScore[];
@@ -31,6 +31,8 @@ function getScoreColor(score: number) {
 const FIXED_HEIGHT = 340;
 
 export default function ReadinessTrend({ data, isLoading }: ReadinessTrendProps) {
+  const formatDate = useFormattedDate();
+
   if (isLoading) {
     return (
       <Box sx={{ height: FIXED_HEIGHT }}>
@@ -91,7 +93,9 @@ export default function ReadinessTrend({ data, isLoading }: ReadinessTrendProps)
       >
         {data.map((item, idx) => {
           const score = item.avg_score ?? 0;
-          const date = item.calculated_at ? displayFormattedDateTime(item.calculated_at) : "";
+          const date = item.calculated_at
+            ? formatDate(item.calculated_at, { includeTime: true })
+            : "";
 
           return (
             <Box key={idx}>

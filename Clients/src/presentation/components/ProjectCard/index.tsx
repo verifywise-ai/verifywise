@@ -6,7 +6,7 @@ import { Btn, Card, styles, SubtitleValue, Title } from "./styles";
 import useNavigateSearch from "../../../application/hooks/useNavigateSearch";
 import useUsers from "../../../application/hooks/useUsers";
 import getProjectData from "../../../application/tools/getProjectData";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { User } from "../../../domain/types/User";
 import { IProjectCardProps } from "../../../domain/interfaces/i.project";
 
@@ -32,6 +32,7 @@ const ProjectCard: FC<IProjectCardProps> = ({
   controls,
   last_updated,
 }) => {
+  const formatDate = useFormattedDate();
   const theme = useTheme();
   const navigate = useNavigateSearch();
   const { users } = useUsers();
@@ -56,9 +57,7 @@ const ProjectCard: FC<IProjectCardProps> = ({
           <Typography variant="subtitle1" component="span" sx={styles.subtitle}>
             Last updated
           </Typography>
-          <SubtitleValue>
-            {last_updated ? displayFormattedDate(last_updated.toString()) : "NA"}
-          </SubtitleValue>
+          <SubtitleValue>{last_updated ? formatDate(last_updated.toString()) : "NA"}</SubtitleValue>
         </Box>
       </Box>
       <ProgressBarRender

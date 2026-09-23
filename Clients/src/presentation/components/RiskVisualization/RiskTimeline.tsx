@@ -3,9 +3,11 @@ import { Box, Typography, Stack, Chip } from "@mui/material";
 import { format } from "date-fns";
 import { IRiskTimelineProps } from "../../types/interfaces/i.risk";
 import { ITimelineEvent } from "../../../domain/interfaces/i.widget";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => {
+  const formatDate = useFormattedDate();
+
   const getRiskLevelFromString = (level: string | number): number => {
     if (typeof level === "number") return level;
     const levelStr = level.trim().toLowerCase();
@@ -74,7 +76,7 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
   }, [risks]);
 
   const formatTime = (date: Date) => {
-    return displayFormattedDate(date);
+    return formatDate(date);
   };
 
   // Group events by month for better organization

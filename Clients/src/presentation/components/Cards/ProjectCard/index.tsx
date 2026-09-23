@@ -18,6 +18,7 @@ import {
 import useNavigateSearch from "../../../../application/hooks/useNavigateSearch";
 import { fetchData } from "../../../../application/hooks/fetchDataHook";
 import useUsers from "../../../../application/hooks/useUsers";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 
 import { Project } from "../../../../domain/types/Project";
 import { User } from "../../../../domain/types/User";
@@ -143,12 +144,11 @@ function FrameworkButton({
   );
 }
 
-import { displayFormattedDate } from "../../../tools/isoDateToString";
-
 export const ProjectCard = React.memo(function ProjectCard({
   project,
   isLoading = false,
 }: ProjectCardProps) {
+  const formatDate = useFormattedDate();
   const navigate = useNavigateSearch();
   const { users } = useUsers();
 
@@ -213,7 +213,7 @@ export const ProjectCard = React.memo(function ProjectCard({
             <Stack className="project-card-spec-tile" alignItems="flex-end">
               <Typography sx={projectCardSpecKeyStyle}>Last updated</Typography>
               <Typography sx={projectCardSpecValueStyle}>
-                {displayFormattedDate(project.last_updated.toString())}
+                {formatDate(project.last_updated.toString())}
               </Typography>
             </Stack>
           </Stack>

@@ -17,13 +17,14 @@ import {
 } from "@mui/material";
 import { Download, ShieldX } from "lucide-react";
 import { ENV_VARs } from "../../../../env.vars";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 /**
  * SharedView page component for displaying publicly shared data
  * Accessed via /shared/:resourceType/:token
  */
 const SharedView: React.FC = () => {
+  const formatDate = useFormattedDate();
   const { token } = useParams<{ token: string }>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -260,7 +261,7 @@ const SharedView: React.FC = () => {
     if (key === "status_date") {
       try {
         const date = new Date(value);
-        return <Typography variant="body2">{displayFormattedDate(date)}</Typography>;
+        return <Typography variant="body2">{formatDate(date)}</Typography>;
       } catch {
         return <Typography variant="body2">{String(value)}</Typography>;
       }

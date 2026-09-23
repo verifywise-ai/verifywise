@@ -8,9 +8,10 @@ import {
 import GovernanceTooltip from "./GovernanceTooltip";
 import { CustomizableButton } from "../button/customizable-button";
 import { border as borderPalette, background, text, brand, status } from "../../themes/palette";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 const ActivationHistory: React.FC = () => {
+  const formatDate = useFormattedDate();
   const { data: activations, isLoading } = useActivationHistory();
   const deactivateMutation = useDeactivateScenario();
 
@@ -63,9 +64,7 @@ const ActivationHistory: React.FC = () => {
       <Stack gap="12px">
         {activations.slice(0, 5).map((activation: any) => {
           const isActive = activation.status === "active";
-          const date = activation.activated_at
-            ? displayFormattedDate(activation.activated_at)
-            : "—";
+          const date = activation.activated_at ? formatDate(activation.activated_at) : "—";
 
           return (
             <Box
