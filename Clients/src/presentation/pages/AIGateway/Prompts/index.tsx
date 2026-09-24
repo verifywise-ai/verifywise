@@ -31,7 +31,7 @@ import StandardModal from "../../../components/Modals/StandardModal";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import TablePaginationActions from "../../../components/TablePagination";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import {
   getPaginationRowCount,
   setPaginationRowCount,
@@ -56,6 +56,7 @@ interface Prompt {
 const { header, body, frame } = singleTheme.tableStyles.primary;
 
 export default function PromptsPage() {
+  const formatDate = useFormattedDate();
   const navigate = useNavigate();
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [loading, setLoading] = useState(true);
@@ -350,7 +351,7 @@ export default function PromptsPage() {
                     </Box>
                   </TableCell>
                   <TableCell style={{ ...body.cell, color: "#475467" }}>
-                    {displayFormattedDate(p.updated_at)}
+                    {formatDate(p.updated_at)}
                   </TableCell>
                   <TableCell style={{ ...body.cell, width: 48, minWidth: 48 }}>
                     <IconButton

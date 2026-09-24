@@ -31,7 +31,7 @@ import {
   KEY_DISPLAY_BG,
 } from "../shared";
 import MCPTable from "../MCPTable";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import dayjs from "dayjs";
 
@@ -60,6 +60,7 @@ interface AgentKey {
 }
 
 export default function MCPAgentKeysPage() {
+  const formatDate = useFormattedDate();
   const [keys, setKeys] = useState<AgentKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -308,7 +309,7 @@ export default function MCPAgentKeysPage() {
                   )}
                 </Stack>,
                 <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                  by {key.created_by_name} &middot; {displayFormattedDate(key.created_at)}
+                  by {key.created_by_name} &middot; {formatDate(key.created_at)}
                 </Typography>,
                 <Stack direction="row" alignItems="center" justifyContent="flex-end" gap="4px">
                   {key.is_active && !key.revoked_at && (

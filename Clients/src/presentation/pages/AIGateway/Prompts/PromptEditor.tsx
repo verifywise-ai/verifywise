@@ -54,7 +54,7 @@ import { EmptyState } from "../../../components/EmptyState";
 import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import palette from "../../../themes/palette";
 import {
   useCardSx,
@@ -213,6 +213,7 @@ interface ChatMessage {
 type TestTab = "chat" | "compare" | "test-set";
 
 export default function PromptEditorPage() {
+  const formatDate = useFormattedDate();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const cardSx = useCardSx();
@@ -1256,7 +1257,7 @@ export default function PromptEditorPage() {
                     )}
                   </Box>
                   <Typography fontSize={12} color="text.secondary">
-                    {v.created_by_name || "Unknown"} &middot; {displayFormattedDate(v.created_at)}
+                    {v.created_by_name || "Unknown"} &middot; {formatDate(v.created_at)}
                   </Typography>
                   {/* Feature 6: Commit message */}
                   {v.commit_message && (

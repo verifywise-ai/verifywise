@@ -33,7 +33,7 @@ import { sectionTitleSx, useCardSx, ProviderIcon, TOP_PROVIDERS } from "../share
 import CustomizableSkeleton from "../../../components/Skeletons";
 import VirtualKeysTab from "../VirtualKeys/index";
 import { validateApiKeyFormat } from "../../../../application/utils/apiKeyValidation";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 
 const TOP_IDS = new Set(TOP_PROVIDERS.map((p) => p._id));
 
@@ -126,6 +126,7 @@ interface RiskSuggestion {
 }
 
 export default function AIGatewaySettingsPage() {
+  const formatDate = useFormattedDate();
   const cardSx = useCardSx();
   const { tab: urlTab } = useParams<{ tab: string }>();
   const navigate = useNavigate();
@@ -1259,7 +1260,7 @@ export default function AIGatewaySettingsPage() {
                               )}
                               {s.reviewed_at && (
                                 <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                                  {displayFormattedDate(s.reviewed_at)}
+                                  {formatDate(s.reviewed_at)}
                                 </Typography>
                               )}
                             </Stack>
