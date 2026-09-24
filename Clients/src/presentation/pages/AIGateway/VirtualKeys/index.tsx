@@ -35,7 +35,7 @@ import {
   WARNING_TEXT,
   KEY_DISPLAY_BG,
 } from "../shared";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import dayjs from "dayjs";
 
 interface CreateVirtualKeyPayload {
@@ -70,6 +70,7 @@ interface VirtualKey {
 }
 
 export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: boolean } = {}) {
+  const formatDate = useFormattedDate();
   const cardSx = useCardSx();
   const [keys, setKeys] = useState<VirtualKey[]>([]);
   const [endpointCount, setEndpointCount] = useState<number | null>(null);
@@ -387,7 +388,7 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
                         />
                       )}
                       <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                        by {key.created_by_name} &middot; {displayFormattedDate(key.created_at)}
+                        by {key.created_by_name} &middot; {formatDate(key.created_at)}
                       </Typography>
                     </Stack>
                     {budgetPct !== null && (

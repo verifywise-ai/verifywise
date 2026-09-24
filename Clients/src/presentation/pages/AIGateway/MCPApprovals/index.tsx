@@ -13,7 +13,7 @@ import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { sectionTitleSx, useCardSx, MCP_STATUS_COLORS, MCP_STATUS_FALLBACK } from "../shared";
 import MCPTable from "../MCPTable";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import palette from "../../../themes/palette";
 import CustomizableSkeleton from "../../../components/Skeletons";
 
@@ -36,6 +36,7 @@ interface Approval {
 // Uses MCP_STATUS_COLORS from shared.ts
 
 export default function MCPApprovalsPage() {
+  const formatDate = useFormattedDate();
   const cardSx = useCardSx();
   const [tab, setTab] = useState<"pending" | "history">("pending");
   const [pending, setPending] = useState<Approval[]>([]);
@@ -228,7 +229,7 @@ export default function MCPApprovalsPage() {
                     </Typography>,
                     <Typography variant="body2" color="text.secondary">
                       {item.decided_at
-                        ? `${item.decided_by_name || `User #${item.decided_by}`} · ${displayFormattedDate(item.decided_at)}`
+                        ? `${item.decided_by_name || `User #${item.decided_by}`} · ${formatDate(item.decided_at)}`
                         : "—"}
                     </Typography>,
                     <Typography variant="body2" color="text.secondary">
@@ -325,12 +326,12 @@ export default function MCPApprovalsPage() {
                           </strong>
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          Requested: {displayFormattedDate(item.created_at)}
+                          Requested: {formatDate(item.created_at)}
                         </Typography>
                         {item.decided_at && (
                           <Typography variant="body2" color="text.secondary">
                             Decided by: {item.decided_by_name || `User #${item.decided_by}`} at{" "}
-                            {displayFormattedDate(item.decided_at)}
+                            {formatDate(item.decided_at)}
                           </Typography>
                         )}
                       </Stack>

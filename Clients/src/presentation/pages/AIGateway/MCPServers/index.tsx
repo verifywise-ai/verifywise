@@ -24,7 +24,7 @@ import palette from "../../../themes/palette";
 import { slugify } from "../shared";
 import MCPTable from "../MCPTable";
 import CustomizableSkeleton from "../../../components/Skeletons";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 
 interface ServerForm {
   name: string;
@@ -69,6 +69,7 @@ interface MCPServer {
 }
 
 export default function MCPServersPage() {
+  const formatDate = useFormattedDate();
   const [servers, setServers] = useState<MCPServer[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -296,7 +297,7 @@ export default function MCPServersPage() {
               </Box>,
               <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
                 {srv.created_by_name ? `${srv.created_by_name} · ` : ""}
-                {displayFormattedDate(srv.created_at)}
+                {formatDate(srv.created_at)}
               </Typography>,
               <Box
                 sx={{ display: "flex", justifyContent: "center" }}
