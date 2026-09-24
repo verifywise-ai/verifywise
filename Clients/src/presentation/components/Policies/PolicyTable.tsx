@@ -18,7 +18,7 @@ import { POLICY_TAGS } from "../../../domain/models/Common/policy/policyManager.
 import { store } from "../../../application/redux/store";
 import { useCustomFieldDefinitions } from "../../../application/hooks/useCustomFields";
 import { formatCustomFieldValue } from "../CustomFieldsSection/formatCustomFieldValue";
-import { displayFormattedDate, displayFormattedDateTime } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 const tableHeaders = [
   { id: "title", name: "Title" },
@@ -46,6 +46,7 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
   canRunBulkActions = false,
   onBulkActionSuccess,
 }) => {
+  const formatDate = useFormattedDate();
   const cellStyle = singleTheme.tableStyles.primary.body.cell;
 
   const isVisible = useCallback(
@@ -392,7 +393,7 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
                       : undefined,
                 }}
               >
-                {policy.next_review_date ? displayFormattedDate(policy.next_review_date) : "-"}
+                {policy.next_review_date ? formatDate(policy.next_review_date) : "-"}
               </TableCell>
             )}
             {isVisible("author") && (
@@ -426,7 +427,9 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
                       : undefined,
                 }}
               >
-                {policy.last_updated_at ? displayFormattedDateTime(policy.last_updated_at) : "-"}
+                {policy.last_updated_at
+                  ? formatDate(policy.last_updated_at, { includeTime: true })
+                  : "-"}
               </TableCell>
             )}
             {isVisible("updated_by") && (

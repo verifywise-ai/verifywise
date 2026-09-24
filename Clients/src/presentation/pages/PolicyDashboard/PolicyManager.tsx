@@ -38,7 +38,7 @@ import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import LinkedPolicyModal from "../../components/Policies/LinkedPolicyModal";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { useVirtualFolders } from "../../../application/hooks/useVirtualFolders";
 import { FolderTree } from "../FileManager/components/FolderTree";
 import { CreateFolderModal } from "../FileManager/components/CreateFolderModal";
@@ -68,6 +68,7 @@ const POLICY_TABLE_COLUMNS: ColumnConfig<PolicyColumnKey>[] = [
 ];
 
 const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
+  const formatDate = useFormattedDate();
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -515,13 +516,13 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
       return {
         title: policy.title || "-",
         status: policy.status || "-",
-        next_review: policy.next_review_date ? displayFormattedDate(policy.next_review_date) : "-",
+        next_review: policy.next_review_date ? formatDate(policy.next_review_date) : "-",
         author: authorName,
-        last_updated: policy.last_updated_at ? displayFormattedDate(policy.last_updated_at) : "-",
+        last_updated: policy.last_updated_at ? formatDate(policy.last_updated_at) : "-",
         updated_by: updatedByName,
       };
     });
-  }, [filteredPolicies, users]);
+  }, [filteredPolicies, users, formatDate]);
 
   return (
     <>
