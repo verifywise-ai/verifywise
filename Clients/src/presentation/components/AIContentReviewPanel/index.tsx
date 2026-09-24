@@ -11,7 +11,7 @@ import {
 import Chip from "../Chip";
 import AIContentBadge from "../AIContentBadge";
 import type { AIContentMetadata, ReviewAction } from "../../../domain/interfaces/i.aiContent";
-import { displayFormattedDate, displayFormattedDateTime } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 interface AIContentReviewPanelProps {
   item: AIContentMetadata;
@@ -28,9 +28,10 @@ export default function AIContentReviewPanel({
   onReview,
   isReviewing,
 }: AIContentReviewPanelProps) {
+  const formatDate = useFormattedDate();
   const [notes, setNotes] = useState("");
 
-  const createdDate = item.created_at ? displayFormattedDateTime(item.created_at) : "";
+  const createdDate = item.created_at ? formatDate(item.created_at, { includeTime: true }) : "";
 
   return (
     <Box
@@ -218,7 +219,7 @@ export default function AIContentReviewPanel({
             <CheckCircle size={16} style={{ color: accent.primary.text }} />
             <Typography sx={{ fontSize: 13, color: accent.primary.text, fontWeight: 500 }}>
               {item.review_action.charAt(0).toUpperCase() + item.review_action.slice(1)}
-              {item.reviewed_at && ` on ${displayFormattedDate(item.reviewed_at)}`}
+              {item.reviewed_at && ` on ${formatDate(item.reviewed_at)}`}
             </Typography>
           </Stack>
         )}

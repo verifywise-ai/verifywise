@@ -21,7 +21,7 @@ import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/us
 import CustomizableSkeleton from "../Skeletons";
 
 import { projectWrapperStyle, noProjectsTextStyle, vwhomeBodyProjectsGrid } from "./style";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 const ProjectList = ({
   projects,
@@ -29,6 +29,7 @@ const ProjectList = ({
   onProjectDeleted,
   isLoading = false,
 }: IProjectListProps) => {
+  const formatDate = useFormattedDate();
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = usePersistedViewMode("projects-view-mode", "table");
 
@@ -317,13 +318,13 @@ const ProjectList = ({
         project_title: project.project_title || "-",
         ai_risk_classification: project.ai_risk_classification || "-",
         type_of_high_risk_role: project.type_of_high_risk_role?.replace(/_/g, " ") || "-",
-        start_date: project.start_date ? displayFormattedDate(project.start_date) : "-",
-        last_updated: project.last_updated ? displayFormattedDate(project.last_updated) : "-",
+        start_date: project.start_date ? formatDate(project.start_date) : "-",
+        last_updated: project.last_updated ? formatDate(project.last_updated) : "-",
         owner: ownerName,
         status: project.status || "-",
       };
     });
-  }, [filteredProjects, getUserNameById]);
+  }, [filteredProjects, getUserNameById, formatDate]);
 
   return (
     <Box sx={{ width: "100%" }}>

@@ -29,7 +29,7 @@ import { ITasksTableProps } from "../../../types/interfaces/i.table";
 import { TaskModel } from "../../../../domain/models/Common/task/task.model";
 import { CategoryChip } from "../../Chip/CategoryChip/CategoryChip";
 import { DISPLAY_TO_PRIORITY_MAP, PRIORITY_DISPLAY_MAP } from "../../../constants/priorityOptions";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { taskTableStyles } from "./styles";
 import { useStandardTable } from "../../../../application/hooks/useStandardTable";
 import { useBulkSelection } from "../../../../application/hooks/useBulkSelection";
@@ -119,6 +119,7 @@ const TasksTable: React.FC<ITasksTableProps> = ({
   canRunBulkActions = false,
   onBulkActionSuccess,
 }) => {
+  const formatDate = useFormattedDate();
   const theme = useTheme();
 
   const {
@@ -432,7 +433,7 @@ const TasksTable: React.FC<ITasksTableProps> = ({
                             task.isOverdue && task.status !== TaskStatus.COMPLETED ? 500 : 400,
                         }}
                       >
-                        {displayFormattedDate(task.due_date)}
+                        {formatDate(task.due_date)}
                       </Typography>
                       {task.status === TaskStatus.COMPLETED ? null : task.isOverdue ? (
                         <Chip label="Overdue" variant="error" />
@@ -573,6 +574,7 @@ const TasksTable: React.FC<ITasksTableProps> = ({
       canRunBulkActions,
       isSelected,
       toggleSelection,
+      formatDate,
     ],
   );
 
