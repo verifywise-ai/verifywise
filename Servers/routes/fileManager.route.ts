@@ -190,7 +190,7 @@ router.get(
  * @returns {200} Org file settings
  * @returns {500} Server error
  */
-router.get("/org-settings", authenticateJWT, getFileOrgSettingsHandler);
+router.get("/org-settings", fileOperationsLimiter, authenticateJWT, getFileOrgSettingsHandler);
 
 /**
  * @route   PUT /file-manager/org-settings
@@ -202,7 +202,13 @@ router.get("/org-settings", authenticateJWT, getFileOrgSettingsHandler);
  * @returns {403} Access denied
  * @returns {500} Server error
  */
-router.put("/org-settings", authenticateJWT, authorize(["Admin"]), updateFileOrgSettingsHandler);
+router.put(
+  "/org-settings",
+  fileOperationsLimiter,
+  authenticateJWT,
+  authorize(["Admin"]),
+  updateFileOrgSettingsHandler,
+);
 
 /**
  * @route   GET /file-manager/:id
