@@ -48,7 +48,7 @@ import Select from "../../components/Inputs/Select";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import { useUserGuideSidebarContext } from "../../components/UserGuide/UserGuideSidebarContext";
 import { palette } from "../../themes/palette";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 const numberFormatter = new Intl.NumberFormat("en-US");
 
@@ -127,6 +127,7 @@ function useCardSx() {
 }
 
 function ApiKeysSection() {
+  const formatDate = useFormattedDate();
   const cardSx = useCardSx();
   const { open: openGuide } = useUserGuideSidebarContext();
   const [loading, setLoading] = useState(true);
@@ -333,10 +334,10 @@ function ApiKeysSection() {
                       <Chip label={k.is_active ? "Active" : "Revoked"} size="small" />
                     </TableCell>
                     <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                      {k.created_at ? displayFormattedDate(k.created_at) : "—"}
+                      {k.created_at ? formatDate(k.created_at) : "—"}
                     </TableCell>
                     <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                      {k.last_used_at ? displayFormattedDate(k.last_used_at) : "Never"}
+                      {k.last_used_at ? formatDate(k.last_used_at) : "Never"}
                     </TableCell>
                     <TableCell align="right" sx={singleTheme.tableStyles.primary.body.cell}>
                       {k.is_active ? (
@@ -427,6 +428,7 @@ function ApiKeysSection() {
 // ─── Syslog Config Section ──────────────────────────────────────────
 
 function SyslogConfigSection() {
+  const formatDate = useFormattedDate();
   const cardSx = useCardSx();
   const { open: openGuide } = useUserGuideSidebarContext();
   const [loading, setLoading] = useState(true);
@@ -599,7 +601,7 @@ function SyslogConfigSection() {
                       <Chip label={c.is_active ? "Active" : "Inactive"} size="small" />
                     </TableCell>
                     <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                      {c.created_at ? displayFormattedDate(c.created_at) : "—"}
+                      {c.created_at ? formatDate(c.created_at) : "—"}
                     </TableCell>
                     <TableCell align="right" sx={singleTheme.tableStyles.primary.body.cell}>
                       <Stack direction="row" gap="4px" justifyContent="flex-end">

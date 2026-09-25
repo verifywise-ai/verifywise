@@ -46,7 +46,7 @@ import TablePaginationActions from "../../components/TablePagination";
 import GovernanceWizardModal from "./GovernanceWizardModal";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import Alert from "../../components/Alert";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import {
   SelectorVertical,
   SortableColumn,
@@ -101,6 +101,7 @@ function ToolIcon({ vendor, size = 18 }: { vendor?: string; size?: number }) {
 }
 
 export default function AIToolsPage() {
+  const formatDate = useFormattedDate();
   const theme = useTheme();
   const navigate = useNavigate();
   const { toolId } = useParams<{ toolId?: string }>();
@@ -322,17 +323,13 @@ export default function AIToolsPage() {
               <DashboardHeaderCard
                 title="First detected"
                 count={
-                  selectedTool.first_detected_at
-                    ? displayFormattedDate(selectedTool.first_detected_at)
-                    : "—"
+                  selectedTool.first_detected_at ? formatDate(selectedTool.first_detected_at) : "—"
                 }
                 disableNavigation
               />
               <DashboardHeaderCard
                 title="Last seen"
-                count={
-                  selectedTool.last_seen_at ? displayFormattedDate(selectedTool.last_seen_at) : "—"
-                }
+                count={selectedTool.last_seen_at ? formatDate(selectedTool.last_seen_at) : "—"}
                 disableNavigation
               />
             </Box>
@@ -585,7 +582,7 @@ export default function AIToolsPage() {
                       {t.risk_score ?? 0}
                     </TableCell>
                     <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                      {t.last_seen_at ? displayFormattedDate(t.last_seen_at) : "—"}
+                      {t.last_seen_at ? formatDate(t.last_seen_at) : "—"}
                     </TableCell>
                   </TableRow>
                 );

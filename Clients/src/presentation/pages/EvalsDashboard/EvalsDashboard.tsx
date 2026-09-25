@@ -65,7 +65,7 @@ import {
 import type { LLMProvider } from "../../../infrastructure/api/evaluationLlmApiKeysService";
 import { evalModelsService } from "../../../infrastructure/api/evalModelsService";
 import { Plus as PlusIcon, Trash2 as DeleteIcon } from "lucide-react";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { Collapse, IconButton, CircularProgress } from "@mui/material";
 import VWChip from "../../components/Chip";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
@@ -230,6 +230,7 @@ interface LocalProvider {
 }
 
 export default function EvalsDashboard() {
+  const formatDate = useFormattedDate();
   const { projectId } = useParams<{ projectId?: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -561,7 +562,7 @@ export default function EvalsDashboard() {
   // Format date for display
   const formatKeyDate = (dateStr: string): string => {
     try {
-      return displayFormattedDate(dateStr);
+      return formatDate(dateStr);
     } catch {
       return "-";
     }
