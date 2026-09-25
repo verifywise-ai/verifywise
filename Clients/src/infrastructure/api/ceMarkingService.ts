@@ -10,9 +10,7 @@ const CE_MARKING_API = `/ce-marking`;
 
 /** Payload shapes accepted by the CE Marking update endpoint. */
 type CEMarkingUpdatePayload =
-  | Partial<CEMarkingData>
-  | ConformityStepsUpdatePayload
-  | LinkedResourcesUpdatePayload;
+  Partial<CEMarkingData> | ConformityStepsUpdatePayload | LinkedResourcesUpdatePayload;
 
 /** Policy option returned by the linkable-policies lookup. */
 export interface CEMarkingPolicyOption {

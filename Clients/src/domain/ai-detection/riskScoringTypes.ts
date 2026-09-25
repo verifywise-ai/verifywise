@@ -7,11 +7,7 @@
  */
 
 export type DimensionKey =
-  | "data_sovereignty"
-  | "transparency"
-  | "security"
-  | "autonomy"
-  | "supply_chain";
+  "data_sovereignty" | "transparency" | "security" | "autonomy" | "supply_chain";
 
 export type RiskGrade = "A" | "B" | "C" | "D" | "F";
 

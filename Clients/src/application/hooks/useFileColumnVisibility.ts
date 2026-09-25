@@ -14,14 +14,7 @@ import { storageService } from "../../infrastructure/storage";
  * Keys match the display names used in the table for consistency
  */
 export type FileColumn =
-  | "file"
-  | "upload_date"
-  | "uploader"
-  | "source"
-  | "version"
-  | "status"
-  | "quality"
-  | "action";
+  "file" | "upload_date" | "uploader" | "source" | "version" | "status" | "quality" | "action";
 
 /**
  * Column configuration with display name and default visibility

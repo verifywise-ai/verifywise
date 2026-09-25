@@ -6,13 +6,7 @@
 import CustomAxios from "./customAxios";
 
 export type LLMProvider =
-  | "openai"
-  | "anthropic"
-  | "google"
-  | "xai"
-  | "mistral"
-  | "huggingface"
-  | "openrouter";
+  "openai" | "anthropic" | "google" | "xai" | "mistral" | "huggingface" | "openrouter";
 
 export interface LLMApiKey {
   id?: number;

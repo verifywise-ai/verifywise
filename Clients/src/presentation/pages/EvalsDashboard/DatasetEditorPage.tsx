@@ -119,8 +119,7 @@ export default function DatasetEditorPage() {
       type AxiosLike = { response?: { data?: unknown } };
       const axiosErr = e as AxiosLike | Error;
       const resData = (axiosErr as AxiosLike)?.response?.data as
-        | Record<string, unknown>
-        | undefined;
+        Record<string, unknown> | undefined;
       const serverMsg =
         (resData && (String(resData.message ?? "") || String(resData.detail ?? ""))) ||
         (axiosErr instanceof Error ? axiosErr.message : null);

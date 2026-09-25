@@ -150,7 +150,8 @@ Create a unified `Chip` component to replace all scattered chip/badge implementa
 ```tsx
 interface ChipProps {
   label: string;
-  variant?: // Risk levels
+  variant?:
+    // Risk levels
     | "critical"
     | "high"
     | "medium"
