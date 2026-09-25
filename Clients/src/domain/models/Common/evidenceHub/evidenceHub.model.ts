@@ -5,6 +5,8 @@ export interface FileResponse {
   mimetype: string;
   uploaded_by: number;
   upload_date: string;
+  // Lifecycle, owned by the file itself. DATE string (YYYY-MM-DD) or null.
+  expiry_date?: string | null;
 }
 
 export class EvidenceHubModel {

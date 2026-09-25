@@ -27,6 +27,7 @@ import { getAllEntities } from "../../../../application/repository/entity.reposi
 import { User } from "../../../../domain/types/User";
 import dayjs, { Dayjs } from "dayjs";
 import utc from "dayjs/plugin/utc";
+import { earliestFileExpiry } from "../../../../application/utils/fileExpiry";
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
 import modelInventoryOptions from "../../../utils/model-inventory.json";
 import { useProjects } from "../../../../application/hooks/useProjects";
@@ -512,14 +513,18 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
     }
 
     // Map data to rows
-    const rows = data.map((item) => ({
-      "ID": item.id,
-      "Title": item.evidence_name || "",
-      "Type": item.evidence_type || "",
-      "Mapped Models": item.mapped_model_ids?.join(", ") || "",
-      "DESCRIPTION": item.description,
-      "EXPIRY_DATE": item.expiry_date ? dayjs.utc(item.expiry_date).format("YYYY-MM-DD") : "-",
-    }));
+    const rows = data.map((item) => {
+      // Expiry lives on the linked files; the earliest one represents the row.
+      const expiryDate = earliestFileExpiry(item.evidence_files);
+      return {
+        "ID": item.id,
+        "Title": item.evidence_name || "",
+        "Type": item.evidence_type || "",
+        "Mapped Models": item.mapped_model_ids?.join(", ") || "",
+        "DESCRIPTION": item.description,
+        "EXPIRY_DATE": expiryDate ? dayjs.utc(expiryDate).format("YYYY-MM-DD") : "-",
+      };
+    });
 
     // Extract CSV header from object keys
     const header = Object.keys(rows[0]).join(",");
