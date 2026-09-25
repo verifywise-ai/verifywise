@@ -62,7 +62,9 @@ export async function insertMockData(
           last_updated_by: userId,
         },
         [], // no additional members
-        [1, 2], // frameworks: EU AI Act (1) + ISO/IEC 42001 (2)
+        [1], // frameworks: EU AI Act (1) — ISO/IEC 42001 (2) is organizational
+        // and lives on its own organizational project below, per the
+        // is_organizational partition enforced by createNewProjectQuery
         organizationId,
         userId,
         transaction,
@@ -72,8 +74,33 @@ export async function insertMockData(
       await createEUFrameworkQuery(project.id!, true, organizationId, transaction, true);
 
       // create ISO/IEC 42001 framework — seeds clause/annex implementation
-      // descriptions, auditor feedback and a mix of statuses (is_mock_data=true)
-      await createISOFrameworkQuery(project.id!, true, organizationId, transaction, true);
+      // descriptions, auditor feedback and a mix of statuses (is_mock_data=true).
+      // ISO/IEC 42001 is an organizational framework (is_organizational=true), so
+      // it can only be attached to an organizational project — never to the
+      // non-organizational use case project above.
+      const isoOrgProject = await createNewProjectQuery(
+        {
+          project_title: "Organization-wide AI Management System",
+          owner: userId,
+          start_date: new Date(Date.now()),
+          geography: 1,
+          target_industry: "Human Resources",
+          description:
+            "An organization-wide AI management system (AIMS) establishing governance, policies, roles and controls for the responsible development and operation of AI across the entire organization, implemented in accordance with ISO/IEC 42001.",
+          ai_risk_classification: AiRiskClassification.LIMITED_RISK,
+          goal: "To provide a single organizational framework for AI governance, risk management and continual improvement that all business units and AI systems align with, in compliance with ISO/IEC 42001 requirements",
+          last_updated: new Date(Date.now()),
+          last_updated_by: userId,
+          is_organizational: true,
+        },
+        [], // no additional members
+        [2], // frameworks: ISO/IEC 42001 (2) — organizational framework
+        organizationId,
+        userId,
+        transaction,
+        true, // is demo
+      );
+      await createISOFrameworkQuery(isoOrgProject.id!, true, organizationId, transaction, true);
 
       // create project risks
       await createRiskQuery(
