@@ -9285,6 +9285,15 @@ export const translations: Record<string, Record<string, string>> = {
     "Invite via email": "Per E-Mail einladen",
     "Must include an uppercase letter, a lowercase letter, and a digit. Minimum 8 characters.":
       "Muss einen Großbuchstaben, einen Kleinbuchstaben und eine Ziffer enthalten. Mindestens 8 Zeichen.",
+    "Create API tokens for the super admin API":
+      "API-Tokens für die Super-Administrator-API erstellen",
+    "Install": "Installieren",
+    "Install the MCP server to manage organizations and users from Claude Code":
+      "MCP-Server installieren, um Organisationen und Benutzer über Claude Code zu verwalten",
+    "Installed": "Installiert",
+    "MCP server": "MCP-Server",
+    "The MCP server source was not found next to the backend. It is included from MCPServer/ at build time.":
+      "Die MCP-Server-Quelle wurde nicht neben dem Backend gefunden. Sie wird zur Build-Zeit aus MCPServer/ eingebunden.",
   },
 
   fr: {
@@ -18500,6 +18509,15 @@ export const translations: Record<string, Record<string, string>> = {
     "Invite via email": "Inviter par e-mail",
     "Must include an uppercase letter, a lowercase letter, and a digit. Minimum 8 characters.":
       "Doit contenir une majuscule, une minuscule et un chiffre. Minimum 8 caractères.",
+    "Create API tokens for the super admin API":
+      "Créer des tokens d'API pour l'API super administrateur",
+    "Install": "Installer",
+    "Install the MCP server to manage organizations and users from Claude Code":
+      "Installer le serveur MCP pour gérer les organisations et les utilisateurs depuis Claude Code",
+    "Installed": "Installé",
+    "MCP server": "Serveur MCP",
+    "The MCP server source was not found next to the backend. It is included from MCPServer/ at build time.":
+      "Les sources du serveur MCP n'ont pas été trouvées à côté du backend. Elles sont incluses depuis MCPServer/ au moment de la compilation.",
   },
   es: {
     "Deployment name": "Nombre del despliegue",
@@ -27634,5 +27652,14 @@ export const translations: Record<string, Record<string, string>> = {
     "Invite via email": "Invitar por correo",
     "Must include an uppercase letter, a lowercase letter, and a digit. Minimum 8 characters.":
       "Debe incluir una mayúscula, una minúscula y un dígito. Mínimo 8 caracteres.",
+    "Create API tokens for the super admin API":
+      "Crear tokens de API para la API de superadministrador",
+    "Install": "Instalar",
+    "Install the MCP server to manage organizations and users from Claude Code":
+      "Instalar el servidor MCP para gestionar organizaciones y usuarios desde Claude Code",
+    "Installed": "Instalado",
+    "MCP server": "Servidor MCP",
+    "The MCP server source was not found next to the backend. It is included from MCPServer/ at build time.":
+      "No se encontró el código fuente del servidor MCP junto al backend. Se incluye desde MCPServer/ en tiempo de compilación.",
   },
 };

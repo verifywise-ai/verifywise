@@ -12,10 +12,15 @@ const mockGetNumberOfApiTokensQuery = getNumberOfApiTokensQuery as jest.MockedFu
   typeof getNumberOfApiTokensQuery
 >;
 
-function createMockReq(role?: string, organizationId?: number): Partial<Request> {
+function createMockReq(
+  role?: string,
+  organizationId?: number,
+  isSuperAdmin = false,
+): Partial<Request> {
   return {
     role,
     organizationId,
+    isSuperAdmin,
     t: (key: string) => key,
   } as Partial<Request>;
 }
@@ -45,9 +50,23 @@ describe("tokens.middleware", () => {
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({
         message: "Forbidden",
-        data: "Only Admin users can create API tokens.",
+        data: "Only Admin and super admin users can create API tokens.",
       });
       expect(next).not.toHaveBeenCalled();
+    });
+
+    it("should allow a super admin with no organization role", async () => {
+      mockGetNumberOfApiTokensQuery.mockResolvedValue(0);
+      const req = createMockReq("SuperAdmin", undefined, true) as Request;
+      const res = createMockRes();
+
+      await validateTokenCreation(req, res as Response, next);
+
+      // null, not undefined: the query scopes such tokens by
+      // organization_id IS NULL.
+      expect(mockGetNumberOfApiTokensQuery).toHaveBeenCalledWith(null);
+      expect(next).toHaveBeenCalled();
+      expect(res.status).not.toHaveBeenCalled();
     });
 
     it("should return 403 when token limit is reached", async () => {
@@ -79,6 +98,16 @@ describe("tokens.middleware", () => {
   });
 
   describe("validateTokenDeletion", () => {
+    it("should allow a super admin with no organization role", async () => {
+      const req = createMockReq("SuperAdmin", undefined, true) as Request;
+      const res = createMockRes();
+
+      await validateTokenDeletion(req, res as Response, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(res.status).not.toHaveBeenCalled();
+    });
+
     it("should return 403 when user is not Admin", async () => {
       const req = createMockReq("Editor", 1) as Request;
       const res = createMockRes();
@@ -88,7 +117,7 @@ describe("tokens.middleware", () => {
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({
         message: "Forbidden",
-        data: "Only Admin users can delete API tokens.",
+        data: "Only Admin and super admin users can delete API tokens.",
       });
       expect(next).not.toHaveBeenCalled();
     });

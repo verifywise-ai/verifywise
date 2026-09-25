@@ -6,7 +6,7 @@ FROM node:26-alpine3.22
 ENV NODE_ENV=production
 
 WORKDIR /app
-COPY ./package.json ./package-lock.json ./
+COPY ./Servers/package.json ./Servers/package-lock.json ./
 
 # Increase timeout and use cache for cross-platform builds.
 # --include=dev is required even though NODE_ENV=production: devDependencies
@@ -37,10 +37,19 @@ RUN apk upgrade --no-cache && \
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
-COPY ./ ./
-COPY ./SQL_Commands.sql ./SQL_Commands.sql
+COPY ./Servers/ ./
+COPY ./Servers/SQL_Commands.sql ./SQL_Commands.sql
 
 RUN npm run build
+
+# The MCP server (MCPServer/) ships with the backend so the super admin console
+# can install it without a separate download. It is built here, while npm still
+# exists — the layer below removes npm from the runtime image, so nothing can be
+# built after this point.
+COPY ./MCPServer/package.json ./MCPServer/package-lock.json ./MCPServer/
+RUN cd MCPServer && npm ci --no-audit --no-fund
+COPY ./MCPServer/ ./MCPServer/
+RUN cd MCPServer && npm run build
 
 # Strip the package managers from the runtime image. npm/npx/corepack are only
 # needed at build time (npm ci + npm run build, both done above). Their bundled
@@ -56,7 +65,7 @@ RUN rm -rf \
       /usr/local/bin/corepack \
       /root/.npm
 
-COPY ./templates ./dist/templates
+COPY ./Servers/templates ./dist/templates
 
 # Install dcron with error handling for ARM64 QEMU issues
 RUN apk add --no-cache dcron || apk add --no-cache --force-broken-world dcron
@@ -67,7 +76,7 @@ EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 CMD node -e "require('http').get('http://localhost:3000/health', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1)).on('error', () => process.exit(1))"
 
-COPY ./start.sh ./start.sh
+COPY ./Servers/start.sh ./start.sh
 RUN chmod +x ./start.sh
 
 CMD ["./start.sh"]
