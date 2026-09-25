@@ -9,6 +9,7 @@ import { invite } from "./vwmailer.ctrl";
 import { createNewUserWrapper } from "./user.ctrl";
 import { OrganizationModel } from "../domain.layer/models/organization/organization.model";
 import { getMonitoringConfig, upsertMonitoringConfig } from "../utils/monitoringConfig.utils";
+import { getMcpServerStatus, installMcpServer, uninstallMcpServer } from "../utils/mcpServer.utils";
 import {
   createInvitationQuery,
   getInvitationsByOrganizationQuery,
@@ -776,5 +777,42 @@ export async function generateMonitoringToken(req: Request, res: Response) {
     return res.status(200).json(STATUS_CODE[200](redactMonitoringConfig(updated)));
   } catch (error) {
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * Whether the MCP server is built and ready to register with a client.
+ */
+export async function getMcpServer(req: Request, res: Response) {
+  try {
+    return res.status(200).json(STATUS_CODE[200](await getMcpServerStatus()));
+  } catch (error) {
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * Build the MCP server so it can be registered with an MCP client.
+ *
+ * Runs npm install and the TypeScript build in MCPServer/. Takes a minute or
+ * two on a cold install, so the request is held until it finishes rather than
+ * reporting a success the caller would have to poll to confirm.
+ */
+export async function installMcpServerHandler(_req: Request, res: Response) {
+  try {
+    return res.status(200).json(STATUS_CODE[200](await installMcpServer()));
+  } catch (error) {
+    return res.status(400).json(STATUS_CODE[400]({ message: (error as Error).message }));
+  }
+}
+
+/**
+ * Remove the MCP server build, leaving the source in place.
+ */
+export async function uninstallMcpServerHandler(_req: Request, res: Response) {
+  try {
+    return res.status(200).json(STATUS_CODE[200](await uninstallMcpServer()));
+  } catch (error) {
+    return res.status(400).json(STATUS_CODE[400]({ message: (error as Error).message }));
   }
 }

@@ -47,12 +47,26 @@ export const hashApiToken = async (token: string): Promise<string> => {
   return derived.toString("hex");
 };
 
-export const getNumberOfApiTokensQuery = async (organizationId: number) => {
+/**
+ * SQL predicate scoping api_tokens to one owner.
+ *
+ * A super-admin token belongs to no organization, so its `organization_id` is
+ * NULL and `= :organizationId` can never match it — nothing equals NULL in SQL.
+ * The two forms are branched rather than written as
+ * `organization_id IS NOT DISTINCT FROM :organizationId`, which reads better but
+ * is not an indexable operator: this column leads
+ * idx_api_tokens_org_token (organization_id, token), and the hash lookup below
+ * runs on every API-token request.
+ */
+const orgScope = (organizationId: number | null): string =>
+  organizationId === null ? "organization_id IS NULL" : "organization_id = :organizationId";
+
+export const getNumberOfApiTokensQuery = async (organizationId: number | null) => {
   // Only active (non-revoked) tokens count toward the per-organization limit.
   // Revoked rows are retained for audit but must not consume a slot, otherwise
   // revoking a token would permanently reduce the org's creation capacity.
   const numberOfTokens = (await sequelize.query(
-    `SELECT COUNT(*) FROM api_tokens WHERE organization_id = :organizationId AND revoked = false;`,
+    `SELECT COUNT(*) FROM api_tokens WHERE ${orgScope(organizationId)} AND revoked = false;`,
     { replacements: { organizationId } },
   )) as [{ count: string }[], number];
   return parseInt(numberOfTokens[0][0].count, 10);
@@ -60,14 +74,14 @@ export const getNumberOfApiTokensQuery = async (organizationId: number) => {
 
 export const createApiTokenQuery = async (
   tokenPayload: IToken,
-  organizationId: number,
+  organizationId: number | null,
   transaction: Transaction,
 ) => {
   // Check if an active (non-revoked) token with this name already exists.
   // A revoked token frees up its name for reuse.
   const existingToken = (await sequelize.query(
     `SELECT id FROM api_tokens
-       WHERE organization_id = :organizationId AND name = :name AND revoked = false;`,
+       WHERE ${orgScope(organizationId)} AND name = :name AND revoked = false;`,
     {
       replacements: { organizationId, name: tokenPayload.name },
       transaction,
@@ -113,12 +127,12 @@ export const createApiTokenQuery = async (
  * Scoped by organization to keep the lookup tenant-isolated.
  */
 export const getActiveApiTokenByHashQuery = async (
-  organizationId: number,
+  organizationId: number | null,
   tokenHash: string,
 ): Promise<{ id: number; revoked: boolean; expires_at: Date } | null> => {
   const result = (await sequelize.query(
     `SELECT id, revoked, expires_at FROM api_tokens
-       WHERE organization_id = :organizationId
+       WHERE ${orgScope(organizationId)}
          AND token = :tokenHash
          AND revoked = false
          AND expires_at > NOW()
@@ -134,11 +148,11 @@ export const getActiveApiTokenByHashQuery = async (
  */
 export const touchApiTokenLastUsedQuery = async (
   id: number,
-  organizationId: number,
+  organizationId: number | null,
 ): Promise<void> => {
   await sequelize.query(
     `UPDATE api_tokens SET last_used_at = NOW()
-       WHERE id = :id AND organization_id = :organizationId;`,
+       WHERE id = :id AND ${orgScope(organizationId)};`,
     { replacements: { id, organizationId } },
   );
 };
@@ -148,28 +162,31 @@ export const touchApiTokenLastUsedQuery = async (
  * the UI and audit trail) but can no longer authenticate. Returns false when no
  * matching active token exists.
  */
-export const revokeApiTokenQuery = async (id: number, organizationId: number): Promise<boolean> => {
+export const revokeApiTokenQuery = async (
+  id: number,
+  organizationId: number | null,
+): Promise<boolean> => {
   const result = (await sequelize.query(
     `UPDATE api_tokens SET revoked = true
-       WHERE id = :id AND organization_id = :organizationId AND revoked = false
+       WHERE id = :id AND ${orgScope(organizationId)} AND revoked = false
        RETURNING id;`,
     { replacements: { id, organizationId } },
   )) as [{ id: number }[], number];
   return result[0].length > 0;
 };
 
-export const getApiTokensQuery = async (organizationId: number) => {
+export const getApiTokensQuery = async (organizationId: number | null) => {
   const result = (await sequelize.query(
     `SELECT id, name, expires_at, created_by, created_at, revoked, last_used_at
-       FROM api_tokens WHERE organization_id = :organizationId ORDER BY created_at DESC;`,
+       FROM api_tokens WHERE ${orgScope(organizationId)} ORDER BY created_at DESC;`,
     { replacements: { organizationId } },
   )) as [TokenModel[], number];
   return result[0];
 };
 
-export const deleteApiTokenQuery = async (id: number, organizationId: number) => {
+export const deleteApiTokenQuery = async (id: number, organizationId: number | null) => {
   const result = await sequelize.query(
-    `DELETE FROM api_tokens WHERE organization_id = :organizationId AND id = :id RETURNING *;`,
+    `DELETE FROM api_tokens WHERE ${orgScope(organizationId)} AND id = :id RETURNING *;`,
     {
       replacements: { organizationId, id },
       mapToModel: true,

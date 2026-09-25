@@ -12,11 +12,13 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { deploymentTools } from "./tools/deployments.js";
 import { organizationTools } from "./tools/organizations.js";
 import { userTools } from "./tools/users.js";
+import { prompts } from "./prompts.js";
 import type { ToolDef } from "./tool.js";
 
-const tools: ToolDef[] = [...organizationTools, ...userTools];
+const tools: ToolDef[] = [...deploymentTools, ...organizationTools, ...userTools];
 
 const server = new McpServer({ name: "verifywise", version: "0.1.0" });
 
@@ -40,6 +42,18 @@ for (const tool of tools) {
         };
       }
     },
+  );
+}
+
+for (const prompt of prompts) {
+  server.registerPrompt(
+    prompt.name,
+    { title: prompt.title, description: prompt.description, argsSchema: prompt.argsSchema },
+    (args: Record<string, string | undefined>) => ({
+      messages: [
+        { role: "user" as const, content: { type: "text" as const, text: prompt.build(args) } },
+      ],
+    }),
   );
 }
 

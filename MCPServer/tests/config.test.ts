@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { configPath, loadProfiles, resolveProfile } from "../src/config";
+import { configPath, loadProfiles, resolveProfile, saveProfile } from "../src/config";
 
 let dir: string;
 
@@ -120,5 +120,55 @@ describe("resolveProfile", () => {
       }),
     );
     expect(resolveProfile("later", file).url).toBe("https://later.io");
+  });
+});
+
+describe("saveProfile", () => {
+  const entry = { name: "acme", url: "https://acme.verifywise.ai", token: "tok" };
+
+  it("creates the file, and its directory, owner-only", () => {
+    const file = path.join(dir, "nested", "mcp.json");
+    saveProfile(entry, file);
+
+    expect(loadProfiles(file).get("acme")).toEqual({ ...entry, name: "acme" });
+    expect(fs.statSync(file).mode & 0o777).toBe(0o600);
+  });
+
+  it("keeps the deployments already in the file", () => {
+    const file = writeConfig(VALID);
+    saveProfile(entry, file);
+
+    expect([...loadProfiles(file).keys()].sort()).toEqual(["acme", "staging"]);
+    expect(loadProfiles(file).get("staging")!.token).toBe("token-b");
+  });
+
+  it("replaces a deployment of the same name rather than duplicating it", () => {
+    const file = writeConfig(VALID);
+    saveProfile({ ...entry, token: "rotated" }, file);
+
+    expect(loadProfiles(file).size).toBe(2);
+    expect(loadProfiles(file).get("acme")!.token).toBe("rotated");
+  });
+
+  it("tightens the mode of an existing world-readable file", () => {
+    const file = writeConfig(VALID);
+    fs.chmodSync(file, 0o644);
+    saveProfile(entry, file);
+
+    expect(fs.statSync(file).mode & 0o777).toBe(0o600);
+  });
+
+  it("refuses to overwrite a file it cannot parse", () => {
+    const file = writeConfig("{ broken");
+    expect(() => saveProfile(entry, file)).toThrow(/left untouched/);
+    expect(fs.readFileSync(file, "utf8")).toBe("{ broken");
+  });
+
+  it("rejects an empty name, an empty token and a bad url", () => {
+    const file = path.join(dir, "mcp.json");
+    expect(() => saveProfile({ ...entry, name: "  " }, file)).toThrow(/name is required/);
+    expect(() => saveProfile({ ...entry, token: " " }, file)).toThrow(/No token given/);
+    expect(() => saveProfile({ ...entry, url: "acme.verifywise.ai" }, file)).toThrow(/invalid url/);
+    expect(fs.existsSync(file)).toBe(false);
   });
 });

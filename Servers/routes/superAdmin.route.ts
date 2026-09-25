@@ -22,6 +22,9 @@ import {
   listSuperAdmins,
   grantSuperAdmin,
   revokeSuperAdmin,
+  getMcpServer,
+  installMcpServerHandler,
+  uninstallMcpServerHandler,
 } from "../controllers/superAdmin.ctrl";
 
 const router = express.Router();
@@ -50,6 +53,10 @@ router.put("/monitoring", updateMonitoring);
 router.post("/monitoring/token", generateMonitoringToken);
 
 // SuperAdmin membership: list current SuperAdmins, elect a user, revoke.
+router.get("/mcp-server", getMcpServer);
+router.post("/mcp-server/install", installMcpServerHandler);
+router.delete("/mcp-server", uninstallMcpServerHandler);
+
 router.get("/super-admins", listSuperAdmins);
 router.post("/super-admins", grantSuperAdmin);
 router.delete("/super-admins/:user_id", revokeSuperAdmin);
