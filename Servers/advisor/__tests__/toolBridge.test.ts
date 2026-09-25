@@ -92,9 +92,9 @@ describe("sanitizeToolOutput", () => {
   });
 
   it("recurses into nested arrays and objects", () => {
-    expect(sanitizeToolOutput({ items: [{ ok: 1 }, undefined], meta: { drop: undefined } })).toEqual(
-      { items: [{ ok: 1 }, null], meta: {} },
-    );
+    expect(
+      sanitizeToolOutput({ items: [{ ok: 1 }, undefined], meta: { drop: undefined } }),
+    ).toEqual({ items: [{ ok: 1 }, null], meta: {} });
   });
 
   it("maps a bare function/symbol in an array to null (defensive)", () => {
@@ -111,11 +111,7 @@ describe("sanitizeToolOutput", () => {
   it("output is always accepted by the SDK's modelMessageSchema", () => {
     // These raw shapes FAIL the schema via the SDK path when unsanitized;
     // after sanitization they must pass.
-    for (const raw of [
-      [{ id: 1 }, undefined],
-      { items: [{ ok: 1 }, undefined] },
-      [() => 1],
-    ]) {
+    for (const raw of [[{ id: 1 }, undefined], { items: [{ ok: 1 }, undefined] }, [() => 1]]) {
       expectSchemaValid(sanitizeToolOutput(raw));
     }
   });

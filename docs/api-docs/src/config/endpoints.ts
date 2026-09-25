@@ -10012,6 +10012,42 @@ export const superAdminEndpoints: Endpoint[] = [
   },
   {
     method: 'GET',
+    path: '/super-admin/mcp-server',
+    summary: "Get Mcp Server",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
+    method: 'DELETE',
+    path: '/super-admin/mcp-server',
+    summary: "Uninstall Mcp Server Handler",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
+    method: 'POST',
+    path: '/super-admin/mcp-server/install',
+    summary: "Install Mcp Server Handler",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
+    method: 'GET',
     path: '/super-admin/super-admins',
     summary: "List Super Admins",
     description: "Requires role: Super Admin",

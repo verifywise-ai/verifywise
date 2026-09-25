@@ -118,6 +118,75 @@ export function loadProfiles(file: string = configPath()): Map<string, Profile> 
 }
 
 /**
+ * Name a deployment after its host, so nobody has to invent one.
+ *
+ * The first label is the useful part — "test" for test.verifywise.ai,
+ * "localhost" for localhost:3000. If that name is already taken by a different
+ * deployment the full hostname is used instead, so two hosts that happen to
+ * share a first label cannot overwrite each other.
+ */
+export function deriveProfileName(url: string, file: string = configPath()): string {
+  const { hostname } = new URL(url);
+  const short = hostname.split(".")[0];
+
+  let existing: Map<string, Profile>;
+  try {
+    existing = loadProfiles(file);
+  } catch {
+    return short;
+  }
+
+  const clash = existing.get(short);
+  return clash && new URL(clash.url).hostname !== hostname ? hostname : short;
+}
+
+/**
+ * Add or replace one deployment in the profile file, keeping every other entry.
+ *
+ * Merges rather than overwrites: saving a second deployment must not wipe the
+ * first. Refuses to touch a file it cannot parse, so a typo in a hand-edited
+ * config does not cost the user their other tokens.
+ *
+ * The file holds live API tokens, so it is created owner-read/write only and an
+ * existing file's mode is tightened to match.
+ */
+export function saveProfile(
+  entry: { name: string; url: string; token: string },
+  file: string = configPath(),
+): void {
+  const name = entry.name.trim();
+  if (!name) {
+    throw new Error("A deployment name is required.");
+  }
+  const url = parseUrl(entry.url, name);
+  const token = entry.token.trim();
+  if (!token) {
+    throw new Error(`No token given for "${name}".`);
+  }
+
+  let existing: ProfileFile = {};
+  if (fs.existsSync(file)) {
+    try {
+      existing = JSON.parse(fs.readFileSync(file, "utf8")) as ProfileFile;
+    } catch (error) {
+      throw new Error(
+        `${file} is not valid JSON, so it was left untouched: ${(error as Error).message}`,
+      );
+    }
+  }
+
+  const merged = {
+    ...existing,
+    profiles: { ...(existing.profiles ?? {}), [name]: { url, token } },
+  };
+
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, `${JSON.stringify(merged, null, 2)}\n`, { mode: 0o600 });
+  // writeFileSync only applies mode when creating the file.
+  fs.chmodSync(file, 0o600);
+}
+
+/**
  * Resolve the deployment a tool call targets.
  *
  * The name is required and must match a defined profile. Nothing is inferred:

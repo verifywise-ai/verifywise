@@ -47,10 +47,29 @@ npm install
 npm run build
 ```
 
-## Configure
+## Connect a deployment
 
-Deployments live in `~/.verifywise/mcp.json`, never in the MCP client config —
-so tokens are not duplicated per client and are never passed through the model:
+Run the `login` prompt — in Claude Code it appears as a slash command:
+
+```
+/login
+```
+
+It asks for the deployment URL, a short name to save it under, and an API token,
+then calls the `add_deployment` tool. That tool checks the token against the
+deployment's super-admin API **before** saving it, so a token that cannot
+actually do anything is reported straight away rather than failing later on some
+unrelated call.
+
+You can skip ahead by passing what you already know: `/login https://acme.verifywise.ai acme`.
+The token is always asked for in conversation rather than taken as an argument,
+so it does not end up in your shell or command history.
+
+### The profile file
+
+`add_deployment` writes to `~/.verifywise/mcp.json`, owner-read/write only.
+Deployments already in the file are kept — saving a second one never wipes the
+first. You can also write it by hand:
 
 ```json
 {
@@ -64,6 +83,9 @@ so tokens are not duplicated per client and are never passed through the model:
 ```bash
 chmod 600 ~/.verifywise/mcp.json
 ```
+
+Credentials live here rather than in the MCP client config, so they are not
+duplicated per client and are never passed through the model.
 
 Every tool requires a `profile` naming the deployment to act on. There is no
 default and no fallback: a name that is not defined fails, listing the profiles

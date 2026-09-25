@@ -186,3 +186,35 @@ export async function grantSuperAdmin(userId: number) {
 export async function revokeSuperAdmin(userId: number) {
   return apiServices.delete(`/super-admin/super-admins/${userId}`);
 }
+
+export interface McpServerStatus {
+  installed: boolean;
+  registered: boolean;
+  claudeCliAvailable: boolean;
+  sourcePresent: boolean;
+  entryPoint: string | null;
+  canInstall: boolean;
+}
+
+export async function getMcpServerStatus() {
+  return apiServices.get<ServerResponse<McpServerStatus>>("/super-admin/mcp-server");
+}
+
+/**
+ * Builds the MCP server on the backend. Held open until the build finishes,
+ * which can take a couple of minutes on a cold dependency install.
+ */
+export async function installMcpServer() {
+  return apiServices.post<ServerResponse<McpServerStatus>>("/super-admin/mcp-server/install", {});
+}
+
+/**
+ * Removes the MCP server build and its dependencies; the source stays.
+ *
+ * The type argument is the unwrapped payload, unlike get and post above:
+ * apiServices.delete returns response.data.data, so the { message, data }
+ * envelope is already gone by the time the caller sees it.
+ */
+export async function uninstallMcpServer() {
+  return apiServices.delete<McpServerStatus>("/super-admin/mcp-server");
+}

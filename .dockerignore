@@ -40,5 +40,17 @@
 **/.DS_Store
 **/Thumbs.db
 
-# Local environment files
-**/.env.local
+# Local environment files. **/.env matters for the Servers image in particular:
+# it builds from this context and copies Servers/ wholesale, so without this the
+# DB password, JWT secret and private keys would be baked into the image and
+# flagged by Trivy's secret scanner. Keep .env.example for reference.
+**/.env
+**/.env.*
+!**/.env.example
+
+# Test coverage reports — rendered source, never needed at runtime.
+**/coverage/
+
+# Build output — regenerated inside the image.
+Servers/dist/
+MCPServer/dist/

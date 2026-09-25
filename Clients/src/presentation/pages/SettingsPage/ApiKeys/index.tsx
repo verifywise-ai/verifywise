@@ -51,10 +51,20 @@ const EXPIRY_OPTIONS = [
   { value: 365, label: "1 year" },
 ];
 
-const ApiKeys = () => {
-  const { userRoleName } = useAuth();
+interface ApiKeysProps {
+  /**
+   * LLM keys are organization-scoped, so they are hidden when this screen is
+   * mounted in the super admin console, where there is no organization.
+   */
+  showLlmKeys?: boolean;
+}
+
+const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
+  const { userRoleName, isSuperAdmin } = useAuth();
   const theme = useTheme();
-  const isDisabled = !allowedRoles.apiKeys?.manage?.includes(userRoleName);
+  // A pure super admin has no organization role, so the role list alone would
+  // lock them out. The backend applies the same rule (tokens.middleware.ts).
+  const isDisabled = !isSuperAdmin && !allowedRoles.apiKeys?.manage?.includes(userRoleName);
 
   const [tokens, setTokens] = useState<ApiTokenModel[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -724,7 +734,7 @@ const ApiKeys = () => {
         />
       )}
 
-      <LLMKeys />
+      {showLlmKeys && <LLMKeys />}
     </Stack>
   );
 };
