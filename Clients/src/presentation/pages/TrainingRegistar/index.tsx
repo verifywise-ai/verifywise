@@ -40,6 +40,7 @@ import { EvidenceHubModel } from "../../../domain/models/Common/evidenceHub/evid
 import { createEvidenceHub } from "../../../application/repository/evidenceHub.repository";
 import { FilePreviewPanel } from "../FileManager/components/FilePreviewPanel";
 import { FileMetadata } from "../../../application/repository/file.repository";
+import { earliestFileExpiry } from "../../../application/utils/fileExpiry";
 import { User } from "../../../domain/types/User";
 
 import Alert from "../../../presentation/components/Alert";
@@ -379,9 +380,7 @@ const Training: React.FC = () => {
           uploader_name: uploader?.name,
           uploader_surname: uploader?.surname,
           tags: evidence?.tags,
-          expiry_date: evidence?.expiry_date
-            ? new Date(evidence.expiry_date).toISOString()
-            : undefined,
+          expiry_date: rawFile.expiry_date ?? undefined,
           description: evidence?.description ?? undefined,
         };
       });
@@ -844,14 +843,20 @@ const Training: React.FC = () => {
   }, []);
 
   const evidenceExportData = useMemo(() => {
-    return filteredEvidence.map((e) => ({
-      evidence_name: e.evidence_name || "-",
-      evidence_type: e.evidence_type || "-",
-      mapped_trainings: e.mapped_training_ids?.length
-        ? e.mapped_training_ids.map((id) => trainingNameById.get(id) || `Training ${id}`).join(", ")
-        : "-",
-      expiry_date: e.expiry_date ? displayFormattedDate(e.expiry_date as any) : "-",
-    }));
+    return filteredEvidence.map((e) => {
+      // Expiry lives on the linked files; the earliest one represents the row.
+      const expiryDate = earliestFileExpiry(e.evidence_files);
+      return {
+        evidence_name: e.evidence_name || "-",
+        evidence_type: e.evidence_type || "-",
+        mapped_trainings: e.mapped_training_ids?.length
+          ? e.mapped_training_ids
+              .map((id) => trainingNameById.get(id) || `Training ${id}`)
+              .join(", ")
+          : "-",
+        expiry_date: expiryDate ? displayFormattedDate(expiryDate) : "-",
+      };
+    });
   }, [filteredEvidence, trainingNameById]);
 
   return (

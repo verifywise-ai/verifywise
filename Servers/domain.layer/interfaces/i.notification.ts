@@ -32,6 +32,7 @@ export enum NotificationType {
 
   // File notifications
   FILE_UPLOADED = "file_uploaded",
+  FILE_EXPIRING = "file_expiring",
 
   // Collaboration notifications
   COMMENT_ADDED = "comment_added",
@@ -43,9 +44,6 @@ export enum NotificationType {
   // MRM (Model Risk Management) monitoring notifications
   MRM_METRIC_BREACH = "mrm_metric_breach",
   MRM_REVALIDATION_DUE = "mrm_revalidation_due",
-
-  // Evidence Hub notifications
-  EVIDENCE_EXPIRED = "evidence_expired",
 
   // AI Gateway notifications
   AI_GATEWAY_BUDGET_WARNING = "ai_gateway_budget_warning",

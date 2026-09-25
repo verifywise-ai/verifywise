@@ -19,7 +19,6 @@ import {
 import TablePaginationActions from "../../components/TablePagination";
 import CustomizableSkeleton from "../../components/Skeletons";
 import CustomIconButton from "../../components/IconButton";
-import StatusChip from "../../components/Chip";
 import {
   ChevronsUpDown,
   ChevronUp,
@@ -49,27 +48,12 @@ import {
 import { singleTheme } from "../../themes";
 import { palette } from "../../themes/palette";
 import { EvidenceHubTableProps } from "../../../domain/interfaces/i.modelInventory";
+import { earliestFileExpiry } from "../../../application/utils/fileExpiry";
+import { FileExpiryChip } from "../../components/FileExpiryChip";
 
 dayjs.extend(utc);
 
 const EVIDENCE_HUB_SORTING_KEY = "verifywise_evidence_hub_sorting";
-
-/** Records expiring within this window are flagged "expiring soon". */
-const EXPIRING_SOON_DAYS = 30;
-
-type ExpiryStatus = "expired" | "expiring_soon" | null;
-
-// Derived client-side from expiry_date; null/invalid dates mean "no expiry".
-const getExpiryStatus = (expiryDate: Date | string | null | undefined): ExpiryStatus => {
-  if (!expiryDate) return null;
-  const expiry = new Date(expiryDate);
-  if (isNaN(expiry.getTime())) return null;
-  const now = new Date();
-  if (expiry.getTime() < now.getTime()) return "expired";
-  const soonThreshold = new Date(now);
-  soonThreshold.setDate(soonThreshold.getDate() + EXPIRING_SOON_DAYS);
-  return expiry.getTime() <= soonThreshold.getTime() ? "expiring_soon" : null;
-};
 
 type SortDirection = "asc" | "desc" | null;
 type SortConfig = {
@@ -85,10 +69,8 @@ const TABLE_COLUMNS = [
   { id: "tags", label: "TAGS", sortable: false },
   { id: "frameworks", label: "FRAMEWORKS", sortable: false },
   { id: "reviewer", label: "REVIEWER", sortable: true },
-  { id: "retention_policy", label: "RETENTION", sortable: true },
   { id: "uploaded_by", label: "UPLOADED BY", sortable: true },
   { id: "uploaded_on", label: "UPLOADED ON", sortable: true },
-  { id: "expiry_date", label: "EXPIRY", sortable: true },
   { id: "actions", label: "", sortable: false },
 ];
 
@@ -333,11 +315,6 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
           bValue = b.reviewer_id ? userMap.get(b.reviewer_id.toString())?.toLowerCase() || "" : "";
           break;
 
-        case "retention_policy":
-          aValue = a.retention_policy?.toLowerCase() || "";
-          bValue = b.retention_policy?.toLowerCase() || "";
-          break;
-
         case "uploaded_by":
           aValue =
             a.evidence_files && a.evidence_files.length > 0
@@ -364,11 +341,6 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
           bValue = bDate ? new Date(bDate).getTime() : 0;
           break;
         }
-
-        case "expiry_date":
-          aValue = a.expiry_date ? new Date(a.expiry_date).getTime() : 0;
-          bValue = b.expiry_date ? new Date(b.expiry_date).getTime() : 0;
-          break;
 
         default:
           return 0;
@@ -446,6 +418,7 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
                         }
                       />
                       {evidence.evidence_name}
+                      <FileExpiryChip expiryDate={earliestFileExpiry(evidence.evidence_files)} />
                     </Box>
                     {evidence.evidence_files && evidence.evidence_files.length > 1 && (
                       <Box
@@ -558,11 +531,6 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
                   {evidence.reviewer_id ? userMap.get(evidence.reviewer_id.toString()) || "-" : "-"}
                 </TableCell>
               )}
-              {isColVisible("retention_policy") && (
-                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                  {evidence.retention_policy ? evidence.retention_policy.replace(/_/g, " ") : "-"}
-                </TableCell>
-              )}
               {isColVisible("uploaded_by") && (
                 <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                   <TooltipCell
@@ -581,23 +549,6 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
                     const d = f?.upload_date ?? f?.uploaded_time;
                     return d ? displayFormattedDate(d) : "-";
                   })()}
-                </TableCell>
-              )}
-              {isColVisible("expiry_date") && (
-                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                  {evidence.expiry_date ? (
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <span>{displayFormattedDate(evidence.expiry_date)}</span>
-                      {getExpiryStatus(evidence.expiry_date) === "expired" && (
-                        <StatusChip label="Expired" variant="error" />
-                      )}
-                      {getExpiryStatus(evidence.expiry_date) === "expiring_soon" && (
-                        <StatusChip label="Expiring soon" variant="warning" />
-                      )}
-                    </Stack>
-                  ) : (
-                    "-"
-                  )}
                 </TableCell>
               )}
               <TableCell sx={singleTheme.tableStyles.primary.body.cell}>

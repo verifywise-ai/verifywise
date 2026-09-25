@@ -2,12 +2,10 @@
 import React, { FC, useState, useEffect, useCallback, Suspense } from "react";
 import { Stack, Box, Typography, IconButton, Tooltip } from "@mui/material";
 import { UploadIcon, Trash2 as DeleteIcon } from "lucide-react";
-import dayjs, { Dayjs } from "dayjs";
 import StandardModal from "../StandardModal";
 import { CustomizableButton } from "../../button/customizable-button";
 import FileManagerUploadModal from "../FileManagerUpload";
 import SelectComponent from "../../Inputs/Select";
-import DatePicker from "../../Inputs/Datepicker";
 import Field from "../../Inputs/Field";
 import { EvidenceHubModel } from "../../../../domain/models/Common/evidenceHub/evidenceHub.model";
 import { getAllEntities } from "../../../../application/repository/entity.repository";
@@ -44,7 +42,6 @@ interface FormState {
   evidence_name: string;
   evidence_type: string;
   description: string;
-  expiry_date: Date | null;
   evidence_files: FileResponse[];
   selected_training_id: number | "";
 }
@@ -53,7 +50,6 @@ const initialFormState: FormState = {
   evidence_name: "",
   evidence_type: "",
   description: "",
-  expiry_date: null,
   evidence_files: [],
   selected_training_id: "",
 };
@@ -88,7 +84,6 @@ const NewTrainingEvidence: FC<NewTrainingEvidenceProps> = ({
           evidence_name: initialData.evidence_name || "",
           evidence_type: initialData.evidence_type || "",
           description: initialData.description || "",
-          expiry_date: initialData.expiry_date ? new Date(initialData.expiry_date as any) : null,
           evidence_files: (initialData.evidence_files || []) as any,
           selected_training_id:
             Array.isArray(initialData.mapped_training_ids) &&
@@ -176,14 +171,12 @@ const NewTrainingEvidence: FC<NewTrainingEvidenceProps> = ({
         evidence_name: values.evidence_name,
         evidence_type: values.evidence_type,
         description: values.description || null,
-        expiry_date: values.expiry_date,
         mapped_training_ids: [effectiveTrainingId as number],
         mapped_model_ids: [],
         evidence_files: values.evidence_files as any,
         tags: [],
         framework_ids: [],
         reviewer_id: null,
-        retention_policy: null,
       });
       await onSuccess(payload);
       handleClose();
@@ -352,20 +345,6 @@ const NewTrainingEvidence: FC<NewTrainingEvidenceProps> = ({
                 setValues((prev) => ({ ...prev, description: e.target.value }))
               }
               placeholder="Optional notes about this evidence"
-            />
-          </Suspense>
-
-          <Suspense fallback={<div>Loading...</div>}>
-            <DatePicker
-              label="Expiry date"
-              date={values.expiry_date ? dayjs(values.expiry_date) : null}
-              handleDateChange={(date: Dayjs | null) =>
-                setValues((prev) => ({
-                  ...prev,
-                  expiry_date: date?.isValid() ? date.toDate() : null,
-                }))
-              }
-              sx={{ width: "100%" }}
             />
           </Suspense>
         </Stack>

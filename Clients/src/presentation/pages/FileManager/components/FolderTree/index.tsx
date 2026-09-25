@@ -15,6 +15,7 @@ import {
   ChevronDown as ChevronDownIcon,
   Files as FilesIcon,
   FileQuestion as UncategorizedIcon,
+  AlertCircle as ExpiredIcon,
   Plus as PlusIcon,
   Pencil as EditIcon,
   Trash2 as DeleteIcon,
@@ -40,6 +41,8 @@ interface FolderTreeProps {
   allLabel?: string;
   /** Whether to show the "Uncategorized" item. Defaults to true. */
   showUncategorized?: boolean;
+  /** Whether to show the "Expired files" item. Defaults to true. */
+  showExpired?: boolean;
 }
 
 interface FolderItemProps {
@@ -266,6 +269,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
   onToggleCollapse,
   allLabel = "All files",
   showUncategorized = true,
+  showExpired = true,
 }) => {
   const [expandedFolders, setExpandedFolders] = useState<Set<number>>(new Set());
 
@@ -443,7 +447,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
                     "&:hover": {
                       backgroundColor: selectedFolder === "uncategorized" ? "#E8F5F1" : "#F0F2F5",
                     },
-                    "marginBottom": "8px",
+                    "marginBottom": showExpired ? "4px" : "8px",
                   }}
                 >
                   <Box sx={{ width: 20 }} />
@@ -460,6 +464,40 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
                     }}
                   >
                     Uncategorized
+                  </Typography>
+                </Box>
+              )}
+
+              {/* Expired files — client-side filter, no server call */}
+              {showExpired && (
+                <Box
+                  onClick={() => onSelectFolder("expired")}
+                  sx={{
+                    "display": "flex",
+                    "alignItems": "center",
+                    "padding": "6px 8px",
+                    "cursor": "pointer",
+                    "borderRadius": "4px",
+                    "backgroundColor": selectedFolder === "expired" ? "#E8F5F1" : "transparent",
+                    "&:hover": {
+                      backgroundColor: selectedFolder === "expired" ? "#E8F5F1" : "#F0F2F5",
+                    },
+                    "marginBottom": "8px",
+                  }}
+                >
+                  <Box sx={{ width: 20 }} />
+                  <Box sx={{ marginRight: "8px", display: "flex", color: "status.error.text" }}>
+                    <ExpiredIcon size={16} />
+                  </Box>
+                  <Typography
+                    sx={{
+                      flex: 1,
+                      fontSize: 13,
+                      fontWeight: selectedFolder === "expired" ? 500 : 400,
+                      color: selectedFolder === "expired" ? "brand.primary" : "text.secondary",
+                    }}
+                  >
+                    Expired files
                   </Typography>
                 </Box>
               )}

@@ -35,6 +35,7 @@ import {
 import IconButton from "../../IconButton";
 import { FileIcon } from "../../FileIcon";
 import Chip from "../../Chip";
+import { FileExpiryChip } from "../../FileExpiryChip";
 import Checkbox from "../../Inputs/Checkbox";
 import ChipInput from "../../Inputs/ChipInput";
 import ConfirmationModal from "../../Dialogs/ConfirmationModal";
@@ -732,6 +733,7 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                         <span style={{ whiteSpace: "nowrap" }}>
                           {truncateFileName(row.fileName)}
                         </span>
+                        <FileExpiryChip expiryDate={row.expiryDate} />
                       </Box>
                     </TableCell>
                   )}

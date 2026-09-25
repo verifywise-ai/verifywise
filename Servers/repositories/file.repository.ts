@@ -12,7 +12,12 @@
 
 import { sequelize } from "../database/db";
 import { QueryTypes, Transaction } from "sequelize";
-import { FileModel, FileSource } from "../domain.layer/models/file/file.model";
+import { FileModel, FileSource, RetentionPolicy } from "../domain.layer/models/file/file.model";
+import {
+  computeExpiryDate,
+  resolveFileExpiryOnCreate,
+  toExpiryDateString,
+} from "../utils/retention.utils";
 import { ProjectModel } from "../domain.layer/models/project/project.model";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 import { FILE_GROUP_LABEL_CASE_SQL } from "../utils/files/fileGroupLabel.sql";
@@ -122,6 +127,7 @@ export interface UpdateFileMetadataInput {
   review_status?: ReviewStatus;
   version?: string;
   expiry_date?: string | null;
+  retention_policy?: RetentionPolicy | null;
   description?: string | null;
   last_modified_by: number;
 }
@@ -227,11 +233,19 @@ export async function uploadProjectFile(
     isDemo = projectResult[0]?.is_demo || false;
   }
 
+  // Apply org-level default retention (if configured). The project-file
+  // upload path takes no per-file expiry/retention overrides from callers.
+  const { expiry_date, retention_policy } = await resolveFileExpiryOnCreate(
+    organizationId,
+    null,
+    null,
+  );
+
   const query = `
     INSERT INTO files
-      (organization_id, filename, content, type, project_id, uploaded_by, uploaded_time, is_demo, source)
+      (organization_id, filename, content, type, project_id, uploaded_by, uploaded_time, is_demo, source, expiry_date, retention_policy)
     VALUES
-      (:organizationId, :filename, :content, :type, :project_id, :uploaded_by, :uploaded_time, :is_demo, :source)
+      (:organizationId, :filename, :content, :type, :project_id, :uploaded_by, :uploaded_time, :is_demo, :source, :expiry_date, :retention_policy)
     RETURNING *`;
 
   const result = await sequelize.query(query, {
@@ -245,6 +259,8 @@ export async function uploadProjectFile(
       uploaded_time: new Date().toISOString(),
       is_demo: isDemo,
       source,
+      expiry_date,
+      retention_policy,
     },
     mapToModel: true,
     model: FileModel,
@@ -392,12 +408,21 @@ export async function uploadOrganizationFile(
   // If approval workflow is selected, set status to pending_review
   const reviewStatus = approvalWorkflowId ? "pending_review" : "draft";
 
+  // Apply org-level default retention (if configured). This upload path
+  // takes no per-file expiry/retention overrides — users can set them via
+  // the File Manager metadata editor after upload.
+  const { expiry_date, retention_policy } = await resolveFileExpiryOnCreate(
+    organizationId,
+    null,
+    null,
+  );
+
   const query = `
     INSERT INTO files
-      (organization_id, filename, size, type, file_path, content, uploaded_by, uploaded_time, model_id, org_id, is_demo, source, project_id, file_group_id, review_status, version, approval_workflow_id)
+      (organization_id, filename, size, type, file_path, content, uploaded_by, uploaded_time, model_id, org_id, is_demo, source, project_id, file_group_id, review_status, version, approval_workflow_id, expiry_date, retention_policy)
     VALUES
-      (:organizationId, :filename, :size, :mimetype, :file_path, :content, :uploaded_by, NOW(), :model_id, :org_id, false, :source, NULL, gen_random_uuid(), :review_status, '1.0', :approval_workflow_id)
-    RETURNING id, filename, size, type AS mimetype, file_path, uploaded_by, uploaded_time AS upload_date, model_id, org_id, is_demo, source, project_id, file_group_id, review_status, version, approval_workflow_id`;
+      (:organizationId, :filename, :size, :mimetype, :file_path, :content, :uploaded_by, NOW(), :model_id, :org_id, false, :source, NULL, gen_random_uuid(), :review_status, '1.0', :approval_workflow_id, :expiry_date, :retention_policy)
+    RETURNING id, filename, size, type AS mimetype, file_path, uploaded_by, uploaded_time AS upload_date, model_id, org_id, is_demo, source, project_id, file_group_id, review_status, version, approval_workflow_id, expiry_date, retention_policy`;
 
   const result = await sequelize.query(query, {
     replacements: {
@@ -413,6 +438,8 @@ export async function uploadOrganizationFile(
       source: finalSource ?? "File Manager",
       review_status: reviewStatus,
       approval_workflow_id: approvalWorkflowId ?? null,
+      expiry_date,
+      retention_policy,
     },
     type: QueryTypes.SELECT,
     ...(txn && { transaction: txn }),
@@ -767,9 +794,21 @@ export async function updateFileMetadata(
     setClauses.push("version = :version");
     replacements.version = updates.version;
   }
+  // expiry_date + retention_policy precedence: an explicit expiry_date on
+  // the request always wins. A retention_policy without an explicit
+  // expiry_date derives expiry_date (indefinite → NULL, no expiry). Both
+  // fields can also be cleared explicitly by passing null.
+  if (updates.retention_policy !== undefined) {
+    setClauses.push("retention_policy = :retention_policy");
+    replacements.retention_policy = updates.retention_policy;
+  }
   if (updates.expiry_date !== undefined) {
     setClauses.push("expiry_date = :expiry_date");
     replacements.expiry_date = updates.expiry_date;
+  } else if (updates.retention_policy !== undefined) {
+    const derived = computeExpiryDate(updates.retention_policy);
+    setClauses.push("expiry_date = :expiry_date");
+    replacements.expiry_date = derived ? toExpiryDateString(derived) : null;
   }
   if (updates.description !== undefined) {
     setClauses.push("description = :description");

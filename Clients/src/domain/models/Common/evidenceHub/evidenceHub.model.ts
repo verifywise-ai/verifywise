@@ -5,6 +5,8 @@ export interface FileResponse {
   mimetype: string;
   uploaded_by: number;
   upload_date: string;
+  // Lifecycle, owned by the file itself. DATE string (YYYY-MM-DD) or null.
+  expiry_date?: string | null;
 }
 
 export class EvidenceHubModel {
@@ -12,16 +14,14 @@ export class EvidenceHubModel {
   evidence_name!: string;
   evidence_type!: string;
   description?: string | null;
+  // Lifecycle (expiry_date, retention_policy) lives on each linked file, not on
+  // the evidence record.
   evidence_files: FileResponse[] = [];
-  expiry_date?: Date | null;
-  expired_at?: string | null;
-  archived_at?: string | null;
   mapped_model_ids?: number[] | null;
   mapped_training_ids?: number[] | null;
   tags?: string[];
   framework_ids?: string[];
   reviewer_id?: number | null;
-  retention_policy?: string | null;
   created_at?: Date;
   updated_at?: Date;
 
@@ -31,15 +31,11 @@ export class EvidenceHubModel {
     this.evidence_type = data.evidence_type || "";
     this.description = data.description ?? null;
     this.evidence_files = data.evidence_files ?? [];
-    this.expiry_date = data.expiry_date ? new Date(data.expiry_date) : null;
-    this.expired_at = data.expired_at ?? null;
-    this.archived_at = data.archived_at ?? null;
     this.mapped_model_ids = data.mapped_model_ids ?? null;
     this.mapped_training_ids = data.mapped_training_ids ?? null;
     this.tags = data.tags ?? [];
     this.framework_ids = data.framework_ids ?? [];
     this.reviewer_id = data.reviewer_id ?? null;
-    this.retention_policy = data.retention_policy ?? null;
     this.created_at = data.created_at ?? new Date();
     this.updated_at = data.updated_at ?? new Date();
   }

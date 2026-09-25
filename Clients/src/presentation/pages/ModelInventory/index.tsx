@@ -61,6 +61,7 @@ import { createEvidenceHub } from "../../../application/repository/evidenceHub.r
 import EvidenceHubTable from "./evidenceHubTable";
 import FilePreviewPanel from "../FileManager/components/FilePreviewPanel";
 import { FileMetadata } from "../../../application/repository/file.repository";
+import { earliestFileExpiry } from "../../../application/utils/fileExpiry";
 import ModelEvaluationsTab from "./ModelEvaluationsTab";
 import ModelRiskManagementTab from "./mrm";
 import ShareButton from "../../components/ShareViewDropdown/ShareButton";
@@ -636,7 +637,7 @@ const ModelInventory: React.FC = () => {
         case "uploaded_by":
           return item.evidence_files?.[0]?.uploaded_by?.toString();
         case "expiry_date":
-          return item.expiry_date;
+          return earliestFileExpiry(item.evidence_files);
         default:
           return null;
       }
@@ -1192,9 +1193,7 @@ const ModelInventory: React.FC = () => {
           uploader_name: uploader?.name,
           uploader_surname: uploader?.surname,
           tags: evidence?.tags,
-          expiry_date: evidence?.expiry_date
-            ? new Date(evidence.expiry_date).toISOString()
-            : undefined,
+          expiry_date: rawFile.expiry_date ?? undefined,
           description: evidence?.description ?? undefined,
         };
       });
@@ -1810,9 +1809,10 @@ const ModelInventory: React.FC = () => {
           .filter(Boolean)
           .join(", ") || "-";
 
-      // Format expiry date
-      const formattedExpiryDate = evidence.expiry_date
-        ? new Date(evidence.expiry_date).toISOString().split("T")[0]
+      // Expiry lives on the linked files; the earliest one represents the row.
+      const earliestExpiry = earliestFileExpiry(evidence.evidence_files);
+      const formattedExpiryDate = earliestExpiry
+        ? new Date(earliestExpiry).toISOString().split("T")[0]
         : "-";
 
       return {

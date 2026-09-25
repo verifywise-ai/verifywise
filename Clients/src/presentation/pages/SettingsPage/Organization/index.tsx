@@ -27,7 +27,7 @@ import { getAuthToken } from "../../../../application/redux/auth/getAuthToken";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import { useLogoFetch } from "../../../../application/hooks/useLogoFetch";
 import { OrganizationModel } from "../../../../domain/models/Common/organization/organization.model";
-import EvidenceRetentionSection from "./EvidenceRetentionSection";
+import FileRetentionSection from "./FileRetentionSection";
 
 interface AlertState {
   variant: "success" | "info" | "warning" | "error";
@@ -541,8 +541,8 @@ const Organization = () => {
         </Box>
       </Stack>
 
-      {/* Evidence Hub retention settings */}
-      <EvidenceRetentionSection
+      {/* Org-wide default file retention policy */}
+      <FileRetentionSection
         isDisabled={isEditingDisabled}
         onError={(message) => showAlert("error", "Error", message)}
         onSuccess={(message) => showAlert("success", "Success", message)}
