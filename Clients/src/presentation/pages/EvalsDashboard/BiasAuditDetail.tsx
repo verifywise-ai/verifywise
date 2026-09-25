@@ -28,7 +28,7 @@ import {
   type ScoreDistributionTable,
 } from "../../../application/repository/deepEval.repository";
 import EditableText from "../../components/EditableText";
-import { displayFormattedDateTime } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 interface BiasAuditDetailProps {
   auditId: string;
@@ -420,6 +420,7 @@ function ScoreDistributionView({ table }: { table: ScoreDistributionTable }) {
 }
 
 export default function BiasAuditDetail({ auditId, onBack }: BiasAuditDetailProps) {
+  const formatDate = useFormattedDate();
   const theme = useTheme();
   const [audit, setAudit] = useState<BiasAuditDetailResponse | null>(null);
   const [status, setStatus] = useState<string>("pending");
@@ -576,7 +577,7 @@ export default function BiasAuditDetail({ auditId, onBack }: BiasAuditDetailProp
           </Stack>
           {audit?.createdAt && (
             <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
-              {audit.presetName} · Created {displayFormattedDateTime(audit.createdAt)}
+              {audit.presetName} · Created {formatDate(audit.createdAt, { includeTime: true })}
             </Typography>
           )}
         </Stack>

@@ -5,7 +5,7 @@
 import { Stack, Typography, useTheme } from "@mui/material";
 import ProgressBar from "../../../components/ProjectCard/ProgressBar";
 import { FC, memo, useCallback, useMemo } from "react";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import Risks from "../../../components/Risks";
 import IntakeSubmissionCard from "../IntakeSubmissionCard";
 import { useSearchParams } from "react-router";
@@ -34,6 +34,7 @@ interface ProgressBarCardProps {
 }
 
 const Overview: FC<OverviewProps> = memo(({ projectRisksSummary }) => {
+  const formatDate = useFormattedDate();
   const [searchParams] = useSearchParams();
   const projectId = searchParams.get("projectId") ?? "1"; // default project ID is 2
   // Extract numeric ID for plugin-sourced IDs like "prefix-123"
@@ -128,7 +129,7 @@ const Overview: FC<OverviewProps> = memo(({ projectRisksSummary }) => {
           <Stack sx={styles.block}>
             <Typography sx={styles.title}>Last updated</Typography>
             <Typography sx={styles.value}>
-              {displayFormattedDate(project.last_updated.toISOString())}
+              {formatDate(project.last_updated.toISOString())}
             </Typography>
           </Stack>
           <Stack sx={styles.block}>
