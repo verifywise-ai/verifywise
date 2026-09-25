@@ -208,7 +208,13 @@ export async function installMcpServer() {
   return apiServices.post<ServerResponse<McpServerStatus>>("/super-admin/mcp-server/install", {});
 }
 
-/** Removes the MCP server build and its dependencies; the source stays. */
+/**
+ * Removes the MCP server build and its dependencies; the source stays.
+ *
+ * The type argument is the unwrapped payload, unlike get and post above:
+ * apiServices.delete returns response.data.data, so the { message, data }
+ * envelope is already gone by the time the caller sees it.
+ */
 export async function uninstallMcpServer() {
-  return apiServices.delete<ServerResponse<McpServerStatus>>("/super-admin/mcp-server");
+  return apiServices.delete<McpServerStatus>("/super-admin/mcp-server");
 }
