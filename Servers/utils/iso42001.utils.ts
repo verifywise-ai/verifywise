@@ -661,9 +661,11 @@ export const createNewSubClausesQuery = async (
           subclause_meta_id: _subClauseId,
           projects_frameworks_id: projectFrameworkId,
           implementation_description: enable_ai_data_insertion
-            ? demoSubClauses[ctr].implementation_description
+            ? (demoSubClauses[ctr]?.implementation_description ?? "")
             : null,
-          auditor_feedback: enable_ai_data_insertion ? demoSubClauses[ctr].auditor_feedback : null,
+          auditor_feedback: enable_ai_data_insertion
+            ? (demoSubClauses[ctr]?.auditor_feedback ?? "")
+            : null,
           status: is_mock_data
             ? STATUSES[Math.floor(Math.random() * STATUSES.length)]
             : "Not started",
@@ -742,15 +744,17 @@ export const createNewAnnexeCategoriesQuery = async (
           organizationId,
           annexcategory_meta_id: _annexCategoryId,
           projects_frameworks_id: projectFrameworkId,
-          is_applicable: enable_ai_data_insertion ? demoAnnexCategories[ctr].is_applicable : null,
+          is_applicable: enable_ai_data_insertion
+            ? (demoAnnexCategories[ctr]?.is_applicable ?? true)
+            : null,
           justification_for_exclusion: enable_ai_data_insertion
-            ? demoAnnexCategories[ctr].justification_for_exclusion
+            ? (demoAnnexCategories[ctr]?.justification_for_exclusion ?? "")
             : null,
           implementation_description: enable_ai_data_insertion
-            ? demoAnnexCategories[ctr].implementation_description
+            ? (demoAnnexCategories[ctr]?.implementation_description ?? "")
             : null,
           auditor_feedback: enable_ai_data_insertion
-            ? demoAnnexCategories[ctr].auditor_feedback
+            ? (demoAnnexCategories[ctr]?.auditor_feedback ?? "")
             : null,
           status: is_mock_data
             ? STATUSES[Math.floor(Math.random() * STATUSES.length)]
