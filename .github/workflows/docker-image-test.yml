@@ -138,5 +138,5 @@ jobs:
           script: |
             cd /root/verifywise/_saas_deployment
             docker-compose --env-file .env.prod down
-            docker images --format "table {{.Repository}}:{{.Tag}}\t{{.ID}}" | grep -v -E "(redis|postgres|admin)" | awk 'NR>1 {print $2}' | xargs -r docker rmi -f || true
+            docker-compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod pull
             ./install.sh

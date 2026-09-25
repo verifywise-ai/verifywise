@@ -31,6 +31,7 @@ export interface IAIIncidentManagement {
   model_system_version?: string;
   interim_report?: boolean;
   archived?: boolean;
+  is_demo?: boolean;
   approval_status: AIIncidentManagementApprovalStatus;
   approved_by?: string;
   approval_date?: Date | string;

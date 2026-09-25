@@ -5,7 +5,7 @@ import { Box, Typography } from "@mui/material";
 import { Send, Loader2, Info, AlertCircle } from "lucide-react";
 import Field from "../../components/Inputs/Field";
 import { CustomizableButton } from "../../components/button/customizable-button";
-import { FormFieldRenderer } from "./FormFieldRenderer";
+import { FormFieldRenderer, FormFieldHint } from "./FormFieldRenderer";
 import { MathCaptcha } from "./MathCaptcha";
 import {
   getPublicForm,
@@ -298,6 +298,8 @@ export function PublicIntakeForm() {
   if (isLoading) {
     return (
       <Box
+        component="main"
+        aria-busy="true"
         sx={{
           minHeight: "100vh",
           display: "flex",
@@ -306,6 +308,18 @@ export function PublicIntakeForm() {
           backgroundColor: "#fafafa",
         }}
       >
+        <Typography
+          component="h1"
+          sx={{
+            position: "absolute",
+            width: 1,
+            height: 1,
+            overflow: "hidden",
+            clip: "rect(0, 0, 0, 0)",
+          }}
+        >
+          Loading...
+        </Typography>
         <Loader2 size={32} color={brand.primary} style={{ animation: "spin 1s linear infinite" }} />
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </Box>
@@ -316,6 +330,7 @@ export function PublicIntakeForm() {
   if (error && !formData) {
     return (
       <Box
+        component="main"
         sx={{
           minHeight: "100vh",
           display: "flex",
@@ -335,7 +350,10 @@ export function PublicIntakeForm() {
             boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
           }}
         >
-          <Typography sx={{ fontWeight: 600, color: "#1e293b", fontSize: "18px", mb: 2 }}>
+          <Typography
+            component="h1"
+            sx={{ fontWeight: 600, color: "#1e293b", fontSize: "18px", mb: 2 }}
+          >
             Form unavailable
           </Typography>
           <Typography sx={{ color: "#64748b", fontSize: "14px" }}>{error}</Typography>
@@ -363,6 +381,7 @@ export function PublicIntakeForm() {
 
   return (
     <Box
+      component="main"
       sx={{
         minHeight: "100vh",
         backgroundColor: ds.backgroundColor,
@@ -386,6 +405,7 @@ export function PublicIntakeForm() {
           {/* Banner */}
           <GradientBanner height={160} colorTheme={ds.colorTheme} logoSrc={organizationLogo}>
             <Typography
+              component="h1"
               sx={{
                 color: "background.main",
                 fontSize: "28px",
@@ -457,6 +477,7 @@ export function PublicIntakeForm() {
             {collectContactInfo && (
               <>
                 <Typography
+                  component="h2"
                   sx={{
                     fontWeight: 600,
                     color: "#1e293b",
@@ -490,26 +511,29 @@ export function PublicIntakeForm() {
                     id="submitter-email"
                     label="Email"
                     type="email"
+                    isRequired
                     value={submitterEmail}
                     onChange={(e) => {
                       setSubmitterEmail(e.target.value);
                       setEmailError(null);
                     }}
                     error={emailError || undefined}
-                    helperText={emailError || "We'll send you updates about your submission"}
                     sx={{
                       "& .MuiOutlinedInput-root": {
                         "borderRadius": "8px",
                         "fontSize": "15px",
-                        "& fieldset": { borderColor: "#e2e8f0" },
-                        "&:hover fieldset": { borderColor: "#cbd5e1" },
-                        "&.Mui-focused fieldset": { borderColor: ds.colorTheme },
+                        "& fieldset": { borderColor: emailError ? "#ef4444" : "#e2e8f0" },
+                        "&:hover fieldset": { borderColor: emailError ? "#ef4444" : "#cbd5e1" },
+                        "&.Mui-focused fieldset": {
+                          borderColor: emailError ? "#ef4444" : ds.colorTheme,
+                        },
                       },
                       "& .MuiOutlinedInput-input": {
                         padding: "12px 14px",
                       },
                     }}
                   />
+                  <FormFieldHint text="We'll send you updates about your submission" />
                 </Box>
 
                 <Box sx={{ my: 4, borderTop: "1px solid #e2e8f0" }} />

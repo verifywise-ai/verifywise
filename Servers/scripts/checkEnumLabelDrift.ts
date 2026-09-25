@@ -65,6 +65,14 @@ const checks: Check[] = [
     },
   },
   {
+    key: "modelInventoryType",
+    frontend: {
+      file: "Clients/src/domain/enums/modelInventory.enum.ts",
+      enum: "ModelInventoryType",
+    },
+    swaggerSchema: "ModelInventoryType",
+  },
+  {
     key: "aiLifecyclePhase",
     frontend: {
       file: "Clients/src/domain/enums/aiLifeCyclePhase.enum.ts",

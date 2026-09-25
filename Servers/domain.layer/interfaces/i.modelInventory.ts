@@ -1,4 +1,5 @@
 import { ModelInventoryStatus } from "../enums/model-inventory-status.enum";
+import { ModelInventoryType } from "../enums/model-inventory-type.enum";
 import { MrmTier } from "../enums/mrm.enum";
 
 export interface IModelInventory {
@@ -12,6 +13,7 @@ export interface IModelInventory {
   security_assessment: boolean;
   status: ModelInventoryStatus;
   status_date: Date;
+  type?: ModelInventoryType;
   reference_link?: string;
   biases?: string;
   limitations?: string;

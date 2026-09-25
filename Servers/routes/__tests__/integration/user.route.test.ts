@@ -48,14 +48,15 @@ jest.mock("../../../middleware/accessControl.middleware", () => ({
   default: jest.fn(() => (_req: any, _res: any, next: any) => next()),
 }));
 
+// Every limiter this router mounts must be stubbed here. They all now come from
+// rateLimit.middleware (loginLimiter used to be declared inline in user.route.ts and
+// was covered by an express-rate-limit mock), so a limiter missing from this list
+// mounts `undefined` and the whole suite fails to load.
 jest.mock("../../../middleware/rateLimit.middleware", () => ({
   authLimiter: jest.fn((_req: any, _res: any, next: any) => next()),
+  loginLimiter: jest.fn((_req: any, _res: any, next: any) => next()),
   tokenRefreshLimiter: jest.fn((_req: any, _res: any, next: any) => next()),
 }));
-
-jest.mock("express-rate-limit", () =>
-  jest.fn(() => (_req: unknown, _res: unknown, next: () => void) => next()),
-);
 
 import userRoutes from "../../user.route";
 

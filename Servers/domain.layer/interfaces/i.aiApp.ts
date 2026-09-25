@@ -101,6 +101,7 @@ export interface IAIAppCreatePayload {
   policy_ids?: number[];
   data_exposure?: { data_type: string; allowed: boolean }[];
   departments?: { department: string; user_count: number }[];
+  is_demo?: boolean;
 }
 
 export interface IAIAppUpdatePayload {

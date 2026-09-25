@@ -214,7 +214,7 @@ export class AiAppModel extends Model<AiAppModel> implements IAIApp {
       shadow_ai_tool_id: data.shadow_ai_tool_id ?? null,
       required_training: data.required_training ?? null,
       risk_score: null,
-      is_demo: false,
+      is_demo: data.is_demo ?? false,
       created_at: new Date(),
       updated_at: new Date(),
     });

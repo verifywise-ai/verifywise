@@ -272,6 +272,63 @@ export async function deleteAllTaskEntityLinksQuery(
 }
 
 /**
+ * Persist entity links for a task inside the caller's transaction.
+ *
+ * Unlike the POST /tasks/:id/entities endpoint, this helper never rejects:
+ * invalid entity types, nonexistent entities, and duplicates are skipped so
+ * that link persistence can never fail the surrounding task save.
+ *
+ * @returns the number of links actually inserted
+ */
+export async function persistTaskEntityLinks(
+  taskId: number,
+  entityLinks: Array<{ entity_id: number; entity_type: string; entity_name?: string }>,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<number> {
+  let persisted = 0;
+  for (const link of entityLinks) {
+    try {
+      const entityId = Number(link.entity_id);
+      if (!entityId || Number.isNaN(entityId)) continue;
+      if (!link.entity_type || !isValidEntityType(link.entity_type)) continue;
+
+      const exists = await entityExistsQuery(
+        entityId,
+        link.entity_type,
+        organizationId,
+        transaction,
+      );
+      if (!exists) continue;
+
+      const alreadyLinked = await linkExistsQuery(
+        taskId,
+        entityId,
+        link.entity_type,
+        organizationId,
+        transaction,
+      );
+      if (alreadyLinked) continue;
+
+      await createTaskEntityLinkQuery(
+        {
+          task_id: taskId,
+          entity_id: entityId,
+          entity_type: link.entity_type as EntityType,
+          entity_name: link.entity_name || undefined,
+        },
+        organizationId,
+        transaction,
+      );
+      persisted++;
+    } catch (error) {
+      console.error("persistTaskEntityLinks: failed to persist link", error);
+    }
+  }
+  return persisted;
+}
+
+/**
  * Check if a link already exists
  */
 export async function linkExistsQuery(

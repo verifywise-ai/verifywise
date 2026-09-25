@@ -65,7 +65,11 @@ const MODE_OPTIONS = [
   { _id: "image_generation", name: "Image generation" },
   { _id: "audio_transcription", name: "Audio transcription" },
   { _id: "completion", name: "Completion" },
+  { _id: "responses", name: "Responses" },
 ];
+
+// Text-generation modes priced per input/output token, compared by the cost calculator.
+const CALCULATOR_MODES = new Set(["chat", "completion", "responses"]);
 
 const FEATURE_FILTERS = [
   { key: "supports_vision", label: "Vision", icon: Eye },
@@ -189,7 +193,9 @@ export default function ModelsPage() {
 
     return filtered
       .filter(
-        (m) => m.mode === "chat" && (m.input_cost_per_million > 0 || m.output_cost_per_million > 0),
+        (m) =>
+          CALCULATOR_MODES.has(m.mode) &&
+          (m.input_cost_per_million > 0 || m.output_cost_per_million > 0),
       )
       .map((m) => {
         const dailyInputCost = (reqs * inp * m.input_cost_per_million) / 1_000_000;
@@ -203,7 +209,7 @@ export default function ModelsPage() {
   const calcResultsTotal = calcResults.length;
   const calcResultsVisible = useMemo(() => {
     return calcShowAll ? calcResults : calcResults.slice(0, 50);
-  }, [filtered, calcRequests, calcInputTokens, calcOutputTokens]);
+  }, [calcResults, calcShowAll]);
 
   // Compare models
   const compareModels = useMemo(

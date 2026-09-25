@@ -1,6 +1,6 @@
 # Core
 fastapi>=0.141.1
-uvicorn>=0.52.4
+uvicorn>=0.53.0
 python-dotenv>=1.2.3
 pydantic>=2.13.5
 pydantic-settings>=2.15.0
@@ -9,17 +9,17 @@ cryptography>=50.0.1
 httpx>=0.28.1
 
 # Database (async PostgreSQL)
-sqlalchemy[asyncio]>=2.0.52
+sqlalchemy[asyncio]>=2.0.54
 asyncpg>=0.31.0
 
 # LiteLLM SDK (MIT licensed)
 # Pinned to a specific version — updated per VerifyWise release
-litellm==1.100.1
+litellm==1.101.0
 
 # Database migrations (Alembic)
-sqlalchemy[asyncio]>=2.0.52
+sqlalchemy[asyncio]>=2.0.54
 asyncpg>=0.29.0
-alembic>=1.19.2
+alembic>=1.20.0
 
 # Guardrails — PII detection (in-process, no Docker)
 presidio-analyzer>=2.2.364

@@ -25,7 +25,8 @@ Clients/src/presentation/components/
 ├── Alert/                     # Alerts
 ├── Toast/                     # Notifications
 ├── Avatar/                    # User avatars
-├── Chip.tsx                   # Unified status/risk badge chip
+├── StatusBadge/               # Shared risk, status, severity, and boolean badge
+├── Chip.tsx                   # Re-export of StatusBadge for existing screens
 ├── Chip/                      # Specialized chips (DaysChip, CategoryChip)
 ├── Layout/                    # Page layouts
 └── Tooltip/                   # Tooltips
@@ -491,34 +492,34 @@ Notification toast.
 />
 ```
 
-### Chip
+### StatusBadge
 
-Unified badge component for risk levels, statuses, severities, and boolean values. Renders consistent light pastel styling with theme-derived colors. See the runnable showcase in StyleGuide → Chips.
+Shared badge for risk levels, statuses, severities, and boolean values. Renders consistent light pastel styling with theme-derived colors. `Chip` re-exports this component, so existing screens can keep `import Chip from ".../Chip"`. See the runnable showcase in StyleGuide → Chips.
 
 ```tsx
-// File: Clients/src/presentation/components/Chip.tsx
+// File: Clients/src/presentation/components/StatusBadge/index.tsx
 
-import Chip from "@/presentation/components/Chip";
+import StatusBadge from "@/presentation/components/StatusBadge";
 
-// Explicit variant
-<Chip label="High" variant="high" />
+// Explicit variant (risk, status, severity, or boolean label key)
+<StatusBadge label="High" variant="high" />
 
 // Auto-derived variant from common labels (case-insensitive)
-<Chip label="Approved" />
-<Chip label="In progress" />
+<StatusBadge label="Approved" />
+<StatusBadge label="In progress" />
 
 // Sizes: "small" (24px, default) | "medium" (34px)
-<Chip label="Pending" variant="warning" size="small" />
-<Chip label="Pending" variant="warning" size="medium" />
+<StatusBadge label="Pending" variant="warning" size="small" />
+<StatusBadge label="Pending" variant="warning" size="medium" />
 
 // Lowercase display
-<Chip label="In progress" variant="warning" uppercase={false} />
+<StatusBadge label="In progress" variant="warning" uppercase={false} />
 
 // Custom colors (one-off cases only — prefer variant)
-<Chip label="Custom" backgroundColor="#E8F5E9" textColor="#2E7D32" />
+<StatusBadge label="Custom" backgroundColor="#E8F5E9" textColor="#2E7D32" />
 
 // Optional leading icon
-<Chip label="Blocked" variant="error" icon={<AlertCircle size={12} />} />
+<StatusBadge label="Blocked" variant="error" icon={<AlertCircle size={12} />} />
 ```
 
 **Props:**
@@ -526,7 +527,7 @@ import Chip from "@/presentation/components/Chip";
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `label` | string | — | Text displayed in the chip (required) |
-| `variant` | `ChipVariant` | auto | Semantic color variant; derived from label when omitted |
+| `variant` | `ChipVariant` | auto | Label key in the risk, status, severity, or boolean group; derived from the label when omitted |
 | `size` | `"small"` \| `"medium"` | `"small"` | Chip height (24px or 34px) |
 | `uppercase` | boolean | `true` | Uppercase label text |
 | `backgroundColor` | string | — | Override background (use with `textColor`) |

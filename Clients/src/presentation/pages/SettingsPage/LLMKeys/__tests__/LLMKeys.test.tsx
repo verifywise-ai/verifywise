@@ -144,7 +144,7 @@ describe("LLMKeys", () => {
     await waitFor(() => expect(screen.getByText("Anthropic")).toBeInTheDocument());
 
     const buttons = screen.getAllByRole("button");
-    const deleteBtn = buttons.find((btn) => btn.querySelector("svg.lucide-trash2"));
+    const deleteBtn = buttons.find((btn) => btn.querySelector("svg.lucide-trash"));
     await user.click(deleteBtn!);
     expect(screen.getByText("Delete API key")).toBeInTheDocument();
 
@@ -162,7 +162,7 @@ describe("LLMKeys", () => {
     await waitFor(() => expect(screen.getByText("Anthropic")).toBeInTheDocument());
 
     const buttons = screen.getAllByRole("button");
-    const deleteBtn = buttons.find((btn) => btn.querySelector("svg.lucide-trash2"));
+    const deleteBtn = buttons.find((btn) => btn.querySelector("svg.lucide-trash"));
     await user.click(deleteBtn!);
     await user.click(screen.getByText("Delete"));
 

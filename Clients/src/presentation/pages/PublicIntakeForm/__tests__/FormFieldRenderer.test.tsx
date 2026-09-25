@@ -45,6 +45,28 @@ describe("FormFieldRenderer accessible names", () => {
     expect(screen.getByLabelText(/Company name/)).toBeInTheDocument();
   });
 
+  it("shows a single error message for a required empty field", async () => {
+    const user = userEvent.setup();
+
+    function SubmitHarness() {
+      const { control, handleSubmit, formState } = useForm<Record<string, unknown>>();
+      return (
+        <form onSubmit={handleSubmit(() => undefined)}>
+          <FormFieldRenderer
+            field={makeField({ validation: { required: true } })}
+            control={control}
+            errors={formState.errors}
+          />
+          <button type="submit">Go</button>
+        </form>
+      );
+    }
+
+    renderWithProviders(<SubmitHarness />);
+    await user.click(screen.getByRole("button", { name: "Go" }));
+    expect(screen.getAllByText("This field is required")).toHaveLength(1);
+  });
+
   it("names a select from field.label rather than its placeholder", () => {
     renderWithProviders(
       <Harness

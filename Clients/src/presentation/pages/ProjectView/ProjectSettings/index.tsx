@@ -732,10 +732,7 @@ const ProjectSettings = React.memo(
           deployment_context:
             deploymentContextItems.find((item) => item._id === values.deploymentContext)?.name ||
             null,
-          framework: values.monitoredRegulationsAndStandards.map((fw) => ({
-            project_framework_id: fw._id,
-            framework_id: fw._id,
-          })),
+          framework: values.monitoredRegulationsAndStandards.map((fw) => fw._id),
         },
       }).then(async (response) => {
         if (response.status === 202) {

@@ -93,13 +93,13 @@ export const createNewIncidentQuery = async (
         severity, status, occurred_date, date_detected, reporter, approval_status,
         approved_by, categories_of_harm, affected_persons_groups, description, relationship_causality,
         immediate_mitigations, planned_corrective_actions, model_system_version, interim_report, approval_date, approval_notes,
-        created_at, updated_at, archived
+        created_at, updated_at, archived, is_demo
       ) VALUES (
         :organization_id, :ai_project, :model_inventory_id, :project_id, :assignee_id, :type,
         :severity, :status, :occurred_date, :date_detected, :reporter, :approval_status,
         :approved_by, :categories_of_harm, :affected_persons_groups, :description, :relationship_causality,
         :immediate_mitigations, :planned_corrective_actions, :model_system_version, :interim_report, :approval_date, :approval_notes,
-        :created_at, :updated_at, :archived
+        :created_at, :updated_at, :archived, :is_demo
       ) RETURNING *`,
       {
         replacements: {
@@ -129,6 +129,7 @@ export const createNewIncidentQuery = async (
           created_at,
           updated_at: created_at,
           archived: incident.archived || false,
+          is_demo: incident.is_demo || false,
         },
         mapToModel: true,
         model: AIIncidentManagementModel,

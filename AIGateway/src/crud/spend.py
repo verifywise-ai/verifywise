@@ -45,7 +45,7 @@ async def get_spend_summary(
     """
     sql = text("""
         SELECT
-            COALESCE(SUM(cost_usd), 0)           AS total_cost,
+            COALESCE(SUM(cost_usd) FILTER (WHERE cost_usd <> 'NaN'::numeric), 0) AS total_cost,
             COUNT(*)                              AS total_requests,
             COALESCE(SUM(total_tokens), 0)        AS total_tokens,
             COALESCE(AVG(latency_ms), 0)          AS avg_latency_ms
@@ -84,7 +84,7 @@ async def get_spend_by_model(
     sql = text("""
         SELECT
             model,
-            COALESCE(SUM(cost_usd), 0)      AS total_cost,
+            COALESCE(SUM(cost_usd) FILTER (WHERE cost_usd <> 'NaN'::numeric), 0)      AS total_cost,
             COUNT(*)                         AS total_requests,
             COALESCE(SUM(total_tokens), 0)  AS total_tokens
         FROM ai_gateway_spend_logs
@@ -118,7 +118,7 @@ async def get_spend_by_endpoint(
         SELECT
             sl.endpoint_id,
             COALESCE(ep.display_name, sl.endpoint_id::text) AS endpoint_name,
-            COALESCE(SUM(sl.cost_usd), 0)      AS total_cost,
+            COALESCE(SUM(sl.cost_usd) FILTER (WHERE sl.cost_usd <> 'NaN'::numeric), 0)      AS total_cost,
             COUNT(*)                            AS total_requests,
             COALESCE(SUM(sl.total_tokens), 0)  AS total_tokens
         FROM ai_gateway_spend_logs sl
@@ -156,7 +156,7 @@ async def get_spend_by_user(
             sl.user_id,
             COALESCE(u.name, sl.user_id::text) AS user_name,
             u.email                             AS user_email,
-            COALESCE(SUM(sl.cost_usd), 0)      AS total_cost,
+            COALESCE(SUM(sl.cost_usd) FILTER (WHERE sl.cost_usd <> 'NaN'::numeric), 0)      AS total_cost,
             COUNT(*)                            AS total_requests,
             COALESCE(SUM(sl.total_tokens), 0)  AS total_tokens
         FROM ai_gateway_spend_logs sl
@@ -186,34 +186,40 @@ async def get_spend_by_day(
 ) -> list[dict]:
     """
     Return cost/requests/tokens grouped by day.
-    For period="1d" returns an hourly breakdown (00:00 – 23:00) using
-    generate_series so that hours with no activity still appear.
+    For period="1d" returns the last 24 hourly buckets in time order, ending
+    with the current hour, using generate_series so that hours with no
+    activity still appear. Labels ("HH:00") are formatted in Python: a colon
+    inside a text() SQL literal would be parsed as a bind parameter.
     """
     if period == "1d":
         # Hourly breakdown for single-day view
         sql = text("""
             WITH hours AS (
-                SELECT generate_series(0, 23) AS hour
+                SELECT generate_series(
+                    date_trunc('hour', CAST(:end_date AS timestamptz)) - INTERVAL '23 hours',
+                    date_trunc('hour', CAST(:end_date AS timestamptz)),
+                    INTERVAL '1 hour'
+                ) AS bucket
             )
             SELECT
-                TO_CHAR(hours.hour, 'FM00') || ':00'    AS period,
-                COALESCE(SUM(sl.cost_usd), 0)             AS total_cost,
+                hours.bucket                            AS period,
+                COALESCE(SUM(sl.cost_usd) FILTER (WHERE sl.cost_usd <> 'NaN'::numeric), 0)             AS total_cost,
                 COUNT(sl.id)                            AS total_requests,
                 COALESCE(SUM(sl.total_tokens), 0)       AS total_tokens
             FROM hours
             LEFT JOIN ai_gateway_spend_logs sl
-                   ON EXTRACT(HOUR FROM sl.created_at) = hours.hour
-                  AND sl.organization_id = :org_id
-                  AND sl.created_at BETWEEN :start_date AND :end_date
-            GROUP BY hours.hour
-            ORDER BY hours.hour ASC
+                   ON sl.organization_id = :org_id
+                  AND sl.created_at >= hours.bucket
+                  AND sl.created_at <  hours.bucket + INTERVAL '1 hour'
+            GROUP BY hours.bucket
+            ORDER BY hours.bucket ASC
         """)
     else:
         # Daily breakdown
         sql = text("""
             SELECT
                 DATE(created_at)                        AS period,
-                COALESCE(SUM(cost_usd), 0)              AS total_cost,
+                COALESCE(SUM(cost_usd) FILTER (WHERE cost_usd <> 'NaN'::numeric), 0)              AS total_cost,
                 COUNT(*)                                AS total_requests,
                 COALESCE(SUM(total_tokens), 0)          AS total_tokens
             FROM ai_gateway_spend_logs
@@ -232,7 +238,9 @@ async def get_spend_by_day(
     out = []
     for r in rows:
         d = _row_to_dict(r)
-        if isinstance(d.get("period"), date):
+        if isinstance(d.get("period"), datetime):
+            d["period"] = f"{d['period'].hour:02d}:00"
+        elif isinstance(d.get("period"), date):
             d["period"] = d["period"].isoformat()
         out.append(d)
     return out
@@ -256,7 +264,7 @@ async def get_spend_by_tag(
     sql = text("""
         SELECT
             metadata->>:tag_key                 AS tag_value,
-            COALESCE(SUM(cost_usd), 0)          AS total_cost,
+            COALESCE(SUM(cost_usd) FILTER (WHERE cost_usd <> 'NaN'::numeric), 0)          AS total_cost,
             COUNT(*)                            AS total_requests,
             COALESCE(SUM(total_tokens), 0)      AS total_tokens
         FROM ai_gateway_spend_logs
@@ -295,7 +303,7 @@ async def get_spend_by_provider(
     sql = text("""
         SELECT
             COALESCE(ep.provider, 'unknown')    AS provider,
-            COALESCE(SUM(sl.cost_usd), 0)       AS total_cost,
+            COALESCE(SUM(sl.cost_usd) FILTER (WHERE sl.cost_usd <> 'NaN'::numeric), 0)       AS total_cost,
             COUNT(*)                            AS total_requests,
             COALESCE(SUM(sl.total_tokens), 0)   AS total_tokens
         FROM ai_gateway_spend_logs sl
@@ -396,6 +404,21 @@ async def get_tokens_per_request_by_endpoint(
 # Paginated spend log detail
 # ---------------------------------------------------------------------------
 
+async def has_spend_logs(db: AsyncSession, org_id: int) -> bool:
+    """
+    Return whether the organisation has any spend log at all. EXISTS stops at
+    the first matching index entry, unlike the COUNT(*) behind the logs list.
+    """
+    result = await db.execute(
+        text(
+            "SELECT EXISTS (SELECT 1 FROM ai_gateway_spend_logs"
+            " WHERE organization_id = :org_id) AS has_logs"
+        ),
+        {"org_id": org_id},
+    )
+    return bool(result.scalar())
+
+
 async def get_spend_logs_detail(
     db: AsyncSession,
     org_id: int,
@@ -481,7 +504,7 @@ async def get_spend_logs_detail(
             sl.model,
             sl.status_code,
             CASE WHEN sl.virtual_key_id IS NOT NULL THEN 'virtual-key' ELSE 'playground' END AS source,
-            sl.cost_usd AS cost,
+            CASE WHEN sl.cost_usd = 'NaN'::numeric THEN 0 ELSE sl.cost_usd END AS cost,
             sl.prompt_tokens,
             sl.completion_tokens,
             sl.total_tokens,

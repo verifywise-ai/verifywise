@@ -192,6 +192,13 @@ export class AIIncidentManagementModel
   archived?: boolean;
 
   @Column({
+    type: DataType.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  })
+  is_demo?: boolean;
+
+  @Column({
     type: DataType.DATE,
     allowNull: false,
   })
@@ -354,6 +361,7 @@ export class AIIncidentManagementModel
       approved_by: data.approved_by || "",
       approval_date: data.approval_date || undefined,
       approval_notes: data.approval_notes || "",
+      is_demo: data.is_demo || false,
       created_at: new Date(),
       updated_at: new Date(),
     });

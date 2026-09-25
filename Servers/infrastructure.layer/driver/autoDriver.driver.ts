@@ -1,5 +1,7 @@
 import { getData, deleteDemoVendorsData } from "../../utils/autoDriver.utils";
 import { createEUFrameworkQuery } from "../../utils/eu.utils";
+import { createISOFrameworkQuery } from "../../utils/iso42001.utils";
+import { createAiAppQuery } from "../../utils/aiApp.utils";
 import { sequelize } from "../../database/db";
 import { createNewProjectQuery, deleteProjectByIdQuery } from "../../utils/project.utils";
 import { createRiskQuery } from "../../utils/risk.utils";
@@ -14,6 +16,7 @@ import { createNewModelInventoryQuery } from "../../utils/modelInventory.utils";
 import { createNewDatasetQuery } from "../../utils/dataset.utils";
 
 import { insertShadowAiDemoData, deleteShadowAiDemoData } from "./shadowAiDemoData";
+import { insertAiGatewayDemoData, deleteAiGatewayDemoData } from "./aiGatewayDemoData";
 import { addVendorProjects } from "../../utils/vendor.utils";
 import { ProjectModel } from "../../domain.layer/models/project/project.model";
 import { HighRiskRole } from "../../domain.layer/enums/high-risk-role.enum";
@@ -26,6 +29,13 @@ import { ModelRiskStatus } from "../../domain.layer/enums/model-risk-status.enum
 import { TaskPriority, TaskStatus } from "../../domain.layer/enums/task-priority.enum";
 import { ModelInventoryModel } from "../../domain.layer/models/modelInventory/modelInventory.model";
 import { DatasetModel } from "../../domain.layer/models/dataset/dataset.model";
+import { AiAppStatus, AiAppDiscoveredSource } from "../../domain.layer/enums/ai-app-status.enum";
+import {
+  IncidentType,
+  Severity,
+  AIIncidentManagementStatus,
+  AIIncidentManagementApprovalStatus,
+} from "../../domain.layer/enums/ai-incident-management.enum";
 export async function insertMockData(
   organizationId: number,
   _organization: number,
@@ -52,7 +62,7 @@ export async function insertMockData(
           last_updated_by: userId,
         },
         [], // no additional members
-        [1], // frameworks
+        [1, 2], // frameworks: EU AI Act (1) + ISO/IEC 42001 (2)
         organizationId,
         userId,
         transaction,
@@ -60,6 +70,10 @@ export async function insertMockData(
       );
       // create eu framework
       await createEUFrameworkQuery(project.id!, true, organizationId, transaction, true);
+
+      // create ISO/IEC 42001 framework — seeds clause/annex implementation
+      // descriptions, auditor feedback and a mix of statuses (is_mock_data=true)
+      await createISOFrameworkQuery(project.id!, true, organizationId, transaction, true);
 
       // create project risks
       await createRiskQuery(
@@ -507,12 +521,441 @@ export async function insertMockData(
         userId,
         transaction,
       );
+
+      // =====================================================
+      // Additional use cases (projects)
+      // =====================================================
+      const codingAssistantProject = await createNewProjectQuery(
+        {
+          project_title: "Internal AI Coding Assistant",
+          owner: userId,
+          start_date: new Date(Date.now()),
+          geography: 1,
+          target_industry: "Software & IT services",
+          description:
+            "An internally deployed AI pair-programming tool integrated into developer IDEs and CI pipelines. It suggests code, generates unit tests, and summarizes changes for reviewers. Access is restricted to authenticated employees; prompts and completions are logged for audit, and outputs are treated as suggestions requiring human review before merge.",
+          ai_risk_classification: AiRiskClassification.LIMITED_RISK,
+          type_of_high_risk_role: HighRiskRole.DEPLOYER,
+          goal: "Give engineers an LLM coding assistant for code completion, generation, refactoring and test writing across internal repositories, while keeping proprietary source and secrets within governed, audited boundaries.",
+          last_updated: new Date(Date.now()),
+          last_updated_by: userId,
+        },
+        [],
+        [1],
+        organizationId,
+        userId,
+        transaction,
+        true, // is demo
+      );
+      await createEUFrameworkQuery(
+        codingAssistantProject.id!,
+        true,
+        organizationId,
+        transaction,
+        true,
+      );
+
+      const demandForecastProject = await createNewProjectQuery(
+        {
+          project_title: "Demand Forecasting & Inventory Optimization",
+          owner: userId,
+          start_date: new Date(Date.now()),
+          geography: 1,
+          target_industry: "Retail & consumer goods",
+          description:
+            "A machine-learning demand-forecasting and inventory-optimization system that predicts SKU-level demand from historical sales, seasonality, promotions and external signals, then recommends purchase and replenishment quantities. Forecasts feed planning dashboards; automated ordering stays within human-approved thresholds, and model performance is monitored for drift.",
+          ai_risk_classification: AiRiskClassification.LIMITED_RISK,
+          type_of_high_risk_role: HighRiskRole.DEPLOYER,
+          goal: "Forecast product demand and optimize inventory and replenishment across the supply chain using ML models, reducing stockouts and overstock while improving service levels and working-capital efficiency.",
+          last_updated: new Date(Date.now()),
+          last_updated_by: userId,
+        },
+        [],
+        [1],
+        organizationId,
+        userId,
+        transaction,
+        true, // is demo
+      );
+      await createEUFrameworkQuery(
+        demandForecastProject.id!,
+        true,
+        organizationId,
+        transaction,
+        true,
+      );
+
+      // =====================================================
+      // Project risks for the additional use cases
+      // =====================================================
+      await createRiskQuery(
+        {
+          risk_name: "Source code and secret leakage via AI coding assistant",
+          risk_owner: userId,
+          ai_lifecycle_phase: "Deployment & integration",
+          risk_description:
+            "Developers may paste proprietary source code, credentials, or secrets into the AI coding assistant, where content may be transmitted to or retained by an external model provider, exposing intellectual property outside the organization's control.",
+          risk_category: ["Strategic risk"],
+          impact:
+            "Loss of intellectual property, exposure of credentials leading to unauthorized system access, and potential breach of confidentiality obligations with customers and partners.",
+          assessment_mapping: "",
+          controls_mapping: "",
+          likelihood: "Likely",
+          severity: "Major",
+          risk_level_autocalculated: "High risk",
+          review_notes:
+            "Route assistant traffic through the AI gateway and confirm provider retention/training is disabled.",
+          mitigation_status: "In Progress",
+          current_risk_level: "High risk",
+          deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          mitigation_plan:
+            "Enforce an approved-tools policy for the coding assistant, enable data-loss-prevention scanning on assistant traffic, and disable provider retention/training on submitted content. Train developers on what must never be pasted and provide sanctioned internal alternatives for sensitive repositories.",
+          implementation_strategy:
+            "Roll out DLP rules and provider retention controls, publish the approved-tools policy, and deliver secure-use training to all engineers before general availability.",
+          mitigation_evidence_document: "",
+          likelihood_mitigation: "Unlikely",
+          risk_severity: "Moderate",
+          final_risk_level: "Medium risk",
+          risk_approval: userId,
+          approval_status: "In Progress",
+          date_of_assessment: new Date(Date.now()),
+          projects: [codingAssistantProject.id!],
+          frameworks: [1], // EU AI Act framework
+          is_demo: true,
+        },
+        organizationId,
+        transaction,
+      );
+
+      await createRiskQuery(
+        {
+          risk_name: "Forecast data drift degrading demand accuracy",
+          risk_owner: userId,
+          ai_lifecycle_phase: "Monitoring & maintenance",
+          risk_description:
+            "Changes in demand patterns, supplier catalog feeds, or seasonality can cause the forecasting model to drift, producing inaccurate predictions that drive stockouts or overstock and erode planner trust in the system.",
+          risk_category: ["Operational risk"],
+          impact:
+            "Inaccurate replenishment recommendations, increased carrying cost and lost sales, and reduced confidence in the forecasting system.",
+          assessment_mapping: "",
+          controls_mapping: "",
+          likelihood: "Possible",
+          severity: "Major",
+          risk_level_autocalculated: "High risk",
+          review_notes:
+            "Monitor forecast error against actuals and alert on drift beyond agreed thresholds.",
+          mitigation_status: "In Progress",
+          current_risk_level: "High risk",
+          deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          mitigation_plan:
+            "Track forecast accuracy and input-feed stability, set drift-detection alerts, schedule periodic retraining, and keep automated ordering within human-approved thresholds until accuracy recovers.",
+          implementation_strategy:
+            "Instrument drift monitoring on inputs and forecast error, define retraining triggers, and require human sign-off on ordering when drift alerts fire.",
+          mitigation_evidence_document: "",
+          likelihood_mitigation: "Unlikely",
+          risk_severity: "Moderate",
+          final_risk_level: "Medium risk",
+          risk_approval: userId,
+          approval_status: "In Progress",
+          date_of_assessment: new Date(Date.now()),
+          projects: [demandForecastProject.id!],
+          frameworks: [1], // EU AI Act framework
+          is_demo: true,
+        },
+        organizationId,
+        transaction,
+      );
+
+      // =====================================================
+      // AI apps (inventory)
+      // =====================================================
+      await createAiAppQuery(
+        {
+          name: "Customer Recommendation Engine",
+          description:
+            "Customer-facing product recommendation service that personalizes suggestions on web and mobile storefronts using a hosted LLM/ML ranking model via the AI gateway.",
+          status: AiAppStatus.APPROVED,
+          discovered_source: AiAppDiscoveredSource.MANUAL,
+          owner_id: userId,
+          is_demo: true,
+        },
+        organizationId,
+        transaction,
+      );
+
+      await createAiAppQuery(
+        {
+          name: "AI Coding Assistant",
+          description:
+            "AI pair-programming assistant used by the engineering team for code completion and generation inside IDEs. Access is SSO-gated and routed through governed guardrails to prevent secret and proprietary-code leakage.",
+          status: AiAppStatus.UNDER_REVIEW,
+          discovered_source: AiAppDiscoveredSource.MANUAL,
+          owner_id: userId,
+          is_demo: true,
+        },
+        organizationId,
+        transaction,
+      );
+
+      await createAiAppQuery(
+        {
+          name: "Demand Forecasting Service",
+          description:
+            "Internal ML application that forecasts SKU-level demand and recommends replenishment quantities for supply-chain planners. Outputs feed planning dashboards; automated ordering stays within human-approved thresholds and is monitored for drift.",
+          status: AiAppStatus.APPROVED,
+          discovered_source: AiAppDiscoveredSource.MANUAL,
+          owner_id: userId,
+          is_demo: true,
+        },
+        organizationId,
+        transaction,
+      );
+
+      // =====================================================
+      // Additional models (distinct external_key per model to
+      // satisfy the per-organization unique external-key constraint)
+      // =====================================================
+      await createNewModelInventoryQuery(
+        {
+          provider_model: "Recommendation Ranking Model",
+          provider: "Foundation Model Provider",
+          model: "Recommendation Ranking Model",
+          version: "1.0",
+          approver: userId,
+          capabilities: ["Ranking", "Personalization", "Embeddings"],
+          security_assessment: true,
+          status: "Approved",
+          status_date: new Date(Date.now()),
+          biases:
+            "Popularity bias toward frequently purchased items; potential cold-start disadvantage for new products.",
+          limitations:
+            "Requires sufficient interaction history for reliable personalization. Latency-sensitive at high request volumes.",
+          hosting_provider: "Managed LLM API (EU region)",
+          reference_link: "https://example.com/models/recommendation-ranking",
+          external_key: "demo-recommendation-ranking-model-001",
+          security_assessment_data: [],
+          is_demo: true,
+        } as unknown as ModelInventoryModel,
+        organizationId,
+        [codingAssistantProject.id!],
+        [],
+        transaction,
+      );
+
+      await createNewModelInventoryQuery(
+        {
+          provider_model: "Demand Forecasting Model",
+          provider: "In-house Data Science",
+          model: "Demand Forecasting Model",
+          version: "2.1.0",
+          approver: userId,
+          capabilities: ["Time-series forecasting", "Inventory optimization"],
+          security_assessment: true,
+          status: "Approved",
+          status_date: new Date(Date.now()),
+          biases:
+            "Sensitivity to abrupt changes in supplier catalog feeds; seasonal SKUs may be under-forecast after data drift.",
+          limitations:
+            "Depends on clean, schema-stable input feeds. Automated ordering is bounded by human-approved thresholds.",
+          hosting_provider: "Internal (private cloud)",
+          reference_link: null,
+          external_key: "demo-demand-forecasting-model-001",
+          security_assessment_data: [],
+          is_demo: true,
+        } as unknown as ModelInventoryModel,
+        organizationId,
+        [demandForecastProject.id!],
+        [],
+        transaction,
+      );
+
+      // =====================================================
+      // Additional vendors
+      // =====================================================
+      await createNewVendorQuery(
+        {
+          projects: [codingAssistantProject.id!],
+          vendor_name: "Foundation Model Provider",
+          vendor_provides:
+            "Hosted large language models and embeddings used by the customer recommendation engine and internal coding assistant, accessed via the AI gateway under data-processing and enterprise privacy terms.",
+          assignee: userId,
+          website: "www.example-model-provider.com",
+          vendor_contact_person: "Enterprise Account Team",
+          review_result: "Positive",
+          review_status: "Reviewed",
+          reviewer: userId,
+          review_date: new Date(Date.now()),
+        },
+        organizationId,
+        transaction,
+        true, // is demo
+      );
+
+      await createNewVendorQuery(
+        {
+          projects: [demandForecastProject.id!],
+          vendor_name: "Data Labeling & Evaluation Partner",
+          vendor_provides:
+            "Data labeling and evaluation services supporting training and validation datasets for the demand-forecasting and recommendation models, under a data-processing agreement.",
+          assignee: userId,
+          website: "www.example-data-partner.com",
+          vendor_contact_person: "Account Manager",
+          review_result: "Positive",
+          review_status: "In review",
+          reviewer: userId,
+          review_date: new Date(Date.now()),
+        },
+        organizationId,
+        transaction,
+        true, // is demo
+      );
+
+      // =====================================================
+      // Additional training register entries
+      // =====================================================
+      await createNewTrainingRegistarQuery(
+        {
+          training_name: "ISO/IEC 42001 AI Management System Foundations",
+          duration: "3 hours",
+          provider: "VerifyWise Academy",
+          department: "Engineering",
+          status: "Completed",
+          numberOfPeople: 18,
+          description:
+            "Foundational training on the ISO/IEC 42001 AI management system: clauses, Annex A controls, and how teams operating the recommendation, forecasting and coding-assistant systems apply them day to day.",
+          is_demo: true,
+        },
+        organizationId,
+        transaction,
+      );
+
+      await createNewTrainingRegistarQuery(
+        {
+          training_name: "AI Fairness and Bias Mitigation",
+          duration: "2 hours",
+          provider: "Internal Responsible AI Team",
+          department: "Data Science",
+          status: "In Progress",
+          numberOfPeople: 12,
+          description:
+            "Workshop on detecting and mitigating bias in AI systems, covering fairness metrics, monitoring thresholds, and the review process triggered when a model breaches them.",
+          is_demo: true,
+        },
+        organizationId,
+        transaction,
+      );
+
+      await createNewTrainingRegistarQuery(
+        {
+          training_name: "Secure and Responsible Use of AI Coding Assistants",
+          duration: "1 hour",
+          provider: "Security Engineering",
+          department: "Engineering",
+          status: "Completed",
+          numberOfPeople: 40,
+          description:
+            "Guidance for engineers on using the AI coding assistant safely: avoiding secret and proprietary-code leakage, reviewing AI-generated code before merge, license considerations, and the guardrails enforced through the AI gateway.",
+          is_demo: true,
+        },
+        organizationId,
+        transaction,
+      );
+
+      // =====================================================
+      // Incidents
+      //
+      // Insert demo incidents directly rather than via
+      // createNewIncidentQuery: that helper fires any active
+      // "incident_added" automation (emails/notifications), which should
+      // not happen when loading demo data. (Note: the vendor and training
+      // helpers used above have the same automation behavior — a
+      // pre-existing trait of the seeder, not addressed here.) The
+      // `ai_project` values are free-text (not FKs) and must match the
+      // seeded project titles above so the demo incidents resolve to real
+      // use cases.
+      // =====================================================
+      const demoIncidents = [
+        {
+          ai_project: "Demand Forecasting & Inventory Optimization",
+          type: IncidentType.MODEL_DRIFT,
+          severity: Severity.SERIOUS,
+          status: AIIncidentManagementStatus.OPEN,
+          occurred_date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+          date_detected: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+          categories_of_harm: ["Property"],
+          description:
+            "Demand-forecasting model produced systematically low forecasts for a group of seasonal SKUs over a two-week period, contributing to localized stockouts. Root cause traced to input-data drift after a supplier changed its product catalog feed. Detected via monitoring alerts on forecast-vs-actual error.",
+          relationship_causality:
+            "Input-data drift from a changed supplier catalog feed degraded forecast accuracy for the affected category.",
+          immediate_mitigations:
+            "Affected SKUs switched to manual planner review; forecast feed for the impacted category temporarily overridden with a prior-season baseline.",
+          planned_corrective_actions:
+            "Add schema-validation and drift detection on supplier catalog feeds; retrain model with corrected data; add automated alerting for sustained forecast bias.",
+        },
+        {
+          ai_project: "AI Recruitment Screening Platform",
+          type: IncidentType.UNEXPECTED_BEHAVIOR,
+          severity: Severity.VERY_SERIOUS,
+          status: AIIncidentManagementStatus.OPEN,
+          occurred_date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+          date_detected: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
+          categories_of_harm: ["Rights"],
+          description:
+            "A routine fairness audit of the recruitment screening model detected a disparity in shortlisting rates across an age-related applicant group that exceeded the internal fairness threshold. No hiring decision was finalized on the affected batch. The model was paused for the impacted role family pending investigation and re-validation.",
+          relationship_causality:
+            "Model scoring showed a statistically significant disparity for the affected group above the internal fairness threshold.",
+          immediate_mitigations:
+            "Paused the model for the impacted role family and reverted affected shortlists to manual review.",
+          planned_corrective_actions:
+            "Conduct third-party fairness audit, remove/adjust contributing features, re-validate against fairness thresholds before re-enabling.",
+        },
+      ];
+
+      for (const incident of demoIncidents) {
+        await sequelize.query(
+          `INSERT INTO ai_incident_managements (
+            organization_id, ai_project, type, severity, status,
+            occurred_date, date_detected, reporter, approval_status,
+            categories_of_harm, description, relationship_causality,
+            immediate_mitigations, planned_corrective_actions,
+            interim_report, archived, is_demo, created_at, updated_at
+          ) VALUES (
+            :organization_id, :ai_project, :type, :severity, :status,
+            :occurred_date, :date_detected, :reporter, :approval_status,
+            :categories_of_harm, :description, :relationship_causality,
+            :immediate_mitigations, :planned_corrective_actions,
+            false, false, true, NOW(), NOW()
+          )`,
+          {
+            replacements: {
+              organization_id: organizationId,
+              ai_project: incident.ai_project,
+              type: incident.type,
+              severity: incident.severity,
+              status: incident.status,
+              occurred_date: incident.occurred_date,
+              date_detected: incident.date_detected,
+              reporter: String(userId),
+              approval_status: AIIncidentManagementApprovalStatus.PENDING,
+              categories_of_harm: JSON.stringify(incident.categories_of_harm),
+              description: incident.description,
+              relationship_causality: incident.relationship_causality,
+              immediate_mitigations: incident.immediate_mitigations,
+              planned_corrective_actions: incident.planned_corrective_actions,
+            },
+            transaction,
+          },
+        );
+      }
     } else {
       // project already exists, delete it and insert a new one
     }
 
     // Seed Shadow AI demo data (tools, events, rollups, rules, alerts)
     await insertShadowAiDemoData(organizationId, userId, transaction);
+
+    // Seed AI Gateway demo data (endpoints, virtual keys, ~30 days of spend logs)
+    await insertAiGatewayDemoData(organizationId, userId, transaction);
 
     await transaction.commit();
   } catch (error) {
@@ -526,6 +969,9 @@ export async function deleteMockData(organizationId: number) {
   try {
     // Clean all Shadow AI demo data first (no FK ties to governance tables)
     await deleteShadowAiDemoData(organizationId, transaction);
+
+    // Clean AI Gateway demo data (spend logs, virtual keys, endpoints)
+    await deleteAiGatewayDemoData(organizationId, transaction);
 
     // =====================================================
     // DELETE ORDER MATTERS - respect foreign key constraints
@@ -551,6 +997,19 @@ export async function deleteMockData(organizationId: number) {
     // 2. Delete demo training registers
     await sequelize.query(
       `DELETE FROM trainingregistar WHERE organization_id = :organizationId AND is_demo = true`,
+      { replacements: { organizationId }, transaction },
+    );
+
+    // 2a. Delete demo AI apps (child tables cascade via ON DELETE CASCADE)
+    await sequelize.query(
+      `DELETE FROM ai_apps WHERE organization_id = :organizationId AND is_demo = true`,
+      { replacements: { organizationId }, transaction },
+    );
+
+    // 2b. Delete demo incidents (dependent rows, e.g. ce_marking_incidents,
+    // are removed automatically via ON DELETE CASCADE)
+    await sequelize.query(
+      `DELETE FROM ai_incident_managements WHERE organization_id = :organizationId AND is_demo = true`,
       { replacements: { organizationId }, transaction },
     );
 

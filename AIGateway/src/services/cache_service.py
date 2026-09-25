@@ -20,6 +20,7 @@ from crud.cache import (
     get_global_cache_settings,
     get_cache_entry_count,
 )
+from services.cost_service import _safe_cost
 
 logger = logging.getLogger("uvicorn")
 
@@ -137,7 +138,10 @@ async def store_in_cache(
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
             total_tokens=total_tokens,
-            cost_usd=cost_usd,
+            # Sanitize at the cache write boundary: a non-finite original cost
+            # would otherwise be read back on a cache hit into spend-log
+            # metadata JSON and into the cache-stats aggregate.
+            cost_usd=_safe_cost(cost_usd),
             ttl_seconds=ttl_seconds,
             expires_at=expires_at,
         )

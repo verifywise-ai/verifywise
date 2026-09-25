@@ -32,6 +32,12 @@ export type ChipVariant =
 export type ChipSize = "small" | "medium";
 
 /**
+ * Semantic groups for StatusBadge. The `variant` prop still accepts the
+ * label keys in ChipVariant (for example "high" or "success").
+ */
+export type StatusBadgeVariantGroup = "risk" | "status" | "severity" | "boolean";
+
+/**
  * Props interface for the unified Chip component
  */
 export interface IChipProps {
@@ -50,6 +56,11 @@ export interface IChipProps {
   /** Optional icon to display before the label */
   icon?: React.ReactNode;
 }
+
+/**
+ * Props for the shared StatusBadge. Chip re-exports the same shape.
+ */
+export type IStatusBadgeProps = IChipProps;
 
 /**
  * Color configuration for chip variants

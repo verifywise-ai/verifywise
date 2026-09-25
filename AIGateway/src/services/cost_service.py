@@ -1,5 +1,22 @@
+import math
+
 import litellm
 from typing import Optional
+
+
+def _safe_cost(value: float) -> float:
+    """
+    Coerce a cost to a finite, non-negative float.
+
+    LiteLLM's cost_per_token can return NaN (not raise) when a model's pricing
+    is unknown — e.g. for a provider-prefixed model id it doesn't recognize.
+    A NaN cost persisted to ai_gateway_spend_logs.cost_usd then breaks every
+    SUM/AVG the spend dashboards run (COALESCE does not catch NaN), so we never
+    let a non-finite cost leave this module.
+    """
+    if value is None or not math.isfinite(value) or value < 0:
+        return 0.0
+    return value
 
 
 def estimate_prompt_cost(
@@ -18,7 +35,7 @@ def estimate_prompt_cost(
             prompt_tokens=prompt_tokens,
             completion_tokens=max_tokens,
         )
-        return prompt_cost + completion_cost
+        return _safe_cost(prompt_cost + completion_cost)
     except Exception:
         return 0.0
 
@@ -42,7 +59,7 @@ def calculate_stream_cost(
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
         )
-        return prompt_cost + completion_cost, {
+        return _safe_cost(prompt_cost + completion_cost), {
             "prompt_tokens": prompt_tokens,
             "completion_tokens": completion_tokens,
             "total_tokens": prompt_tokens + completion_tokens,

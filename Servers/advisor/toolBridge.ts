@@ -4,6 +4,53 @@ import { z, ZodTypeAny } from "zod";
 import logger from "../utils/logger/fileLogger";
 
 /**
+ * Make a tool's return value safe for the AI SDK's JSON message schema.
+ *
+ * The AI SDK serializes a tool result into a tool-result message and validates
+ * it against `modelMessageSchema` on the next step of the streamText tool loop.
+ * Its `jsonValueSchema` treats object values as optional (an `undefined` value
+ * is allowed) but requires every ARRAY element to be a valid JSON value —
+ * `undefined` is not one. So an output like `rows.map(r => cond ? {...} :
+ * undefined)` (or any array with a hole) fails validation and throws
+ * "Invalid prompt: The messages do not match the ModelMessage[] schema."
+ * mid-stream, which reaches the user as "Something went wrong while generating
+ * a response".
+ *
+ * The SDK's own coercion only handles a *top-level* `undefined` (→ `null`); it
+ * does not recurse. We sanitize recursively here, at the single point every
+ * bridged tool result passes through:
+ *   - top-level `undefined`  → `null`
+ *   - `undefined` array elements → `null` (preserve position/length)
+ *   - `undefined` object values  → dropped (schema-valid and cleaner)
+ *   - functions / non-JSON values in arrays → `null` (defensive)
+ * All other values pass through unchanged.
+ *
+ * Exported for unit testing.
+ */
+export function sanitizeToolOutput(value: unknown): unknown {
+  if (value === undefined) return null;
+  if (value === null || typeof value !== "object") {
+    // Primitives that JSON can represent pass through; a bare function or
+    // symbol at the top level becomes null so it can't break serialization.
+    return typeof value === "function" || typeof value === "symbol" ? null : value;
+  }
+  if (Array.isArray(value)) {
+    // Array elements must each be valid — map undefined/holes to null.
+    return value.map((el) => {
+      const sanitized = sanitizeToolOutput(el);
+      return sanitized === undefined ? null : sanitized;
+    });
+  }
+  // Plain object: drop keys whose value sanitizes away to undefined.
+  const out: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+    if (val === undefined) continue;
+    out[key] = sanitizeToolOutput(val);
+  }
+  return out;
+}
+
+/**
  * Convert a JSON Schema type definition to a Zod schema.
  * Handles the subset of JSON Schema used in our OpenAI-format tool definitions.
  *
@@ -155,7 +202,20 @@ export function bridgeTools(
           logger.info(
             `[toolBridge] Tool "${name}" returned: ${resultSize} ${Array.isArray(result) ? "items" : ""}`,
           );
-          return result;
+          // Recursively make the output safe for the AI SDK's JSON message
+          // schema (see sanitizeToolOutput). This prevents an undefined —
+          // top-level OR nested inside an array — from breaking the tool-loop
+          // with "The messages do not match the ModelMessage[] schema." A tool
+          // that resolves to nothing at all becomes a self-describing empty
+          // result so the model can narrate "no data" rather than seeing a
+          // bare null it can't distinguish from a genuine null datum.
+          if (result === undefined) {
+            logger.warn(
+              `[toolBridge] Tool "${name}" returned undefined — substituting an empty result to keep the message schema valid`,
+            );
+            return { result: null, note: "tool returned no value" };
+          }
+          return sanitizeToolOutput(result);
         } catch (error) {
           logger.error(`[toolBridge] Error executing tool "${name}":`, error);
           return {

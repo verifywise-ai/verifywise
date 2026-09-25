@@ -28,7 +28,7 @@ import {
   notifyTaskUpdated,
   ITaskEntityLinkForEmail,
 } from "../services/inAppNotification.service";
-import { getTaskEntityLinksQuery } from "../utils/taskEntityLink.utils";
+import { getTaskEntityLinksQuery, persistTaskEntityLinks } from "../utils/taskEntityLink.utils";
 import { translateError } from "../utils/i18n.utils";
 import {
   recordEntityCreation,
@@ -62,7 +62,7 @@ export async function createTask(req: Request, res: Response): Promise<any> {
       status,
       categories,
       assignees,
-      entity_links, // Entity links passed for notification purposes
+      entity_links, // Entity links: persisted with the task and used for notifications
     } = req.body;
 
     // Create task with current user as creator
@@ -89,6 +89,13 @@ export async function createTask(req: Request, res: Response): Promise<any> {
         taskData,
         transaction,
       );
+    }
+
+    // Persist entity links atomically with the task, so linked policies and
+    // other entities survive even if a client skips the follow-up
+    // POST /tasks/:id/entities calls.
+    if (task.id && Array.isArray(entity_links) && entity_links.length > 0) {
+      await persistTaskEntityLinks(task.id, entity_links, req.organizationId!, transaction);
     }
 
     await transaction.commit();
@@ -423,7 +430,7 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
       status,
       categories,
       assignees,
-      entity_links, // Entity links passed for notification purposes
+      entity_links, // Entity links: persisted with the task and used for notifications
     } = req.body;
 
     // Only include fields that are being updated
@@ -459,6 +466,12 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
           transaction,
         );
       }
+    }
+
+    // Persist any new entity links atomically with the task update (additive
+    // only — removals continue to go through DELETE /tasks/:id/entities/:linkId).
+    if (updatedTask.id && Array.isArray(entity_links) && entity_links.length > 0) {
+      await persistTaskEntityLinks(updatedTask.id, entity_links, req.organizationId!, transaction);
     }
 
     await transaction.commit();

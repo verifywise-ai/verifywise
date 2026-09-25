@@ -154,8 +154,8 @@ export const createNewModelInventoryQuery = async (
 
   try {
     const result = await sequelize.query(
-      `INSERT INTO model_inventories (organization_id, provider_model, provider, model, version, approver, capabilities, security_assessment, status, status_date, reference_link, biases, limitations, hosting_provider, intended_use, security_assessment_data, is_demo, external_key, created_at, updated_at)
-      VALUES (:organization_id, :provider_model, :provider, :model, :version, :approver, :capabilities, :security_assessment, :status, :status_date, :reference_link, :biases, :limitations, :hosting_provider, :intended_use, :security_assessment_data, :is_demo, :external_key, :created_at, :updated_at) RETURNING *`,
+      `INSERT INTO model_inventories (organization_id, provider_model, provider, model, version, approver, capabilities, security_assessment, status, status_date, type, reference_link, biases, limitations, hosting_provider, intended_use, security_assessment_data, is_demo, external_key, created_at, updated_at)
+      VALUES (:organization_id, :provider_model, :provider, :model, :version, :approver, :capabilities, :security_assessment, :status, :status_date, :type, :reference_link, :biases, :limitations, :hosting_provider, :intended_use, :security_assessment_data, :is_demo, :external_key, :created_at, :updated_at) RETURNING *`,
       {
         replacements: {
           organization_id: organizationId,
@@ -170,6 +170,7 @@ export const createNewModelInventoryQuery = async (
           security_assessment: modelInventory.security_assessment,
           status: modelInventory.status,
           status_date: modelInventory.status_date,
+          type: modelInventory.type ?? null,
           reference_link: modelInventory.reference_link,
           biases: modelInventory.biases,
           limitations: modelInventory.limitations,
@@ -308,7 +309,7 @@ export const updateModelInventoryByIdQuery = async (
   try {
     // First update the record
     await sequelize.query(
-      `UPDATE model_inventories SET provider_model = :provider_model, provider = :provider, model = :model, version = :version, approver = :approver, capabilities = :capabilities, security_assessment = :security_assessment, status = :status, status_date = :status_date, reference_link = :reference_link, biases = :biases, limitations = :limitations,  hosting_provider = :hosting_provider, intended_use = :intended_use, security_assessment_data = :security_assessment_data, is_demo = :is_demo, external_key = :external_key, updated_at = :updated_at WHERE organization_id = :organization_id AND id = :id`,
+      `UPDATE model_inventories SET provider_model = :provider_model, provider = :provider, model = :model, version = :version, approver = :approver, capabilities = :capabilities, security_assessment = :security_assessment, status = :status, status_date = :status_date, type = :type, reference_link = :reference_link, biases = :biases, limitations = :limitations,  hosting_provider = :hosting_provider, intended_use = :intended_use, security_assessment_data = :security_assessment_data, is_demo = :is_demo, external_key = :external_key, updated_at = :updated_at WHERE organization_id = :organization_id AND id = :id`,
       {
         replacements: {
           organization_id: organizationId,
@@ -324,6 +325,7 @@ export const updateModelInventoryByIdQuery = async (
           security_assessment: modelInventory.security_assessment,
           status: modelInventory.status,
           status_date: modelInventory.status_date,
+          type: modelInventory.type ?? null,
           reference_link: modelInventory.reference_link,
           biases: modelInventory.biases,
           limitations: modelInventory.limitations,

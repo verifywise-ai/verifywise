@@ -55,7 +55,8 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
 
   const { dashboard, fetchDashboard } = useDashboard();
 
-  // Check for demo data existence
+  // Check for demo data existence. The backend flags all demo entities with
+  // `is_demo`; fall back to known demo project titles for legacy demo data.
   useEffect(() => {
     if (dashboard?.projects_list) {
       const demoProjectTitles = [
@@ -64,8 +65,8 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
         "AI Compliance Checker",
         "Information Security & AI Governance Framework",
       ];
-      const hasDemoProjects = dashboard.projects_list.some((project) =>
-        demoProjectTitles.includes(project.project_title),
+      const hasDemoProjects = dashboard.projects_list.some(
+        (project) => project.is_demo === true || demoProjectTitles.includes(project.project_title),
       );
       setHasDemoData(hasDemoProjects);
     }

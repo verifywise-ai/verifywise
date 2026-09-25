@@ -266,7 +266,7 @@ describe("ShadowAI - SettingsPage", () => {
     const rows = screen.getAllByRole("row");
     const dataRow = rows.find((r) => within(r).queryByText("proxy-01.corp.com"))!;
     const trashButton = Array.from(dataRow.querySelectorAll("button")).find((btn) =>
-      btn.querySelector("svg.lucide-trash2"),
+      btn.querySelector("svg.lucide-trash"),
     )!;
     fireEvent.click(trashButton);
 

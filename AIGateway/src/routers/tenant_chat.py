@@ -11,11 +11,11 @@ around the existing /internal/v1/models service.
 import logging
 from typing import Optional
 
-import litellm
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from middlewares.auth import verify_internal_key
+from routers.models import build_model_catalog, build_models_grouped
 from services.tenant_proxy import (
     tenant_chat_completion,
     tenant_embedding,
@@ -122,23 +122,7 @@ async def get_providers(request: Request):
     verify_internal_key(request)
 
     try:
-        providers: dict[str, list] = {}
-        for model_name, info in litellm.model_cost.items():
-            provider = info.get("litellm_provider", "unknown")
-            if provider not in providers:
-                providers[provider] = []
-            providers[provider].append({
-                "id": model_name,
-                "mode": info.get("mode", "chat"),
-            })
-
-        return {
-            "data": {
-                "providers": list(providers.keys()),
-                "models": providers,
-                "total": len(litellm.model_cost),
-            }
-        }
+        return {"data": build_models_grouped()}
     except Exception as e:
         logger.error(f"Failed to get providers: {e}")
         return {"data": {"providers": [], "models": {}, "total": 0}}
@@ -146,25 +130,20 @@ async def get_providers(request: Request):
 
 @router.get("/models/catalog")
 async def get_model_catalog(request: Request):
-    """Get the full model catalog from LiteLLM cost DB."""
+    """
+    Get the full model catalog from the LiteLLM cost DB.
+
+    Returns the same records as /internal/v1/models/catalog (id, mode,
+    per-million prices, feature flags), which is the shape the Models page
+    (catalog, cost calculator, comparison) is built on.
+    """
     verify_internal_key(request)
 
     try:
-        models = []
-        for model_name, info in litellm.model_cost.items():
-            models.append({
-                "model": model_name,
-                "provider": info.get("litellm_provider", "unknown"),
-                "input_cost_per_token": info.get("input_cost_per_token"),
-                "output_cost_per_token": info.get("output_cost_per_token"),
-                "max_tokens": info.get("max_tokens"),
-                "max_input_tokens": info.get("max_input_tokens"),
-                "max_output_tokens": info.get("max_output_tokens"),
-                "supports_function_calling": info.get("supports_function_calling", False),
-                "supports_vision": info.get("supports_vision", False),
-                "supports_streaming": info.get("supports_streaming", True),
-            })
-        return {"data": {"models": models, "total": len(models)}}
+        models = build_model_catalog()
     except Exception as e:
+        # Fail loudly so the Models page shows its error banner instead of an
+        # empty catalog that looks like "no models match your filters".
         logger.error(f"Failed to get model catalog: {e}")
-        return {"data": {"models": [], "total": 0}}
+        raise HTTPException(status_code=500, detail="Failed to load model catalog")
+    return {"data": {"models": models, "total": len(models)}}

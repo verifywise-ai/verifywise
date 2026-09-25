@@ -1,5 +1,6 @@
 import { screen, render } from "@testing-library/react";
 import Chip, { VARIANT_COLORS, getChipColors } from "../Chip";
+import StatusBadge from "../StatusBadge";
 import { ThemeProvider, createTheme } from "@mui/material";
 
 function renderWithTheme(ui: React.ReactElement) {
@@ -7,6 +8,10 @@ function renderWithTheme(ui: React.ReactElement) {
 }
 
 describe("Chip", () => {
+  it("re-exports StatusBadge", () => {
+    expect(Chip).toBe(StatusBadge);
+  });
+
   it("renders the label text", () => {
     renderWithTheme(<Chip label="High" variant="high" />);
     expect(screen.getByText("High")).toBeInTheDocument();

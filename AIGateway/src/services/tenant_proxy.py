@@ -28,7 +28,7 @@ from sqlalchemy import text
 
 from config import settings
 from database.db import get_db
-from services.cost_service import estimate_prompt_cost
+from services.cost_service import _safe_cost, estimate_prompt_cost
 from services.llm_service import chat_completion, embedding, stream_chat_completion
 from services.proxy_service import (
     check_org_budget,
@@ -349,6 +349,10 @@ async def _finalize_spend(
     error_message: Optional[str] = None,
 ):
     """Log spend and reconcile budget after request completes."""
+    # Second spend-log write path (tenant/JWT flow), parallel to
+    # proxy_service.log_spend — sanitize cost here too so a non-finite cost can
+    # never be persisted to cost_usd or reconciled into the budget counter.
+    cost_usd = _safe_cost(cost_usd)
     try:
         # Get log settings
         log_bodies = {"request": False, "response": False}
@@ -597,7 +601,9 @@ async def tenant_stream_completion(
                     data = json.loads(chunk[6:])
                     if "usage" in data and data["usage"]:
                         total_usage = data["usage"]
-                    if "cost_usd" in data and data["cost_usd"]:
+                    if "cost_usd" in data and data["cost_usd"] is not None:
+                        # is not None (not truthiness): keep a legitimate 0.0
+                        # cost, and _safe_cost at finalize neutralizes any NaN.
                         total_cost = data["cost_usd"]
                     if "model" in data and data["model"]:
                         final_model = data["model"]

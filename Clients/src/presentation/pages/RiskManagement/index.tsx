@@ -100,8 +100,8 @@ const RiskManagement = () => {
     riskDescription: string;
     riskCategory: number[];
     potentialImpact: string;
-    assessmentMapping: number;
-    controlsMapping: number;
+    assessmentMapping: string;
+    controlsMapping: string;
     likelihood: number;
     riskSeverity: number;
     riskLevel: number;
@@ -594,8 +594,8 @@ const RiskManagement = () => {
     riskDescription: string;
     riskCategory: number[];
     potentialImpact: string;
-    assessmentMapping: number;
-    controlsMapping: number;
+    assessmentMapping: string;
+    controlsMapping: string;
     likelihood: number;
     riskSeverity: number;
     riskLevel: number;

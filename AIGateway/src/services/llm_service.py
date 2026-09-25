@@ -3,7 +3,7 @@ from typing import AsyncIterator
 
 import litellm
 
-from services.cost_service import calculate_stream_cost
+from services.cost_service import _safe_cost, calculate_stream_cost
 
 
 async def chat_completion(
@@ -50,6 +50,8 @@ async def chat_completion(
         # Model not in LiteLLM cost DB (e.g., OpenRouter models) — use upstream cost if available
         cost = getattr(response, "_hidden_params", {}).get("response_cost") or 0.0
 
+    # completion_cost can return NaN (not raise) for models it can't price.
+    cost = _safe_cost(cost)
     result = response.model_dump()
     result["cost_usd"] = cost
     result["usage"] = {
@@ -76,7 +78,7 @@ async def embedding(
         cost = 0.0
     return {
         "response": response.model_dump(),
-        "cost_usd": cost,
+        "cost_usd": _safe_cost(cost),
         "model": model,
     }
 
@@ -123,7 +125,9 @@ async def stream_chat_completion(
 
     if last_chunk and hasattr(last_chunk, "usage") and last_chunk.usage:
         try:
-            cost = litellm.completion_cost(completion_response=last_chunk)
+            # completion_cost can return NaN (not raise); coerce so the
+            # `cost == 0.0` fallback below still fires and no NaN is emitted.
+            cost = _safe_cost(litellm.completion_cost(completion_response=last_chunk))
             usage = {
                 "prompt_tokens": last_chunk.usage.prompt_tokens,
                 "completion_tokens": last_chunk.usage.completion_tokens,

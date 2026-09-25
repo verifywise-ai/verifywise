@@ -121,7 +121,7 @@ async def get_cache_stats(organization_id: int) -> dict:
                 SELECT
                     COUNT(*)                                       AS total_entries,
                     COALESCE(SUM(hit_count), 0)                    AS total_hits,
-                    COALESCE(SUM(hit_count * cost_usd), 0)         AS total_cost_saved,
+                    COALESCE(SUM(hit_count * cost_usd) FILTER (WHERE cost_usd <> 'NaN'::numeric), 0) AS total_cost_saved,
                     COALESCE(SUM(hit_count * total_tokens), 0)     AS total_tokens_saved,
                     ROUND(
                         CASE WHEN COUNT(*) > 0

@@ -94,7 +94,9 @@ class DeepEvalDatasetsService {
     form.append("dataset_type", datasetType);
     form.append("turn_type", turnType);
     form.append("org_id", finalOrgId);
-    const res = await CustomAxios.post("/deepeval/datasets/upload", form);
+    const res = await CustomAxios.post("/deepeval/datasets/upload", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
     return res.data as UploadDatasetResponse;
   }
 

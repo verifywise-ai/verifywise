@@ -10077,6 +10077,17 @@ export const systemEndpoints: Endpoint[] = [
     ],
     tag: "System",
   },
+  {
+    method: 'GET',
+    path: '/health',
+    summary: "Health Check",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "System",
+  },
 ];
 
 // Tasks endpoints

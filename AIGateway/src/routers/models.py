@@ -10,7 +10,7 @@ router = APIRouter()
 _cached_models: dict | None = None
 
 
-def _get_models_grouped() -> dict:
+def build_models_grouped() -> dict:
     """Build and cache the grouped models dict."""
     global _cached_models
     if _cached_models is not None:
@@ -43,13 +43,13 @@ def _get_models_grouped() -> dict:
 async def list_models(request: Request):
     """Return list of supported models grouped by provider."""
     verify_internal_key(request)
-    return _get_models_grouped()
+    return build_models_grouped()
 
 
 _cached_catalog: list | None = None
 
 
-def _get_model_catalog() -> list:
+def build_model_catalog() -> list:
     """Build a flat catalog of all models with full metadata. Cached at module scope."""
     global _cached_catalog
     if _cached_catalog is not None:
@@ -67,10 +67,16 @@ def _get_model_catalog() -> list:
         provider = info.get("litellm_provider", "")
         if not provider or len(provider) > 50:
             continue
+        # Entries without a mode are LiteLLM pricing tiers (e.g.
+        # "fireworks-ai-embedding-up-to-150m"), not callable models. Defaulting
+        # them to "chat" put them in the cost calculator as the cheapest models.
+        mode = info.get("mode")
+        if not mode:
+            continue
         catalog.append({
             "id": model_key,
-            "provider": info.get("litellm_provider", "unknown"),
-            "mode": info.get("mode", "chat"),
+            "provider": provider,
+            "mode": mode,
             "max_input_tokens": info.get("max_input_tokens"),
             "max_output_tokens": info.get("max_output_tokens"),
             "input_cost_per_million": round((info.get("input_cost_per_token") or 0) * 1_000_000, 4),
@@ -93,7 +99,7 @@ def _get_model_catalog() -> list:
 async def model_catalog(request: Request):
     """Return full model catalog with pricing and feature metadata."""
     verify_internal_key(request)
-    catalog = _get_model_catalog()
+    catalog = build_model_catalog()
     return {"models": catalog, "total": len(catalog)}
 
 
