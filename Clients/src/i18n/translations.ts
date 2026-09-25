@@ -9285,6 +9285,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Invite via email": "Per E-Mail einladen",
     "Must include an uppercase letter, a lowercase letter, and a digit. Minimum 8 characters.":
       "Muss einen Großbuchstaben, einen Kleinbuchstaben und eine Ziffer enthalten. Mindestens 8 Zeichen.",
+    "Default retention policy": "Standard-Aufbewahrungsrichtlinie",
+    "Expired files": "Abgelaufene Dateien",
+    "File Manager": "Dateimanager",
+    "File retention": "Dateiaufbewahrung",
+    "Retention policy": "Aufbewahrungsrichtlinie",
   },
 
   fr: {
@@ -18500,6 +18505,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Invite via email": "Inviter par e-mail",
     "Must include an uppercase letter, a lowercase letter, and a digit. Minimum 8 characters.":
       "Doit contenir une majuscule, une minuscule et un chiffre. Minimum 8 caractères.",
+    "Default retention policy": "Politique de rétention par défaut",
+    "Expired files": "Fichiers expirés",
+    "File Manager": "Gestionnaire de fichiers",
+    "File retention": "Rétention des fichiers",
+    "Retention policy": "Politique de rétention",
   },
   es: {
     "Deployment name": "Nombre del despliegue",
@@ -27634,5 +27644,10 @@ export const translations: Record<string, Record<string, string>> = {
     "Invite via email": "Invitar por correo",
     "Must include an uppercase letter, a lowercase letter, and a digit. Minimum 8 characters.":
       "Debe incluir una mayúscula, una minúscula y un dígito. Mínimo 8 caracteres.",
+    "Default retention policy": "Política de retención predeterminada",
+    "Expired files": "Archivos caducados",
+    "File Manager": "Gestor de archivos",
+    "File retention": "Retención de archivos",
+    "Retention policy": "Política de retención",
   },
 };
