@@ -24365,6 +24365,50 @@ paths:
         -
           bearerAuth: []
       description: 'Requires role: Super Admin'
+  /super-admin/mcp-server:
+    get:
+      summary: 'Get Mcp Server'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Super Admin'
+      operationId: getMcpServer
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Super Admin'
+    delete:
+      summary: 'Uninstall Mcp Server Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Super Admin'
+      operationId: uninstallMcpServerHandler
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Super Admin'
+  /super-admin/mcp-server/install:
+    post:
+      summary: 'Install Mcp Server Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Super Admin'
+      operationId: installMcpServerHandler
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Super Admin'
   /super-admin/super-admins:
     get:
       summary: 'List Super Admins'
