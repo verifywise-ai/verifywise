@@ -56,6 +56,7 @@ const TABLE_COLUMNS: StandardColumn[] = [
   { id: "risks", label: "RISKS", sortable: true },
   { id: "status", label: "STATUS", sortable: true },
   { id: "status_date", label: "STATUS DATE", sortable: true },
+  { id: "type", label: "TYPE", sortable: true },
   { id: "actions", label: "", sortable: false },
 ];
 
@@ -222,6 +223,10 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
         case "status_date":
           aValue = a.status_date ? new Date(a.status_date).getTime() : 0;
           bValue = b.status_date ? new Date(b.status_date).getTime() : 0;
+          break;
+        case "type":
+          aValue = (a.type || "").toLowerCase();
+          bValue = (b.type || "").toLowerCase();
           break;
         default:
           return 0;
@@ -438,6 +443,26 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
                           : "-"
                       }
                     />
+                  </TableCell>
+                )}
+                {isColVisible("type") && (
+                  <TableCell
+                    sx={{
+                      ...singleTheme.tableStyles.primary.body.cell,
+                      whiteSpace: "nowrap",
+                      backgroundColor:
+                        sortConfig.key === "type"
+                          ? singleTheme.tableColors.sortedColumn
+                          : undefined,
+                    }}
+                  >
+                    {modelInventory.type ? (
+                      <Chip label={modelInventory.type} />
+                    ) : (
+                      <Typography variant="body2" sx={{ color: palette.text.disabled }}>
+                        -
+                      </Typography>
+                    )}
                   </TableCell>
                 )}
                 {customFieldDefs.map((def) => {

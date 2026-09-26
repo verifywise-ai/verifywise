@@ -19,6 +19,10 @@ import { translateError } from "../utils/i18n.utils";
 export const createApiToken = async (req: Request, res: Response) => {
   const transaction = await sequelize.transaction();
   const { name, expires_in_days } = req.body;
+  // null for a super admin who belongs to no organization. Such a token is
+  // instance-wide rather than tenant-scoped, and is stored and looked up with
+  // organization_id IS NULL.
+  const organizationId = req.organizationId ?? null;
 
   if (!expires_in_days) {
     return res.status(400).json(STATUS_CODE[400](req.t!("expires_in_days is required")));
@@ -47,7 +51,12 @@ export const createApiToken = async (req: Request, res: Response) => {
     // user's current role on every request, so the token cannot outlive a
     // demotion. Role name is sourced from the cached live role map so newly
     // added roles work without a code change.
-    const roleName = await getRoleNameById(user.role_id!);
+    //
+    // A pure super admin has no org role (role_id IS NULL) and so is not in the
+    // role map. Their token carries the same "SuperAdmin" name loginUser mints;
+    // the auth middleware skips the role comparison when role_id is NULL.
+    const isOrglessSuperAdmin = user.role_id === null || user.role_id === undefined;
+    const roleName = isOrglessSuperAdmin ? "SuperAdmin" : await getRoleNameById(user.role_id!);
     if (!roleName) {
       throw new ValidationException("Unable to resolve the creating user's role.");
     }
@@ -59,7 +68,7 @@ export const createApiToken = async (req: Request, res: Response) => {
         id: user.id!,
         email: user.email!,
         roleName,
-        organizationId: req.organizationId!,
+        organizationId,
       },
       expiryDays,
     ) as string;
@@ -81,7 +90,7 @@ export const createApiToken = async (req: Request, res: Response) => {
         expires_at: new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000),
         created_by: req.userId!,
       },
-      req.organizationId!,
+      organizationId,
       transaction,
     );
     logStructured(
@@ -128,7 +137,7 @@ export const getApiTokens = async (req: Request, res: Response) => {
   logger.debug(`🛠️ Fetching API tokens`);
   logStructured("processing", `starting API tokens fetch`, "getApiTokens", "tokens.ctrl.ts");
   try {
-    const tokens = await getApiTokensQuery(req.organizationId!);
+    const tokens = await getApiTokensQuery(req.organizationId ?? null);
     logStructured(
       "successful",
       `fetched ${tokens.length} API tokens`,
@@ -167,7 +176,7 @@ export const deleteApiToken = async (req: Request, res: Response) => {
   try {
     const success = await deleteApiTokenQuery(
       parseInt(Array.isArray(id) ? id[0] : id),
-      req.organizationId!,
+      req.organizationId ?? null,
     );
     if (!success) {
       logStructured("error", `API token not found: ${id}`, "deleteApiToken", "tokens.ctrl.ts");
@@ -209,7 +218,7 @@ export const revokeApiToken = async (req: Request, res: Response) => {
   try {
     const success = await revokeApiTokenQuery(
       parseInt(Array.isArray(id) ? id[0] : id),
-      req.organizationId!,
+      req.organizationId ?? null,
     );
     if (!success) {
       logStructured(

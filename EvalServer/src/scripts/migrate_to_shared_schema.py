@@ -80,7 +80,9 @@ class IdMapping:
 class MigrationResult:
     """Result of a migration run."""
     success: bool
-    status: str  # "completed", "just_completed", "failed", "no_tenants", "already_completed"
+    # "completed", "just_completed", "failed", "no_tenants", "already_completed",
+    # "schema_not_ready"
+    status: str
     organizations_migrated: int = 0
     tables_processed: int = 0
     rows_migrated: int = 0
@@ -206,9 +208,138 @@ async def has_organization_id_column(session: AsyncSession, table_name: str) -> 
     return row[0] if row else False
 
 
+MIGRATION_STATUS_TABLE = "evalserver_migration_status"
+
+
+def get_missing_shared_tables(verifywise_tables: Set[str]) -> List[str]:
+    """Return the shared llm_evals_* tables (created by Alembic) that don't exist yet."""
+    return [t for t in get_all_tables_in_order() if t not in verifywise_tables]
+
+
+def schema_not_ready_result(missing_tables: List[str]) -> MigrationResult:
+    return MigrationResult(
+        success=False,
+        status="schema_not_ready",
+        errors=[
+            "Shared tables missing in verifywise schema ("
+            + ", ".join(missing_tables)
+            + "). Run `alembic upgrade head` in EvalServer/src, then restart."
+        ],
+    )
+
+
+# ============================================================
+# STRANDED-DATA DETECTION
+# ============================================================
+
+async def org_has_shared_rows(
+    session: AsyncSession, org_id: int, verifywise_tables: Set[str]
+) -> bool:
+    """True if any shared llm_evals_* table holds a row for this organization."""
+    for table_name in get_all_tables_in_order():
+        if table_name not in verifywise_tables:
+            continue
+        res = await session.execute(
+            _text('SELECT EXISTS (SELECT 1 FROM verifywise."' + table_name + '" WHERE organization_id = :org_id)'),
+            {"org_id": org_id},
+        )
+        row = res.fetchone()
+        if row and row[0]:
+            return True
+    return False
+
+
+async def tenant_has_legacy_rows(session: AsyncSession, tenant_hash: str) -> bool:
+    """True if the org's legacy tenant schema holds any llm_evals (or pre-rename) rows."""
+    if not await schema_exists(session, tenant_hash):
+        return False
+    available_tables = await get_tables_in_schema(session, tenant_hash)
+    for table_name in get_all_tables_in_order():
+        source_table = get_source_table_name(table_name, available_tables)
+        if source_table not in available_tables:
+            continue
+        res = await session.execute(
+            _text('SELECT EXISTS (SELECT 1 FROM "' + tenant_hash + '"."' + source_table + '")')
+        )
+        row = res.fetchone()
+        if row and row[0]:
+            return True
+    return False
+
+
+async def find_stranded_organizations(
+    session: AsyncSession, verifywise_tables: Set[str]
+) -> List[int]:
+    """
+    Organizations whose legacy tenant data was never copied.
+
+    An older startup check could record the migration "completed" while the
+    shared tables were missing, copying nothing. Such an org has rows in its
+    tenant schema but none at all in the shared tables. Requiring the shared
+    side to be completely empty for the org keeps a rerun safe: the SERIAL-id
+    tables (api_keys, datasets, bias_audit_results) are inserted without
+    ON CONFLICT, so rerunning over existing rows would duplicate them.
+    """
+    org_result = await session.execute(text("SELECT id FROM public.organizations ORDER BY id"))
+    stranded: List[int] = []
+    for (org_id,) in org_result.fetchall():
+        if await org_has_shared_rows(session, org_id, verifywise_tables):
+            continue
+        if await tenant_has_legacy_rows(session, get_tenant_hash(org_id)):
+            stranded.append(org_id)
+    return stranded
+
+
+async def plan_migration(
+    session: AsyncSession,
+) -> Tuple[Optional[MigrationResult], Optional[Set[int]]]:
+    """
+    Decide whether the data migration has to run.
+
+    Returns ``(early_result, org_filter)``. ``early_result`` is set when the run
+    should stop now: "already_completed" (healthy DB) or "schema_not_ready"
+    (Alembic has not created the shared tables; the status row is not touched
+    so the migration runs once they exist). Otherwise ``org_filter`` is None for
+    a normal full run, or the set of stranded org ids to recover.
+    """
+    verifywise_tables = await get_tables_in_schema(session, "verifywise")
+
+    # Status first, so a healthy, already-migrated DB skips everything else.
+    status = None
+    if MIGRATION_STATUS_TABLE in verifywise_tables:
+        status = await get_migration_status(session)
+
+    org_filter: Optional[Set[int]] = None
+    if status and status.get("status") == "completed":
+        stranded = await find_stranded_organizations(session, verifywise_tables)
+        if not stranded:
+            return (
+                MigrationResult(
+                    success=True,
+                    status="already_completed",
+                    organizations_migrated=status.get("organizations_migrated") or 0,
+                ),
+                None,
+            )
+        print(
+            "⚠️  Data migration is marked completed, but organization(s) "
+            + ", ".join(str(o) for o in stranded)
+            + " have legacy tenant-schema llm_evals rows and no rows in the shared "
+            "tables. Re-running the data migration for them."
+        )
+        org_filter = set(stranded)
+
+    missing_tables = get_missing_shared_tables(verifywise_tables)
+    if missing_tables:
+        return schema_not_ready_result(missing_tables), None
+
+    return None, org_filter
+
+
 # ============================================================
 # MIGRATION STATUS TRACKING
 # ============================================================
+
 
 async def ensure_migration_status_table(session: AsyncSession):
     """Create migration_status table if it doesn't exist."""
@@ -324,7 +455,15 @@ async def migrate_table(
     # Get columns from both source and target tables
     source_columns = await get_table_columns(session, tenant_hash, source_table)
     target_columns = await get_table_columns(session, "verifywise", table_name)
-    if not source_columns or not target_columns:
+    if not target_columns:
+        # The source has rows but the shared table is missing. Skipping here
+        # would let the run be recorded "completed" with the data left behind,
+        # so fail the organization instead.
+        raise RuntimeError(
+            f"target table verifywise.{table_name} does not exist; "
+            "run `alembic upgrade head` in EvalServer/src first"
+        )
+    if not source_columns:
         return result
 
     # Only copy columns that exist in BOTH source and target
@@ -584,21 +723,27 @@ async def migrate_to_shared_schema(
 
     try:
         async with Session() as session:
+            # Skip a completed run (unless an earlier run stranded some org's
+            # data), and refuse to run -- or record "completed" -- while the
+            # shared tables Alembic creates are missing.
+            early_result, org_filter = await plan_migration(session)
+            if early_result is not None:
+                if early_result.status == "already_completed":
+                    print("✓ Migration already completed")
+                else:
+                    print(f"✗ {early_result.errors[0]}")
+                return early_result
+
             # Ensure migration status table exists
             await ensure_migration_status_table(session)
-
-            # Check if migration already completed
-            status = await get_migration_status(session)
-            if status and status.get("status") == "completed":
-                print("✓ Migration already completed")
-                result.status = "already_completed"
-                return result
 
             # Get all organizations
             org_result = await session.execute(
                 text("SELECT id, name FROM public.organizations ORDER BY id")
             )
             organizations = [{"id": row[0], "name": row[1]} for row in org_result.fetchall()]
+            if org_filter is not None:
+                organizations = [org for org in organizations if org["id"] in org_filter]
 
             if not organizations:
                 print("No organizations found.")
@@ -732,19 +877,18 @@ async def check_and_run_migration(database_url: str) -> MigrationResult:
 
             try:
                 async with Session() as session:
+                    # Healthy completed DB -> "already_completed". Shared tables
+                    # missing -> "schema_not_ready" without touching the status
+                    # row, so the migration runs on the next startup after
+                    # `alembic upgrade head`. A completed run that stranded an
+                    # org's data falls through; migrate_to_shared_schema re-plans
+                    # and re-runs it for the stranded orgs only.
+                    early_result, _ = await plan_migration(session)
+                    if early_result is not None:
+                        return early_result
+
                     # Ensure migration status table exists
                     await ensure_migration_status_table(session)
-
-                    # Check current migration status
-                    status = await get_migration_status(session)
-
-                    # If migration already completed, skip
-                    if status and status.get("status") == "completed":
-                        return MigrationResult(
-                            success=True,
-                            status="already_completed",
-                            organizations_migrated=status.get("organizations_migrated", 0)
-                        )
 
                     # Check if any tenant schemas exist
                     org_result = await session.execute(

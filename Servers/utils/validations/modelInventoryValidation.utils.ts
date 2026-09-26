@@ -45,6 +45,13 @@ export const MODEL_INVENTORY_STATUS_ENUM = [
 ] as const;
 
 /**
+ * Model inventory type enum values
+ *
+ * Classification of the model's AI paradigm. NULL means "unclassified".
+ */
+export const MODEL_INVENTORY_TYPE_ENUM = ["Traditional ML", "GenAI", "RAG", "Agentic AI"] as const;
+
+/**
  * Model capabilities enum values
  *
  * Capabilities are organized into categories:
@@ -240,6 +247,13 @@ export const validateModelInventoryStatus = (value: any): ValidationResult => {
 };
 
 /**
+ * Validates model inventory type field (optional)
+ */
+export const validateModelInventoryType = (value: any): ValidationResult => {
+  return validateEnum(value, "Model inventory type", MODEL_INVENTORY_TYPE_ENUM, false);
+};
+
+/**
  * Validates status date field
  */
 export const validateStatusDate = (value: any): ValidationResult => {
@@ -286,6 +300,7 @@ export const createModelInventorySchema = {
   security_assessment: validateSecurityAssessment,
   status: validateModelInventoryStatus,
   status_date: validateStatusDate,
+  type: validateModelInventoryType,
   is_demo: validateIsDemo,
 };
 
@@ -303,6 +318,7 @@ export const updateModelInventorySchema = {
   security_assessment: validateSecurityAssessment,
   status: validateModelInventoryStatus,
   status_date: validateStatusDate,
+  type: validateModelInventoryType,
   is_demo: validateIsDemo,
 };
 

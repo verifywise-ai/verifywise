@@ -60,13 +60,13 @@ export default defineConfig({
         entryFileNames: "assets/[name]-[hash].js",
         chunkFileNames: "assets/[name]-[hash].js",
         assetFileNames: "assets/[name]-[hash].[ext]",
-        // Native rolldown chunk groups. `includeDependenciesRecursively: false`
-        // keeps each group limited to the packages it matches — with the old
-        // manualChunks function, group dependency capture pulled unrelated
-        // modules (e.g. react/jsx-runtime into vendor-editor, @xyflow/react and
-        // @tiptap/react into vendor-react) onto the critical path.
+        // Native rolldown chunk groups. Dependency capture stays recursive (the
+        // default): with `includeDependenciesRecursively: false` a group holds only
+        // the packages its `test` matches, so shared internals (redux under
+        // @reduxjs/toolkit, @mui/system under @mui/material) land in unrelated
+        // chunks and the vendor chunk imports them back — a cycle that leaves
+        // bindings uninitialized at module init and blanks the app on load.
         advancedChunks: {
-          includeDependenciesRecursively: false,
           groups: [
             {
               name: "vendor-react",
@@ -105,7 +105,7 @@ export default defineConfig({
   },
   test: {
     environment: "jsdom",
-    setupFiles: "./src/test/setup.ts",
+    setupFiles: ["./src/test/setupEnv.ts", "./src/test/setup.ts"],
     globals: true,
     testTimeout: 20000,
     exclude: ["e2e/**", "**/node_modules/**"],

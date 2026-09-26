@@ -392,7 +392,7 @@ async def purge_guardrail_logs(org_id: int, retention_days: int) -> int:
                         SELECT id
                         FROM ai_gateway_guardrail_logs
                         WHERE organization_id = :org_id
-                          AND created_at < NOW() - INTERVAL ':retention_days days'
+                          AND created_at < NOW() - make_interval(days => :retention_days)
                         LIMIT :batch_size
                     )
                     """

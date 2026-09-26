@@ -1,7 +1,10 @@
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "../../../test/renderWithProviders";
 import ModelInventoryTable from "./modelInventoryTable";
-import { ModelInventoryStatus } from "../../../domain/enums/modelInventory.enum";
+import {
+  ModelInventoryStatus,
+  ModelInventoryType,
+} from "../../../domain/enums/modelInventory.enum";
 import type { IModelInventory } from "../../../domain/interfaces/i.modelInventory";
 import {
   ModelRiskCategory,
@@ -43,6 +46,7 @@ const models: IModelInventory[] = [
     security_assessment: true,
     status: ModelInventoryStatus.APPROVED,
     status_date: new Date("2026-01-01"),
+    type: ModelInventoryType.GENAI,
     projects: [],
     frameworks: [],
   },
@@ -95,6 +99,14 @@ describe("ModelInventoryTable", () => {
     expect(screen.getByText("GPT-4")).toBeInTheDocument();
     expect(screen.getByText("Approved")).toBeInTheDocument();
     expect(screen.getByText("Pending")).toBeInTheDocument();
+  });
+
+  it("renders the type column with a chip, or a dash when type is not set", () => {
+    renderWithProviders(<ModelInventoryTable data={models} isLoading={false} />);
+
+    expect(screen.getByText("TYPE")).toBeInTheDocument();
+    expect(screen.getByText("GenAI")).toBeInTheDocument();
+    expect(screen.getAllByText("-").length).toBeGreaterThan(0);
   });
 
   it("shows 'No risks' when a model has none, and a risks link otherwise", () => {

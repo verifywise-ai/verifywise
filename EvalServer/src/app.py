@@ -86,37 +86,43 @@ async def cleanup_orphaned_experiments():
 
     try:
         async with get_db() as db:
+            # Each best-effort UPDATE runs in a SAVEPOINT: a failure (e.g. the table
+            # does not exist) rolls back only that statement. Without it the whole
+            # transaction is left aborted and every later query fails with
+            # InFailedSQLTransactionError, hiding the real error.
             # First, try shared-schema (llm_evals_experiments)
             try:
-                res = await db.execute(text(
-                    "UPDATE llm_evals_experiments "
-                    "SET status = 'failed', error_message = 'Server restarted during execution', "
-                    "completed_at = NOW() WHERE status = 'running'"
-                ))
+                async with db.begin_nested():
+                    res = await db.execute(text(
+                        "UPDATE llm_evals_experiments "
+                        "SET status = 'failed', error_message = 'Server restarted during execution', "
+                        "completed_at = NOW() WHERE status = 'running'"
+                    ))
                 if res.rowcount > 0:
                     logger.info(f"Marked {res.rowcount} orphaned experiment(s) as failed in verifywise schema")
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"Orphaned experiment cleanup failed for verifywise schema: {e}")
 
-            # Also check legacy tenant schemas (for backward compatibility during migration)
+            # Also check legacy tenant schemas (for backward compatibility during
+            # migration) -- only those that actually have llm_evals_experiments.
             result = await db.execute(text(
-                "SELECT schema_name FROM information_schema.schemata "
-                "WHERE schema_name NOT IN ('public', 'information_schema', 'pg_catalog', 'pg_toast') "
-                "AND schema_name NOT LIKE 'pg_%'"
+                "SELECT table_schema FROM information_schema.tables "
+                "WHERE table_name = 'llm_evals_experiments' AND table_schema <> 'verifywise'"
             ))
             schemas = [row[0] for row in result.fetchall()]
             for schema in schemas:
                 try:
                     safe_schema = schema.replace('"', '""')
-                    res = await db.execute(_text(
-                        'UPDATE "' + safe_schema + '".llm_evals_experiments '
-                        + "SET status = 'failed', error_message = 'Server restarted during execution', "
-                        + "completed_at = NOW() WHERE status = 'running'"
-                    ))
+                    async with db.begin_nested():
+                        res = await db.execute(_text(
+                            'UPDATE "' + safe_schema + '".llm_evals_experiments '
+                            + "SET status = 'failed', error_message = 'Server restarted during execution', "
+                            + "completed_at = NOW() WHERE status = 'running'"
+                        ))
                     if res.rowcount > 0:
                         logger.info(f"Marked {res.rowcount} orphaned experiment(s) as failed in schema '{schema}'")
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(f"Orphaned experiment cleanup failed for schema '{schema}': {e}")
             await db.commit()
     except Exception as e:
         logger.warning(f"Orphaned experiment cleanup skipped: {e}")

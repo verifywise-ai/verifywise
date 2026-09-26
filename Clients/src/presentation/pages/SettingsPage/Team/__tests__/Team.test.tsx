@@ -187,9 +187,9 @@ describe("TeamManagement", () => {
     renderWithProviders(<TeamManagement />);
 
     const deleteButtons = screen.getAllByRole("button");
-    const trashBtn = deleteButtons.find((btn) => btn.querySelector("svg.lucide-trash2"));
+    const trashBtn = deleteButtons.find((btn) => btn.querySelector("svg.lucide-trash"));
     await user.click(trashBtn!);
-    expect(screen.getByText("Confirm delete")).toBeInTheDocument();
+    expect(await screen.findByText("Confirm delete")).toBeInTheDocument();
 
     const dialog = screen.getByRole("dialog");
     await user.click(within(dialog).getByText("Delete"));
@@ -208,9 +208,9 @@ describe("TeamManagement", () => {
     renderWithProviders(<TeamManagement />);
 
     const deleteButtons = screen.getAllByRole("button");
-    const trashBtn = deleteButtons.find((btn) => btn.querySelector("svg.lucide-trash2"));
+    const trashBtn = deleteButtons.find((btn) => btn.querySelector("svg.lucide-trash"));
     await user.click(trashBtn!);
-    const dialog = screen.getByRole("dialog");
+    const dialog = await screen.findByRole("dialog");
     await user.click(within(dialog).getByText("Delete"));
 
     await waitFor(() => {

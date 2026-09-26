@@ -9,32 +9,32 @@ import {
   Chip as MuiChip,
 } from "@mui/material";
 import { Check, Copy, X } from "lucide-react";
-import Chip from "../../../components/Chip";
+import StatusBadge from "../../../components/StatusBadge";
 import { ChipVariant } from "../../../types/interfaces/i.chip";
 import CodeBlock from "../components/CodeBlock";
 
 const chipSnippets = {
-  basic: `import Chip from "../components/Chip";
+  basic: `import StatusBadge from "../components/StatusBadge";
 
-<Chip label="High" variant="high" />`,
+<StatusBadge label="High" variant="high" />`,
   autoVariant: `// Variant is auto-derived from the label when omitted
-<Chip label="Approved" />
-<Chip label="In progress" />`,
-  size: `<Chip label="Small" variant="info" size="small" />
-<Chip label="Medium" variant="info" size="medium" />`,
-  uppercase: `<Chip label="In progress" variant="warning" uppercase={false} />`,
-  custom: `<Chip label="Custom" backgroundColor="#E8F5E9" textColor="#2E7D32" />`,
+<StatusBadge label="Approved" />
+<StatusBadge label="In progress" />`,
+  size: `<StatusBadge label="Small" variant="info" size="small" />
+<StatusBadge label="Medium" variant="info" size="medium" />`,
+  uppercase: `<StatusBadge label="In progress" variant="warning" uppercase={false} />`,
+  custom: `<StatusBadge label="Custom" backgroundColor="#E8F5E9" textColor="#2E7D32" />`,
 };
 
 const dosAndDontsExamples = [
   {
     do: {
-      title: "Use the unified Chip component for status badges",
-      code: `<Chip label="Approved" />\n<Chip label="High" variant="high" />`,
+      title: "Use StatusBadge for status badges",
+      code: `<StatusBadge label="Approved" />\n<StatusBadge label="High" variant="high" />`,
       preview: (
         <Box sx={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-          <Chip label="Approved" />
-          <Chip label="High" variant="high" />
+          <StatusBadge label="Approved" />
+          <StatusBadge label="High" variant="high" />
         </Box>
       ),
     },
@@ -76,21 +76,21 @@ const dosAndDontsExamples = [
   {
     do: {
       title: "Let the variant auto-derive from common labels",
-      code: `<Chip label="In progress" />\n<Chip label="Rejected" />`,
+      code: `<StatusBadge label="In progress" />\n<StatusBadge label="Rejected" />`,
       preview: (
         <Box sx={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-          <Chip label="In progress" />
-          <Chip label="Rejected" />
+          <StatusBadge label="In progress" />
+          <StatusBadge label="Rejected" />
         </Box>
       ),
     },
     dont: {
       title: "Don't hardcode hex colors for standard statuses",
-      code: `<Chip\n  label="In progress"\n  backgroundColor="#FEF3C7"\n  textColor="#D97706"\n/>`,
+      code: `<StatusBadge\n  label="In progress"\n  backgroundColor="#FEF3C7"\n  textColor="#D97706"\n/>`,
       preview: (
         <Box sx={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-          <Chip label="In progress" backgroundColor="#FEF3C7" textColor="#D97706" />
-          <Chip label="Rejected" backgroundColor="#FEE2E2" textColor="#DC2626" />
+          <StatusBadge label="In progress" backgroundColor="#FEF3C7" textColor="#D97706" />
+          <StatusBadge label="Rejected" backgroundColor="#FEE2E2" textColor="#DC2626" />
         </Box>
       ),
     },
@@ -98,30 +98,30 @@ const dosAndDontsExamples = [
   {
     do: {
       title: "Pass an explicit variant when the label is ambiguous",
-      code: `<Chip label="Stage 2" variant="warning" />\n<Chip label="Tier A" variant="high" />`,
+      code: `<StatusBadge label="Stage 2" variant="warning" />\n<StatusBadge label="Tier A" variant="high" />`,
       preview: (
         <Box sx={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-          <Chip label="Stage 2" variant="warning" />
-          <Chip label="Tier A" variant="high" />
+          <StatusBadge label="Stage 2" variant="warning" />
+          <StatusBadge label="Tier A" variant="high" />
         </Box>
       ),
     },
     dont: {
       title: "Don't rely on auto-variant for custom or unknown labels",
-      code: `<Chip label="Stage 2" />\n<Chip label="Tier A" />`,
+      code: `<StatusBadge label="Stage 2" />\n<StatusBadge label="Tier A" />`,
       preview: (
         <Box sx={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-          <Chip label="Stage 2" />
-          <Chip label="Tier A" />
+          <StatusBadge label="Stage 2" />
+          <StatusBadge label="Tier A" />
         </Box>
       ),
     },
   },
   {
     do: {
-      title: "Use Chip for risk levels, statuses, and severities",
-      code: `import Chip from "../components/Chip";\n\n<Chip label="Critical" variant="critical" />`,
-      preview: <Chip label="Critical" variant="critical" />,
+      title: "Use StatusBadge for risk levels, statuses, and severities",
+      code: `import StatusBadge from "../components/StatusBadge";\n\n<StatusBadge label="Critical" variant="critical" />`,
+      preview: <StatusBadge label="Critical" variant="critical" />,
     },
     dont: {
       title: "Don't use raw MUI Chip for status badges",
@@ -133,7 +133,7 @@ const dosAndDontsExamples = [
   },
 ];
 
-// Variant groups, mirroring VARIANT_COLORS in Chip.tsx
+// Variant groups, mirroring VARIANT_GROUPS in StatusBadge
 const variantGroups: { group: string; variants: ChipVariant[] }[] = [
   { group: "Risk levels", variants: ["critical", "high", "medium", "low", "very-low"] },
   { group: "Status", variants: ["success", "warning", "error", "info", "default"] },
@@ -183,9 +183,9 @@ const ChipSection: React.FC = () => {
             maxWidth: 600,
           }}
         >
-          The unified Chip component renders consistent light pastel badges for risk levels,
-          statuses, severities and boolean values. The variant is auto-derived from the label when
-          not provided explicitly.
+          StatusBadge is the shared badge for risk, status, severity, and boolean values. Chip
+          re-exports it, so existing screens keep their import. Variant, size, and the uppercase
+          override are shown below. The variant is auto-derived from the label when omitted.
         </Typography>
       </Box>
 
@@ -212,7 +212,7 @@ const ChipSection: React.FC = () => {
               </Typography>
               <Box sx={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                 {variants.map((variant) => (
-                  <Chip key={variant} label={variant.replace("-", " ")} variant={variant} />
+                  <StatusBadge key={variant} label={variant.replace("-", " ")} variant={variant} />
                 ))}
               </Box>
             </Box>
@@ -232,7 +232,7 @@ const ChipSection: React.FC = () => {
                 code={chipSnippets.basic}
                 onCopy={handleCopy}
               >
-                <Chip label="High" variant="high" />
+                <StatusBadge label="High" variant="high" />
               </ExampleWithCode>
 
               <ExampleWithCode
@@ -241,15 +241,15 @@ const ChipSection: React.FC = () => {
                 onCopy={handleCopy}
               >
                 <Box sx={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                  <Chip label="Approved" />
-                  <Chip label="In progress" />
+                  <StatusBadge label="Approved" />
+                  <StatusBadge label="In progress" />
                 </Box>
               </ExampleWithCode>
 
               <ExampleWithCode label="Sizes" code={chipSnippets.size} onCopy={handleCopy}>
                 <Box sx={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                  <Chip label="Small" variant="info" size="small" />
-                  <Chip label="Medium" variant="info" size="medium" />
+                  <StatusBadge label="Small" variant="info" size="small" />
+                  <StatusBadge label="Medium" variant="info" size="medium" />
                 </Box>
               </ExampleWithCode>
 
@@ -258,11 +258,11 @@ const ChipSection: React.FC = () => {
                 code={chipSnippets.uppercase}
                 onCopy={handleCopy}
               >
-                <Chip label="In progress" variant="warning" uppercase={false} />
+                <StatusBadge label="In progress" variant="warning" uppercase={false} />
               </ExampleWithCode>
 
               <ExampleWithCode label="Custom colors" code={chipSnippets.custom} onCopy={handleCopy}>
-                <Chip label="Custom" backgroundColor="#E8F5E9" textColor="#2E7D32" />
+                <StatusBadge label="Custom" backgroundColor="#E8F5E9" textColor="#2E7D32" />
               </ExampleWithCode>
             </Stack>
           </Box>
@@ -325,8 +325,8 @@ const ChipSection: React.FC = () => {
       {/* Do's and Don'ts */}
       <SpecSection title="Do's and don'ts">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
-          Follow these patterns when displaying risk levels, statuses, and severities. Use the
-          unified Chip instead of inline styles or raw MUI Chip.
+          Follow these patterns when displaying risk levels, statuses, and severities. Use
+          StatusBadge instead of inline styles or raw MUI Chip.
         </Typography>
         <Stack spacing="16px">
           {dosAndDontsExamples.map((item, index) => (
@@ -379,7 +379,7 @@ const ChipSection: React.FC = () => {
         </Typography>
         <Stack spacing="8px">
           {[
-            "Import Chip from components/Chip",
+            "Import StatusBadge from components/StatusBadge",
             "Prefer label-only usage — the variant is auto-derived from common labels",
             "Pass an explicit variant when the label is ambiguous or custom",
             "Unknown labels fall back to the default (gray) variant",

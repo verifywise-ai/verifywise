@@ -17,7 +17,10 @@ import { ChevronDown, DownloadIcon } from "lucide-react";
 import StandardModal from "../StandardModal";
 import CustomFieldsSection, { type CustomFieldsSectionHandle } from "../../CustomFieldsSection";
 import { useRequiredCustomFieldsGate } from "../../CustomFieldsSection/RequiredCustomFieldsGate";
-import { ModelInventoryStatus } from "../../../../domain/enums/modelInventory.enum";
+import {
+  ModelInventoryStatus,
+  ModelInventoryType,
+} from "../../../../domain/enums/modelInventory.enum";
 import { HistorySidebar } from "../../Common/HistorySidebar";
 import { useModelInventoryChangeHistory } from "../../../../application/hooks/useModelInventoryChangeHistory";
 import { getAllEntities } from "../../../../application/repository/entity.repository";
@@ -78,6 +81,7 @@ interface NewModelInventoryFormValues {
   security_assessment: boolean;
   status: ModelInventoryStatus;
   status_date: string;
+  type: ModelInventoryType | "" | null;
   reference_link: string;
   biases: string;
   limitations: string;
@@ -99,6 +103,7 @@ const initialState: NewModelInventoryFormValues = {
   security_assessment: false,
   status: ModelInventoryStatus.PENDING,
   status_date: new Date().toISOString().split("T")[0],
+  type: "",
   reference_link: "",
   biases: "",
   limitations: "",
@@ -116,6 +121,13 @@ const statusOptions = [
   { _id: ModelInventoryStatus.PENDING, name: "Pending" },
   { _id: ModelInventoryStatus.BLOCKED, name: "Blocked" },
   { _id: ModelInventoryStatus.RETIRED, name: "Retired" },
+];
+
+const typeOptions = [
+  { _id: ModelInventoryType.TRADITIONAL_ML, name: "Traditional ML" },
+  { _id: ModelInventoryType.GENAI, name: "GenAI" },
+  { _id: ModelInventoryType.RAG, name: "RAG" },
+  { _id: ModelInventoryType.AGENTIC_AI, name: "Agentic AI" },
 ];
 
 const capabilityOptions = [
@@ -458,6 +470,7 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
         if (onSuccess) {
           const result = await onSuccess({
             ...values,
+            type: values.type || null,
             capabilities: values.capabilities,
             security_assessment: values.security_assessment,
           });
@@ -801,6 +814,16 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
           onChange={handleOnTextFieldChange("external_key")}
           sx={fieldStyle}
           placeholder="eg. credit-scoring-v3"
+        />
+        <SelectComponent
+          items={typeOptions}
+          value={values.type ?? ""}
+          error={errors.type}
+          sx={{ width: "50%" }}
+          id="type"
+          label="Type"
+          onChange={handleOnSelectChange("type")}
+          placeholder="Select type"
         />
       </Stack>
 

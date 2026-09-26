@@ -66,8 +66,8 @@ const riskInitialState: RiskFormValues = {
   riskDescription: "",
   riskCategory: [1],
   potentialImpact: "",
-  assessmentMapping: 0,
-  controlsMapping: 0,
+  assessmentMapping: "",
+  controlsMapping: "",
   likelihood: 1 as Likelihood,
   riskSeverity: 1 as Severity,
   riskLevel: 0,
@@ -263,8 +263,8 @@ export function useRiskForm(props: AddNewRiskFormProps): UseRiskFormReturn {
             )
           : [1],
         potentialImpact: (inputValues.impact as string) ?? "",
-        assessmentMapping: (inputValues.assessment_mapping as number) ?? 0,
-        controlsMapping: (inputValues.controlsMapping as number) ?? 0,
+        assessmentMapping: String(inputValues.assessment_mapping ?? ""),
+        controlsMapping: String(inputValues.controls_mapping ?? ""),
         likelihood: likelihoodItems.find((item) => item.name === inputValues.likelihood)?._id ?? 1,
         riskSeverity:
           riskSeverityItems.find((item) => item.name === inputValues.severity)?._id ?? 1,

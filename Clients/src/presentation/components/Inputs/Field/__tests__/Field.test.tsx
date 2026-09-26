@@ -15,7 +15,9 @@ describe("Field Component", () => {
     renderWithProviders(<Field label="Email" isRequired />);
 
     expect(screen.getByText("Email")).toBeInTheDocument();
-    expect(screen.getByText("*")).toBeInTheDocument();
+    const asterisk = screen.getByText("*");
+    expect(asterisk).toBeInTheDocument();
+    expect(asterisk).toHaveStyle({ color: "#D32F2F" });
   });
 
   it("shows (optional) label when isOptional is true", () => {
@@ -80,6 +82,27 @@ describe("Field Component", () => {
     renderWithProviders(<Field label="Email" error="Invalid email format" />);
 
     expect(screen.getByText("Invalid email format")).toBeInTheDocument();
+  });
+
+  it("sets aria-invalid and aria-errormessage when an error exists", () => {
+    renderWithProviders(
+      <Field label="Email" error="Invalid email format" placeholder="Enter email" />,
+    );
+
+    const input = screen.getByPlaceholderText("Enter email");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+
+    const errorMessageId = input.getAttribute("aria-errormessage");
+    expect(errorMessageId).toBeTruthy();
+    expect(document.getElementById(errorMessageId!)).toHaveTextContent("Invalid email format");
+  });
+
+  it("does not mark the input invalid when there is no error", () => {
+    renderWithProviders(<Field label="Email" placeholder="Enter email" />);
+
+    const input = screen.getByPlaceholderText("Enter email");
+    expect(input).toHaveAttribute("aria-invalid", "false");
+    expect(input).not.toHaveAttribute("aria-errormessage");
   });
 
   it("does not display error when error prop is empty", () => {

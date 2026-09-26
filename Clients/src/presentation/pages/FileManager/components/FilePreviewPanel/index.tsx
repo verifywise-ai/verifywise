@@ -424,6 +424,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
             <Tooltip title="Previous file">
               <span>
                 <IconButton
+                  aria-label="Previous file"
                   onClick={() => onNavigate?.((currentIndex as number) - 1)}
                   size="small"
                   disabled={!canPrev}
@@ -456,6 +457,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
               <Tooltip title="Next file">
                 <span>
                   <IconButton
+                    aria-label="Next file"
                     onClick={() => onNavigate?.((currentIndex as number) + 1)}
                     size="small"
                     disabled={!canNext}
@@ -470,13 +472,19 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
         </Box>
         <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
           {onEdit && file && (
-            <IconButton onClick={() => onEdit(file)} size="small" sx={{ color: "text.icon" }}>
+            <IconButton
+              aria-label="Edit file"
+              onClick={() => onEdit(file)}
+              size="small"
+              sx={{ color: "text.icon" }}
+            >
               <Pencil size={18} />
             </IconButton>
           )}
           <Tooltip title={!isAdmin ? "Only admins can download files" : ""}>
             <span>
               <IconButton
+                aria-label="Download file"
                 onClick={handleDownload}
                 size="small"
                 disabled={downloading || !isAdmin}
@@ -490,7 +498,12 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
               </IconButton>
             </span>
           </Tooltip>
-          <IconButton onClick={onClose} size="small" sx={{ color: "text.icon" }}>
+          <IconButton
+            aria-label="Close file preview"
+            onClick={onClose}
+            size="small"
+            sx={{ color: "text.icon" }}
+          >
             <X size={18} />
           </IconButton>
         </Box>

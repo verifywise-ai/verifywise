@@ -1,8 +1,13 @@
 import { screen } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import Chip from "../../Chip";
+import StatusBadge from "../../StatusBadge";
 
 describe("Chip", () => {
+  it("re-exports StatusBadge", () => {
+    expect(Chip).toBe(StatusBadge);
+  });
+
   it("renders the label text", () => {
     renderWithProviders(<Chip label="Active" />);
     expect(screen.getByText("Active")).toBeInTheDocument();

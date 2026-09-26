@@ -5,7 +5,6 @@ Prefix: /spend
 
 from __future__ import annotations
 
-import asyncio
 import re
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -78,27 +77,21 @@ async def spend_summary(
 ):
     """
     Return a comprehensive spend overview for the requesting organisation.
-    All sub-queries run in parallel via asyncio.gather.
+    Sub-queries run sequentially: an AsyncSession does not allow concurrent
+    operations, so asyncio.gather on one session fails intermittently.
     """
     verify_internal_key(request)
     org_id = get_org_id(request)
     start_date, end_date = get_date_range(period)
 
     async with get_db() as db:
-        (
-            summary,
-            by_day,
-            by_model,
-            by_provider,
-            error_rate_by_day,
-            tokens_per_endpoint,
-        ) = await asyncio.gather(
-            spend_crud.get_spend_summary(db, org_id, start_date, end_date),
-            spend_crud.get_spend_by_day(db, org_id, start_date, end_date, period),
-            spend_crud.get_spend_by_model(db, org_id, start_date, end_date),
-            spend_crud.get_spend_by_provider(db, org_id, start_date, end_date),
-            spend_crud.get_error_rate_by_day(db, org_id, start_date, end_date),
-            spend_crud.get_tokens_per_request_by_endpoint(db, org_id, start_date, end_date),
+        summary = await spend_crud.get_spend_summary(db, org_id, start_date, end_date)
+        by_day = await spend_crud.get_spend_by_day(db, org_id, start_date, end_date, period)
+        by_model = await spend_crud.get_spend_by_model(db, org_id, start_date, end_date)
+        by_provider = await spend_crud.get_spend_by_provider(db, org_id, start_date, end_date)
+        error_rate_by_day = await spend_crud.get_error_rate_by_day(db, org_id, start_date, end_date)
+        tokens_per_endpoint = await spend_crud.get_tokens_per_request_by_endpoint(
+            db, org_id, start_date, end_date
         )
 
     return {
@@ -196,6 +189,22 @@ async def spend_by_tag(
         "end_date": end_date,
         "data": rows,
     }
+
+
+# ---------------------------------------------------------------------------
+# GET /spend/logs
+# ---------------------------------------------------------------------------
+
+@router.get("/exists", summary="Whether the organisation has any spend logs")
+async def spend_logs_exist(request: Request):
+    """Cheap first-time check for the dashboard (no count, no joins)."""
+    verify_internal_key(request)
+    org_id = get_org_id(request)
+
+    async with get_db() as db:
+        has_logs = await spend_crud.has_spend_logs(db, org_id)
+
+    return {"has_logs": has_logs}
 
 
 # ---------------------------------------------------------------------------

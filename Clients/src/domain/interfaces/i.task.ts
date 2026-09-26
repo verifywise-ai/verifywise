@@ -35,6 +35,7 @@ export interface ITask {
   updated_at?: Date;
   creator_name?: string;
   assignees?: ITaskAssignee[];
+  entity_links?: IEntityLink[];
   isOverdue?: boolean;
 }
 

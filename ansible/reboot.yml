@@ -1,0 +1,41 @@
+---
+- name: Reboot server(s) and wait until fully back
+  hosts: all
+  become: yes                    # reboot requires root/sudo on the target host
+  gather_facts: no               # facts would fail/be stale mid-reboot; not needed here
+  serial: 1                      # reboot ONE server at a time — never take down the whole fleet at once
+
+  tasks:
+    - name: Check SSH connectivity before reboot
+      ansible.builtin.ping:
+
+    - name: Show which host is about to reboot
+      ansible.builtin.debug:
+        msg: "Rebooting {{ inventory_hostname }} ({{ ansible_host | default(inventory_hostname) }})..."
+
+    - name: Reboot the server and wait for it to come back
+      ansible.builtin.reboot:
+        msg: "Reboot initiated by Semaphore (Ansible)"
+        pre_reboot_delay: 5          # give services 5s to shut down cleanly
+        post_reboot_delay: 10        # extra wait after SSH responds (services still starting)
+        reboot_timeout: 600          # fail if not back within 10 minutes
+        connect_timeout: 60
+        test_command: uptime         # confirms shell is usable, not just port open
+
+    - name: Confirm the server is really back
+      ansible.builtin.command: uptime
+      register: uptime_result
+      changed_when: false
+
+    - name: Show uptime after reboot
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} is back up: {{ uptime_result.stdout }}"
+
+    - name: Verify critical services are running (adjust to your stack)
+      ansible.builtin.service:
+        name: "{{ item }}"
+        state: started
+      loop:
+        - ssh             # service name on Debian/Ubuntu hosts ('sshd' on RHEL/CentOS)
+        - docker          # remove this line if the host doesn't run Docker
+      ignore_errors: yes   # don't fail the whole task if a service doesn't exist on this host

@@ -1,7 +1,6 @@
 import express, { RequestHandler } from "express";
 import cors from "cors";
 import helmet from "helmet";
-import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
 import { csrfProtection } from "./middleware/csrf.middleware";
 
@@ -120,7 +119,7 @@ import virtualKeyProxyRoutes from "./routes/virtualKeyProxy.route";
 import internalRoutes from "./routes/internal.route";
 import superAdminRoutes from "./routes/superAdmin.route";
 import { i18nMiddleware } from "./middleware/i18n.middleware";
-import { generalApiLimiter } from "./middleware/rateLimit.middleware";
+import { generalApiLimiter, healthCheckLimiter } from "./middleware/rateLimit.middleware";
 import { sequelize } from "./database/db";
 import redisClient from "./database/redis";
 import ssoConfigRoutes from "./routes/ssoConfig.route";
@@ -192,57 +191,45 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
 
   // Generous rate limiter for the health endpoint. Load-balancer probes are
   // still allowed, but the endpoint is capped to prevent abuse.
-  const nodeEnv = (process.env.NODE_ENV ?? "").trim().toLowerCase();
-  const isNonProduction = nodeEnv === "development" || nodeEnv === "test" || nodeEnv === "local";
-  app.get(
-    "/health",
-    rateLimit({
-      windowMs: 60 * 1000,
-      max: isNonProduction ? 100000 : 1000,
-      standardHeaders: true,
-      legacyHeaders: false,
-      message: "Too many health-check requests from this IP, please slow down",
-    }),
-    async (_req, res) => {
-      const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || "http://localhost:8100";
-      const checks: Record<string, { status: "ok" | "error"; error?: string }> = {};
+  app.get("/health", healthCheckLimiter, async (_req, res) => {
+    const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || "http://localhost:8100";
+    const checks: Record<string, { status: "ok" | "error"; error?: string }> = {};
 
+    try {
+      await sequelize.query("SELECT 1");
+      checks.database = { status: "ok" };
+    } catch (err: unknown) {
+      checks.database = { status: "error", error: (err as Error).message };
+    }
+
+    try {
+      const pong = await redisClient.ping();
+      checks.redis =
+        pong === "PONG"
+          ? { status: "ok" }
+          : { status: "error", error: `Unexpected PING response: ${pong}` };
+    } catch (err: unknown) {
+      checks.redis = { status: "error", error: (err as Error).message };
+    }
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
       try {
-        await sequelize.query("SELECT 1");
-        checks.database = { status: "ok" };
-      } catch (err: unknown) {
-        checks.database = { status: "error", error: (err as Error).message };
+        const gwRes = await fetch(`${AI_GATEWAY_URL}/health`, { signal: controller.signal });
+        checks.ai_gateway = gwRes.ok
+          ? { status: "ok" }
+          : { status: "error", error: `HTTP ${gwRes.status}` };
+      } finally {
+        clearTimeout(timeout);
       }
+    } catch (err: unknown) {
+      checks.ai_gateway = { status: "error", error: (err as Error).message };
+    }
 
-      try {
-        const pong = await redisClient.ping();
-        checks.redis =
-          pong === "PONG"
-            ? { status: "ok" }
-            : { status: "error", error: `Unexpected PING response: ${pong}` };
-      } catch (err: unknown) {
-        checks.redis = { status: "error", error: (err as Error).message };
-      }
-
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 5000);
-        try {
-          const gwRes = await fetch(`${AI_GATEWAY_URL}/health`, { signal: controller.signal });
-          checks.ai_gateway = gwRes.ok
-            ? { status: "ok" }
-            : { status: "error", error: `HTTP ${gwRes.status}` };
-        } finally {
-          clearTimeout(timeout);
-        }
-      } catch (err: unknown) {
-        checks.ai_gateway = { status: "error", error: (err as Error).message };
-      }
-
-      const allOk = Object.values(checks).every((c) => c.status === "ok");
-      res.status(allOk ? 200 : 503).json({ status: allOk ? "ok" : "degraded", checks });
-    },
-  );
+    const allOk = Object.values(checks).every((c) => c.status === "ok");
+    res.status(allOk ? 200 : 503).json({ status: allOk ? "ok" : "degraded", checks });
+  });
 
   // Track every request: metrics + access log (shipped to the central
   // observability stack when monitoring is enabled). Mounted after /health so

@@ -54,6 +54,7 @@ jest.mock("../../services/inAppNotification.service", () => ({
 }));
 jest.mock("../../utils/taskEntityLink.utils", () => ({
   getTaskEntityLinksQuery: jest.fn().mockResolvedValue([]),
+  persistTaskEntityLinks: jest.fn().mockResolvedValue(0),
 }));
 jest.mock("../../utils/changeHistory.base.utils", () => ({
   recordEntityCreation: jest.fn().mockResolvedValue(undefined),
@@ -87,6 +88,11 @@ import {
   restoreTaskByIdQuery,
   hardDeleteTaskByIdQuery,
 } from "../../utils/task.utils";
+import { persistTaskEntityLinks } from "../../utils/taskEntityLink.utils";
+
+const mockPersistLinks = persistTaskEntityLinks as jest.MockedFunction<
+  typeof persistTaskEntityLinks
+>;
 
 const mockCreate = createNewTaskQuery as jest.MockedFunction<typeof createNewTaskQuery>;
 const mockGetAll = getTasksQuery as jest.MockedFunction<typeof getTasksQuery>;
@@ -196,6 +202,24 @@ describe("task.ctrl", () => {
       const res = createRes();
       await createTask(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+    it("should persist entity_links when provided", async () => {
+      const task = mockTask(buildTask({ id: 5 }));
+      mockCreate.mockResolvedValue(task as any);
+      const links = [{ entity_id: 9, entity_type: "policy", entity_name: "P" }];
+      const req = createReq({ body: { title: "T1", assignees: [], entity_links: links } });
+      const res = createRes();
+      await createTask(req, res);
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(mockPersistLinks).toHaveBeenCalledWith(5, links, 1, expect.anything());
+    });
+    it("should not persist entity_links when none are provided", async () => {
+      const task = mockTask(buildTask());
+      mockCreate.mockResolvedValue(task as any);
+      const req = createReq({ body: { title: "T1", assignees: [] } });
+      const res = createRes();
+      await createTask(req, res);
+      expect(mockPersistLinks).not.toHaveBeenCalled();
     });
   });
 
@@ -322,6 +346,32 @@ describe("task.ctrl", () => {
       const res = createRes();
       await updateTask(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+    it("should persist entity_links when provided", async () => {
+      const existing = mockTask(buildTask());
+      const updated = mockTask(buildTask({ id: 7 }));
+      mockGetById.mockResolvedValue(existing as any);
+      mockUpdate.mockResolvedValue(updated as any);
+      const links = [{ entity_id: 3, entity_type: "vendor", entity_name: "V" }];
+      const req = createReq({
+        params: { id: "7" },
+        body: { title: "T2", entity_links: links },
+      });
+      const res = createRes();
+      await updateTask(req, res);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(mockPersistLinks).toHaveBeenCalledWith(7, links, 1, expect.anything());
+    });
+    it("should not persist entity_links when none are provided", async () => {
+      const existing = mockTask(buildTask());
+      const updated = mockTask(buildTask({ id: 7 }));
+      mockGetById.mockResolvedValue(existing as any);
+      mockUpdate.mockResolvedValue(updated as any);
+      const req = createReq({ params: { id: "7" }, body: { title: "T2" } });
+      const res = createRes();
+      await updateTask(req, res);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(mockPersistLinks).not.toHaveBeenCalled();
     });
   });
 

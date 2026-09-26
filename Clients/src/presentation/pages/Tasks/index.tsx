@@ -19,7 +19,6 @@ import {
   hardDeleteTask,
 } from "../../../application/repository/task.repository";
 import {
-  addTaskEntityLink,
   removeTaskEntityLink,
   getTaskEntityLinks,
 } from "../../../application/repository/taskEntityLink.repository";
@@ -352,36 +351,18 @@ const Tasks: React.FC = () => {
 
   const handleTaskCreated = async (formData: any) => {
     try {
-      // Extract entity_links - we'll pass them to the API for notification purposes
-      // but also sync them separately after creation
+      // entity_links are persisted by the backend inside the create
+      // transaction; they are also used for the assignment notification.
       const { entity_links, ...taskData } = formData;
 
       const response = await createTaskMutation.mutateAsync({
         body: {
           ...taskData,
-          // Include entity_links for notification email (backend uses these immediately)
           entity_links: entity_links || [],
         },
       });
       if (response && response.data) {
         const newTaskId = response.data.id;
-
-        // Save entity links if any
-        if (entity_links && entity_links.length > 0 && newTaskId) {
-          try {
-            for (const link of entity_links) {
-              await addTaskEntityLink(
-                newTaskId,
-                link.entity_id,
-                link.entity_type,
-                link.entity_name,
-              );
-            }
-          } catch (linkError) {
-            console.error("Error saving entity links:", linkError);
-            // Don't fail the whole operation, just log the error
-          }
-        }
 
         setAlert({
           variant: "success",
@@ -442,7 +423,9 @@ const Tasks: React.FC = () => {
         },
       });
       if (response && response.data) {
-        // Sync entity links: get existing, compare, remove old, add new
+        // Sync removals only: the backend persists new links atomically
+        // inside the update transaction, so the diff below only needs to
+        // delete links that were removed in the form.
         if (newEntityLinks) {
           try {
             const existingLinks = await getTaskEntityLinks(editingTask.id!);
@@ -457,29 +440,9 @@ const Tasks: React.FC = () => {
                 ),
             );
 
-            // Find links to add (in new but not in existing)
-            const linksToAdd = newEntityLinks.filter(
-              (newLink: any) =>
-                !existingLinks.some(
-                  (existing) =>
-                    existing.entity_id === newLink.entity_id &&
-                    existing.entity_type === newLink.entity_type,
-                ),
-            );
-
             // Remove old links
             for (const link of linksToRemove) {
               await removeTaskEntityLink(editingTask.id!, link.id);
-            }
-
-            // Add new links
-            for (const link of linksToAdd) {
-              await addTaskEntityLink(
-                editingTask.id!,
-                link.entity_id,
-                link.entity_type,
-                link.entity_name,
-              );
             }
           } catch (linkError) {
             console.error("Error syncing entity links:", linkError);

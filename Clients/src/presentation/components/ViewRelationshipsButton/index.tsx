@@ -48,6 +48,7 @@ const ViewRelationshipsButton: React.FC<ViewRelationshipsButtonProps> = ({
     <>
       <VWTooltip content={tooltipText} maxWidth={200}>
         <IconButton
+          aria-label={tooltipText}
           size={size}
           onClick={handleClick}
           sx={{

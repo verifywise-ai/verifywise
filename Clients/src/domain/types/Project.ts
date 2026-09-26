@@ -27,6 +27,7 @@ export type Project = {
   monitored_regulations_and_standards: string[];
   geography?: number;
   target_industry?: string;
+  is_demo?: boolean; // flag for demo projects seeded by the auto-driver
   description?: string;
   is_organizational?: boolean;
 

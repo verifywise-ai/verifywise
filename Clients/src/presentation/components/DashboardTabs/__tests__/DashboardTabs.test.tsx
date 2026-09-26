@@ -28,7 +28,7 @@ const availableTabs: DashboardTabConfig[] = [
 ];
 
 function findAddButton() {
-  return document.querySelector(".MuiIconButton-root") as HTMLElement;
+  return screen.getByRole("button", { name: "Add or hide dashboard tabs" });
 }
 
 describe("DashboardTabs", () => {

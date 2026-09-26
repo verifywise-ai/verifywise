@@ -1,4 +1,4 @@
-import { ModelInventoryStatus } from "../../../enums/modelInventory.enum";
+import { ModelInventoryStatus, ModelInventoryType } from "../../../enums/modelInventory.enum";
 
 export class ModelInventoryModel {
   id?: number;
@@ -11,6 +11,7 @@ export class ModelInventoryModel {
   security_assessment!: boolean;
   status!: ModelInventoryStatus;
   status_date!: Date;
+  type?: ModelInventoryType | null;
   is_demo?: boolean;
   created_at?: Date;
   updated_at?: Date;
@@ -26,6 +27,7 @@ export class ModelInventoryModel {
     this.security_assessment = data.security_assessment;
     this.status = data.status;
     this.status_date = data.status_date;
+    this.type = data.type;
     this.is_demo = data.is_demo;
     this.created_at = data.created_at;
     this.updated_at = data.updated_at;

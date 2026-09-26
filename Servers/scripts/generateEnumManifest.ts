@@ -10,6 +10,7 @@ import { TaskStatus } from "../domain.layer/enums/task-status.enum";
 import { TaskPriority } from "../domain.layer/enums/task-priority.enum";
 import { DataClassification } from "../domain.layer/enums/data-classification.enum";
 import { ModelInventoryStatus } from "../domain.layer/enums/model-inventory-status.enum";
+import { ModelInventoryType } from "../domain.layer/enums/model-inventory-type.enum";
 
 import {
   AI_LIFECYCLE_PHASE_ENUM,
@@ -51,6 +52,7 @@ const manifest = {
   taskPriority: enumValues(TaskPriority),
   dataClassification: enumValues(DataClassification),
   modelInventoryStatus: enumValues(ModelInventoryStatus),
+  modelInventoryType: enumValues(ModelInventoryType),
   aiLifecyclePhase: constValues(AI_LIFECYCLE_PHASE_ENUM),
   riskLikelihood: constValues(LIKELIHOOD_ENUM),
   riskSeverity: constValues(SEVERITY_ENUM),

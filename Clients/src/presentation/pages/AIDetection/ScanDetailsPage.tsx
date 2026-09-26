@@ -7,8 +7,7 @@
  * @module pages/AIDetection/ScanDetailsPage
  */
 
-import { useState, useEffect, Suspense } from "react";
-import { useNavigate, useParams } from "react-router";
+import { Suspense } from "react";
 import { Box, Typography } from "@mui/material";
 import { TabContext } from "@mui/lab";
 import {
@@ -24,29 +23,10 @@ import Alert from "../../components/Alert";
 import { StatCard } from "../../components/Cards/StatCard";
 import TabBar from "../../components/TabBar";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
-import {
-  getScan,
-  getScanFindings,
-  getScanSecurityFindings,
-  getScanSecuritySummary,
-  exportAIBOM,
-  getComplianceMapping,
-  recalculateRiskScore,
-} from "../../../application/repository/aiDetection.repository";
 import Toggle from "../../components/Inputs/Toggle";
-import {
-  ScanResponse,
-  ConfidenceLevel,
-  SecuritySeverity,
-  SecuritySummary,
-  SecurityFinding,
-  Finding,
-  ComplianceMappingResponse,
-} from "../../../domain/ai-detection/types";
 import AIDepGraphModal from "../../components/AIDepGraphModal";
 import { palette } from "../../themes/palette";
-import { TabValue } from "./ScanDetails/scanDetailsConfig";
-import { usePaginatedFindings } from "./ScanDetails/usePaginatedFindings";
+import { useScanDetails } from "./ScanDetails/useScanDetails";
 import { ScanDetailsHeader } from "./ScanDetails/ScanDetailsHeader";
 import { SuggestedRisksSection } from "./ScanDetails/SuggestedRisksSection";
 import { FindingsTabPanel } from "./ScanDetails/FindingsTabPanel";
@@ -59,337 +39,40 @@ import { VulnerabilitiesTab } from "./ScanDetails/VulnerabilitiesTab";
 // ============================================================================
 
 export default function ScanDetailsPage() {
-  const navigate = useNavigate();
-  const { scanId: scanIdParam, tab } = useParams<{ scanId: string; tab?: string }>();
-  const scanId = parseInt(scanIdParam || "0", 10);
-  const initialTab: TabValue = (tab as TabValue) || "libraries";
-  const [scan, setScan] = useState<ScanResponse | null>(null);
-
-  // Paginated findings state (grouped by tab)
-  const libraryState = usePaginatedFindings();
-  const apiCallState = usePaginatedFindings();
-  const secretState = usePaginatedFindings();
-  const modelState = usePaginatedFindings();
-  const ragState = usePaginatedFindings();
-  const agentState = usePaginatedFindings();
-  const securityState = usePaginatedFindings<SecurityFinding>();
-
-  const [securitySummary, setSecuritySummary] = useState<SecuritySummary | null>(null);
-  const [vulnerabilityFindings, setVulnerabilityFindings] = useState<Finding[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState(initialTab);
-
-  // Handle tab change with URL navigation
-  const handleTabChange = (_: React.SyntheticEvent, newValue: string) => {
-    setActiveTab(newValue as TabValue);
-    navigate(`/ai-detection/scans/${scanId}/${newValue}`, { replace: true });
-  };
-
-  // Sync activeTab when initialTab changes (URL navigation)
-  useEffect(() => {
-    setActiveTab(initialTab);
-  }, [initialTab]);
-  const [confidenceFilter, setConfidenceFilter] = useState<ConfidenceLevel | null>(null);
-  const [severityFilter, setSeverityFilter] = useState<SecuritySeverity | null>(null);
-  const [showSuppressed, setShowSuppressed] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  const [showDepGraph, setShowDepGraph] = useState(false);
-  const [complianceData, setComplianceData] = useState<ComplianceMappingResponse | null>(null);
-  const [complianceLoading, setComplianceLoading] = useState(false);
-  const [isRecalculating, setIsRecalculating] = useState(false);
-
-  // Toast alert state
-  const [alert, setAlert] = useState<{ variant: "success" | "error"; body: string } | null>(null);
-  const showAlert = (variant: "success" | "error", body: string) => {
-    setAlert({ variant, body });
-    setTimeout(() => setAlert(null), 3000);
-  };
-
-  // Initial load - only loads scan data
-  useEffect(() => {
-    const loadInitialData = async () => {
-      setIsLoading(true);
-      try {
-        const [
-          scanResponse,
-          findingsResponse,
-          apiCallFindingsResponse,
-          secretFindingsResponse,
-          modelFindingsResponse,
-          ragFindingsResponse,
-          agentFindingsResponse,
-          securityFindingsResponse,
-          summaryResponse,
-          vulnFindingsResponses,
-        ] = await Promise.all([
-          getScan(scanId),
-          getScanFindings(scanId, { page: 1, limit: 50, finding_type: "library" }),
-          getScanFindings(scanId, { page: 1, limit: 50, finding_type: "api_call" }),
-          getScanFindings(scanId, { page: 1, limit: 50, finding_type: "secret" }),
-          getScanFindings(scanId, { page: 1, limit: 50, finding_type: "model_ref" }),
-          getScanFindings(scanId, { page: 1, limit: 50, finding_type: "rag_component" }),
-          getScanFindings(scanId, { page: 1, limit: 50, finding_type: "agent" }),
-          getScanSecurityFindings(scanId, { page: 1, limit: 50 }),
-          getScanSecuritySummary(scanId),
-          Promise.all([
-            getScanFindings(scanId, { page: 1, limit: 50, finding_type: "prompt_injection" }),
-            getScanFindings(scanId, { page: 1, limit: 50, finding_type: "jailbreak_risk" }),
-            getScanFindings(scanId, {
-              page: 1,
-              limit: 50,
-              finding_type: "training_data_poisoning",
-            }),
-            getScanFindings(scanId, { page: 1, limit: 50, finding_type: "model_dos" }),
-            getScanFindings(scanId, { page: 1, limit: 50, finding_type: "supply_chain" }),
-            getScanFindings(scanId, { page: 1, limit: 50, finding_type: "pii_exposure" }),
-            getScanFindings(scanId, { page: 1, limit: 50, finding_type: "insecure_plugin" }),
-            getScanFindings(scanId, { page: 1, limit: 50, finding_type: "excessive_agency" }),
-            getScanFindings(scanId, { page: 1, limit: 50, finding_type: "overreliance" }),
-            getScanFindings(scanId, { page: 1, limit: 50, finding_type: "model_theft" }),
-          ]),
-        ]);
-        setScan(scanResponse);
-        libraryState.setFindings(findingsResponse.findings);
-        libraryState.setTotalPages(findingsResponse.pagination.total_pages);
-        apiCallState.setFindings(apiCallFindingsResponse.findings);
-        apiCallState.setTotalPages(apiCallFindingsResponse.pagination.total_pages);
-        secretState.setFindings(secretFindingsResponse.findings);
-        secretState.setTotalPages(secretFindingsResponse.pagination.total_pages);
-        modelState.setFindings(modelFindingsResponse.findings);
-        modelState.setTotalPages(modelFindingsResponse.pagination.total_pages);
-        ragState.setFindings(ragFindingsResponse.findings);
-        ragState.setTotalPages(ragFindingsResponse.pagination.total_pages);
-        agentState.setFindings(agentFindingsResponse.findings);
-        agentState.setTotalPages(agentFindingsResponse.pagination.total_pages);
-        securityState.setFindings(securityFindingsResponse.findings);
-        securityState.setTotalPages(securityFindingsResponse.pagination.total_pages);
-        setSecuritySummary(summaryResponse);
-        // Combine all vulnerability findings
-        setVulnerabilityFindings(vulnFindingsResponses.flatMap((r) => r.findings));
-      } catch {
-        // Error loading scan - component will show empty state
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadInitialData();
-  }, [scanId]);
-
-  // Reload library findings when page or filter changes
-  useEffect(() => {
-    if (!scan) return;
-
-    const loadLibraryFindings = async () => {
-      try {
-        const findingsResponse = await getScanFindings(scanId, {
-          page: libraryState.page,
-          limit: 50,
-          confidence: confidenceFilter || undefined,
-          finding_type: "library",
-        });
-        libraryState.setFindings(findingsResponse.findings);
-        libraryState.setTotalPages(findingsResponse.pagination.total_pages);
-      } catch {
-        // Error loading findings - UI shows empty state
-      }
-    };
-
-    loadLibraryFindings();
-  }, [scanId, libraryState.page, confidenceFilter, scan]);
-
-  // Reload API call findings when page changes
-  useEffect(() => {
-    if (!scan) return;
-
-    const loadApiCallFindings = async () => {
-      try {
-        const findingsResponse = await getScanFindings(scanId, {
-          page: apiCallState.page,
-          limit: 50,
-          finding_type: "api_call",
-        });
-        apiCallState.setFindings(findingsResponse.findings);
-        apiCallState.setTotalPages(findingsResponse.pagination.total_pages);
-      } catch {
-        // Error loading findings - UI shows empty state
-      }
-    };
-
-    loadApiCallFindings();
-  }, [scanId, apiCallState.page, scan]);
-
-  // Reload secret findings when page changes
-  useEffect(() => {
-    if (!scan) return;
-
-    const loadSecretFindings = async () => {
-      try {
-        const findingsResponse = await getScanFindings(scanId, {
-          page: secretState.page,
-          limit: 50,
-          finding_type: "secret",
-        });
-        secretState.setFindings(findingsResponse.findings);
-        secretState.setTotalPages(findingsResponse.pagination.total_pages);
-      } catch {
-        // Error loading findings - UI shows empty state
-      }
-    };
-
-    loadSecretFindings();
-  }, [scanId, secretState.page, scan]);
-
-  // Reload model findings when page changes
-  useEffect(() => {
-    if (!scan) return;
-
-    const loadModelFindings = async () => {
-      try {
-        const findingsResponse = await getScanFindings(scanId, {
-          page: modelState.page,
-          limit: 50,
-          finding_type: "model_ref",
-        });
-        modelState.setFindings(findingsResponse.findings);
-        modelState.setTotalPages(findingsResponse.pagination.total_pages);
-      } catch {
-        // Error loading findings - UI shows empty state
-      }
-    };
-
-    loadModelFindings();
-  }, [scanId, modelState.page, scan]);
-
-  // Reload RAG findings when page changes
-  useEffect(() => {
-    if (!scan) return;
-
-    const loadRagFindings = async () => {
-      try {
-        const findingsResponse = await getScanFindings(scanId, {
-          page: ragState.page,
-          limit: 50,
-          finding_type: "rag_component",
-        });
-        ragState.setFindings(findingsResponse.findings);
-        ragState.setTotalPages(findingsResponse.pagination.total_pages);
-      } catch {
-        // Error loading findings - UI shows empty state
-      }
-    };
-
-    loadRagFindings();
-  }, [scanId, ragState.page, scan]);
-
-  // Reload agent findings when page changes
-  useEffect(() => {
-    if (!scan) return;
-
-    const loadAgentFindings = async () => {
-      try {
-        const findingsResponse = await getScanFindings(scanId, {
-          page: agentState.page,
-          limit: 50,
-          finding_type: "agent",
-        });
-        agentState.setFindings(findingsResponse.findings);
-        agentState.setTotalPages(findingsResponse.pagination.total_pages);
-      } catch {
-        // Error loading findings - UI shows empty state
-      }
-    };
-
-    loadAgentFindings();
-  }, [scanId, agentState.page, scan]);
-
-  // Reload security findings when page or filter changes
-  useEffect(() => {
-    if (!scan) return;
-
-    const loadSecurityFindings = async () => {
-      try {
-        const [findingsResponse, summaryResponse] = await Promise.all([
-          getScanSecurityFindings(scanId, {
-            page: securityState.page,
-            limit: 50,
-            severity: severityFilter || undefined,
-          }),
-          getScanSecuritySummary(scanId),
-        ]);
-        securityState.setFindings(findingsResponse.findings);
-        securityState.setTotalPages(findingsResponse.pagination.total_pages);
-        setSecuritySummary(summaryResponse);
-      } catch {
-        // Error loading findings - UI shows empty state
-      }
-    };
-
-    loadSecurityFindings();
-  }, [scanId, securityState.page, severityFilter, scan]);
-
-  // Load compliance data when tab is selected (lazy loading)
-  useEffect(() => {
-    if (activeTab !== "compliance" || !scan || complianceData) return;
-
-    const loadComplianceData = async () => {
-      setComplianceLoading(true);
-      try {
-        const data = await getComplianceMapping(scanId);
-        setComplianceData(data);
-      } catch {
-        // Error loading compliance data - UI shows empty state
-      } finally {
-        setComplianceLoading(false);
-      }
-    };
-
-    loadComplianceData();
-  }, [activeTab, scanId, scan, complianceData]);
-
-  // Handle risk score recalculation
-  const handleRecalculateRiskScore = async () => {
-    if (!scan) return;
-    setIsRecalculating(true);
-    try {
-      const result = await recalculateRiskScore(scanId);
-      const updated = await getScan(scanId);
-      setScan(updated);
-      showAlert("success", `Risk score updated: ${result.score} (${result.grade})`);
-    } catch {
-      showAlert("error", "Failed to recalculate risk score");
-    } finally {
-      setIsRecalculating(false);
-    }
-  };
-
-  // Handle AI-BOM export
-  const handleExportAIBOM = async () => {
-    if (!scan || isExporting) return;
-
-    setIsExporting(true);
-    try {
-      const aiBomData = await exportAIBOM(scanId);
-
-      // Create blob and download
-      const blob = new Blob([JSON.stringify(aiBomData, null, 2)], {
-        type: "application/json",
-      });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `ai-bom-${scan.scan.repository_owner}-${scan.scan.repository_name}-${scanId}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      showAlert("success", "AI-BOM exported successfully");
-    } catch {
-      showAlert("error", "Failed to export AI-BOM");
-    } finally {
-      setIsExporting(false);
-    }
-  };
+  const {
+    scanId,
+    scan,
+    isLoading,
+    activeTab,
+    handleTabChange,
+    confidenceFilter,
+    setConfidenceFilter,
+    severityFilter,
+    setSeverityFilter,
+    showSuppressed,
+    setShowSuppressed,
+    isExporting,
+    showDepGraph,
+    setShowDepGraph,
+    complianceData,
+    complianceLoading,
+    isRecalculating,
+    alert,
+    setAlert,
+    showAlert,
+    libraryState,
+    apiCallState,
+    secretState,
+    modelState,
+    ragState,
+    agentState,
+    securityState,
+    securitySummary,
+    vulnerabilityFindings,
+    handleRecalculateRiskScore,
+    handleExportAIBOM,
+    navigate,
+  } = useScanDetails();
 
   if (isLoading && !scan) {
     return (

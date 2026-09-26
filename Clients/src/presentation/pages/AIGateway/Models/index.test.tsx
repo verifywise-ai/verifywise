@@ -373,6 +373,22 @@ describe("AIGateway - ModelsPage", () => {
     expect(screen.queryByText("text-embedding-3-small")).not.toBeInTheDocument();
   });
 
+  it("includes priced responses-mode models in the cost calculator", async () => {
+    (apiServices.get as any).mockResolvedValue({
+      data: {
+        data: {
+          models: [
+            ...richModels,
+            baseModel({ id: "gpt-5.1-codex", provider: "openai", mode: "responses" }),
+          ],
+        },
+      },
+    });
+    renderModels("/ai-gateway/models/calculator");
+
+    expect(await screen.findByText("gpt-5.1-codex")).toBeInTheDocument();
+  });
+
   it("recalculates costs when calculator inputs change", async () => {
     (apiServices.get as any).mockResolvedValue({ data: { data: { models: richModels } } });
     renderModels("/ai-gateway/models/calculator");
@@ -401,12 +417,15 @@ describe("AIGateway - ModelsPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Show all 55 models")).toBeInTheDocument();
     });
+    // Sorted cheapest first, so the most expensive model is past the top 50.
+    expect(screen.queryByText("chat-model-54")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Show all 55 models"));
 
     await waitFor(() => {
       expect(screen.getByText("Show top 50 of 55")).toBeInTheDocument();
     });
+    expect(screen.getByText("chat-model-54")).toBeInTheDocument();
   });
 
   it("shows the feature comparison table pre-populated with default models", async () => {

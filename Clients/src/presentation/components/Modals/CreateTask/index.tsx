@@ -89,14 +89,43 @@ const CreateTask: FC<ICreateTaskProps> = ({
   const [activeTab, setActiveTab] = useState("details");
   const customFieldsRef = useRef<CustomFieldsSectionHandle | null>(null);
   const customFieldsGate = useRequiredCustomFieldsGate("task", initialData?.id ?? null);
+  // Tracks the last hydrated (initialData, users-ready) pair so refetches
+  // that return a new `users` array identity (e.g. react-query
+  // refetchOnWindowFocus) do NOT reset the form while the user is editing —
+  // the old behavior silently wiped freshly added linked items.
+  const hydratedRef = useRef<{ data: unknown; usersReady: boolean } | null>(null);
 
   useEffect(() => {
     if (!isOpen) {
+      hydratedRef.current = null;
       setValues(initialState);
       resetErrors();
       setIsSubmitting(false);
       setActiveTab("details");
-    } else if (isOpen && initialData) {
+      return;
+    }
+
+    // useEffect: hydrating when users transitions unloaded -> loaded is still
+    // allowed (assignee names need the users list); any later identity or
+    // emptiness fluctuation must NOT reset in-progress edits.
+    const usersReady = Array.isArray(users) && users.length > 0;
+    const prev = hydratedRef.current;
+    if (prev && prev.data === initialData) {
+      if (prev.usersReady) return; // hydrated for this task; never reset again
+      if (!usersReady) return; // users still unavailable; keep current values
+      // users just became ready -> fall through and hydrate once
+    }
+    hydratedRef.current = { data: initialData, usersReady };
+    console.debug(
+      "[TaskLinkDebug] hydrate task=",
+      initialData?.id ?? "new",
+      "links=",
+      initialData?.entity_links?.length ?? 0,
+      "usersReady=",
+      usersReady,
+    );
+
+    if (initialData) {
       setValues({
         title: initialData.title || "",
         description: initialData.description || "",
@@ -147,12 +176,12 @@ const CreateTask: FC<ICreateTaskProps> = ({
             );
         })(),
         categories: initialData.categories || [],
-        entity_links: (initialData as any).entity_links || [],
+        entity_links: initialData.entity_links || [],
       });
     } else {
       setValues(initialState);
     }
-  }, [isOpen, mode, initialData, users]);
+  }, [isOpen, mode, initialData, users, resetErrors]);
 
   const handleOnTextFieldChange = useCallback(
     (prop: keyof ICreateTaskFormValues) => (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -216,6 +245,7 @@ const CreateTask: FC<ICreateTaskProps> = ({
   );
 
   const handleEntityLinksChange = useCallback((newLinks: EntityLink[]) => {
+    console.debug("[TaskLinkDebug] entity_links onChange:", JSON.stringify(newLinks));
     setValues((prev) => ({
       ...prev,
       entity_links: newLinks,
@@ -241,6 +271,10 @@ const CreateTask: FC<ICreateTaskProps> = ({
             ...values,
             assignees: values.assignees.map((user) => String(user.id)),
           };
+          console.debug(
+            "[TaskLinkDebug] submit entity_links:",
+            JSON.stringify(formattedValues.entity_links),
+          );
           const result = await onSuccess(formattedValues as any);
           // Parent's onSuccess returns the new entity id on create. In edit
           // mode the id is already known.

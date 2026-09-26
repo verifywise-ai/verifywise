@@ -120,15 +120,23 @@ export async function postAutoDrivers(): Promise<any> {
 export async function checkDemoDataExists(): Promise<boolean> {
   try {
     const response = await apiServices.get("/projects");
-    const projects = response.data as Array<{ project_title: string }>;
+    // apiServices.get resolves to { data: { message, data }, status }, so the
+    // projects array is nested under response.data.data.
+    const envelope = response.data as {
+      data?: Array<{ project_title?: string; is_demo?: boolean }>;
+    };
+    const projects = Array.isArray(envelope?.data) ? envelope.data : [];
 
-    // Check if any project has demo-specific titles
+    // Primary signal: the backend flags all demo entities with `is_demo`.
+    // Fall back to known demo project titles for legacy demo data.
     const demoProjectTitles = [
+      "AI Recruitment Screening Platform",
       "AI Compliance Checker",
       "Information Security & AI Governance Framework",
     ];
-    const hasDemoProjects = projects.some((project) =>
-      demoProjectTitles.includes(project.project_title),
+    const hasDemoProjects = projects.some(
+      (project) =>
+        project.is_demo === true || demoProjectTitles.includes(project.project_title ?? ""),
     );
 
     return hasDemoProjects;

@@ -531,7 +531,10 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
 
   // Handle adding a new entity link
   const handleAddLink = () => {
-    if (!canAddLink) return;
+    if (!canAddLink) {
+      console.debug("[TaskLinkDebug] addLink blocked: canAddLink=false");
+      return;
+    }
 
     let entityType: EntityType;
     let entityName: string = "";
@@ -559,6 +562,15 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
     // Check for duplicates
     const isDuplicate = value.some(
       (link) => link.entity_id === newLink.entity_id && link.entity_type === newLink.entity_type,
+    );
+
+    console.debug(
+      "[TaskLinkDebug] addLink:",
+      JSON.stringify(newLink),
+      "duplicate:",
+      isDuplicate,
+      "currentValue:",
+      JSON.stringify(value),
     );
 
     if (!isDuplicate) {

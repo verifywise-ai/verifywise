@@ -22,8 +22,8 @@ export interface SelectedRiskData {
   riskDescription: string;
   riskCategory: number[];
   potentialImpact: string;
-  assessmentMapping: number;
-  controlsMapping: number;
+  assessmentMapping: string;
+  controlsMapping: string;
   likelihood: number;
   riskSeverity: number;
   riskLevel: number;
@@ -73,8 +73,8 @@ export const DEFAULT_VALUES = {
   ACTION_OWNER: 0,
   AI_LIFECYCLE_PHASE: 0,
   POTENTIAL_IMPACT: "",
-  ASSESSMENT_MAPPING: 0,
-  CONTROLS_MAPPING: 0,
+  ASSESSMENT_MAPPING: "",
+  CONTROLS_MAPPING: "",
   RISK_LEVEL: 0,
   DEFAULT_CATEGORY_ID: 1,
 } as const;

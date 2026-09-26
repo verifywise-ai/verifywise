@@ -1,5 +1,5 @@
 import { TaskPriority, TaskStatus } from "../../../enums/task.enum";
-import { ITask, ITaskAssignee } from "../../../interfaces/i.task";
+import { ITask, ITaskAssignee, IEntityLink } from "../../../interfaces/i.task";
 
 export class TaskModel implements ITask {
   id?: number;
@@ -15,6 +15,7 @@ export class TaskModel implements ITask {
   updated_at?: Date;
   creator_name?: string;
   assignees?: ITaskAssignee[];
+  entity_links?: IEntityLink[];
   isOverdue?: boolean;
 
   constructor(data?: Partial<ITask>) {
@@ -31,6 +32,7 @@ export class TaskModel implements ITask {
     this.updated_at = data?.updated_at ?? new Date();
     this.creator_name = data?.creator_name ?? "";
     this.assignees = data?.assignees ?? [];
+    this.entity_links = data?.entity_links ?? [];
     this.isOverdue = data?.isOverdue ?? false;
   }
   static createTask(data: TaskModel): TaskModel {

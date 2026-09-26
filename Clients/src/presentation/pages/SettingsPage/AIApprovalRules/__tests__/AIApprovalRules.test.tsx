@@ -115,7 +115,7 @@ describe("AIApprovalRules", () => {
     mockListApprovalRules.mockResolvedValue([]);
 
     const deleteButtons = screen.getAllByRole("button");
-    const trashButton = deleteButtons.find((btn) => btn.querySelector("svg.lucide-trash2"));
+    const trashButton = deleteButtons.find((btn) => btn.querySelector("svg.lucide-trash"));
     fireEvent.click(trashButton!);
 
     await waitFor(() => {
@@ -131,7 +131,7 @@ describe("AIApprovalRules", () => {
     );
 
     const deleteButtons = screen.getAllByRole("button");
-    const trashButton = deleteButtons.find((btn) => btn.querySelector("svg.lucide-trash2"));
+    const trashButton = deleteButtons.find((btn) => btn.querySelector("svg.lucide-trash"));
     fireEvent.click(trashButton!);
 
     expect(mockDeleteApprovalRule).not.toHaveBeenCalled();
@@ -145,7 +145,7 @@ describe("AIApprovalRules", () => {
     mockDeleteApprovalRule.mockRejectedValue(new Error("fail"));
 
     const deleteButtons = screen.getAllByRole("button");
-    const trashButton = deleteButtons.find((btn) => btn.querySelector("svg.lucide-trash2"));
+    const trashButton = deleteButtons.find((btn) => btn.querySelector("svg.lucide-trash"));
     fireEvent.click(trashButton!);
 
     await waitFor(() => {

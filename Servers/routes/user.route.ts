@@ -47,12 +47,7 @@ const upload = multer({
   },
 });
 
-import rateLimit from "express-rate-limit";
-import {
-  authLimiter,
-  isNonProduction,
-  tokenRefreshLimiter,
-} from "../middleware/rateLimit.middleware";
+import { authLimiter, loginLimiter, tokenRefreshLimiter } from "../middleware/rateLimit.middleware";
 
 import {
   checkUserExists,
@@ -166,16 +161,9 @@ router.post("/register", authLimiter, registerJWT, createNewUser);
  * @param {express.Request} req - Express request object
  * @param {express.Response} res - Express response object
  */
-// Apply rate limiting specifically to login route. Relaxed in explicit
-// dev/test so a single localhost IP running repeated E2E logins is not
-// locked out; production keeps the strict 5/min ceiling.
-const loginLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  // Relaxed in explicit dev/test so the E2E suite's repeated UI logins are not
-  // blocked; strict 5/min production limit unchanged (see rateLimit.middleware).
-  max: isNonProduction ? 1000 : 5, // limit each IP to N login requests per windowMs
-  message: "Too many login attempts from this IP, please try again after a minute",
-});
+// loginLimiter (5/min, relaxed in explicit dev/test) lives in
+// middleware/rateLimit.middleware.ts with every other limiter, so it shares the
+// standard RateLimit-* headers and STATUS_CODE[429] envelope.
 router.post("/login", loginLimiter, loginUser);
 router.post("/login-microsoft", loginLimiter, loginUserWithMicrosoft);
 

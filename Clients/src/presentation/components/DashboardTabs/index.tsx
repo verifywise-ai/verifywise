@@ -155,6 +155,7 @@ const DashboardTabs: React.FC<DashboardTabsProps> = ({
       {/* Add tab button */}
       <Tooltip title="Add or hide dashboard tabs">
         <IconButton
+          aria-label="Add or hide dashboard tabs"
           onClick={handleAddClick}
           size="small"
           sx={{

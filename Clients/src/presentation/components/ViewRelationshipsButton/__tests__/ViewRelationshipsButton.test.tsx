@@ -38,7 +38,7 @@ describe("ViewRelationshipsButton", () => {
 
   it("renders the button", () => {
     renderWithProviders(<ViewRelationshipsButton {...defaultProps} />);
-    const button = screen.getByRole("button");
+    const button = screen.getByRole("button", { name: "View relationships" });
     expect(button).toBeInTheDocument();
   });
 
@@ -47,7 +47,7 @@ describe("ViewRelationshipsButton", () => {
 
     expect(screen.queryByTestId("entity-graph-modal")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button"));
+    fireEvent.click(screen.getByRole("button", { name: "View relationships" }));
 
     expect(screen.getByTestId("entity-graph-modal")).toBeInTheDocument();
   });
@@ -55,7 +55,7 @@ describe("ViewRelationshipsButton", () => {
   it("closes the modal when close is triggered", () => {
     renderWithProviders(<ViewRelationshipsButton {...defaultProps} />);
 
-    fireEvent.click(screen.getByRole("button"));
+    fireEvent.click(screen.getByRole("button", { name: "View relationships" }));
     expect(screen.getByTestId("entity-graph-modal")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Close"));

@@ -14,7 +14,7 @@ async def list_runs(org_id: int, limit: int = 50, offset: int = 0) -> dict:
             SELECT agent_run_id,
                    COUNT(*) AS model_count,
                    COALESCE(SUM(total_tokens), 0) AS tokens,
-                   COALESCE(SUM(cost_usd), 0) AS cost,
+                   COALESCE(SUM(cost_usd) FILTER (WHERE cost_usd <> 'NaN'::numeric), 0) AS cost,
                    MIN(created_at) AS first_at,
                    MAX(created_at) AS last_at
             FROM ai_gateway_spend_logs
@@ -54,7 +54,7 @@ async def list_runs(org_id: int, limit: int = 50, offset: int = 0) -> dict:
             SELECT agent_run_id,
                    COUNT(*) AS model_count,
                    COALESCE(SUM(total_tokens), 0) AS tokens,
-                   COALESCE(SUM(cost_usd), 0) AS cost,
+                   COALESCE(SUM(cost_usd) FILTER (WHERE cost_usd <> 'NaN'::numeric), 0) AS cost,
                    MIN(created_at) AS first_at,
                    MAX(created_at) AS last_at
             FROM ai_gateway_spend_logs
@@ -107,7 +107,8 @@ async def get_run(org_id: int, run_id: str) -> dict:
 
     model_sql = """
         SELECT 'model' AS kind, created_at, model, provider,
-               prompt_tokens, completion_tokens, total_tokens, cost_usd,
+               prompt_tokens, completion_tokens, total_tokens,
+               CASE WHEN cost_usd = 'NaN'::numeric THEN 0 ELSE cost_usd END AS cost_usd,
                latency_ms, status_code, request_messages, response_text,
                NULL::int AS agent_key_id
         FROM ai_gateway_spend_logs

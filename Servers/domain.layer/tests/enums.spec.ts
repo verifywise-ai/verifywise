@@ -15,6 +15,7 @@ import { IntakeEntityType } from "../enums/intake-entity-type.enum";
 import { IntakeFormStatus } from "../enums/intake-form-status.enum";
 import { IntakeSubmissionStatus } from "../enums/intake-submission-status.enum";
 import { ModelInventoryStatus } from "../enums/model-inventory-status.enum";
+import { ModelInventoryType } from "../enums/model-inventory-type.enum";
 import { NISTAIMRFFunctionType, NISTFunctionTitles } from "../enums/nist-ai-rmf-function.enum";
 import { SlackNotificationRoutingType } from "../enums/slack.enum";
 import { UserDateFormat } from "../enums/user-preferences.enum";
@@ -172,6 +173,21 @@ describe("Domain Enums", () => {
         "BLOCKED",
         "REJECTED",
         "RETIRED",
+      ]);
+    });
+  });
+
+  describe("ModelInventoryType", () => {
+    it("should have expected values", () => {
+      verifyEnum(ModelInventoryType, ["TRADITIONAL_ML", "GENAI", "RAG", "AGENTIC_AI"]);
+    });
+
+    it("string values should match the PostgreSQL enum labels", () => {
+      expect(Object.values(ModelInventoryType)).toEqual([
+        "Traditional ML",
+        "GenAI",
+        "RAG",
+        "Agentic AI",
       ]);
     });
   });

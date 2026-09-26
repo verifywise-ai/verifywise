@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Box, Typography } from "@mui/material";
+import { Box, IconButton, Typography } from "@mui/material";
 import { RefreshCw } from "lucide-react";
 import Field from "../../components/Inputs/Field";
 import { getCaptcha } from "../../../application/repository/intakeForm.repository";
@@ -73,22 +73,21 @@ export function MathCaptcha({ value, onChange, error, refreshTrigger }: MathCapt
         <Typography sx={{ fontWeight: 500, color: "#1f2937", fontSize: "13px" }}>
           Security check
         </Typography>
-        <Box
+        <IconButton
+          aria-label="Get new question"
           title="Get new question"
-          onClick={isLoading ? undefined : handleRefresh}
+          onClick={handleRefresh}
+          disabled={isLoading}
+          size="small"
           sx={{
-            "cursor": isLoading ? "default" : "pointer",
-            "opacity": isLoading ? 0.5 : 1,
-            "display": "flex",
-            "alignItems": "center",
-            "p": "4px",
-            "borderRadius": "6px",
             "color": `${status.default.text}`,
-            "&:hover": isLoading ? {} : { color: `${brand.primary}`, backgroundColor: "#f0fdf4" },
+            "borderRadius": "6px",
+            "p": "4px",
+            "&:hover": { color: `${brand.primary}`, backgroundColor: "#f0fdf4" },
           }}
         >
           <RefreshCw size={16} strokeWidth={1.5} />
-        </Box>
+        </IconButton>
       </Box>
 
       <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
@@ -109,24 +108,39 @@ export function MathCaptcha({ value, onChange, error, refreshTrigger }: MathCapt
           {isLoading ? "Loading..." : question}
         </Typography>
         <Typography sx={{ fontSize: "16px", color: `${status.default.text}` }}>=</Typography>
-        <Field
-          id="captcha-answer"
-          label=""
-          value={value}
-          onChange={handleChange}
-          placeholder="?"
-          type="number"
-          disabled={isLoading}
-          error={error}
-          sx={{
-            "width": 80,
-            "& .MuiOutlinedInput-root": {
-              fontSize: "16px",
-              fontWeight: 600,
-            },
-            "& input": { textAlign: "center" },
-          }}
-        />
+        <Box sx={{ position: "relative" }}>
+          <Typography
+            component="label"
+            htmlFor="captcha-answer"
+            sx={{
+              position: "absolute",
+              width: 1,
+              height: 1,
+              overflow: "hidden",
+              clip: "rect(0, 0, 0, 0)",
+            }}
+          >
+            Captcha answer
+          </Typography>
+          <Field
+            id="captcha-answer"
+            label=""
+            value={value}
+            onChange={handleChange}
+            placeholder="?"
+            type="number"
+            disabled={isLoading}
+            error={error}
+            sx={{
+              "width": 80,
+              "& .MuiOutlinedInput-root": {
+                fontSize: "16px",
+                fontWeight: 600,
+              },
+              "& input": { textAlign: "center" },
+            }}
+          />
+        </Box>
       </Box>
 
       {error && <Typography sx={{ color: "#ef4444", fontSize: "12px", mt: 1 }}>{error}</Typography>}

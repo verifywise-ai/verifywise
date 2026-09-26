@@ -80,6 +80,18 @@ const sections: Array<{
   { name: "ZIndexSection", Component: ZIndexSection, title: "Z-Index scale" },
 ];
 
+describe("ChipSection", () => {
+  it("showcases StatusBadge variant groups, sizes, and the uppercase override", () => {
+    renderWithProviders(<ChipSection />);
+    expect(screen.getAllByText(/StatusBadge/).length).toBeGreaterThan(0);
+    expect(screen.getByText("Risk levels")).toBeInTheDocument();
+    expect(screen.getByText("Severity")).toBeInTheDocument();
+    expect(screen.getByText("Boolean")).toBeInTheDocument();
+    expect(screen.getByText("Sizes")).toBeInTheDocument();
+    expect(screen.getByText("Lowercase (uppercase=false)")).toBeInTheDocument();
+  });
+});
+
 describe("StyleGuide sections", () => {
   it.each(sections)(
     "$name renders without crashing and shows its title",

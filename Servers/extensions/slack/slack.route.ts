@@ -13,7 +13,6 @@
  */
 
 import express from "express";
-import rateLimit from "express-rate-limit";
 import authenticateJWT from "../../middleware/auth.middleware";
 import { requireExtensionEnabled } from "../../middleware/requireExtensionEnabled.middleware";
 import {
@@ -32,20 +31,13 @@ router.use(requireExtensionEnabled("slack"));
 
 // Rate limit the OAuth-exchange endpoint so a leaked JWT can't spam
 // Slack's OAuth API on our behalf.
-const createWorkspaceLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 10,
-  message: {
-    error:
-      "Too many Slack workspace creation requests from this IP, please try again after an hour.",
-  },
-});
+import { slackWorkspaceCreateLimiter } from "../../middleware/rateLimit.middleware";
 
 // OAuth workspaces — exposed at /api/extensions/slack/oauth/workspaces to match
 // the extension's UI conventions. Handlers are shared with /api/slackWebhooks.
 router.get("/oauth/workspaces", getAllSlackWebhooks);
 router.get("/oauth/workspaces/:id", getSlackWebhookById);
-router.post("/oauth/workspaces", createWorkspaceLimiter, createNewSlackWebhook);
+router.post("/oauth/workspaces", slackWorkspaceCreateLimiter, createNewSlackWebhook);
 router.patch("/oauth/workspaces/:id", updateSlackWebhookById);
 router.delete("/oauth/workspaces/:id", deleteSlackWebhookById);
 

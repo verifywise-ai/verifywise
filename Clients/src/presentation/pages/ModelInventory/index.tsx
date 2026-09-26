@@ -51,7 +51,10 @@ import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import TabContext from "@mui/lab/TabContext";
 import { SearchBox } from "../../components/Search";
 import TabBar from "../../components/TabBar";
-import { ModelInventoryStatus } from "../../../domain/enums/modelInventory.enum";
+import {
+  ModelInventoryStatus,
+  ModelInventoryType,
+} from "../../../domain/enums/modelInventory.enum";
 import { EvidenceHubModel } from "../../../domain/models/Common/evidenceHub/evidenceHub.model";
 import NewEvidenceHub from "../../components/Modals/EvidenceHub";
 import { createEvidenceHub } from "../../../application/repository/evidenceHub.repository";
@@ -88,6 +91,7 @@ type ModelInventoryColumn =
   | "risks"
   | "status"
   | "status_date"
+  | "type"
   | "actions";
 
 const MODEL_INVENTORY_COLUMNS: ColumnConfig<ModelInventoryColumn>[] = [
@@ -99,6 +103,7 @@ const MODEL_INVENTORY_COLUMNS: ColumnConfig<ModelInventoryColumn>[] = [
   { key: "risks", label: "Risks", defaultVisible: true },
   { key: "status", label: "Status", defaultVisible: true },
   { key: "status_date", label: "Status date", defaultVisible: true },
+  { key: "type", label: "Type", defaultVisible: true },
   { key: "actions", label: "Actions", defaultVisible: true, alwaysVisible: true },
 ];
 
@@ -327,6 +332,17 @@ const ModelInventory: React.FC = () => {
           { value: "false", label: "Not assessed" },
         ],
       },
+      {
+        id: "type",
+        label: "Type",
+        type: "select" as const,
+        options: [
+          { value: ModelInventoryType.TRADITIONAL_ML, label: "Traditional ML" },
+          { value: ModelInventoryType.GENAI, label: "GenAI" },
+          { value: ModelInventoryType.RAG, label: "RAG" },
+          { value: ModelInventoryType.AGENTIC_AI, label: "Agentic AI" },
+        ],
+      },
     ],
     [getUniqueProviders, getUniqueApprovers],
   );
@@ -345,6 +361,8 @@ const ModelInventory: React.FC = () => {
           return item.approver?.toString();
         case "security_assessment":
           return item.security_assessment ? "true" : "false";
+        case "type":
+          return item.type ?? null;
         default:
           return null;
       }
@@ -2533,6 +2551,7 @@ const ModelInventory: React.FC = () => {
                   status_date: selectedModelInventory.status_date
                     ? new Date(selectedModelInventory.status_date).toISOString().split("T")[0]
                     : new Date().toISOString().split("T")[0],
+                  type: selectedModelInventory.type ?? "",
                   reference_link: selectedModelInventory.reference_link || "",
                   biases: selectedModelInventory.biases || "",
                   limitations: selectedModelInventory.limitations || "",

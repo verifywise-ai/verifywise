@@ -185,7 +185,7 @@ describe("SettingsPage", () => {
     });
 
     const deleteButtons = screen.getAllByRole("button");
-    const trashButton = deleteButtons.find((b) => b.querySelector(".lucide-trash2"));
+    const trashButton = deleteButtons.find((b) => b.querySelector(".lucide-trash"));
     fireEvent.click(trashButton as HTMLElement);
 
     await waitFor(() => {

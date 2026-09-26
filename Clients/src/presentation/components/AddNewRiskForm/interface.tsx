@@ -15,8 +15,8 @@ export type ProjectRisk = {
   riskDescription: string;
   riskCategory: number[] | string[];
   potentialImpact: string;
-  assessmentMapping: number;
-  controlsMapping: number;
+  assessmentMapping: string;
+  controlsMapping: string;
   likelihood: Likelihood | string;
   riskSeverity: Severity;
   riskLevel: number;

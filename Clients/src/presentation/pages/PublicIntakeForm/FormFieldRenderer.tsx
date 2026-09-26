@@ -55,9 +55,10 @@ function safeRegExp(pattern: string): RegExp | null {
 }
 
 /**
- * Guidance text displayed directly under the input element
+ * Hint copy under a public-form control. Shared by contact fields and
+ * schema fields so Email and Use case name (etc.) use the same type.
  */
-function GuidanceText({ text }: { text?: string }) {
+export function FormFieldHint({ text }: { text?: string }) {
   if (!text) return null;
   return (
     <Typography
@@ -71,6 +72,13 @@ function GuidanceText({ text }: { text?: string }) {
       {text}
     </Typography>
   );
+}
+
+/**
+ * Guidance text displayed directly under the input element
+ */
+function GuidanceText({ text }: { text?: string }) {
+  return <FormFieldHint text={text} />;
 }
 
 /**
@@ -160,9 +168,9 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
                     placeholder={field.placeholder}
                     type={field.type === "email" ? "email" : field.type === "url" ? "url" : "text"}
                     error={errorMessage}
-                    helperText={errorMessage || field.helpText}
                   />
                   <GuidanceText text={field.guidanceText} />
+                  <HelperText text={field.helpText} />
                 </>
               )}
             />
@@ -202,9 +210,9 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
                     placeholder={field.placeholder}
                     rows={4}
                     error={errorMessage}
-                    helperText={errorMessage || field.helpText}
                   />
                   <GuidanceText text={field.guidanceText} />
+                  <HelperText text={field.helpText} />
                 </>
               )}
             />
@@ -246,9 +254,9 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
                     type="number"
                     placeholder={field.placeholder}
                     error={errorMessage}
-                    helperText={errorMessage || field.helpText}
                   />
                   <GuidanceText text={field.guidanceText} />
+                  <HelperText text={field.helpText} />
                 </>
               )}
             />
@@ -275,9 +283,9 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
                     value={fieldProps.value as string}
                     type="date"
                     error={errorMessage}
-                    helperText={errorMessage || field.helpText}
                   />
                   <GuidanceText text={field.guidanceText} />
+                  <HelperText text={field.helpText} />
                 </>
               )}
             />

@@ -66,6 +66,29 @@ const PERIOD_OPTIONS = [
   { _id: "90d", name: "90 days" },
 ];
 
+/** Whether the org has any gateway traffic at all; null when the check fails. */
+async function fetchHasLogs(): Promise<boolean | null> {
+  const res = await apiServices
+    .get<Record<string, any>>("/ai-gateway/spend/exists")
+    .catch(() => null);
+  return typeof res?.data?.has_logs === "boolean" ? res.data.has_logs : null;
+}
+
+/** Onboarding checklist state for the first-time overlay. */
+async function fetchSetupStatus(hasRequests: boolean) {
+  const [keysRes, endpointsRes, vkeysRes] = await Promise.all([
+    apiServices.get<Record<string, any>>("/ai-gateway/keys").catch(() => null),
+    apiServices.get<Record<string, any>>("/ai-gateway/endpoints").catch(() => null),
+    apiServices.get<Record<string, any>>("/ai-gateway/virtual-keys").catch(() => null),
+  ]);
+  return {
+    hasApiKey: (keysRes?.data?.data || []).length > 0,
+    hasEndpoint: (endpointsRes?.data?.endpoints || []).length > 0,
+    hasVirtualKey: (vkeysRes?.data?.data || []).length > 0,
+    hasRequests,
+  };
+}
+
 export default function SpendDashboardPage() {
   const cardSx = useCardSx();
   const userGuideSidebar = useUserGuideSidebarContext();
@@ -86,34 +109,18 @@ export default function SpendDashboardPage() {
   });
 
   useEffect(() => {
+    // Ignore responses from a load that a newer one (e.g. a period switch) replaced.
+    let cancelled = false;
     const load = async () => {
       setLoading(true);
       try {
-        // Check first-time status before loading period-based data
-        const logsCheck = await apiServices
-          .get<Record<string, any>>("/ai-gateway/spend/logs?limit=1")
-          .catch(() => null);
-        const totalLogs = logsCheck?.data?.total || 0;
-        if (totalLogs === 0) {
-          const [keysRes, endpointsRes, vkeysRes] = await Promise.all([
-            apiServices.get<Record<string, any>>("/ai-gateway/keys").catch(() => null),
-            apiServices.get<Record<string, any>>("/ai-gateway/endpoints").catch(() => null),
-            apiServices.get<Record<string, any>>("/ai-gateway/virtual-keys").catch(() => null),
-          ]);
-          setSetupStatus({
-            hasApiKey: (keysRes?.data?.data || []).length > 0,
-            hasEndpoint: (endpointsRes?.data?.endpoints || []).length > 0,
-            hasVirtualKey: (vkeysRes?.data?.data || []).length > 0,
-            hasRequests: false,
-          });
-          setIsFirstTime(true);
-          setLoading(false);
-          return;
-        }
-        setIsFirstTime(false);
-
-        const [spendRes, endpointRes, userRes, gsRes, cacheRes] = await Promise.all([
-          apiServices.get<Record<string, any>>(`/ai-gateway/spend?period=${period}`),
+        // Fetch the first-time check and the period data together, so the
+        // charts wait for the slowest request instead of two round trips.
+        const [hasLogs, spendRes, endpointRes, userRes, gsRes, cacheRes] = await Promise.all([
+          fetchHasLogs(),
+          apiServices
+            .get<Record<string, any>>(`/ai-gateway/spend?period=${period}`)
+            .catch(() => null),
           apiServices
             .get<Record<string, any>>(`/ai-gateway/spend/by-endpoint?period=${period}`)
             .catch(() => null),
@@ -125,7 +132,24 @@ export default function SpendDashboardPage() {
             .catch(() => null),
           apiServices.get<Record<string, any>>("/ai-gateway/cache/stats").catch(() => null),
         ]);
-        setData(spendRes?.data || null);
+        if (cancelled) return;
+        // If the existence check itself failed, don't show onboarding to an
+        // org whose period data proves it has traffic.
+        const hasTraffic = hasLogs ?? (spendRes?.data?.summary?.total_requests ?? 0) > 0;
+        if (!hasTraffic) {
+          // Only new orgs need the setup checklist; fetching it here (rather
+          // than in the batch above) keeps that batch within the browser's
+          // six-connections-per-host limit.
+          const status = await fetchSetupStatus(false);
+          if (cancelled) return;
+          setSetupStatus(status);
+          setIsFirstTime(true);
+          return;
+        }
+        setIsFirstTime(false);
+        if (!spendRes) throw new Error("Spend summary request failed");
+
+        setData(spendRes.data || null);
         setByEndpoint(
           (endpointRes?.data?.data || []).map((d: any) => ({
             ...d,
@@ -162,13 +186,23 @@ export default function SpendDashboardPage() {
         }
         setCacheStats(cacheRes?.data?.stats || null);
       } catch {
+        if (cancelled) return;
+        // Clear every panel so the page doesn't mix stale charts with an
+        // empty summary.
         setData(null);
+        setByEndpoint([]);
+        setByUser([]);
+        setGuardrailStats(null);
+        setCacheStats(null);
         setIsFirstTime(false);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     load();
+    return () => {
+      cancelled = true;
+    };
   }, [period, reloadKey]);
 
   const summary = data?.summary;
@@ -217,18 +251,8 @@ export default function SpendDashboardPage() {
     byDay.length > 0 || byModel.length > 0 || byEndpoint.length > 0 || summary?.total_requests > 0;
 
   const refreshSetupStatus = useCallback(async () => {
-    const [keysRes, endpointsRes, vkeysRes, logsCheck] = await Promise.all([
-      apiServices.get<Record<string, any>>("/ai-gateway/keys").catch(() => null),
-      apiServices.get<Record<string, any>>("/ai-gateway/endpoints").catch(() => null),
-      apiServices.get<Record<string, any>>("/ai-gateway/virtual-keys").catch(() => null),
-      apiServices.get<Record<string, any>>("/ai-gateway/spend/logs?limit=1").catch(() => null),
-    ]);
-    const newStatus = {
-      hasApiKey: (keysRes?.data?.data || []).length > 0,
-      hasEndpoint: (endpointsRes?.data?.endpoints || []).length > 0,
-      hasVirtualKey: (vkeysRes?.data?.data || []).length > 0,
-      hasRequests: (logsCheck?.data?.total || 0) > 0,
-    };
+    const [hasLogs, status] = await Promise.all([fetchHasLogs(), fetchSetupStatus(false)]);
+    const newStatus = { ...status, hasRequests: hasLogs === true };
     setSetupStatus(newStatus);
     if (newStatus.hasRequests) {
       setIsFirstTime(false);

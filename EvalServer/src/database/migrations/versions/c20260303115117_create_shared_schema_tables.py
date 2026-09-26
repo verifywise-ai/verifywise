@@ -389,8 +389,13 @@ def upgrade() -> None:
     # ============================================================
     # 14. MIGRATION STATUS TABLE (for tracking data migration)
     # ============================================================
+    # IF NOT EXISTS: the app's startup data-migration check
+    # (scripts/migrate_to_shared_schema.ensure_migration_status_table) also
+    # creates this table. If the server was ever started before
+    # `alembic upgrade head`, a plain CREATE TABLE here fails with
+    # DuplicateTableError and the whole schema can never be created.
     op.execute(sa.text('''
-        CREATE TABLE verifywise.evalserver_migration_status (
+        CREATE TABLE IF NOT EXISTS verifywise.evalserver_migration_status (
             migration_key VARCHAR(255) PRIMARY KEY,
             status VARCHAR(50) NOT NULL,
             organizations_migrated INTEGER DEFAULT 0,

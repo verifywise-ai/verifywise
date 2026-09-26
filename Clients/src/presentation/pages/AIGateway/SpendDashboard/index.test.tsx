@@ -114,8 +114,8 @@ function mockNonFirstTime(
   } = {},
 ) {
   mockGet.mockImplementation((url: string) => {
-    if (url.includes("/ai-gateway/spend/logs?limit=1")) {
-      return Promise.resolve({ data: { total: 1 } });
+    if (url.includes("/ai-gateway/spend/exists")) {
+      return Promise.resolve({ data: { has_logs: true } });
     }
     if (url.includes("/ai-gateway/spend/by-endpoint")) {
       return Promise.resolve({ data: { data: overrides.byEndpoint ?? [] } });
@@ -156,8 +156,8 @@ function mockNonFirstTime(
 
 function mockFirstTime(setup: { keys?: any[]; endpoints?: any[]; vkeys?: any[] } = {}) {
   mockGet.mockImplementation((url: string) => {
-    if (url.includes("/ai-gateway/spend/logs?limit=1")) {
-      return Promise.resolve({ data: { total: 0 } });
+    if (url.includes("/ai-gateway/spend/exists")) {
+      return Promise.resolve({ data: { has_logs: false } });
     }
     if (url.includes("/ai-gateway/keys")) {
       return Promise.resolve({ data: { data: setup.keys ?? [] } });
@@ -258,8 +258,8 @@ describe("AIGateway - SpendDashboard (index)", () => {
 
   it("falls back to a non-first-time empty state when the main spend fetch fails", async () => {
     mockGet.mockImplementation((url: string) => {
-      if (url.includes("/ai-gateway/spend/logs?limit=1")) {
-        return Promise.resolve({ data: { total: 1 } });
+      if (url.includes("/ai-gateway/spend/exists")) {
+        return Promise.resolve({ data: { has_logs: true } });
       }
       if (url.includes("/ai-gateway/spend")) {
         return Promise.reject(new Error("boom"));
@@ -272,6 +272,82 @@ describe("AIGateway - SpendDashboard (index)", () => {
       expect(screen.getByText(/No analytics data for this period/)).toBeInTheDocument();
     });
     expect(screen.queryByTestId("onboarding-overlay")).not.toBeInTheDocument();
+  });
+
+  it("requests the period data without waiting for the first-time logs check", async () => {
+    mockNonFirstTime();
+    const defaultImpl = mockGet.getMockImplementation() as (url: string) => Promise<unknown>;
+    let releaseLogsCheck: () => void = () => {};
+    mockGet.mockImplementation((url: string) => {
+      if (url.includes("/ai-gateway/spend/exists")) {
+        return new Promise((resolve) => {
+          releaseLogsCheck = () => resolve({ data: { has_logs: true } });
+        });
+      }
+      return defaultImpl(url);
+    });
+    renderWithProviders(<SpendDashboardPage />);
+
+    await waitFor(() => {
+      const urls = mockGet.mock.calls.map(([url]) => url as string);
+      expect(urls.some((u) => u.startsWith("/ai-gateway/spend?period="))).toBe(true);
+      expect(urls.some((u) => u.includes("/ai-gateway/guardrails/stats"))).toBe(true);
+      expect(urls.some((u) => u.includes("/ai-gateway/cache/stats"))).toBe(true);
+    });
+    expect(screen.queryByTestId("stat-Total cost")).not.toHaveTextContent("$12.3456");
+
+    releaseLogsCheck();
+    await waitFor(() => {
+      expect(screen.getByTestId("stat-Total cost")).toHaveTextContent("$12.3456");
+    });
+  });
+
+  it("shows the dashboard, not onboarding, when the existence check fails but the period has traffic", async () => {
+    mockNonFirstTime();
+    const defaultImpl = mockGet.getMockImplementation() as (url: string) => Promise<unknown>;
+    mockGet.mockImplementation((url: string) =>
+      url.includes("/ai-gateway/spend/exists")
+        ? Promise.reject(new Error("timeout"))
+        : defaultImpl(url),
+    );
+    renderWithProviders(<SpendDashboardPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("stat-Total cost")).toHaveTextContent("$12.3456");
+    });
+    expect(screen.queryByTestId("onboarding-overlay")).not.toBeInTheDocument();
+  });
+
+  it("ignores a slower, older load after the period changes", async () => {
+    mockNonFirstTime();
+    const defaultImpl = mockGet.getMockImplementation() as (url: string) => Promise<unknown>;
+    let releaseFirstSummary: () => void = () => {};
+    const staleSummary = {
+      ...mockSpendData,
+      summary: { ...mockSpendData.summary, total_cost: 99 },
+    };
+    mockGet.mockImplementation((url: string) => {
+      if (url.startsWith("/ai-gateway/spend?period=1d")) {
+        return new Promise((resolve) => {
+          releaseFirstSummary = () => resolve({ data: staleSummary });
+        });
+      }
+      return defaultImpl(url);
+    });
+    renderWithProviders(<SpendDashboardPage />);
+
+    await waitFor(() => {
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining("/ai-gateway/spend?period=1d"));
+    });
+    fireEvent.mouseDown(screen.getByRole("combobox"));
+    fireEvent.click(screen.getByRole("option", { name: "7 days" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("stat-Total cost")).toHaveTextContent("$12.3456");
+    });
+    releaseFirstSummary();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(screen.getByTestId("stat-Total cost")).toHaveTextContent("$12.3456");
   });
 
   it("changes the analytics period and persists it to storage", async () => {

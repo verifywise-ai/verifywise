@@ -16,9 +16,9 @@ charset-normalizer==3.4.4
 click==8.3.3
 deepeval==4.1.3
 distro==1.9.0
-docstring_parser==0.17.0
+docstring_parser==0.18.0
 eval_type_backport==0.4.0
-fastapi==0.139.2
+fastapi==0.141.1
 filelock==3.20.3
 frozenlist==1.8.0
 fsspec==2025.10.0
@@ -47,7 +47,7 @@ Mako==1.4.1
 markdown-it-py==4.0.0
 MarkupSafe==3.0.3
 mdurl==0.1.2
-mistralai==2.10.0
+mistralai==2.10.1
 mpmath==1.3.0
 multidict==6.7.1
 narwhals==2.10.2
@@ -91,7 +91,7 @@ setuptools==83.0.0
 shellingham==1.5.4
 six==1.17.0
 sniffio==1.3.1
-SQLAlchemy==2.0.52
+SQLAlchemy==2.0.54
 starlette==1.3.1
 sympy==1.13.3
 tabulate==0.9.0  # deepeval 4.1.3..4.1.7 pins tabulate<0.10.0

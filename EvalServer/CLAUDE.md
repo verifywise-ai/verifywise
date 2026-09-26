@@ -1,6 +1,6 @@
 # EvalServer — Python LLM Evaluation Service
 
-> **Last Updated:** 2026-04-09
+> **Last Updated:** 2026-09-23
 
 ---
 
@@ -42,9 +42,17 @@ alembic upgrade head && uvicorn app:app --host 0.0.0.0 --port 8000 --workers 4
 
 Alembic runs ONCE before uvicorn spawns workers. Data migration (`run_data_migration()`) runs per-worker in the startup event but is protected by `pg_advisory_lock(8675309)` so only one worker executes it.
 
+**Always run `alembic upgrade head` before starting the app**, including local/manual setups (`python app.py`, bare `uvicorn`). Docker's `start.sh` already does this.
+
 ### Data Migration
 
 `src/scripts/migrate_to_shared_schema.py` migrates `llm_evals_*` data from old tenant schemas. Config in `src/scripts/migration_config.py`. Handles JSONB serialization (`json.dumps` for asyncpg), NOT NULL safety checks, and FK remapping with `IdMapping`.
+
+Both entry points (startup `check_and_run_migration()` and the CLI `migrate_to_shared_schema()`) go through `plan_migration()`:
+
+1. **Status first.** If `evalserver_migration_status` says `completed` and no org is stranded (see 3), return `already_completed` without further checks.
+2. **`schema_not_ready`.** If any shared `verifywise.llm_evals_*` table is missing, return `schema_not_ready` and do NOT write the status row, so the migration runs on the next start after `alembic upgrade head`. `migrate_table()` also raises if a target table is missing while the source has rows, so a run can never be recorded `completed` with data left behind.
+3. **Stranded-data auto-recovery.** Older builds could record `completed` after copying 0 rows (shared tables missing at the time). When status is `completed` but an org has rows in its legacy tenant schema and **zero rows in every shared `llm_evals_*` table**, the migration is re-run for those orgs only, with a log line naming them. The "shared side empty" condition is what makes the rerun safe: `SERIAL_ID_TABLES` (api_keys, datasets, bias_audit_results) are inserted without `ON CONFLICT` and would duplicate. An org that already has any shared rows is never re-migrated automatically.
 
 ---
 

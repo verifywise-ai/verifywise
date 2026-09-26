@@ -151,7 +151,7 @@ describe("ShadowAI - RulesPage", () => {
 
     const deleteButtons = screen.getAllByRole("button", { name: "" });
     // First icon button in each rule card row is the delete trash icon.
-    const trashButton = deleteButtons.find((btn) => btn.querySelector("svg.lucide-trash2"));
+    const trashButton = deleteButtons.find((btn) => btn.querySelector("svg.lucide-trash"));
     fireEvent.click(trashButton!);
 
     await waitFor(() => {

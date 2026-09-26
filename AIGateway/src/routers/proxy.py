@@ -365,7 +365,7 @@ async def _handle_stream(
                         if "usage" in chunk:
                             total_prompt = chunk["usage"].get("prompt_tokens", total_prompt)
                             total_completion = chunk["usage"].get("completion_tokens", total_completion)
-                        if "cost_usd" in chunk:
+                        if "cost_usd" in chunk and chunk["cost_usd"] is not None:
                             total_cost = chunk["cost_usd"]
                         if "model" in chunk:
                             final_model = chunk["model"]

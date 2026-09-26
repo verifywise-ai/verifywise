@@ -320,11 +320,14 @@ describe("Test Entity Repository", () => {
   // ── checkDemoDataExists ────────────────────────────────────────────────────
 
   describe("checkDemoDataExists", () => {
-    it("should return true when a demo project title is found", async () => {
+    it("should return true when a project is flagged as demo data", async () => {
       vi.mocked(apiServices.get).mockResolvedValue({
         status: 200,
         statusText: "OK",
-        data: [{ project_title: "AI Compliance Checker" }, { project_title: "Other Project" }],
+        data: {
+          message: "OK",
+          data: [{ project_title: "Custom Project", is_demo: true }],
+        },
       });
 
       const result = await checkDemoDataExists();
@@ -333,11 +336,17 @@ describe("Test Entity Repository", () => {
       expect(result).toBe(true);
     });
 
-    it("should return true for the second demo title", async () => {
+    it("should return true when a legacy demo project title is found", async () => {
       vi.mocked(apiServices.get).mockResolvedValue({
         status: 200,
         statusText: "OK",
-        data: [{ project_title: "Information Security & AI Governance Framework" }],
+        data: {
+          message: "OK",
+          data: [
+            { project_title: "AI Compliance Checker", is_demo: false },
+            { project_title: "Other Project" },
+          ],
+        },
       });
 
       const result = await checkDemoDataExists();
@@ -345,11 +354,14 @@ describe("Test Entity Repository", () => {
       expect(result).toBe(true);
     });
 
-    it("should return false when no demo project titles are found", async () => {
+    it("should return false when no demo projects are found", async () => {
       vi.mocked(apiServices.get).mockResolvedValue({
         status: 200,
         statusText: "OK",
-        data: [{ project_title: "My Custom Project" }],
+        data: {
+          message: "OK",
+          data: [{ project_title: "My Custom Project", is_demo: false }],
+        },
       });
 
       const result = await checkDemoDataExists();

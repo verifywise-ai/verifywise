@@ -781,6 +781,10 @@ export const translations: Record<string, Record<string, string>> = {
     "STATUS": "STATUS",
     "Status date": "Statusdatum",
     "STATUS DATE": "STATUSDATUM",
+    "Traditional ML": "Traditionelles ML",
+    "GenAI": "GenAI",
+    "RAG": "RAG",
+    "Agentic AI": "Agentische KI",
     "Action": "Aktion",
     "ACTION": "AKTION",
     "Action owner": "Aktionsverantwortlicher",
@@ -1628,6 +1632,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Archivierte Nachweise werden in der Nachweiszentrale-Liste ausgeblendet, aber nie gelöscht. Die Archivierung erfordert zusätzlich das Server-Flag EVIDENCE_RETENTION_ARCHIVE_ENABLED.",
     "Back to history": "Zurück zum Verlauf",
     "Back to prompts": "Zurück zu Prompts",
+    "Captcha answer": "Captcha-Antwort",
     "Click to upload": "Zum Hochladen klicken",
     "Close AI dependency graph modal": "Modal für KI-Abhängigkeitsgraph schließen",
     "Close banner": "Banner schließen",
@@ -1636,6 +1641,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Close drawer": "Schublade schließen",
     "Close editor": "Editor schließen",
     "Close entity graph modal": "Entitätsgraph-Modal schließen",
+    "Close file preview": "Dateivorschau schließen",
     "Close icon": "Schließen-Symbol",
     "Close image lightbox": "Bild-Lightbox schließen",
     "Close notification": "Benachrichtigung schließen",
@@ -1750,6 +1756,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Edit declaration of conformity": "Konformitätserklärung bearbeiten",
     "Edit EU registration": "EU-Registrierung bearbeiten",
     "Edit EU registration details": "EU-Registrierungsdetails bearbeiten",
+    "Edit file": "Datei bearbeiten",
     "Edit file metadata": "Dateimetadaten bearbeiten",
     "Edit folder": "Ordner bearbeiten",
     "Edit project": "Projekt bearbeiten",
@@ -9278,6 +9285,15 @@ export const translations: Record<string, Record<string, string>> = {
     "Invite via email": "Per E-Mail einladen",
     "Must include an uppercase letter, a lowercase letter, and a digit. Minimum 8 characters.":
       "Muss einen Großbuchstaben, einen Kleinbuchstaben und eine Ziffer enthalten. Mindestens 8 Zeichen.",
+    "Create API tokens for the super admin API":
+      "API-Tokens für die Super-Administrator-API erstellen",
+    "Install": "Installieren",
+    "Install the MCP server to manage organizations and users from Claude Code":
+      "MCP-Server installieren, um Organisationen und Benutzer über Claude Code zu verwalten",
+    "Installed": "Installiert",
+    "MCP server": "MCP-Server",
+    "The MCP server source was not found next to the backend. It is included from MCPServer/ at build time.":
+      "Die MCP-Server-Quelle wurde nicht neben dem Backend gefunden. Sie wird zur Build-Zeit aus MCPServer/ eingebunden.",
   },
 
   fr: {
@@ -10405,6 +10421,10 @@ export const translations: Record<string, Record<string, string>> = {
     "OWNER": "RESPONSABLE",
     "Status date": "Date de statut",
     "STATUS DATE": "DATE DE STATUT",
+    "Traditional ML": "ML traditionnel",
+    "GenAI": "GenAI",
+    "RAG": "RAG",
+    "Agentic AI": "IA agentique",
     "Action owner": "Responsable d'action",
     "Date detected": "Date de détection",
     "Date generated": "Date de génération",
@@ -11025,6 +11045,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Les preuves archivées sont masquées de la liste du Centre de preuves mais ne sont jamais supprimées. L'archivage nécessite également le flag serveur EVIDENCE_RETENTION_ARCHIVE_ENABLED.",
     "Back to history": "Retour à l'historique",
     "Back to prompts": "Retour aux prompts",
+    "Captcha answer": "Réponse au captcha",
     "Click to upload": "Cliquer pour téléverser",
     "Close AI dependency graph modal": "Fermer la fenêtre du graphe de dépendances IA",
     "Close banner": "Fermer la bannière",
@@ -11033,6 +11054,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Close drawer": "Fermer le tiroir",
     "Close editor": "Fermer l'éditeur",
     "Close entity graph modal": "Fermer la fenêtre du graphe d'entités",
+    "Close file preview": "Fermer l'aperçu du fichier",
     "Close icon": "Icône de fermeture",
     "Close image lightbox": "Fermer la lightbox d'image",
     "Close notification": "Fermer la notification",
@@ -11142,6 +11164,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Edit declaration of conformity": "Modifier la déclaration de conformité",
     "Edit EU registration": "Modifier l'enregistrement UE",
     "Edit EU registration details": "Modifier les détails d'enregistrement UE",
+    "Edit file": "Modifier le fichier",
     "Edit file metadata": "Modifier les métadonnées du fichier",
     "Edit folder": "Modifier le dossier",
     "Edit project": "Modifier le projet",
@@ -18486,6 +18509,15 @@ export const translations: Record<string, Record<string, string>> = {
     "Invite via email": "Inviter par e-mail",
     "Must include an uppercase letter, a lowercase letter, and a digit. Minimum 8 characters.":
       "Doit contenir une majuscule, une minuscule et un chiffre. Minimum 8 caractères.",
+    "Create API tokens for the super admin API":
+      "Créer des tokens d'API pour l'API super administrateur",
+    "Install": "Installer",
+    "Install the MCP server to manage organizations and users from Claude Code":
+      "Installer le serveur MCP pour gérer les organisations et les utilisateurs depuis Claude Code",
+    "Installed": "Installé",
+    "MCP server": "Serveur MCP",
+    "The MCP server source was not found next to the backend. It is included from MCPServer/ at build time.":
+      "Les sources du serveur MCP n'ont pas été trouvées à côté du backend. Elles sont incluses depuis MCPServer/ au moment de la compilation.",
   },
   es: {
     "Deployment name": "Nombre del despliegue",
@@ -19016,6 +19048,10 @@ export const translations: Record<string, Record<string, string>> = {
     "STATUS": "ESTADO",
     "Status date": "Fecha de estado",
     "STATUS DATE": "FECHA DE ESTADO",
+    "Traditional ML": "ML tradicional",
+    "GenAI": "GenAI",
+    "RAG": "RAG",
+    "Agentic AI": "IA agéntica",
     "Action": "Acción",
     "ACTION": "ACCIÓN",
     "Action owner": "Responsable de la acción",
@@ -19630,6 +19666,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Las evidencias archivadas se ocultan de la lista del Centro de evidencias pero nunca se eliminan. El archivado también requiere el flag de servidor EVIDENCE_RETENTION_ARCHIVE_ENABLED.",
     "Back to history": "Volver al historial",
     "Back to prompts": "Volver a los prompts",
+    "Captcha answer": "Respuesta del captcha",
     "Click to upload": "Haga clic para cargar",
     "Close AI dependency graph modal": "Cerrar la ventana del gráfico de dependencias de IA",
     "Close banner": "Cerrar banner",
@@ -19638,6 +19675,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Close drawer": "Cerrar panel",
     "Close editor": "Cerrar editor",
     "Close entity graph modal": "Cerrar la ventana del gráfico de entidades",
+    "Close file preview": "Cerrar vista previa del archivo",
     "Close icon": "Icono de cerrar",
     "Close image lightbox": "Cerrar lightbox de imagen",
     "Close notification": "Cerrar notificación",
@@ -19746,6 +19784,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Edit declaration of conformity": "Editar declaración de conformidad",
     "Edit EU registration": "Editar registro de la UE",
     "Edit EU registration details": "Editar detalles del registro de la UE",
+    "Edit file": "Editar archivo",
     "Edit file metadata": "Editar metadatos del archivo",
     "Edit folder": "Editar carpeta",
     "Edit project": "Editar proyecto",
@@ -27613,5 +27652,14 @@ export const translations: Record<string, Record<string, string>> = {
     "Invite via email": "Invitar por correo",
     "Must include an uppercase letter, a lowercase letter, and a digit. Minimum 8 characters.":
       "Debe incluir una mayúscula, una minúscula y un dígito. Mínimo 8 caracteres.",
+    "Create API tokens for the super admin API":
+      "Crear tokens de API para la API de superadministrador",
+    "Install": "Instalar",
+    "Install the MCP server to manage organizations and users from Claude Code":
+      "Instalar el servidor MCP para gestionar organizaciones y usuarios desde Claude Code",
+    "Installed": "Instalado",
+    "MCP server": "Servidor MCP",
+    "The MCP server source was not found next to the backend. It is included from MCPServer/ at build time.":
+      "No se encontró el código fuente del servidor MCP junto al backend. Se incluye desde MCPServer/ en tiempo de compilación.",
   },
 };
