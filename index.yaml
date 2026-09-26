@@ -2,8 +2,24 @@ apiVersion: v1
 entries:
   verifywise:
   - apiVersion: v2
+    appVersion: v2.5.2
+    created: "2026-09-26T23:06:09.869905346Z"
+    description: VerifyWise — AI governance platform (EU AI Act, ISO 42001, ISO 27001,
+      NIST AI RMF)
+    digest: 925b1f0a18d6d81150b381ebca81e5144ddb2955ff5ba09a418c50685e1325fb
+    home: https://verifywise.ai
+    maintainers:
+    - name: VerifyWise
+    name: verifywise
+    sources:
+    - https://github.com/verifywise-ai/verifywise
+    type: application
+    urls:
+    - https://verifywise-ai.github.io/verifywise/verifywise-2.5.2.tgz
+    version: 2.5.2
+  - apiVersion: v2
     appVersion: v2.5.1
-    created: "2026-09-16T21:13:16.621773078Z"
+    created: "2026-09-26T23:06:09.869257635Z"
     description: VerifyWise — AI governance platform (EU AI Act, ISO 42001, ISO 27001,
       NIST AI RMF)
     digest: 43c65067d3ee8d5e34315f4bd80a423322077b8a0fc301f26f91d1f1d9d771ad
@@ -17,4 +33,4 @@ entries:
     urls:
     - https://verifywise-ai.github.io/verifywise/verifywise-2.5.1.tgz
     version: 2.5.1
-generated: "2026-09-16T21:13:16.620941157Z"
+generated: "2026-09-26T23:06:09.868469371Z"
