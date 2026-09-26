@@ -253,9 +253,15 @@ router.get("/:id/calculate-progress", authenticateJWT, calculateProgress);
 /**
  * Profile Photo Routes
  */
-router.post("/:id/profile-photo", authenticateJWT, upload.single("photo"), uploadUserProfilePhoto);
+router.post(
+  "/:id/profile-photo",
+  authenticateJWT,
+  selfOnly,
+  upload.single("photo"),
+  uploadUserProfilePhoto,
+);
 router.get("/:id/profile-photo", authenticateJWT, getUserProfilePhoto);
-router.delete("/:id/profile-photo", authenticateJWT, deleteUserProfilePhoto);
+router.delete("/:id/profile-photo", authenticateJWT, selfOnly, deleteUserProfilePhoto);
 
 export default router;
 
