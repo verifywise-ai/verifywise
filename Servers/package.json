@@ -47,7 +47,7 @@
     "@ai-sdk/openai": "^4.0.69",
     "@aws-sdk/client-ses": "^3.1135.0",
     "@azure/communication-email": "^1.1.0",
-    "@azure/msal-node": "^6.0.1",
+    "@azure/msal-node": "^7.0.0",
     "@daytonaio/sdk": "^0.214.0",
     "@e2b/code-interpreter": "^2.8.0",
     "@opentelemetry/api": "^1.9.1",
