@@ -107,7 +107,7 @@ typing_extensions==4.15.0
 tzdata==2025.2
 uritemplate==4.2.0
 urllib3==2.7.0
-uvicorn==0.52.4
+uvicorn==0.53.0
 watchfiles==1.1.1
 wcwidth==0.8.2
 websockets==15.0.1
