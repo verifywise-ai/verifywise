@@ -109,7 +109,7 @@ uritemplate==4.2.0
 urllib3==2.7.0
 uvicorn==0.52.4
 watchfiles==1.1.1
-wcwidth==0.8.2
+wcwidth==0.9.1
 websockets==15.0.1
 wheel==0.46.2
 yarl==1.24.5
