@@ -18,7 +18,7 @@ import singleTheme from "../../../themes/v1SingleTheme";
 import { ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
 import Placeholder from "../../../assets/imgs/empty-state.svg";
 import CustomizableSkeleton from "../../Skeletons";
-import { formatDateTime } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { Event } from "../../../../domain/types/Event";
 import { User } from "../../../../domain/types/User";
 import {
@@ -86,6 +86,7 @@ const EventsTable: React.FC<IEventsTableProps> = ({
   isLoading,
   paginated = true,
 }) => {
+  const formatDate = useFormattedDate();
   const theme = useTheme();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(() =>
@@ -359,7 +360,9 @@ const EventsTable: React.FC<IEventsTableProps> = ({
                       : "inherit",
                 }}
               >
-                {event.timestamp ? formatDateTime(event.timestamp) : "N/A"}
+                {event.timestamp
+                  ? formatDate(event.timestamp, { includeTime: true, includeSeconds: true })
+                  : "N/A"}
               </TableCell>
             </TableRow>
           ))
@@ -372,7 +375,7 @@ const EventsTable: React.FC<IEventsTableProps> = ({
         )}
       </TableBody>
     ),
-    [sortedData, page, rowsPerPage, formattedUsers],
+    [sortedData, page, rowsPerPage, formattedUsers, formatDate],
   );
 
   if (isLoading) {

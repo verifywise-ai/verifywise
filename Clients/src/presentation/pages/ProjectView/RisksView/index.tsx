@@ -11,7 +11,7 @@ import { ProjectRisk } from "../../../../application/hooks/useProjectRisks";
 import { getAllEntities } from "../../../../application/repository/entity.repository";
 import { VendorRisk } from "../../../../domain/types/VendorRisk";
 import { StatusTileCards, StatusTileItem } from "../../../components/Cards/StatusTileCards";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 
 const projectRisksColNames = [
   {
@@ -75,6 +75,7 @@ const vendorRisksColNames = [
  */
 
 const RisksView: FC<RisksViewProps> = memo(({ risksSummary, risksData, title, projectId }) => {
+  const formatDate = useFormattedDate();
   /**
    * Determines which column set to use based on risk type
    */
@@ -105,7 +106,7 @@ const RisksView: FC<RisksViewProps> = memo(({ risksSummary, risksData, title, pr
 
         // Special formatting for dates
         if (col.id === "review_date" && value) {
-          value = displayFormattedDate(value);
+          value = formatDate(value);
         }
 
         // Special formatting for ALE currency
@@ -122,7 +123,7 @@ const RisksView: FC<RisksViewProps> = memo(({ risksSummary, risksData, title, pr
       acc.push(row);
       return acc;
     }, []);
-  }, [risksData, risksTableCols]);
+  }, [risksData, risksTableCols, formatDate]);
 
   /**
    * Combines columns and rows data for table component

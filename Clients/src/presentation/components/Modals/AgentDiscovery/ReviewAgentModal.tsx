@@ -5,7 +5,7 @@ import VWChip from "../../Chip";
 import { CustomizableButton } from "../../button/customizable-button";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { AgentPrimitiveRow } from "../../../../domain/interfaces/i.agentDiscovery";
-import { displayFormattedDateTime } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { getAllEntities } from "../../../../application/repository/entity.repository";
 import LinkModelModal from "./LinkModelModal";
 
@@ -22,6 +22,7 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
   agent,
   onSuccess,
 }) => {
+  const formatUserDate = useFormattedDate();
   const theme = useTheme();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
@@ -84,7 +85,7 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "—";
-    return displayFormattedDateTime(dateStr);
+    return formatUserDate(dateStr, { includeTime: true });
   };
 
   return (

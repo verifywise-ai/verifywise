@@ -25,7 +25,7 @@ const SelectorVertical = (props: React.SVGAttributes<SVGSVGElement>) => (
   <ChevronsUpDown size={16} {...props} />
 );
 import Chip from "../../components/Chip";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { IModelRisk } from "../../../domain/interfaces/i.modelRisk";
 import { User } from "../../../domain/types/User";
 import { ModelRisksTableProps } from "../../../domain/interfaces/i.modelInventory";
@@ -63,6 +63,7 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
   hidePagination = false,
   visibleColumns,
 }) => {
+  const formatUserDate = useFormattedDate();
   const theme = useTheme();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -149,13 +150,16 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
     return `${start} - ${end}`;
   }, [page, rowsPerPage, dataLength]);
 
-  const formatDate = (dateString: string) => {
-    try {
-      return displayFormattedDate(dateString);
-    } catch {
-      return dateString;
-    }
-  };
+  const formatDate = useCallback(
+    (dateString: string) => {
+      try {
+        return formatUserDate(dateString);
+      } catch {
+        return dateString;
+      }
+    },
+    [formatUserDate],
+  );
 
   const getOwnerName = useCallback(
     (ownerId: string | number) => {
@@ -494,6 +498,7 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
       visibleTableColumns,
       customFieldDefs,
       users,
+      formatDate,
     ],
   );
 

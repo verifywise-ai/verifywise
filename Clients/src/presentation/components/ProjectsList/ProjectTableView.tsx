@@ -33,7 +33,7 @@ import EmptyStateTip from "../EmptyState/EmptyStateTip";
 import { TableEmptyStateLayout } from "../Table/TableEmptyStateLayout";
 import { IProjectTableViewProps } from "../../../domain/interfaces/i.project";
 import { Project } from "../../../domain/types/Project";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { deleteProject } from "../../../application/repository/project.repository";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import Alert from "../Alert";
@@ -150,6 +150,7 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
   onProjectDeleted,
   visibleColumns,
 }) => {
+  const formatUserDate = useFormattedDate();
   const theme = useTheme();
   const navigate = useNavigateSearch();
   const { setProjects } = useContext(VerifyWiseContext);
@@ -237,7 +238,7 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
   }, []);
 
   const formatDate = (date: Date) => {
-    return displayFormattedDate(date);
+    return formatUserDate(date);
   };
 
   const handleChangePage = useCallback((_event: unknown, newPage: number) => {

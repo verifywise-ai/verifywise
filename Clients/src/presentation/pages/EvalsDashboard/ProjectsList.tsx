@@ -33,7 +33,7 @@ import { PageHeader } from "../../components/Layout/PageHeader";
 import SelectableCard from "../../components/SelectableCard";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import StandardModal from "../../components/Modals/StandardModal";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import Field from "../../components/Inputs/Field";
 import Alert from "../../components/Alert";
 import { EmptyState } from "../../components/EmptyState";
@@ -67,6 +67,7 @@ const columns: StandardColumn[] = [
 ];
 
 export default function ProjectsList() {
+  const formatUserDate = useFormattedDate();
   const navigate = useNavigate();
   const [projects, setProjects] = useState<DeepEvalProject[]>([]);
   const [runsByProject, setRunsByProject] = useState<Record<string, number>>({});
@@ -315,7 +316,7 @@ export default function ProjectsList() {
   };
 
   const formatDate = (date: string) => {
-    return displayFormattedDate(date);
+    return formatUserDate(date);
   };
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, project: DeepEvalProject) => {
