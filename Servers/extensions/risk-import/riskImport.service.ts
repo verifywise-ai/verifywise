@@ -13,6 +13,15 @@ import {
 } from "./risks.enums";
 
 /**
+ * A PostgreSQL text-array literal, e.g. `{"a","b \"c\""}`. Each element is quoted,
+ * with backslashes escaped before double quotes: escaping only the quotes would let
+ * a value ending in a backslash escape its closing quote and split the array.
+ */
+export function toPostgresTextArray(values: string[]): string {
+  return `{${values.map((value) => `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`).join(",")}}`;
+}
+
+/**
  * Server-side risk-import extension logic. Two entry points:
  *   - buildExcelTemplate() → an .xlsx buffer with dropdown-validated
  *     enum columns and a user picker sourced from the caller's org.
@@ -421,7 +430,7 @@ export async function importRisks(
               organization_id: organizationId,
               ...data,
               risk_category: data.risk_category
-                ? `{${(data.risk_category as string[]).map((c) => `"${c.replace(/"/g, '\\"')}"`).join(",")}}`
+                ? toPostgresTextArray(data.risk_category as string[])
                 : null,
             },
             transaction,
