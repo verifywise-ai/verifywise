@@ -17,6 +17,8 @@
 }
 
 .command-dialog-content {
+  display: flex;
+  flex-direction: column;
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 16px 70px rgba(0, 0, 0, 0.2);
@@ -44,6 +46,7 @@
 .command-input-wrapper {
   position: relative;
   width: 100%;
+  flex-shrink: 0;
 }
 
 .command-input {
@@ -52,10 +55,39 @@
   border: none;
   width: 100%;
   font-size: 17px;
-  padding: 12px 16px;
+  padding: 12px 44px 12px 16px;
   outline: none;
   background: transparent;
   color: #000;
+}
+
+.command-close-button {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: #999;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.command-close-button:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #666;
+}
+
+.command-close-button:focus-visible {
+  outline: 2px solid #007acc;
+  outline-offset: 1px;
 }
 
 .command-input::placeholder {
@@ -71,7 +103,7 @@
   bottom: 0;
   display: flex;
   align-items: center;
-  padding: 12px 16px;
+  padding: 12px 44px 12px 16px;
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 13px;
@@ -90,7 +122,8 @@
 }
 
 .command-list {
-  max-height: 420px;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   padding: 8px;
 }
@@ -226,6 +259,7 @@
 
 /* Filter bar */
 .command-filter-bar {
+  flex-shrink: 0;
   --filter-border: #e5e5e5;
   --filter-bg: #fafafa;
   --dropdown-bg: #ffffff;
@@ -389,6 +423,15 @@
     color: #888;
   }
 
+  .command-close-button {
+    color: #aaa;
+  }
+
+  .command-close-button:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+  }
+
   .command-group [cmdk-group-heading] {
     color: #777;
     background: rgba(255, 255, 255, 0.02);
@@ -497,6 +540,7 @@
 
 /* Navigation hints footer */
 .command-footer {
+  flex-shrink: 0;
   border-top: 1px solid #e5e5e5;
   background: #fafafa;
   margin-top: 8px;

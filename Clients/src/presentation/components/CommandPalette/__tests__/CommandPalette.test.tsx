@@ -151,8 +151,32 @@ describe("CommandPalette", () => {
     renderWithProviders(<CommandPalette open={true} onOpenChange={mockOnOpenChange} />);
     expect(screen.getByText("Navigate")).toBeInTheDocument();
     expect(screen.getByText("Select")).toBeInTheDocument();
-    expect(screen.getByText("Close")).toBeInTheDocument();
+    expect(screen.getByText("to close")).toBeInTheDocument();
+    expect(screen.getByText("esc")).toBeInTheDocument();
   });
+
+  it("should close dialog when the close button is clicked", async () => {
+    renderWithProviders(<CommandPalette open={true} onOpenChange={mockOnOpenChange} />);
+    const user = userEvent.setup();
+
+    await user.click(screen.getByRole("button", { name: "Close" }));
+
+    expect(mockOnOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it.each(["{Enter}", "[Space]"])(
+    "should close dialog when the close button is activated with %s",
+    async (key) => {
+      renderWithProviders(<CommandPalette open={true} onOpenChange={mockOnOpenChange} />);
+      const user = userEvent.setup();
+
+      screen.getByRole("button", { name: "Close" }).focus();
+      await user.keyboard(key);
+
+      expect(mockOnOpenChange).toHaveBeenCalledWith(false);
+      expect(mockExecute).not.toHaveBeenCalled();
+    },
+  );
 
   it("should render recent searches", () => {
     mockUseWiseSearch.mockReturnValue({
