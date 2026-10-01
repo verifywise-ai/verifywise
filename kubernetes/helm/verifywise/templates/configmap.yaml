@@ -33,7 +33,6 @@ data:
   REDIS_URL: "redis://redis:6379/0"
 
   # Feature flags
-  MOCK_DATA_ON: {{ .Values.config.mockDataOn | quote }}
   MULTI_TENANCY_ENABLED: {{ .Values.config.multiTenancyEnabled | quote }}
 
   # Email

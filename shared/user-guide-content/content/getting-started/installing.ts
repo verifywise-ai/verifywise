@@ -120,9 +120,7 @@ AI_GATEWAY_INTERNAL_KEY=
 EVAL_SERVER_INTERNAL_KEY=
 
 # Encryption algorithm
-ENCRYPTION_ALGORITHM=aes-256-cbc
-
-MOCK_DATA_ON=false`,
+ENCRYPTION_ALGORITHM=aes-256-cbc`,
     },
     {
       type: 'paragraph',

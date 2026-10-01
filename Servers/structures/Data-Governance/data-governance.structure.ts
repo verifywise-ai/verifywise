@@ -22,6 +22,68 @@ export const dataGovernanceStructure: FrameworkStructure = {
   source_labels: {
     practice: "Data Governance practices",
   },
+  demo: {
+    "Data Governance Council": {
+      implementation_description:
+        "A data governance council with representation from legal, security, data engineering and the business lines meets monthly, approves standards and records its decisions.",
+      auditor_feedback: "Council is chartered and meeting; decisions are minuted.",
+    },
+    "Data Stewardship": {
+      implementation_description:
+        "Data stewards are named per domain with documented duties covering definitions, quality thresholds and access decisions for their datasets.",
+      auditor_feedback: "Stewards are named for every domain in scope.",
+    },
+    "Data Ownership": {
+      implementation_description:
+        "Every registered dataset has an accountable owner recorded in the catalog, and ownership transfers on a documented handover.",
+      auditor_feedback: "Ownership is unambiguous; keep it current as teams reorganise.",
+    },
+    "Data Quality Standards": {
+      implementation_description:
+        "Quality dimensions and acceptance thresholds — completeness, validity, timeliness and uniqueness — are defined for each critical dataset.",
+      auditor_feedback: "Standards are defined with measurable thresholds.",
+    },
+    "Data Quality Measurement": {
+      implementation_description:
+        "Automated profiling runs on a schedule against the defined thresholds, and results are published to the owning teams.",
+      auditor_feedback: "Measurement is automated; extend coverage beyond the critical datasets.",
+    },
+    "Data Quality Remediation": {
+      implementation_description:
+        "Threshold breaches raise tracked remediation tickets with an owner and a response time, and repeat breaches trigger a root-cause review.",
+      auditor_feedback: "Remediation is tracked to closure; review the ageing backlog.",
+    },
+    "Business Glossary": {
+      implementation_description:
+        "A business glossary holds agreed definitions for shared terms and metrics, each with a steward, and is linked to the matching catalog entries.",
+      auditor_feedback: "Glossary is maintained and linked to the catalog.",
+    },
+    "Data Catalog": {
+      implementation_description:
+        "The catalog covers critical datasets with ownership, classification, source and refresh metadata, populated by automated harvesting plus steward review.",
+      auditor_feedback: "Catalog coverage is good for critical data.",
+    },
+    "Data Lineage": {
+      implementation_description:
+        "Lineage is captured from source system through transformation to the consuming model or report, so the inputs behind an AI output can be traced.",
+      auditor_feedback: "Lineage is traceable end to end for the flagship pipelines.",
+    },
+    "Data Retention": {
+      implementation_description:
+        "A retention schedule sets a period per data category, approved by legal and enforced by policy on the storage platforms.",
+      auditor_feedback: "Retention schedule is approved; confirm enforcement on every platform.",
+    },
+    "Data Archival": {
+      implementation_description:
+        "Data past its active window moves to an archival tier that preserves classification and access controls, with restores tested periodically.",
+      auditor_feedback: "Archival tier preserves controls; restore testing is evidenced.",
+    },
+    "Data Disposal": {
+      implementation_description:
+        "Disposal at end of retention is verified and recorded, including disposal by processors, with certificates retained as evidence.",
+      auditor_feedback: "Disposal is evidenced; obtain certificates from every processor.",
+    },
+  },
   seed: {
     name: "Data Governance Framework",
     description: "Framework for implementing enterprise data governance",

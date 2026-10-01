@@ -158,8 +158,14 @@ export const addFrameworkToProjectQuery = async (
     return false;
   }
 
+  // Tag the link row the way the project is tagged, so a framework added to a
+  // demo project is demo throughout — the seeders derive is_demo from the project.
   const result = (await sequelize.query(
-    `INSERT INTO projects_frameworks (organization_id, project_id, framework_id) VALUES (:organizationId, :projectId, :frameworkId) RETURNING *;`,
+    `INSERT INTO projects_frameworks (organization_id, project_id, framework_id, is_demo)
+     SELECT :organizationId, :projectId, :frameworkId, p.is_demo
+       FROM projects p
+      WHERE p.id = :projectId AND p.organization_id = :organizationId
+     RETURNING *;`,
     { replacements: { projectId, frameworkId, organizationId }, transaction },
   )) as [ProjectFrameworksModel[], number];
   if (!result[0]?.length) {

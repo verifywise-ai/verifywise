@@ -17,6 +17,7 @@ import { ProjectFrameworksModel } from "../domain.layer/models/projectFrameworks
 import { Clauses } from "../structures/ISO-42001/clauses/clauses.struct";
 import { Annex } from "../structures/ISO-42001/annex/annex.struct";
 import { STATUSES } from "../types/status.type";
+import { demoDueDate } from "./demoSeedFields";
 import { SubClauseISORisks } from "../domain.layer/frameworks/ISO-42001/subClauseISORisks.model";
 import { validateRiskArray } from "./utility.utils";
 import {
@@ -608,14 +609,14 @@ export const createNewClausesQuery = async (
   is_mock_data: boolean,
 ) => {
   const projectFramework = (await sequelize.query(
-    `SELECT pf.id, p.owner FROM projects_frameworks pf
+    `SELECT pf.id, p.owner, p.is_demo FROM projects_frameworks pf
        JOIN projects p ON p.id = pf.project_id
       WHERE pf.organization_id = :organizationId AND pf.project_id = :project_id AND pf.framework_id = 2`,
     {
       replacements: { organizationId, project_id: projectId },
       transaction,
     },
-  )) as [{ id: number; owner: number | null }[], number];
+  )) as [{ id: number; owner: number | null; is_demo: boolean }[], number];
   const subClauses = (await sequelize.query(`SELECT id FROM subclauses_struct_iso ORDER BY id;`, {
     transaction,
   })) as [{ id: number }[], number];
@@ -632,6 +633,7 @@ export const createNewClausesQuery = async (
     transaction,
     is_mock_data,
     projectFramework[0][0].owner,
+    projectFramework[0][0].is_demo,
   );
   const clauses = await getManagementSystemClausesQuery(subClauseIds, organizationId, transaction);
   return clauses;
@@ -649,15 +651,16 @@ export const createNewSubClausesQuery = async (
   transaction: Transaction,
   is_mock_data: boolean,
   demoOwner: number | null = null,
+  isDemo: boolean = false,
 ) => {
   const subClauseIds = [];
   let ctr = 0;
   for (let _subClauseId of subClauses) {
     const subClauseId = (await sequelize.query(
       `INSERT INTO subclauses_iso (
-        organization_id, subclause_meta_id, projects_frameworks_id, implementation_description, auditor_feedback, status, owner
+        organization_id, subclause_meta_id, projects_frameworks_id, implementation_description, auditor_feedback, status, owner, reviewer, approver, due_date, is_demo
       ) VALUES (
-        :organizationId, :subclause_meta_id, :projects_frameworks_id, :implementation_description, :auditor_feedback, :status, :owner
+        :organizationId, :subclause_meta_id, :projects_frameworks_id, :implementation_description, :auditor_feedback, :status, :owner, :reviewer, :approver, :due_date, :is_demo
       ) RETURNING id;`,
       {
         replacements: {
@@ -674,6 +677,10 @@ export const createNewSubClausesQuery = async (
           // same on every seed; a real project starts at "Not started".
           status: is_mock_data ? STATUSES[ctr % STATUSES.length] : "Not started",
           owner: is_mock_data ? demoOwner : null,
+          reviewer: is_mock_data ? demoOwner : null,
+          approver: is_mock_data ? demoOwner : null,
+          due_date: is_mock_data ? demoDueDate(ctr) : null,
+          is_demo: isDemo,
         },
         transaction,
       },
@@ -692,14 +699,14 @@ export const createNewAnnexesQUery = async (
   is_mock_data: boolean,
 ) => {
   const projectFramework = (await sequelize.query(
-    `SELECT pf.id, p.owner FROM projects_frameworks pf
+    `SELECT pf.id, p.owner, p.is_demo FROM projects_frameworks pf
        JOIN projects p ON p.id = pf.project_id
       WHERE pf.organization_id = :organizationId AND pf.project_id = :project_id AND pf.framework_id = 2`,
     {
       replacements: { organizationId, project_id: projectId },
       transaction,
     },
-  )) as [{ id: number; owner: number | null }[], number];
+  )) as [{ id: number; owner: number | null; is_demo: boolean }[], number];
   const annexCategories = (await sequelize.query(
     `SELECT id FROM annexcategories_struct_iso ORDER BY id;`,
     { transaction },
@@ -719,6 +726,7 @@ export const createNewAnnexesQUery = async (
     transaction,
     is_mock_data,
     projectFramework[0][0].owner,
+    projectFramework[0][0].is_demo,
   );
   const annexes = await getReferenceControlsQuery(annexCategoryIds, organizationId, transaction);
   return annexes;
@@ -738,15 +746,16 @@ export const createNewAnnexeCategoriesQuery = async (
   transaction: Transaction,
   is_mock_data: boolean,
   demoOwner: number | null = null,
+  isDemo: boolean = false,
 ) => {
   const annexCategoryIds = [];
   let ctr = 0;
   for (let _annexCategoryId of annexCategories) {
     const annexCategoryId = (await sequelize.query(
       `INSERT INTO annexcategories_iso (
-        organization_id, annexcategory_meta_id, projects_frameworks_id, is_applicable, justification_for_exclusion, implementation_description, auditor_feedback, status, owner
+        organization_id, annexcategory_meta_id, projects_frameworks_id, is_applicable, justification_for_exclusion, implementation_description, auditor_feedback, status, owner, reviewer, approver, due_date, is_demo
       ) VALUES (
-        :organizationId, :annexcategory_meta_id, :projects_frameworks_id, :is_applicable, :justification_for_exclusion, :implementation_description, :auditor_feedback, :status, :owner
+        :organizationId, :annexcategory_meta_id, :projects_frameworks_id, :is_applicable, :justification_for_exclusion, :implementation_description, :auditor_feedback, :status, :owner, :reviewer, :approver, :due_date, :is_demo
       ) RETURNING id;`,
       {
         replacements: {
@@ -769,6 +778,10 @@ export const createNewAnnexeCategoriesQuery = async (
           // same on every seed; a real project starts at "Not started".
           status: is_mock_data ? STATUSES[ctr % STATUSES.length] : "Not started",
           owner: is_mock_data ? demoOwner : null,
+          reviewer: is_mock_data ? demoOwner : null,
+          approver: is_mock_data ? demoOwner : null,
+          due_date: is_mock_data ? demoDueDate(ctr) : null,
+          is_demo: isDemo,
         },
         transaction,
       },

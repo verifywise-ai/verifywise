@@ -89,9 +89,6 @@ spec:
           valueFrom:
             secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: EVAL_SERVER_INTERNAL_KEY }
 
-        - name: MOCK_DATA_ON
-          valueFrom:
-            configMapKeyRef: { name: verifywise-config, key: MOCK_DATA_ON }
         - name: MULTI_TENANCY_ENABLED
           valueFrom:
             configMapKeyRef: { name: verifywise-config, key: MULTI_TENANCY_ENABLED }

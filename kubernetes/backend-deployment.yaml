@@ -136,11 +136,6 @@ spec:
               key: EVAL_SERVER_INTERNAL_KEY
 
         # Feature Flags
-        - name: MOCK_DATA_ON
-          valueFrom:
-            configMapKeyRef:
-              name: verifywise-config
-              key: MOCK_DATA_ON
         - name: MULTI_TENANCY_ENABLED
           valueFrom:
             configMapKeyRef:

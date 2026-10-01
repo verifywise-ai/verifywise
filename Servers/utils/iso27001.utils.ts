@@ -2,6 +2,7 @@ import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import { ProjectFrameworksModel } from "../domain.layer/models/projectFrameworks/projectFrameworks.model";
 import { STATUSES } from "../types/status.type";
+import { demoDueDate } from "./demoSeedFields";
 import { ISO27001Clause } from "../structures/ISO-27001/clauses/iso27001.clause.struct";
 import { ISO27001Annex } from "../structures/ISO-27001/annexes/iso27001.annex.struct";
 import { ISO27001ClauseStructModel } from "../domain.layer/frameworks/ISO-27001/ISO27001ClauseStruct.model";
@@ -619,13 +620,15 @@ export const createNewClausesQuery = async (
   transaction: Transaction,
   is_mock_data: boolean,
 ) => {
-  const projectFrameworkId = (await sequelize.query(
-    `SELECT id FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :project_id AND framework_id = 3`,
+  const projectFramework = (await sequelize.query(
+    `SELECT pf.id, p.owner, p.is_demo FROM projects_frameworks pf
+       JOIN projects p ON p.id = pf.project_id
+      WHERE pf.organization_id = :organizationId AND pf.project_id = :project_id AND pf.framework_id = 3`,
     {
       replacements: { organizationId, project_id: projectId },
       transaction,
     },
-  )) as [{ id: number }[], number];
+  )) as [{ id: number; owner: number | null; is_demo: boolean }[], number];
   const subClauses = (await sequelize.query(
     `SELECT id FROM subclauses_struct_iso27001 ORDER BY id;`,
     { transaction },
@@ -636,12 +639,14 @@ export const createNewClausesQuery = async (
   }[];
   const subClauseIds = await createNewSubClausesQuery(
     subClauses[0].map((subClause) => subClause.id),
-    projectFrameworkId[0][0].id,
+    projectFramework[0][0].id,
     enable_ai_data_insertion,
     demoSubClauses,
     organizationId,
     transaction,
     is_mock_data,
+    projectFramework[0][0].owner,
+    projectFramework[0][0].is_demo,
   );
   const clauses = await getMainClausesQuery(subClauseIds, organizationId, transaction);
   return clauses;
@@ -658,28 +663,40 @@ export const createNewSubClausesQuery = async (
   organizationId: number,
   transaction: Transaction,
   is_mock_data: boolean,
+  demoOwner: number | null = null,
+  isDemo: boolean = false,
 ) => {
   const subClauseIds = [];
   let ctr = 0;
   for (let _subClauseId of subClauses) {
     const subClauseId = (await sequelize.query(
       `INSERT INTO subclauses_iso27001 (
-        organization_id, subclause_meta_id, projects_frameworks_id, implementation_description, auditor_feedback, status
+        organization_id, subclause_meta_id, projects_frameworks_id, implementation_description, auditor_feedback, status, owner, reviewer, approver, due_date, is_demo
       ) VALUES (
-        :organizationId, :subclause_meta_id, :projects_frameworks_id, :implementation_description, :auditor_feedback, :status
+        :organizationId, :subclause_meta_id, :projects_frameworks_id, :implementation_description, :auditor_feedback, :status, :owner, :reviewer, :approver, :due_date, :is_demo
       ) RETURNING id;`,
       {
         replacements: {
           organizationId,
           subclause_meta_id: _subClauseId,
           projects_frameworks_id: projectFrameworkId,
+          // The struct tables are seeded by migrations and can hold more rows
+          // than the structure file's demo text covers (ISO 27001:2022 added a
+          // sub-clause), so index defensively rather than crashing the seed.
           implementation_description: enable_ai_data_insertion
-            ? demoSubClauses[ctr].implementation_description
+            ? (demoSubClauses[ctr]?.implementation_description ?? "")
             : null,
-          auditor_feedback: enable_ai_data_insertion ? demoSubClauses[ctr].auditor_feedback : null,
-          status: is_mock_data
-            ? STATUSES[Math.floor(Math.random() * STATUSES.length)]
-            : "Not started",
+          auditor_feedback: enable_ai_data_insertion
+            ? (demoSubClauses[ctr]?.auditor_feedback ?? "")
+            : null,
+          // Walk STATUSES in order so the demo covers every status and looks the
+          // same on every seed; a real project starts at "Not started".
+          status: is_mock_data ? STATUSES[ctr % STATUSES.length] : "Not started",
+          owner: is_mock_data ? demoOwner : null,
+          reviewer: is_mock_data ? demoOwner : null,
+          approver: is_mock_data ? demoOwner : null,
+          due_date: is_mock_data ? demoDueDate(ctr) : null,
+          is_demo: isDemo,
         },
         transaction,
       },
@@ -697,13 +714,15 @@ export const createNewAnnexesQUery = async (
   transaction: Transaction,
   is_mock_data: boolean,
 ) => {
-  const projectFrameworkId = (await sequelize.query(
-    `SELECT id FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :project_id AND framework_id = 3`,
+  const projectFramework = (await sequelize.query(
+    `SELECT pf.id, p.owner, p.is_demo FROM projects_frameworks pf
+       JOIN projects p ON p.id = pf.project_id
+      WHERE pf.organization_id = :organizationId AND pf.project_id = :project_id AND pf.framework_id = 3`,
     {
       replacements: { organizationId, project_id: projectId },
       transaction,
     },
-  )) as [{ id: number }[], number];
+  )) as [{ id: number; owner: number | null; is_demo: boolean }[], number];
   const annexControls = (await sequelize.query(
     `SELECT id FROM annexcontrols_struct_iso27001 ORDER BY id;`,
     { transaction },
@@ -714,12 +733,14 @@ export const createNewAnnexesQUery = async (
   }[];
   const annexControlIds = await createNewAnnexControlsQuery(
     annexControls[0].map((annexControl) => annexControl.id),
-    projectFrameworkId[0][0].id,
+    projectFramework[0][0].id,
     demoAnnexControls,
     enable_ai_data_insertion,
     organizationId,
     transaction,
     is_mock_data,
+    projectFramework[0][0].owner,
+    projectFramework[0][0].is_demo,
   );
   const annexes = await getAnnexControlsQuery(annexControlIds, organizationId, transaction);
   return annexes;
@@ -736,15 +757,17 @@ export const createNewAnnexControlsQuery = async (
   organizationId: number,
   transaction: Transaction,
   is_mock_data: boolean,
+  demoOwner: number | null = null,
+  isDemo: boolean = false,
 ) => {
   const annexControlIds = [];
   let ctr = 0;
   for (let _annexControlId of annexControls) {
     const annexControlId = (await sequelize.query(
       `INSERT INTO annexcontrols_iso27001 (
-        organization_id, annexcontrol_meta_id, projects_frameworks_id, implementation_description, auditor_feedback, status
+        organization_id, annexcontrol_meta_id, projects_frameworks_id, implementation_description, auditor_feedback, status, owner, reviewer, approver, due_date, is_demo
       ) VALUES (
-        :organizationId, :annexcontrol_meta_id, :projects_frameworks_id, :implementation_description, :auditor_feedback, :status
+        :organizationId, :annexcontrol_meta_id, :projects_frameworks_id, :implementation_description, :auditor_feedback, :status, :owner, :reviewer, :approver, :due_date, :is_demo
       ) RETURNING id;`,
       {
         replacements: {
@@ -752,14 +775,19 @@ export const createNewAnnexControlsQuery = async (
           annexcontrol_meta_id: _annexControlId,
           projects_frameworks_id: projectFrameworkId,
           implementation_description: enable_ai_data_insertion
-            ? demoAnnexControls[ctr].implementation_description
+            ? (demoAnnexControls[ctr]?.implementation_description ?? "")
             : null,
           auditor_feedback: enable_ai_data_insertion
-            ? demoAnnexControls[ctr].auditor_feedback
+            ? (demoAnnexControls[ctr]?.auditor_feedback ?? "")
             : null,
-          status: is_mock_data
-            ? STATUSES[Math.floor(Math.random() * STATUSES.length)]
-            : "Not started",
+          // Walk STATUSES in order so the demo covers every status and looks the
+          // same on every seed; a real project starts at "Not started".
+          status: is_mock_data ? STATUSES[ctr % STATUSES.length] : "Not started",
+          owner: is_mock_data ? demoOwner : null,
+          reviewer: is_mock_data ? demoOwner : null,
+          approver: is_mock_data ? demoOwner : null,
+          due_date: is_mock_data ? demoDueDate(ctr) : null,
+          is_demo: isDemo,
         },
         transaction,
       },

@@ -2,6 +2,8 @@ import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import { NISTAIMRFSubcategoryModel } from "../domain.layer/frameworks/NIST-AI-RMF/nist_ai_rmf_subcategory.model";
 import { STATUSES } from "../types/status.type";
+import { demoDueDate } from "./demoSeedFields";
+import { NIST_AI_RMF_DEMO } from "../structures/NIST-AI-RMF/nist-ai-rmf.demo";
 import {
   deleteAllFileEntityLinksForEntities,
   getEvidenceFilesForEntities,
@@ -261,24 +263,29 @@ export const getSubcategoryByIdQuery = async (
  */
 export const createNISTAI_RMFFrameworkQuery = async (
   projectId: number,
-  _enable_ai_data_insertion: boolean,
+  enable_ai_data_insertion: boolean,
   organizationId: number,
   transaction: Transaction,
   is_mock_data: boolean = false,
 ) => {
-  const projectFrameworkId = (await sequelize.query(
-    `SELECT id FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :project_id AND framework_id = 4`,
+  const projectFramework = (await sequelize.query(
+    `SELECT pf.id, p.owner, p.is_demo FROM projects_frameworks pf
+       JOIN projects p ON p.id = pf.project_id
+      WHERE pf.organization_id = :organizationId AND pf.project_id = :project_id AND pf.framework_id = 4`,
     {
       replacements: { organizationId, project_id: projectId },
       transaction,
     },
-  )) as [{ id: number }[], number];
+  )) as [{ id: number; owner: number | null; is_demo: boolean }[], number];
 
   const subcategoryIds = await createNewSubcategoriesQuery(
-    projectFrameworkId[0][0].id,
+    projectFramework[0][0].id,
     organizationId,
     transaction,
     is_mock_data,
+    projectFramework[0][0].owner,
+    projectFramework[0][0].is_demo,
+    enable_ai_data_insertion,
   );
 
   return {
@@ -295,8 +302,12 @@ export const createNewSubcategoriesQuery = async (
   organizationId: number,
   transaction: Transaction,
   is_mock_data: boolean,
+  demoOwner: number | null = null,
+  isDemo: boolean = false,
+  enable_ai_data_insertion: boolean = false,
 ) => {
-  // Get all subcategories from struct table
+  // subcategory_id already holds the NIST reference within the function ("1.1",
+  // "2.11"), so function + subcategory_id is the key into NIST_AI_RMF_DEMO.
   const structSubcategories = (await sequelize.query(
     `SELECT id, function, subcategory_id, description, order_no
      FROM nist_ai_rmf_subcategories_struct
@@ -313,7 +324,7 @@ export const createNewSubcategoriesQuery = async (
   )) as Array<{
     id: number;
     function: string;
-    subcategory_id: number;
+    subcategory_id: string;
     description: string;
     order_no: number;
   }>;
@@ -321,22 +332,33 @@ export const createNewSubcategoriesQuery = async (
   const subcategoryIds = [];
 
   // Create implementation record for each struct subcategory
-  for (const structSubcat of structSubcategories) {
+  for (const [ctr, structSubcat] of structSubcategories.entries()) {
+    const demo = NIST_AI_RMF_DEMO[`${structSubcat.function}-${structSubcat.subcategory_id}`];
     const result = (await sequelize.query(
       `INSERT INTO nist_ai_rmf_subcategories (
-        organization_id, subcategory_meta_id, projects_frameworks_id, status, is_demo, created_at
+        organization_id, subcategory_meta_id, projects_frameworks_id, implementation_description,
+        auditor_feedback, status, owner, reviewer, approver, due_date, is_demo, created_at
       ) VALUES (
-        :organizationId, :subcategory_meta_id, :projects_frameworks_id, :status, :is_demo, NOW()
+        :organizationId, :subcategory_meta_id, :projects_frameworks_id, :implementation_description,
+        :auditor_feedback, :status, :owner, :reviewer, :approver, :due_date, :is_demo, NOW()
       ) RETURNING id;`,
       {
         replacements: {
           organizationId,
           subcategory_meta_id: structSubcat.id,
           projects_frameworks_id: projectFrameworkId,
-          status: is_mock_data
-            ? STATUSES[Math.floor(Math.random() * STATUSES.length)]
-            : "Not started",
-          is_demo: is_mock_data,
+          implementation_description: enable_ai_data_insertion
+            ? (demo?.implementation_description ?? null)
+            : null,
+          auditor_feedback: enable_ai_data_insertion ? (demo?.auditor_feedback ?? null) : null,
+          // Walk STATUSES in order so the demo covers every status and looks the
+          // same on every seed; a real project starts at "Not started".
+          status: is_mock_data ? STATUSES[ctr % STATUSES.length] : "Not started",
+          owner: is_mock_data ? demoOwner : null,
+          reviewer: is_mock_data ? demoOwner : null,
+          approver: is_mock_data ? demoOwner : null,
+          due_date: is_mock_data ? demoDueDate(ctr) : null,
+          is_demo: isDemo,
         },
         transaction,
       },

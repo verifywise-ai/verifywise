@@ -37,7 +37,6 @@ data:
   REDIS_URL: "redis://redis:6379/0"
 
   # Feature Flags
-  MOCK_DATA_ON: "false"
   MULTI_TENANCY_ENABLED: "false"
 
   # Email Configuration

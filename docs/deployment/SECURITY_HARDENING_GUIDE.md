@@ -410,9 +410,6 @@ BACKEND_URL=https://verifywise.example.com/api
 # Email (configure your provider)
 EMAIL_PROVIDER=exchange-online
 EMAIL_ID=noreply@example.com
-
-# Disable mock data
-MOCK_DATA_ON=false
 ```
 
 ### Environment file permissions
