@@ -26,9 +26,9 @@ router.use((_req, res, next) => {
 router.get("/check-status", checkSSOStatus);
 router.get("/orgs", listSSOOrgs);
 
-router.get("/", authenticateJWT, authorize(["Admin"]), getSSOConfig);
-router.put("/", authenticateJWT, authorize(["Admin"]), saveSSOConfig);
-router.put("/enable", authenticateJWT, authorize(["Admin"]), enableSSO);
-router.put("/disable", authenticateJWT, authorize(["Admin"]), disableSSO);
+router.get("/", authenticateJWT, authorize("ssoConfig.admin"), getSSOConfig);
+router.put("/", authenticateJWT, authorize("ssoConfig.admin"), saveSSOConfig);
+router.put("/enable", authenticateJWT, authorize("ssoConfig.admin"), enableSSO);
+router.put("/disable", authenticateJWT, authorize("ssoConfig.admin"), disableSSO);
 
 export default router;

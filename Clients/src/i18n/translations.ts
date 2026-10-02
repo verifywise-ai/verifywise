@@ -8529,6 +8529,17 @@ export const translations: Record<string, Record<string, string>> = {
     "Failed to load custom fields.": "Benutzerdefinierte Felder konnten nicht geladen werden.",
     "Required custom fields missing": "Erforderliche benutzerdefinierte Felder fehlen",
 
+    // Roles (custom organization roles)
+    "Roles": "Rollen",
+    "Add role": "Rolle hinzufügen",
+    "Edit role": "Rolle bearbeiten",
+    "Delete role": "Rolle löschen",
+    "What is this role for?": "Wofür ist diese Rolle?",
+    "You don't have permission to manage roles.":
+      "Sie haben keine Berechtigung, Rollen zu verwalten.",
+    "Manage custom roles and their permissions":
+      "Benutzerdefinierte Rollen und deren Berechtigungen verwalten",
+
     // Microsoft Entra ID SSO
     "Sign in with Microsoft": "Mit Microsoft anmelden",
     "Configure Microsoft Entra ID single sign-on":
@@ -17772,6 +17783,17 @@ export const translations: Record<string, Record<string, string>> = {
     "Failed to load custom fields.": "Échec du chargement des champs personnalisés.",
     "Required custom fields missing": "Champs personnalisés obligatoires manquants",
 
+    // Roles (custom organization roles)
+    "Roles": "Rôles",
+    "Add role": "Ajouter un rôle",
+    "Edit role": "Modifier le rôle",
+    "Delete role": "Supprimer le rôle",
+    "What is this role for?": "À quoi sert ce rôle ?",
+    "You don't have permission to manage roles.":
+      "Vous n'avez pas l'autorisation de gérer les rôles.",
+    "Manage custom roles and their permissions":
+      "Gérer les rôles personnalisés et leurs autorisations",
+
     // Microsoft Entra ID SSO
     "Sign in with Microsoft": "Se connecter avec Microsoft",
     "Configure Microsoft Entra ID single sign-on":
@@ -26719,6 +26741,16 @@ export const translations: Record<string, Record<string, string>> = {
       "Define campos específicos de la organización en entidades como Proveedores, Políticas, etc.",
     "Only Admins can manage custom fields.":
       "Solo los administradores pueden gestionar los campos personalizados.",
+
+    // Roles (custom organization roles)
+    "Roles": "Roles",
+    "Add role": "Añadir rol",
+    "Edit role": "Editar rol",
+    "Delete role": "Eliminar rol",
+    "What is this role for?": "¿Para qué sirve este rol?",
+    "You don't have permission to manage roles.": "No tienes permiso para administrar roles.",
+    "Manage custom roles and their permissions": "Administrar roles personalizados y sus permisos",
+
     "Configure Microsoft Entra ID single sign-on":
       "Configura el inicio de sesión único de Microsoft Entra ID",
     "Found in Azure Portal &gt; Microsoft Entra ID &gt; Overview &gt; Tenant ID":

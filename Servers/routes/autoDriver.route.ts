@@ -6,7 +6,7 @@ import { deleteAutoDriver, postAutoDriver } from "../controllers/autoDriver.ctrl
 import authenticateJWT from "../middleware/auth.middleware";
 import authorize from "../middleware/accessControl.middleware";
 
-router.post("/", authenticateJWT, authorize(["Admin"]), postAutoDriver);
-router.delete("/", authenticateJWT, authorize(["Admin"]), deleteAutoDriver);
+router.post("/", authenticateJWT, authorize("autoDriver.admin"), postAutoDriver);
+router.delete("/", authenticateJWT, authorize("autoDriver.admin"), deleteAutoDriver);
 
 export default router;

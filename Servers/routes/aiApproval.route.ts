@@ -15,7 +15,7 @@ const router = Router();
 router.get("/stats", authenticateJWT, getApprovalStatsCtrl);
 router.get("/", authenticateJWT, listApprovalsCtrl);
 router.get("/:id", authenticateJWT, getApprovalDetailCtrl);
-router.post("/:id/approve", authenticateJWT, authorize(["Admin"]), approveApprovalCtrl);
-router.post("/:id/reject", authenticateJWT, authorize(["Admin"]), rejectApprovalCtrl);
+router.post("/:id/approve", authenticateJWT, authorize("aiApproval.admin"), approveApprovalCtrl);
+router.post("/:id/reject", authenticateJWT, authorize("aiApproval.admin"), rejectApprovalCtrl);
 
 export default router;

@@ -23,11 +23,11 @@ router.get("/:id", authenticateJWT, getTemplate);
 // stricter Admin-only generate route: custom templates are org-shared content,
 // not a privileged operation. System templates are read-only for everyone,
 // enforced in the query WHERE clause rather than here.
-router.post("/", authenticateJWT, authorize(["Admin", "Editor"]), createTemplate);
-router.patch("/:id", authenticateJWT, authorize(["Admin", "Editor"]), updateTemplate);
-router.delete("/:id", authenticateJWT, authorize(["Admin", "Editor"]), archiveTemplate);
+router.post("/", authenticateJWT, authorize("reportTemplate.edit"), createTemplate);
+router.patch("/:id", authenticateJWT, authorize("reportTemplate.edit"), updateTemplate);
+router.delete("/:id", authenticateJWT, authorize("reportTemplate.edit"), archiveTemplate);
 
 // Ad-hoc run: same write RBAC as the rest of this router's mutating routes.
-router.post("/:id/run", authenticateJWT, authorize(["Admin", "Editor"]), runTemplateNow);
+router.post("/:id/run", authenticateJWT, authorize("reportTemplate.edit"), runTemplateNow);
 
 export default router;

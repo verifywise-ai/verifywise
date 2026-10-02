@@ -29,10 +29,12 @@ import { Request, Response } from "express";
 
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import {
+  countUsersWithRoleQuery,
   createNewRoleQuery,
   deleteRoleByIdQuery,
-  getAllRolesQuery,
+  getAllRolesForOrganizationQuery,
   getRoleByIdQuery,
+  getRoleByNameInOrganizationQuery,
   updateRoleByIdQuery,
 } from "../utils/role.utils";
 import { sequelize } from "../database/db";
@@ -41,6 +43,8 @@ import { ValidationException } from "../domain.layer/exceptions/custom.exception
 import { translateError } from "../utils/i18n.utils";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import { invalidateRoleMapCache } from "../utils/roleMap";
+import { BUILTIN_ROLE_NAMES } from "../config/rolePermissions.config";
+import { deleteRolePermissionsForRoleQuery } from "../utils/rolePermissions.utils";
 
 /**
  * Retrieves all roles from the system
@@ -65,25 +69,27 @@ import { invalidateRoleMapCache } from "../utils/roleMap";
  *   ]
  * }
  */
-export async function getAllRoles(_req: Request, res: Response): Promise<any> {
+export async function getAllRoles(req: Request, res: Response): Promise<any> {
   logProcessing({
     description: "starting getAllRoles",
     functionName: "getAllRoles",
     fileName: "role.ctrl.ts",
-    userId: _req.userId!,
-    organizationId: _req.organizationId!,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
   });
 
   try {
-    const roles = await getAllRolesQuery();
+    // Built-ins plus this organization's custom roles — other orgs' custom
+    // roles are invisible (issue #4588).
+    const roles = await getAllRolesForOrganizationQuery(req.organizationId ?? null);
 
     await logSuccess({
       eventType: "Read",
       description: "Retrieved all roles",
       functionName: "getAllRoles",
       fileName: "role.ctrl.ts",
-      userId: _req.userId!,
-      organizationId: _req.organizationId!,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
     });
 
     if (roles) {
@@ -98,11 +104,11 @@ export async function getAllRoles(_req: Request, res: Response): Promise<any> {
       functionName: "getAllRoles",
       fileName: "role.ctrl.ts",
       error: error as Error,
-      userId: _req.userId!,
-      organizationId: _req.organizationId!,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
     });
 
-    return res.status(500).json(STATUS_CODE[500](translateError(_req, error)));
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
 
@@ -225,8 +231,27 @@ export async function createRole(req: Request, res: Response): Promise<any> {
 
   try {
     const newRole = req.body;
+    const organizationId = req.organizationId ?? null;
+
+    // Custom roles cannot shadow a built-in role name (built-in names are
+    // global; getRoleByName would otherwise resolve ambiguously).
+    if (BUILTIN_ROLE_NAMES.has(newRole.name)) {
+      throw new ValidationException("Name is reserved for a built-in role", "name", newRole.name);
+    }
+    if (organizationId == null) {
+      throw new ValidationException(
+        "Custom roles must belong to an organization",
+        "organization_id",
+        organizationId,
+      );
+    }
+    const nameCollision = await getRoleByNameInOrganizationQuery(newRole.name, organizationId);
+    if (nameCollision) {
+      throw new ValidationException("A role with this name already exists", "name", newRole.name);
+    }
 
     const roleObj = await RoleModel.createRole(newRole.name, newRole.description);
+    roleObj.organization_id = organizationId;
     const createdRole = await createNewRoleQuery(roleObj, transaction);
 
     if (createdRole) {
@@ -330,6 +355,43 @@ export async function updateRoleById(req: Request, res: Response): Promise<any> 
   try {
     const updatedRole = req.body;
 
+    // Only custom roles of the caller's own organization are mutable —
+    // built-ins (organization_id IS NULL) and other orgs' roles are not.
+    const existingRole = await getRoleByIdQuery(roleId);
+    if (!existingRole) {
+      await transaction.rollback();
+      return res.status(404).json(STATUS_CODE[404]({}));
+    }
+    if (existingRole.organization_id == null) {
+      await transaction.rollback();
+      return res.status(403).json(STATUS_CODE[403](req.t!("Built-in roles cannot be modified")));
+    }
+    if (existingRole.organization_id !== (req.organizationId ?? null)) {
+      await transaction.rollback();
+      return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
+    }
+
+    if (updatedRole.name && updatedRole.name !== existingRole.name) {
+      if (BUILTIN_ROLE_NAMES.has(updatedRole.name)) {
+        throw new ValidationException(
+          "Name is reserved for a built-in role",
+          "name",
+          updatedRole.name,
+        );
+      }
+      const nameCollision = await getRoleByNameInOrganizationQuery(
+        updatedRole.name,
+        existingRole.organization_id!,
+      );
+      if (nameCollision) {
+        throw new ValidationException(
+          "A role with this name already exists",
+          "name",
+          updatedRole.name,
+        );
+      }
+    }
+
     const role = await updateRoleByIdQuery(roleId, updatedRole, transaction);
 
     if (role) {
@@ -423,6 +485,29 @@ export async function deleteRoleById(req: Request, res: Response): Promise<any> 
   });
 
   try {
+    // Same ownership rules as update: custom roles of the caller's org only.
+    const existingRole = await getRoleByIdQuery(roleId);
+    if (!existingRole) {
+      await transaction.rollback();
+      return res.status(404).json(STATUS_CODE[404]({}));
+    }
+    if (existingRole.organization_id == null) {
+      await transaction.rollback();
+      return res.status(403).json(STATUS_CODE[403](req.t!("Built-in roles cannot be deleted")));
+    }
+    if (existingRole.organization_id !== (req.organizationId ?? null)) {
+      await transaction.rollback();
+      return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
+    }
+
+    const assignedUsers = await countUsersWithRoleQuery(roleId);
+    if (assignedUsers > 0) {
+      await transaction.rollback();
+      return res.status(409).json(STATUS_CODE[409](req.t!("Role is still assigned to users")));
+    }
+
+    // Remove the role's permission matrix rows inside the same transaction.
+    await deleteRolePermissionsForRoleQuery(existingRole.organization_id!, roleId, transaction);
     const deletedRole = await deleteRoleByIdQuery(roleId, transaction);
 
     if (deletedRole) {

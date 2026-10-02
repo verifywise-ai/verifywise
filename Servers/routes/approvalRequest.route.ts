@@ -65,7 +65,7 @@ router.get("/pending-approvals", authenticateJWT, getPendingApprovals);
  * Get all approval requests (admin view)
  * @access Admin only
  */
-router.get("/all", authenticateJWT, authorize(["Admin"]), getAllApprovalRequests);
+router.get("/all", authenticateJWT, authorize("approvalRequest.admin"), getAllApprovalRequests);
 
 /**
  * GET /approval-requests/:id

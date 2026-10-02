@@ -26,9 +26,22 @@
 import express from "express";
 const router = express.Router();
 
-import { getAllRoles, getRoleById } from "../controllers/role.ctrl";
+import {
+  createRole,
+  deleteRoleById,
+  getAllRoles,
+  getRoleById,
+  updateRoleById,
+} from "../controllers/role.ctrl";
+import {
+  getMyPermissions,
+  getPermissionCatalog,
+  getRolePermissionsById,
+  replaceRolePermissions,
+} from "../controllers/rolePermissions.ctrl";
 
 import authenticateJWT from "../middleware/auth.middleware";
+import authorize from "../middleware/accessControl.middleware";
 
 /**
  * GET /roles
@@ -45,6 +58,10 @@ import authenticateJWT from "../middleware/auth.middleware";
  * @returns {Array<Object>} Array of role objects
  */
 router.get("/", authenticateJWT, getAllRoles);
+
+router.get("/permissions/catalog", authenticateJWT, getPermissionCatalog);
+// Single-segment path — must be declared before "/:id".
+router.get("/my-permissions", authenticateJWT, getMyPermissions);
 
 /**
  * GET /roles/:id
@@ -76,7 +93,7 @@ router.get("/:id", authenticateJWT, getRoleById);
  * @param {express.Response} res - Express response object
  * @returns {Object} Created role object
  */
-// router.post("/", authenticateJWT, createRole);
+router.post("/", authenticateJWT, authorize("roles.manage"), createRole);
 
 /**
  * PUT /roles/:id
@@ -92,7 +109,7 @@ router.get("/:id", authenticateJWT, getRoleById);
  * @param {express.Response} res - Express response object
  * @returns {Object} Updated role object
  */
-// router.put("/:id", authenticateJWT, updateRoleById);
+router.put("/:id", authenticateJWT, authorize("roles.manage"), updateRoleById);
 
 /**
  * DELETE /roles/:id
@@ -109,6 +126,10 @@ router.get("/:id", authenticateJWT, getRoleById);
  * @param {express.Response} res - Express response object
  * @returns {Object} Deleted role object
  */
-// router.delete("/:id", authenticateJWT, deleteRoleById);
+router.delete("/:id", authenticateJWT, authorize("roles.manage"), deleteRoleById);
+
+// Custom-role permission matrix (issue #4588). Same roles.manage guard.
+router.get("/:id/permissions", authenticateJWT, getRolePermissionsById);
+router.put("/:id/permissions", authenticateJWT, authorize("roles.manage"), replaceRolePermissions);
 
 export default router;

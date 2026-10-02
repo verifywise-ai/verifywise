@@ -18,6 +18,8 @@ import CustomFieldsTab from "./CustomFields";
 import AIApprovalRules from "./AIApprovalRules";
 import TabBar, { TabItem } from "../../components/TabBar";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
+import { useMyPermissions } from "../../../application/hooks/useRolePermissions";
+import Roles from "./Roles";
 
 // Built-in tabs (defined outside component to avoid recreation on each render)
 // Feature flag: the AI Approval Rules tab governs the in-platform AI agent /
@@ -38,6 +40,7 @@ const BUILT_IN_TABS = [
   "audit-ledger",
   "sso",
   "custom-fields",
+  "roles",
   ...(SHOW_AI_APPROVAL_RULES ? ["ai-approval-rules"] : []),
 ];
 
@@ -51,6 +54,10 @@ export default function ProfilePage() {
   const isFeaturesDisabled = !allowedRoles.features?.manage?.includes(userRoleName);
   const isAuditLedgerDisabled = userRoleName !== "Admin";
   const isCustomFieldsDisabled = userRoleName !== "Admin";
+  // Permission-aware gate (issue #4588): any role holding roles.manage —
+  // including a custom role — can manage roles, matching the backend.
+  const { can } = useMyPermissions();
+  const isRolesDisabled = !can("roles.manage");
 
   const { tab } = useParams<{ tab?: string }>();
 
@@ -190,6 +197,16 @@ export default function ProfilePage() {
                   },
                 ]
               : []),
+            ...(!isRolesDisabled
+              ? [
+                  {
+                    label: "Roles",
+                    value: "roles",
+                    icon: "Shield" as TabItem["icon"],
+                    tooltip: "Manage custom roles and their permissions",
+                  },
+                ]
+              : []),
             ...(SHOW_AI_APPROVAL_RULES && !isAuditLedgerDisabled
               ? [
                   {
@@ -249,6 +266,11 @@ export default function ProfilePage() {
         {!isCustomFieldsDisabled && (
           <TabPanel sx={{ p: 0 }} value="custom-fields">
             <CustomFieldsTab />
+          </TabPanel>
+        )}
+        {!isRolesDisabled && (
+          <TabPanel sx={{ p: 0 }} value="roles">
+            <Roles />
           </TabPanel>
         )}
         {SHOW_AI_APPROVAL_RULES && !isAuditLedgerDisabled && (

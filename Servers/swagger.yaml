@@ -10237,6 +10237,47 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+    post:
+      summary: 'Create Role'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Roles
+      operationId: createRole
+      security:
+        -
+          bearerAuth: []
+  /roles/permissions/catalog:
+    get:
+      summary: 'Get Permission Catalog'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Roles
+      operationId: getPermissionCatalog
+      security:
+        -
+          bearerAuth: []
+  /roles/my-permissions:
+    get:
+      summary: 'Get My Permissions'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Roles
+      operationId: getMyPermissions
+      security:
+        -
+          bearerAuth: []
   '/roles/{id}':
     get:
       tags:
@@ -10260,6 +10301,59 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+    put:
+      summary: 'Update Role By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Roles
+      operationId: updateRoleById
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Role By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Roles
+      operationId: deleteRoleById
+      security:
+        -
+          bearerAuth: []
+  '/roles/{id}/permissions':
+    get:
+      summary: 'Get Role Permissions By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Roles
+      operationId: getRolePermissionsById
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Replace Role Permissions'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Roles
+      operationId: replaceRolePermissions
+      security:
+        -
+          bearerAuth: []
   /files:
     get:
       tags:
@@ -17025,34 +17119,6 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
-  /file-manager/org-settings:
-    get:
-      summary: 'Get File Org Settings Handler'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - Files
-      operationId: getFileOrgSettingsHandler
-      security:
-        -
-          bearerAuth: []
-    put:
-      summary: 'Update File Org Settings Handler'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - Files
-      operationId: updateFileOrgSettingsHandler
-      security:
-        -
-          bearerAuth: []
-      description: 'Requires role: Admin'
   '/file-manager/{id}':
     get:
       tags:

@@ -10,9 +10,9 @@ router.use(authenticateJWT);
 router.use(requireExtensionEnabled("risk-import"));
 
 // GET /template — Excel template with dropdown-validated enum columns
-router.get("/template", authorize(["Admin", "Editor"]), downloadExcelTemplate);
+router.get("/template", authorize("ext.riskImport.edit"), downloadExcelTemplate);
 
 // POST /import — validate + bulk-insert risks
-router.post("/import", authorize(["Admin", "Editor"]), bulkImportRisks);
+router.post("/import", authorize("ext.riskImport.edit"), bulkImportRisks);
 
 export default router;

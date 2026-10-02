@@ -4357,29 +4357,6 @@ export const fileEndpoints: Endpoint[] = [
   },
   {
     method: 'GET',
-    path: '/file-manager/org-settings',
-    summary: "Get File Org Settings Handler",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Files",
-  },
-  {
-    method: 'PUT',
-    path: '/file-manager/org-settings',
-    summary: "Update File Org Settings Handler",
-    description: "Requires role: Admin",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Files",
-  },
-  {
-    method: 'GET',
     path: '/file-manager/{id}',
     summary: "Download File",
     description: "Requires role: Admin",
@@ -9401,6 +9378,39 @@ export const roleEndpoints: Endpoint[] = [
     tag: "Roles",
   },
   {
+    method: 'POST',
+    path: '/roles',
+    summary: "Create Role",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Roles",
+  },
+  {
+    method: 'GET',
+    path: '/roles/permissions/catalog',
+    summary: "Get Permission Catalog",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Roles",
+  },
+  {
+    method: 'GET',
+    path: '/roles/my-permissions',
+    summary: "Get My Permissions",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Roles",
+  },
+  {
     method: 'GET',
     path: '/roles/{id}',
     summary: "Get Role By Id",
@@ -9411,6 +9421,50 @@ export const roleEndpoints: Endpoint[] = [
     responses: [
       { status: 200, description: "Success" },
       { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Roles",
+  },
+  {
+    method: 'PUT',
+    path: '/roles/{id}',
+    summary: "Update Role By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Roles",
+  },
+  {
+    method: 'DELETE',
+    path: '/roles/{id}',
+    summary: "Delete Role By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Roles",
+  },
+  {
+    method: 'GET',
+    path: '/roles/{id}/permissions',
+    summary: "Get Role Permissions By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Roles",
+  },
+  {
+    method: 'PUT',
+    path: '/roles/{id}/permissions',
+    summary: "Replace Role Permissions",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Roles",

@@ -27,6 +27,8 @@
 
 import { Request, Response, NextFunction } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
+import { roleHasPermission } from "../utils/rolePermissions.utils";
+import type { PermissionKey } from "../config/rolePermissions.config";
 
 interface AuthenticatedRequest extends Request {
   userId?: number;
@@ -61,8 +63,21 @@ interface AuthenticatedRequest extends Request {
  * // Protect sensitive operations
  * router.get('/audit-logs', authenticateJWT, authorize(['Admin', 'Auditor']), getAuditLogs);
  */
+/**
+ * Authorization middleware (issue #4588 — permission matrix).
+ *
+ * Accepts either:
+ *   - a permission key (`authorize("risks.edit")`): resolved through the
+ *     permission matrix — built-in roles against the static BUILTIN matrix
+ *     (parity with the old allowlists), custom organization roles against
+ *     the `role_permissions` table (missing row = deny).
+ *   - a legacy role-name array (`authorize(["Admin", "Editor"])`): kept as a
+ *     temporary shim so the ~94 call sites can migrate file-by-file; new code
+ *     must use permission keys.
+ */
 const authorize =
-  (allowedRoles: string[]) => (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  (permissionOrRoles: PermissionKey | string[]) =>
+  async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     // Check if role exists (populated by authenticateJWT middleware)
     if (!req.role) {
       console.error("Authorization failed: No role found in request");
@@ -70,11 +85,27 @@ const authorize =
     }
     const roleName = req.role; // Extract role from authenticated request
 
-    if (!allowedRoles.includes(roleName)) {
-      return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
-    }
+    try {
+      if (Array.isArray(permissionOrRoles)) {
+        // Legacy path — unchanged literal-allowlist behavior (migration shim).
+        if (!permissionOrRoles.includes(roleName)) {
+          return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
+        }
+        return next();
+      }
 
-    return next(); // Proceed if role is authorized
+      const allowed = await roleHasPermission(
+        req.organizationId ?? null,
+        roleName,
+        permissionOrRoles,
+      );
+      if (!allowed) {
+        return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
+      }
+      return next();
+    } catch (error) {
+      return next(error);
+    }
   };
 
 export default authorize;

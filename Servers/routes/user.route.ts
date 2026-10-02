@@ -232,7 +232,7 @@ router.patch("/:id", authenticateJWT, updateUserById);
  * @param {express.Request} req - Express request object
  * @param {express.Response} res - Express response object
  */
-router.delete("/:id", authenticateJWT, authorize(["Admin", "SuperAdmin"]), deleteUserById);
+router.delete("/:id", authenticateJWT, authorize("user.deleteSuper"), deleteUserById);
 
 /**
  * GET /users/check-user-exists

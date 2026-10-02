@@ -47,20 +47,20 @@ router.get("/:id", authenticateJWT, getApprovalWorkflowById);
  * Create new approval workflow
  * @access Admin only
  */
-router.post("/", authenticateJWT, authorize(["Admin"]), createApprovalWorkflow);
+router.post("/", authenticateJWT, authorize("approvalWorkflow.admin"), createApprovalWorkflow);
 
 /**
  * PUT /approval-workflows/:id
  * Update approval workflow
  * @access Admin only
  */
-router.put("/:id", authenticateJWT, authorize(["Admin"]), updateApprovalWorkflow);
+router.put("/:id", authenticateJWT, authorize("approvalWorkflow.admin"), updateApprovalWorkflow);
 
 /**
  * DELETE /approval-workflows/:id
  * Delete approval workflow
  * @access Admin only
  */
-router.delete("/:id", authenticateJWT, authorize(["Admin"]), deleteApprovalWorkflow);
+router.delete("/:id", authenticateJWT, authorize("approvalWorkflow.admin"), deleteApprovalWorkflow);
 
 export default router;

@@ -21,18 +21,18 @@ const router = express.Router();
 // this middleware makes it authoritative.
 router.get("/", authenticateJWT, listExtensions);
 router.get("/:key", authenticateJWT, getExtension);
-router.post("/:key/enable", authenticateJWT, authorize(["Admin"]), enableExtension);
-router.post("/:key/disable", authenticateJWT, authorize(["Admin"]), disableExtension);
+router.post("/:key/enable", authenticateJWT, authorize("extension.admin"), enableExtension);
+router.post("/:key/disable", authenticateJWT, authorize("extension.admin"), disableExtension);
 router.patch(
   "/:key/configuration",
   authenticateJWT,
-  authorize(["Admin"]),
+  authorize("extension.admin"),
   updateExtensionConfiguration,
 );
 router.post(
   "/:key/test-connection",
   authenticateJWT,
-  authorize(["Admin"]),
+  authorize("extension.admin"),
   testExtensionConnection,
 );
 

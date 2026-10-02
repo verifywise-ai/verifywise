@@ -37,25 +37,28 @@ import {
 // ADMIN / EDITOR ROUTES (Authenticated)
 // ============================================================================
 
-const WRITE_ROLES = ["Admin", "Editor"];
-
 // Intake Forms — Admin & Editor for write operations
 router.get("/forms", authenticateJWT, getAllIntakeForms);
 router.get("/forms/:id", authenticateJWT, getIntakeFormById);
-router.post("/forms", authenticateJWT, authorize(WRITE_ROLES), createIntakeForm);
-router.patch("/forms/:id", authenticateJWT, authorize(WRITE_ROLES), updateIntakeForm);
-router.delete("/forms/:id", authenticateJWT, authorize(WRITE_ROLES), deleteIntakeForm);
-router.post("/forms/:id/archive", authenticateJWT, authorize(WRITE_ROLES), archiveIntakeForm);
+router.post("/forms", authenticateJWT, authorize("intakeForm.edit"), createIntakeForm);
+router.patch("/forms/:id", authenticateJWT, authorize("intakeForm.edit"), updateIntakeForm);
+router.delete("/forms/:id", authenticateJWT, authorize("intakeForm.edit"), deleteIntakeForm);
+router.post("/forms/:id/archive", authenticateJWT, authorize("intakeForm.edit"), archiveIntakeForm);
 router.get("/forms/:id/preview", authenticateJWT, previewForm);
 
 // LLM features — Admin & Editor
 router.post(
   "/forms/suggested-questions",
   authenticateJWT,
-  authorize(WRITE_ROLES),
+  authorize("intakeForm.edit"),
   getLLMSuggestedQuestions,
 );
-router.post("/forms/field-guidance", authenticateJWT, authorize(WRITE_ROLES), getFieldGuidance);
+router.post(
+  "/forms/field-guidance",
+  authenticateJWT,
+  authorize("intakeForm.edit"),
+  getFieldGuidance,
+);
 
 // Submissions
 router.get("/submissions", authenticateJWT, getPendingSubmissions);
@@ -66,12 +69,22 @@ router.get("/submissions/:id/preview", authenticateJWT, getSubmissionPreview);
 router.patch(
   "/submissions/:id/risk-override",
   authenticateJWT,
-  authorize(WRITE_ROLES),
+  authorize("intakeForm.edit"),
   overrideSubmissionRisk,
 );
 router.get("/forms/:id/submissions", authenticateJWT, getFormSubmissions);
-router.post("/submissions/:id/approve", authenticateJWT, authorize(WRITE_ROLES), approveSubmission);
-router.post("/submissions/:id/reject", authenticateJWT, authorize(WRITE_ROLES), rejectSubmission);
+router.post(
+  "/submissions/:id/approve",
+  authenticateJWT,
+  authorize("intakeForm.edit"),
+  approveSubmission,
+);
+router.post(
+  "/submissions/:id/reject",
+  authenticateJWT,
+  authorize("intakeForm.edit"),
+  rejectSubmission,
+);
 
 // ============================================================================
 // PUBLIC ROUTES (Unauthenticated, rate-limited)

@@ -35,10 +35,6 @@ import {
   previewFile,
   getFileVersionHistory,
 } from "../controllers/fileManager.ctrl";
-import {
-  getFileOrgSettingsHandler,
-  updateFileOrgSettingsHandler,
-} from "../controllers/fileOrgSettings.ctrl";
 import authenticateJWT from "../middleware/auth.middleware";
 import authorize from "../middleware/accessControl.middleware";
 import { fileOperationsLimiter } from "../middleware/rateLimit.middleware";
@@ -133,7 +129,7 @@ router.post(
   "/",
   fileOperationsLimiter,
   authenticateJWT,
-  authorize(["Admin", "Reviewer", "Editor"]),
+  authorize("fileManager.contribute"),
   upload.single("file"),
   handleMulterError,
   uploadFile,
@@ -181,33 +177,6 @@ router.get(
   authenticateJWT,
   validatePaginationQuery,
   listFilesWithMetadata,
-);
-
-/**
- * @route   GET /file-manager/org-settings
- * @desc    Get org-wide default retention policy for file uploads
- * @access  All authenticated users
- * @returns {200} Org file settings
- * @returns {500} Server error
- */
-router.get("/org-settings", fileOperationsLimiter, authenticateJWT, getFileOrgSettingsHandler);
-
-/**
- * @route   PUT /file-manager/org-settings
- * @desc    Set org-wide default retention policy for file uploads
- * @access  Admin only
- * @body    { default_retention_policy: RetentionPolicy | null }
- * @returns {200} Updated org file settings
- * @returns {400} Invalid retention policy
- * @returns {403} Access denied
- * @returns {500} Server error
- */
-router.put(
-  "/org-settings",
-  fileOperationsLimiter,
-  authenticateJWT,
-  authorize(["Admin"]),
-  updateFileOrgSettingsHandler,
 );
 
 /**
@@ -273,7 +242,7 @@ router.patch(
   "/:id/metadata",
   fileOperationsLimiter,
   authenticateJWT,
-  authorize(["Admin", "Reviewer", "Editor"]),
+  authorize("fileManager.contribute"),
   validateUpdateFileMetadata,
   updateMetadata,
 );
@@ -311,7 +280,7 @@ router.delete(
   "/:id",
   fileOperationsLimiter,
   authenticateJWT,
-  authorize(["Admin", "Reviewer", "Editor"]),
+  authorize("fileManager.contribute"),
   validateFileIdParam,
   removeFile,
 );

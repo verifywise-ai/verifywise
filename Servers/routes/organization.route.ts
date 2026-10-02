@@ -103,7 +103,7 @@ router.post("/", authenticateJWT, superAdminOnly, createOrganization);
  * @param {express.Response} res - Express response object
  * @returns {Object} Updated organization object
  */
-router.patch("/:id", authenticateJWT, authorize(["Admin"]), updateOrganizationById);
+router.patch("/:id", authenticateJWT, authorize("organization.admin"), updateOrganizationById);
 
 /**
  * PATCH /organizations/:id/onboarding-status
@@ -123,7 +123,7 @@ router.patch("/:id", authenticateJWT, authorize(["Admin"]), updateOrganizationBy
 router.patch(
   "/:id/onboarding-status",
   authenticateJWT,
-  authorize(["Admin"]),
+  authorize("organization.admin"),
   updateOnboardingStatus,
 );
 

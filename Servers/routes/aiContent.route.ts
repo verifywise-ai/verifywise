@@ -15,6 +15,6 @@ router.get("/unreviewed", authenticateJWT, getUnreviewed);
 router.get("/:entityType/:entityId", authenticateJWT, getBadges);
 
 // PATCH mark as reviewed
-router.patch("/:id/review", authenticateJWT, authorize(["Admin", "Editor"]), reviewContent);
+router.patch("/:id/review", authenticateJWT, authorize("aiContent.edit"), reviewContent);
 
 export default router;

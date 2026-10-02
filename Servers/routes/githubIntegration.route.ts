@@ -20,21 +20,19 @@ import {
 const router = Router();
 
 // Admin role required for token management
-const ADMIN_ROLES = ["Admin"];
-
 // All routes require authentication
 router.use(authenticateJWT);
 
 // GET /api/integrations/github/token - Get token status
-router.get("/token", authorize(ADMIN_ROLES), getGitHubTokenStatusController);
+router.get("/token", authorize("githubIntegration.admin"), getGitHubTokenStatusController);
 
 // POST /api/integrations/github/token - Save/update token
-router.post("/token", authorize(ADMIN_ROLES), saveGitHubTokenController);
+router.post("/token", authorize("githubIntegration.admin"), saveGitHubTokenController);
 
 // DELETE /api/integrations/github/token - Delete token
-router.delete("/token", authorize(ADMIN_ROLES), deleteGitHubTokenController);
+router.delete("/token", authorize("githubIntegration.admin"), deleteGitHubTokenController);
 
 // POST /api/integrations/github/token/test - Test token validity
-router.post("/token/test", authorize(ADMIN_ROLES), testGitHubTokenController);
+router.post("/token/test", authorize("githubIntegration.admin"), testGitHubTokenController);
 
 export default router;

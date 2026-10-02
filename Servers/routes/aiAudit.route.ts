@@ -11,7 +11,7 @@ import {
 const router = Router();
 
 router.get("/analytics", authenticateJWT, getAnalytics);
-router.get("/export", authenticateJWT, authorize(["Admin"]), exportAuditLog);
+router.get("/export", authenticateJWT, authorize("aiAudit.admin"), exportAuditLog);
 router.get("/log/:actionId", authenticateJWT, getActionAuditTrail);
 router.get("/log", authenticateJWT, getAuditLog);
 

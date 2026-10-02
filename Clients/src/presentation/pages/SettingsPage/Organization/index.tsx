@@ -16,7 +16,7 @@ import {
   UpdateMyOrganization,
 } from "../../../../application/repository/organization.repository";
 import Alert from "../../../components/Alert";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useResourceAccess } from "../../../../application/hooks/useResourceAccess";
 import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
 import {
   uploadAITrustCentreLogo,
@@ -37,10 +37,13 @@ interface AlertState {
 }
 
 const Organization = () => {
-  const { userRoleName, organizationId } = useAuth();
+  const { organizationId } = useAuth();
   const { fetchLogoAsBlobUrl } = useLogoFetch();
-  const isEditingDisabled = !allowedRoles.organizations.edit.includes(userRoleName);
-  const isCreatingDisabled = !allowedRoles.organizations.create.includes(userRoleName);
+  // Permission-aware gates (issue #4588): built-ins keep the legacy matrix;
+  // custom roles are allowed only via the enforced organization.admin key.
+  const { canAccess } = useResourceAccess();
+  const isEditingDisabled = !canAccess("organizations", "edit");
+  const isCreatingDisabled = !canAccess("organizations", "create");
 
   // Organization states
   const [isSaveDisabled, setIsSaveDisabled] = useState(true);
