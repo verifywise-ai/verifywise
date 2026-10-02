@@ -26,7 +26,7 @@ describe("Vendors API", () => {
 
   describe("POST /api/vendors", () => {
     it("creates a vendor with bypassAuth (201)", async () => {
-      const app = createTestApp({
+      const app = await createTestApp({
         bypassAuth: true,
         mockUser: { userId, organizationId: orgId, role: "Admin" },
       });
@@ -41,7 +41,7 @@ describe("Vendors API", () => {
     });
 
     it("creates a vendor with real JWT from login (201)", async () => {
-      const app = createTestApp();
+      const app = await createTestApp();
 
       const loginRes = await testRequest(app)
         .post("/api/users/login")
@@ -59,7 +59,7 @@ describe("Vendors API", () => {
     });
 
     it("returns 400 for missing required assignee", async () => {
-      const app = createTestApp({
+      const app = await createTestApp({
         bypassAuth: true,
         mockUser: { userId, organizationId: orgId, role: "Admin" },
       });
@@ -74,7 +74,7 @@ describe("Vendors API", () => {
 
   describe("GET /api/vendors", () => {
     it("returns empty list when no vendors exist", async () => {
-      const app = createTestApp({
+      const app = await createTestApp({
         bypassAuth: true,
         mockUser: { userId, organizationId: orgId, role: "Admin" },
       });
@@ -85,7 +85,7 @@ describe("Vendors API", () => {
     });
 
     it("returns created vendor in list", async () => {
-      const app = createTestApp({
+      const app = await createTestApp({
         bypassAuth: true,
         mockUser: { userId, organizationId: orgId, role: "Admin" },
       });

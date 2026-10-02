@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState, useMemo, useRef } from "react";
-import { Box, Stack, Popover, Typography, IconButton } from "@mui/material";
+import { Box, Stack, Popover, Typography, IconButton, Tooltip } from "@mui/material";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { StatusTileCards, StatusTileItem } from "../../components/Cards/StatusTileCards";
 import { CustomizableButton } from "../../components/button/customizable-button";
-import { BarChart3, ChevronDown } from "lucide-react";
+import { BarChart3, ChevronDown, Network } from "lucide-react";
 import ibmLogo from "../../assets/ibm_logo.svg";
 import mitLogo from "../../assets/mit_logo.svg";
 import VWProjectRisksTable from "../../components/Table/VWProjectRisksTable";
@@ -469,9 +469,11 @@ const RiskManagement = () => {
       const response = await getAllProjectRisks({ filter });
       setShowCustomizableSkeleton(false);
       setProjectRisks(response.data);
+      return response.data as RiskModel[];
     } catch (error) {
       console.error("Error fetching project risks:", error);
       handleToast("error", "Unexpected error occurs while fetching project risks.");
+      return [] as RiskModel[];
     }
   }, []);
 
@@ -637,19 +639,20 @@ const RiskManagement = () => {
     const pageCount = Math.floor(projectRisks.length / rowsPerPage);
     setCurrentPage(pageCount);
 
-    fetchProjectRisks();
+    void fetchProjectRisks();
     setRefreshKey((prevKey) => prevKey + 1);
   };
 
   const handleUpdate = () => {
+    const subjectId = selectedRow[0]?.id;
     // Set flash immediately to ensure visibility
-    setCurrentRow(selectedRow[0].id!); // set current row to trigger flash-feedback
+    setCurrentRow(subjectId!); // set current row to trigger flash-feedback
 
     setTimeout(() => {
       setIsLoading(initialLoadingState);
       handleToast("success", "Risk updated successfully");
       // Fetch fresh data after flash is set
-      fetchProjectRisks();
+      void fetchProjectRisks();
     }, 500);
 
     setTimeout(() => {
@@ -838,6 +841,17 @@ const RiskManagement = () => {
               filename="risk-management"
               title="Risk Management"
             />
+            {userRoleName === "Admin" && (
+              <Tooltip title="Risk inheritance graph" arrow>
+                <IconButton
+                  onClick={() => navigate("/risk-inheritance")}
+                  aria-label="Risk inheritance graph"
+                  sx={analyticsIconButtonStyle}
+                >
+                  <Network size={16} color={text.secondary} />
+                </IconButton>
+              </Tooltip>
+            )}
             <div data-joyride-id="analytics-button">
               <IconButton
                 onClick={() => setIsAnalyticsDrawerOpen(true)}

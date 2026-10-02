@@ -214,6 +214,16 @@ const VWProjectRisksTableBody = ({
                       ? `${row.risk_name.slice(0, 30)}...`
                       : row.risk_name
                     : "-"}
+                  {row.evidence_stale_at && (
+                    // VW Chip takes neither title nor sx, so both move to the wrapper.
+                    <Box
+                      component="span"
+                      sx={{ display: "inline-flex", ml: 2 }}
+                      title={new Date(row.evidence_stale_at).toLocaleString()}
+                    >
+                      <Chip size="small" variant="warning" label="Evidence stale" />
+                    </Box>
+                  )}
                 </TableCell>
                 {isColVisible("risk_owner") && (
                   <TableCell

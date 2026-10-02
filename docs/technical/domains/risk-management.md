@@ -1,5 +1,7 @@
 # Risk Management Domain
 
+**Last Updated:** 2026-10-02
+
 ## Overview
 
 VerifyWise implements comprehensive risk management across three risk types: Project Risks, Vendor Risks, and Model Risks. The system supports risk assessment, lifecycle tracking, mitigation planning, and historical trend analysis aligned with EU AI Act and ISO frameworks.
@@ -292,6 +294,48 @@ Each control link stores:
 }
 ```
 
+## Duplicate Detection
+
+`GET /api/riskLinks/duplicates` returns pairs of risks that look like the same
+risk entered twice, ranked by text similarity, with the reasons attached. A
+human reads the report and cleans up by hand.
+
+**Similarity rule.** Each risk becomes a token set from `risk_name + " " +
+risk_description` (lowercase, strip everything but `[a-z0-9 ]`, split on
+whitespace, drop tokens of length 2 or fewer). Only risks sharing at least one
+`risk_category` value are compared; pairs score Jaccard similarity and are
+reported at or above `DUPLICATE_SIMILARITY_THRESHOLD = 0.25`, sorted by
+similarity descending. Each reported pair also carries `also_shares` context
+(shared categories, shared project, same lifecycle phase), which never decides
+inclusion.
+
+**It writes nothing.** No migration, no new `relation_type`, no `risk_links`
+rows — exact match finds zero pairs on real data and the link scorer has no
+text signal, so neither mechanism was reused.
+
+## Control Coverage Gaps
+
+`GET /api/riskLinks/coverage` answers "which risk is not mitigated by any
+control?" Every active risk lands in exactly one state:
+
+| State | Rule | Meaning |
+|---|---|---|
+| `covered` | ≥ 1 control-side link | Fine. Counted, never listed. |
+| `gap` | 0 control-side links, but ≥ 1 of its projects has a framework attached | **The finding.** Someone can fix this today. |
+| `no_framework` | 0 control-side links and no project with a framework | Not a finding. Nothing to map to yet. |
+
+`no_framework` stays separate from `gap` because a project with no framework
+attached has no controls at all — reporting its risks as uncontrolled would be
+a false audit finding (on the dev org, the naive two-state version reports all
+37 risks uncontrolled for exactly this reason).
+
+An assessment answer is not a control: `assessment_link_count` rides along in
+each listed risk for context ("0 controls but 3 assessment answers" is a
+different conversation from "0 of everything") and never affects the state. A
+risk linked only via `answers_eu__risks` is still a `gap`.
+
+**It writes nothing.** No migration, no `risk_links` rows, no cache rows.
+
 ## API Endpoints
 
 ### Project Risks
@@ -503,6 +547,215 @@ recordProjectRiskDeletion(riskId, userId, tenant)
 | `components/AddNewRiskForm/` | Risk form modal |
 | `tools/riskCalculator.ts` | Risk calculation |
 | `application/repository/risk.repository.ts` | API calls |
+
+### Risk links (risk inheritance)
+
+Risks are linked to each other in `verifywise.risk_links` — one row per pair,
+stored canonically (smaller risk id first) for undirected `related_to` edges.
+An edge carries a `score`, a structured `reasons` array, a `source`
+(`derived` | `user` | `agent`) and a `status` (`suggested` | `confirmed` |
+`dismissed`). Source and status are orthogonal: a derived suggestion can be
+confirmed, and a user-created link can be dismissed.
+
+### Value-chain inheritance
+
+Value-chain inheritance lets a project risk inherit from a risk owned by a
+different risk domain. The supported legs are `vendor risk → project risk` and
+`model risk → project risk`. A `vendor risk → model risk` leg is not supported:
+`model_inventories` has no `vendor_id`, so there is no persisted relationship on
+which to base that direction. Vendor and model risks are parents only; project
+risks remain the children.
+
+The existing `risk_links` row stores the project child in `source_risk_id`. The
+parent is stored in exactly one of the nullable typed target columns:
+`target_risk_id`, `target_model_risk_id`, or `target_vendor_risk_id`. The child
+column and its one-parent index are intentionally unchanged, so the same
+one-parent guarantee applies across all parent entity types.
+
+Cross-entity links use `inherits_from` only. A manual `POST /api/riskLinks`
+request must provide exactly one of `targetRiskId`, `targetModelRiskId`, or
+`targetVendorRiskId`; these fields are mutually exclusive. Cross-entity links
+are created either as confirmed user links or as agent suggestions and appear
+in the project risk's Parent risk
+group with a label identifying the model or vendor parent.
+
+The vendor side has its own panel: the vendor risk modal's **Linked risks**
+tab lists the project risks that inherit from it
+(`GET /api/riskLinks/vendor-risks/:vendorRiskId`) and links new children through
+the same `POST /api/riskLinks`. That read endpoint never derives direction by
+comparing ids. `risks` and `vendorrisks` have separate sequences, so a child can
+carry the vendor risk's own id; every link on that list is `incoming` by
+construction.
+
+`POST /api/riskLinks/vendor-risks/:vendorRiskId/suggest-hierarchy` (Admin) runs
+the direction pass on a subset: only the connected components of related risks
+that contain a project risk in the vendor's use cases
+(`getVendorRiskChildCandidatesQuery`). The LLM-key check, the component size
+cap and the 202 `{ enqueued, skipped }` response are the same as the org-wide
+pass.
+
+Three read-only vendor reports sit beside F7 and F8, in
+`services/riskLinks/vendorReports.ts`: `GET /api/riskLinks/vendor-exposure`
+(confirmed children per vendor risk and per vendor, with use cases),
+`/vendor-duplicates` (F7's scorer, blocked by vendor) and `/vendor-coverage`
+(F8's three states over `frameworks_vendorrisks` and the frameworks on the
+vendor's use cases). The Vendors page shows them; see
+[Vendors](./vendors.md#vendor-risk-insights).
+
+The map (`GET /api/riskLinks`) carries `vendor: { id, name }` on vendor risk
+nodes, `null` elsewhere. The page uses it for a vendor filter, kept in the URL
+as `?vendor=ID`: it shows that vendor's risks, their `inherits_from` children,
+the vendor risks related to them and the links among those
+(`pages/RiskInheritanceGraph/vendorFilter.ts`).
+
+### Vendor risk pairs
+
+Two vendor risks can be related (`related_to`), never parent and child. Such a
+row has no project risk at all, so `source_risk_id` is nullable and a second
+source column, `source_vendor_risk_id` (FK `vendorrisks`, `ON DELETE CASCADE`),
+holds the smaller vendor risk id, with the larger in `target_vendor_risk_id`
+(migration `20261002152922-risk-links-vendor-related.js`). The constraints:
+
+| Constraint | Rule |
+|------------|------|
+| `risk_links_one_source` | Exactly one of `source_risk_id`, `source_vendor_risk_id` |
+| `risk_links_vendor_pair` | A vendor source is only `related_to`, has a vendor target, and `source_vendor_risk_id < target_vendor_risk_id` |
+| `risk_links_cross_entity_inherits` | A non-risk target is `inherits_from`, unless the source is a vendor risk |
+| `risk_links_unique_vendor_pair` | Unique `(source_vendor_risk_id, target_vendor_risk_id, relation_type)` where the vendor source is set |
+
+`inherits_from`, the one-parent index and the stale-parent trigger only ever
+see a project risk source, so none of them changed. Every project risk read
+joins `risks` on the source or filters `inherits_from`, so vendor pairs never
+appear there, even when a project risk shares a vendor risk's id. The readers
+that do include them are the vendor panel, the map (an edge keyed
+`vendor_risk:{id}` on both ends; `RiskGraphEdgeRow` carries
+`source_entity_type`) and dismissal analytics (which names a vendor source by
+its description). The vendor exposure report reads `inherits_from` only.
+
+Scoring and recompute live in `services/riskLinks/vendorRelated.ts`, with their
+own `vendor_risk_link_recompute` job, separate from the project risk
+providers: similar wording is required, then same vendor, shared framework and
+a use case shared across vendors each add 1. The threshold and the per-risk
+cap are the project ones. `POST /api/riskLinks/vendor-risks/recompute` (Admin)
+enqueues every active vendor risk as a backfill. See
+[Vendors](./vendors.md#related-vendor-risks) for the signals, triggers and the
+manual `POST /api/riskLinks` payload.
+
+Since C6 the direction pass (`POST /api/riskLinks/suggest-hierarchy`) also
+proposes vendor and model risks as parents, when they share a project with a
+risk in the cluster. They arrive as `suggested` / `agent` rows and are
+confirmed or dismissed like any other suggestion. They carry the
+`cross_entity_hierarchy` reason signal rather than `hierarchy`, which is how
+query 4b of `risk-link-precision.sql` reports them apart from project-risk
+suggestions.
+
+**Scoring.** `Servers/services/riskLinks/` holds a `LinkSignalProvider`
+interface and two providers: `field_overlap` (tier 0) and `structural_graph`
+(tier 1). Tier 0 scores shared category 3, shared control mapping 2, shared
+assessment mapping 2, same lifecycle phase 2, shared project 1. `"0"` in a
+control or assessment mapping means "nothing mapped" and never matches — the
+risk form has no picker for those fields and always sends `0`. Providers are
+merged by summing scores and concatenating reasons; any provider that throws
+aborts the recompute, so nothing is written or deleted and the risk keeps its
+existing edges.
+
+### Tier 1 — shared framework elements
+
+Two risks attached to the same framework element score
+`min(4, Σ 2 / log2(1 + degree))`, where `degree` is how many active risks in the
+organization are attached to that element. A control only these two risks touch
+is worth 1.26; one that forty risks touch is worth 0.37. Roughly three exclusive
+shared elements reach the suggestion threshold of 3 on structure alone.
+
+The rarity weight is the point. In a single-framework organization every risk
+shares the framework, so a flat weight would push every pair over the threshold
+and leave the per-risk cap as the real filter. The cap of 4 sits below tier 0's
+maximum of 10, so strong field overlap still outranks pure structure.
+
+Ten join tables contribute elements: ISO 42001 subclauses and annex categories,
+ISO 27001 subclauses and annex controls, EU AI Act controls, subcontrols and
+assessment answers, NIST AI RMF subcategories, and custom framework level-2 and
+level-3 items. Projects are excluded — tier 0 already scores `shared_project` —
+and so is `frameworks_risks`, which rarity would flatten to noise anyway.
+
+The user sees one signal per pair, not one per element:
+`{ "signal": "shared_framework_element", "weight": 3.1,
+   "detail": "2 EU AI Act controls, 1 ISO 42001 subclause" }`.
+
+### A provider that fails aborts the recompute
+
+Any provider throwing rejects the whole run: nothing is written and nothing is
+pruned, so the risk keeps the edges it had. Finishing on a partial set would
+strip the missing tier's points from every pair and delete the `derived` +
+`suggested` edges that then fell below the threshold — a transient database
+error would silently destroy real suggestions. A provider returning an empty
+array still means "ran, found nothing" and the run continues. The failed job
+is retried with exponential backoff, three attempts in total.
+
+**Persistence.** A pair at or above score 3 becomes a `derived` / `suggested`
+edge, up to 20 new edges per recompute, best score first with ties broken by
+risk id. The cap gates creation only. Pruning is driven by the score alone —
+an edge is deleted only when it is `derived` + `suggested` *and* its score fell
+below 3 — because scores are symmetric between two risks but cap membership is
+not, and pruning on the cap would make the two endpoints delete and recreate
+the same edge on alternating saves. `confirmed` edges are never pruned, and a
+`dismissed` edge stays dismissed however high its score climbs.
+
+**When it runs.** A BullMQ job (`risk_link_recompute` on the shared
+`automation-actions` queue) recomputes one risk at a time, enqueued after a
+risk is created, after it is updated, and after a bulk `set_category`.
+Deleting a risk does *not* trigger a recompute: `risks` is soft-deleted, edges
+survive, and the read path filters soft-deleted risks on both endpoints.
+`POST /api/riskLinks/recompute` (Admin) fans out one job per active risk and is
+required at least once per org, since the table starts empty.
+
+The job carries `jobId: risk-link:<org>:<risk>` so a burst of saves collapses
+into one run, plus `removeOnComplete` and `removeOnFail` — a retained job of
+either kind would make BullMQ ignore every later `add` for that risk. It also
+makes three attempts in total, with exponential backoff between them. Two
+recomputes share at most the single edge between them and cannot deadlock, but
+three risks forming a triangle can, because the top-N cap makes an edge a
+keeper for one endpoint and an ordinary incident row for the other. The
+backfill puts the whole org on a worker running ten jobs at a time, so Postgres
+aborting one side with 40P01 is an ordinary event; the retry is what keeps that
+risk from silently ending up with no links.
+
+**Endpoints.**
+
+| Method | Path | Role | Purpose |
+|---|---|---|---|
+| GET | `/api/riskLinks/:riskId` | any authenticated | Links in either direction. Defaults to `suggested` + `confirmed`; `?status=dismissed` for the dismissed list. |
+| PATCH | `/api/riskLinks/:id` | any authenticated | `{ status }`. Allowed: `suggested→confirmed`, `suggested→dismissed`, `confirmed→dismissed`, `dismissed→confirmed`, and `dismissed→suggested` as an explicit undo that clears the decision fields. Anything else is a 400. |
+| POST | `/api/riskLinks` | any authenticated | Create a link by hand. Lands `confirmed`/`user` straight away. |
+| POST | `/api/riskLinks/recompute` | Admin | Backfill the whole org. |
+| POST | `/api/riskLinks/suggest-hierarchy` | Admin | Queue one direction-agent pass per connected component. |
+| GET | `/api/riskLinks/duplicates` | any authenticated | Duplicate candidate report. Ranked pairs with reasons; writes nothing. |
+| GET | `/api/riskLinks/coverage` | any authenticated | Control coverage gap report. Three states; writes nothing. |
+| GET | `/api/riskLinks/vendor-risks/:vendorRiskId` | any authenticated | The project risks that inherit from a vendor risk, in the same shape as `GET /:riskId` with every link `incoming`. Same `?status=` filter. |
+| GET | `/api/riskLinks/vendor-risks/:vendorRiskId/shared-projects` | any authenticated | Project risks in the vendor's projects with those project titles. Ranks the vendor panel's picker; removes nobody from it. |
+
+There is no delete endpoint: a hard delete would be recreated by the next
+recompute, so dismissal is the durable way to remove a link.
+
+> The older client-side summary in
+> `Clients/src/application/tools/relatedRisks.ts` still renders after a risk is
+> saved. It computes the same signals in the browser and stores nothing; it is
+> superseded by the endpoints above and is removed when the linked-risks UI
+> lands.
+
+**Are the suggestions any good?** `docs/technical/domains/risk-link-precision.sql`
+is a hand-run psql script that reports confirm rates per signal, per score
+band, and per signal combination, plus how often the direction agent gets the
+arrow backwards. Read its header before the numbers: `suggested` rows are
+undecided, not rejected, and a row's verdict is credited to every signal on
+it, so a weak signal riding along with a strong one inherits its score.
+Dismissing a *suggested* link also captures an optional structured reason
+(`dismiss_reason`, plus a note for `other`), which query 6 breaks down by
+relation type. Dismissing a *confirmed* link records nothing on purpose: that
+is a human un-linking a pair they already accepted, not feedback about a
+suggestion, and mixing the two would skew every rate in the file.
+
+Design: `docs/superpowers/specs/2026-08-11-risk-inheritance-design.md`
 
 ## Related Documentation
 

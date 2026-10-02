@@ -15,6 +15,89 @@ export async function enqueueAutomationAction(
   return automationQueue.add(actionKey, data, options);
 }
 
+/**
+ * Recompute one risk's stored link edges in the background.
+ *
+ * `jobId` collapses a burst of saves for the same risk into one run. That only
+ * works because the job is removed as soon as it settles: BullMQ silently
+ * ignores an `add` whose jobId still exists, so a *retained* completed or
+ * failed job would suppress every later recompute for that risk forever.
+ * Known limitation: a save landing while the job is already active is dropped;
+ * the next save or POST /riskLinks/recompute picks it up.
+ *
+ * Retries because the recompute can lose a deadlock. Two runs share at most the
+ * one edge between them, but a triangle of three risks recomputing at once can
+ * cycle: the cap makes an edge a keeper for one endpoint and a plain incident
+ * row for the other, so the score order does not fix the lock order. That cap
+ * asymmetry is the mechanism on its own; `getIncidentLinksQuery` having no
+ * ORDER BY is a second, independent route, so adding one does not remove the
+ * need for this retry. The backfill enqueues every risk in the org at once
+ * against a worker running ten at a time, so none of this is exotic.
+ * Postgres aborts one side with 40P01, and without a retry that risk would
+ * silently keep no links until its next save.
+ */
+export async function enqueueRiskLinkRecompute(organizationId: number, riskId: number) {
+  return automationQueue.add(
+    "risk_link_recompute",
+    { organizationId, riskId },
+    {
+      jobId: `risk-link:${organizationId}:${riskId}`,
+      removeOnComplete: true,
+      removeOnFail: true,
+      attempts: 3,
+      backoff: { type: "exponential", delay: 1000 },
+    },
+  );
+}
+
+/**
+ * The vendor risk counterpart of enqueueRiskLinkRecompute: rebuild the
+ * `related_to` suggestions between one vendor risk and the others. Same jobId
+ * collapsing, removal on settle and deadlock retry, for the same reasons.
+ */
+export async function enqueueVendorRiskLinkRecompute(organizationId: number, vendorRiskId: number) {
+  return automationQueue.add(
+    "vendor_risk_link_recompute",
+    { organizationId, vendorRiskId },
+    {
+      jobId: `vendor-risk-link:${organizationId}:${vendorRiskId}`,
+      removeOnComplete: true,
+      removeOnFail: true,
+      attempts: 3,
+      backoff: { type: "exponential", delay: 1000 },
+    },
+  );
+}
+
+/**
+ * One direction pass over one connected component.
+ *
+ * The jobId is derived from the component's smallest id, which is stable
+ * because `connectedComponents` sorts. An admin double-clicking the button, or
+ * two admins clicking it at once, therefore costs one LLM call rather than two.
+ *
+ * `attempts: 3` matches the recompute job, but the failure it covers is
+ * different: the service swallows model errors and returns 0, so a retry here
+ * only ever re-runs a job that failed on Redis or on a database error, never
+ * one that failed on the model's answer.
+ */
+export async function enqueueRiskLinkDirection(organizationId: number, riskIds: number[]) {
+  if (riskIds.length === 0) {
+    throw new Error("enqueueRiskLinkDirection requires at least one risk id");
+  }
+  return automationQueue.add(
+    "risk_link_direction",
+    { organizationId, riskIds },
+    {
+      jobId: `risk-link-direction:${organizationId}:${Math.min(...riskIds)}`,
+      removeOnComplete: true,
+      removeOnFail: true,
+      attempts: 3,
+      backoff: { type: "exponential", delay: 1000 },
+    },
+  );
+}
+
 export async function scheduleVendorReviewDateNotification() {
   await automationQueue.obliterate({ force: true });
   logger.info("Adding Vendor Review Date Notification jobs to the queue...");
@@ -439,6 +522,63 @@ export async function scheduleFileExpirySweep() {
     {
       name: "file_expiry_sweep",
       data: { type: "file_expiry" },
+      opts: {
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
+    },
+  );
+}
+
+export async function scheduleEvidenceFreshnessSweep() {
+  logger.info("Adding evidence freshness sweep job to the queue...");
+  // Daily at 5 AM -- 3 AM is the MRM retention prune and 4 AM the revalidation
+  // sweep, so this slot is free. No obliterate here -- the scheduler upsert is
+  // idempotent by scheduler id.
+  await automationQueue.upsertJobScheduler(
+    "evidence_freshness_sweep",
+    { pattern: "0 5 * * *" },
+    {
+      name: "evidence_freshness_sweep",
+      data: {},
+      opts: {
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
+    },
+  );
+}
+
+export async function scheduleDeadlineEscalationSweep() {
+  logger.info("Adding deadline escalation sweep job to the queue...");
+  // Daily at 7 AM, after the 6 AM AI detection scan check and before the 8 AM
+  // report notification; the workflow autopilot scans share the slot. No
+  // obliterate here -- the scheduler upsert is idempotent by scheduler id.
+  await automationQueue.upsertJobScheduler(
+    "deadline_escalation_sweep",
+    { pattern: "0 7 * * *" },
+    {
+      name: "deadline_escalation_sweep",
+      data: {},
+      opts: {
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
+    },
+  );
+}
+
+export async function scheduleStaleInheritanceNotifySweep() {
+  logger.info("Adding stale-inheritance notification sweep job to the queue...");
+  // Daily at 5:30 AM -- between the 5 AM evidence sweep and the 6 AM AI
+  // detection check. No obliterate: the scheduler upsert is idempotent by
+  // scheduler id.
+  await automationQueue.upsertJobScheduler(
+    "stale_inheritance_notify_sweep",
+    { pattern: "30 5 * * *" },
+    {
+      name: "stale_inheritance_notify_sweep",
+      data: {},
       opts: {
         removeOnComplete: true,
         removeOnFail: false,

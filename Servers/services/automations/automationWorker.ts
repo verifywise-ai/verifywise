@@ -25,6 +25,12 @@ import { processScheduledAiDetectionScans } from "../aiDetection/scheduledScanPr
 import { syncAiTrustIndex } from "./actions/syncAiTrustIndex";
 import { runRevalidationSweepAllOrgs } from "./actions/mrmRevalidationSweep";
 import { runRetentionPruneAllOrgs } from "./actions/mrmRetentionPrune";
+import { runEvidenceFreshnessSweepAllOrgs } from "./actions/evidenceFreshnessSweep";
+import { runDeadlineEscalationSweepAllOrgs } from "./actions/deadlineEscalationSweep";
+import { runStaleInheritanceNotifySweepAllOrgs } from "./actions/staleInheritanceNotifySweep";
+import { recomputeRiskLinks } from "../riskLinks/recompute";
+import { recomputeVendorRiskLinks } from "../riskLinks/vendorRelated";
+import { suggestDirectionForComponent } from "../riskLinks/direction/direction.service";
 import { runFileExpirySweepAllOrgs } from "./actions/fileExpirySweep";
 // AI Gateway budget/risk jobs — call AIGateway HTTP endpoints via internal API
 const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || "http://127.0.0.1:8100";
@@ -684,6 +690,30 @@ export const createAutomationWorker = () => {
           await runRevalidationSweepAllOrgs();
         } else if (name === "mrm_retention_prune") {
           await runRetentionPruneAllOrgs();
+        } else if (name === "evidence_freshness_sweep") {
+          await runEvidenceFreshnessSweepAllOrgs();
+        } else if (name === "deadline_escalation_sweep") {
+          await runDeadlineEscalationSweepAllOrgs();
+        } else if (name === "stale_inheritance_notify_sweep") {
+          await runStaleInheritanceNotifySweepAllOrgs();
+        } else if (name === "risk_link_recompute") {
+          const { organizationId, riskId } = job.data as {
+            organizationId: number;
+            riskId: number;
+          };
+          await recomputeRiskLinks(organizationId, riskId);
+        } else if (name === "vendor_risk_link_recompute") {
+          const { organizationId, vendorRiskId } = job.data as {
+            organizationId: number;
+            vendorRiskId: number;
+          };
+          await recomputeVendorRiskLinks(organizationId, vendorRiskId);
+        } else if (name === "risk_link_direction") {
+          const { organizationId, riskIds } = job.data as {
+            organizationId: number;
+            riskIds: number[];
+          };
+          await suggestDirectionForComponent(organizationId, riskIds);
         } else if (name === "file_expiry_sweep") {
           await runFileExpirySweepAllOrgs();
         } else if (name === "mcp_audit_cleanup") {

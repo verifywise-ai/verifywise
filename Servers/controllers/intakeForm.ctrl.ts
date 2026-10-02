@@ -51,6 +51,7 @@ import { generateSuggestedQuestions, generateFieldGuidance } from "../services/i
 import { getCompanyLogoQuery } from "../utils/aiTrustCentre.utils";
 
 import { translateError } from "../utils/i18n.utils";
+import { toId } from "../utils/validations/validation.utils";
 import { isEmail } from "../utils/validations/email.utils";
 /** Safely extract a single string from req.params (which may be string | string[]). */
 const paramStr = (val: string | string[]): string => (Array.isArray(val) ? val[0] : val);
@@ -103,7 +104,7 @@ function verifySignedToken<T = Record<string, unknown>>(token: string): T | null
 
 /** Parse and validate an integer ID parameter. Returns NaN for invalid values. */
 function parseId(param: string | string[]): number {
-  return parseInt(paramStr(param), 10);
+  return toId(paramStr(param));
 }
 
 // ============================================================================

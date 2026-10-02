@@ -19,7 +19,7 @@ describe("Tasks API", () => {
 
   describe("POST /api/tasks", () => {
     it("creates a task with bypassAuth (201)", async () => {
-      const app = createTestApp({
+      const app = await createTestApp({
         bypassAuth: true,
         mockUser: { userId, organizationId: orgId, role: "Admin" },
       });
@@ -33,7 +33,7 @@ describe("Tasks API", () => {
     });
 
     it("creates a task with real JWT from login (201)", async () => {
-      const app = createTestApp();
+      const app = await createTestApp();
 
       const loginRes = await testRequest(app)
         .post("/api/users/login")
@@ -51,7 +51,7 @@ describe("Tasks API", () => {
     });
 
     it("returns 400 without auth (no token)", async () => {
-      const app = createTestApp();
+      const app = await createTestApp();
       const res = await testRequest(app).post("/api/tasks").send({ title: "Unauthorized Task" });
 
       expect(res.status).toBe(400);
@@ -60,7 +60,7 @@ describe("Tasks API", () => {
 
   describe("GET /api/tasks", () => {
     it("returns paginated task list", async () => {
-      const app = createTestApp({
+      const app = await createTestApp({
         bypassAuth: true,
         mockUser: { userId, organizationId: orgId, role: "Admin" },
       });
@@ -73,7 +73,7 @@ describe("Tasks API", () => {
     });
 
     it("includes created task in list", async () => {
-      const app = createTestApp({
+      const app = await createTestApp({
         bypassAuth: true,
         mockUser: { userId, organizationId: orgId, role: "Admin" },
       });

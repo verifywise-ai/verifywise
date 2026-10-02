@@ -33,10 +33,30 @@ export interface IRiskFiltersProps {
 /**
  * Props for risk heat map component
  */
-export interface IRiskHeatMapProps {
-  risks: RiskModel[];
-  onRiskSelect?: (risk: RiskModel) => void;
-  selectedRisk?: RiskModel | null;
+/**
+ * The fields the heat map reads. Project risks (RiskModel) and vendor risks
+ * both provide them, so either can be plotted.
+ */
+export interface HeatMapRisk {
+  id?: number;
+  risk_name: string;
+  likelihood: string;
+  severity: string;
+}
+
+/** A heat map cell by its position on the 1-5 scales. */
+export interface HeatMapCellRef {
+  likelihood: number;
+  severity: number;
+}
+
+export interface IRiskHeatMapProps<T extends HeatMapRisk = RiskModel> {
+  risks: T[];
+  onRiskSelect?: (risk: T) => void;
+  selectedRisk?: T | null;
+  /** When given, a click selects the whole cell instead of its first risk. */
+  onCellSelect?: (cell: HeatMapCellRef) => void;
+  selectedCell?: HeatMapCellRef | null;
 }
 
 /**

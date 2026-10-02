@@ -64,7 +64,7 @@ describe("report scope authorization", () => {
     ownedProjectId = await seedProject(orgId, editorId, "Editor's project");
     foreignProjectId = await seedProject(orgId, adminId, "Admin's project");
 
-    const res = await testRequest(appFor(adminId, "Admin", orgId))
+    const res = await testRequest(await appFor(adminId, "Admin", orgId))
       .post(TEMPLATES)
       .send(VALID_TEMPLATE);
     expect(res.status).toBe(201);
@@ -99,41 +99,41 @@ describe("report scope authorization", () => {
   }
 
   it("refuses an Editor creating an organization-scope schedule", async () => {
-    const res = await testRequest(appFor(editorId, "Editor", orgId))
+    const res = await testRequest(await appFor(editorId, "Editor", orgId))
       .post(SCHEDULES)
       .send(schedulePayload({ scope: "organization" }));
     expect(res.status).toBe(403);
   });
 
   it("refuses an Editor creating a schedule for a project they do not belong to", async () => {
-    const res = await testRequest(appFor(editorId, "Editor", orgId))
+    const res = await testRequest(await appFor(editorId, "Editor", orgId))
       .post(SCHEDULES)
       .send(schedulePayload({ scope: "project", projectId: foreignProjectId }));
     expect(res.status).toBe(403);
   });
 
   it("allows an Editor a schedule for their own project", async () => {
-    const res = await testRequest(appFor(editorId, "Editor", orgId))
+    const res = await testRequest(await appFor(editorId, "Editor", orgId))
       .post(SCHEDULES)
       .send(schedulePayload({ scope: "project", projectId: ownedProjectId }));
     expect(res.status).toBe(201);
   });
 
   it("allows an Admin an organization-scope schedule", async () => {
-    const res = await testRequest(appFor(adminId, "Admin", orgId))
+    const res = await testRequest(await appFor(adminId, "Admin", orgId))
       .post(SCHEDULES)
       .send(schedulePayload({ scope: "organization" }));
     expect(res.status).toBe(201);
   });
 
   it("refuses an Editor widening their own schedule to organization scope by PATCH", async () => {
-    const created = await testRequest(appFor(editorId, "Editor", orgId))
+    const created = await testRequest(await appFor(editorId, "Editor", orgId))
       .post(SCHEDULES)
       .send(schedulePayload({ scope: "project", projectId: ownedProjectId }));
     expect(created.status).toBe(201);
     const id = (created.body?.data ?? created.body).id;
 
-    const res = await testRequest(appFor(editorId, "Editor", orgId))
+    const res = await testRequest(await appFor(editorId, "Editor", orgId))
       .patch(`${SCHEDULES}/${id}`)
       .send({ scope: "organization", projectId: null });
     expect(res.status).toBe(403);
@@ -142,20 +142,20 @@ describe("report scope authorization", () => {
   it("refuses an Editor running a template with no scope in the body", async () => {
     // reportTemplate.ctrl defaults an omitted scope to "organization", so this
     // is the widest report in the product reachable with the least input.
-    const res = await testRequest(appFor(editorId, "Editor", orgId))
+    const res = await testRequest(await appFor(editorId, "Editor", orgId))
       .post(`${TEMPLATES}/${templateId}/run`)
       .send({ templateVersionId: versionId });
     expect(res.status).toBe(403);
   });
 
   it("refuses an Editor run-now on someone else's project schedule", async () => {
-    const created = await testRequest(appFor(adminId, "Admin", orgId))
+    const created = await testRequest(await appFor(adminId, "Admin", orgId))
       .post(SCHEDULES)
       .send(schedulePayload({ scope: "project", projectId: foreignProjectId }));
     expect(created.status).toBe(201);
     const id = (created.body?.data ?? created.body).id;
 
-    const res = await testRequest(appFor(editorId, "Editor", orgId)).post(
+    const res = await testRequest(await appFor(editorId, "Editor", orgId)).post(
       `${SCHEDULES}/${id}/run-now`,
     );
     expect(res.status).toBe(403);
@@ -169,7 +169,7 @@ describe("report scope authorization", () => {
   // its next run, for a project canViewRunQuery already denies this Editor on
   // the read side.
   it("refuses an Editor redirecting a foreign project schedule's recipients", async () => {
-    const created = await testRequest(appFor(adminId, "Admin", orgId))
+    const created = await testRequest(await appFor(adminId, "Admin", orgId))
       .post(SCHEDULES)
       .send(schedulePayload({ scope: "project", projectId: foreignProjectId }));
     expect(created.status).toBe(201);
@@ -180,7 +180,7 @@ describe("report scope authorization", () => {
       { replacements: { id }, type: QueryTypes.SELECT },
     )) as Array<{ delivery_config: unknown }>;
 
-    const res = await testRequest(appFor(editorId, "Editor", orgId))
+    const res = await testRequest(await appFor(editorId, "Editor", orgId))
       .patch(`${SCHEDULES}/${id}`)
       .send({
         deliveryConfig: {
@@ -202,13 +202,13 @@ describe("report scope authorization", () => {
   });
 
   it("refuses an Editor resuming a foreign project schedule", async () => {
-    const created = await testRequest(appFor(adminId, "Admin", orgId))
+    const created = await testRequest(await appFor(adminId, "Admin", orgId))
       .post(SCHEDULES)
       .send(schedulePayload({ scope: "project", projectId: foreignProjectId }));
     expect(created.status).toBe(201);
     const id = (created.body?.data ?? created.body).id;
 
-    const res = await testRequest(appFor(editorId, "Editor", orgId)).post(
+    const res = await testRequest(await appFor(editorId, "Editor", orgId)).post(
       `${SCHEDULES}/${id}/resume`,
     );
     expect(res.status).toBe(403);
@@ -218,13 +218,13 @@ describe("report scope authorization", () => {
   // Positive control for the two refusals above: the fix must not block a
   // member acting on their own project's schedule.
   it("allows a project member to patch their own schedule's deliveryConfig", async () => {
-    const created = await testRequest(appFor(editorId, "Editor", orgId))
+    const created = await testRequest(await appFor(editorId, "Editor", orgId))
       .post(SCHEDULES)
       .send(schedulePayload({ scope: "project", projectId: ownedProjectId }));
     expect(created.status).toBe(201);
     const id = (created.body?.data ?? created.body).id;
 
-    const res = await testRequest(appFor(editorId, "Editor", orgId))
+    const res = await testRequest(await appFor(editorId, "Editor", orgId))
       .patch(`${SCHEDULES}/${id}`)
       .send({
         deliveryConfig: { saveToStorage: true, attachFile: true, recipients: ["editor@test.com"] },

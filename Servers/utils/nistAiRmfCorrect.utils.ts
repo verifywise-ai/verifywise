@@ -7,6 +7,7 @@ import {
   getEvidenceFilesForEntities,
   getEvidenceFilesForEntity,
 } from "./files/evidenceFiles.utils";
+import { toId } from "./validations/validation.utils";
 
 /**
  * Pre-check function to ensure NIST AI RMF infrastructure exists before starting main transaction
@@ -388,7 +389,10 @@ export const updateSubcategoryQuery = async (
           if (value === "" || value === null || value === undefined) {
             return acc;
           }
-          const numValue = parseInt(value as string);
+          // toId, not parseInt: a salvaging parse turns an owner of "3abc"
+          // into user 3 and assigns the record to them. Junk now trips the
+          // guard below, which drops the field from the SET clause.
+          const numValue = toId(value);
           if (isNaN(numValue)) {
             return acc;
           }

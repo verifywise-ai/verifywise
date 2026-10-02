@@ -19,7 +19,7 @@
     "postinstall": "patch-package",
     "migrate-db": "npx sequelize db:migrate --debug",
     "worker": "node dist/jobs/worker.js",
-    "watch": "tsc-watch --noClear --onSuccess \"npm-run-all postbuild start\"",
+    "watch": "tsc-watch --noClear --onSuccess \"npm-run-all postbuild --parallel start worker\"",
     "reset-db": "ts-node scripts/resetDatabase.ts",
     "seed:demo": "ts-node scripts/seeds/demo.ts",
     "seed:demo:reset": "ts-node scripts/seeds/demo.ts --reset",

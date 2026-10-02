@@ -50,6 +50,7 @@ import {
   updateThresholdQuery,
   ThresholdEvaluation,
 } from "../utils/mrmMonitoring.utils";
+import { toId } from "../utils/validations/validation.utils";
 
 const FILE = "mrmMonitoring.ctrl.ts";
 
@@ -75,7 +76,7 @@ function fail(req: Request, res: Response, fn: string, msg: string, error: unkno
   return res.status(status).json(body);
 }
 
-const parseId = (raw: string | string[]): number => parseInt(Array.isArray(raw) ? raw[0] : raw, 10);
+const parseId = (raw: string | string[]): number => toId(Array.isArray(raw) ? raw[0] : raw);
 
 // ===========================================================================
 // Ingestion (token-auth — NOT JWT)
@@ -512,7 +513,7 @@ export async function createIngestionToken(req: Request, res: Response) {
 
   let modelId: number | null = null;
   if (model_inventory_id !== undefined && model_inventory_id !== null) {
-    modelId = parseInt(String(model_inventory_id), 10);
+    modelId = toId(model_inventory_id);
     if (Number.isNaN(modelId)) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid model id")));
     }
@@ -646,7 +647,7 @@ export async function getThresholds(req: Request, res: Response) {
   try {
     const modelIdRaw = req.query.modelId;
     const metric = typeof req.query.metric === "string" ? req.query.metric : undefined;
-    const modelId = modelIdRaw ? parseInt(String(modelIdRaw), 10) : undefined;
+    const modelId = modelIdRaw ? toId(modelIdRaw) : undefined;
     if (modelIdRaw && Number.isNaN(modelId)) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid model id")));
     }

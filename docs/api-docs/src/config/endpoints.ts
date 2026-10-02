@@ -3203,6 +3203,18 @@ export const evidenceAiEndpoints: Endpoint[] = [
 // Evidence endpoints
 export const evidenceHubEndpoints: Endpoint[] = [
   {
+    method: 'POST',
+    path: '/evidenceHub/freshness-sweep',
+    summary: "Run Freshness Sweep",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Evidence",
+  },
+  {
     method: 'GET',
     path: '/evidenceHub',
     summary: "Get All Evidences",
@@ -9386,6 +9398,219 @@ export const riskHistoryEndpoints: Endpoint[] = [
   },
 ];
 
+// RiskLinks endpoints
+export const risklinksEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/riskLinks/recompute',
+    summary: "Recompute All Risk Links",
+    description: "Requires role: Admin or SuperAdmin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+  {
+    method: 'POST',
+    path: '/riskLinks/suggest-hierarchy',
+    summary: "Suggest Risk Hierarchy",
+    description: "Requires role: Admin or SuperAdmin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+  {
+    method: 'GET',
+    path: '/riskLinks',
+    summary: "Get Risk Graph",
+    description: "Requires role: Admin or SuperAdmin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+  {
+    method: 'POST',
+    path: '/riskLinks',
+    summary: "Create Risk Link",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+  {
+    method: 'GET',
+    path: '/riskLinks/dismissals',
+    summary: "Get Dismissal Analytics",
+    description: "Requires role: Admin or SuperAdmin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+  {
+    method: 'GET',
+    path: '/riskLinks/duplicates',
+    summary: "Get Duplicate Candidates",
+    description: "Requires role: Admin or SuperAdmin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+  {
+    method: 'GET',
+    path: '/riskLinks/coverage',
+    summary: "Get Control Coverage",
+    description: "Requires role: Admin or SuperAdmin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+  {
+    method: 'GET',
+    path: '/riskLinks/vendor-exposure',
+    summary: "Get Vendor Exposure",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+  {
+    method: 'GET',
+    path: '/riskLinks/vendor-duplicates',
+    summary: "Get Vendor Duplicate Candidates",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+  {
+    method: 'GET',
+    path: '/riskLinks/vendor-coverage',
+    summary: "Get Vendor Framework Coverage",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+  {
+    method: 'GET',
+    path: '/riskLinks/vendor-risks/{vendorRiskId}',
+    summary: "Get Vendor Risk Links",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+  {
+    method: 'GET',
+    path: '/riskLinks/vendor-risks/{vendorRiskId}/shared-projects',
+    summary: "Get Vendor Risk Shared Projects",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+  {
+    method: 'POST',
+    path: '/riskLinks/vendor-risks/recompute',
+    summary: "Recompute All Vendor Risk Links",
+    description: "Requires role: Admin or SuperAdmin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+  {
+    method: 'POST',
+    path: '/riskLinks/vendor-risks/{vendorRiskId}/suggest-hierarchy',
+    summary: "Suggest Vendor Risk Hierarchy",
+    description: "Requires role: Admin or SuperAdmin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+  {
+    method: 'GET',
+    path: '/riskLinks/{riskId}',
+    summary: "Get Risk Links",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+  {
+    method: 'GET',
+    path: '/riskLinks/{riskId}/shared-projects',
+    summary: "Get Shared Projects",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+  {
+    method: 'PATCH',
+    path: '/riskLinks/{id}',
+    summary: "Update Risk Link Status",
+    description: "Requires role: Admin or Editor or Reviewer",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+  {
+    method: 'POST',
+    path: '/riskLinks/{id}/acknowledge-parent-change',
+    summary: "Acknowledge Parent Level Change",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+];
+
 // Roles endpoints
 export const roleEndpoints: Endpoint[] = [
   {
@@ -11146,6 +11371,17 @@ export const vendorEndpoints: Endpoint[] = [
     ],
     tag: "Vendors",
   },
+  {
+    method: 'GET',
+    path: '/vendors/{id}/riskSuggestions',
+    summary: "Get Vendor Risk Suggestions",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Vendors",
+  },
 ];
 
 // Vendor Risks endpoints
@@ -11353,6 +11589,7 @@ export const allEndpoints = {
   reportingtemplates: reportingtemplatesEndpoints,
   riskBenchmark: riskBenchmarkEndpoints,
   riskHistory: riskHistoryEndpoints,
+  risklinks: risklinksEndpoints,
   role: roleEndpoints,
   search: searchEndpoints,
   setting: settingEndpoints,

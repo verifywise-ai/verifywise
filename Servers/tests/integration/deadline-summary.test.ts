@@ -35,7 +35,7 @@ describe("GET /api/deadlines/summary", () => {
   };
 
   it("returns overdue and due-soon counts for an admin", async () => {
-    const app = createTestApp({
+    const app = await createTestApp({
       bypassAuth: true,
       mockUser: { userId: adminId, organizationId: orgId, role: "Admin" },
     });
@@ -79,7 +79,7 @@ describe("GET /api/deadlines/summary", () => {
   });
 
   it("respects per-user visibility for non-admins", async () => {
-    const app = createTestApp({
+    const app = await createTestApp({
       bypassAuth: true,
       mockUser: {
         userId: editorId,
@@ -115,7 +115,7 @@ describe("GET /api/deadlines/summary", () => {
   });
 
   it("falls back to the default threshold when none is provided", async () => {
-    const app = createTestApp({
+    const app = await createTestApp({
       bypassAuth: true,
       mockUser: { userId: adminId, organizationId: orgId, role: "Admin" },
     });

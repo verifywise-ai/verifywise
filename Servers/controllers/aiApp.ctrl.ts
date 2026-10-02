@@ -17,10 +17,11 @@ import {
 } from "../utils/aiApp.utils";
 import { AiAppStatus, AiAppPolicyStatus } from "../domain.layer/enums/ai-app-status.enum";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
+import { toId } from "../utils/validations/validation.utils";
 
 function parseIdParam(req: Request): number {
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-  const parsed = parseInt(raw, 10);
+  const parsed = toId(raw);
   if (Number.isNaN(parsed) || parsed <= 0) {
     throw new ValidationException("Valid ID is required", "id", raw);
   }
@@ -31,7 +32,7 @@ function parseShadowAiToolIdParam(req: Request): number {
   const raw = Array.isArray(req.params.shadowAiToolId)
     ? req.params.shadowAiToolId[0]
     : req.params.shadowAiToolId;
-  const parsed = parseInt(raw, 10);
+  const parsed = toId(raw);
   if (Number.isNaN(parsed) || parsed <= 0) {
     throw new ValidationException("Valid Shadow AI tool ID is required", "shadowAiToolId", raw);
   }

@@ -53,7 +53,7 @@ describe("File Manager API", () => {
 
   /** Upload one file and return the created row's id. */
   async function uploadFile(
-    app: ReturnType<typeof adminApp>,
+    app: Awaited<ReturnType<typeof adminApp>>,
     filename = "policy.csv",
     body = CSV_BODY,
   ): Promise<number> {
@@ -67,7 +67,7 @@ describe("File Manager API", () => {
 
   describe("POST /api/file-manager", () => {
     it("uploads a file and returns its metadata (201)", async () => {
-      const app = adminApp();
+      const app = await adminApp();
 
       const res = await testRequest(app)
         .post("/api/file-manager")
@@ -89,7 +89,7 @@ describe("File Manager API", () => {
     });
 
     it("persists the row as an org-level file scoped to the caller's organization", async () => {
-      const app = adminApp();
+      const app = await adminApp();
       const fileId = await uploadFile(app);
 
       const [row] = (await sequelize.query(
@@ -110,7 +110,7 @@ describe("File Manager API", () => {
 
   describe("GET /api/file-manager", () => {
     it("returns the documented { data: { files, pagination } } envelope", async () => {
-      const app = adminApp();
+      const app = await adminApp();
       await uploadFile(app);
 
       const res = await testRequest(app).get("/api/file-manager");
@@ -135,7 +135,7 @@ describe("File Manager API", () => {
     });
 
     it("paginates and reports the true total across pages", async () => {
-      const app = adminApp();
+      const app = await adminApp();
       await uploadFile(app, "first.csv");
       await uploadFile(app, "second.csv");
       await uploadFile(app, "third.csv");
@@ -153,7 +153,7 @@ describe("File Manager API", () => {
     });
 
     it("returns an empty list rather than erroring when the org has no files", async () => {
-      const res = await testRequest(adminApp()).get("/api/file-manager");
+      const res = await testRequest(await adminApp()).get("/api/file-manager");
 
       expect(res.status).toBe(200);
       expect(res.body.data.files).toEqual([]);
@@ -163,7 +163,7 @@ describe("File Manager API", () => {
 
   describe("GET /api/file-manager/:id", () => {
     it("round-trips the stored bytes with download headers", async () => {
-      const app = adminApp();
+      const app = await adminApp();
       const fileId = await uploadFile(app);
 
       // supertest parses the body by content type, which turns the download into
@@ -187,7 +187,7 @@ describe("File Manager API", () => {
 
   describe("GET /api/file-manager/:id/metadata", () => {
     it("returns the metadata columns for the file", async () => {
-      const app = adminApp();
+      const app = await adminApp();
       const fileId = await uploadFile(app);
 
       const res = await testRequest(app).get(`/api/file-manager/${fileId}/metadata`);
@@ -204,7 +204,7 @@ describe("File Manager API", () => {
 
   describe("PATCH /api/file-manager/:id/metadata", () => {
     it("persists tags, review status, version and description", async () => {
-      const app = adminApp();
+      const app = await adminApp();
       const fileId = await uploadFile(app);
 
       const updates = {
@@ -235,7 +235,7 @@ describe("File Manager API", () => {
 
   describe("DELETE /api/file-manager/:id", () => {
     it("removes the row from the database", async () => {
-      const app = adminApp();
+      const app = await adminApp();
       const fileId = await uploadFile(app);
 
       const res = await testRequest(app).delete(`/api/file-manager/${fileId}`);
@@ -252,7 +252,7 @@ describe("File Manager API", () => {
 
   describe("GET /api/file-manager/with-metadata", () => {
     it("flags a file expiring inside the threshold and leaves a distant one unflagged", async () => {
-      const app = adminApp();
+      const app = await adminApp();
       const expiringId = await uploadFile(app, "expiring.csv");
       const distantId = await uploadFile(app, "distant.csv");
 
@@ -283,9 +283,9 @@ describe("File Manager API", () => {
 
   describe("role authorization", () => {
     it("rejects upload, delete and metadata update for Auditor (403)", async () => {
-      const admin = adminApp();
+      const admin = await adminApp();
       const fileId = await uploadFile(admin);
-      const auditor = adminApp("Auditor");
+      const auditor = await adminApp("Auditor");
 
       const uploadRes = await testRequest(auditor)
         .post("/api/file-manager")
@@ -305,16 +305,16 @@ describe("File Manager API", () => {
     });
 
     it("allows Auditor to read the file list (200)", async () => {
-      await uploadFile(adminApp());
+      await uploadFile(await adminApp());
 
-      const res = await testRequest(adminApp("Auditor")).get("/api/file-manager");
+      const res = await testRequest(await adminApp("Auditor")).get("/api/file-manager");
 
       expect(res.status).toBe(200);
       expect(res.body.data.files).toHaveLength(1);
     });
 
     it("allows Editor to upload, update metadata and delete", async () => {
-      const editor = adminApp("Editor");
+      const editor = await adminApp("Editor");
 
       const uploadRes = await testRequest(editor)
         .post("/api/file-manager")
@@ -335,7 +335,7 @@ describe("File Manager API", () => {
     });
 
     it("allows Reviewer to upload (201)", async () => {
-      const res = await testRequest(adminApp("Reviewer"))
+      const res = await testRequest(await adminApp("Reviewer"))
         .post("/api/file-manager")
         .attach("file", Buffer.from(CSV_BODY), {
           filename: "reviewer.csv",
@@ -350,11 +350,11 @@ describe("File Manager API", () => {
     it("keeps one organization's files invisible and undeletable from another", async () => {
       const { orgA, orgB, userA, userB } = await seedTwoOrgsAndUsers(1);
 
-      const appA = createTestApp({
+      const appA = await createTestApp({
         bypassAuth: true,
         mockUser: { userId: userA, organizationId: orgA, role: "Admin" },
       });
-      const appB = createTestApp({
+      const appB = await createTestApp({
         bypassAuth: true,
         mockUser: { userId: userB, organizationId: orgB, role: "Admin" },
       });
@@ -402,7 +402,7 @@ describe("File Manager API", () => {
 
   describe("validation and upload errors", () => {
     it("rejects a file whose extension and MIME type disagree (415)", async () => {
-      const res = await testRequest(adminApp())
+      const res = await testRequest(await adminApp())
         .post("/api/file-manager")
         .attach("file", Buffer.from("PK"), {
           filename: "payload.csv",
@@ -414,7 +414,7 @@ describe("File Manager API", () => {
     });
 
     it("rejects a multipart upload with no file part (400)", async () => {
-      const res = await testRequest(adminApp())
+      const res = await testRequest(await adminApp())
         .post("/api/file-manager")
         .field("source", "File Manager");
 
@@ -426,13 +426,13 @@ describe("File Manager API", () => {
       // `if (!file)` guard, so a request with no multipart body throws on the
       // undefined body and lands in the 500 handler instead of returning 400.
       // Locked in so a future fix to 400 is a deliberate, visible change.
-      const res = await testRequest(adminApp()).post("/api/file-manager");
+      const res = await testRequest(await adminApp()).post("/api/file-manager");
 
       expect(res.status).toBe(500);
     });
 
     it("rejects an invalid review_status (400)", async () => {
-      const app = adminApp();
+      const app = await adminApp();
       const fileId = await uploadFile(app);
 
       const res = await testRequest(app)
@@ -443,13 +443,13 @@ describe("File Manager API", () => {
     });
 
     it("rejects a non-numeric file id (400)", async () => {
-      const res = await testRequest(adminApp()).get("/api/file-manager/abc");
+      const res = await testRequest(await adminApp()).get("/api/file-manager/abc");
 
       expect(res.status).toBe(400);
     });
 
     it("returns 404 for a well-formed id that does not exist", async () => {
-      const res = await testRequest(adminApp()).get("/api/file-manager/999999");
+      const res = await testRequest(await adminApp()).get("/api/file-manager/999999");
 
       expect(res.status).toBe(404);
     });
@@ -457,7 +457,7 @@ describe("File Manager API", () => {
 
   describe("transactional delete", () => {
     it("clears folder mappings and entity links together with the file", async () => {
-      const app = adminApp();
+      const app = await adminApp();
       const fileId = await uploadFile(app);
 
       const [folder] = (await sequelize.query(

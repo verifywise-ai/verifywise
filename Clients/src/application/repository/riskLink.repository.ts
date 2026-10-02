@@ -1,0 +1,268 @@
+import { apiServices } from "../../infrastructure/api/networkServices";
+import { APIError } from "../tools/error";
+import {
+  CoverageReport,
+  CreateRiskLinkInput,
+  DismissalAnalytics,
+  DismissReason,
+  DuplicateReport,
+  RiskGraph,
+  RiskLink,
+  RiskLinkStatus,
+  SharedProjectCandidate,
+  VendorCoverageReport,
+  VendorDuplicateReport,
+  VendorExposureReport,
+  VendorRiskChildCandidate,
+} from "../../domain/interfaces/i.riskLink";
+
+function extractData<T>(response: { data: { data: T } }): T {
+  return response.data.data;
+}
+
+/**
+ * Deliberately unlike `policy.repository.ts`, which throws a hardcoded message
+ * and reads `error.response.status`. `apiServices` rejects with a
+ * `CustomException` whose `.message` is already the backend's message and whose
+ * `.response` is the response *body*, not the response object — so
+ * `.response.status` is always undefined there. The panel needs the real status
+ * (409 vs 404) and the real message, so both are carried through.
+ */
+function toAPIError(error: any, fallback: string): APIError {
+  return new APIError(error?.message || fallback, error?.status, error);
+}
+
+export async function getRiskLinks(riskId: number, status?: RiskLinkStatus): Promise<RiskLink[]> {
+  try {
+    const query = status ? `?status=${status}` : "";
+    const response = await apiServices.get<{ message: string; data: RiskLink[] }>(
+      `/riskLinks/${riskId}${query}`,
+    );
+    return extractData<RiskLink[]>(response);
+  } catch (error: any) {
+    throw toAPIError(error, "Failed to fetch linked risks");
+  }
+}
+
+/** The project risks that inherit from one vendor risk. Same shape as getRiskLinks. */
+export async function getVendorRiskLinks(
+  vendorRiskId: number,
+  status?: RiskLinkStatus,
+): Promise<RiskLink[]> {
+  try {
+    const query = status ? `?status=${status}` : "";
+    const response = await apiServices.get<{ message: string; data: RiskLink[] }>(
+      `/riskLinks/vendor-risks/${vendorRiskId}${query}`,
+    );
+    return extractData<RiskLink[]>(response);
+  } catch (error: any) {
+    throw toAPIError(error, "Failed to fetch linked risks");
+  }
+}
+
+export async function getVendorRiskSharedProjects(
+  vendorRiskId: number,
+): Promise<VendorRiskChildCandidate[]> {
+  try {
+    const response = await apiServices.get<{
+      message: string;
+      data: VendorRiskChildCandidate[];
+    }>(`/riskLinks/vendor-risks/${vendorRiskId}/shared-projects`);
+    return extractData<VendorRiskChildCandidate[]>(response);
+  } catch (error: any) {
+    throw toAPIError(error, "Failed to fetch shared projects");
+  }
+}
+
+export async function createRiskLink(input: CreateRiskLinkInput): Promise<{ id: number }> {
+  try {
+    const response = await apiServices.post<{ message: string; data: { id: number } }>(
+      "/riskLinks",
+      input,
+    );
+    return extractData<{ id: number }>(response);
+  } catch (error: any) {
+    throw toAPIError(error, "Failed to create the link");
+  }
+}
+
+/** `dismissal` is only ever accepted on a link that is currently `suggested`. */
+export async function updateRiskLinkStatus(
+  id: number,
+  status: RiskLinkStatus,
+  dismissal?: { dismissReason: DismissReason; dismissNote?: string },
+): Promise<{ id: number; status: RiskLinkStatus }> {
+  try {
+    const response = await apiServices.patch<{
+      message: string;
+      data: { id: number; status: RiskLinkStatus };
+    }>(`/riskLinks/${id}`, { status, ...dismissal });
+    return extractData<{ id: number; status: RiskLinkStatus }>(response);
+  } catch (error: any) {
+    throw toAPIError(error, "Failed to update the link");
+  }
+}
+
+/**
+ * Mark a stale-inheritance warning as reviewed. Idempotent on the server.
+ */
+export async function acknowledgeParentLevelChange(id: number): Promise<{ id: number }> {
+  try {
+    const response = await apiServices.post<{ message: string; data: { id: number } }>(
+      `/riskLinks/${id}/acknowledge-parent-change`,
+      {},
+    );
+    return extractData<{ id: number }>(response);
+  } catch (error: any) {
+    throw toAPIError(error, "Failed to acknowledge the parent-level change");
+  }
+}
+
+export async function recomputeRiskLinks(): Promise<{ enqueued: number }> {
+  try {
+    const response = await apiServices.post<{
+      message: string;
+      data: { enqueued: number };
+    }>("/riskLinks/recompute", {});
+    return extractData<{ enqueued: number }>(response);
+  } catch (error: any) {
+    throw toAPIError(error, "Failed to start the scan");
+  }
+}
+
+/** Queues a rescore of every active vendor risk's related vendor risks. */
+export async function recomputeVendorRiskLinks(): Promise<{ enqueued: number }> {
+  try {
+    const response = await apiServices.post<{
+      message: string;
+      data: { enqueued: number };
+    }>("/riskLinks/vendor-risks/recompute", {});
+    return extractData<{ enqueued: number }>(response);
+  } catch (error: any) {
+    throw toAPIError(error, "Failed to start the scan");
+  }
+}
+
+/**
+ * Starts a direction pass over every cluster of related risks in the org.
+ * `skipped` counts clusters too large for one model call.
+ */
+export async function suggestRiskHierarchy(): Promise<{
+  enqueued: number;
+  skipped: number;
+}> {
+  try {
+    const response = await apiServices.post<{
+      message: string;
+      data: { enqueued: number; skipped: number };
+    }>("/riskLinks/suggest-hierarchy", {});
+    return extractData<{ enqueued: number; skipped: number }>(response);
+  } catch (error: any) {
+    throw toAPIError(error, "Failed to start the hierarchy suggestions");
+  }
+}
+
+export async function getRiskGraph(status?: RiskLinkStatus): Promise<RiskGraph> {
+  try {
+    const query = status ? `?status=${status}` : "";
+    const response = await apiServices.get<{ message: string; data: RiskGraph }>(
+      `/riskLinks${query}`,
+    );
+    return extractData<RiskGraph>(response);
+  } catch (error: any) {
+    throw toAPIError(error, "Failed to fetch the risk graph");
+  }
+}
+
+export async function getDismissalAnalytics(): Promise<DismissalAnalytics> {
+  try {
+    const response = await apiServices.get<{ message: string; data: DismissalAnalytics }>(
+      "/riskLinks/dismissals",
+    );
+    return extractData<DismissalAnalytics>(response);
+  } catch (error: any) {
+    throw toAPIError(error, "Failed to fetch dismissal analytics");
+  }
+}
+
+export async function getSharedProjects(riskId: number): Promise<SharedProjectCandidate[]> {
+  try {
+    const response = await apiServices.get<{
+      message: string;
+      data: SharedProjectCandidate[];
+    }>(`/riskLinks/${riskId}/shared-projects`);
+    return extractData<SharedProjectCandidate[]>(response);
+  } catch (error: any) {
+    throw toAPIError(error, "Failed to fetch shared projects");
+  }
+}
+
+export async function getDuplicateCandidates(): Promise<DuplicateReport> {
+  try {
+    const response = await apiServices.get<{ message: string; data: DuplicateReport }>(
+      "/riskLinks/duplicates",
+    );
+    return extractData<DuplicateReport>(response);
+  } catch (error: any) {
+    throw toAPIError(error, "Failed to fetch duplicate candidates");
+  }
+}
+
+export async function getControlCoverage(): Promise<CoverageReport> {
+  try {
+    const response = await apiServices.get<{ message: string; data: CoverageReport }>(
+      "/riskLinks/coverage",
+    );
+    return extractData<CoverageReport>(response);
+  } catch (error: any) {
+    throw toAPIError(error, "Failed to fetch control coverage");
+  }
+}
+
+export async function getVendorExposure(): Promise<VendorExposureReport> {
+  try {
+    const response = await apiServices.get<{ message: string; data: VendorExposureReport }>(
+      "/riskLinks/vendor-exposure",
+    );
+    return extractData<VendorExposureReport>(response);
+  } catch (error: any) {
+    throw toAPIError(error, "Failed to fetch vendor exposure");
+  }
+}
+
+export async function getVendorDuplicateCandidates(): Promise<VendorDuplicateReport> {
+  try {
+    const response = await apiServices.get<{ message: string; data: VendorDuplicateReport }>(
+      "/riskLinks/vendor-duplicates",
+    );
+    return extractData<VendorDuplicateReport>(response);
+  } catch (error: any) {
+    throw toAPIError(error, "Failed to fetch vendor duplicate candidates");
+  }
+}
+
+export async function getVendorFrameworkCoverage(): Promise<VendorCoverageReport> {
+  try {
+    const response = await apiServices.get<{ message: string; data: VendorCoverageReport }>(
+      "/riskLinks/vendor-coverage",
+    );
+    return extractData<VendorCoverageReport>(response);
+  } catch (error: any) {
+    throw toAPIError(error, "Failed to fetch vendor framework coverage");
+  }
+}
+
+/** The hierarchy pass, limited to the clusters this vendor risk could parent. */
+export async function suggestVendorRiskHierarchy(
+  vendorRiskId: number,
+): Promise<{ enqueued: number; skipped: number }> {
+  try {
+    const response = await apiServices.post<{
+      message: string;
+      data: { enqueued: number; skipped: number };
+    }>(`/riskLinks/vendor-risks/${vendorRiskId}/suggest-hierarchy`, {});
+    return extractData<{ enqueued: number; skipped: number }>(response);
+  } catch (error: any) {
+    throw toAPIError(error, "Failed to start the hierarchy suggestions");
+  }
+}

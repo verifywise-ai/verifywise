@@ -40,3 +40,4 @@ accessibility-report/
 blob-report/
 playwright/.cache/
 e2e/.auth/
+e2e/.artifacts/

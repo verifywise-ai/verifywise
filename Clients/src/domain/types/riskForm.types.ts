@@ -37,7 +37,6 @@ export interface MitigationFormValues {
   approver: number;
   approvalStatus: number;
   dateOfAssessment: string;
-  recommendations: string;
 }
 
 /**

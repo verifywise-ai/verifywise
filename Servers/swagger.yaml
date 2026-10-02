@@ -7799,6 +7799,8 @@ tags:
   -
     name: 'Risk History'
   -
+    name: RiskLinks
+  -
     name: Roles
   -
     name: 'SSO Config'
@@ -9156,6 +9158,20 @@ paths:
                   message: {type: string, example: 'Internal Server Error'}
                   error: {type: string}
       operationId: deleteVendorById
+  '/vendors/{id}/riskSuggestions':
+    get:
+      summary: 'Get Vendor Risk Suggestions'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Vendors
+      operationId: getVendorRiskSuggestions
+      security:
+        -
+          bearerAuth: []
   '/vendor-change-history/{id}':
     get:
       tags:
@@ -10217,6 +10233,268 @@ paths:
       tags:
         - 'Project Risks'
       operationId: bulkUpdateProjectRisks
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
+  /riskLinks/recompute:
+    post:
+      summary: 'Recompute All Risk Links'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: recomputeAllRiskLinks
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or SuperAdmin'
+  /riskLinks/suggest-hierarchy:
+    post:
+      summary: 'Suggest Risk Hierarchy'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: suggestRiskHierarchy
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or SuperAdmin'
+  /riskLinks:
+    post:
+      summary: 'Create Risk Link'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: createRiskLink
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
+    get:
+      summary: 'Get Risk Graph'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: getRiskGraph
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or SuperAdmin'
+  /riskLinks/dismissals:
+    get:
+      summary: 'Get Dismissal Analytics'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: getDismissalAnalytics
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or SuperAdmin'
+  /riskLinks/duplicates:
+    get:
+      summary: 'Get Duplicate Candidates'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: getDuplicateCandidates
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or SuperAdmin'
+  /riskLinks/coverage:
+    get:
+      summary: 'Get Control Coverage'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: getControlCoverage
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or SuperAdmin'
+  /riskLinks/vendor-exposure:
+    get:
+      summary: 'Get Vendor Exposure'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: getVendorExposure
+      security:
+        -
+          bearerAuth: []
+  /riskLinks/vendor-duplicates:
+    get:
+      summary: 'Get Vendor Duplicate Candidates'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: getVendorDuplicateCandidates
+      security:
+        -
+          bearerAuth: []
+  /riskLinks/vendor-coverage:
+    get:
+      summary: 'Get Vendor Framework Coverage'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: getVendorFrameworkCoverage
+      security:
+        -
+          bearerAuth: []
+  '/riskLinks/vendor-risks/{vendorRiskId}':
+    get:
+      summary: 'Get Vendor Risk Links'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: getVendorRiskLinks
+      security:
+        -
+          bearerAuth: []
+  '/riskLinks/vendor-risks/{vendorRiskId}/shared-projects':
+    get:
+      summary: 'Get Vendor Risk Shared Projects'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: getVendorRiskSharedProjects
+      security:
+        -
+          bearerAuth: []
+  /riskLinks/vendor-risks/recompute:
+    post:
+      summary: 'Recompute All Vendor Risk Links'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: recomputeAllVendorRiskLinks
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or SuperAdmin'
+  '/riskLinks/vendor-risks/{vendorRiskId}/suggest-hierarchy':
+    post:
+      summary: 'Suggest Vendor Risk Hierarchy'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: suggestVendorRiskHierarchy
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or SuperAdmin'
+  '/riskLinks/{riskId}':
+    get:
+      summary: 'Get Risk Links'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: getRiskLinks
+      security:
+        -
+          bearerAuth: []
+  '/riskLinks/{riskId}/shared-projects':
+    get:
+      summary: 'Get Shared Projects'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: getSharedProjects
+      security:
+        -
+          bearerAuth: []
+  '/riskLinks/{id}':
+    patch:
+      summary: 'Update Risk Link Status'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: updateRiskLinkStatus
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor or Reviewer'
+  '/riskLinks/{id}/acknowledge-parent-change':
+    post:
+      summary: 'Acknowledge Parent Level Change'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: acknowledgeParentLevelChange
       security:
         -
           bearerAuth: []
@@ -17881,6 +18159,21 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+  /evidenceHub/freshness-sweep:
+    post:
+      summary: 'Run Freshness Sweep'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Evidence
+      operationId: runFreshnessSweep
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin'
   /evidenceHub:
     get:
       tags:

@@ -94,6 +94,17 @@ async function apiPost<T = any>(ctx: ApiContext, path: string, data: unknown): P
   return response.json() as Promise<T>;
 }
 
+async function apiGet<T = any>(ctx: ApiContext, path: string): Promise<T> {
+  const response = await ctx.request.get(path, {
+    headers: { Authorization: `Bearer ${ctx.token}` },
+  });
+  if (!response.ok()) {
+    const body = await response.text();
+    throw new Error(`GET ${path} failed: ${response.status()} ${body}`);
+  }
+  return response.json() as Promise<T>;
+}
+
 async function apiDelete<T = any>(ctx: ApiContext, path: string): Promise<T> {
   const response = await ctx.request.delete(path, {
     headers: { Authorization: `Bearer ${ctx.token}` },
@@ -276,6 +287,23 @@ export const projectRisks = {
 
   async delete(ctx: ApiContext, id: number): Promise<void> {
     await apiDelete(ctx, `/api/projectRisks/${id}`);
+  },
+};
+
+export interface CoverageSummary {
+  total_active_risks: number;
+  covered: number;
+  gap: number;
+  no_framework: number;
+}
+
+export const riskLinks = {
+  async coverageSummary(ctx: ApiContext): Promise<CoverageSummary> {
+    const body = await apiGet<{ data: { summary: CoverageSummary } }>(
+      ctx,
+      "/api/riskLinks/coverage",
+    );
+    return unwrapData<{ summary: CoverageSummary }>(body).summary;
   },
 };
 

@@ -52,6 +52,9 @@ export const EMAIL_TEMPLATES = {
   // Vendor templates
   VENDOR_REVIEW_DUE: "vendor-review-due.mjml",
 
+  // Risk deadline templates
+  RISK_DEADLINE_DUE: "risk-deadline-due.mjml",
+
   // Shadow AI templates
   SHADOW_AI_ALERT: "shadow-ai-alert.mjml",
 

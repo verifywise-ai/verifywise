@@ -23,6 +23,14 @@ export enum NotificationType {
   POLICY_DUE_SOON = "policy_due_soon",
   POLICY_OVERDUE = "policy_overdue",
 
+  // Risk notifications (flag written only by the nightly evidence-freshness sweep)
+  EVIDENCE_STALE = "evidence_stale",
+  RISK_INHERITANCE_STALE = "risk_inheritance_stale",
+  MODEL_RISK_CANDIDATES = "model_risk_candidates",
+  VENDOR_RISK_CANDIDATES = "vendor_risk_candidates",
+  RISK_DEADLINE_DUE_SOON = "risk_deadline_due_soon",
+  MODEL_RISK_DUE_SOON = "model_risk_due_soon",
+
   // Training notifications
   TRAINING_ASSIGNED = "training_assigned",
   TRAINING_COMPLETED = "training_completed",

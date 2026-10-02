@@ -19,7 +19,7 @@ import { Application } from "express";
 import fs from "fs";
 import path from "path";
 
-import { createTestApp } from "../setup";
+import { createTestExpressApp } from "../setup";
 import * as rateLimiters from "../../../middleware/rateLimit.middleware";
 
 // Building the real app compiles the whole backend through ts-jest.
@@ -162,7 +162,7 @@ describe("rate limiter wiring", () => {
   let app: Application;
 
   beforeAll(() => {
-    app = createTestApp();
+    app = createTestExpressApp();
   });
 
   describe("per-route limiters", () => {

@@ -7,6 +7,7 @@ import {
   getUnreviewedQuery,
   getStatsQuery,
 } from "../utils/aiContent.utils";
+import { toId } from "../utils/validations/validation.utils";
 
 const fileName = "aiContent.ctrl.ts";
 
@@ -54,7 +55,7 @@ export async function getBadges(req: Request, res: Response) {
  */
 export async function reviewContent(req: Request, res: Response) {
   const functionName = "reviewContent";
-  const id = parseInt(String(req.params.id));
+  const id = toId(req.params.id);
 
   if (isNaN(id)) {
     return res.status(400).json(STATUS_CODE[400]("Invalid content ID"));

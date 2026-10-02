@@ -32,6 +32,7 @@ import {
 } from "../utils/mrm.utils";
 import { triggerRevalidation } from "../utils/mrmRevalidation.utils";
 import { MrmRevalidationTriggerSource } from "../domain.layer/enums/mrmMonitoring.enum";
+import { toId } from "../utils/validations/validation.utils";
 
 const FILE = "mrm.ctrl.ts";
 
@@ -52,7 +53,7 @@ function fail(req: Request, res: Response, fn: string, msg: string, error: unkno
   return res.status(status).json(body);
 }
 
-const parseId = (raw: string | string[]): number => parseInt(Array.isArray(raw) ? raw[0] : raw, 10);
+const parseId = (raw: string | string[]): number => toId(Array.isArray(raw) ? raw[0] : raw);
 
 // ---------------------------------------------------------------------------
 // Tiering
@@ -133,7 +134,7 @@ export async function getValidations(req: Request, res: Response) {
   logStructured("processing", "fetching validations", fn, FILE);
   try {
     const modelIdRaw = req.query.modelId;
-    const modelId = modelIdRaw ? parseInt(String(modelIdRaw), 10) : undefined;
+    const modelId = modelIdRaw ? toId(modelIdRaw) : undefined;
     if (modelIdRaw && Number.isNaN(modelId)) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid model id")));
     }
@@ -292,8 +293,8 @@ export async function getFindings(req: Request, res: Response) {
   try {
     const modelIdRaw = req.query.modelId;
     const validationIdRaw = req.query.validationId;
-    const modelId = modelIdRaw ? parseInt(String(modelIdRaw), 10) : undefined;
-    const validationId = validationIdRaw ? parseInt(String(validationIdRaw), 10) : undefined;
+    const modelId = modelIdRaw ? toId(modelIdRaw) : undefined;
+    const validationId = validationIdRaw ? toId(validationIdRaw) : undefined;
     if ((modelIdRaw && Number.isNaN(modelId)) || (validationIdRaw && Number.isNaN(validationId))) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid filter id")));
     }
@@ -448,8 +449,7 @@ export async function setModelRoles(req: Request, res: Response) {
     if (!a || !Object.values(MrmModelRole).includes(a.role)) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid role in assignments")));
     }
-    const userId =
-      a.user_id === null || a.user_id === undefined ? null : parseInt(String(a.user_id), 10);
+    const userId = a.user_id === null || a.user_id === undefined ? null : toId(a.user_id);
     if (userId !== null && Number.isNaN(userId)) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid user id in assignments")));
     }

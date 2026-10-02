@@ -348,7 +348,6 @@ export function SuggestedRisksSection({
                   approver: 0,
                   approvalStatus: 0,
                   dateOfAssessment: "",
-                  recommendations: "",
                 }
               : undefined
           }

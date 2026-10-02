@@ -1,0 +1,1616 @@
+# C4: Value-chain inheritance — Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Let a vendor risk or a model risk be the parent of a project risk, reusing the `risk_links` table and the whole C1–C3 confirm/dismiss lifecycle.
+
+**Architecture:** `risk_links.target_risk_id` becomes nullable and gains two sibling typed FK columns, one per foreign risk table. The child column `source_risk_id` is untouched — it carries `risk_links_single_parent_idx`, so C1's one-parent rule extends across entity types with no constraint migration. Links are created by a human only; no suggestion engine.
+
+**Tech Stack:** PostgreSQL, Sequelize 6 raw queries, Express 4, TypeScript, Jest (backend), React 19 + MUI 7, Vitest (frontend)
+
+**Spec:** `docs/superpowers/specs/2026-08-30-risk-links-c4-value-chain-inheritance-design.md`
+
+## Global Constraints
+
+- **Where a type error bites, and where it does not — this differs by test location, and getting it wrong is what broke two earlier drafts of this plan.**
+
+  | Test file | Typechecked? | Consequence of a type error |
+  |-----------|--------------|-----------------------------|
+  | `Servers/services/riskLinks/tests/*.spec.ts` (unit) | **No** | Invisible. Outside `tsconfig.json`'s `include`, and nothing imports a test file, so `tsc` never sees it. ts-jest also runs with `diagnostics: false`. The test runs and asserts normally. |
+  | `Servers/tests/integration/*.test.ts` | **Yes** | **Aborts the whole run before a single test executes.** `tsconfig.json` includes `./tests/**/*.ts`, and `tests/integration/globalSetup.js` runs `npm run build` first. |
+  | `Clients/**` (vitest) | **No** | Invisible — esbuild strips types without checking. Only `cd Clients && npm run typecheck` sees them. |
+
+  So: a backend **unit** test or a **frontend** test may reference a property that does not exist yet and still run — that is deliberate, and several red steps here depend on it. A backend **integration** test may not: the type must exist before the test can run at all, which is why Tasks 3 and 4 widen their types in Step 1, *before* the red, with the behaviour left untouched. **Widening a type is not implementing behaviour.**
+
+- **No red step in this plan is a compile error.** A build abort tells you nothing about behaviour, so every red here is a real assertion failure or a real runtime throw. If what you get is a `tsc` error, that step is wrong — stop and report it.
+- **Integration tests reach HTTP through the tenant harness, not a token.** `seedTwoTenantContexts()` returns `{ owner, attacker }`, each carrying a ready supertest agent on an app with auth bypassed: `await owner.request.post("/api/risk-links").send({...})`. There is no bearer token to set, and no second key called `other`.
+- **Error text lands in `res.body.data`, not `res.body.message`.** `STATUS_CODE[400](text)` returns `{ message: "Bad Request", data: text }` — `message` is the generic status phrase on every response.
+
+- **Migrations qualify the schema** (`verifywise.risk_links`). **Application and test SQL must NOT** — `search_path` is already `verifywise`.
+- **Direction convention:** on every `inherits_from` row, `source_risk_id` is the **child** and the target is the **parent**. Never reversed.
+- **Cross-entity links are `inherits_from` only.** `related_to` across tables is rejected at the API and by a CHECK.
+- **One direction only:** vendor and model risks are parents, never children. No panel is added to `VendorRisksDialog` or `NewModelRisk`.
+- **Tenant scoping is mandatory** on every new query: `mr.organization_id = :organizationId`, `vr.organization_id = :organizationId`. `model_risks.organization_id` is nullable in the schema; matching on equality makes a NULL row invisible, which is the correct fail-closed direction.
+- **No suggestion engine in C4.** Every new row is `status = 'confirmed', source = 'user'`.
+- No `console.log`. No hardcoded values. UI uses theme references.
+
+### Test commands — read this before running anything
+
+| What | Command |
+|------|---------|
+| Backend unit | `cd Servers && npm run test` |
+| Backend **integration** | `cd Servers && npm run test:integration -- --testPathPatterns=riskLinks` |
+| Frontend | `cd Clients && npx vitest run` |
+| Frontend types | `cd Clients && npm run typecheck` |
+
+`npm run test` is `test:unit` and **excludes** `tests/integration/`. Running `npx jest riskLinks` fails four suites because integration tests need their own config and `globalSetup`. That is not a bug in your code.
+
+---
+
+## File Structure
+
+| File | Responsibility |
+|------|----------------|
+| Create `Servers/database/migrations/20260830120000-risk-links-cross-entity-parent.js` | the two columns, two CHECKs, two partial unique indexes |
+| Modify `Servers/tests/factories/test-entities.factory.ts` | `createTestModelRisk`, `createTestVendorRisk` |
+| Modify `Servers/tests/factories/index.ts` | re-export the two factories |
+| Create `Servers/tests/integration/riskLinks.crossEntity.test.ts` | every constraint and read-path test |
+| Modify `Servers/services/riskLinks/hierarchy.ts` | `ParentEntityType`, pair comparison |
+| Modify `Servers/services/riskLinks/types.ts` | `RiskLinkRow` gains the two columns |
+| Modify `Servers/utils/riskLink.utils.ts` | `getConfirmedHierarchyEdgesQuery`, `getRiskLinksForRiskQuery`, `getLiveCrossEntityParentQuery`, `createUserRiskLinkQuery` |
+| Modify `Servers/controllers/riskLinks.ctrl.ts` | target resolution, `toResponse` entity type |
+| Modify `Clients/src/domain/interfaces/i.riskLink.ts` | `entityType` on `relatedRisk`, on `CreateRiskLinkInput` |
+| Modify `Clients/src/presentation/components/LinkedRisksPanel/index.tsx` | type chip |
+| Modify `Clients/src/presentation/components/LinkedRisksPanel/LinkRiskForm.tsx` | parent-source selector |
+| Modify `docs/technical/domains/risk-management.md` | document the feature |
+
+---
+
+## Task 1: Migration, factories, and the constraints
+
+**Files:**
+- Create: `Servers/database/migrations/20260830120000-risk-links-cross-entity-parent.js`
+- Modify: `Servers/tests/factories/test-entities.factory.ts`
+- Modify: `Servers/tests/factories/index.ts`
+- Test: `Servers/tests/integration/riskLinks.crossEntity.test.ts`
+
+**Interfaces:**
+- Produces: columns `risk_links.target_model_risk_id`, `risk_links.target_vendor_risk_id`; constraints `risk_links_one_target`, `risk_links_cross_entity_inherits`; indexes `risk_links_unique_model_target`, `risk_links_unique_vendor_target`; factories `createTestModelRisk(orgId, options?) => Promise<number>` and `createTestVendorRisk(orgId, options?) => Promise<number>`.
+
+- [ ] **Step 1: Add the two factories**
+
+Append to `Servers/tests/factories/test-entities.factory.ts`. Every `model_risks` column except `id` is nullable, and `vendorrisks` requires only `organization_id`, so both inserts stay minimal.
+
+```ts
+export interface CreateTestModelRiskOptions {
+  model_id?: number;
+  risk_name?: string | null;
+  risk_level?: "Low" | "Medium" | "High" | "Critical";
+  owner?: number | null;
+}
+
+export async function createTestModelRisk(
+  orgId: number,
+  options: CreateTestModelRiskOptions = {},
+): Promise<number> {
+  const suffix = Date.now();
+  const [result] = await sequelize.query(
+    `INSERT INTO model_risks (organization_id, model_id, risk_name, risk_level, owner, created_at, updated_at, is_deleted)
+     VALUES (:orgId, :modelId, :name, :level, :owner, NOW(), NOW(), false) RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        modelId: options.model_id ?? null,
+        name: options.risk_name === undefined ? `Model risk ${suffix}` : options.risk_name,
+        level: options.risk_level ?? "High",
+        owner: options.owner ?? null,
+      },
+    },
+  );
+  return (result as any[])[0].id;
+}
+
+export interface CreateTestVendorRiskOptions {
+  vendor_id?: number;
+  risk_description?: string;
+  risk_level?: string;
+  action_owner?: number | null;
+}
+
+export async function createTestVendorRisk(
+  orgId: number,
+  options: CreateTestVendorRiskOptions = {},
+): Promise<number> {
+  const suffix = Date.now();
+  const [result] = await sequelize.query(
+    `INSERT INTO vendorrisks (organization_id, vendor_id, risk_description, risk_level, action_owner, is_demo, created_at, updated_at, is_deleted)
+     VALUES (:orgId, :vendorId, :description, :level, :owner, false, NOW(), NOW(), false) RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        vendorId: options.vendor_id ?? null,
+        description: options.risk_description ?? `Vendor risk ${suffix}`,
+        level: options.risk_level ?? "High",
+        owner: options.action_owner ?? null,
+      },
+    },
+  );
+  return (result as any[])[0].id;
+}
+```
+
+Re-export both from `Servers/tests/factories/index.ts`, alongside `createTestModelInventory`.
+
+- [ ] **Step 2: Write the failing constraint tests**
+
+Create `Servers/tests/integration/riskLinks.crossEntity.test.ts`.
+
+```ts
+jest.setTimeout(60000);
+
+import { cleanupDatabase } from "./helpers";
+import { sequelize } from "../../database/db";
+import { seedTwoTenantContexts } from "./tenant-isolation/tenantIsolation.harness";
+import { createTestRisk, createTestModelRisk, createTestVendorRisk } from "../factories";
+
+afterEach(async () => {
+  await cleanupDatabase();
+});
+
+/*
+ * Every test below writes a straight INSERT, bypassing the controller on
+ * purpose: they prove the CONSTRAINTS do the work, not the application
+ * validation layered above them.
+ */
+
+describe("risk_links_one_target", () => {
+  it("rejects a row with no parent at all", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+
+    await expect(
+      sequelize.query(
+        `INSERT INTO risk_links (organization_id, source_risk_id, relation_type, status, source)
+         VALUES (:orgId, :child, 'inherits_from', 'confirmed', 'user')`,
+        { replacements: { orgId: owner.orgId, child } },
+      ),
+    ).rejects.toMatchObject({
+      original: { code: "23514", constraint: "risk_links_one_target" },
+    });
+  });
+
+  it("rejects a row with two parents of different kinds", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const parent = await createTestRisk(owner.orgId, {});
+    const modelRisk = await createTestModelRisk(owner.orgId, {});
+
+    await expect(
+      sequelize.query(
+        `INSERT INTO risk_links (organization_id, source_risk_id, target_risk_id, target_model_risk_id, relation_type, status, source)
+         VALUES (:orgId, :child, :parent, :modelRisk, 'inherits_from', 'confirmed', 'user')`,
+        { replacements: { orgId: owner.orgId, child, parent, modelRisk } },
+      ),
+    ).rejects.toMatchObject({
+      original: { code: "23514", constraint: "risk_links_one_target" },
+    });
+  });
+});
+
+describe("risk_links_cross_entity_inherits", () => {
+  it("rejects a related_to link to a vendor risk", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const vendorRisk = await createTestVendorRisk(owner.orgId, {});
+
+    await expect(
+      sequelize.query(
+        `INSERT INTO risk_links (organization_id, source_risk_id, target_vendor_risk_id, relation_type, status, source)
+         VALUES (:orgId, :child, :vendorRisk, 'related_to', 'confirmed', 'user')`,
+        { replacements: { orgId: owner.orgId, child, vendorRisk } },
+      ),
+    ).rejects.toMatchObject({
+      original: { code: "23514", constraint: "risk_links_cross_entity_inherits" },
+    });
+  });
+});
+
+describe("cross-entity uniqueness", () => {
+  it("rejects the same model risk as parent twice", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const modelRisk = await createTestModelRisk(owner.orgId, {});
+    const add = () =>
+      sequelize.query(
+        `INSERT INTO risk_links (organization_id, source_risk_id, target_model_risk_id, relation_type, status, source)
+         VALUES (:orgId, :child, :modelRisk, 'inherits_from', 'suggested', 'user')`,
+        { replacements: { orgId: owner.orgId, child, modelRisk } },
+      );
+
+    await add();
+    await expect(add()).rejects.toMatchObject({
+      original: { code: "23505", constraint: "risk_links_unique_model_target" },
+    });
+  });
+});
+
+/**
+ * The claim this whole design rests on (spec §2.4): risk_links_single_parent_idx
+ * is keyed on source_risk_id ALONE, so it already covers a parent that lives in
+ * another table. If this test fails, the storage shape was the wrong choice and
+ * the constraint needs a migration after all.
+ */
+describe("risk_links_single_parent_idx across entity types", () => {
+  it("refuses a confirmed vendor-risk parent when a project-risk parent is confirmed", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const projectParent = await createTestRisk(owner.orgId, {});
+    const vendorRisk = await createTestVendorRisk(owner.orgId, {});
+
+    await sequelize.query(
+      `INSERT INTO risk_links (organization_id, source_risk_id, target_risk_id, relation_type, status, source)
+       VALUES (:orgId, :child, :projectParent, 'inherits_from', 'confirmed', 'user')`,
+      { replacements: { orgId: owner.orgId, child, projectParent } },
+    );
+
+    await expect(
+      sequelize.query(
+        `INSERT INTO risk_links (organization_id, source_risk_id, target_vendor_risk_id, relation_type, status, source)
+         VALUES (:orgId, :child, :vendorRisk, 'inherits_from', 'confirmed', 'user')`,
+        { replacements: { orgId: owner.orgId, child, vendorRisk } },
+      ),
+    ).rejects.toMatchObject({
+      original: { code: "23505", constraint: "risk_links_single_parent_idx" },
+    });
+  });
+});
+```
+
+- [ ] **Step 3: Run the tests and watch them fail**
+
+Run: `cd Servers && npm run test:integration -- --testPathPatterns=riskLinks.crossEntity`
+
+Expected: all five red, but **not all for the same reason**. Four of them name a
+column that does not exist yet; the first one never mentions a new column at
+all, so it dies one step earlier, on the `NOT NULL` that is still on
+`target_risk_id`. Check your output against this table — a test that goes red
+for a reason that is not in this table is a signal, not noise:
+
+| Test | Pre-migration error | Why |
+|------|--------------------|-----|
+| `rejects a row with no parent at all` | `23502` not-null violation on `target_risk_id` | Its INSERT lists no target column at all, so the column that still exists and is still `NOT NULL` rejects it before any CHECK could. |
+| `rejects a row with two parents of different kinds` | `42703` undefined column `target_model_risk_id` | |
+| `rejects a related_to link to a vendor risk` | `42703` undefined column `target_vendor_risk_id` | |
+| `rejects the same model risk as parent twice` | `42703` undefined column `target_model_risk_id` | Fails on the **first** `add()`, before the duplicate is ever attempted. |
+| `refuses a confirmed vendor-risk parent…` | `42703` undefined column `target_vendor_risk_id` | Its first INSERT (a plain project-risk parent) succeeds today; the second one is the red. |
+
+That first row is worth understanding rather than working around. Both `23502`
+and `23514` are the database refusing a parentless row — but only `23514` proves
+what the test is for. Pre-migration the row is rejected by an accident of the
+old schema; post-migration `DROP NOT NULL` removes that accident and
+`risk_links_one_target` has to catch it instead. So that single assertion is
+also your proof that `DROP NOT NULL` actually ran. Do not soften it to accept
+either code.
+
+If instead you get `relation "model_risks" does not exist`, your test database is behind on migrations generally. There is no `npm run migrate` script — you do not need one: `npm run test:integration` runs `tests/integration/globalSetup.js`, which does `npm run build` and `npx sequelize db:migrate` with `NODE_ENV=test` on every run. If the table is still missing after that, the migration itself did not apply — report it rather than migrating by hand.
+
+- [ ] **Step 4: Write the migration**
+
+Create `Servers/database/migrations/20260830120000-risk-links-cross-entity-parent.js`:
+
+```js
+"use strict";
+
+module.exports = {
+  async up(queryInterface) {
+    // The child column (source_risk_id) is deliberately untouched. It carries
+    // risk_links_single_parent_idx, and in value-chain inheritance the child is
+    // always a project risk — so C1's one-parent rule extends across entity
+    // types for free. See the C4 design, §2.4.
+    await queryInterface.sequelize.query(`
+      ALTER TABLE verifywise.risk_links
+        ALTER COLUMN target_risk_id DROP NOT NULL,
+        ADD COLUMN IF NOT EXISTS target_model_risk_id  INTEGER REFERENCES verifywise.model_risks(id)  ON DELETE CASCADE,
+        ADD COLUMN IF NOT EXISTS target_vendor_risk_id INTEGER REFERENCES verifywise.vendorrisks(id) ON DELETE CASCADE;
+    `);
+
+    // Exactly one parent, of exactly one kind.
+    await queryInterface.sequelize.query(`
+      ALTER TABLE verifywise.risk_links
+        ADD CONSTRAINT risk_links_one_target CHECK (
+            (target_risk_id        IS NOT NULL)::int
+          + (target_model_risk_id  IS NOT NULL)::int
+          + (target_vendor_risk_id IS NOT NULL)::int = 1
+        );
+    `);
+
+    // risk_links_canonical orders related_to edges smaller-id-first by comparing
+    // bare integers. Across tables those integers come from different sequences,
+    // and with a NULL target_risk_id the comparison yields NULL and the CHECK
+    // PASSES silently. Forbidding the combination closes that hole.
+    await queryInterface.sequelize.query(`
+      ALTER TABLE verifywise.risk_links
+        ADD CONSTRAINT risk_links_cross_entity_inherits CHECK (
+          target_risk_id IS NOT NULL OR relation_type = 'inherits_from'
+        );
+    `);
+
+    // risk_links_unique stops protecting cross-entity rows once target_risk_id
+    // is NULL: Postgres treats each NULL as distinct. These restore it.
+    await queryInterface.sequelize.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS risk_links_unique_model_target
+        ON verifywise.risk_links (source_risk_id, target_model_risk_id, relation_type)
+        WHERE target_model_risk_id IS NOT NULL;
+    `);
+    await queryInterface.sequelize.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS risk_links_unique_vendor_target
+        ON verifywise.risk_links (source_risk_id, target_vendor_risk_id, relation_type)
+        WHERE target_vendor_risk_id IS NOT NULL;
+    `);
+  },
+
+  async down(queryInterface) {
+    // Drops cross-entity rows: target_risk_id cannot go back to NOT NULL while
+    // they exist, and there is no project risk to point them at.
+    await queryInterface.sequelize.query(`
+      DELETE FROM verifywise.risk_links WHERE target_risk_id IS NULL;
+    `);
+    await queryInterface.sequelize.query(`
+      DROP INDEX IF EXISTS verifywise.risk_links_unique_vendor_target;
+      DROP INDEX IF EXISTS verifywise.risk_links_unique_model_target;
+      ALTER TABLE verifywise.risk_links
+        DROP CONSTRAINT IF EXISTS risk_links_cross_entity_inherits,
+        DROP CONSTRAINT IF EXISTS risk_links_one_target,
+        DROP COLUMN IF EXISTS target_vendor_risk_id,
+        DROP COLUMN IF EXISTS target_model_risk_id,
+        ALTER COLUMN target_risk_id SET NOT NULL;
+    `);
+  },
+};
+```
+
+- [ ] **Step 5: Run the migration and the tests**
+
+```bash
+cd Servers && npm run test:integration -- --testPathPatterns=riskLinks.crossEntity
+```
+
+Expected: PASS. The single-parent test passing is the design's central claim confirmed — if it fails, **stop and report it** rather than adding a constraint.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add Servers/database/migrations/20260830120000-risk-links-cross-entity-parent.js Servers/tests/factories Servers/tests/integration/riskLinks.crossEntity.test.ts
+git commit -m "feat(risk-links): let a link point at a vendor or model risk"
+```
+
+---
+
+## Task 2: Teach the hierarchy rule about entity types
+
+**Files:**
+- Modify: `Servers/services/riskLinks/hierarchy.ts`
+- Test: `Servers/services/riskLinks/tests/hierarchy.spec.ts`
+
+**Interfaces:**
+- Produces: `export type ParentEntityType = "risk" | "model_risk" | "vendor_risk"`; `HierarchyEdge` gains optional `parentEntityType?: ParentEntityType`. `validateTwoLevel`'s signature is otherwise unchanged.
+
+- [ ] **Step 1: Write the failing test**
+
+Append to `Servers/services/riskLinks/tests/hierarchy.spec.ts`:
+
+```ts
+describe("cross-entity parents (C4)", () => {
+  it("does not mistake a model risk for the project risk of the same id", () => {
+    // risks(7) is already the child of risks(9). Proposing model_risks(7) as a
+    // parent must NOT report parent_is_a_child: the ids come from different
+    // sequences and refer to unrelated rows.
+    const confirmed = [{ childRiskId: 7, parentRiskId: 9 }];
+
+    expect(
+      validateTwoLevel(
+        { childRiskId: 41, parentRiskId: 7, parentEntityType: "model_risk" },
+        confirmed,
+      ),
+    ).toBeNull();
+  });
+
+  it("still refuses a second parent when one is cross-entity", () => {
+    const confirmed = [
+      { childRiskId: 41, parentRiskId: 3, parentEntityType: "vendor_risk" as const },
+    ];
+
+    expect(
+      validateTwoLevel({ childRiskId: 41, parentRiskId: 9 }, confirmed),
+    ).toBe("child_already_has_parent");
+  });
+
+  it("treats the same cross-entity parent as a duplicate, not a violation", () => {
+    const confirmed = [
+      { childRiskId: 41, parentRiskId: 3, parentEntityType: "vendor_risk" as const },
+    ];
+
+    expect(
+      validateTwoLevel(
+        { childRiskId: 41, parentRiskId: 3, parentEntityType: "vendor_risk" },
+        confirmed,
+      ),
+    ).toBeNull();
+  });
+
+  it("does not confuse a vendor-risk parent with a model-risk parent of the same id", () => {
+    const confirmed = [
+      { childRiskId: 41, parentRiskId: 3, parentEntityType: "vendor_risk" as const },
+    ];
+
+    expect(
+      validateTwoLevel(
+        { childRiskId: 41, parentRiskId: 3, parentEntityType: "model_risk" },
+        confirmed,
+      ),
+    ).toBe("child_already_has_parent");
+  });
+});
+```
+
+- [ ] **Step 2: Run it and watch it fail**
+
+Run: `cd Servers && npm run test -- --testPathPatterns=hierarchy`
+
+Expected: **two** of the four fail, with plain assertion errors. Not a type error — see the Global Constraints note; `parentEntityType` is an unknown property here and jest will not say a word about it.
+
+| Test | Received | Expected | Why it is red |
+|------|----------|----------|---------------|
+| `does not mistake a model risk for the project risk of the same id` | `"parent_is_a_child"` | `null` | `risks(7)` is a child in `confirmed`, and the bare-integer check cannot tell it apart from the proposed `model_risks(7)`. |
+| `does not confuse a vendor-risk parent with a model-risk parent of the same id` | `null` | `"child_already_has_parent"` | The opposite error: the duplicate-filter treats `vendor_risk 3` and `model_risk 3` as the same edge and drops it, leaving nothing to violate. |
+
+The other two — `still refuses a second parent when one is cross-entity` and `treats the same cross-entity parent as a duplicate` — pass before and after. They are regression guards for the behaviour Task 2 must not break; their being green now is correct, not a sign you wrote them wrong.
+
+- [ ] **Step 3: Implement**
+
+In `Servers/services/riskLinks/hierarchy.ts`, add the type, extend the interface, and switch the three comparisons to a key:
+
+```ts
+/** Which table a parent id points at. C4: vendor and model risks are parents only. */
+export type ParentEntityType = "risk" | "model_risk" | "vendor_risk";
+
+/** In storage, `source_risk_id` is the child and the target column is the parent. */
+export interface HierarchyEdge {
+  childRiskId: number;
+  parentRiskId: number;
+  /**
+   * Which table `parentRiskId` points at. Absent means `risks`, so every C1–C3
+   * caller keeps working untouched. Without it, `model_risks.id = 7` and
+   * `risks.id = 7` compare equal and the validator reports a violation about a
+   * row the user never mentioned.
+   */
+  parentEntityType?: ParentEntityType;
+}
+
+const parentKey = (e: HierarchyEdge): string =>
+  `${e.parentEntityType ?? "risk"}:${e.parentRiskId}`;
+
+export function validateTwoLevel(
+  proposed: HierarchyEdge,
+  confirmed: HierarchyEdge[],
+): HierarchyViolation | null {
+  const { childRiskId } = proposed;
+  const proposedParent = parentKey(proposed);
+
+  const others = confirmed.filter(
+    (e) => !(e.childRiskId === childRiskId && parentKey(e) === proposedParent),
+  );
+
+  // Order is load-bearing: first match wins, so the message is deterministic
+  // when more than one rule applies.
+  if (others.some((e) => e.childRiskId === childRiskId)) return "child_already_has_parent";
+
+  // A cross-entity parent can never itself be a child (C4 §3.3), and childRiskId
+  // only ever holds a risks(id) — so this check is meaningful only for a plain
+  // risk parent. Guarding it is what stops the id collision.
+  if ((proposed.parentEntityType ?? "risk") === "risk") {
+    if (others.some((e) => e.childRiskId === proposed.parentRiskId)) return "parent_is_a_child";
+  }
+
+  if (others.some((e) => parentKey(e) === `risk:${childRiskId}`)) return "child_has_children";
+  return null;
+}
+```
+
+- [ ] **Step 4: Run the tests**
+
+Run: `cd Servers && npm run test -- --testPathPatterns=hierarchy`
+
+Expected: PASS, including every pre-existing test — none of them pass `parentEntityType`, so all of them exercise the `?? "risk"` default.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add Servers/services/riskLinks/hierarchy.ts Servers/services/riskLinks/tests/hierarchy.spec.ts
+git commit -m "fix(risk-links): stop a model risk id colliding with a project risk id"
+```
+
+---
+
+## Task 3: Fetch the right confirmed edges for a cross-entity parent
+
+**Files:**
+- Modify: `Servers/utils/riskLink.utils.ts:291-315`
+- Modify: `Servers/controllers/riskLinks.ctrl.ts` — **two** call sites: the status-confirmation flow (~line 301) and the POST flow (~line 393)
+- Modify: `Servers/utils/__tests__/riskLink.utils.test.ts` (~lines 108, 123) — **typechecked**, see Step 1a
+- Modify: `Servers/controllers/__tests__/riskLinks.ctrl.test.ts` (~lines 165, 481) — not typechecked; fails at runtime instead
+- Test: `Servers/tests/integration/riskLinks.crossEntity.test.ts`
+
+**Interfaces:**
+- Consumes: `ParentEntityType` from Task 2.
+- Produces: `export interface HierarchyParent { id: number; entityType: ParentEntityType }` and the new signature `getConfirmedHierarchyEdgesQuery(organizationId: number, childRiskId: number, parent: HierarchyParent): Promise<HierarchyEdge[]>`.
+
+Task 2 fixed the validator. This is the layer below it: the query that feeds the validator has the same id collision in its WHERE clause, so fixing only one leaves the validator receiving edges it should never have been handed.
+
+- [ ] **Step 1a: Widen the signature — types only, behaviour untouched**
+
+This test lives in `Servers/tests/integration/`, which **is** typechecked (see Global Constraints). Calling the current `parentRiskId: number` signature with an object would abort the whole integration run at `tsc` before any test ran, and a build abort is a useless red. So make the type accept the object first, and keep the body doing exactly what it does today.
+
+In `Servers/utils/riskLink.utils.ts`, add the interface and change the third parameter — **nothing else**:
+
+```ts
+/** Which parent the caller is proposing, and which table it lives in. */
+export interface HierarchyParent {
+  id: number;
+  entityType: ParentEntityType;
+}
+
+export async function getConfirmedHierarchyEdgesQuery(
+  organizationId: number,
+  childRiskId: number,
+  parent: HierarchyParent,
+): Promise<HierarchyEdge[]> {
+  const rows = await sequelize.query(
+    // ...query text unchanged...
+    {
+      // The only body edit: unwrap the id so the existing SQL still binds a
+      // number. This deliberately keeps the bug — the query still cannot tell
+      // model_risks(7) from risks(7). Step 3 is what fixes that.
+      replacements: { organizationId, childRiskId, parentRiskId: parent.id },
+      type: QueryTypes.SELECT,
+    },
+  );
+```
+
+Import `ParentEntityType` from `../services/riskLinks/hierarchy` alongside the existing `HierarchyEdge` import.
+
+Now update every caller. `grep -rn "getConfirmedHierarchyEdgesQuery" Servers --include="*.ts"` finds **five**, and they fail in three different ways — which is why a green build does not mean you are done:
+
+| Site | In the `tsc` program? | What breaks if you skip it |
+|------|----------------------|----------------------------|
+| `controllers/riskLinks.ctrl.ts` ~301, status confirmation | yes | `npm run build` fails |
+| `controllers/riskLinks.ctrl.ts` ~393, POST | yes | `npm run build` fails |
+| `utils/__tests__/riskLink.utils.test.ts` ~108, ~123 | **yes** — `include` has `./utils/**/*.ts` | `npm run build` fails, so `globalSetup` aborts and **no integration test runs at all** |
+| `controllers/__tests__/riskLinks.ctrl.test.ts` ~165, ~481 | no — `exclude` lists `controllers/__tests__` | build stays green; `toHaveBeenCalledWith` fails at runtime under `npm run test:unit` |
+
+Both controller sites take the same shape. The POST flow (~line 393):
+
+```ts
+await getConfirmedHierarchyEdgesQuery(req.organizationId!, sourceRiskId, {
+  id: targetRiskId,
+  entityType: "risk",
+}),
+```
+
+The status-confirmation flow (~line 301) reads its ids off the stored row instead:
+
+```ts
+const violation = validateTwoLevel(
+  { childRiskId: link.source_risk_id, parentRiskId: link.target_risk_id },
+  await getConfirmedHierarchyEdgesQuery(req.organizationId!, link.source_risk_id, {
+    id: link.target_risk_id,
+    entityType: "risk",
+  }),
+);
+```
+
+`"risk"` is correct at both sites *for now* — nothing can create a cross-entity link until Task 5. Task 4 makes `target_risk_id` nullable, which turns the confirm site into a `tsc` error and forces it to read the row's real parent. That is where it gets its permanent shape, not here.
+
+In `Servers/utils/__tests__/riskLink.utils.test.ts`, both calls become `getConfirmedHierarchyEdgesQuery(7, 4, { id: 9, entityType: "risk" })`. Leave their `expect`s alone in this step: the replacements object is still `{ organizationId: 7, childRiskId: 4, parentRiskId: 9 }` and the mapper still emits no `parentEntityType`, so both assertions stay green. Step 3 is what breaks them.
+
+Leave `Servers/controllers/__tests__/riskLinks.ctrl.test.ts` untouched until Step 4 as well — it is invisible to `tsc`, so it cannot block the red.
+
+Do not commit yet — this half is not a deliverable on its own.
+
+- [ ] **Step 1b: Write the failing test**
+
+Append to `Servers/tests/integration/riskLinks.crossEntity.test.ts`:
+
+```ts
+import { getConfirmedHierarchyEdgesQuery } from "../../utils/riskLink.utils";
+
+describe("getConfirmedHierarchyEdgesQuery with a cross-entity parent", () => {
+  it("ignores the project risk that happens to share the model risk's id", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const decoyChild = await createTestRisk(owner.orgId, {});
+    const decoyParent = await createTestRisk(owner.orgId, {});
+
+    // decoyChild is a confirmed child of decoyParent. It is unrelated to
+    // anything we are about to propose.
+    await sequelize.query(
+      `INSERT INTO risk_links (organization_id, source_risk_id, target_risk_id, relation_type, status, source)
+       VALUES (:orgId, :decoyChild, :decoyParent, 'inherits_from', 'confirmed', 'user')`,
+      { replacements: { orgId: owner.orgId, decoyChild, decoyParent } },
+    );
+
+    // Ask about a MODEL risk whose id equals decoyChild's id. Nothing about
+    // decoyChild should come back.
+    const edges = await getConfirmedHierarchyEdgesQuery(owner.orgId, child, {
+      id: decoyChild,
+      entityType: "model_risk",
+    });
+
+    expect(edges).toEqual([]);
+  });
+
+  it("returns the child's existing cross-entity parent, labelled", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const vendorRisk = await createTestVendorRisk(owner.orgId, {});
+
+    await sequelize.query(
+      `INSERT INTO risk_links (organization_id, source_risk_id, target_vendor_risk_id, relation_type, status, source)
+       VALUES (:orgId, :child, :vendorRisk, 'inherits_from', 'confirmed', 'user')`,
+      { replacements: { orgId: owner.orgId, child, vendorRisk } },
+    );
+
+    const edges = await getConfirmedHierarchyEdgesQuery(owner.orgId, child, {
+      id: vendorRisk,
+      entityType: "vendor_risk",
+    });
+
+    expect(edges).toEqual([
+      { childRiskId: child, parentRiskId: vendorRisk, parentEntityType: "vendor_risk" },
+    ]);
+  });
+});
+```
+
+- [ ] **Step 2: Run it and watch it fail**
+
+Run: `cd Servers && npm run test:integration -- --testPathPatterns=riskLinks.crossEntity`
+
+Expected: both fail, with concrete assertion diffs against rows the query really returned. Not a type error and not a Sequelize binding error — Step 1a made the call legal, so what you are looking at is the actual defect.
+
+| Test | Received | Expected | Why it is red |
+|------|----------|----------|---------------|
+| `ignores the project risk that happens to share the model risk's id` | `[{ childRiskId: <decoyChild>, parentRiskId: <decoyParent> }]` | `[]` | The WHERE clause is `source_risk_id IN (:childRiskId, :parentRiskId)`. `parentRiskId` binds the *model risk's* id, which collides with `decoyChild`'s id in `risks`, so the decoy's unrelated edge matches. This is the collision the task exists to fix. |
+| `returns the child's existing cross-entity parent, labelled` | `[{ childRiskId: <child>, parentRiskId: null }]` | `[{ childRiskId: <child>, parentRiskId: <vendorRisk>, parentEntityType: "vendor_risk" }]` | The row *is* found — its `source_risk_id` is the child — but the SELECT list reads only `target_risk_id`, which is NULL on a cross-entity row, and there is no `parentEntityType` at all. |
+
+- [ ] **Step 3: Implement the query**
+
+Replace the body of `getConfirmedHierarchyEdgesQuery` in `Servers/utils/riskLink.utils.ts`. `HierarchyParent` and the signature already exist from Step 1a; this is the part that changes behaviour:
+
+```ts
+export async function getConfirmedHierarchyEdgesQuery(
+  organizationId: number,
+  childRiskId: number,
+  parent: HierarchyParent,
+): Promise<HierarchyEdge[]> {
+  // Only one of the three parent bindings is ever non-null. `IN` and `=`
+  // against NULL yield NULL, so the unused branches match nothing rather than
+  // matching everything — the same fail-closed property the tenant filters use.
+  const rows = await sequelize.query(
+    `SELECT source_risk_id, target_risk_id, target_model_risk_id, target_vendor_risk_id
+       FROM risk_links
+      WHERE organization_id = :organizationId
+        AND relation_type = 'inherits_from'
+        AND status = 'confirmed'
+        AND (source_risk_id IN (:childRiskId, :parentRiskId)
+             OR target_risk_id IN (:childRiskId, :parentRiskId)
+             OR target_model_risk_id = :parentModelRiskId
+             OR target_vendor_risk_id = :parentVendorRiskId)`,
+    {
+      replacements: {
+        organizationId,
+        childRiskId,
+        parentRiskId: parent.entityType === "risk" ? parent.id : null,
+        parentModelRiskId: parent.entityType === "model_risk" ? parent.id : null,
+        parentVendorRiskId: parent.entityType === "vendor_risk" ? parent.id : null,
+      },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  // source is the child, target is the parent — see risk_links_canonical, which
+  // exempts inherits_from from id reordering precisely so this holds.
+  return (
+    rows as {
+      source_risk_id: number;
+      target_risk_id: number | null;
+      target_model_risk_id: number | null;
+      target_vendor_risk_id: number | null;
+    }[]
+  ).map((row) => ({
+    childRiskId: row.source_risk_id,
+    parentRiskId: (row.target_model_risk_id ??
+      row.target_vendor_risk_id ??
+      row.target_risk_id) as number,
+    parentEntityType:
+      row.target_model_risk_id != null
+        ? ("model_risk" as const)
+        : row.target_vendor_risk_id != null
+          ? ("vendor_risk" as const)
+          : ("risk" as const),
+  }));
+}
+```
+
+- [ ] **Step 4: Update the unit-test assertions Step 3 just broke**
+
+Step 3 changed both the replacements object and the mapper's output, so four assertions that Step 1a deliberately left green are now wrong. Not one of them is visible to `npm run build`.
+
+In `Servers/utils/__tests__/riskLink.utils.test.ts`:
+
+```ts
+// ~line 108 — three bindings now, and the SQL gained two predicates
+expect(sql).toContain("target_model_risk_id = :parentModelRiskId");
+expect(sql).toContain("target_vendor_risk_id = :parentVendorRiskId");
+expect(options.replacements).toEqual({
+  organizationId: 7,
+  childRiskId: 4,
+  parentRiskId: 9,
+  parentModelRiskId: null,
+  parentVendorRiskId: null,
+});
+
+// ~line 123 — the mapper now labels every edge, same-table ones included
+expect(edges).toEqual([{ childRiskId: 4, parentRiskId: 9, parentEntityType: "risk" }]);
+```
+
+In `Servers/controllers/__tests__/riskLinks.ctrl.test.ts`, both call assertions take the object:
+
+```ts
+// ~line 165
+expect(mockUtils.getConfirmedHierarchyEdgesQuery).toHaveBeenCalledWith(7, 3, {
+  id: 42,
+  entityType: "risk",
+});
+// ~line 481
+expect(mockUtils.getConfirmedHierarchyEdgesQuery).toHaveBeenCalledWith(7, 4, {
+  id: 9,
+  entityType: "risk",
+});
+```
+
+- [ ] **Step 5: Run the tests**
+
+Both harnesses. The unit run is the only thing that sees `controllers/__tests__`, so integration alone would tell you nothing about two of the five call sites:
+
+```bash
+cd Servers && npm run test:unit -- --testPathPatterns=riskLink
+```
+
+```bash
+cd Servers && npm run test:integration -- --testPathPatterns=riskLinks
+```
+
+Expected: PASS in both — `riskLinks.hierarchy` included, since a plain-risk parent behaves exactly as before.
+
+Use `test:unit`, not `test`. `npm run test` is itself `npm run test:unit`, so `npm run test -- --testPathPatterns=riskLink` hands the flag to *npm* rather than jest and silently runs all 243 suites instead of the handful you meant to check. It still exits 0, which makes it easy to misread as a targeted pass.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add Servers/utils/riskLink.utils.ts Servers/controllers/riskLinks.ctrl.ts \
+        Servers/utils/__tests__/riskLink.utils.test.ts \
+        Servers/controllers/__tests__/riskLinks.ctrl.test.ts \
+        Servers/tests/integration/riskLinks.crossEntity.test.ts
+git commit -m "fix(risk-links): scope the hierarchy fetch to the parent's own table"
+```
+
+---
+
+## Task 4: Read cross-entity parents into the panel
+
+**Files:**
+- Modify: `Servers/services/riskLinks/types.ts:64-79`
+- Modify: `Servers/utils/riskLink.utils.ts:599-650` (`getRiskLinksForRiskQuery`)
+- Modify: `Servers/controllers/riskLinks.ctrl.ts` (`toResponse`, ~line 60-80)
+- Test: `Servers/tests/integration/riskLinks.crossEntity.test.ts`
+
+**Interfaces:**
+- Produces: `RiskLinkRow` gains `target_model_risk_id: number | null` and `target_vendor_risk_id: number | null`; `target_risk_id` becomes `number | null`. The query's row shape gains `related_entity_type: ParentEntityType`. `toResponse` emits `relatedRisk.entityType`.
+
+- [ ] **Step 1a: Widen the row type — types only, behaviour untouched**
+
+Same reason as Task 3 Step 1a: this test is in `Servers/tests/integration/`, which is typechecked, so reading `row.related_entity_type` off a type that lacks it would abort the run at `tsc` instead of failing a test. Declare the field first; leave the SQL alone.
+
+In `Servers/utils/riskLink.utils.ts`:
+
+```ts
+export interface RiskLinkWithRelated extends RiskLinkRow {
+  related_id: number;
+  /** Which table the parent lives in. Populated by the query in Step 3. */
+  related_entity_type: ParentEntityType;
+  related_risk_name: string | null;
+  related_risk_level: string | null;
+  related_risk_owner: number | null;
+}
+```
+
+The `.map()` at the end of `getRiskLinksForRiskQuery` does not yet set it, so `tsc` will demand one line. Add exactly this and nothing more — it is deliberately wrong, and Step 3 replaces it:
+
+```ts
+    related_entity_type: row.related_entity_type,
+```
+
+Do not commit yet.
+
+- [ ] **Step 1b: Write the failing tests**
+
+Append to `Servers/tests/integration/riskLinks.crossEntity.test.ts`:
+
+```ts
+import { getRiskLinksForRiskQuery } from "../../utils/riskLink.utils";
+
+describe("getRiskLinksForRiskQuery with cross-entity parents", () => {
+  it("names a vendor risk from its truncated description", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const vendorRisk = await createTestVendorRisk(owner.orgId, {
+      risk_description: "A".repeat(120),
+      risk_level: "High",
+    });
+
+    await sequelize.query(
+      `INSERT INTO risk_links (organization_id, source_risk_id, target_vendor_risk_id, relation_type, status, source)
+       VALUES (:orgId, :child, :vendorRisk, 'inherits_from', 'confirmed', 'user')`,
+      { replacements: { orgId: owner.orgId, child, vendorRisk } },
+    );
+
+    const rows = await getRiskLinksForRiskQuery(owner.orgId, child, ["confirmed"]);
+
+    // Assert the row arrived before reading fields off it: today it does not,
+    // and `rows[0].related_entity_type` would crash instead of failing.
+    expect(rows).toHaveLength(1);
+    expect(rows[0].related_entity_type).toBe("vendor_risk");
+    expect(rows[0].related_id).toBe(vendorRisk);
+    expect(rows[0].related_risk_name).toBe("A".repeat(80));
+    expect(rows[0].related_risk_level).toBe("High");
+  });
+
+  it("hides a parent that belongs to another tenant", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const foreignModelRisk = await createTestModelRisk(attacker.orgId, {});
+
+    // The link row itself is in the owner's org; only the parent is foreign.
+    // Without the per-table tenant guard this renders as a blank panel row.
+    await sequelize.query(
+      `INSERT INTO risk_links (organization_id, source_risk_id, target_model_risk_id, relation_type, status, source)
+       VALUES (:orgId, :child, :foreignModelRisk, 'inherits_from', 'confirmed', 'user')`,
+      { replacements: { orgId: owner.orgId, child, foreignModelRisk } },
+    );
+
+    expect(await getRiskLinksForRiskQuery(owner.orgId, child, ["confirmed"])).toEqual([]);
+  });
+
+  it("hides a soft-deleted parent", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const modelRisk = await createTestModelRisk(owner.orgId, {});
+
+    await sequelize.query(
+      `INSERT INTO risk_links (organization_id, source_risk_id, target_model_risk_id, relation_type, status, source)
+       VALUES (:orgId, :child, :modelRisk, 'inherits_from', 'confirmed', 'user')`,
+      { replacements: { orgId: owner.orgId, child, modelRisk } },
+    );
+    await sequelize.query(`UPDATE model_risks SET is_deleted = true WHERE id = :modelRisk`, {
+      replacements: { modelRisk },
+    });
+
+    expect(await getRiskLinksForRiskQuery(owner.orgId, child, ["confirmed"])).toEqual([]);
+  });
+
+  it("still returns plain project-risk parents", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const parent = await createTestRisk(owner.orgId, {});
+
+    await sequelize.query(
+      `INSERT INTO risk_links (organization_id, source_risk_id, target_risk_id, relation_type, status, source)
+       VALUES (:orgId, :child, :parent, 'inherits_from', 'confirmed', 'user')`,
+      { replacements: { orgId: owner.orgId, child, parent } },
+    );
+
+    const rows = await getRiskLinksForRiskQuery(owner.orgId, child, ["confirmed"]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].related_entity_type).toBe("risk");
+    expect(rows[0].related_id).toBe(parent);
+  });
+});
+```
+
+- [ ] **Step 2: Run and watch them fail**
+
+Run: `cd Servers && npm run test:integration -- --testPathPatterns=riskLinks.crossEntity`
+
+Expected: **two** of the four fail — and not the two you would guess. Verified against the current query on a seeded database:
+
+| Test | Received | Expected | Status |
+|------|----------|----------|--------|
+| `names a vendor risk from its truncated description` | `[]` (length 0) | length 1 | **RED.** The inner `JOIN risks related` resolves `related.id = l.target_risk_id`, which is NULL on a cross-entity row, so the row is dropped. |
+| `hides a parent that belongs to another tenant` | `[]` | `[]` | **Green — for the wrong reason.** The inner join drops it because the parent is cross-entity, not because of the tenant guard. It only starts testing what it claims once Step 3 makes the join `LEFT`. |
+| `hides a soft-deleted parent` | `[]` | `[]` | **Green — for the wrong reason.** Same cause. |
+| `still returns plain project-risk parents` | `[{ ..., related_entity_type: undefined }]` | `related_entity_type === "risk"` | **RED.** The row comes back fine, but the SELECT list never emits `related_entity_type` and the `.map()` copies an absent field. |
+
+The two green tests are the exception to the "if a test passes before you implement, stop" rule, and this is the whole of that exception: they are tenant and soft-delete guards whose subject does not exist yet. They must stay green after Step 3 — that is what proves the `LEFT JOIN` did not open a hole. Exactly like the two green tests in Task 2.
+
+Two things that look like they should also be dropping these rows, and do not — check them off rather than chasing them:
+
+- `AND (l.source_risk_id = :riskId OR l.target_risk_id = :riskId)` survives untouched. `target_risk_id = :riskId` is NULL on a cross-entity row, but the subject of this query is always the **child**, and the child is always `source_risk_id`, so the first disjunct is TRUE. Leave this line exactly as it is.
+- `AND related.organization_id = :organizationId AND related.is_deleted = false` **would** re-drop every cross-entity row the moment the join goes `LEFT` — a NULL `related` fails both. That is why Step 3 moves them into the `ON` clause. This is the one place where turning an inner join into a `LEFT JOIN` is not sufficient on its own.
+
+- [ ] **Step 3: Rewrite the query**
+
+Replace the query body inside `getRiskLinksForRiskQuery`:
+
+```sql
+SELECT l.*,
+       COALESCE(mr.id, vr.id, related.id) AS related_id,
+       CASE
+         WHEN l.target_model_risk_id  IS NOT NULL THEN 'model_risk'
+         WHEN l.target_vendor_risk_id IS NOT NULL THEN 'vendor_risk'
+         ELSE 'risk'
+       END AS related_entity_type,
+       COALESCE(
+         related.risk_name,
+         NULLIF(mr.risk_name, ''),
+         NULLIF(LEFT(vr.risk_description, 80), '')
+       ) AS related_risk_name,
+       COALESCE(
+         related.risk_level_autocalculated::text,
+         mr.risk_level::text,
+         vr.risk_level
+       ) AS related_risk_level,
+       COALESCE(related.risk_owner, mr.owner, vr.action_owner) AS related_risk_owner
+  FROM risk_links l
+  -- LEFT, and the tenant/soft-delete guards live in ON rather than WHERE: in
+  -- WHERE they would re-drop every cross-entity row, which is exactly the bug
+  -- the inner join had.
+  LEFT JOIN risks related
+         ON related.id = CASE WHEN l.source_risk_id = :riskId
+                              THEN l.target_risk_id ELSE l.source_risk_id END
+        AND related.organization_id = :organizationId
+        AND related.is_deleted = false
+  LEFT JOIN model_risks mr
+         ON mr.id = l.target_model_risk_id
+        AND mr.organization_id = :organizationId
+        AND mr.is_deleted = false
+  LEFT JOIN vendorrisks vr
+         ON vr.id = l.target_vendor_risk_id
+        AND vr.organization_id = :organizationId
+        AND vr.is_deleted = false
+  JOIN risks subject ON subject.id = :riskId
+ WHERE l.organization_id = :organizationId
+   AND (l.source_risk_id = :riskId OR l.target_risk_id = :riskId)
+   AND subject.organization_id = :organizationId
+   AND subject.is_deleted = false
+   AND l.status IN (:statuses)
+   -- The tenant boundary. A parent that is deleted or belongs to another org
+   -- resolved to NULL in all three joins; drop the row rather than render it blank.
+   AND COALESCE(related.id, mr.id, vr.id) IS NOT NULL
+ ORDER BY l.score DESC, COALESCE(mr.id, vr.id, related.id) ASC
+```
+
+Widen the row type the function returns with `related_entity_type: ParentEntityType`.
+
+`vendorrisks.risk_level` is a plain VARCHAR while the other two are enums, hence the `::text` casts on those two only.
+
+- [ ] **Step 4: Update the types and `toResponse`**
+
+In `Servers/services/riskLinks/types.ts`, `RiskLinkRow`:
+
+```ts
+  source_risk_id: number;
+  /** Null when the parent lives in another table — see the two columns below. */
+  target_risk_id: number | null;
+  target_model_risk_id: number | null;
+  target_vendor_risk_id: number | null;
+```
+
+In `Servers/controllers/riskLinks.ctrl.ts`, `toResponse`'s `relatedRisk` object gains one field:
+
+```ts
+    relatedRisk: {
+      id: link.related_id,
+      entityType: link.related_entity_type,
+      name: link.related_risk_name,
+      riskLevel: link.related_risk_level,
+      ownerId: link.related_risk_owner,
+    },
+```
+
+`direction` needs no change. It reads `link.source_risk_id === riskId ? "outgoing" : "incoming"`, and on a cross-entity row the subject is the child, i.e. `source_risk_id` — so it computes `"outgoing"`, which is what puts the row under the panel's **Parent risk** heading. (The panel's three headings are "Parent risk", "Child risks" and "Relates to" — an existing test in `LinkedRisksPanel.test.tsx` asserts that "Inherits from" and "Inherited by" appear nowhere, so do not reintroduce that wording.) Verify the placement in the test rather than trusting this note; if a cross-entity parent ever renders under "Child risks", this is the line to look at.
+
+- [ ] **Step 5: Run the tests**
+
+```bash
+cd Servers && npm run test:unit -- --testPathPatterns=riskLink
+```
+
+```bash
+cd Servers && npm run test:integration -- --testPathPatterns=riskLinks
+```
+
+Expected: PASS in both. The unit run must stay green — `RiskLinkRow.target_risk_id` becoming nullable surfaces anywhere a helper assumed it was not. Two places in production code do: `toLinkRow` in `Servers/utils/riskLink.utils.ts` (an object literal that now needs the two new columns mapped) and `Servers/services/riskLinks/recompute.ts` (~line 99), where `otherId` becomes `number | null` and is handed to a `Set<number>`. Guard the latter by skipping the row — a cross-entity parent has no project risk on the other end, and recompute owns `related_to` suggestions only:
+
+```ts
+if (existing.target_risk_id == null) continue;
+```
+
+Separate commands, not `&&`: chaining them means a failure in the unit run stops integration from running at all.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add Servers/services/riskLinks/types.ts Servers/utils/riskLink.utils.ts Servers/controllers/riskLinks.ctrl.ts Servers/tests/integration/riskLinks.crossEntity.test.ts
+git commit -m "feat(risk-links): show vendor and model risk parents in the panel"
+```
+
+---
+
+## Task 5: Accept a cross-entity parent on POST
+
+**Files:**
+- Modify: `Servers/controllers/riskLinks.ctrl.ts:355-430`
+- Modify: `Servers/utils/riskLink.utils.ts` (`getLiveCrossEntityParentQuery`, `createUserRiskLinkQuery`)
+- Test: `Servers/tests/integration/riskLinks.crossEntity.test.ts`
+
+**Interfaces:**
+- Consumes: `HierarchyParent` (Task 3), `ParentEntityType` (Task 2).
+- Produces: `getLiveCrossEntityParentQuery(parent: HierarchyParent, organizationId: number): Promise<boolean>`; `createUserRiskLinkQuery` gains a `target: HierarchyParent` parameter in place of `targetRiskId`.
+
+- [ ] **Step 1: Write the failing tests**
+
+These go through the HTTP layer. Follow the request-building style already in `Servers/tests/integration/riskLinks.dismissReason.test.ts` — reuse its app/token helpers rather than inventing new ones.
+
+```ts
+describe("POST /api/risk-links with a cross-entity parent", () => {
+  it("creates an inheritance link to a vendor risk", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const vendorRisk = await createTestVendorRisk(owner.orgId, {});
+
+    const res = await owner.request.post("/api/risk-links").send({ sourceRiskId: child, targetVendorRiskId: vendorRisk, relationType: "inherits_from" });
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.relatedRisk.entityType).toBe("vendor_risk");
+    expect(res.body.data.relatedRisk.id).toBe(vendorRisk);
+  });
+
+  it("rejects two target fields", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const parent = await createTestRisk(owner.orgId, {});
+    const vendorRisk = await createTestVendorRisk(owner.orgId, {});
+
+    const res = await owner.request.post("/api/risk-links").send({
+        sourceRiskId: child,
+        targetRiskId: parent,
+        targetVendorRiskId: vendorRisk,
+        relationType: "inherits_from",
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.data).toMatch(/exactly one parent/i);
+  });
+
+  it("rejects related_to across entity types", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const modelRisk = await createTestModelRisk(owner.orgId, {});
+
+    const res = await owner.request.post("/api/risk-links").send({ sourceRiskId: child, targetModelRiskId: modelRisk, relationType: "related_to" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.data).toMatch(/only inheritance links/i);
+  });
+
+  it("404s on another tenant's model risk", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const foreign = await createTestModelRisk(attacker.orgId, {});
+
+    const res = await owner.request.post("/api/risk-links").send({ sourceRiskId: child, targetModelRiskId: foreign, relationType: "inherits_from" });
+
+    expect(res.status).toBe(404);
+  });
+
+  it("409s when the child already has a confirmed project-risk parent", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const parent = await createTestRisk(owner.orgId, {});
+    const vendorRisk = await createTestVendorRisk(owner.orgId, {});
+
+    await sequelize.query(
+      `INSERT INTO risk_links (organization_id, source_risk_id, target_risk_id, relation_type, status, source)
+       VALUES (:orgId, :child, :parent, 'inherits_from', 'confirmed', 'user')`,
+      { replacements: { orgId: owner.orgId, child, parent } },
+    );
+
+    const res = await owner.request.post("/api/risk-links").send({ sourceRiskId: child, targetVendorRiskId: vendorRisk, relationType: "inherits_from" });
+
+    expect(res.status).toBe(409);
+  });
+});
+```
+
+- [ ] **Step 2: Run and watch them fail**
+
+Run: `cd Servers && npm run test:integration -- --testPathPatterns=riskLinks.crossEntity`
+
+Expected: all five red, four of them the same way and one differently.
+
+Four send only a cross-entity target, so `parseInt(String(req.body.targetRiskId), 10)` is `NaN` and the existing guard short-circuits: **400**, with `res.body.data === "Invalid request"`. That is the red for `creates an inheritance link to a vendor risk` (wanted 201), `404s on another tenant's model risk` (wanted 404), `409s when the child already has a confirmed project-risk parent` (wanted 409), and `rejects related_to across entity types`.
+
+Watch that last one: it *wants* 400, so `expect(res.status).toBe(400)` passes today for entirely the wrong reason. Its red is the line below it — `res.body.data` is `"Invalid request"`, not the `/only inheritance links/i` the rule is supposed to produce. Do not delete that message assertion; it is the only thing making the test mean anything.
+
+The fifth, `rejects two target fields`, sends a valid `targetRiskId` **and** a `targetVendorRiskId`. Today the second field is simply ignored, so the request succeeds: **201**, where the test wants 400. That test is the reason `resolveTarget` counts the fields instead of taking the first one it finds.
+
+- [ ] **Step 3: Resolve the target in the controller**
+
+Add above the handler in `Servers/controllers/riskLinks.ctrl.ts`:
+
+```ts
+type TargetRejection = "not_exactly_one" | "cross_entity_related_to";
+
+const TARGET_MESSAGES: Record<TargetRejection, string> = {
+  not_exactly_one: "Provide exactly one parent risk.",
+  cross_entity_related_to: "Only inheritance links are supported across risk types.",
+};
+
+/**
+ * Exactly one of the three target fields must be present. The CHECK constraint
+ * `risk_links_one_target` says the same thing at the table; this is the layer
+ * that produces a readable message instead of a 500.
+ */
+function resolveTarget(
+  body: any,
+  relationType: RiskLinkRelationType,
+): { parent: HierarchyParent } | { rejection: TargetRejection } {
+  const candidates: [ParentEntityType, unknown][] = [
+    ["risk", body?.targetRiskId],
+    ["model_risk", body?.targetModelRiskId],
+    ["vendor_risk", body?.targetVendorRiskId],
+  ];
+  const given = candidates
+    .filter(([, v]) => v !== undefined && v !== null && v !== "")
+    .map(([entityType, v]) => ({ entityType, id: parseInt(String(v), 10) }));
+
+  if (given.length !== 1 || isNaN(given[0].id)) return { rejection: "not_exactly_one" };
+  if (given[0].entityType !== "risk" && relationType !== "inherits_from") {
+    return { rejection: "cross_entity_related_to" };
+  }
+  return { parent: given[0] };
+}
+```
+
+Rework the handler's opening. The self-link and liveness checks branch on entity type; everything from the hierarchy check down is shared.
+
+```ts
+  const sourceRiskId = parseInt(String(req.body?.sourceRiskId), 10);
+  const relationType = req.body?.relationType;
+
+  if (isNaN(sourceRiskId) || !isRelationType(relationType)) {
+    return res.status(400).json(STATUS_CODE[400]("Invalid link payload"));
+  }
+
+  const resolved = resolveTarget(req.body, relationType);
+  if ("rejection" in resolved) {
+    return res.status(400).json(STATUS_CODE[400](TARGET_MESSAGES[resolved.rejection]));
+  }
+  const { parent } = resolved;
+
+  // Self-linking is only expressible within one table.
+  if (parent.entityType === "risk" && sourceRiskId === parent.id) {
+    return res.status(400).json(STATUS_CODE[400]("A risk cannot link to itself"));
+  }
+
+  if (parent.entityType === "risk") {
+    const live = await getLiveRiskIdsQuery([sourceRiskId, parent.id], req.organizationId!);
+    if (live.length !== 2) {
+      return res.status(404).json(STATUS_CODE[404]("Risk not found"));
+    }
+  } else {
+    const childLive = await getLiveRiskIdsQuery([sourceRiskId], req.organizationId!);
+    if (childLive.length !== 1) {
+      return res.status(404).json(STATUS_CODE[404]("Risk not found"));
+    }
+    if (!(await getLiveCrossEntityParentQuery(parent, req.organizationId!))) {
+      return res.status(404).json(STATUS_CODE[404]("Risk not found"));
+    }
+  }
+
+  if (relationType === "inherits_from") {
+    const violation = validateTwoLevel(
+      { childRiskId: sourceRiskId, parentRiskId: parent.id, parentEntityType: parent.entityType },
+      await getConfirmedHierarchyEdgesQuery(req.organizationId!, sourceRiskId, parent),
+    );
+    if (violation) {
+      return res.status(409).json(STATUS_CODE[409](HIERARCHY_MESSAGES[violation]));
+    }
+  }
+```
+
+The canonicalisation block below stays, but only ever runs for a plain-risk `related_to` — a cross-entity target cannot reach it, because `resolveTarget` rejects that combination.
+
+- [ ] **Step 4: Add the liveness query**
+
+In `Servers/utils/riskLink.utils.ts`:
+
+```ts
+/**
+ * Whether a cross-entity parent exists, is not soft-deleted, and belongs to
+ * this org. `model_risks.organization_id` is nullable in the schema; matching on
+ * equality makes such a row invisible, which is the correct fail-closed answer.
+ */
+export async function getLiveCrossEntityParentQuery(
+  parent: HierarchyParent,
+  organizationId: number,
+): Promise<boolean> {
+  const table = parent.entityType === "model_risk" ? "model_risks" : "vendorrisks";
+  const rows = await sequelize.query(
+    `SELECT 1 FROM ${table}
+      WHERE id = :id AND organization_id = :organizationId AND is_deleted = false`,
+    { replacements: { id: parent.id, organizationId }, type: QueryTypes.SELECT },
+  );
+  return rows.length === 1;
+}
+```
+
+`table` is chosen from a closed two-value union, never from request data — there is no interpolation of user input here.
+
+Then widen `createUserRiskLinkQuery` to take `target: HierarchyParent` and write the matching column:
+
+```ts
+  const targetColumn =
+    target.entityType === "model_risk"
+      ? "target_model_risk_id"
+      : target.entityType === "vendor_risk"
+        ? "target_vendor_risk_id"
+        : "target_risk_id";
+```
+
+and use `${targetColumn}` in the INSERT's column list. The `ON CONFLICT` target needs more than the column swap: Postgres only matches a **partial** index when the clause repeats its predicate, so the three cases are not interchangeable.
+
+```ts
+  const conflictTarget =
+    target.entityType === "risk"
+      ? "(source_risk_id, target_risk_id, relation_type)"
+      : `(source_risk_id, ${targetColumn}, relation_type) WHERE ${targetColumn} IS NOT NULL`;
+```
+
+Without the `WHERE`, Postgres answers `there is no unique or exclusion constraint matching the ON CONFLICT specification` — a 500, not a duplicate-friendly no-op. Both `targetColumn` and `conflictTarget` come from the closed `ParentEntityType` union, never from request data.
+
+**Leave `createAgentHierarchyLinkQuery` alone.** It carries the same `ON CONFLICT (source_risk_id, target_risk_id, relation_type)` clause, and that stays correct: C4 is manual-only (spec §3.1), so the agent path only ever writes `target_risk_id`, and the plain `risk_links_unique` constraint still covers every row it produces. Widening it would be dead code for a suggester that does not exist.
+
+- [ ] **Step 5: Run everything**
+
+```bash
+cd Servers && npm run test && npm run test:integration -- --testPathPatterns=riskLinks && npm run check:api-drift
+```
+
+Expected: PASS. API drift reports **no drift** — it compares path, method and `security.bearerAuth` only, and a request-body change touches none of those. That is expected, not a miss.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add Servers/controllers/riskLinks.ctrl.ts Servers/utils/riskLink.utils.ts Servers/tests/integration/riskLinks.crossEntity.test.ts
+git commit -m "feat(risk-links): link a project risk to a vendor or model risk parent"
+```
+
+---
+
+## Task 6: Show the parent's type in the panel
+
+**Files:**
+- Modify: `Clients/src/domain/interfaces/i.riskLink.ts`
+- Modify: `Clients/src/presentation/components/LinkedRisksPanel/index.tsx:224`
+- Modify: `Clients/src/presentation/components/LinkedRisksPanel/LinkRiskForm.tsx`
+- Test: `Clients/src/presentation/components/LinkedRisksPanel/__tests__/LinkedRisksPanel.test.tsx`
+
+**Interfaces:**
+- Consumes: the API shape from Tasks 4 and 5.
+- Produces: `RiskLinkEntityType`; `RiskLink["relatedRisk"]` gains `entityType`; `CreateRiskLinkInput` becomes a union over the three target fields.
+
+- [ ] **Step 1: Write the failing test**
+
+Append a new `describe` to `LinkedRisksPanel.test.tsx`. The file's two helpers are `link(overrides)` — which builds a `RiskLink` on top of a `related_to` / `suggested` default — and `queryResult(links)`, which wraps them in the shape `useRiskLinks` returns. There is no render helper: each test sets the mock and calls `render` itself.
+
+Note the warning the file already carries at the top of its first test: fixture names must not collide with the group headings ("Parent risk", "Child risks", "Relates to"), or `getByText` becomes ambiguous. The names below are chosen accordingly.
+
+```tsx
+describe("LinkedRisksPanel entity type labels", () => {
+  it("labels a vendor risk parent", () => {
+    mockUseRiskLinks.mockReturnValue(
+      queryResult([
+        link({
+          relationType: "inherits_from",
+          direction: "outgoing",
+          status: "confirmed",
+          relatedRisk: {
+            id: 3,
+            entityType: "vendor_risk",
+            name: "Subprocessor has no SOC 2 report",
+            riskLevel: "High",
+            ownerId: null,
+          },
+        }),
+      ]),
+    );
+    render(<LinkedRisksPanel riskId={42} />);
+
+    expect(screen.getByText("Subprocessor has no SOC 2 report")).toBeInTheDocument();
+    expect(screen.getByText("Vendor risk")).toBeInTheDocument();
+  });
+
+  it("does not label a plain project risk parent", () => {
+    mockUseRiskLinks.mockReturnValue(
+      queryResult([
+        link({
+          relationType: "inherits_from",
+          direction: "outgoing",
+          status: "confirmed",
+          relatedRisk: {
+            id: 3,
+            entityType: "risk",
+            name: "Training data gap",
+            riskLevel: "High",
+            ownerId: null,
+          },
+        }),
+      ]),
+    );
+    render(<LinkedRisksPanel riskId={42} />);
+
+    expect(screen.getByText("Training data gap")).toBeInTheDocument();
+    expect(screen.queryByText("Project risk")).not.toBeInTheDocument();
+  });
+});
+```
+
+- [ ] **Step 2: Run and watch it fail**
+
+Run: `cd Clients && npx vitest run LinkedRisksPanel`
+
+Expected: `Unable to find an element with the text: Vendor risk`. No type error appears — vitest transforms through esbuild, which strips types without checking them. The `entityType` property genuinely does not exist on the interface yet, and `npm run typecheck` in Step 6 is where that gets caught.
+
+- [ ] **Step 3: Extend the interface**
+
+In `Clients/src/domain/interfaces/i.riskLink.ts`:
+
+```ts
+/** Mirrors `ParentEntityType` in Servers/services/riskLinks/hierarchy.ts. */
+export type RiskLinkEntityType = "risk" | "model_risk" | "vendor_risk";
+
+/** Empty for "risk": a project risk in a panel of project risks needs no label. */
+export const ENTITY_TYPE_LABELS: Record<RiskLinkEntityType, string> = {
+  risk: "",
+  model_risk: "Model risk",
+  vendor_risk: "Vendor risk",
+};
+```
+
+`relatedRisk` gains `entityType: RiskLinkEntityType`.
+
+`CreateRiskLinkInput` becomes a union, so the compiler enforces what
+`risk_links_one_target` enforces at the table:
+
+```ts
+export type CreateRiskLinkInput = {
+  sourceRiskId: number;
+  relationType: RiskLinkRelationType;
+} & (
+  | { targetRiskId: number }
+  | { targetModelRiskId: number }
+  | { targetVendorRiskId: number }
+);
+```
+
+- [ ] **Step 4: Render the chip**
+
+In `LinkedRisksPanel/index.tsx`, beside the existing level chip at line 224:
+
+```tsx
+{ENTITY_TYPE_LABELS[link.relatedRisk.entityType] && (
+  <Chip
+    size="small"
+    variant="outlined"
+    label={ENTITY_TYPE_LABELS[link.relatedRisk.entityType]}
+  />
+)}
+{link.relatedRisk.riskLevel && (
+  <Chip size="small" label={link.relatedRisk.riskLevel} />
+)}
+```
+
+- [ ] **Step 5: Add the source selector to `LinkRiskForm`**
+
+The selector renders **only** under `inherits_from`. That is not a shortcut: a vendor or model risk can only ever be a parent (spec §3.3) and a cross-entity link can only ever be `inherits_from` (§3.4), so under the other two choices every cross-entity option would be disabled. Rendering nothing beats rendering two dead radios with a tooltip apologising for them.
+
+Add the imports:
+
+```tsx
+import { getAllVendorRisks } from "../../../application/repository/vendorRisk.repository";
+import { getAllEntities } from "../../../application/repository/entity.repository";
+```
+
+Add the source type above the component, next to `CHOICES`:
+
+```tsx
+type ParentSource = "risk" | "model_risk" | "vendor_risk";
+
+const PARENT_SOURCES: { value: ParentSource; label: string }[] = [
+  { value: "risk", label: "Project risk" },
+  { value: "model_risk", label: "Model risk" },
+  { value: "vendor_risk", label: "Vendor risk" },
+];
+```
+
+Add the state next to `rawChoice`, and derive `source` the same way `choice` is derived — for the same reason, so a relation-type change cannot leave a stale cross-entity source behind:
+
+```tsx
+  const [rawSource, setRawSource] = useState<ParentSource>("risk");
+  const source: ParentSource = choice === "inherits_from" ? rawSource : "risk";
+```
+
+Fetch the cross-entity candidates. Both branches project down to the same `Candidate` shape the autocomplete already renders, and the vendor-risk truncation matches the server's `LEFT(risk_description, 80)` from spec §5.2 — the same string, so the option the user picks reads identically to the chip they get back:
+
+```tsx
+  const { data: crossEntityCandidates = [] } = useQuery<Candidate[]>({
+    queryKey: ["riskLinkParents", source],
+    enabled: source !== "risk",
+    queryFn: async () => {
+      const response: any =
+        source === "vendor_risk"
+          ? await getAllVendorRisks({ filter: "active" })
+          : await getAllEntities({ routeUrl: "/modelRisks" });
+      const rows = (response?.data ?? []) as any[];
+      return rows.map((row) => ({
+        id: row.id,
+        risk_name:
+          source === "vendor_risk"
+            ? (row.risk_description ?? "").slice(0, 80) || "Untitled vendor risk"
+            : row.risk_name || "Untitled model risk",
+      }));
+    },
+  });
+```
+
+`excludedIds` must become key-based. A `model_risks` row and a `risks` row share id space — this is the same collision the backend hits in Tasks 2 and 3, and here it would silently hide an unrelated model risk because a project risk with that id is already linked:
+
+```tsx
+  const excludedKeys = useMemo(() => {
+    const keys = new Set<string>([`risk:${riskId}`]);
+    for (const link of existingLinks) {
+      const blocks =
+        choice === "related_to"
+          ? link.relationType === "related_to"
+          : link.relationType === "inherits_from";
+      if (blocks) keys.add(`${link.relatedRisk.entityType}:${link.relatedRisk.id}`);
+    }
+    return keys;
+  }, [existingLinks, choice, riskId]);
+
+  const options = useMemo(() => {
+    const pool = source === "risk" ? candidates : crossEntityCandidates;
+    return pool.filter((candidate) => !excludedKeys.has(`${source}:${candidate.id}`));
+  }, [candidates, crossEntityCandidates, source, excludedKeys]);
+```
+
+Reset the partner when the source changes, exactly as `handleChoice` already does:
+
+```tsx
+  const handleSource = (next: ParentSource) => {
+    setRawSource(next);
+    setError(null);
+    setPartner(null);
+  };
+```
+
+Send the right target field:
+
+```tsx
+    const input: CreateRiskLinkInput =
+      choice === "inherited_by"
+        ? { sourceRiskId: partner.id, targetRiskId: riskId, relationType: "inherits_from" }
+        : source === "model_risk"
+          ? { sourceRiskId: riskId, targetModelRiskId: partner.id, relationType: "inherits_from" }
+          : source === "vendor_risk"
+            ? { sourceRiskId: riskId, targetVendorRiskId: partner.id, relationType: "inherits_from" }
+            : { sourceRiskId: riskId, targetRiskId: partner.id, relationType: choice };
+```
+
+Render the selector directly under the existing `RadioGroup`, and label the autocomplete for what it is now listing:
+
+```tsx
+      {choice === "inherits_from" && (
+        <RadioGroup
+          row
+          value={source}
+          onChange={(event) => handleSource(event.target.value as ParentSource)}
+        >
+          {PARENT_SOURCES.map(({ value, label }) => (
+            <FormControlLabel key={value} value={value} control={<Radio />} label={label} />
+          ))}
+        </RadioGroup>
+      )}
+```
+
+and change the `AutoCompleteField` label from the hard-coded `"Risk"`:
+
+```tsx
+        label={PARENT_SOURCES.find((s) => s.value === source)!.label}
+```
+
+- [ ] **Step 6: Run the frontend checks**
+
+```bash
+cd Clients && npm run typecheck && npx vitest run
+```
+
+Expected: PASS both. `typecheck` is not optional — `npm run build` does not run `tsc`, so a type error passes a green build.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add Clients/src/domain/interfaces/i.riskLink.ts Clients/src/presentation/components/LinkedRisksPanel
+git commit -m "feat(risk-links): label vendor and model risk parents in the panel"
+```
+
+---
+
+## Task 7: Document it and verify the whole branch
+
+**Files:**
+- Modify: `docs/technical/domains/risk-management.md`
+- Modify: `CLAUDE.md` (Last Updated date only, if you touched any CLAUDE.md)
+
+- [ ] **Step 1: Document the feature**
+
+Add a "Value-chain inheritance" section to `docs/technical/domains/risk-management.md` covering: the two legs that exist and the one that does not (`model_inventories` has no `vendor_id`), the storage shape and why the child column was left alone, the `inherits_from`-only rule, and the POST body's three mutually exclusive target fields.
+
+- [ ] **Step 2: Full verification**
+
+```bash
+cd Servers && npm run build && npm run test && npm run test:integration && npm run check:api-drift
+```
+
+```bash
+cd Clients && npm run typecheck && npm run build && npx vitest run
+```
+
+Pre-existing failures you did not cause: `deadline-summary.test.ts` is date-dependent and already failing on `develop`. Anything else that fails is yours.
+
+- [ ] **Step 3: Confirm no console.log**
+
+```bash
+git diff develop...HEAD -- Servers Clients | grep -n "^+.*console\.log"
+```
+
+Expected: no output.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add docs/technical/domains/risk-management.md
+git commit -m "docs(risk-links): document value-chain inheritance"
+```
+
+---
+
+## Self-review notes
+
+**Spec coverage.** §2.4 → Task 1 Step 2's fourth describe block. §3.2/§4.1/§4.2 → Task 1. §5.2/§5.3 → Task 4. §6 → Task 2. §6.1 → Task 3. §7.1 → Task 5. §7.2 → Task 6. §9's ten tests map onto Tasks 1, 2, 3, 4 and 5; test 5b is Task 3 Step 1's first case.
+
+**Not covered by a task, deliberately.** §3.1 (no suggestion engine) and §8 (the C5 seam) are decisions about what *not* to build — nothing to implement.
+
+**Type consistency.** `ParentEntityType` is defined once in `hierarchy.ts` (Task 2) and imported everywhere. `HierarchyParent` is defined once in `riskLink.utils.ts` (Task 3). The client mirrors the union as `RiskLinkEntityType` (Task 6) because the client cannot import from `Servers/` — the comment on it names the source of truth, matching how `DismissReason` is already mirrored.

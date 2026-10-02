@@ -28,6 +28,9 @@ export interface IEvidenceHub {
   /** Multiple training IDs can be mapped (empty array or null allowed) */
   mapped_training_ids?: number[] | null;
 
+  /** Multiple risk IDs can be mapped (empty array or null allowed) */
+  mapped_risk_ids?: number[] | null;
+
   created_at?: Date;
   updated_at?: Date;
 }

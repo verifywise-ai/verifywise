@@ -1,5 +1,6 @@
-import { Transaction } from "sequelize";
+import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
+import { isSupportedLang, type SupportedLang } from "./i18n.utils";
 import { UserPreferencesModel } from "../domain.layer/models/userPreferences/userPreferences.model";
 
 export const getPreferencesByUserQuery = async (
@@ -23,6 +24,24 @@ export const getPreferencesByUserQuery = async (
     return preference;
   } catch (error) {
     throw error;
+  }
+};
+
+/**
+ * The language a user saved in Settings, for text written outside a request
+ * (notifications sent by a nightly job have no Accept-Language to read).
+ * "en" when nothing is saved, the language has no backend dictionary, or the
+ * read fails: a notification must never be lost over its wording.
+ */
+export const getUserLanguage = async (userId: number): Promise<SupportedLang> => {
+  try {
+    const [row] = await sequelize.query<{ language: string | null }>(
+      `SELECT language FROM user_preferences WHERE user_id = :id`,
+      { replacements: { id: userId }, type: QueryTypes.SELECT },
+    );
+    return isSupportedLang(row?.language) ? row.language : "en";
+  } catch {
+    return "en";
   }
 };
 

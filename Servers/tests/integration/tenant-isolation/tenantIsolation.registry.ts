@@ -203,6 +203,14 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     tables: ["scheduled_reports"],
     baseRoute: "/api/reporting/scheduled-reports",
   },
+  {
+    // No conventional CRUD surface (links are scored by the engine, then
+    // confirmed or dismissed), so the hand-written file covers it.
+    name: "risk_links",
+    tables: ["risk_links"],
+    baseRoute: "/api/riskLinks",
+    testFile: "riskLinks.isolation.test.ts",
+  },
 ];
 
 /** Flat set of all tenant-scoped tables declared in the registry. */

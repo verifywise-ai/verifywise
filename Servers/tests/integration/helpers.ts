@@ -106,6 +106,8 @@ export async function cleanupDatabase(): Promise<void> {
           projects_members,
           projects_frameworks,
           files,
+          evidence_hub,
+          notifications,
           risks,
           tasks,
           vendors,

@@ -48,6 +48,11 @@ import { FilterBy, FilterColumn, FilterCondition } from "../../components/Table/
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { Project } from "../../../domain/types/Project";
+import { useQueryClient } from "@tanstack/react-query";
+import { useVendorExposure, VENDOR_INSIGHTS_KEY } from "../../../application/hooks/useRiskLinks";
+import type { HeatMapCellRef } from "../../types/interfaces/i.risk";
+import VendorRiskInsights from "./VendorRiskInsights";
+import { matchesHeatCell } from "./VendorRiskInsights/HeatMapSection";
 
 // Constants
 const REDIRECT_DELAY_MS = 2000;
@@ -61,6 +66,7 @@ type VendorRiskColumnKey =
   | "action_owner"
   | "risk_severity"
   | "risk_level"
+  | "inherited_by"
   | "actions";
 
 const VENDOR_TABLE_COLUMNS: ColumnConfig<VendorColumnKey>[] = [
@@ -80,6 +86,7 @@ const VENDOR_RISKS_TABLE_COLUMNS: ColumnConfig<VendorRiskColumnKey>[] = [
   { key: "action_owner", label: "Action owner", defaultVisible: true },
   { key: "risk_severity", label: "Risk severity", defaultVisible: true },
   { key: "risk_level", label: "Risk level", defaultVisible: true },
+  { key: "inherited_by", label: "Inherited by", defaultVisible: true },
   { key: "actions", label: "Actions", defaultVisible: true, alwaysVisible: true },
 ];
 
@@ -136,9 +143,18 @@ const Vendors = () => {
 
   // Selected risk level for card filtering
   const [selectedRiskLevel, setSelectedRiskLevel] = useState<string | null>(null);
+  const [heatCell, setHeatCell] = useState<HeatMapCellRef | null>(null);
+  const [riskModalTab, setRiskModalTab] = useState<"details" | "linked-risks">("details");
+  const queryClient = useQueryClient();
 
   const currentPath = location.pathname;
   const isRisksTab = currentPath.includes("/vendors/risks");
+
+  const { data: exposure } = useVendorExposure(isRisksTab);
+  const exposureById = useMemo(
+    () => new Map((exposure?.risks ?? []).map((risk) => [risk.vendor_risk_id, risk])),
+    [exposure],
+  );
   const value = isRisksTab ? "2" : "1";
 
   // TanStack Query hooks
@@ -156,6 +172,13 @@ const Vendors = () => {
       vendorId: "all",
       filter: filterStatus,
     });
+
+  // Saving, deleting or re-assigning a vendor risk changes its reach, its
+  // duplicates and its coverage, so the insights refresh with the list.
+  const refreshVendorRisks = useCallback(async () => {
+    await refetchVendorRisks();
+    await queryClient.invalidateQueries({ queryKey: VENDOR_INSIGHTS_KEY });
+  }, [refetchVendorRisks, queryClient]);
 
   // FilterBy - Dynamic options generators for Vendors tab
   const getUniqueVendorAssignees = useCallback(() => {
@@ -624,7 +647,7 @@ const Vendors = () => {
         setTimeout(() => {
           setAlert(null);
         }, 3000);
-        await refetchVendorRisks();
+        await refreshVendorRisks();
       } else if (response.status === 404) {
         setAlert({
           variant: "error",
@@ -683,7 +706,7 @@ const Vendors = () => {
         setTimeout(() => {
           setAlert(null);
         }, 3000);
-        await refetchVendorRisks();
+        await refreshVendorRisks();
       } else if (response.status === 404) {
         setAlert({
           variant: "error",
@@ -718,7 +741,10 @@ const Vendors = () => {
     }
   };
 
-  const handleEditRisk = async (riskId: number | undefined) => {
+  const handleEditRisk = async (
+    riskId: number | undefined,
+    tab: "details" | "linked-risks" = "details",
+  ) => {
     if (!riskId) {
       setAlert({
         variant: "error",
@@ -731,6 +757,7 @@ const Vendors = () => {
       const response = await getVendorRiskById({
         id: Number(riskId),
       });
+      setRiskModalTab(tab);
       setSelectedRisk(response.data);
       setIsRiskModalOpen(true);
     } catch (e) {
@@ -817,6 +844,11 @@ const Vendors = () => {
       });
     }
 
+    // Then the heat map cell, if one is selected
+    if (heatCell) {
+      filtered = filtered.filter((risk) => matchesHeatCell(risk, heatCell));
+    }
+
     // Then apply search filter
     if (risksSearchTerm.trim()) {
       const query = risksSearchTerm.toLowerCase();
@@ -824,7 +856,21 @@ const Vendors = () => {
     }
 
     return filtered;
-  }, [filterVendorRiskData, vendorRisks, selectedRiskLevel, risksSearchTerm]);
+  }, [filterVendorRiskData, vendorRisks, selectedRiskLevel, heatCell, risksSearchTerm]);
+
+  const handleHeatCell = useCallback((cell: HeatMapCellRef | null) => {
+    setHeatCell(cell);
+    if (cell) {
+      setAlert({
+        variant: "info",
+        title: "Filtering by heat map cell",
+        body: "The table now shows only vendor risks in the selected cell. Select the cell again to see all risks.",
+      });
+    } else {
+      setAlert(null);
+      setShowAlert(false);
+    }
+  }, []);
 
   // Filter vendors using FilterBy and search
   const filteredVendors = useMemo(() => {
@@ -1244,22 +1290,32 @@ const Vendors = () => {
           {loadingVendorRisks ? (
             <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
           ) : (
-            <GroupedTableView
-              groupedData={groupedVendorRisks}
-              ungroupedData={filteredVendorRisks}
-              renderTable={(data, options) => (
-                <RiskTable
-                  users={users}
-                  vendors={vendors}
-                  vendorRisks={data}
-                  onDelete={handleDeleteRisk}
-                  onEdit={handleEditRisk}
-                  isDeletingAllowed={isDeletingAllowed}
-                  hidePagination={options?.hidePagination}
-                  visibleColumns={vendorRiskVisibleColumns}
-                />
-              )}
-            />
+            <Stack spacing={4}>
+              <VendorRiskInsights
+                risks={vendorRisks}
+                selectedCell={heatCell}
+                onSelectCell={handleHeatCell}
+                onOpenRisk={(id) => handleEditRisk(id)}
+              />
+              <GroupedTableView
+                groupedData={groupedVendorRisks}
+                ungroupedData={filteredVendorRisks}
+                renderTable={(data, options) => (
+                  <RiskTable
+                    users={users}
+                    vendors={vendors}
+                    vendorRisks={data}
+                    onDelete={handleDeleteRisk}
+                    onEdit={handleEditRisk}
+                    isDeletingAllowed={isDeletingAllowed}
+                    hidePagination={options?.hidePagination}
+                    visibleColumns={vendorRiskVisibleColumns}
+                    exposure={exposureById}
+                    onOpenLinks={(id) => handleEditRisk(id, "linked-risks")}
+                  />
+                )}
+              />
+            </Stack>
           )}
         </TabPanel>
       </TabContext>
@@ -1269,7 +1325,7 @@ const Vendors = () => {
         setIsOpen={() => setIsOpen(false)}
         value={value}
         onSuccess={async () => {
-          await refetchVendorRisks();
+          await refreshVendorRisks();
           await refetchVendors();
         }}
         existingVendor={selectedVendor}
@@ -1279,9 +1335,10 @@ const Vendors = () => {
         handleChange={handleChange}
         setIsOpen={handleRiskModal}
         value={value}
-        onSuccess={refetchVendorRisks}
+        onSuccess={refreshVendorRisks}
         existingRisk={selectedRisk}
         vendors={vendors}
+        initialTab={riskModalTab}
       />
       {isSubmitting && <CustomizableToast title="Processing your request. Please wait..." />}
 

@@ -1,6 +1,6 @@
 # VerifyWise - Development Guide
 
-> **Last Updated:** 2026-09-26
+> **Last Updated:** 2026-10-01
 
 This document contains cross-cutting rules for the VerifyWise codebase. Directory-scoped guides load automatically when working in each area:
 
@@ -95,9 +95,9 @@ interface TokenPayload {
 ### Starting Development
 
 ```bash
-cd Servers && npm install && npm run watch    # Backend (Terminal 1)
+cd Servers && npm install && npm run watch    # Backend + BullMQ worker (Terminal 1)
 cd Clients && npm install && npm run dev      # Frontend (Terminal 2)
-cd Servers && npm run worker                  # BullMQ Worker (Terminal 3, optional)
+cd Servers && npm run worker                  # BullMQ worker alone (only if not using `watch`)
 cd EvalServer/src && alembic upgrade head && uvicorn app:app --port 8000 --workers 4  # EvalServer (Terminal 4, optional)
 ```
 
@@ -118,7 +118,8 @@ fix(dashboard): resolve chart rendering issue
 
 ### PR Checklist
 
-- [ ] Build passes locally (`cd Servers && npm run build` and `cd Clients && npm run build`)
+- [ ] Build passes locally (`cd Servers && npm run build` and `cd Clients && npm run typecheck && npm run build`)
+      — `typecheck` is not optional: the frontend `build` does not run `tsc`, so type errors pass a green build
 - [ ] `npm run format-check` clean in **both** `Servers` and `Clients` — if either
       reports issues, run `npm run format`, then recommit before opening the PR
 - [ ] Self-review completed
@@ -138,8 +139,8 @@ fine unasked; `gh pr create` is not.
 ## Testing
 
 - **Minimum coverage:** 80%
-- **Frontend:** `cd Clients && npm run test` (Vitest)
-- **Backend:** `cd Servers && npm run test` (Jest)
+- **Frontend:** `cd Clients && npx vitest run` (Vitest — `npm run test` is `vitest watch` and never exits)
+- **Backend:** `cd Servers && npm run test` (Jest — this is `test:unit`; it *excludes* `tests/integration/`, which must be run separately)
 
 ---
 

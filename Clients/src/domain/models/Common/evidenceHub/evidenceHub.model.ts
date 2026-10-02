@@ -19,6 +19,7 @@ export class EvidenceHubModel {
   evidence_files: FileResponse[] = [];
   mapped_model_ids?: number[] | null;
   mapped_training_ids?: number[] | null;
+  mapped_risk_ids?: number[] | null;
   tags?: string[];
   framework_ids?: string[];
   reviewer_id?: number | null;
@@ -33,6 +34,7 @@ export class EvidenceHubModel {
     this.evidence_files = data.evidence_files ?? [];
     this.mapped_model_ids = data.mapped_model_ids ?? null;
     this.mapped_training_ids = data.mapped_training_ids ?? null;
+    this.mapped_risk_ids = data.mapped_risk_ids ?? null;
     this.tags = data.tags ?? [];
     this.framework_ids = data.framework_ids ?? [];
     this.reviewer_id = data.reviewer_id ?? null;

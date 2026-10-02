@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { LucideIcon } from "lucide-react";
+import type { VendorRiskExposure } from "../../../domain/interfaces/i.riskLink";
 import { VendorModel } from "../../../domain/models/Common/vendor/vendor.model";
 import { RiskModel } from "../../../domain/models/Common/risks/risk.model";
 import { FileModel } from "../../../domain/models/Common/file/file.model";
@@ -243,6 +244,10 @@ export interface IRiskTableProps {
   isDeletingAllowed?: boolean;
   hidePagination?: boolean;
   visibleColumns?: Set<string>;
+  /** Blast radius per vendor risk id, for the "Inherited by" column. */
+  exposure?: Map<number, VendorRiskExposure>;
+  /** Opens a vendor risk on its Linked risks tab; falls back to onEdit. */
+  onOpenLinks?: (riskId: number) => void;
 }
 
 export interface ITasksTableProps {

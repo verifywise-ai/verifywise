@@ -52,7 +52,6 @@ export const MITIGATION_FORM_FIELD_ORDER: (keyof MitigationFormValues)[] = [
   "approver",
   "approvalStatus",
   "dateOfAssessment",
-  "recommendations",
 ];
 
 export const MITIGATION_FORM_FIELD_IDS: Partial<Record<keyof MitigationFormValues, string>> = {
@@ -64,7 +63,6 @@ export const MITIGATION_FORM_FIELD_IDS: Partial<Record<keyof MitigationFormValue
   approver: "approver-input",
   approvalStatus: "approval-status-input",
   dateOfAssessment: "mitigation-assessment-date-input",
-  recommendations: "recommendations-input",
 };
 
 export const VENDOR_RISK_FORM_FIELD_ORDER: (keyof VendorRiskFormValues)[] = [

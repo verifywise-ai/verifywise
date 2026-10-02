@@ -25,6 +25,7 @@ import { UploadedFile, RequestWithFile } from "../utils/question.utils";
 import { getUserProjects } from "../utils/user.utils";
 
 import { translateError } from "../utils/i18n.utils";
+import { toId } from "../utils/validations/validation.utils";
 // Note: Files are only unlinked from evidence_links, not deleted from file manager
 // This allows the same file to be used as evidence in multiple places
 
@@ -381,9 +382,9 @@ export async function updateNISTAIRMFSubcategoryById(
 
     // Notify owner, reviewer, approver if changed
     const entityName = currentData.title || `Subcategory #${subcategoryId}`;
-    const newOwner = subcategory.owner ? parseInt(String(subcategory.owner)) : null;
-    const newReviewer = subcategory.reviewer ? parseInt(String(subcategory.reviewer)) : null;
-    const newApprover = subcategory.approver ? parseInt(String(subcategory.approver)) : null;
+    const newOwner = subcategory.owner ? toId(subcategory.owner) : null;
+    const newReviewer = subcategory.reviewer ? toId(subcategory.reviewer) : null;
+    const newApprover = subcategory.approver ? toId(subcategory.approver) : null;
 
     if (newOwner) {
       notifyNistAiRmfAssignment(

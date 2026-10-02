@@ -73,7 +73,7 @@ describe("manual report run visibility", () => {
    * membership rule then has to classify. BullMQ is mocked in ./setup.
    */
   async function generateManualRun(scopedToProject: number): Promise<number> {
-    const adminApp = createTestApp({
+    const adminApp = await createTestApp({
       bypassAuth: true,
       mockUser: { userId: adminId, role: "Admin", organizationId: orgId },
     });

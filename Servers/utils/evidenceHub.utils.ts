@@ -8,6 +8,9 @@ import {
   deleteFileEntityLink,
 } from "./files/evidenceFiles.utils";
 
+/** Days without an update after which mapped evidence counts as stale. */
+export const EVIDENCE_FRESHNESS_DAYS = 90;
+
 // Helper to normalize a date value to an ISO string or null
 const toISO = (d: any): string | null => {
   if (!d) return null;
@@ -91,6 +94,7 @@ export const getAllEvidencesQuery = async (organizationId: number) => {
       description: record.description,
       mapped_model_ids: record.mapped_model_ids,
       mapped_training_ids: record.mapped_training_ids,
+      mapped_risk_ids: record.mapped_risk_ids,
       tags: record.tags,
       framework_ids: record.framework_ids,
       reviewer_id: record.reviewer_id,
@@ -109,6 +113,7 @@ export const getAllEvidencesQuery = async (organizationId: number) => {
       description: record.description,
       mapped_model_ids: null,
       mapped_training_ids: null,
+      mapped_risk_ids: null,
       tags: [],
       framework_ids: ["nist_ai_rmf"],
       reviewer_id: record.reviewer,
@@ -163,6 +168,7 @@ export const createNewEvidenceQuery = async (
                 description,
                 mapped_model_ids,
                 mapped_training_ids,
+                mapped_risk_ids,
                 created_at,
                 updated_at
             ) VALUES (
@@ -172,6 +178,7 @@ export const createNewEvidenceQuery = async (
                 :description,
                 :mapped_model_ids,
                 :mapped_training_ids,
+                :mapped_risk_ids,
                 :created_at,
                 :updated_at
             ) RETURNING *`,
@@ -186,6 +193,9 @@ export const createNewEvidenceQuery = async (
             : null,
           mapped_training_ids: evidence.mapped_training_ids
             ? `{${evidence.mapped_training_ids.join(",")}}`
+            : null,
+          mapped_risk_ids: evidence.mapped_risk_ids
+            ? `{${evidence.mapped_risk_ids.join(",")}}`
             : null,
           created_at,
           updated_at: created_at,
@@ -253,6 +263,7 @@ export const updateEvidenceByIdQuery = async (
                 description = :description,
                 mapped_model_ids = :mapped_model_ids,
                 mapped_training_ids = :mapped_training_ids,
+                mapped_risk_ids = :mapped_risk_ids,
                 updated_at = :updated_at
              WHERE organization_id = :organizationId AND id = :id`,
       {
@@ -267,6 +278,9 @@ export const updateEvidenceByIdQuery = async (
             : null,
           mapped_training_ids: evidence.mapped_training_ids
             ? `{${evidence.mapped_training_ids.join(",")}}`
+            : null,
+          mapped_risk_ids: evidence.mapped_risk_ids
+            ? `{${evidence.mapped_risk_ids.join(",")}}`
             : null,
           updated_at,
         },
@@ -362,4 +376,93 @@ export const deleteEvidenceByIdQuery = async (
     console.error("Error deleting evidence:", error);
     throw error;
   }
+};
+
+/** Risks with at least one stale mapped evidence. Stale = a linked file is
+ *  past its expiry date, or the evidence is untouched for
+ *  EVIDENCE_FRESHNESS_DAYS. Expiry lives on files (DATE), joined the same way
+ *  getEvidenceFilesForEntity reads them; a file expiring today is not yet
+ *  stale, matching the file expiry sweep and the "Expired" badge. */
+export const getStaleEvidenceRiskIdsQuery = async (
+  organizationId: number,
+  now: Date,
+): Promise<number[]> => {
+  const cutoff = new Date(now.getTime() - EVIDENCE_FRESHNESS_DAYS * 86400000);
+  const rows = (await sequelize.query(
+    `SELECT DISTINCT unnest(e.mapped_risk_ids) AS risk_id
+       FROM evidence_hub e
+      WHERE e.organization_id = :organizationId
+        AND e.mapped_risk_ids IS NOT NULL
+        AND array_length(e.mapped_risk_ids, 1) > 0
+        AND (
+          e.updated_at < :cutoff
+          OR EXISTS (
+            SELECT 1
+              FROM file_entity_links fel
+              JOIN files f ON f.id = fel.file_id AND f.organization_id = fel.organization_id
+             WHERE fel.organization_id = e.organization_id
+               AND fel.framework_type = 'evidence_hub'
+               AND fel.entity_type = 'evidence'
+               AND fel.entity_id = e.id
+               AND fel.link_type = 'evidence'
+               AND f.expiry_date < CAST(:now AS date)
+          )
+        )`,
+    { replacements: { organizationId, now, cutoff }, type: QueryTypes.SELECT },
+  )) as { risk_id: number }[];
+  return rows.map((r) => r.risk_id);
+};
+
+export interface UnnotifiedStaleRiskRow {
+  id: number;
+  risk_name: string;
+  risk_owner: number | null;
+  /** Text (see the stale-link sent-record): reparses losslessly. */
+  evidence_stale_at: string;
+}
+
+/** Flagged risks whose CURRENT staleness the owner has not been told about.
+ *  A failed delivery leaves `evidence_stale_notified_at` behind, so it is
+ *  retried; a later flag moves `evidence_stale_at` past the sent-record. */
+export const getUnnotifiedStaleRisksQuery = async (
+  organizationId: number,
+): Promise<UnnotifiedStaleRiskRow[]> => {
+  const rows = (await sequelize.query(
+    `SELECT id, risk_name, risk_owner,
+            evidence_stale_at::text AS evidence_stale_at
+       FROM risks
+      WHERE organization_id = :organizationId
+        AND is_deleted = false
+        AND evidence_stale_at IS NOT NULL
+        AND (evidence_stale_notified_at IS NULL
+             OR evidence_stale_notified_at < evidence_stale_at)
+      ORDER BY id ASC`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
+  )) as any[];
+  return rows.map((row) => ({
+    id: row.id,
+    risk_name: row.risk_name,
+    risk_owner: row.risk_owner ?? null,
+    evidence_stale_at: row.evidence_stale_at,
+  }));
+};
+
+/**
+ * Stamp the sent-record for one just-notified risk — only if the flag is still
+ * the value the sweep sent about. Guarded for the same reason as the
+ * stale-link mark: a re-flag between SELECT and UPDATE must not be stamped.
+ */
+export const markEvidenceStaleNotifiedQuery = async (
+  organizationId: number,
+  riskId: number,
+  seenStaleAt: string,
+): Promise<void> => {
+  await sequelize.query(
+    `UPDATE risks
+        SET evidence_stale_notified_at = :seenStaleAt::timestamp
+      WHERE organization_id = :organizationId
+        AND id = :riskId
+        AND evidence_stale_at = :seenStaleAt::timestamp`,
+    { replacements: { organizationId, riskId, seenStaleAt } },
+  );
 };
