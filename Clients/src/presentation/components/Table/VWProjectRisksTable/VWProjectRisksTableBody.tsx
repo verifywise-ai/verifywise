@@ -16,7 +16,7 @@ import { ProjectRisk } from "../../../../domain/types/ProjectRisk";
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
 import IconButton from "../../IconButton";
 import ViewRelationshipsButton from "../../ViewRelationshipsButton";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import allowedRoles from "../../../../application/constants/permissions";
 import { useSearchParams } from "react-router";
 import { ProjectRiskMitigation } from "../../ProjectRiskMitigation/ProjectRiskMitigation";
@@ -72,6 +72,7 @@ const VWProjectRisksTableBody = ({
   customFieldDefs = [],
   selection,
 }: IVWProjectRisksTableRow) => {
+  const formatDate = useFormattedDate();
   const isColVisible = (colId: string) => !visibleColumns || visibleColumns.has(colId);
   const theme = useTheme();
   const { setInputValues } = useContext(VerifyWiseContext);
@@ -307,7 +308,7 @@ const VWProjectRisksTableBody = ({
                             : "",
                     }}
                   >
-                    {row.deadline ? displayFormattedDate(row.deadline.toString()) : "NA"}
+                    {row.deadline ? formatDate(row.deadline.toString()) : "NA"}
                   </TableCell>
                 )}
                 {isColVisible("controls_mapping") && (

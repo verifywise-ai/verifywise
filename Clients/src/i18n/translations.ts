@@ -593,6 +593,13 @@ export const translations: Record<string, Record<string, string>> = {
     "Add new": "Neu hinzufügen",
     "Add agent": "Agent hinzufügen",
     "Add new risk": "Neues Risiko hinzufügen",
+    "Add a new risk": "Neues Risiko hinzufügen",
+    "Create a detailed breakdown of risks and their mitigation strategies to assist in documenting your risk management activities effectively.":
+      "Erstellen Sie eine detaillierte Aufschlüsselung der Risiken und ihrer Minderungsstrategien, um Ihre Risikomanagement-Aktivitäten wirksam zu dokumentieren.",
+    "Manage all organization risks in risk management":
+      "Alle Risiken der Organisation im Risikomanagement verwalten",
+    "View and add risks for this use case":
+      "Risiken für diesen Anwendungsfall anzeigen und hinzufügen",
     "Add new risks": "Neue Risiken hinzufügen",
     "Add new risk manually": "Neues Risiko manuell hinzufügen",
     "Add new risk menu": "Menü für neues Risiko",
@@ -5566,8 +5573,8 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Chatbot for Customer Support": "KI-Chatbot für den Kundensupport",
     "AI Gateway": "AI Gateway",
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar und CI/CD-Scanning",
-    "Custom frameworks, Model Risk Management, and Extensions":
-      "Custom Frameworks, Model Risk Management und Extensions",
+    "Built-in frameworks, Model Risk Management, and Extensions":
+      "Integrierte Frameworks, Model Risk Management und Extensions",
     "AI Trust Index, AI Apps inventory, and Agent Control":
       "AI Trust Index, AI Apps inventory und Agent Control",
     "EU AI Act control workflow, clearable selects, and AI advisor fix":
@@ -5655,8 +5662,16 @@ export const translations: Record<string, Record<string, string>> = {
     "Activate the compliance frameworks relevant to your organization.":
       "Aktivieren Sie die für Ihre Organisation relevanten Compliance-Rahmenwerke.",
     "Active incidents": "Aktive Vorfälle",
-    "Add SOC 2, GDPR, HIPAA, and other compliance frameworks as plugins with full controls.":
-      "Fügen Sie SOC 2, GDPR, HIPAA und andere Compliance-Rahmenwerke als Plugins mit vollständigen Kontrollen hinzu.",
+    "SOC 2, GDPR, HIPAA, DORA, and 17 more frameworks are built in, with requirements, evidence, and risk tracking.":
+      "SOC 2, GDPR, HIPAA, DORA und 17 weitere Rahmenwerke sind integriert, mit Anforderungen, Nachweisen und Risikoverfolgung.",
+    "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import, and Dataset Bulk Upload.":
+      "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import und Dataset Bulk Upload.",
+    "Admins enable, configure, and disable extensions from the Extensions page. Nothing to install.":
+      "Administratoren aktivieren, konfigurieren und deaktivieren Extensions auf der Seite Extensions. Keine Installation erforderlich.",
+    "Import risks from Excel, bulk upload datasets with PII detection, and define model lifecycle phases.":
+      "Importieren Sie Risiken aus Excel, laden Sie Datensätze gesammelt mit PII-Erkennung hoch und definieren Sie Phasen des Modelllebenszyklus.",
+    "Connect Slack, MLflow, Azure AI Foundry, Jira Assets, and more with extensions that admins enable.":
+      "Verbinden Sie Slack, MLflow, Azure AI Foundry, Jira Assets und mehr mit Extensions, die Administratoren aktivieren.",
     "Add at least one field before publishing":
       "Fügen Sie mindestens ein Feld hinzu, bevor Sie veröffentlichen",
     "Add colleagues to collaborate on compliance and risk management tasks.":
@@ -6003,8 +6018,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Conformity assessment topics": "Themen der Konformitätsbewertung",
     "Congratulations": "Glückwunsch",
     "Connect": "Verbinden",
-    "Connect Slack, Jira, MLflow, Azure AI, and more for seamless workflow integration.":
-      "Verbinden Sie Slack, Jira, MLflow, Azure AI und mehr für eine nahtlose Workflow-Integration.",
+    "Send notifications to Slack, sync models from MLflow and Azure AI Foundry, and import use cases from Jira Assets.":
+      "Senden Sie Benachrichtigungen an Slack, synchronisieren Sie Modelle aus MLflow und Azure AI Foundry und importieren Sie Anwendungsfälle aus Jira Assets.",
     "Connect a GitHub token to scan private repositories":
       "Verbinden Sie ein GitHub-Token, um private Repositories zu scannen",
     "Connect with ML platforms to track experiments, models, and deployments.":
@@ -6247,8 +6262,8 @@ export const translations: Record<string, Record<string, string>> = {
     "EU AI Act Compliance Dashboard": "EU-KI-Verordnungs-Compliance-Dashboard",
     "EU AI Act only (specific to an AI system/project)":
       "Nur EU-KI-Verordnung (spezifisch für ein KI-System/Projekt)",
-    "EU AI Act, ISO 42001, NIST AI RMF, SOC 2, GDPR, and more with pluggable framework support.":
-      "EU-KI-Verordnung, ISO 42001, NIST AI RMF, SOC 2, GDPR und mehr mit Plugin-fähiger Rahmenwerk-Unterstützung.",
+    "EU AI Act, ISO 42001, NIST AI RMF, SOC 2, GDPR, and 20 more frameworks, all built in.":
+      "EU-KI-Verordnung, ISO 42001, NIST AI RMF, SOC 2, GDPR und 20 weitere Rahmenwerke, alle integriert.",
     "EU AI act": "EU-KI-Verordnung",
     "EU Database Data Entry Timeliness": "Zeitnähe der EU-Datenbank-Dateneingabe",
     "EU Database Registration": "EU-Datenbank-Registrierung",
@@ -7355,8 +7370,8 @@ export const translations: Record<string, Record<string, string>> = {
     "References to AI models in the codebase": "Verweise auf KI-Modelle im Code",
     "Register AI-related training programs and educational resources. Track completion status, certifications, and learning progress across your team.":
       "Registrieren Sie KI-bezogene Schulungsprogramme und Bildungsressourcen. Verfolgen Sie den Abschlussstatus, Zertifizierungen und den Lernfortschritt in Ihrem Team.",
-    "Register and track AI models with details like hosting, biases, and limitations. Extend with the lifecycle plugin.":
-      "Registrieren und verfolgen Sie KI-Modelle mit Details wie Hosting, Verzerrungen und Einschränkungen. Erweitern Sie mit dem Lebenszyklus-Plugin.",
+    "Register and track AI models with details like hosting, biases, and limitations. Extend with the Model Lifecycle extension.":
+      "Registrieren und verfolgen Sie KI-Modelle mit Details wie Hosting, Verzerrungen und Einschränkungen. Erweitern Sie mit der Extension Model Lifecycle.",
     "Register external AI providers and third-party services. Document vendor information, contracts, and compliance requirements in one centralized location.":
       "Registrieren Sie externe KI-Anbieter und Drittanbieterdienste. Dokumentieren Sie Anbieterinformationen, Verträge und Compliance-Anforderungen an einem zentralen Ort.",
     "Register providers, authorized representatives, and deployers, along with their AI systems, in the EU database as required by the AI Act.":
@@ -9285,6 +9300,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Invite via email": "Per E-Mail einladen",
     "Must include an uppercase letter, a lowercase letter, and a digit. Minimum 8 characters.":
       "Muss einen Großbuchstaben, einen Kleinbuchstaben und eine Ziffer enthalten. Mindestens 8 Zeichen.",
+    "Default retention policy": "Standard-Aufbewahrungsrichtlinie",
+    "Expired files": "Abgelaufene Dateien",
+    "File Manager": "Dateimanager",
+    "File retention": "Dateiaufbewahrung",
+    "Retention policy": "Aufbewahrungsrichtlinie",
     "Create API tokens for the super admin API":
       "API-Tokens für die Super-Administrator-API erstellen",
     "Install": "Installieren",
@@ -9865,6 +9885,12 @@ export const translations: Record<string, Record<string, string>> = {
     "Add new": "Ajouter",
     "Add agent": "Ajouter un agent",
     "Add new risk": "Ajouter un nouveau risque",
+    "Add a new risk": "Ajouter un nouveau risque",
+    "Create a detailed breakdown of risks and their mitigation strategies to assist in documenting your risk management activities effectively.":
+      "Créez une description détaillée des risques et de leurs stratégies d'atténuation afin de documenter efficacement vos activités de gestion des risques.",
+    "Manage all organization risks in risk management":
+      "Gérer tous les risques de l'organisation dans la gestion des risques",
+    "View and add risks for this use case": "Consulter et ajouter des risques pour ce cas d'usage",
     "Add new risks": "Ajouter de nouveaux risques",
     "Add new vendor": "Ajouter un nouveau fournisseur",
     "Add new policy": "Ajouter une nouvelle politique",
@@ -14789,8 +14815,8 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Chatbot for Customer Support": "Chatbot IA pour le support client",
     "AI Gateway": "AI Gateway",
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar et analyse CI/CD",
-    "Custom frameworks, Model Risk Management, and Extensions":
-      "Custom Frameworks, Model Risk Management et Extensions",
+    "Built-in frameworks, Model Risk Management, and Extensions":
+      "Référentiels intégrés, Model Risk Management et Extensions",
     "AI Trust Index, AI Apps inventory, and Agent Control":
       "AI Trust Index, AI Apps inventory et Agent Control",
     "EU AI Act control workflow, clearable selects, and AI advisor fix":
@@ -14876,8 +14902,16 @@ export const translations: Record<string, Record<string, string>> = {
     "Activate the compliance frameworks relevant to your organization.":
       "Activez les référentiels de conformité pertinents pour votre organisation.",
     "Active incidents": "Incidents actifs",
-    "Add SOC 2, GDPR, HIPAA, and other compliance frameworks as plugins with full controls.":
-      "Ajoutez SOC 2, GDPR, HIPAA et d'autres référentiels de conformité en tant que plugins avec contrôles complets.",
+    "SOC 2, GDPR, HIPAA, DORA, and 17 more frameworks are built in, with requirements, evidence, and risk tracking.":
+      "SOC 2, RGPD, HIPAA, DORA et 17 autres référentiels sont intégrés, avec exigences, preuves et suivi des risques.",
+    "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import, and Dataset Bulk Upload.":
+      "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import et Dataset Bulk Upload.",
+    "Admins enable, configure, and disable extensions from the Extensions page. Nothing to install.":
+      "Les administrateurs activent, configurent et désactivent les extensions depuis la page Extensions. Rien à installer.",
+    "Import risks from Excel, bulk upload datasets with PII detection, and define model lifecycle phases.":
+      "Importez des risques depuis Excel, téléversez des jeux de données en masse avec détection des PII et définissez les phases du cycle de vie des modèles.",
+    "Connect Slack, MLflow, Azure AI Foundry, Jira Assets, and more with extensions that admins enable.":
+      "Connectez Slack, MLflow, Azure AI Foundry, Jira Assets et plus avec des extensions activées par les administrateurs.",
     "Add at least one field before publishing": "Ajoutez au moins un champ avant de publier",
     "Add colleagues to collaborate on compliance and risk management tasks.":
       "Ajoutez des collègues pour collaborer aux tâches de conformité et de gestion des risques.",
@@ -15223,8 +15257,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Conformity assessment topics": "Thèmes d'évaluation de conformité",
     "Congratulations": "Félicitations",
     "Connect": "Connecter",
-    "Connect Slack, Jira, MLflow, Azure AI, and more for seamless workflow integration.":
-      "Connectez Slack, Jira, MLflow, Azure AI, et plus pour une intégration de flux de travail transparente.",
+    "Send notifications to Slack, sync models from MLflow and Azure AI Foundry, and import use cases from Jira Assets.":
+      "Envoyez des notifications vers Slack, synchronisez les modèles depuis MLflow et Azure AI Foundry, et importez des cas d'usage depuis Jira Assets.",
     "Connect a GitHub token to scan private repositories":
       "Connectez un jeton GitHub pour analyser les dépôts privés",
     "Connect with ML platforms to track experiments, models, and deployments.":
@@ -15466,8 +15500,8 @@ export const translations: Record<string, Record<string, string>> = {
     "EU AI Act Compliance Dashboard": "Tableau de bord de conformité au Règlement IA de l'UE",
     "EU AI Act only (specific to an AI system/project)":
       "Règlement IA de l'UE uniquement (spécifique à un système/projet IA)",
-    "EU AI Act, ISO 42001, NIST AI RMF, SOC 2, GDPR, and more with pluggable framework support.":
-      "Règlement IA de l'UE, ISO 42001, NIST AI RMF, SOC 2, RGPD et plus avec prise en charge de référentiels enfichables.",
+    "EU AI Act, ISO 42001, NIST AI RMF, SOC 2, GDPR, and 20 more frameworks, all built in.":
+      "Règlement IA de l'UE, ISO 42001, NIST AI RMF, SOC 2, RGPD et 20 autres référentiels, tous intégrés.",
     "EU AI act": "Règlement IA de l'UE",
     "EU Database Data Entry Timeliness": "Rapidité de saisie des données dans la base UE",
     "EU Database Registration": "Enregistrement dans la base UE",
@@ -16577,8 +16611,8 @@ export const translations: Record<string, Record<string, string>> = {
     "References to AI models in the codebase": "Références aux modèles IA dans le code",
     "Register AI-related training programs and educational resources. Track completion status, certifications, and learning progress across your team.":
       "Enregistrez les programmes de formation et ressources éducatives liés à l'IA. Suivez l'état d'achèvement, les certifications et la progression de l'apprentissage dans votre équipe.",
-    "Register and track AI models with details like hosting, biases, and limitations. Extend with the lifecycle plugin.":
-      "Enregistrez et suivez les modèles IA avec des détails comme l'hébergement, les biais et les limitations. Étendez avec le plugin de cycle de vie.",
+    "Register and track AI models with details like hosting, biases, and limitations. Extend with the Model Lifecycle extension.":
+      "Enregistrez et suivez les modèles IA avec des détails comme l'hébergement, les biais et les limitations. Étendez avec l'extension Model Lifecycle.",
     "Register external AI providers and third-party services. Document vendor information, contracts, and compliance requirements in one centralized location.":
       "Enregistrez les fournisseurs IA externes et les services tiers. Documentez les informations sur les fournisseurs, contrats et exigences de conformité dans un emplacement centralisé.",
     "Register providers, authorized representatives, and deployers, along with their AI systems, in the EU database as required by the AI Act.":
@@ -18509,6 +18543,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Invite via email": "Inviter par e-mail",
     "Must include an uppercase letter, a lowercase letter, and a digit. Minimum 8 characters.":
       "Doit contenir une majuscule, une minuscule et un chiffre. Minimum 8 caractères.",
+    "Default retention policy": "Politique de rétention par défaut",
+    "Expired files": "Fichiers expirés",
+    "File Manager": "Gestionnaire de fichiers",
+    "File retention": "Rétention des fichiers",
+    "Retention policy": "Politique de rétention",
     "Create API tokens for the super admin API":
       "Créer des tokens d'API pour l'API super administrateur",
     "Install": "Installer",
@@ -18875,6 +18914,12 @@ export const translations: Record<string, Record<string, string>> = {
     "Add new": "Añadir nuevo",
     "Add agent": "Añadir agente",
     "Add new risk": "Añadir nuevo riesgo",
+    "Add a new risk": "Añadir un nuevo riesgo",
+    "Create a detailed breakdown of risks and their mitigation strategies to assist in documenting your risk management activities effectively.":
+      "Cree un desglose detallado de los riesgos y sus estrategias de mitigación para documentar eficazmente sus actividades de gestión de riesgos.",
+    "Manage all organization risks in risk management":
+      "Gestionar todos los riesgos de la organización en gestión de riesgos",
+    "View and add risks for this use case": "Ver y añadir riesgos para este caso de uso",
     "Add new risks": "Añadir nuevos riesgos",
     "Add new risk manually": "Añadir nuevo riesgo manualmente",
     "Add new risk menu": "Menú de nuevo riesgo",
@@ -22001,8 +22046,8 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Chatbot for Customer Support": "Chatbot de IA para atención al cliente",
     "AI Gateway": "AI Gateway",
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar y análisis de CI/CD",
-    "Custom frameworks, Model Risk Management, and Extensions":
-      "Custom Frameworks, Model Risk Management y Extensions",
+    "Built-in frameworks, Model Risk Management, and Extensions":
+      "Marcos integrados, Model Risk Management y Extensions",
     "AI Trust Index, AI Apps inventory, and Agent Control":
       "AI Trust Index, AI Apps inventory y Agent Control",
     "AI Lifecycle Risk Management": "Gestión de riesgos del ciclo de vida de la IA",
@@ -25287,8 +25332,16 @@ export const translations: Record<string, Record<string, string>> = {
       "Acciones para abordar riesgos y oportunidades (incluye evaluación de riesgos, tratamiento y evaluación de impacto)",
     "Activate the compliance frameworks relevant to your organization.":
       "Active los marcos de cumplimiento relevantes para su organización.",
-    "Add SOC 2, GDPR, HIPAA, and other compliance frameworks as plugins with full controls.":
-      "Añada SOC 2, GDPR, HIPAA y otros marcos de cumplimiento como complementos con controles completos.",
+    "SOC 2, GDPR, HIPAA, DORA, and 17 more frameworks are built in, with requirements, evidence, and risk tracking.":
+      "SOC 2, GDPR, HIPAA, DORA y 17 marcos más están integrados, con requisitos, evidencias y seguimiento de riesgos.",
+    "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import, and Dataset Bulk Upload.":
+      "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import y Dataset Bulk Upload.",
+    "Admins enable, configure, and disable extensions from the Extensions page. Nothing to install.":
+      "Los administradores activan, configuran y desactivan extensiones desde la página Extensions. No hay nada que instalar.",
+    "Import risks from Excel, bulk upload datasets with PII detection, and define model lifecycle phases.":
+      "Importe riesgos desde Excel, cargue conjuntos de datos en bloque con detección de PII y defina fases del ciclo de vida de los modelos.",
+    "Connect Slack, MLflow, Azure AI Foundry, Jira Assets, and more with extensions that admins enable.":
+      "Conecte Slack, MLflow, Azure AI Foundry, Jira Assets y más con extensiones que activan los administradores.",
     "Add colleagues to collaborate on compliance and risk management tasks.":
       "Añada colegas para colaborar en tareas de cumplimiento y gestión de riesgos.",
     "Add new AI models to your inventory with comprehensive metadata including provider, version, capabilities, security assessment, and usage details.":
@@ -25475,8 +25528,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Configure la precisión, la relevancia, la toxicidad, el sesgo y métricas personalizadas para cada evaluación.",
     "Configure automated alerts when new AI tools are detected or usage thresholds are exceeded.":
       "Configure alertas automatizadas cuando se detecten nuevas herramientas de IA o se superen los umbrales de uso.",
-    "Connect Slack, Jira, MLflow, Azure AI, and more for seamless workflow integration.":
-      "Conecte Slack, Jira, MLflow, Azure AI y más para una integración fluida del flujo de trabajo.",
+    "Send notifications to Slack, sync models from MLflow and Azure AI Foundry, and import use cases from Jira Assets.":
+      "Envíe notificaciones a Slack, sincronice modelos desde MLflow y Azure AI Foundry, e importe casos de uso desde Jira Assets.",
     "Connect a GitHub token to scan private repositories":
       "Conecte un token de GitHub para analizar repositorios privados",
     "Connect with ML platforms to track experiments, models, and deployments.":
@@ -25619,8 +25672,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Redacte nuevas políticas de gobernanza alineadas con los requisitos normativos. Use plantillas y mejores prácticas para garantizar una cobertura exhaustiva.",
     "EU AI Act only (specific to an AI system/project)":
       "Solo EU AI Act (específico de un sistema/proyecto de IA)",
-    "EU AI Act, ISO 42001, NIST AI RMF, SOC 2, GDPR, and more with pluggable framework support.":
-      "EU AI Act, ISO 42001, NIST AI RMF, SOC 2, GDPR y más, con soporte de marcos conectables.",
+    "EU AI Act, ISO 42001, NIST AI RMF, SOC 2, GDPR, and 20 more frameworks, all built in.":
+      "EU AI Act, ISO 42001, NIST AI RMF, SOC 2, GDPR y 20 marcos más, todos integrados.",
     "EU conformity assessment and CE marking status":
       "Estado de la evaluación de conformidad de la UE y del marcado CE",
     "Effective mechanisms ensure non-conforming systems can be removed or disabled to prevent further risks.":
@@ -26122,8 +26175,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Controles de referencia (Declaración de aplicabilidad)",
     "Register AI-related training programs and educational resources. Track completion status, certifications, and learning progress across your team.":
       "Registre programas de formación y recursos educativos relacionados con la IA. Haga seguimiento del estado de finalización, las certificaciones y el progreso de aprendizaje de todo su equipo.",
-    "Register and track AI models with details like hosting, biases, and limitations. Extend with the lifecycle plugin.":
-      "Registre y haga seguimiento de los modelos de IA con detalles como el alojamiento, los sesgos y las limitaciones. Amplíe con el complemento de ciclo de vida.",
+    "Register and track AI models with details like hosting, biases, and limitations. Extend with the Model Lifecycle extension.":
+      "Registre y haga seguimiento de los modelos de IA con detalles como el alojamiento, los sesgos y las limitaciones. Amplíe con la extensión Model Lifecycle.",
     "Register external AI providers and third-party services. Document vendor information, contracts, and compliance requirements in one centralized location.":
       "Registre proveedores de IA externos y servicios de terceros. Documente la información de los proveedores, los contratos y los requisitos de cumplimiento en una ubicación centralizada.",
     "Register providers, authorized representatives, and deployers, along with their AI systems, in the EU database as required by the AI Act.":
@@ -27652,6 +27705,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Invite via email": "Invitar por correo",
     "Must include an uppercase letter, a lowercase letter, and a digit. Minimum 8 characters.":
       "Debe incluir una mayúscula, una minúscula y un dígito. Mínimo 8 caracteres.",
+    "Default retention policy": "Política de retención predeterminada",
+    "Expired files": "Archivos caducados",
+    "File Manager": "Gestor de archivos",
+    "File retention": "Retención de archivos",
+    "Retention policy": "Política de retención",
     "Create API tokens for the super admin API":
       "Crear tokens de API para la API de superadministrador",
     "Install": "Instalar",

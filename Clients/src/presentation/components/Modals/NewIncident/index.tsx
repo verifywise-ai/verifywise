@@ -23,6 +23,11 @@ import { User } from "../../../../domain/types/User";
 import { Project } from "../../../../domain/types/Project";
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
+import { focusFormFieldById } from "../../../../application/utils/formValidationFocus";
+import {
+  INCIDENT_FORM_FIELD_IDS,
+  INCIDENT_FORM_FIELD_ORDER,
+} from "../../../constants/formValidationFieldMaps";
 import {
   Severity,
   IncidentManagementStatus,
@@ -166,7 +171,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
     [],
   );
 
-  const { errors, validateAll, clearFieldError, resetErrors } =
+  const { errors, validateAll, clearFieldError, resetErrors, getFirstInvalidField } =
     useFormValidation<NewIncidentFormValues>(validators);
 
   // Use the useProjects hook to get approved projects only
@@ -323,7 +328,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
 
   const handleSaveIncident = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (validateAll(values)) {
+    if (validateAll(values, INCIDENT_FORM_FIELD_ORDER)) {
       // Normalize optional FK pickers to integer ids or null (issue #4583)
       const toId = (v: unknown) => (v === undefined || v === null || v === "" ? null : Number(v));
       onSuccess?.({
@@ -333,7 +338,13 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
         assignee_id: toId(values.assignee_id),
       });
       handleClose();
+      return;
     }
+    // Validation failed — move focus to the first invalid field so the
+    // user immediately sees what needs fixing (issue #4754).
+    const firstInvalid = getFirstInvalidField();
+    const fieldId = firstInvalid ? INCIDENT_FORM_FIELD_IDS[firstInvalid] : undefined;
+    if (fieldId) focusFormFieldById(fieldId);
   };
 
   const isViewMode = mode === "view";
@@ -635,6 +646,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
 
                 {/* Categories of harm */}
                 <FormLabel
+                  required
                   sx={{
                     color: theme.palette.text.secondary,
                     fontSize: 13,
@@ -643,7 +655,11 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                 >
                   Categories of harm
                 </FormLabel>
-                <FormGroup row sx={{ gap: theme.spacing(3), flexWrap: "nowrap" }}>
+                <FormGroup
+                  id="categories-of-harm"
+                  row
+                  sx={{ gap: theme.spacing(3), flexWrap: "nowrap" }}
+                >
                   {harmCategories.map((category) => (
                     <Box key={category} sx={{ flex: 1 }}>
                       <Checkbox
@@ -660,7 +676,11 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                 </FormGroup>
 
                 {errors.categories_of_harm && (
-                  <Typography color="error" sx={{ mt: 0.5, fontSize: 13 }}>
+                  <Typography
+                    role="alert"
+                    color="error"
+                    sx={{ mt: 0.5, fontSize: 13, fontWeight: 500 }}
+                  >
                     {errors.categories_of_harm}
                   </Typography>
                 )}

@@ -505,12 +505,12 @@ For each page/screen the following subsections describe: routes, user-facing fea
 |-----------|-------|
 | Routes | `/extensions`, `/extensions/:key/settings` |
 | Component | `Clients/src/presentation/pages/Extensions/index.tsx`, `Extensions/Settings/index.tsx` |
-| Features | Extension marketplace/grid, enable/disable toggles, per-extension settings (MLflow, Azure AI Foundry, Jira Assets, Slack, dataset bulk upload, model lifecycle, risk import). |
-| Access | Start Here shortcut; direct URL; Settings → Features enable. |
-| e2e tests | `Clients/e2e/plugins.spec.ts` |
+| Features | Built-in extension catalog (no marketplace), enable/disable, per-extension settings (MLflow, Azure AI Foundry, Jira Assets, Slack, dataset bulk upload, model lifecycle, risk import). Admin only. |
+| Access | Header **Extensions** button (Admin); Start Here card; direct URL. Non-Admins are redirected to `/`. |
+| e2e tests | None active (`Clients/e2e/plugins.spec.ts` is a skipped leftover) |
 | Unit tests | `Clients/src/presentation/pages/Extensions/**/*.test.tsx` |
-| Backend domain | `/api/extensions`, `/api/extensions/:key/config` |
-| User guide | `shared/user-guide-content/content/integrations/plugins.ts`, `docs/user-guide-audit/integrations/plugins.md` |
+| Backend domain | `/api/extensions`, `/api/extensions/:key/{enable,disable,configuration,test-connection}`, `/api/extensions/<key>/...` (see `docs/technical/infrastructure/extensions.md`) |
+| User guide | `shared/user-guide-content/content/integrations/extensions.ts`, `docs/user-guide-audit/integrations/plugins.md` |
 
 ---
 

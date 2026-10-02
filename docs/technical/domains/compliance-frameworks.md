@@ -2,7 +2,12 @@
 
 ## Overview
 
-VerifyWise supports four major compliance frameworks for AI governance: EU AI Act, ISO 42001, ISO 27001, and NIST AI RMF. Each framework has a distinct structure, but all share common patterns for progress tracking, status management, and risk linking.
+VerifyWise ships 25 compliance frameworks, all available to every organization. None of them needs to be installed or enabled.
+
+- **4 core frameworks** (ids 1–4): EU AI Act, ISO 42001, ISO 27001 and NIST AI RMF. Each has hand-built tables, endpoints and pages. Most of this document describes these.
+- **21 bundled frameworks** (ids 5–25): SOC 2, GDPR, HIPAA and others. They are declared in the structure registry (`Servers/structures/`) and served by generic endpoints and a generic UI. See [Bundled frameworks (ids 5–25)](#bundled-frameworks-ids-525).
+
+All frameworks share the same patterns for progress tracking, status management and risk linking. Users cannot create, import or export their own frameworks. New frameworks are added in code. See [Adding a New Compliance Framework](../guides/adding-new-framework.md).
 
 ## Supported Frameworks
 
@@ -12,6 +17,7 @@ VerifyWise supports four major compliance frameworks for AI governance: EU AI Ac
 | ISO 42001 | 2 | AI management system |
 | ISO 27001 | 3 | Information security management |
 | NIST AI RMF | 4 | AI risk management |
+| 21 bundled frameworks | 5–25 | See [Bundled frameworks](#bundled-frameworks-ids-525) |
 
 ## Framework Structures
 
@@ -454,12 +460,15 @@ POST /frameworks/toProject?frameworkId=2&projectId=5
 
 ### Process
 
-1. Validate framework and project exist
-2. Create `project_frameworks` record
-3. Initialize tenant-specific schema tables
-4. Clone framework structure to project
-5. Populate demo data if applicable
-6. Return success
+`Servers/controllers/framework.ctrl.ts` → `Servers/utils/framework.utils.ts`:
+
+1. Reject the change if the use case has a pending approval request ("This use case has a pending approval request and cannot be modified until the approval process is complete.").
+2. Reject a framework that is already on the project.
+3. Reject a mismatch between `frameworks.is_organizational` and `projects.is_organizational`. Organizational frameworks only go on the organizational project, and use-case frameworks only on use cases.
+4. Insert the `projects_frameworks` row.
+5. Call `frameworkAdditionMap[frameworkId]` (`Servers/types/framework.type.ts`). This creates the per-project implementation rows with status "Not started".
+
+The routes only require authentication. The "manage frameworks" restriction (Admin, Editor) is applied in the client through the `frameworks.manage` permission.
 
 ### Remove Framework
 
@@ -467,7 +476,94 @@ POST /frameworks/toProject?frameworkId=2&projectId=5
 DELETE /frameworks/fromProject?frameworkId=2&projectId=5
 ```
 
-Cascades deletion of all implementation data.
+Calls `frameworkDeletionMap[frameworkId]` and deletes all of that project's implementation data for the framework (status, assignments, risk links, evidence links). The UI asks for confirmation ("Confirm framework removal") first.
+
+## Bundled frameworks (ids 5–25)
+
+These frameworks shipped as plugins until PR #4443 (August 2026). They are now core and are declared in TypeScript:
+
+- `Servers/structures/<Name>/<key>.structure.ts`: one file per framework (`FrameworkStructure`, see `Servers/structures/types.ts`)
+- `Servers/structures/index.ts`: `FRAMEWORK_STRUCTURES`, `getStructureById`, `getStructureByKey`, `requireStructureByKey`
+- Migrations `20260805125946-create-framework-struct-tables.js` (frameworks row + struct tables + seed), `20260805130326-create-framework-impl-tables.js` (impl + `__risks` tables) and `20260805131033-migrate-framework-data.js` (copied data from the legacy `custom_framework_*` tables, which were kept)
+
+### Catalog
+
+Names and flags come from each structure's `seed.name` and `seed.is_organizational`.
+
+**Organization-level (12)**: added under **Frameworks → Manage frameworks → Add/remove frameworks**
+
+| ID | Key | Name | Levels |
+|----|-----|------|--------|
+| 5 | `soc2` | SOC 2 Type II Framework | 2 |
+| 6 | `gdpr` | GDPR Compliance Framework | 2 |
+| 8 | `ccpa` | CCPA Compliance Framework | 2 |
+| 9 | `dora` | DORA Compliance Framework | 2 |
+| 13 | `cis-controls` | CIS Controls v8 | 2 |
+| 16 | `data-governance` | Data Governance Framework | 2 |
+| 17 | `uae-pdpl` | UAE Personal Data Protection Law | 2 |
+| 18 | `saudi-pdpl` | Saudi Arabia Personal Data Protection Law | 2 |
+| 19 | `qatar-pdpl` | Qatar Personal Data Privacy Law | 2 |
+| 20 | `bahrain-pdpl` | Bahrain Personal Data Protection Law | 2 |
+| 21 | `quebec-law25` | Quebec Law 25 Compliance Framework | 2 |
+| 25 | `nist-csf` | NIST Cybersecurity Framework | 3 |
+
+**Use-case-level (9)**: added from a use case's **Frameworks/regulations** tab
+
+| ID | Key | Name | Levels |
+|----|-----|------|--------|
+| 7 | `pci-dss` | PCI-DSS Lite Framework | 2 |
+| 10 | `altai` | ALTAI - Assessment List for Trustworthy AI | 2 |
+| 11 | `ftc-ai-guidelines` | FTC AI Guidelines | 2 |
+| 12 | `nyc-local-law-144` | NYC Local Law 144 - Automated Employment Decision Tools | 2 |
+| 14 | `ai-ethics` | AI Ethics & Governance Framework | 2 |
+| 15 | `oecd-ai-principles` | OECD AI Principles | 2 |
+| 22 | `texas-ai-act` | Texas Responsible AI Governance Act Framework | 2 |
+| 23 | `colorado-ai-act` | Colorado Artificial Intelligence Act Framework | 2 |
+| 24 | `hipaa` | HIPAA Security Rule Framework | 3 |
+
+Total: 4 core + 21 bundled = **25 frameworks**.
+
+### Tables
+
+Each structure names its own tables. SOC 2, for example, uses `soc2_trust_service_categories_struct` → `soc2_controls_struct` (global structure), `soc2_controls` (per org/project implementation) and `soc2_controls__risks` (risk junction). Three-level frameworks add an `l3_struct`, `l3_impl` and `l3_risks` table. Implementation status values match the ISO frameworks: Not started, Draft, In progress, Awaiting review, Awaiting approval, Implemented, Audited, Needs rework.
+
+Evidence is stored in `file_entity_links` with `framework_type` set to the structure's `framework_type` (e.g. `soc2`, `nyc_local_law_144`) and `entity_type` from `entity_types`.
+
+### Generic endpoints
+
+Adding and removing use the shared `POST /api/frameworks/toProject` and `DELETE /api/frameworks/fromProject`. `Servers/utils/frameworkRegistry.utils.ts` provides `makeCreate(key)` / `makeDelete(key)`, which are wired into `frameworkAdditionMap` / `frameworkDeletionMap`.
+
+Implementation work goes through `Servers/routes/frameworkImpl.route.ts`, mounted at `/api/frameworks` next to `frameworks.route.ts`. It is handled by `Servers/controllers/frameworkImpl.ctrl.ts` and `Servers/utils/frameworkImpl.utils.ts`. All routes require JWT. `:level` is `l2` or `l3`.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/frameworks/:frameworkId/tree/:projectId` | Full L1 → L2 (→ L3) tree with implementation rows for the project |
+| GET | `/api/frameworks/:frameworkId/dashboard/:projectFrameworkId` | Progress summary |
+| GET | `/api/frameworks/:frameworkId/impl/:level/:id` | One implementation row |
+| GET | `/api/frameworks/:frameworkId/impl/:level/:id/risks` | Linked risks |
+| PATCH | `/api/frameworks/:frameworkId/impl/:level/:id` | Multipart. Fields: `status`, `implementation_description`, `owner`, `reviewer`, `approver`, `due_date`, `auditor_feedback`, `risksMitigated` / `risksDelete` (JSON number arrays). Uploaded files become evidence in `file_entity_links`. |
+
+Table and column names are resolved from the structure by `frameworkId`. Invalid parameters return 400. A framework id or level the structure doesn't define returns 404.
+
+### Generic UI
+
+| Piece | Path |
+|-------|------|
+| Page | `Clients/src/presentation/pages/Framework/Generic/index.tsx` (`GenericFramework`). Also routed at `/projects/:projectId/framework/:frameworkId`, and embedded in the Frameworks page and the use-case Frameworks/regulations tab. |
+| Drawer | `Clients/src/presentation/components/Drawer/GenericFrameworkDrawer/`: Details, Evidence, Cross mappings and Notes tabs |
+| Dashboard card | `Clients/src/presentation/pages/Framework/Dashboard/GenericFrameworkOverviewCard.tsx` |
+| Badges | `Clients/public/assets/badges/*.svg` via `Clients/src/presentation/tools/frameworkBadge.ts` (keyed by exact framework name) |
+
+The **Notes** tab uses `notesAttachedTo = "<FRAMEWORK_TYPE>_<ENTITY_TYPE>"` (e.g. `SOC2_CONTROL`). Its values come from `NotesAttachedToEnum` in `Servers/domain.layer/models/notes/notes.model.ts`.
+
+### Reporting limitation
+
+Generated reports cover only the four core frameworks. `Servers/services/reporting/dataCollector.ts` builds framework sections for ids 1–4 only. A bundled framework on a project adds no framework section to a report. See [Reporting](./reporting.md).
+
+### Known gaps
+
+- The Frameworks page **Settings** tab (`Clients/src/presentation/pages/Framework/Settings/index.tsx`) only offers ISO 27001, ISO 42001 and NIST AI RMF. Organizational bundled frameworks are added through **Manage frameworks → Add/remove frameworks**.
+- The legacy `custom_framework_*` tables are still in the database. `GET /api/extensions/jira-assets/projects/:projectId/custom-frameworks-progress` still reads them.
 
 ## Key Files
 
@@ -487,6 +583,10 @@ Cascades deletion of all implementation data.
 | `routes/iso-42001.route.ts` | ISO 42001 routes |
 | `routes/nist-ai-rmf.route.ts` | NIST routes |
 | `routes/eu-ai-act.route.ts` | EU AI Act routes |
+| `structures/index.ts`, `structures/<Name>/*.structure.ts` | Bundled framework registry (ids 5–25) |
+| `utils/frameworkRegistry.utils.ts` | Add/remove bundled frameworks on a project |
+| `routes/frameworkImpl.route.ts`, `controllers/frameworkImpl.ctrl.ts`, `utils/frameworkImpl.utils.ts` | Generic implementation endpoints |
+| `types/framework.type.ts` | `frameworkAdditionMap` / `frameworkDeletionMap` by framework id |
 
 ### Frontend
 
@@ -498,6 +598,9 @@ Cascades deletion of all implementation data.
 | `pages/Framework/NIST-AI-RMF/` | NIST views |
 | `utils/frameworkDataUtils.ts` | Data utilities |
 | `constants/frameworks.ts` | Framework constants |
+| `pages/Framework/Generic/` | Generic framework page (bundled frameworks) |
+| `components/Drawer/GenericFrameworkDrawer/` | Generic requirement drawer |
+| `pages/ProjectView/AddNewFramework/` | "AI Frameworks" add/remove modal |
 
 ## Related Documentation
 

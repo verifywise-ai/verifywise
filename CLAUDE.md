@@ -1,6 +1,6 @@
 # VerifyWise - Development Guide
 
-> **Last Updated:** 2026-09-17
+> **Last Updated:** 2026-09-26
 
 This document contains cross-cutting rules for the VerifyWise codebase. Directory-scoped guides load automatically when working in each area:
 
@@ -28,19 +28,21 @@ Always update the "Last Updated" date when modifying any CLAUDE.md file.
 
 ---
 
-## Related Repositories
+## Frameworks and Extensions
 
-| Repository | Location | Purpose |
-|------------|----------|---------|
-| **plugin-marketplace** | `../plugin-marketplace` (sibling directory) | All plugins (30+), framework plugins (SOC 2, GDPR, etc.), integration plugins. See `plugin-marketplace/CLAUDE.md`. |
+Everything is in this repository. There is no separate plugin repository. The former plugin system and marketplace were removed in August 2026.
 
-> Plugin source code is NOT in this repository. Work in the plugin-marketplace repo.
+| What | Where | Reference |
+|------|-------|-----------|
+| Core frameworks (EU AI Act, ISO 42001, ISO 27001, NIST AI RMF; ids 1–4) | Hand-built tables, routes and pages | `docs/technical/domains/compliance-frameworks.md` |
+| 21 bundled frameworks (SOC 2, GDPR, HIPAA, ...; ids 5–25) | `Servers/structures/<Name>/*.structure.ts`, registry `Servers/structures/index.ts` | `docs/technical/guides/adding-new-framework.md` |
+| 7 extensions (Slack, MLflow, Azure AI Foundry, Model Lifecycle, Risk Import, Jira Assets, Dataset Bulk Upload) | `Servers/extensions/<key>/` + `Clients/src/presentation/pages/Extensions/` | `docs/technical/infrastructure/extensions.md` |
 
 ---
 
 ## Project Overview
 
-VerifyWise is an AI governance platform supporting EU AI Act, ISO 42001, ISO 27001, NIST AI RMF, and plugin frameworks (SOC 2, GDPR, HIPAA, etc.).
+VerifyWise is an AI governance platform supporting EU AI Act, ISO 42001, ISO 27001, NIST AI RMF, and 21 more built-in frameworks (SOC 2, GDPR, HIPAA, etc.), plus built-in extensions (integrations an Admin enables per organization).
 
 ### Tech Stack
 
@@ -201,10 +203,10 @@ Read the relevant file BEFORE implementing changes in that area:
 | When working on... | Read this file |
 |---------------------|---------------|
 | Adding a new feature (full guide) | `docs/technical/guides/adding-new-feature.md` |
-| Adding a new framework | `docs/technical/guides/adding-new-framework.md` |
+| Adding a new framework (`Servers/structures` registry) | `docs/technical/guides/adding-new-framework.md` |
 | Code style (short version) | `docs/technical/guides/code-style.md` |
 | Detailed coding standards (TS, React, backend, security, testing) | `CodeRules/README.md` |
-| Plugin system | `docs/technical/infrastructure/plugin-system.md` |
+| Extensions (built-in integrations: catalog, enablement, gate middleware) | `docs/technical/infrastructure/extensions.md` |
 | Approval workflows | `docs/technical/domains/approvals.md` |
 | Agent Control (AI Gateway native tool-call hook, file-write gating, approval, result capture, run correlation, multi-agent wiring) | `docs/technical/domains/agent-control.md` |
 | Agent Control integrator/developer docs (connect an agent, Claude Code + Cursor, generic contract, API ref) | `shared/user-guide-content/content/developers/` |
@@ -243,7 +245,7 @@ Read the relevant file BEFORE implementing changes in that area:
 ## Additional Resources
 
 - [Code Rules](./CodeRules/README.md) - Detailed coding standards
-- [Plugin System](./docs/PLUGIN_SYSTEM.md) - Plugin architecture
+- [Extensions](./docs/technical/infrastructure/extensions.md) - Built-in extensions architecture
 - [Technical Docs](./docs/technical/) - Architecture documentation
 - [API Docs](./Servers/swagger.yaml) - OpenAPI specification
 - [Agent Roles](./agents/) - AI-assisted development roles

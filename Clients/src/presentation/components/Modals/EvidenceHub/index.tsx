@@ -6,10 +6,8 @@ import { UploadIcon } from "lucide-react";
 import { CustomizableButton } from "../../button/customizable-button";
 import FileManagerUploadModal from "../FileManagerUpload";
 import { Trash2 as DeleteIconGrey } from "lucide-react";
-import dayjs, { Dayjs } from "dayjs";
 import { getAllEntities } from "../../../../application/repository/entity.repository";
 import SelectComponent from "../../Inputs/Select";
-import DatePicker from "../../Inputs/Datepicker";
 import { EvidenceHubModel } from "../../../../domain/models/Common/evidenceHub/evidenceHub.model";
 import { EvidenceType } from "../../../../domain/enums/evidenceHub.enum";
 import Field from "../../Inputs/Field";
@@ -47,7 +45,6 @@ interface NewEvidenceHubFormErrors {
   mapped_model_ids?: string;
   files?: string;
   description?: string;
-  expiry_date?: string;
 }
 
 const WIZARD_STEPS = [
@@ -66,17 +63,6 @@ const FRAMEWORK_OPTIONS = [
   "SOC 2",
   "GDPR",
   "HIPAA",
-];
-
-const RETENTION_OPTIONS = [
-  { _id: "30_days", name: "30 days" },
-  { _id: "90_days", name: "90 days" },
-  { _id: "6_months", name: "6 months" },
-  { _id: "1_year", name: "1 year" },
-  { _id: "3_years", name: "3 years" },
-  { _id: "5_years", name: "5 years" },
-  { _id: "7_years", name: "7 years" },
-  { _id: "indefinite", name: "Indefinite" },
 ];
 
 const TAG_SUGGESTIONS = [
@@ -120,12 +106,10 @@ const initialState: EvidenceHubModel = {
   evidence_type: "",
   description: "",
   mapped_model_ids: [],
-  expiry_date: null,
   evidence_files: [] as FileResponse[],
   tags: [],
   framework_ids: [],
   reviewer_id: null,
-  retention_policy: null,
 };
 
 const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
@@ -219,14 +203,6 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
     [],
   );
 
-  const handleDateChange = useCallback((newDate: Dayjs | null) => {
-    setValues((prev) => ({
-      ...prev,
-      expiry_date: newDate?.isValid() ? newDate.toDate() : null,
-    }));
-    setErrors((prev) => ({ ...prev, expiry_date: "" }));
-  }, []);
-
   const handleUploadSuccess = (files: FileResponse[]) => {
     const mapped = files.map((file) => ({
       id: file.id,
@@ -279,15 +255,6 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
       }
       if (!values.description?.trim()) {
         newErrors.description = "Description is required";
-      }
-      if (values.expiry_date) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const expiry = new Date(values.expiry_date);
-        expiry.setHours(0, 0, 0, 0);
-        if (expiry < today) {
-          newErrors.expiry_date = "Expiry date cannot be in the past";
-        }
       }
     }
 
@@ -466,24 +433,6 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
                 error={errors.description}
               />
             </Suspense>
-
-            <Stack direction="row" spacing={6}>
-              <Box sx={{ flex: 1 }}>
-                <Suspense fallback={<div>Loading...</div>}>
-                  <DatePicker
-                    label="Expiry date"
-                    date={values.expiry_date ? dayjs(values.expiry_date) : null}
-                    handleDateChange={handleDateChange}
-                    sx={{
-                      width: "100%",
-                      backgroundColor: theme.palette.background.main,
-                    }}
-                    error={errors.expiry_date}
-                  />
-                </Suspense>
-              </Box>
-              <Box sx={{ flex: 1 }} />
-            </Stack>
           </Stack>
         );
 
@@ -584,21 +533,6 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
                 }));
               }}
               placeholder="Select a reviewer"
-              sx={{ width: "100%" }}
-            />
-
-            <SelectComponent
-              id="retention-policy"
-              label="Retention / review cycle"
-              items={RETENTION_OPTIONS}
-              value={values.retention_policy ?? ""}
-              onChange={(event: any) => {
-                setValues((prev) => ({
-                  ...prev,
-                  retention_policy: event.target.value || null,
-                }));
-              }}
-              placeholder="Select retention policy"
               sx={{ width: "100%" }}
             />
           </Stack>

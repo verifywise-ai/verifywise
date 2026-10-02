@@ -17,7 +17,7 @@ import Field from "../../../components/Inputs/Field";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { EmptyState } from "../../../components/EmptyState";
 import CustomizableSkeleton from "../../../components/Skeletons";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { MrmFindingSeverity, MrmFindingStage } from "../../../../domain/enums/mrm.enum";
 import { IMrmFinding, IMrmFleetRow } from "../../../../domain/interfaces/i.mrm";
 import { MrmUser } from "./types";
@@ -56,6 +56,7 @@ interface FindingsTabProps {
 }
 
 const FindingsTab = ({ users, onError, onSuccess }: FindingsTabProps) => {
+  const formatDate = useFormattedDate();
   const { data: findings = [], isLoading } = useFindings();
   const { data: fleet = [] } = useFleetTiering();
   const { data: validations = [] } = useValidations();
@@ -190,7 +191,7 @@ const FindingsTab = ({ users, onError, onSuccess }: FindingsTabProps) => {
                   <TableCell sx={mrmTableCellStyle}>{userName(finding.owner_id)}</TableCell>
                   <TableCell sx={mrmTableCellStyle}>{finding.remediation_plan || "—"}</TableCell>
                   <TableCell sx={mrmTableCellStyle}>
-                    {finding.due_date ? displayFormattedDate(finding.due_date) : "—"}
+                    {finding.due_date ? formatDate(finding.due_date) : "—"}
                   </TableCell>
                   <TableCell sx={mrmTableCellStyle}>
                     <Chip

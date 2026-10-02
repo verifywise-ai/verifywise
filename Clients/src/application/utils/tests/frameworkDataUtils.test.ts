@@ -172,6 +172,17 @@ describe("frameworkDataUtils", () => {
       // Assigned (owner not null/undefined) = 2/4 => 50
       expect(result.assignmentPercentage).toBe(50);
     });
+
+    it("counts Audited as completed", () => {
+      const items = [
+        { id: 1, title: "a", status: "Implemented", owner: 1 },
+        { id: 2, title: "b", status: "Audited", owner: null },
+        { id: 3, title: "c", status: "In progress", owner: null },
+        { id: 4, title: "d", status: "Not started", owner: null },
+      ];
+
+      expect(calculateItemPercentages(items as any).completionPercentage).toBe(50);
+    });
   });
 
   describe("isValidClauseNumber", () => {
@@ -181,33 +192,33 @@ describe("frameworkDataUtils", () => {
       expect(console.warn).toHaveBeenCalled();
     });
 
-    it("ISO27001: returns false when both arrangement and clause_no missing", () => {
+    it("ISO27001: returns false when clause_id missing", () => {
       (isISO27001 as any).mockReturnValue(true);
       expect(isValidClauseNumber({ title: "x" }, "ISO 27001")).toBe(false);
       expect(console.warn).toHaveBeenCalled();
     });
 
-    it("ISO27001: returns false when arrangement/clause_no not numeric", () => {
+    it("ISO27001: returns false when clause_id not numeric", () => {
       (isISO27001 as any).mockReturnValue(true);
-      expect(isValidClauseNumber({ arrangement: "A" }, "ISO 27001")).toBe(false);
+      expect(isValidClauseNumber({ clause_id: "A" }, "ISO 27001")).toBe(false);
       expect(console.warn).toHaveBeenCalled();
     });
 
-    it("ISO27001: returns true when clause number in range using arrangement", () => {
+    it("ISO27001: returns true when clause number in range using clause_id", () => {
       (isISO27001 as any).mockReturnValue(true);
-      expect(isValidClauseNumber({ arrangement: "4" }, "ISO 27001")).toBe(true);
-      expect(isValidClauseNumber({ arrangement: "10" }, "ISO 27001")).toBe(true);
+      expect(isValidClauseNumber({ clause_id: "4" }, "ISO 27001")).toBe(true);
+      expect(isValidClauseNumber({ clause_id: "10" }, "ISO 27001")).toBe(true);
     });
 
     it("ISO27001: returns false when clause number out of range", () => {
       (isISO27001 as any).mockReturnValue(true);
-      expect(isValidClauseNumber({ arrangement: "3" }, "ISO 27001")).toBe(false);
-      expect(isValidClauseNumber({ arrangement: "11" }, "ISO 27001")).toBe(false);
+      expect(isValidClauseNumber({ clause_id: "3" }, "ISO 27001")).toBe(false);
+      expect(isValidClauseNumber({ clause_id: "11" }, "ISO 27001")).toBe(false);
     });
 
     it("ISO42001: returns false when clause_no missing", () => {
       (isISO27001 as any).mockReturnValue(false);
-      expect(isValidClauseNumber({ arrangement: "4" }, "ISO 42001")).toBe(false);
+      expect(isValidClauseNumber({ clause_id: "4" }, "ISO 42001")).toBe(false);
       expect(console.warn).toHaveBeenCalled();
     });
 
@@ -223,22 +234,17 @@ describe("frameworkDataUtils", () => {
       expect(isValidClauseNumber({ clause_no: "10" }, "ISO 42001")).toBe(true);
     });
 
-    it("ISO27001: falls back to clause_no when arrangement is present but falsy (covers OR branch at line 202)", () => {
+    it("ISO27001: returns false when clause_id is present but empty", () => {
       (isISO27001 as any).mockReturnValue(true);
-
-      // arrangement exists (does not trigger 'missing clause number'), but is "" (falsy)
-      // so it should use clause_no
-      const result = isValidClauseNumber({ arrangement: "", clause_no: "4" }, "ISO 27001");
-
-      expect(result).toBe(true);
+      expect(isValidClauseNumber({ clause_id: "" }, "ISO 27001")).toBe(false);
+      expect(console.warn).toHaveBeenCalled();
     });
   });
 
   describe("getClauseNumber", () => {
-    it("ISO27001 uses arrangement fallback to clause_no", () => {
+    it("ISO27001 uses clause_id", () => {
       (isISO27001 as any).mockReturnValue(true);
-      expect(getClauseNumber({ arrangement: "5", clause_no: "6" }, "ISO 27001")).toBe(5);
-      expect(getClauseNumber({ clause_no: "6" }, "ISO 27001")).toBe(6);
+      expect(getClauseNumber({ clause_id: "5", clause_no: "6" }, "ISO 27001")).toBe(5);
     });
 
     it("ISO42001 uses clause_no", () => {

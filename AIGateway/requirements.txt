@@ -9,15 +9,15 @@ cryptography>=50.0.1
 httpx>=0.28.1
 
 # Database (async PostgreSQL)
-sqlalchemy[asyncio]>=2.0.54
+sqlalchemy[asyncio]>=2.1.0
 asyncpg>=0.31.0
 
 # LiteLLM SDK (MIT licensed)
 # Pinned to a specific version — updated per VerifyWise release
-litellm==1.101.0
+litellm==1.102.1
 
 # Database migrations (Alembic)
-sqlalchemy[asyncio]>=2.0.54
+sqlalchemy[asyncio]>=2.1.0
 asyncpg>=0.29.0
 alembic>=1.20.0
 

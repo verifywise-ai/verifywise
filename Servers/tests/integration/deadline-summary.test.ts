@@ -1,3 +1,8 @@
+// Integration suites share one Postgres instance and truncate between
+// tests; the default 5s hook timeout is not enough once several suites
+// run in the same --runInBand pass. Same value as the isolation matrix.
+jest.setTimeout(60000);
+
 import { createTestApp, testRequest } from "./setup";
 import { createTestOrganization, createTestUser, cleanupDatabase } from "./helpers";
 import { createTestTask, assignTaskToUser } from "../factories/test-entities.factory";

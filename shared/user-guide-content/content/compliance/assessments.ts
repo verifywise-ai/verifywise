@@ -24,7 +24,7 @@ export const assessmentsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise includes support for the following compliance frameworks:',
+      text: 'VerifyWise has built-in support for these four core frameworks:',
     },
     {
       type: 'icon-cards',
@@ -50,6 +50,10 @@ export const assessmentsContent: ArticleContent = {
           description: 'Voluntary risk management framework with practical guidance for trustworthy AI.',
         },
       ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Another 21 frameworks are built in as well, including SOC 2 Type II, GDPR, CCPA, DORA, HIPAA, PCI-DSS, CIS Controls v8, the NIST Cybersecurity Framework, NYC Local Law 144 and several national data protection laws. All of them are available to every organization. See **Adding frameworks** for the full list and how to add them.',
     },
     {
       type: 'heading',
@@ -173,6 +177,12 @@ export const assessmentsContent: ArticleContent = {
       type: 'article-links',
       title: 'Framework documentation',
       items: [
+        {
+          collectionId: 'compliance',
+          articleId: 'adding-frameworks',
+          title: 'Adding frameworks',
+          description: 'All 25 built-in frameworks and how to add them',
+        },
         {
           collectionId: 'compliance',
           articleId: 'eu-ai-act',

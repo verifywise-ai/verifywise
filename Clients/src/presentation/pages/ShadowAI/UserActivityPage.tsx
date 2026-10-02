@@ -51,7 +51,7 @@ import {
   SortableTableHead,
 } from "./constants";
 import { palette } from "../../themes/palette";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 interface UserDetailData {
   email: string;
@@ -80,6 +80,7 @@ const BASE_TABS = [
 const DEPT_PER_PAGE = 10;
 
 export default function UserActivityPage() {
+  const formatDate = useFormattedDate();
   const location = useLocation();
   const navigate = useNavigate();
   const theme = useTheme();
@@ -361,7 +362,7 @@ export default function UserActivityPage() {
                           {t.event_count}
                         </TableCell>
                         <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                          {displayFormattedDate(t.last_used)}
+                          {formatDate(t.last_used)}
                         </TableCell>
                       </TableRow>
                     ))}

@@ -20,6 +20,7 @@ const FileTable: React.FC<IFileTableProps> = ({
   visibleColumnKeys,
   canRunBulkActions = false,
   onBulkActionSuccess,
+  emptyMessage,
 }) => {
   const [sortField, setSortField] = useState<keyof FileModel | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
@@ -94,7 +95,9 @@ const FileTable: React.FC<IFileTableProps> = ({
   return files.length === 0 ? (
     <EmptyState
       icon={FileText}
-      message="There are currently no pieces of evidence or other documents uploaded."
+      message={
+        emptyMessage ?? "There are currently no pieces of evidence or other documents uploaded."
+      }
       imageAlt="No files available"
     />
   ) : (

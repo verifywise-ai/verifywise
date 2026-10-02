@@ -215,18 +215,28 @@ async def get_spend_by_day(
             ORDER BY hours.bucket ASC
         """)
     else:
-        # Daily breakdown
+        # Daily breakdown: one row per calendar day in the range, zero-filled,
+        # so a 7d/30d chart shows quiet days instead of skipping them.
         sql = text("""
+            WITH days AS (
+                SELECT generate_series(
+                    CAST(CAST(:start_date AS timestamptz) AS date),
+                    CAST(CAST(:end_date AS timestamptz) AS date),
+                    INTERVAL '1 day'
+                )::date AS day
+            )
             SELECT
-                DATE(created_at)                        AS period,
-                COALESCE(SUM(cost_usd) FILTER (WHERE cost_usd <> 'NaN'::numeric), 0)              AS total_cost,
-                COUNT(*)                                AS total_requests,
-                COALESCE(SUM(total_tokens), 0)          AS total_tokens
-            FROM ai_gateway_spend_logs
-            WHERE organization_id = :org_id
-              AND created_at BETWEEN :start_date AND :end_date
-            GROUP BY DATE(created_at)
-            ORDER BY period ASC
+                days.day                                AS period,
+                COALESCE(SUM(sl.cost_usd) FILTER (WHERE sl.cost_usd <> 'NaN'::numeric), 0)        AS total_cost,
+                COUNT(sl.id)                            AS total_requests,
+                COALESCE(SUM(sl.total_tokens), 0)       AS total_tokens
+            FROM days
+            LEFT JOIN ai_gateway_spend_logs sl
+                   ON sl.organization_id = :org_id
+                  AND sl.created_at BETWEEN CAST(:start_date AS timestamptz) AND CAST(:end_date AS timestamptz)
+                  AND DATE(sl.created_at) = days.day
+            GROUP BY days.day
+            ORDER BY days.day ASC
         """)
 
     result = await db.execute(
@@ -333,23 +343,33 @@ async def get_error_rate_by_day(
     end_date: str,
 ) -> list[dict]:
     """
-    Return total requests, error count, and error_rate per day.
+    Return total requests, error count, and error_rate per day, with one row
+    per calendar day in the range (zero-filled for days without traffic).
     """
     sql = text("""
+        WITH days AS (
+            SELECT generate_series(
+                CAST(CAST(:start_date AS timestamptz) AS date),
+                CAST(CAST(:end_date AS timestamptz) AS date),
+                INTERVAL '1 day'
+            )::date AS day
+        )
         SELECT
-            DATE(created_at)                                AS day,
-            COUNT(*)                                        AS total_requests,
-            COUNT(*) FILTER (WHERE status_code >= 400)        AS error_count,
-            ROUND(
-                COUNT(*) FILTER (WHERE status_code >= 400)::numeric
-                / NULLIF(COUNT(*), 0) * 100,
+            days.day                                        AS day,
+            COUNT(sl.id)                                    AS total_requests,
+            COUNT(sl.id) FILTER (WHERE sl.status_code >= 400) AS error_count,
+            COALESCE(ROUND(
+                COUNT(sl.id) FILTER (WHERE sl.status_code >= 400)::numeric
+                / NULLIF(COUNT(sl.id), 0) * 100,
                 2
-            )                                               AS error_rate
-        FROM ai_gateway_spend_logs
-        WHERE organization_id = :org_id
-          AND created_at BETWEEN :start_date AND :end_date
-        GROUP BY DATE(created_at)
-        ORDER BY day ASC
+            ), 0)                                           AS error_rate
+        FROM days
+        LEFT JOIN ai_gateway_spend_logs sl
+               ON sl.organization_id = :org_id
+              AND sl.created_at BETWEEN CAST(:start_date AS timestamptz) AND CAST(:end_date AS timestamptz)
+              AND DATE(sl.created_at) = days.day
+        GROUP BY days.day
+        ORDER BY days.day ASC
     """)
     result = await db.execute(
         sql,

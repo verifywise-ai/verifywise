@@ -30,6 +30,8 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: "22"
+          cache: npm
+          cache-dependency-path: Servers/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -64,6 +66,8 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: "22"
+          cache: npm
+          cache-dependency-path: Servers/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -124,6 +128,22 @@ jobs:
       run:
         working-directory: Servers
 
+    env:
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: verifywise_test
+      NODE_ENV: test
+      SUPERADMIN_EMAIL: super@local.dev
+      SUPERADMIN_PASSWORD: Super123!
+      JWT_SECRET: test-jwt-secret-key-for-testing-only
+      REFRESH_TOKEN_SECRET: test-refresh-secret-key-for-testing-only
+      ENCRYPTION_KEY: default-key-change-this-in-production-32chars!!
+      # Required by the RLS runtime-role migration (rls-app-role.js), run via
+      # globalSetup; it fails closed without it. CI-only value.
+      DB_APP_PASSWORD: test-app-role-password-for-ci
+
     services:
       postgres:
         image: postgres:16
@@ -146,26 +166,13 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: "22"
+          cache: npm
+          cache-dependency-path: Servers/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
       - name: Run tenant-isolation integration matrix
-        env:
-          DB_HOST: localhost
-          DB_PORT: "5432"
-          DB_USER: postgres
-          DB_PASSWORD: postgres
-          DB_NAME: verifywise_test
-          NODE_ENV: test
-          SUPERADMIN_EMAIL: super@local.dev
-          SUPERADMIN_PASSWORD: Super123!
-          JWT_SECRET: test-jwt-secret-key-for-testing-only
-          REFRESH_TOKEN_SECRET: test-refresh-secret-key-for-testing-only
-          ENCRYPTION_KEY: default-key-change-this-in-production-32chars!!
-          # Required by the RLS runtime-role migration (rls-app-role.js), run via
-          # globalSetup; it fails closed without it. CI-only value.
-          DB_APP_PASSWORD: test-app-role-password-for-ci
         run: npm run test:integration -- --testPathPatterns=tenant-isolation
 
       # These suites live outside tests/integration/tenant-isolation/, so the
@@ -182,58 +189,13 @@ jobs:
       # multi-table transactional delete and the response envelope the frontend
       # destructures are only exercised here, against a real database.
       - name: Run database-backed regression suites
-        env:
-          DB_HOST: localhost
-          DB_PORT: "5432"
-          DB_USER: postgres
-          DB_PASSWORD: postgres
-          DB_NAME: verifywise_test
-          NODE_ENV: test
-          SUPERADMIN_EMAIL: super@local.dev
-          SUPERADMIN_PASSWORD: Super123!
-          JWT_SECRET: test-jwt-secret-key-for-testing-only
-          REFRESH_TOKEN_SECRET: test-refresh-secret-key-for-testing-only
-          ENCRYPTION_KEY: default-key-change-this-in-production-32chars!!
-          # Required by the RLS runtime-role migration (rls-app-role.js), run via
-          # globalSetup; it fails closed without it. CI-only value.
-          DB_APP_PASSWORD: test-app-role-password-for-ci
         run: |
           npm run test:integration -- --testPathPatterns='tests/integration/(workflow-audit-log|user-deletion-fks|reporting-rls-policies|report-run-visibility|framework-gap-workflow|report-scope-membership|report-scope-authorization|workflow-approval-gate|file-manager|rate-limiting/limiter-wiring)\.test\.ts'
 
       - name: Run deadline-summary smoke test
-        env:
-          DB_HOST: localhost
-          DB_PORT: "5432"
-          DB_USER: postgres
-          DB_PASSWORD: postgres
-          DB_NAME: verifywise_test
-          NODE_ENV: test
-          SUPERADMIN_EMAIL: super@local.dev
-          SUPERADMIN_PASSWORD: Super123!
-          JWT_SECRET: test-jwt-secret-key-for-testing-only
-          REFRESH_TOKEN_SECRET: test-refresh-secret-key-for-testing-only
-          ENCRYPTION_KEY: default-key-change-this-in-production-32chars!!
-          # Required by the RLS runtime-role migration (rls-app-role.js), run via
-          # globalSetup; it fails closed without it. CI-only value.
-          DB_APP_PASSWORD: test-app-role-password-for-ci
         run: npm run test:smoke
 
       - name: Run schema-drift tenant isolation audit
-        env:
-          DB_HOST: localhost
-          DB_PORT: "5432"
-          DB_USER: postgres
-          DB_PASSWORD: postgres
-          DB_NAME: verifywise_test
-          NODE_ENV: test
-          SUPERADMIN_EMAIL: super@local.dev
-          SUPERADMIN_PASSWORD: Super123!
-          JWT_SECRET: test-jwt-secret-key-for-testing-only
-          REFRESH_TOKEN_SECRET: test-refresh-secret-key-for-testing-only
-          ENCRYPTION_KEY: default-key-change-this-in-production-32chars!!
-          # Required by the RLS runtime-role migration (rls-app-role.js), run via
-          # globalSetup; it fails closed without it. CI-only value.
-          DB_APP_PASSWORD: test-app-role-password-for-ci
         run: npx ts-node scripts/auditTenantIsolationCoverage.ts
 
   api-docs-drift:
@@ -250,6 +212,8 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: "22"
+          cache: npm
+          cache-dependency-path: Servers/package-lock.json
 
       - name: Install dependencies
         run: npm ci
@@ -281,6 +245,8 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: "22"
+          cache: npm
+          cache-dependency-path: Servers/package-lock.json
 
       - name: Install dependencies
         run: npm ci

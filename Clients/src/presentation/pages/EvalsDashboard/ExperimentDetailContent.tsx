@@ -42,7 +42,7 @@ import {
   type Experiment,
   type EvaluationLog,
 } from "../../../application/repository/deepEval.repository";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 // Preprocess LaTeX delimiters to work with remark-math
 const preprocessLatex = (text: string): string => {
@@ -181,6 +181,7 @@ export default function ExperimentDetailContent({
   projectId,
   onBack,
 }: ExperimentDetailContentProps) {
+  const formatDate = useFormattedDate();
   const [loading, setLoading] = useState(true);
   const [experiment, setExperiment] = useState<Experiment | null>(null);
   const [logs, setLogs] = useState<EvaluationLog[]>([]);
@@ -322,7 +323,7 @@ export default function ExperimentDetailContent({
         (experiment as unknown as { config?: Record<string, Record<string, unknown>> }).config ||
         {};
 
-      const nextName = `${experiment.name || "Eval"} (rerun ${displayFormattedDate(new Date())})`;
+      const nextName = `${experiment.name || "Eval"} (rerun ${formatDate(new Date())})`;
 
       const payload = {
         project_id: projectId,
@@ -838,7 +839,7 @@ export default function ExperimentDetailContent({
                       : palette.text.secondary,
                 }}
               >
-                {displayFormattedDate(experiment.created_at)}
+                {formatDate(experiment.created_at)}
               </Typography>
             </Box>
           </Stack>

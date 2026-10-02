@@ -257,7 +257,7 @@
     description: >
       Returns all model inventories associated with a project (via the
       model_inventories_projects_frameworks join table where framework_id IS NULL).
-      Non-numeric project IDs (e.g. plugin-sourced) return an empty array.
+      Non-numeric project IDs return an empty array.
     security:
       - bearerAuth: []
     parameters:

@@ -1,35 +1,77 @@
 /**
- * Demo Data Seeder for Incident Management
+ * Incident management demo seeder — creates 8 realistic AI incidents through
+ * the real HTTP API (POST /api/ai-incident-managements), so validation,
+ * change history and "incident_added" automations behave exactly as in the UI.
  *
- * This script generates realistic demo incident data for testing and demonstration purposes.
+ * Auth (never hardcoded; pick one):
+ *   AUTH_TOKEN=<jwt>                          an access token for the target org
+ *   SEED_EMAIL=<email> SEED_PASSWORD=<pw>     logs in via POST /api/users/login
+ * The incidents land in the org of the authenticated user.
  *
- * Usage:
- *   npm run seed:incidents
- *   or
- *   npx tsx scripts/seedIncidentData.ts
+ * Idempotent: incidents whose description already exists in the org are
+ * skipped, so reruns add nothing.
+ *
+ * LOCAL / DEMO ONLY. Requires the backend to be running.
+ *
+ * Usage (from Servers/):
+ *   SEED_EMAIL=admin@example.com SEED_PASSWORD=... npm run seed:incidents
+ *   npm run seed:incidents -- --json    # print the payloads, write nothing
+ *
+ * Env:
+ *   API_BASE_URL   (default http://localhost:3000/api)
  */
 
 import {
   AIIncidentManagementApprovalStatus,
-  IncidentManagementStatus,
-  Severity,
+  AIIncidentManagementStatus,
   IncidentType,
-  HarmCategory,
-} from "../src/domain/enums/aiIncidentManagement.enum.ts";
-import type { IAIIncidentManagement } from "../src/domain/interfaces/i.incidentManagement.ts";
+  Severity,
+} from "../../domain.layer/enums/ai-incident-management.enum";
 
-// Demo incident templates
-const demoIncidents: Omit<IAIIncidentManagement, "id" | "created_at" | "updated_at">[] = [
+// categories_of_harm values the API accepts (see the frontend HarmCategory enum).
+const HARM = {
+  HEALTH: "Health",
+  SAFETY: "Safety",
+  RIGHTS: "Rights",
+  PROPERTY: "Property",
+  ENVIRONMENT: "Environment",
+} as const;
+
+interface SeedIncident {
+  incident_id: string;
+  ai_project: string;
+  type: IncidentType;
+  severity: Severity;
+  status: AIIncidentManagementStatus;
+  occurred_date: string;
+  date_detected: string;
+  reporter: string;
+  categories_of_harm: string[];
+  affected_persons_groups?: string;
+  description: string;
+  relationship_causality?: string;
+  immediate_mitigations?: string;
+  planned_corrective_actions?: string;
+  model_system_version?: string;
+  interim_report: boolean;
+  approval_status: AIIncidentManagementApprovalStatus;
+  approved_by?: string;
+  approval_date?: string;
+  approval_notes?: string;
+  archived: boolean;
+}
+
+const DEMO_INCIDENTS: SeedIncident[] = [
   {
     incident_id: "INC-2024-001",
     ai_project: "Customer Support Chatbot v2.1",
     type: IncidentType.UNEXPECTED_BEHAVIOR,
     severity: Severity.SERIOUS,
-    status: IncidentManagementStatus.MITIGATED,
+    status: AIIncidentManagementStatus.MITIGATED,
     occurred_date: "2024-01-15",
     date_detected: "2024-01-16",
     reporter: "Sarah Johnson",
-    categories_of_harm: [HarmCategory.FUNDAMENTAL_RIGHTS, HarmCategory.PROPERTY],
+    categories_of_harm: [HARM.RIGHTS, HARM.PROPERTY],
     affected_persons_groups: "Approximately 150 customers in the EMEA region",
     description:
       "The chatbot provided incorrect financial advice to customers, potentially leading to monetary losses. The model exhibited unexpected behavior when processing complex multi-turn conversations about investment products.",
@@ -52,11 +94,11 @@ const demoIncidents: Omit<IAIIncidentManagement, "id" | "created_at" | "updated_
     ai_project: "Resume Screening AI",
     type: IncidentType.MALFUNCTION,
     severity: Severity.VERY_SERIOUS,
-    status: IncidentManagementStatus.INVESTIGATED,
+    status: AIIncidentManagementStatus.INVESTIGATING,
     occurred_date: "2024-02-03",
     date_detected: "2024-02-10",
     reporter: "David Martinez",
-    categories_of_harm: [HarmCategory.FUNDAMENTAL_RIGHTS],
+    categories_of_harm: [HARM.RIGHTS],
     affected_persons_groups: "Job applicants from underrepresented demographics",
     description:
       "Bias audit revealed the resume screening model systematically ranked candidates from certain ethnic backgrounds lower, violating fair hiring practices and equal opportunity regulations.",
@@ -78,11 +120,11 @@ const demoIncidents: Omit<IAIIncidentManagement, "id" | "created_at" | "updated_
     ai_project: "Predictive Maintenance System",
     type: IncidentType.MODEL_DRIFT,
     severity: Severity.SERIOUS,
-    status: IncidentManagementStatus.OPEN,
+    status: AIIncidentManagementStatus.OPEN,
     occurred_date: "2024-03-12",
     date_detected: "2024-03-14",
     reporter: "Jennifer Lee",
-    categories_of_harm: [HarmCategory.SAFETY, HarmCategory.PROPERTY],
+    categories_of_harm: [HARM.SAFETY, HARM.PROPERTY],
     affected_persons_groups:
       "Factory workers and equipment operators at 3 manufacturing facilities",
     description:
@@ -105,11 +147,11 @@ const demoIncidents: Omit<IAIIncidentManagement, "id" | "created_at" | "updated_
     ai_project: "Content Moderation AI",
     type: IncidentType.MISUSE,
     severity: Severity.MINOR,
-    status: IncidentManagementStatus.CLOSED,
+    status: AIIncidentManagementStatus.CLOSED,
     occurred_date: "2024-01-28",
     date_detected: "2024-01-28",
     reporter: "Alex Thompson",
-    categories_of_harm: [HarmCategory.FUNDAMENTAL_RIGHTS],
+    categories_of_harm: [HARM.RIGHTS],
     affected_persons_groups: "Small number of content creators (estimated 20-30 users)",
     description:
       "Adversarial users discovered technique to bypass content moderation filters through strategic character substitution, allowing policy-violating content to remain visible temporarily.",
@@ -132,11 +174,11 @@ const demoIncidents: Omit<IAIIncidentManagement, "id" | "created_at" | "updated_
     ai_project: "Medical Diagnosis Assistant",
     type: IncidentType.SECURITY_BREACH,
     severity: Severity.VERY_SERIOUS,
-    status: IncidentManagementStatus.INVESTIGATED,
+    status: AIIncidentManagementStatus.INVESTIGATING,
     occurred_date: "2024-02-20",
     date_detected: "2024-02-21",
     reporter: "Dr. Robert Kim",
-    categories_of_harm: [HarmCategory.HEALTH, HarmCategory.FUNDAMENTAL_RIGHTS],
+    categories_of_harm: [HARM.HEALTH, HARM.RIGHTS],
     affected_persons_groups: "Patient data potentially accessed: approximately 500 records",
     description:
       "Prompt injection attack exploited model vulnerability to extract training data containing patient information. Security researcher responsibly disclosed the vulnerability.",
@@ -160,11 +202,11 @@ const demoIncidents: Omit<IAIIncidentManagement, "id" | "created_at" | "updated_
     ai_project: "Smart Traffic Management",
     type: IncidentType.PERFORMANCE_DEGRADATION,
     severity: Severity.SERIOUS,
-    status: IncidentManagementStatus.MITIGATED,
+    status: AIIncidentManagementStatus.MITIGATED,
     occurred_date: "2024-03-05",
     date_detected: "2024-03-05",
     reporter: "Carlos Mendez",
-    categories_of_harm: [HarmCategory.SAFETY, HarmCategory.ENVIRONMENT],
+    categories_of_harm: [HARM.SAFETY, HARM.ENVIRONMENT],
     affected_persons_groups: "Commuters in downtown district (approximately 50,000 daily users)",
     description:
       "Traffic signal optimization algorithm failed during peak hours, causing 40% increase in congestion and elevated vehicle emissions. System performance degraded after software update.",
@@ -188,11 +230,11 @@ const demoIncidents: Omit<IAIIncidentManagement, "id" | "created_at" | "updated_
     ai_project: "Fraud Detection System",
     type: IncidentType.DATA_CORRUPTION,
     severity: Severity.MINOR,
-    status: IncidentManagementStatus.CLOSED,
+    status: AIIncidentManagementStatus.CLOSED,
     occurred_date: "2024-01-10",
     date_detected: "2024-01-12",
     reporter: "Lisa Wang",
-    categories_of_harm: [HarmCategory.PROPERTY],
+    categories_of_harm: [HARM.PROPERTY],
     affected_persons_groups: "Small business customers (12 accounts)",
     description:
       "Data corruption in transaction logs caused false positive fraud alerts for legitimate business transactions, temporarily blocking valid payments.",
@@ -215,11 +257,11 @@ const demoIncidents: Omit<IAIIncidentManagement, "id" | "created_at" | "updated_
     ai_project: "Autonomous Warehouse Robots",
     type: IncidentType.MALFUNCTION,
     severity: Severity.SERIOUS,
-    status: IncidentManagementStatus.INVESTIGATED,
+    status: AIIncidentManagementStatus.INVESTIGATING,
     occurred_date: "2024-02-28",
     date_detected: "2024-02-28",
     reporter: "James Patterson",
-    categories_of_harm: [HarmCategory.SAFETY],
+    categories_of_harm: [HARM.SAFETY],
     affected_persons_groups: "Warehouse personnel (15 workers in affected zone)",
     description:
       "Navigation system malfunction caused robot to deviate from designated pathways, creating collision risk with warehouse staff. Emergency stop activated by safety observer.",
@@ -238,164 +280,78 @@ const demoIncidents: Omit<IAIIncidentManagement, "id" | "created_at" | "updated_
   },
 ];
 
-/**
- * Formats and displays incident data for review
- */
-function displayIncidents(
-  incidents: Omit<IAIIncidentManagement, "id" | "created_at" | "updated_at">[],
-) {
-  console.log("\n📋 Demo Incident Data Generated\n");
-  console.log("═".repeat(80));
+const API_BASE_URL = (process.env.API_BASE_URL || "http://localhost:3000/api").replace(/\/$/, "");
 
-  incidents.forEach((incident, index) => {
-    console.log(`\n🔸 Incident ${index + 1}:`);
-    console.log(`   ID: ${incident.incident_id}`);
-    console.log(`   Project: ${incident.ai_project}`);
-    console.log(`   Type: ${incident.type}`);
-    console.log(`   Severity: ${incident.severity}`);
-    console.log(`   Status: ${incident.status}`);
-    console.log(`   Approval: ${incident.approval_status}`);
-    console.log(`   Harm Categories: ${incident.categories_of_harm.join(", ")}`);
+async function getToken(): Promise<string> {
+  if (process.env.AUTH_TOKEN) return process.env.AUTH_TOKEN;
+  const email = process.env.SEED_EMAIL;
+  const password = process.env.SEED_PASSWORD;
+  if (!email || !password) {
+    throw new Error(
+      "No credentials. Set AUTH_TOKEN, or SEED_EMAIL and SEED_PASSWORD for a user in the target org.",
+    );
+  }
+  const res = await fetch(`${API_BASE_URL}/users/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
   });
-
-  console.log("\n" + "═".repeat(80));
-  console.log(`\n✅ Total incidents generated: ${incidents.length}`);
-  console.log("\n📊 Statistics:");
-
-  // Calculate statistics
-  const severityCount = incidents.reduce(
-    (acc, inc) => {
-      acc[inc.severity] = (acc[inc.severity] || 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>,
-  );
-
-  const statusCount = incidents.reduce(
-    (acc, inc) => {
-      acc[inc.status] = (acc[inc.status] || 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>,
-  );
-
-  console.log(
-    `   By Severity: ${JSON.stringify(severityCount, null, 2)
-      .replace(/[{}"\n]/g, "")
-      .trim()}`,
-  );
-  console.log(
-    `   By Status: ${JSON.stringify(statusCount, null, 2)
-      .replace(/[{}"\n]/g, "")
-      .trim()}`,
-  );
+  const body = (await res.json().catch(() => undefined)) as
+    { data?: { token?: string } } | undefined;
+  const token = body?.data?.token;
+  if (!res.ok || !token) throw new Error(`Login failed for ${email} (HTTP ${res.status}).`);
+  return token;
 }
 
-/**
- * Exports incident data as JSON for API seeding
- */
-function exportAsJSON(
-  incidents: Omit<IAIIncidentManagement, "id" | "created_at" | "updated_at">[],
-) {
-  const jsonOutput = JSON.stringify(incidents, null, 2);
-  console.log("\n📄 JSON Export (copy this to use with API):");
-  console.log("─".repeat(80));
-  console.log(jsonOutput);
-  console.log("─".repeat(80));
-  return jsonOutput;
+async function api(token: string, method: string, path: string, body?: unknown): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    method,
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`${method} ${path} -> ${res.status}: ${text.slice(0, 500)}`);
+  return text ? JSON.parse(text) : undefined;
 }
 
-/**
- * Seeds incidents to the database via API
- */
-async function seedToDatabase(
-  incidents: Omit<IAIIncidentManagement, "id" | "created_at" | "updated_at">[],
-) {
-  const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:3000/api";
-  const AUTH_TOKEN = process.env.AUTH_TOKEN || "";
+async function main() {
+  if (process.argv.includes("--json")) {
+    console.log(JSON.stringify(DEMO_INCIDENTS, null, 2));
+    return;
+  }
 
-  console.log("\n🌱 Seeding incidents to database...");
-  console.log(`   API: ${API_BASE_URL}/ai-incident-managements`);
-  console.log("─".repeat(80));
+  console.log(`Seeding ${DEMO_INCIDENTS.length} demo incidents via ${API_BASE_URL}`);
+  const token = await getToken();
 
-  let successCount = 0;
-  let failCount = 0;
+  const existing = await api(token, "GET", "/ai-incident-managements");
+  const rows: Array<{ description?: string }> = Array.isArray(existing?.data)
+    ? existing.data
+    : (existing?.data?.data ?? existing?.data?.rows ?? []);
+  const existingDescriptions = new Set(rows.map((r) => r.description));
 
-  for (const incident of incidents) {
+  let created = 0;
+  let skipped = 0;
+  let failed = 0;
+  for (const incident of DEMO_INCIDENTS) {
+    if (existingDescriptions.has(incident.description)) {
+      skipped++;
+      console.log(`  skip    ${incident.ai_project} (already exists)`);
+      continue;
+    }
     try {
-      const headers: HeadersInit = {
-        "Content-Type": "application/json",
-      };
-
-      if (AUTH_TOKEN) {
-        headers["Authorization"] = `Bearer ${AUTH_TOKEN}`;
-      }
-
-      const response = await fetch(`${API_BASE_URL}/ai-incident-managements`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(incident),
-      });
-
-      if (response.ok) {
-        await response.json();
-        successCount++;
-        console.log(`✅ Created: ${incident.incident_id} - ${incident.ai_project}`);
-      } else {
-        failCount++;
-        const errorText = await response.text();
-        console.error(
-          `❌ Failed: ${incident.incident_id} - Status ${response.status}: ${errorText}`,
-        );
-      }
-    } catch (error) {
-      failCount++;
-      console.error(
-        `❌ Error creating ${incident.incident_id}:`,
-        error instanceof Error ? error.message : error,
-      );
+      await api(token, "POST", "/ai-incident-managements", incident);
+      created++;
+      console.log(`  created ${incident.ai_project} [${incident.severity}, ${incident.status}]`);
+    } catch (err) {
+      failed++;
+      console.error(`  FAILED  ${incident.ai_project}: ${(err as Error).message}`);
     }
   }
-
-  console.log("─".repeat(80));
-  console.log(`\n✅ Successfully created: ${successCount} incidents`);
-  if (failCount > 0) {
-    console.log(`❌ Failed to create: ${failCount} incidents`);
-  }
-  console.log("");
+  console.log(`Done: ${created} created, ${skipped} already present, ${failed} failed.`);
+  if (failed > 0) process.exitCode = 1;
 }
 
-/**
- * Main execution
- */
-async function main() {
-  console.log("\n🚀 Incident Management Demo Data Seeder\n");
-
-  displayIncidents(demoIncidents);
-
-  // Check flags
-  const shouldExportJSON = process.argv.includes("--json");
-  const shouldSeed = process.argv.includes("--seed");
-
-  if (shouldExportJSON) {
-    exportAsJSON(demoIncidents);
-  }
-
-  if (shouldSeed) {
-    await seedToDatabase(demoIncidents);
-  }
-
-  console.log("\n💡 Usage Tips:");
-  console.log("   • Add --seed flag to insert incidents into database via API");
-  console.log("   • Add --json flag to export as JSON format");
-  console.log("   • Set AUTH_TOKEN environment variable if authentication is required");
-  console.log(
-    "   • Set API_BASE_URL environment variable to override default (http://localhost:3000/api)",
-  );
-  console.log("   • Modify incident templates to fit your specific use cases\n");
-}
-
-// Run the seeder (ESM entry point check)
-main();
-
-export { demoIncidents };
+main().catch((err) => {
+  console.error(`[seed:incidents] FAILED: ${err instanceof Error ? err.message : err}`);
+  process.exit(1);
+});

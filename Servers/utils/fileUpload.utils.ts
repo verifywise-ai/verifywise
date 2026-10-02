@@ -3,6 +3,7 @@ import { sequelize } from "../database/db";
 import { FileModel, FileSource } from "../domain.layer/models/file/file.model";
 import { Transaction, QueryTypes } from "sequelize";
 import { ProjectModel } from "../domain.layer/models/project/project.model";
+import { resolveFileExpiryOnCreate } from "./retention.utils";
 
 const sanitizeFilename = (name: string) => name.replace(/[^a-zA-Z0-9-_\.]/g, "_");
 
@@ -32,12 +33,21 @@ export const uploadFile = async (
     );
     is_demo = projectIsDemo[0]?.is_demo || false;
   }
+  // Apply org-level default retention (if configured). Explicit expiry /
+  // retention overrides come later via updateFileMetadata — this upload path
+  // takes no per-file values from the caller.
+  const { expiry_date, retention_policy } = await resolveFileExpiryOnCreate(
+    organizationId,
+    null,
+    null,
+  );
+
   const query = `INSERT INTO files
     (
-      organization_id, filename, content, type, project_id, uploaded_by, uploaded_time, is_demo, source, size, file_path, org_id, model_id
+      organization_id, filename, content, type, project_id, uploaded_by, uploaded_time, is_demo, source, size, file_path, org_id, model_id, expiry_date, retention_policy
     )
     VALUES (
-      :organization_id, :filename, :content, :type, :project_id, :uploaded_by, :uploaded_time, :is_demo, :source, :size, :file_path, :org_id, :model_id
+      :organization_id, :filename, :content, :type, :project_id, :uploaded_by, :uploaded_time, :is_demo, :source, :size, :file_path, :org_id, :model_id, :expiry_date, :retention_policy
     ) RETURNING *`;
   const result = await sequelize.query(query, {
     replacements: {
@@ -54,6 +64,8 @@ export const uploadFile = async (
       file_path: options?.file_path || sanitizeFilename(file.originalname),
       org_id: options?.org_id || null,
       model_id: options?.model_id || null,
+      expiry_date,
+      retention_policy,
     },
     mapToModel: true,
     model: FileModel,

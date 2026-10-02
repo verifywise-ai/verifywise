@@ -121,6 +121,8 @@ export interface IRisksViewProps {
   title: string;
   // Optional header content (e.g., framework toggle)
   headerContent?: ReactNode;
+  // Optional actions rendered beside the table title (e.g., an add button)
+  actions?: ReactNode;
   // Refresh key for forcing re-fetches
   refreshTrigger?: number;
   // When true, hides edit/delete actions and shows guidance to use centralized risk management

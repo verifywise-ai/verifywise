@@ -81,9 +81,14 @@ export const quickStartContent: ArticleContent = {
       items: [
         { bold: '', text: 'Click into your new use case from the dashboard or sidebar (Inventory → Use cases)' },
         { bold: '', text: 'Open the **"Frameworks/regulations"** tab' },
-        { bold: '', text: 'Click **"Add framework"** and select the one that applies' },
+        { bold: '', text: 'Click **"Add Framework"** (or **"Manage frameworks/regulations"** if the use case already has one), then click **"Add"** on the framework that applies and **"Done"**' },
         { bold: '', text: 'The controls and sub-controls populate automatically' },
       ],
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      text: 'A use case takes use case-level frameworks such as EU AI Act, HIPAA or NYC Local Law 144. ISO 42001, ISO 27001 and NIST AI RMF are organization-level, so you add them from the **Frameworks** page instead. See **Adding frameworks** for the full list.',
     },
     {
       type: 'heading',

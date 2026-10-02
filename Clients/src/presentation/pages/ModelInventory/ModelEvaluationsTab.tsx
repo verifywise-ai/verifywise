@@ -9,7 +9,7 @@ import {
   type ModelEvaluation,
   type ModelEvaluationsResponse,
 } from "../../../application/repository/modelEvaluations.repository";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 const statusColorMap: Record<string, string> = {
   completed: "#4caf50",
@@ -72,6 +72,7 @@ function getKeyResult(eval_: ModelEvaluation): string {
 }
 
 export default function ModelEvaluationsTab() {
+  const formatDate = useFormattedDate();
   const [data, setData] = useState<ModelEvaluationsResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -179,7 +180,7 @@ export default function ModelEvaluationsTab() {
                     )}
                   </Stack>
                 </td>
-                <td>{e.created_at ? displayFormattedDate(e.created_at) : "—"}</td>
+                <td>{e.created_at ? formatDate(e.created_at) : "—"}</td>
               </tr>
             ))}
           </tbody>

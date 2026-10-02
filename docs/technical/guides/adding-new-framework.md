@@ -1,516 +1,289 @@
 # Adding a New Compliance Framework
 
-This guide explains how to add a new compliance framework to VerifyWise. The system currently supports EU AI Act, ISO 42001, ISO 27001, and NIST AI RMF. Follow these steps to add additional frameworks.
+This guide covers adding a framework to the **structure registry** in
+`Servers/structures/`. The 21 bundled frameworks (ids 5–25: SOC 2, GDPR, HIPAA,
+...) work this way. A registry framework needs no custom tables, routes,
+controllers or UI. You declare its hierarchy in one TypeScript file, and the
+generic endpoints (`/api/frameworks/:frameworkId/...`) and the generic UI
+(`GenericFramework` + `GenericFrameworkDrawer`) handle the rest.
 
-## Overview
+> **Users cannot create frameworks.** There is no UI or API for creating,
+> importing, editing or exporting a framework structure. Every framework ships
+> in the codebase. A new framework means a code change and a migration.
 
-Adding a framework requires:
-1. Database tables for framework structure
-2. Seed data for framework content
-3. Backend models, routes, and controllers
-4. Frontend components and integration
-5. Report generation support
+## Core frameworks vs registry frameworks
 
-## Step 1: Define Framework Structure
+| | Core (hand-built) | Registry (structure file) |
+|---|---|---|
+| Frameworks | EU AI Act (1), ISO 42001 (2), ISO 27001 (3), NIST AI RMF (4) | 21 frameworks, ids 5–25 |
+| Structure | Hand-written files in `Servers/structures/{EU-AI-Act,ISO-42001,ISO-27001,NIST-AI-RMF}/`, not in the registry | One `*.structure.ts` per framework, listed in `FRAMEWORK_STRUCTURES` |
+| Tables | Bespoke (`controls_eu`, `subclauses_iso`, `subclauses_iso27001`, `nist_ai_rmf_subcategories`, ...) | Generated from the structure's `tables` / `cols` |
+| API | Per-framework routers (`/api/eu-ai-act`, `/api/iso-42001`, `/api/iso-27001`, `/api/nist-ai-rmf`) | Generic `/api/frameworks/:frameworkId/...` |
+| UI | Per-framework pages | `GenericFramework` + `GenericFrameworkDrawer` |
+| Reports | Covered by the reporting service | **Not covered yet** (see [Compliance Frameworks](../domains/compliance-frameworks.md#reporting-limitation)) |
 
-Before coding, map out:
-- **Categories/Sections**: Top-level groupings
-- **Controls/Clauses**: Individual requirements
-- **Evidence requirements**: What documentation is needed
-- **Status options**: Compliance states
+Add new frameworks through the registry, not as core frameworks.
 
-Example structure:
+## How a registry framework works
+
 ```
-Framework: SOC 2
-├── Category: Security
-│   ├── Control: CC1.1 - Integrity and Ethical Values
-│   ├── Control: CC1.2 - Board Oversight
-│   └── ...
-├── Category: Availability
-│   ├── Control: A1.1 - Capacity Planning
-│   └── ...
-└── ...
+Servers/structures/<Name>/<key>.structure.ts   ← declares id, tables, seed
+        │
+        ├─► Servers/structures/index.ts (FRAMEWORK_STRUCTURES, getStructureById/ByKey)
+        │
+        ├─► migrations (compiled: require("../../dist/structures"))
+        │     frameworks row + struct tables + seed, impl tables, __risks tables
+        │
+        ├─► Servers/utils/frameworkRegistry.utils.ts
+        │     makeCreate(key) / makeDelete(key) → add/remove framework on a project
+        │
+        └─► Servers/utils/frameworkImpl.utils.ts + routes/frameworkImpl.route.ts
+              tree, dashboard, impl read/update, risks, evidence
 ```
 
-## Step 2: Database Migration
+Per framework, the tables are:
 
-### Main Framework Tables
+| Table (from `tables`) | Scope | Contents |
+|---|---|---|
+| `l1_struct` | Global | Level 1 groupings (e.g. SOC 2 trust service categories) |
+| `l2_struct` | Global | Level 2 items: title, description, summary, `questions[]`, `evidence_examples[]` |
+| `l3_struct` (three-level only) | Global | Level 3 items, same columns |
+| `l2_impl` / `l3_impl` | Per org + project | Status, owner, reviewer, approver, due date, implementation details, auditor feedback |
+| `l2_risks` / `l3_risks` | Per org | `<impl>__risks` junction to `risks` |
 
-Create migration in `Servers/database/migrations/`:
+Evidence goes in `file_entity_links` (`framework_type` = the structure's
+`framework_type`, `entity_type` = `entity_types.l2_impl` / `l3_impl`).
 
-```javascript
-// 20260117000000-create-soc2-framework-tables.js
-"use strict";
+## Worked example: the SOC 2 structure file
 
-module.exports = {
-  async up(queryInterface, Sequelize) {
-    // All tables created once in verifywise schema
-    // Tenant-scoped tables include organization_id column
+Two-level frameworks can start from `Servers/structures/SOC2/soc2.structure.ts`.
+For three levels, use `HIPAA/hipaa.structure.ts` or
+`NIST-CSF/nist-csf.structure.ts`. The shape is defined in
+`Servers/structures/types.ts` (`FrameworkStructure`).
 
-    // Categories table (struct — shared, no org_id)
-    await queryInterface.sequelize.query(`
-      CREATE TABLE verifywise.soc2_categories (
-        id SERIAL PRIMARY KEY,
-        category_id VARCHAR(50) NOT NULL,
-        name VARCHAR(255) NOT NULL,
-        description TEXT,
-        order_no INTEGER DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
+This is the real SOC 2 file, cut down to one level 1 group with one level 2
+item:
 
-    // Controls table (tenant-scoped — with org_id)
-    await queryInterface.sequelize.query(`
-      CREATE TABLE verifywise.soc2_controls (
-        id SERIAL PRIMARY KEY,
-        organization_id INTEGER NOT NULL REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
-        control_id VARCHAR(50) NOT NULL,
-        category_id INTEGER REFERENCES verifywise.soc2_categories(id),
-        title VARCHAR(500) NOT NULL,
-        description TEXT,
-        status VARCHAR(20) DEFAULT 'Not started',
-        owner VARCHAR(255),
-        implementation_notes TEXT,
-        evidence_links JSONB DEFAULT '[]',
-        order_no INTEGER DEFAULT 0,
-        project_framework_id INTEGER,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-      CREATE INDEX idx_soc2_controls_org ON verifywise.soc2_controls(organization_id);
-      CREATE INDEX idx_soc2_controls_category ON verifywise.soc2_controls(category_id);
-      CREATE INDEX idx_soc2_controls_pf ON verifywise.soc2_controls(project_framework_id);
-    `);
+```ts
+// Servers/structures/SOC2/soc2.structure.ts
+import type { FrameworkStructure } from "../types";
+
+export const soc2Structure: FrameworkStructure = {
+  id: 5,                       // fixed frameworks.id; must be unique and unused
+  key: "soc2",                 // kebab-case; used for lookups and folder naming
+  framework_type: "soc2",      // snake_case; stored in file_entity_links.framework_type
+  displayName: "SOC 2 Type II Framework",
+  tables: {
+    l1_struct: "soc2_trust_service_categories_struct",
+    l2_struct: "soc2_controls_struct",
+    l2_impl: "soc2_controls",
+    l2_risks: "soc2_controls__risks",
   },
-
-  async down(queryInterface, Sequelize) {
-    await queryInterface.sequelize.query(`
-      DROP TABLE IF EXISTS verifywise.soc2_controls;
-      DROP TABLE IF EXISTS verifywise.soc2_categories;
-    `);
+  cols: {
+    l2_struct_parent: "trust_service_category_id", // FK column l2_struct → l1_struct
+    l2_impl_meta: "control_meta_id",               // FK column l2_impl → l2_struct
+    l2_risks_impl: "control_id",                   // FK column l2_risks → l2_impl
   },
-};
-```
-
-### Add Framework Reference
-
-Add to the public `frameworks` table:
-
-```javascript
-// Add in migration
-await queryInterface.bulkInsert("frameworks", [
-  {
-    id: 5, // Next available ID
-    name: "SOC 2",
-    description: "Service Organization Control 2 Type II",
-    created_at: new Date(),
-    updated_at: new Date(),
+  entity_types: {
+    l2_impl: "control",        // file_entity_links.entity_type
   },
-]);
-```
-
-## Step 3: Seed Data
-
-Create seed file in `Servers/database/seeders/`:
-
-```javascript
-// soc2-framework-seed.js
-module.exports = {
-  async up(queryInterface, Sequelize) {
-    // Seed shared struct data (no org_id needed)
-    await queryInterface.bulkInsert(
-      "soc2_categories",
-      [
-        {
-          category_id: "CC",
-          name: "Common Criteria",
-          description: "Common Criteria related to...",
-          order_no: 1,
-        },
-        {
-          category_id: "A",
-          name: "Availability",
-          description: "Availability criteria...",
-          order_no: 2,
-        },
-        // ... more categories
-      ]
-    );
-
-    // Note: Tenant-scoped controls are created per-project
-    // when a project subscribes to this framework, not in the seeder.
+  source_labels: {
+    control: "SOC 2 controls", // files.source label; must be a FileSource value
   },
-};
-```
-
-## Step 4: Backend Models
-
-Create models in `Servers/domain.layer/models/soc2/`:
-
-```typescript
-// soc2Category.model.ts
-import { Table, Column, Model, DataType, HasMany } from "sequelize-typescript";
-
-@Table({ tableName: "soc2_categories", timestamps: false })
-export class SOC2CategoryModel extends Model {
-  @Column({ primaryKey: true, autoIncrement: true, type: DataType.INTEGER })
-  id!: number;
-
-  @Column({ type: DataType.STRING(50), allowNull: false })
-  category_id!: string;
-
-  @Column({ type: DataType.STRING(255), allowNull: false })
-  name!: string;
-
-  @Column({ type: DataType.TEXT })
-  description?: string;
-
-  @Column({ type: DataType.INTEGER, defaultValue: 0 })
-  order_no!: number;
-
-  @HasMany(() => SOC2ControlModel)
-  controls!: SOC2ControlModel[];
-}
-```
-
-```typescript
-// soc2Control.model.ts
-import { Table, Column, Model, DataType, ForeignKey, BelongsTo } from "sequelize-typescript";
-
-@Table({
-  tableName: "soc2_controls",
-  timestamps: true,
-  createdAt: "created_at",
-  updatedAt: "updated_at",
-})
-export class SOC2ControlModel extends Model {
-  @Column({ primaryKey: true, autoIncrement: true, type: DataType.INTEGER })
-  id!: number;
-
-  @Column({ type: DataType.STRING(50), allowNull: false })
-  control_id!: string;
-
-  @ForeignKey(() => SOC2CategoryModel)
-  @Column({ type: DataType.INTEGER })
-  category_id!: number;
-
-  @Column({ type: DataType.STRING(500), allowNull: false })
-  title!: string;
-
-  @Column({ type: DataType.TEXT })
-  description?: string;
-
-  @Column({
-    type: DataType.ENUM("Not started", "In progress", "Compliant", "Non-compliant", "Not applicable"),
-    defaultValue: "Not started",
-  })
-  status!: string;
-
-  @Column({ type: DataType.STRING(255) })
-  owner?: string;
-
-  @Column({ type: DataType.TEXT })
-  implementation_notes?: string;
-
-  @Column({ type: DataType.JSONB, defaultValue: [] })
-  evidence_links!: number[];
-
-  @Column({ type: DataType.INTEGER })
-  project_framework_id?: number;
-
-  @BelongsTo(() => SOC2CategoryModel)
-  category!: SOC2CategoryModel;
-}
-```
-
-## Step 5: Backend Utils
-
-Create utils in `Servers/utils/`:
-
-```typescript
-// soc2.utils.ts
-import { sequelize } from "../config/database";
-import { QueryTypes, Transaction } from "sequelize";
-
-export const getSOC2CategoriesQuery = async () => {
-  const query = `
-    SELECT * FROM soc2_categories
-    ORDER BY order_no
-  `;
-  return sequelize.query(query, { type: QueryTypes.SELECT });
-};
-
-export const getSOC2ControlsQuery = async (
-  projectFrameworkId: number,
-  organizationId: number
-) => {
-  const query = `
-    SELECT c.*, cat.name as category_name
-    FROM soc2_controls c
-    JOIN soc2_categories cat ON c.category_id = cat.id
-    WHERE c.project_framework_id = :projectFrameworkId
-      AND c.organization_id = :organizationId
-    ORDER BY cat.order_no, c.order_no
-  `;
-  return sequelize.query(query, {
-    type: QueryTypes.SELECT,
-    replacements: { projectFrameworkId, organizationId },
-  });
-};
-
-export const updateSOC2ControlQuery = async (
-  id: number,
-  data: Partial<any>,
-  organizationId: number,
-  transaction?: Transaction
-) => {
-  const setClauses: string[] = [];
-  const replacements: Record<string, any> = { id, organizationId };
-
-  if (data.status !== undefined) {
-    setClauses.push("status = :status");
-    replacements.status = data.status;
-  }
-  if (data.owner !== undefined) {
-    setClauses.push("owner = :owner");
-    replacements.owner = data.owner;
-  }
-  if (data.implementation_notes !== undefined) {
-    setClauses.push("implementation_notes = :notes");
-    replacements.notes = data.implementation_notes;
-  }
-  if (data.evidence_links !== undefined) {
-    setClauses.push("evidence_links = :evidence");
-    replacements.evidence = JSON.stringify(data.evidence_links);
-  }
-  setClauses.push("updated_at = NOW()");
-
-  const query = `
-    UPDATE soc2_controls
-    SET ${setClauses.join(", ")}
-    WHERE id = :id AND organization_id = :organizationId
-    RETURNING *
-  `;
-  return sequelize.query(query, {
-    type: QueryTypes.UPDATE,
-    replacements,
-    transaction,
-  });
-};
-
-export const createSOC2ControlsForProjectQuery = async (
-  projectFrameworkId: number,
-  organizationId: number,
-  transaction?: Transaction
-) => {
-  // Copy template controls to project-specific records
-  const query = `
-    INSERT INTO soc2_controls
-      (organization_id, control_id, category_id, title, description, status, order_no, project_framework_id)
-    SELECT :organizationId, control_id, category_id, title, description, 'Not started', order_no, :pfId
-    FROM soc2_controls
-    WHERE project_framework_id IS NULL AND organization_id = :organizationId
-  `;
-  return sequelize.query(query, {
-    type: QueryTypes.INSERT,
-    replacements: { pfId: projectFrameworkId, organizationId },
-    transaction,
-  });
-};
-```
-
-## Step 6: Backend Routes and Controller
-
-```typescript
-// soc2.route.ts
-import express from "express";
-import { authenticateJWT } from "../middleware/auth.middleware";
-import {
-  getCategories,
-  getControls,
-  updateControl,
-  getProgress,
-} from "../controllers/soc2.ctrl";
-
-const router = express.Router();
-
-router.get("/categories", authenticateJWT, getCategories);
-router.get("/controls/:projectFrameworkId", authenticateJWT, getControls);
-router.patch("/controls/:id", authenticateJWT, updateControl);
-router.get("/progress/:projectFrameworkId", authenticateJWT, getProgress);
-
-export default router;
-```
-
-Register in `routes/index.ts`:
-```typescript
-import soc2Routes from "./soc2.route";
-router.use("/soc2", soc2Routes);
-```
-
-## Step 7: Frontend Integration
-
-### Add Framework ID Constant
-
-```typescript
-// constants/frameworks.ts
-export const FRAMEWORK_IDS = {
-  EU_AI_ACT: 1,
-  ISO_42001: 2,
-  ISO_27001: 3,
-  NIST_AI_RMF: 4,
-  SOC_2: 5,
-};
-```
-
-### Create Framework Components
-
-```typescript
-// pages/SOC2/index.tsx
-import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
-import { soc2Repository } from "../../repository/soc2.repository";
-import { SOC2Table } from "./SOC2Table";
-import { ProgressCard } from "./ProgressCard";
-
-export const SOC2Page = () => {
-  const { projectFrameworkId } = useParams();
-  const [controls, setControls] = useState([]);
-  const [progress, setProgress] = useState(null);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const [controlsData, progressData] = await Promise.all([
-        soc2Repository.getControls(projectFrameworkId),
-        soc2Repository.getProgress(projectFrameworkId),
-      ]);
-      setControls(controlsData);
-      setProgress(progressData);
-    };
-    fetchData();
-  }, [projectFrameworkId]);
-
-  return (
-    <Box>
-      <ProgressCard progress={progress} />
-      <SOC2Table controls={controls} onUpdate={fetchData} />
-    </Box>
-  );
-};
-```
-
-## Step 8: Report Integration
-
-Add to `dataCollector.ts`:
-
-```typescript
-// In ReportDataCollector class
-private async collectSOC2Controls(): Promise<SOC2SectionData> {
-  const query = `
-    SELECT c.*, cat.name as category_name
-    FROM soc2_controls c
-    JOIN soc2_categories cat ON c.category_id = cat.id
-    WHERE c.project_framework_id = :pfId
-      AND c.organization_id = :organizationId
-    ORDER BY cat.order_no, c.order_no
-  `;
-
-  const controls = await sequelize.query(query, {
-    type: QueryTypes.SELECT,
-    replacements: { pfId: this.projectFrameworkId, organizationId: this.organizationId },
-  });
-
-  const grouped = this.groupByCategory(controls);
-
-  return {
-    categories: grouped,
-    totalControls: controls.length,
-    compliantCount: controls.filter(c => c.status === "Compliant").length,
-    progressPercentage: this.calculateProgress(controls),
-  };
-}
-```
-
-Add section to report template:
-
-```ejs
-<!-- In report-pdf.ejs -->
-<% if (sections.soc2) { %>
-<div class="section" id="soc2">
-  <h2>SOC 2 Controls</h2>
-  <% sections.soc2.categories.forEach(category => { %>
-    <h3><%= category.name %></h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Control ID</th>
-          <th>Title</th>
-          <th>Status</th>
-          <th>Owner</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% category.controls.forEach(control => { %>
-        <tr>
-          <td><%= control.control_id %></td>
-          <td><%= control.title %></td>
-          <td><%= control.status %></td>
-          <td><%= control.owner || '-' %></td>
-        </tr>
-        <% }); %>
-      </tbody>
-    </table>
-  <% }); %>
-</div>
-<% } %>
-```
-
-## Step 9: Add to Section Selector
-
-Update `GenerateReport/constants.ts`:
-
-```typescript
-// Add to REPORT_SECTION_GROUPS
-{
-  group: "Compliance & Governance",
-  sections: [
-    // ... existing sections
-    {
-      key: "soc2",
-      label: "SOC 2 Controls",
-      frameworks: [FRAMEWORK_IDS.SOC_2],
+  seed: {
+    name: "SOC 2 Type II Framework",  // frameworks.name, shown in the UI
+    description: "Framework based on AICPA Trust Services Criteria for SOC 2 compliance",
+    version: "1.0.0",
+    is_organizational: true,          // true = organization-level, false = use-case-level
+    hierarchy: {
+      type: "two_level",              // or "three_level"; must match whether tables.l3_struct is set
+      level1_name: "Trust Service Category",
+      level2_name: "Control",
     },
-  ],
-},
+    structure: [
+      {
+        title: "CC1: Control Environment",
+        description:
+          "The set of standards, processes, and structures that provide the basis for carrying out internal control",
+        order_no: 1,
+        items: [
+          {
+            title: "CC1.1 - Commitment to Integrity and Ethics",
+            description: "The entity demonstrates a commitment to integrity and ethical values",
+            order_no: 1,
+            summary: "Establish and communicate ethical standards",
+            questions: [
+              "Is there a code of conduct?",
+              "How are ethical standards communicated?",
+              "How are violations handled?",
+            ],
+            evidence_examples: [
+              "Code of conduct",
+              "Ethics training records",
+              "Disciplinary action records",
+            ],
+          },
+        ],
+      },
+    ],
+  },
+};
+
+export default soc2Structure;
 ```
 
-## Step 10: Framework Auto-Creation
+Seed field rules (`types.ts`):
 
-Add to `approvalRequest.utils.ts` for automatic framework creation on approval:
+- Level 1 (`SeedLevel1`): `title` is required. `description`, `order_no` and
+  `items` are optional.
+- Level 2 / level 3 (`SeedLevel2` / `SeedLevel3`): `title` is required.
+  `description`, `summary`, `questions[]`, `evidence_examples[]` and `order_no`
+  are optional. A level 2 item has nested `items` only in a three-level
+  framework.
+- `hierarchy.level*_name` values are for documentation only.
+- The struct migration throws if `seed.hierarchy.type` doesn't match whether
+  `tables.l3_struct` is set.
 
-```typescript
-// In createFrameworkRecords function
-case 5: // SOC 2
-  await createSOC2ControlsForProjectQuery(projectFrameworkId, organizationId, transaction);
-  break;
+Three-level frameworks also set:
+
+- `tables.l3_struct`, `tables.l3_impl`, `tables.l3_risks`
+- `cols.l3_struct_parent`, `cols.l3_impl_meta`, `cols.l3_impl_parent`,
+  `cols.l3_risks_impl`
+- `entity_types.l3_impl` and a matching `source_labels` entry
+
+`hipaa.structure.ts` shows all of them.
+
+## Steps
+
+### 1. Write the structure file
+
+Create `Servers/structures/<Name>/<key>.structure.ts` with a default export.
+Use the next unused id. Ids 1–25 are taken, so the next is **26**. Check the
+registry and `SELECT max(id) FROM verifywise.frameworks` first. Table names
+must not collide with existing tables.
+
+### 2. Register it
+
+Add the import and the entry to `FRAMEWORK_STRUCTURES` in
+`Servers/structures/index.ts`.
+
+### 3. Add the create/delete wrappers
+
+In `Servers/utils/frameworkRegistry.utils.ts`:
+
+```ts
+// <Name> (id=26)
+export const create<Name>FrameworkQuery = makeCreate("<key>");
+export const deleteProjectFramework<Name>Query = makeDelete("<key>");
 ```
+
+### 4. Map the id
+
+In `Servers/types/framework.type.ts`, import the two wrappers and add:
+
+- `26: create<Name>FrameworkQuery` to `frameworkAdditionMap`
+- `26: deleteProjectFramework<Name>Query` to `frameworkDeletionMap`
+- `26: []` to `frameworkFilesDeletionSourceMap`. Registry frameworks clean up
+  their own `file_entity_links`.
+
+### 5. File source labels
+
+Add each `source_labels` value to `Servers/domain.layer/models/file/file.model.ts`
+in two places: the `FileSource` type union, and the `DataType.ENUM(...)` list on
+the `source` column. The database column is `VARCHAR(255)`, so no schema change
+is needed.
+
+### 6. Notes
+
+`GenericFramework` turns on the drawer's **Notes** tab with
+`notesAttachedTo = "<FRAMEWORK_TYPE>_<ENTITY_TYPE>"` in upper case (e.g.
+`SOC2_CONTROL`, `HIPAA_IMPLEMENTATION_SPECIFICATION`). Add one value per
+entity type to `NotesAttachedToEnum` in
+`Servers/domain.layer/models/notes/notes.model.ts`. The model rejects values
+outside the enum. The column is `VARCHAR(50)`, so keep the value within 50
+characters.
+
+### 7. Tenant-isolation audit
+
+Add the new `l2_impl` and `l2_risks` tables (and `l3_impl` / `l3_risks`, if
+any) to `Servers/scripts/auditTenantIsolationCoverage.ts`, following the
+existing per-framework entries. CI (`.github/workflows/backend-checks.yml`)
+runs this script.
+
+### 8. Write a new migration
+
+Do **not** edit the `20260805*` migrations. Existing databases have already
+run them, so they would never pick up a new registry entry. Create a new
+migration with a `date`-generated timestamp (see `Servers/CLAUDE.md`) that, for
+your key only:
+
+1. inserts the `frameworks` row (`id`, `name`, `description`, `version`,
+   `is_organizational`, `is_active = TRUE`, `is_demo = FALSE`)
+2. creates the struct tables and seeds them from `seed.structure`, as in
+   `20260805125946-create-framework-struct-tables.js`
+3. creates the status enum, impl table(s) and `__risks` table(s), as in
+   `20260805130326-create-framework-impl-tables.js`
+
+Load your entry with
+`const { requireStructureByKey } = require("../../dist/structures")`.
+
+**Make it idempotent.** The `20260805*` migrations loop over the whole
+`FRAMEWORK_STRUCTURES` array. On a **fresh** database they run with your
+registry change in place and create your framework themselves, before your
+migration runs. Guard your migration, for example by returning early when
+`SELECT 1 FROM verifywise.frameworks WHERE id = :id` finds a row. Without a
+guard, its `INSERT` and `CREATE TABLE` statements fail on new installs.
+
+### 9. Build before migrating
+
+Migrations `require("../../dist/structures")`, the **compiled** registry. Run
+the build first:
+
+```bash
+cd Servers
+npm run build        # compiles structures/ into dist/structures
+npm run migrate-db
+```
+
+`npm run watch` (tsc-watch, then `postbuild` + `start`, which runs
+`migrate-db`) and the Dockerfile (`RUN npm run build`) already build first. A
+bare `npm run migrate-db` on a stale `dist/` won't see your framework.
+
+### 10. Client
+
+- Add a badge SVG to `Clients/public/assets/badges/`. Add an entry in
+  `Clients/src/presentation/tools/frameworkBadge.ts` keyed by the **exact**
+  `seed.name`. With no entry, callers render a fallback icon.
+- No other client code is needed. The framework appears in the **AI
+  Frameworks** add/remove modal: under **Frameworks → Manage frameworks** if
+  `is_organizational` is true, or in a use case's **Frameworks/regulations**
+  tab if false. `GenericFramework` (`Clients/src/presentation/pages/Framework/Generic/`)
+  and `GenericFrameworkDrawer` (`Clients/src/presentation/components/Drawer/GenericFrameworkDrawer/`)
+  render it.
+
+### 11. API docs
+
+A registry framework adds no routes, so `Servers/swagger.yaml` doesn't change.
+Run `npm run generate:swagger` and `npm run generate:endpoints` only if you
+also changed routes.
 
 ## Checklist
 
-- [ ] Database migration creates all required tables
-- [ ] Seed data includes all framework content
-- [ ] Backend models define schema correctly
-- [ ] Utils handle all CRUD operations
-- [ ] Routes and controllers are registered
-- [ ] Frontend components display framework data
-- [ ] Report generation includes new framework
-- [ ] Section selector shows framework option
-- [ ] Framework auto-creation works on approval
-- [ ] Progress calculation is accurate
-- [ ] Evidence linking works
+- [ ] `<key>.structure.ts` with a unique id, key, `framework_type` and table names
+- [ ] Added to `FRAMEWORK_STRUCTURES`
+- [ ] `makeCreate` / `makeDelete` wrappers
+- [ ] `frameworkAdditionMap`, `frameworkDeletionMap`, `frameworkFilesDeletionSourceMap`
+- [ ] `FileSource` union + `source` column `DataType.ENUM` list
+- [ ] `NotesAttachedToEnum` values
+- [ ] Tenant-isolation audit entries
+- [ ] New, idempotent migration; `npm run build` then `npm run migrate-db`
+- [ ] Badge SVG + `frameworkBadge.ts` entry
+- [ ] Added to a project in the UI; requirements show "Not started"; status,
+      evidence and risk links save; removing the framework deletes its impl rows
 
-## Related Documentation
+## Related documentation
 
 - [Compliance Frameworks](../domains/compliance-frameworks.md)
+- [Extensions](../infrastructure/extensions.md) (integrations, which are separate from frameworks)
 - [Reporting](../domains/reporting.md)
 - [Adding New Feature](./adding-new-feature.md)

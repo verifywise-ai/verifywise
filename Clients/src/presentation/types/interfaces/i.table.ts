@@ -149,6 +149,8 @@ export interface IFileTableProps {
   visibleColumnKeys?: FileColumn[];
   canRunBulkActions?: boolean;
   onBulkActionSuccess?: (result: FileBulkActionResult) => void;
+  /** Override the empty-state message; defaults to the standard "no files" copy. */
+  emptyMessage?: string;
 }
 
 export interface IProjectRiskTableBodyProps {

@@ -68,7 +68,7 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'During creation you pick which compliance frameworks apply. EU AI Act, ISO 42001, ISO 27001, and NIST AI RMF come built in, and your organization may have plugin frameworks installed on top. You can always add or remove frameworks later from settings.',
+      text: 'During creation you can pick which compliance frameworks apply in the **Applicable regulations (optional)** field. All frameworks are built in, from EU AI Act to HIPAA, PCI-DSS and NYC Local Law 144, so there is nothing to install. You can add or remove frameworks later from the use case\'s **Frameworks/regulations** tab with **Manage frameworks/regulations**. See **Adding frameworks** for the full list and the rules.',
     },
     {
       type: 'paragraph',
@@ -141,7 +141,7 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'For AI systems that require a CE mark under the EU AI Act. This tab appears when the relevant plugin is active and walks through the conformity assessment steps.',
+      text: 'For AI systems that require a CE mark under the EU AI Act. This tab is available on every use case and walks through the conformity assessment steps.',
     },
     {
       type: 'heading',
@@ -339,6 +339,12 @@ export const useCasesContent: ArticleContent = {
           articleId: 'eu-ai-act',
           title: 'EU AI Act compliance',
           description: 'How risk classification maps to regulatory requirements',
+        },
+        {
+          collectionId: 'compliance',
+          articleId: 'adding-frameworks',
+          title: 'Adding frameworks',
+          description: 'Add built-in frameworks to a use case and work through their requirements',
         },
         {
           collectionId: 'ai-governance',

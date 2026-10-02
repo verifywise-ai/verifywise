@@ -36,11 +36,11 @@ const evidence1 = new EvidenceHubModel({
       mimetype: "application/pdf",
       uploaded_by: 1,
       upload_date: "2026-07-01T00:00:00Z",
+      expiry_date: "2026-12-01",
     },
   ],
   mapped_model_ids: [1],
   tags: ["compliance", "soc2", "annual"],
-  expiry_date: new Date("2026-12-01"),
 });
 
 const evidence2 = new EvidenceHubModel({

@@ -49,7 +49,7 @@ import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import Alert from "../../components/Alert";
 import CustomizableSkeleton from "../../components/Skeletons";
 import TabBar from "../../components/TabBar";
@@ -85,6 +85,7 @@ const TASKS_TABLE_COLUMNS: ColumnConfig<TaskColumnKey>[] = [
 ];
 
 const Tasks: React.FC = () => {
+  const formatDate = useFormattedDate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [includeArchived, setIncludeArchived] = useState(false);
   const queryClient = useQueryClient();
@@ -644,7 +645,7 @@ const Tasks: React.FC = () => {
         }
         return "Unassigned";
       case "due_date":
-        return task.due_date ? displayFormattedDate(task.due_date) : "No Due Date";
+        return task.due_date ? formatDate(task.due_date) : "No Due Date";
       default:
         return "Other";
     }
@@ -694,12 +695,12 @@ const Tasks: React.FC = () => {
         status: STATUS_DISPLAY_MAP[task.status as TaskStatus] || task.status || "-",
         priority: task.priority || "-",
         assignees: assigneeNames,
-        due_date: task.due_date ? displayFormattedDate(task.due_date) : "-",
+        due_date: task.due_date ? formatDate(task.due_date) : "-",
         creator: creatorName,
         categories: task.categories?.join(", ") || "-",
       };
     });
-  }, [filteredTasks, users]);
+  }, [filteredTasks, users, formatDate]);
 
   return (
     <PageHeaderExtended

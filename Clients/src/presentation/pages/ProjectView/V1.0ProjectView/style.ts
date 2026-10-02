@@ -35,3 +35,11 @@ export const projectRiskSection = {
   mt: 10,
   fontSize: 16,
 };
+
+export const projectRiskSectionLink = {
+  "color": "primary.main",
+  "fontSize": 13,
+  "textDecoration": "none",
+  "width": "fit-content",
+  "&:hover": { textDecoration: "underline" },
+};

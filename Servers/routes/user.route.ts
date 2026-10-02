@@ -252,10 +252,23 @@ router.get("/:id/calculate-progress", authenticateJWT, calculateProgress);
 
 /**
  * Profile Photo Routes
+ *
+ * Upload and delete are self-only (selfOnly middleware, same pattern as
+ * PATCH /chng-pass/:id) — without it any org member could overwrite or
+ * delete any other member's photo (BOLA). See issue #4723.
+ *
+ * GET stays org-scoped (no selfOnly): member avatars are legitimately
+ * rendered across the app for other users in the same organization.
  */
-router.post("/:id/profile-photo", authenticateJWT, upload.single("photo"), uploadUserProfilePhoto);
+router.post(
+  "/:id/profile-photo",
+  authenticateJWT,
+  selfOnly,
+  upload.single("photo"),
+  uploadUserProfilePhoto,
+);
 router.get("/:id/profile-photo", authenticateJWT, getUserProfilePhoto);
-router.delete("/:id/profile-photo", authenticateJWT, deleteUserProfilePhoto);
+router.delete("/:id/profile-photo", authenticateJWT, selfOnly, deleteUserProfilePhoto);
 
 export default router;
 

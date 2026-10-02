@@ -37,6 +37,10 @@ export class FileModel {
   tags?: string[];
   entityLinks?: FileEntityLinkProjection[];
   linkGroups?: string[];
+  // Lifecycle: DATE string (YYYY-MM-DD) or null. Drives the Expired badge and
+  // the daily server-side notification sweep. See isFileExpired.
+  expiryDate?: string | null;
+  retentionPolicy?: string | null;
 
   constructor(data: FileModel) {
     this.id = data.id;
@@ -61,6 +65,8 @@ export class FileModel {
     this.tags = data.tags;
     this.entityLinks = data.entityLinks;
     this.linkGroups = data.linkGroups;
+    this.expiryDate = data.expiryDate ?? null;
+    this.retentionPolicy = data.retentionPolicy ?? null;
   }
 
   static createNewFile(data: Partial<FileModel>): FileModel {
@@ -98,6 +104,8 @@ export class FileModel {
       tags: apiData.tags,
       entityLinks: apiData.entityLinks,
       linkGroups: apiData.linkGroups,
+      expiryDate: apiData.expiryDate ?? null,
+      retentionPolicy: apiData.retentionPolicy ?? null,
     } as FileModel);
   }
 

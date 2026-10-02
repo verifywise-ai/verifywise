@@ -8,103 +8,40 @@ VerifyWise integrates with external services for AI model management, notificati
 
 | Integration | Purpose | Auth Method |
 |-------------|---------|-------------|
-| MLflow | AI/ML model registry sync | None/Basic/Token |
+| MLflow (extension) | AI/ML model registry sync | None/Basic/Token |
 | GitHub | Private repository access | PAT (encrypted) |
-| Slack | Team notifications | OAuth + Webhooks |
+| Slack (extension) | Team notifications | OAuth + Webhooks |
 | LLM Providers | AI advisor capabilities | API Keys (encrypted) |
 
 ---
 
 ## MLflow Integration
 
+MLflow, Azure AI Foundry, Slack and Jira Assets are **extensions**. An Admin enables and configures them per organization. See [Extensions](./extensions.md) for the catalog, config storage, gate middleware and routes.
+
 ### Purpose
 
-Syncs AI/ML model metadata from MLflow tracking servers to VerifyWise model inventory.
+Pulls experiment runs from an MLflow tracking server into the Model inventory **MLFlow** tab.
 
-### Database Schema
+### Configuration
 
-```
-mlflow_integrations
-├── id (PK, SERIAL)
-├── tracking_server_url (VARCHAR NOT NULL)
-├── auth_method (ENUM: none/basic/token)
-├── username (VARCHAR, encrypted)
-├── username_iv (VARCHAR)
-├── password (VARCHAR, encrypted)
-├── password_iv (VARCHAR)
-├── api_token (VARCHAR, encrypted)
-├── api_token_iv (VARCHAR)
-├── verify_ssl (BOOLEAN, default: true)
-├── timeout (INTEGER, default: 30)
-├── last_tested_at (TIMESTAMP)
-├── last_test_status (ENUM: success/error)
-├── last_test_message (TEXT)
-├── last_synced_at (TIMESTAMP)
-├── last_sync_status (ENUM: success/partial/error)
-├── last_sync_message (TEXT)
-├── updated_by (FK → users)
-├── created_at (TIMESTAMP)
-└── updated_at (TIMESTAMP)
-```
+Stored in `extension_enablements.configuration` for the `mlflow` extension. `password` and `api_token` are encrypted and never returned to the client. Fields: `tracking_server_url`, `auth_method` (`none` / `basic` / `token`), `username`, `password`, `api_token`, `verify_ssl` (default true), `timeout` (1–600 seconds, default 30). The service reads them with `ExtensionService.getRuntimeConfiguration("mlflow", organizationId)`.
+
+Synced runs are stored in `mlflow_model_records`.
 
 ### API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/integrations/mlflow/test` | Test connection |
-| GET | `/integrations/mlflow/config` | Get configuration |
-| POST | `/integrations/mlflow/configure` | Save configuration |
-| GET | `/integrations/mlflow/models` | Fetch models |
-| GET | `/integrations/mlflow/sync-status` | Get sync status |
-| GET | `/integrations/mlflow/health` | Health check |
+| POST | `/api/extensions/mlflow/test-connection` | Test connection (catalog route, Admin) |
+| PATCH | `/api/extensions/mlflow/configuration` | Save configuration (catalog route, Admin) |
+| GET | `/api/extensions/mlflow/models` | List synced models |
+| GET | `/api/extensions/mlflow/models/:modelId` | One synced model |
+| POST | `/api/extensions/mlflow/sync` | Sync now |
 
-### Authentication Methods
+### Sync
 
-**None:**
-```json
-{ "authMethod": "none" }
-```
-
-**Basic Auth:**
-```json
-{
-  "authMethod": "basic",
-  "username": "user",
-  "password": "pass"
-}
-```
-
-**Token Auth:**
-```json
-{
-  "authMethod": "token",
-  "apiToken": "mlflow-api-token"
-}
-```
-
-### Automated Sync
-
-- **Schedule:** Hourly (cron: `0 * * * *`)
-- **Queue:** BullMQ with Redis
-- **Retry:** 3 attempts with exponential backoff
-- **Pre-check:** Only syncs if last test was successful
-
-### Configuration Response
-
-```json
-{
-  "configured": true,
-  "config": {
-    "trackingServerUrl": "https://mlflow.example.com",
-    "authMethod": "token",
-    "timeout": 30,
-    "verifySsl": true,
-    "hasStoredApiToken": true,
-    "lastTestStatus": "success",
-    "lastSyncedAt": "2025-01-17T10:00:00Z"
-  }
-}
-```
+Sync is manual only (**Sync** button → `POST /sync`). No scheduled MLflow sync job exists.
 
 ---
 
@@ -196,14 +133,18 @@ slack_webhooks (public schema)
 
 ### API Endpoints
 
+Slack is the `slack` extension. The client uses the gated extension routes:
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/slack-webhooks/` | List webhooks |
-| GET | `/slack-webhooks/:id` | Get webhook |
-| POST | `/slack-webhooks/` | Create webhook |
-| PATCH | `/slack-webhooks/:id` | Update webhook |
-| DELETE | `/slack-webhooks/:id` | Delete webhook |
-| POST | `/slack-webhooks/:id/send` | Send message |
+| GET | `/api/extensions/slack/oauth/workspaces` | List webhooks |
+| GET | `/api/extensions/slack/oauth/workspaces/:id` | Get webhook |
+| POST | `/api/extensions/slack/oauth/workspaces` | Connect workspace (OAuth code exchange) |
+| PATCH | `/api/extensions/slack/oauth/workspaces/:id` | Update webhook (routing, active) |
+| DELETE | `/api/extensions/slack/oauth/workspaces/:id` | Delete webhook |
+| POST | `/api/extensions/slack/oauth/workspaces/:id/send` | Send message |
+
+The legacy `/api/slackWebhooks` mount serves the same handlers but is **not** gated by the extension. Notification delivery (`services/slack/`) reads `slack_webhooks` directly and does not check whether the extension is enabled.
 
 ### OAuth Flow
 
@@ -232,7 +173,7 @@ Notifications can be routed to different channels based on event type (configure
 
 ### Rate Limiting
 
-- Webhook creation: 10 requests per hour per IP
+- Workspace connection (`POST /api/extensions/slack/oauth/workspaces`): 10 requests per hour
 
 ---
 
@@ -306,11 +247,13 @@ const { iv, value } = encrypt(plaintext);
 const { data, success } = decrypt({ iv, value });
 ```
 
+Extension secret config fields (MLflow, Azure AI Foundry) are the exception. They use `encrypt` / `decrypt` from `utils/encryption.utils.ts` (AES-256-GCM, key from `ENCRYPTION_KEY`). See [Extensions](./extensions.md#secrets-and-validation).
+
 ### Secret Handling
 
 | Integration | Storage | Frontend Access |
 |-------------|---------|-----------------|
-| MLflow | Encrypted credentials | Status only |
+| MLflow | Encrypted secret fields in `extension_enablements.configuration` | Non-secret fields only |
 | GitHub | Encrypted token | Status only |
 | Slack | Encrypted token + URL | Status only |
 | LLM Keys | Plain (unique constraint) | Masked (last 4 chars) |
@@ -319,9 +262,9 @@ const { data, success } = decrypt({ iv, value });
 
 | Integration | Required Role |
 |-------------|---------------|
-| MLflow | Authenticated |
+| MLflow | Admin to configure; any user of an org with the extension enabled to read/sync |
 | GitHub | Admin |
-| Slack | Authenticated (user-scoped) |
+| Slack | Authenticated, extension enabled (user-scoped) |
 | LLM Keys | Authenticated |
 
 ---
@@ -338,8 +281,6 @@ FRONTEND_URL=https://app.verifywise.ai
 # Encryption
 ENCRYPTION_KEY=32-byte-key-for-aes-256
 
-# Redis (for MLflow sync)
-REDIS_URL=redis://localhost:6379
 ```
 
 ---
@@ -350,10 +291,9 @@ REDIS_URL=redis://localhost:6379
 
 | File | Purpose |
 |------|---------|
-| `routes/integrations.route.ts` | Routes |
-| `src/services/mlflow.service.ts` | Service |
-| `services/mlflow/mlflowSyncProducer.ts` | Sync producer |
-| `services/mlflow/mlflowSyncWorker.ts` | Sync worker |
+| `extensions/mlflow/mlflow.route.ts` | Routes (gated) |
+| `extensions/mlflow/mlflow.ctrl.ts` | Controller |
+| `extensions/mlflow/mlflow.service.ts` | Config, test connection, sync |
 
 ### GitHub
 
@@ -368,7 +308,8 @@ REDIS_URL=redis://localhost:6379
 
 | File | Purpose |
 |------|---------|
-| `routes/slackWebhook.route.ts` | Routes |
+| `extensions/slack/slack.route.ts` | Routes (gated) |
+| `routes/slackWebhook.route.ts` | Legacy routes (ungated) |
 | `controllers/slackWebhook.ctrl.ts` | Controller |
 | `services/slack/slackNotificationService.ts` | Notification service |
 | `domain.layer/models/slackNotification/` | Model |
@@ -388,4 +329,5 @@ REDIS_URL=redis://localhost:6379
 
 - [Automations](./automations.md) - Uses Slack for notifications
 - [Model Inventory](../domains/models.md) - Receives MLflow data
+- [Extensions](./extensions.md) - Enablement and configuration for MLflow, Slack and the other extensions
 - [AI Detection](../domains/ai-detection.md) - Uses GitHub integration

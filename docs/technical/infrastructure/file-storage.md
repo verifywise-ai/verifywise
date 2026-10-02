@@ -723,24 +723,25 @@ export const fileOperationsLimiter = rateLimit({
 
 ## File Entity Links (Generic Linking)
 
-The `file_entity_links` table provides a generic way to associate files with any entity (frameworks, plugins, controls, etc.) without modifying the core files table.
+The `file_entity_links` table provides a generic way to associate files with any entity (framework controls, requirements, assessments, etc.) without modifying the core files table. Tables live in the shared `verifywise` schema, so every query filters on `organization_id`.
 
 ### Linking a File to an Entity
 
 ```typescript
-// Link file to a framework control or plugin entity
+// Link a file as evidence on a framework implementation row
 await sequelize.query(`
-  INSERT INTO "${tenantId}".file_entity_links
-  (file_id, framework_type, entity_type, entity_id, project_id, created_by)
-  VALUES (:fileId, :frameworkType, :entityType, :entityId, :projectId, :userId)
+  INSERT INTO file_entity_links
+    (organization_id, file_id, framework_type, entity_type, entity_id, link_type, created_at)
+  VALUES (:organizationId, :fileId, :frameworkType, :entityType, :entityId, 'evidence', NOW())
+  ON CONFLICT (file_id, framework_type, entity_type, entity_id) DO NOTHING
 `, {
   replacements: {
+    organizationId,
     fileId,
-    frameworkType: "eu-ai-act",  // or plugin key like "nyc-local-law-144"
-    entityType: "control",        // or "level2", "assessment", etc.
+    frameworkType: "eu_ai_act",   // core: eu_ai_act, iso_42001, iso_27001, nist_ai_rmf;
+                                  // bundled: the structure's framework_type, e.g. "nyc_local_law_144"
+    entityType: "subcontrol",     // e.g. "subcontrol", "assessment", or a bundled framework's entity_types value
     entityId,
-    projectId,
-    userId,
   },
   transaction
 });
@@ -750,27 +751,29 @@ await sequelize.query(`
 
 ```typescript
 const files = await sequelize.query(`
-  SELECT f.* FROM "${tenantId}".files f
-  INNER JOIN "${tenantId}".file_entity_links fel ON f.id = fel.file_id
-  WHERE fel.framework_type = :frameworkType
+  SELECT f.* FROM files f
+  INNER JOIN file_entity_links fel ON f.id = fel.file_id
+  WHERE fel.organization_id = :organizationId
+    AND fel.framework_type = :frameworkType
     AND fel.entity_type = :entityType
     AND fel.entity_id = :entityId
-`, { replacements: { frameworkType, entityType, entityId } });
+`, { replacements: { organizationId, frameworkType, entityType, entityId } });
 ```
 
 ### Unlinking a File
 
 ```typescript
 await sequelize.query(`
-  DELETE FROM "${tenantId}".file_entity_links
-  WHERE file_id = :fileId
+  DELETE FROM file_entity_links
+  WHERE organization_id = :organizationId
+    AND file_id = :fileId
     AND framework_type = :frameworkType
     AND entity_type = :entityType
     AND entity_id = :entityId
-`, { replacements: { fileId, frameworkType, entityType, entityId }, transaction });
+`, { replacements: { organizationId, fileId, frameworkType, entityType, entityId }, transaction });
 ```
 
-This is particularly important for **plugin file associations** — see [Plugin System](./plugin-system.md#file-linking-for-plugins).
+The 21 bundled frameworks (ids 5–25) store all their evidence this way. `Servers/utils/frameworkImpl.utils.ts` writes the links using the structure's `framework_type` and `entity_types`. See [Compliance Frameworks](../domains/compliance-frameworks.md#bundled-frameworks-ids-525) and [Adding a New Compliance Framework](../guides/adding-new-framework.md).
 
 ---
 

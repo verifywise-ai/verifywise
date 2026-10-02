@@ -10,7 +10,7 @@ export const EXPLORE_VIDEO_DATA: Record<string, ExploreVideoData> = {
         category: "INVENTORY",
         title: "Model inventory\n& lifecycle",
         description:
-          "Register and track AI models with details like hosting, biases, and limitations. Extend with the lifecycle plugin.",
+          "Register and track AI models with details like hosting, biases, and limitations. Extend with the Model Lifecycle extension.",
       },
       {
         number: "02",
@@ -63,10 +63,10 @@ export const EXPLORE_VIDEO_DATA: Record<string, ExploreVideoData> = {
       },
       {
         number: "04",
-        category: "EXTENSIBLE",
-        title: "Plugin\nframeworks",
+        category: "BUILT IN",
+        title: "Built-in\nframeworks",
         description:
-          "Add SOC 2, GDPR, HIPAA, and more via the plugin marketplace — same controls experience.",
+          "SOC 2, GDPR, HIPAA, DORA, and 17 more frameworks are built in, with requirements, evidence, and risk tracking.",
       },
     ],
   },
@@ -299,37 +299,37 @@ export const EXPLORE_VIDEO_DATA: Record<string, ExploreVideoData> = {
     ],
   },
 
-  "Plugins": {
-    introTitle: "Plugins",
-    introSubtitle: "Extend the platform",
+  "Extensions": {
+    introTitle: "Extensions",
+    introSubtitle: "Built-in integrations",
     features: [
       {
         number: "01",
-        category: "MARKETPLACE",
-        title: "Marketplace\nbrowse",
+        category: "CATALOG",
+        title: "Seven\nextensions",
         description:
-          "Browse 30+ plugins for frameworks, integrations, and data tools in the marketplace.",
+          "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import, and Dataset Bulk Upload.",
       },
       {
         number: "02",
-        category: "INSTALL",
-        title: "One-click\ninstall",
+        category: "ADMIN",
+        title: "Enable &\nconfigure",
         description:
-          "Install and configure plugins with a single click — no code changes required.",
+          "Admins enable, configure, and disable extensions from the Extensions page. Nothing to install.",
       },
       {
         number: "03",
-        category: "FRAMEWORKS",
-        title: "Framework\nplugins",
+        category: "INTEGRATIONS",
+        title: "Connected\ntools",
         description:
-          "Add SOC 2, GDPR, HIPAA, and other compliance frameworks as plugins with full controls.",
+          "Send notifications to Slack, sync models from MLflow and Azure AI Foundry, and import use cases from Jira Assets.",
       },
       {
         number: "04",
-        category: "INTEGRATIONS",
-        title: "Integration\nplugins",
+        category: "DATA",
+        title: "Data &\nlifecycle",
         description:
-          "Connect Slack, Jira, MLflow, Azure AI, and more for seamless workflow integration.",
+          "Import risks from Excel, bulk upload datasets with PII detection, and define model lifecycle phases.",
       },
     ],
   },

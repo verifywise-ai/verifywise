@@ -18,7 +18,7 @@ import StandardModal from "../../../components/Modals/StandardModal";
 import { EmptyState } from "../../../components/EmptyState";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import { SearchBox } from "../../../components/Search";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { MrmTier } from "../../../../domain/enums/mrm.enum";
 import { IMrmFleetRow } from "../../../../domain/interfaces/i.mrm";
 import { useAssignModelTier, useFleetTiering } from "../../../../application/hooks/useMrm";
@@ -46,6 +46,7 @@ const TIER_LEGEND =
   "Tier 1 full independent validation + continuous monitoring · annual revalidation.  Tier 2 standard validation + periodic monitoring · 18-month cycle.  Tier 3 lightweight review · biennial.  Tiering rules and cadence are configured in Settings → Tiering rules.";
 
 const TieringTab = ({ onError, onSuccess }: TieringTabProps) => {
+  const formatDate = useFormattedDate();
   const { data: fleet = [], isLoading } = useFleetTiering();
   const assignTier = useAssignModelTier();
 
@@ -143,7 +144,7 @@ const TieringTab = ({ onError, onSuccess }: TieringTabProps) => {
                   </TableCell>
                   <TableCell sx={mrmTableCellStyle}>{row.mrm_materiality_drivers ?? "—"}</TableCell>
                   <TableCell sx={mrmTableCellStyle}>
-                    {row.mrm_tiered_at ? displayFormattedDate(row.mrm_tiered_at) : "—"}
+                    {row.mrm_tiered_at ? formatDate(row.mrm_tiered_at) : "—"}
                   </TableCell>
                   <TableCell sx={mrmTableCellStyle}>
                     {row.status ? <Chip label={row.status} uppercase={false} /> : "—"}

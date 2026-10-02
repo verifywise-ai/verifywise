@@ -33,7 +33,7 @@ import { CustomizableButton } from "../../../components/button/customizable-butt
 import StandardModal from "../../../components/Modals/StandardModal";
 import Field from "../../../components/Inputs/Field";
 import DatePicker from "../../../components/Inputs/Datepicker";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import VWTooltip from "../../../components/VWTooltip";
 import Checkbox from "../../../components/Inputs/Checkbox";
 import {
@@ -225,6 +225,7 @@ const getStatusBgColor = (status: ConformityStepStatus): string => {
 };
 
 const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
+  const formatDate = useFormattedDate();
   const theme = useTheme();
   const navigate = useNavigate();
   const { users } = useUsers();
@@ -1904,7 +1905,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                               •
                             </Typography>
                             <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
-                              Uploaded: {displayFormattedDate(evidence.uploaded_time)}
+                              Uploaded: {formatDate(evidence.uploaded_time)}
                             </Typography>
                           </>
                         )}
@@ -2001,7 +2002,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                               •
                             </Typography>
                             <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
-                              Occurred: {displayFormattedDate(incident.occurred_date)}
+                              Occurred: {formatDate(incident.occurred_date)}
                             </Typography>
                           </>
                         )}

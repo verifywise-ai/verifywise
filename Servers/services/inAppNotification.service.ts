@@ -950,41 +950,53 @@ export const notifyPolicyDueSoon = async (
 };
 
 /**
- * Notify evidence expired (Evidence Hub retention sweep)
+ * Notify a file uploader that their file is inside the 7-day pre-expiry
+ * window. Called by the daily fileExpirySweep for each row it matches; the
+ * sweep writes no state back, so a re-run on the same day sends again —
+ * the window itself is the dedup.
  */
-export const notifyEvidenceExpired = async (
+export const notifyFileExpiring = async (
   organizationId: number,
   recipientId: number,
-  evidence: {
+  file: {
     id: number;
     name: string;
     expiryDate: string;
+    daysRemaining: number;
   },
   baseUrl: string,
 ): Promise<void> => {
   const recipient = await getUserById(recipientId);
 
+  const daysRemainingLabel =
+    file.daysRemaining <= 0
+      ? "expires today"
+      : file.daysRemaining === 1
+        ? "1 day"
+        : `${file.daysRemaining} days`;
+
   await sendInAppNotification(
     organizationId,
     {
       user_id: recipientId,
-      type: NotificationType.EVIDENCE_EXPIRED,
-      title: "Evidence expired",
-      message: `Evidence "${evidence.name}" expired on ${evidence.expiryDate}`,
-      entity_type: NotificationEntityType.EVIDENCE,
-      entity_id: evidence.id,
-      entity_name: evidence.name,
-      action_url: buildEntityUrl(NotificationEntityType.EVIDENCE, evidence.id),
+      type: NotificationType.FILE_EXPIRING,
+      title: "File expiring soon",
+      message: `File "${file.name}" expires on ${file.expiryDate} (${daysRemainingLabel})`,
+      entity_type: NotificationEntityType.FILE,
+      entity_id: file.id,
+      entity_name: file.name,
+      action_url: buildEntityUrl(NotificationEntityType.FILE, file.id),
     },
     true,
     {
-      template: EMAIL_TEMPLATES.EVIDENCE_EXPIRED,
-      subject: `Evidence expired: ${evidence.name}`,
+      template: EMAIL_TEMPLATES.FILE_EXPIRING,
+      subject: `File expiring soon: ${file.name}`,
       variables: {
         recipient_name: recipient ? `${recipient.name}` : "there",
-        evidence_name: evidence.name,
-        expiry_date: evidence.expiryDate,
-        evidence_url: `${baseUrl}${buildEntityUrl(NotificationEntityType.EVIDENCE, evidence.id)}`,
+        file_name: file.name,
+        expiry_date: file.expiryDate,
+        days_remaining: daysRemainingLabel,
+        file_url: `${baseUrl}${buildEntityUrl(NotificationEntityType.FILE, file.id)}`,
       },
     },
   );

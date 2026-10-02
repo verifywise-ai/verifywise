@@ -21,6 +21,11 @@ import { CirclePlus as AddCircleOutlineIcon, Trash2 } from "lucide-react";
 
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
+import { focusFormFieldById } from "../../../../application/utils/formValidationFocus";
+import {
+  TRAINING_FORM_FIELD_IDS,
+  TRAINING_FORM_FIELD_ORDER,
+} from "../../../constants/formValidationFieldMaps";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
 import {
   TrainingRegistarDTO,
@@ -100,7 +105,7 @@ const NewTraining: FC<NewTrainingProps> = ({
     }),
     [],
   );
-  const { errors, validateAll, clearFieldError, resetErrors } =
+  const { errors, validateAll, clearFieldError, resetErrors, getFirstInvalidField } =
     useFormValidation<TrainingFormState>(validators);
   const [activeTab, setActiveTab] = useState("details");
 
@@ -226,7 +231,14 @@ const NewTraining: FC<NewTrainingProps> = ({
     async (event?: React.FormEvent) => {
       if (event) event.preventDefault();
 
-      if (!validateAll(values)) return;
+      if (!validateAll(values, TRAINING_FORM_FIELD_ORDER)) {
+        // Validation failed — move focus to the first invalid field so the
+        // user immediately sees what needs fixing (issue #4756).
+        const firstInvalid = getFirstInvalidField();
+        const fieldId = firstInvalid ? TRAINING_FORM_FIELD_IDS[firstInvalid] : undefined;
+        if (fieldId) focusFormFieldById(fieldId);
+        return;
+      }
 
       // Defensive: Guard against undefined callback
       if (!onSuccess) {

@@ -88,6 +88,7 @@ import {
   entityGraphEndpoints,
   euAiActEndpoints,
   evidenceHubEndpoints,
+  extensionEndpoints,
   fileEndpoints,
   frameworkEndpoints,
   friaEndpoints,
@@ -104,7 +105,6 @@ import {
   noteEndpoints,
   notificationEndpoints,
   organizationEndpoints,
-  pluginEndpoints,
   policyEndpoints,
   postMarketMonitoringEndpoints,
   projectEndpoints,
@@ -221,7 +221,7 @@ const App: React.FC = () => {
     // Compliance Frameworks
     { id: 'assessments', label: 'Assessments', icon: <ClipboardCheck size={14} />, category: 'compliance', keywords: ['assessment', 'evaluate'] },
     { id: 'policies', label: 'Policies', icon: <FileCheck size={14} />, category: 'compliance', keywords: ['policy', 'governance'] },
-    { id: 'frameworks', label: 'Frameworks', icon: <Layers size={14} />, category: 'compliance', keywords: ['framework', 'standard'] },
+    { id: 'frameworks', label: 'Frameworks', icon: <Layers size={14} />, category: 'compliance', keywords: ['framework', 'standard', 'soc 2', 'gdpr', 'hipaa', 'dora', 'implementation', 'requirement', 'control'] },
     { id: 'eu-ai-act', label: 'EU AI Act', icon: <Shield size={14} />, category: 'compliance', keywords: ['eu', 'ai act', 'regulation'] },
     { id: 'iso-27001', label: 'ISO 27001', icon: <Award size={14} />, category: 'compliance', keywords: ['iso', '27001', 'security'] },
     { id: 'iso-42001', label: 'ISO 42001', icon: <Award size={14} />, category: 'compliance', keywords: ['iso', '42001', 'ai'] },
@@ -253,7 +253,7 @@ const App: React.FC = () => {
     { id: 'intake-forms', label: 'Intake forms', icon: <ClipboardCheck size={14} />, category: 'advanced', keywords: ['intake', 'form', 'submission'] },
     { id: 'entity-graph', label: 'Entity graph', icon: <Layers size={14} />, category: 'advanced', keywords: ['entity', 'graph', 'relationship'] },
     { id: 'post-market-monitoring', label: 'Post-market monitoring', icon: <Gauge size={14} />, category: 'advanced', keywords: ['post-market', 'monitoring', 'pmm'] },
-    { id: 'plugins', label: 'Plugins', icon: <Boxes size={14} />, category: 'advanced', keywords: ['plugin', 'marketplace', 'extension'] },
+    { id: 'extensions', label: 'Extensions', icon: <Boxes size={14} />, category: 'advanced', keywords: ['extension', 'slack', 'mlflow', 'azure ai foundry', 'jira', 'jira assets', 'model lifecycle', 'risk import', 'dataset bulk upload', 'enable', 'configuration'] },
     { id: 'change-history', label: 'Change history', icon: <ScrollText size={14} />, category: 'advanced', keywords: ['change', 'history', 'audit'] },
     { id: 'audit-ledger', label: 'Audit ledger', icon: <FileCheck size={14} />, category: 'advanced', keywords: ['audit', 'ledger', 'verify'] },
     { id: 'webhooks', label: 'Webhooks', icon: <Zap size={14} />, category: 'advanced', keywords: ['webhook', 'callback', 'event'] },
@@ -640,7 +640,7 @@ const App: React.FC = () => {
               {activeSection === 'shadow-ai' && <EndpointSection title="Shadow AI" description="Endpoints for shadow AI detection, monitoring, and governance." endpoints={shadowAiEndpoints} />}
               {activeSection === 'assessments' && <EndpointSection title="Assessments" description="Endpoints for managing compliance assessments." endpoints={assessmentEndpoints} />}
               {activeSection === 'policies' && <EndpointSection title="Policies" description="Endpoints for managing organizational policies." endpoints={policyEndpoints} />}
-              {activeSection === 'frameworks' && <EndpointSection title="Frameworks" description="Endpoints for managing compliance frameworks." endpoints={frameworkEndpoints} />}
+              {activeSection === 'frameworks' && <EndpointSection title="Frameworks" description="Endpoints for listing compliance frameworks, adding them to or removing them from projects, and working the implementation rows of the built-in frameworks (SOC 2, GDPR, HIPAA and the rest) through the generic /frameworks/{frameworkId}/... endpoints." endpoints={frameworkEndpoints} />}
               {activeSection === 'eu-ai-act' && <EndpointSection title="EU AI Act" description="Endpoints for EU AI Act compliance management." endpoints={euAiActEndpoints} />}
               {activeSection === 'iso-27001' && <EndpointSection title="ISO 27001" description="Endpoints for ISO 27001 information security compliance." endpoints={iso27001Endpoints} />}
               {activeSection === 'iso-42001' && <EndpointSection title="ISO 42001" description="Endpoints for ISO 42001 AI management system compliance." endpoints={iso42001Endpoints} />}
@@ -668,7 +668,7 @@ const App: React.FC = () => {
               {activeSection === 'intake-forms' && <EndpointSection title="Intake forms" description="Endpoints for intake form creation, public submissions, and review." endpoints={intakeFormEndpoints} />}
               {activeSection === 'entity-graph' && <EndpointSection title="Entity graph" description="Endpoints for entity relationship graph, annotations, and gap rules." endpoints={entityGraphEndpoints} />}
               {activeSection === 'post-market-monitoring' && <EndpointSection title="Post-market monitoring" description="Endpoints for post-market monitoring configuration and cycles." endpoints={postMarketMonitoringEndpoints} />}
-              {activeSection === 'plugins' && <EndpointSection title="Plugins" description="Endpoints for plugin marketplace and installation management." endpoints={pluginEndpoints} />}
+              {activeSection === 'extensions' && <EndpointSection title="Extensions" description="Enable, configure and use built-in extensions for your organization." endpoints={extensionEndpoints} />}
               {activeSection === 'change-history' && <EndpointSection title="Change history" description="Endpoints for tracking entity change history across all domains." endpoints={changeHistoryEndpoints} />}
               {activeSection === 'audit-ledger' && <EndpointSection title="Audit ledger" description="Endpoints for the tamper-proof audit ledger." endpoints={auditEndpoints} />}
               {activeSection === 'webhooks' && <EndpointSection title="Webhooks" description="Endpoints for managing webhook configurations and deliveries." endpoints={webhookEndpoints} />}
@@ -822,11 +822,11 @@ const OverviewSection: React.FC = () => (
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
         {[
           { label: 'Core resources', count: 6, desc: 'Users, Organizations, Projects, Roles, Invitations, Super admin' },
-          { label: 'Risk management', count: 5, desc: 'Project risks, Vendors, Vendor risks, Quantitative risks, Risk benchmarks' },
+          { label: 'Risk management', count: 6, desc: 'Project risks, Vendors, Vendor risks, Quantitative risks, Risk benchmarks, Risk history' },
           { label: 'AI governance', count: 9, desc: 'Model inventory, Model risks, Datasets, Training, AI Trust Centre, AI detection, AI advisor, Agent discovery, Shadow AI' },
           { label: 'Compliance', count: 10, desc: 'Assessments, Policies, Frameworks, EU AI Act, ISO 27001, ISO 42001, NIST AI RMF, FRIA, Compliance score, Approval workflows' },
-          { label: 'Utilities', count: 14, desc: 'Files, Email, Dashboard, Search, System & logs, Tasks, Tokens, Preferences, Notes, Notifications, Share links, Reporting, Slack, Subscriptions' },
-          { label: 'Advanced', count: 12, desc: 'Evidence hub, AI incidents, CE marking, Automation, Integrations, Intake forms, Entity graph, Post-market monitoring, Plugins, Change history, Audit ledger, LLM keys' },
+          { label: 'Utilities', count: 12, desc: 'Files, Email services, Dashboard, Search, System & logs, Tasks, Notes, Notifications, Share links, Reporting, Settings, Subscription' },
+          { label: 'Advanced', count: 15, desc: 'Evidence hub, AI incidents, CE marking, Automation, Integrations, Intake forms, Entity graph, Post-market monitoring, Extensions, Change history, Audit ledger, Webhooks, Demo data, Internal, LLM keys' },
         ].map((category) => (
           <Box
             key={category.label}

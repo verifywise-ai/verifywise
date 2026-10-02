@@ -94,6 +94,11 @@ export function useFolderFiles(selectedFolder: SelectedFolder): UseFolderFilesRe
           setAllFiles(filesData);
         } else if (folder === "uncategorized") {
           filesData = await getUncategorizedFiles();
+        } else if (folder === "expired") {
+          // "Expired" is a client-side filter over the org-wide file list —
+          // the page derives displayFiles from filesData (React Query cache),
+          // so this hook has no server call to make for it.
+          filesData = [];
         } else {
           filesData = await getFilesInFolder(folder);
         }

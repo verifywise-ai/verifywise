@@ -30,6 +30,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # The frontend Dockerfile intentionally copies only package.json (not the
+      # lockfile) and runs `npm install` fresh for musl platform binaries, so the
+      # BuildKit layer cache cannot see dependency changes on its own. Scope the
+      # GHA cache by the lockfile hash instead: a lockfile change switches to a
+      # fresh scope (full rebuild with new deps), while an unchanged lockfile
+      # hits the cache. The plain `clients` scope is a rolling fallback.
+      - name: Hash Clients lockfile for cache scope
+        id: clients-lock
+        run: echo "hash=$(sha256sum Clients/package-lock.json | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
       - name: Build and push Clients image
         uses: docker/build-push-action@v7
         with:
@@ -38,7 +48,10 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/verifywise-frontend:test
-          no-cache: true
+          cache-from: |
+            type=gha,scope=clients-${{ steps.clients-lock.outputs.hash }}
+            type=gha,scope=clients
+          cache-to: type=gha,mode=max,scope=clients-${{ steps.clients-lock.outputs.hash }}
           build-args: |
             VITE_SLACK_CLIENT_ID=${{ secrets.SLACK_CLIENT_ID }}
             VITE_APP_VERSION=develop

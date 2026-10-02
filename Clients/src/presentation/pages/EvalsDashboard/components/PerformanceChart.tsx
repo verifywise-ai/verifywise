@@ -15,7 +15,8 @@ import {
   type Experiment,
 } from "../../../../application/repository/deepEval.repository";
 import { vwTooltipStyle, ChartOutlineWrapper } from "../../../components/Charts/VWCharts";
-import { displayFormattedDate, displayFormattedTime } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import { displayFormattedTime } from "../../../tools/isoDateToString";
 
 export type TimeRange = "7d" | "30d" | "100d" | "all";
 
@@ -102,6 +103,7 @@ type ChartPoint = {
 };
 
 export default function PerformanceChart({ projectId, timeRange }: PerformanceChartProps) {
+  const formatDate = useFormattedDate();
   const [data, setData] = useState<ChartPoint[]>([]);
   const [activeMetrics, setActiveMetrics] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -157,7 +159,7 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
         });
 
         // Build chart point
-        const dateStr = displayFormattedDate(exp.created_at);
+        const dateStr = formatDate(exp.created_at);
         const timeStr = displayFormattedTime(exp.created_at);
         const point: ChartPoint = {
           name: `Run ${i + 1}`,
@@ -181,7 +183,7 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
     } finally {
       setLoading(false);
     }
-  }, [projectId, timeRange, getCutoffDate]);
+  }, [projectId, timeRange, getCutoffDate, formatDate]);
 
   useEffect(() => {
     void loadPerformanceData();

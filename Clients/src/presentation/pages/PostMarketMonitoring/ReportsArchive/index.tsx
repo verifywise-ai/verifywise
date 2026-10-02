@@ -33,7 +33,7 @@ import {
   PMMReportsFilterRequest,
 } from "../../../../domain/types/PostMarketMonitoring";
 import dayjs, { Dayjs } from "dayjs";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { AlertState } from "../../../../application/interfaces/appStates";
 
 interface LocalAlertState extends AlertState {
@@ -42,6 +42,7 @@ interface LocalAlertState extends AlertState {
 }
 
 const ReportsArchive: React.FC = () => {
+  const formatDate = useFormattedDate();
   const theme = useTheme();
 
   // State
@@ -307,7 +308,7 @@ const ReportsArchive: React.FC = () => {
                       </TableCell>
                       <TableCell sx={tableCellStyle}>#{report.cycle_number}</TableCell>
                       <TableCell sx={tableCellStyle}>
-                        {report.completed_at ? displayFormattedDate(report.completed_at) : "-"}
+                        {report.completed_at ? formatDate(report.completed_at) : "-"}
                       </TableCell>
                       <TableCell sx={tableCellStyle}>{report.completed_by_name || "-"}</TableCell>
                       <TableCell sx={tableCellStyle} align="center">

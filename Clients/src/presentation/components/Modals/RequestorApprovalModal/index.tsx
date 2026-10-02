@@ -55,7 +55,7 @@ import {
 import StepDetailsModal from "./StepDetailsModal";
 import DualButtonModal from "../../Dialogs/ConfirmationModal";
 import Field from "../../Inputs/Field";
-import { displayFormattedDateTime } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import {
   IMenuItemExtended,
   IRequestorApprovalProps,
@@ -147,6 +147,7 @@ const getWorkflowChipProps = (value: string) => {
 };
 
 const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, onRefresh }) => {
+  const formatDate = useFormattedDate();
   const [isStepDetailsModalOpen, setIsStepDetailsModalOpen] = useState(false);
   const [selectedStepDetails, setSelectedStepDetails] = useState<IStepDetails | null>(null);
   const [selectedItem, setSelectedItem] = useState<IMenuItemExtended | null>(null);
@@ -807,7 +808,7 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
                         <DetailField
                           icon={<Calendar size={14} />}
                           label="Created"
-                          value={displayFormattedDateTime(requestDetails.dateCreated)}
+                          value={formatDate(requestDetails.dateCreated, { includeTime: true })}
                         />
                       )}
                     </Stack>
@@ -851,7 +852,7 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
                               <Typography sx={stepTitleStyle}>{step.title}</Typography>
                               {step.status === ApprovalStepStatus.Completed && step.date && (
                                 <Typography sx={stepDateStyle}>
-                                  {displayFormattedDateTime(step.date)}
+                                  {formatDate(step.date, { includeTime: true })}
                                 </Typography>
                               )}
                             </Stack>

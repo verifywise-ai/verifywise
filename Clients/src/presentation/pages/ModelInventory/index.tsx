@@ -23,7 +23,7 @@ import MLFlowTab from "../Extensions/mlflow/MLFlowTab";
 import AzureAIFoundryTab from "../Extensions/azure-ai-foundry/AzureAIFoundryTab";
 // Import the table and modal components specific to ModelInventory
 import ModelInventoryTable from "./modelInventoryTable";
-// Note: LifecycleConfigEditor is now provided by the model-lifecycle plugin via plugin slots
+// Note: the lifecycle config editor lives in the Model Lifecycle extension (pages/Extensions/model-lifecycle)
 import { IModelInventory } from "../../../domain/interfaces/i.modelInventory";
 import NewModelInventory from "../../components/Modals/NewModelInventory";
 import ModelRisksTable from "./ModelRisksTable";
@@ -61,6 +61,7 @@ import { createEvidenceHub } from "../../../application/repository/evidenceHub.r
 import EvidenceHubTable from "./evidenceHubTable";
 import FilePreviewPanel from "../FileManager/components/FilePreviewPanel";
 import { FileMetadata } from "../../../application/repository/file.repository";
+import { earliestFileExpiry } from "../../../application/utils/fileExpiry";
 import ModelEvaluationsTab from "./ModelEvaluationsTab";
 import ModelRiskManagementTab from "./mrm";
 import ShareButton from "../../components/ShareViewDropdown/ShareButton";
@@ -151,7 +152,7 @@ const ModelInventory: React.FC = () => {
   const [modelInventoryData, setModelInventoryData] = useState<IModelInventory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isNewModelInventoryModalOpen, setIsNewModelInventoryModalOpen] = useState(false);
-  // Note: Lifecycle config is now provided by the model-lifecycle plugin via plugin slots
+  // Note: Lifecycle config is managed by the Model Lifecycle extension (pages/Extensions/model-lifecycle)
 
   const [selectedModelInventory, setSelectedModelInventory] = useState<IModelInventory | null>(
     null,
@@ -636,7 +637,7 @@ const ModelInventory: React.FC = () => {
         case "uploaded_by":
           return item.evidence_files?.[0]?.uploaded_by?.toString();
         case "expiry_date":
-          return item.expiry_date;
+          return earliestFileExpiry(item.evidence_files);
         default:
           return null;
       }
@@ -1192,9 +1193,7 @@ const ModelInventory: React.FC = () => {
           uploader_name: uploader?.name,
           uploader_surname: uploader?.surname,
           tags: evidence?.tags,
-          expiry_date: evidence?.expiry_date
-            ? new Date(evidence.expiry_date).toISOString()
-            : undefined,
+          expiry_date: rawFile.expiry_date ?? undefined,
           description: evidence?.description ?? undefined,
         };
       });
@@ -1502,9 +1501,12 @@ const ModelInventory: React.FC = () => {
 
         errorMessage = validationMessages;
       }
-      // Handle general error message
+      // Handle general error message — prefer the specific payload (STATUS_CODE
+      // puts the specific text in `data`, e.g. a 409 "Conflict" carries the
+      // human-readable reason there) over the generic `message` (issue #4755).
       else if (errorData.message) {
-        errorMessage = errorData.message;
+        errorMessage =
+          typeof errorData.data === "string" && errorData.data ? errorData.data : errorData.message;
       }
     }
 
@@ -1810,9 +1812,10 @@ const ModelInventory: React.FC = () => {
           .filter(Boolean)
           .join(", ") || "-";
 
-      // Format expiry date
-      const formattedExpiryDate = evidence.expiry_date
-        ? new Date(evidence.expiry_date).toISOString().split("T")[0]
+      // Expiry lives on the linked files; the earliest one represents the row.
+      const earliestExpiry = earliestFileExpiry(evidence.evidence_files);
+      const formattedExpiryDate = earliestExpiry
+        ? new Date(earliestExpiry).toISOString().split("T")[0]
         : "-";
 
       return {
@@ -1979,7 +1982,7 @@ const ModelInventory: React.FC = () => {
     } else if (newValue === "model-risk-management") {
       navigate("/model-inventory/model-risk-management");
     } else {
-      // Handle plugin tabs dynamically
+      // Handle extension tabs (e.g. MLflow, Azure AI Foundry) dynamically
       navigate(`/model-inventory/${newValue}`);
     }
   };
@@ -2285,7 +2288,7 @@ const ModelInventory: React.FC = () => {
                 >
                   <BarChart3 size={16} color={palette.text.secondary} />
                 </IconButton>
-                {/* Lifecycle config is now accessed via Plugin Settings page */}
+                {/* Lifecycle config is accessed from the Model Lifecycle extension settings page */}
                 <div data-joyride-id="add-model-button">
                   <CustomizableButton
                     variant="contained"
@@ -2632,7 +2635,7 @@ const ModelInventory: React.FC = () => {
           onOpenLink={handleOpenLink}
         />
 
-        {/* Lifecycle Config is now provided by the model-lifecycle plugin */}
+        {/* Lifecycle config is provided by the Model Lifecycle extension */}
       </PageHeaderExtended>
     </Stack>
   );

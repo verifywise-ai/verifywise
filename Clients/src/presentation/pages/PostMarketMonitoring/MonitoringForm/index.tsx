@@ -31,7 +31,8 @@ import {
 } from "../../../../domain/types/PostMarketMonitoring";
 import { AlertState } from "../../../../application/interfaces/appStates";
 import { brand } from "../../../themes/palette";
-import { displayFormattedDate, displayFormattedTime } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import { displayFormattedTime } from "../../../tools/isoDateToString";
 
 interface LocalAlertState extends AlertState {
   isToast: boolean;
@@ -39,6 +40,7 @@ interface LocalAlertState extends AlertState {
 }
 
 const MonitoringForm: React.FC = () => {
+  const formatDate = useFormattedDate();
   const theme = useTheme();
   const { cycleId } = useParams<{ cycleId: string }>();
   const navigate = useNavigate();
@@ -297,7 +299,7 @@ const MonitoringForm: React.FC = () => {
                 Due date
               </Typography>
               <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                {displayFormattedDate(cycle.due_at)}
+                {formatDate(cycle.due_at)}
               </Typography>
             </Stack>
 
@@ -333,7 +335,7 @@ const MonitoringForm: React.FC = () => {
             <CheckCircle size={20} color={theme.palette.status.success.main} />
             <Typography sx={{ fontSize: 13, color: theme.palette.status.success.text }}>
               This monitoring cycle was completed on{" "}
-              {cycle.completed_at ? displayFormattedDate(cycle.completed_at) : ""}
+              {cycle.completed_at ? formatDate(cycle.completed_at) : ""}
               {cycle.completed_by_name && ` by ${cycle.completed_by_name}`}.
             </Typography>
           </Stack>

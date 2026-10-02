@@ -26,7 +26,7 @@ import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtende
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import palette from "../../../themes/palette";
 import { useCardSx, ProviderIcon, useGatewayModels, slugify } from "../shared";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import { SHOW_AI_GATEWAY_PROMPTS } from "../../../../application/config/featureFlags";
 
@@ -65,6 +65,7 @@ const EMPTY_FORM: EndpointForm = {
 };
 
 export default function EndpointsPage() {
+  const formatDate = useFormattedDate();
   const cardSx = useCardSx();
   const [endpoints, setEndpoints] = useState<any[]>([]);
   const [apiKeys, setApiKeys] = useState<any[]>([]);
@@ -389,7 +390,7 @@ export default function EndpointsPage() {
                       </Typography>
                       <Typography sx={{ fontSize: 11, color: palette.text.disabled, mt: "2px" }}>
                         {ep.created_by_name ? `Added by ${ep.created_by_name}` : "Added"} &middot;{" "}
-                        {displayFormattedDate(ep.created_at)}
+                        {formatDate(ep.created_at)}
                       </Typography>
                     </Box>
                   </Stack>

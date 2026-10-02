@@ -32,7 +32,7 @@ import TablePaginationActions from "../../TablePagination";
 import { paginationStyle } from "../styles";
 import { useUserMap } from "../../../../../src/presentation/hooks/userMap";
 import { text } from "../../../themes/palette";
-import { displayFormattedDateTime } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 
 interface LinkedPolicyObjectsTableProps {
   policies: any[];
@@ -155,6 +155,7 @@ const LinkedPolicyObjectsTable: React.FC<LinkedPolicyObjectsTableProps> = ({
   paginated = true,
   type,
 }) => {
+  const formatDate = useFormattedDate();
   const theme = useTheme();
   const { userMap } = useUserMap();
 
@@ -332,7 +333,9 @@ const LinkedPolicyObjectsTable: React.FC<LinkedPolicyObjectsTableProps> = ({
                         : "inherit",
                   }}
                 >
-                  {row.last_updated_at ? displayFormattedDateTime(row.last_updated_at) : "-"}
+                  {row.last_updated_at
+                    ? formatDate(row.last_updated_at, { includeTime: true })
+                    : "-"}
                 </TableCell>
 
                 {/* LAST UPDATED BY */}
@@ -392,6 +395,7 @@ const LinkedPolicyObjectsTable: React.FC<LinkedPolicyObjectsTableProps> = ({
       userMap,
       type,
       onRemove,
+      formatDate,
     ],
   );
 

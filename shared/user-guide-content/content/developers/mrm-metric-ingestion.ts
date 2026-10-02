@@ -252,7 +252,7 @@ export const mrmMetricIngestionContent: ArticleContent = {
     },
     {
       type: "paragraph",
-      text: "Every newly stored point gets an immutable evaluation with a frozen copy of the threshold it was judged against — the audit record examiners see. A warn or breach sends an in-app notification to the people assigned to the model’s MRM roles, and a threshold set to notify and flag for revalidation also opens or annotates a revalidation task for the model. These steps run after the response is computed and never change it.",
+      text: "Every newly stored point gets an immutable evaluation with a frozen copy of the threshold it was judged against — the audit record examiners see. A warn or breach notifies the people assigned to the model’s MRM roles plus any additional recipients configured in alert settings, in-app and — when your organization enables it — by email. A hard breach can also open a finding automatically when that setting is on, and a threshold set to notify and flag for revalidation opens or annotates a revalidation task for the model. These steps run after the response is computed and never change it.",
     },
     {
       type: "article-links",

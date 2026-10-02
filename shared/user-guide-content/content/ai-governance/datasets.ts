@@ -89,6 +89,11 @@ export const datasetsContent: ArticleContent = {
       text: 'If you have multiple dataset files to register at once, use the bulk upload feature instead of adding them one by one.',
     },
     {
+      type: 'callout',
+      variant: 'info',
+      text: 'The **Bulk upload** button only appears once an Admin enables the Dataset Bulk Upload extension. See **Extensions**.',
+    },
+    {
       type: 'ordered-list',
       items: [
         { text: 'Click **Bulk upload** in the top right.' },

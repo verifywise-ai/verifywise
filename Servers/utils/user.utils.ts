@@ -594,11 +594,21 @@ export const deleteUserProfilePhotoQuery = async (
 };
 
 /**
- * Deletes all demo users from the database.
+ * Deletes one organization's demo users.
  *
+ * Scoped by organization_id: removing demo data from one org must never delete
+ * another org's users.
+ *
+ * @param organizationId - The organization whose demo users are deleted.
  * @param transaction - The database transaction to use.
  * @returns A promise that resolves when the demo users are deleted.
  */
-export const deleteDemoUsersQuery = async (transaction: Transaction): Promise<void> => {
-  await sequelize.query(`DELETE FROM users WHERE is_demo = true`, { transaction });
+export const deleteDemoUsersQuery = async (
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> => {
+  await sequelize.query(
+    `DELETE FROM users WHERE organization_id = :organizationId AND is_demo = true`,
+    { replacements: { organizationId }, transaction },
+  );
 };

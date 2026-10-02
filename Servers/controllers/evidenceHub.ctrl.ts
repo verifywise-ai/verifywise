@@ -17,7 +17,6 @@ import {
   recordEvidenceRemovedFromModel,
   recordEvidenceFieldChangeForModel,
 } from "../utils/modelInventoryChangeHistory.utils";
-import { resolveEvidenceExpiryDate } from "../utils/evidenceRetention.utils";
 
 export async function getAllEvidences(req: Request, res: Response) {
   logStructured(
@@ -29,8 +28,7 @@ export async function getAllEvidences(req: Request, res: Response) {
   logger.debug("🔍 Fetching all evidences");
 
   try {
-    const includeArchived = req.query.includeArchived === "true";
-    const evidences = await getAllEvidencesQuery(req.organizationId!, includeArchived);
+    const evidences = await getAllEvidencesQuery(req.organizationId!);
 
     if (evidences && evidences.length > 0) {
       logStructured(
@@ -211,21 +209,8 @@ export async function updateEvidenceById(req: Request, res: Response) {
     // Track field changes for models that remain mapped
     const continuingModels = newMappedModels.filter((id: number) => oldMappedModels.includes(id));
 
-    // An explicit expiry_date always wins. When the request changes
-    // retention_policy without an expiry_date, recompute expiry from the
-    // policy (falling back to the org default); "indefinite"/null clears
-    // expiry (null = "no expiry"). Untouched requests keep the stored value.
-    const updateBody: Record<string, any> = { ...req.body };
-    if (updateBody.expiry_date === undefined && updateBody.retention_policy !== undefined) {
-      updateBody.expiry_date = await resolveEvidenceExpiryDate(
-        req.organizationId!,
-        null,
-        updateBody.retention_policy,
-      );
-    }
-
     Object.assign(existingEvidence, {
-      ...updateBody,
+      ...req.body,
       ...(req.body?.description !== undefined && {
         description: sanitizeUserHtml(req.body.description),
       }),
@@ -269,7 +254,6 @@ export async function updateEvidenceById(req: Request, res: Response) {
         { field: "evidence_name", label: "Name" },
         { field: "evidence_type", label: "Type" },
         { field: "description", label: "Description" },
-        { field: "expiry_date", label: "Expiry Date" },
       ];
 
       for (const { field, label } of fieldsToTrack) {

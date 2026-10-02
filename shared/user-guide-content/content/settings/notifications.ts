@@ -50,17 +50,17 @@ export const notificationsContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Go to Integrations from the main menu' },
-        { text: 'Click on the Slack integration card' },
-        { text: 'Authorize VerifyWise to connect to your Slack workspace' },
-        { text: 'Pick which channels should receive notifications' },
-        { text: 'Set up notification routing for different event types' },
+        { text: 'Click the **Extensions** button in the top header' },
+        { text: 'On the Slack card, click **Enable**, then **Configure**' },
+        { text: 'Click **Add to Slack** and authorize VerifyWise to connect to your Slack workspace' },
+        { text: 'Pick the channel that should receive notifications' },
+        { text: 'Click **Configure** to choose which notification types to send' },
       ],
     },
     {
       type: 'callout',
       variant: 'info',
-      text: 'Only admins can configure the Slack integration. Once it\'s set up, notifications go to the designated channels for everyone to see.',
+      text: 'Only Admins can enable and configure the Slack extension. Once it\'s set up, notifications go to the connected channels for everyone in them to see.',
     },
     {
       type: 'heading',
@@ -70,20 +70,7 @@ export const notificationsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'With the Slack integration, you can send different notification types to different channels. This keeps things organized so team members see the updates that matter to them.',
-    },
-    {
-      type: 'paragraph',
-      text: 'Example routing setups:',
-    },
-    {
-      type: 'bullet-list',
-      items: [
-        { bold: '#ai-governance', text: 'All governance-related notifications' },
-        { bold: '#compliance-team', text: 'Compliance assessment updates and deadlines' },
-        { bold: '#risk-alerts', text: 'New risks and critical risk updates' },
-        { bold: '#model-updates', text: 'Model inventory changes and lifecycle events' },
-      ],
+      text: 'Each Slack connection posts to the channel you picked when you added it. In the **Notification Routing** dialog you choose which notification types VerifyWise sends: Membership and roles, Projects and organizations, Policy reminders and status, Evidence and task alerts, and Control or policy changes. The types you select apply to every connected workspace. See **Slack integration** for details.',
     },
     {
       type: 'heading',

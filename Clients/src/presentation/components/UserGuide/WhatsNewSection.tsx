@@ -13,14 +13,14 @@ const CHANGELOG: ChangelogEntry[] = [
   {
     version: "v2.5",
     date: "August 20, 2026",
-    title: "Custom frameworks, Model Risk Management, and Extensions",
+    title: "Built-in frameworks, Model Risk Management, and Extensions",
     summary:
-      "Major release that lets you shape the platform around your organization. Build your own compliance frameworks, turn framework features on and off, and manage the tools you connect through the renamed Extensions area. Model Risk Management gains a revalidation and simulation workflow, threshold breach alerts, and retention controls. This release also adds support for more than one super admin, plus broad accessibility, reliability, and security work.",
+      "Major release that lets you shape the platform around your organization. 21 compliance frameworks, including SOC 2, GDPR, HIPAA, and DORA, are now built in with no plugin install needed, you can turn framework features on and off, and integrations now live in the new Extensions area. Model Risk Management gains a revalidation and simulation workflow, threshold breach alerts, and retention controls. This release also adds support for more than one super admin, plus broad accessibility, reliability, and security work.",
     items: [
-      "Custom frameworks — build and manage your own compliance frameworks alongside the built-in ones, with their own requirements, controls, and risk tracking",
+      "Built-in compliance frameworks — 21 frameworks, including SOC 2, GDPR, HIPAA, and DORA, now ship with the platform with no plugin install needed, each with its own requirements, evidence, and risk tracking",
       "Optional framework features — turn individual framework capabilities on or off to match how your organization works",
       "Model Risk Management — adds a revalidation workflow, a model simulator and dashboard for what-if analysis, threshold breach and overdue-validation alerts with email delivery and auto-generated findings, configurable alert recipients, and record retention controls",
-      "Extensions — the plugin area is now Extensions, with a clearer marketplace, per-extension settings, and configuration for dataset bulk upload and model lifecycle",
+      "Extensions — integrations that used to be plugins are now seven built-in extensions (Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import, and Dataset Bulk Upload) that admins enable and configure from the Extensions page, with no marketplace or install step",
       "Multiple super admins — more than one super admin can now manage the platform",
       "Accessibility — keyboard navigation with focus traps, accessible custom overlays, and automated accessibility checks across the app",
       "Observability — OpenTelemetry metrics and logs for monitoring the platform in production",
