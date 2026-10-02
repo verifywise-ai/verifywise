@@ -96,8 +96,8 @@ export const VENDOR_RISK_MODAL_FIELD_ORDER: (keyof VendorRiskModalFormValues)[] 
   "vendor_id",
   "action_owner",
   "risk_description",
-  "action_plan",
   "impact_description",
+  "action_plan",
   "likelihood",
   "risk_severity",
 ];

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import "./index.css";
-import { Box, SelectChangeEvent, Stack, useTheme, Fade } from "@mui/material";
+import { Box, SelectChangeEvent, Stack, Fade } from "@mui/material";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 import TableWithPlaceholder from "../../components/Table/WithPlaceholder/index";
 import RiskTable from "../../components/Table/RisksTable";
@@ -91,7 +91,6 @@ const VENDOR_RISKS_TABLE_COLUMNS: ColumnConfig<VendorRiskColumnKey>[] = [
 ];
 
 const Vendors = () => {
-  const theme = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -1194,8 +1193,11 @@ const Vendors = () => {
           <Stack spacing={2}>
             <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Stack direction="row" gap={2} alignItems="center">
+                {/* No visible label, so it is named for screen readers; tinted
+                    while it hides something, like the other filters. */}
                 <Select
                   id="filter-status"
+                  ariaLabel="Risk status"
                   value={filterStatus}
                   items={[
                     { _id: "active", name: "Active only" },
@@ -1203,11 +1205,8 @@ const Vendors = () => {
                     { _id: "deleted", name: "Deleted only" },
                   ]}
                   onChange={handleFilterStatusChange}
-                  sx={{
-                    width: "160px",
-                    minHeight: "34px",
-                    borderRadius: theme.shape.borderRadius,
-                  }}
+                  isFilterApplied={filterStatus !== "active"}
+                  sx={{ width: "160px" }}
                 />
                 <FilterBy
                   columns={vendorRiskFilterColumns}

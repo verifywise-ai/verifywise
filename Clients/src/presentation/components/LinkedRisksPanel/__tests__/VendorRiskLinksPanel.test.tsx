@@ -521,6 +521,12 @@ describe("VendorRiskLinksPanel relate form", () => {
 
     expect(screen.getByPlaceholderText("Search vendor risks")).toBeInTheDocument();
     expect(screen.queryByPlaceholderText("Search risks")).toBeNull();
-    expect(screen.getAllByRole("button", { name: "Cancel" }).length).toBeGreaterThan(0);
+    // The toolbar keeps its labels; the open form owns the one Cancel.
+    expect(screen.getByRole("button", { name: "Link a project risk" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Relate a vendor risk" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Cancel" })).toHaveLength(1);
+
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByPlaceholderText("Search vendor risks")).toBeNull();
   });
 });

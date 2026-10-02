@@ -88,7 +88,11 @@ function AutoCompleteField<
         >
           {label}
           {isRequired && (
-            <Typography component="span" ml={theme.spacing(1)} color={theme.palette.error.text}>
+            <Typography
+              component="span"
+              ml={theme.spacing(1)}
+              color={theme.palette.status.error.text}
+            >
               *
             </Typography>
           )}
@@ -113,8 +117,7 @@ function AutoCompleteField<
             {...params}
             size="small"
             placeholder={placeholder}
-            error={!!error || !!helperText}
-            helperText={helperText}
+            error={!!error}
             sx={{
               "& .MuiOutlinedInput-root": {
                 minHeight: "34px",
@@ -181,6 +184,13 @@ function AutoCompleteField<
           }}
         >
           {error}
+        </Typography>
+      )}
+      {/* A hint, not an error: the same size and gap as the error text, in the
+          neutral caption color. An error replaces it. */}
+      {helperText && !error && (
+        <Typography component="span" color={theme.palette.text.tertiary} sx={{ fontSize: 11 }}>
+          {helperText}
         </Typography>
       )}
     </Stack>

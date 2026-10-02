@@ -13,9 +13,11 @@
  */
 
 import TabContext from "@mui/lab/TabContext";
-import { Autocomplete, Box, Stack, TextField, Typography, Divider } from "@mui/material";
+import { Box, Stack, Typography, Divider } from "@mui/material";
 import Field from "../../Inputs/Field";
 import Select from "../../Inputs/Select";
+import AutoCompleteField from "../../Inputs/Autocomplete";
+import { textStyles } from "../../../themes/typography";
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import Alert from "../../Alert";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
@@ -440,182 +442,144 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
     [clearFieldError],
   );
 
+  // Read top to bottom: who and what, then what it would cost and what is
+  // being done about it, then where it applies and how severe it is. The
+  // validation focus order (VENDOR_RISK_MODAL_FIELD_ORDER) follows the same path.
   const risksPanel = (
-    <Stack spacing={6}>
+    <Stack spacing={8}>
       <Stack direction="row" spacing={6}>
-        <Stack flex={1} spacing={6}>
-          <Stack direction="row" spacing={6}>
-            <Box flex={1}>
-              <Select
-                items={VENDOR_OPTIONS}
-                label="Vendor"
-                placeholder="Select vendor"
-                isHidden={false}
-                id="vendor_id"
-                onChange={(e) => handleOnChange("vendor_id", e.target.value)}
-                onBlur={handleFieldBlur("vendor_id")}
-                value={values.vendor_id}
-                error={errors.vendor_id}
-                sx={{ width: "100%" }}
-                isRequired
-                disabled={isEditingDisabled}
-              />
-            </Box>
-            <Box flex={1}>
-              <Select
-                items={formattedUsers}
-                label="Action owner"
-                placeholder="Select owner"
-                isHidden={false}
-                id="action_owner"
-                onChange={(e) => handleOnChange("action_owner", e.target.value)}
-                onBlur={handleFieldBlur("action_owner")}
-                value={values.action_owner || ""}
-                error={errors.action_owner}
-                sx={{ width: "100%" }}
-                isRequired
-                disabled={isEditingDisabled}
-              />
-            </Box>
-          </Stack>
-          <Box>
-            <Field
-              id="vendor-risk-description-input"
-              label="Risk description"
-              width="100%"
-              value={values.risk_description}
-              onChange={(e) => handleOnChange("risk_description", e.target.value)}
-              onBlur={handleFieldBlur("risk_description")}
-              error={errors.risk_description}
-              isRequired
-              disabled={isEditingDisabled}
-              type="description"
-              rows={7}
-              placeholder="Describe the specific risk related to this vendor (e.g., data breach, service outage, compliance gap)."
-            />
-          </Box>
-        </Stack>
-        <Stack flex={1} spacing={6}>
-          <Box>
-            <Field
-              id="vendor-risk-action-plan-input"
-              label="Action plan"
-              width="100%"
-              type="description"
-              value={values.action_plan}
-              error={errors.action_plan}
-              onChange={(e) => handleOnChange("action_plan", e.target.value)}
-              onBlur={handleFieldBlur("action_plan")}
-              isRequired
-              disabled={isEditingDisabled}
-              rows={4}
-              placeholder="Outline the steps or controls you will take to reduce or eliminate this risk."
-            />
-          </Box>
-          <Box>
-            <Field
-              id="vendor-risk-impact-description-input"
-              label="Impact description"
-              width="100%"
-              value={values.impact_description}
-              onChange={(e) => handleOnChange("impact_description", e.target.value)}
-              onBlur={handleFieldBlur("impact_description")}
-              error={errors.impact_description}
-              isRequired
-              disabled={isEditingDisabled}
-              type="description"
-              rows={4}
-              placeholder="Explain the potential consequences if this risk occurs (e.g., financial, reputational, regulatory)."
-            />
-          </Box>
-        </Stack>
-      </Stack>
-
-      {/* Applicable Frameworks */}
-      <Stack>
-        <Typography fontWeight={600} fontSize={16} mb={2}>
-          Applicable frameworks
-        </Typography>
-        <Typography fontSize={13} color="text.secondary" mb={2}>
-          Select the compliance frameworks this vendor risk applies to.
-        </Typography>
-        <Autocomplete
-          multiple
-          id="vendor-risk-frameworks-input"
-          size="small"
-          value={
-            frameworksLoading || !organizationalFrameworks.length
-              ? []
-              : organizationalFrameworks.filter((fw) => selectedFrameworks.includes(Number(fw.id)))
-          }
-          options={organizationalFrameworks}
-          getOptionLabel={(fw) => fw.name}
-          renderOption={(props, option) => {
-            const { key, ...optionProps } = props;
-            return (
-              <Box key={key} component="li" {...optionProps}>
-                <Typography fontSize={13}>{option.name}</Typography>
-              </Box>
-            );
-          }}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              placeholder={
-                frameworksLoading
-                  ? "Loading frameworks..."
-                  : selectedFrameworks.length > 0
-                    ? ""
-                    : "Select applicable frameworks"
-              }
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  paddingTop: "4px !important",
-                  paddingBottom: "4px !important",
-                },
-                "& ::placeholder": {
-                  fontSize: 13,
-                },
-              }}
-            />
-          )}
-          onChange={(_event, newValue) => {
-            setSelectedFrameworks(newValue.map((fw) => Number(fw.id)));
-          }}
-          sx={{
-            "width": "100%",
-            "& .MuiChip-root": {
-              borderRadius: "4px",
-            },
-          }}
-          disabled={frameworksLoading || isEditingDisabled}
-        />
-      </Stack>
-
-      <Stack>
-        <Divider sx={{ mb: 4 }} />
-        <Box>
-          <Typography fontWeight={600} fontSize={16} mb={2}>
-            Calculate risk level
-          </Typography>
-          <Typography fontSize={13} color="text.secondary" mb={4}>
-            The Risk Level is calculated by multiplying the Likelihood and Severity scores. By
-            assigning these scores, the risk level will be determined based on your inputs.
-          </Typography>
-          <Stack direction="row" spacing={6}>
-            <RiskLevel
-              likelihood={Number(values.likelihood) || 1}
-              riskSeverity={Number(values.risk_severity) || 1}
-              handleOnSelectChange={handleOnSelectChange}
-              likelihoodError={errors.likelihood}
-              riskSeverityError={errors.risk_severity}
-              onLikelihoodBlur={handleFieldBlur("likelihood")}
-              onRiskSeverityBlur={handleFieldBlur("risk_severity")}
-              disabled={isEditingDisabled}
-            />
-          </Stack>
+        <Box flex={1}>
+          <Select
+            items={VENDOR_OPTIONS}
+            label="Vendor"
+            placeholder="Select vendor"
+            isHidden={false}
+            id="vendor_id"
+            onChange={(e) => handleOnChange("vendor_id", e.target.value)}
+            onBlur={handleFieldBlur("vendor_id")}
+            value={values.vendor_id}
+            error={errors.vendor_id}
+            sx={{ width: "100%" }}
+            isRequired
+            disabled={isEditingDisabled}
+          />
+        </Box>
+        <Box flex={1}>
+          <Select
+            items={formattedUsers}
+            label="Action owner"
+            placeholder="Select owner"
+            isHidden={false}
+            id="action_owner"
+            onChange={(e) => handleOnChange("action_owner", e.target.value)}
+            onBlur={handleFieldBlur("action_owner")}
+            value={values.action_owner || ""}
+            error={errors.action_owner}
+            sx={{ width: "100%" }}
+            isRequired
+            disabled={isEditingDisabled}
+          />
         </Box>
       </Stack>
+
+      <Field
+        id="vendor-risk-description-input"
+        label="Risk description"
+        width="100%"
+        value={values.risk_description}
+        onChange={(e) => handleOnChange("risk_description", e.target.value)}
+        onBlur={handleFieldBlur("risk_description")}
+        error={errors.risk_description}
+        isRequired
+        disabled={isEditingDisabled}
+        type="description"
+        rows={4}
+        placeholder="Describe the specific risk related to this vendor (e.g., data breach, service outage, compliance gap)."
+      />
+
+      <Stack direction="row" spacing={6}>
+        <Box flex={1}>
+          <Field
+            id="vendor-risk-impact-description-input"
+            label="Impact description"
+            width="100%"
+            value={values.impact_description}
+            onChange={(e) => handleOnChange("impact_description", e.target.value)}
+            onBlur={handleFieldBlur("impact_description")}
+            error={errors.impact_description}
+            isRequired
+            disabled={isEditingDisabled}
+            type="description"
+            rows={4}
+            placeholder="Explain the potential consequences if this risk occurs (e.g., financial, reputational, regulatory)."
+          />
+        </Box>
+        <Box flex={1}>
+          <Field
+            id="vendor-risk-action-plan-input"
+            label="Action plan"
+            width="100%"
+            type="description"
+            value={values.action_plan}
+            error={errors.action_plan}
+            onChange={(e) => handleOnChange("action_plan", e.target.value)}
+            onBlur={handleFieldBlur("action_plan")}
+            isRequired
+            disabled={isEditingDisabled}
+            rows={4}
+            placeholder="Outline the steps or controls you will take to reduce or eliminate this risk."
+          />
+        </Box>
+      </Stack>
+
+      <AutoCompleteField<Framework, true>
+        multiple
+        id="vendor-risk-frameworks-input"
+        label="Applicable frameworks"
+        isOptional
+        helperText="Select the compliance frameworks this vendor risk applies to."
+        placeholder={
+          frameworksLoading
+            ? "Loading frameworks..."
+            : selectedFrameworks.length > 0
+              ? ""
+              : "Select applicable frameworks"
+        }
+        value={
+          frameworksLoading || !organizationalFrameworks.length
+            ? []
+            : organizationalFrameworks.filter((fw) => selectedFrameworks.includes(Number(fw.id)))
+        }
+        options={organizationalFrameworks}
+        getOptionLabel={(fw) => fw.name}
+        isOptionEqualToValue={(option, selected) => option.id === selected.id}
+        onChange={(_event, newValue) => {
+          setSelectedFrameworks(newValue.map((fw) => Number(fw.id)));
+        }}
+        sx={{ width: "100%" }}
+        disabled={frameworksLoading || isEditingDisabled}
+      />
+
+      <Divider />
+
+      <Stack spacing={2}>
+        <Typography sx={{ ...textStyles.subsectionTitle, color: "text.primary" }}>
+          Calculate risk level
+        </Typography>
+        <Typography sx={{ ...textStyles.body, color: "text.tertiary" }}>
+          The risk level is calculated from the likelihood and the severity you select.
+        </Typography>
+      </Stack>
+      <RiskLevel
+        likelihood={Number(values.likelihood) || 1}
+        riskSeverity={Number(values.risk_severity) || 1}
+        handleOnSelectChange={handleOnSelectChange}
+        likelihoodError={errors.likelihood}
+        riskSeverityError={errors.risk_severity}
+        onLikelihoodBlur={handleFieldBlur("likelihood")}
+        onRiskSeverityBlur={handleFieldBlur("risk_severity")}
+        disabled={isEditingDisabled}
+      />
     </Stack>
   );
 

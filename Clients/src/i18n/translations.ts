@@ -9328,8 +9328,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Die Tabelle zeigt jetzt nur Anbieterrisiken in der gewählten Zelle. Wählen Sie die Zelle erneut, um alle Risiken zu sehen.",
     "Vendor risks by likelihood and severity. Select a cell to filter the table.":
       "Anbieterrisiken nach Wahrscheinlichkeit und Schweregrad. Wählen Sie eine Zelle, um die Tabelle zu filtern.",
-    "Each cell counts vendor risks by likelihood and severity. Select a cell to filter the table below, and select it again to show every risk.":
-      "Jede Zelle zählt Anbieterrisiken nach Wahrscheinlichkeit und Schweregrad. Wählen Sie eine Zelle, um die Tabelle unten zu filtern, und wählen Sie sie erneut, um alle Risiken anzuzeigen.",
     "Blast radius": "Wirkungsradius",
     "How many project risks and use cases inherit from the risks of each vendor.":
       "Wie viele Projektrisiken und Anwendungsfälle von den Risiken jedes Anbieters erben.",
@@ -9430,6 +9428,20 @@ export const translations: Record<string, Record<string, string>> = {
     "Same vendor": "Gleicher Anbieter",
     "Shared framework": "Gemeinsames Rahmenwerk",
     "Shared use case": "Gemeinsamer Anwendungsfall",
+    // Vendor risks page layout
+    "Heat map, blast radius, duplicates and framework coverage of vendor risks.":
+      "Heatmap, Wirkungsradius, Duplikate und Rahmenwerksabdeckung der Anbieterrisiken.",
+    "The table shows only the risks in the selected heat map cell.":
+      "Die Tabelle zeigt nur die Risiken in der ausgewählten Heatmap-Zelle.",
+    "Show all risks": "Alle Risiken anzeigen",
+    "The project risk becomes a child of this vendor risk and is flagged for review when its level changes.":
+      "Das Projektrisiko wird diesem Anbieterrisiko untergeordnet und zur Prüfung markiert, wenn sich dessen Stufe ändert.",
+    "Risks of this vendor are listed first.": "Risiken dieses Anbieters werden zuerst aufgeführt.",
+    "Why dismiss this suggestion?": "Warum wird dieser Vorschlag verworfen?",
+    "Optional. A reason helps tune the next suggestions.":
+      "Optional. Ein Grund hilft, die nächsten Vorschläge zu verbessern.",
+    "The risk level is calculated from the likelihood and the severity you select.":
+      "Die Risikostufe wird aus der gewählten Wahrscheinlichkeit und dem gewählten Schweregrad berechnet.",
     "Why are you dismissing {name}?": "Warum verwerfen Sie {name}?",
     "What happened?": "Was ist passiert?",
     "Failed to fetch linked risks": "Verknüpfte Risiken konnten nicht abgerufen werden",
@@ -19364,8 +19376,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Le tableau n'affiche plus que les risques fournisseurs de la cellule sélectionnée. Sélectionnez à nouveau la cellule pour voir tous les risques.",
     "Vendor risks by likelihood and severity. Select a cell to filter the table.":
       "Risques fournisseurs par probabilité et gravité. Sélectionnez une cellule pour filtrer le tableau.",
-    "Each cell counts vendor risks by likelihood and severity. Select a cell to filter the table below, and select it again to show every risk.":
-      "Chaque cellule compte les risques fournisseurs par probabilité et gravité. Sélectionnez une cellule pour filtrer le tableau ci-dessous, puis sélectionnez-la à nouveau pour afficher tous les risques.",
     "Blast radius": "Rayon d'impact",
     "How many project risks and use cases inherit from the risks of each vendor.":
       "Combien de risques de projet et de cas d'usage héritent des risques de chaque fournisseur.",
@@ -19465,6 +19475,21 @@ export const translations: Record<string, Record<string, string>> = {
     "Same vendor": "Même fournisseur",
     "Shared framework": "Cadre commun",
     "Shared use case": "Cas d'usage commun",
+    // Vendor risks page layout
+    "Heat map, blast radius, duplicates and framework coverage of vendor risks.":
+      "Carte thermique, rayon d'impact, doublons et couverture des référentiels des risques fournisseurs.",
+    "The table shows only the risks in the selected heat map cell.":
+      "Le tableau n'affiche que les risques de la cellule sélectionnée de la carte thermique.",
+    "Show all risks": "Afficher tous les risques",
+    "The project risk becomes a child of this vendor risk and is flagged for review when its level changes.":
+      "Le risque de projet devient un enfant de ce risque fournisseur et est signalé pour révision lorsque son niveau change.",
+    "Risks of this vendor are listed first.":
+      "Les risques de ce fournisseur apparaissent en premier.",
+    "Why dismiss this suggestion?": "Pourquoi rejeter cette suggestion ?",
+    "Optional. A reason helps tune the next suggestions.":
+      "Facultatif. Une raison aide à affiner les prochaines suggestions.",
+    "The risk level is calculated from the likelihood and the severity you select.":
+      "Le niveau de risque est calculé à partir de la probabilité et de la gravité que vous sélectionnez.",
     "Why are you dismissing {name}?": "Pourquoi rejetez-vous {name} ?",
     "What happened?": "Que s'est-il passé ?",
     "Failed to fetch linked risks": "Impossible de récupérer les risques liés",
@@ -29320,8 +29345,6 @@ export const translations: Record<string, Record<string, string>> = {
       "La tabla ahora muestra solo los riesgos del proveedor de la celda seleccionada. Seleccione la celda de nuevo para ver todos los riesgos.",
     "Vendor risks by likelihood and severity. Select a cell to filter the table.":
       "Riesgos del proveedor por probabilidad y gravedad. Seleccione una celda para filtrar la tabla.",
-    "Each cell counts vendor risks by likelihood and severity. Select a cell to filter the table below, and select it again to show every risk.":
-      "Cada celda cuenta los riesgos del proveedor por probabilidad y gravedad. Seleccione una celda para filtrar la tabla de abajo y selecciónela de nuevo para mostrar todos los riesgos.",
     "Blast radius": "Radio de impacto",
     "How many project risks and use cases inherit from the risks of each vendor.":
       "Cuántos riesgos de proyecto y casos de uso heredan de los riesgos de cada proveedor.",
@@ -29422,6 +29445,20 @@ export const translations: Record<string, Record<string, string>> = {
     "Same vendor": "Mismo proveedor",
     "Shared framework": "Marco compartido",
     "Shared use case": "Caso de uso compartido",
+    // Vendor risks page layout
+    "Heat map, blast radius, duplicates and framework coverage of vendor risks.":
+      "Mapa de calor, radio de impacto, duplicados y cobertura del marco de los riesgos de proveedor.",
+    "The table shows only the risks in the selected heat map cell.":
+      "La tabla muestra solo los riesgos de la celda seleccionada del mapa de calor.",
+    "Show all risks": "Mostrar todos los riesgos",
+    "The project risk becomes a child of this vendor risk and is flagged for review when its level changes.":
+      "El riesgo de proyecto pasa a depender de este riesgo de proveedor y se marca para revisión cuando cambia su nivel.",
+    "Risks of this vendor are listed first.": "Los riesgos de este proveedor aparecen primero.",
+    "Why dismiss this suggestion?": "¿Por qué descartar esta sugerencia?",
+    "Optional. A reason helps tune the next suggestions.":
+      "Opcional. Un motivo ayuda a ajustar las próximas sugerencias.",
+    "The risk level is calculated from the likelihood and the severity you select.":
+      "El nivel de riesgo se calcula a partir de la probabilidad y la gravedad que selecciones.",
     "Why are you dismissing {name}?": "¿Por qué descartas {name}?",
     "What happened?": "¿Qué ocurrió?",
     "Failed to fetch linked risks": "No se pudieron obtener los riesgos vinculados",

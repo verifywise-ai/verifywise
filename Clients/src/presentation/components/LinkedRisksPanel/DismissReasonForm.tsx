@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { FormControlLabel, Radio, RadioGroup, Stack } from "@mui/material";
+import { FormControlLabel, Radio, RadioGroup } from "@mui/material";
 import { CustomizableButton } from "../button/customizable-button";
 import Field from "../Inputs/Field";
 import { useTranslation } from "../../../application/hooks/useTranslation";
+import InlineFormCard, { InlineFormActions } from "./InlineFormCard";
 import { fill } from "../../../i18n/fill";
 import { DismissReason, RiskLink } from "../../../domain/interfaces/i.riskLink";
 
@@ -63,7 +64,10 @@ export default function DismissReasonForm({
   };
 
   return (
-    <Stack spacing={4} sx={{ pl: 8, py: 4 }}>
+    <InlineFormCard
+      title="Why dismiss this suggestion?"
+      description="Optional. A reason helps tune the next suggestions."
+    >
       {/*
         Named after the risk: several of these can be on screen at once in a
         long list, and "Other" alone is not a distinguishable label.
@@ -81,6 +85,7 @@ export default function DismissReasonForm({
             value={value}
             control={<Radio size="small" />}
             label={DISMISS_REASON_LABELS[value]}
+            sx={{ "& .MuiFormControlLabel-label": { fontSize: 13 } }}
           />
         ))}
       </RadioGroup>
@@ -89,6 +94,7 @@ export default function DismissReasonForm({
         <Field
           id={`dismiss-note-${link.id}`}
           label="What happened?"
+          isRequired
           multiline
           minRows={2}
           value={note}
@@ -97,7 +103,10 @@ export default function DismissReasonForm({
         />
       )}
 
-      <Stack direction="row" spacing={4}>
+      <InlineFormActions>
+        <CustomizableButton size="small" variant="text" color="secondary" onClick={onCancel}>
+          Cancel
+        </CustomizableButton>
         <CustomizableButton
           size="small"
           variant="contained"
@@ -107,10 +116,7 @@ export default function DismissReasonForm({
         >
           Dismiss
         </CustomizableButton>
-        <CustomizableButton size="small" variant="text" color="secondary" onClick={onCancel}>
-          Cancel
-        </CustomizableButton>
-      </Stack>
-    </Stack>
+      </InlineFormActions>
+    </InlineFormCard>
   );
 }

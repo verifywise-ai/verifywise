@@ -47,8 +47,15 @@ const renderInsights = (props: Partial<Parameters<typeof VendorRiskInsights>[0]>
   return handlers;
 };
 
-const open = async (title: string) =>
-  userEvent.click(screen.getByRole("button", { name: new RegExp(`^${title}`) }));
+const panelButton = () => screen.getByRole("button", { name: /^Insights/ });
+
+/** Expands the insights panel if needed, then selects one report's tab. */
+const open = async (title: string) => {
+  if (panelButton().getAttribute("aria-expanded") !== "true") {
+    await userEvent.click(panelButton());
+  }
+  await userEvent.click(screen.getByRole("tab", { name: new RegExp(title) }));
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -91,26 +98,36 @@ describe("vendorLevelRank", () => {
 });
 
 describe("VendorRiskInsights", () => {
-  it("starts with every section closed and fetches no report", () => {
+  it("starts as one closed panel and fetches no report", () => {
     renderInsights();
 
-    for (const title of [
-      "Heat map",
-      "Blast radius",
-      "Duplicate vendor risks",
-      "Framework coverage",
-    ]) {
-      expect(screen.getByRole("button", { name: new RegExp(`^${title}`) })).toHaveAttribute(
-        "aria-expanded",
-        "false",
-      );
-    }
+    expect(panelButton()).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("tab")).toBeNull();
     expect(mockGetVendorExposure).not.toHaveBeenCalled();
     expect(mockGetVendorDuplicates).not.toHaveBeenCalled();
     expect(mockGetVendorCoverage).not.toHaveBeenCalled();
   });
 
-  it("runs a scan only once its section is opened", async () => {
+  it("opens on the heat map, with a tab per report", async () => {
+    renderInsights();
+
+    await userEvent.click(panelButton());
+
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Heat map",
+      "Blast radius",
+      "Duplicate vendor risks",
+      "Framework coverage",
+    ]);
+    expect(screen.getByRole("tab", { name: /Heat map/ })).toHaveAttribute("aria-selected", "true");
+    expect(
+      screen.getByText(
+        "Vendor risks by likelihood and severity. Select a cell to filter the table.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("runs a scan only once its tab is shown", async () => {
     renderInsights();
 
     await open("Duplicate vendor risks");
@@ -118,9 +135,10 @@ describe("VendorRiskInsights", () => {
     expect(await screen.findByText("Customer data leak")).toBeInTheDocument();
     expect(mockGetVendorDuplicates).toHaveBeenCalledTimes(1);
     expect(mockGetVendorCoverage).not.toHaveBeenCalled();
+    expect(mockGetVendorExposure).not.toHaveBeenCalled();
   });
 
-  it("remembers which sections were left open", async () => {
+  it("remembers whether the panel was open, and on which tab", async () => {
     const { unmount } = renderWithProviders(
       <VendorRiskInsights
         risks={[]}
@@ -134,25 +152,30 @@ describe("VendorRiskInsights", () => {
 
     renderInsights();
 
-    expect(screen.getByRole("button", { name: /^Framework coverage/ })).toHaveAttribute(
-      "aria-expanded",
+    expect(panelButton()).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("tab", { name: /Framework coverage/ })).toHaveAttribute(
+      "aria-selected",
       "true",
-    );
-    expect(screen.getByRole("button", { name: /^Heat map/ })).toHaveAttribute(
-      "aria-expanded",
-      "false",
     );
   });
 
   it("starts closed when the remembered state is unreadable", () => {
-    localStorage.setItem("vendor-risk-insights-open", "{not json");
+    localStorage.setItem("vendor-risk-insights", "{not json");
 
     renderInsights();
 
-    expect(screen.getByRole("button", { name: /^Heat map/ })).toHaveAttribute(
-      "aria-expanded",
-      "false",
-    );
+    expect(panelButton()).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("says when a heat map cell filters the table, even with the panel closed", async () => {
+    const { onSelectCell } = renderInsights({ selectedCell: { likelihood: 3, severity: 4 } });
+
+    expect(panelButton()).toHaveAttribute("aria-expanded", "false");
+    expect(
+      screen.getByText("The table shows only the risks in the selected heat map cell."),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByText("Show all risks"));
+    expect(onSelectCell).toHaveBeenLastCalledWith(null);
   });
 });
 

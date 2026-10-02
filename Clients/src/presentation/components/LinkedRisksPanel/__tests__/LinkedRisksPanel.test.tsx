@@ -567,7 +567,8 @@ describe("LinkedRisksPanel dismissal reasons", () => {
     const submit = screen.getByRole("button", { name: "Dismiss" });
     expect(submit).toBeDisabled();
 
-    await userEvent.type(screen.getByLabelText("What happened?"), "  covered by R-14  ");
+    // Required, so the label carries the * marker.
+    await userEvent.type(screen.getByLabelText(/^What happened\?/), "  covered by R-14  ");
     expect(submit).toBeEnabled();
     await userEvent.click(submit);
 

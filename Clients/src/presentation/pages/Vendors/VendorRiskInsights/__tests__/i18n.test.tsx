@@ -62,8 +62,12 @@ const FIXTURES = new Set([
 /** Matches an element whose text includes `text`, read literally. */
 const containing = (text: string) => new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
 
-const renderOpen = (sections: string[]) => {
-  localStorage.setItem("vendor-risk-insights-open", JSON.stringify(sections));
+/** Renders the panel open on one report's tab, or closed with no tab given. */
+const renderOpen = (tab?: string) => {
+  localStorage.setItem(
+    "vendor-risk-insights",
+    JSON.stringify(tab ? { open: true, tab } : { open: false, tab: "heatMap" }),
+  );
   renderWithProviders(
     <VendorRiskInsights
       risks={[vendorRisk({ risk_id: 1 })]}
@@ -90,18 +94,23 @@ describe.each(LANGS)("vendor risk insights in %s", (lang) => {
     resetAudit();
   });
 
-  it("translates the section titles and descriptions", async () => {
-    renderOpen([]);
+  // Closed, so the heat map's own axis labels stay out of this audit; the tabs
+  // are audited with each report below.
+  it("translates the closed panel and its filter notice", async () => {
+    renderWithProviders(
+      <VendorRiskInsights
+        risks={[vendorRisk({ risk_id: 1 })]}
+        selectedCell={{ likelihood: 3, severity: 4 }}
+        onSelectCell={vi.fn()}
+        onOpenRisk={vi.fn()}
+      />,
+    );
 
     for (const key of [
-      "Heat map",
-      "Vendor risks by likelihood and severity. Select a cell to filter the table.",
-      "Blast radius",
-      "How many project risks and use cases inherit from the risks of each vendor.",
-      "Duplicate vendor risks",
-      "Risks of the same vendor that look like one risk entered twice.",
-      "Framework coverage",
-      "Which vendor risks are not mapped to a framework yet.",
+      "Insights",
+      "Heat map, blast radius, duplicates and framework coverage of vendor risks.",
+      "The table shows only the risks in the selected heat map cell.",
+      "Show all risks",
     ]) {
       expect(await screen.findByText(tr(lang, key))).toBeInTheDocument();
     }
@@ -109,15 +118,12 @@ describe.each(LANGS)("vendor risk insights in %s", (lang) => {
     expectNoUntranslatedText(lang, FIXTURES);
   });
 
-  it("translates the heat map caption and the cell's label", async () => {
-    renderOpen(["heatMap"]);
+  it("translates the heat map description and the cell's label", async () => {
+    renderOpen("heatMap");
 
     expect(
       await screen.findByText(
-        tr(
-          lang,
-          "Each cell counts vendor risks by likelihood and severity. Select a cell to filter the table below, and select it again to show every risk.",
-        ),
+        tr(lang, "Vendor risks by likelihood and severity. Select a cell to filter the table."),
       ),
     ).toBeInTheDocument();
     expect(
@@ -132,7 +138,18 @@ describe.each(LANGS)("vendor risk insights in %s", (lang) => {
   });
 
   it("translates the blast radius tiles, table and link", async () => {
-    renderOpen(["blastRadius"]);
+    renderOpen("blastRadius");
+
+    for (const tab of [
+      "Heat map",
+      "Blast radius",
+      "Duplicate vendor risks",
+      "Framework coverage",
+    ]) {
+      expect(
+        await screen.findByRole("tab", { name: containing(tr(lang, tab)) }),
+      ).toBeInTheDocument();
+    }
 
     for (const key of [
       "Vendors with reach",
@@ -155,7 +172,7 @@ describe.each(LANGS)("vendor risk insights in %s", (lang) => {
   });
 
   it("translates the duplicate scan caption and table", async () => {
-    renderOpen(["duplicates"]);
+    renderOpen("duplicates");
 
     // One caption, two sentences: the filled count and the fixed explanation.
     const caption = await screen.findByText(
@@ -178,7 +195,7 @@ describe.each(LANGS)("vendor risk insights in %s", (lang) => {
   });
 
   it("translates the coverage tiles, captions and empty-list text", async () => {
-    renderOpen(["coverage"]);
+    renderOpen("coverage");
 
     for (const key of [
       "Active vendor risks",

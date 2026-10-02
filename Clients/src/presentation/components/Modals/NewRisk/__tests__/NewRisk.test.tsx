@@ -38,6 +38,31 @@ describe("NewRisk (AddNewRisk)", () => {
     expect(document.body).toBeTruthy();
   });
 
+  // Who and what first, then impact before the plan, then where it applies.
+  it("lays the details out in reading order, with frameworks as an optional field", () => {
+    renderWithProviders(<AddNewRisk isOpen={true} setIsOpen={vi.fn()} vendors={[]} />);
+
+    const labels = [
+      "Vendor",
+      "Action owner",
+      "Risk description",
+      "Impact description",
+      "Action plan",
+      "Applicable frameworks",
+      "Likelihood",
+      "Risk severity",
+    ].map((label) => screen.getAllByText(label)[0]);
+    for (let i = 1; i < labels.length; i++) {
+      expect(
+        labels[i - 1].compareDocumentPosition(labels[i]) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    }
+    expect(screen.getByText("(optional)")).toBeInTheDocument();
+    expect(
+      screen.getByText("Select the compliance frameworks this vendor risk applies to."),
+    ).toBeInTheDocument();
+  });
+
   // Links attach to a saved vendor risk, so a new one has nothing to show.
   it("has no Linked risks tab while the risk is being created", () => {
     renderWithProviders(<AddNewRisk isOpen={true} setIsOpen={vi.fn()} vendors={[]} />);

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Alert, Box, CircularProgress, Stack, Typography } from "@mui/material";
-import { Network } from "lucide-react";
+import { Alert, Box, CircularProgress, Divider, Stack, Typography } from "@mui/material";
+import { Link2, Network, Plus } from "lucide-react";
 import { CustomizableButton } from "../button/customizable-button";
 import { EmptyState } from "../EmptyState";
 import { textStyles } from "../../themes/typography";
@@ -167,13 +167,24 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
 
   return (
     <Stack spacing={8} sx={{ py: 8 }}>
-      <Stack direction="row" justifyContent="space-between">
-        <Stack direction="row" spacing={4}>
-          <CustomizableButton size="small" variant="text" onClick={() => toggleForm("child")}>
-            {form === "child" ? "Cancel" : "Link a project risk"}
+      <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Stack direction="row" spacing={4} alignItems="center">
+          {/* Labels stay put while a form is open: the form has its own Cancel. */}
+          <CustomizableButton
+            size="small"
+            variant={form === "child" ? "outlined" : "text"}
+            startIcon={<Link2 size={16} />}
+            onClick={() => toggleForm("child")}
+          >
+            Link a project risk
           </CustomizableButton>
-          <CustomizableButton size="small" variant="text" onClick={() => toggleForm("related")}>
-            {form === "related" ? "Cancel" : "Relate a vendor risk"}
+          <CustomizableButton
+            size="small"
+            variant={form === "related" ? "outlined" : "text"}
+            startIcon={<Plus size={16} />}
+            onClick={() => toggleForm("related")}
+          >
+            Relate a vendor risk
           </CustomizableButton>
           {isAdmin && (
             <CustomizableButton
@@ -246,13 +257,29 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
         if (group.length === 0) return null;
         return (
           <Box key={title}>
-            <Typography sx={{ ...textStyles.subsectionTitle, color: "text.primary", mb: 2 }}>
-              {title}
-            </Typography>
-            <Typography sx={{ ...textStyles.caption, color: "text.accent", mb: 4 }}>
+            <Stack direction="row" spacing={4} alignItems="baseline">
+              <Typography sx={{ ...textStyles.subsectionTitle, color: "text.primary" }}>
+                {title}
+              </Typography>
+              <Typography sx={{ ...textStyles.bodySmall, color: "text.tertiary" }}>
+                {group.length}
+              </Typography>
+            </Stack>
+            <Typography sx={{ ...textStyles.body, color: "text.tertiary", mb: 4 }}>
               {caption}
             </Typography>
-            <Stack spacing={4}>
+            {/* One bordered list per group, a divider between rows, so each
+                link's chips and actions read as one line. */}
+            <Stack
+              divider={<Divider flexItem />}
+              sx={{
+                "border": 1,
+                "borderColor": "border.light",
+                "borderRadius": "4px",
+                "bgcolor": "background.main",
+                "& > :not(hr)": { px: 7, py: 5 },
+              }}
+            >
               {group.map((link) => (
                 <LinkRow
                   key={link.id}

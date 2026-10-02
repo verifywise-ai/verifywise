@@ -1,15 +1,15 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Alert, Stack, Typography } from "@mui/material";
+import { Alert, Stack } from "@mui/material";
 import AutoCompleteField from "../Inputs/Autocomplete";
 import Chip from "../Chip";
 import { CustomizableButton } from "../button/customizable-button";
-import { textStyles } from "../../themes/typography";
 import { getAllVendorRisks } from "../../../application/repository/vendorRisk.repository";
 import { useCreateVendorRiskLink } from "../../../application/hooks/useRiskLinks";
 import { useTranslation } from "../../../application/hooks/useTranslation";
 import { fill } from "../../../i18n/fill";
 import { RiskLink } from "../../../domain/interfaces/i.riskLink";
+import InlineFormCard, { InlineFormActions } from "./InlineFormCard";
 
 interface RelateVendorRiskFormProps {
   vendorRiskId: number;
@@ -105,10 +105,14 @@ export default function RelateVendorRiskForm({
   };
 
   return (
-    <Stack spacing={4} sx={{ py: 4 }}>
+    <InlineFormCard
+      title="Relate a vendor risk"
+      description="Related vendor risks describe the same exposure, at this vendor or another one. Neither inherits from the other."
+    >
       <AutoCompleteField<VendorRiskOption>
         label="Vendor risk"
         placeholder="Search vendor risks"
+        helperText="Risks of this vendor are listed first."
         options={options}
         value={selected}
         getOptionLabel={label}
@@ -133,14 +137,13 @@ export default function RelateVendorRiskForm({
           setError(null);
         }}
       />
-      <Typography sx={{ ...textStyles.caption, color: "text.accent" }}>
-        Related vendor risks describe the same exposure, at this vendor or another one. Neither
-        inherits from the other.
-      </Typography>
 
       {error && <Alert severity="error">{error}</Alert>}
 
-      <Stack direction="row" spacing={4}>
+      <InlineFormActions>
+        <CustomizableButton size="small" variant="text" color="secondary" onClick={onClose}>
+          Cancel
+        </CustomizableButton>
         <CustomizableButton
           size="small"
           variant="contained"
@@ -150,10 +153,7 @@ export default function RelateVendorRiskForm({
         >
           Link
         </CustomizableButton>
-        <CustomizableButton size="small" variant="text" color="secondary" onClick={onClose}>
-          Cancel
-        </CustomizableButton>
-      </Stack>
-    </Stack>
+      </InlineFormActions>
+    </InlineFormCard>
   );
 }

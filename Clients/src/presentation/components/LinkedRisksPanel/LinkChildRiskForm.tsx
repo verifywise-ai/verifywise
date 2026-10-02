@@ -1,9 +1,8 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Alert, Stack, Typography } from "@mui/material";
+import { Alert, Stack } from "@mui/material";
 import AutoCompleteField from "../Inputs/Autocomplete";
 import { CustomizableButton } from "../button/customizable-button";
-import { textStyles } from "../../themes/typography";
 import { getAllProjectRisks } from "../../../application/repository/projectRisk.repository";
 import {
   useCreateVendorRiskLink,
@@ -11,6 +10,7 @@ import {
 } from "../../../application/hooks/useRiskLinks";
 import { RiskLink } from "../../../domain/interfaces/i.riskLink";
 import { SameProjectChip } from "./LinkRiskForm";
+import InlineFormCard, { InlineFormActions } from "./InlineFormCard";
 
 interface LinkChildRiskFormProps {
   vendorRiskId: number;
@@ -26,8 +26,8 @@ interface Candidate {
 
 /**
  * Links a project risk as a child of this vendor risk. There is only one thing
- * to choose: a vendor risk is never a child and never in a `related_to` pair,
- * so the relation and the parent are both fixed.
+ * to choose: a vendor risk is never a child, so the relation and the parent are
+ * both fixed. Relating another vendor risk is RelateVendorRiskForm.
  */
 export default function LinkChildRiskForm({
   vendorRiskId,
@@ -88,10 +88,14 @@ export default function LinkChildRiskForm({
   };
 
   return (
-    <Stack spacing={4} sx={{ py: 4 }}>
+    <InlineFormCard
+      title="Link a project risk"
+      description="The project risk becomes a child of this vendor risk and is flagged for review when its level changes."
+    >
       <AutoCompleteField<Candidate>
         label="Project risk"
         placeholder="Search risks"
+        helperText="A project risk can have only one parent, and a risk with child risks of its own cannot become a child."
         options={options}
         value={child}
         getOptionLabel={(option) => option.risk_name}
@@ -114,14 +118,13 @@ export default function LinkChildRiskForm({
           setError(null);
         }}
       />
-      <Typography sx={{ ...textStyles.caption, color: "text.accent" }}>
-        A project risk can have only one parent, and a risk with child risks of its own cannot
-        become a child.
-      </Typography>
 
       {error && <Alert severity="error">{error}</Alert>}
 
-      <Stack direction="row" spacing={4}>
+      <InlineFormActions>
+        <CustomizableButton size="small" variant="text" color="secondary" onClick={onClose}>
+          Cancel
+        </CustomizableButton>
         <CustomizableButton
           size="small"
           variant="contained"
@@ -131,10 +134,7 @@ export default function LinkChildRiskForm({
         >
           Link
         </CustomizableButton>
-        <CustomizableButton size="small" variant="text" color="secondary" onClick={onClose}>
-          Cancel
-        </CustomizableButton>
-      </Stack>
-    </Stack>
+      </InlineFormActions>
+    </InlineFormCard>
   );
 }

@@ -357,10 +357,13 @@ pairs: they read `inherits_from` only.
 
 ### Vendor risk insights
 
-Above the vendor risks table, `pages/Vendors/VendorRiskInsights/` shows four
-collapsible sections. All start closed; which ones a viewer leaves open is kept
-in `localStorage` (`vendor-risk-insights-open`). The duplicate and coverage
-scans run only once their section is first opened.
+Above the vendor risks table, `pages/Vendors/VendorRiskInsights/` shows one
+collapsible **Insights** panel with a tab per report, so closed it takes a
+single row. It starts closed; whether a viewer left it open, and on which tab,
+is kept in `localStorage` (`vendor-risk-insights`). Only the active tab is
+mounted, so each report is fetched once its tab is first shown. While a heat
+map cell filters the table, a notice under the panel says so and offers
+**Show all risks**, also when the panel is closed.
 
 | Section | Source | What it shows |
 |---------|--------|---------------|
@@ -469,7 +472,8 @@ All vendor changes are tracked:
 | `AddNewRisk` | Create/edit risk modal (Risk details, Custom fields, Activity, Linked risks); `initialTab="linked-risks"` opens an existing risk on its links |
 | `VendorRiskLinksPanel` | The Linked risks tab: child project risks and related vendor risks, plus Suggest children and the related scan |
 | `RelateVendorRiskForm` | Picker that relates another vendor risk to this one |
-| `VendorRiskInsights` | Heat map, blast radius, duplicate and coverage sections above the risks table |
+| `InlineFormCard` | Bordered frame, title and Cancel/primary actions for the forms that open inside the Linked risks tab |
+| `VendorRiskInsights` | Insights panel above the risks table: heat map, blast radius, duplicate and coverage tabs |
 | `RiskTable` | Display vendor risks, including the Inherited by column |
 | `TableWithPlaceholder` | Main vendor list |
 | `GroupedTableView` | Grouped display |
