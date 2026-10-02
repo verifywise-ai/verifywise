@@ -1008,12 +1008,13 @@ const ModelInventory: React.FC = () => {
     return undefined;
   }, [alert]);
 
-  // Handle modelId and evidenceId URL params to open edit modal from Wise Search
+  // Handle modelId, evidenceId, and modelRiskId URL params to open the edit modal
   useEffect(() => {
     if (hasProcessedUrlParam.current || isLoading) return;
 
     const modelId = searchParams.get("modelId");
     const evidenceId = searchParams.get("evidenceId");
+    const modelRiskId = searchParams.get("modelRiskId");
 
     if (modelId) {
       hasProcessedUrlParam.current = true;
@@ -1045,8 +1046,26 @@ const ModelInventory: React.FC = () => {
           console.error("Error fetching evidence from URL param:", err);
           setSearchParams({}, { replace: true });
         });
+    } else if (modelRiskId) {
+      hasProcessedUrlParam.current = true;
+      const id = Number(modelRiskId);
+      if (Number.isNaN(id)) {
+        setSearchParams({}, { replace: true });
+        return;
+      }
+      // This page is mounted on sibling routes, so carry the id across the
+      // remount onto the model-risks tab before opening the editor.
+      if (!location.pathname.includes("/model-risks")) {
+        navigate(`/model-inventory/model-risks?modelRiskId=${encodeURIComponent(modelRiskId)}`, {
+          replace: true,
+        });
+        return;
+      }
+      setSelectedModelRiskId(id);
+      setIsNewModelRiskModalOpen(true);
+      setSearchParams({}, { replace: true });
     }
-  }, [searchParams, isLoading, setSearchParams]);
+  }, [searchParams, isLoading, setSearchParams, location.pathname, navigate]);
 
   // Auto-open create model modal when navigating from "Add new..." dropdown
   useEffect(() => {
