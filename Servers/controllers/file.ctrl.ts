@@ -24,6 +24,8 @@ import {
   LinkType,
 } from "../repositories/file.repository";
 import { parseBulkIds, assertOrgOwnsIds, withBulkTransaction } from "../utils/bulkAction.utils";
+import { getProjectByIdQuery } from "../utils/project.utils";
+import { getUserProjects } from "../utils/user.utils";
 import {
   ForbiddenException,
   ValidationException,
@@ -213,6 +215,17 @@ export const getUserFilesMetaData = async (req: Request, res: Response) => {
 };
 
 export async function postFileContent(req: RequestWithFile, res: Response): Promise<any> {
+  if (!req.userId) {
+    return res.status(401).json(STATUS_CODE[401](req.t!("Unauthenticated")));
+  }
+  if (!req.organizationId) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Missing tenant")));
+  }
+
+  const userId = req.userId;
+  const organizationId = req.organizationId;
+  const role = req.role || "";
+
   const transaction = await sequelize.transaction();
 
   logProcessing({
@@ -227,11 +240,94 @@ export async function postFileContent(req: RequestWithFile, res: Response): Prom
     const body = req.body as {
       question_id: string;
       project_id: number;
-      user_id: number;
-      delete: string;
+      user_id?: number;
+      delete?: string;
     };
 
-    const filesToDelete = JSON.parse(body.delete || "[]") as number[];
+    // Never trust client-supplied project_id blindly: it must exist in the caller's org
+    const projectId = Number(body.project_id);
+    if (!Number.isSafeInteger(projectId) || projectId <= 0) {
+      await transaction.rollback();
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid project ID")));
+    }
+    const project = await getProjectByIdQuery(projectId, organizationId);
+    if (!project) {
+      await transaction.rollback();
+      return res.status(404).json(STATUS_CODE[404](req.t!("Project not found")));
+    }
+
+    // Enforce project membership (Admin/SuperAdmin bypass), mirroring fileManager.ctrl.ts
+    if (role !== "Admin" && role !== "SuperAdmin") {
+      const userProjects = await getUserProjects(userId, organizationId);
+      const isProjectMember = userProjects.some((p) => Number(p.id) === projectId);
+      const isProjectOwner = Number((project as { owner?: number }).owner) === userId;
+      if (!isProjectMember && !isProjectOwner) {
+        await transaction.rollback();
+        await logFailure({
+          eventType: "Create",
+          description: `Access denied to project ${projectId} for user ${userId}`,
+          functionName: "postFileContent",
+          fileName: "file.ctrl.ts",
+          error: new Error(`User ${userId} with role '${role}' denied access to project ${projectId}`),
+          userId: req.userId!,
+          organizationId: req.organizationId!,
+        });
+        return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
+      }
+    }
+
+    // Parse delete list safely: accepts JSON string or array, rejects malformed input
+    let filesToDelete: number[] = [];
+    if (body.delete !== undefined && body.delete !== null && body.delete !== "") {
+      let rawDelete: unknown = body.delete;
+      if (typeof rawDelete === "string") {
+        try {
+          rawDelete = JSON.parse(rawDelete);
+        } catch {
+          await transaction.rollback();
+          return res.status(400).json(STATUS_CODE[400](req.t!("Invalid delete list")));
+        }
+      }
+      if (!Array.isArray(rawDelete)) {
+        await transaction.rollback();
+        return res.status(400).json(STATUS_CODE[400](req.t!("Invalid delete list")));
+      }
+      if (rawDelete.length > 0) {
+        filesToDelete = parseBulkIds(rawDelete);
+        // Tenant-ownership guard: every id must belong to the caller's organization
+        await assertOrgOwnsIds({
+          table: "files",
+          ids: filesToDelete,
+          organizationId,
+          transaction,
+        });
+        // Per-file access check: deleter must be uploader, project member/owner, or Admin
+        for (const fileToDelete of filesToDelete) {
+          const hasAccess = await canUserAccessFile(
+            fileToDelete,
+            userId,
+            role,
+            organizationId,
+            organizationId,
+          );
+          if (!hasAccess) {
+            await transaction.rollback();
+            await logFailure({
+              eventType: "Delete",
+              description: `Access denied to file ID ${fileToDelete} for user ${userId}`,
+              functionName: "postFileContent",
+              fileName: "file.ctrl.ts",
+              error: new Error(
+                `User ${userId} with role '${role}' denied delete access to file ${fileToDelete}`,
+              ),
+              userId: req.userId!,
+              organizationId: req.organizationId!,
+            });
+            return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
+          }
+        }
+      }
+    }
     for (let fileToDelete of filesToDelete) {
       await deleteFileById(fileToDelete, req.organizationId!, transaction);
     }
@@ -241,8 +337,8 @@ export async function postFileContent(req: RequestWithFile, res: Response): Prom
     for (let file of req.files! as UploadedFile[]) {
       const uploadedFile = await uploadFile(
         file,
-        body.user_id,
-        body.project_id,
+        userId,
+        projectId,
         "Assessment tracker group",
         req.organizationId!,
         transaction,
@@ -260,7 +356,7 @@ export async function postFileContent(req: RequestWithFile, res: Response): Prom
 
     const question = await addFileToAnswerEU(
       questionId,
-      body.project_id,
+      projectId,
       uploadedFiles,
       filesToDelete,
       req.organizationId!,
@@ -291,6 +387,12 @@ export async function postFileContent(req: RequestWithFile, res: Response): Prom
       organizationId: req.organizationId!,
     });
 
+    if (error instanceof ValidationException) {
+      return res.status(400).json(STATUS_CODE[400](error.message));
+    }
+    if (error instanceof ForbiddenException) {
+      return res.status(403).json(STATUS_CODE[403](error.message));
+    }
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
