@@ -1,5 +1,5 @@
 # Core
-fastapi>=0.141.1
+fastapi>=0.142.2
 uvicorn>=0.53.0
 python-dotenv>=1.2.3
 pydantic>=2.13.5
