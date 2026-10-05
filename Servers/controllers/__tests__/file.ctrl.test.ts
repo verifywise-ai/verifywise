@@ -59,6 +59,13 @@ jest.mock("../../utils/bulkAction.utils", () => ({
     await fn(transaction);
   }),
 }));
+jest.mock("../../utils/project.utils", () => ({
+  getProjectByIdQuery: jest.fn().mockResolvedValue({ id: 1, owner: 1 }),
+}));
+jest.mock("../../utils/filePermissions.utils", () => ({
+  assertCanAccessProject: jest.fn().mockResolvedValue(undefined),
+  assertCanDeleteFiles: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock("../../domain.layer/exceptions/custom.exception", () => ({
   ForbiddenException: class ForbiddenException extends Error {},
   ValidationException: class ValidationException extends Error {},
@@ -82,6 +89,9 @@ import {
 import getUserFilesMetaDataQuery from "../../utils/files/getUserFilesMetaData.utils";
 import { addFileToAnswerEU } from "../../utils/eu.utils";
 import { createFileEntityLink, deleteFileEntityLink } from "../../repositories/file.repository";
+import { getProjectByIdQuery } from "../../utils/project.utils";
+import { assertCanAccessProject, assertCanDeleteFiles } from "../../utils/filePermissions.utils";
+import { ForbiddenException } from "../../domain.layer/exceptions/custom.exception";
 
 const mockGetFile = getFileById as jest.MockedFunction<typeof getFileById>;
 const mockGetFileMeta = getFileMetadataByProjectId as jest.MockedFunction<
@@ -96,6 +106,11 @@ const mockGetUserFiles = getUserFilesMetaDataQuery as jest.MockedFunction<
 const mockAddFile = addFileToAnswerEU as jest.MockedFunction<typeof addFileToAnswerEU>;
 const mockCreateLink = createFileEntityLink as jest.MockedFunction<typeof createFileEntityLink>;
 const mockDeleteLink = deleteFileEntityLink as jest.MockedFunction<typeof deleteFileEntityLink>;
+const mockGetProject = getProjectByIdQuery as jest.MockedFunction<typeof getProjectByIdQuery>;
+const mockAssertProjectAccess = assertCanAccessProject as jest.MockedFunction<
+  typeof assertCanAccessProject
+>;
+const mockAssertDelete = assertCanDeleteFiles as jest.MockedFunction<typeof assertCanDeleteFiles>;
 
 function createReq(overrides?: Partial<Request>): any {
   return {
@@ -251,6 +266,61 @@ describe("file.ctrl", () => {
       const res = createRes();
       await postFileContent(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+
+    it("should return 400 for a non-integer project id", async () => {
+      const req = createReq({
+        body: { question_id: "1", project_id: "abc" },
+        files: [],
+      });
+      const res = createRes();
+      await postFileContent(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    it("should return 404 when the project is not in the caller's org", async () => {
+      mockGetProject.mockResolvedValueOnce(null);
+      const req = createReq({
+        body: { question_id: "1", project_id: 99 },
+        files: [],
+      });
+      const res = createRes();
+      await postFileContent(req, res);
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    it("should return 403 when the caller may not access the project", async () => {
+      mockAssertProjectAccess.mockRejectedValueOnce(new ForbiddenException("Access denied"));
+      const req = createReq({
+        body: { question_id: "1", project_id: 1 },
+        files: [],
+      });
+      const res = createRes();
+      await postFileContent(req, res);
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+
+    it("should return 400 for a malformed delete list", async () => {
+      const req = createReq({
+        body: { question_id: "1", project_id: 1, delete: "not-json" },
+        files: [],
+      });
+      const res = createRes();
+      await postFileContent(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    it("should check org ownership and per-file rights before deleting", async () => {
+      mockAddFile.mockResolvedValue({ evidence_files: [{ id: 2 }] } as any);
+      const req = createReq({
+        body: { question_id: "1", project_id: 1, delete: "[5]" },
+        files: [],
+      });
+      const res = createRes();
+      await postFileContent(req, res);
+      expect(mockAssertDelete).toHaveBeenCalledWith([5], expect.anything());
+      expect(mockDeleteFile).toHaveBeenCalledWith(5, 1, expect.anything());
+      expect(res.status).toHaveBeenCalledWith(201);
     });
   });
 
