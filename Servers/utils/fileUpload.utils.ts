@@ -1,5 +1,6 @@
 import { UploadedFile } from "./question.utils";
 import { sequelize } from "../database/db";
+import { ForbiddenException } from "../domain.layer/exceptions/custom.exception";
 import { FileModel, FileSource } from "../domain.layer/models/file/file.model";
 import { Transaction, QueryTypes } from "sequelize";
 import { ProjectModel } from "../domain.layer/models/project/project.model";
@@ -31,7 +32,12 @@ export const uploadFile = async (
         ...(transaction && { transaction }),
       },
     );
-    is_demo = projectIsDemo[0]?.is_demo || false;
+    // Defense-in-depth: never attach a file to a project outside the caller's
+    // org, even if a controller forgot to validate project tenancy first.
+    if (projectIsDemo.length === 0) {
+      throw new ForbiddenException("Project not found in organization");
+    }
+    is_demo = projectIsDemo[0].is_demo;
   }
   // Apply org-level default retention (if configured). Explicit expiry /
   // retention overrides come later via updateFileMetadata — this upload path
