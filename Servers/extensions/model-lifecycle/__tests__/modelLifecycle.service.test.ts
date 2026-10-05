@@ -14,9 +14,13 @@ describe("model lifecycle reorder services", () => {
     expect(mockQuery).toHaveBeenCalledTimes(1);
     const [sql, options] = mockQuery.mock.calls[0];
     expect(sql).toContain("UPDATE model_lifecycle_phases");
-    expect(sql).toContain("(VALUES (3, 1), (1, 2), (2, 3)) AS v(id, order_index)");
+    expect(sql).toContain("FROM unnest($orderedIds::int[], $orderIndexes::int[])");
     expect(sql).not.toContain("display_order = :order");
-    expect(options.replacements).toEqual({ organizationId: 7 });
+    expect(options.bind).toEqual({
+      orderedIds: [3, 1, 2],
+      orderIndexes: [1, 2, 3],
+      organizationId: 7,
+    });
   });
 
   it("scopes the item reorder to the phase", async () => {
@@ -25,9 +29,14 @@ describe("model lifecycle reorder services", () => {
     expect(mockQuery).toHaveBeenCalledTimes(1);
     const [sql, options] = mockQuery.mock.calls[0];
     expect(sql).toContain("UPDATE model_lifecycle_items");
-    expect(sql).toContain("phase_id = :phaseId");
-    expect(sql).toContain("(VALUES (2, 1), (1, 2)) AS v(id, order_index)");
-    expect(options.replacements).toEqual({ organizationId: 7, phaseId: 9 });
+    expect(sql).toContain("phase_id = $phaseId");
+    expect(sql).toContain("FROM unnest($orderedIds::int[], $orderIndexes::int[])");
+    expect(options.bind).toEqual({
+      orderedIds: [2, 1],
+      orderIndexes: [1, 2],
+      organizationId: 7,
+      phaseId: 9,
+    });
   });
 
   it("issues no query for an empty list", async () => {
