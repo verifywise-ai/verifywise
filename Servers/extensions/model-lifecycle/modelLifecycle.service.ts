@@ -1,5 +1,6 @@
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
+import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
 
 /**
  * DB helpers for the model-lifecycle extension.
@@ -133,15 +134,29 @@ export async function deletePhase(organizationId: number, phaseId: number): Prom
   );
 }
 
-export async function reorderPhases(organizationId: number, orderedIds: number[]): Promise<void> {
-  for (let i = 0; i < orderedIds.length; i++) {
-    await sequelize.query(
-      `UPDATE model_lifecycle_phases
-          SET display_order = :order, updated_at = NOW()
-        WHERE organization_id = :organizationId AND id = :id;`,
-      { replacements: { organizationId, order: i + 1, id: orderedIds[i] } },
-    );
+/**
+ * The values clause for an id -> order-index mapping. Ids are validated to be
+ * integers by the controllers (and re-checked here), so inlining them cannot
+ * smuggle SQL.
+ */
+function orderValuesClause(orderedIds: number[]): string {
+  if (!orderedIds.every(Number.isInteger)) {
+    throw new ValidationException("orderedIds must contain only integers");
   }
+  return orderedIds.map((id, i) => `(${id}, ${i + 1})`).join(", ");
+}
+
+export async function reorderPhases(organizationId: number, orderedIds: number[]): Promise<void> {
+  if (orderedIds.length === 0) return;
+  // One set-based UPDATE instead of one query per id: a loop over caller input
+  // is a loop-bound-injection surface (CodeQL js/loop-bound-injection).
+  await sequelize.query(
+    `UPDATE model_lifecycle_phases
+        SET display_order = v.order_index, updated_at = NOW()
+       FROM (VALUES ${orderValuesClause(orderedIds)}) AS v(id, order_index)
+      WHERE organization_id = :organizationId AND id = v.id;`,
+    { replacements: { organizationId } },
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -270,14 +285,14 @@ export async function reorderItems(
   phaseId: number,
   orderedIds: number[],
 ): Promise<void> {
-  for (let i = 0; i < orderedIds.length; i++) {
-    await sequelize.query(
-      `UPDATE model_lifecycle_items
-          SET display_order = :order, updated_at = NOW()
-        WHERE organization_id = :organizationId AND id = :id AND phase_id = :phaseId;`,
-      { replacements: { organizationId, order: i + 1, id: orderedIds[i], phaseId } },
-    );
-  }
+  if (orderedIds.length === 0) return;
+  await sequelize.query(
+    `UPDATE model_lifecycle_items
+        SET display_order = v.order_index, updated_at = NOW()
+       FROM (VALUES ${orderValuesClause(orderedIds)}) AS v(id, order_index)
+      WHERE organization_id = :organizationId AND id = v.id AND phase_id = :phaseId;`,
+    { replacements: { organizationId, phaseId } },
+  );
 }
 
 // ---------------------------------------------------------------------------
