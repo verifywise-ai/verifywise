@@ -11,7 +11,7 @@ scikit-learn>=1.9.1
 fairlearn>=0.14.0
 
 # Deep learning and transformers
-torch>=2.14.0,<3.0.0
+torch>=2.14.1,<3.0.0
 transformers>=5.17.0
 sentence-transformers>=6.1.0
 # huggingface-hub 1.16.3+ requires click>=8.4.0, which conflicts with deepeval's click<8.4.0 constraint.
