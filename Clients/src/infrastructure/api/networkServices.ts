@@ -64,7 +64,10 @@ const handleError = (error: unknown): CustomException => {
 // Logging function - only logs in development mode
 const logRequest = (method: string, endpoint: string, params?: unknown, data?: unknown) => {
   if (process.env.NODE_ENV === "development") {
-    console.log(`[API Request] ${method.toUpperCase()} ${endpoint}`, {
+    // Constant format string: the endpoint is user-adjacent input and must
+    // never become part of the format string itself (a `%s`/`%o` in it would
+    // be read as a directive — js/tainted-format-string).
+    console.log("[API Request] %s %s", method.toUpperCase(), endpoint, {
       params,
       data,
     });
