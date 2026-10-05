@@ -288,6 +288,7 @@
   "Invalid entity type. Must be one of: useCase, model, risk, vendor, control, evidence, framework, user": "Type d'entité invalide. Doit être l'un des suivants : useCase, model, risk, vendor, control, evidence, framework, user",
   "Invalid entity_type: {type}": "entity_type invalide : {type}",
   "Invalid file ID": "ID de fichier invalide",
+  "Invalid delete list": "Liste de suppression invalide",
   "Invalid finding ID": "ID de constatation invalide",
   "Invalid folder ID": "ID de dossier invalide",
   "Invalid folder or file ID": "ID de dossier ou de fichier invalide",
