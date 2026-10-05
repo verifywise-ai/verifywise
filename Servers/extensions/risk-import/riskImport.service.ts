@@ -13,12 +13,26 @@ import {
 } from "./risks.enums";
 
 /**
+ * A PostgreSQL text-array literal, e.g. `{"a","b \"c\""}`. Inside an array
+ * literal the backslash is the escape character (unlike standard-conforming
+ * string literals), so backslashes must be escaped before double quotes:
+ * escaping only the quotes lets a value ending in a backslash escape its own
+ * closing quote - PostgreSQL then rejects the literal, or worse, the value
+ * splits into extra elements (CodeQL js/incomplete-sanitization).
+ */
+export function toPostgresTextArray(values: string[]): string {
+  return `{${values
+    .map((value) => `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`)
+    .join(",")}}`;
+}
+
+/**
  * Server-side risk-import extension logic. Two entry points:
- *   - buildExcelTemplate() → an .xlsx buffer with dropdown-validated
+ *   - buildExcelTemplate() â†’ an .xlsx buffer with dropdown-validated
  *     enum columns and a user picker sourced from the caller's org.
- *   - importRisks() → validates every row against the same enums and
+ *   - importRisks() â†’ validates every row against the same enums and
  *     bulk-inserts into verifywise.risks. Errors are collected and
- *     returned as an atomic batch — the migration file's contract is
+ *     returned as an atomic batch â€” the migration file's contract is
  *     that a batch with any validation error inserts nothing.
  */
 
@@ -230,7 +244,7 @@ export interface RiskImportResult {
 }
 
 /**
- * The Excel template renders users as `First Last - email (ID: 42)` — extract
+ * The Excel template renders users as `First Last - email (ID: 42)` â€” extract
  * the numeric id if present, else treat as a bare numeric string.
  */
 function parseUserId(value: string | number | undefined | null): number | null {
@@ -421,7 +435,7 @@ export async function importRisks(
               organization_id: organizationId,
               ...data,
               risk_category: data.risk_category
-                ? `{${(data.risk_category as string[]).map((c) => `"${c.replace(/"/g, '\\"')}"`).join(",")}}`
+                ? toPostgresTextArray(data.risk_category as string[])
                 : null,
             },
             transaction,
@@ -460,7 +474,7 @@ export async function importRisks(
     try {
       await transaction.rollback();
     } catch {
-      // rollback failure — swallow so the outer error propagates
+      // rollback failure â€” swallow so the outer error propagates
     }
     throw err;
   }
