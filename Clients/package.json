@@ -145,7 +145,7 @@
     "eslint": "^10.11.0",
     "jsdom": "^30.1.1",
     "lint-staged": "^17.5.1",
-    "msw": "^2.15.0",
+    "msw": "^3.0.1",
     "prettier": "^3.9.9",
     "typescript": "^7.0.2",
     "url-loader": "^4.1.1",
