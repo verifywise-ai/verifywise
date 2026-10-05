@@ -135,27 +135,35 @@ export async function deletePhase(organizationId: number, phaseId: number): Prom
 }
 
 /**
- * The values clause for an id -> order-index mapping. Ids are validated to be
- * integers by the controllers (and re-checked here), so inlining them cannot
- * smuggle SQL.
+ * Guards the ids before they are handed to the database as bound array
+ * parameters. Bind values travel separately from the SQL text (never
+ * interpolated), so this is belt-and-braces on top of the controller
+ * validation.
  */
-function orderValuesClause(orderedIds: number[]): string {
+function assertSafeIds(orderedIds: number[]): void {
   if (!orderedIds.every(Number.isInteger)) {
     throw new ValidationException("orderedIds must contain only integers");
   }
-  return orderedIds.map((id, i) => `(${id}, ${i + 1})`).join(", ");
 }
 
 export async function reorderPhases(organizationId: number, orderedIds: number[]): Promise<void> {
   if (orderedIds.length === 0) return;
+  assertSafeIds(orderedIds);
   // One set-based UPDATE instead of one query per id: a loop over caller input
-  // is a loop-bound-injection surface (CodeQL js/loop-bound-injection).
+  // is a loop-bound-injection surface (CodeQL js/loop-bound-injection). The id
+  // and order arrays are bound parameters, never interpolated into the SQL.
   await sequelize.query(
     `UPDATE model_lifecycle_phases
         SET display_order = v.order_index, updated_at = NOW()
-       FROM (VALUES ${orderValuesClause(orderedIds)}) AS v(id, order_index)
-      WHERE organization_id = :organizationId AND id = v.id;`,
-    { replacements: { organizationId } },
+       FROM unnest($orderedIds::int[], $orderIndexes::int[]) AS v(id, order_index)
+      WHERE organization_id = $organizationId AND id = v.id;`,
+    {
+      bind: {
+        orderedIds,
+        orderIndexes: orderedIds.map((_id, i) => i + 1),
+        organizationId,
+      },
+    },
   );
 }
 
@@ -286,12 +294,20 @@ export async function reorderItems(
   orderedIds: number[],
 ): Promise<void> {
   if (orderedIds.length === 0) return;
+  assertSafeIds(orderedIds);
   await sequelize.query(
     `UPDATE model_lifecycle_items
         SET display_order = v.order_index, updated_at = NOW()
-       FROM (VALUES ${orderValuesClause(orderedIds)}) AS v(id, order_index)
-      WHERE organization_id = :organizationId AND id = v.id AND phase_id = :phaseId;`,
-    { replacements: { organizationId, phaseId } },
+       FROM unnest($orderedIds::int[], $orderIndexes::int[]) AS v(id, order_index)
+      WHERE organization_id = $organizationId AND id = v.id AND phase_id = $phaseId;`,
+    {
+      bind: {
+        orderedIds,
+        orderIndexes: orderedIds.map((_id, i) => i + 1),
+        organizationId,
+        phaseId,
+      },
+    },
   );
 }
 
