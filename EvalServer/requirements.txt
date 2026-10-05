@@ -110,7 +110,7 @@ urllib3==2.7.0
 uvicorn==0.53.0
 watchfiles==1.1.1
 wcwidth==0.9.1
-websockets==15.0.1
+websockets==17.1
 wheel==0.46.2
 yarl==1.24.5
 zipp==3.23.0
