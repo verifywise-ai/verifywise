@@ -24,6 +24,8 @@ import {
   LinkType,
 } from "../repositories/file.repository";
 import { parseBulkIds, assertOrgOwnsIds, withBulkTransaction } from "../utils/bulkAction.utils";
+import { getProjectByIdQuery } from "../utils/project.utils";
+import { assertCanAccessProject, assertCanDeleteFiles } from "../utils/filePermissions.utils";
 import {
   ForbiddenException,
   ValidationException,
@@ -213,27 +215,85 @@ export const getUserFilesMetaData = async (req: Request, res: Response) => {
 };
 
 export async function postFileContent(req: RequestWithFile, res: Response): Promise<any> {
+  // The caller is derived from the JWT, never from the request body: the
+  // previous implementation trusted client-supplied user_id/project_id and
+  // bulk-deleted without any access check (fixes #4722).
+  if (!req.userId) {
+    return res.status(401).json(STATUS_CODE[401](req.t!("Unauthenticated")));
+  }
+  if (!req.organizationId) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Missing tenant")));
+  }
+  const userId = req.userId;
+  const organizationId = req.organizationId;
+  const role = req.role || "";
+
   const transaction = await sequelize.transaction();
 
   logProcessing({
     description: "starting postFileContent",
     functionName: "postFileContent",
     fileName: "file.ctrl.ts",
-    userId: req.userId!,
-    organizationId: req.organizationId!,
+    userId,
+    organizationId,
   });
 
   try {
     const body = req.body as {
       question_id: string;
       project_id: number;
-      user_id: number;
-      delete: string;
+      delete?: string | number[];
     };
 
-    const filesToDelete = JSON.parse(body.delete || "[]") as number[];
+    // The project must exist inside the caller's organization...
+    const projectId = Number(body.project_id);
+    if (!Number.isSafeInteger(projectId) || projectId <= 0) {
+      await transaction.rollback();
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid project ID")));
+    }
+    const project = await getProjectByIdQuery(projectId, organizationId);
+    if (!project) {
+      await transaction.rollback();
+      return res.status(404).json(STATUS_CODE[404](req.t!("Project not found")));
+    }
+    // ...and the caller must own it, belong to it, or be an Admin.
+    await assertCanAccessProject(projectId, { userId, role, organizationId, transaction });
+
+    // Delete list: accepts a JSON string (legacy client) or an array; ids must
+    // be safe integers owned by the org and deletable by the caller.
+    let filesToDelete: number[] = [];
+    if (body.delete !== undefined && body.delete !== null && body.delete !== "") {
+      let rawDelete: unknown = body.delete;
+      if (typeof rawDelete === "string") {
+        try {
+          rawDelete = JSON.parse(rawDelete);
+        } catch {
+          await transaction.rollback();
+          return res.status(400).json(STATUS_CODE[400](req.t!("Invalid delete list")));
+        }
+      }
+      if (!Array.isArray(rawDelete)) {
+        await transaction.rollback();
+        return res.status(400).json(STATUS_CODE[400](req.t!("Invalid delete list")));
+      }
+      if (rawDelete.length > 0) {
+        filesToDelete = parseBulkIds(rawDelete, { field: "delete" });
+        await assertOrgOwnsIds({
+          table: "files",
+          ids: filesToDelete,
+          organizationId,
+          transaction,
+        });
+        await assertCanDeleteFiles(filesToDelete, {
+          userId,
+          role,
+          organizationId,
+          transaction,
+        });
+      }
+    }
     for (let fileToDelete of filesToDelete) {
-      await deleteFileById(fileToDelete, req.organizationId!, transaction);
+      await deleteFileById(fileToDelete, organizationId, transaction);
     }
 
     const questionId = parseInt(body.question_id);
@@ -241,10 +301,10 @@ export async function postFileContent(req: RequestWithFile, res: Response): Prom
     for (let file of req.files! as UploadedFile[]) {
       const uploadedFile = await uploadFile(
         file,
-        body.user_id,
-        body.project_id,
+        userId,
+        projectId,
         "Assessment tracker group",
-        req.organizationId!,
+        organizationId,
         transaction,
       );
       uploadedFiles.push({
@@ -260,10 +320,10 @@ export async function postFileContent(req: RequestWithFile, res: Response): Prom
 
     const question = await addFileToAnswerEU(
       questionId,
-      body.project_id,
+      projectId,
       uploadedFiles,
       filesToDelete,
-      req.organizationId!,
+      organizationId,
       transaction,
     );
     await transaction.commit();
@@ -273,8 +333,8 @@ export async function postFileContent(req: RequestWithFile, res: Response): Prom
       description: "Posted file content and updated answer evidence",
       functionName: "postFileContent",
       fileName: "file.ctrl.ts",
-      userId: req.userId!,
-      organizationId: req.organizationId!,
+      userId,
+      organizationId,
     });
 
     return res.status(201).json(STATUS_CODE[201](question.evidence_files));
@@ -287,10 +347,16 @@ export async function postFileContent(req: RequestWithFile, res: Response): Prom
       functionName: "postFileContent",
       fileName: "file.ctrl.ts",
       error: error as Error,
-      userId: req.userId!,
-      organizationId: req.organizationId!,
+      userId,
+      organizationId,
     });
 
+    if (error instanceof ValidationException) {
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+    }
+    if (error instanceof ForbiddenException) {
+      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
+    }
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
