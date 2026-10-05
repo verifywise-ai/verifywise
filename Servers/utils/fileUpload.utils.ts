@@ -37,7 +37,7 @@ export const uploadFile = async (
     if (projectIsDemo.length === 0) {
       throw new ForbiddenException("Project not found in organization");
     }
-    is_demo = projectIsDemo[0].is_demo;
+    is_demo = projectIsDemo[0].is_demo || false;
   }
   // Apply org-level default retention (if configured). Explicit expiry /
   // retention overrides come later via updateFileMetadata — this upload path
