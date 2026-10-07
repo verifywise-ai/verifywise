@@ -23,8 +23,7 @@ import StandardModal from "../../../components/Modals/StandardModal";
 import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
 import Field from "../../../components/Inputs/Field";
 import Select from "../../../components/Inputs/Select";
-import allowedRoles from "../../../../application/constants/permissions";
-import { useAuth } from "../../../../application/hooks/useAuth";
+import { useResourceAccess } from "../../../../application/hooks/useResourceAccess";
 import { useMyPermissions } from "../../../../application/hooks/useRolePermissions";
 import {
   LLMKeysFormData,
@@ -69,12 +68,12 @@ const LLMKeys = () => {
     key: "",
     model: "",
   };
-  const { userRoleName } = useAuth();
+  const { canAccess } = useResourceAccess();
   const theme = useTheme();
   const { can } = useMyPermissions();
   // The server allows any role holding llmKeys.admin; the role list keeps
   // Admins enabled while the permission list is still loading.
-  const isDisabled = !can("llmKeys.admin") && !allowedRoles.llmKeys?.manage?.includes(userRoleName);
+  const isDisabled = !can("llmKeys.admin") && !canAccess("llmKeys", "manage");
 
   const [keys, setKeys] = useState<LLMKeysModel[]>([]);
   const [isLoading, setIsLoading] = useState(false);
