@@ -17,7 +17,7 @@ import {
 import { createModelInventory } from "../../../application/repository/modelInventory.repository";
 import { onAiActionCompleted } from "../../../application/events/aiActionEvents";
 import { getShareLinksForResource } from "../../../application/repository/share.repository";
-import { useAuth } from "../../../application/hooks/useAuth";
+import { useResourceAccess } from "../../../application/hooks/useResourceAccess";
 import { useExtensions } from "../../../application/contexts/Extensions.context";
 import MLFlowTab from "../Extensions/mlflow/MLFlowTab";
 import AzureAIFoundryTab from "../Extensions/azure-ai-foundry/AzureAIFoundryTab";
@@ -172,8 +172,8 @@ const ModelInventory: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [showAlert, setShowAlert] = useState(false);
 
-  const { userRoleName } = useAuth();
-  const isCreatingDisabled = !userRoleName || !["Admin", "Editor"].includes(userRoleName);
+  const { canAccess } = useResourceAccess();
+  const isCreatingDisabled = !canAccess("modelInventory", "create");
   const theme = useTheme();
 
   const { isEnabled } = useExtensions();
