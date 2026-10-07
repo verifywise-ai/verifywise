@@ -22,7 +22,7 @@ import { useSearchParams } from "react-router";
 import StatusDropdown from "../../../../components/StatusDropdown";
 import { updateISO42001ClauseStatus } from "../../../../components/StatusDropdown/statusUpdateApi";
 import { useAuth } from "../../../../../application/hooks/useAuth";
-import allowedRoles from "../../../../../application/constants/permissions";
+import { useResourceAccess } from "../../../../../application/hooks/useResourceAccess";
 import { Project } from "../../../../../domain/types/Project";
 import { TabFilterBar } from "../../../../components/FrameworkFilter/TabFilterBar";
 import { StatsCard } from "../../../../components/Cards/StatsCard";
@@ -65,7 +65,8 @@ const ISO42001Clause = ({
   ownerOptions?: { label: string; value: string }[];
   reviewerOptions?: { label: string; value: string }[];
 }) => {
-  const { userId, userRoleName } = useAuth();
+  const { userId } = useAuth();
+  const { canAccess } = useResourceAccess();
   const [clauses, setClauses] = useState<ClauseStructISO[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedSubClause, setSelectedSubClause] = useState<any>(null);
@@ -423,8 +424,7 @@ const ISO42001Clause = ({
                   currentStatus={subClause.status ?? "Not started"}
                   onStatusChange={(newStatus) => handleStatusChange(subClause, newStatus)}
                   size="small"
-                  allowedRoles={allowedRoles.frameworks.edit}
-                  userRole={userRoleName}
+                  disabled={!canAccess("frameworks", "edit")}
                 />
               </Stack>
             );
