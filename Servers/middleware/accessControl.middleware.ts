@@ -66,14 +66,14 @@ interface AuthenticatedRequest extends Request {
 /**
  * Authorization middleware (issue #4588 — permission matrix).
  *
- * Accepts either:
- *   - a permission key (`authorize("risks.edit")`): resolved through the
- *     permission matrix — built-in roles against the static BUILTIN matrix
- *     (parity with the old allowlists), custom organization roles against
- *     the `role_permissions` table (missing row = deny).
- *   - a legacy role-name array (`authorize(["Admin", "Editor"])`): kept as a
- *     temporary shim so the ~94 call sites can migrate file-by-file; new code
- *     must use permission keys.
+ * Accepts a permission key (`authorize("risks.edit")`): resolved through the
+ * permission matrix — built-in roles against the static BUILTIN matrix
+ * (parity with the old allowlists), custom organization roles against the
+ * `role_permissions` table (missing row = deny).
+ *
+ * The legacy role-name array form (`authorize(["Admin", "Editor"])`) is fully
+ * migrated: no production call site uses it anymore. It is kept in the type
+ * only for backward compatibility with older tests and extensions.
  */
 const authorize =
   (permissionOrRoles: PermissionKey | string[]) =>
