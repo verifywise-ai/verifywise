@@ -20,8 +20,7 @@ import ScorersTable, { type ScorerRow } from "../../components/Table/ScorersTabl
 import { PageHeader } from "../../components/Layout/PageHeader";
 import HelperIcon from "../../components/HelperIcon";
 import TipBox from "../../components/TipBox";
-import { useAuth } from "../../../application/hooks/useAuth";
-import allowedRoles from "../../../application/constants/permissions";
+import { useResourceAccess } from "../../../application/hooks/useResourceAccess";
 import { palette } from "../../themes/palette";
 
 export interface ProjectScorersProps {
@@ -41,10 +40,10 @@ export default function ProjectScorers({ projectId, orgId }: ProjectScorersProps
   const [alert, setAlert] = useState<AlertState | null>(null);
 
   // RBAC permissions
-  const { userRoleName } = useAuth();
-  const canCreateScorer = allowedRoles.evals.createScorer.includes(userRoleName);
-  const canEditScorer = allowedRoles.evals.editScorer.includes(userRoleName);
-  const canDeleteScorer = allowedRoles.evals.deleteScorer.includes(userRoleName);
+  const { canAccess } = useResourceAccess();
+  const canCreateScorer = canAccess("evals", "createScorer");
+  const canEditScorer = canAccess("evals", "editScorer");
+  const canDeleteScorer = canAccess("evals", "deleteScorer");
 
   // Edit modal state - using comprehensive CreateScorerModal
   const [editScorerModalOpen, setEditScorerModalOpen] = useState(false);
