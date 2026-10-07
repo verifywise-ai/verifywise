@@ -148,6 +148,22 @@ export async function getEffectivePermissions(
   return loadCustomRolePermissions(organizationId, role);
 }
 
+/**
+ * Query-layer visibility rule (issue #4588 follow-up). Admin and SuperAdmin
+ * see every row, exactly as before the permission matrix. A custom role sees
+ * every row only when granted the module's `<module>.viewAll` key; otherwise
+ * it gets the same narrowed (own/member) visibility as the built-in
+ * non-Admin roles — never less, and only more when explicitly granted.
+ */
+export async function hasUnrestrictedVisibility(
+  organizationId: number | null,
+  roleName: string,
+  viewAllKey: PermissionKey,
+): Promise<boolean> {
+  if (roleName === "Admin" || roleName === "SuperAdmin") return true;
+  return roleHasPermission(organizationId, roleName, viewAllKey);
+}
+
 /** Grant or revoke one permission for a custom role (upsert). */
 export async function setRolePermissionQuery(
   organizationId: number,
