@@ -16,7 +16,7 @@ import { useUpdateProjectRisk } from "../../../../application/hooks/useUpdatePro
 import useUsers from "../../../../application/hooks/useUsers";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useResourceAccess } from "../../../../application/hooks/useResourceAccess";
 import { RiskCalculator } from "../../../tools/riskCalculator";
 import { CustomFieldsSectionHandle } from "../../CustomFieldsSection";
 import { useRequiredCustomFieldsGate } from "../../CustomFieldsSection/RequiredCustomFieldsGate";
@@ -160,6 +160,7 @@ export function useRiskForm(props: AddNewRiskFormProps): UseRiskFormReturn {
   const projectId = searchParams.get("projectId");
 
   const { userRoleName } = useAuth();
+  const { canAccess } = useResourceAccess();
   const { isQuantitative } = useRiskAssessmentMode();
 
   const hookData = useUsers();
@@ -169,8 +170,8 @@ export function useRiskForm(props: AddNewRiskFormProps): UseRiskFormReturn {
   const { inputValues } = useContext(VerifyWiseContext);
   const updateProjectRiskMutation = useUpdateProjectRisk();
 
-  const isEditingDisabled = !allowedRoles.projectRisks.edit.includes(userRoleName);
-  const isCreatingDisabled = !allowedRoles.projectRisks.create.includes(userRoleName);
+  const isEditingDisabled = !canAccess("projectRisks", "edit");
+  const isCreatingDisabled = !canAccess("projectRisks", "create");
 
   const mitigation = useMitigationSection(initialMitigationValues);
 
