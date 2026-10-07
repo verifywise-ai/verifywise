@@ -87,7 +87,7 @@ const handleMulterError = (err: any, _req: Request, res: Response, next: NextFun
  */
 router.post(
   "/upload",
-  authorize(["Admin", "Editor"]),
+  authorize("ext.datasetBulkUpload.edit"),
   upload.single("file"),
   handleMulterError,
   uploadDatasetFile,

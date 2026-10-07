@@ -16,7 +16,7 @@ import { ProjectRisk } from "../../../../domain/types/ProjectRisk";
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
 import IconButton from "../../IconButton";
 import ViewRelationshipsButton from "../../ViewRelationshipsButton";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import allowedRoles from "../../../../application/constants/permissions";
 import { useSearchParams } from "react-router";
 import { ProjectRiskMitigation } from "../../ProjectRiskMitigation/ProjectRiskMitigation";
@@ -72,6 +72,7 @@ const VWProjectRisksTableBody = ({
   customFieldDefs = [],
   selection,
 }: IVWProjectRisksTableRow) => {
+  const formatDate = useFormattedDate();
   const isColVisible = (colId: string) => !visibleColumns || visibleColumns.has(colId);
   const theme = useTheme();
   const { setInputValues } = useContext(VerifyWiseContext);
@@ -213,6 +214,16 @@ const VWProjectRisksTableBody = ({
                       ? `${row.risk_name.slice(0, 30)}...`
                       : row.risk_name
                     : "-"}
+                  {row.evidence_stale_at && (
+                    // VW Chip takes neither title nor sx, so both move to the wrapper.
+                    <Box
+                      component="span"
+                      sx={{ display: "inline-flex", ml: 2 }}
+                      title={new Date(row.evidence_stale_at).toLocaleString()}
+                    >
+                      <Chip size="small" variant="warning" label="Evidence stale" />
+                    </Box>
+                  )}
                 </TableCell>
                 {isColVisible("risk_owner") && (
                   <TableCell
@@ -307,7 +318,7 @@ const VWProjectRisksTableBody = ({
                             : "",
                     }}
                   >
-                    {row.deadline ? displayFormattedDate(row.deadline.toString()) : "NA"}
+                    {row.deadline ? formatDate(row.deadline.toString()) : "NA"}
                   </TableCell>
                 )}
                 {isColVisible("controls_mapping") && (

@@ -31,7 +31,7 @@ router.get("/:id", authenticateJWT, validateRiskIdParam, getRiskById);
 router.patch(
   "/bulk",
   authenticateJWT,
-  authorize(["Admin", "Editor"]),
+  authorize("risks.edit"),
   validateBulkUpdateProjectRisks,
   bulkUpdateProjectRisks,
 );

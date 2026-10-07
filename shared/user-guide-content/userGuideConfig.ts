@@ -366,13 +366,19 @@ export const collections: Collection[] = [
     title: 'Compliance frameworks',
     description: 'Stay compliant with AI regulations including EU AI Act, ISO 42001, and more.',
     icon: 'Shield',
-    articleCount: 8,
+    articleCount: 9,
     articles: [
       {
         id: 'assessments',
         title: 'Compliance overview',
         description: 'Understand available compliance frameworks and how to choose between them.',
         keywords: ['compliance', 'framework', 'overview', 'choose', 'comparison'],
+      },
+      {
+        id: 'adding-frameworks',
+        title: 'Adding frameworks',
+        description: 'Add any of the 25 built-in frameworks to your organization or a use case, and work through their requirements.',
+        keywords: ['framework', 'add framework', 'remove framework', 'manage frameworks', 'organizational', 'use case', 'soc 2', 'gdpr', 'ccpa', 'dora', 'hipaa', 'pci-dss', 'cis controls', 'nist csf', 'cybersecurity', 'nyc local law 144', 'altai', 'oecd', 'ftc', 'colorado', 'texas', 'quebec', 'pdpl', 'data governance', 'ai ethics', 'custom framework', 'requirement'],
       },
       {
         id: 'eu-ai-act',
@@ -497,8 +503,8 @@ export const collections: Collection[] = [
       {
         id: 'integration-overview',
         title: 'Integration overview',
-        description: 'View available integrations and their connection status.',
-        keywords: ['integration', 'connect', 'tools', 'setup', 'overview', 'slack', 'mlflow'],
+        description: 'The ways to connect VerifyWise with other tools: extensions, API keys and automations.',
+        keywords: ['integration', 'connect', 'tools', 'setup', 'overview', 'slack', 'mlflow', 'azure', 'jira', 'extension'],
       },
       {
         id: 'slack-integration',
@@ -519,10 +525,10 @@ export const collections: Collection[] = [
         keywords: ['automation', 'trigger', 'action', 'condition', 'rule', 'automatic', 'workflow'],
       },
       {
-        id: 'plugins',
-        title: 'Plugins & marketplace',
-        description: 'Browse, install, and manage plugins that extend VerifyWise with new frameworks and integrations.',
-        keywords: ['plugin', 'marketplace', 'install', 'framework', 'soc 2', 'gdpr', 'hipaa', 'extension'],
+        id: 'extensions',
+        title: 'Extensions',
+        description: 'Enable, configure and disable the built-in extensions: Slack, MLflow, Azure AI Foundry, Model Lifecycle, Risk Import, Jira Assets and Dataset Bulk Upload.',
+        keywords: ['extension', 'extensions', 'enable', 'disable', 'configure', 'integration', 'slack', 'mlflow', 'azure ai foundry', 'model lifecycle', 'risk import', 'excel', 'jira', 'jira assets', 'dataset bulk upload', 'bulk upload', 'plugin', 'marketplace'],
       },
     ],
   },
@@ -790,7 +796,7 @@ export const collections: Collection[] = [
         id: 'bulk-import-datasets',
         title: 'Bulk importing datasets',
         description: 'Upload a CSV or spreadsheet to register a dataset through the API.',
-        keywords: ['developer', 'api', 'dataset', 'bulk', 'upload', 'import', 'csv', 'xlsx', 'multipart', 'file', 'plugin', 'metadata', 'integration'],
+        keywords: ['developer', 'api', 'dataset', 'bulk', 'upload', 'import', 'csv', 'xlsx', 'multipart', 'file', 'extension', 'metadata', 'integration'],
       },
       {
         id: 'automations-api',

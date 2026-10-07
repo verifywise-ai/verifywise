@@ -21,8 +21,11 @@ import {
   scheduleReportSchedulerTick,
   scheduleMrmRevalidationSweep,
   scheduleMrmRetentionPrune,
-  scheduleEvidenceExpirySweep,
+  scheduleFileExpirySweep,
   scheduleAiTrustIndexSync,
+  scheduleEvidenceFreshnessSweep,
+  scheduleDeadlineEscalationSweep,
+  scheduleStaleInheritanceNotifySweep,
 } from "../services/automations/automationProducer";
 
 async function safeSchedule(name: string, fn: () => Promise<void>): Promise<void> {
@@ -58,7 +61,10 @@ export async function addAllJobs(): Promise<void> {
   await safeSchedule("report-scheduler-tick", scheduleReportSchedulerTick);
   await safeSchedule("mrm-revalidation-sweep", scheduleMrmRevalidationSweep); // non-obliterating — safe to run after the obliterating schedulers
   await safeSchedule("mrm-retention-prune", scheduleMrmRetentionPrune); // non-obliterating — safe to run after the obliterating schedulers
-  await safeSchedule("evidence-expiry-sweep", scheduleEvidenceExpirySweep); // non-obliterating — safe to run after the obliterating schedulers
+  await safeSchedule("file-expiry-sweep", scheduleFileExpirySweep); // non-obliterating — safe to run after the obliterating schedulers
+  await safeSchedule("evidence-freshness-sweep", scheduleEvidenceFreshnessSweep); // non-obliterating — safe to run after the obliterating schedulers
+  await safeSchedule("deadline-escalation-sweep", scheduleDeadlineEscalationSweep); // non-obliterating — safe to run after the obliterating schedulers
+  await safeSchedule("stale-inheritance-notify-sweep", scheduleStaleInheritanceNotifySweep); // non-obliterating — safe to run after the obliterating schedulers
   await safeSchedule("ai-trust-index-sync", scheduleAiTrustIndexSync);
   // Ordering constraint: obliterate-using schedulers (e.g. vendor-review,
   // report-notification) must run BEFORE all non-obliterating ones, or they wipe

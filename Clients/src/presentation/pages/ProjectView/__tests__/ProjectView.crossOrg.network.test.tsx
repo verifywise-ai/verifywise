@@ -14,7 +14,7 @@
  */
 
 import { act, screen, waitFor } from "@testing-library/react";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import { AlertHost } from "../../../../test/AlertHost";
 import { server } from "../../../../test/mocks/server";

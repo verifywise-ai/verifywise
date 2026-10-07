@@ -9,6 +9,8 @@ import {
   Link,
 } from "@mui/material";
 import { useState, useCallback, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import {
   Plus as PlusIcon,
@@ -34,9 +36,10 @@ import {
   createLLMKey,
   deleteLLMKey,
   editLLMKey,
-  getLLMKeys,
 } from "../../../../application/repository/llmKeys.repository";
 import { getModelsForProvider, getRecommendedModel } from "../../../utils/providers";
+import { LLM_KEY_ADD_PARAM } from "../../../../application/constants/llmKeyDeepLink";
+import { invalidateLLMKeyQueries, useLLMKeys } from "../../../../application/hooks/useLLMKeys";
 
 // Import provider logos
 import anthropicLogo from "../../../assets/icons/anthropic_logo.svg";
@@ -68,11 +71,20 @@ const LLMKeys = () => {
     key: "",
     model: "",
   };
-  const { userRoleName } = useAuth();
   const theme = useTheme();
-  const isDisabled = !allowedRoles.llmKeys?.manage?.includes(userRoleName);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
+  const { userRoleName } = useAuth();
+  const isDisabled = !allowedRoles.llmKeys.manage.includes(userRoleName);
 
-  const [keys, setKeys] = useState<LLMKeysModel[]>([]);
+  // The shared, cached key list that Start here and the Advisor also read.
+  const {
+    keys,
+    loading: isKeysLoading,
+    isFetching: isKeysFetching,
+    isError: isKeysError,
+    errorUpdatedAt: keysErrorUpdatedAt,
+  } = useLLMKeys();
   const [isLoading, setIsLoading] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -91,24 +103,28 @@ const LLMKeys = () => {
     setAlert({ variant, title, body, isToast: false });
   }, []);
 
-  const fetchLLMKeys = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const response = await getLLMKeys();
-      if (response && response.data && response.data.data) {
-        const llmKeyModel = response.data.data.map((item: any) => LLMKeysModel.createNewKey(item));
-        setKeys(llmKeyModel);
-      }
-    } catch (_error) {
-      showAlert("error", "Error", "Failed to fetch LLM Keys");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [showAlert]);
-
+  // One alert per failed load or refetch. A query cached in error keeps that
+  // status while it refetches, so wait for the fetch to settle first.
   useEffect(() => {
-    fetchLLMKeys();
-  }, [fetchLLMKeys]);
+    if (isKeysError && !isKeysFetching) showAlert("error", "Error", "Failed to fetch LLM Keys");
+  }, [isKeysError, isKeysFetching, keysErrorUpdatedAt, showAlert]);
+
+  // After a change: refetch the shared key list and status that this page,
+  // Start here, the Advisor, reporting and file summaries read.
+  // Awaited by the handlers, so their spinner covers the refetch and the
+  // empty state does not flash before the new list arrives.
+  const refreshKeys = useCallback(() => invalidateLLMKeyQueries(queryClient), [queryClient]);
+
+  // ?addKey=1 (Start here's "Go to settings") opens the add form once, then
+  // leaves the URL so a refresh or Back does not reopen it. Every arrival
+  // with the flag opens it again. Roles that cannot add keys only lose the flag.
+  useEffect(() => {
+    if (searchParams.get(LLM_KEY_ADD_PARAM) !== "1") return;
+    if (!isDisabled) setIsCreateModalOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete(LLM_KEY_ADD_PARAM);
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, isDisabled]);
 
   useEffect(() => {
     if (alert) {
@@ -247,7 +263,7 @@ const LLMKeys = () => {
       const response = await createLLMKey({ body });
       if (response && response.data) {
         showAlert("success", "Success", "API key added successfully");
-        fetchLLMKeys();
+        await refreshKeys();
       }
     } catch (error: any) {
       const errorMessage =
@@ -263,7 +279,7 @@ const LLMKeys = () => {
       setHeaderRows([]);
     }
   }, [
-    fetchLLMKeys,
+    refreshKeys,
     formData,
     showAlert,
     initialFormData,
@@ -286,7 +302,7 @@ const LLMKeys = () => {
       const response = await editLLMKey({ id: keyToEdit, body });
       if (response && response.data) {
         showAlert("success", "Success", "API key updated successfully");
-        fetchLLMKeys();
+        await refreshKeys();
       }
     } catch (error: any) {
       const errorMessage =
@@ -302,7 +318,7 @@ const LLMKeys = () => {
       setHeaderRows([]);
     }
   }, [
-    fetchLLMKeys,
+    refreshKeys,
     formData,
     showAlert,
     keyToEdit,
@@ -319,7 +335,7 @@ const LLMKeys = () => {
       const response = await deleteLLMKey(keyToDelete.id.toString());
       if (response && response.data) {
         showAlert("success", "Success", "LLM Key deleted successfully");
-        fetchLLMKeys();
+        await refreshKeys();
       }
     } catch (_error) {
       showAlert("error", "Error", "Failed to delete LLM Key");
@@ -329,7 +345,7 @@ const LLMKeys = () => {
       setIsDeleteModalOpen(false);
       setKeyToDelete(null);
     }
-  }, [keyToDelete]);
+  }, [keyToDelete, refreshKeys]);
 
   const handleCloseCreateModal = useCallback(() => {
     setIsCreateModalOpen(false);
@@ -423,7 +439,7 @@ const LLMKeys = () => {
           )}
         </Box>
 
-        {isLoading && keys.length === 0 ? (
+        {(isKeysLoading || isLoading) && keys.length === 0 ? (
           <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
             <CircularProgress />
           </Box>

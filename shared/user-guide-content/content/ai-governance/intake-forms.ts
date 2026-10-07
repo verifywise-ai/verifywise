@@ -329,18 +329,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Choose how submissions are classified by risk:',
-    },
-    {
-      type: 'bullet-list',
-      items: [
-        { bold: 'Generic', text: 'Four-tier system: Low, Medium, High, Critical' },
-        { bold: 'EU AI Act', text: 'Four-tier system aligned with the regulation: Minimal, Limited, High, Unacceptable' },
-      ],
-    },
-    {
-      type: 'paragraph',
-      text: 'The tier system determines the labels and thresholds used when scoring submissions. Both systems use the same scoring dimensions under the hood.',
+      text: 'Submissions are classified using the EU AI Act risk tiers: **Minimal**, **Limited**, **High** and **Unacceptable**. The overall score maps to a tier with fixed thresholds: up to 25 is Minimal, up to 50 Limited, up to 75 High and above 75 Unacceptable.',
     },
     {
       type: 'heading',
@@ -498,7 +487,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The weighted dimension scores produce an overall score that maps to a tier in your chosen risk system (Generic or EU AI Act). With an LLM key connected, each dimension also gets a written explanation of what drove the score.',
+      text: 'The weighted dimension scores produce an overall score that maps to an EU AI Act risk tier. With an LLM key connected, each dimension also gets a written explanation of what drove the score.',
     },
     {
       type: 'heading',
@@ -672,7 +661,6 @@ export const intakeFormsContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { text: 'Configure at least one notification recipient so submissions don\'t sit unreviewed.' },
-        { text: 'Use the EU AI Act tier system if your organization reports under that regulation. The generic system works well for internal governance programs.' },
         { text: 'Connect an LLM key if you want richer risk explanations. The rule-based scoring still works without it, but the LLM adds reasoning context.' },
         { text: 'When rejecting, be specific in the rejection reason. The submitter sees your text verbatim.' },
         { text: 'Review entity data before confirming approval. The field mapping builds a reasonable starting point, but a quick check prevents errors downstream.' },

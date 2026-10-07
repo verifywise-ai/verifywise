@@ -16,7 +16,7 @@ import Chip from "../../../components/Chip";
 import Field from "../../../components/Inputs/Field";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { EmptyState } from "../../../components/EmptyState";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import {
   useCreateIngestionToken,
   useIngestionTokens,
@@ -95,6 +95,7 @@ const PAYLOAD_FIELDS: { field: string; type: string; required: string; notes: st
 ];
 
 const MetricsFeedSection = ({ onError, onSuccess }: MetricsFeedSectionProps) => {
+  const formatDate = useFormattedDate();
   const { data: tokens = [] } = useIngestionTokens();
   const createToken = useCreateIngestionToken();
   const rotateToken = useRotateIngestionToken();
@@ -274,7 +275,7 @@ const MetricsFeedSection = ({ onError, onSuccess }: MetricsFeedSectionProps) => 
                   <TableRow key={token.id} hover>
                     <TableCell sx={mrmTableCellStyle}>{token.name}</TableCell>
                     <TableCell sx={mrmTableCellStyle}>
-                      {token.created_at ? displayFormattedDate(token.created_at) : "—"}
+                      {token.created_at ? formatDate(token.created_at) : "—"}
                     </TableCell>
                     <TableCell sx={mrmTableCellStyle}>
                       {token.last_used_at ? relativeTime(token.last_used_at) : "Never used"}

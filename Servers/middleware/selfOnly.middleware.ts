@@ -33,7 +33,9 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
 export const selfOnly = (req: Request, res: Response, next: NextFunction): void | Response => {
   const jwtUserId = req.userId;
   const paramsId = req.params.id;
-  const bodyId = req.body.id;
+  // req.body is undefined on bodyless requests (e.g. DELETE without a JSON
+  // content-type) — guard against it or such routes 500 in this middleware.
+  const bodyId = req.body?.id;
 
   if (!jwtUserId) {
     return res.status(401).json(STATUS_CODE[401](req.t!("Authentication required")));

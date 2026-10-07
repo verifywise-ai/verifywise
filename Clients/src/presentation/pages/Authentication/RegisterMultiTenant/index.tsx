@@ -20,11 +20,8 @@ import type {
 import CustomizableToast from "../../../components/Toast";
 import Alert from "../../../components/Alert";
 import { useDispatch } from "react-redux";
-import {
-  setUserExists,
-  setAuthToken,
-  setExpiration,
-} from "../../../../application/redux/auth/authSlice";
+import { setUserExists, setExpiration } from "../../../../application/redux/auth/authSlice";
+import { discardToken, startSession } from "../../../../application/utils/clearSession";
 import { CreateMyOrganization } from "../../../../application/repository/organization.repository";
 import useUsers from "../../../../application/hooks/useUsers";
 
@@ -78,7 +75,7 @@ const RegisterMultiTenant: React.FC = () => {
 
   useEffect(() => {
     localStorage.clear();
-    dispatch(setAuthToken(""));
+    discardToken(dispatch);
   }, []);
 
   // Handle input field changes for user form
@@ -165,7 +162,7 @@ const RegisterMultiTenant: React.FC = () => {
       const organizationName =
         response.data.data.organization?.name || `${values.name}'s Organization`;
       const expirationDate = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days
-      dispatch(setAuthToken(token));
+      startSession(dispatch, token);
       dispatch(setExpiration(expirationDate));
       // Store organization name and clear the flag so the modal shows on first login
       localStorage.setItem("initial_org_name", organizationName);

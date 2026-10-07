@@ -2,6 +2,9 @@ import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript
 import { UserModel } from "../user/user.model";
 import { ProjectModel } from "../project/project.model";
 import { OrganizationModel } from "../organization/organization.model";
+import { RETENTION_POLICY_ENUM_VALUES, type RetentionPolicy } from "../../../utils/retention.utils";
+
+export type { RetentionPolicy };
 
 /**
  * Every allowed value for `files.source`. Built-in labels (from EU AI Act /
@@ -77,6 +80,7 @@ export interface File {
   review_status?: ReviewStatus;
   version?: string;
   expiry_date?: Date;
+  retention_policy?: RetentionPolicy | null;
   last_modified_by?: number;
   description?: string;
   // Approval workflow support
@@ -101,6 +105,7 @@ export interface FileType {
   review_status?: ReviewStatus;
   version?: string;
   expiry_date?: Date;
+  retention_policy?: RetentionPolicy | null;
   last_modified_by?: number;
   description?: string;
   // Approval workflow support
@@ -284,6 +289,12 @@ export class FileModel extends Model<File> {
     allowNull: true,
   })
   expiry_date?: Date;
+
+  @Column({
+    type: DataType.ENUM(...RETENTION_POLICY_ENUM_VALUES),
+    allowNull: true,
+  })
+  retention_policy?: RetentionPolicy | null;
 
   @ForeignKey(() => UserModel)
   @Column({

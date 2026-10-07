@@ -1,7 +1,14 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
+import { queryClient } from "../../../../../application/config/queryClient";
 import Login from "../index";
+
+const mockLoginUser = vi.fn();
+vi.mock("../../../../../application/repository/user.repository", async () => {
+  const actual = await vi.importActual("../../../../../application/repository/user.repository");
+  return { ...actual, loginUser: (...args: unknown[]) => mockLoginUser(...args) };
+});
 
 // Mock the SVG import used by Login
 vi.mock("../../../../assets/imgs/background-grid.svg", () => ({
@@ -44,5 +51,25 @@ describe("Login Page", () => {
     await user.click(screen.getByText("Forgot password"));
 
     expect(mockNavigate).toHaveBeenCalledWith("/forgot-password", expect.anything());
+  });
+
+  it("starts the session with an empty query cache", async () => {
+    // Data cached in this tab before (an earlier session that was never
+    // logged out) must not show for the user who signs in now.
+    queryClient.setQueryData(["projects"], [{ id: 1, name: "Previous user's project" }]);
+    mockLoginUser.mockResolvedValue({
+      status: 202,
+      data: { data: { token: "new-token", onboarding_status: "completed" } },
+    });
+    const user = userEvent.setup();
+    const { store } = renderWithProviders(<Login />, { route: "/login" });
+
+    await user.type(screen.getByPlaceholderText("name.surname@companyname.com"), "a@b.com");
+    await user.type(screen.getByPlaceholderText("Enter your password"), "Password#1");
+    await user.click(screen.getByRole("button", { name: /sign in/i }));
+
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/"));
+    expect(store.getState().auth.authToken).toBe("new-token");
+    expect(queryClient.getQueryData(["projects"])).toBeUndefined();
   });
 });

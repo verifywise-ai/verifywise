@@ -22,22 +22,46 @@ import { getAllRolesQuery } from "./role.utils";
 
 export const ROLE_MAP_TTL_MS = 60_000;
 
-let cache: Map<number, string> | null = null;
-let cacheExpiresAt = 0;
-let inflight: Promise<Map<number, string>> | null = null;
-
-async function loadRoleMap(): Promise<Map<number, string>> {
-  const roles = await getAllRolesQuery();
-  const map = new Map<number, string>();
-  for (const r of roles) {
-    if (typeof r.id === "number" && typeof r.name === "string") {
-      map.set(r.id, r.name);
-    }
-  }
-  return map;
+export interface RoleInfo {
+  id: number;
+  name: string;
+  /** NULL for global built-in roles; set for custom organization roles. */
+  organizationId: number | null;
 }
 
-async function getRoleMap(): Promise<Map<number, string>> {
+interface RoleMaps {
+  byId: Map<number, RoleInfo>;
+  /** Keyed `${organizationId ?? ""}:${name}` — org-scoped rows shadow globals. */
+  byOrgAndName: Map<string, RoleInfo>;
+}
+
+let cache: RoleMaps | null = null;
+let cacheExpiresAt = 0;
+let inflight: Promise<RoleMaps> | null = null;
+
+function roleKey(organizationId: number | null, name: string): string {
+  return `${organizationId ?? ""}:${name}`;
+}
+
+async function loadRoleMap(): Promise<RoleMaps> {
+  const roles = await getAllRolesQuery();
+  const byId = new Map<number, RoleInfo>();
+  const byOrgAndName = new Map<string, RoleInfo>();
+  for (const r of roles) {
+    if (typeof r.id === "number" && typeof r.name === "string") {
+      const orgId = typeof r.organization_id === "number" ? r.organization_id : null;
+      const info: RoleInfo = { id: r.id, name: r.name, organizationId: orgId };
+      byId.set(r.id, info);
+      // First write wins for a (org, name) pair; the unique partial index in
+      // the DB guarantees there is only one row per pair anyway.
+      const key = roleKey(orgId, r.name);
+      if (!byOrgAndName.has(key)) byOrgAndName.set(key, info);
+    }
+  }
+  return { byId, byOrgAndName };
+}
+
+async function getRoleMap(): Promise<RoleMaps> {
   const now = Date.now();
   if (cache && now < cacheExpiresAt) return cache;
 
@@ -61,7 +85,7 @@ async function getRoleMap(): Promise<Map<number, string>> {
  */
 export async function getRoleNameById(id: number): Promise<string | undefined> {
   const map = await getRoleMap();
-  return map.get(id);
+  return map.byId.get(id)?.name;
 }
 
 /**
@@ -69,7 +93,28 @@ export async function getRoleNameById(id: number): Promise<string | undefined> {
  */
 export async function hasRoleId(id: number): Promise<boolean> {
   const map = await getRoleMap();
-  return map.has(id);
+  return map.byId.has(id);
+}
+
+/**
+ * Resolve a role by name within an organization. Custom (org-scoped) roles
+ * shadow global built-ins of the same name for that org — creation-time
+ * validation prevents custom roles from reusing built-in names, so in
+ * practice a name resolves to at most one role per org.
+ *
+ * Used by the permission matrix (issue #4588) to decide whether a role is a
+ * built-in (global row) or a custom role (org row → role_permissions table).
+ */
+export async function getRoleByName(
+  organizationId: number | null,
+  name: string,
+): Promise<RoleInfo | undefined> {
+  const map = await getRoleMap();
+  if (organizationId != null) {
+    const scoped = map.byOrgAndName.get(roleKey(organizationId, name));
+    if (scoped) return scoped;
+  }
+  return map.byOrgAndName.get(roleKey(null, name));
 }
 
 /**

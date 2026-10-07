@@ -34,7 +34,7 @@ import {
 import { singleTheme } from "../../themes";
 import { useUserMap } from "../../../presentation/hooks/userMap";
 import { text } from "../../themes/palette";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 interface LinkedObjectsTableProps {
   items: any[];
@@ -159,6 +159,7 @@ const LinkedObjectsTable: React.FC<LinkedObjectsTableProps> = ({
   paginated = true,
   type,
 }) => {
+  const formatDate = useFormattedDate();
   const theme = useTheme();
   const { userMap } = useUserMap();
 
@@ -328,7 +329,7 @@ const LinkedObjectsTable: React.FC<LinkedObjectsTableProps> = ({
                 </TableCell>
                 {type === "risk" && (
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    {row.due_date !== "-" ? displayFormattedDate(row.due_date) : "-"}
+                    {row.due_date !== "-" ? formatDate(row.due_date) : "-"}
                   </TableCell>
                 )}
 
@@ -370,7 +371,7 @@ const LinkedObjectsTable: React.FC<LinkedObjectsTableProps> = ({
         )}
       </TableBody>
     ),
-    [sortedData, hidePagination, page, rowsPerPage, deletingId, onRemove, type],
+    [sortedData, hidePagination, page, rowsPerPage, deletingId, onRemove, type, formatDate],
   );
 
   return (

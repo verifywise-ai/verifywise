@@ -83,7 +83,14 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
   // Fetch avatars for all users in the history
   React.useEffect(() => {
     const fetchAvatars = async () => {
-      const uniqueUserIds = Array.from(new Set(history.map((entry) => entry.changed_by_user_id)));
+      // A system change or a deleted user has no id, so there is no photo to fetch.
+      const uniqueUserIds = Array.from(
+        new Set(
+          history
+            .map((entry) => entry.changed_by_user_id)
+            .filter((userId): userId is number => userId != null),
+        ),
+      );
 
       // Batch fetch all avatars to avoid multiple re-renders
       const newAvatarUrls: { [userId: number]: string | null } = {};
@@ -137,11 +144,13 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
     if (!creationEntry) return null;
 
     const isCurrentUser = creationEntry.changed_by_user_id === currentUserId;
-    const creatorName = isCurrentUser
-      ? "you"
-      : creationEntry.user_name && creationEntry.user_surname
-        ? `${creationEntry.user_name} ${creationEntry.user_surname}`
-        : creationEntry.user_email || "Unknown User";
+    const creatorName = creationEntry.changed_by_system
+      ? "the system"
+      : isCurrentUser
+        ? "you"
+        : creationEntry.user_name && creationEntry.user_surname
+          ? `${creationEntry.user_name} ${creationEntry.user_surname}`
+          : creationEntry.user_email || "Unknown User";
 
     const creationDate = displayFormattedDate(creationEntry.changed_at);
     const creationTime = displayFormattedTime(creationEntry.changed_at);
@@ -168,11 +177,13 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
   const renderHistoryEntry = (group: ModelInventoryChangeHistoryEntry[]) => {
     const firstEntry = group[0];
     const isCurrentUser = firstEntry.changed_by_user_id === currentUserId;
-    const userName = isCurrentUser
-      ? "You"
-      : firstEntry.user_name && firstEntry.user_surname
-        ? `${firstEntry.user_name} ${firstEntry.user_surname}`
-        : firstEntry.user_email || "Unknown User";
+    const userName = firstEntry.changed_by_system
+      ? "System"
+      : isCurrentUser
+        ? "You"
+        : firstEntry.user_name && firstEntry.user_surname
+          ? `${firstEntry.user_name} ${firstEntry.user_surname}`
+          : firstEntry.user_email || "Unknown User";
 
     const relativeTime = formatRelativeTime(firstEntry.changed_at);
 
@@ -192,7 +203,10 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
             user={{
               firstname: firstEntry.user_name || userName,
               lastname: firstEntry.user_surname || "",
-              pathToImage: avatarUrls[firstEntry.changed_by_user_id] || undefined,
+              pathToImage:
+                firstEntry.changed_by_user_id != null
+                  ? avatarUrls[firstEntry.changed_by_user_id] || undefined
+                  : undefined,
             }}
             size="small"
             showBorder={false}

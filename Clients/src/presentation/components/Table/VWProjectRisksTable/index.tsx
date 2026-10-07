@@ -42,6 +42,7 @@ import { useBulkSelection } from "../../../../application/hooks/useBulkSelection
 import { useBulkUpdateProjectRisks } from "../../../../application/hooks/useBulkUpdateProjectRisks";
 import useUsers from "../../../../application/hooks/useUsers";
 import { useCustomFieldDefinitions } from "../../../../application/hooks/useCustomFields";
+import { pageOfLabel } from "../pageOfLabel";
 
 const PROJECT_RISK_CATEGORIES = [
   "Strategic risk",
@@ -648,7 +649,7 @@ const VWProjectRisksTable = ({
                             ActionsComponent={(props) => <TablePaginationActions {...props} />}
                             labelRowsPerPage="Project risks per page"
                             labelDisplayedRows={({ page, count }) =>
-                              `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
+                              pageOfLabel(page + 1, Math.max(0, Math.ceil(count / rowsPerPage)))
                             }
                             sx={{
                               "mt": theme.spacing(6),

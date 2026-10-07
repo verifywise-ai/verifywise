@@ -2,6 +2,11 @@ import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
 import { ExtensionService } from "../../services/extension/extensionService";
 import { safeFetchWithBase } from "../../utils/safeOutboundUrl";
+import {
+  EXTERNAL_SYNC_DEADLINE_MS,
+  describeFetchError,
+  requestSignal,
+} from "../../utils/outboundFetch.utils";
 
 /**
  * mlflow extension — talks to a user-configured MLflow tracking server and
@@ -12,8 +17,13 @@ import { safeFetchWithBase } from "../../utils/safeOutboundUrl";
  *   auth_method          (none | basic | token)
  *   username, password   (basic auth, `password` is is_secret → encrypted)
  *   api_token            (token auth, is_secret → encrypted)
- *   verify_ssl           (boolean, informational only — fetch() honours it)
- *   timeout              (number, seconds; not currently plumbed into fetch)
+ *   timeout              (number, seconds, 1–600; default 30) — per-request limit.
+ *                        A whole sync or connection test also stops after
+ *                        EXTERNAL_SYNC_DEADLINE_MS, which stays below the browser's
+ *                        120s request timeout so the user always gets a reason.
+ *
+ * TLS certificates are always verified (Node fetch default). Older saved
+ * configurations may still carry a `verify_ssl` key; it is ignored.
  */
 
 export interface MLflowConfig {
@@ -22,8 +32,7 @@ export interface MLflowConfig {
   username?: string;
   password?: string;
   api_token?: string;
-  verify_ssl?: boolean;
-  timeout?: number;
+  timeout?: number | string;
 }
 
 export interface MLflowTestConnectionResult {
@@ -37,6 +46,8 @@ export interface MLflowSyncResult {
   modelCount: number;
   syncedAt: string;
   status: string;
+  /** Human-readable failure reason; set when success is false. */
+  error?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -45,6 +56,16 @@ export interface MLflowSyncResult {
 
 export async function loadConfiguration(organizationId: number): Promise<MLflowConfig> {
   return (await ExtensionService.getRuntimeConfiguration("mlflow", organizationId)) as MLflowConfig;
+}
+
+const DEFAULT_TIMEOUT_SECONDS = 30;
+const MAX_TIMEOUT_SECONDS = 600;
+
+/** Configured per-request timeout in seconds, defaulted and clamped. */
+export function requestTimeoutSeconds(config: MLflowConfig): number {
+  const seconds = Number(config.timeout);
+  const valid = config.timeout !== "" && Number.isFinite(seconds) && seconds > 0;
+  return valid ? Math.min(seconds, MAX_TIMEOUT_SECONDS) : DEFAULT_TIMEOUT_SECONDS;
 }
 
 function buildHeaders(config: MLflowConfig): Record<string, string> {
@@ -83,6 +104,10 @@ export async function testConnection(config: MLflowConfig): Promise<MLflowTestCo
         method: "POST",
         headers: buildHeaders(config),
         body: JSON.stringify({ max_results: 1 }),
+        signal: requestSignal(
+          requestTimeoutSeconds(config),
+          AbortSignal.timeout(EXTERNAL_SYNC_DEADLINE_MS),
+        ),
       },
     );
     if (!response.ok) {
@@ -102,7 +127,7 @@ export async function testConnection(config: MLflowConfig): Promise<MLflowTestCo
   } catch (err: any) {
     return {
       success: false,
-      message: `Connection failed: ${err.message}`,
+      message: `Connection failed: ${describeFetchError(err, requestTimeoutSeconds(config))}`,
       testedAt: new Date().toISOString(),
     };
   }
@@ -252,11 +277,13 @@ export async function syncModels(
       modelCount: 0,
       syncedAt: new Date().toISOString(),
       status: "failed: tracking server URL is required",
+      error: "tracking server URL is required",
     };
   }
 
   const headers = buildHeaders(config);
   const trackingUrl = config.tracking_server_url;
+  const deadline = AbortSignal.timeout(EXTERNAL_SYNC_DEADLINE_MS);
 
   try {
     // 1. Experiments — outbound URL validation happens inside safeFetchWithBase.
@@ -267,10 +294,11 @@ export async function syncModels(
         method: "POST",
         headers,
         body: JSON.stringify({ max_results: 1000 }),
+        signal: requestSignal(requestTimeoutSeconds(config), deadline),
       },
     );
     if (!experimentsResponse.ok) {
-      throw new Error(`Failed to fetch experiments: ${experimentsResponse.status}`);
+      throw new Error(`Failed to fetch experiments: HTTP ${experimentsResponse.status}`);
     }
     const experimentsData: any = await experimentsResponse.json();
     const experiments = experimentsData.experiments || [];
@@ -294,11 +322,13 @@ export async function syncModels(
         method: "POST",
         headers,
         body: JSON.stringify({ experiment_ids: chunk, max_results: 1000 }),
+        signal: requestSignal(requestTimeoutSeconds(config), deadline),
       });
-      if (runsResponse.ok) {
-        const runsData: any = await runsResponse.json();
-        if (runsData.runs?.length) allRuns.push(...runsData.runs);
+      if (!runsResponse.ok) {
+        throw new Error(`Failed to fetch runs: HTTP ${runsResponse.status}`);
       }
+      const runsData: any = await runsResponse.json();
+      if (runsData.runs?.length) allRuns.push(...runsData.runs);
     }
 
     // 3. Transform + dedupe on (name, lifecycle_stage), preferring latest training end.
@@ -316,11 +346,12 @@ export async function syncModels(
     }
     const models = Array.from(modelsMap.values());
     if (models.length === 0) {
+      // A reachable server with no runs yet is a successful, empty sync.
       return {
-        success: false,
+        success: true,
         modelCount: 0,
         syncedAt: new Date().toISOString(),
-        status: "failed: MLflow returned no runs",
+        status: "success: no runs found",
       };
     }
 
@@ -333,11 +364,13 @@ export async function syncModels(
       status: "success",
     };
   } catch (err: any) {
+    const error = describeFetchError(err, requestTimeoutSeconds(config));
     return {
       success: false,
       modelCount: 0,
       syncedAt: new Date().toISOString(),
-      status: `failed: ${err.message}`,
+      status: `failed: ${error}`,
+      error,
     };
   }
 }

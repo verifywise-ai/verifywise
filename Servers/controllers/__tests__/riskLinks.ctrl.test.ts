@@ -1,0 +1,1202 @@
+jest.mock("../../utils/riskLink.utils");
+jest.mock("../../services/automations/automationProducer", () => ({
+  enqueueRiskLinkRecomputeBatch: jest.fn().mockResolvedValue(undefined),
+}));
+jest.mock("../../utils/changeHistory.base.utils", () => ({
+  recordEntityChange: jest.fn(),
+}));
+jest.mock("../../database/db", () => ({ sequelize: { transaction: jest.fn() } }));
+jest.mock("../../utils/logger/logHelper", () => ({
+  logProcessing: jest.fn(),
+  logSuccess: jest.fn(),
+  logFailure: jest.fn(),
+}));
+jest.mock("../../utils/statusCode.utils", () => ({
+  STATUS_CODE: {
+    200: (data: any) => ({ message: "OK", data }),
+    201: (data: any) => ({ message: "Created", data }),
+    202: (data: any) => ({ message: "Accepted", data }),
+    400: (data: any) => ({ message: "Bad request", data }),
+    404: (data: any) => ({ message: "Not found", data }),
+    409: (data: any) => ({ message: "Conflict", data }),
+    500: (error: any) => ({ message: "Internal server error", error }),
+  },
+}));
+
+import * as utils from "../../utils/riskLink.utils";
+import { recordEntityChange } from "../../utils/changeHistory.base.utils";
+import { sequelize } from "../../database/db";
+import { enqueueRiskLinkRecomputeBatch } from "../../services/automations/automationProducer";
+import { getTranslator, type SupportedLang } from "../../utils/i18n.utils";
+import {
+  getDismissalAnalytics,
+  getRiskLinks,
+  getRiskGraph,
+  updateRiskLinkStatus,
+  recomputeAllRiskLinks,
+  createRiskLink,
+} from "../riskLinks.ctrl";
+
+const mockUtils = utils as jest.Mocked<typeof utils>;
+
+const res = () => {
+  const r: any = {};
+  r.status = jest.fn().mockReturnValue(r);
+  r.json = jest.fn().mockReturnValue(r);
+  return r;
+};
+
+const req = (overrides: any = {}) => ({
+  params: {},
+  query: {},
+  body: {},
+  userId: 5,
+  organizationId: 7,
+  t: getTranslator("en"),
+  ...overrides,
+});
+// resetAllMocks, not clearAllMocks — see the note in recompute.spec.ts: a
+// rejected implementation set in an error-path test must not leak forward.
+beforeEach(() => jest.resetAllMocks());
+
+describe("getRiskLinks", () => {
+  it("defaults to suggested and confirmed", async () => {
+    mockUtils.getRiskLinksForRiskQuery.mockResolvedValue([]);
+    await getRiskLinks(req({ params: { riskId: "42" } }) as any, res() as any);
+    expect(mockUtils.getRiskLinksForRiskQuery).toHaveBeenCalledWith(7, 42, [
+      "suggested",
+      "confirmed",
+    ]);
+  });
+
+  it("honours ?status=dismissed", async () => {
+    mockUtils.getRiskLinksForRiskQuery.mockResolvedValue([]);
+    await getRiskLinks(
+      req({ params: { riskId: "42" }, query: { status: "dismissed" } }) as any,
+      res() as any,
+    );
+    expect(mockUtils.getRiskLinksForRiskQuery).toHaveBeenCalledWith(7, 42, ["dismissed"]);
+  });
+
+  it("rejects an unknown status with 400", async () => {
+    const r = res();
+    await getRiskLinks(
+      req({ params: { riskId: "42" }, query: { status: "banana" } }) as any,
+      r as any,
+    );
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(mockUtils.getRiskLinksForRiskQuery).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-numeric riskId with 400", async () => {
+    const r = res();
+    await getRiskLinks(req({ params: { riskId: "abc" } }) as any, r as any);
+    expect(r.status).toHaveBeenCalledWith(400);
+  });
+
+  it("echoes a stored dismissal reason", async () => {
+    mockUtils.getRiskLinksForRiskQuery.mockResolvedValue([
+      {
+        id: 1,
+        organization_id: 7,
+        source_risk_id: 3,
+        target_risk_id: 42,
+        relation_type: "related_to" as const,
+        status: "dismissed" as const,
+        source: "derived" as const,
+        score: 5,
+        reasons: [],
+        decided_at: null,
+        last_computed_at: null,
+        dismiss_reason: "not_related" as const,
+        dismiss_note: null,
+        related_id: 3,
+        related_risk_name: "Model drift",
+        related_risk_level: "High risk",
+        related_risk_owner: 9,
+      },
+    ]);
+    const r = res();
+    await getRiskLinks(
+      req({ params: { riskId: "42" }, query: { status: "dismissed" } }) as any,
+      r as any,
+    );
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: [expect.objectContaining({ dismissReason: "not_related", dismissNote: null })],
+      }),
+    );
+  });
+
+  it("normalises an undirected edge to the caller's perspective", async () => {
+    mockUtils.getRiskLinksForRiskQuery.mockResolvedValue([
+      {
+        id: 100,
+        organization_id: 7,
+        source_risk_id: 3,
+        target_risk_id: 42,
+        relation_type: "related_to",
+        status: "suggested",
+        source: "derived",
+        score: 5,
+        reasons: [{ signal: "shared_category", weight: 3 }],
+        decided_at: null,
+        last_computed_at: null,
+        related_id: 3,
+        related_risk_name: "Model drift",
+        related_risk_level: "High risk",
+        related_risk_owner: 9,
+      },
+    ] as any);
+    const r = res();
+    await getRiskLinks(req({ params: { riskId: "42" } }) as any, r as any);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: [
+          expect.objectContaining({
+            id: 100,
+            direction: "undirected",
+            score: 5,
+            relatedRisk: { id: 3, name: "Model drift", riskLevel: "High risk", ownerId: 9 },
+          }),
+        ],
+      }),
+    );
+  });
+});
+
+describe("updateRiskLinkStatus", () => {
+  beforeEach(() => mockUtils.updateRiskLinkStatusQuery.mockResolvedValue(true));
+
+  const suggested = {
+    id: 100,
+    organization_id: 7,
+    source_risk_id: 3,
+    target_risk_id: 42,
+    relation_type: "related_to" as const,
+    status: "suggested" as const,
+    source: "derived" as const,
+    score: 5,
+    reasons: [],
+    decided_at: null,
+    last_computed_at: null,
+    dismiss_reason: null,
+    dismiss_note: null,
+  };
+
+  const suggestedInheritance = {
+    ...suggested,
+    relation_type: "inherits_from" as const,
+    source_risk_id: 3,
+    target_risk_id: 42,
+  };
+
+  it("409s when confirming a suggestion whose child already has a parent", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue(suggestedInheritance);
+    mockUtils.getConfirmedHierarchyEdgesQuery.mockResolvedValue([
+      { childRiskId: 3, parentRiskId: 99 },
+    ]);
+    const r = res();
+    await updateRiskLinkStatus(
+      req({ params: { id: "100" }, body: { status: "confirmed" } }) as any,
+      r as any,
+    );
+    expect(mockUtils.getConfirmedHierarchyEdgesQuery).toHaveBeenCalledWith(7, 3, {
+      id: 42,
+      entityType: "risk",
+    });
+    expect(r.status).toHaveBeenCalledWith(409);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: "This risk already has a parent. Remove it first." }),
+    );
+    expect(mockUtils.updateRiskLinkStatusQuery).not.toHaveBeenCalled();
+  });
+
+  it("runs the rule when restoring a dismissed inheritance link", async () => {
+    // dismissed -> confirmed reaches the same end state as a fresh POST, so it
+    // must be refusable the same way.
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue({
+      ...suggestedInheritance,
+      status: "dismissed" as const,
+    });
+    mockUtils.getConfirmedHierarchyEdgesQuery.mockResolvedValue([
+      { childRiskId: 42, parentRiskId: 99 },
+    ]);
+    const r = res();
+    await updateRiskLinkStatus(
+      req({ params: { id: "100" }, body: { status: "confirmed" } }) as any,
+      r as any,
+    );
+    expect(r.status).toHaveBeenCalledWith(409);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: "That risk is already a child of another risk, so it cannot be a parent.",
+      }),
+    );
+  });
+
+  it("confirms an inheritance link when the grouping stays two levels deep", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue(suggestedInheritance);
+    mockUtils.getConfirmedHierarchyEdgesQuery.mockResolvedValue([]);
+    const r = res();
+    await updateRiskLinkStatus(
+      req({ params: { id: "100" }, body: { status: "confirmed" } }) as any,
+      r as any,
+    );
+    expect(mockUtils.updateRiskLinkStatusQuery).toHaveBeenCalledWith(
+      100,
+      7,
+      "confirmed",
+      5,
+      null,
+      null,
+      "suggested",
+    );
+    expect(r.status).toHaveBeenCalledWith(200);
+  });
+
+  it("does not run the rule on a related_to row", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue(suggested);
+    await updateRiskLinkStatus(
+      req({ params: { id: "100" }, body: { status: "confirmed" } }) as any,
+      res() as any,
+    );
+    expect(mockUtils.getConfirmedHierarchyEdgesQuery).not.toHaveBeenCalled();
+  });
+
+  it("does not run the rule when dismissing an inheritance link", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue({
+      ...suggestedInheritance,
+      status: "confirmed" as const,
+    });
+    await updateRiskLinkStatus(
+      req({ params: { id: "100" }, body: { status: "dismissed" } }) as any,
+      res() as any,
+    );
+    expect(mockUtils.getConfirmedHierarchyEdgesQuery).not.toHaveBeenCalled();
+  });
+
+  it("turns a lost single-parent race into 409, not 500", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue(suggestedInheritance);
+    mockUtils.getConfirmedHierarchyEdgesQuery.mockResolvedValue([]);
+    mockUtils.updateRiskLinkStatusQuery.mockRejectedValue({
+      original: { code: "23505", constraint: "risk_links_single_parent_idx" },
+    });
+    const r = res();
+    await updateRiskLinkStatus(
+      req({ params: { id: "100" }, body: { status: "confirmed" } }) as any,
+      r as any,
+    );
+    expect(r.status).toHaveBeenCalledWith(409);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: "This risk already has a parent. Remove it first." }),
+    );
+  });
+
+  it("confirms a suggestion and records who decided", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue(suggested);
+    const r = res();
+    await updateRiskLinkStatus(
+      req({ params: { id: "100" }, body: { status: "confirmed" } }) as any,
+      r as any,
+    );
+    expect(mockUtils.updateRiskLinkStatusQuery).toHaveBeenCalledWith(
+      100,
+      7,
+      "confirmed",
+      5,
+      null,
+      null,
+      "suggested",
+    );
+    expect(r.status).toHaveBeenCalledWith(200);
+  });
+
+  it("clears the decision fields on an explicit undo (dismissed -> suggested)", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue({ ...suggested, status: "dismissed" });
+    await updateRiskLinkStatus(
+      req({ params: { id: "100" }, body: { status: "suggested" } }) as any,
+      res() as any,
+    );
+    expect(mockUtils.updateRiskLinkStatusQuery).toHaveBeenCalledWith(
+      100,
+      7,
+      "suggested",
+      null,
+      null,
+      null,
+      "dismissed",
+    );
+  });
+
+  it("rejects confirmed -> suggested with 400 (R6)", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue({ ...suggested, status: "confirmed" });
+    const r = res();
+    await updateRiskLinkStatus(
+      req({ params: { id: "100" }, body: { status: "suggested" } }) as any,
+      r as any,
+    );
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(mockUtils.updateRiskLinkStatusQuery).not.toHaveBeenCalled();
+  });
+
+  it("404s on a link belonging to another org", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue(null);
+    const r = res();
+    await updateRiskLinkStatus(
+      req({ params: { id: "100" }, body: { status: "confirmed" } }) as any,
+      r as any,
+    );
+    expect(r.status).toHaveBeenCalledWith(404);
+  });
+
+  it("rejects an unknown target status with 400", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue(suggested);
+    const r = res();
+    await updateRiskLinkStatus(
+      req({ params: { id: "100" }, body: { status: "banana" } }) as any,
+      r as any,
+    );
+    expect(r.status).toHaveBeenCalledWith(400);
+  });
+
+  it("passes a dismissal reason through to the query", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue(suggestedInheritance);
+    const r = res();
+    await updateRiskLinkStatus(
+      req({
+        params: { id: "100" },
+        body: { status: "dismissed", dismissReason: "wrong_direction" },
+      }) as any,
+      r as any,
+    );
+    expect(mockUtils.updateRiskLinkStatusQuery).toHaveBeenCalledWith(
+      100,
+      7,
+      "dismissed",
+      5,
+      "wrong_direction",
+      null,
+      "suggested",
+    );
+    expect(r.status).toHaveBeenCalledWith(200);
+  });
+
+  it("trims and stores the note for `other`", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue(suggested);
+    await updateRiskLinkStatus(
+      req({
+        params: { id: "100" },
+        body: { status: "dismissed", dismissReason: "other", dismissNote: "  see R-14  " },
+      }) as any,
+      res() as any,
+    );
+    expect(mockUtils.updateRiskLinkStatusQuery).toHaveBeenCalledWith(
+      100,
+      7,
+      "dismissed",
+      5,
+      "other",
+      "see R-14",
+      "suggested",
+    );
+  });
+
+  it("400s on a reason offered for the wrong relation type", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue(suggested); // related_to
+    const r = res();
+    await updateRiskLinkStatus(
+      req({
+        params: { id: "100" },
+        body: { status: "dismissed", dismissReason: "wrong_direction" },
+      }) as any,
+      r as any,
+    );
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: "That dismissal reason does not apply to this kind of link",
+      }),
+    );
+    expect(mockUtils.updateRiskLinkStatusQuery).not.toHaveBeenCalled();
+  });
+
+  it("400s on a reason sent for a confirmed row, and writes nothing (§3.1)", async () => {
+    // The panel does not offer the form here, but the panel is not a trust
+    // boundary. Letting this through is the corruption C3 exists to avoid.
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue({
+      ...suggested,
+      status: "confirmed" as const,
+    });
+    const r = res();
+    await updateRiskLinkStatus(
+      req({
+        params: { id: "100" },
+        body: { status: "dismissed", dismissReason: "not_related" },
+      }) as any,
+      r as any,
+    );
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: "A dismissal reason only applies to a suggested link" }),
+    );
+    expect(mockUtils.updateRiskLinkStatusQuery).not.toHaveBeenCalled();
+  });
+
+  it("dismisses a confirmed row with no reason at all", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue({
+      ...suggested,
+      status: "confirmed" as const,
+    });
+    await updateRiskLinkStatus(
+      req({ params: { id: "100" }, body: { status: "dismissed" } }) as any,
+      res() as any,
+    );
+    expect(mockUtils.updateRiskLinkStatusQuery).toHaveBeenCalledWith(
+      100,
+      7,
+      "dismissed",
+      5,
+      null,
+      null,
+      "confirmed",
+    );
+  });
+
+  it("400s when `other` arrives without a note", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue(suggested);
+    const r = res();
+    await updateRiskLinkStatus(
+      req({ params: { id: "100" }, body: { status: "dismissed", dismissReason: "other" } }) as any,
+      r as any,
+    );
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: "A note is required when the dismissal reason is Other" }),
+    );
+  });
+
+  it("keeps the transition guard ahead of the reason check", async () => {
+    // confirmed -> suggested is already a 400 (R6). It must stay THAT 400,
+    // not a confusing one about dismissal reasons.
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue({
+      ...suggested,
+      status: "confirmed" as const,
+    });
+    const r = res();
+    await updateRiskLinkStatus(
+      req({
+        params: { id: "100" },
+        body: { status: "suggested", dismissReason: "not_related" },
+      }) as any,
+      r as any,
+    );
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: "Cannot change status from confirmed to suggested" }),
+    );
+  });
+});
+
+describe("recomputeAllRiskLinks", () => {
+  it("enqueues one batch for every active risk and answers 202", async () => {
+    mockUtils.getActiveRiskIdsQuery.mockResolvedValue([3, 7, 42]);
+    const r = res();
+    await recomputeAllRiskLinks(req() as any, r as any);
+    expect(enqueueRiskLinkRecomputeBatch).toHaveBeenCalledTimes(1);
+    expect(enqueueRiskLinkRecomputeBatch).toHaveBeenCalledWith(7, [3, 7, 42], "all");
+    expect(r.status).toHaveBeenCalledWith(202);
+    expect(r.json).toHaveBeenCalledWith(expect.objectContaining({ data: { enqueued: 3 } }));
+  });
+
+  it("scores the risk whose panel started the scan first", async () => {
+    mockUtils.getActiveRiskIdsQuery.mockResolvedValue([3, 7, 42]);
+    await recomputeAllRiskLinks(req({ body: { firstRiskId: 42 } }) as any, res() as any);
+    expect(enqueueRiskLinkRecomputeBatch).toHaveBeenCalledWith(7, [42, 3, 7], "all");
+  });
+
+  it("ignores a firstRiskId that is not an active risk in the org", async () => {
+    mockUtils.getActiveRiskIdsQuery.mockResolvedValue([3, 7]);
+    await recomputeAllRiskLinks(req({ body: { firstRiskId: 999 } }) as any, res() as any);
+    expect(enqueueRiskLinkRecomputeBatch).toHaveBeenCalledWith(7, [3, 7], "all");
+  });
+});
+
+describe("createRiskLink", () => {
+  const body = (overrides: any = {}) => ({
+    sourceRiskId: 4,
+    targetRiskId: 9,
+    relationType: "related_to",
+    ...overrides,
+  });
+
+  it("rejects a malformed body with 400", async () => {
+    const r = res();
+    await createRiskLink(req({ body: { sourceRiskId: "abc", targetRiskId: 9 } }) as any, r as any);
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(r.json).toHaveBeenCalledWith(expect.objectContaining({ data: "Invalid link payload" }));
+    expect(mockUtils.createUserRiskLinkQuery).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unknown relationType with 400", async () => {
+    const r = res();
+    await createRiskLink(req({ body: body({ relationType: "banana" }) }) as any, r as any);
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(mockUtils.getLiveRiskIdsQuery).not.toHaveBeenCalled();
+  });
+
+  it("rejects a self-link with 400", async () => {
+    const r = res();
+    await createRiskLink(req({ body: body({ targetRiskId: 4 }) }) as any, r as any);
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: "A risk cannot link to itself" }),
+    );
+    expect(mockUtils.getLiveRiskIdsQuery).not.toHaveBeenCalled();
+  });
+
+  it("checks both ids against the caller's org in one query", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([4, 9]);
+    mockUtils.createUserRiskLinkQuery.mockResolvedValue(77);
+    await createRiskLink(req({ body: body() }) as any, res() as any);
+    expect(mockUtils.getLiveRiskIdsQuery).toHaveBeenCalledWith([4, 9], 7);
+  });
+
+  // Unknown, cross-org and soft-deleted ids are one code path: the store returns
+  // fewer than two rows. They are listed separately because the SQL clause behind
+  // each differs, and Task 2 pins them against a real database.
+  it.each([
+    ["an unknown id", [4]],
+    ["a cross-org id", [4]],
+    ["a soft-deleted id", [4]],
+  ])("404s on %s", async (_label, live) => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue(live as number[]);
+    const r = res();
+    await createRiskLink(req({ body: body() }) as any, r as any);
+    expect(r.status).toHaveBeenCalledWith(404);
+    expect(r.json).toHaveBeenCalledWith(expect.objectContaining({ data: "Risk not found" }));
+    expect(mockUtils.createUserRiskLinkQuery).not.toHaveBeenCalled();
+  });
+
+  it("409s with the parent message when the child already has a parent", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([4, 9]);
+    mockUtils.getConfirmedHierarchyEdgesQuery.mockResolvedValue([
+      { childRiskId: 4, parentRiskId: 12 },
+    ]);
+    const r = res();
+    await createRiskLink(req({ body: body({ relationType: "inherits_from" }) }) as any, r as any);
+    // source is the child, target is the parent — {source: 4, target: 9}
+    expect(mockUtils.getConfirmedHierarchyEdgesQuery).toHaveBeenCalledWith(7, 4, {
+      id: 9,
+      entityType: "risk",
+    });
+    expect(r.status).toHaveBeenCalledWith(409);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: "This risk already has a parent. Remove it first." }),
+    );
+    expect(mockUtils.createUserRiskLinkQuery).not.toHaveBeenCalled();
+  });
+
+  it("409s when the proposed parent is already someone else's child", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([4, 9]);
+    mockUtils.getConfirmedHierarchyEdgesQuery.mockResolvedValue([
+      { childRiskId: 9, parentRiskId: 12 },
+    ]);
+    const r = res();
+    await createRiskLink(req({ body: body({ relationType: "inherits_from" }) }) as any, r as any);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: "That risk is already a child of another risk, so it cannot be a parent.",
+      }),
+    );
+  });
+
+  it("409s when the proposed child already has children", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([4, 9]);
+    mockUtils.getConfirmedHierarchyEdgesQuery.mockResolvedValue([
+      { childRiskId: 12, parentRiskId: 4 },
+    ]);
+    const r = res();
+    await createRiskLink(req({ body: body({ relationType: "inherits_from" }) }) as any, r as any);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: "This risk has child risks, so it cannot become a child." }),
+    );
+  });
+
+  it("refuses the reciprocal edge that the old two-cycle check caught", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([4, 9]);
+    // 4 -> 9 already confirmed; the caller proposes 9 -> 4.
+    mockUtils.getConfirmedHierarchyEdgesQuery.mockResolvedValue([
+      { childRiskId: 4, parentRiskId: 9 },
+    ]);
+    const r = res();
+    await createRiskLink(
+      req({ body: { sourceRiskId: 9, targetRiskId: 4, relationType: "inherits_from" } }) as any,
+      r as any,
+    );
+    expect(r.status).toHaveBeenCalledWith(409);
+  });
+
+  it("does not load hierarchy edges for related_to", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([4, 9]);
+    mockUtils.createUserRiskLinkQuery.mockResolvedValue(77);
+    await createRiskLink(req({ body: body() }) as any, res() as any);
+    expect(mockUtils.getConfirmedHierarchyEdgesQuery).not.toHaveBeenCalled();
+  });
+
+  it("lets a duplicate inherits_from pair reach the store for its own message", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([4, 9]);
+    // The identical edge must not be reported as child_already_has_parent — it
+    // would name the very parent the user just tried to add.
+    mockUtils.getConfirmedHierarchyEdgesQuery.mockResolvedValue([
+      { childRiskId: 4, parentRiskId: 9 },
+    ]);
+    mockUtils.createUserRiskLinkQuery.mockResolvedValue(null);
+    const r = res();
+    await createRiskLink(req({ body: body({ relationType: "inherits_from" }) }) as any, r as any);
+    expect(r.status).toHaveBeenCalledWith(409);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: 'These risks are already linked. If the link was dismissed, use "Show dismissed" to restore it.',
+      }),
+    );
+  });
+
+  it("turns a lost single-parent race into 409, not 500", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([4, 9]);
+    mockUtils.getConfirmedHierarchyEdgesQuery.mockResolvedValue([]);
+    // What node-postgres raises when the partial unique index fires, as
+    // Sequelize wraps it for a raw query.
+    mockUtils.createUserRiskLinkQuery.mockRejectedValue({
+      original: { code: "23505", constraint: "risk_links_single_parent_idx" },
+    });
+    const r = res();
+    await createRiskLink(req({ body: body({ relationType: "inherits_from" }) }) as any, r as any);
+    expect(r.status).toHaveBeenCalledWith(409);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: "This risk already has a parent. Remove it first." }),
+    );
+  });
+
+  it("still 500s on an unrelated store failure", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([4, 9]);
+    mockUtils.createUserRiskLinkQuery.mockRejectedValue(new Error("connection lost"));
+    const r = res();
+    await createRiskLink(req({ body: body() }) as any, r as any);
+    expect(r.status).toHaveBeenCalledWith(500);
+  });
+
+  it("409s with the dismissed hint when the pair already exists", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([4, 9]);
+    mockUtils.createUserRiskLinkQuery.mockResolvedValue(null);
+    const r = res();
+    await createRiskLink(req({ body: body() }) as any, r as any);
+    expect(r.status).toHaveBeenCalledWith(409);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: 'These risks are already linked. If the link was dismissed, use "Show dismissed" to restore it.',
+      }),
+    );
+  });
+
+  // The load-bearing assertion. Identical input, two relation types, two
+  // different column placements. Inverting this has no visible symptom until
+  // someone reads an inheritance backwards.
+  it("canonicalises related_to to smaller-id-first", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([9, 4]);
+    mockUtils.createUserRiskLinkQuery.mockResolvedValue(77);
+    const r = res();
+    await createRiskLink(
+      req({ body: { sourceRiskId: 9, targetRiskId: 4, relationType: "related_to" } }) as any,
+      r as any,
+    );
+    expect(mockUtils.createUserRiskLinkQuery).toHaveBeenCalledWith({
+      organizationId: 7,
+      sourceRiskId: 4,
+      target: { id: 9, entityType: "risk" },
+      relationType: "related_to",
+      userId: 5,
+    });
+    expect(r.status).toHaveBeenCalledWith(201);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ id: 77 }) }),
+    );
+  });
+
+  it("leaves inherits_from in the order the caller sent", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([9, 4]);
+    mockUtils.getConfirmedHierarchyEdgesQuery.mockResolvedValue([]);
+    mockUtils.createUserRiskLinkQuery.mockResolvedValue(78);
+    const r = res();
+    await createRiskLink(
+      req({ body: { sourceRiskId: 9, targetRiskId: 4, relationType: "inherits_from" } }) as any,
+      r as any,
+    );
+    expect(mockUtils.createUserRiskLinkQuery).toHaveBeenCalledWith({
+      organizationId: 7,
+      sourceRiskId: 9,
+      target: { id: 4, entityType: "risk" },
+      relationType: "inherits_from",
+      userId: 5,
+    });
+    expect(r.status).toHaveBeenCalledWith(201);
+  });
+
+  it("500s when the store throws", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockRejectedValue(new Error("boom"));
+    const r = res();
+    await createRiskLink(req({ body: body() }) as any, r as any);
+    expect(r.status).toHaveBeenCalledWith(500);
+  });
+});
+
+describe("getRiskGraph", () => {
+  const row = (overrides: any = {}) => ({
+    id: 1,
+    relation_type: "inherits_from",
+    status: "confirmed",
+    score: 0,
+    parent_level_changed_at: null,
+    source_entity_type: "risk",
+    source_id: 3,
+    target_entity_type: "risk",
+    target_id: 9,
+    source_name: "Child risk",
+    source_level: "Low risk",
+    target_name: "Parent risk",
+    target_level: "High risk",
+    ...overrides,
+  });
+
+  it("defaults to suggested and confirmed and dedupes shared nodes", async () => {
+    mockUtils.getRiskGraphQuery.mockResolvedValue([
+      row({ id: 1, source_id: 3 }),
+      row({ id: 2, source_id: 4, status: "suggested" }),
+    ]);
+    const r = res();
+    await getRiskGraph(req() as any, r as any);
+
+    expect(mockUtils.getRiskGraphQuery).toHaveBeenCalledWith(7, ["suggested", "confirmed"]);
+    expect(r.status).toHaveBeenCalledWith(200);
+    const payload = r.json.mock.calls[0][0].data;
+    expect(payload.edges).toHaveLength(2);
+    expect(payload.truncated).toBe(false);
+    // Two children, one shared parent: three nodes, not four.
+    expect(payload.nodes).toHaveLength(3);
+    expect(payload.nodes).toContainEqual({
+      key: "risk:9",
+      entityType: "risk",
+      id: 9,
+      name: "Parent risk",
+      riskLevel: "High risk",
+      // Only vendor risk nodes name a vendor.
+      vendor: null,
+    });
+  });
+
+  it("keys a vendor risk pair by its vendor risk source, with both vendors", async () => {
+    mockUtils.getRiskGraphQuery.mockResolvedValue([
+      row({
+        relation_type: "related_to",
+        source_entity_type: "vendor_risk",
+        source_id: 3,
+        source_vendor_id: 10,
+        source_vendor_name: "Acme",
+        target_entity_type: "vendor_risk",
+        target_id: 9,
+        target_vendor_id: 11,
+        target_vendor_name: "Zeta",
+      }),
+    ]);
+    const r = res();
+    await getRiskGraph(req() as any, r as any);
+
+    const payload = r.json.mock.calls[0][0].data;
+    expect(payload.edges[0]).toMatchObject({
+      sourceKey: "vendor_risk:3",
+      targetKey: "vendor_risk:9",
+    });
+    expect(payload.nodes).toEqual([
+      expect.objectContaining({ key: "vendor_risk:3", vendor: { id: 10, name: "Acme" } }),
+      expect.objectContaining({ key: "vendor_risk:9", vendor: { id: 11, name: "Zeta" } }),
+    ]);
+  });
+
+  it("honours ?status=confirmed", async () => {
+    mockUtils.getRiskGraphQuery.mockResolvedValue([]);
+    await getRiskGraph(req({ query: { status: "confirmed" } }) as any, res() as any);
+    expect(mockUtils.getRiskGraphQuery).toHaveBeenCalledWith(7, ["confirmed"]);
+  });
+
+  it("rejects an unknown status with 400", async () => {
+    const r = res();
+    await getRiskGraph(req({ query: { status: "banana" } }) as any, r as any);
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(mockUtils.getRiskGraphQuery).not.toHaveBeenCalled();
+  });
+
+  it("slices past the cap and reports truncation", async () => {
+    (mockUtils as any).RISK_GRAPH_EDGE_CAP = 1;
+    mockUtils.getRiskGraphQuery.mockResolvedValue([row({ id: 1 }), row({ id: 2 })]);
+    const r = res();
+    await getRiskGraph(req() as any, r as any);
+    const payload = r.json.mock.calls[0][0].data;
+    expect(payload.edges).toHaveLength(1);
+    expect(payload.edges[0].id).toBe(1);
+    expect(payload.truncated).toBe(true);
+    (mockUtils as any).RISK_GRAPH_EDGE_CAP = 500;
+  });
+});
+
+describe("getDismissalAnalytics", () => {
+  const { logFailure } = jest.requireMock("../../utils/logger/logHelper") as {
+    logFailure: jest.Mock;
+  };
+
+  it("maps snake_case rows to the camelCase payload", async () => {
+    mockUtils.getDismissalAnalyticsQuery.mockResolvedValue({
+      signals: [{ signal: "shared_category", decided: 10, dismissed: 4, topReason: "too_weak" }],
+      reasons: [
+        {
+          relationType: "related_to",
+          source: "derived",
+          status: "dismissed",
+          dismissReason: "too_weak",
+          count: 4,
+        },
+      ],
+      notes: [
+        {
+          id: 9,
+          relationType: "related_to",
+          source: "derived",
+          dismissReason: "too_weak",
+          dismissNote: "Same vendor, different failure.",
+          decidedAt: "2026-09-01T10:00:00.000Z",
+          sourceName: "Model drift",
+        },
+      ],
+    });
+    const r = res();
+    await getDismissalAnalytics(req() as any, r as any);
+
+    expect(mockUtils.getDismissalAnalyticsQuery).toHaveBeenCalledWith(7);
+    expect(r.status).toHaveBeenCalledWith(200);
+    const payload = r.json.mock.calls[0][0].data;
+    expect(payload.signals).toEqual([
+      { signal: "shared_category", decided: 10, dismissed: 4, topReason: "too_weak" },
+    ]);
+    expect(payload.notes[0]).toMatchObject({
+      dismissNote: "Same vendor, different failure.",
+      decidedAt: "2026-09-01T10:00:00.000Z",
+      sourceName: "Model drift",
+    });
+  });
+
+  it("keeps a null dismiss reason as null, not undefined", async () => {
+    mockUtils.getDismissalAnalyticsQuery.mockResolvedValue({
+      signals: [],
+      reasons: [
+        {
+          relationType: "inherits_from",
+          source: "agent",
+          status: "dismissed",
+          dismissReason: null,
+          count: 3,
+        },
+      ],
+      notes: [],
+    });
+    const r = res();
+    await getDismissalAnalytics(req() as any, r as any);
+
+    const payload = r.json.mock.calls[0][0].data;
+    expect(payload.reasons).toEqual([
+      {
+        relationType: "inherits_from",
+        source: "agent",
+        status: "dismissed",
+        dismissReason: null,
+        count: 3,
+      },
+    ]);
+    expect("dismissReason" in payload.reasons[0]).toBe(true);
+  });
+
+  it("answers 500 and logs the failure when the query rejects", async () => {
+    mockUtils.getDismissalAnalyticsQuery.mockRejectedValue(new Error("boom"));
+    const r = res();
+    await getDismissalAnalytics(req() as any, r as any);
+
+    expect(r.status).toHaveBeenCalledWith(500);
+    expect(logFailure).toHaveBeenCalled();
+  });
+});
+
+// The messages are keys in locales/*.json, resolved per request by `req.t`.
+// Each case runs the real controller with the real German and French
+// dictionaries and expects the dictionary's text, not the English key.
+describe.each<SupportedLang>(["de", "fr"])("response language: %s", (lang) => {
+  const t = getTranslator(lang);
+  const body = (overrides: any = {}) => ({
+    sourceRiskId: 4,
+    targetRiskId: 9,
+    relationType: "related_to",
+    ...overrides,
+  });
+  const inLang = (
+    r: ReturnType<typeof res>,
+    key: string,
+    vars?: Record<string, string | number>,
+  ) => {
+    const sent = r.json.mock.calls[0][0].data;
+    expect(sent).toBe(t(key, vars));
+    expect(sent).not.toBe(key);
+  };
+
+  it("translates a rejected self-link", async () => {
+    const r = res();
+    await createRiskLink(req({ t, body: body({ targetRiskId: 4 }) }) as any, r as any);
+    expect(r.status).toHaveBeenCalledWith(400);
+    inLang(r, "A risk cannot link to itself");
+  });
+
+  it("translates the already-linked hint, which quotes a button label", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([4, 9]);
+    mockUtils.createUserRiskLinkQuery.mockResolvedValue(null);
+    const r = res();
+    await createRiskLink(req({ t, body: body() }) as any, r as any);
+    expect(r.status).toHaveBeenCalledWith(409);
+    inLang(
+      r,
+      'These risks are already linked. If the link was dismissed, use "Show dismissed" to restore it.',
+    );
+  });
+
+  it("translates a hierarchy violation", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([4, 9]);
+    mockUtils.getConfirmedHierarchyEdgesQuery.mockResolvedValue([
+      { childRiskId: 4, parentRiskId: 99 },
+    ]);
+    const r = res();
+    await createRiskLink(
+      req({ t, body: { sourceRiskId: 4, targetRiskId: 9, relationType: "inherits_from" } }) as any,
+      r as any,
+    );
+    expect(r.status).toHaveBeenCalledWith(409);
+    inLang(r, "This risk already has a parent. Remove it first.");
+  });
+
+  it("translates a missing link and fills the status placeholders", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue(null as any);
+    const missing = res();
+    await updateRiskLinkStatus(
+      req({ t, params: { id: "100" }, body: { status: "confirmed" } }) as any,
+      missing as any,
+    );
+    expect(missing.status).toHaveBeenCalledWith(404);
+    inLang(missing, "Risk link not found");
+
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue({
+      id: 100,
+      organization_id: 7,
+      source_risk_id: 3,
+      target_risk_id: 42,
+      relation_type: "related_to",
+      status: "confirmed",
+      source: "derived",
+      score: 5,
+      reasons: [],
+      decided_at: null,
+      last_computed_at: null,
+      dismiss_reason: null,
+      dismiss_note: null,
+    } as any);
+    const blocked = res();
+    await updateRiskLinkStatus(
+      req({ t, params: { id: "100" }, body: { status: "suggested" } }) as any,
+      blocked as any,
+    );
+    expect(blocked.status).toHaveBeenCalledWith(400);
+    inLang(blocked, "Cannot change status from {from} to {to}", {
+      from: "confirmed",
+      to: "suggested",
+    });
+  });
+
+  it("translates a malformed id", async () => {
+    const r = res();
+    await getRiskLinks(req({ t, params: { riskId: "abc" } }) as any, r as any);
+    expect(r.status).toHaveBeenCalledWith(400);
+    inLang(r, "Invalid risk ID");
+  });
+});
+
+// A key missing from a dictionary falls back to English without an error, so
+// nothing else would notice. Reads the controller's own source so a message
+// added later is checked without anyone remembering to list it here.
+describe("every message the controller sends has a German and French translation", () => {
+  const fs = jest.requireActual("fs") as typeof import("fs");
+  const path = jest.requireActual("path") as typeof import("path");
+  const read = (file: string) => fs.readFileSync(path.resolve(__dirname, "..", "..", file), "utf8");
+  const dictionary = (lang: string): Record<string, string> =>
+    JSON.parse(read(`locales/${lang}.json`));
+
+  const keys = [
+    ...read("controllers/riskLinks.ctrl.ts").matchAll(
+      /req\.t!\(\s*("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')/g,
+    ),
+  ].map((m) => (m[1][0] === '"' ? JSON.parse(m[1]) : m[1].slice(1, -1).replace(/\\'/g, "'")));
+
+  it("finds the controller's keys", () => {
+    expect(keys.length).toBeGreaterThan(20);
+  });
+
+  it.each(["en", "de", "fr"])("has all of them in locales/%s.json", (lang) => {
+    const dict = dictionary(lang);
+    expect(keys.filter((key) => !(key in dict))).toEqual([]);
+  });
+
+  it.each(["de", "fr"])("translates them in %s (none left as the English key)", (lang) => {
+    const dict = dictionary(lang);
+    expect(keys.filter((key) => dict[key] === key)).toEqual([]);
+  });
+});
+
+describe("link history", () => {
+  beforeEach(() => {
+    mockUtils.updateRiskLinkStatusQuery.mockResolvedValue(true);
+    // Both ends are written in one transaction; "tx" stands in for it.
+    (sequelize.transaction as jest.Mock).mockImplementation(async (fn: any) => fn("tx"));
+  });
+
+  const link = {
+    id: 100,
+    organization_id: 7,
+    source_risk_id: 3,
+    source_vendor_risk_id: null,
+    target_risk_id: null,
+    target_model_risk_id: 42,
+    target_vendor_risk_id: null,
+    relation_type: "inherits_from" as const,
+    status: "suggested" as const,
+    source: "derived" as const,
+    score: 5,
+    reasons: [],
+    decided_at: null,
+    last_computed_at: null,
+    dismiss_reason: null,
+    dismiss_note: null,
+    parent_level_changed_at: null,
+  };
+  const ends = {
+    source: { entityType: "risk" as const, id: 3, name: "Bias in screening" },
+    target: { entityType: "model_risk" as const, id: 42, name: "Model drift" },
+  };
+  const mockRecord = recordEntityChange as jest.Mock;
+
+  it("notes a confirmation on the risk at each end, worded from that end", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue(link);
+    mockUtils.getConfirmedHierarchyEdgesQuery.mockResolvedValue([]);
+    mockUtils.getRiskLinkEndpointsQuery.mockResolvedValue(ends);
+    const r = res();
+    await updateRiskLinkStatus(
+      req({ params: { id: "100" }, body: { status: "confirmed" } }) as any,
+      r as any,
+    );
+    expect(r.status).toHaveBeenCalledWith(200);
+    expect(mockRecord).toHaveBeenCalledTimes(2);
+    expect(mockRecord).toHaveBeenCalledWith(
+      "risk",
+      3,
+      "updated",
+      5,
+      7,
+      "Linked risk",
+      "Suggested: Inherits from Model drift",
+      "Confirmed: Inherits from Model drift",
+      "tx",
+    );
+    expect(mockRecord).toHaveBeenCalledWith(
+      "model_risk",
+      42,
+      "updated",
+      5,
+      7,
+      "Linked risk",
+      "Suggested: Inherited by Bias in screening",
+      "Confirmed: Inherited by Bias in screening",
+      "tx",
+    );
+  });
+
+  it("409s and writes no history when the link changed after it was read", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue(link);
+    mockUtils.getConfirmedHierarchyEdgesQuery.mockResolvedValue([]);
+    mockUtils.updateRiskLinkStatusQuery.mockResolvedValue(false);
+    const r = res();
+    await updateRiskLinkStatus(
+      req({ params: { id: "100" }, body: { status: "confirmed" } }) as any,
+      r as any,
+    );
+    expect(r.status).toHaveBeenCalledWith(409);
+    expect(mockRecord).not.toHaveBeenCalled();
+  });
+
+  it("still answers 200 when writing history fails", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue({ ...link, status: "confirmed" as const });
+    mockUtils.getRiskLinkEndpointsQuery.mockResolvedValue(ends);
+    mockRecord.mockRejectedValue(new Error("history table missing"));
+    const r = res();
+    await updateRiskLinkStatus(
+      req({ params: { id: "100" }, body: { status: "dismissed" } }) as any,
+      r as any,
+    );
+    expect(mockUtils.updateRiskLinkStatusQuery).toHaveBeenCalled();
+    expect(r.status).toHaveBeenCalledWith(200);
+  });
+
+  it("notes a new user link with no previous value", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([4, 9]);
+    mockUtils.createUserRiskLinkQuery.mockResolvedValue(77);
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue({
+      ...link,
+      id: 77,
+      source_risk_id: 4,
+      target_risk_id: 9,
+      target_model_risk_id: null,
+      relation_type: "related_to" as const,
+      status: "confirmed" as const,
+      source: "user" as const,
+    });
+    mockUtils.getRiskLinkEndpointsQuery.mockResolvedValue({
+      source: { entityType: "risk", id: 4, name: "Data leakage" },
+      target: { entityType: "risk", id: 9, name: "Prompt injection" },
+    });
+    await createRiskLink(
+      req({ body: { sourceRiskId: 4, targetRiskId: 9, relationType: "related_to" } }) as any,
+      res() as any,
+    );
+    expect(mockRecord).toHaveBeenCalledWith(
+      "risk",
+      4,
+      "updated",
+      5,
+      7,
+      "Linked risk",
+      "-",
+      "Confirmed: Relates to Prompt injection",
+      "tx",
+    );
+    expect(mockRecord).toHaveBeenCalledWith(
+      "risk",
+      9,
+      "updated",
+      5,
+      7,
+      "Linked risk",
+      "-",
+      "Confirmed: Relates to Data leakage",
+      "tx",
+    );
+  });
+});

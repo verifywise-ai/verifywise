@@ -32,7 +32,7 @@ describe("Approval Workflows API", () => {
     };
 
     it("creates an approval workflow with bypassAuth (201)", async () => {
-      const app = createTestApp({
+      const app = await createTestApp({
         bypassAuth: true,
         mockUser: { userId, organizationId: orgId, role: "Admin" },
       });
@@ -45,7 +45,7 @@ describe("Approval Workflows API", () => {
     });
 
     it("returns 400 for missing workflow title", async () => {
-      const app = createTestApp({
+      const app = await createTestApp({
         bypassAuth: true,
         mockUser: { userId, organizationId: orgId, role: "Admin" },
       });
@@ -57,7 +57,7 @@ describe("Approval Workflows API", () => {
     });
 
     it("returns 400 for invalid entity_type", async () => {
-      const app = createTestApp({
+      const app = await createTestApp({
         bypassAuth: true,
         mockUser: { userId, organizationId: orgId, role: "Admin" },
       });
@@ -70,7 +70,7 @@ describe("Approval Workflows API", () => {
     });
 
     it("returns 403 for non-admin user", async () => {
-      const app = createTestApp();
+      const app = await createTestApp();
       const nonAdminOrgId = await createTestOrganization();
       await createTestUser(nonAdminOrgId, 3, "editor@test.com", "EditorPass1!");
 
@@ -91,7 +91,7 @@ describe("Approval Workflows API", () => {
 
   describe("POST /api/approval-requests", () => {
     it("creates an approval request referencing a workflow (201)", async () => {
-      const app = createTestApp({
+      const app = await createTestApp({
         bypassAuth: true,
         mockUser: { userId, organizationId: orgId, role: "Admin" },
       });
@@ -123,7 +123,7 @@ describe("Approval Workflows API", () => {
     });
 
     it("returns 400 for missing request name", async () => {
-      const app = createTestApp({
+      const app = await createTestApp({
         bypassAuth: true,
         mockUser: { userId, organizationId: orgId, role: "Admin" },
       });
@@ -134,7 +134,7 @@ describe("Approval Workflows API", () => {
     });
 
     it("returns 404 for nonexistent workflow", async () => {
-      const app = createTestApp({
+      const app = await createTestApp({
         bypassAuth: true,
         mockUser: { userId, organizationId: orgId, role: "Admin" },
       });

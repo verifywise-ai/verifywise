@@ -23,6 +23,7 @@ import {
 } from "../../../../application/utils/paginationStorage";
 import { text, status } from "../../../themes/palette";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import { pageOfLabel } from "../pageOfLabel";
 
 const LOGS_TABLE_SORTING_KEY = "verifywise_logs_table_sorting";
 
@@ -494,7 +495,7 @@ const LogsTable: React.FC<LogsTableProps> = ({ data, isLoading = false, paginate
                 ActionsComponent={(props) => <TablePaginationActions {...props} />}
                 labelRowsPerPage="Rows per page"
                 labelDisplayedRows={({ page, count }) =>
-                  `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
+                  pageOfLabel(page + 1, Math.max(0, Math.ceil(count / rowsPerPage)))
                 }
                 slotProps={{
                   select: {

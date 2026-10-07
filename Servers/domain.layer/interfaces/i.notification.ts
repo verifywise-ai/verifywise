@@ -23,6 +23,14 @@ export enum NotificationType {
   POLICY_DUE_SOON = "policy_due_soon",
   POLICY_OVERDUE = "policy_overdue",
 
+  // Risk notifications (flag written only by the nightly evidence-freshness sweep)
+  EVIDENCE_STALE = "evidence_stale",
+  RISK_INHERITANCE_STALE = "risk_inheritance_stale",
+  MODEL_RISK_CANDIDATES = "model_risk_candidates",
+  VENDOR_RISK_CANDIDATES = "vendor_risk_candidates",
+  RISK_DEADLINE_DUE_SOON = "risk_deadline_due_soon",
+  MODEL_RISK_DUE_SOON = "model_risk_due_soon",
+
   // Training notifications
   TRAINING_ASSIGNED = "training_assigned",
   TRAINING_COMPLETED = "training_completed",
@@ -32,6 +40,7 @@ export enum NotificationType {
 
   // File notifications
   FILE_UPLOADED = "file_uploaded",
+  FILE_EXPIRING = "file_expiring",
 
   // Collaboration notifications
   COMMENT_ADDED = "comment_added",
@@ -43,9 +52,6 @@ export enum NotificationType {
   // MRM (Model Risk Management) monitoring notifications
   MRM_METRIC_BREACH = "mrm_metric_breach",
   MRM_REVALIDATION_DUE = "mrm_revalidation_due",
-
-  // Evidence Hub notifications
-  EVIDENCE_EXPIRED = "evidence_expired",
 
   // AI Gateway notifications
   AI_GATEWAY_BUDGET_WARNING = "ai_gateway_budget_warning",

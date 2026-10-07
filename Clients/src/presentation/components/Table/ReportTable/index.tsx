@@ -30,6 +30,7 @@ import {
   setPaginationRowCount,
 } from "../../../../application/utils/paginationStorage";
 import { IReportTablePropsExtended } from "../../../types/interfaces/i.table";
+import { pageOfLabel } from "../pageOfLabel";
 
 const REPORTS_SORTING_KEY = "verifywise_reports_sorting";
 
@@ -333,7 +334,7 @@ const ReportTable: React.FC<IReportTablePropsExtended> = ({
                     ActionsComponent={(props) => <TablePaginationActions {...props} />}
                     labelRowsPerPage="Reports per page"
                     labelDisplayedRows={({ page, count }) =>
-                      `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
+                      pageOfLabel(page + 1, Math.max(0, Math.ceil(count / rowsPerPage)))
                     }
                     sx={paginationStyle}
                     slotProps={{

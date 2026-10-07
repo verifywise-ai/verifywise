@@ -20,7 +20,7 @@ VerifyWise is a full-stack AI governance platform built with a modern JavaScript
 │  ┌──────────────────────────────────────────────────────────────────┐  │
 │  │  Vite Dev Server / Nginx (Production)  │  Port: 5173 (dev)       │  │
 │  ├──────────────────────────────────────────────────────────────────┤  │
-│  │  React 18 + Redux Toolkit + React Query + MUI v7                 │  │
+│  │  React 19 + Redux Toolkit + React Query + MUI v7                 │  │
 │  │  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐    │  │
 │  │  │   Pages    │ │ Components │ │   Hooks    │ │   Context  │    │  │
 │  │  └────────────┘ └────────────┘ └────────────┘ └────────────┘    │  │
@@ -258,7 +258,7 @@ Clients/src/
 - Permission checks in middleware and controllers
 
 ### Data Protection
-- AES-256-CBC encryption for sensitive data
+- AES-256-GCM encryption for sensitive data (decryption still accepts legacy AES-256-CBC values)
 - Tenant isolation prevents cross-tenant data access
 - Rate limiting on API endpoints
 - Input validation with express-validator

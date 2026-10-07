@@ -28,21 +28,36 @@ router.get("/sync/status", authenticateJWT, getSyncStatus);
 router.get("/:id", authenticateJWT, getAgentPrimitiveById);
 
 // Create + sync trigger
-router.post("/", authenticateJWT, authorize(["Admin"]), createAgentPrimitive);
-router.post("/sync", authenticateJWT, authorize(["Admin"]), triggerSync);
+router.post("/", authenticateJWT, authorize("agentDiscovery.admin"), createAgentPrimitive);
+router.post("/sync", authenticateJWT, authorize("agentDiscovery.admin"), triggerSync);
 
 // Update (manual agents only)
-router.patch("/:id", authenticateJWT, authorize(["Admin"]), updateAgentPrimitive);
+router.patch("/:id", authenticateJWT, authorize("agentDiscovery.admin"), updateAgentPrimitive);
 
 // Review + model linking
-router.patch("/:id/review", authenticateJWT, authorize(["Admin"]), reviewAgentPrimitive);
-router.patch("/:id/link-model", authenticateJWT, authorize(["Admin"]), linkModelToAgent);
-router.patch("/:id/unlink-model", authenticateJWT, authorize(["Admin"]), unlinkModelFromAgent);
+router.patch(
+  "/:id/review",
+  authenticateJWT,
+  authorize("agentDiscovery.admin"),
+  reviewAgentPrimitive,
+);
+router.patch(
+  "/:id/link-model",
+  authenticateJWT,
+  authorize("agentDiscovery.admin"),
+  linkModelToAgent,
+);
+router.patch(
+  "/:id/unlink-model",
+  authenticateJWT,
+  authorize("agentDiscovery.admin"),
+  unlinkModelFromAgent,
+);
 
 // Audit logs
 router.get("/:id/audit-logs", authenticateJWT, getAgentAuditLogs);
 
 // Delete
-router.delete("/:id", authenticateJWT, authorize(["Admin"]), deleteAgentPrimitiveById);
+router.delete("/:id", authenticateJWT, authorize("agentDiscovery.admin"), deleteAgentPrimitiveById);
 
 export default router;

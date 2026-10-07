@@ -1,6 +1,5 @@
 import { useDispatch } from "react-redux";
-import { useNavigate } from "react-router";
-import { clearAuthState } from "../redux/auth/authSlice";
+import { endSessionAndReload } from "../utils/clearSession";
 import { apiServices } from "../../infrastructure/api/networkServices";
 
 /**
@@ -10,11 +9,10 @@ import { apiServices } from "../../infrastructure/api/networkServices";
  */
 const useLogout = () => {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
 
   /**
    * Handles logging out the user
-   * Clears the authentication state and navigates to the login page
+   * Clears the authentication state and query cache, then loads the login page
    */
   const logout = async () => {
     // Revoke the refresh token server-side and clear the cookie.
@@ -25,11 +23,8 @@ const useLogout = () => {
       // Intentionally ignored — local state is cleared regardless.
     }
 
-    // Clear the authentication token by dispatching the logout action
-    dispatch(clearAuthState());
-
-    // Navigate to the login page
-    navigate("/login");
+    // Clear the auth state and the query cache, then load the login page.
+    await endSessionAndReload(dispatch);
   };
 
   return logout;

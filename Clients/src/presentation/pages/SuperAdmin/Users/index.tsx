@@ -34,7 +34,7 @@ import UserFormFields, {
 import { passwordValidation } from "../../../../application/validations/passwordValidation";
 import { EmailAvailabilityStatus } from "../../../../application/hooks/useEmailAvailability";
 import singleTheme from "../../../themes/v1SingleTheme";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 
 const EMPTY_USER_FORM: UserFormValues = {
   email: "",
@@ -45,6 +45,7 @@ const EMPTY_USER_FORM: UserFormValues = {
 };
 
 const Users = () => {
+  const formatDate = useFormattedDate();
   const { id: orgId } = useParams<{ id: string }>();
   const [users, setUsers] = useState<OrgUser[]>([]);
   const [invitations, setInvitations] = useState<OrgInvitation[]>([]);
@@ -270,11 +271,9 @@ const Users = () => {
                         {user.role_name}
                       </Box>
                     </TableCell>
+                    <TableCell sx={tableStyles.body.cell}>{formatDate(user.created_at)}</TableCell>
                     <TableCell sx={tableStyles.body.cell}>
-                      {displayFormattedDate(user.created_at)}
-                    </TableCell>
-                    <TableCell sx={tableStyles.body.cell}>
-                      {user.last_login ? displayFormattedDate(user.last_login) : "Never"}
+                      {user.last_login ? formatDate(user.last_login) : "Never"}
                     </TableCell>
                     <TableCell sx={{ ...tableStyles.body.cell, textAlign: "right" }}>
                       <Button
@@ -372,10 +371,10 @@ const Users = () => {
                           </Box>
                         </TableCell>
                         <TableCell sx={tableStyles.body.cell}>
-                          {displayFormattedDate(inv.created_at)}
+                          {formatDate(inv.created_at)}
                         </TableCell>
                         <TableCell sx={tableStyles.body.cell}>
-                          {displayFormattedDate(inv.expires_at)}
+                          {formatDate(inv.expires_at)}
                         </TableCell>
                       </TableRow>
                     );

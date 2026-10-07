@@ -218,7 +218,7 @@ docker compose logs -f --tail=100
 docker compose exec backend node -e "const {sequelize} = require('./dist/database/db'); sequelize.authenticate().then(() => console.log('DB OK')).catch(e => console.error(e))"
 ```
 
-Note: VerifyWise does not currently have a dedicated health check endpoint. Monitor service health via Docker health checks and logs.
+Check `curl -fsS http://localhost:3000/health/ready` (see [Health monitoring](#health-monitoring)), plus Docker health checks and logs.
 
 ---
 
@@ -337,9 +337,17 @@ crontab -e
 |-----------|--------------|--------|
 | PostgreSQL | `pg_isready` | Docker Compose built-in |
 | Redis | `redis-cli ping` | Docker Compose built-in |
-| Backend | Check logs / test endpoint | Manual / monitoring tool |
+| Backend | `GET /health/live`, `GET /health/ready`, `GET /health` | HTTP probe / monitoring tool |
 
-Note: The application does not expose a dedicated `/health` endpoint. Use Docker's built-in health checks and external monitoring tools to verify service availability.
+The backend exposes three rate-limited health endpoints:
+
+| Endpoint | Checks | Use for |
+|----------|--------|---------|
+| `GET /health/live` | Nothing beyond the process serving HTTP; always `200` | Liveness probes |
+| `GET /health/ready` | PostgreSQL and Redis (2s timeout each) | Readiness probes, load balancers, Docker `HEALTHCHECK` |
+| `GET /health` | PostgreSQL, Redis and the AI Gateway | Uptime monitoring and dashboards |
+
+`/health/ready` and `/health` return `200` with `{"status":"ok","checks":{...}}` when every check passes, or `503` with `"status":"degraded"` and the failing check's error. Do not use `/health` for liveness or readiness: an AI Gateway outage makes it return `503`, which would restart or de-route healthy backend pods. The bundled Kubernetes manifests, Helm chart, Dockerfile and Ansible playbooks already use `/health/live` and `/health/ready`.
 
 ### Monitoring with Docker
 

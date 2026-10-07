@@ -1,14 +1,15 @@
 import { Divider, Stack, Typography } from "@mui/material";
 import { columnStyle, rowStyle } from "./style";
 import { GroupStatsCard } from "../../../../components/Cards/GroupStatsCard";
-import { projectRiskSection } from "../style";
+import { projectRiskSection, projectRiskSectionLink } from "../style";
 import { StatusTileCards, StatusTileItem } from "../../../../components/Cards/StatusTileCards";
 import { InfoCard } from "../../../../components/Cards/InfoCard";
 import { DescriptionCard } from "../../../../components/Cards/DescriptionCard";
 import { TeamCard } from "../../../../components/Cards/TeamCard";
+import { Link } from "react-router";
 import { Project } from "../../../../../domain/types/Project";
 import CustomizableSkeleton from "../../../../components/Skeletons";
-import { displayFormattedDate } from "../../../../tools/isoDateToString";
+import useFormattedDate from "../../../../../application/hooks/useFormattedDate";
 import { pluralizeEntityType } from "../../../../tools/pluralizeEntityType";
 import { useEffect, useMemo, useState } from "react";
 import { User } from "../../../../../domain/types/User";
@@ -26,6 +27,7 @@ import {
 import { brand } from "../../../../themes/palette";
 
 const VWProjectOverview = ({ project }: { project?: Project }) => {
+  const formatDate = useFormattedDate();
   const [projectFrameworkId, setProjectFrameworkId] = useState<number | null>(null);
   const [projectFrameworkId2, setProjectFrameworkId2] = useState<number | null>(null);
   const { users } = useUsers();
@@ -252,7 +254,7 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
               />
               <InfoCard
                 title="Last updated"
-                body={displayFormattedDate(project.last_updated.toString())}
+                body={formatDate(project.last_updated.toString())}
                 icon={<ClockIcon size={16} />}
               />
               {user.name !== undefined && user.surname !== undefined ? (
@@ -387,6 +389,18 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
                 entityName="risk"
                 size="small"
               />
+              <Stack sx={{ gap: 2 }}>
+                <Typography
+                  component={Link}
+                  to={`/project-view?projectId=${projectId}&tab=project-risks`}
+                  sx={projectRiskSectionLink}
+                >
+                  View and add risks for this use case
+                </Typography>
+                <Typography component={Link} to="/risk-management" sx={projectRiskSectionLink}>
+                  Manage all organization risks in risk management
+                </Typography>
+              </Stack>
             </>
           ) : (
             <>

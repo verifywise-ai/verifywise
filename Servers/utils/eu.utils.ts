@@ -22,6 +22,8 @@ import { STATUSES_ANSWERS, STATUSES_COMPLIANCE } from "../types/status.type";
 import { AnswerEURisksModel } from "../domain.layer/frameworks/EU-AI-Act/answerEURisks.model";
 import { validateRiskArray } from "./utility.utils";
 import { getEvidenceFilesForEntities } from "./files/evidenceFiles.utils";
+import { logStructured } from "./logger/fileLogger";
+import { demoDueDate } from "./demoSeedFields";
 
 const getDemoAnswers = (): string[] => {
   const answers = [];
@@ -765,13 +767,16 @@ export const createNewAssessmentEUQuery = async (
       transaction,
     },
   )) as [{ id: number }[], number];
+  // Resolved once from the project and applied to every row this seed writes,
+  // so a framework added to a demo project is tagged as demo throughout.
+  const isDemo = await findIsDemo("projects", assessment.project_id, organizationId, transaction);
   const result = await sequelize.query(
     `INSERT INTO assessments (organization_id, projects_frameworks_id, is_demo) VALUES (:organizationId, :projects_frameworks_id, :is_demo) RETURNING *`,
     {
       replacements: {
         organizationId,
         projects_frameworks_id: projectFrameworkId[0][0].id,
-        is_demo: await findIsDemo("projects", assessment.project_id, organizationId, transaction),
+        is_demo: isDemo,
       },
       mapToModel: true,
       model: AssessmentEUModel,
@@ -784,6 +789,7 @@ export const createNewAssessmentEUQuery = async (
     organizationId,
     transaction,
     is_mock_data,
+    isDemo,
   );
   const assessments = await getAssessmentsEUByIdQuery(result[0].id!, organizationId, transaction);
   return { ...result[0].dataValues, topics: assessments };
@@ -795,6 +801,7 @@ export const createNewAnswersEUQuery = async (
   organizationId: number,
   transaction: Transaction,
   is_mock_data: boolean,
+  isDemo: boolean,
 ) => {
   let demoAnswers: string[] = [];
   if (enable_ai_data_insertion) demoAnswers = getDemoAnswers();
@@ -804,7 +811,7 @@ export const createNewAnswersEUQuery = async (
     transaction,
   });
   let createdAnswers: (AnswerEUModel | QuestionStructEUModel)[] = [];
-  let ansCtr = 0;
+  let ctr = 0;
   for (let question of questions) {
     const result = await sequelize.query(
       `INSERT INTO answers_eu(organization_id, assessment_id, question_id, answer, status, is_demo) VALUES (
@@ -815,11 +822,11 @@ export const createNewAnswersEUQuery = async (
           organizationId,
           assessment_id: assessmentId,
           question_id: question.id!,
-          answer: enable_ai_data_insertion ? demoAnswers[ansCtr++] : null,
-          status: is_mock_data
-            ? STATUSES_ANSWERS[Math.floor(Math.random() * STATUSES_ANSWERS.length)]
-            : "Not started",
-          is_demo: await findIsDemo("assessments", assessmentId, organizationId, transaction),
+          answer: enable_ai_data_insertion ? demoAnswers[ctr] : null,
+          // Walk the statuses in order so the demo covers every status and looks
+          // the same on every seed; a real project starts at "Not started".
+          status: is_mock_data ? STATUSES_ANSWERS[ctr % STATUSES_ANSWERS.length] : "Not started",
+          is_demo: isDemo,
         },
         mapToModel: true,
         model: AnswerEUModel,
@@ -827,6 +834,15 @@ export const createNewAnswersEUQuery = async (
       },
     );
     createdAnswers = createdAnswers.concat(Object.assign({}, result[0], question));
+    ctr++;
+  }
+  if (enable_ai_data_insertion) {
+    logStructured(
+      "successful",
+      `assessment ${assessmentId}: seeded ${createdAnswers.length} answers, ${demoAnswers.filter(Boolean).length} of ${questions.length} questions had demo answers`,
+      "createNewAnswersEUQuery",
+      "eu.utils.ts",
+    );
   }
   return createdAnswers;
 };
@@ -841,35 +857,62 @@ export const createNewControlsQuery = async (
   let demoControls: any[] = [];
   if (enable_ai_data_insertion) demoControls = getDemoControls();
 
-  const controlsStruct = await sequelize.query(`SELECT * FROM controls_struct_eu;`, {
+  // ORDER BY id is load-bearing: demoControls is a flat array built by walking
+  // ControlCategories in file order, and each struct row is paired with it by
+  // position. Without an explicit order Postgres returns heap order, which
+  // diverges from id order as soon as a struct row has been rewritten by a
+  // later migration — every demo text then lands on the wrong control.
+  const controlsStruct = await sequelize.query(`SELECT * FROM controls_struct_eu ORDER BY id;`, {
     mapToModel: true,
     model: ControlStructEUModel,
     transaction,
   });
-  let controlCtr = 0;
+  if (enable_ai_data_insertion && demoControls.length !== controlsStruct.length) {
+    logStructured(
+      "error",
+      `demo control count mismatch: ${demoControls.length} in ControlCategories vs ${controlsStruct.length} rows in controls_struct_eu`,
+      "createNewControlsQuery",
+      "eu.utils.ts",
+    );
+  }
+  // The project framework, its owner and its is_demo flag are the same for every
+  // control, so they are resolved once rather than per row.
+  const projectFramework = (await sequelize.query(
+    `SELECT pf.id, p.owner, p.is_demo FROM projects_frameworks pf
+       JOIN projects p ON p.id = pf.project_id
+      WHERE pf.organization_id = :organizationId AND pf.project_id = :project_id AND pf.framework_id = 1`,
+    {
+      replacements: { organizationId, project_id: projectId },
+      transaction,
+    },
+  )) as [{ id: number; owner: number | null; is_demo: boolean }[], number];
+  const { id: projectFrameworkId, owner: projectOwner, is_demo: isDemo } = projectFramework[0][0];
   let controlIds: number[] = [];
-  for (let controlStruct of controlsStruct) {
-    const projectFrameworkId = (await sequelize.query(
-      `SELECT id FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :project_id AND framework_id = 1`,
-      {
-        replacements: { organizationId, project_id: projectId },
-        transaction,
-      },
-    )) as [{ id: number }[], number];
+  // Subcontrols continue one walk across the whole framework rather than
+  // restarting per control, which would pile most rows onto the first status.
+  let subControlStatusOffset = 0;
+  for (const [ctr, controlStruct] of controlsStruct.entries()) {
     const result = await sequelize.query(
-      `INSERT INTO controls_eu(organization_id, control_meta_id, implementation_details, status, projects_frameworks_id, is_demo) VALUES (
-        :organizationId, :control_meta_id, :implementation_details, :status, :projects_frameworks_id, :is_demo
+      `INSERT INTO controls_eu(organization_id, control_meta_id, implementation_details, status, owner, reviewer, approver, due_date, projects_frameworks_id, is_demo) VALUES (
+        :organizationId, :control_meta_id, :implementation_details, :status, :owner, :reviewer, :approver, :due_date, :projects_frameworks_id, :is_demo
       ) RETURNING id;`,
       {
         replacements: {
           organizationId,
           control_meta_id: controlStruct.id!,
           implementation_details: enable_ai_data_insertion
-            ? (demoControls[controlCtr]?.implementation_details ?? null)
+            ? (demoControls[ctr]?.implementation_details ?? null)
             : null,
-          status: enable_ai_data_insertion ? "Waiting" : null,
-          projects_frameworks_id: projectFrameworkId[0][0].id,
-          is_demo: await findIsDemo("projects", projectId, organizationId, transaction),
+          // Walk the statuses in order so the demo covers every status and looks
+          // the same on every seed; a real project starts at "Waiting", the first
+          // value of enum_controls_status.
+          status: is_mock_data ? STATUSES_COMPLIANCE[ctr % STATUSES_COMPLIANCE.length] : "Waiting",
+          owner: is_mock_data ? projectOwner : null,
+          reviewer: is_mock_data ? projectOwner : null,
+          approver: is_mock_data ? projectOwner : null,
+          due_date: is_mock_data ? demoDueDate(ctr) : null,
+          projects_frameworks_id: projectFrameworkId,
+          is_demo: isDemo,
         },
         mapToModel: true,
         model: ControlEUModel,
@@ -877,14 +920,26 @@ export const createNewControlsQuery = async (
       },
     );
     controlIds.push(result[0].id!);
-    await createNewSubControlsQuery(
+    const subControls = await createNewSubControlsQuery(
       controlStruct.id!,
-      demoControls[controlCtr++]?.subControls || [],
+      demoControls[ctr]?.subControls || [],
       result[0].id!,
       enable_ai_data_insertion,
       organizationId,
       transaction,
       is_mock_data,
+      isDemo,
+      projectOwner,
+      subControlStatusOffset,
+    );
+    subControlStatusOffset += subControls.length;
+  }
+  if (enable_ai_data_insertion) {
+    logStructured(
+      "successful",
+      `project ${projectId}: seeded ${controlIds.length} controls, ${demoControls.filter((c) => c?.implementation_details).length} of ${controlsStruct.length} had demo implementation details`,
+      "createNewControlsQuery",
+      "eu.utils.ts",
     );
   }
   const compliances = await getCompliancesEUByIdQuery(controlIds, organizationId, transaction);
@@ -899,20 +954,36 @@ export const createNewSubControlsQuery = async (
   organizationId: number,
   transaction: Transaction,
   is_mock_data: boolean,
+  isDemo: boolean,
+  demoOwner: number | null = null,
+  statusOffset: number = 0,
 ) => {
+  // Ordered for the same reason as controls_struct_eu above: demoSubControls is
+  // matched to these rows by position.
   const subControlMetaIds = await sequelize.query(
-    `SELECT id FROM subcontrols_struct_eu WHERE control_id = :control_id`,
+    `SELECT id FROM subcontrols_struct_eu WHERE control_id = :control_id ORDER BY id`,
     {
       replacements: { control_id: controlStructId },
       transaction,
     },
   );
+  // A count mismatch here means the struct row and the demo entry it was paired
+  // with by position are not the same control — i.e. the two arrays have drifted
+  // out of alignment and the demo text is landing on the wrong subcontrols.
+  if (enable_ai_data_insertion && demoSubControls.length !== subControlMetaIds[0].length) {
+    logStructured(
+      "error",
+      `control_meta ${controlStructId}: ${subControlMetaIds[0].length} subcontrols in subcontrols_struct_eu vs ${demoSubControls.length} in the paired demo control`,
+      "createNewSubControlsQuery",
+      "eu.utils.ts",
+    );
+  }
   let ctr = 0;
   let createdSubControls: SubcontrolEUModel[] = [];
   for (let subControl of subControlMetaIds[0] as { id: number }[]) {
     const result = await sequelize.query(
-      `INSERT INTO subcontrols_eu(organization_id, control_id, subcontrol_meta_id, implementation_details, evidence_description, feedback_description, status, is_demo) VALUES (
-        :organizationId, :control_id, :subcontrol_meta_id, :implementation_details, :evidence_description, :feedback_description, :status, :is_demo
+      `INSERT INTO subcontrols_eu(organization_id, control_id, subcontrol_meta_id, implementation_details, evidence_description, feedback_description, status, owner, reviewer, approver, due_date, is_demo) VALUES (
+        :organizationId, :control_id, :subcontrol_meta_id, :implementation_details, :evidence_description, :feedback_description, :status, :owner, :reviewer, :approver, :due_date, :is_demo
       ) RETURNING *`,
       {
         replacements: {
@@ -929,9 +1000,13 @@ export const createNewSubControlsQuery = async (
             ? (demoSubControls[ctr]?.feedback_description ?? null)
             : null,
           status: is_mock_data
-            ? STATUSES_COMPLIANCE[Math.floor(Math.random() * STATUSES_COMPLIANCE.length)]
+            ? STATUSES_COMPLIANCE[(statusOffset + ctr) % STATUSES_COMPLIANCE.length]
             : "Waiting",
-          is_demo: await findIsDemo("controls_eu", controlId, organizationId, transaction),
+          owner: is_mock_data ? demoOwner : null,
+          reviewer: is_mock_data ? demoOwner : null,
+          approver: is_mock_data ? demoOwner : null,
+          due_date: is_mock_data ? demoDueDate(statusOffset + ctr) : null,
+          is_demo: isDemo,
         },
         mapToModel: true,
         model: SubcontrolEUModel,

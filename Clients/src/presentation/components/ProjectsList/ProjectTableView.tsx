@@ -33,7 +33,7 @@ import EmptyStateTip from "../EmptyState/EmptyStateTip";
 import { TableEmptyStateLayout } from "../Table/TableEmptyStateLayout";
 import { IProjectTableViewProps } from "../../../domain/interfaces/i.project";
 import { Project } from "../../../domain/types/Project";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { deleteProject } from "../../../application/repository/project.repository";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import Alert from "../Alert";
@@ -43,6 +43,7 @@ import { text } from "../../themes/palette";
 import useUsers from "../../../application/hooks/useUsers";
 import { useCustomFieldDefinitions } from "../../../application/hooks/useCustomFields";
 import { formatCustomFieldValue } from "../CustomFieldsSection/formatCustomFieldValue";
+import { pageOfLabel } from "../Table/pageOfLabel";
 
 const SelectorVertical = (props: React.SVGAttributes<SVGSVGElement>) => (
   <ChevronsUpDown size={16} {...props} />
@@ -150,6 +151,7 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
   onProjectDeleted,
   visibleColumns,
 }) => {
+  const formatUserDate = useFormattedDate();
   const theme = useTheme();
   const navigate = useNavigateSearch();
   const { setProjects } = useContext(VerifyWiseContext);
@@ -237,7 +239,7 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
   }, []);
 
   const formatDate = (date: Date) => {
-    return displayFormattedDate(date);
+    return formatUserDate(date);
   };
 
   const handleChangePage = useCallback((_event: unknown, newPage: number) => {
@@ -621,7 +623,7 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
                   ActionsComponent={(props) => <TablePaginationActions {...props} />}
                   labelRowsPerPage="Use cases per page"
                   labelDisplayedRows={({ page, count }) =>
-                    `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
+                    pageOfLabel(page + 1, Math.max(0, Math.ceil(count / rowsPerPage)))
                   }
                   slotProps={{
                     select: {

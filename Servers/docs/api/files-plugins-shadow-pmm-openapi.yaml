@@ -1,10 +1,11 @@
 openapi: 3.0.3
 info:
-  title: VerifyWise - File Manager, Virtual Folders, Plugins, Shadow AI & Post-Market Monitoring
+  title: VerifyWise - File Manager, Virtual Folders, Extensions, Shadow AI & Post-Market Monitoring
   version: 1.0.0
   description: |
-    OpenAPI specification for File Manager, Virtual Folders, Plugins, Shadow AI,
-    and Post-Market Monitoring API domains.
+    OpenAPI specification for File Manager, Virtual Folders, the Extensions
+    catalog, Shadow AI, and Post-Market Monitoring API domains. (The file name
+    predates the move from plugins to built-in extensions.)
 
 servers:
   - url: /
@@ -540,21 +541,32 @@ paths:
                 $ref: "#/components/schemas/ApiResponse"
 
   # ===========================================================================
-  # PLUGINS
+  # EXTENSIONS (catalog; per-extension routes live under /extensions/<key>/)
   # ===========================================================================
-  /plugins/marketplace:
+  /extensions:
     get:
-      tags: [Plugins]
-      summary: Get all available plugins from marketplace
+      tags: [Extensions]
+      summary: List extensions
+      description: Lists every built-in extension with its config fields, whether it is enabled for the caller's organization and its configuration with secret fields removed. Any authenticated user.
       parameters:
         - name: category
           in: query
           schema:
             type: string
+            enum:
+              [
+                communication,
+                ml_ops,
+                data_management,
+                version_control,
+                monitoring,
+                security,
+                analytics,
+              ]
           description: Filter by category
       responses:
         "200":
-          description: List of plugins
+          description: List of extensions
           content:
             application/json:
               schema:
@@ -564,22 +576,18 @@ paths:
                       data:
                         type: array
                         items:
-                          $ref: "#/components/schemas/Plugin"
+                          $ref: "#/components/schemas/Extension"
 
-  /plugins/marketplace/search:
+  /extensions/{key}:
     get:
-      tags: [Plugins]
-      summary: Search plugins
+      tags: [Extensions]
+      summary: Get extension
+      description: Catalog metadata, config fields, per-organization enabled state and redacted configuration for one extension. Any authenticated user.
       parameters:
-        - name: q
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Search query
+        - $ref: "#/components/parameters/ExtensionKey"
       responses:
         "200":
-          description: Matching plugins
+          description: Extension detail
           content:
             application/json:
               schema:
@@ -587,74 +595,32 @@ paths:
                   - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/Plugin"
+                        $ref: "#/components/schemas/Extension"
         "400":
           $ref: "#/components/responses/BadRequest"
-
-  /plugins/marketplace/{key}:
-    get:
-      tags: [Plugins]
-      summary: Get plugin by key
-      parameters:
-        - name: key
-          in: path
-          required: true
-          schema:
-            type: string
-            pattern: "^[a-z0-9-]+$"
-      responses:
-        "200":
-          description: Plugin details
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - properties:
-                      data:
-                        $ref: "#/components/schemas/Plugin"
         "404":
           $ref: "#/components/responses/NotFound"
 
-  /plugins/categories:
-    get:
-      tags: [Plugins]
-      summary: Get plugin categories
-      responses:
-        "200":
-          description: List of categories
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - properties:
-                      data:
-                        type: array
-                        items:
-                          type: string
-
-  /plugins/install:
+  /extensions/{key}/enable:
     post:
-      tags: [Plugins]
-      summary: Install a plugin
+      tags: [Extensions]
+      summary: Enable extension
+      description: Enables the extension for the caller's organization. The optional configuration is validated against the extension's config fields; secret fields are encrypted at rest. Admin only.
+      parameters:
+        - $ref: "#/components/parameters/ExtensionKey"
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
               type: object
-              required: [pluginKey]
               properties:
-                pluginKey:
-                  type: string
-                  pattern: "^[a-z0-9-]+$"
-                  description: Plugin key to install
+                configuration:
+                  type: object
+                  additionalProperties: true
       responses:
-        "201":
-          description: Plugin installed
+        "200":
+          description: Extension enabled
           content:
             application/json:
               schema:
@@ -662,17 +628,24 @@ paths:
                   - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        $ref: "#/components/schemas/PluginInstallation"
+                        $ref: "#/components/schemas/Extension"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
-  /plugins/installations:
-    get:
-      tags: [Plugins]
-      summary: Get installed plugins for organization
+  /extensions/{key}/disable:
+    post:
+      tags: [Extensions]
+      summary: Disable extension
+      description: Disables the extension for the caller's organization. Configuration and data are kept. Admin only.
+      parameters:
+        - $ref: "#/components/parameters/ExtensionKey"
       responses:
         "200":
-          description: List of installed plugins
+          description: Extension disabled
           content:
             application/json:
               schema:
@@ -680,38 +653,21 @@ paths:
                   - $ref: "#/components/schemas/ApiResponse"
                   - properties:
                       data:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/PluginInstallation"
-
-  /plugins/installations/{id}:
-    delete:
-      tags: [Plugins]
-      summary: Uninstall a plugin
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: Installation ID
-      responses:
-        "200":
-          description: Plugin uninstalled
+                        $ref: "#/components/schemas/Extension"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
-  /plugins/installations/{id}/configuration:
-    put:
-      tags: [Plugins]
-      summary: Update plugin configuration
+  /extensions/{key}/configuration:
+    patch:
+      tags: [Extensions]
+      summary: Update extension configuration
+      description: Updates the stored configuration. Secret fields left out of the body keep their existing value. Admin only.
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-          description: Installation ID
+        - $ref: "#/components/parameters/ExtensionKey"
       requestBody:
         required: true
         content:
@@ -723,37 +679,37 @@ paths:
                 configuration:
                   type: object
                   additionalProperties: true
-                  description: Plugin-specific configuration key-value pairs
       responses:
         "200":
           description: Configuration updated
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiResponse"
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+                  - properties:
+                      data:
+                        $ref: "#/components/schemas/Extension"
         "400":
           $ref: "#/components/responses/BadRequest"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
-  /plugins/{key}/test-connection:
+  /extensions/{key}/test-connection:
     post:
-      tags: [Plugins]
-      summary: Test plugin connection with provided configuration
+      tags: [Extensions]
+      summary: Test extension connection
+      description: Checks connectivity using the submitted configuration overlaid on the stored one. Supported for mlflow, azure-ai-foundry and jira-assets; other keys return success false. Admin only.
       parameters:
-        - name: key
-          in: path
-          required: true
-          schema:
-            type: string
-            pattern: "^[a-z0-9-]+$"
+        - $ref: "#/components/parameters/ExtensionKey"
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
               type: object
-              required: [configuration]
               properties:
                 configuration:
                   type: object
@@ -769,6 +725,12 @@ paths:
                   - properties:
                       data:
                         $ref: "#/components/schemas/ConnectionTestResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   # ===========================================================================
   # SHADOW AI
@@ -1934,6 +1896,14 @@ components:
         pattern: '^\d+d$'
         default: 30d
       description: Time period in days (e.g., "30d", "7d", "90d")
+    ExtensionKey:
+      name: key
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: "^[a-z0-9][a-z0-9-]{0,63}$"
+      description: Extension key (slack, mlflow, azure-ai-foundry, model-lifecycle, risk-import, jira-assets, dataset-bulk-upload)
 
   responses:
     BadRequest:
@@ -2208,46 +2178,113 @@ components:
             type: integer
           minItems: 1
 
-    # ─── Plugin Schemas ─────────────────────────────────────────────────────
-    Plugin:
+    # ─── Extension Schemas ──────────────────────────────────────────────────
+    ExtensionConfigField:
       type: object
       properties:
-        key:
+        field_key:
           type: string
-        name:
+        field_type:
           type: string
-        description:
+          enum: [text, textarea, url, email, password, number, boolean, select, multiselect]
+        label:
           type: string
-        category:
+        help_text:
           type: string
-        version:
+          nullable: true
+        placeholder:
           type: string
-        author:
+          nullable: true
+        is_required:
+          type: boolean
+        is_secret:
+          type: boolean
+          description: Secret values are encrypted at rest and never returned by the API
+        default_value:
           type: string
-        icon_url:
-          type: string
-        documentation_url:
-          type: string
+          nullable: true
+        display_order:
+          type: integer
+        options:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              value:
+                type: string
 
-    PluginInstallation:
+    ExtensionEnablement:
       type: object
       properties:
         id:
           type: integer
-        plugin_key:
-          type: string
         organization_id:
           type: integer
-        installed_by:
+        extension_id:
           type: integer
-        installed_at:
+        enabled:
+          type: boolean
+        enabled_at:
           type: string
           format: date-time
+          nullable: true
+        enabled_by:
+          type: integer
+          nullable: true
+
+    Extension:
+      type: object
+      properties:
+        id:
+          type: integer
+        key:
+          type: string
+          example: mlflow
+        name:
+          type: string
+        display_name:
+          type: string
+        description:
+          type: string
+        version:
+          type: string
+        category:
+          type: string
+          enum:
+            [
+              communication,
+              ml_ops,
+              data_management,
+              version_control,
+              monitoring,
+              security,
+              analytics,
+            ]
+        icon_path:
+          type: string
+          nullable: true
+        documentation_url:
+          type: string
+          nullable: true
+        requires_configuration:
+          type: boolean
+        configFields:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExtensionConfigField"
+        enabled:
+          type: boolean
         configuration:
           type: object
           additionalProperties: true
-        status:
-          type: string
+          description: Stored configuration with secret fields removed
+        enablement:
+          allOf:
+            - $ref: "#/components/schemas/ExtensionEnablement"
+          nullable: true
 
     ConnectionTestResult:
       type: object
@@ -2256,8 +2293,9 @@ components:
           type: boolean
         message:
           type: string
-        details:
-          type: object
+        testedAt:
+          type: string
+          format: date-time
 
     # ─── Shadow AI Schemas ──────────────────────────────────────────────────
     ShadowAiToolStatus:

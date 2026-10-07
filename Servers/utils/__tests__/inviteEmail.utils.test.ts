@@ -1,8 +1,7 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
 jest.mock("../jwt.utils", () => ({
-  generateInviteToken: jest.fn().mockReturnValue("mock-token-123"),
-  ONE_WEEK_MS: 604800000,
+  generateInviteTokenUntil: jest.fn().mockReturnValue("mock-token-123"),
 }));
 
 jest.mock("../../config/constants", () => ({ frontEndUrl: "https://app.example.com" }));
@@ -16,12 +15,12 @@ jest.mock("fs/promises", () => ({
 }));
 
 import fs from "fs/promises";
-import { generateInviteToken, ONE_WEEK_MS } from "../jwt.utils";
+import { generateInviteTokenUntil } from "../jwt.utils";
 import { sendEmail } from "../../services/emailService";
 import { sendInviteEmail } from "../inviteEmail.utils";
 
-const mockGenerateInviteToken = generateInviteToken as jest.MockedFunction<
-  typeof generateInviteToken
+const mockGenerateInviteToken = generateInviteTokenUntil as jest.MockedFunction<
+  typeof generateInviteTokenUntil
 >;
 const mockSendEmail = sendEmail as jest.MockedFunction<typeof sendEmail>;
 const mockReadFile = fs.readFile as jest.MockedFunction<typeof fs.readFile>;
@@ -33,6 +32,7 @@ describe("inviteEmail.utils", () => {
     surname: "Doe",
     roleId: 2,
     organizationId: 10,
+    expiresAt: new Date("2026-11-05T12:00:00Z"),
   };
 
   beforeEach(() => {
@@ -46,17 +46,21 @@ describe("inviteEmail.utils", () => {
       expect(result.link).toBe("https://app.example.com/user-reg?token=mock-token-123");
     });
 
-    it("should call generateInviteToken with correct payload", async () => {
-      await sendInviteEmail(params);
+    it("should sign the link with the invitee payload, expiring at expiresAt", async () => {
+      const result = await sendInviteEmail(params);
 
-      expect(mockGenerateInviteToken).toHaveBeenCalledWith(expect.any(Object));
-      expect(mockGenerateInviteToken.mock.calls[0][0]).toMatchObject({
+      expect(mockGenerateInviteToken).toHaveBeenCalledTimes(1);
+      const [payload, expiresAt] = mockGenerateInviteToken.mock.calls[0];
+      expect(payload).toMatchObject({
         name: "John",
         surname: "Doe",
         roleId: 2,
         email: "user@example.com",
         organizationId: 10,
       });
+      // The link expires at the stored invitations.expires_at.
+      expect(expiresAt).toEqual(params.expiresAt);
+      expect(result.link).toContain("mock-token-123");
     });
 
     it("should call sendEmail with correct args", async () => {
@@ -75,28 +79,33 @@ describe("inviteEmail.utils", () => {
       });
     });
 
-    it("should return expiresAt ~1 week from now", async () => {
-      const before = Date.now();
-      const result = await sendInviteEmail(params);
-      const after = Date.now();
-
-      const expectedExpires = before + ONE_WEEK_MS;
-      expect(result.expiresAt.getTime()).toBeGreaterThanOrEqual(expectedExpires - 1000);
-      expect(result.expiresAt.getTime()).toBeLessThanOrEqual(
-        expectedExpires + (after - before) + 1000,
-      );
-    });
-
-    it("should handle sendEmail failure gracefully", async () => {
+    // The invitation row is already saved when this runs, so a send that
+    // throws must still hand back the link, reported like a failed send.
+    it("returns the link with the error when sendEmail throws", async () => {
       mockSendEmail.mockRejectedValue(new Error("SMTP error"));
 
-      await expect(sendInviteEmail(params)).rejects.toThrow("SMTP error");
+      const result = await sendInviteEmail(params);
+
+      expect(result.link).toBe("https://app.example.com/user-reg?token=mock-token-123");
+      expect(result.info.error).toEqual({ name: "Error", message: "SMTP error" });
     });
 
-    it("should handle fs.readFile failure gracefully", async () => {
+    it("returns the link with the error when the template cannot be read", async () => {
       mockReadFile.mockRejectedValue(new Error("ENOENT"));
 
-      await expect(sendInviteEmail(params)).rejects.toThrow("ENOENT");
+      const result = await sendInviteEmail(params);
+
+      expect(result.link).toBe("https://app.example.com/user-reg?token=mock-token-123");
+      expect(result.info.error?.message).toBe("ENOENT");
+      expect(mockSendEmail).not.toHaveBeenCalled();
+    });
+
+    // A failed signature (e.g. JWT_SECRET unset) would email token=undefined.
+    it("throws and sends nothing when the link cannot be signed", async () => {
+      mockGenerateInviteToken.mockReturnValueOnce(undefined);
+
+      await expect(sendInviteEmail(params)).rejects.toThrow("Could not sign the invitation link");
+      expect(mockSendEmail).not.toHaveBeenCalled();
     });
   });
 });

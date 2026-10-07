@@ -16,7 +16,7 @@ import Chip from "../../Chip";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { DatasetRow } from "./index";
 import { text, background, status } from "../../../themes/palette";
-import { displayFormattedDateTime } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 
 interface DatasetsTableBodyProps {
   rows: DatasetRow[];
@@ -39,6 +39,7 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
   onDelete,
   onDownload,
 }) => {
+  const formatUserDate = useFormattedDate();
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [menuRow, setMenuRow] = useState<DatasetRow | null>(null);
 
@@ -83,7 +84,7 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
 
   const formatDate = (dateStr?: string | null): string => {
     if (!dateStr) return "-";
-    return displayFormattedDateTime(dateStr);
+    return formatUserDate(dateStr, { includeTime: true });
   };
 
   return (

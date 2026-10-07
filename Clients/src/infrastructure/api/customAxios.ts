@@ -24,7 +24,8 @@
 import axios, { AxiosError } from "axios";
 import { store } from "../../application/redux/store";
 import { ENV_VARs } from "../../../env.vars";
-import { clearAuthState, setAuthToken } from "../../application/redux/auth/authSlice";
+import { setAuthToken } from "../../application/redux/auth/authSlice";
+import { clearSession, endSessionAndReload } from "../../application/utils/clearSession";
 import { storageService } from "../storage";
 import { AlertProps } from "../../presentation/types/alert.types";
 import { translateKey } from "../../i18n/domTranslator";
@@ -36,9 +37,52 @@ import type {
   RetriableRequestConfig,
 } from "./api.types";
 
-const performLogout = () => {
-  store.dispatch(clearAuthState());
-  window.location.href = "/login";
+/**
+ * Refresh answers that mean the session cannot be renewed: 400 (no refresh
+ * cookie), 401 (revoked or invalid), 406 (expired). The refresh endpoint's
+ * only 403 is the CSRF check, which says nothing about the refresh token.
+ */
+const SESSION_ENDED_STATUSES = [400, 401, 406];
+
+/** How long the "Session Expired" message stays up before the reload. */
+const SESSION_EXPIRED_RELOAD_DELAY_MS = 1500;
+
+/**
+ * The auth middleware's 403 details that end the session, as the server
+ * translates them (en, de, fr).
+ */
+const SESSION_DENIED_DETAILS = [
+  "User does not belong to this organization",
+  "Benutzer gehört nicht zu dieser Organisation",
+  "L'utilisateur n'appartient pas à cette organisation",
+  "Not allowed to access",
+  "Zugriff nicht erlaubt",
+  "Accès non autorisé",
+];
+
+// Several requests can fail at once: end the session (and alert) once.
+let isLoggingOut = false;
+
+/**
+ * True if this caller should end the session: none is ending yet, and there
+ * is still a token. Responses that land after the session was cleared (the
+ * page is reloading) are ignored.
+ */
+const claimLogout = () => {
+  if (isLoggingOut || !store.getState()?.auth?.authToken) return false;
+  isLoggingOut = true;
+  return true;
+};
+
+/** True while a forced logout is under way (the page is about to reload). */
+export const isSessionEnding = () => isLoggingOut;
+
+const performLogout = async () => {
+  try {
+    await endSessionAndReload(store.dispatch);
+  } finally {
+    isLoggingOut = false;
+  }
 };
 
 // Create a global callback for showing alerts
@@ -80,6 +124,41 @@ const getEnvelopeErrorMessage = (data: ApiErrorEnvelope): string | undefined => 
 // page shows an inline alert). Skip the global toast for these so users don't
 // see duplicate notifications.
 const ENDPOINTS_WITH_CUSTOM_ERROR_UI = ["/users/login"];
+
+// Endpoints authorized by the token in an emailed link (invitation, password
+// reset), which the page sends itself, not by the session token.
+const LINK_TOKEN_ENDPOINTS = ["/users/reset-password", "/users/register"];
+
+const isLinkTokenEndpoint = (url: string | undefined) =>
+  LINK_TOKEN_ENDPOINTS.some((path) => url?.includes(path) ?? false);
+
+// The auth middleware's answer to a request sent without a token, as the
+// server translates it (en, de, fr).
+const TOKEN_NOT_FOUND_DETAILS = ["Token not found", "Token nicht gefunden", "Jeton introuvable"];
+
+/**
+ * True for a failure that only says the session is over, once it has been
+ * cleared (logout, forced logout): a request sent with the old session token
+ * that lands afterwards, or a query refetching after the cache was emptied,
+ * which goes out with no token and gets the auth middleware's "Token not
+ * found". These are not shown, and do not try to refresh the token. Errors
+ * from requests sent while signed out (login, registration, password reset)
+ * are not affected.
+ */
+const isAfterSessionCleared = (
+  error: AxiosError,
+  request: RetriableRequestConfig | undefined,
+  detail: string | undefined,
+) => {
+  if (store.getState()?.auth?.authToken) return false;
+  if (request?._sentWithSession) return true;
+  return (
+    error.response?.status === 400 &&
+    !isLinkTokenEndpoint(request?.url) &&
+    detail !== undefined &&
+    TOKEN_NOT_FOUND_DETAILS.includes(detail)
+  );
+};
 
 // Show a translated error toast for server or network failures, and for 4xx
 // client errors using the backend's message from the { message, data }
@@ -158,11 +237,9 @@ CustomAxios.interceptors.request.use(
     // Add authorization token
     const state = store.getState();
     const token = state.auth.authToken;
-    if (
-      token &&
-      !(config.url?.includes("/users/reset-password") || config.url?.includes("/users/register"))
-    ) {
+    if (token && !isLinkTokenEndpoint(config.url)) {
       config.headers.Authorization = `Bearer ${token}`;
+      (config as RetriableRequestConfig)._sentWithSession = true;
     }
 
     const lang = storageService.get("language", "en");
@@ -215,19 +292,21 @@ CustomAxios.interceptors.response.use(
 
     if (
       error.response?.status === 403 &&
-      (errorDetail === "User does not belong to this organization" ||
-        errorDetail === "Not allowed to access")
+      errorDetail !== undefined &&
+      SESSION_DENIED_DETAILS.includes(errorDetail)
     ) {
-      if (showAlertCallback) {
-        showAlertCallback({
-          variant: "info",
-          title: "Access Denied",
-          body: "Please login again to continue.",
-        });
+      if (claimLogout()) {
+        if (showAlertCallback) {
+          showAlertCallback({
+            variant: "info",
+            title: "Access Denied",
+            body: "Please login again to continue.",
+          });
+        }
+        setTimeout(() => {
+          void performLogout();
+        }, 1000);
       }
-      setTimeout(() => {
-        performLogout();
-      }, 1000);
       return Promise.reject(new Error(errorDetail || "Forbidden"));
     }
 
@@ -244,6 +323,11 @@ CustomAxios.interceptors.response.use(
           body: "Too many requests in a short time. Please wait a moment and refresh the page.",
         });
       }
+      return Promise.reject(error);
+    }
+
+    // The session was cleared after this request went out: no refresh, no toast.
+    if (isAfterSessionCleared(error, originalRequest, errorDetail)) {
       return Promise.reject(error);
     }
 
@@ -266,18 +350,12 @@ CustomAxios.interceptors.response.use(
       if (isRefreshing) {
         return new Promise<string | null>((resolve, reject) => {
           failedQueue.push({ resolve, reject });
-        })
-          .then((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-            return CustomAxios(originalRequest);
-          })
-          .catch((err: unknown) => {
-            // If refresh token fails, redirect to login
-            if (axios.isAxiosError(err) && err.response?.status === 406) {
-              store.dispatch(setAuthToken(""));
-            }
-            return Promise.reject(err);
-          });
+        }).then((token) => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return CustomAxios(originalRequest);
+        });
+        // A failed refresh rejects the queue; the request that ran the
+        // refresh has already cleared the session.
       }
 
       originalRequest._retry = true;
@@ -299,9 +377,25 @@ CustomAxios.interceptors.response.use(
         }
       } catch (refreshError: unknown) {
         processQueue(refreshError, null);
-        // If refresh token request fails with 406, redirect to login
-        if (axios.isAxiosError(refreshError) && refreshError.response?.status === 406) {
-          store.dispatch(setAuthToken(""));
+        // The refresh token is expired, revoked or missing: end the session.
+        // A 5xx or network failure leaves it for the next request to retry.
+        const status = axios.isAxiosError(refreshError) ? refreshError.response?.status : undefined;
+        if (status !== undefined && SESSION_ENDED_STATUSES.includes(status) && claimLogout()) {
+          // A 406 already showed "Session Expired" on the refresh call itself.
+          if (status !== 406 && showAlertCallback) {
+            showAlertCallback({
+              variant: "warning",
+              title: "Session Expired",
+              body: "Please login again to continue.",
+            });
+          }
+          // Drop the token now, so retries and clicks in the meantime cannot
+          // start another refresh; only the reload waits, so the message
+          // can be read.
+          clearSession(store.dispatch);
+          setTimeout(() => {
+            void performLogout();
+          }, SESSION_EXPIRED_RELOAD_DELAY_MS);
         }
         return Promise.reject(refreshError);
       } finally {
@@ -311,6 +405,16 @@ CustomAxios.interceptors.response.use(
 
     // Surface generic translated error toasts for server and network failures.
     // Auth-specific errors (403/429/406) are handled above and return early.
+    // A rejected refresh ends the session (the request that ran it reloads
+    // to /login); its own error is not shown.
+    if (
+      originalRequest?.url === "/users/refresh-token" &&
+      error.response?.status !== undefined &&
+      SESSION_ENDED_STATUSES.includes(error.response.status)
+    ) {
+      return Promise.reject(error);
+    }
+
     showGlobalErrorAlert(error);
 
     return Promise.reject(error);

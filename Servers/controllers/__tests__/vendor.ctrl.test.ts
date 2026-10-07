@@ -24,6 +24,7 @@ jest.mock("../../utils/statusCode.utils", () => ({
     200: (d: any) => ({ message: "OK", data: d }),
     201: (d: any) => ({ message: "Created", data: d }),
     204: (d: any) => ({ message: "No Content", data: d }),
+    400: (d: any) => ({ message: "Bad Request", data: d }),
     404: (d: any) => ({ message: "Not Found", data: d }),
     500: (d: any) => ({ message: "Internal Server Error", data: d }),
   },
@@ -42,7 +43,7 @@ jest.mock("../../database/db", () => ({
 }));
 
 import { buildVendor, buildManyVendor } from "../../tests/factories/vendor.factory";
-import { getAllVendors, getVendorById } from "../vendor.ctrl";
+import { getAllVendors, getVendorById, getVendorRiskSuggestions } from "../vendor.ctrl";
 import { getAllVendorsQuery, getVendorByIdQuery } from "../../utils/vendor.utils";
 
 const mockGetAllVendorsQuery = getAllVendorsQuery as jest.MockedFunction<typeof getAllVendorsQuery>;
@@ -142,6 +143,19 @@ describe("vendor.ctrl", () => {
       await getVendorById(req, res as Response);
 
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+  });
+
+  describe("getVendorRiskSuggestions", () => {
+    it("should return 400 for a vendor id that is not a positive integer", async () => {
+      for (const id of ["abc", "1.5", "0"]) {
+        const req = createMockReq({ params: { id } as any }) as Request;
+        const res = createMockRes();
+
+        await getVendorRiskSuggestions(req, res as Response);
+
+        expect(res.status).toHaveBeenCalledWith(400);
+      }
     });
   });
 });

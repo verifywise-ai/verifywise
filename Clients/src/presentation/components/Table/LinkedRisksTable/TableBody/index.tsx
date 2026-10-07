@@ -16,6 +16,7 @@ import { paginationStyle, paginationDropdown, paginationSelect } from "../../sty
 import TablePaginationActions from "../../../TablePagination";
 import { IProjectRiskTableBodyProps } from "../../../../types/interfaces/i.table";
 import { RiskModel } from "../../../../../domain/models/Common/risks/risk.model";
+import { pageOfLabel } from "../../pageOfLabel";
 
 const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
 const LinkedRisksTableBody: React.FC<IProjectRiskTableBodyProps> = ({
@@ -122,7 +123,7 @@ const LinkedRisksTableBody: React.FC<IProjectRiskTableBodyProps> = ({
             ActionsComponent={(props) => <TablePaginationActions {...props} />}
             labelRowsPerPage="Risks per page"
             labelDisplayedRows={({ page, count }) =>
-              `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
+              pageOfLabel(page + 1, Math.max(0, Math.ceil(count / rowsPerPage)))
             }
             sx={paginationStyle}
             slotProps={{

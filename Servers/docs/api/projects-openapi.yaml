@@ -9,7 +9,8 @@ paths:
       description: >
         Returns all projects visible to the authenticated user. Admins and SuperAdmins
         see all projects in the organization; other roles see only projects they own or
-        are members of. Includes approval status and any plugin-sourced use cases.
+        are members of. Includes approval status and use cases imported by the Jira
+        Assets extension.
       operationId: getAllProjects
       tags: [Projects]
       security:
@@ -917,7 +918,7 @@ components:
             _source:
               type: string
               nullable: true
-              description: Plugin source identifier for externally-sourced use cases
+              description: Set when the use case was imported by an extension
               example: jira-assets
 
     ProjectDetail:

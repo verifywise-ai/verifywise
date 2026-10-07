@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { server } from "../../../test/mocks/server";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 
 import { deepEvalOrgsService } from "../deepEvalOrgsService";
 

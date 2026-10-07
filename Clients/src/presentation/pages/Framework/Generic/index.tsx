@@ -35,7 +35,6 @@ import { handleAlert } from "../../../../application/tools/alertUtils";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import allowedRoles from "../../../../application/constants/permissions";
 import { StatsCard } from "../../../components/Cards/StatsCard";
-import { brand } from "../../../themes/palette";
 import { pluralizeEntityType } from "../../../tools/pluralizeEntityType";
 import { isCompletedStatus } from "../../../../domain/types/Status";
 import { styles } from "./style";
@@ -424,12 +423,7 @@ const GenericFramework = ({
       />
       {progress.total > 0 && (
         <Stack sx={{ mt: 2 }}>
-          <StatsCard
-            title={progress.title}
-            completed={progress.completed}
-            total={progress.total}
-            progressbarColor={brand.primary}
-          />
+          <StatsCard title={progress.title} completed={progress.completed} total={progress.total} />
         </Stack>
       )}
       {filteredL1.map((l1) => (

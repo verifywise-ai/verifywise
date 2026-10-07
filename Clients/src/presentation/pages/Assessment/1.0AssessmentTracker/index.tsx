@@ -246,7 +246,6 @@ const AssessmentTracker = ({
               total={assessmentProgress.totalQuestions}
               completed={assessmentProgress.answeredQuestions}
               title="Assessments"
-              progressbarColor={brand.primary}
             />
           ) : (
             <Typography>Unable to fetch statistical values from the server</Typography>

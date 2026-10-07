@@ -44,7 +44,6 @@ services:
       - DB_PORT=$DB_PORT
       - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in the env file before starting}
       - DB_NAME=$DB_NAME
-      - MOCK_DATA_ON=$MOCK_DATA_ON
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set in the env file before starting}
       - SMTP_HOST=smtp.gmail.com
       - SMTP_PORT=587

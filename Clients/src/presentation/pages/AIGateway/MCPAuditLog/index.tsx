@@ -27,7 +27,7 @@ import { sectionTitleSx, useCardSx, MCP_STATUS_COLORS, MCP_STATUS_FALLBACK } fro
 import CustomizableSkeleton from "../../../components/Skeletons";
 import MCPTable from "../MCPTable";
 import MCPInvocationDrawer from "../MCPInvocationDrawer";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 
 interface AuditLog {
   id: number;
@@ -67,6 +67,7 @@ const STATUS_ITEMS = [
 const PAGE_SIZE = 20;
 
 export default function MCPAuditLogPage() {
+  const formatDate = useFormattedDate();
   const cardSx = useCardSx();
 
   const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -369,7 +370,7 @@ export default function MCPAuditLogPage() {
                         {log.agent_key_name || log.key_name || `Key #${log.agent_key_id}`}
                       </Typography>,
                       <Typography color="text.disabled" sx={{ fontSize: 12 }}>
-                        {displayFormattedDate(log.created_at)}
+                        {formatDate(log.created_at)}
                       </Typography>,
                     ];
                   }}

@@ -50,21 +50,33 @@ const getClient = (accessToken: string, iv: string) => {
   return new WebClient(data);
 };
 
+export interface SlackSendResult {
+  /** At least one webhook integration exists for this routing. */
+  attempted: boolean;
+  /** At least one message posted successfully. */
+  delivered: boolean;
+}
+
 export const sendSlackNotification = async (
   params: { userId: number; routingType: string },
   message: any,
-) => {
+): Promise<SlackSendResult> => {
   try {
     const { userId, routingType } = params;
     const slackIntegrations: ISlackWebhook[] = await getSlackWebhookByIdAndRoutingType(
       userId,
       routingType,
     );
-    await Promise.all(
+    // No webhook is the normal dev path, not an error — and not a delivery.
+    if (slackIntegrations.length === 0) return { attempted: false, delivered: false };
+    const results = await Promise.allSettled(
       slackIntegrations.map((integration) => sendImmediateMessage(integration, message)),
     );
+    const delivered = results.some((result) => result.status === "fulfilled");
+    return { attempted: true, delivered };
   } catch (error: any) {
     logger.error("Error sending Slack Notification:", error);
+    return { attempted: true, delivered: false };
   }
 };
 

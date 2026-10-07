@@ -1,0 +1,1934 @@
+import { QueryTypes, Transaction } from "sequelize";
+import { sequelize } from "../database/db";
+import {
+  LinkSignal,
+  RiskLinkRelationType,
+  RiskLinkRow,
+  RiskLinkSource,
+  RiskLinkStatus,
+  RiskScoringRow,
+  StructuralNeighbourRow,
+  RelatedPair,
+} from "../services/riskLinks/types";
+import { HierarchyEdge, ParentEntityType } from "../services/riskLinks/hierarchy";
+import { DismissReason } from "../services/riskLinks/dismissReason";
+import { toJsonArray, toNumber } from "./pgRow.utils";
+
+/**
+ * pg hands NUMERIC back as a string and can hand JSONB / JSON_AGG output back
+ * as a string too. Everything crossing this boundary is coerced here so no
+ * caller ever compares a number to "5.000".
+ */
+/** Which parent the caller is proposing, and which table it lives in. */
+export interface HierarchyParent {
+  id: number;
+  entityType: ParentEntityType;
+}
+
+const toLinkRow = (row: any): RiskLinkRow => ({
+  id: row.id,
+  organization_id: row.organization_id,
+  source_risk_id: row.source_risk_id ?? null,
+  source_vendor_risk_id: row.source_vendor_risk_id ?? null,
+  target_risk_id: row.target_risk_id ?? null,
+  target_model_risk_id: row.target_model_risk_id ?? null,
+  target_vendor_risk_id: row.target_vendor_risk_id ?? null,
+  relation_type: row.relation_type,
+  status: row.status,
+  source: row.source,
+  score: toNumber(row.score),
+  reasons: toJsonArray<LinkSignal>(row.reasons),
+  decided_at: row.decided_at ?? null,
+  last_computed_at: row.last_computed_at ?? null,
+  dismiss_reason: row.dismiss_reason ?? null,
+  dismiss_note: row.dismiss_note ?? null,
+  parent_level_changed_at: row.parent_level_changed_at ?? null,
+});
+
+/**
+ * Every active risk in the org, reduced to the columns tier-0 scoring reads.
+ *
+ * risk_category is enum_projectrisks_risk_category[] — a custom enum array whose
+ * OID node-pg has no parser for, so it is cast to text[] to guarantee a JS array.
+ */
+export async function getRiskScoringRowsQuery(organizationId: number): Promise<RiskScoringRow[]> {
+  const rows = await sequelize.query(
+    `SELECT r.id,
+            r.risk_category::text[] AS risk_category,
+            r.controls_mapping,
+            r.assessment_mapping,
+            r.ai_lifecycle_phase::text AS ai_lifecycle_phase,
+            COALESCE(
+              JSON_AGG(DISTINCT pr.project_id) FILTER (WHERE pr.project_id IS NOT NULL),
+              '[]'
+            ) AS projects
+     FROM risks r
+     LEFT JOIN projects_risks pr
+       ON r.id = pr.risk_id AND pr.organization_id = :organizationId
+     WHERE r.organization_id = :organizationId AND r.is_deleted = false
+     GROUP BY r.id`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
+  );
+
+  return (rows as any[]).map((row) => ({
+    id: row.id,
+    risk_category: Array.isArray(row.risk_category) ? row.risk_category : null,
+    controls_mapping: row.controls_mapping ?? null,
+    assessment_mapping: row.assessment_mapping ?? null,
+    ai_lifecycle_phase: row.ai_lifecycle_phase ?? null,
+    projects: toJsonArray<number>(row.projects),
+  }));
+}
+
+/** Every active risk id in the org — the fan-out list for a full recompute. */
+export async function getActiveRiskIdsQuery(organizationId: number): Promise<number[]> {
+  const rows = await sequelize.query(
+    `SELECT id FROM risks
+     WHERE organization_id = :organizationId AND is_deleted = false
+     ORDER BY id ASC`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
+  );
+  return (rows as any[]).map((row) => row.id);
+}
+
+/**
+ * Every active risk in the org that shares a framework element with this one,
+ * one row per (neighbour, shared element), with that element's degree.
+ *
+ * Eight of the ten join tables call the risk column `projects_risks_id`. That is
+ * a legacy misnomer: it holds a risk id and joins straight to `risks.id` — there
+ * is no hop through `projects_risks`.
+ *
+ * The org filter appears on every arm AND on the risks join. Element ids are not
+ * global — each of the ten element tables is org-scoped — but `organization_id`
+ * is nullable on these join tables and nothing declares a foreign key to the
+ * element table, so a row naming another org's element is schema-legal. The
+ * filter is what makes this correct instead of dependent on ids not colliding.
+ */
+export async function getStructuralNeighboursQuery(
+  organizationId: number,
+  riskId: number,
+): Promise<StructuralNeighbourRow[]> {
+  const rows = await sequelize.query(
+    `WITH element_links AS (
+       SELECT projects_risks_id AS risk_id, 'iso42001_subclause:'     || subclause_id                 AS element_key FROM subclauses_iso__risks            WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT projects_risks_id,            'iso27001_subclause:'     || subclause_id                                FROM subclauses_iso27001__risks       WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT projects_risks_id,            'iso42001_annexcategory:' || annexcategory_id                            FROM annexcategories_iso__risks       WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT projects_risks_id,            'iso27001_annexcontrol:'  || annexcontrol_id                             FROM annexcontrols_iso27001__risks    WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT projects_risks_id,            'eu_control:'             || control_id                                  FROM controls_eu__risks               WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT projects_risks_id,            'eu_subcontrol:'          || subcontrol_id                               FROM subcontrols_eu__risks            WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT projects_risks_id,            'eu_answer:'              || answer_id                                   FROM answers_eu__risks                WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT projects_risks_id,            'nist_subcategory:'       || nist_ai_rmf_subcategory_id                  FROM nist_ai_rmf_subcategories__risks WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT risk_id,                      'custom_l2:'              || level2_impl_id                              FROM custom_framework_level2_risks    WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT risk_id,                      'custom_l3:'              || level3_impl_id                              FROM custom_framework_level3_risks    WHERE organization_id = :organizationId
+     ),
+     active AS (
+       SELECT DISTINCT el.risk_id, el.element_key
+       FROM element_links el
+       JOIN risks r
+         ON r.id = el.risk_id
+        AND r.organization_id = :organizationId
+        AND r.is_deleted = false
+     ),
+     degrees AS (
+       SELECT element_key, COUNT(*) AS degree
+       FROM active
+       GROUP BY element_key
+     )
+     SELECT a2.risk_id  AS target_risk_id,
+            a1.element_key,
+            d.degree
+     FROM active a1
+     JOIN active a2 ON a2.element_key = a1.element_key AND a2.risk_id <> a1.risk_id
+     JOIN degrees d ON d.element_key = a1.element_key
+     WHERE a1.risk_id = :riskId`,
+    { replacements: { organizationId, riskId }, type: QueryTypes.SELECT },
+  );
+
+  return (rows as any[]).map((row) => ({
+    target_risk_id: row.target_risk_id,
+    element_key: row.element_key,
+    degree: toNumber(row.degree),
+  }));
+}
+
+/**
+ * Two-level rule (services/riskLinks/hierarchy.ts) as a SQL predicate over a
+ * project risk aliased `r`: excludes a risk that already has a confirmed
+ * parent (`child_already_has_parent`) or has confirmed children
+ * (`child_has_children`), so a candidate list never offers a parent link the
+ * server would reject with 409. Shared by the model- and vendor-risk candidate
+ * queries; change it here, and in hierarchy.ts, together.
+ */
+export const CANNOT_TAKE_PARENT_SQL = `AND NOT EXISTS (
+              SELECT 1
+                FROM risk_links l
+               WHERE l.organization_id = :organizationId
+                 AND l.relation_type   = 'inherits_from'
+                 AND l.status          = 'confirmed'
+                 AND (l.source_risk_id = r.id OR l.target_risk_id = r.id)
+            )`;
+
+/**
+ * The edges recompute owns that touch this risk, either direction, any status:
+ * machine-scored `related_to` rows (`source = 'derived'`). Agent and user rows,
+ * and every `inherits_from` row, are never returned, so recompute cannot
+ * rescore, re-reason or prune them. Keep this filter in SQL: it is the only
+ * guarantee a future caller cannot forget.
+ */
+export async function getRecomputeOwnedLinksQuery(
+  organizationId: number,
+  riskId: number,
+  transaction?: Transaction,
+): Promise<RiskLinkRow[]> {
+  const rows = await sequelize.query(
+    `SELECT * FROM risk_links
+     WHERE organization_id = :organizationId
+       AND relation_type = 'related_to'
+       AND source = 'derived'
+       AND (source_risk_id = :riskId OR target_risk_id = :riskId)`,
+    {
+      replacements: { organizationId, riskId },
+      type: QueryTypes.SELECT,
+      ...(transaction && { transaction }),
+    },
+  );
+  return (rows as any[]).map(toLinkRow);
+}
+
+export interface UpsertRiskLinkInput {
+  organizationId: number;
+  /** Already canonicalised: sourceRiskId < targetRiskId. */
+  sourceRiskId: number;
+  targetRiskId: number;
+  score: number;
+  reasons: LinkSignal[];
+}
+
+/**
+ * Create a derived suggestion, or refresh an existing edge's score.
+ *
+ * ON CONFLICT deliberately touches neither status nor source: a confirmed or
+ * dismissed edge keeps the human's decision across every recompute (R1, R3).
+ * And it updates only a row recompute wrote (source = 'derived'): a user-made
+ * related_to link on the same pair keeps its own score and reasons.
+ */
+export async function upsertRiskLinkQuery(
+  input: UpsertRiskLinkInput,
+  transaction: Transaction,
+): Promise<void> {
+  await sequelize.query(
+    `INSERT INTO risk_links
+       (organization_id, source_risk_id, target_risk_id, relation_type,
+        status, source, score, reasons, last_computed_at)
+     VALUES (:organizationId, :sourceRiskId, :targetRiskId, 'related_to',
+             'suggested', 'derived', :score, CAST(:reasons AS JSONB), NOW())
+     ON CONFLICT (source_risk_id, target_risk_id, relation_type)
+     DO UPDATE SET score = EXCLUDED.score,
+                   reasons = EXCLUDED.reasons,
+                   last_computed_at = NOW(),
+                   updated_at = NOW()
+     WHERE risk_links.organization_id = EXCLUDED.organization_id
+       AND risk_links.source = 'derived'`,
+    {
+      replacements: {
+        organizationId: input.organizationId,
+        sourceRiskId: input.sourceRiskId,
+        targetRiskId: input.targetRiskId,
+        score: input.score,
+        reasons: JSON.stringify(input.reasons),
+      },
+      type: QueryTypes.INSERT,
+      transaction,
+    },
+  );
+}
+
+/**
+ * Which of these ids are live risks in this org.
+ *
+ * Both risk id columns on `risk_links` carry real foreign keys to `risks`, so an
+ * id that exists nowhere is already rejected by the database. What no constraint
+ * catches is an id that exists and belongs to another org, or one that is
+ * soft-deleted — so both clauses below are load-bearing, and neither has a
+ * safety net behind it. Callers compare the result length against the input.
+ */
+export async function getLiveRiskIdsQuery(
+  ids: number[],
+  organizationId: number,
+): Promise<number[]> {
+  if (ids.length === 0) return [];
+  const rows = await sequelize.query(
+    `SELECT id FROM risks
+      WHERE id IN (:ids) AND organization_id = :organizationId AND is_deleted = false`,
+    { replacements: { ids, organizationId }, type: QueryTypes.SELECT },
+  );
+  return (rows as { id: number }[]).map((row) => row.id);
+}
+
+/**
+ * Whether a cross-entity parent exists, is not soft-deleted, and belongs to
+ * this org. `model_risks.organization_id` is nullable in the schema; matching on
+ * equality makes such a row invisible, which is the correct fail-closed answer.
+ */
+export async function getLiveCrossEntityParentQuery(
+  parent: HierarchyParent,
+  organizationId: number,
+): Promise<boolean> {
+  const table = parent.entityType === "model_risk" ? "model_risks" : "vendorrisks";
+  const rows = await sequelize.query(
+    `SELECT 1 FROM ${table}
+      WHERE id = :id AND organization_id = :organizationId AND is_deleted = false`,
+    { replacements: { id: parent.id, organizationId }, type: QueryTypes.SELECT },
+  );
+  return rows.length === 1;
+}
+
+/** Does this exact directed edge already exist? Used to refuse a two-cycle. */
+export async function riskLinkPairExistsQuery(
+  organizationId: number,
+  sourceRiskId: number,
+  targetRiskId: number,
+  relationType: RiskLinkRelationType,
+): Promise<boolean> {
+  const rows = await sequelize.query(
+    `SELECT 1 FROM risk_links
+      WHERE organization_id = :organizationId
+        AND source_risk_id = :sourceRiskId
+        AND target_risk_id = :targetRiskId
+        AND relation_type = :relationType
+      LIMIT 1`,
+    {
+      replacements: { organizationId, sourceRiskId, targetRiskId, relationType },
+      type: QueryTypes.SELECT,
+    },
+  );
+  return (rows as unknown[]).length > 0;
+}
+
+/**
+ * Every CONFIRMED `inherits_from` edge touching either endpoint of a proposed
+ * edge — the input to `validateTwoLevel`.
+ *
+ * A superset of what the three rules need. Narrowing it would mean three
+ * queries or a UNION; both existing indexes
+ * (`risk_links_org_source_status_idx`, `risk_links_org_target_status_idx`)
+ * serve this one, and the surplus keeps the SQL and the rule simple.
+ *
+ * `status = 'confirmed'` is load-bearing, not a filter for tidiness: competing
+ * SUGGESTED parents are legal by design, so including them would reject
+ * proposals the product is supposed to offer.
+ */
+export async function getConfirmedHierarchyEdgesQuery(
+  organizationId: number,
+  childRiskId: number,
+  parent: HierarchyParent,
+): Promise<HierarchyEdge[]> {
+  // Only one of the three parent bindings is ever non-null. `IN` and `=`
+  // against NULL yield NULL, so the unused branches match nothing rather than
+  // matching everything — the same fail-closed property the tenant filters use.
+  const rows = await sequelize.query(
+    `SELECT source_risk_id, target_risk_id, target_model_risk_id, target_vendor_risk_id
+       FROM risk_links
+      WHERE organization_id = :organizationId
+        AND relation_type = 'inherits_from'
+        AND status = 'confirmed'
+        AND (source_risk_id IN (:childRiskId, :parentRiskId)
+             OR target_risk_id IN (:childRiskId, :parentRiskId)
+             OR target_model_risk_id = :parentModelRiskId
+             OR target_vendor_risk_id = :parentVendorRiskId)`,
+    {
+      replacements: {
+        organizationId,
+        childRiskId,
+        parentRiskId: parent.entityType === "risk" ? parent.id : null,
+        parentModelRiskId: parent.entityType === "model_risk" ? parent.id : null,
+        parentVendorRiskId: parent.entityType === "vendor_risk" ? parent.id : null,
+      },
+      type: QueryTypes.SELECT,
+    },
+  );
+  // source is the child, target is the parent — see risk_links_canonical, which
+  // exempts inherits_from from id reordering precisely so this holds.
+  return (
+    rows as {
+      source_risk_id: number;
+      target_risk_id: number | null;
+      target_model_risk_id: number | null;
+      target_vendor_risk_id: number | null;
+    }[]
+  ).map((row) => ({
+    childRiskId: row.source_risk_id,
+    parentRiskId: (row.target_model_risk_id ??
+      row.target_vendor_risk_id ??
+      row.target_risk_id) as number,
+    parentEntityType:
+      row.target_model_risk_id != null
+        ? ("model_risk" as const)
+        : row.target_vendor_risk_id != null
+          ? ("vendor_risk" as const)
+          : ("risk" as const),
+  }));
+}
+
+/**
+ * Every `related_to` pair in the org that still has two live risks behind it —
+ * the edge list `connectedComponents` partitions.
+ *
+ * `dismissed` is excluded deliberately. A dismissed relation is a statement
+ * that these two risks are not related; letting it through would merge two
+ * clusters the user has already told us to keep apart, and then hand the merged
+ * cluster to the model as one grouping problem.
+ *
+ * The joins to `risks` are what keep a soft-deleted partner out. Without them a
+ * dead id reaches the prompt with no risk row behind it: harmless in the sense
+ * that the model cannot name what it cannot see, but it inflates the size check
+ * and can spend a whole call on a component with one real member.
+ */
+export async function getRelatedPairsQuery(organizationId: number): Promise<RelatedPair[]> {
+  const rows = await sequelize.query(
+    `SELECT l.source_risk_id, l.target_risk_id
+       FROM risk_links l
+       JOIN risks s ON s.id = l.source_risk_id
+                   AND s.organization_id = :organizationId
+                   AND s.is_deleted = false
+       JOIN risks t ON t.id = l.target_risk_id
+                   AND t.organization_id = :organizationId
+                   AND t.is_deleted = false
+      WHERE l.organization_id = :organizationId
+        AND l.relation_type = 'related_to'
+        AND l.status IN ('suggested', 'confirmed')`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
+  );
+
+  return (rows as { source_risk_id: number; target_risk_id: number }[]).map((row) => ({
+    a: toNumber(row.source_risk_id),
+    b: toNumber(row.target_risk_id),
+  }));
+}
+
+/** The four columns the direction prompt shows the model about one risk. */
+export interface RiskPromptRow {
+  id: number;
+  risk_name: string | null;
+  risk_description: string | null;
+  risk_category: string[] | null;
+  ai_lifecycle_phase: string | null;
+}
+
+/**
+ * The prompt payload for one component.
+ *
+ * `risk_description` is the column that actually carries the signal a grouping
+ * decision needs — the name alone rarely says whether a risk is the umbrella or
+ * one instance under it. The two enum columns are cast to text for the same
+ * reason `getRiskScoringRowsQuery` casts them: the driver returns a Postgres
+ * enum as an opaque value otherwise.
+ */
+export async function getRiskPromptRowsQuery(
+  organizationId: number,
+  riskIds: number[],
+): Promise<RiskPromptRow[]> {
+  if (riskIds.length === 0) return [];
+  const rows = await sequelize.query(
+    `SELECT id,
+            risk_name,
+            risk_description,
+            risk_category::text[] AS risk_category,
+            ai_lifecycle_phase::text AS ai_lifecycle_phase
+       FROM risks
+      WHERE id IN (:riskIds)
+        AND organization_id = :organizationId
+        AND is_deleted = false
+      ORDER BY id`,
+    { replacements: { riskIds, organizationId }, type: QueryTypes.SELECT },
+  );
+
+  return (rows as any[]).map((row) => ({
+    id: toNumber(row.id),
+    risk_name: row.risk_name ?? null,
+    risk_description: row.risk_description ?? null,
+    risk_category: Array.isArray(row.risk_category) ? row.risk_category : null,
+    ai_lifecycle_phase: row.ai_lifecycle_phase ?? null,
+  }));
+}
+
+/** One stored `inherits_from` edge, in the child/parent terms the rules use. */
+export interface HierarchyPairRow {
+  childRiskId: number;
+  parentRiskId: number;
+  /**
+   * Which table `parentRiskId` points at. Required here, unlike on
+   * `HierarchyEdge`: a stored row always knows which of the three target
+   * columns held its parent, and defaulting would let a vendor risk's id be
+   * compared against a project risk's.
+   */
+  parentEntityType: ParentEntityType;
+  status: RiskLinkStatus;
+}
+
+/**
+ * Every `inherits_from` row touching any of these risks, in every status.
+ *
+ * One round trip serving two different needs. Rule 4 of the filter needs all
+ * three statuses, because a `dismissed` pair must never be proposed again;
+ * rule 5 needs the `confirmed` and `suggested` subset, because those are the
+ * edges a new proposal could contradict. Splitting it would be two queries for
+ * one index scan.
+ *
+ * Note the direction mapping: `source_risk_id` is the child.
+ */
+export async function getHierarchyPairsQuery(
+  organizationId: number,
+  riskIds: number[],
+): Promise<HierarchyPairRow[]> {
+  if (riskIds.length === 0) return [];
+  const rows = await sequelize.query(
+    `SELECT source_risk_id, target_risk_id, target_model_risk_id,
+            target_vendor_risk_id, status
+       FROM risk_links
+      WHERE organization_id = :organizationId
+        AND relation_type = 'inherits_from'
+        AND (source_risk_id IN (:riskIds) OR target_risk_id IN (:riskIds))`,
+    { replacements: { organizationId, riskIds }, type: QueryTypes.SELECT },
+  );
+
+  // The `risk_links_one_target` CHECK guarantees exactly one of the three is
+  // non-null, so the first match is the only match.
+  return (rows as any[]).map((row) => {
+    const [parentRiskId, parentEntityType]: [unknown, ParentEntityType] =
+      row.target_model_risk_id != null
+        ? [row.target_model_risk_id, "model_risk"]
+        : row.target_vendor_risk_id != null
+          ? [row.target_vendor_risk_id, "vendor_risk"]
+          : [row.target_risk_id, "risk"];
+
+    return {
+      childRiskId: toNumber(row.source_risk_id),
+      parentRiskId: toNumber(parentRiskId),
+      parentEntityType,
+      status: row.status as RiskLinkStatus,
+    };
+  });
+}
+
+export interface CreateAgentHierarchyLinkInput {
+  organizationId: number;
+  childRiskId: number;
+  /** C4 made parents polymorphic; C6 made the agent path able to write one. */
+  parent: HierarchyParent;
+  /** The model's own one-line justification, 15-120 chars by schema. */
+  reason: string;
+}
+
+/**
+ * Writes one agent proposal as a `suggested` / `agent` row.
+ *
+ * A fourth query rather than a flag on `upsertRiskLinkQuery` or
+ * `createUserRiskLinkQuery`: the first hardcodes `related_to`/`derived` and
+ * exists to be re-run by the scoring engine, the second hardcodes
+ * `confirmed`/`user` and stamps `decided_at`. An agent row is neither — it is
+ * an undecided proposal, so `decided_at` stays NULL and `score` stays at its
+ * column default of 0. §9 of the design stops the frontend showing that 0.
+ *
+ * The reason travels in the existing `reasons` column as a single signal with
+ * `weight: 0`, which is what the panel's `reasonLabel` already knows how to
+ * render.
+ *
+ * `ON CONFLICT DO NOTHING` returns null on a pair that already has a row of
+ * this relation type. That should not happen — rule 4 of the filter drops those
+ * before they get here — but two components can only be processed concurrently,
+ * so the constraint stays the last word.
+ *
+ * A cross-entity parent goes to its own target column and carries its own
+ * signal (`cross_entity_hierarchy`); a plain risk parent is unchanged.
+ */
+export async function createAgentHierarchyLinkQuery(
+  input: CreateAgentHierarchyLinkInput,
+): Promise<number | null> {
+  const targetColumn =
+    input.parent.entityType === "model_risk"
+      ? "target_model_risk_id"
+      : input.parent.entityType === "vendor_risk"
+        ? "target_vendor_risk_id"
+        : "target_risk_id";
+  const conflictTarget =
+    input.parent.entityType === "risk"
+      ? "(source_risk_id, target_risk_id, relation_type)"
+      : `(source_risk_id, ${targetColumn}, relation_type) WHERE ${targetColumn} IS NOT NULL`;
+
+  // C6 §4.3: the signal is what lets the precision report tell a cross-entity
+  // suggestion from a project-risk one. Both land in the same source/relation
+  // bucket, so without it neither can be measured.
+  const reasons: LinkSignal[] = [
+    {
+      signal: input.parent.entityType === "risk" ? "hierarchy" : "cross_entity_hierarchy",
+      weight: 0,
+      detail: input.reason,
+    },
+  ];
+
+  const rows = await sequelize.query(
+    `INSERT INTO risk_links (organization_id, source_risk_id, ${targetColumn},
+                             relation_type, status, source, reasons, created_at)
+     VALUES (:organizationId, :childRiskId, :parentId,
+             'inherits_from', 'suggested', 'agent', CAST(:reasons AS JSONB), NOW())
+     ON CONFLICT ${conflictTarget} DO NOTHING
+     RETURNING id`,
+    {
+      replacements: {
+        organizationId: input.organizationId,
+        childRiskId: input.childRiskId,
+        parentId: input.parent.id,
+        reasons: JSON.stringify(reasons),
+      },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  const row = (rows as { id: number }[])[0];
+  return row ? toNumber(row.id) : null;
+}
+
+export interface CreateUserRiskLinkInput {
+  organizationId: number;
+  sourceRiskId: number;
+  target: HierarchyParent;
+  relationType: RiskLinkRelationType;
+  userId: number;
+}
+
+/**
+ * Write a human-asserted link. `confirmed` + `user` makes the row immune to the
+ * recompute prune on both of that prune's two conditions. `score` and `reasons`
+ * are left to their column defaults (0, []) — a human link has no score.
+ *
+ * Returns null when the pair already exists: the ON CONFLICT names
+ * `risk_links_unique`, so a duplicate pair is absorbed here rather than raised.
+ *
+ * It does NOT absorb `risk_links_single_parent_idx` — a different constraint,
+ * which raises. The controller catches that one by name; see
+ * `isSingleParentViolation` in riskLinks.ctrl.ts.
+ */
+export async function createUserRiskLinkQuery(
+  input: CreateUserRiskLinkInput,
+): Promise<number | null> {
+  const targetColumn =
+    input.target.entityType === "model_risk"
+      ? "target_model_risk_id"
+      : input.target.entityType === "vendor_risk"
+        ? "target_vendor_risk_id"
+        : "target_risk_id";
+  const conflictTarget =
+    input.target.entityType === "risk"
+      ? "(source_risk_id, target_risk_id, relation_type)"
+      : `(source_risk_id, ${targetColumn}, relation_type) WHERE ${targetColumn} IS NOT NULL`;
+
+  const [rows] = await sequelize.query(
+    `INSERT INTO risk_links
+       (organization_id, source_risk_id, ${targetColumn}, relation_type,
+        status, source, created_by_user_id, decided_by_user_id, decided_at)
+     VALUES (:organizationId, :sourceRiskId, :targetId, :relationType,
+             'confirmed', 'user', :userId, :userId, NOW())
+     ON CONFLICT ${conflictTarget} DO NOTHING
+     RETURNING id`,
+    {
+      replacements: {
+        organizationId: input.organizationId,
+        sourceRiskId: input.sourceRiskId,
+        targetId: input.target.id,
+        relationType: input.relationType,
+        userId: input.userId,
+      },
+    },
+  );
+  const row = (rows as { id: number }[])[0];
+  return row ? row.id : null;
+}
+
+/** Refresh score and reasons on an edge the recompute is keeping but not upserting. */
+export async function updateRiskLinkScoreQuery(
+  id: number,
+  organizationId: number,
+  score: number,
+  reasons: LinkSignal[],
+  transaction: Transaction,
+): Promise<void> {
+  await sequelize.query(
+    `UPDATE risk_links
+     SET score = :score,
+         reasons = CAST(:reasons AS JSONB),
+         last_computed_at = NOW(),
+         updated_at = NOW()
+     WHERE id = :id AND organization_id = :organizationId`,
+    {
+      replacements: { id, organizationId, score, reasons: JSON.stringify(reasons) },
+      type: QueryTypes.UPDATE,
+      transaction,
+    },
+  );
+}
+
+/**
+ * Prune stale suggestions. The source/status predicate is belt-and-braces: the
+ * caller already filtered, but a confirmed edge must never be deletable here.
+ */
+export async function deleteRiskLinksQuery(
+  ids: number[],
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> {
+  if (ids.length === 0) return;
+  await sequelize.query(
+    `DELETE FROM risk_links
+     WHERE organization_id = :organizationId
+       AND id IN (:ids)
+       AND source = 'derived'
+       AND status = 'suggested'`,
+    {
+      replacements: { organizationId, ids },
+      type: QueryTypes.DELETE,
+      transaction,
+    },
+  );
+}
+
+export interface RiskLinkWithRelated extends RiskLinkRow {
+  related_id: number;
+  /** Which table the parent lives in. Populated by the query below. */
+  related_entity_type: ParentEntityType;
+  related_risk_name: string | null;
+  related_risk_level: string | null;
+  related_risk_owner: number | null;
+  /** Set only when the related risk is a vendor risk on the vendor panel. */
+  related_vendor_name?: string | null;
+}
+
+/**
+ * Every visible edge for one risk, in either direction.
+ *
+ * R7: edges outlive a soft-deleted risk, so the read — not the write — is what
+ * hides them. Both endpoints are joined and both are filtered: `related` so a
+ * deleted partner disappears from the list, `subject` so a deleted subject
+ * returns an empty list rather than its old neighbours.
+ */
+export async function getRiskLinksForRiskQuery(
+  organizationId: number,
+  riskId: number,
+  statuses: RiskLinkStatus[],
+): Promise<RiskLinkWithRelated[]> {
+  const rows = await sequelize.query(
+    `SELECT l.*,
+            COALESCE(mr.id, vr.id, related.id) AS related_id,
+            CASE
+              WHEN l.target_model_risk_id  IS NOT NULL THEN 'model_risk'
+              WHEN l.target_vendor_risk_id IS NOT NULL THEN 'vendor_risk'
+              ELSE 'risk'
+            END AS related_entity_type,
+            COALESCE(
+              related.risk_name,
+              NULLIF(mr.risk_name, ''),
+              NULLIF(LEFT(vr.risk_description, 80), ''),
+              CASE
+                WHEN l.target_model_risk_id IS NOT NULL THEN 'Untitled model risk'
+                WHEN l.target_vendor_risk_id IS NOT NULL THEN 'Untitled vendor risk'
+              END
+            ) AS related_risk_name,
+            COALESCE(
+              related.risk_level_autocalculated::text,
+              mr.risk_level::text,
+              vr.risk_level
+            ) AS related_risk_level,
+            COALESCE(related.risk_owner, mr.owner, vr.action_owner) AS related_risk_owner
+     FROM risk_links l
+     LEFT JOIN risks related
+            ON related.id = CASE WHEN l.source_risk_id = :riskId
+                                 THEN l.target_risk_id ELSE l.source_risk_id END
+           AND related.organization_id = :organizationId
+           AND related.is_deleted = false
+     LEFT JOIN model_risks mr
+            ON mr.id = l.target_model_risk_id
+           AND mr.organization_id = :organizationId
+           AND mr.is_deleted = false
+     LEFT JOIN vendorrisks vr
+            ON vr.id = l.target_vendor_risk_id
+           AND vr.organization_id = :organizationId
+           AND vr.is_deleted = false
+     JOIN risks subject ON subject.id = :riskId
+     WHERE l.organization_id = :organizationId
+       AND (l.source_risk_id = :riskId OR l.target_risk_id = :riskId)
+       AND subject.organization_id = :organizationId
+       AND subject.is_deleted = false
+       AND l.status IN (:statuses)
+       AND COALESCE(related.id, mr.id, vr.id) IS NOT NULL
+     ORDER BY l.score DESC, COALESCE(mr.id, vr.id, related.id) ASC`,
+    { replacements: { organizationId, riskId, statuses }, type: QueryTypes.SELECT },
+  );
+
+  return (rows as any[]).map((row) => ({
+    ...toLinkRow(row),
+    related_id: row.related_id,
+    related_entity_type: row.related_entity_type,
+    related_risk_name: row.related_risk_name ?? null,
+    related_risk_level: row.related_risk_level ?? null,
+    related_risk_owner: row.related_risk_owner ?? null,
+  }));
+}
+
+/**
+ * Everything linked to one vendor risk: the project risks that inherit from it
+ * (`inherits_from`, the vendor risk is the parent) and the vendor risks related
+ * to it (`related_to` pairs stored with `source_vendor_risk_id`).
+ *
+ * Same R7 rule as getRiskLinksForRiskQuery: a soft-deleted partner drops out of
+ * the list, and a soft-deleted subject returns nothing.
+ */
+export async function getRiskLinksForVendorRiskQuery(
+  organizationId: number,
+  vendorRiskId: number,
+  statuses: RiskLinkStatus[],
+): Promise<RiskLinkWithRelated[]> {
+  const rows = await sequelize.query(
+    `SELECT l.*,
+            child.id AS related_id,
+            'risk' AS related_entity_type,
+            child.risk_name AS related_risk_name,
+            child.risk_level_autocalculated::text AS related_risk_level,
+            child.risk_owner AS related_risk_owner,
+            NULL::text AS related_vendor_name
+       FROM risk_links l
+       JOIN risks child
+         ON child.id = l.source_risk_id
+        AND child.organization_id = :organizationId
+        AND child.is_deleted = false
+       JOIN vendorrisks subject
+         ON subject.id = l.target_vendor_risk_id
+        AND subject.organization_id = :organizationId
+        AND subject.is_deleted = false
+      WHERE l.organization_id = :organizationId
+        AND l.target_vendor_risk_id = :vendorRiskId
+        AND l.relation_type = 'inherits_from'
+        AND l.status IN (:statuses)
+
+     UNION ALL
+
+     SELECT l.*,
+            other.id AS related_id,
+            'vendor_risk' AS related_entity_type,
+            COALESCE(NULLIF(LEFT(other.risk_description, 80), ''), 'Untitled vendor risk')
+              AS related_risk_name,
+            other.risk_level AS related_risk_level,
+            other.action_owner AS related_risk_owner,
+            vendor.vendor_name AS related_vendor_name
+       FROM risk_links l
+       JOIN vendorrisks other
+         ON other.id = CASE WHEN l.source_vendor_risk_id = :vendorRiskId
+                            THEN l.target_vendor_risk_id ELSE l.source_vendor_risk_id END
+        AND other.organization_id = :organizationId
+        AND other.is_deleted = false
+       LEFT JOIN vendors vendor
+         ON vendor.id = other.vendor_id
+        AND vendor.organization_id = :organizationId
+       JOIN vendorrisks subject
+         ON subject.id = :vendorRiskId
+        AND subject.organization_id = :organizationId
+        AND subject.is_deleted = false
+      WHERE l.organization_id = :organizationId
+        AND l.source_vendor_risk_id IS NOT NULL
+        AND (l.source_vendor_risk_id = :vendorRiskId OR l.target_vendor_risk_id = :vendorRiskId)
+        AND l.status IN (:statuses)
+
+      ORDER BY score DESC, related_entity_type, related_id`,
+    { replacements: { organizationId, vendorRiskId, statuses }, type: QueryTypes.SELECT },
+  );
+
+  return (rows as any[]).map((row) => ({
+    ...toLinkRow(row),
+    related_id: row.related_id,
+    related_entity_type: row.related_entity_type,
+    related_risk_name: row.related_risk_name ?? null,
+    related_risk_level: row.related_risk_level ?? null,
+    related_risk_owner: row.related_risk_owner ?? null,
+    related_vendor_name: row.related_vendor_name ?? null,
+  }));
+}
+
+/** A project risk that sits in a project the vendor is attached to. */
+export interface VendorRiskChildCandidate {
+  id: number;
+  projects: string[];
+}
+
+/**
+ * Ranking data for the vendor panel's link picker: the project risks in the
+ * projects this vendor serves, with those project titles. The mirror of
+ * getSharedProjectCandidatesQuery, which ranks vendor parents for a project
+ * risk over the same `vendors_projects` join.
+ */
+export async function getVendorRiskChildCandidatesQuery(
+  organizationId: number,
+  vendorRiskId: number,
+): Promise<VendorRiskChildCandidate[]> {
+  const rows = await sequelize.query(
+    `SELECT DISTINCT child.id AS id, p.project_title AS project_title
+       FROM vendorrisks vr
+       JOIN vendors_projects vp
+         ON vp.vendor_id = vr.vendor_id
+        AND vp.organization_id = :organizationId
+       JOIN projects_risks pr
+         ON pr.project_id = vp.project_id
+        AND pr.organization_id = :organizationId
+       JOIN risks child
+         ON child.id = pr.risk_id
+        AND child.organization_id = :organizationId
+        AND child.is_deleted = false
+       JOIN projects p ON p.id = vp.project_id
+      WHERE vr.id = :vendorRiskId
+        AND vr.organization_id = :organizationId
+        AND vr.is_deleted = false
+      ORDER BY child.id, p.project_title`,
+    { replacements: { organizationId, vendorRiskId }, type: QueryTypes.SELECT },
+  );
+
+  const grouped = new Map<number, VendorRiskChildCandidate>();
+  for (const row of rows as { id: number; project_title: string }[]) {
+    const entry = grouped.get(row.id);
+    if (entry) entry.projects.push(row.project_title);
+    else grouped.set(row.id, { id: row.id, projects: [row.project_title] });
+  }
+  return [...grouped.values()];
+}
+
+/** Hard ceiling on edges returned to the graph page. */
+export const RISK_GRAPH_EDGE_CAP = 500;
+
+export interface RiskGraphEdgeRow {
+  id: number;
+  relation_type: RiskLinkRelationType;
+  status: RiskLinkStatus;
+  score: number;
+  parent_level_changed_at: string | null;
+  /** "vendor_risk" only on a related_to pair of two vendor risks. */
+  source_entity_type: "risk" | "vendor_risk";
+  source_id: number;
+  target_entity_type: ParentEntityType;
+  target_id: number;
+  source_name: string | null;
+  source_level: string | null;
+  target_name: string | null;
+  target_level: string | null;
+  /** Set only when that end is a vendor risk: lets the graph filter by vendor. */
+  source_vendor_id: number | null;
+  source_vendor_name: string | null;
+  target_vendor_id: number | null;
+  target_vendor_name: string | null;
+}
+
+/**
+ * Every visible edge in the org, both endpoints named.
+ *
+ * Ordered so `inherits_from` sorts before `related_to`: if an org ever exceeds
+ * the cap, the inheritance skeleton is what survives truncation.
+ *
+ * Like getRiskLinksForRiskQuery, the read is what hides a soft-deleted risk —
+ * edges outlive the rows they point at.
+ */
+export async function getRiskGraphQuery(
+  organizationId: number,
+  statuses: RiskLinkStatus[],
+): Promise<RiskGraphEdgeRow[]> {
+  const rows = await sequelize.query(
+    `SELECT l.id, l.relation_type, l.status, l.score, l.parent_level_changed_at,
+            CASE WHEN l.source_vendor_risk_id IS NOT NULL THEN 'vendor_risk' ELSE 'risk' END
+              AS source_entity_type,
+            COALESCE(l.source_vendor_risk_id, l.source_risk_id) AS source_id,
+            CASE
+              WHEN l.target_model_risk_id  IS NOT NULL THEN 'model_risk'
+              WHEN l.target_vendor_risk_id IS NOT NULL THEN 'vendor_risk'
+              ELSE 'risk'
+            END AS target_entity_type,
+            COALESCE(l.target_model_risk_id, l.target_vendor_risk_id, l.target_risk_id) AS target_id,
+            COALESCE(
+              src.risk_name,
+              NULLIF(LEFT(svr.risk_description, 80), ''),
+              CASE WHEN l.source_vendor_risk_id IS NOT NULL THEN 'Untitled vendor risk' END
+            ) AS source_name,
+            COALESCE(src.risk_level_autocalculated::text, svr.risk_level) AS source_level,
+            svr.vendor_id AS source_vendor_id,
+            svendor.vendor_name AS source_vendor_name,
+            COALESCE(
+              tgt.risk_name,
+              NULLIF(mr.risk_name, ''),
+              NULLIF(LEFT(vr.risk_description, 80), ''),
+              CASE
+                WHEN l.target_model_risk_id  IS NOT NULL THEN 'Untitled model risk'
+                WHEN l.target_vendor_risk_id IS NOT NULL THEN 'Untitled vendor risk'
+              END
+            ) AS target_name,
+            COALESCE(tgt.risk_level_autocalculated::text, mr.risk_level::text, vr.risk_level)
+              AS target_level,
+            vr.vendor_id AS target_vendor_id,
+            vendor.vendor_name AS target_vendor_name
+     FROM risk_links l
+     LEFT JOIN risks src      ON src.id = l.source_risk_id
+                             AND src.organization_id = :organizationId
+                             AND src.is_deleted = false
+     LEFT JOIN vendorrisks svr ON svr.id = l.source_vendor_risk_id
+                             AND svr.organization_id = :organizationId
+                             AND svr.is_deleted = false
+     LEFT JOIN vendors svendor ON svendor.id = svr.vendor_id
+                             AND svendor.organization_id = :organizationId
+     LEFT JOIN risks tgt      ON tgt.id = l.target_risk_id
+                             AND tgt.organization_id = :organizationId
+                             AND tgt.is_deleted = false
+     LEFT JOIN model_risks mr ON mr.id = l.target_model_risk_id
+                             AND mr.organization_id = :organizationId
+                             AND mr.is_deleted = false
+     LEFT JOIN vendorrisks vr ON vr.id = l.target_vendor_risk_id
+                             AND vr.organization_id = :organizationId
+                             AND vr.is_deleted = false
+     LEFT JOIN vendors vendor ON vendor.id = vr.vendor_id
+                             AND vendor.organization_id = :organizationId
+     WHERE l.organization_id = :organizationId
+       AND l.status IN (:statuses)
+       AND COALESCE(src.id, svr.id) IS NOT NULL
+       AND COALESCE(tgt.id, mr.id, vr.id) IS NOT NULL
+     ORDER BY l.relation_type, l.id
+     LIMIT :limit`,
+    {
+      replacements: { organizationId, statuses, limit: RISK_GRAPH_EDGE_CAP + 1 },
+      type: QueryTypes.SELECT,
+    },
+  );
+  // `score` is numeric(6,3) and pg hands it back as a string. This file's own
+  // rule (see `toNumber` at the top) is that nothing leaves here uncoerced.
+  return (rows as any[]).map((row) => ({
+    ...row,
+    source_id: toNumber(row.source_id),
+    target_id: toNumber(row.target_id),
+    score: toNumber(row.score),
+  }));
+}
+
+export interface DismissalSignalRow {
+  signal: string;
+  decided: number;
+  dismissed: number;
+  /** "none" when most dismissals of this signal gave no reason. */
+  topReason: string | null;
+}
+
+export interface DismissalReasonRow {
+  relationType: RiskLinkRelationType;
+  source: RiskLinkSource;
+  status: "confirmed" | "dismissed";
+  /** Null is a legitimate value: dismissed without giving a reason. */
+  dismissReason: DismissReason | null;
+  count: number;
+}
+
+export interface DismissalNote {
+  id: number;
+  relationType: RiskLinkRelationType;
+  source: RiskLinkSource;
+  dismissReason: DismissReason | null;
+  dismissNote: string;
+  decidedAt: string | null;
+  sourceName: string | null;
+}
+
+export interface DismissalAnalytics {
+  signals: DismissalSignalRow[];
+  reasons: DismissalReasonRow[];
+  notes: DismissalNote[];
+}
+
+/**
+ * Three plain aggregates over decided links, for tuning the suggester: which
+ * engine signal humans throw away, why, and what they wrote about it.
+ * Vendor risk pairs count like any other link: their source is a vendor risk,
+ * so each query takes whichever source end is live.
+ *
+ * Deliberately three queries, not one CTE: each reads risk_links once and a
+ * seq scan is the correct plan at this row count (see the dismiss-reason
+ * migration comment). No score anywhere: inherits_from agent rows all carry
+ * score 0 and related_to scores are unbounded, so there is no range to band.
+ */
+export async function getDismissalAnalyticsQuery(
+  organizationId: number,
+): Promise<DismissalAnalytics> {
+  const signalRows = (await sequelize.query(
+    `SELECT e.obj->>'signal'                          AS signal,
+            COUNT(*)::int                             AS decided,
+            COUNT(*) FILTER (WHERE l.status = 'dismissed')::int AS dismissed,
+            mode() WITHIN GROUP (ORDER BY COALESCE(l.dismiss_reason, 'none'))
+              FILTER (WHERE l.status = 'dismissed')   AS top_reason
+     FROM risk_links l
+     LEFT JOIN risks src ON src.id = l.source_risk_id
+                        AND src.organization_id = :organizationId
+                        AND src.is_deleted = false
+     LEFT JOIN vendorrisks svr ON svr.id = l.source_vendor_risk_id
+                              AND svr.organization_id = :organizationId
+                              AND svr.is_deleted = false
+     CROSS JOIN LATERAL jsonb_array_elements(
+       CASE WHEN jsonb_typeof(l.reasons) = 'array' THEN l.reasons ELSE '[]'::jsonb END
+     ) AS e(obj)
+      WHERE l.organization_id = :organizationId
+        AND COALESCE(src.id, svr.id) IS NOT NULL
+        AND l.status IN ('confirmed', 'dismissed')
+        AND l.source IN ('derived', 'agent')
+        AND e.obj->>'signal' IS NOT NULL
+      GROUP BY 1
+      ORDER BY dismissed DESC, 1`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
+  )) as any[];
+
+  const reasonRows = (await sequelize.query(
+    `SELECT l.relation_type, l.source, l.status, l.dismiss_reason, COUNT(*)::int AS count
+     FROM risk_links l
+     LEFT JOIN risks src ON src.id = l.source_risk_id
+                        AND src.organization_id = :organizationId
+                        AND src.is_deleted = false
+     LEFT JOIN vendorrisks svr ON svr.id = l.source_vendor_risk_id
+                              AND svr.organization_id = :organizationId
+                              AND svr.is_deleted = false
+      WHERE l.organization_id = :organizationId
+        AND COALESCE(src.id, svr.id) IS NOT NULL
+        AND l.status IN ('confirmed', 'dismissed')
+        AND l.source IN ('derived', 'agent')
+      GROUP BY 1, 2, 3, 4
+      ORDER BY 1, 2, 3, count DESC`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
+  )) as any[];
+
+  const noteRows = (await sequelize.query(
+    `SELECT l.id, l.relation_type, l.source, l.dismiss_reason, l.dismiss_note,
+            l.decided_at,
+            COALESCE(src.risk_name, NULLIF(LEFT(svr.risk_description, 80), '')) AS source_name
+     FROM risk_links l
+     LEFT JOIN risks src ON src.id = l.source_risk_id
+                        AND src.organization_id = :organizationId
+                        AND src.is_deleted = false
+     LEFT JOIN vendorrisks svr ON svr.id = l.source_vendor_risk_id
+                              AND svr.organization_id = :organizationId
+                              AND svr.is_deleted = false
+     WHERE l.organization_id = :organizationId
+       AND COALESCE(src.id, svr.id) IS NOT NULL
+       AND l.status = 'dismissed'
+       AND l.dismiss_note IS NOT NULL
+       AND l.dismiss_note <> ''
+     ORDER BY l.decided_at DESC NULLS LAST, l.id DESC
+     LIMIT 20`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
+  )) as any[];
+
+  return {
+    signals: signalRows.map((row) => ({
+      signal: row.signal,
+      decided: toNumber(row.decided),
+      dismissed: toNumber(row.dismissed),
+      topReason: row.top_reason ?? null,
+    })),
+    reasons: reasonRows.map((row) => ({
+      relationType: row.relation_type,
+      source: row.source,
+      status: row.status,
+      dismissReason: row.dismiss_reason ?? null,
+      count: toNumber(row.count),
+    })),
+    notes: noteRows.map((row) => ({
+      id: toNumber(row.id),
+      relationType: row.relation_type,
+      source: row.source,
+      dismissReason: row.dismiss_reason ?? null,
+      dismissNote: row.dismiss_note,
+      decidedAt: row.decided_at ?? null,
+      sourceName: row.source_name ?? null,
+    })),
+  };
+}
+
+export async function getRiskLinkByIdQuery(
+  id: number,
+  organizationId: number,
+): Promise<RiskLinkRow | null> {
+  const rows = await sequelize.query(
+    `SELECT * FROM risk_links WHERE id = :id AND organization_id = :organizationId`,
+    { replacements: { id, organizationId }, type: QueryTypes.SELECT },
+  );
+  const row = (rows as any[])[0];
+  return row ? toLinkRow(row) : null;
+}
+
+/** One end of a link, named the way the Linked risks panel names it. */
+export interface RiskLinkEndpoint {
+  entityType: ParentEntityType;
+  id: number;
+  name: string;
+}
+
+/**
+ * Both ends of a link, for writing history on each. `source` is the child of an
+ * `inherits_from` edge and the smaller id of a `related_to` pair. An end that
+ * is soft-deleted or outside the org comes back null.
+ */
+export type RiskLinkEnds = Pick<
+  RiskLinkRow,
+  | "source_risk_id"
+  | "source_vendor_risk_id"
+  | "target_risk_id"
+  | "target_model_risk_id"
+  | "target_vendor_risk_id"
+>;
+
+export async function getRiskLinkEndpointsQuery(
+  organizationId: number,
+  link: RiskLinkEnds,
+): Promise<{ source: RiskLinkEndpoint | null; target: RiskLinkEndpoint | null }> {
+  const rows = (await sequelize.query(
+    `SELECT 'risk' AS entity_type, id, COALESCE(NULLIF(risk_name, ''), 'Risk ' || id) AS name
+       FROM risks
+      WHERE id IN (:riskIds) AND organization_id = :organizationId AND is_deleted = false
+     UNION ALL
+     SELECT 'model_risk', id, COALESCE(NULLIF(risk_name, ''), 'Untitled model risk')
+       FROM model_risks
+      WHERE id = :modelRiskId AND organization_id = :organizationId AND is_deleted = false
+     UNION ALL
+     SELECT 'vendor_risk', id, COALESCE(NULLIF(LEFT(risk_description, 80), ''), 'Untitled vendor risk')
+       FROM vendorrisks
+      WHERE id IN (:vendorRiskIds) AND organization_id = :organizationId AND is_deleted = false`,
+    {
+      replacements: {
+        organizationId,
+        // -1 keeps `IN (...)` valid when an end is not in that table.
+        riskIds: [link.source_risk_id, link.target_risk_id].filter((v) => v != null).concat(-1),
+        modelRiskId: link.target_model_risk_id ?? -1,
+        vendorRiskIds: [link.source_vendor_risk_id, link.target_vendor_risk_id]
+          .filter((v) => v != null)
+          .concat(-1),
+      },
+      type: QueryTypes.SELECT,
+    },
+  )) as Array<{ entity_type: ParentEntityType; id: number; name: string }>;
+
+  const find = (entityType: ParentEntityType, id: number | null): RiskLinkEndpoint | null => {
+    const row =
+      id == null ? undefined : rows.find((r) => r.entity_type === entityType && r.id === id);
+    return row ? { entityType, id: row.id, name: row.name } : null;
+  };
+
+  return {
+    source:
+      link.source_risk_id != null
+        ? find("risk", link.source_risk_id)
+        : find("vendor_risk", link.source_vendor_risk_id),
+    target:
+      find("risk", link.target_risk_id) ??
+      find("model_risk", link.target_model_risk_id) ??
+      find("vendor_risk", link.target_vendor_risk_id),
+  };
+}
+
+/**
+ * One vendor or model risk that shares at least one project with a given
+ * project risk. C5 is a ranking hint for the link picker: nothing here is
+ * written, scored, or thresholded — a candidate either shares a project or
+ * does not.
+ */
+export interface SharedProjectCandidate {
+  entityType: Exclude<ParentEntityType, "risk">;
+  id: number;
+  /**
+   * What to show for it. C5's consumer already held the names it was
+   * decorating; C6's prompt does not, and an id alone is not something a model
+   * can judge. Same display expressions getRiskLinksForRiskQuery settled on —
+   * `vendorrisks` has no name column.
+   */
+  name: string;
+  projects: string[];
+}
+
+/**
+ * Shared project is the only honest cross-entity signal: `vendorrisks` carries
+ * none of the fields the tier-0 scorer compares, and the two `risk_category`
+ * enums are disjoint vocabularies.
+ *
+ * `DISTINCT` is load-bearing on the model branch —
+ * `model_inventories_projects_frameworks` is keyed per framework, so one model
+ * in one project under three frameworks would otherwise appear three times.
+ *
+ * The org filters on the junction tables sit on nullable columns on purpose.
+ * A NULL there makes the row invisible, which is the correct direction for a
+ * tenant boundary and matches the rest of the codebase. The subject's own
+ * ownership is anchored to `risks.organization_id`, which is NOT NULL, so it
+ * does not depend on the nullable `projects_risks.organization_id`.
+ */
+export async function getSharedProjectCandidatesQuery(
+  organizationId: number,
+  riskId: number,
+): Promise<SharedProjectCandidate[]> {
+  const rows = await sequelize.query(
+    `WITH subject_projects AS (
+       SELECT pr.project_id
+         FROM projects_risks pr
+         JOIN risks subject
+           ON subject.id = pr.risk_id
+          AND subject.organization_id = :organizationId
+          AND subject.is_deleted = false
+        WHERE pr.risk_id = :riskId
+          AND pr.organization_id = :organizationId
+     )
+     SELECT DISTINCT 'vendor_risk' AS entity_type, vr.id AS id,
+            LEFT(vr.risk_description, 80) AS name, p.project_title AS project_title
+       FROM vendorrisks vr
+       JOIN vendors_projects vp
+         ON vp.vendor_id = vr.vendor_id
+        AND vp.organization_id = :organizationId
+       JOIN subject_projects sp ON sp.project_id = vp.project_id
+       JOIN projects p          ON p.id          = vp.project_id
+      WHERE vr.organization_id = :organizationId
+        AND vr.is_deleted = false
+
+     UNION ALL
+
+     SELECT DISTINCT 'model_risk', mr.id, mr.risk_name, p.project_title
+       FROM model_risks mr
+       JOIN model_inventories_projects_frameworks mp
+         ON mp.model_inventory_id = mr.model_id
+        AND mp.organization_id = :organizationId
+       JOIN subject_projects sp ON sp.project_id = mp.project_id
+       JOIN projects p          ON p.id          = mp.project_id
+      WHERE mr.organization_id = :organizationId
+        AND mr.is_deleted = false
+
+     ORDER BY entity_type, id, project_title`,
+    { replacements: { organizationId, riskId }, type: QueryTypes.SELECT },
+  );
+
+  // DISTINCT already guarantees one row per (entity, id, title), so the titles
+  // can be pushed without a second de-duplication pass. The map preserves row
+  // order, so the returned array follows ORDER BY entity_type, which sorts
+  // "model_risk" BEFORE "vendor_risk". The vendor branch is written first in
+  // the SQL, but that is not the output order — callers join by id and must
+  // never assert a vendor-first array.
+  const grouped = new Map<string, SharedProjectCandidate>();
+  for (const row of rows as any[]) {
+    const key = `${row.entity_type}:${row.id}`;
+    const entry = grouped.get(key);
+    if (entry) {
+      entry.projects.push(row.project_title);
+    } else {
+      grouped.set(key, {
+        entityType: row.entity_type,
+        id: row.id,
+        name: row.name,
+        projects: [row.project_title],
+      });
+    }
+  }
+  return [...grouped.values()];
+}
+
+/**
+ * Record a human decision. `decidedByUserId` of null is the explicit undo
+ * (dismissed -> suggested): it clears decided_at too, so the edge looks
+ * untouched again and a later recompute may prune it normally.
+ *
+ * Both dismissal columns are written on EVERY call, and both parameters are
+ * required rather than defaulted. That is the clearing rule (C3 §3.5) made
+ * structural: leaving `dismissed` passes nulls, so a stale reason cannot
+ * survive onto a confirmed row, and a future second caller cannot forget.
+ */
+export async function updateRiskLinkStatusQuery(
+  id: number,
+  organizationId: number,
+  status: RiskLinkStatus,
+  decidedByUserId: number | null,
+  dismissReason: DismissReason | null,
+  dismissNote: string | null,
+  /**
+   * The status the caller read. When given, the row changes only if it still
+   * has that status, so a link pruned or decided by someone else in between is
+   * left alone and the caller learns of it from the `false` result.
+   */
+  fromStatus?: RiskLinkStatus,
+): Promise<boolean> {
+  const rows = await sequelize.query(
+    `UPDATE risk_links
+     SET status = :status,
+         decided_by_user_id = :decidedByUserId,
+         decided_at = CASE WHEN :decidedByUserId IS NULL THEN NULL ELSE NOW() END,
+         dismiss_reason = :dismissReason,
+         dismiss_note = :dismissNote,
+         updated_at = NOW()
+     WHERE id = :id AND organization_id = :organizationId
+       AND (CAST(:fromStatus AS text) IS NULL OR CAST(status AS text) = :fromStatus)
+     RETURNING id`,
+    {
+      replacements: {
+        id,
+        organizationId,
+        status,
+        decidedByUserId,
+        dismissReason,
+        dismissNote,
+        fromStatus: fromStatus ?? null,
+      },
+      type: QueryTypes.SELECT,
+    },
+  );
+  return rows.length > 0;
+}
+
+/**
+ * Project risks that have model-risk link candidates they have never seen.
+ *
+ * A (risk, model_risk) pair is a candidate when the two share a project via
+ * the model inventory and no `risk_links` row exists for the pair yet. The
+ * NOT EXISTS is status-agnostic on purpose: a dismissed link is a human saying
+ * no, and re-proposing it is exactly what the dismissal analytics discourage.
+ *
+ * `COUNT(DISTINCT mr.id)` absorbs the two row shapes of
+ * `model_inventories_projects_frameworks` (with and without framework_id); a
+ * naive COUNT(*) would double-count. `risk_owner` is selected but not filtered
+ * — an ownerless risk is a real candidate, it just cannot be notified.
+ *
+ * A risk that cannot take a model-risk parent is left out — one that already
+ * has a confirmed parent (single-parent rule) or has children of its own
+ * (two-level rule) — exactly as getVendorRiskCandidatesQuery does.
+ */
+export interface ModelRiskCandidateRow {
+  risk_id: number;
+  risk_name: string;
+  risk_owner: number | null;
+  candidate_count: number;
+}
+
+export async function getModelRiskCandidatesQuery(input: {
+  organizationId: number;
+  modelInventoryId: number;
+  projectIds: number[];
+  modelRiskIds?: number[];
+  limit: number;
+}): Promise<ModelRiskCandidateRow[]> {
+  const { organizationId, modelInventoryId, projectIds, modelRiskIds, limit } = input;
+  // IN () is a syntax error in Postgres and Sequelize renders an empty array
+  // as IN (NULL): never reach the database with an empty project list.
+  if (projectIds.length === 0) return [];
+
+  // Appended by concatenation, only when non-empty — never a toggle in SQL.
+  const modelRiskFilter =
+    modelRiskIds && modelRiskIds.length > 0 ? `AND mr.id IN (:modelRiskIds)` : "";
+
+  // Project-add triggers announce the whole (risk, model) context, so an
+  // already-announced pair must not consume LIMIT budget starving higher ids.
+  // Suppressed here (not just in JS) so LIMIT applies after dedup. Skipped for
+  // the model-risk-create path, whose novelty is per model-risk and is checked
+  // in JS against a finer-grained sent-record.
+  const announcedFilter =
+    modelRiskIds && modelRiskIds.length > 0
+      ? ""
+      : `AND NOT EXISTS (
+           SELECT 1
+             FROM notifications n
+            WHERE n.organization_id = :organizationId
+              AND n.user_id = r.risk_owner
+              AND n.type = 'model_risk_candidates'
+              AND n.entity_type = 'risk'
+              AND n.entity_id = r.id
+              AND n.metadata->>'model_inventory_id' = :modelInventoryId::text
+         )`;
+
+  const rows = await sequelize.query(
+    `SELECT r.id                  AS risk_id,
+            r.risk_name           AS risk_name,
+            r.risk_owner          AS risk_owner,
+            COUNT(DISTINCT mr.id) AS candidate_count
+       FROM projects_risks pr
+       JOIN risks r
+         ON r.id = pr.risk_id
+        AND r.organization_id = :organizationId
+        AND r.is_deleted = false
+       JOIN model_inventories_projects_frameworks mp
+         ON mp.project_id = pr.project_id
+        AND mp.organization_id = :organizationId
+        AND mp.model_inventory_id = :modelInventoryId
+       JOIN model_risks mr
+         ON mr.model_id = mp.model_inventory_id
+        AND mr.organization_id = :organizationId
+        AND mr.is_deleted = false
+      WHERE pr.organization_id = :organizationId
+        AND pr.project_id IN (:projectIds)
+        ${modelRiskFilter}
+        AND NOT EXISTS (
+              SELECT 1
+                FROM risk_links l
+               WHERE l.organization_id      = :organizationId
+                 AND l.source_risk_id       = r.id
+                 AND l.target_model_risk_id = mr.id
+            )
+        ${CANNOT_TAKE_PARENT_SQL}
+        ${announcedFilter}
+      GROUP BY r.id, r.risk_name, r.risk_owner
+      -- Ownerless rows last: they can never be notified, so they must not
+      -- occupy LIMIT slots ahead of notifiable risks.
+      ORDER BY (r.risk_owner IS NULL), r.id
+      LIMIT :limit`,
+    {
+      replacements: { organizationId, modelInventoryId, projectIds, modelRiskIds, limit },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  return (rows as any[]).map((row) => ({
+    risk_id: row.risk_id,
+    risk_name: row.risk_name,
+    risk_owner: row.risk_owner ?? null,
+    candidate_count: toNumber(row.candidate_count),
+  }));
+}
+
+export interface VendorRiskCandidateRow {
+  risk_id: number;
+  risk_name: string;
+  risk_owner: number | null;
+  candidate_count: number;
+}
+
+/**
+ * Project risks in the given use cases that could inherit from this vendor's
+ * risks: the vendor counterpart of getModelRiskCandidatesQuery, with one
+ * difference. A risk that cannot take a vendor parent is left out — one that
+ * already has a confirmed parent (single-parent rule) or has children of its
+ * own (two-level rule). Telling its owner to "review the suggested links"
+ * would point at a link the server will refuse.
+ */
+export async function getVendorRiskCandidatesQuery(input: {
+  organizationId: number;
+  vendorId: number;
+  projectIds: number[];
+  vendorRiskIds?: number[];
+  limit: number;
+}): Promise<VendorRiskCandidateRow[]> {
+  const { organizationId, vendorId, projectIds, vendorRiskIds, limit } = input;
+  if (projectIds.length === 0) return [];
+
+  const vendorRiskFilter =
+    vendorRiskIds && vendorRiskIds.length > 0 ? `AND vr.id IN (:vendorRiskIds)` : "";
+
+  // Same split as the model query: a use-case trigger announces the whole
+  // (risk, vendor) context, so an announced pair is suppressed in SQL before
+  // LIMIT; a vendor-risk-create trigger is checked per vendor risk in JS.
+  const announcedFilter =
+    vendorRiskIds && vendorRiskIds.length > 0
+      ? ""
+      : `AND NOT EXISTS (
+           SELECT 1
+             FROM notifications n
+            WHERE n.organization_id = :organizationId
+              AND n.user_id = r.risk_owner
+              AND n.type = 'vendor_risk_candidates'
+              AND n.entity_type = 'risk'
+              AND n.entity_id = r.id
+              AND n.metadata->>'vendor_id' = :vendorId::text
+         )`;
+
+  const rows = await sequelize.query(
+    `SELECT r.id                  AS risk_id,
+            r.risk_name           AS risk_name,
+            r.risk_owner          AS risk_owner,
+            COUNT(DISTINCT vr.id) AS candidate_count
+       FROM projects_risks pr
+       JOIN risks r
+         ON r.id = pr.risk_id
+        AND r.organization_id = :organizationId
+        AND r.is_deleted = false
+       JOIN vendors_projects vp
+         ON vp.project_id = pr.project_id
+        AND vp.organization_id = :organizationId
+        AND vp.vendor_id = :vendorId
+       JOIN vendorrisks vr
+         ON vr.vendor_id = vp.vendor_id
+        AND vr.organization_id = :organizationId
+        AND vr.is_deleted = false
+      WHERE pr.organization_id = :organizationId
+        AND pr.project_id IN (:projectIds)
+        ${vendorRiskFilter}
+        AND NOT EXISTS (
+              SELECT 1
+                FROM risk_links l
+               WHERE l.organization_id       = :organizationId
+                 AND l.source_risk_id        = r.id
+                 AND l.target_vendor_risk_id = vr.id
+            )
+        ${CANNOT_TAKE_PARENT_SQL}
+        ${announcedFilter}
+      GROUP BY r.id, r.risk_name, r.risk_owner
+      -- Ownerless rows last: they can never be notified.
+      ORDER BY (r.risk_owner IS NULL), r.id
+      LIMIT :limit`,
+    {
+      replacements: { organizationId, vendorId, projectIds, vendorRiskIds, limit },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  return (rows as any[]).map((row) => ({
+    risk_id: row.risk_id,
+    risk_name: row.risk_name,
+    risk_owner: row.risk_owner ?? null,
+    candidate_count: toNumber(row.candidate_count),
+  }));
+}
+
+/** The use cases a vendor serves, and its name, for the candidate notices. */
+export async function getVendorNoticeContextQuery(
+  organizationId: number,
+  vendorId: number,
+): Promise<{ name: string; projectIds: number[] } | null> {
+  const rows = (await sequelize.query(
+    `SELECT v.vendor_name AS name,
+            COALESCE(ARRAY_AGG(vp.project_id) FILTER (WHERE vp.project_id IS NOT NULL), '{}')
+              AS project_ids
+       FROM vendors v
+       LEFT JOIN vendors_projects vp
+              ON vp.vendor_id = v.id
+             AND vp.organization_id = :organizationId
+      WHERE v.id = :vendorId
+        AND v.organization_id = :organizationId
+      GROUP BY v.vendor_name`,
+    { replacements: { organizationId, vendorId }, type: QueryTypes.SELECT },
+  )) as { name: string; project_ids: unknown[] }[];
+  if (rows.length === 0) return null;
+  return { name: rows[0].name, projectIds: (rows[0].project_ids ?? []).map(toNumber) };
+}
+
+/**
+ * Scan rows for the duplicate candidate report (F7). One read, no joins into
+ * the link tables — projects ride along for the `also_shares` context.
+ *
+ * Casts are load-bearing: `ai_lifecycle_phase` is a Postgres enum (trim/lower
+ * fail on it without `::text`) and `risk_category` is an array column (map it
+ * as an array in JS, never a string — category blocking depends on it).
+ */
+export interface DuplicateScanRow {
+  id: number;
+  risk_name: string;
+  risk_description: string | null;
+  risk_category: string[];
+  ai_lifecycle_phase: string | null;
+  risk_owner: number | null;
+  projects: number[];
+}
+
+export async function getDuplicateScanRowsQuery(
+  organizationId: number,
+  limit: number,
+): Promise<DuplicateScanRow[]> {
+  const rows = await sequelize.query(
+    `SELECT r.id,
+            r.risk_name,
+            r.risk_description,
+            r.risk_category::text[]         AS risk_category,
+            r.ai_lifecycle_phase::text      AS ai_lifecycle_phase,
+            r.risk_owner,
+            COALESCE(
+              (SELECT array_agg(DISTINCT pr.project_id)
+                 FROM projects_risks pr
+                WHERE pr.risk_id = r.id
+                  AND pr.organization_id = :organizationId),
+              ARRAY[]::integer[]
+            )                               AS projects
+       FROM risks r
+      WHERE r.organization_id = :organizationId
+        AND r.is_deleted = false
+      ORDER BY r.id
+      LIMIT :limit`,
+    {
+      replacements: { organizationId, limit },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  return (rows as any[]).map((row) => ({
+    id: row.id,
+    risk_name: row.risk_name,
+    risk_description: row.risk_description ?? null,
+    risk_category: Array.isArray(row.risk_category) ? row.risk_category : [],
+    ai_lifecycle_phase: row.ai_lifecycle_phase ?? null,
+    risk_owner: row.risk_owner ?? null,
+    projects: Array.isArray(row.projects) ? row.projects : [],
+  }));
+}
+
+/**
+ * Scan rows for the control coverage gap report (F8): per active risk, how
+ * many control-side links, how many assessment-side links, and how many of
+ * its projects have a framework attached.
+ *
+ * The two link CTEs are getStructuralNeighboursQuery's `element_links` CTE
+ * (above) split in two, minus nothing on the control side except
+ * `answers_eu__risks`, which rides alone and never counts as coverage. The
+ * column-name split (`projects_risks_id` holding a `risks.id`, except the two
+ * `custom_framework_*` tables using `risk_id`) is copied from there, not
+ * re-derived.
+ *
+ * ORDER BY uses the raw `risk_level_autocalculated` enum (declared in
+ * severity order, so DESC is worst-first with no CASE); `::text` appears only
+ * in the SELECT list, where an alphabetical sort would read
+ * High < Low < Medium < No < Very high.
+ */
+export interface CoverageScanRow {
+  id: number;
+  risk_name: string;
+  risk_owner: number | null;
+  risk_level: string | null;
+  mitigation_status: string | null;
+  control_link_count: number;
+  assessment_link_count: number;
+  framework_project_count: number;
+  projects: { id: number; name: string; has_framework: boolean }[];
+  /** Mirrors coverageState() in services/riskLinks/coverage.ts — keep in sync. */
+  state: "covered" | "gap" | "no_framework";
+  /** Honest per-state total across the whole org, even when capped. */
+  state_total: number;
+}
+
+export async function getCoverageScanRowsQuery(
+  organizationId: number,
+  maxRows: number,
+): Promise<CoverageScanRow[]> {
+  const rows = await sequelize.query(
+    `WITH control_links AS (
+       SELECT projects_risks_id AS risk_id FROM subcontrols_eu__risks             WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT projects_risks_id         FROM controls_eu__risks                 WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT projects_risks_id         FROM subclauses_iso__risks              WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT projects_risks_id         FROM subclauses_iso27001__risks         WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT projects_risks_id         FROM annexcategories_iso__risks         WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT projects_risks_id         FROM annexcontrols_iso27001__risks      WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT projects_risks_id         FROM nist_ai_rmf_subcategories__risks   WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT risk_id                   FROM custom_framework_level2_risks      WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT risk_id                   FROM custom_framework_level3_risks      WHERE organization_id = :organizationId
+     ),
+     assessment_links AS (
+       SELECT projects_risks_id AS risk_id FROM answers_eu__risks WHERE organization_id = :organizationId
+     ),
+     -- Aggregate once and join, instead of one correlated subquery per risk:
+     -- the per-risk form was O(risks x join_table) because the join tables'
+     -- PKs lead with the element id, so a risk_id = r.id predicate forced a
+     -- full index scan for every risk.
+     control_counts AS (
+       SELECT risk_id, COUNT(*) AS n FROM control_links GROUP BY risk_id
+     ),
+     assessment_counts AS (
+       SELECT risk_id, COUNT(*) AS n FROM assessment_links GROUP BY risk_id
+     ),
+     framework_counts AS (
+       SELECT pr.risk_id, COUNT(DISTINCT pr.project_id) AS n
+         FROM projects_risks pr
+         JOIN projects_frameworks pf
+           ON pf.project_id = pr.project_id AND pf.organization_id = :organizationId
+        WHERE pr.organization_id = :organizationId
+        GROUP BY pr.risk_id
+     ),
+     project_lists AS (
+       SELECT pr.risk_id,
+              json_agg(json_build_object(
+                'id', p.id,
+                'name', p.project_title,
+                'has_framework', EXISTS (
+                  SELECT 1 FROM projects_frameworks pf
+                  WHERE pf.project_id = p.id AND pf.organization_id = :organizationId
+                )
+              ) ORDER BY p.id) AS projects
+         FROM projects_risks pr
+         JOIN projects p ON p.id = pr.project_id AND p.organization_id = :organizationId
+        WHERE pr.organization_id = :organizationId
+        GROUP BY pr.risk_id
+     ),
+     scored AS (
+       SELECT r.id,
+              r.risk_name,
+              r.risk_owner,
+              r.risk_level_autocalculated,
+              r.risk_level_autocalculated::text AS risk_level,
+              r.mitigation_status::text         AS mitigation_status,
+              COALESCE(cc.n, 0) AS control_link_count,
+              COALESCE(ac.n, 0) AS assessment_link_count,
+              COALESCE(fc.n, 0) AS framework_project_count,
+              -- A project-less risk has no project_lists row, so it resolves to
+              -- '[]' and lands in no_framework rather than an outer join's NULLs.
+              COALESCE(pl.projects, '[]') AS projects,
+              -- MUST match coverageState() in services/riskLinks/coverage.ts.
+              CASE
+                WHEN COALESCE(cc.n, 0) > 0 THEN 'covered'
+                WHEN COALESCE(fc.n, 0) > 0 THEN 'gap'
+                ELSE 'no_framework'
+              END AS state
+         FROM risks r
+         LEFT JOIN control_counts    cc ON cc.risk_id = r.id
+         LEFT JOIN assessment_counts ac ON ac.risk_id = r.id
+         LEFT JOIN framework_counts  fc ON fc.risk_id = r.id
+         LEFT JOIN project_lists     pl ON pl.risk_id = r.id
+        WHERE r.organization_id = :organizationId
+          AND r.is_deleted = false
+     ),
+     -- Cap per state but keep honest totals: summary counts every row while
+     -- the lists carry only the worst-first window. Without this the report
+     -- materialises every active risk plus its projects JSON on each load.
+     ranked AS (
+       SELECT scored.*,
+              ROW_NUMBER() OVER (
+                PARTITION BY state
+                ORDER BY risk_level_autocalculated DESC NULLS LAST, id ASC
+              ) AS rn,
+              COUNT(*) OVER (PARTITION BY state) AS state_total
+         FROM scored
+     )
+     SELECT id, risk_name, risk_owner, risk_level, mitigation_status,
+            control_link_count, assessment_link_count, framework_project_count,
+            projects, state, state_total
+       FROM ranked
+      WHERE rn <= :maxRows
+      ORDER BY state, rn`,
+    {
+      replacements: { organizationId, maxRows },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  return (rows as any[]).map((row) => ({
+    id: row.id,
+    risk_name: row.risk_name,
+    risk_owner: row.risk_owner ?? null,
+    risk_level: row.risk_level ?? null,
+    mitigation_status: row.mitigation_status ?? null,
+    control_link_count: toNumber(row.control_link_count),
+    assessment_link_count: toNumber(row.assessment_link_count),
+    framework_project_count: toNumber(row.framework_project_count),
+    projects: Array.isArray(row.projects) ? row.projects : [],
+    state: row.state,
+    state_total: toNumber(row.state_total),
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Stale-inheritance lifecycle: acknowledgement + notification sweep
+// ---------------------------------------------------------------------------
+
+export interface StaleChildRow {
+  link_id: number;
+  child_risk_id: number;
+  child_name: string;
+  risk_owner: number | null;
+  organization_id: number;
+  /** The flag value the sweep read; the sent-record must not overwrite a newer one. */
+  parent_changed_at: string;
+}
+
+/**
+ * Clear the "parent level changed" flag on one link, and the sent-record with
+ * it so a later move re-notifies. Org-scoped and idempotent: only a link whose
+ * flag is currently set is touched, so a second click (or a link already
+ * reviewed) is a no-op rather than an error. Returns true when a row changed.
+ */
+export async function acknowledgeParentLevelChangeQuery(
+  organizationId: number,
+  linkId: number,
+): Promise<boolean> {
+  // RETURNING, not the UPDATE's metadata: on Postgres that is the driver's
+  // result object, not a row count, so counting it always gave false.
+  const rows = await sequelize.query(
+    `UPDATE risk_links
+        SET parent_level_changed_at = NULL,
+            parent_level_notified_at = NULL,
+            updated_at = NOW()
+      WHERE id = :linkId
+        AND organization_id = :organizationId
+        AND parent_level_changed_at IS NOT NULL
+      RETURNING id`,
+    { replacements: { organizationId, linkId }, type: QueryTypes.SELECT },
+  );
+  return rows.length > 0;
+}
+
+/**
+ * Confirmed children whose parent level moved and whose owner has not been told
+ * about this particular change yet. `parent_level_notified_at < parent_level_changed_at`
+ * re-arms the notice when the parent moves again after a prior notice.
+ */
+export async function getUnnotifiedStaleChildrenQuery(
+  organizationId: number,
+): Promise<StaleChildRow[]> {
+  const rows = (await sequelize.query(
+    `SELECT l.id AS link_id,
+            l.source_risk_id AS child_risk_id,
+            r.risk_name AS child_name,
+            r.risk_owner,
+            l.organization_id,
+            -- Text, not timestamptz: pg returns a JS Date (ms precision) while
+            -- NOW() stores microseconds, so a Date round-trip would never
+            -- equal the stored value. The text reparses losslessly.
+            l.parent_level_changed_at::text AS parent_changed_at
+       FROM risk_links l
+       JOIN risks r
+         ON r.id = l.source_risk_id
+        AND r.organization_id = l.organization_id
+        AND r.is_deleted = false
+      WHERE l.organization_id = :organizationId
+        AND l.relation_type = 'inherits_from'
+        AND l.status = 'confirmed'
+        AND l.parent_level_changed_at IS NOT NULL
+        AND (l.parent_level_notified_at IS NULL
+             OR l.parent_level_notified_at < l.parent_level_changed_at)
+      ORDER BY l.id ASC`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
+  )) as any[];
+  return rows.map((row) => ({
+    link_id: row.link_id,
+    child_risk_id: row.child_risk_id,
+    child_name: row.child_name,
+    risk_owner: row.risk_owner ?? null,
+    organization_id: row.organization_id,
+    parent_changed_at: row.parent_changed_at,
+  }));
+}
+
+/**
+ * Stamp the sent-record for one just-notified link — but only if the flag is
+ * still the value the sweep sent about. A parent move landing between the
+ * sweep's SELECT and this UPDATE advances `parent_level_changed_at`; stamping
+ * it as notified would silently drop the new warning, so the write is a no-op
+ * then and the next run retries.
+ */
+export async function markParentLevelNotifiedQuery(
+  organizationId: number,
+  linkId: number,
+  seenChangedAt: string,
+): Promise<void> {
+  await sequelize.query(
+    `UPDATE risk_links
+        SET parent_level_notified_at = :seenChangedAt::timestamptz
+      WHERE organization_id = :organizationId
+        AND id = :linkId
+        AND parent_level_changed_at = :seenChangedAt::timestamptz`,
+    { replacements: { organizationId, linkId, seenChangedAt } },
+  );
+}

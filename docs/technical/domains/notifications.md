@@ -134,6 +134,44 @@ Before delivering notifications:
 | `role_changed_to_admin` | Role promoted | Email |
 | `project_created` | New project | Email |
 
+### Risk Notifications
+
+| Type | Trigger | Delivery |
+|------|---------|----------|
+| `model_risk_candidates` | Model gained a project, or a new model risk, leaving unseen shared-project candidates for a project risk | In-app |
+| `vendor_risk_candidates` | Vendor gained a use case, or a new vendor risk, leaving unseen candidate parents for a project risk in that use case | In-app |
+| `risk_deadline_due_soon` | Project risk deadline within 7 days (in-app + email) or 1 day (Slack) | In-app + Email / Slack |
+| `model_risk_due_soon` | Model risk target date within 7 days (in-app + email) or 1 day (Slack) | In-app + Email / Slack |
+
+#### Deadline escalation dedup
+
+The nightly deadline sweep notifies the owner plus every org admin, so the
+sent-record is per recipient per entity per threshold per deadline:
+`organization_id`, `user_id`, `type`, `entity_type`, `entity_id` plus
+`metadata->>'threshold_days'` and `metadata->>'deadline'`. The threshold clause
+is what lets the 7-day and 1-day notices coexist on the same risk. The deadline
+clause (the exact stored deadline, `deadlineNoticeKey` in
+`utils/deadline.utils.ts`) re-arms both notices when the deadline is
+rescheduled: a notice sent for the old deadline does not count for the new
+one. A failed write leaves no record, so the next night retries exactly that
+recipient.
+
+What the sweep scans (`getRisksApproachingDeadlineQuery`,
+`getModelRisksApproachingTargetDateQuery`):
+
+- Closed items are skipped: project risks whose `mitigation_status` is
+  `Completed` or `Canceled`, model risks whose `status` is `Resolved` or
+  `Accepted`.
+- Overdue deadlines are only looked back `DEADLINE_OVERDUE_LOOKBACK_DAYS`
+  (7). That covers a missed run or a week of worker downtime, and stops the
+  first run after a deploy from notifying about every deadline that ever
+  passed. A recurring overdue reminder would be a separate feature.
+
+Apart from a reschedule, the only thing that re-arms a notice is a user
+deleting the notification themselves — the dedup row is the notification row,
+so deleting it looks exactly like "never sent". There is no scheduled purge
+(both bulk-delete helpers in `utils/notification.utils.ts` have no callers).
+
 ### Slack Routing Categories
 
 ```typescript
@@ -372,6 +410,8 @@ enum NotificationType {
   APPROVAL_COMPLETE = "approval_complete",
   VENDOR_REVIEW_DUE = "vendor_review_due",
   POLICY_DUE_SOON = "policy_due_soon",
+  EVIDENCE_STALE = "evidence_stale",
+  MODEL_RISK_CANDIDATES = "model_risk_candidates",
   TRAINING_ASSIGNED = "training_assigned",
   // ... more types
 }

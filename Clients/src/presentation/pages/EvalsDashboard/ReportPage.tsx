@@ -36,7 +36,7 @@ import CustomAxios from "../../../infrastructure/api/customAxios";
 import { getAllExperiments } from "../../../application/repository/deepEval.repository";
 import { palette } from "../../themes/palette";
 import singleTheme from "../../themes/v1SingleTheme";
-import { displayFormattedDateTime } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 interface ReportPageProps {
   projectId: string;
@@ -63,6 +63,7 @@ export default function ReportPage({
   orgId,
   orgName = "",
 }: ReportPageProps) {
+  const formatUserDate = useFormattedDate();
   const theme = useTheme();
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -298,7 +299,7 @@ export default function ReportPage({
 
   const formatDate = (iso: string) => {
     try {
-      return displayFormattedDateTime(iso);
+      return formatUserDate(iso, { includeTime: true });
     } catch {
       return iso;
     }

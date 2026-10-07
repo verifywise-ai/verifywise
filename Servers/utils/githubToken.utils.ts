@@ -2,7 +2,8 @@
  * @fileoverview GitHub Token Utilities
  *
  * Database query functions for managing GitHub tokens with encryption.
- * Tokens are encrypted at rest using AES-256-CBC encryption.
+ * Tokens are encrypted at rest with AES-256-GCM via encryption.utils (legacy
+ * AES-256-CBC values still decrypt).
  *
  * @module utils/githubToken
  */

@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Box, CircularProgress, Typography } from "@mui/material";
 import { useNavigate, useSearchParams } from "react-router";
 import { useDispatch } from "react-redux";
-import { setAuthToken, setExpiration } from "../../../../application/redux/auth/authSlice";
+import { setExpiration } from "../../../../application/redux/auth/authSlice";
+import { startSession } from "../../../../application/utils/clearSession";
 import { loginUserWithMicrosoft } from "../../../../application/repository/user.repository";
 
 const MicrosoftCallback: React.FC = () => {
@@ -54,7 +55,7 @@ const MicrosoftCallback: React.FC = () => {
           );
           window.close();
         } else {
-          dispatch(setAuthToken(token));
+          startSession(dispatch, token);
           dispatch(setExpiration(expirationDate));
           localStorage.setItem("root_version", __APP_VERSION__);
           navigate("/");

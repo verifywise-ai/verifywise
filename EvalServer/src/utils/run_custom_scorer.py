@@ -13,6 +13,8 @@ import json
 from typing import Dict, Any, List, Optional, Tuple, Union
 from dataclasses import dataclass
 
+from utils.error_detection import redact_secrets
+
 # OpenAI client (used for OpenAI-compatible APIs)
 try:
     from openai import OpenAI
@@ -365,7 +367,8 @@ async def run_custom_scorer(
             scorer_name=scorer_name,
             label="ERROR",
             score=0.0,
-            raw_response=f"Failed to initialize model: {str(e)}",
+            # Stored in the experiment's results, shown to the organization.
+            raw_response=f"Failed to initialize model: {redact_secrets(str(e))}",
             passed=False,
         )
     
@@ -433,7 +436,7 @@ async def run_custom_scorer(
             scorer_name=scorer_name,
             label="ERROR",
             score=0.0,
-            raw_response=f"Error calling judge model ({provider}): {str(e)}",
+            raw_response=f"Error calling judge model ({provider}): {redact_secrets(str(e))}",
             passed=False,
         )
 

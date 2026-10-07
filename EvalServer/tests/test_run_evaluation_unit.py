@@ -558,3 +558,125 @@ async def test_upsert_judge_scorer_noop_without_judge_model(
     )
     list_mock.assert_not_called()
     create_mock.assert_not_called()
+
+
+# --------------------------------------------------------------------------- #
+# Failure reason when no prompt produced a response                            #
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.asyncio
+async def test_no_responses_failure_reason_includes_first_error(
+    inline_prompts_config: Dict[str, Any],
+    mock_db_session: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _capture_runner_init(monkeypatch)
+    _patch_run_eval_dependencies(monkeypatch)
+
+    from deepeval_engine import model_runner as mr_module
+    from crud import evaluation_logs as crud_module
+
+    calls = {"n": 0}
+
+    def failing_generate(self, *a, **kw):
+        calls["n"] += 1
+        raise RuntimeError(f"Unexpected provider reply for sample {calls['n']}")
+
+    monkeypatch.setattr(mr_module.ModelRunner, "generate", failing_generate)
+
+    from utils.run_evaluation import run_evaluation
+
+    result = await run_evaluation(
+        db=mock_db_session,
+        experiment_id="exp-no-responses",
+        config=dict(inline_prompts_config),
+        organization_id=1,
+    )
+
+    expected = (
+        "No responses generated: 2/2 prompts failed. "
+        "First error: Unexpected provider reply for sample 1"
+    )
+    assert result == {"error": expected}
+    failed_calls = [
+        c
+        for c in crud_module.update_experiment_status.call_args_list
+        if c.kwargs.get("status") == "failed"
+    ]
+    assert failed_calls, "experiment was not marked failed"
+    assert failed_calls[-1].kwargs["error_message"] == expected
+
+
+@pytest.mark.asyncio
+async def test_no_responses_reason_keeps_the_retry_error(
+    inline_prompts_config: Dict[str, Any],
+    mock_db_session: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An empty first answer whose retry raises reports the retry's error."""
+    _capture_runner_init(monkeypatch)
+    _patch_run_eval_dependencies(monkeypatch)
+
+    from deepeval_engine import model_runner as mr_module
+
+    def generate(self, *a, temperature=None, **kw):
+        if temperature == 0.2:
+            raise RuntimeError("Unsupported value: temperature")
+        return ""
+
+    monkeypatch.setattr(mr_module.ModelRunner, "generate", generate)
+
+    from utils.run_evaluation import run_evaluation
+
+    result = await run_evaluation(
+        db=mock_db_session,
+        experiment_id="exp-retry",
+        config=dict(inline_prompts_config),
+        organization_id=1,
+    )
+
+    assert result == {
+        "error": "No responses generated: 2/2 prompts failed. "
+        "First error: Unsupported value: temperature"
+    }
+
+
+@pytest.mark.asyncio
+async def test_no_responses_reason_counts_each_prompt_once(
+    inline_prompts_config: Dict[str, Any],
+    mock_db_session: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A prompt that fails twice (empty answer, then saving its log) counts once."""
+    _capture_runner_init(monkeypatch)
+    _patch_run_eval_dependencies(monkeypatch)
+
+    from deepeval_engine import model_runner as mr_module
+    from crud import evaluation_logs as crud_module
+
+    monkeypatch.setattr(mr_module.ModelRunner, "generate", lambda self, *a, **kw: "")
+    # Per prompt: saving the empty-output log fails, then logging the error works.
+    ok = {"id": "l1"}
+    monkeypatch.setattr(
+        crud_module,
+        "create_log",
+        AsyncMock(
+            side_effect=[RuntimeError("connection reset"), ok, RuntimeError("connection reset"), ok]
+        ),
+    )
+
+    from utils.run_evaluation import run_evaluation
+
+    result = await run_evaluation(
+        db=mock_db_session,
+        experiment_id="exp-once",
+        config=dict(inline_prompts_config),
+        organization_id=1,
+    )
+
+    assert result == {
+        "error": "No responses generated: 2/2 prompts failed. "
+        "First error: Model returned an empty response"
+    }
+

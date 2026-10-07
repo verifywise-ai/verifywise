@@ -1,15 +1,7 @@
 import { test as setup } from "@playwright/test";
-import { execFileSync } from "child_process";
-import dotenv from "dotenv";
-import { existsSync, mkdtempSync, readFileSync, unlinkSync } from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-import { tmpdir } from "os";
 import { loginAs } from "./helpers/auth.helper";
+import { seedAdminInOrg } from "./helpers/seedAdmin.helper";
 import { createApiContext, orgs, projects, projectRisks, tasks } from "./factories/api.factory";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 /**
  * Global setup: logs in once via the real UI and saves browser storage state.
@@ -28,66 +20,11 @@ const __dirname = path.dirname(__filename);
 
 const TEST_EMAIL = process.env.E2E_EMAIL || "verifywise@email.com";
 const TEST_PASSWORD = process.env.E2E_PASSWORD || "Verifywise#1";
-const SERVERS_DIR = path.resolve(__dirname, "../../Servers");
 
 const USER_AUTH_STATE_PATH = "e2e/.auth/user.json";
 const ADMIN_AUTH_STATE_PATH = "e2e/.auth/admin.json";
 
-interface SeedOutput {
-  orgId: number;
-  userId: number;
-  email: string;
-  password: string;
-  credentialsFile: string | null;
-}
-
-const E2E_NODE_ENV = process.env.E2E_NODE_ENV || "test";
 const SETUP_ORG_NAME = "E2E Global Setup Org";
-
-function seedAdminInOrg(orgId: number): SeedOutput {
-  const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: E2E_NODE_ENV };
-  if (E2E_NODE_ENV === "test") {
-    // seedE2EAdmin.ts connects via Servers/database/db.ts. Its config module
-    // reads process.env at import time, before db.ts's own .env.test override
-    // runs, so the test DB values must already be in the child env. This
-    // mirrors the integration-suite convention (tests/integration/globalSetup.js).
-    const envTestPath = path.resolve(SERVERS_DIR, ".env.test");
-    if (existsSync(envTestPath)) {
-      Object.assign(env, dotenv.parse(readFileSync(envTestPath, "utf8")));
-    }
-  }
-
-  const tmpDir = mkdtempSync(path.join(tmpdir(), "vw-e2e-"));
-  const credentialsFile = path.join(tmpDir, "e2e-credentials.json");
-
-  const stdout = execFileSync(
-    process.platform === "win32" ? "npx.cmd" : "npx",
-    ["ts-node", "scripts/seedE2EAdmin.ts", String(orgId), `--output-file=${credentialsFile}`],
-    {
-      cwd: SERVERS_DIR,
-      encoding: "utf-8",
-      env,
-      shell: true,
-    },
-  );
-  const lastLine = stdout.trim().split("\n").pop() || "";
-  const metadata = JSON.parse(lastLine) as Omit<SeedOutput, "password">;
-
-  if (!metadata.credentialsFile) {
-    throw new Error("seedE2EAdmin did not write a credentials file");
-  }
-
-  const credentials = JSON.parse(readFileSync(metadata.credentialsFile, "utf-8")) as SeedOutput;
-
-  // Clean up the temporary credentials file as soon as we've read it.
-  try {
-    unlinkSync(metadata.credentialsFile);
-  } catch {
-    // Best-effort cleanup; don't fail the setup if the file is already gone.
-  }
-
-  return credentials;
-}
 
 setup("authenticate", async ({ page }) => {
   // 1. Login as the default super-admin and save state.

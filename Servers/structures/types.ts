@@ -92,4 +92,15 @@ export interface FrameworkStructure {
    *  present in the FileSource union in file.model.ts. */
   source_labels: Record<string, FileSource>;
   seed: FrameworkSeed;
+  /** Optional demo narrative, keyed by level-2 struct title. Seeded only when
+   *  the project is demo data (is_mock_data), the way the hand-written
+   *  frameworks seed theirs. Titles with no entry are left empty, and entries
+   *  whose title is not in the struct table are ignored, so this stays safe
+   *  when a struct table and its structure file drift apart. */
+  demo?: Record<string, FrameworkDemoEntry>;
+}
+
+export interface FrameworkDemoEntry {
+  implementation_description: string;
+  auditor_feedback: string;
 }

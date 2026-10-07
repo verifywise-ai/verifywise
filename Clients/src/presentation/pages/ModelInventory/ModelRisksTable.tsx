@@ -25,13 +25,14 @@ const SelectorVertical = (props: React.SVGAttributes<SVGSVGElement>) => (
   <ChevronsUpDown size={16} {...props} />
 );
 import Chip from "../../components/Chip";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { IModelRisk } from "../../../domain/interfaces/i.modelRisk";
 import { User } from "../../../domain/types/User";
 import { ModelRisksTableProps } from "../../../domain/interfaces/i.modelInventory";
 import { palette } from "../../themes/palette";
 import { useCustomFieldDefinitions } from "../../../application/hooks/useCustomFields";
 import { formatCustomFieldValue } from "../../components/CustomFieldsSection/formatCustomFieldValue";
+import { pageOfLabel } from "../../components/Table/pageOfLabel";
 
 // LocalStorage key for sorting
 const MODEL_RISKS_SORTING_KEY = "verifywise_model_risks_sorting";
@@ -63,6 +64,7 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
   hidePagination = false,
   visibleColumns,
 }) => {
+  const formatUserDate = useFormattedDate();
   const theme = useTheme();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -149,13 +151,16 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
     return `${start} - ${end}`;
   }, [page, rowsPerPage, dataLength]);
 
-  const formatDate = (dateString: string) => {
-    try {
-      return displayFormattedDate(dateString);
-    } catch {
-      return dateString;
-    }
-  };
+  const formatDate = useCallback(
+    (dateString: string) => {
+      try {
+        return formatUserDate(dateString);
+      } catch {
+        return dateString;
+      }
+    },
+    [formatUserDate],
+  );
 
   const getOwnerName = useCallback(
     (ownerId: string | number) => {
@@ -494,6 +499,7 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
       visibleTableColumns,
       customFieldDefs,
       users,
+      formatDate,
     ],
   );
 
@@ -550,7 +556,7 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
                 ActionsComponent={(props) => <TablePaginationActions {...props} />}
                 labelRowsPerPage="Rows per page"
                 labelDisplayedRows={({ page, count }) =>
-                  `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
+                  pageOfLabel(page + 1, Math.max(0, Math.ceil(count / rowsPerPage)))
                 }
                 slotProps={{
                   select: {

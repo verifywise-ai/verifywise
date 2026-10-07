@@ -19,7 +19,7 @@ import { EmptyState } from "../../EmptyState";
 import EmptyStateTip from "../../EmptyState/EmptyStateTip";
 import { TableEmptyStateLayout } from "../TableEmptyStateLayout";
 import singleTheme from "../../../themes/v1SingleTheme";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import TablePaginationActions from "../../TablePagination";
 import {
   ChevronsUpDown,
@@ -43,6 +43,7 @@ import VendorLogo from "../../VendorLogo";
 import { text } from "../../../themes/palette";
 import { useCustomFieldDefinitions } from "../../../../application/hooks/useCustomFields";
 import { formatCustomFieldValue } from "../../CustomFieldsSection/formatCustomFieldValue";
+import { pageOfLabel } from "../pageOfLabel";
 
 const VENDORS_ROWS_PER_PAGE_KEY = "verifywise_vendors_rows_per_page";
 const VENDORS_SORTING_KEY = "verifywise_vendors_sorting";
@@ -150,6 +151,7 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
   vendorRisks = [],
   visibleColumns,
 }) => {
+  const formatDate = useFormattedDate();
   const theme = useTheme();
   const { userRoleName } = useAuth();
   const [page, setPage] = useState(0);
@@ -504,9 +506,7 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                         sortConfig.key === "review_date" ? "background.surface" : "inherit",
                     }}
                   >
-                    {row.review_date
-                      ? displayFormattedDate(row.review_date.toString())
-                      : "No review date"}
+                    {row.review_date ? formatDate(row.review_date.toString()) : "No review date"}
                   </TableCell>
                 )}
                 {customFieldDefs.map((def) => {
@@ -561,6 +561,7 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
       isVisible,
       customFieldDefs,
       formatCfValue,
+      formatDate,
     ],
   );
 
@@ -636,7 +637,7 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                     ActionsComponent={(props) => <TablePaginationActions {...props} />}
                     labelRowsPerPage="Rows per page"
                     labelDisplayedRows={({ page, count }) =>
-                      `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
+                      pageOfLabel(page + 1, Math.max(0, Math.ceil(count / rowsPerPage)))
                     }
                     slotProps={{
                       select: {

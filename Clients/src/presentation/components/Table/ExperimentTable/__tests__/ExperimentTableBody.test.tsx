@@ -87,6 +87,24 @@ describe("ExperimentTableBody", () => {
     expect(screen.getByText("Failed")).toBeInTheDocument();
   });
 
+  it("shows the failure reason in a tooltip on a failed row", async () => {
+    const user = userEvent.setup();
+    const rows: IExperimentRow[] = [
+      { ...mockRows[2], errorMessage: "No responses generated: 10/10 prompts failed." },
+    ];
+    renderWithProviders(
+      <table>
+        <ExperimentTableBody {...defaultProps} rows={rows} />
+      </table>,
+    );
+
+    await user.hover(screen.getByText("Failed"));
+
+    expect(
+      await screen.findByText("No responses generated: 10/10 prompts failed."),
+    ).toBeInTheDocument();
+  });
+
   it("renders model names", () => {
     renderWithProviders(
       <table>

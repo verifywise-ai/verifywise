@@ -9,3 +9,8 @@ export const StatsCardRate = (theme: Theme) => ({
   color: theme.palette.text.primary,
   fontSize: 26,
 });
+
+export const StatsCardCaption = (theme: Theme) => ({
+  color: theme.palette.text.accent,
+  fontSize: theme.typography.fontSize,
+});

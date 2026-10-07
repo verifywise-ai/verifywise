@@ -40,5 +40,12 @@ export interface LLMKeyStatus {
 
 export async function getLLMKeyStatus(): Promise<LLMKeyStatus> {
   const response = await apiServices.get("/llm-keys/status");
-  return (response.data as any).data as LLMKeyStatus;
+  const status = (response.data as any)?.data as LLMKeyStatus | undefined;
+  // A body without a status (a proxy page, a cached or truncated response) is
+  // a failed load, not "no keys": callers show the add-a-key prompt only on a
+  // real answer.
+  if (typeof status?.hasKeys !== "boolean") {
+    throw new Error("Unexpected LLM key status response");
+  }
+  return status;
 }

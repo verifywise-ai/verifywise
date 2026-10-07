@@ -21,6 +21,7 @@ import {
 import { RefreshCw, X, ChevronsUpDown } from "lucide-react";
 import { colors, borderRadius, chipStyles, buttonStyles, tableStyles } from "../theme";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
+import { getApiErrorReason } from "../../../../application/utils/apiErrorReason";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 
 const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
@@ -130,7 +131,8 @@ export default function AzureAIFoundryTab() {
     try {
       await apiServices.post("/extensions/azure-ai-foundry/sync", {});
     } catch (error: any) {
-      setWarning(error?.response?.data?.message || "Sync failed. Showing cached data.");
+      const reason = getApiErrorReason(error);
+      setWarning(reason ? `Sync failed: ${reason}` : "Sync failed. Showing cached data.");
     }
     await fetchModels();
   };

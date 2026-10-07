@@ -16,7 +16,7 @@ import Select from "../../../components/Inputs/Select";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { EmptyState } from "../../../components/EmptyState";
 import CustomizableSkeleton from "../../../components/Skeletons";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { MrmValidationStage } from "../../../../domain/enums/mrm.enum";
 import { IMrmFleetRow, IMrmValidation } from "../../../../domain/interfaces/i.mrm";
 import { MrmUser } from "./types";
@@ -55,6 +55,7 @@ interface ValidationTabProps {
 }
 
 const ValidationTab = ({ users, onError, onSuccess }: ValidationTabProps) => {
+  const formatDate = useFormattedDate();
   const { data: validations = [], isLoading } = useValidations();
   const { data: fleet = [] } = useFleetTiering();
   const createValidation = useCreateValidation();
@@ -220,12 +221,10 @@ const ValidationTab = ({ users, onError, onSuccess }: ValidationTabProps) => {
                       {validation.report_version || "Draft"}
                     </TableCell>
                     <TableCell sx={mrmTableCellStyle}>
-                      {validation.signed_off_at
-                        ? displayFormattedDate(validation.signed_off_at)
-                        : "—"}
+                      {validation.signed_off_at ? formatDate(validation.signed_off_at) : "—"}
                     </TableCell>
                     <TableCell sx={mrmTableCellStyle}>
-                      {validation.next_due ? displayFormattedDate(validation.next_due) : "—"}
+                      {validation.next_due ? formatDate(validation.next_due) : "—"}
                     </TableCell>
                   </TableRow>
                 );

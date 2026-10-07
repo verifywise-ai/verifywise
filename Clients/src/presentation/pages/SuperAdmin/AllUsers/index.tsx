@@ -33,7 +33,7 @@ import SearchBox from "../../../components/Search/SearchBox";
 import { EmptyState } from "../../../components/EmptyState";
 import Select from "../../../components/Inputs/Select";
 import singleTheme from "../../../themes/v1SingleTheme";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { getSelectStyles } from "../../../utils/inputStyles";
 
 const DeleteUserModal = ({
@@ -89,6 +89,7 @@ const EditUserModal = ({
   onClose: () => void;
   onUpdated: () => void;
 }) => {
+  const formatDate = useFormattedDate();
   const [name, setName] = useState("");
   const [surname, setSurname] = useState("");
   const [email, setEmail] = useState("");
@@ -183,7 +184,7 @@ const EditUserModal = ({
             Joined
           </Typography>
           <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-            {target ? displayFormattedDate(target.created_at) : "—"}
+            {target ? formatDate(target.created_at) : "—"}
           </Typography>
         </Stack>
         <Stack spacing={0.5}>
@@ -191,7 +192,7 @@ const EditUserModal = ({
             Last login
           </Typography>
           <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-            {target?.last_login ? displayFormattedDate(target.last_login) : "Never"}
+            {target?.last_login ? formatDate(target.last_login) : "Never"}
           </Typography>
         </Stack>
         {error && <Typography sx={{ fontSize: 13, color: "#D32F2F" }}>{error}</Typography>}
@@ -331,6 +332,7 @@ const InviteUserModal = ({
 type SortField = "name" | "email" | "organization_name" | "role_name" | "created_at";
 
 const AllUsers = () => {
+  const formatDate = useFormattedDate();
   const theme = useTheme();
   const [users, setUsers] = useState<GlobalUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -617,9 +619,7 @@ const AllUsers = () => {
                         {user.role_name}
                       </Box>
                     </TableCell>
-                    <TableCell sx={tableStyles.body.cell}>
-                      {displayFormattedDate(user.created_at)}
-                    </TableCell>
+                    <TableCell sx={tableStyles.body.cell}>{formatDate(user.created_at)}</TableCell>
                     <TableCell sx={{ ...tableStyles.body.cell, textAlign: "right" }}>
                       <Button
                         size="small"

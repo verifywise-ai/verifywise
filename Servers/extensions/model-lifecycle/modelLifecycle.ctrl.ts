@@ -17,6 +17,28 @@ function intParam(req: Request, name: string): number {
   const value = Array.isArray(raw) ? raw[0] : raw;
   return parseInt(String(value), 10);
 }
+const MAX_ORDERED_IDS = 1000;
+
+/**
+ * The ids a reorder request lists, or undefined when the body does not hold an
+ * array of at most MAX_ORDERED_IDS integers. The service loops over them, so an
+ * object with a large `length` must never reach it.
+ */
+export function orderedIdsFrom(req: Request): number[] | undefined {
+  const value: unknown = req.body?.orderedIds ?? [];
+  return Array.isArray(value) && value.length <= MAX_ORDERED_IDS && value.every(Number.isInteger)
+    ? value
+    : undefined;
+}
+
+function invalidOrderedIds(res: Response) {
+  return res
+    .status(400)
+    .json(
+      STATUS_CODE[400](`orderedIds must be an array of at most ${MAX_ORDERED_IDS} integer ids`),
+    );
+}
+
 function fail(res: Response, error: unknown, req: Request, where: string) {
   logStructured("error", `model-lifecycle ${where} failed`, where, fileName);
   logger.error(`❌ Error in ${where}:`, error);
@@ -67,7 +89,8 @@ export async function deletePhaseCtrl(req: Request, res: Response): Promise<any>
 
 export async function reorderPhasesCtrl(req: Request, res: Response): Promise<any> {
   try {
-    const orderedIds = (req.body?.orderedIds ?? []) as number[];
+    const orderedIds = orderedIdsFrom(req);
+    if (!orderedIds) return invalidOrderedIds(res);
     await svc.reorderPhases(orgId(req), orderedIds);
     return res.status(200).json(STATUS_CODE[200]({ success: true }));
   } catch (err) {
@@ -107,7 +130,8 @@ export async function deleteItemCtrl(req: Request, res: Response): Promise<any> 
 
 export async function reorderItemsCtrl(req: Request, res: Response): Promise<any> {
   try {
-    const orderedIds = (req.body?.orderedIds ?? []) as number[];
+    const orderedIds = orderedIdsFrom(req);
+    if (!orderedIds) return invalidOrderedIds(res);
     await svc.reorderItems(orgId(req), intParam(req, "phaseId"), orderedIds);
     return res.status(200).json(STATUS_CODE[200]({ success: true }));
   } catch (err) {

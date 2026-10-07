@@ -128,3 +128,38 @@ async def test_has_spend_logs_uses_exists(found):
     sql, params = db.execute.await_args.args
     assert "EXISTS" in str(sql) and "COUNT" not in str(sql).upper()
     assert params == {"org_id": 7}
+
+
+# Regression: the daily breakdowns grouped by DATE(created_at) over existing
+# rows only, so a 7d/30d chart showed just the days that had traffic. They now
+# generate every calendar day in the range and left-join the logs onto it.
+@pytest.mark.parametrize("period", ["7d", "30d", "90d"])
+async def test_daily_breakdown_zero_fills_every_day(period):
+    sql, _ = await _captured_sql(period)
+    compiled = str(sql.compile(dialect=postgresql.dialect()))
+    assert "generate_series" in compiled
+    assert "LEFT JOIN ai_gateway_spend_logs" in compiled
+
+
+async def test_error_rate_by_day_zero_fills_every_day():
+    from crud.spend import get_error_rate_by_day
+
+    result = MagicMock()
+    result.fetchall.return_value = []
+    db = MagicMock()
+    db.execute = AsyncMock(return_value=result)
+    await get_error_rate_by_day(db, 1, "2026-09-20", "2026-09-27")
+    compiled = str(db.execute.await_args.args[0].compile(dialect=postgresql.dialect()))
+    assert "generate_series" in compiled
+    assert "LEFT JOIN ai_gateway_spend_logs" in compiled
+
+
+# asyncpg gives each bind parameter one type. If :start_date is cast to date
+# anywhere, it becomes a date everywhere and the BETWEEN filter starts at
+# midnight, counting rows from before the requested window. Every use must be
+# cast to timestamptz, with dates derived from that.
+@pytest.mark.parametrize("period", ["7d", "30d"])
+async def test_daily_breakdown_never_casts_bind_params_straight_to_date(period):
+    sql, _ = await _captured_sql(period)
+    compiled = str(sql.compile(dialect=postgresql.dialect()))
+    assert not re.search(r"CAST\(%\((start|end)_date\)s AS DATE\)", compiled, re.I)

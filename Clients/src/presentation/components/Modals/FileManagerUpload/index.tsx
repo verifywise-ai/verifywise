@@ -453,6 +453,35 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
             />
           </Box>
 
+          {/* Retention & expiry hint — shown on every actual upload flow.
+              Hidden in selectionOnly mode where files are handed to a parent
+              form (e.g. AI Trust Center) and may never enter File Manager. */}
+          {!selectionOnly && (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 1.5,
+                fontSize: 13,
+                color: theme.palette.text.secondary,
+                backgroundColor: theme.palette.background.fill,
+                padding: "12px 16px",
+                borderRadius: "4px",
+                border: `1px solid ${theme.palette.border.light}`,
+              }}
+            >
+              <Info
+                size={16}
+                color={theme.palette.text.tertiary}
+                style={{ marginTop: 2, flexShrink: 0 }}
+              />
+              <span>
+                Retention policy and expiry date can be edited per file from the{" "}
+                <strong>File Manager</strong> after upload.
+              </span>
+            </Box>
+          )}
+
           {/* Approval Workflow Selector */}
           <Collapse in={showApprovalWorkflow}>
             {loadingWorkflows ? (

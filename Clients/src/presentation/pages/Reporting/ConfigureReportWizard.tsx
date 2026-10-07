@@ -132,7 +132,7 @@ export default function ConfigureReportWizard({
   const create = useCreateScheduledReport();
   const runNow = useRunTemplateNow();
 
-  // hasKeys is optimistically true while loading (useLLMKeyStatus.ts:38), so
+  // hasKeys is optimistically true while loading (see useLLMKeyStatus), so
   // gate on the settled value only — otherwise the blocks flicker from
   // enabled to disabled on mount. Three prior commits chased that flicker;
   // do not "fix" the hook.

@@ -213,6 +213,7 @@ export default function ExtensionsPage() {
     <PageHeaderExtended
       title="Extensions"
       description="Enable and configure integrations for your organization."
+      helpArticlePath="integrations/extensions"
     >
       {loading ? (
         <Box display="flex" justifyContent="center" py={6}>

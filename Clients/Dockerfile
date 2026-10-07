@@ -40,7 +40,7 @@ ENV VITE_APP_VERSION=$VITE_APP_VERSION
 RUN npm run build
 
 # Step 9: Use a lightweight web server for production
-FROM nginx:1.31.5-alpine
+FROM nginx:1.31.6-alpine
 
 # apk upgrade pulls the latest Alpine security patches so Trivy release scans
 # don't fail on fixable base-image CVEs (e.g. util-linux CVE-2026-53612..53614,

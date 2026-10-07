@@ -77,7 +77,6 @@ persistence:
 # ---------------------------------------------------------------------------
 config:
   nodeEnv: production
-  mockDataOn: "false"
   multiTenancyEnabled: "false"
 
   # Email — provider: resend | smtp | exchange-online | amazon-ses

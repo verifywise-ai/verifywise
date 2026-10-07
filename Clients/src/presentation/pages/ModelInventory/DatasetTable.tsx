@@ -50,7 +50,7 @@ import {
 } from "./style";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { DatasetStatus, DataClassification, DatasetType } from "../../../domain/enums/dataset.enum";
 import Chip from "../../components/Chip";
 import { palette } from "../../themes/palette";
@@ -134,6 +134,7 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
   flashRowId,
   visibleColumns,
 }) => {
+  const formatDate = useFormattedDate();
   const theme = useTheme();
   const { userRoleName } = useAuth();
   const [page, setPage] = useState(0);
@@ -418,9 +419,7 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
                   </TableCell>
                 )}
                 {isVisible("updated_at") && (
-                  <TableCell>
-                    {dataset.updated_at ? displayFormattedDate(dataset.updated_at) : "-"}
-                  </TableCell>
+                  <TableCell>{dataset.updated_at ? formatDate(dataset.updated_at) : "-"}</TableCell>
                 )}
                 {isVisible("actions") && (
                   <TableCell onClick={(e) => e.stopPropagation()}>

@@ -27,7 +27,13 @@ import StandardModal from "../StandardModal";
 interface InviteUserModalProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  onSendInvite: (email: string, status: number | string, link?: string) => void;
+  onSendInvite: (
+    email: string,
+    status: number | string,
+    link?: string,
+    /** The server's reason when the invite was refused. */
+    errorMessage?: string,
+  ) => void;
 }
 
 interface FormValues {
@@ -140,8 +146,19 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ isOpen, setIsOpen, on
         } else {
           onSendInvite(values.email, response.status);
         }
-      } catch (_error) {
-        onSendInvite(values.email, -1);
+      } catch (error) {
+        // apiServices rethrows the server's message with its status. Show it
+        // only for a refusal (e.g. a role the inviter may not grant) or a
+        // conflict (the invitation changed meanwhile); other failures carry
+        // transport text, so the generic retry message stays.
+        const status = (error as { status?: number })?.status;
+        const refused = status === 400 || status === 403 || status === 409;
+        onSendInvite(
+          values.email,
+          -1,
+          undefined,
+          refused && error instanceof Error && error.message ? error.message : undefined,
+        );
       } finally {
         setIsOpen(false);
       }

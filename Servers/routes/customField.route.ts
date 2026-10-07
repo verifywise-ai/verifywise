@@ -19,17 +19,22 @@ import authorize from "../middleware/accessControl.middleware";
 // Definitions — Admin can mutate; any authenticated user can read.
 router.get("/definitions/by-id/:id", authenticateJWT, getCustomFieldDefinitionById);
 router.get("/definitions/:entityType", authenticateJWT, listCustomFieldDefinitions);
-router.post("/definitions", authenticateJWT, authorize(["Admin"]), createCustomFieldDefinition);
+router.post(
+  "/definitions",
+  authenticateJWT,
+  authorize("customField.admin"),
+  createCustomFieldDefinition,
+);
 router.patch(
   "/definitions/:id",
   authenticateJWT,
-  authorize(["Admin"]),
+  authorize("customField.admin"),
   updateCustomFieldDefinition,
 );
 router.delete(
   "/definitions/:id",
   authenticateJWT,
-  authorize(["Admin"]),
+  authorize("customField.admin"),
   deleteCustomFieldDefinition,
 );
 

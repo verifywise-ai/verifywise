@@ -2,6 +2,14 @@ import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
 import { ExtensionService } from "../../services/extension/extensionService";
 import { safeFetchWithBase } from "../../utils/safeOutboundUrl";
+import {
+  EXTERNAL_SYNC_DEADLINE_MS,
+  describeFetchError,
+  requestSignal,
+} from "../../utils/outboundFetch.utils";
+
+/** Azure AI Foundry has no timeout setting; each request gets this limit. */
+const REQUEST_TIMEOUT_SECONDS = 30;
 
 /**
  * azure-ai-foundry extension — pulls deployments from an Azure AI Foundry
@@ -37,6 +45,8 @@ export interface AzureAiFoundrySyncResult {
   modelCount: number;
   syncedAt: string;
   status: string;
+  /** Human-readable failure reason; set when success is false. */
+  error?: string;
 }
 
 export interface AzureAiFoundryTestResult {
@@ -81,6 +91,10 @@ export async function testConnection(
       {
         method: "GET",
         headers: { "api-key": config.api_key, "Content-Type": "application/json" },
+        signal: requestSignal(
+          REQUEST_TIMEOUT_SECONDS,
+          AbortSignal.timeout(EXTERNAL_SYNC_DEADLINE_MS),
+        ),
       },
     );
     if (!response.ok) {
@@ -100,7 +114,7 @@ export async function testConnection(
   } catch (err: any) {
     return {
       success: false,
-      message: `Connection failed: ${err.message}`,
+      message: `Connection failed: ${describeFetchError(err, REQUEST_TIMEOUT_SECONDS)}`,
       testedAt: new Date().toISOString(),
     };
   }
@@ -178,6 +192,7 @@ export async function syncModels(
       modelCount: 0,
       syncedAt: new Date().toISOString(),
       status: "failed: project endpoint and API key are required",
+      error: "project endpoint and API key are required",
     };
   }
   try {
@@ -187,10 +202,14 @@ export async function syncModels(
       {
         method: "GET",
         headers: { "api-key": config.api_key, "Content-Type": "application/json" },
+        signal: requestSignal(
+          REQUEST_TIMEOUT_SECONDS,
+          AbortSignal.timeout(EXTERNAL_SYNC_DEADLINE_MS),
+        ),
       },
     );
     if (!response.ok) {
-      throw new Error(`Failed to fetch deployments: ${response.status}`);
+      throw new Error(`Failed to fetch deployments: HTTP ${response.status}`);
     }
     const data: any = await response.json();
     const deployments: AzureProjectDeployment[] = data.value || [];
@@ -210,11 +229,13 @@ export async function syncModels(
       status: "success",
     };
   } catch (err: any) {
+    const error = describeFetchError(err, REQUEST_TIMEOUT_SECONDS);
     return {
       success: false,
       modelCount: 0,
       syncedAt: new Date().toISOString(),
-      status: `failed: ${err.message}`,
+      status: `failed: ${error}`,
+      error,
     };
   }
 }

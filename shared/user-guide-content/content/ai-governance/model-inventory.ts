@@ -163,6 +163,10 @@ export const modelInventoryContent: ArticleContent = {
       text: 'If you use MLflow, VerifyWise can pull in model training metadata directly: training timestamps, parameters, metrics and lifecycle stage. This saves you from manually entering data that your ML platform already has.',
     },
     {
+      type: 'paragraph',
+      text: 'Once an Admin enables and configures the MLflow extension, an **MLFlow** tab appears in Model inventory. Click **Sync** there to pull the latest runs; syncing is manual. The Azure AI Foundry extension works the same way with its own **Azure AI Foundry** tab. See **Extensions** for setup.',
+    },
+    {
       type: 'heading',
       id: 'change-history',
       level: 2,

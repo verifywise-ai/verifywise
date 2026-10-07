@@ -288,7 +288,7 @@ const AgentDiscovery: React.FC = () => {
       } else {
         showAlertMessage(
           "success",
-          "No agents found. Make sure you have a plugin like Azure AI Foundry installed and configured.",
+          "No agents found. Make sure the Azure AI Foundry extension is enabled and configured.",
         );
       }
       fetchAgents();
@@ -296,7 +296,7 @@ const AgentDiscovery: React.FC = () => {
     } catch (error) {
       showAlertMessage(
         "error",
-        "Sync failed. Check that a discovery-capable plugin is installed and configured.",
+        "Sync failed. Check that the Azure AI Foundry extension is enabled and configured.",
       );
     } finally {
       setIsSyncing(false);

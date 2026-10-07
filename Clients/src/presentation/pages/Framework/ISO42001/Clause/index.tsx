@@ -26,7 +26,6 @@ import allowedRoles from "../../../../../application/constants/permissions";
 import { Project } from "../../../../../domain/types/Project";
 import { TabFilterBar } from "../../../../components/FrameworkFilter/TabFilterBar";
 import { StatsCard } from "../../../../components/Cards/StatsCard";
-import { brand } from "../../../../themes/palette";
 
 const ISO42001Clause = ({
   project: _project,
@@ -501,9 +500,8 @@ const ISO42001Clause = ({
       <Stack sx={{ mt: 2 }}>
         <StatsCard
           title="Clauses"
-          completed={clauseProgress?.doneSubclauses ?? 0}
-          total={clauseProgress?.totalSubclauses ?? 0}
-          progressbarColor={brand.primary}
+          completed={clauseProgress?.doneSubclauses}
+          total={clauseProgress?.totalSubclauses}
         />
       </Stack>
       {filteredClauses &&

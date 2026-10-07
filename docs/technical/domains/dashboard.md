@@ -9,7 +9,7 @@ The Dashboard domain provides centralized metrics, visualizations, and analytics
 - Real-time metrics aggregation
 - Time-series risk history tracking
 - Interactive charts (line, pie/donut)
-- Configurable widget layouts
+- Executive and operations views (selection remembered per browser)
 - Client-side caching with localStorage
 - Organization-wide and project-specific views
 - Framework compliance progress tracking
@@ -225,37 +225,6 @@ function shouldRecordSnapshot(current, previous): boolean {
 | Policy Dashboard | `/policy-dashboard` | Policy metrics |
 | Evals Dashboard | `/evals-dashboard` | LLM evaluation |
 
-### Widget Types
-
-```typescript
-enum WidgetType {
-  METRICS = 'metrics',
-  PROJECTS = 'projects',
-  RISKS = 'risks',
-  COMPLIANCE = 'compliance',
-  ACTIVITIES = 'activities',
-  TASKS = 'tasks',
-  CHART = 'chart',
-  TABLE = 'table',
-  CUSTOM = 'custom'
-}
-```
-
-### Dashboard Context
-
-```typescript
-// Layout persistence keys
-verifywise_dashboard_layouts_{projectId}_{dashboardId}_{userId}
-verifywise_dashboard_preferences_{projectId}_{dashboardId}_{userId}
-verifywise_dashboard_widgets_{projectId}_{dashboardId}_{userId}
-```
-
-Features:
-- Edit mode for customization
-- Widget add/remove/update
-- Export/import configurations
-- localStorage persistence
-
 ## Custom Hooks
 
 ### useDashboard
@@ -424,8 +393,10 @@ Pattern: Stale-while-revalidate
 ### Storage Keys
 
 ```
-vw_dashboard_metrics_{userId}
-vw_dashboard_layouts_{projectId}_{userId}
+verifywise_dashboard_metrics_cache   # metrics cache
+dashboard_view_preference            # "executive" | "operations"
+dashboard_active_tabs                # enabled dashboard tabs (tab bar currently hidden behind SHOW_AI_AGENT_DASHBOARD_TABS)
+dashboard_selected_tab               # last selected dashboard tab
 ```
 
 ## Error Handling
@@ -433,8 +404,9 @@ vw_dashboard_layouts_{projectId}_{userId}
 ### Error Boundary
 
 ```typescript
+// IntegratedDashboard.tsx wraps the whole dashboard
 <DashboardErrorBoundary>
-  <DashboardWidgets />
+  {/* dashboard content */}
 </DashboardErrorBoundary>
 ```
 
@@ -480,7 +452,6 @@ const results = await Promise.allSettled([
 | `hooks/useDashboardMetrics.ts` | Metrics aggregation |
 | `components/Charts/RiskHistoryChart.tsx` | Line chart |
 | `components/Charts/StatusDonutChart.tsx` | Donut chart |
-| `contexts/DashboardContext.tsx` | Layout state |
 | `components/Dashboard/DashboardErrorBoundary.tsx` | Error handling |
 
 ## Related Documentation

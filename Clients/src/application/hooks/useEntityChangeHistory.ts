@@ -15,7 +15,10 @@ export interface EntityChangeHistoryEntry {
   field_name?: string;
   old_value?: string;
   new_value?: string;
-  changed_by_user_id: number;
+  /** Null for an unattended job's change, or for a user who was since deleted. */
+  changed_by_user_id: number | null;
+  /** True when an unattended job made the change (no user acted). */
+  changed_by_system?: boolean;
   changed_at: string;
   user_name?: string;
   user_surname?: string;

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The AI Detection domain provides repository scanning capabilities to identify AI/ML libraries, dependencies, API calls, secrets, model references, RAG components, AI agents, and LLM vulnerabilities within codebases. It combines pattern matching against 100+ known AI technologies with a 2-phase LLM vulnerability detection pipeline covering the full OWASP Top 10 for LLM Applications. The system includes governance workflows, risk scoring across 7 dimensions, scheduled/recurring scans, and repository management.
+The AI Detection domain provides repository scanning capabilities to identify AI/ML libraries, dependencies, API calls, secrets, model references, RAG components, AI agents, and LLM vulnerabilities within codebases. It combines pattern matching against 100+ known AI technologies with a 2-phase LLM vulnerability detection pipeline covering the full OWASP Top 10 for LLM Applications. The system includes governance workflows, risk scoring across 5 dimensions, scheduled/recurring scans, and repository management.
 
 ## Key Features
 
@@ -10,7 +10,7 @@ The AI Detection domain provides repository scanning capabilities to identify AI
 - 100+ AI/ML library pattern detection
 - LLM vulnerability detection (OWASP LLM Top 10, LLM01–LLM10)
 - 2-phase vulnerability pipeline: regex pre-filter + LLM deep analysis
-- AI Governance Risk Score (AGRS) across 7 dimensions with grade A–F
+- AI Governance Risk Score (AGRS) across 5 dimensions with grade A–F
 - Model security scanning for serialized model files
 - Real-time scan progress tracking
 - Governance status workflows (review, approve, flag)
@@ -377,21 +377,19 @@ After scan completes, `crossReferenceFindings()` links vulnerability findings to
 
 ### Overview
 
-Calculates a 0–100 risk score across 7 governance dimensions, with an A–F letter grade. Optionally enhanced by LLM for contextual analysis.
+Calculates a 0–100 risk score across 5 governance dimensions, with an A–F letter grade. Optionally enhanced by LLM for contextual analysis.
 
 ### Dimensions
 
 | Dimension | Default Weight | What it measures |
 |-----------|---------------|-----------------|
-| Data sovereignty | 15% | Cloud API calls to high-risk providers, RAG components |
-| Transparency | 15% | Undocumented model references, libraries |
-| Security | 25% | Secrets, API calls, vulnerability findings |
-| Autonomy | 15% | Agents, excessive agency, insecure plugins |
-| Supply chain | 15% | Dependencies, libraries, API calls |
-| License | 10% | License risk of dependencies |
-| Accuracy | 10% | Model quality and reliability indicators |
+| Data sovereignty | 25% | Data leaving the organization via cloud AI providers (API calls, RAG components, libraries, prompt injection, PII exposure, model theft) |
+| Transparency | 20% | Ability to explain and audit AI behavior (model references, libraries, agents, overreliance) |
+| Security | 20% | Credential exposure and vulnerabilities (secrets, API calls, OWASP LLM findings) |
+| Autonomy | 15% | Autonomous decision-making without human oversight (agents, excessive agency, insecure plugins) |
+| Supply chain | 20% | Third-party AI dependency and provider concentration (dependencies, libraries, API calls) |
 
-Weights are configurable per organization via `PATCH /ai-detection/risk-scoring/config`.
+Defaults come from `DIMENSION_DEFINITIONS` in `Servers/config/riskScoringConfig.ts`. Weights are configurable per organization via `PATCH /ai-detection/risk-scoring/config`.
 
 ### Scoring Algorithm
 
@@ -594,7 +592,7 @@ AIDetection/
 ├── AddRepositoryModal.tsx # Repository registration modal
 ├── AIDetectionSidebar.tsx # Left sidebar navigation
 └── components/
-    └── RiskScoreCard.tsx  # Risk score visualization with 7 dimensions
+    └── RiskScoreCard.tsx  # Risk score visualization with 5 dimensions
 ```
 
 ### Scan Details Tabs
@@ -640,7 +638,7 @@ useEffect(() => {
 
 ### Token Management
 
-- Encrypted storage with AES-256-CBC
+- Encrypted storage with AES-256-GCM (via `encryption.utils.ts`; legacy CBC values still decrypt)
 - Token formats supported:
   - Classic: `ghp_...` (40+ chars)
   - Fine-grained: `github_pat_...` (30+ chars)

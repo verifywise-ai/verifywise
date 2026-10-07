@@ -41,8 +41,7 @@ import {
   getRiskScoringConfig,
   updateRiskScoringConfig,
 } from "../../../application/repository/aiDetection.repository";
-import { getLLMKeys } from "../../../application/repository/llmKeys.repository";
-import { LLMKeysModel } from "../../../domain/models/Common/llmKeys/llmKeys.model";
+import { useLLMKeys } from "../../../application/hooks/useLLMKeys";
 import {
   DimensionKey,
   RiskScoringConfig,
@@ -82,7 +81,8 @@ export default function SettingsPage() {
   const [dimensionWeights, setDimensionWeights] = useState<Record<DimensionKey, number>>({
     ...DEFAULT_DIMENSION_WEIGHTS,
   });
-  const [llmKeys, setLlmKeys] = useState<LLMKeysModel[]>([]);
+  // Shared, per-organization cache: refreshed wherever a key changes.
+  const { keys: llmKeys, loading: llmKeysLoading, isError: llmKeysError } = useLLMKeys();
   const [vulnerabilityScanEnabled, setVulnerabilityScanEnabled] = useState(false);
   const [vulnerabilityTypesEnabled, setVulnerabilityTypesEnabled] = useState<
     Record<VulnerabilityTypeKey, boolean>
@@ -106,11 +106,11 @@ export default function SettingsPage() {
     loadTokenStatus();
   }, [loadTokenStatus]);
 
-  // Load risk scoring config and LLM keys
+  // Load risk scoring config
   const loadRiskConfig = useCallback(async () => {
     setRiskConfigLoading(true);
     try {
-      const [config, keysResponse] = await Promise.all([getRiskScoringConfig(), getLLMKeys()]);
+      const config = await getRiskScoringConfig();
       setRiskConfig(config);
       setLlmEnabled(config.llm_enabled);
       setLlmKeyId(config.llm_key_id);
@@ -119,9 +119,6 @@ export default function SettingsPage() {
       setVulnerabilityTypesEnabled(
         config.vulnerability_types_enabled ?? { ...DEFAULT_VULNERABILITY_TYPES_ENABLED },
       );
-
-      const keys = keysResponse?.data?.data || keysResponse?.data || [];
-      setLlmKeys(Array.isArray(keys) ? keys : []);
     } catch (err) {
       console.error("Failed to load risk scoring config:", err);
     } finally {
@@ -429,7 +426,7 @@ export default function SettingsPage() {
           </Box>
         </TabPanel>
         <TabPanel value="risk-scoring" sx={{ p: 0, pt: "8px" }}>
-          {riskConfigLoading ? (
+          {riskConfigLoading || llmKeysLoading ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
               <CircularProgress size={24} />
             </Box>
@@ -485,7 +482,9 @@ export default function SettingsPage() {
                       <Box sx={{ display: "flex", alignItems: "center", gap: "8px", mt: "8px" }}>
                         <Info size={12} color={palette.text.accent} strokeWidth={1.5} />
                         <Typography sx={{ fontSize: 12, color: palette.text.accent }}>
-                          Configure LLM keys in Settings → Organization → LLM keys
+                          {llmKeysError
+                            ? "Couldn't load LLM keys. Reload the page to try again."
+                            : "Configure LLM keys in Settings → Organization → LLM keys"}
                         </Typography>
                       </Box>
                     )}

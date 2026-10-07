@@ -63,6 +63,7 @@ import {
   SortableTableHead,
 } from "./constants";
 import { palette } from "../../themes/palette";
+import { pageOfLabel } from "../../components/Table/pageOfLabel";
 
 const TRIGGER_LABELS: Record<ShadowAiTriggerType, string> = {
   new_tool_detected: "New tool detected",
@@ -596,7 +597,7 @@ export default function RulesPage() {
                     ActionsComponent={(props) => <TablePaginationActions {...props} />}
                     labelRowsPerPage=""
                     labelDisplayedRows={({ page, count }) =>
-                      `Page ${page + 1} of ${Math.max(0, Math.ceil(count / ALERTS_PER_PAGE))}`
+                      pageOfLabel(page + 1, Math.max(0, Math.ceil(count / ALERTS_PER_PAGE)))
                     }
                     slotProps={{
                       select: {

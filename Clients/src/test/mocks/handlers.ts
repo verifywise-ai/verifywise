@@ -1,4 +1,4 @@
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import { mockProjects, createMockProject } from "./data/projects";
 import { mockRisks, createMockRisk } from "./data/risks";
 import { mockVendors, createMockVendor } from "./data/vendors";

@@ -143,6 +143,44 @@ describe("ExperimentDetailContent", () => {
       expect(await screen.findByText("Evaluating gpt-4o with 0 prompts")).toBeInTheDocument();
     });
 
+    it("shows the failure reason for a failed experiment, keeping the description", async () => {
+      const reason =
+        "No responses generated: 30/30 prompts failed. First error: model claude-sonnet-5 not found";
+      deepEvalMocks.getExperiment.mockResolvedValue({
+        experiment: { ...mockExperiment, status: "failed", error_message: reason },
+      });
+
+      renderDetail();
+
+      expect(await screen.findByTestId("experiment-failure-reason")).toHaveTextContent(reason);
+      expect(screen.getByText("Failed")).toBeInTheDocument();
+      expect(screen.getByText("A test run")).toBeInTheDocument();
+    });
+
+    it("falls back to the description for a failed experiment without a reason", async () => {
+      deepEvalMocks.getExperiment.mockResolvedValue({
+        experiment: { ...mockExperiment, status: "failed", error_message: "   " },
+      });
+
+      renderDetail();
+
+      expect(await screen.findByText("A test run")).toBeInTheDocument();
+      expect(screen.getByText("Failed")).toBeInTheDocument();
+      expect(screen.queryByTestId("experiment-failure-reason")).not.toBeInTheDocument();
+    });
+
+    it("does not show a failure reason for a completed experiment", async () => {
+      deepEvalMocks.getExperiment.mockResolvedValue({
+        experiment: { ...mockExperiment, error_message: "stale reason from an earlier run" },
+      });
+
+      renderDetail();
+
+      expect(await screen.findByText("A test run")).toBeInTheDocument();
+      expect(screen.queryByTestId("experiment-failure-reason")).not.toBeInTheDocument();
+      expect(screen.queryByText("stale reason from an earlier run")).not.toBeInTheDocument();
+    });
+
     it("calls onBack when the back link is clicked", async () => {
       const onBack = vi.fn();
       renderDetail({ onBack });

@@ -34,6 +34,7 @@ import { IISO27001SubClause } from "../domain.layer/interfaces/i.ISO27001SubClau
 import { IISO27001AnnexControl } from "../domain.layer/interfaces/i.iso27001AnnexControl";
 
 import { translateError } from "../utils/i18n.utils";
+import { toId } from "../utils/validations/validation.utils";
 // Helper function to get user name
 async function getUserNameById(userId: number): Promise<string> {
   const result = await sequelize.query<{ name: string; surname: string }>(
@@ -771,9 +772,9 @@ export async function saveClauses(req: RequestWithFile, res: Response): Promise<
 
     // Notify owner, reviewer, approver if changed
     const entityName = currentData.title || `Subclause #${subClauseId}`;
-    const newOwner = subClause.owner ? parseInt(String(subClause.owner)) : null;
-    const newReviewer = subClause.reviewer ? parseInt(String(subClause.reviewer)) : null;
-    const newApprover = subClause.approver ? parseInt(String(subClause.approver)) : null;
+    const newOwner = subClause.owner ? toId(subClause.owner) : null;
+    const newReviewer = subClause.reviewer ? toId(subClause.reviewer) : null;
+    const newApprover = subClause.approver ? toId(subClause.approver) : null;
 
     if (newOwner) {
       notifyIso27001Assignment(
@@ -944,9 +945,9 @@ export async function saveAnnexes(req: RequestWithFile, res: Response): Promise<
 
     // Notify owner, reviewer, approver if changed
     const annexEntityName = currentAnnexData.control_title || `Annex Control #${annexControlId}`;
-    const newAnnexOwner = annexControl.owner ? parseInt(String(annexControl.owner)) : null;
-    const newAnnexReviewer = annexControl.reviewer ? parseInt(String(annexControl.reviewer)) : null;
-    const newAnnexApprover = annexControl.approver ? parseInt(String(annexControl.approver)) : null;
+    const newAnnexOwner = annexControl.owner ? toId(annexControl.owner) : null;
+    const newAnnexReviewer = annexControl.reviewer ? toId(annexControl.reviewer) : null;
+    const newAnnexApprover = annexControl.approver ? toId(annexControl.approver) : null;
 
     if (newAnnexOwner) {
       notifyIso27001Assignment(

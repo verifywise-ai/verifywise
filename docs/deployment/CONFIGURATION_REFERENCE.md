@@ -17,12 +17,15 @@ All configuration is managed through environment variables. Create a `.env` file
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
 | `NODE_ENV` | Environment mode (`development`, `production`) | `development` | Yes |
-| `MOCK_DATA_ON` | Enable demo/mock data | `false` | No |
 
 ```bash
 NODE_ENV=production
-MOCK_DATA_ON=false
 ```
+
+Demo data is not controlled by an environment variable. An Admin seeds it from
+the app — the setup prompt shown on first login offers "Add demo data", which
+calls `POST /api/autoDrivers`. The same endpoint backs the CLI seeder
+(`cd Servers && npm run seed:demo -- --org <id> --with-use-cases`).
 
 ---
 
@@ -314,7 +317,6 @@ These variables are used by Docker Compose for service configuration.
 | `REFRESH_TOKEN_SECRET` | Any value | 64+ hex characters |
 | `DB_PASSWORD` | Simple | Strong (16+ chars) |
 | `DB_SSL` | false | true |
-| `MOCK_DATA_ON` | true/false | false |
 | URLs | localhost | HTTPS domains |
 
 ### Secret generation
@@ -338,7 +340,6 @@ openssl rand -base64 24
 
 ```bash
 NODE_ENV=development
-MOCK_DATA_ON=true
 
 BACKEND_PORT=3000
 FRONTEND_PORT=8080
@@ -365,7 +366,6 @@ EMAIL_ID=dev@example.com
 
 ```bash
 NODE_ENV=production
-MOCK_DATA_ON=false
 
 BACKEND_PORT=3000
 FRONTEND_PORT=8080

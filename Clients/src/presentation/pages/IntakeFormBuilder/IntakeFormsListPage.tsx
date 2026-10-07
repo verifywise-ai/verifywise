@@ -66,6 +66,7 @@ import {
   paginationMenuProps,
   paginationSelectStyle,
 } from "../ModelInventory/style";
+import { pageOfLabel } from "../../components/Table/pageOfLabel";
 
 // ============================================================================
 // Helpers
@@ -560,7 +561,7 @@ export function IntakeFormsListPage() {
                       ActionsComponent={(props) => <TablePaginationActions {...props} />}
                       labelRowsPerPage="Rows per page"
                       labelDisplayedRows={({ page: p, count }) =>
-                        `Page ${p + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
+                        pageOfLabel(p + 1, Math.max(0, Math.ceil(count / rowsPerPage)))
                       }
                       slotProps={{
                         select: {

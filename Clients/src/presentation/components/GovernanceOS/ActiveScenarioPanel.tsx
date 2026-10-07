@@ -20,7 +20,7 @@ import FrameworkChip from "./FrameworkChip";
 import GovernanceTooltip from "./GovernanceTooltip";
 import { CustomizableButton } from "../button/customizable-button";
 import { border as borderPalette, background, text, brand, status } from "../../themes/palette";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 interface ActiveScenarioPanelProps {
   activeScenario: IGovernanceScenario | null | undefined;
@@ -38,6 +38,7 @@ const ActiveScenarioPanel: React.FC<ActiveScenarioPanelProps> = ({
   activeScenario,
   onActivate,
 }) => {
+  const formatDate = useFormattedDate();
   const navigate = useNavigate();
   const { data: activations } = useActivationHistory();
   const deactivateMutation = useDeactivateScenario();
@@ -90,7 +91,7 @@ const ActiveScenarioPanel: React.FC<ActiveScenarioPanelProps> = ({
   ].filter(Boolean) as number[];
 
   const activationDate = latestActivation?.activated_at
-    ? displayFormattedDate(latestActivation.activated_at)
+    ? formatDate(latestActivation.activated_at)
     : null;
 
   return (

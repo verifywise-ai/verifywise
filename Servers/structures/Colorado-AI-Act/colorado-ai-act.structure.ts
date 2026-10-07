@@ -25,7 +25,7 @@ export const coloradoAiActStructure: FrameworkStructure = {
   seed: {
     name: "Colorado Artificial Intelligence Act Framework",
     description:
-      "Framework for ensuring compliance with the Colorado Artificial Intelligence Act (SB 21-169) which aims to protect consumers from algorithmic discrimination in high-risk AI decision-making",
+      "Framework for ensuring compliance with the Colorado Artificial Intelligence Act (SB 24-205) which aims to protect consumers from algorithmic discrimination in high-risk AI decision-making",
     version: "1.0.0",
     is_organizational: false,
     hierarchy: {

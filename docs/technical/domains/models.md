@@ -225,34 +225,32 @@ Model ─────┬───── Project A (direct)
 
 ### Configuration
 
+Stored in `extension_enablements.configuration` for the `mlflow` extension (secrets encrypted):
+
 ```
-mlflow_integrations
-├── tracking_server_url
-├── auth_method (none/basic/token)
-├── username (encrypted)
-├── password (encrypted)
-├── api_token (encrypted)
-├── verify_ssl
-├── timeout
-├── last_synced_at
-├── last_sync_status
-└── last_sync_message
+tracking_server_url   (required)
+auth_method           (none / basic / token)
+username, password    (basic auth; password encrypted)
+api_token             (token auth; encrypted)
+timeout               (seconds, 1–600, default 30; per-request abort; whole sync capped at 110s)
 ```
+
+TLS certificates are always verified. Older configurations may still carry a `verify_ssl` key; it is ignored (the form field was removed in `20261007090000-remove-mlflow-verify-ssl-field.js`).
 
 ### Sync Process
 
-1. Hourly sync via BullMQ (cron: `0 * * * *`)
-2. Check organization MLFlow config
-3. Verify last test was successful
-4. Fetch models from tracking server
-5. Update local MLFlow model records
-6. Record sync status
+Sync is manual. No scheduler runs it.
 
-### Retry Strategy
+1. A user clicks **Sync** on the Model Inventory → MLFlow tab (`POST /api/extensions/mlflow/sync`; requires sign-in and the MLflow extension to be enabled)
+2. Load the organization's MLflow extension config
+3. Fetch experiments, then search runs in chunks (`/api/2.0/mlflow/runs/search`)
+4. Transform runs into model records, de-duplicating on model name + lifecycle stage (latest training end wins)
+5. Upsert into `mlflow_model_records` (`ON CONFLICT (organization_id, model_name, version)`)
+6. Return `200` with the sync result (an empty server is a successful sync with zero models), or `502` with the failure reason in `error` (an HTTP error from experiments or runs search, a timeout, or a connection error with its cause code)
 
-- Max 3 retries
-- Exponential backoff (1s, 2s, 4s)
-- Soft error handling per organization
+### Error Handling
+
+- No automatic retries. A failed sync returns its error and the tab keeps showing the last synced records.
 
 ### MLFlow Model Record
 
@@ -397,6 +395,8 @@ security_assessment_data: [
 | `model_updated` | Model modified |
 | `model_deleted` | Model deleted |
 
+Creating a model, attaching a model to a new project, and creating a model risk each notify (`model_risk_candidates`, in-app) the owners of project risks sharing those projects when the risks have model-risk link candidates they have never seen. No `risk_links` rows are written; the owner reviews candidates in the existing link picker.
+
 ## Key Files
 
 ### Backend
@@ -409,7 +409,7 @@ security_assessment_data: [
 | `utils/modelRisk.utils.ts` | Risk queries |
 | `controllers/modelInventory.ctrl.ts` | Controller |
 | `routes/modelInventory.route.ts` | Routes |
-| `services/integrations/mlflow/` | MLFlow sync |
+| `Servers/extensions/mlflow/` | MLFlow extension (routes, controller, sync service) |
 
 ### Frontend
 

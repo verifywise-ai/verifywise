@@ -107,6 +107,12 @@ export const generatingReportsContent: ArticleContent = {
       ],
     },
     {
+      type: 'callout',
+      variant: 'info',
+      title: 'Current limitation',
+      text: 'Framework content in reports currently covers EU AI Act, ISO 42001, ISO 27001 and NIST AI RMF only. The 21 other built-in frameworks, such as SOC 2 or GDPR, are not included in reports yet.',
+    },
+    {
       type: 'heading',
       id: 'generating-use-case-report',
       level: 2,

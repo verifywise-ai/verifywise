@@ -15,6 +15,8 @@ def _text(sql: str):
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 
+from utils.error_detection import redact_secrets
+
 
 async def create_arena_comparison(
     comparison_id: str,
@@ -160,7 +162,9 @@ async def update_arena_comparison(
         params["detailed_results"] = json.dumps(detailed_results)
     if error_message is not None:
         updates.append("error_message = :error_message")
-        params["error_message"] = error_message
+        # Provider errors can echo credentials; the reason is shown to the
+        # whole organization.
+        params["error_message"] = redact_secrets(error_message) if error_message else error_message
     if completed_at is not None:
         updates.append("completed_at = :completed_at")
         params["completed_at"] = completed_at
@@ -219,6 +223,25 @@ async def delete_arena_comparison(
     return row is not None
 
 
+def _redact_result_errors(results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Redact the error text a failed contestant call or judging step leaves in
+    a result ("Error: ..."), including results stored before that was redacted
+    on write.
+    """
+    for result in results:
+        if not isinstance(result, dict):
+            continue
+        reason = result.get("reason")
+        if isinstance(reason, str) and reason.startswith("Error: "):
+            result["reason"] = redact_secrets(reason)
+        for contestant in result.get("contestants") or []:
+            output = contestant.get("output") if isinstance(contestant, dict) else None
+            if isinstance(output, str) and output.startswith("Error: "):
+                contestant["output"] = redact_secrets(output)
+    return results
+
+
 def _row_to_dict(row) -> Dict[str, Any]:
     """
     Convert a database row to a dictionary.
@@ -238,8 +261,11 @@ def _row_to_dict(row) -> Dict[str, Any]:
         "progress": row["progress"],
         "winner": row["winner"],
         "winCounts": row["win_counts"] if isinstance(row["win_counts"], dict) else json.loads(row["win_counts"] or "{}"),
-        "detailedResults": row["detailed_results"] if isinstance(row["detailed_results"], list) else json.loads(row["detailed_results"] or "[]"),
-        "errorMessage": row["error_message"],
+        "detailedResults": _redact_result_errors(
+            row["detailed_results"] if isinstance(row["detailed_results"], list) else json.loads(row["detailed_results"] or "[]")
+        ),
+        # Also redacts rows stored before redaction on write existed.
+        "errorMessage": redact_secrets(row["error_message"]) if row["error_message"] else row["error_message"],
         "createdAt": row["created_at"].isoformat() if row["created_at"] else None,
         "updatedAt": row["updated_at"].isoformat() if row["updated_at"] else None,
         "completedAt": row["completed_at"].isoformat() if row["completed_at"] else None,

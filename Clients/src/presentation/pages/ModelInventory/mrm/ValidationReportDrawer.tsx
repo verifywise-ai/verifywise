@@ -8,7 +8,7 @@ import StandardModal from "../../../components/Modals/StandardModal";
 import { MrmValidationOutcome, MrmValidationStage } from "../../../../domain/enums/mrm.enum";
 import { IMrmValidation, IMrmValidationReport } from "../../../../domain/interfaces/i.mrm";
 import { useSignoffValidation, useUpdateValidation } from "../../../../application/hooks/useMrm";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import {
   mrmErrorMessage,
   REPORT_SECTIONS,
@@ -55,6 +55,7 @@ const ValidationReportDrawer = ({
   onError,
   onSuccess,
 }: ValidationReportDrawerProps) => {
+  const formatDate = useFormattedDate();
   const updateValidation = useUpdateValidation();
   const signoff = useSignoffValidation();
 
@@ -180,7 +181,7 @@ const ValidationReportDrawer = ({
                     </Box>
                     <Typography sx={{ fontSize: "13px", color: "text.secondary", flex: 1 }}>
                       {entry.reason}
-                      {entry.at ? ` · ${displayFormattedDate(entry.at)}` : ""}
+                      {entry.at ? ` · ${formatDate(entry.at)}` : ""}
                     </Typography>
                   </Stack>
                 ))}

@@ -74,10 +74,10 @@ export function parseAppFile(): RouteRegistration[] {
     }
   }
 
-  // Inline health endpoint
-  if (content.includes('app.get("/health"')) {
+  // Inline health endpoints (/health, /health/live, /health/ready)
+  for (const match of content.matchAll(/app\.get\("(\/health(?:\/[a-z]+)?)"/g)) {
     registrations.push({
-      basePath: "/health",
+      basePath: match[1],
       importName: "_inline_health",
       isFactory: false,
       line: 0,
@@ -308,13 +308,16 @@ export function buildEndpoints(): Endpoint[] {
       endpoints.push({
         method: "get",
         routePath: "/",
-        handlerName: "healthCheck",
+        handlerName:
+          reg.basePath === "/health"
+            ? "healthCheck"
+            : `healthCheck_${reg.basePath.split("/").pop()}`,
         auth: false,
         roles: [],
-        path: "/health",
-        openApiPath: "/health",
+        path: reg.basePath,
+        openApiPath: reg.basePath,
         tag: "System",
-        basePath: "/health",
+        basePath: reg.basePath,
         routeFile: "app.ts",
       });
       continue;
@@ -372,7 +375,6 @@ export function deriveTag(basePath: string): string {
     "/api/modelInventory": "Model Inventory",
     "/api/modelInventoryHistory": "Model Inventory",
     "/api/datasets": "Datasets",
-    "/api/extensions/dataset-bulk-upload": "Datasets",
     "/api/dataset-change-history": "Datasets",
     "/api/policies": "Policies",
     "/api/tasks": "Tasks",
@@ -409,6 +411,7 @@ export function deriveTag(basePath: string): string {
     "/api/extensions/jira-assets": "Extensions",
     "/api/extensions/model-lifecycle": "Extensions",
     "/api/extensions/risk-import": "Extensions",
+    "/api/extensions/dataset-bulk-upload": "Extensions",
     "/api/notifications": "Notifications",
     "/api/entity-graph": "Entity Graph",
     "/api/evidenceHub": "Evidence",
@@ -539,8 +542,16 @@ export function mergeSwagger(endpoints: Endpoint[], existing: any): any {
       delete operation.security;
     }
 
+    // Append (never overwrite) the role note, so hand-written descriptions in
+    // swagger.yaml survive regeneration. Any previous role note is stripped
+    // first to keep the output stable across runs.
     if (ep.roles.length > 0) {
-      operation.description = `Requires role: ${ep.roles.join(" or ")}`;
+      const roleNote = `Requires role: ${ep.roles.join(" or ")}`;
+      const baseDescription =
+        typeof operation.description === "string"
+          ? operation.description.replace(/\s*Requires role: [^\n]*$/, "").trim()
+          : "";
+      operation.description = baseDescription ? `${baseDescription} ${roleNote}` : roleNote;
     }
 
     allTags.add(ep.tag);

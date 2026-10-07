@@ -2,6 +2,11 @@ import { getAllUsersQuery, getUserByIdQuery } from "../../utils/user.utils";
 import { getAllRolesQuery } from "../../utils/role.utils";
 import { getOrganizationByIdQuery } from "../../utils/organization.utils";
 import { getSubscription } from "../../utils/subscription.util";
+import { pendingInvitationToReplace, userInviteRefusal } from "../../utils/inviteRole.utils";
+import { createInvitationQuery } from "../../utils/invitation.utils";
+import { sendInviteEmail } from "../../utils/inviteEmail.utils";
+import { INVITATION_LIFETIME_MS } from "../../utils/jwt.utils";
+import { isValidEmail } from "../../services/email/types";
 
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
@@ -380,37 +385,92 @@ const fetchSlackWebhooks = async (_params: {}, organizationId: number): Promise<
 
 // --- Write Tools ---
 
+const INVITE_REFUSAL_MESSAGES = {
+  not_allowed: "You do not have permission to invite users",
+  unknown_role: "Unknown role",
+  exceeds_access: "You cannot invite a user with more access than your own",
+} as const;
+
 const agentSendInvitation = createWriteToolFn({
   toolName: "agent_send_invitation",
   warningLevel: "warning",
   descriptionFn: (params) =>
     `Send invitation to ${params.email} with role ID ${params.role_id}${params.name ? ` (${params.name})` : ""}`,
   executeFn: async (params, organizationId) => {
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-    const token = require("crypto").randomBytes(32).toString("hex");
-
-    const result = await sequelize.query(
-      `INSERT INTO invitations (organization_id, email, role_id, name, token, status, invited_by, created_at, expires_at)
-       VALUES (:organization_id, :email, :role_id, :name, :token, 'pending', :invited_by, NOW(), :expires_at)
-       RETURNING id, email, status`,
-      {
-        replacements: {
-          organization_id: organizationId,
-          email: params.email,
-          role_id: params.role_id,
-          name: params.name || null,
-          token,
-          invited_by: (params as any)._userId || null,
-          expires_at: expiresAt,
-        },
-        type: QueryTypes.INSERT,
-      },
+    // The approval gateway sets _userId to the user who approved the action.
+    const invitedBy = params._userId as number;
+    if (!invitedBy) {
+      throw new Error("Cannot send an invitation without an inviting user");
+    }
+    const email = String(params.email ?? "").trim();
+    const name = (params.name as string) || "";
+    const roleId = Number(params.role_id);
+    // Model-supplied: check before saving, so a bad value fails cleanly
+    // instead of storing a row whose link can never register.
+    if (!isValidEmail(email)) {
+      throw new Error("A valid email address is required");
+    }
+    if (!Number.isInteger(roleId) || roleId <= 0) {
+      throw new Error("A valid role_id is required");
+    }
+    // Runs as the approving user, who needs only aiApproval.admin to approve:
+    // apply the invite route's rules to them.
+    const refusal = await userInviteRefusal(organizationId, invitedBy, roleId);
+    if (refusal) {
+      throw new Error(INVITE_REFUSAL_MESSAGES[refusal]);
+    }
+    const replace = await pendingInvitationToReplace(
+      organizationId,
+      email,
+      roleId,
+      (pendingRoleId) => userInviteRefusal(organizationId, invitedBy, pendingRoleId),
     );
-    const row = (result as any[])[0]?.[0] || (result as any[])[0];
+    if (replace.refused) {
+      throw new Error("You cannot replace an invitation for a role with more access than your own");
+    }
+
+    // Same flow as the Team page invite (vwmailer.ctrl.ts): save the row,
+    // then email a link signed for its expires_at, so the link registers.
+    const expiresAt = new Date(Date.now() + INVITATION_LIFETIME_MS);
+    const row = await createInvitationQuery(
+      organizationId,
+      email,
+      name,
+      "",
+      roleId,
+      invitedBy,
+      expiresAt,
+      { replace: replace.replace },
+    );
+    if (!row) {
+      throw new Error("The invitation was changed by someone else. Try again.");
+    }
+
+    const { info } = await sendInviteEmail({
+      email,
+      name,
+      roleId,
+      organizationId,
+      expiresAt,
+    });
+
+    if (info.error) {
+      // The link is a registration credential, so it is not returned here
+      // (tool results go to the model). Resend from the Team page instead.
+      return {
+        id: row.id,
+        email: row.email,
+        status: "pending",
+        email_sent: false,
+        message: `Invitation saved, but the email could not be sent (${info.error.message}). Resend it from the Team page.`,
+      };
+    }
+
     return {
       id: row.id,
       email: row.email,
       status: "pending",
+      email_sent: true,
       message: "Invitation sent successfully",
     };
   },

@@ -31,14 +31,14 @@ router.post("/attach-bulk", authenticateJWT, attachFilesToEntity);
 router.delete("/detach", authenticateJWT, detachFileFromEntity);
 
 // Bulk file actions (Admin/Editor only). Must come before generic /:id routes.
-router.patch("/bulk-tags", authenticateJWT, authorize(["Admin", "Editor"]), bulkUpdateFileTags);
+router.patch("/bulk-tags", authenticateJWT, authorize("file.edit"), bulkUpdateFileTags);
 
 // File download - Admin only
-router.get("/:id", authenticateJWT, authorize(["Admin"]), getFileContentById);
+router.get("/:id", authenticateJWT, authorize("file.admin"), getFileContentById);
 router.post(
   "/",
   authenticateJWT,
-  authorize(["Admin", "Reviewer", "Editor"]),
+  authorize("file.contribute"),
   upload.any("files"),
   postFileContent,
 );

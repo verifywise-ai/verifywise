@@ -31,6 +31,7 @@ import { EmptyState } from "../EmptyState";
 import TablePaginationActions from "../TablePagination";
 import { ChevronsUpDown, ShieldAlert } from "lucide-react";
 import { IVendorRisk, IVendorRisksDialogProps } from "../../../domain/interfaces/i.vendor";
+import { pageOfLabel } from "../Table/pageOfLabel";
 
 const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
 
@@ -252,7 +253,7 @@ const VendorRisksDialog: React.FC<IVendorRisksDialogProps> = ({
                         ActionsComponent={(props) => <TablePaginationActions {...props} />}
                         labelRowsPerPage="Risks per page"
                         labelDisplayedRows={({ page, count }) =>
-                          `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
+                          pageOfLabel(page + 1, Math.max(0, Math.ceil(count / rowsPerPage)))
                         }
                         sx={paginationStyle(theme)}
                         slotProps={{

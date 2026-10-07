@@ -60,6 +60,16 @@ export class RoleModel extends Model<RoleModel> implements IRoleAttributes {
   })
   is_demo?: boolean;
 
+  /**
+   * NULL = global built-in role (immutable). Set = custom role owned by that
+   * organization (issue #4588).
+   */
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+  })
+  organization_id?: number | null;
+
   @Column({
     type: DataType.DATE,
     allowNull: false,

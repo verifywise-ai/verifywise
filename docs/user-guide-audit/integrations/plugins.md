@@ -1,3 +1,5 @@
+> **Superseded (2026-09-26):** the plugin system this audit covers was removed in August 2026. Frameworks are now built in, and integrations are extensions. See `docs/technical/infrastructure/extensions.md`.
+
 # Audit: integrations/plugins
 
 **Article path:** shared/user-guide-content/content/integrations/plugins.ts

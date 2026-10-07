@@ -41,7 +41,7 @@ class TestParseResults(unittest.TestCase):
             "completeness": 0.85,
             "answerRelevancy": 0.75,
         })
-        results = parse_results(exp, threshold=0.7)
+        results = parse_results(exp, threshold=0.7, logs=[])
 
         self.assertTrue(results["passed"])
         self.assertEqual(len(results["metrics"]), 3)
@@ -55,7 +55,7 @@ class TestParseResults(unittest.TestCase):
             "correctness": 0.9,
             "completeness": 0.3,
         })
-        results = parse_results(exp, threshold=0.7)
+        results = parse_results(exp, threshold=0.7, logs=[])
 
         self.assertFalse(results["passed"])
         completeness = next(m for m in results["metrics"] if m["name"] == "completeness")
@@ -69,7 +69,7 @@ class TestParseResults(unittest.TestCase):
             "toxicity": 0.0,
             "hallucination": 0.1,
         })
-        results = parse_results(exp, threshold=0.7)
+        results = parse_results(exp, threshold=0.7, logs=[])
 
         self.assertTrue(results["passed"])
         for m in results["metrics"]:
@@ -80,7 +80,7 @@ class TestParseResults(unittest.TestCase):
         exp = self._make_experiment({
             "bias": 0.9,
         })
-        results = parse_results(exp, threshold=0.7)
+        results = parse_results(exp, threshold=0.7, logs=[])
 
         self.assertFalse(results["passed"])
         bias = results["metrics"][0]
@@ -92,7 +92,7 @@ class TestParseResults(unittest.TestCase):
             avg_scores={"correctness": 0.6, "completeness": 0.6},
             thresholds={"correctness": 0.5, "completeness": 0.8},
         )
-        results = parse_results(exp, threshold=0.7)
+        results = parse_results(exp, threshold=0.7, logs=[])
 
         correctness = next(m for m in results["metrics"] if m["name"] == "correctness")
         completeness = next(m for m in results["metrics"] if m["name"] == "completeness")
@@ -105,12 +105,12 @@ class TestParseResults(unittest.TestCase):
 
     def test_edge_case_score_equals_threshold(self):
         exp = self._make_experiment({"correctness": 0.7})
-        results = parse_results(exp, threshold=0.7)
+        results = parse_results(exp, threshold=0.7, logs=[])
         self.assertTrue(results["passed"])
 
     def test_empty_scores(self):
         exp = self._make_experiment({})
-        results = parse_results(exp, threshold=0.7)
+        results = parse_results(exp, threshold=0.7, logs=[])
         self.assertTrue(results["passed"])
         self.assertEqual(len(results["metrics"]), 0)
 
@@ -125,7 +125,7 @@ class TestParseResults(unittest.TestCase):
                 "total_prompts": 3,
             }),
         }
-        results = parse_results(exp, threshold=0.7)
+        results = parse_results(exp, threshold=0.7, logs=[])
         self.assertTrue(results["passed"])
         self.assertEqual(results["model"], "test-model")
 
@@ -150,12 +150,12 @@ class TestGenerateMarkdown(unittest.TestCase):
         md = generate_markdown(results)
 
         self.assertIn("## VerifyWise LLM Evaluation Results", md)
-        self.assertIn("**PASS**", md)
+        self.assertIn("Overall: ✅ PASS", md)
         self.assertIn("gpt-4o-mini", md)
         self.assertIn("90.0%", md)
         self.assertIn("5.0%", md)
         self.assertIn("*(inverted)*", md)
-        self.assertIn(":white_check_mark:", md)
+        self.assertIn("✅", md)
 
     def test_failing_report(self):
         results = {
@@ -172,8 +172,8 @@ class TestGenerateMarkdown(unittest.TestCase):
         }
         md = generate_markdown(results)
 
-        self.assertIn("**FAIL**", md)
-        self.assertIn(":x:", md)
+        self.assertIn("Overall: ❌ FAIL", md)
+        self.assertIn("❌", md)
         self.assertIn("30.0%", md)
         self.assertNotIn("Duration", md)
 
@@ -192,9 +192,9 @@ class TestGenerateMarkdown(unittest.TestCase):
         }
         md = generate_markdown(results)
 
-        self.assertIn("| Metric | Score | Threshold | Status |", md)
-        self.assertIn("|--------|-------|-----------|--------|", md)
-        self.assertIn("| answerRelevancy | 85.0% | 70% | :white_check_mark: |", md)
+        self.assertIn("| Metric | Score | Threshold | Result |", md)
+        self.assertIn("|:------:|:-----:|:---------:|:------:|", md)
+        self.assertIn("| answerRelevancy | 85.0% | 70% | ✅ |", md)
 
 
 class TestResolveDataset(unittest.TestCase):
@@ -346,12 +346,12 @@ class TestEndToEnd(unittest.TestCase):
             "gpt-4o-mini", "openai", "gpt-4o", "openai", 0.7, "E2E",
         )
         experiment = poll_experiment("http://localhost:3000", "t", exp["id"], 5, 1)
-        results = parse_results(experiment, 0.7)
+        results = parse_results(experiment, 0.7, [])
         md = generate_markdown(results)
 
         self.assertTrue(results["passed"])
         self.assertEqual(len(results["metrics"]), 3)
-        self.assertIn("**PASS**", md)
+        self.assertIn("Overall: ✅ PASS", md)
         self.assertIn("95.0%", md)
 
     @patch("ci_eval_runner.resolve_dataset")
@@ -391,12 +391,12 @@ class TestEndToEnd(unittest.TestCase):
             "gpt-4o", "openai", 0.7, "Fail",
         )
         experiment = poll_experiment("http://localhost:3000", "t", exp["id"], 5, 1)
-        results = parse_results(experiment, 0.7)
+        results = parse_results(experiment, 0.7, [])
         md = generate_markdown(results)
 
         self.assertFalse(results["passed"])
-        self.assertIn("**FAIL**", md)
-        self.assertIn(":x:", md)
+        self.assertIn("Overall: ❌ FAIL", md)
+        self.assertIn("❌", md)
 
 
 if __name__ == "__main__":

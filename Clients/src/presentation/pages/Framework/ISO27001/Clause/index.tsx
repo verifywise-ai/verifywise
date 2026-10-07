@@ -27,7 +27,6 @@ import { Project } from "../../../../../domain/types/Project";
 import { useModalKeyHandling } from "../../../../../application/hooks/useModalKeyHandling";
 import { TabFilterBar } from "../../../../components/FrameworkFilter/TabFilterBar";
 import { StatsCard } from "../../../../components/Cards/StatsCard";
-import { brand } from "../../../../themes/palette";
 
 const ISO27001Clause = ({
   project,
@@ -498,9 +497,8 @@ const ISO27001Clause = ({
       <Stack sx={{ mt: 2 }}>
         <StatsCard
           title="Clauses"
-          completed={clauseProgress?.doneSubclauses ?? 0}
-          total={clauseProgress?.totalSubclauses ?? 0}
-          progressbarColor={brand.primary}
+          completed={clauseProgress?.doneSubclauses}
+          total={clauseProgress?.totalSubclauses}
         />
       </Stack>
       {filteredClauses &&

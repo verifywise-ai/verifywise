@@ -42,7 +42,6 @@ export interface ProjectRisk {
   risk_approval: any;
   approval_status: any;
   date_of_assessment: any;
-  recommendations?: any;
 }
 
 export const projectRiskQueryKeys = {

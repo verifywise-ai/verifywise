@@ -1,11 +1,24 @@
 import { useSelector } from "react-redux";
 import { Navigate, useLocation } from "react-router";
+import axios from "axios";
+import CustomException from "../../../infrastructure/exceptions/customeException";
 import { useEffect, useState, useRef } from "react";
 import { useDispatch } from "react-redux";
-import { setUserExists, clearAuthState } from "../../../application/redux/auth/authSlice";
+import { setUserExists } from "../../../application/redux/auth/authSlice";
+import { endSessionAndReload } from "../../../application/utils/clearSession";
+import { isSessionEnding } from "../../../infrastructure/api/customAxios";
 import { getAllEntities } from "../../../application/repository/entity.repository";
 import { extractUserToken } from "../../../application/tools/extractToken";
 import { IProtectedRouteProps } from "../../types/widget.types";
+
+/**
+ * Responses that mean the token itself is no good. The auth middleware
+ * answers 400 for a missing or malformed token; 406 is a failed refresh.
+ * Session-ending 403s (org mismatch, role change) are handled by the axios
+ * interceptor; a 403 that reaches here with a status is e.g. the refresh
+ * call's CSRF check, which says nothing about the session.
+ */
+const AUTH_FAILURE_STATUSES = [400, 401, 406];
 
 const ProtectedRoute = ({
   Component,
@@ -53,8 +66,24 @@ const ProtectedRoute = ({
               routeUrl: `/users/${user?.id}`,
             });
           } catch (tokenError) {
+            // Only an auth failure ends the session. A 5xx or a network error
+            // says nothing about the token; the next request will tell.
+            // apiServices rethrows failures as CustomException with the status.
+            const status =
+              tokenError instanceof CustomException
+                ? tokenError.status
+                : axios.isAxiosError(tokenError)
+                  ? tokenError.response?.status
+                  : undefined;
+            if (status === undefined || !AUTH_FAILURE_STATUSES.includes(status)) {
+              throw tokenError;
+            }
             console.warn("Token validation failed, clearing auth state:", tokenError);
-            dispatch(clearAuthState());
+            // A full reload, like every forced logout: app-level state
+            // (Advisor conversation, contexts) must not reach the next user.
+            // If the interceptor is already ending the session (a failed
+            // refresh), let it: it reloads after showing why.
+            if (!isSessionEnding()) void endSessionAndReload(dispatch);
             hasValidatedRef.current = false;
             return; // Exit early since token is invalid
           }

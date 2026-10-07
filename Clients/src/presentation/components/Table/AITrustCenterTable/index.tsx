@@ -20,6 +20,7 @@ import { IAITrustCenterTableProps } from "../../../types/interfaces/i.table";
 import CustomizableSkeleton from "../../Skeletons";
 import { TableEmptyStateLayout } from "../TableEmptyStateLayout";
 import { EmptyState } from "../../EmptyState";
+import { pageOfLabel } from "../pageOfLabel";
 
 const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
 
@@ -358,7 +359,7 @@ const AITrustCenterTable = <T extends { id: number }>({
                 ActionsComponent={(props) => <TablePaginationActions {...props} />}
                 labelRowsPerPage="Rows per page"
                 labelDisplayedRows={({ page, count }) =>
-                  `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
+                  pageOfLabel(page + 1, Math.max(0, Math.ceil(count / rowsPerPage)))
                 }
                 slotProps={{
                   select: {

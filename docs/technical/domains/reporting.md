@@ -238,6 +238,15 @@ look like two frameworks. Ids must be **greater than 0**: a `0` closes all four
 framework gates in `collectAllData`, which is the shipped bug documented above,
 so every parser branch rejects it rather than passing it through.
 
+> **Since August 2026 (PR #4443):** the 21 former plugin frameworks are native
+> `frameworks` rows (ids 5–25), so `native:5`…`native:25` parse and their
+> `projects_frameworks` pairings exist. The collector still builds framework
+> sections only for ids 1–4 (`dataCollector.ts`), so generated reports **do not
+> cover** the bundled frameworks yet. The `plugin:` and `custom:` namespaces
+> remain in the parser and point at the legacy `custom_framework_*` tables,
+> which were kept. See
+> [Compliance Frameworks](./compliance-frameworks.md#reporting-limitation).
+
 **Empty or NULL means every framework in scope.** That is the entire
 backward-compatibility story: every row written before the column existed keeps
 behaving exactly as it did. `resolveReportRequest` passes `undefined` rather

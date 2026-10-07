@@ -43,6 +43,7 @@ import {
   displayFormattedDateTime,
   displayFormattedTime,
 } from "../../../tools/isoDateToString";
+import { pageOfLabel } from "../../../components/Table/pageOfLabel";
 
 const AUTO_REFRESH_INTERVAL_MS = 10_000;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -682,7 +683,7 @@ export default function LogsPage() {
                   ActionsComponent={(props) => <TablePaginationActions {...props} />}
                   labelRowsPerPage="Rows per page"
                   labelDisplayedRows={({ page, count }) =>
-                    `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
+                    pageOfLabel(page + 1, Math.max(0, Math.ceil(count / rowsPerPage)))
                   }
                   slotProps={{
                     select: {
@@ -835,7 +836,7 @@ export default function LogsPage() {
                           ActionsComponent={(props) => <TablePaginationActions {...props} />}
                           labelRowsPerPage="Rows per page"
                           labelDisplayedRows={({ page, count }) =>
-                            `Page ${page + 1} of ${Math.max(1, Math.ceil(count / grRowsPerPage))}`
+                            pageOfLabel(page + 1, Math.max(1, Math.ceil(count / grRowsPerPage)))
                           }
                           slotProps={{
                             select: {

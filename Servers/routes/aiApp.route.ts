@@ -24,27 +24,27 @@ router.get("/policy-suggestions", authenticateJWT, getPolicySuggestions);
 router.get("/:id", authenticateJWT, getAiAppById);
 
 // POST requests
-router.post("/", authenticateJWT, authorize(["Admin", "Editor"]), createAiApp);
-router.post("/:id/models", authenticateJWT, authorize(["Admin", "Editor"]), linkModelsToAiApp);
-router.post("/:id/policies", authenticateJWT, authorize(["Admin", "Editor"]), setPoliciesForAiApp);
+router.post("/", authenticateJWT, authorize("aiApp.edit"), createAiApp);
+router.post("/:id/models", authenticateJWT, authorize("aiApp.edit"), linkModelsToAiApp);
+router.post("/:id/policies", authenticateJWT, authorize("aiApp.edit"), setPoliciesForAiApp);
 router.post(
   "/:id/data-exposure",
   authenticateJWT,
-  authorize(["Admin", "Editor"]),
+  authorize("aiApp.edit"),
   setDataExposureForAiApp,
 );
 router.post(
   "/from-shadow-ai/:shadowAiToolId",
   authenticateJWT,
-  authorize(["Admin", "Editor"]),
+  authorize("aiApp.edit"),
   promoteFromShadowAi,
 );
 
 // PATCH requests
-router.patch("/:id", authenticateJWT, authorize(["Admin", "Editor"]), updateAiAppById);
-router.patch("/:id/status", authenticateJWT, authorize(["Admin", "Editor"]), updateAiAppStatus);
+router.patch("/:id", authenticateJWT, authorize("aiApp.edit"), updateAiAppById);
+router.patch("/:id/status", authenticateJWT, authorize("aiApp.edit"), updateAiAppStatus);
 
 // DELETE requests
-router.delete("/:id", authenticateJWT, authorize(["Admin"]), deleteAiAppById);
+router.delete("/:id", authenticateJWT, authorize("aiApp.admin"), deleteAiAppById);
 
 export default router;

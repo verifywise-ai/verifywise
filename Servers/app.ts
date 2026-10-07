@@ -7,6 +7,7 @@ import { csrfProtection } from "./middleware/csrf.middleware";
 import assessmentRoutes from "./routes/assessment.route";
 import projectRoutes from "./routes/project.route";
 import risksRoutes from "./routes/risks.route";
+import riskLinksRoutes from "./routes/riskLinks.route";
 import questionRoutes from "./routes/question.route";
 import userRoutes from "./routes/user.route";
 import vendorRoutes from "./routes/vendor.route";
@@ -189,46 +190,82 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
 
   app.use(i18nMiddleware);
 
-  // Generous rate limiter for the health endpoint. Load-balancer probes are
-  // still allowed, but the endpoint is capped to prevent abuse.
-  app.get("/health", healthCheckLimiter, async (_req, res) => {
+  type HealthCheck = { status: "ok" | "error"; error?: string };
+
+  // Data-store checks must answer within the readiness probe's timeout (3s).
+  // The Redis client queues commands indefinitely while disconnected
+  // (maxRetriesPerRequest: null), so without this a Redis outage would leave
+  // every probe hanging instead of returning 503.
+  const DATA_STORE_CHECK_TIMEOUT_MS = 2000;
+  const withTimeout = <T>(work: Promise<T>, label: string): Promise<T> => {
+    let timer: NodeJS.Timeout | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error(`${label} check timed out after ${DATA_STORE_CHECK_TIMEOUT_MS}ms`)),
+        DATA_STORE_CHECK_TIMEOUT_MS,
+      );
+    });
+    return Promise.race([work, timeout]).finally(() => clearTimeout(timer));
+  };
+
+  const checkDatabase = async (): Promise<HealthCheck> => {
+    try {
+      await withTimeout(sequelize.query("SELECT 1"), "Database");
+      return { status: "ok" };
+    } catch (err: unknown) {
+      return { status: "error", error: (err as Error).message };
+    }
+  };
+
+  const checkRedis = async (): Promise<HealthCheck> => {
+    try {
+      const pong = await withTimeout(redisClient.ping(), "Redis");
+      return pong === "PONG"
+        ? { status: "ok" }
+        : { status: "error", error: `Unexpected PING response: ${pong}` };
+    } catch (err: unknown) {
+      return { status: "error", error: (err as Error).message };
+    }
+  };
+
+  const checkAiGateway = async (): Promise<HealthCheck> => {
     const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || "http://localhost:8100";
-    const checks: Record<string, { status: "ok" | "error"; error?: string }> = {};
-
     try {
-      await sequelize.query("SELECT 1");
-      checks.database = { status: "ok" };
+      const gwRes = await fetch(`${AI_GATEWAY_URL}/health`, { signal: AbortSignal.timeout(5000) });
+      return gwRes.ok ? { status: "ok" } : { status: "error", error: `HTTP ${gwRes.status}` };
     } catch (err: unknown) {
-      checks.database = { status: "error", error: (err as Error).message };
+      return { status: "error", error: (err as Error).message };
     }
+  };
 
-    try {
-      const pong = await redisClient.ping();
-      checks.redis =
-        pong === "PONG"
-          ? { status: "ok" }
-          : { status: "error", error: `Unexpected PING response: ${pong}` };
-    } catch (err: unknown) {
-      checks.redis = { status: "error", error: (err as Error).message };
-    }
-
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
-      try {
-        const gwRes = await fetch(`${AI_GATEWAY_URL}/health`, { signal: controller.signal });
-        checks.ai_gateway = gwRes.ok
-          ? { status: "ok" }
-          : { status: "error", error: `HTTP ${gwRes.status}` };
-      } finally {
-        clearTimeout(timeout);
-      }
-    } catch (err: unknown) {
-      checks.ai_gateway = { status: "error", error: (err as Error).message };
-    }
-
+  const sendChecks = (res: express.Response, checks: Record<string, HealthCheck>) => {
     const allOk = Object.values(checks).every((c) => c.status === "ok");
     res.status(allOk ? 200 : 503).json({ status: allOk ? "ok" : "degraded", checks });
+  };
+
+  // Generous rate limiter for the health endpoints. Load-balancer probes are
+  // still allowed, but the endpoints are capped to prevent abuse.
+  //
+  // /health/live   liveness: the process is up and serving HTTP. No dependency
+  //                checks, so an outage elsewhere never restarts healthy pods.
+  // /health/ready  readiness: the backend's own data stores (PostgreSQL, Redis).
+  // /health        full status including the AI Gateway, for monitoring.
+  app.get("/health/live", healthCheckLimiter, (_req, res) => {
+    res.status(200).json({ status: "ok" });
+  });
+
+  app.get("/health/ready", healthCheckLimiter, async (_req, res) => {
+    const [database, redis] = await Promise.all([checkDatabase(), checkRedis()]);
+    sendChecks(res, { database, redis });
+  });
+
+  app.get("/health", healthCheckLimiter, async (_req, res) => {
+    const [database, redis, ai_gateway] = await Promise.all([
+      checkDatabase(),
+      checkRedis(),
+      checkAiGateway(),
+    ]);
+    sendChecks(res, { database, redis, ai_gateway });
   });
 
   // Track every request: metrics + access log (shipped to the central
@@ -259,6 +296,7 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   app.use("/api/autoDrivers", autoDriverRoutes);
   app.use("/api/assessments", assessmentRoutes);
   app.use("/api/projectRisks", risksRoutes);
+  app.use("/api/riskLinks", riskLinksRoutes);
   app.use("/api/roles", roleRoutes);
   app.use("/api/files", fileRoutes);
   app.use("/api/mail", mailRoutes);

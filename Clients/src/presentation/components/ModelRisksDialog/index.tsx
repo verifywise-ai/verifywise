@@ -34,6 +34,7 @@ import {
 } from "../../../application/repository/entity.repository";
 import { User } from "../../../domain/types/User";
 import NewModelRisk from "../Modals/NewModelRisk";
+import { pageOfLabel } from "../Table/pageOfLabel";
 
 const SelectorVertical = (props: React.SVGAttributes<SVGSVGElement>) => (
   <ChevronsUpDown size={16} {...props} />
@@ -324,7 +325,7 @@ const ModelRisksDialog: React.FC<ModelRisksDialogProps> = ({
                         ActionsComponent={(props) => <TablePaginationActions {...props} />}
                         labelRowsPerPage="Risks per page"
                         labelDisplayedRows={({ page, count }) =>
-                          `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
+                          pageOfLabel(page + 1, Math.max(0, Math.ceil(count / rowsPerPage)))
                         }
                         sx={paginationStyle(theme)}
                         slotProps={{

@@ -23,9 +23,9 @@ Tokens are obtained via `/api/users/login` and refreshed via `/api/users/refresh
 | Login | 5 req/min per IP |
 | Password reset | 5 req/min per IP |
 | Invite | 5 req/min per IP |
-| AI Detection scans | 30 req/15 min |
+| AI Detection scans | 10 req/hour |
 | Webhook creation | 10 req/hour |
-| Plugin installation | 20 req/hour per IP |
+| Slack workspace connection (`POST /api/extensions/slack/oauth/workspaces`) | 10 req/hour |
 | File operations | Configured limit |
 
 ### Roles
@@ -204,6 +204,18 @@ Tokens are obtained via `/api/users/login` and refreshed via `/api/users/refresh
 | GET | `/:id` | Get framework by ID | JWT |
 | POST | `/toProject` | Add to project | JWT |
 | DELETE | `/fromProject` | Remove from project | JWT |
+
+### Bundled frameworks (ids 5–25)
+
+Generic implementation endpoints for the frameworks declared in `Servers/structures/` (`frameworkImpl.route.ts`). `:level` is `l2` or `l3`. See [Compliance Frameworks](../domains/compliance-frameworks.md#bundled-frameworks-ids-525).
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/:frameworkId/tree/:projectId` | Structure tree with implementation rows | JWT |
+| GET | `/:frameworkId/dashboard/:projectFrameworkId` | Progress summary | JWT |
+| GET | `/:frameworkId/impl/:level/:id` | One implementation row | JWT |
+| GET | `/:frameworkId/impl/:level/:id/risks` | Linked risks | JWT |
+| PATCH | `/:frameworkId/impl/:level/:id` | Update implementation (multipart; files become evidence) | JWT |
 
 ---
 
@@ -616,16 +628,7 @@ Query params: `query`, `limit`, `offset`
 
 ### MLFlow
 
-**Base Path:** `/api/integrations/mlflow`
-
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| POST | `/test` | Test connection | JWT |
-| GET | `/config` | Get config | JWT |
-| POST | `/configure` | Configure | JWT |
-| GET | `/models` | Get models | JWT |
-| GET | `/sync-status` | Sync status | JWT |
-| GET | `/health` | Health check | None |
+MLflow is an extension. Its routes are under `/api/extensions/mlflow` (`GET /models`, `GET /models/:modelId`, `POST /sync`); configuration and the connection test use the generic extension endpoints. See [Extensions](#extensions).
 
 ### GitHub
 
@@ -640,46 +643,36 @@ Query params: `query`, `limit`, `offset`
 
 ---
 
-## Plugins
+## Extensions
 
-**Base Path:** `/api/plugins`
+Built-in integrations that an Admin enables per organization. Architecture: [Extensions](../infrastructure/extensions.md).
 
-### Marketplace
+### Catalog
 
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| GET | `/marketplace` | List all published plugins | JWT |
-| GET | `/marketplace/:key` | Get plugin by key | JWT |
-| GET | `/marketplace/search?q=` | Search plugins | JWT |
-| GET | `/categories` | Get plugin categories | JWT |
+**Base Path:** `/api/extensions`
 
-### Installation Management
+| Method | Endpoint | Description | Auth | Role |
+|--------|----------|-------------|------|------|
+| GET | `/` | List extensions with this org's state (secrets redacted). Optional `?category=` | JWT | Any |
+| GET | `/:key` | One extension: catalog data, config fields, state | JWT | Any |
+| POST | `/:key/enable` | Enable. Body `{ configuration?: {...} }` | JWT | Admin |
+| POST | `/:key/disable` | Disable. Configuration and data are kept. | JWT | Admin |
+| PATCH | `/:key/configuration` | Update config. Blank secret fields keep the stored value. | JWT | Admin |
+| POST | `/:key/test-connection` | Connectivity check (`mlflow`, `azure-ai-foundry`, `jira-assets`). Other keys return 200 with `success: false`. | JWT | Admin |
 
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| POST | `/install` | Install plugin | JWT |
-| GET | `/installations` | List installed plugins | JWT |
-| DELETE | `/installations/:id` | Uninstall plugin | JWT |
-| PUT | `/installations/:id/configuration` | Update configuration | JWT |
-| POST | `/:key/test-connection` | Test plugin connection | JWT |
+### Per-extension routes
 
-### OAuth (Slack Plugin)
+Every per-extension route returns **403** "Extension '`<key>`' is not enabled for this organization" until an Admin enables the extension (`requireExtensionEnabled`).
 
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| POST | `/:key/oauth/connect` | Connect OAuth workspace | JWT |
-| GET | `/:key/oauth/workspaces` | Get connected workspaces | JWT |
-| PATCH | `/:key/oauth/workspaces/:webhookId` | Update workspace settings | JWT |
-| DELETE | `/:key/oauth/workspaces/:webhookId` | Disconnect workspace | JWT |
-
-### Plugin-Specific
-
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| GET | `/:key/models` | Get MLflow models | JWT |
-| POST | `/:key/sync` | Sync MLflow models | JWT |
-| GET | `/:key/template` | Get risk import template | JWT |
-| POST | `/:key/import` | Import risks from CSV | JWT |
+| Base Path | Endpoints | Role |
+|-----------|-----------|------|
+| `/api/extensions/slack` | `GET`, `POST /oauth/workspaces`; `GET`, `PATCH`, `DELETE /oauth/workspaces/:id`; `POST /oauth/workspaces/:id/send` | Any |
+| `/api/extensions/mlflow` | `GET /models`, `GET /models/:modelId`, `POST /sync` | Any |
+| `/api/extensions/azure-ai-foundry` | `GET /models`, `GET /models/:deploymentId`, `POST /sync`, `GET /discover` | Any |
+| `/api/extensions/model-lifecycle` | `GET /config`; `POST /phases`, `PUT /phases/reorder`, `PUT`, `DELETE /phases/:id`; `POST /phases/:phaseId/items`, `PUT /phases/:phaseId/items/reorder`, `PUT`, `DELETE /items/:id`; `GET /models/:id/lifecycle`, `GET /models/:id/lifecycle/progress`; `PUT /models/:id/lifecycle/items/:itemId`; files, people and approvals under `/models/:id/lifecycle/items/:itemId/...` | Any |
+| `/api/extensions/risk-import` | `GET /template`, `POST /import` | Admin, Editor |
+| `/api/extensions/jira-assets` | `GET`, `POST /config`; `GET /vw-attributes`; `GET /schemas`, `/schemas/:schemaId/object-types`, `/object-types/:objectTypeId/attributes`, `/object-types/:objectTypeId/objects`; `POST /import`, `POST /sync`, `GET /sync/status`, `GET /sync/history`; `GET /use-cases`, `GET`, `DELETE /use-cases/:id`; `GET /projects/:projectId/custom-frameworks-progress` | Any |
+| `/api/extensions/dataset-bulk-upload` | `POST /upload` (multipart, 30 MB, CSV/XLS/XLSX) | Admin, Editor |
 
 ---
 
@@ -740,6 +733,8 @@ All change history endpoints follow the same pattern:
 ### Slack Webhooks
 **Base Path:** `/api/slackWebhooks`
 
+> Legacy mount, kept alongside `/api/extensions/slack/oauth/workspaces` (same handlers). Unlike the extension routes, it is **not** gated by the Slack extension being enabled.
+
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
 | GET | `/` | Get webhooks | JWT |
@@ -769,7 +764,7 @@ All change history endpoints follow the same pattern:
 | Reporting | `/api/reporting` | `/reporting` |
 | Training Registry | `/api/training` | `/training` |
 | AI Trust Center | `/api/aiTrustCentre` | `/ai-trust-center` |
-| Plugins | `/api/plugins` | `/plugins` |
+| Extensions | `/api/extensions` | `/extensions` |
 | Settings | `/api/organizations` | `/settings` |
 | LLM Evals | `/api/deepeval` | `/evals` |
 | AI Detection | `/api/ai-detection` | `/ai-detection` |

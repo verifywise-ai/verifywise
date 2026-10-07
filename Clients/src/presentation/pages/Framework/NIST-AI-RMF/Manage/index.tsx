@@ -23,7 +23,6 @@ import NISTAIRMFDrawerDialog from "../../../../components/Drawer/NISTAIRMFDashbo
 import { NISTAIRMFFunction } from "../types";
 import { TabFilterBar } from "../../../../components/FrameworkFilter/TabFilterBar";
 import { StatsCard } from "../../../../components/Cards/StatsCard";
-import { brand } from "../../../../themes/palette";
 
 interface NISTAIRMFManageProps {
   project: Project;
@@ -61,10 +60,8 @@ const NISTAIRMFManage = ({
   }>({});
   const [searchParams, setSearchParams] = useSearchParams();
   const [alert, setAlert] = useState<AlertProps | null>(null);
-  const [progress, setProgress] = useState<{ total: number; done: number }>({
-    total: 0,
-    done: 0,
-  });
+  // null until loaded, so the card shows a skeleton instead of 0 of 0.
+  const [progress, setProgress] = useState<{ total: number; done: number } | null>(null);
   const categoryId = searchParams.get("categoryId");
 
   // Drawer state
@@ -432,12 +429,7 @@ const NISTAIRMFManage = ({
         />
       )}
       <Stack sx={{ mt: 2 }}>
-        <StatsCard
-          title="Subcategories"
-          completed={progress.done}
-          total={progress.total}
-          progressbarColor={brand.primary}
-        />
+        <StatsCard title="Subcategories" completed={progress?.done} total={progress?.total} />
       </Stack>
       {filteredCategories &&
         filteredCategories.map((category: any) => (

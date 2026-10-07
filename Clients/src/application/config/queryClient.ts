@@ -1,4 +1,9 @@
 import { QueryClient } from "@tanstack/react-query";
+import {
+  LLM_KEYS_QUERY_KEY,
+  LLM_KEY_STATUS_QUERY_KEY,
+  retryLLMKeyQuery,
+} from "../constants/llmKeyQueries";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -11,10 +16,17 @@ export const queryClient = new QueryClient({
       refetchOnReconnect: true, // Refetch when internet reconnects
     },
     mutations: {
-      retry: 1, // Retry failed mutations only once
+      // Never retry. A failed mutation is usually an answer (400, 409) that
+      // fails the same way twice, and on a lost response the first request may
+      // already have been saved, so a retry can create or send things twice.
+      retry: false,
     },
   },
 });
+
+// LLM key list and status: fail fast instead of the default three retries.
+queryClient.setQueryDefaults(LLM_KEYS_QUERY_KEY, { retry: retryLLMKeyQuery });
+queryClient.setQueryDefaults(LLM_KEY_STATUS_QUERY_KEY, { retry: retryLLMKeyQuery });
 
 // Helper function to invalidate queries
 export const invalidateQueries = (queryKeys: string[][]) => {

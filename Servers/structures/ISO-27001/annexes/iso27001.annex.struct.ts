@@ -29,6 +29,8 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Establish comprehensive information security policies that define the organization's approach to protecting information assets. This includes developing formal policy documents, obtaining management approval, communicating policies to all stakeholders, and establishing regular review cycles. The policies should cover all aspects of information security including data classification, access controls, incident response, and compliance requirements. Implementation involves policy distribution, staff training, and regular compliance monitoring.",
+        auditor_feedback:
+          "Topic-specific policies are approved and published; confirm annual review dates.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -69,6 +71,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Define and document clear information security roles and responsibilities across the organization. This includes establishing security governance structure, appointing information security officers, defining accountability for information assets, and ensuring all personnel understand their security responsibilities. Implementation involves creating role descriptions, establishing reporting lines, conducting regular role reviews, and maintaining up-to-date responsibility matrices that align with business objectives and regulatory requirements.",
+        auditor_feedback: "Roles are allocated and acknowledged by the individuals named.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -109,6 +112,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Describe how 'Segregation of duties' is planned, implemented, communicated, and reviewed. Include tools, systems, or teams responsible. Mention how often this control is tested and improved.",
+        auditor_feedback: "Conflicting duties are separated; review the exceptions register.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -149,6 +153,8 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Describe how 'Management responsibilities' is planned, implemented, communicated, and reviewed. Include tools, systems, or teams responsible. Mention how often this control is tested and improved.",
+        auditor_feedback:
+          "Management requires staff to apply security per policy; evidence is adequate.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -189,6 +195,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Describe how 'Contact with authorities' is planned, implemented, communicated, and reviewed. Include tools, systems, or teams responsible. Mention how often this control is tested and improved.",
+        auditor_feedback: "Authority contacts are documented and were verified this period.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -229,6 +236,8 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Describe how 'Contact with special interest groups' is planned, implemented, communicated, and reviewed. Include tools, systems, or teams responsible. Mention how often this control is tested and improved.",
+        auditor_feedback:
+          "Memberships are active; capture how intelligence received is acted upon.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -269,6 +278,8 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Describe how 'Threat intelligence' is planned, implemented, communicated, and reviewed. Include tools, systems, or teams responsible. Mention how often this control is tested and improved.",
+        auditor_feedback:
+          "Threat feeds are consumed; link findings to vulnerability prioritisation.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -309,6 +320,8 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Describe how 'Information security in project management' is planned, implemented, communicated, and reviewed. Include tools, systems, or teams responsible. Mention how often this control is tested and improved.",
+        auditor_feedback:
+          "Security is addressed at project gates; apply it to smaller projects too.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -341,6 +354,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Maintain a live inventory of information assets (data, applications, infrastructure) and other associated assets (physical, services). Assign an owner to each and review the inventory on a defined cadence and on significant change.",
+        auditor_feedback: "Asset inventory is complete with owners assigned.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -373,6 +387,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Publish acceptable use rules that cover information, systems, and supporting assets. Communicate the rules to all users and contractors, obtain acknowledgement, and monitor for violations.",
+        auditor_feedback: "Acceptable use rules are published and acknowledged on joining.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -413,6 +428,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Describe how 'Return of assets' is planned, implemented, communicated, and reviewed. Include tools, systems, or teams responsible. Mention how often this control is tested and improved.",
+        auditor_feedback: "Return of assets is evidenced in the leaver checklist.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -453,6 +469,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Describe how 'Classification of information' is planned, implemented, communicated, and reviewed. Include tools, systems, or teams responsible. Mention how often this control is tested and improved.",
+        auditor_feedback: "Classification scheme is applied consistently across repositories.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -493,6 +510,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Describe how 'Labelling of information' is planned, implemented, communicated, and reviewed. Include tools, systems, or teams responsible. Mention how often this control is tested and improved.",
+        auditor_feedback: "Labelling is applied to documents; extend it to exported datasets.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -525,6 +543,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Define and enforce rules for transferring information across all channels (electronic, physical, verbal). Use appropriate controls (encryption, authentication, secure messaging) and cover transfer in third-party agreements.",
+        auditor_feedback: "Transfer rules and agreements are in place for each channel in use.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -557,6 +576,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Document an access control policy covering logical and physical access. Apply least privilege and need-to-know, review access periodically, and update access rights promptly when roles change.",
+        auditor_feedback: "Access control policy reflects both business and security requirements.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -589,6 +609,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Operate an identity lifecycle that covers request, verification, provisioning, maintenance, suspension, and deletion. Ensure each identity is uniquely attributable and that stale identities are removed promptly.",
+        auditor_feedback: "Identity lifecycle is managed from a single authoritative source.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -621,6 +642,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Allocate authentication information through a controlled process, use MFA where appropriate, protect stored authentication data, and require prompt change on suspected compromise.",
+        auditor_feedback: "Secret handling is strong; confirm break-glass credentials are vaulted.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -653,6 +675,8 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Grant, review, modify, and revoke access rights through a documented workflow. Maintain a separate register for privileged access, and perform reviews at planned intervals and on job changes.",
+        auditor_feedback:
+          "Provisioning and revocation are timely; recertification evidence is present.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -685,6 +709,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Classify suppliers by the risk they pose to information security, define security requirements proportional to that risk, and monitor supplier compliance over the life of the relationship.",
+        auditor_feedback: "Supplier security requirements are agreed before onboarding.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -717,6 +742,8 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Maintain template security clauses for supplier agreements covering confidentiality, incident notification, audit, subcontracting, and termination. Customize per supplier risk and ensure formal sign-off.",
+        auditor_feedback:
+          "Agreements carry security clauses; confirm audit rights in every contract.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -749,6 +776,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Map ICT supply-chain dependencies, require supplier flow-down of security obligations to subcontractors, and monitor for vulnerabilities in third-party ICT components.",
+        auditor_feedback: "Supply chain risk is assessed down to the sub-processor level.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -781,6 +809,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Schedule supplier reviews, track SLA and security metrics, and evaluate supplier changes (e.g., new subcontractors, service scope changes) for security impact before acceptance.",
+        auditor_feedback: "Supplier reviews happen on schedule and findings are tracked.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -813,6 +842,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Maintain a cloud service inventory, define per-service security requirements (identity, encryption, logging, data residency), and plan for orderly exit including data portability and deletion.",
+        auditor_feedback: "Cloud responsibilities are mapped; document the exit arrangements.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -845,6 +875,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Publish an incident management plan with defined roles, communication paths, and playbooks. Train responders and exercise the plan at planned intervals to maintain readiness.",
+        auditor_feedback: "Incident plan defines roles, severities and escalation paths.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -877,6 +908,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Triage detected events using defined criteria, classify them as incidents or non-incidents with recorded rationale, and feed learnings back to improve detection and response.",
+        auditor_feedback: "Triage criteria are applied consistently by the on-call team.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -909,6 +941,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Run incidents through the documented playbook covering containment, eradication, recovery, and stakeholder communication. Record timelines, actions, and decisions for each incident.",
+        auditor_feedback: "Responses follow the documented procedures and are recorded.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -941,6 +974,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Hold post-incident reviews, record lessons, and convert them into tracked improvement actions. Periodically analyze trends across incidents to identify systemic weaknesses.",
+        auditor_feedback: "Lessons learned feed back into controls; close the older actions.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -973,6 +1007,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Define evidence-handling procedures covering identification, acquisition, preservation, and chain of custody. Maintain tooling and training, and coordinate with legal counsel when applicable.",
+        auditor_feedback: "Evidence handling preserves chain of custody.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1005,6 +1040,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Integrate information security requirements into continuity plans, assess alternate workflows and sites, and validate the approach through exercises.",
+        auditor_feedback: "Continuity arrangements keep security controls in force while degraded.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1037,6 +1073,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Define per-service ICT continuity requirements, implement backup/recovery/redundancy capabilities, and test them on a defined schedule aligned with the business continuity plan.",
+        auditor_feedback: "Recovery objectives are defined and have been tested against.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1069,6 +1106,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Maintain a register of applicable requirements with owners, monitor for changes, and review compliance periodically. Track gaps to closure.",
+        auditor_feedback: "Legal register is maintained and mapped to controls.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1101,6 +1139,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Catalogue owned and licensed IP, track software licenses for compliance, and train personnel on IP handling obligations. Perform periodic license compliance checks.",
+        auditor_feedback: "Licence compliance is monitored; the software inventory supports this.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1133,6 +1172,8 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Define retention periods by record class, apply classification-appropriate storage and transmission controls, and securely destroy records when retention expires.",
+        auditor_feedback:
+          "Records are protected against loss and falsification for their retention period.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1165,6 +1206,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Maintain a record of processing activities, operate data subject request workflows within legal timelines, and run DPIAs on high-risk processing before it begins.",
+        auditor_feedback: "Privacy controls align with the data protection obligations identified.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1197,6 +1239,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Plan independent reviews (internal audit, external assessor) at defined intervals and on major change. Track findings through a remediation process.",
+        auditor_feedback: "Independent review was performed; track the findings to closure.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1229,6 +1272,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Conduct regular management-led reviews of compliance with information security policies, rules, and standards. Record findings and drive nonconformities to closure.",
+        auditor_feedback: "Compliance checks are routine; broaden the sampling coverage.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1261,6 +1305,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Document operating procedures for information processing facilities (start-up/shut-down, backup, maintenance, media handling, safety). Make them accessible and review on change.",
+        auditor_feedback: "Procedures are current and accessible to the staff who run them.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1300,6 +1345,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Describe how 'Screening' is planned, implemented, communicated, and reviewed. Include tools, systems, or teams responsible. Mention how often this control is tested and improved.",
+        auditor_feedback: "Pre-employment screening is proportionate and documented.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1340,6 +1386,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Describe how 'Terms and conditions of employment' is planned, implemented, communicated, and reviewed. Include tools, systems, or teams responsible. Mention how often this control is tested and improved.",
+        auditor_feedback: "Contracts state security responsibilities explicitly.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1380,6 +1427,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Describe how 'Information security awareness, education and training' is planned, implemented, communicated, and reviewed. Include tools, systems, or teams responsible. Mention how often this control is tested and improved.",
+        auditor_feedback: "Training completion is high; refresh the content annually.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1420,6 +1468,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Describe how 'Disciplinary process' is planned, implemented, communicated, and reviewed. Include tools, systems, or teams responsible. Mention how often this control is tested and improved.",
+        auditor_feedback: "A documented process exists and has been communicated.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1452,6 +1501,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Include post-termination obligations in contracts, brief departing personnel, and recover access rights and assets as part of exit workflows.",
+        auditor_feedback: "Post-employment obligations are stated and enforced.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1480,6 +1530,7 @@ export const ISO27001Annex = [
         evidence_examples: ["NDA templates", "Signed NDA register", "NDA review schedule"],
         implementation_description:
           "Use appropriate NDA templates with personnel, contractors, and third parties. Track signatures and expirations, and review template clauses periodically.",
+        auditor_feedback: "NDAs are in place and reviewed for continued adequacy.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1512,6 +1563,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Publish a remote working policy, provide managed endpoints with encryption and EDR, and require secure connectivity with strong authentication.",
+        auditor_feedback: "Remote working controls cover device, network and physical aspects.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1544,6 +1596,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Publish clear reporting channels (email, intranet, hotline) and communicate them broadly. Acknowledge and triage reports promptly, and protect reporters from retaliation.",
+        auditor_feedback: "Reporting channels are known to staff and response times measured.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1591,6 +1644,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Describe how 'Physical security perimeters' is planned, implemented, communicated, and reviewed. Include tools, systems, or teams responsible. Mention how often this control is tested and improved.",
+        auditor_feedback: "Perimeters are defined and were intact at the sites visited.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1631,6 +1685,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Describe how 'Physical entry controls' is planned, implemented, communicated, and reviewed. Include tools, systems, or teams responsible. Mention how often this control is tested and improved.",
+        auditor_feedback: "Entry controls and visitor records are operating.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1671,6 +1726,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Describe how 'Securing offices, rooms and facilities' is planned, implemented, communicated, and reviewed. Include tools, systems, or teams responsible. Mention how often this control is tested and improved.",
+        auditor_feedback: "Secure areas suit the information they hold.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1702,6 +1758,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Implement physical monitoring (CCTV, intrusion detection, guards) proportionate to risk. Review logs and action alerts through a defined process.",
+        auditor_feedback: "Monitoring covers entry points; footage retention meets policy.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1734,6 +1791,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Assess physical and environmental threats to each facility, implement protective measures (fire suppression, flood/power protection, intrusion hardening), and maintain and test them on a schedule.",
+        auditor_feedback: "Environmental protections are present and serviced.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1766,6 +1824,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Define secure areas, document entry/exit and behavior rules, and audit for compliance. Ensure rules cover device use, recording, and escorting visitors.",
+        auditor_feedback: "Rules for secure areas are posted and followed.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1798,6 +1857,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Publish clear desk and clear screen rules, enforce auto-lock on devices, and perform walkthrough checks to identify and correct non-compliance.",
+        auditor_feedback: "Spot checks show good compliance; continue the periodic sweeps.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1838,6 +1898,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Describe how 'Equipment siting and protection' is planned, implemented, communicated, and reviewed. Include tools, systems, or teams responsible. Mention how often this control is tested and improved.",
+        auditor_feedback: "Equipment is sited to reduce environmental and access risk.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1870,6 +1931,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Authorize and track off-site asset use, require encryption and physical security, and define procedures for loss or theft including prompt reporting.",
+        auditor_feedback: "Off-site asset use is authorised and tracked.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1902,6 +1964,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Manage storage media across acquisition, use, transport, and disposal with classification-appropriate controls. Record and verify disposal using certified processes.",
+        auditor_feedback: "Media handling and disposal follow the classification scheme.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1934,6 +1997,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Provision resilient power, cooling, and communications with UPS/generator coverage. Test supporting utilities regularly and align supplier SLAs to criticality.",
+        auditor_feedback: "Power and cooling are redundant and maintained.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1966,6 +2030,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Route and protect cabling to reduce interception and damage risk. Secure terminations and patch panels and maintain up-to-date cable documentation.",
+        auditor_feedback: "Cabling is protected from interception and damage.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -1998,6 +2063,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Follow vendor maintenance schedules, log maintenance activities, and protect data on equipment that leaves the premises for service (wipe or remove media where appropriate).",
+        auditor_feedback: "Maintenance is performed by authorised personnel and recorded.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2030,6 +2096,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Follow a documented disposal process that verifies secure wipe or physical destruction of media. Retain destruction records and certificates where contractually or legally required.",
+        auditor_feedback: "Sanitisation is verified before re-use or disposal.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2077,6 +2144,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Describe how 'User endpoint devices' is planned, implemented, communicated, and reviewed. Include tools, systems, or teams responsible. Mention how often this control is tested and improved.",
+        auditor_feedback: "Endpoint baseline is enforced centrally.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2116,6 +2184,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Describe how 'Privileged access rights' is planned, implemented, communicated, and reviewed. Include tools, systems, or teams responsible. Mention how often this control is tested and improved.",
+        auditor_feedback: "Privileged accounts are limited, named and reviewed.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2147,6 +2216,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Apply least-privilege access at application and data layers, review roles against actual usage, and deny access by default.",
+        auditor_feedback: "Access is restricted in line with the access control policy.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2178,6 +2248,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Restrict source code access via repository permissions, require code review for changes to protected branches, and review developer access rights periodically.",
+        auditor_feedback: "Repository access is least-privilege with review on merge.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2209,6 +2280,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Enforce strong authentication (MFA, phishing-resistant where appropriate), eliminate weak defaults, and monitor authentication events for anomalies.",
+        auditor_feedback: "Multi-factor authentication is enforced on the systems in scope.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2240,6 +2312,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Monitor capacity of critical systems, maintain forecasts, and trigger scaling actions ahead of saturation thresholds.",
+        auditor_feedback: "Capacity is forecast and monitored against thresholds.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2271,6 +2344,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Deploy and maintain endpoint protection across all endpoints, investigate detections promptly, and reinforce with user awareness training.",
+        auditor_feedback: "Malware protection is deployed and signatures are current.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2302,6 +2376,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Subscribe to vulnerability feeds, scan environments regularly, prioritize by risk, remediate within SLA, and track exceptions with expiry.",
+        auditor_feedback: "Vulnerabilities are prioritised and remediated within SLA.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2333,6 +2408,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Define hardening baselines, apply them via automation, detect and remediate drift, and gate configuration changes through change management.",
+        auditor_feedback: "Baselines are defined and configuration drift is detected.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2364,6 +2440,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Tie deletion to retention schedules, verify deletion (including backups where required), and obtain attestations from third parties at contract termination.",
+        auditor_feedback: "Deletion requests are fulfilled and evidenced.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2395,6 +2472,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Mask, pseudonymize, or anonymize data based on its classification and use context. Assess re-identification risk for pseudonymized datasets.",
+        auditor_feedback: "Masking is applied wherever production data is reused.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2426,6 +2504,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Deploy DLP on primary data flows (email, endpoints, cloud), tune policies, and triage incidents through a defined response process.",
+        auditor_feedback: "DLP rules are tuned; review the volume of exceptions.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2457,6 +2536,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Run backups per defined RPO, test restoration on a schedule, and protect backup media from unauthorized access (immutable or offline copies).",
+        auditor_feedback: "Backups run to schedule and restores are tested.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2488,6 +2568,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Design redundancy into critical services to meet availability targets, test failover, and track single points of failure for remediation.",
+        auditor_feedback: "Redundancy meets the stated availability requirements.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2519,6 +2600,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Define logging standards, centralize logs in a protected repository, retain per policy, and protect against tampering (append-only, hash integrity).",
+        auditor_feedback: "Logs capture the required events and are protected from tampering.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2550,6 +2632,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Build detection use cases aligned with threats, triage alerts within SLA, and periodically review and expand monitoring coverage.",
+        auditor_feedback: "Monitoring produces actionable alerts rather than noise.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2581,6 +2664,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Point all systems at approved time sources (NTP/PTP), monitor for drift, and ensure logs carry reliable timestamps for forensic use.",
+        auditor_feedback: "Time sources are synchronised across the systems in scope.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2612,6 +2696,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Inventory privileged utilities, require authorization for use, log all usage, and review the logs for anomalies.",
+        auditor_feedback: "Utility program use is restricted and logged.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2643,6 +2728,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Control software installation via an approved catalog, verify package integrity, and gate deployments through change management.",
+        auditor_feedback: "Installation is controlled through an approved process.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2674,6 +2760,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Harden and centrally manage network devices, deploy firewalls and IDS/IPS, and maintain current architecture documentation reviewed on change.",
+        auditor_feedback: "Network controls are documented and match the deployed topology.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2705,6 +2792,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Inventory network services, define security requirements per service, align supplier SLAs, and monitor performance against requirements.",
+        auditor_feedback: "Service security mechanisms are specified and monitored.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2736,6 +2824,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Segment networks by trust and classification, restrict east-west traffic by default, and audit segmentation boundaries on a schedule.",
+        auditor_feedback: "Segmentation is implemented; verify the rules between zones annually.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2767,6 +2856,8 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Enforce category and reputation-based web filtering, control and log any bypass mechanisms, and communicate policy to users.",
+        auditor_feedback:
+          "Filtering blocks known-malicious categories with a documented exception path.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2798,6 +2889,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Publish a cryptography policy, operate a key management lifecycle (generation, distribution, rotation, destruction), and review implementations periodically.",
+        auditor_feedback: "Cryptographic policy covers algorithms and key management.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2829,6 +2921,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Adopt a secure SDLC with security activities and gates at each phase. Track security defects to closure with priority-based SLAs.",
+        auditor_feedback: "Security activities are embedded at each development stage.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2860,6 +2953,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Capture security requirements in every application build or acquisition, review for completeness, and verify via security acceptance tests before release.",
+        auditor_feedback: "Security requirements are captured before build begins.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2891,6 +2985,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Maintain secure design principles, run architecture reviews on significant changes, and publish reusable patterns to promote consistency.",
+        auditor_feedback: "Engineering principles are documented and applied in design review.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2921,6 +3016,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Adopt secure coding standards per language, integrate static analysis into CI, and train developers on common vulnerability classes.",
+        auditor_feedback: "Coding standards are enforced through review and tooling.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2952,6 +3048,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Integrate SAST, DAST, and dependency scanning; block high/critical findings at release gates; and run penetration tests before significant releases.",
+        auditor_feedback: "Testing covers security cases before release.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -2983,6 +3080,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Include security requirements in outsourced development contracts, review deliverables for security, and hold vendor developers to equivalent secure development standards.",
+        auditor_feedback: "Outsourced work is held to the same security requirements.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -3014,6 +3112,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Separate dev, test, and prod environments by access and network, prohibit unmasked production data in lower environments, and control promotions through change management.",
+        auditor_feedback: "Environments are separated with controlled promotion.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -3045,6 +3144,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Establish and operate a formal change management process covering submission, assessment, authorization, implementation, and post-change review for all information processing facility changes.",
+        auditor_feedback: "Changes are assessed, approved and recorded.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -3069,6 +3169,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Maintain a test data management policy that avoids production data with sensitive content. Where production data must be used, apply masking or anonymization and equivalent access controls.",
+        auditor_feedback: "Test data is selected and protected appropriately.",
         status: "Not Started",
         owner: "",
         reviewer: "",
@@ -3093,6 +3194,7 @@ export const ISO27001Annex = [
         ],
         implementation_description:
           "Coordinate audit tests with operational owners; define scope and schedule in advance; prefer off-hours execution where feasible to protect information system availability.",
+        auditor_feedback: "Audit testing is planned so operations are not disrupted.",
         status: "Not Started",
         owner: "",
         reviewer: "",

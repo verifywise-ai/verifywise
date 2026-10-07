@@ -14,7 +14,7 @@ import {
   CODE_BLOCK_BG,
   CODE_BLOCK_TEXT,
 } from "./shared";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 interface InvocationDrawerProps {
   logId: number | null;
@@ -44,6 +44,7 @@ interface AuditLogDetail {
 }
 
 export default function MCPInvocationDrawer({ logId, open, onClose }: InvocationDrawerProps) {
+  const formatDate = useFormattedDate();
   const [row, setRow] = useState<AuditLogDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -127,7 +128,7 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
                 />
               </Stack>
               <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                {displayFormattedDate(row.created_at)}
+                {formatDate(row.created_at)}
               </Typography>
               <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
                 {(row.agent_key_name || "—") + " · " + (row.session_id || "—")}
@@ -186,7 +187,7 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
                   <Typography
                     sx={{ fontSize: 12, color: palette.text.tertiary, whiteSpace: "nowrap" }}
                   >
-                    {displayFormattedDate(e.at)}
+                    {formatDate(e.at)}
                   </Typography>
                 </Stack>
               ))}

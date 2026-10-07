@@ -53,17 +53,18 @@ Properties: `organization_id`, `tier_id`, `status` ("active" | "cancelled" | "ex
 
 ## Dataset Bulk Upload
 
-Plugin: `dataset-bulk-upload` (must be installed)
+Extension: `dataset-bulk-upload` (an Admin must enable it for the organization)
 
 ```
-POST /api/dataset-bulk-upload/upload
-Content-Type: multipart/form-data
+POST /api/extensions/dataset-bulk-upload/upload
+Content-Type: multipart/form-data   (field: file, one file per request)
 ```
 
 - Supported: CSV, XLS, XLSX
 - Max file size: 30MB
 - Admin or Editor role required
-- Error 413 (too large), 415 (wrong type), 403 (plugin not installed)
+- Error 413 (too large), 415 (wrong type), 403 (extension not enabled)
+- Code: `Servers/extensions/dataset-bulk-upload/`
 
 ---
 

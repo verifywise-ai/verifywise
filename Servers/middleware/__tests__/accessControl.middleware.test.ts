@@ -1,6 +1,13 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 import { Request, Response } from "express";
 import authorize from "../accessControl.middleware";
+import { roleHasPermission } from "../../utils/rolePermissions.utils";
+
+jest.mock("../../utils/rolePermissions.utils", () => ({
+  roleHasPermission: jest.fn(),
+}));
+
+const mockRoleHasPermission = roleHasPermission as jest.MockedFunction<typeof roleHasPermission>;
 
 function createMockReq(role?: string): Partial<Request> {
   // The i18nMiddleware always runs before access-control middleware in the
@@ -88,4 +95,57 @@ describe("accessControl.middleware (authorize)", () => {
       expect(next).toHaveBeenCalled();
     },
   );
+
+  describe("permission keys (issue #4588)", () => {
+    beforeEach(() => {
+      mockRoleHasPermission.mockReset();
+    });
+
+    it("should call next() when the permission matrix grants access", async () => {
+      mockRoleHasPermission.mockResolvedValue(true);
+      const req = { ...createMockReq("AI Engineer"), organizationId: 1 } as any;
+      const res = createMockRes();
+
+      await authorize("risks.edit")(req as Request, res as Response, next);
+
+      expect(mockRoleHasPermission).toHaveBeenCalledWith(1, "AI Engineer", "risks.edit");
+      expect(next).toHaveBeenCalled();
+      expect(res.status).not.toHaveBeenCalled();
+    });
+
+    it("should return 403 when the permission matrix denies access", async () => {
+      mockRoleHasPermission.mockResolvedValue(false);
+      const req = { ...createMockReq("AI Engineer"), organizationId: 1 } as any;
+      const res = createMockRes();
+
+      await authorize("risks.edit")(req as Request, res as Response, next);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({ message: "Forbidden", data: "Access denied" });
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it("should pass null organizationId when the request has none", async () => {
+      mockRoleHasPermission.mockResolvedValue(true);
+      const req = createMockReq("SuperAdmin") as any;
+      const res = createMockRes();
+
+      await authorize("auditLedger.super")(req as Request, res as Response, next);
+
+      expect(mockRoleHasPermission).toHaveBeenCalledWith(null, "SuperAdmin", "auditLedger.super");
+      expect(next).toHaveBeenCalled();
+    });
+
+    it("should propagate matrix errors to next(error)", async () => {
+      const error = new Error("DB unavailable");
+      mockRoleHasPermission.mockRejectedValue(error);
+      const req = { ...createMockReq("AI Engineer"), organizationId: 1 } as any;
+      const res = createMockRes();
+
+      await authorize("risks.edit")(req as Request, res as Response, next);
+
+      expect(next).toHaveBeenCalledWith(error);
+      expect(res.status).not.toHaveBeenCalled();
+    });
+  });
 });

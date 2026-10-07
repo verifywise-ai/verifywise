@@ -76,6 +76,8 @@ export interface ApiResponse<T> {
  */
 export type RetriableRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
+  /** Set by the request interceptor when it attached the session token. */
+  _sentWithSession?: boolean;
 };
 
 /**

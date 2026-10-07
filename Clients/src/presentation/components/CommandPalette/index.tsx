@@ -553,6 +553,17 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     previouslyFocusedRef.current?.focus();
   }, []);
 
+  // cmdk listens for Enter on the palette and runs the highlighted command.
+  // Activate the button here so Enter and Space close the palette instead.
+  const handleCloseButtonKeyDown = useCallback((event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.click();
+  }, []);
+
   // Disable cmdk's built-in filtering when in search mode (we use server-side search)
   const shouldFilter = !isSearchMode;
 
@@ -574,7 +585,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             <div className="command-dialog-content">
               <div id="command-palette-description" className="sr-only">
                 Search for commands, navigate to pages, or perform actions using keyboard shortcuts.
-                Use arrow keys to navigate, Enter to select, and Escape to close.
+                Use arrow keys to navigate, Enter to select, and Escape or the Close button to
+                close.
               </div>
 
               <div className="command-input-wrapper">
@@ -598,6 +610,16 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                     {SEARCH_HINTS[currentHintIndex]}
                   </span>
                 )}
+                <Dialog.Close asChild>
+                  <button
+                    type="button"
+                    className="command-close-button"
+                    aria-label="Close"
+                    onKeyDown={handleCloseButtonKeyDown}
+                  >
+                    <X size={16} strokeWidth={1.5} />
+                  </button>
+                </Dialog.Close>
               </div>
 
               <div id="command-palette-help" className="sr-only">
@@ -1132,8 +1154,16 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                 </Box>
 
                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                  <Box
+                    className="command-footer-key"
+                    sx={{ display: "flex", alignItems: "center" }}
+                    aria-hidden="true"
+                  >
+                    <X size={10} />
+                  </Box>
+                  <Typography sx={{ fontSize: "10px", color: "#666" }}>or</Typography>
                   <Box className="command-footer-key">esc</Box>
-                  <Typography sx={{ fontSize: "10px", color: "#666" }}>Close</Typography>
+                  <Typography sx={{ fontSize: "10px", color: "#666" }}>to close</Typography>
                 </Box>
 
                 <Box sx={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 0.5 }}>

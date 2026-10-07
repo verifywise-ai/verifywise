@@ -1,6 +1,7 @@
 import React from "react";
 import { Box, Typography, Button, useTheme } from "@mui/material";
 import { useNavigate } from "react-router";
+import { LLM_KEY_CREATE_PATH } from "../../../../../application/constants/llmKeyDeepLink";
 
 interface AIKeyBannerProps {
   onClose: () => void;
@@ -12,7 +13,7 @@ const AIKeyBanner: React.FC<AIKeyBannerProps> = ({ onClose }) => {
 
   const handleConfigureClick = () => {
     onClose();
-    navigate("/settings/apikeys");
+    navigate(LLM_KEY_CREATE_PATH);
   };
 
   return (

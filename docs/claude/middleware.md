@@ -130,18 +130,18 @@ Error responses: 400 (no token), 401 (verification failed), 403 (wrong org/role)
 
 ---
 
-## Plugin Guard Middleware
+## Extension Gate Middleware
 
-File: `Servers/middleware/pluginGuard.middleware.ts`
+File: `Servers/middleware/requireExtensionEnabled.middleware.ts`
 
 ```typescript
-import { requirePlugin } from "../middleware/pluginGuard.middleware";
+import { requireExtensionEnabled } from "../../middleware/requireExtensionEnabled.middleware";
 
-router.use(requirePlugin("dataset-bulk-upload"));
-router.post("/upload", requirePlugin("my-plugin"), uploadHandler);
+router.use(authenticateJWT);
+router.use(requireExtensionEnabled("dataset-bulk-upload"));
 ```
 
-Returns 404 if plugin not installed, 401 if no tenant context.
+Checks `extension_enablements` for the caller's organization. Responses: 401 if there is no `req.organizationId`, 404 "Extension '`<key>`' not found in catalog" for an unknown key, and 403 "Extension '`<key>`' is not enabled for this organization" when the extension is not enabled. Every router under `Servers/extensions/<key>/` uses it. See `docs/technical/infrastructure/extensions.md`.
 
 ---
 

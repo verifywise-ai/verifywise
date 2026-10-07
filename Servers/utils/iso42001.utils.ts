@@ -17,6 +17,7 @@ import { ProjectFrameworksModel } from "../domain.layer/models/projectFrameworks
 import { Clauses } from "../structures/ISO-42001/clauses/clauses.struct";
 import { Annex } from "../structures/ISO-42001/annex/annex.struct";
 import { STATUSES } from "../types/status.type";
+import { demoDueDate } from "./demoSeedFields";
 import { SubClauseISORisks } from "../domain.layer/frameworks/ISO-42001/subClauseISORisks.model";
 import { validateRiskArray } from "./utility.utils";
 import {
@@ -24,6 +25,7 @@ import {
   getEvidenceFilesForEntities,
   deleteAllFileEntityLinksForEntities,
 } from "./files/evidenceFiles.utils";
+import { toId } from "./validations/validation.utils";
 
 const getDemoSubClauses = (): object[] => {
   const subClauses = [];
@@ -61,7 +63,7 @@ export const countSubClausesISOByProjectId = async (
   doneSubclauses: string;
 }> => {
   const result = (await sequelize.query(
-    `SELECT COUNT(*) AS "totalSubclauses", SUM(CASE WHEN status = 'Implemented' THEN 1 ELSE 0 END) AS "doneSubclauses" FROM subclauses_iso WHERE organization_id = :organizationId AND projects_frameworks_id = :projects_frameworks_id;`,
+    `SELECT COUNT(*) AS "totalSubclauses", SUM(CASE WHEN status IN ('Implemented', 'Audited') THEN 1 ELSE 0 END) AS "doneSubclauses" FROM subclauses_iso WHERE organization_id = :organizationId AND projects_frameworks_id = :projects_frameworks_id;`,
     {
       replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
     },
@@ -77,7 +79,7 @@ export const countAnnexCategoriesISOByProjectId = async (
   doneAnnexcategories: string;
 }> => {
   const result = (await sequelize.query(
-    `SELECT COUNT(*) AS "totalAnnexcategories", SUM(CASE WHEN status = 'Implemented' THEN 1 ELSE 0 END) AS "doneAnnexcategories" FROM annexcategories_iso WHERE organization_id = :organizationId AND projects_frameworks_id = :projects_frameworks_id;`,
+    `SELECT COUNT(*) AS "totalAnnexcategories", SUM(CASE WHEN status IN ('Implemented', 'Audited') THEN 1 ELSE 0 END) AS "doneAnnexcategories" FROM annexcategories_iso WHERE organization_id = :organizationId AND projects_frameworks_id = :projects_frameworks_id;`,
     {
       replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
     },
@@ -607,13 +609,15 @@ export const createNewClausesQuery = async (
   transaction: Transaction,
   is_mock_data: boolean,
 ) => {
-  const projectFrameworkId = (await sequelize.query(
-    `SELECT id FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :project_id AND framework_id = 2`,
+  const projectFramework = (await sequelize.query(
+    `SELECT pf.id, p.owner, p.is_demo FROM projects_frameworks pf
+       JOIN projects p ON p.id = pf.project_id
+      WHERE pf.organization_id = :organizationId AND pf.project_id = :project_id AND pf.framework_id = 2`,
     {
       replacements: { organizationId, project_id: projectId },
       transaction,
     },
-  )) as [{ id: number }[], number];
+  )) as [{ id: number; owner: number | null; is_demo: boolean }[], number];
   const subClauses = (await sequelize.query(`SELECT id FROM subclauses_struct_iso ORDER BY id;`, {
     transaction,
   })) as [{ id: number }[], number];
@@ -623,12 +627,14 @@ export const createNewClausesQuery = async (
   }[];
   const subClauseIds = await createNewSubClausesQuery(
     subClauses[0].map((subClause) => subClause.id),
-    projectFrameworkId[0][0].id,
+    projectFramework[0][0].id,
     enable_ai_data_insertion,
     demoSubClauses,
     organizationId,
     transaction,
     is_mock_data,
+    projectFramework[0][0].owner,
+    projectFramework[0][0].is_demo,
   );
   const clauses = await getManagementSystemClausesQuery(subClauseIds, organizationId, transaction);
   return clauses;
@@ -645,15 +651,17 @@ export const createNewSubClausesQuery = async (
   organizationId: number,
   transaction: Transaction,
   is_mock_data: boolean,
+  demoOwner: number | null = null,
+  isDemo: boolean = false,
 ) => {
   const subClauseIds = [];
   let ctr = 0;
   for (let _subClauseId of subClauses) {
     const subClauseId = (await sequelize.query(
       `INSERT INTO subclauses_iso (
-        organization_id, subclause_meta_id, projects_frameworks_id, implementation_description, auditor_feedback, status
+        organization_id, subclause_meta_id, projects_frameworks_id, implementation_description, auditor_feedback, status, owner, reviewer, approver, due_date, is_demo
       ) VALUES (
-        :organizationId, :subclause_meta_id, :projects_frameworks_id, :implementation_description, :auditor_feedback, :status
+        :organizationId, :subclause_meta_id, :projects_frameworks_id, :implementation_description, :auditor_feedback, :status, :owner, :reviewer, :approver, :due_date, :is_demo
       ) RETURNING id;`,
       {
         replacements: {
@@ -666,9 +674,14 @@ export const createNewSubClausesQuery = async (
           auditor_feedback: enable_ai_data_insertion
             ? (demoSubClauses[ctr]?.auditor_feedback ?? "")
             : null,
-          status: is_mock_data
-            ? STATUSES[Math.floor(Math.random() * STATUSES.length)]
-            : "Not started",
+          // Walk STATUSES in order so the demo covers every status and looks the
+          // same on every seed; a real project starts at "Not started".
+          status: is_mock_data ? STATUSES[ctr % STATUSES.length] : "Not started",
+          owner: is_mock_data ? demoOwner : null,
+          reviewer: is_mock_data ? demoOwner : null,
+          approver: is_mock_data ? demoOwner : null,
+          due_date: is_mock_data ? demoDueDate(ctr) : null,
+          is_demo: isDemo,
         },
         transaction,
       },
@@ -686,13 +699,15 @@ export const createNewAnnexesQUery = async (
   transaction: Transaction,
   is_mock_data: boolean,
 ) => {
-  const projectFrameworkId = (await sequelize.query(
-    `SELECT id FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :project_id AND framework_id = 2`,
+  const projectFramework = (await sequelize.query(
+    `SELECT pf.id, p.owner, p.is_demo FROM projects_frameworks pf
+       JOIN projects p ON p.id = pf.project_id
+      WHERE pf.organization_id = :organizationId AND pf.project_id = :project_id AND pf.framework_id = 2`,
     {
       replacements: { organizationId, project_id: projectId },
       transaction,
     },
-  )) as [{ id: number }[], number];
+  )) as [{ id: number; owner: number | null; is_demo: boolean }[], number];
   const annexCategories = (await sequelize.query(
     `SELECT id FROM annexcategories_struct_iso ORDER BY id;`,
     { transaction },
@@ -705,12 +720,14 @@ export const createNewAnnexesQUery = async (
   }[];
   const annexCategoryIds = await createNewAnnexeCategoriesQuery(
     annexCategories[0].map((annexCategory) => annexCategory.id),
-    projectFrameworkId[0][0].id,
+    projectFramework[0][0].id,
     demoAnnexCategories,
     enable_ai_data_insertion,
     organizationId,
     transaction,
     is_mock_data,
+    projectFramework[0][0].owner,
+    projectFramework[0][0].is_demo,
   );
   const annexes = await getReferenceControlsQuery(annexCategoryIds, organizationId, transaction);
   return annexes;
@@ -729,15 +746,17 @@ export const createNewAnnexeCategoriesQuery = async (
   organizationId: number,
   transaction: Transaction,
   is_mock_data: boolean,
+  demoOwner: number | null = null,
+  isDemo: boolean = false,
 ) => {
   const annexCategoryIds = [];
   let ctr = 0;
   for (let _annexCategoryId of annexCategories) {
     const annexCategoryId = (await sequelize.query(
       `INSERT INTO annexcategories_iso (
-        organization_id, annexcategory_meta_id, projects_frameworks_id, is_applicable, justification_for_exclusion, implementation_description, auditor_feedback, status
+        organization_id, annexcategory_meta_id, projects_frameworks_id, is_applicable, justification_for_exclusion, implementation_description, auditor_feedback, status, owner, reviewer, approver, due_date, is_demo
       ) VALUES (
-        :organizationId, :annexcategory_meta_id, :projects_frameworks_id, :is_applicable, :justification_for_exclusion, :implementation_description, :auditor_feedback, :status
+        :organizationId, :annexcategory_meta_id, :projects_frameworks_id, :is_applicable, :justification_for_exclusion, :implementation_description, :auditor_feedback, :status, :owner, :reviewer, :approver, :due_date, :is_demo
       ) RETURNING id;`,
       {
         replacements: {
@@ -756,9 +775,14 @@ export const createNewAnnexeCategoriesQuery = async (
           auditor_feedback: enable_ai_data_insertion
             ? (demoAnnexCategories[ctr]?.auditor_feedback ?? "")
             : null,
-          status: is_mock_data
-            ? STATUSES[Math.floor(Math.random() * STATUSES.length)]
-            : "Not started",
+          // Walk STATUSES in order so the demo covers every status and looks the
+          // same on every seed; a real project starts at "Not started".
+          status: is_mock_data ? STATUSES[ctr % STATUSES.length] : "Not started",
+          owner: is_mock_data ? demoOwner : null,
+          reviewer: is_mock_data ? demoOwner : null,
+          approver: is_mock_data ? demoOwner : null,
+          due_date: is_mock_data ? demoDueDate(ctr) : null,
+          is_demo: isDemo,
         },
         transaction,
       },
@@ -831,7 +855,10 @@ export const updateSubClauseQuery = async (
           if (value === "" || value === null) {
             value = null;
           } else {
-            const numValue = parseInt(value as string);
+            // toId, not parseInt: a salvaging parse turns an owner of "3abc"
+            // into user 3 and assigns the record to them. Junk now trips the
+            // guard below, which drops the field from the SET clause.
+            const numValue = toId(value);
             if (isNaN(numValue)) return acc;
             value = numValue;
           }
@@ -989,7 +1016,10 @@ export const updateAnnexCategoryQuery = async (
           if (value === "" || value === null) {
             value = null;
           } else {
-            const numValue = parseInt(value as string);
+            // toId, not parseInt: a salvaging parse turns an owner of "3abc"
+            // into user 3 and assigns the record to them. Junk now trips the
+            // guard below, which drops the field from the SET clause.
+            const numValue = toId(value);
             if (isNaN(numValue)) return acc;
             value = numValue;
           }

@@ -732,6 +732,58 @@ api.interceptors.response.use(
 );
 ```
 
+### Ending a session
+
+Every logout path ends the session through `clearSession(dispatch)`
+(`Clients/src/application/utils/clearSession.ts`), which dispatches
+`clearAuthState()` and then clears the React Query cache, so no server data
+from one session is shown to the next user in the same tab. Auth is cleared
+first so anything that refetches afterwards has no token to send.
+
+| Path | Where |
+|------|-------|
+| Manual logout (sidebar, profile deletion) | `useLogout` (`application/hooks/useLogout.ts`) |
+| 403 org mismatch / not allowed (en, de, fr messages) | `performLogout` (`infrastructure/api/customAxios.ts`), once for concurrent 403s |
+| Refresh rejected (400, 401 or 406; a CSRF 403 does not end the session) | response interceptor (`infrastructure/api/customAxios.ts`), after showing "Session Expired" for 1.5 s |
+| Stored token rejected on load (400, 401 or 406 only; skipped if the interceptor is already ending the session) | `ProtectedRoute` |
+
+Manual logout, the 403 logout and a rejected refresh go through
+`endSessionAndReload` (same file): it clears the session, flushes
+redux-persist, then does a full page load of `/login` (not a client-side
+navigate), so app-level providers start empty and the cleared auth is what
+storage restores. Concurrent failures end the session once, and responses
+that arrive after it was cleared are ignored. `ProtectedRoute` and the
+refresh keep the session on a 5xx or network error, which says nothing about
+the token.
+
+Mounted queries can refetch once the cache is cleared, with no token, and
+requests sent before the clear can still land. Once the store holds no token,
+the axios response interceptor drops these quietly, with no toast and no token
+refresh: any failure of a request that carried the session token, and the auth
+middleware's `400 "Token not found"` (en/de/fr) from anything else except the
+invitation and password-reset endpoints. Errors from requests made while signed
+out (login, registration, password reset) still show.
+
+`ProtectedRoute` reloads too when the server rejects the stored token. Ending
+or starting a session also forgets in-flight deduplicated GETs
+(`clearInflightGets`), so a request sent under one session is never handed to
+the next. The registration pages call `discardToken`, which drops the token,
+the query cache and in-flight GETs without the logout reset of the rest of the
+auth state.
+
+Do not dispatch `clearAuthState()` directly for a logout; call `clearSession`.
+
+### Starting a session
+
+Every sign-in path stores its token through `startSession(dispatch, token)`
+(same file), which empties the React Query cache before dispatching
+`setAuthToken`. A tab whose earlier session was never logged out (an expired
+session, or another user signing in) shows nothing cached from it. Callers:
+password login (`Login`), Microsoft sign-in (`MicrosoftSignIn`,
+`MicrosoftCallback`) and the sign-in after creating an organization
+(`RegisterMultiTenant`). A token refresh keeps the same user and calls
+`setAuthToken` directly.
+
 ## Security Features Summary
 
 | Feature | Implementation |

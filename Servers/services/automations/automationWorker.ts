@@ -7,7 +7,11 @@ import { sequelize } from "../../database/db";
 import { TenantAutomationActionModel } from "../../domain.layer/models/tenantAutomationAction/tenantAutomationAction.model";
 import { buildVendorReplacements } from "../../utils/automation/vendor.automation.utils";
 import { replaceTemplateVariables } from "../../utils/automation/automation.utils";
-import { enqueueAutomationAction } from "./automationProducer";
+import {
+  enqueueAutomationAction,
+  enqueueRiskLinkRecompute,
+  enqueueVendorRiskLinkRecompute,
+} from "./automationProducer";
 import { uploadFile } from "../../utils/fileUpload.utils";
 import { mapReportTypeToFileSource } from "../../controllers/reporting.ctrl";
 import { buildReportingReplacements } from "../../utils/automation/reporting.automation.utils";
@@ -25,7 +29,16 @@ import { processScheduledAiDetectionScans } from "../aiDetection/scheduledScanPr
 import { syncAiTrustIndex } from "./actions/syncAiTrustIndex";
 import { runRevalidationSweepAllOrgs } from "./actions/mrmRevalidationSweep";
 import { runRetentionPruneAllOrgs } from "./actions/mrmRetentionPrune";
-import { runEvidenceExpirySweepAllOrgs } from "./actions/evidenceExpirySweep";
+import { runEvidenceFreshnessSweepAllOrgs } from "./actions/evidenceFreshnessSweep";
+import { runDeadlineEscalationSweepAllOrgs } from "./actions/deadlineEscalationSweep";
+import { runStaleInheritanceNotifySweepAllOrgs } from "./actions/staleInheritanceNotifySweep";
+import { recomputeRiskLinks, recomputeRiskLinksBatch } from "../riskLinks/recompute";
+import {
+  recomputeVendorRiskLinks,
+  recomputeVendorRiskLinksBatch,
+} from "../riskLinks/vendorRelated";
+import { suggestDirectionForComponent } from "../riskLinks/direction/direction.service";
+import { runFileExpirySweepAllOrgs } from "./actions/fileExpirySweep";
 // AI Gateway budget/risk jobs — call AIGateway HTTP endpoints via internal API
 const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || "http://127.0.0.1:8100";
 const AI_GATEWAY_KEY = process.env.AI_GATEWAY_INTERNAL_KEY || "";
@@ -684,8 +697,47 @@ export const createAutomationWorker = () => {
           await runRevalidationSweepAllOrgs();
         } else if (name === "mrm_retention_prune") {
           await runRetentionPruneAllOrgs();
-        } else if (name === "evidence_expiry_sweep") {
-          await runEvidenceExpirySweepAllOrgs();
+        } else if (name === "evidence_freshness_sweep") {
+          await runEvidenceFreshnessSweepAllOrgs();
+        } else if (name === "deadline_escalation_sweep") {
+          await runDeadlineEscalationSweepAllOrgs();
+        } else if (name === "stale_inheritance_notify_sweep") {
+          await runStaleInheritanceNotifySweepAllOrgs();
+        } else if (name === "risk_link_recompute") {
+          const { organizationId, riskId } = job.data as {
+            organizationId: number;
+            riskId: number;
+          };
+          await recomputeRiskLinks(organizationId, riskId);
+        } else if (name === "risk_link_recompute_batch") {
+          const { organizationId, riskIds } = job.data as {
+            organizationId: number;
+            riskIds: number[];
+          };
+          const failed = await recomputeRiskLinksBatch(organizationId, riskIds);
+          // Retried one by one, with the per-risk job's backoff.
+          await Promise.all(failed.map((id) => enqueueRiskLinkRecompute(organizationId, id)));
+        } else if (name === "vendor_risk_link_recompute_batch") {
+          const { organizationId, vendorRiskIds } = job.data as {
+            organizationId: number;
+            vendorRiskIds: number[];
+          };
+          const failed = await recomputeVendorRiskLinksBatch(organizationId, vendorRiskIds);
+          await Promise.all(failed.map((id) => enqueueVendorRiskLinkRecompute(organizationId, id)));
+        } else if (name === "vendor_risk_link_recompute") {
+          const { organizationId, vendorRiskId } = job.data as {
+            organizationId: number;
+            vendorRiskId: number;
+          };
+          await recomputeVendorRiskLinks(organizationId, vendorRiskId);
+        } else if (name === "risk_link_direction") {
+          const { organizationId, riskIds } = job.data as {
+            organizationId: number;
+            riskIds: number[];
+          };
+          await suggestDirectionForComponent(organizationId, riskIds);
+        } else if (name === "file_expiry_sweep") {
+          await runFileExpirySweepAllOrgs();
         } else if (name === "mcp_audit_cleanup") {
           try {
             const [auditResult, approvalResult] = await Promise.all([

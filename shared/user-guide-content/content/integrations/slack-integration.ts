@@ -22,7 +22,7 @@ export const slackIntegrationContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Receive notifications', text: 'Get real-time alerts about governance events in Slack channels' },
-        { bold: 'Route by channel', text: 'Send different notification types to specific channels' },
+        { bold: 'Choose what to send', text: 'Pick which notification types go to Slack' },
         { bold: 'Multiple workspaces', text: 'Connect more than one Slack workspace if needed' },
         { bold: 'Stay informed', text: 'Keep your team updated without requiring them to log into VerifyWise' },
       ],
@@ -35,15 +35,15 @@ export const slackIntegrationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'To connect your Slack workspace:',
+      text: 'Slack is one of the built-in extensions, so an Admin needs to enable it first. To connect your Slack workspace:',
     },
     {
       type: 'ordered-list',
       items: [
-        { text: 'Go to Integrations from the main menu' },
-        { text: 'Click Configure on the Slack integration card' },
-        { text: 'You\'ll be redirected to Slack to authorize the connection' },
-        { text: 'Select the Slack workspace you want to connect' },
+        { text: 'Click the **Extensions** button in the top header' },
+        { text: 'On the Slack card, click **Enable**, then **Configure**' },
+        { text: 'Click **Add to Slack**. You\'ll be redirected to Slack to authorize the connection' },
+        { text: 'Select the Slack workspace and the channel VerifyWise should post to' },
         { text: 'Review the permissions and click Allow' },
         { text: 'You\'ll be sent back to VerifyWise with the connection active' },
       ],
@@ -52,6 +52,12 @@ export const slackIntegrationContent: ArticleContent = {
       type: 'callout',
       variant: 'info',
       text: 'You need permission to install apps in your Slack workspace. If you see an error during authorization, contact your Slack workspace administrator.',
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      title: 'Self-hosted installations',
+      text: 'On a self-hosted installation, **Add to Slack** only works once a Slack app is configured: set `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET` and `SLACK_API_URL` on the server, and `VITE_SLACK_CLIENT_ID` and `VITE_SLACK_URL` on the client.',
     },
     {
       type: 'heading',
@@ -66,10 +72,8 @@ export const slackIntegrationContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'channels:read', text: 'View channels to allow notification routing' },
+        { bold: 'incoming-webhook', text: 'Post messages to the channel you pick during authorization' },
         { bold: 'chat:write', text: 'Send messages to channels' },
-        { bold: 'incoming-webhook', text: 'Create webhooks for notifications' },
-        { bold: 'groups:read', text: 'View private channels for routing options' },
       ],
     },
     {
@@ -84,33 +88,34 @@ export const slackIntegrationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'After connecting Slack, you can manage your integrations from the Slack management page:',
+      text: 'After connecting Slack, manage your connections from the Slack settings page:',
     },
     {
       type: 'ordered-list',
       items: [
-        { text: 'Go to Integrations' },
-        { text: 'Click Manage on the Slack integration card' },
-        { text: 'View your connected workspaces and their status' },
+        { text: 'Click the **Extensions** button in the top header' },
+        { text: 'Click **Configure** on the Slack card' },
+        { text: 'View your connected workspaces and their status in the table' },
       ],
     },
     {
       type: 'heading',
       id: 'integration-table',
       level: 3,
-      text: 'Integration table',
+      text: 'Connections table',
     },
     {
       type: 'paragraph',
-      text: 'The integrations table shows:',
+      text: 'The table shows one row per connection:',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Workspace', text: 'The name of the connected Slack workspace' },
-        { bold: 'Channel', text: 'The default channel for notifications' },
-        { bold: 'Status', text: 'Whether the connection is active' },
-        { bold: 'Actions', text: 'Options to configure routing or delete the connection' },
+        { bold: 'Team Name', text: 'The name of the connected Slack workspace' },
+        { bold: 'Channel', text: 'The channel VerifyWise posts to' },
+        { bold: 'Creation Date', text: 'When the connection was added' },
+        { bold: 'Active', text: 'Whether the connection is active or inactive' },
+        { bold: 'Action', text: 'Turn the connection on or off, or delete it' },
       ],
     },
     {
@@ -121,7 +126,7 @@ export const slackIntegrationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You can configure where different notification types go by setting up routing rules. This lets you direct specific notifications to relevant channels.',
+      text: 'Routing decides which notification types VerifyWise sends to Slack. Each connection posts to the channel you chose when you added it.',
     },
     {
       type: 'paragraph',
@@ -130,17 +135,21 @@ export const slackIntegrationContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Click the routing icon for a workspace connection' },
-        { text: 'Select the notification types to route' },
-        { text: 'Choose the target channel for each notification type' },
-        { text: 'Save your routing configuration' },
+        { text: 'On the Slack settings page, click **Configure** (available once at least one workspace is connected)' },
+        { text: 'In the **Notification Routing** dialog, open "Apply to all workspaces" and select the notification types to send' },
+        { text: 'Click **Save Changes**' },
       ],
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      text: 'The notification types you select apply to every connected workspace.',
     },
     {
       type: 'image',
       src: '/images/user-guide/slack-notifications.png',
-      alt: 'Notification routing modal showing different notification types like Membership and roles, Projects and organizations, Policy reminders, and Evidence alerts with channel selection dropdowns',
-      caption: 'Configure notification routing to send different alert types to specific Slack channels.',
+      alt: 'Notification routing dialog listing notification types such as Membership and roles, Projects and organizations, Policy reminders and Evidence alerts',
+      caption: 'Choose which notification types VerifyWise sends to Slack.',
     },
     {
       type: 'heading',
@@ -150,7 +159,7 @@ export const slackIntegrationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You can route these notification types to specific channels:',
+      text: 'You can choose from these notification types:',
     },
     {
       type: 'bullet-list',
@@ -175,10 +184,10 @@ export const slackIntegrationContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Go to the Slack management page' },
-        { text: 'Click "Add to Slack"' },
+        { text: 'Go to the Slack settings page' },
+        { text: 'Click **Add to Slack**' },
         { text: 'Follow the authorization flow for the new workspace' },
-        { text: 'Configure notification routing for the new connection' },
+        { text: 'Update notification routing if needed' },
       ],
     },
     {
@@ -194,16 +203,20 @@ export const slackIntegrationContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Go to the Slack management page' },
+        { text: 'Go to the Slack settings page' },
         { text: 'Find the workspace connection in the table' },
-        { text: 'Click the delete icon in the actions column' },
-        { text: 'Confirm the removal when prompted' },
+        { text: 'Click the delete icon in the Action column' },
       ],
     },
     {
       type: 'callout',
       variant: 'warning',
-      text: 'Removing a Slack connection stops all notifications to that workspace right away. You can reconnect at any time by going through the authorization flow again.',
+      text: 'The connection is removed as soon as you click delete, without a confirmation step, and notifications to it stop right away. To pause a connection instead, turn it off in the Action column. You can reconnect at any time by going through the authorization flow again.',
+    },
+    {
+      type: 'callout',
+      variant: 'tip',
+      text: 'To stop notifications, turn off or delete the connections in the table before you disable the Slack extension. Disabling the extension hides the Slack settings page but keeps your connections.',
     },
     {
       type: 'heading',
@@ -220,7 +233,7 @@ export const slackIntegrationContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { text: 'Check that the Slack connection is active in the integrations table' },
+        { text: 'Check that the Slack extension is enabled and the connection is active in the connections table' },
         { text: 'Verify notification routing is set up for the right channel' },
         { text: 'Make sure the VerifyWise app hasn\'t been removed from your Slack workspace' },
         { text: 'Confirm the target channel still exists' },
@@ -254,7 +267,7 @@ export const slackIntegrationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Yes, if you grant the appropriate permissions during authorization. The VerifyWise Slack app needs to be invited to private channels before it can send messages there.',
+      text: 'Yes. When you authorize the connection, Slack lets you pick the channel VerifyWise posts to, including private channels you belong to.',
     },
     {
       type: 'heading',
@@ -295,6 +308,12 @@ export const slackIntegrationContent: ArticleContent = {
           articleId: 'integration-overview',
           title: 'Integration overview',
           description: 'View all available integrations',
+        },
+        {
+          collectionId: 'integrations',
+          articleId: 'extensions',
+          title: 'Extensions',
+          description: 'Enable and configure built-in extensions',
         },
         {
           collectionId: 'settings',

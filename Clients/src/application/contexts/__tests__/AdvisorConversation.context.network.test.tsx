@@ -20,7 +20,7 @@ import React from "react";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { server } from "../../../test/mocks/server";
 import { advisorErrors } from "../../../test/mocks/errorHandlers";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 
 import {
   AdvisorConversationProvider,

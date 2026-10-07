@@ -40,7 +40,12 @@ export async function syncFromAzure(req: Request, res: Response): Promise<any> {
         );
     }
     const result = await syncModels(organizationId, config);
-    return res.status(result.success ? 200 : 500).json(STATUS_CODE[200](result));
+    if (!result.success) {
+      // The project endpoint failed or returned nothing usable: an upstream
+      // failure, reported with the reason the client shows to the user.
+      return res.status(502).json(STATUS_CODE[502](result.error ?? "Azure AI Foundry sync failed"));
+    }
+    return res.status(200).json(STATUS_CODE[200](result));
   } catch (error) {
     logStructured("error", "azure sync failed", "syncFromAzure", fileName);
     logger.error("❌ Error in syncFromAzure:", error);

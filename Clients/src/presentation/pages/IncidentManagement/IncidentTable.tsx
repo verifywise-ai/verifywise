@@ -15,7 +15,7 @@ import CustomizableSkeleton from "../../components/Skeletons";
 import Chip from "../../components/Chip";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { singleTheme } from "../../themes";
 import { AIIncidentManagementModel } from "../../../domain/models/Common/incidentManagement/incidentManagement.model";
 import { IncidentTableProps } from "../../types/interfaces/i.table";
@@ -69,6 +69,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
   hidePagination = false,
   visibleColumns,
 }) => {
+  const formatDate = useFormattedDate();
   const isVisible = useCallback(
     (key: string) => {
       if (!visibleColumns) return true;
@@ -265,7 +266,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                           sortConfig.key === "occurred_date" ? "background.surface" : "inherit",
                       }}
                     >
-                      {incident.occurred_date ? displayFormattedDate(incident.occurred_date) : "-"}
+                      {incident.occurred_date ? formatDate(incident.occurred_date) : "-"}
                     </TableCell>
                   )}
                   {isVisible("approved_by") && (
@@ -316,6 +317,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
       sortConfig.key,
       visibleTableColumns.length,
       hidePagination,
+      formatDate,
     ],
   );
 

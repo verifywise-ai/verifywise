@@ -35,6 +35,13 @@ describe("ProjectRisks (V1.0ProjectView)", () => {
     expect(screen.getByTestId("risks-view")).toHaveTextContent("Use case risks read-only");
   });
 
+  it("offers no risk creation from this tab", () => {
+    renderWithProviders(<VWProjectRisks project={{ id: 3 } as Project} />, {
+      route: "/project-view?projectId=3",
+    });
+    expect(screen.queryByRole("button", { name: /add new risk/i })).not.toBeInTheDocument();
+  });
+
   it("fetches project risks scoped to the projectId query param", async () => {
     mockGetAllProjectRisksByProjectId.mockResolvedValue({ data: [{ id: 1 }] });
     renderWithProviders(<VWProjectRisks project={{ id: 3 } as Project} />, {

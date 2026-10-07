@@ -143,6 +143,8 @@ function extractStrings(content) {
     "name",
     "submitButtonText",
     "body",
+    "adminMessage",
+    "memberMessage",
   ];
   for (const prop of props) {
     // JSX attribute: prop="..."

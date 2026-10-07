@@ -13,6 +13,9 @@ import {
 } from "../domain.layer/interfaces/i.notification";
 import { notificationService } from "./notificationService";
 import { EMAIL_TEMPLATES } from "../constants/emailTemplates";
+import { translate, type SupportedLang } from "../utils/i18n.utils";
+import { getUserLanguage } from "../utils/userPreference.utils";
+import { deadlineNoticeKey } from "../utils/deadline.utils";
 
 /**
  * Build a frontend-compatible URL for a given entity type and id.
@@ -907,6 +910,147 @@ export const notifyVendorReviewDue = async (
 };
 
 /**
+ * "due on 12 Sep" / "3 days overdue" — shared by both deadline notifiers.
+ * English unless a language is passed: the email template is English, so only
+ * the in-app row is worded for the recipient.
+ */
+const deadlineDistanceText = (deadline: Date, lang: SupportedLang = "en"): string => {
+  const daysLeft = Math.ceil((deadline.getTime() - Date.now()) / 86400000);
+  if (daysLeft > 1) return translate(lang, "in {days} days", { days: daysLeft });
+  if (daysLeft === 1) return translate(lang, "tomorrow");
+  if (daysLeft === 0) return translate(lang, "today");
+  return translate(lang, "{days} days overdue", { days: -daysLeft });
+};
+
+const DATE_LOCALES: Record<SupportedLang, string> = { en: "en-US", de: "de-DE", fr: "fr-FR" };
+
+const deadlineDateText = (deadline: Date, lang: SupportedLang = "en"): string =>
+  deadline.toLocaleDateString(DATE_LOCALES[lang], {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+/**
+ * Notify one recipient that a project risk's deadline is approaching.
+ * In-app + email (email skippable via sendEmail=false for legs that only need
+ * the in-app row as their dedup record). The in-app row's metadata carries
+ * threshold_days and the deadline it was sent for — without them the notice
+ * would re-send every night forever, or never re-arm after a reschedule.
+ */
+export const notifyRiskDeadlineDueSoon = async (
+  organizationId: number,
+  recipientId: number,
+  risk: { id: number; name: string; deadline: Date },
+  thresholdDays: number,
+  baseUrl: string,
+  sendEmail = true,
+): Promise<void> => {
+  const recipient = await getUserById(recipientId);
+  const lang = await getUserLanguage(recipientId);
+  const distance = deadlineDistanceText(risk.deadline);
+
+  await sendInAppNotification(
+    organizationId,
+    {
+      user_id: recipientId,
+      type: NotificationType.RISK_DEADLINE_DUE_SOON,
+      title: translate(lang, "Risk deadline approaching"),
+      message: translate(lang, 'Risk "{name}" is due {distance} ({date}).', {
+        name: risk.name,
+        distance: deadlineDistanceText(risk.deadline, lang),
+        date: deadlineDateText(risk.deadline, lang),
+      }),
+      entity_type: NotificationEntityType.RISK,
+      entity_id: risk.id,
+      entity_name: risk.name,
+      action_url: buildEntityUrl(NotificationEntityType.RISK, risk.id),
+      metadata: { threshold_days: thresholdDays, deadline: deadlineNoticeKey(risk.deadline) },
+    },
+    sendEmail,
+    sendEmail
+      ? {
+          template: EMAIL_TEMPLATES.RISK_DEADLINE_DUE,
+          subject: `Risk deadline approaching: ${risk.name}`,
+          variables: {
+            recipient_name: recipient ? `${recipient.name}` : "there",
+            entity_kind: "Risk",
+            entity_name: risk.name,
+            deadline_label: "Deadline",
+            deadline_date: deadlineDateText(risk.deadline),
+            days_text: distance,
+            entity_url: `${baseUrl}${buildEntityUrl(NotificationEntityType.RISK, risk.id)}`,
+          },
+        }
+      : undefined,
+  );
+};
+
+/**
+ * Notify one recipient that a model risk's target date is approaching.
+ * Same shape as notifyRiskDeadlineDueSoon, except the action URL: entity_id
+ * is the MODEL-RISK id (that granularity is what the dedup needs — two risks
+ * on one model must each produce a notice), while the URL must point at the
+ * MODEL, built from model_risks.model_id. Do not "fix" the disagreement by
+ * feeding the model-risk id to buildEntityUrl(MODEL, …) — that links to a
+ * model that does not exist. model_id is nullable: fall back to the list.
+ */
+export const notifyModelRiskDueSoon = async (
+  organizationId: number,
+  recipientId: number,
+  modelRisk: { id: number; name: string; deadline: Date; model_id: number | null },
+  thresholdDays: number,
+  baseUrl: string,
+  sendEmail = true,
+): Promise<void> => {
+  const recipient = await getUserById(recipientId);
+  const lang = await getUserLanguage(recipientId);
+  const distance = deadlineDistanceText(modelRisk.deadline);
+  const modelPath =
+    modelRisk.model_id != null
+      ? `/model-inventory/models/${modelRisk.model_id}`
+      : `/model-inventory`;
+
+  await sendInAppNotification(
+    organizationId,
+    {
+      user_id: recipientId,
+      type: NotificationType.MODEL_RISK_DUE_SOON,
+      title: translate(lang, "Model risk target date approaching"),
+      message: translate(lang, 'Model risk "{name}" is due {distance} ({date}).', {
+        name: modelRisk.name,
+        distance: deadlineDistanceText(modelRisk.deadline, lang),
+        date: deadlineDateText(modelRisk.deadline, lang),
+      }),
+      entity_type: NotificationEntityType.MODEL,
+      entity_id: modelRisk.id,
+      entity_name: modelRisk.name,
+      action_url: modelPath,
+      metadata: {
+        threshold_days: thresholdDays,
+        deadline: deadlineNoticeKey(modelRisk.deadline),
+      },
+    },
+    sendEmail,
+    sendEmail
+      ? {
+          template: EMAIL_TEMPLATES.RISK_DEADLINE_DUE,
+          subject: `Model risk target date approaching: ${modelRisk.name}`,
+          variables: {
+            recipient_name: recipient ? `${recipient.name}` : "there",
+            entity_kind: "Model risk",
+            entity_name: modelRisk.name,
+            deadline_label: "Target date",
+            deadline_date: deadlineDateText(modelRisk.deadline),
+            days_text: distance,
+            entity_url: `${baseUrl}${modelPath}`,
+          },
+        }
+      : undefined,
+  );
+};
+
+/**
  * Notify policy due soon
  */
 export const notifyPolicyDueSoon = async (
@@ -950,41 +1094,242 @@ export const notifyPolicyDueSoon = async (
 };
 
 /**
- * Notify evidence expired (Evidence Hub retention sweep)
+ * Notify risk owner that linked evidence has gone stale.
+ *
+ * In-app only: the sweep runs nightly and the flag clears itself, so email
+ * would be noise. A risk with no owner is flagged but not notified — return
+ * early, do not fall back to org admins.
  */
-export const notifyEvidenceExpired = async (
+export const notifyEvidenceStale = async (
+  organizationId: number,
+  risk: {
+    id: number;
+    risk_name: string;
+    risk_owner: number | null;
+  },
+): Promise<void> => {
+  if (risk.risk_owner == null) return;
+  const lang = await getUserLanguage(risk.risk_owner);
+
+  await sendInAppNotification(
+    organizationId,
+    {
+      user_id: risk.risk_owner,
+      type: NotificationType.EVIDENCE_STALE,
+      title: translate(lang, "Evidence stale"),
+      message: translate(lang, 'Risk "{name}" has stale linked evidence. Review and refresh it.', {
+        name: risk.risk_name,
+      }),
+      entity_type: NotificationEntityType.RISK,
+      entity_id: risk.id,
+      entity_name: risk.risk_name,
+      action_url: buildEntityUrl(NotificationEntityType.RISK, risk.id),
+    },
+    false,
+  );
+};
+
+/**
+ * Notify risk owner that a parent risk's level moved and the inherited level
+ * may now be stale. In-app only, same shape as notifyEvidenceStale: the sweep
+ * keeps retrying until it stamps the link, so a null owner is the only skip.
+ */
+export const notifyParentLevelChanged = async (
+  organizationId: number,
+  risk: {
+    id: number;
+    risk_name: string;
+    risk_owner: number | null;
+  },
+): Promise<void> => {
+  if (risk.risk_owner == null) return;
+  const lang = await getUserLanguage(risk.risk_owner);
+
+  await sendInAppNotification(
+    organizationId,
+    {
+      user_id: risk.risk_owner,
+      type: NotificationType.RISK_INHERITANCE_STALE,
+      title: translate(lang, "Inherited risk level may be stale"),
+      message: translate(
+        lang,
+        'A parent risk\'s level changed, so the inherited level on "{name}" may be out of date. Review it.',
+        { name: risk.risk_name },
+      ),
+      entity_type: NotificationEntityType.RISK,
+      entity_id: risk.id,
+      entity_name: risk.risk_name,
+      action_url: buildEntityUrl(NotificationEntityType.RISK, risk.id),
+    },
+    false,
+  );
+};
+
+// Named `notifyRiskOfModelCandidates`, NOT `notifyModelRiskCandidates` —
+// the latter is the orchestrating service in services/riskLinks/modelCandidates.ts,
+// which calls this once per risk. Two different functions; do not merge the names.
+export const notifyRiskOfModelCandidates = async (
+  organizationId: number,
+  risk: { id: number; risk_name: string; risk_owner: number | null },
+  model: { id: number; name: string },
+  candidateCount: number,
+  modelRiskIds: number[] = [],
+): Promise<boolean> => {
+  if (risk.risk_owner == null) return false;
+  const lang = await getUserLanguage(risk.risk_owner);
+  try {
+    await sendInAppNotification(
+      organizationId,
+      {
+        user_id: risk.risk_owner,
+        type: NotificationType.MODEL_RISK_CANDIDATES,
+        title: translate(lang, "New model risks to review"),
+        message:
+          candidateCount === 1
+            ? translate(
+                lang,
+                'Risk "{riskName}" now shares a project with 1 model risk from "{modelName}". Review the suggested links.',
+                { riskName: risk.risk_name, modelName: model.name },
+              )
+            : translate(
+                lang,
+                'Risk "{riskName}" now shares a project with {count} model risks from "{modelName}". Review the suggested links.',
+                { riskName: risk.risk_name, count: candidateCount, modelName: model.name },
+              ),
+        entity_type: NotificationEntityType.RISK,
+        entity_id: risk.id,
+        entity_name: risk.risk_name,
+        action_url: buildEntityUrl(NotificationEntityType.RISK, risk.id),
+        // Sent-record keys: model-level for project triggers, plus the
+        // announced model-risk ids for model-risk-create triggers (which must
+        // survive a prior model-level notice). Sorted for stable equality.
+        metadata: {
+          model_inventory_id: model.id,
+          model_risk_ids: [...modelRiskIds].sort((a, b) => a - b),
+        },
+      },
+      false,
+    );
+    return true;
+  } catch (error) {
+    // Lost the race with a concurrent trigger that inserted the same notice:
+    // the partial unique index turns it into a suppressed duplicate, not an
+    // error. Match the constraint name so an unrelated 23505 still throws.
+    const pg =
+      (error as { parent?: { code?: string; constraint?: string } })?.parent ??
+      (error as { original?: { code?: string; constraint?: string } })?.original;
+    if (pg?.code === "23505" && pg?.constraint === "notifications_model_risk_candidates_uniq") {
+      return false;
+    }
+    throw error;
+  }
+};
+
+// Named `notifyRiskOfVendorCandidates`, NOT `notifyVendorRiskCandidates`: the
+// latter is the orchestrating service in services/riskLinks/vendorCandidates.ts,
+// which calls this once per risk. Mirrors notifyRiskOfModelCandidates.
+export const notifyRiskOfVendorCandidates = async (
+  organizationId: number,
+  risk: { id: number; risk_name: string; risk_owner: number | null },
+  vendor: { id: number; name: string },
+  candidateCount: number,
+  vendorRiskIds: number[] = [],
+): Promise<boolean> => {
+  if (risk.risk_owner == null) return false;
+  const lang = await getUserLanguage(risk.risk_owner);
+  try {
+    await sendInAppNotification(
+      organizationId,
+      {
+        user_id: risk.risk_owner,
+        type: NotificationType.VENDOR_RISK_CANDIDATES,
+        title: translate(lang, "Vendor risks to review"),
+        message:
+          candidateCount === 1
+            ? translate(
+                lang,
+                'Risk "{riskName}" is in a use case served by "{vendorName}", which has 1 vendor risk it could inherit from. Review it from the Linked risks tab.',
+                { riskName: risk.risk_name, vendorName: vendor.name },
+              )
+            : translate(
+                lang,
+                'Risk "{riskName}" is in a use case served by "{vendorName}", which has {count} vendor risks it could inherit from. Review them from the Linked risks tab.',
+                { riskName: risk.risk_name, count: candidateCount, vendorName: vendor.name },
+              ),
+        entity_type: NotificationEntityType.RISK,
+        entity_id: risk.id,
+        entity_name: risk.risk_name,
+        action_url: buildEntityUrl(NotificationEntityType.RISK, risk.id),
+        // Sent-record keys, sorted for stable equality against the unique index.
+        metadata: {
+          vendor_id: vendor.id,
+          vendor_risk_ids: [...vendorRiskIds].sort((a, b) => a - b),
+        },
+      },
+      false,
+    );
+    return true;
+  } catch (error) {
+    // A concurrent trigger inserted the same notice first: a suppressed
+    // duplicate, not an error. Matched by name so another 23505 still throws.
+    const pg =
+      (error as { parent?: { code?: string; constraint?: string } })?.parent ??
+      (error as { original?: { code?: string; constraint?: string } })?.original;
+    if (pg?.code === "23505" && pg?.constraint === "notifications_vendor_risk_candidates_uniq") {
+      return false;
+    }
+    throw error;
+  }
+};
+
+/**
+ * Notify a file uploader that their file is inside the 7-day pre-expiry
+ * window. Called by the daily fileExpirySweep for each row it matches; the
+ * sweep writes no state back, so a re-run on the same day sends again —
+ * the window itself is the dedup.
+ */
+export const notifyFileExpiring = async (
   organizationId: number,
   recipientId: number,
-  evidence: {
+  file: {
     id: number;
     name: string;
     expiryDate: string;
+    daysRemaining: number;
   },
   baseUrl: string,
 ): Promise<void> => {
   const recipient = await getUserById(recipientId);
 
+  const daysRemainingLabel =
+    file.daysRemaining <= 0
+      ? "expires today"
+      : file.daysRemaining === 1
+        ? "1 day"
+        : `${file.daysRemaining} days`;
+
   await sendInAppNotification(
     organizationId,
     {
       user_id: recipientId,
-      type: NotificationType.EVIDENCE_EXPIRED,
-      title: "Evidence expired",
-      message: `Evidence "${evidence.name}" expired on ${evidence.expiryDate}`,
-      entity_type: NotificationEntityType.EVIDENCE,
-      entity_id: evidence.id,
-      entity_name: evidence.name,
-      action_url: buildEntityUrl(NotificationEntityType.EVIDENCE, evidence.id),
+      type: NotificationType.FILE_EXPIRING,
+      title: "File expiring soon",
+      message: `File "${file.name}" expires on ${file.expiryDate} (${daysRemainingLabel})`,
+      entity_type: NotificationEntityType.FILE,
+      entity_id: file.id,
+      entity_name: file.name,
+      action_url: buildEntityUrl(NotificationEntityType.FILE, file.id),
     },
     true,
     {
-      template: EMAIL_TEMPLATES.EVIDENCE_EXPIRED,
-      subject: `Evidence expired: ${evidence.name}`,
+      template: EMAIL_TEMPLATES.FILE_EXPIRING,
+      subject: `File expiring soon: ${file.name}`,
       variables: {
         recipient_name: recipient ? `${recipient.name}` : "there",
-        evidence_name: evidence.name,
-        expiry_date: evidence.expiryDate,
-        evidence_url: `${baseUrl}${buildEntityUrl(NotificationEntityType.EVIDENCE, evidence.id)}`,
+        file_name: file.name,
+        expiry_date: file.expiryDate,
+        days_remaining: daysRemainingLabel,
+        file_url: `${baseUrl}${buildEntityUrl(NotificationEntityType.FILE, file.id)}`,
       },
     },
   );

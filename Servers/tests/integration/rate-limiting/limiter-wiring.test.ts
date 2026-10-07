@@ -19,7 +19,7 @@ import { Application } from "express";
 import fs from "fs";
 import path from "path";
 
-import { createTestApp } from "../setup";
+import { createTestExpressApp } from "../setup";
 import * as rateLimiters from "../../../middleware/rateLimit.middleware";
 
 // Building the real app compiles the whole backend through ts-jest.
@@ -162,7 +162,7 @@ describe("rate limiter wiring", () => {
   let app: Application;
 
   beforeAll(() => {
-    app = createTestApp();
+    app = createTestExpressApp();
   });
 
   describe("per-route limiters", () => {
@@ -187,15 +187,18 @@ describe("rate limiter wiring", () => {
     });
   });
 
-  it("guards GET /health, which is defined on the app rather than in a router", () => {
-    const healthRoute = stackOf(app).find((layer) => layer.route?.path === "/health");
-    expect(healthRoute).toBeDefined();
+  it.each(["/health", "/health/live", "/health/ready"])(
+    "guards GET %s, which is defined on the app rather than in a router",
+    (path) => {
+      const healthRoute = stackOf(app).find((layer) => layer.route?.path === path);
+      expect(healthRoute).toBeDefined();
 
-    const limiters = healthRoute!
-      .route!.stack.map((handler) => LIMITER_NAMES.get(handler.handle))
-      .filter(Boolean);
-    expect(limiters).toContain("healthCheckLimiter");
-  });
+      const limiters = healthRoute!
+        .route!.stack.map((handler) => LIMITER_NAMES.get(handler.handle))
+        .filter(Boolean);
+      expect(limiters).toContain("healthCheckLimiter");
+    },
+  );
 
   describe("whole-router coverage", () => {
     it("rate limits every route under /api/file-manager", () => {

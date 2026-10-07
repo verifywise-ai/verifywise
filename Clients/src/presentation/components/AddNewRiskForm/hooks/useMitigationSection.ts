@@ -34,7 +34,6 @@ export const mitigationInitialState: MitigationFormValues = {
   approver: 0,
   approvalStatus: 0,
   dateOfAssessment: new Date().toISOString(),
-  recommendations: "",
 };
 
 export interface UseMitigationSectionReturn {
@@ -84,7 +83,6 @@ export function useMitigationSection(
         approvalStatus:
           approvalStatusItems.find((item) => item.name === inputValues.approval_status)?._id ?? 1,
         dateOfAssessment: parseDateValue(inputValues.date_of_assessment),
-        recommendations: (inputValues.recommendations as string) ?? "",
       };
     },
     [],

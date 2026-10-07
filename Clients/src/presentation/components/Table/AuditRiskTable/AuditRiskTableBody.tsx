@@ -22,6 +22,7 @@ import Chip from "../../Chip";
 import { useSearchParams } from "react-router";
 import { CustomizableButton } from "../../button/customizable-button";
 import { IAuditRiskTableBodyProps, ITypeRisk } from "../../../types/interfaces/i.table";
+import { pageOfLabel } from "../pageOfLabel";
 
 const navigateToNewTab = (url: string) => {
   window.open(url, "_blank", "noopener,noreferrer");
@@ -148,7 +149,7 @@ export const AuditRiskTableBody: React.FC<IAuditRiskTableBodyProps> = ({
             ActionsComponent={(props) => <TablePaginationActions {...props} />}
             labelRowsPerPage="Risks per page"
             labelDisplayedRows={({ page, count }) =>
-              `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
+              pageOfLabel(page + 1, Math.max(0, Math.ceil(count / rowsPerPage)))
             }
             sx={paginationStyle}
             slotProps={{

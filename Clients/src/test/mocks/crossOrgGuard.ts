@@ -22,7 +22,7 @@
  * @see docs/technical/security/tenant-isolation.md
  */
 
-import { http, HttpResponse, type HttpHandler } from "msw";
+import { http, HttpResponse, type HttpHandler } from "msw/http";
 import { store } from "../../application/redux/store";
 import { clearAuthState, setAuthToken } from "../../application/redux/auth/authSlice";
 import { extractUserToken } from "../../application/tools/extractToken";

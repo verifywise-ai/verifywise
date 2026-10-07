@@ -42,6 +42,7 @@ import singleTheme from "../../../../themes/v1SingleTheme";
 import { ChevronsUpDown } from "lucide-react";
 import { status, background } from "../../../../themes/palette";
 import useFormattedDate from "../../../../../application/hooks/useFormattedDate";
+import { pageOfLabel } from "../../../../components/Table/pageOfLabel";
 
 interface AutomationHistoryProps {
   automationId: string;
@@ -780,7 +781,7 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                     ActionsComponent={(props) => <TablePaginationActions {...props} />}
                     labelRowsPerPage="Rows per page"
                     labelDisplayedRows={({ page, count }) =>
-                      `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
+                      pageOfLabel(page + 1, Math.max(0, Math.ceil(count / rowsPerPage)))
                     }
                     slotProps={{
                       select: {

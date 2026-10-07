@@ -49,6 +49,21 @@ describe("useTranslation", () => {
     expect(result.current.lang).toBe("tr");
   });
 
+  it("re-binds t when the active language's dictionary finishes loading", () => {
+    // The translator sets the language first and loads its dictionary after,
+    // then announces the load with an event for the same language.
+    mockLang = "tr";
+    const { result } = renderHook(() => useTranslation());
+    const before = result.current.t;
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent("vw:languagechange", { detail: { lang: "tr" } }));
+    });
+
+    expect(result.current.lang).toBe("tr");
+    expect(result.current.t).not.toBe(before);
+  });
+
   it("ignores events without a lang in the detail payload", () => {
     const { result } = renderHook(() => useTranslation());
 

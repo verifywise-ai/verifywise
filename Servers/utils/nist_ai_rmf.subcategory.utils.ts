@@ -2,6 +2,7 @@ import { Transaction, QueryTypes } from "sequelize";
 import { sequelize } from "../database/db";
 import { NISTAIMRFSubcategoryModel } from "../domain.layer/frameworks/NIST-AI-RMF/nist_ai_rmf_subcategory.model";
 import { getEvidenceFilesForEntity } from "./files/evidenceFiles.utils";
+import { toId } from "./validations/validation.utils";
 
 /**
  * Get all subcategories for a category (using function and category_id from struct)
@@ -176,7 +177,10 @@ export const updateNISTAIRMFSubcategoryByIdQuery = async (
         if (value === "" || value === null) {
           value = null;
         } else {
-          const numValue = parseInt(value as string);
+          // toId, not parseInt: a salvaging parse turns an owner of "3abc"
+          // into user 3 and assigns the record to them. Junk now trips the
+          // guard below, which drops the field from the SET clause.
+          const numValue = toId(value);
           if (isNaN(numValue)) return false;
           value = numValue;
         }

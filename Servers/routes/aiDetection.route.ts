@@ -4,11 +4,11 @@
  * Express router for AI Detection endpoints.
  * All routes require authentication and role-based authorization.
  *
- * Authorization Model:
- * - Start scan: Admin, Editor
- * - View scans/findings: Admin, Editor, Reviewer, Auditor
- * - Cancel scan: Admin, Editor (ownership check in service layer)
- * - Delete scan: Admin only
+ * Authorization Model (permission keys, issue #4588):
+ * - Start scan: aiDetection.edit (was Admin, Editor)
+ * - View scans/findings: aiDetection.read (was Admin, Editor, Reviewer, Auditor)
+ * - Cancel scan: aiDetection.edit (ownership check in service layer)
+ * - Delete scan / risk scoring config: aiDetection.admin (was Admin only)
  *
  * @module routes/aiDetection
  */
@@ -47,11 +47,6 @@ import {
 
 const router = express.Router();
 
-// Role groups for authorization
-const ALL_ROLES = ["Admin", "Editor", "Reviewer", "Auditor"];
-const WRITE_ROLES = ["Admin", "Editor"];
-const ADMIN_ONLY = ["Admin"];
-
 /**
  * @route   POST /ai-detection/scans
  * @desc    Start a new repository scan
@@ -63,7 +58,7 @@ router.post(
   "/scans",
   aiDetectionScanLimiter,
   authenticateJWT,
-  authorize(WRITE_ROLES),
+  authorize("aiDetection.edit"),
   startScanController,
 );
 
@@ -73,7 +68,7 @@ router.post(
  * @access  Private - All roles
  * @query   page, limit, status
  */
-router.get("/scans", authenticateJWT, authorize(ALL_ROLES), getScansController);
+router.get("/scans", authenticateJWT, authorize("aiDetection.read"), getScansController);
 
 /**
  * @route   GET /ai-detection/scans/active
@@ -81,21 +76,31 @@ router.get("/scans", authenticateJWT, authorize(ALL_ROLES), getScansController);
  * @access  Private - All roles
  * @note    Efficient single-query endpoint for polling
  */
-router.get("/scans/active", authenticateJWT, authorize(ALL_ROLES), getActiveScanController);
+router.get(
+  "/scans/active",
+  authenticateJWT,
+  authorize("aiDetection.read"),
+  getActiveScanController,
+);
 
 /**
  * @route   GET /ai-detection/scans/:scanId
  * @desc    Get scan details with summary
  * @access  Private - All roles
  */
-router.get("/scans/:scanId", authenticateJWT, authorize(ALL_ROLES), getScanController);
+router.get("/scans/:scanId", authenticateJWT, authorize("aiDetection.read"), getScanController);
 
 /**
  * @route   GET /ai-detection/scans/:scanId/status
  * @desc    Get scan status for polling
  * @access  Private - All roles
  */
-router.get("/scans/:scanId/status", authenticateJWT, authorize(ALL_ROLES), getScanStatusController);
+router.get(
+  "/scans/:scanId/status",
+  authenticateJWT,
+  authorize("aiDetection.read"),
+  getScanStatusController,
+);
 
 /**
  * @route   GET /ai-detection/scans/:scanId/findings
@@ -106,7 +111,7 @@ router.get("/scans/:scanId/status", authenticateJWT, authorize(ALL_ROLES), getSc
 router.get(
   "/scans/:scanId/findings",
   authenticateJWT,
-  authorize(ALL_ROLES),
+  authorize("aiDetection.read"),
   getScanFindingsController,
 );
 
@@ -119,7 +124,7 @@ router.get(
 router.get(
   "/scans/:scanId/security-findings",
   authenticateJWT,
-  authorize(ALL_ROLES),
+  authorize("aiDetection.read"),
   getSecurityFindingsController,
 );
 
@@ -131,7 +136,7 @@ router.get(
 router.get(
   "/scans/:scanId/security-summary",
   authenticateJWT,
-  authorize(ALL_ROLES),
+  authorize("aiDetection.read"),
   getSecuritySummaryController,
 );
 
@@ -140,14 +145,24 @@ router.get(
  * @desc    Cancel an in-progress scan
  * @access  Private - Admin, Editor (ownership check in service layer)
  */
-router.post("/scans/:scanId/cancel", authenticateJWT, authorize(WRITE_ROLES), cancelScanController);
+router.post(
+  "/scans/:scanId/cancel",
+  authenticateJWT,
+  authorize("aiDetection.edit"),
+  cancelScanController,
+);
 
 /**
  * @route   DELETE /ai-detection/scans/:scanId
  * @desc    Delete a completed/failed/cancelled scan
  * @access  Private - Admin only
  */
-router.delete("/scans/:scanId", authenticateJWT, authorize(ADMIN_ONLY), deleteScanController);
+router.delete(
+  "/scans/:scanId",
+  authenticateJWT,
+  authorize("aiDetection.admin"),
+  deleteScanController,
+);
 
 /**
  * @route   PATCH /ai-detection/scans/:scanId/findings/:findingId/governance
@@ -158,7 +173,7 @@ router.delete("/scans/:scanId", authenticateJWT, authorize(ADMIN_ONLY), deleteSc
 router.patch(
   "/scans/:scanId/findings/:findingId/governance",
   authenticateJWT,
-  authorize(WRITE_ROLES),
+  authorize("aiDetection.edit"),
   updateGovernanceStatusController,
 );
 
@@ -170,7 +185,7 @@ router.patch(
 router.get(
   "/scans/:scanId/governance-summary",
   authenticateJWT,
-  authorize(ALL_ROLES),
+  authorize("aiDetection.read"),
   getGovernanceSummaryController,
 );
 
@@ -179,7 +194,7 @@ router.get(
  * @desc    Get overall AI Detection statistics
  * @access  Private - All roles
  */
-router.get("/stats", authenticateJWT, authorize(ALL_ROLES), getAIDetectionStatsController);
+router.get("/stats", authenticateJWT, authorize("aiDetection.read"), getAIDetectionStatsController);
 
 /**
  * @route   GET /ai-detection/scans/:scanId/export/ai-bom
@@ -190,7 +205,7 @@ router.get("/stats", authenticateJWT, authorize(ALL_ROLES), getAIDetectionStatsC
 router.get(
   "/scans/:scanId/export/ai-bom",
   authenticateJWT,
-  authorize(ALL_ROLES),
+  authorize("aiDetection.read"),
   exportAIBOMController,
 );
 
@@ -203,7 +218,7 @@ router.get(
 router.get(
   "/scans/:scanId/dependency-graph",
   authenticateJWT,
-  authorize(ALL_ROLES),
+  authorize("aiDetection.read"),
   getDependencyGraphController,
 );
 
@@ -216,7 +231,7 @@ router.get(
 router.get(
   "/scans/:scanId/compliance",
   authenticateJWT,
-  authorize(ALL_ROLES),
+  authorize("aiDetection.read"),
   getComplianceMappingController,
 );
 
@@ -228,7 +243,7 @@ router.get(
 router.get(
   "/scans/:scanId/risk-score",
   authenticateJWT,
-  authorize(ALL_ROLES),
+  authorize("aiDetection.read"),
   getRiskScoreController,
 );
 
@@ -240,7 +255,7 @@ router.get(
 router.post(
   "/scans/:scanId/risk-score/recalculate",
   authenticateJWT,
-  authorize(WRITE_ROLES),
+  authorize("aiDetection.edit"),
   recalculateRiskScoreController,
 );
 
@@ -252,7 +267,7 @@ router.post(
 router.get(
   "/risk-scoring/config",
   authenticateJWT,
-  authorize(ALL_ROLES),
+  authorize("aiDetection.read"),
   getRiskScoringConfigController,
 );
 
@@ -264,7 +279,7 @@ router.get(
 router.patch(
   "/risk-scoring/config",
   authenticateJWT,
-  authorize(ADMIN_ONLY),
+  authorize("aiDetection.admin"),
   updateRiskScoringConfigController,
 );
 
@@ -274,7 +289,12 @@ router.patch(
  * @access  Private - Admin, Editor
  * @body    { match_type, field, value, reason?, expires_at? }
  */
-router.post("/suppressions", authenticateJWT, authorize(WRITE_ROLES), createSuppressionController);
+router.post(
+  "/suppressions",
+  authenticateJWT,
+  authorize("aiDetection.edit"),
+  createSuppressionController,
+);
 
 /**
  * @route   GET /ai-detection/suppressions
@@ -282,7 +302,12 @@ router.post("/suppressions", authenticateJWT, authorize(WRITE_ROLES), createSupp
  * @access  Private - All roles
  * @query   include_expired
  */
-router.get("/suppressions", authenticateJWT, authorize(ALL_ROLES), listSuppressionsController);
+router.get(
+  "/suppressions",
+  authenticateJWT,
+  authorize("aiDetection.read"),
+  listSuppressionsController,
+);
 
 /**
  * @route   DELETE /ai-detection/suppressions/:id
@@ -292,7 +317,7 @@ router.get("/suppressions", authenticateJWT, authorize(ALL_ROLES), listSuppressi
 router.delete(
   "/suppressions/:id",
   authenticateJWT,
-  authorize(WRITE_ROLES),
+  authorize("aiDetection.edit"),
   deleteSuppressionController,
 );
 

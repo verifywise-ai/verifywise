@@ -32,7 +32,7 @@ Cross-cutting services used across the platform.
 | [File Storage](./infrastructure/file-storage.md) | Upload, storage, retrieval |
 | [PDF Generation](./infrastructure/pdf-generation.md) | EJS templates, Playwright rendering |
 | [External Integrations](./infrastructure/integrations.md) | MLflow, GitHub, Slack, LLM providers |
-| [Plugin System](./infrastructure/plugin-system.md) | Remote plugin marketplace, installation, configuration |
+| [Extensions](./infrastructure/extensions.md) | Built-in integrations (Slack, MLflow, Azure AI Foundry, ...): catalog, enablement, config, gate middleware |
 | [AI Advisor](./infrastructure/ai-advisor.md) | LLM integration, tool calling, conversation |
 
 ### Frontend
@@ -59,7 +59,7 @@ Deep-dive into specific feature areas. Each document covers data models, API end
 |----------|-------------|
 | [Use Cases](./domains/use-cases.md) | AI use case management, risk classification |
 | [Risk Management](./domains/risk-management.md) | Risk identification, assessment, mitigation |
-| [Compliance Frameworks](./domains/compliance-frameworks.md) | EU AI Act, ISO 42001, ISO 27001, NIST AI RMF |
+| [Compliance Frameworks](./domains/compliance-frameworks.md) | EU AI Act, ISO 42001, ISO 27001, NIST AI RMF, plus 21 bundled frameworks (SOC 2, GDPR, HIPAA, ...) |
 | [Post-Market Monitoring](./domains/post-market-monitoring.md) | Monitoring cycles, notifications, reports |
 | [Vendors](./domains/vendors.md) | Third-party vendor management |
 | [Models](./domains/models.md) | AI model inventory and lifecycle |
@@ -83,7 +83,7 @@ How-to guides for common development tasks.
 | Document | Description |
 |----------|-------------|
 | [Adding a New Feature](./guides/adding-new-feature.md) | Step-by-step guide for new features |
-| [Adding a Compliance Framework](./guides/adding-new-framework.md) | How to add new regulatory frameworks |
+| [Adding a Compliance Framework](./guides/adding-new-framework.md) | How to add a framework to the `Servers/structures` registry |
 | [API Conventions](./guides/api-conventions.md) | REST patterns, error handling, response formats |
 
 ### Code Standards & Patterns
@@ -113,7 +113,8 @@ Coding conventions and architectural patterns.
 | Reuse UI components | [Components](./frontend/components.md) |
 | Add LLM capabilities | [AI Advisor](./infrastructure/ai-advisor.md) |
 | Integrate external services | [External Integrations](./infrastructure/integrations.md) |
-| Extend platform with plugins | [Plugin System](./infrastructure/plugin-system.md) |
+| Add or change an integration (extension) | [Extensions](./infrastructure/extensions.md) |
+| Add a compliance framework | [Adding a Compliance Framework](./guides/adding-new-framework.md) |
 | Implement real-time notifications | [Notifications](./domains/notifications.md) |
 | Add dashboard metrics | [Dashboard](./domains/dashboard.md) |
 | Scan repositories for AI usage | [AI Detection](./domains/ai-detection.md) |

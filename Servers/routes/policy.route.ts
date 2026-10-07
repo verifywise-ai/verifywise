@@ -20,7 +20,7 @@ router.post("/import/docx", authenticateJWT, upload.single("file"), PolicyContro
 router.patch(
   "/bulk",
   authenticateJWT,
-  authorize(["Admin", "Editor"]),
+  authorize("policy.edit"),
   PolicyController.bulkUpdatePolicies,
 );
 

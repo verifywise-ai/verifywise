@@ -44,38 +44,9 @@ export class EvidenceHubModel extends Model<EvidenceHubModel> {
   /**
    * Evidence files - now managed via file_entity_links table
    * This property is populated dynamically by the utils layer, not stored in database
+   * Lifecycle (expiry_date, retention_policy) lives on each file, not here.
    */
   evidence_files?: FileResponse[];
-
-  @Column({
-    type: DataType.DATE,
-    allowNull: true,
-  })
-  expiry_date?: Date;
-
-  @Column({
-    type: DataType.STRING(100),
-    allowNull: true,
-  })
-  retention_policy?: string | null;
-
-  @Column({
-    type: DataType.DATE,
-    allowNull: true,
-  })
-  expired_at?: Date | null;
-
-  @Column({
-    type: DataType.DATE,
-    allowNull: true,
-  })
-  expiry_notified_at?: Date | null;
-
-  @Column({
-    type: DataType.DATE,
-    allowNull: true,
-  })
-  archived_at?: Date | null;
 
   @Column({
     type: DataType.ARRAY(DataType.INTEGER),
@@ -88,6 +59,12 @@ export class EvidenceHubModel extends Model<EvidenceHubModel> {
     allowNull: true,
   })
   mapped_training_ids?: number[] | null;
+
+  @Column({
+    type: DataType.ARRAY(DataType.INTEGER),
+    allowNull: true,
+  })
+  mapped_risk_ids?: number[] | null;
 
   /** timestamps */
   @Column({
@@ -109,12 +86,9 @@ export class EvidenceHubModel extends Model<EvidenceHubModel> {
       evidence_type: this.evidence_type,
       description: this.description,
       evidence_files: this.evidence_files,
-      expiry_date: this.expiry_date?.toISOString() || null,
-      retention_policy: this.retention_policy ?? null,
-      expired_at: this.expired_at?.toISOString() || null,
-      archived_at: this.archived_at?.toISOString() || null,
       mapped_model_ids: this.mapped_model_ids,
       mapped_training_ids: this.mapped_training_ids,
+      mapped_risk_ids: this.mapped_risk_ids,
       created_at: (this.createdAt ?? this.created_at)?.toISOString(),
       updated_at: (this.updatedAt ?? this.updated_at)?.toISOString(),
     };
@@ -131,12 +105,9 @@ export class EvidenceHubModel extends Model<EvidenceHubModel> {
       evidence_type: this.evidence_type,
       description: this.description,
       evidence_files: this.evidence_files,
-      expiry_date: this.expiry_date?.toISOString() || null,
-      retention_policy: this.retention_policy ?? null,
-      expired_at: this.expired_at?.toISOString() || null,
-      archived_at: this.archived_at?.toISOString() || null,
       mapped_model_ids: this.mapped_model_ids,
       mapped_training_ids: this.mapped_training_ids,
+      mapped_risk_ids: this.mapped_risk_ids,
       created_at: (this.createdAt ?? this.created_at)?.toISOString(),
       updated_at: (this.updatedAt ?? this.updated_at)?.toISOString(),
     };
@@ -151,10 +122,9 @@ export class EvidenceHubModel extends Model<EvidenceHubModel> {
       evidence_type: data.evidence_type ?? existingEvidence.evidence_type,
       description: data.description ?? existingEvidence.description,
       evidence_files: data.evidence_files ?? existingEvidence.evidence_files,
-      expiry_date: data.expiry_date ?? existingEvidence.expiry_date,
-      retention_policy: data.retention_policy ?? existingEvidence.retention_policy,
       mapped_model_ids: data.mapped_model_ids ?? existingEvidence.mapped_model_ids,
       mapped_training_ids: data.mapped_training_ids ?? existingEvidence.mapped_training_ids,
+      mapped_risk_ids: data.mapped_risk_ids ?? existingEvidence.mapped_risk_ids,
       updated_at: new Date(),
     });
 

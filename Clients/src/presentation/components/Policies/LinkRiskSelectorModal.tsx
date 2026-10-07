@@ -36,6 +36,7 @@ import TablePaginationActions from "../TablePagination";
 import { paginationStyle } from "../Table/styles";
 import CustomizableToast from "../../components/Toast";
 import { text } from "../../themes/palette";
+import { pageOfLabel } from "../Table/pageOfLabel";
 
 const SORT_KEY = "vw_link_risk_selector_sort";
 
@@ -413,7 +414,7 @@ const LinkRiskSelectorModal: React.FC<LinkRiskSelectorModalProps> = ({
                   ActionsComponent={(props) => <TablePaginationActions {...props} />}
                   labelRowsPerPage="Rows per page"
                   labelDisplayedRows={({ page, count }) =>
-                    `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
+                    pageOfLabel(page + 1, Math.max(0, Math.ceil(count / rowsPerPage)))
                   }
                   slotProps={{
                     select: {

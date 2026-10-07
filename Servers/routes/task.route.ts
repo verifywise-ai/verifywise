@@ -32,7 +32,7 @@ router.post("/:id/entities", authenticateJWT, addTaskEntityLink);
 
 // PATCH requests
 // Note: More specific routes must come before generic /:id routes
-router.patch("/bulk", authenticateJWT, authorize(["Admin", "Editor"]), bulkUpdateTasks);
+router.patch("/bulk", authenticateJWT, authorize("task.edit"), bulkUpdateTasks);
 
 // PUT requests
 // Note: More specific routes must come before generic /:id routes

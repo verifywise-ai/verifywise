@@ -208,7 +208,7 @@ The strategy is not to pick one "silver bullet" tool. It is to build **five comp
 **Purpose:** Find coverage gaps in modules that are too numerous or change too fast to script exhaustively.
 
 **Pilot design:**
-- **Scope:** one non-critical module (e.g., Settings, Training, Plugins, or Public Intake Forms).
+- **Scope:** one non-critical module (e.g., Settings, Training, Extensions, or Public Intake Forms).
 - **Tooling:** evaluate **AegisRunner** (low cost, exports Playwright), **TestSprite** (MCP/CLI integration for AI-agent workflows), **Autify Aximo** (cross-platform NL scenarios), or **Checksum** (session-based generation).
 - **Execution:** run nightly against a staging environment seeded with synthetic data.
 - **Governance:** every generated test or failure must be reviewed by a human; no autonomous agent is allowed to approve its own results. Do not point agents at production.
@@ -320,7 +320,7 @@ The table below scores tools across dimensions that matter for VerifyWise: cost,
 
 ### Phase 3 — Autonomous Agent Pilot (6–12 weeks)
 
-1. **Select one module** (Settings, Training, Plugins, or Public Intake Forms) and one tool (AegisRunner, TestSprite, Autify Aximo, or Checksum).
+1. **Select one module** (Settings, Training, Extensions, or Public Intake Forms) and one tool (AegisRunner, TestSprite, Autify Aximo, or Checksum).
 2. **Run nightly against staging** with synthetic data.
 3. **Track:** pass rate, false-positive rate, generated-test quality, time to triage, and maintenance burden.
 4. **Promote or discard:** export the best generated tests into Layer 3; drop the tool if it does not reduce manual effort.

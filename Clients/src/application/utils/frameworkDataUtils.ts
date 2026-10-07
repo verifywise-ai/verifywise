@@ -6,6 +6,7 @@
  */
 
 import { isISO27001 } from "../constants/frameworks";
+import { isCompletedStatus } from "../../domain/types/Status";
 
 /**
  * Common interfaces used across framework components
@@ -27,7 +28,7 @@ export interface ClauseData {
   id: number;
   title: string;
   clause_no: string;
-  arrangement: string;
+  clause_id: string;
   subClauses: SubClauseData[];
 }
 
@@ -164,8 +165,8 @@ export const calculateItemPercentages = (items: SubClauseData[]) => {
     };
   }
 
-  // Calculate completion percentage (implemented items)
-  const implementedCount = items.filter((item) => item.status === "Implemented").length;
+  // Calculate completion percentage (items in a completed status: Implemented or Audited)
+  const implementedCount = items.filter((item) => isCompletedStatus(item.status)).length;
   const completionPercentage = Math.round((implementedCount / items.length) * 100);
 
   // Calculate assignment percentage (items with owner assigned)
@@ -196,12 +197,12 @@ export const isValidClauseNumber = (clause: any, frameworkName: string): boolean
   let clauseNumber: number;
 
   if (isISO27001(0, frameworkName)) {
-    // ISO 27001 uses 'arrangement' field
-    if (typeof clause.arrangement === "undefined" && typeof clause.clause_no === "undefined") {
-      console.warn(`Missing clause number in ${frameworkName} data:`, clause);
+    // ISO 27001 uses 'clause_id' field
+    if (typeof clause.clause_id === "undefined") {
+      console.warn(`Missing clause_id in ${frameworkName} data:`, clause);
       return false;
     }
-    clauseNumber = parseInt(clause.arrangement || clause.clause_no);
+    clauseNumber = parseInt(clause.clause_id);
   } else {
     // ISO 42001 uses 'clause_no' field
     if (typeof clause.clause_no === "undefined") {
@@ -227,7 +228,7 @@ export const isValidClauseNumber = (clause: any, frameworkName: string): boolean
  */
 export const getClauseNumber = (clause: any, frameworkName: string): number => {
   if (isISO27001(0, frameworkName)) {
-    return parseInt(clause.arrangement || clause.clause_no);
+    return parseInt(clause.clause_id);
   }
   return parseInt(clause.clause_no);
 };

@@ -373,6 +373,20 @@ describe("user.repository", () => {
       });
     });
 
+    it("should return the reason for 409 (the organization's last Admin)", async () => {
+      vi.mocked(apiServices.delete).mockRejectedValue({
+        status: 409,
+        data: { data: "The organization must keep at least one Admin" },
+      });
+
+      const result = await deleteUserById({ userId: 1 });
+
+      expect(result).toEqual({
+        data: { message: "The organization must keep at least one Admin" },
+        status: 409,
+      });
+    });
+
     it("should return default message for 403 when data.data is undefined", async () => {
       const mockError = {
         status: 403,

@@ -8,7 +8,7 @@ vi.mock("../networkServices", () => ({
 }));
 
 import { apiServices } from "../networkServices";
-import { getDeduped } from "../inflightGet";
+import { clearInflightGets, getDeduped } from "../inflightGet";
 
 const mockedGet = apiServices.get as unknown as ReturnType<typeof vi.fn>;
 
@@ -99,5 +99,42 @@ describe("getDeduped", () => {
     const retry = await getDeduped("/projects");
     expect(retry.data).toBe("ok");
     expect(mockedGet).toHaveBeenCalledTimes(2);
+  });
+
+  it("drops pending requests when cleared, so the next caller sends its own", async () => {
+    // A request sent under one session must not be handed to the next.
+    const first = deferred<unknown>();
+    mockedGet.mockReturnValueOnce(first.promise).mockResolvedValueOnce({ data: "new" });
+
+    void getDeduped("/projects");
+    clearInflightGets();
+    const second = await getDeduped("/projects");
+
+    expect(mockedGet).toHaveBeenCalledTimes(2);
+    expect(second).toEqual({ data: "new" });
+    first.resolve({ data: "old" });
+  });
+
+  it("does not let a request from before the clear remove the new entry", async () => {
+    const old = deferred<unknown>();
+    const fresh = deferred<unknown>();
+    mockedGet
+      .mockReturnValueOnce(old.promise)
+      .mockReturnValueOnce(fresh.promise)
+      .mockResolvedValueOnce({ data: "third" });
+
+    void getDeduped("/projects");
+    clearInflightGets();
+    const second = getDeduped("/projects");
+    old.resolve({ data: "old" });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    // Still deduped onto the new session's request.
+    const third = getDeduped("/projects");
+    expect(third).toBe(second);
+    expect(mockedGet).toHaveBeenCalledTimes(2);
+    fresh.resolve({ data: "fresh" });
+    await second;
   });
 });

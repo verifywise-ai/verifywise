@@ -30,7 +30,7 @@ import { User } from "../../../domain/types/User";
 import { tableRowHoverStyle, tableRowDeletingStyle } from "./style";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { ModelInventoryStatus } from "../../../domain/enums/modelInventory.enum";
 import Chip from "../../components/Chip";
 import { VWLink } from "../../components/Link";
@@ -95,6 +95,7 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
   flashRowId,
   visibleColumns,
 }) => {
+  const formatDate = useFormattedDate();
   const { userRoleName } = useAuth();
   const { isEnabled } = useExtensions();
   const [users, setUsers] = useState<User[]>([]);
@@ -438,9 +439,7 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
                   >
                     <TooltipCell
                       value={
-                        modelInventory.status_date
-                          ? displayFormattedDate(modelInventory.status_date)
-                          : "-"
+                        modelInventory.status_date ? formatDate(modelInventory.status_date) : "-"
                       }
                     />
                   </TableCell>
@@ -551,6 +550,7 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
       flashRowId,
       isColVisible,
       visibleTableColumns,
+      formatDate,
     ],
   );
 

@@ -23,7 +23,6 @@ import { styles } from "./styles";
 import { getEntityById } from "../../../../application/repository/entity.repository";
 import { StatsCard } from "../../../components/Cards/StatsCard";
 import { useSearchParams } from "react-router";
-import { brand } from "../../../themes/palette";
 
 const ISO42001Clauses = ({
   project: _project,
@@ -229,10 +228,9 @@ const ISO42001Clauses = ({
     <Stack className="iso-42001-clauses">
       {alert && <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />}
       <StatsCard
-        completed={clauseProgress?.doneSubclauses ?? 0}
-        total={clauseProgress?.totalSubclauses ?? 0}
+        completed={clauseProgress?.doneSubclauses}
+        total={clauseProgress?.totalSubclauses}
         title="Clauses"
-        progressbarColor={brand.primary}
       />
       <Typography sx={{ ...styles.title, mt: 4 }}>{"Management System Clauses"}</Typography>
       {clauses &&

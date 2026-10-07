@@ -7,7 +7,9 @@ import {
   createFileEntityLink,
   deleteFileEntityLink,
 } from "./files/evidenceFiles.utils";
-import { resolveEvidenceExpiryDate } from "./evidenceRetention.utils";
+
+/** Days without an update after which mapped evidence counts as stale. */
+export const EVIDENCE_FRESHNESS_DAYS = 90;
 
 // Helper to normalize a date value to an ISO string or null
 const toISO = (d: any): string | null => {
@@ -16,21 +18,17 @@ const toISO = (d: any): string | null => {
   return isNaN(date.getTime()) ? null : date.toISOString();
 };
 
-// Get all evidences (includes evidence_hub records + NIST AI RMF virtual records)
-// Archived records (archived_at set by the retention sweep) are hidden unless
-// includeArchived is true. NIST virtual records are never archived.
-export const getAllEvidencesQuery = async (
-  organizationId: number,
-  includeArchived: boolean = false,
-) => {
+// Get all evidences (includes evidence_hub records + NIST AI RMF virtual records).
+// Lifecycle (expiry_date, retention_policy) lives on each linked file, not on
+// the evidence record — see files.expiry_date and the file expiry sweep.
+export const getAllEvidencesQuery = async (organizationId: number) => {
   // 1. Fetch evidence_hub records as plain objects
   const evidenceHubRecords = (await sequelize.query(
     `SELECT * FROM evidence_hub
       WHERE organization_id = :organizationId
-        AND (:includeArchived OR archived_at IS NULL)
       ORDER BY created_at DESC, id ASC`,
     {
-      replacements: { organizationId, includeArchived },
+      replacements: { organizationId },
       type: QueryTypes.SELECT,
     },
   )) as any[];
@@ -94,15 +92,12 @@ export const getAllEvidencesQuery = async (
       evidence_name: record.evidence_name,
       evidence_type: record.evidence_type,
       description: record.description,
-      expiry_date: toISO(record.expiry_date),
-      expired_at: toISO(record.expired_at),
-      archived_at: toISO(record.archived_at),
       mapped_model_ids: record.mapped_model_ids,
       mapped_training_ids: record.mapped_training_ids,
+      mapped_risk_ids: record.mapped_risk_ids,
       tags: record.tags,
       framework_ids: record.framework_ids,
       reviewer_id: record.reviewer_id,
-      retention_policy: record.retention_policy,
       created_at: toISO(record.created_at),
       updated_at: toISO(record.updated_at),
       evidence_files: evidenceHubFilesMap.get(record.id) || [],
@@ -116,15 +111,12 @@ export const getAllEvidencesQuery = async (
       evidence_name: `${record.index}: ${record.description}`,
       evidence_type: "NIST AI RMF",
       description: record.description,
-      expiry_date: null,
-      expired_at: null,
-      archived_at: null,
       mapped_model_ids: null,
       mapped_training_ids: null,
+      mapped_risk_ids: null,
       tags: [],
       framework_ids: ["nist_ai_rmf"],
       reviewer_id: record.reviewer,
-      retention_policy: null,
       created_at: toISO(record.created_at),
       updated_at: toISO(record.created_at),
       evidence_files: nistFilesMap.get(record.entity_id) || [],
@@ -166,26 +158,17 @@ export const createNewEvidenceQuery = async (
 ) => {
   const created_at = new Date();
   try {
-    // expiry_date precedence: explicit value > per-evidence retention_policy
-    // > org default retention. All-absent resolves to null = "no expiry".
-    const expiry_date = await resolveEvidenceExpiryDate(
-      organizationId,
-      evidence.expiry_date ?? null,
-      evidence.retention_policy ?? null,
-      created_at,
-    );
-
-    // Insert without evidence_files (now managed via file_entity_links)
+    // Insert without evidence_files (now managed via file_entity_links).
+    // Lifecycle (expiry_date, retention_policy) lives on each linked file, not here.
     const result = await sequelize.query(
       `INSERT INTO evidence_hub (
                 organization_id,
                 evidence_name,
                 evidence_type,
                 description,
-                expiry_date,
-                retention_policy,
                 mapped_model_ids,
                 mapped_training_ids,
+                mapped_risk_ids,
                 created_at,
                 updated_at
             ) VALUES (
@@ -193,10 +176,9 @@ export const createNewEvidenceQuery = async (
                 :evidence_name,
                 :evidence_type,
                 :description,
-                :expiry_date,
-                :retention_policy,
                 :mapped_model_ids,
                 :mapped_training_ids,
+                :mapped_risk_ids,
                 :created_at,
                 :updated_at
             ) RETURNING *`,
@@ -206,13 +188,14 @@ export const createNewEvidenceQuery = async (
           evidence_name: evidence.evidence_name,
           evidence_type: evidence.evidence_type,
           description: evidence.description ?? null,
-          expiry_date,
-          retention_policy: evidence.retention_policy ?? null,
           mapped_model_ids: evidence.mapped_model_ids
             ? `{${evidence.mapped_model_ids.join(",")}}`
             : null,
           mapped_training_ids: evidence.mapped_training_ids
             ? `{${evidence.mapped_training_ids.join(",")}}`
+            : null,
+          mapped_risk_ids: evidence.mapped_risk_ids
+            ? `{${evidence.mapped_risk_ids.join(",")}}`
             : null,
           created_at,
           updated_at: created_at,
@@ -272,20 +255,15 @@ export const updateEvidenceByIdQuery = async (
 
   try {
     // Update without evidence_files (now managed via file_entity_links).
-    // When expiry_date changes, clear the sweep flags so a re-dated record
-    // is un-flagged/un-archived and eligible for a fresh expiry evaluation.
+    // Lifecycle (expiry_date, retention_policy) lives on each linked file.
     await sequelize.query(
       `UPDATE evidence_hub SET
                 evidence_name = :evidence_name,
                 evidence_type = :evidence_type,
                 description = :description,
-                expiry_date = :expiry_date,
-                retention_policy = :retention_policy,
-                expired_at = CASE WHEN expiry_date IS DISTINCT FROM :expiry_date THEN NULL ELSE expired_at END,
-                expiry_notified_at = CASE WHEN expiry_date IS DISTINCT FROM :expiry_date THEN NULL ELSE expiry_notified_at END,
-                archived_at = CASE WHEN expiry_date IS DISTINCT FROM :expiry_date THEN NULL ELSE archived_at END,
                 mapped_model_ids = :mapped_model_ids,
                 mapped_training_ids = :mapped_training_ids,
+                mapped_risk_ids = :mapped_risk_ids,
                 updated_at = :updated_at
              WHERE organization_id = :organizationId AND id = :id`,
       {
@@ -295,13 +273,14 @@ export const updateEvidenceByIdQuery = async (
           evidence_name: evidence.evidence_name,
           evidence_type: evidence.evidence_type,
           description: evidence.description,
-          expiry_date: evidence.expiry_date ?? null,
-          retention_policy: evidence.retention_policy ?? null,
           mapped_model_ids: evidence.mapped_model_ids
             ? `{${evidence.mapped_model_ids.join(",")}}`
             : null,
           mapped_training_ids: evidence.mapped_training_ids
             ? `{${evidence.mapped_training_ids.join(",")}}`
+            : null,
+          mapped_risk_ids: evidence.mapped_risk_ids
+            ? `{${evidence.mapped_risk_ids.join(",")}}`
             : null,
           updated_at,
         },
@@ -397,4 +376,93 @@ export const deleteEvidenceByIdQuery = async (
     console.error("Error deleting evidence:", error);
     throw error;
   }
+};
+
+/** Risks with at least one stale mapped evidence. Stale = a linked file is
+ *  past its expiry date, or the evidence is untouched for
+ *  EVIDENCE_FRESHNESS_DAYS. Expiry lives on files (DATE), joined the same way
+ *  getEvidenceFilesForEntity reads them; a file expiring today is not yet
+ *  stale, matching the file expiry sweep and the "Expired" badge. */
+export const getStaleEvidenceRiskIdsQuery = async (
+  organizationId: number,
+  now: Date,
+): Promise<number[]> => {
+  const cutoff = new Date(now.getTime() - EVIDENCE_FRESHNESS_DAYS * 86400000);
+  const rows = (await sequelize.query(
+    `SELECT DISTINCT unnest(e.mapped_risk_ids) AS risk_id
+       FROM evidence_hub e
+      WHERE e.organization_id = :organizationId
+        AND e.mapped_risk_ids IS NOT NULL
+        AND array_length(e.mapped_risk_ids, 1) > 0
+        AND (
+          e.updated_at < :cutoff
+          OR EXISTS (
+            SELECT 1
+              FROM file_entity_links fel
+              JOIN files f ON f.id = fel.file_id AND f.organization_id = fel.organization_id
+             WHERE fel.organization_id = e.organization_id
+               AND fel.framework_type = 'evidence_hub'
+               AND fel.entity_type = 'evidence'
+               AND fel.entity_id = e.id
+               AND fel.link_type = 'evidence'
+               AND f.expiry_date < CAST(:now AS date)
+          )
+        )`,
+    { replacements: { organizationId, now, cutoff }, type: QueryTypes.SELECT },
+  )) as { risk_id: number }[];
+  return rows.map((r) => r.risk_id);
+};
+
+export interface UnnotifiedStaleRiskRow {
+  id: number;
+  risk_name: string;
+  risk_owner: number | null;
+  /** Text (see the stale-link sent-record): reparses losslessly. */
+  evidence_stale_at: string;
+}
+
+/** Flagged risks whose CURRENT staleness the owner has not been told about.
+ *  A failed delivery leaves `evidence_stale_notified_at` behind, so it is
+ *  retried; a later flag moves `evidence_stale_at` past the sent-record. */
+export const getUnnotifiedStaleRisksQuery = async (
+  organizationId: number,
+): Promise<UnnotifiedStaleRiskRow[]> => {
+  const rows = (await sequelize.query(
+    `SELECT id, risk_name, risk_owner,
+            evidence_stale_at::text AS evidence_stale_at
+       FROM risks
+      WHERE organization_id = :organizationId
+        AND is_deleted = false
+        AND evidence_stale_at IS NOT NULL
+        AND (evidence_stale_notified_at IS NULL
+             OR evidence_stale_notified_at < evidence_stale_at)
+      ORDER BY id ASC`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
+  )) as any[];
+  return rows.map((row) => ({
+    id: row.id,
+    risk_name: row.risk_name,
+    risk_owner: row.risk_owner ?? null,
+    evidence_stale_at: row.evidence_stale_at,
+  }));
+};
+
+/**
+ * Stamp the sent-record for one just-notified risk — only if the flag is still
+ * the value the sweep sent about. Guarded for the same reason as the
+ * stale-link mark: a re-flag between SELECT and UPDATE must not be stamped.
+ */
+export const markEvidenceStaleNotifiedQuery = async (
+  organizationId: number,
+  riskId: number,
+  seenStaleAt: string,
+): Promise<void> => {
+  await sequelize.query(
+    `UPDATE risks
+        SET evidence_stale_notified_at = :seenStaleAt::timestamp
+      WHERE organization_id = :organizationId
+        AND id = :riskId
+        AND evidence_stale_at = :seenStaleAt::timestamp`,
+    { replacements: { organizationId, riskId, seenStaleAt } },
+  );
 };

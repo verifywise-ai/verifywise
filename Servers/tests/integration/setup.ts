@@ -10,13 +10,15 @@ jest.mock("../../services/userNotification/projectNotifications", () => ({
   ProjectRole: {},
 }));
 jest.mock("../../services/slack/slackNotificationService", () => ({
-  sendSlackNotification: jest.fn().mockResolvedValue(undefined),
+  sendSlackNotification: jest.fn().mockResolvedValue({ attempted: false, delivered: false }),
 }));
 jest.mock("../../services/inAppNotification.service", () => ({
   sendInAppNotification: jest.fn().mockResolvedValue(undefined),
   notifyUserAssigned: jest.fn().mockResolvedValue(undefined),
   notifyTaskAssigned: jest.fn().mockResolvedValue(undefined),
   notifyTaskUpdated: jest.fn().mockResolvedValue(undefined),
+  notifyEvidenceStale: jest.fn().mockResolvedValue(undefined),
+  notifyParentLevelChanged: jest.fn().mockResolvedValue(undefined),
   ITaskEntityLinkForEmail: {},
 }));
 
@@ -85,6 +87,7 @@ jest.mock("../../database/redis", () => ({
   REDIS_URL: "redis://localhost:6379/0",
 }));
 
+import http from "http";
 import { Application, Request, Response, NextFunction } from "express";
 import supertest, { Agent } from "supertest";
 import { createApp } from "../../app";
@@ -105,7 +108,32 @@ const DEFAULT_MOCK_USER = {
   organizationId: 1,
 };
 
-export function createTestApp(options?: TestAppOptions): Application {
+/**
+ * Test servers are bound to 127.0.0.1 explicitly, never to the wildcard
+ * address. supertest hardcodes its request URL as `http://127.0.0.1:<port>`
+ * (see supertest/lib/test.js `serverAddress`), and on BSD/macOS a wildcard
+ * bind can be granted an ephemeral port that some unrelated process already
+ * holds as a 127.0.0.1-specific listener — the more specific bind then wins
+ * the connection and the test's request is answered by that foreign process.
+ * A loopback-specific bind cannot be handed such a port: the OS refuses it
+ * with EADDRINUSE. Binding here also means supertest finds `address()`
+ * already populated and never calls `listen(0)` itself.
+ */
+const testServers: http.Server[] = [];
+
+afterAll(() => {
+  for (const server of testServers.splice(0)) {
+    server.closeAllConnections();
+    server.close();
+  }
+});
+
+/**
+ * The Express app with the test auth bypass mounted, not listening. For tests
+ * that inspect the app itself (middleware order, router stack); anything that
+ * sends a request uses createTestApp, which binds it to loopback.
+ */
+export function createTestExpressApp(options?: TestAppOptions): Application {
   const mockUser = { ...DEFAULT_MOCK_USER, ...options?.mockUser };
 
   const preRoutesMiddleware: Array<(req: Request, res: Response, next: NextFunction) => void> = [];
@@ -124,6 +152,16 @@ export function createTestApp(options?: TestAppOptions): Application {
   return createApp(preRoutesMiddleware);
 }
 
-export function testRequest(app: Application): Agent {
+export async function createTestApp(options?: TestAppOptions): Promise<http.Server> {
+  const server = http.createServer(createTestExpressApp(options));
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", resolve);
+  });
+  testServers.push(server);
+  return server;
+}
+
+export function testRequest(app: http.Server): Agent {
   return supertest.agent(app);
 }

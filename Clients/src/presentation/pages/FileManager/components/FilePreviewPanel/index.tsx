@@ -44,6 +44,11 @@ import {
 import { useIsAdmin } from "../../../../../application/hooks/useIsAdmin";
 import { status } from "../../../../themes/palette";
 import { displayFormattedDate } from "../../../../tools/isoDateToString";
+import { FileExpiryChip } from "../../../../components/FileExpiryChip";
+import {
+  RETENTION_POLICY_LABELS,
+  type RetentionPolicy,
+} from "../../../../../domain/enums/retention.enum";
 
 interface FilePreviewPanelProps {
   isOpen: boolean;
@@ -591,8 +596,24 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
               {file.expiry_date && (
                 <>
                   <Typography sx={{ fontSize: 13, color: "text.icon" }}>Expiry date</Typography>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
+                      {formatDate(file.expiry_date)}
+                    </Typography>
+                    <FileExpiryChip expiryDate={file.expiry_date} />
+                  </Box>
+                </>
+              )}
+
+              {/* Retention policy */}
+              {file.retention_policy && (
+                <>
+                  <Typography sx={{ fontSize: 13, color: "text.icon" }}>
+                    Retention policy
+                  </Typography>
                   <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-                    {formatDate(file.expiry_date)}
+                    {RETENTION_POLICY_LABELS[file.retention_policy as RetentionPolicy] ??
+                      file.retention_policy}
                   </Typography>
                 </>
               )}

@@ -73,7 +73,7 @@
 
     - name: Wait for backend health endpoint
       ansible.builtin.uri:
-        url: "http://127.0.0.1:{{ backend_port }}/health"
+        url: "http://127.0.0.1:{{ backend_port }}/health/ready"
         method: GET
         status_code: 200
       register: result

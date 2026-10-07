@@ -8,6 +8,7 @@ on:
     paths:
       - "Clients/**"
       - "Servers/**"
+      - ".github/workflows/e2e-tests.yml"
   workflow_dispatch:
     inputs:
       only_last_failed:
@@ -18,9 +19,17 @@ on:
 
 jobs:
   e2e-tests:
-    name: Playwright E2E Tests
+    name: Playwright E2E Tests (shard ${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # Each shard is its own job with its own Postgres and Redis, so tests that
+    # depend on earlier tests' data still run in order within a shard and
+    # cannot see another shard's data. Playwright runs the setup projects a
+    # shard's tests depend on inside that shard.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
 
     services:
       postgres:
@@ -258,9 +267,9 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: Clients/test-results/.last-run.json
-          key: playwright-last-run-${{ github.ref }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: playwright-last-run-${{ github.ref }}-shard${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
-            playwright-last-run-${{ github.ref }}-
+            playwright-last-run-${{ github.ref }}-shard${{ matrix.shard }}-
 
       - name: Run previously failed E2E tests
         working-directory: Clients
@@ -302,20 +311,20 @@ jobs:
           DB_NAME: verifywise_test
           DB_USER: postgres
           DB_PASSWORD: postgres
-        run: npx playwright test
+        run: npx playwright test --shard=${{ matrix.shard }}/3
 
       - name: Save last-run metadata
         if: always()
         uses: actions/cache/save@v6
         with:
           path: Clients/test-results/.last-run.json
-          key: playwright-last-run-${{ github.ref }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: playwright-last-run-${{ github.ref }}-shard${{ matrix.shard }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-report
+          name: playwright-report-shard${{ matrix.shard }}
           path: Clients/playwright-report/
           retention-days: 14
 
@@ -328,7 +337,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: accessibility-report
+          name: accessibility-report-shard${{ matrix.shard }}
           path: Clients/accessibility-report/
           retention-days: 14
 
@@ -336,7 +345,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-results
+          name: playwright-results-shard${{ matrix.shard }}
           path: Clients/test-results/
           retention-days: 7
 
@@ -344,7 +353,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: backend-logs
+          name: backend-logs-shard${{ matrix.shard }}
           path: /tmp/backend.log
           retention-days: 7
 
@@ -352,6 +361,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: aigateway-logs
+          name: aigateway-logs-shard${{ matrix.shard }}
           path: /tmp/aigateway.log
           retention-days: 7

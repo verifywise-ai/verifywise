@@ -9,7 +9,7 @@ export const GENESIS_HASH = "0".repeat(64);
 interface AuditLedgerEntry {
   organizationId: number;
   entryType: "event_log" | "change_history";
-  userId: number;
+  userId: number | null;
   eventType?: string | null;
   entityType?: string | null;
   entityId?: number | null;

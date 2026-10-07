@@ -79,7 +79,14 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
 
   React.useEffect(() => {
     const fetchAvatars = async () => {
-      const uniqueUserIds = Array.from(new Set(history.map((entry) => entry.changed_by_user_id)));
+      // A system change or a deleted user has no id, so there is no photo to fetch.
+      const uniqueUserIds = Array.from(
+        new Set(
+          history
+            .map((entry) => entry.changed_by_user_id)
+            .filter((userId): userId is number => userId != null),
+        ),
+      );
 
       const newAvatarUrls: { [userId: number]: string | null } = {};
 
@@ -198,13 +205,15 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
     const firstEntry = group[0];
     const isCurrentUser = firstEntry.changed_by_user_id === currentUserId;
 
-    const userName = !firstEntry.changed_by_user_id
-      ? "Deleted User"
-      : isCurrentUser
-        ? "You"
-        : firstEntry.user_name && firstEntry.user_surname
-          ? `${firstEntry.user_name} ${firstEntry.user_surname}`
-          : firstEntry.user_email || "Unknown User";
+    const userName = firstEntry.changed_by_system
+      ? "System"
+      : !firstEntry.changed_by_user_id
+        ? "Deleted User"
+        : isCurrentUser
+          ? "You"
+          : firstEntry.user_name && firstEntry.user_surname
+            ? `${firstEntry.user_name} ${firstEntry.user_surname}`
+            : firstEntry.user_email || "Unknown User";
 
     const relativeTime = formatRelativeTime(firstEntry.changed_at);
 
@@ -227,7 +236,10 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
             user={{
               firstname: firstEntry.user_name || userName,
               lastname: firstEntry.user_surname || "",
-              pathToImage: avatarUrls[firstEntry.changed_by_user_id] || undefined,
+              pathToImage:
+                firstEntry.changed_by_user_id != null
+                  ? avatarUrls[firstEntry.changed_by_user_id] || undefined
+                  : undefined,
             }}
             size="small"
             showBorder={false}

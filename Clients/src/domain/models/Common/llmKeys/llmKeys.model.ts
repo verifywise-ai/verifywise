@@ -3,7 +3,7 @@ export type LLMProviderId = "anthropic" | "openai" | "openrouter" | "custom";
 // Display names for providers (used in forms and UI)
 export type LLMProviderName = "Anthropic" | "OpenAI" | "OpenRouter" | "Custom";
 
-interface LLMKeysData {
+export interface LLMKeysData {
   id: number;
   name: LLMProviderName;
   key: string;

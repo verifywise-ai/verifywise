@@ -11,6 +11,7 @@ import { getAttestationSummary } from "../utils/mrmAttestation.utils";
 import { generateAttestationReport } from "../services/reporting/mrmAttestationReport";
 import { runRevalidationSweep } from "../services/automations/actions/mrmRevalidationSweep";
 import { getOrganizationByIdQuery } from "../utils/organization.utils";
+import { toId } from "../utils/validations/validation.utils";
 
 const FILE = "mrmRevalidation.ctrl.ts";
 
@@ -31,7 +32,7 @@ function fail(req: Request, res: Response, fn: string, msg: string, error: unkno
   return res.status(status).json(body);
 }
 
-const parseId = (raw: string | string[]): number => parseInt(Array.isArray(raw) ? raw[0] : raw, 10);
+const parseId = (raw: string | string[]): number => toId(Array.isArray(raw) ? raw[0] : raw);
 
 // ---------------------------------------------------------------------------
 // Material-change trigger (explicit "request revalidation" action)

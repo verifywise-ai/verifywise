@@ -83,8 +83,7 @@ export const installingContent: ArticleContent = {
     {
       type: 'code',
       code: `mkdir verifywise && cd verifywise
-curl -O https://raw.githubusercontent.com/bluewave-labs/verifywise/develop/install.sh
-curl -O https://raw.githubusercontent.com/bluewave-labs/verifywise/develop/.env.prod`,
+curl -O https://raw.githubusercontent.com/verifywise-ai/verifywise/develop/install.sh`,
     },
     {
       type: 'heading',
@@ -94,19 +93,38 @@ curl -O https://raw.githubusercontent.com/bluewave-labs/verifywise/develop/.env.
     },
     {
       type: 'paragraph',
-      text: "Open `.env.prod` and change the values below. Everything else has sensible defaults.",
+      text: "`.env.prod` is not published in the repository, so create it yourself in the same folder as `install.sh`. The installer checks every secret below and refuses to start any container while one is empty.",
     },
     {
       type: 'code',
-      code: `# Your server's IP or domain (replace localhost)
-BACKEND_URL=http://your-server-ip:3000
-FRONTEND_URL=http://your-server-ip:8080
+      code: `# Database
+DB_USER=verifywise
+DB_PASSWORD=your-secure-password
+DB_NAME=verifywise
+DB_PORT=5432
 
-# Generate a JWT secret: openssl rand -base64 32
-JWT_SECRET=your-generated-secret-here
+# Ports published on the host
+BACKEND_PORT=3000
+FRONTEND_PORT=8080
 
-# Pick a strong database password
-POSTGRES_PASSWORD=your-secure-password`,
+# First admin account
+SUPERADMIN_EMAIL=admin@example.com
+SUPERADMIN_PASSWORD=your-admin-password
+
+# Secrets: generate each with openssl rand -base64 32
+JWT_SECRET=
+REFRESH_TOKEN_SECRET=
+ENCRYPTION_KEY=
+ENCRYPTION_PASSWORD=
+AI_GATEWAY_INTERNAL_KEY=
+EVAL_SERVER_INTERNAL_KEY=
+
+# Encryption algorithm
+ENCRYPTION_ALGORITHM=aes-256-cbc`,
+    },
+    {
+      type: 'paragraph',
+      text: "Do not set `BACKEND_URL` or `FRONTEND_URL` here. Compose wires the services together internally and derives both from `BACKEND_PORT` and `FRONTEND_PORT`.",
     },
     {
       type: 'heading',
@@ -200,12 +218,15 @@ cd Clients && npm run dev`,
         { key: 'description', label: 'Description' },
       ],
       rows: [
-        { variable: 'BACKEND_URL', description: 'URL where the API is reachable (default: http://localhost:3000)' },
-        { variable: 'FRONTEND_URL', description: 'URL where the web app is served (default: http://localhost:8080 in prod)' },
-        { variable: 'JWT_SECRET', description: 'Secret for signing access and refresh tokens' },
-        { variable: 'POSTGRES_PASSWORD', description: 'PostgreSQL password' },
-        { variable: 'POSTGRES_DB', description: 'Database name (default: verifywise)' },
-        { variable: 'REDIS_HOST', description: 'Redis hostname (default: localhost)' },
+        { variable: 'BACKEND_PORT', description: 'Port the API is published on (default: 3000)' },
+        { variable: 'FRONTEND_PORT', description: 'Port the web app is published on (default: 8080)' },
+        { variable: 'JWT_SECRET', description: 'Secret for signing access tokens' },
+        { variable: 'REFRESH_TOKEN_SECRET', description: 'Secret for signing refresh tokens' },
+        { variable: 'DB_USER', description: 'PostgreSQL user' },
+        { variable: 'DB_PASSWORD', description: 'PostgreSQL password. Compose passes this to the database as POSTGRES_PASSWORD, so set DB_PASSWORD, not POSTGRES_PASSWORD' },
+        { variable: 'DB_NAME', description: 'Database name (default: verifywise)' },
+        { variable: 'SUPERADMIN_EMAIL', description: 'Email address of the first admin account' },
+        { variable: 'SUPERADMIN_PASSWORD', description: 'Password for the first admin account' },
       ],
     },
     {

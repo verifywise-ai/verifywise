@@ -239,7 +239,11 @@ class BiasAuditService {
     formData.append("config_json", JSON.stringify(config));
     formData.append("org_id", config.orgId);
 
-    const res = await CustomAxios.post("/deepeval/bias-audits/run", formData);
+    // The instance defaults to JSON, which would make axios send FormData as
+    // JSON. In the browser axios drops this header so the boundary is set.
+    const res = await CustomAxios.post("/deepeval/bias-audits/run", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
     return res.data as { auditId: string; status: string };
   }
 
@@ -281,7 +285,9 @@ class BiasAuditService {
   async parseHeaders(dataset: File): Promise<string[]> {
     const formData = new FormData();
     formData.append("dataset", dataset);
-    const res = await CustomAxios.post("/deepeval/bias-audits/parse-headers", formData);
+    const res = await CustomAxios.post("/deepeval/bias-audits/parse-headers", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
     return (res.data as { headers: string[] }).headers;
   }
 }

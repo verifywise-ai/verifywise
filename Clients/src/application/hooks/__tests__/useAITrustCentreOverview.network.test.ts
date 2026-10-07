@@ -14,7 +14,7 @@
  */
 
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import { server } from "../../../test/mocks/server";
 import { aiTrustCentreErrors } from "../../../test/mocks/errorHandlers";
 

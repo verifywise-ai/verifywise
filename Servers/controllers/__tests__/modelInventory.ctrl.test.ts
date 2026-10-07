@@ -35,6 +35,7 @@ jest.mock("../../utils/statusCode.utils", () => ({
     204: (d: any) => ({ message: "No Content", data: d }),
     400: (d: any) => ({ message: "Bad Request", data: d }),
     404: (d: any) => ({ message: "Not Found", data: d }),
+    409: (d: any) => ({ message: "Conflict", data: d }),
     500: (d: any) => ({ message: "Internal Server Error", data: d }),
     503: (d: any) => ({ message: "Service Unavailable", data: d }),
   },
@@ -227,6 +228,19 @@ describe("modelInventory.ctrl", () => {
       await createNewModelInventory(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
     });
+    it("should return 409 when external key violates the unique index (issue #4755)", async () => {
+      const conflictError = Object.assign(new Error("duplicate key value"), {
+        parent: { code: "23505" },
+      });
+      mockCreate.mockRejectedValue(conflictError);
+      const req = createReq({
+        body: { provider: "p", model: "M1", version: "1", external_key: "key-1" },
+      });
+      const res = createRes();
+      await createNewModelInventory(req, res);
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ message: "Conflict" }));
+    });
   });
 
   describe("updateModelInventoryById", () => {
@@ -251,6 +265,18 @@ describe("modelInventory.ctrl", () => {
       const res = createRes();
       await updateModelInventoryById(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+    it("should return 409 when external key violates the unique index (issue #4755)", async () => {
+      const conflictError = Object.assign(new Error("duplicate key value"), {
+        parent: { code: "23505" },
+      });
+      mockGetById.mockResolvedValue(mockModel({ id: 1, model: "M1" }) as any);
+      mockUpdate.mockRejectedValue(conflictError);
+      const req = createReq({ params: { id: "1" }, body: { external_key: "key-1" } });
+      const res = createRes();
+      await updateModelInventoryById(req, res);
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ message: "Conflict" }));
     });
   });
 

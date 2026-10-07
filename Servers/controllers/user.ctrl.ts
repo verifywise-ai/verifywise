@@ -29,6 +29,7 @@ import {
   checkUserExistsQuery,
   createNewUserQuery,
   deleteUserByIdQuery,
+  isLastAdminQuery,
   deleteUserProfilePhotoQuery,
   getAllUsersQuery,
   getAssessmentsForProject,
@@ -58,7 +59,7 @@ import {
   BusinessLogicException,
   ConflictException,
 } from "../domain.layer/exceptions/custom.exception";
-import { Transaction } from "sequelize";
+import { ForeignKeyConstraintError, Transaction } from "sequelize";
 import logger, { logStructured } from "../utils/logger/fileLogger";
 import { logEvent } from "../utils/logger/dbLogger";
 import { generateUserTokens } from "../utils/auth.utils";
@@ -339,22 +340,17 @@ async function getUserById(req: Request, res: Response) {
   logger.debug(`🔍 Looking up user with ID: ${id}`);
 
   try {
-    const user = (await getUserByIdQuery(id)) as UserModel;
+    const user = (await getUserByIdQuery(id)) as UserModel | null;
     const isSelfLookup = id === req.userId;
-    if (!isSelfLookup && user.organization_id !== req.organizationId) {
-      logStructured("error", `access denied to user ID ${id}`, "getUserById", "user.ctrl.ts");
-      return res
-        .status(403)
-        .json(STATUS_CODE[403](req.t!("Forbidden: Access to this user is denied")));
+    // A user in another organization answers like a missing one, so the
+    // endpoint does not reveal which user ids exist.
+    if (!user || (!isSelfLookup && user.organization_id !== req.organizationId)) {
+      logStructured("successful", `no user found: ID ${id}`, "getUserById", "user.ctrl.ts");
+      return res.status(404).json(STATUS_CODE[404](req.t!("User not found")));
     }
 
-    if (user) {
-      logStructured("successful", `user found: ID ${id}`, "getUserById", "user.ctrl.ts");
-      return res.status(200).json(STATUS_CODE[200](user.toSafeJSON()));
-    }
-
-    logStructured("successful", `no user found: ID ${id}`, "getUserById", "user.ctrl.ts");
-    return res.status(404).json(STATUS_CODE[404](user));
+    logStructured("successful", `user found: ID ${id}`, "getUserById", "user.ctrl.ts");
+    return res.status(200).json(STATUS_CODE[200](user.toSafeJSON()));
   } catch (error) {
     logStructured("error", `failed to fetch user: ID ${id}`, "getUserById", "user.ctrl.ts");
     logger.error("❌ Error in getUserById:", error);
@@ -505,14 +501,27 @@ async function createNewUser(req: Request, res: Response) {
     const user = (await createNewUserQuery(userModel, transaction)) as UserModel;
 
     if (user) {
-      await transaction.commit();
-
-      // Mark any pending invitation as accepted (fire-and-forget)
-      try {
-        await markInvitationAcceptedQuery(organizationId, email);
-      } catch (_) {
-        // Non-critical — don't block user creation
+      // In the same transaction: a link works once, so if the invitation
+      // cannot be marked accepted the user is not created either. No pending
+      // row means it was revoked (or used) after the link was checked.
+      const accepted = await markInvitationAcceptedQuery(
+        organizationId,
+        res.locals.invitation,
+        transaction,
+      );
+      if (accepted === 0) {
+        await transaction.rollback();
+        return res
+          .status(403)
+          .json(
+            STATUS_CODE[403](
+              req.t!(
+                "This invitation link is no longer valid. Use the most recent invitation email, or ask your administrator to resend it.",
+              ),
+            ),
+          );
       }
+      await transaction.commit();
 
       logStructured("successful", `user created: ${email}`, "createNewUser", "user.ctrl.ts");
       await logEvent("Create", `User created: ${email}`, req.userId!, req.organizationId!);
@@ -1107,8 +1116,15 @@ async function updateUserById(req: Request, res: Response) {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   const { name, surname, email, roleId: roleIdRaw, last_login } = req.body;
 
-  // Convert roleId to number if it exists (frontend may send as string)
-  const roleId = roleIdRaw ? parseInt(roleIdRaw) : undefined;
+  // The frontend may send the id as a string of digits. Anything else
+  // (true, arrays, "0x2", " 2 ", "2e0", ...) becomes NaN and is refused as an
+  // unknown role below; Number() alone would turn true into 1 (Admin).
+  const roleId =
+    roleIdRaw === undefined || roleIdRaw === null || roleIdRaw === ""
+      ? undefined
+      : typeof roleIdRaw === "number" || (typeof roleIdRaw === "string" && /^\d+$/.test(roleIdRaw))
+        ? Number(roleIdRaw)
+        : NaN;
 
   logStructured("processing", `updating user ID ${id}`, "updateUserById", "user.ctrl.ts");
 
@@ -1116,14 +1132,13 @@ async function updateUserById(req: Request, res: Response) {
     // Check permissions (if user context is available)
     const currentUserId = (req as any).user?.id;
     const user = await getUserByIdQuery(id);
-
     const isSelf = req.userId === id;
-    if (!isSelf && user.organization_id !== req.organizationId) {
-      logStructured("error", `access denied to user ID ${id}`, "updateUserById", "user.ctrl.ts");
+    // A user in another organization answers like a missing one, so the
+    // endpoint does not reveal which user ids exist.
+    if (!user || (!isSelf && user.organization_id !== req.organizationId)) {
+      logStructured("error", `user not found: ID ${id}`, "updateUserById", "user.ctrl.ts");
       await transaction.rollback();
-      return res
-        .status(403)
-        .json(STATUS_CODE[403](req.t!("Forbidden: Access to this user is denied")));
+      return res.status(404).json(STATUS_CODE[404](req.t!("User not found")));
     }
 
     // Authorization: only Admins may edit other users.
@@ -1157,18 +1172,44 @@ async function updateUserById(req: Request, res: Response) {
         .json(STATUS_CODE[403](req.t!("Forbidden: Only admins can change user roles")));
     }
 
-    // Validate that the requested role actually exists.
+    // The requested role must exist and be assignable in the caller's
+    // organization: a built-in role (organization_id NULL) or one of this
+    // organization's own custom roles. Another organization's custom role
+    // and SuperAdmin (granted only through the super_admins mapping) are
+    // refused. All three cases get the same response so the endpoint does
+    // not reveal which role ids exist in other organizations.
     if (roleId !== undefined && roleId !== user.role_id) {
-      const targetRole = await getRoleByIdQuery(roleId);
-      if (!targetRole) {
+      // Read from the database, not the role cache, so a role created or
+      // deleted a moment ago is judged correctly. A built-in role has an
+      // organization_id of exactly null; a row without the field is refused.
+      const targetRole =
+        Number.isInteger(roleId) && roleId > 0 ? await getRoleByIdQuery(roleId) : null;
+      const isAssignable =
+        !!targetRole &&
+        targetRole.name !== "SuperAdmin" &&
+        (targetRole.organization_id === null || targetRole.organization_id === req.organizationId);
+      if (!isAssignable) {
         logStructured(
           "error",
-          `invalid role ID ${roleId} requested for user ID ${id}`,
+          `unassignable role ID ${roleId} requested for user ID ${id}`,
           "updateUserById",
           "user.ctrl.ts",
         );
         await transaction.rollback();
-        return res.status(400).json(STATUS_CODE[400](req.t!("Invalid role ID")));
+        return res.status(400).json(STATUS_CODE[400](req.t!("Unknown role")));
+      }
+
+      if (await isLastAdminQuery(user.organization_id!, id, transaction)) {
+        logStructured(
+          "error",
+          `refused to change the role of the last Admin, user ID ${id}`,
+          "updateUserById",
+          "user.ctrl.ts",
+        );
+        await transaction.rollback();
+        return res
+          .status(409)
+          .json(STATUS_CODE[409](req.t!("The organization must keep at least one Admin")));
       }
     }
 
@@ -1272,6 +1313,11 @@ async function updateUserById(req: Request, res: Response) {
   } catch (error) {
     await transaction.rollback();
 
+    // The role was deleted between the check above and the update.
+    if (error instanceof ForeignKeyConstraintError) {
+      return res.status(400).json(STATUS_CODE[400](req.t!("Unknown role")));
+    }
+
     if (error instanceof ValidationException) {
       logStructured(
         "error",
@@ -1331,19 +1377,13 @@ async function deleteUserById(req: Request, res: Response) {
   try {
     const user = await getUserByIdQuery(id);
 
-    // Pure SuperAdmin (no role, no org) cannot be deleted through the
-    // tenant endpoint.
-    if (user && user.role_id == null && user.organization_id == null) {
+    // A user in another organization answers like a missing one, so the
+    // endpoint does not reveal which user ids exist. This also covers a pure
+    // SuperAdmin (no role, no organization), never deletable from here.
+    if (!user || user.organization_id !== req.organizationId) {
+      logStructured("error", `user not found: ID ${id}`, "deleteUserById", "user.ctrl.ts");
       await transaction.rollback();
-      return res.status(403).json(STATUS_CODE[403](req.t!("Super-admin user cannot be deleted")));
-    }
-
-    if (user.organization_id !== req.organizationId) {
-      logStructured("error", `access denied to user ID ${id}`, "deleteUserById", "user.ctrl.ts");
-      await transaction.rollback();
-      return res
-        .status(403)
-        .json(STATUS_CODE[403](req.t!("Forbidden: Access to this user is denied")));
+      return res.status(404).json(STATUS_CODE[404](req.t!("User not found")));
     }
 
     if (user) {
@@ -1370,6 +1410,19 @@ async function deleteUserById(req: Request, res: Response) {
               ),
             ),
           );
+      }
+
+      if (await isLastAdminQuery(req.organizationId!, id, transaction)) {
+        logStructured(
+          "error",
+          `refused to delete the last Admin, user ID ${id}`,
+          "deleteUserById",
+          "user.ctrl.ts",
+        );
+        await transaction.rollback();
+        return res
+          .status(409)
+          .json(STATUS_CODE[409](req.t!("The organization must keep at least one Admin")));
       }
 
       const deletedUser = await deleteUserByIdQuery(id, req.organizationId!, transaction);
@@ -1829,7 +1882,8 @@ async function uploadUserProfilePhoto(req: any, res: Response) {
 
   try {
     const user = await getUserByIdQuery(userId);
-    if (user.organization_id !== req.organizationId) {
+    // A missing user and another organization's answer alike (no id oracle).
+    if (!user || user.organization_id !== req.organizationId) {
       logStructured(
         "error",
         `access denied to user ID ${userId}`,
@@ -1837,9 +1891,7 @@ async function uploadUserProfilePhoto(req: any, res: Response) {
         "user.ctrl.ts",
       );
       await transaction.rollback();
-      return res
-        .status(403)
-        .json(STATUS_CODE[403](req.t!("Forbidden: Access to this user is denied")));
+      return res.status(404).json(STATUS_CODE[404](req.t!("User not found")));
     }
 
     if (!attachment) {
@@ -1962,16 +2014,15 @@ async function getUserProfilePhoto(req: Request, res: Response) {
 
   try {
     const user = await getUserByIdQuery(userId);
-    if (user.organization_id !== req.organizationId) {
+    // A missing user and another organization's answer alike (no id oracle).
+    if (!user || user.organization_id !== req.organizationId) {
       logStructured(
         "error",
         `access denied to user ID ${userId}`,
         "getUserProfilePhoto",
         "user.ctrl.ts",
       );
-      return res
-        .status(403)
-        .json(STATUS_CODE[403](req.t!("Forbidden: Access to this user is denied")));
+      return res.status(404).json(STATUS_CODE[404](req.t!("User not found")));
     }
 
     const photo = await getUserProfilePhotoQuery(userId, req.organizationId!);
@@ -2029,7 +2080,8 @@ async function deleteUserProfilePhoto(req: Request, res: Response) {
 
   try {
     const user = await getUserByIdQuery(userId);
-    if (user.organization_id !== req.organizationId) {
+    // A missing user and another organization's answer alike (no id oracle).
+    if (!user || user.organization_id !== req.organizationId) {
       logStructured(
         "error",
         `access denied to user ID ${userId}`,
@@ -2037,9 +2089,7 @@ async function deleteUserProfilePhoto(req: Request, res: Response) {
         "user.ctrl.ts",
       );
       await transaction.rollback();
-      return res
-        .status(403)
-        .json(STATUS_CODE[403](req.t!("Forbidden: Access to this user is denied")));
+      return res.status(404).json(STATUS_CODE[404](req.t!("User not found")));
     }
 
     const isDeleted = await deleteUserProfilePhotoQuery(userId, req.organizationId!, transaction);

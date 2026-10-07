@@ -8,7 +8,7 @@
  *
  * Methods matter here. Four of the seven bulk routes are PATCH and three are
  * POST — a handler registered on the wrong verb never matches, and with
- * `onUnhandledRequest: "error"` the test fails with an unhandled-request error
+ * `onUnhandledFrame: "error"` the test fails with an unhandled-frame error
  * rather than a useful assertion. The verbs were read off the repositories.
  *
  * The success handler echoes the payload it received, so the assertion proves

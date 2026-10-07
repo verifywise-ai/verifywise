@@ -14,7 +14,7 @@ import Chip from "../../../components/Chip";
 import Select from "../../../components/Inputs/Select";
 import { EmptyState } from "../../../components/EmptyState";
 import CustomizableSkeleton from "../../../components/Skeletons";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import {
   useFleetTiering,
   useMetricTrend,
@@ -85,6 +85,7 @@ const MetricTrendCell = ({ modelId, metric }: { modelId: number; metric: string 
 };
 
 const MonitoringTab = ({ onError }: MonitoringTabProps) => {
+  const formatDate = useFormattedDate();
   const theme = useTheme();
   const { data: fleet = [] } = useFleetTiering();
   const [modelId, setModelId] = useState<number | "">("");
@@ -244,7 +245,7 @@ const MonitoringTab = ({ onError }: MonitoringTabProps) => {
                             })
                           : "—"}
                       </TableCell>
-                      <TableCell sx={mrmTableCellStyle}>{displayFormattedDate(b.at)}</TableCell>
+                      <TableCell sx={mrmTableCellStyle}>{formatDate(b.at)}</TableCell>
                       <TableCell sx={mrmTableCellStyle}>
                         <Chip
                           label={evalStatusLabel(b.status)}

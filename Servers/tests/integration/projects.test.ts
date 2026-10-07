@@ -28,7 +28,7 @@ describe("POST /api/projects", () => {
   };
 
   it("creates a project with bypassAuth (201)", async () => {
-    const app = createTestApp({
+    const app = await createTestApp({
       bypassAuth: true,
       mockUser: { userId, organizationId: orgId, role: "Admin" },
     });
@@ -40,7 +40,7 @@ describe("POST /api/projects", () => {
   });
 
   it("creates a project with real JWT from login (201)", async () => {
-    const app = createTestApp();
+    const app = await createTestApp();
 
     const loginRes = await testRequest(app)
       .post("/api/users/login")
@@ -58,7 +58,7 @@ describe("POST /api/projects", () => {
   });
 
   it("returns error for missing project_title", async () => {
-    const app = createTestApp({
+    const app = await createTestApp({
       bypassAuth: true,
       mockUser: { userId, organizationId: orgId, role: "Admin" },
     });

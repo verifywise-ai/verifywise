@@ -23,52 +23,53 @@ import {
 
 const router = express.Router();
 
-const ALL_ROLES = ["Admin", "Editor", "Reviewer", "Auditor"];
-const WRITE_ROLES = ["Admin", "Editor"];
-const ADMIN_ONLY = ["Admin"];
-
 /**
  * @route   GET /ai-detection/repositories
  * @desc    List all registered repositories
  * @access  Private - All roles
  * @query   page, limit
  */
-router.get("/", authenticateJWT, authorize(ALL_ROLES), listRepositories);
+router.get("/", authenticateJWT, authorize("aiDetectionRepository.read"), listRepositories);
 
 /**
  * @route   GET /ai-detection/repositories/:id
  * @desc    Get a single repository by ID
  * @access  Private - All roles
  */
-router.get("/:id", authenticateJWT, authorize(ALL_ROLES), getRepository);
+router.get("/:id", authenticateJWT, authorize("aiDetectionRepository.read"), getRepository);
 
 /**
  * @route   POST /ai-detection/repositories
  * @desc    Register a new repository
  * @access  Private - Admin, Editor
  */
-router.post("/", authenticateJWT, authorize(WRITE_ROLES), createRepository);
+router.post("/", authenticateJWT, authorize("aiDetectionRepository.edit"), createRepository);
 
 /**
  * @route   PATCH /ai-detection/repositories/:id
  * @desc    Update a repository (schedule, display name, etc.)
  * @access  Private - Admin, Editor
  */
-router.patch("/:id", authenticateJWT, authorize(WRITE_ROLES), updateRepository);
+router.patch("/:id", authenticateJWT, authorize("aiDetectionRepository.edit"), updateRepository);
 
 /**
  * @route   DELETE /ai-detection/repositories/:id
  * @desc    Remove a repository from registry
  * @access  Private - Admin only
  */
-router.delete("/:id", authenticateJWT, authorize(ADMIN_ONLY), deleteRepository);
+router.delete("/:id", authenticateJWT, authorize("aiDetectionRepository.admin"), deleteRepository);
 
 /**
  * @route   POST /ai-detection/repositories/:id/scan
  * @desc    Trigger a manual scan for a registered repository
  * @access  Private - Admin, Editor
  */
-router.post("/:id/scan", authenticateJWT, authorize(WRITE_ROLES), triggerRepositoryScan);
+router.post(
+  "/:id/scan",
+  authenticateJWT,
+  authorize("aiDetectionRepository.edit"),
+  triggerRepositoryScan,
+);
 
 /**
  * @route   POST /ai-detection/repositories/:id/webhook-secret
@@ -78,7 +79,7 @@ router.post("/:id/scan", authenticateJWT, authorize(WRITE_ROLES), triggerReposit
 router.post(
   "/:id/webhook-secret",
   authenticateJWT,
-  authorize(WRITE_ROLES),
+  authorize("aiDetectionRepository.edit"),
   generateWebhookSecretController,
 );
 
@@ -88,6 +89,11 @@ router.post(
  * @access  Private - All roles
  * @query   page, limit
  */
-router.get("/:id/scans", authenticateJWT, authorize(ALL_ROLES), getRepositoryScans);
+router.get(
+  "/:id/scans",
+  authenticateJWT,
+  authorize("aiDetectionRepository.read"),
+  getRepositoryScans,
+);
 
 export default router;

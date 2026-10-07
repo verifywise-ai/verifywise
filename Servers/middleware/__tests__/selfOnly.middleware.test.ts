@@ -6,7 +6,9 @@ function createMockReq(userId?: number, paramsId?: string, bodyId?: number): Par
   return {
     userId,
     params: paramsId ? { id: paramsId } : {},
-    body: bodyId ? { id: bodyId } : {},
+    // `undefined` simulates bodyless requests (no JSON content-type),
+    // e.g. DELETE routes — the middleware must not throw on req.body.id.
+    body: bodyId !== undefined ? { id: bodyId } : (undefined as unknown as Request["body"]),
     t: (key: string) => key,
   } as Partial<Request>;
 }
@@ -23,6 +25,15 @@ describe("selfOnly middleware", () => {
 
   beforeEach(() => {
     next = jest.fn();
+  });
+
+  it("should not throw when req.body is undefined (bodyless request)", () => {
+    const req = createMockReq(2, "2") as Request;
+    (req as any).body = undefined;
+    const res = createMockRes();
+
+    expect(() => selfOnly(req, res as Response, next)).not.toThrow();
+    expect(next).toHaveBeenCalled();
   });
 
   it("should return 401 when userId is missing", () => {

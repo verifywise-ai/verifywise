@@ -1,11 +1,16 @@
 import { screen, waitFor } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
+import { useLocation } from "react-router";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import { LLMKeysModel } from "../../../../../domain/models/Common/llmKeys/llmKeys.model";
 
 let mockUserRoleName = "Admin";
+
+/** Shows the current query string, so a test can see the deep link removed. */
+const SearchProbe = () => <span data-testid="search">{useLocation().search}</span>;
 vi.mock("../../../../../application/hooks/useAuth", () => ({
-  useAuth: () => ({ userRoleName: mockUserRoleName }),
+  useAuth: () => ({ userRoleName: mockUserRoleName, organizationId: 1 }),
 }));
 
 const mockGetLLMKeys = vi.fn();
@@ -84,6 +89,24 @@ describe("LLMKeys", () => {
     });
   });
 
+  it("shows no error when a cached list whose refetch failed reloads on mount", async () => {
+    // A list loaded elsewhere (e.g. the Advisor), then a refetch failed: the
+    // cache holds the list with status "error", which it keeps while it
+    // refetches on this page's mount.
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData(["llmKeys", 1], [buildKey()]);
+    await queryClient
+      .fetchQuery({ queryKey: ["llmKeys", 1], queryFn: () => Promise.reject(new Error("blip")) })
+      .catch(() => undefined);
+    expect(queryClient.getQueryState(["llmKeys", 1])?.status).toBe("error");
+
+    mockGetLLMKeys.mockResolvedValue({ data: { data: [buildKey()] } });
+    renderWithProviders(<LLMKeys />, { queryClient });
+
+    await waitFor(() => expect(screen.getByText("Anthropic")).toBeInTheDocument());
+    expect(screen.queryByText("Failed to fetch LLM Keys")).not.toBeInTheDocument();
+  });
+
   it("opens the add-key modal and creates a key using a custom endpoint", async () => {
     const user = userEvent.setup();
     renderWithProviders(<LLMKeys />);
@@ -108,6 +131,32 @@ describe("LLMKeys", () => {
     const [{ body }] = mockCreateLLMKey.mock.calls[0];
     expect(body.name).toBe("Custom");
     expect(body.url).toBe("https://my-proxy.example.com/v1");
+  });
+
+  it("does not flash the empty state while the list refreshes after adding a key", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<LLMKeys />);
+    await waitFor(() => expect(screen.getByText("No LLM keys yet")).toBeInTheDocument());
+
+    await user.click(screen.getByText("Add API key"));
+    await user.click(screen.getByText("Custom"));
+    await user.type(screen.getByLabelText(/Endpoint URL/), "https://my-proxy.example.com/v1");
+    await user.type(screen.getByLabelText(/Model name/), "llama-3");
+    await user.type(screen.getByLabelText(/^API key/), "sk-custom-newkey");
+
+    mockCreateLLMKey.mockResolvedValue({ data: { data: {} } });
+    let resolveList!: (value: unknown) => void;
+    mockGetLLMKeys.mockReturnValue(new Promise((resolve) => (resolveList = resolve)));
+
+    await user.click(screen.getByText("Add key"));
+    await waitFor(() => expect(mockCreateLLMKey).toHaveBeenCalled());
+    await waitFor(() => expect(mockGetLLMKeys).toHaveBeenCalledTimes(2));
+
+    // Still refreshing: a spinner, not "no keys".
+    expect(screen.queryByText("No LLM keys yet")).not.toBeInTheDocument();
+
+    resolveList({ data: { data: [buildKey({ name: "Custom" })] } });
+    await waitFor(() => expect(screen.getByText("Custom endpoint")).toBeInTheDocument());
   });
 
   it("shows a custom endpoint URL field when Custom provider is selected", async () => {
@@ -177,5 +226,51 @@ describe("LLMKeys", () => {
     renderWithProviders(<LLMKeys />);
     await waitFor(() => expect(screen.getByText("Anthropic")).toBeInTheDocument());
     expect(screen.getByText("Create new LLM key").closest("button")).toBeDisabled();
+  });
+
+  it("opens the create form when the addKey query is present", async () => {
+    renderWithProviders(<LLMKeys />, { route: "/settings/apikeys?addKey=1" });
+    expect(await screen.findByRole("heading", { name: "Add API key" })).toBeInTheDocument();
+  });
+
+  it("does not open the create form from the deep link for non-admins", async () => {
+    mockUserRoleName = "Editor";
+    renderWithProviders(<LLMKeys />, { route: "/settings/apikeys?addKey=1" });
+    await waitFor(() => expect(screen.getByText("No LLM keys yet")).toBeInTheDocument());
+    expect(screen.queryByRole("heading", { name: "Add API key" })).not.toBeInTheDocument();
+  });
+
+  it("removes the addKey flag from the URL once the form is open", async () => {
+    renderWithProviders(
+      <>
+        <LLMKeys />
+        <SearchProbe />
+      </>,
+      { route: "/settings/apikeys?addKey=1" },
+    );
+    expect(await screen.findByRole("heading", { name: "Add API key" })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId("search")).toHaveTextContent(/^$/));
+  });
+
+  it("removes the addKey flag for non-admins too", async () => {
+    mockUserRoleName = "Editor";
+    renderWithProviders(
+      <>
+        <LLMKeys />
+        <SearchProbe />
+      </>,
+      { route: "/settings/apikeys?addKey=1" },
+    );
+    await waitFor(() => expect(screen.getByTestId("search")).toHaveTextContent(/^$/));
+  });
+
+  it("stays closed after the deep-linked form is cancelled", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<LLMKeys />, { route: "/settings/apikeys?addKey=1" });
+    await screen.findByRole("heading", { name: "Add API key" });
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("heading", { name: "Add API key" })).not.toBeInTheDocument(),
+    );
   });
 });

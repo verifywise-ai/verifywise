@@ -11,7 +11,7 @@ expect.extend(matchers as unknown as MatchersObject);
 // import time see the stubs.
 
 // ---- MSW lifecycle ----
-beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+beforeAll(() => server.listen({ onUnhandledFrame: "error" }));
 afterEach(() => {
   server.resetHandlers();
   vi.restoreAllMocks();

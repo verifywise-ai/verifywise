@@ -104,10 +104,12 @@ describe("slackNotificationService", () => {
         },
       ] as any);
 
-      await sendSlackNotification(
-        { userId: 1, routingType: "approval" },
-        { title: "Test", message: "Hello" },
-      );
+      await expect(
+        sendSlackNotification(
+          { userId: 1, routingType: "approval" },
+          { title: "Test", message: "Hello" },
+        ),
+      ).resolves.toEqual({ attempted: true, delivered: true });
 
       expect(mockGetSlackWebhook).toHaveBeenCalledWith(1, "approval");
       expect(mockPostMessage).toHaveBeenCalledTimes(2);
@@ -115,21 +117,23 @@ describe("slackNotificationService", () => {
 
     it("should handle no integrations gracefully", async () => {
       mockGetSlackWebhook.mockResolvedValue([]);
-      await sendSlackNotification(
-        { userId: 1, routingType: "approval" },
-        { title: "Test", message: "Hello" },
-      );
+      await expect(
+        sendSlackNotification(
+          { userId: 1, routingType: "approval" },
+          { title: "Test", message: "Hello" },
+        ),
+      ).resolves.toEqual({ attempted: false, delivered: false });
       expect(mockPostMessage).not.toHaveBeenCalled();
     });
 
-    it("should swallow errors", async () => {
+    it("should swallow errors but report non-delivery", async () => {
       mockGetSlackWebhook.mockRejectedValue(new Error("DB error"));
       await expect(
         sendSlackNotification(
           { userId: 1, routingType: "approval" },
           { title: "Test", message: "Hello" },
         ),
-      ).resolves.toBeUndefined();
+      ).resolves.toEqual({ attempted: true, delivered: false });
     });
   });
 

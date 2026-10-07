@@ -19,6 +19,7 @@ interface SelectorVerticalProps {
 const SelectorVertical = (props: SelectorVerticalProps) => <ChevronsUpDown size={16} {...props} />;
 import { paginationDropdown, paginationSelect, paginationStyle } from "../styles";
 import { CustomizableButton } from "../../button/customizable-button";
+import { pageOfLabel } from "../pageOfLabel";
 
 interface ProjectRiskMitigationTableBodyProps {
   rows: ProjectRiskMitigation[];
@@ -155,7 +156,7 @@ export const ProjectRiskMitigationTableBody: React.FC<ProjectRiskMitigationTable
             ActionsComponent={(props) => <TablePaginationActions {...props} />}
             labelRowsPerPage="Risks per page"
             labelDisplayedRows={({ page, count }) =>
-              `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
+              pageOfLabel(page + 1, Math.max(0, Math.ceil(count / rowsPerPage)))
             }
             sx={paginationStyle}
             slotProps={{

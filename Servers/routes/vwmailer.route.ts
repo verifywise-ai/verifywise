@@ -9,13 +9,21 @@ import { invite } from "../controllers/vwmailer.ctrl";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import { getUserByEmailQuery } from "../utils/user.utils";
 import authenticateJWT from "../middleware/auth.middleware";
+import authorize from "../middleware/accessControl.middleware";
 import { inviteEmailLimiter, passwordResetEmailLimiter } from "../middleware/rateLimit.middleware";
 
 const router = express.Router();
 
-router.post("/invite", authenticateJWT, inviteEmailLimiter, async (req, res) => {
-  await invite(req, res, req.body);
-});
+// Same permission as listing, revoking and resending invitations.
+router.post(
+  "/invite",
+  authenticateJWT,
+  authorize("invitation.super"),
+  inviteEmailLimiter,
+  async (req, res) => {
+    await invite(req, res, req.body);
+  },
+);
 
 router.post("/reset-password", passwordResetEmailLimiter, async (req: Request, res: Response) => {
   const { to, name, email } = req.body;

@@ -17,8 +17,8 @@ router.get("/", authenticateJWT, listRuns);
 router.get("/:id", authenticateJWT, getRun);
 router.get("/:id/download", authenticateJWT, downloadRun);
 router.get("/:id/analyses", authenticateJWT, getRunAnalyses);
-router.patch("/:id/archive", authenticateJWT, authorize(["Admin", "Editor"]), archiveRun);
-router.patch("/:id/restore", authenticateJWT, authorize(["Admin", "Editor"]), restoreRun);
-router.delete("/:id", authenticateJWT, authorize(["Admin", "Editor"]), deleteRun);
+router.patch("/:id/archive", authenticateJWT, authorize("reportRun.edit"), archiveRun);
+router.patch("/:id/restore", authenticateJWT, authorize("reportRun.edit"), restoreRun);
+router.delete("/:id", authenticateJWT, authorize("reportRun.edit"), deleteRun);
 
 export default router;

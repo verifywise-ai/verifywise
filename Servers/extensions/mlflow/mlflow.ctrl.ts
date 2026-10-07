@@ -35,7 +35,12 @@ export async function syncFromMlflow(req: Request, res: Response): Promise<any> 
         );
     }
     const result = await syncModels(organizationId, config);
-    return res.status(result.success ? 200 : 500).json(STATUS_CODE[200](result));
+    if (!result.success) {
+      // The tracking server failed or returned nothing usable: an upstream
+      // failure, reported with the reason the client shows to the user.
+      return res.status(502).json(STATUS_CODE[502](result.error ?? "MLflow sync failed"));
+    }
+    return res.status(200).json(STATUS_CODE[200](result));
   } catch (error) {
     logStructured("error", "mlflow sync failed", "syncFromMlflow", fileName);
     logger.error("❌ Error in syncFromMlflow:", error);

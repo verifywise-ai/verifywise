@@ -11,7 +11,7 @@ describe("queryClient config", () => {
     expect(defaults.queries?.refetchOnWindowFocus).toBe(false);
     expect(defaults.queries?.refetchOnMount).toBe(true);
     expect(defaults.queries?.refetchOnReconnect).toBe(true);
-    expect(defaults.mutations?.retry).toBe(1);
+    expect(defaults.mutations?.retry).toBe(false);
   });
 
   it("should invalidate queries by keys", async () => {

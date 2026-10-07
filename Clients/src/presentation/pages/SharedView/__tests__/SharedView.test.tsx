@@ -1,5 +1,6 @@
 import { screen } from "@testing-library/react";
-import { delay, http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
+import { delay } from "msw/utils/delay";
 import { Route, Routes } from "react-router";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import { server } from "../../../../test/mocks/server";

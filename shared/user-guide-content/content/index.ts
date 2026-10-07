@@ -25,6 +25,7 @@ import { iso42001Content } from './compliance/iso-42001';
 import { iso27001Content } from './compliance/iso-27001';
 import { nistAiRmfContent } from './compliance/nist-ai-rmf';
 import { assessmentsContent } from './compliance/assessments';
+import { addingFrameworksContent } from './compliance/adding-frameworks';
 import { friaContent } from './compliance/fria';
 import { ceMarkingContent } from './compliance/ce-marking';
 import { postMarketMonitoringContent } from './compliance/post-market-monitoring';
@@ -50,7 +51,7 @@ import { integrationOverviewContent } from './integrations/integration-overview'
 import { slackIntegrationContent } from './integrations/slack-integration';
 import { apiAccessContent } from './integrations/api-access';
 import { automationsContent } from './integrations/automations';
-import { pluginsContent } from './integrations/plugins';
+import { extensionsContent } from './integrations/extensions';
 import { superAdminContent } from './settings/super-admin';
 import { llmEvalsOverviewContent } from './llm-evals/llm-evals-overview';
 import { runningExperimentsContent } from './llm-evals/running-experiments';
@@ -154,6 +155,7 @@ export const articleContentMap: Record<string, ArticleContent> = {
   'compliance/iso-27001': iso27001Content,
   'compliance/nist-ai-rmf': nistAiRmfContent,
   'compliance/assessments': assessmentsContent,
+  'compliance/adding-frameworks': addingFrameworksContent,
   'compliance/fria': friaContent,
   'compliance/ce-marking': ceMarkingContent,
   'compliance/post-market-monitoring': postMarketMonitoringContent,
@@ -178,7 +180,7 @@ export const articleContentMap: Record<string, ArticleContent> = {
   'integrations/slack-integration': slackIntegrationContent,
   'integrations/api-access': apiAccessContent,
   'integrations/automations': automationsContent,
-  'integrations/plugins': pluginsContent,
+  'integrations/extensions': extensionsContent,
   // LLM Evals
   'llm-evals/llm-evals-overview': llmEvalsOverviewContent,
   'llm-evals/running-experiments': runningExperimentsContent,

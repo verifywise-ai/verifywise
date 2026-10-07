@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 import { ChevronsUpDown } from "lucide-react";
 import TablePaginationActions from "../../TablePagination";
+import { pageOfLabel } from "../pageOfLabel";
 
 const SelectorVertical = (props: React.SVGAttributes<SVGSVGElement>) => (
   <ChevronsUpDown size={16} {...props} />
@@ -81,7 +82,7 @@ const StandardTablePagination: React.FC<StandardTablePaginationProps> = memo(
                   ActionsComponent={TablePaginationActions}
                   labelRowsPerPage={`${capitalPlural} per page`}
                   labelDisplayedRows={({ page: p, count }) =>
-                    `Page ${p + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
+                    pageOfLabel(p + 1, Math.max(0, Math.ceil(count / rowsPerPage)))
                   }
                   sx={{
                     "mt": theme.spacing(6),

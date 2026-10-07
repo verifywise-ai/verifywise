@@ -25,6 +25,7 @@ from crud.deepeval_arena import (
     delete_arena_comparison,
 )
 from database.redis import get_redis
+from utils.error_detection import redact_secrets
 
 import logging
 logger = logging.getLogger('uvicorn')
@@ -342,7 +343,9 @@ async def run_arena_comparison_task(
                         "name": contestant["name"],
                         "model": model,
                         "provider": provider,
-                        "output": f"Error: {str(e)}",
+                        # Stored in the results the organization sees; provider
+                        # errors can echo credentials.
+                        "output": f"Error: {redact_secrets(str(e))}",
                     })
             
             # Use GEval to judge the responses with per-criterion scores
@@ -467,7 +470,7 @@ IMPORTANT: Respond with ONLY the JSON, no other text."""
                     "testCaseIndex": idx,
                     "input": input_text,
                     "winner": None,
-                    "reason": f"Error: {str(e)}",
+                    "reason": f"Error: {redact_secrets(str(e))}",
                     "contestants": contestant_responses,
                 })
         

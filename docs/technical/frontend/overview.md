@@ -2,7 +2,7 @@
 
 ## Overview
 
-VerifyWise uses React 18 with TypeScript, Vite for bundling, and follows Clean Architecture principles. State management is handled by Redux Toolkit (client state) and React Query (server state). The UI is built with Material-UI (MUI) v7 with Emotion styling.
+VerifyWise uses React 19 with TypeScript, Vite for bundling, and follows Clean Architecture principles. State management is handled by Redux Toolkit (client state) and React Query (server state). The UI is built with Material-UI (MUI) v7 with Emotion styling.
 
 ## Architecture
 

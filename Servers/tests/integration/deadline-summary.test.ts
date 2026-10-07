@@ -1,3 +1,8 @@
+// Integration suites share one Postgres instance and truncate between
+// tests; the default 5s hook timeout is not enough once several suites
+// run in the same --runInBand pass. Same value as the isolation matrix.
+jest.setTimeout(60000);
+
 import { createTestApp, testRequest } from "./setup";
 import { createTestOrganization, createTestUser, cleanupDatabase } from "./helpers";
 import { createTestTask, assignTaskToUser } from "../factories/test-entities.factory";
@@ -30,7 +35,7 @@ describe("GET /api/deadlines/summary", () => {
   };
 
   it("returns overdue and due-soon counts for an admin", async () => {
-    const app = createTestApp({
+    const app = await createTestApp({
       bypassAuth: true,
       mockUser: { userId: adminId, organizationId: orgId, role: "Admin" },
     });
@@ -74,7 +79,7 @@ describe("GET /api/deadlines/summary", () => {
   });
 
   it("respects per-user visibility for non-admins", async () => {
-    const app = createTestApp({
+    const app = await createTestApp({
       bypassAuth: true,
       mockUser: {
         userId: editorId,
@@ -110,7 +115,7 @@ describe("GET /api/deadlines/summary", () => {
   });
 
   it("falls back to the default threshold when none is provided", async () => {
-    const app = createTestApp({
+    const app = await createTestApp({
       bypassAuth: true,
       mockUser: { userId: adminId, organizationId: orgId, role: "Admin" },
     });

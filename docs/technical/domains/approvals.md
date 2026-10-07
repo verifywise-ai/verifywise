@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Approval Workflows domain provides a comprehensive multi-step approval process for use cases and projects in VerifyWise. It supports configurable workflow templates, multiple approval steps, flexible approver requirements, and automatic framework creation upon final approval.
+The Approval Workflows domain provides a comprehensive multi-step approval process for 15 entity types in VerifyWise (use cases, files, risks, vendors, models, policies, incidents, tasks, datasets, training, evidence, AI actions, automations, post-market monitoring configs and notes). It supports configurable workflow templates, multiple approval steps, flexible approver requirements, and, for use cases, automatic framework creation upon final approval.
 
 ## Key Features
 
@@ -22,7 +22,7 @@ The Approval Workflows domain provides a comprehensive multi-step approval proce
 approval_workflows
 ├── id (PK, SERIAL)
 ├── workflow_title (VARCHAR(255))
-├── entity_type (ENUM: use_case/project)
+├── entity_type (VARCHAR(50), values from EntityType enum)
 ├── description (TEXT)
 ├── created_by (FK → users)
 ├── is_active (BOOLEAN, default: true)
@@ -63,7 +63,7 @@ approval_requests
 ├── request_name (VARCHAR(255))
 ├── workflow_id (FK → approval_workflows)
 ├── entity_id (INTEGER)
-├── entity_type (ENUM: use_case/project)
+├── entity_type (VARCHAR(50), values from EntityType enum)
 ├── entity_data (JSONB) -- Snapshot at request time
 ├── status (ENUM)
 ├── requested_by (FK → users)
@@ -137,11 +137,27 @@ enum ApprovalResult {
 ### Entity Types
 
 ```typescript
-enum ApprovalEntityType {
-  USE_CASE = "use_case"
-  PROJECT = "project"
+// Servers/domain.layer/enums/approval-workflow.enum.ts
+enum EntityType {
+  USE_CASE = "use_case",
+  FILE = "file",
+  RISK = "risk",
+  VENDOR = "vendor",
+  MODEL_INVENTORY = "model_inventory",
+  POLICY = "policy",
+  INCIDENT = "incident",
+  TASK = "task",
+  DATASET = "dataset",
+  TRAINING = "training",
+  EVIDENCE = "evidence",
+  AI_ACTION = "ai_action",
+  AUTOMATION = "automation",
+  PMM_CONFIG = "pmm_config",
+  NOTE = "note",
 }
 ```
+
+The `entity_type` columns are `VARCHAR(50)` with no CHECK constraint (dropped in `20260413175412-extend-entity-types-and-seed-workflows.js`).
 
 ## API Endpoints
 

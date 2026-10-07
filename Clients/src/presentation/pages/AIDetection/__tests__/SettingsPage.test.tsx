@@ -1,5 +1,7 @@
-import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
+import { invalidateLLMKeyQueries } from "../../../../application/hooks/useLLMKeys";
 import SettingsPage from "../SettingsPage";
 import type { RiskScoringConfig } from "../../../../domain/ai-detection/riskScoringTypes";
 import { DEFAULT_DIMENSION_WEIGHTS } from "../../../../domain/ai-detection/riskScoringTypes";
@@ -32,6 +34,16 @@ const mockGetLLMKeys = vi.fn();
 vi.mock("../../../../application/repository/llmKeys.repository", () => ({
   getLLMKeys: (...args: unknown[]) => mockGetLLMKeys(...args),
 }));
+
+// The key list is cached per organization; give the page one.
+const ORG_ID = 7;
+vi.mock("../../../../application/hooks/useAuth", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../../application/hooks/useAuth")>();
+  return { useAuth: () => ({ ...actual.useAuth(), organizationId: ORG_ID }) };
+});
+
+const openAIKey = { id: 3, name: "OpenAI", key: "sk-***", model: "gpt-4o" };
+const anthropicKey = { id: 4, name: "Anthropic", key: "sk-ant-***", model: "claude-x" };
 
 vi.mock("../../../components/Layout/PageHeaderExtended", () => ({
   PageHeaderExtended: ({ children, title, alert }: any) => (
@@ -321,6 +333,55 @@ describe("SettingsPage", () => {
 
     await waitFor(() => {
       expect(mockListSuppressions).toHaveBeenCalled();
+    });
+  });
+
+  describe("LLM key picker", () => {
+    const openRiskScoringWithKeyPicker = async () => {
+      await waitFor(() => {
+        expect(screen.getByLabelText("Personal access token")).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole("tab", { name: /Risk scoring/ }));
+    };
+
+    it("shows the keys from the shared query cache without fetching them again", async () => {
+      mockGetRiskScoringConfig.mockResolvedValue(
+        makeRiskConfig({ llm_enabled: true, llm_key_id: openAIKey.id }),
+      );
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+      });
+      queryClient.setQueryData(["llmKeys", ORG_ID], [openAIKey]);
+
+      renderWithProviders(<SettingsPage />, { queryClient });
+      await openRiskScoringWithKeyPicker();
+
+      await waitFor(() => {
+        expect(screen.getByText("OpenAI — gpt-4o")).toBeInTheDocument();
+      });
+      expect(mockGetLLMKeys).not.toHaveBeenCalled();
+    });
+
+    it("refreshes the picker when the key queries are invalidated", async () => {
+      mockGetRiskScoringConfig.mockResolvedValue(
+        makeRiskConfig({ llm_enabled: true, llm_key_id: anthropicKey.id }),
+      );
+      mockGetLLMKeys.mockResolvedValue({ data: { data: [openAIKey] } });
+
+      const { queryClient } = renderWithProviders(<SettingsPage />);
+      await openRiskScoringWithKeyPicker();
+      await waitFor(() => {
+        expect(screen.queryByText(/Configure LLM keys in Settings/)).not.toBeInTheDocument();
+      });
+      expect(screen.queryByText("Anthropic — claude-x")).not.toBeInTheDocument();
+
+      // A key is added elsewhere (e.g. Settings > LLM keys).
+      mockGetLLMKeys.mockResolvedValue({ data: { data: [openAIKey, anthropicKey] } });
+      await act(() => invalidateLLMKeyQueries(queryClient));
+
+      await waitFor(() => {
+        expect(screen.getByText("Anthropic — claude-x")).toBeInTheDocument();
+      });
     });
   });
 });

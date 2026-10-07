@@ -164,6 +164,8 @@ Templates are stored in `Servers/templates/` as `.mjml` files.
 | `pmm-completed.mjml` | PMM completed | `{{completed_by_name}}`, `{{completed_at}}` |
 | `pmm-flagged-concern.mjml` | Concern flagged | `{{flagged_questions_html}}` |
 
+**Link lifetimes.** An invitation link (`account-creation-email.mjml`) is valid for 30 days after it is sent or resent (`INVITATION_LIFETIME_MS` in `Servers/utils/jwt.utils.ts`). The same constant sets `invitations.expires_at`, which the Team page uses to show "Pending" or "Expired". Invitations sent before this was raised from 7 days keep their original 7-day link; resending issues a new 30-day one. Password-reset links last 1 hour.
+
 ### Template Structure
 
 ```xml

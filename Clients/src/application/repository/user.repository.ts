@@ -142,12 +142,13 @@ export async function deleteUserById({
     const response = await apiServices.delete(`/users/${userId}`);
     return response as ApiResponse<DeleteResponse>;
   } catch (error: unknown) {
-    // Handle 403 (demo user deletion) as a normal response, not an exception
+    // Handle 403 (demo user) and 409 (the organization's last Admin) as a
+    // normal response carrying the server's reason, not an exception
     const axiosError = error as { status?: number; data?: { data?: string } };
-    if (axiosError.status === 403) {
+    if (axiosError.status === 403 || axiosError.status === 409) {
       return {
         data: { message: axiosError.data?.data || "User cannot be deleted" },
-        status: 403,
+        status: axiosError.status,
       };
     }
     throw error;

@@ -26,7 +26,6 @@ import { Project } from "../../../../../domain/types/Project";
 import { useSearchParams } from "react-router";
 import { TabFilterBar } from "../../../../components/FrameworkFilter/TabFilterBar";
 import { StatsCard } from "../../../../components/Cards/StatsCard";
-import { brand } from "../../../../themes/palette";
 
 const ISO27001Annex = ({
   project,
@@ -359,9 +358,8 @@ const ISO27001Annex = ({
           <Stack sx={{ mt: 2 }}>
             <StatsCard
               title="Annex controls"
-              completed={annexesProgress?.doneAnnexControls ?? 0}
-              total={annexesProgress?.totalAnnexControls ?? 0}
-              progressbarColor={brand.primary}
+              completed={annexesProgress?.doneAnnexControls}
+              total={annexesProgress?.totalAnnexControls}
             />
           </Stack>
           {filteredAnnexes &&

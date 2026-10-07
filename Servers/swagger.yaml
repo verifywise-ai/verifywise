@@ -5500,44 +5500,6 @@ components:
           items:
             type: integer
           minItems: 1
-    Plugin:
-      type: object
-      properties:
-        key:
-          type: string
-        name:
-          type: string
-        description:
-          type: string
-        category:
-          type: string
-        version:
-          type: string
-        author:
-          type: string
-        icon_url:
-          type: string
-        documentation_url:
-          type: string
-    PluginInstallation:
-      type: object
-      properties:
-        id:
-          type: integer
-        plugin_key:
-          type: string
-        organization_id:
-          type: integer
-        installed_by:
-          type: integer
-        installed_at:
-          type: string
-          format: date-time
-        configuration:
-          type: object
-          additionalProperties: true
-        status:
-          type: string
     ConnectionTestResult:
       type: object
       properties:
@@ -5545,8 +5507,9 @@ components:
           type: boolean
         message:
           type: string
-        details:
-          type: object
+        testedAt:
+          type: string
+          format: date-time
     ShadowAiToolStatus:
       type: string
       enum:
@@ -7836,6 +7799,8 @@ tags:
   -
     name: 'Risk History'
   -
+    name: RiskLinks
+  -
     name: Roles
   -
     name: 'SSO Config'
@@ -8137,7 +8102,7 @@ paths:
   /users/register:
     post:
       summary: 'Register a new user'
-      description: "Creates a new user account. Requires a valid registration JWT (set by registerJWT middleware).\nValidates email uniqueness, password strength, and required fields.\nMarks any pending invitation as accepted after successful creation.\n"
+      description: "Creates a new user account. Requires a valid registration JWT (set by registerJWT middleware).\nValidates email uniqueness, password strength, and required fields.\nThe account takes the invited email, role and organization from the invitation link, which must match the current pending invitation (a resent or re-invited link replaces earlier ones). The invitation is accepted in the same transaction, so a link registers once; a link that was revoked, used or replaced is refused with 403.\n"
       tags:
         - Users
       requestBody:
@@ -9193,6 +9158,20 @@ paths:
                   message: {type: string, example: 'Internal Server Error'}
                   error: {type: string}
       operationId: deleteVendorById
+  '/vendors/{id}/riskSuggestions':
+    get:
+      summary: 'Get Vendor Risk Suggestions'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Vendors
+      operationId: getVendorRiskSuggestions
+      security:
+        -
+          bearerAuth: []
   '/vendor-change-history/{id}':
     get:
       tags:
@@ -10258,6 +10237,268 @@ paths:
         -
           bearerAuth: []
       description: 'Requires role: Admin or Editor'
+  /riskLinks/recompute:
+    post:
+      summary: 'Recompute All Risk Links'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: recomputeAllRiskLinks
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or SuperAdmin'
+  /riskLinks/suggest-hierarchy:
+    post:
+      summary: 'Suggest Risk Hierarchy'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: suggestRiskHierarchy
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or SuperAdmin'
+  /riskLinks:
+    post:
+      summary: 'Create Risk Link'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: createRiskLink
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
+    get:
+      summary: 'Get Risk Graph'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: getRiskGraph
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or SuperAdmin'
+  /riskLinks/dismissals:
+    get:
+      summary: 'Get Dismissal Analytics'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: getDismissalAnalytics
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or SuperAdmin'
+  /riskLinks/duplicates:
+    get:
+      summary: 'Get Duplicate Candidates'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: getDuplicateCandidates
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or SuperAdmin'
+  /riskLinks/coverage:
+    get:
+      summary: 'Get Control Coverage'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: getControlCoverage
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or SuperAdmin'
+  /riskLinks/vendor-exposure:
+    get:
+      summary: 'Get Vendor Exposure'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: getVendorExposure
+      security:
+        -
+          bearerAuth: []
+  /riskLinks/vendor-duplicates:
+    get:
+      summary: 'Get Vendor Duplicate Candidates'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: getVendorDuplicateCandidates
+      security:
+        -
+          bearerAuth: []
+  /riskLinks/vendor-coverage:
+    get:
+      summary: 'Get Vendor Framework Coverage'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: getVendorFrameworkCoverage
+      security:
+        -
+          bearerAuth: []
+  '/riskLinks/vendor-risks/{vendorRiskId}':
+    get:
+      summary: 'Get Vendor Risk Links'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: getVendorRiskLinks
+      security:
+        -
+          bearerAuth: []
+  '/riskLinks/vendor-risks/{vendorRiskId}/shared-projects':
+    get:
+      summary: 'Get Vendor Risk Shared Projects'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: getVendorRiskSharedProjects
+      security:
+        -
+          bearerAuth: []
+  /riskLinks/vendor-risks/recompute:
+    post:
+      summary: 'Recompute All Vendor Risk Links'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: recomputeAllVendorRiskLinks
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or SuperAdmin'
+  '/riskLinks/vendor-risks/{vendorRiskId}/suggest-hierarchy':
+    post:
+      summary: 'Suggest Vendor Risk Hierarchy'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: suggestVendorRiskHierarchy
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or SuperAdmin'
+  '/riskLinks/{riskId}':
+    get:
+      summary: 'Get Risk Links'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: getRiskLinks
+      security:
+        -
+          bearerAuth: []
+  '/riskLinks/{riskId}/shared-projects':
+    get:
+      summary: 'Get Shared Projects'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: getSharedProjects
+      security:
+        -
+          bearerAuth: []
+  '/riskLinks/{id}':
+    patch:
+      summary: 'Update Risk Link Status'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: updateRiskLinkStatus
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor or Reviewer'
+  '/riskLinks/{id}/acknowledge-parent-change':
+    post:
+      summary: 'Acknowledge Parent Level Change'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: acknowledgeParentLevelChange
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
   /roles:
     get:
       tags:
@@ -10274,6 +10515,47 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+    post:
+      summary: 'Create Role'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Roles
+      operationId: createRole
+      security:
+        -
+          bearerAuth: []
+  /roles/permissions/catalog:
+    get:
+      summary: 'Get Permission Catalog'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Roles
+      operationId: getPermissionCatalog
+      security:
+        -
+          bearerAuth: []
+  /roles/my-permissions:
+    get:
+      summary: 'Get My Permissions'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Roles
+      operationId: getMyPermissions
+      security:
+        -
+          bearerAuth: []
   '/roles/{id}':
     get:
       tags:
@@ -10297,6 +10579,59 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+    put:
+      summary: 'Update Role By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Roles
+      operationId: updateRoleById
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Role By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Roles
+      operationId: deleteRoleById
+      security:
+        -
+          bearerAuth: []
+  '/roles/{id}/permissions':
+    get:
+      summary: 'Get Role Permissions By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Roles
+      operationId: getRolePermissionsById
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Replace Role Permissions'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Roles
+      operationId: replaceRolePermissions
+      security:
+        -
+          bearerAuth: []
   /files:
     get:
       tags:
@@ -10543,21 +10878,28 @@ paths:
     post:
       tags:
         - Mail
-      summary: 'Invite Limiter'
+      summary: 'Invite a user'
       operationId: anonymous
       security:
         -
           bearerAuth: []
+      description: 'Requires the invitation.super permission (Admin by default). The invite always goes to the caller''s organization; an organizationId in the body is ignored, and a SuperAdmin without an organization uses /super-admin/organizations/{id}/invite. Only an Admin may grant a built-in role; other inviting roles may grant only the organization''s custom roles with no permission they lack.'
       requestBody:
         content:
           application/json:
             schema:
               type: object
       responses:
-        '201':
-          description: 'Created successfully'
+        '200':
+          description: 'Invitation email sent'
+        '206':
+          description: 'Invitation saved but the email failed; the response carries the link'
+        '400':
+          description: 'Unknown or invalid role'
         '401':
           description: Unauthorized
+        '403':
+          description: 'Forbidden - missing permission, no organization, or the role grants more access than the caller has'
         '500':
           description: 'Internal server error'
   /mail/reset-password:
@@ -10730,10 +11072,14 @@ paths:
           description: 'Internal server error'
   '/frameworks/{frameworkId}/tree/{projectId}':
     get:
-      summary: 'Get Framework Tree'
+      summary: 'Get framework tree'
       responses:
         '200':
-          description: Success
+          description: 'Framework tree'
+        '400':
+          description: 'Invalid parameters'
+        '404':
+          description: 'Framework not found or not attached to this project'
         '500':
           description: 'Internal server error'
       tags:
@@ -10742,12 +11088,32 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Returns the framework metadata (id, key, framework_type, display_name, entity_types, hierarchy_type) and the full structure tree with the project''s implementation rows. Generic endpoint for the bundled frameworks declared in Servers/structures.'
+      parameters:
+        -
+          name: frameworkId
+          in: path
+          required: true
+          description: 'Framework id (the bundled frameworks use ids 5-25)'
+          schema:
+            type: integer
+        -
+          name: projectId
+          in: path
+          required: true
+          description: 'Project (use case) id, or the organizational project id'
+          schema:
+            type: integer
   '/frameworks/{frameworkId}/dashboard/{projectFrameworkId}':
     get:
-      summary: 'Get Framework Dashboard'
+      summary: 'Get framework dashboard'
       responses:
         '200':
-          description: Success
+          description: 'Status counts'
+        '400':
+          description: 'Invalid parameters'
+        '404':
+          description: 'Framework not found or not attached to this project'
         '500':
           description: 'Internal server error'
       tags:
@@ -10756,12 +11122,32 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Returns status counts for the framework''s implementation rows in the given project.'
+      parameters:
+        -
+          name: frameworkId
+          in: path
+          required: true
+          description: 'Framework id (the bundled frameworks use ids 5-25)'
+          schema:
+            type: integer
+        -
+          name: projectFrameworkId
+          in: path
+          required: true
+          description: 'projects_frameworks row id linking the framework to the project'
+          schema:
+            type: integer
   '/frameworks/{frameworkId}/impl/{level}/{id}':
     get:
-      summary: 'Get Impl By Id'
+      summary: 'Get implementation row'
       responses:
         '200':
-          description: Success
+          description: 'Implementation row'
+        '400':
+          description: 'Invalid parameters'
+        '404':
+          description: 'Framework or record not found'
         '500':
           description: 'Internal server error'
       tags:
@@ -10770,11 +11156,41 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Returns one implementation row (status, owner, reviewer, approver, due date, notes, evidence).'
+      parameters:
+        -
+          name: frameworkId
+          in: path
+          required: true
+          description: 'Framework id (the bundled frameworks use ids 5-25)'
+          schema:
+            type: integer
+        -
+          name: level
+          in: path
+          required: true
+          description: 'Implementation level: l2 (two-level frameworks) or l3 (leaf level of three-level frameworks)'
+          schema:
+            type: string
+            enum:
+              - l2
+              - l3
+        -
+          name: id
+          in: path
+          required: true
+          description: 'Implementation row id'
+          schema:
+            type: integer
     patch:
-      summary: 'Update Impl'
+      summary: 'Update implementation row'
       responses:
         '200':
-          description: Success
+          description: 'Updated implementation row'
+        '400':
+          description: 'Invalid parameters'
+        '404':
+          description: 'Framework or record not found'
         '500':
           description: 'Internal server error'
       tags:
@@ -10783,12 +11199,70 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Multipart form. Fields: status, implementation_description, owner, reviewer, approver, due_date, auditor_feedback, risksMitigated (JSON array), risksDelete (JSON array), delete (JSON array of file ids to detach), user_id; attach evidence as file parts.'
+      parameters:
+        -
+          name: frameworkId
+          in: path
+          required: true
+          description: 'Framework id (the bundled frameworks use ids 5-25)'
+          schema:
+            type: integer
+        -
+          name: level
+          in: path
+          required: true
+          description: 'Implementation level: l2 (two-level frameworks) or l3 (leaf level of three-level frameworks)'
+          schema:
+            type: string
+            enum:
+              - l2
+              - l3
+        -
+          name: id
+          in: path
+          required: true
+          description: 'Implementation row id'
+          schema:
+            type: integer
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                implementation_description:
+                  type: string
+                owner:
+                  type: string
+                reviewer:
+                  type: string
+                approver:
+                  type: string
+                due_date:
+                  type: string
+                auditor_feedback:
+                  type: string
+                risksMitigated:
+                  type: string
+                risksDelete:
+                  type: string
+                delete:
+                  type: string
+                user_id:
+                  type: string
   '/frameworks/{frameworkId}/impl/{level}/{id}/risks':
     get:
-      summary: 'Get Impl Risks'
+      summary: 'Get implementation row risks'
       responses:
         '200':
-          description: Success
+          description: 'Linked risks'
+        '400':
+          description: 'Invalid parameters'
+        '404':
+          description: 'Framework not found'
         '500':
           description: 'Internal server error'
       tags:
@@ -10797,6 +11271,32 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Returns the risks linked to one implementation row.'
+      parameters:
+        -
+          name: frameworkId
+          in: path
+          required: true
+          description: 'Framework id (the bundled frameworks use ids 5-25)'
+          schema:
+            type: integer
+        -
+          name: level
+          in: path
+          required: true
+          description: 'Implementation level: l2 (two-level frameworks) or l3 (leaf level of three-level frameworks)'
+          schema:
+            type: string
+            enum:
+              - l2
+              - l3
+        -
+          name: id
+          in: path
+          required: true
+          description: 'Implementation row id'
+          schema:
+            type: integer
   /eu-ai-act/controlCategories:
     get:
       tags:
@@ -12847,7 +13347,7 @@ paths:
       tags:
         - 'Model Inventory'
       summary: 'Get model inventories by project ID'
-      description: "Returns all model inventories associated with a project (via the model_inventories_projects_frameworks join table where framework_id IS NULL). Non-numeric project IDs (e.g. plugin-sourced) return an empty array.\n"
+      description: "Returns all model inventories associated with a project (via the model_inventories_projects_frameworks join table where framework_id IS NULL). Non-numeric project IDs return an empty array.\n"
       operationId: getModelByProjectId
       security:
         -
@@ -12969,10 +13469,12 @@ paths:
           description: 'Internal server error'
   /extensions:
     get:
-      summary: 'List Extensions'
+      summary: 'List extensions'
       responses:
         '200':
-          description: Success
+          description: 'List of extensions'
+        '401':
+          description: 'Not authenticated'
         '500':
           description: 'Internal server error'
       tags:
@@ -12981,12 +13483,27 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Lists every built-in extension in the catalog with its config field definitions, whether it is enabled for the caller''s organization, and its configuration with secret fields removed. Available to any authenticated user.'
+      parameters:
+        -
+          name: category
+          in: query
+          required: false
+          description: 'Filter by category: communication, ml_ops, data_management, version_control, monitoring, security or analytics'
+          schema:
+            type: string
   '/extensions/{key}':
     get:
-      summary: 'Get Extension'
+      summary: 'Get extension'
       responses:
         '200':
-          description: Success
+          description: 'Extension detail'
+        '400':
+          description: 'Invalid extension key format'
+        '401':
+          description: 'Not authenticated'
+        '404':
+          description: 'Extension not found'
         '500':
           description: 'Internal server error'
       tags:
@@ -12995,12 +13512,29 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Returns one extension: catalog metadata, config field definitions, per-organization enabled state and redacted configuration. Available to any authenticated user.'
+      parameters:
+        -
+          name: key
+          in: path
+          required: true
+          description: 'Extension key: slack, mlflow, azure-ai-foundry, model-lifecycle, risk-import, jira-assets or dataset-bulk-upload'
+          schema:
+            type: string
   '/extensions/{key}/enable':
     post:
-      summary: 'Enable Extension'
+      summary: 'Enable extension'
       responses:
         '200':
-          description: Success
+          description: 'Extension enabled'
+        '400':
+          description: 'Invalid key or configuration'
+        '401':
+          description: 'Not authenticated'
+        '403':
+          description: 'Admin role required'
+        '404':
+          description: 'Extension not found'
         '500':
           description: 'Internal server error'
       tags:
@@ -13009,13 +13543,38 @@ paths:
       security:
         -
           bearerAuth: []
-      description: 'Requires role: Admin'
+      description: 'Enables the extension for the caller''s organization. Optional body { configuration } is validated against the extension''s config fields; secret fields are encrypted at rest. Admin only. Requires role: Admin'
+      parameters:
+        -
+          name: key
+          in: path
+          required: true
+          description: 'Extension key: slack, mlflow, azure-ai-foundry, model-lifecycle, risk-import, jira-assets or dataset-bulk-upload'
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                configuration:
+                  type: object
   '/extensions/{key}/disable':
     post:
-      summary: 'Disable Extension'
+      summary: 'Disable extension'
       responses:
         '200':
-          description: Success
+          description: 'Extension disabled'
+        '400':
+          description: 'Invalid extension key format'
+        '401':
+          description: 'Not authenticated'
+        '403':
+          description: 'Admin role required'
+        '404':
+          description: 'Extension not found'
         '500':
           description: 'Internal server error'
       tags:
@@ -13024,13 +13583,29 @@ paths:
       security:
         -
           bearerAuth: []
-      description: 'Requires role: Admin'
+      description: 'Disables the extension for the caller''s organization. Configuration and data are kept, so enabling it again restores the previous setup. Admin only. Requires role: Admin'
+      parameters:
+        -
+          name: key
+          in: path
+          required: true
+          description: 'Extension key: slack, mlflow, azure-ai-foundry, model-lifecycle, risk-import, jira-assets or dataset-bulk-upload'
+          schema:
+            type: string
   '/extensions/{key}/configuration':
     patch:
-      summary: 'Update Extension Configuration'
+      summary: 'Update extension configuration'
       responses:
         '200':
-          description: Success
+          description: 'Configuration updated'
+        '400':
+          description: 'Invalid key or configuration'
+        '401':
+          description: 'Not authenticated'
+        '403':
+          description: 'Admin role required'
+        '404':
+          description: 'Extension not found'
         '500':
           description: 'Internal server error'
       tags:
@@ -13039,13 +13614,40 @@ paths:
       security:
         -
           bearerAuth: []
-      description: 'Requires role: Admin'
+      description: 'Updates the stored configuration. Body { configuration }. Secret fields left out of the body keep their existing encrypted value. Admin only. Requires role: Admin'
+      parameters:
+        -
+          name: key
+          in: path
+          required: true
+          description: 'Extension key: slack, mlflow, azure-ai-foundry, model-lifecycle, risk-import, jira-assets or dataset-bulk-upload'
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - configuration
+              properties:
+                configuration:
+                  type: object
   '/extensions/{key}/test-connection':
     post:
-      summary: 'Test Extension Connection'
+      summary: 'Test extension connection'
       responses:
         '200':
-          description: Success
+          description: 'Connection test result'
+        '400':
+          description: 'Invalid extension key format'
+        '401':
+          description: 'Not authenticated'
+        '403':
+          description: 'Admin role required'
+        '404':
+          description: 'Extension not found'
         '500':
           description: 'Internal server error'
       tags:
@@ -13054,28 +13656,68 @@ paths:
       security:
         -
           bearerAuth: []
-      description: 'Requires role: Admin'
+      description: 'Checks that the extension can reach its remote service. The submitted { configuration } is overlaid on the stored configuration. Supported for mlflow, azure-ai-foundry and jira-assets; other keys return 200 with success false. Returns { success, message, testedAt }. Admin only. Requires role: Admin'
+      parameters:
+        -
+          name: key
+          in: path
+          required: true
+          description: 'Extension key: slack, mlflow, azure-ai-foundry, model-lifecycle, risk-import, jira-assets or dataset-bulk-upload'
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                configuration:
+                  type: object
   /extensions/dataset-bulk-upload/upload:
     post:
       summary: 'Upload Dataset File'
       responses:
         '200':
           description: Success
+        '400':
+          description: 'No file or invalid metadata JSON'
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
+        '413':
+          description: 'File too large'
+        '415':
+          description: 'Unsupported file type'
         '500':
           description: 'Internal server error'
       tags:
-        - Datasets
+        - Extensions
       operationId: uploadDatasetFile
       security:
         -
           bearerAuth: []
-      description: 'Requires role: Admin or Editor'
+      description: 'Uploads one CSV, XLS or XLSX file (multipart field file, max 30 MB) with an optional metadata JSON string and creates a dataset record; the bulk upload screen calls it once per file. Requires the dataset-bulk-upload extension to be enabled for the organization (403 otherwise). Requires role: Admin or Editor'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                metadata:
+                  type: string
   /extensions/risk-import/template:
     get:
       summary: 'Download Excel Template'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13084,13 +13726,15 @@ paths:
       security:
         -
           bearerAuth: []
-      description: 'Requires role: Admin or Editor'
+      description: 'Requires the risk-import extension to be enabled for the organization (403 otherwise). Requires role: Admin or Editor'
   /extensions/risk-import/import:
     post:
       summary: 'Bulk Import Risks'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13099,13 +13743,15 @@ paths:
       security:
         -
           bearerAuth: []
-      description: 'Requires role: Admin or Editor'
+      description: 'Requires the risk-import extension to be enabled for the organization (403 otherwise). Requires role: Admin or Editor'
   /extensions/slack/oauth/workspaces:
     get:
       summary: 'Get All Slack Webhooks'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13114,11 +13760,14 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the slack extension to be enabled for the organization (403 otherwise).'
     post:
       summary: 'Create New Slack Webhook'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13127,12 +13776,15 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the slack extension to be enabled for the organization (403 otherwise).'
   '/extensions/slack/oauth/workspaces/{id}':
     get:
       summary: 'Get Slack Webhook By Id'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13141,11 +13793,22 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the slack extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The id'
+          schema:
+            type: integer
     patch:
       summary: 'Update Slack Webhook By Id'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13154,11 +13817,22 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the slack extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The id'
+          schema:
+            type: integer
     delete:
       summary: 'Delete Slack Webhook By Id'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13167,12 +13841,23 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the slack extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The id'
+          schema:
+            type: integer
   '/extensions/slack/oauth/workspaces/{id}/send':
     post:
       summary: 'Send Slack Message'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13181,12 +13866,23 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the slack extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The id'
+          schema:
+            type: integer
   /extensions/mlflow/models:
     get:
       summary: 'List Models'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13195,12 +13891,15 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the mlflow extension to be enabled for the organization (403 otherwise).'
   /extensions/mlflow/sync:
     post:
       summary: 'Sync From Mlflow'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13209,12 +13908,15 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the mlflow extension to be enabled for the organization (403 otherwise).'
   '/extensions/mlflow/models/{modelId}':
     get:
       summary: 'Get Model By Id'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13223,12 +13925,23 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the mlflow extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: modelId
+          in: path
+          required: true
+          description: 'The modelId'
+          schema:
+            type: string
   /extensions/azure-ai-foundry/models:
     get:
       summary: 'List Deployments'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13237,12 +13950,15 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the azure-ai-foundry extension to be enabled for the organization (403 otherwise).'
   /extensions/azure-ai-foundry/sync:
     post:
       summary: 'Sync From Azure'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13251,12 +13967,15 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the azure-ai-foundry extension to be enabled for the organization (403 otherwise).'
   '/extensions/azure-ai-foundry/models/{deploymentId}':
     get:
       summary: 'Get Deployment By Id'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13265,12 +13984,23 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the azure-ai-foundry extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: deploymentId
+          in: path
+          required: true
+          description: 'The deploymentId'
+          schema:
+            type: string
   /extensions/azure-ai-foundry/discover:
     get:
       summary: 'Discover Ai Agents'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13279,12 +14009,15 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the azure-ai-foundry extension to be enabled for the organization (403 otherwise).'
   /extensions/jira-assets/config:
     get:
       summary: 'Get Config'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13293,11 +14026,14 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the jira-assets extension to be enabled for the organization (403 otherwise).'
     post:
       summary: 'Post Config'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13306,12 +14042,15 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the jira-assets extension to be enabled for the organization (403 otherwise).'
   /extensions/jira-assets/vw-attributes:
     get:
       summary: 'Get Vw Attributes'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13320,12 +14059,15 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the jira-assets extension to be enabled for the organization (403 otherwise).'
   /extensions/jira-assets/schemas:
     get:
       summary: 'Get Schemas'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13334,12 +14076,15 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the jira-assets extension to be enabled for the organization (403 otherwise).'
   '/extensions/jira-assets/schemas/{schemaId}/object-types':
     get:
       summary: 'Get Object Types'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13348,12 +14093,23 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the jira-assets extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: schemaId
+          in: path
+          required: true
+          description: 'The schemaId'
+          schema:
+            type: string
   '/extensions/jira-assets/object-types/{objectTypeId}/attributes':
     get:
       summary: 'Get Attributes'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13362,12 +14118,23 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the jira-assets extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: objectTypeId
+          in: path
+          required: true
+          description: 'The objectTypeId'
+          schema:
+            type: string
   '/extensions/jira-assets/object-types/{objectTypeId}/objects':
     get:
       summary: 'Get Objects'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13376,12 +14143,23 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the jira-assets extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: objectTypeId
+          in: path
+          required: true
+          description: 'The objectTypeId'
+          schema:
+            type: string
   /extensions/jira-assets/import:
     post:
       summary: 'Post Import'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13390,12 +14168,15 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the jira-assets extension to be enabled for the organization (403 otherwise).'
   /extensions/jira-assets/sync:
     post:
       summary: 'Post Sync'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13404,12 +14185,15 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the jira-assets extension to be enabled for the organization (403 otherwise).'
   /extensions/jira-assets/sync/status:
     get:
       summary: 'Get Sync Status Ctrl'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13418,12 +14202,15 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the jira-assets extension to be enabled for the organization (403 otherwise).'
   /extensions/jira-assets/sync/history:
     get:
       summary: 'Get Sync History Ctrl'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13432,12 +14219,15 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the jira-assets extension to be enabled for the organization (403 otherwise).'
   /extensions/jira-assets/use-cases:
     get:
       summary: 'List Use Cases Ctrl'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13446,12 +14236,15 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the jira-assets extension to be enabled for the organization (403 otherwise).'
   '/extensions/jira-assets/use-cases/{id}':
     get:
       summary: 'Get Use Case Ctrl'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13460,11 +14253,22 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the jira-assets extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The id'
+          schema:
+            type: integer
     delete:
       summary: 'Delete Use Case Ctrl'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13473,12 +14277,23 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the jira-assets extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The id'
+          schema:
+            type: integer
   '/extensions/jira-assets/projects/{projectId}/custom-frameworks-progress':
     get:
       summary: 'Get Custom Frameworks Progress Ctrl'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13487,12 +14302,23 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the jira-assets extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: projectId
+          in: path
+          required: true
+          description: 'The projectId'
+          schema:
+            type: integer
   /extensions/model-lifecycle/config:
     get:
       summary: 'List Config'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13501,12 +14327,15 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the model-lifecycle extension to be enabled for the organization (403 otherwise).'
   /extensions/model-lifecycle/phases:
     post:
       summary: 'Create Phase Ctrl'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13515,12 +14344,15 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the model-lifecycle extension to be enabled for the organization (403 otherwise).'
   /extensions/model-lifecycle/phases/reorder:
     put:
       summary: 'Reorder Phases Ctrl'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13529,12 +14361,15 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the model-lifecycle extension to be enabled for the organization (403 otherwise).'
   '/extensions/model-lifecycle/phases/{id}':
     put:
       summary: 'Update Phase Ctrl'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13543,11 +14378,22 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the model-lifecycle extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The id'
+          schema:
+            type: integer
     delete:
       summary: 'Delete Phase Ctrl'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13556,12 +14402,23 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the model-lifecycle extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The id'
+          schema:
+            type: integer
   '/extensions/model-lifecycle/phases/{phaseId}/items':
     post:
       summary: 'Create Item Ctrl'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13570,12 +14427,23 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the model-lifecycle extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: phaseId
+          in: path
+          required: true
+          description: 'The phaseId'
+          schema:
+            type: integer
   '/extensions/model-lifecycle/phases/{phaseId}/items/reorder':
     put:
       summary: 'Reorder Items Ctrl'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13584,12 +14452,23 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the model-lifecycle extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: phaseId
+          in: path
+          required: true
+          description: 'The phaseId'
+          schema:
+            type: integer
   '/extensions/model-lifecycle/items/{id}':
     put:
       summary: 'Update Item Ctrl'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13598,11 +14477,22 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the model-lifecycle extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The id'
+          schema:
+            type: integer
     delete:
       summary: 'Delete Item Ctrl'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13611,12 +14501,23 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the model-lifecycle extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The id'
+          schema:
+            type: integer
   '/extensions/model-lifecycle/models/{id}/lifecycle':
     get:
       summary: 'Get Lifecycle Ctrl'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13625,12 +14526,23 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the model-lifecycle extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The id'
+          schema:
+            type: integer
   '/extensions/model-lifecycle/models/{id}/lifecycle/progress':
     get:
       summary: 'Get Progress Ctrl'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13639,12 +14551,23 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the model-lifecycle extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The id'
+          schema:
+            type: integer
   '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}':
     put:
       summary: 'Upsert Value Ctrl'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13653,12 +14576,30 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the model-lifecycle extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The id'
+          schema:
+            type: integer
+        -
+          name: itemId
+          in: path
+          required: true
+          description: 'The itemId'
+          schema:
+            type: integer
   '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}/files':
     post:
       summary: 'Attach File Ctrl'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13667,12 +14608,30 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the model-lifecycle extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The id'
+          schema:
+            type: integer
+        -
+          name: itemId
+          in: path
+          required: true
+          description: 'The itemId'
+          schema:
+            type: integer
   '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}/files/{fileId}':
     delete:
       summary: 'Detach File Ctrl'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13681,12 +14640,37 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the model-lifecycle extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The id'
+          schema:
+            type: integer
+        -
+          name: itemId
+          in: path
+          required: true
+          description: 'The itemId'
+          schema:
+            type: integer
+        -
+          name: fileId
+          in: path
+          required: true
+          description: 'The fileId'
+          schema:
+            type: integer
   '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}/people':
     post:
       summary: 'Add Person Ctrl'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13695,12 +14679,30 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the model-lifecycle extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The id'
+          schema:
+            type: integer
+        -
+          name: itemId
+          in: path
+          required: true
+          description: 'The itemId'
+          schema:
+            type: integer
   '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}/people/{userId}':
     delete:
       summary: 'Remove Person Ctrl'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13709,12 +14711,37 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the model-lifecycle extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The id'
+          schema:
+            type: integer
+        -
+          name: itemId
+          in: path
+          required: true
+          description: 'The itemId'
+          schema:
+            type: integer
+        -
+          name: userId
+          in: path
+          required: true
+          description: 'The userId'
+          schema:
+            type: integer
   '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}/approvals':
     post:
       summary: 'Add Approver Ctrl'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13723,12 +14750,30 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the model-lifecycle extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The id'
+          schema:
+            type: integer
+        -
+          name: itemId
+          in: path
+          required: true
+          description: 'The itemId'
+          schema:
+            type: integer
   '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}/approvals/{userId}':
     put:
       summary: 'Update Approval Status Ctrl'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13737,11 +14782,36 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the model-lifecycle extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The id'
+          schema:
+            type: integer
+        -
+          name: itemId
+          in: path
+          required: true
+          description: 'The itemId'
+          schema:
+            type: integer
+        -
+          name: userId
+          in: path
+          required: true
+          description: 'The userId'
+          schema:
+            type: integer
     delete:
       summary: 'Remove Approver Ctrl'
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
         '500':
           description: 'Internal server error'
       tags:
@@ -13750,6 +14820,29 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires the model-lifecycle extension to be enabled for the organization (403 otherwise).'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The id'
+          schema:
+            type: integer
+        -
+          name: itemId
+          in: path
+          required: true
+          description: 'The itemId'
+          schema:
+            type: integer
+        -
+          name: userId
+          in: path
+          required: true
+          description: 'The userId'
+          schema:
+            type: integer
   '/model-inventory-change-history/{id}':
     get:
       tags:
@@ -16730,6 +17823,7 @@ paths:
       tags:
         - 'LLM Keys'
       summary: 'Get L L M Keys'
+      description: 'Callers without the llmKeys.admin permission get custom_headers as null and, for Custom providers, only the origin (scheme and host) of the URL. The API key itself is never returned.'
       operationId: getLLMKeys
       security:
         -
@@ -16759,6 +17853,8 @@ paths:
           description: 'Created successfully'
         '401':
           description: Unauthorized
+        '403':
+          description: 'Forbidden - requires the llmKeys.admin permission (Admin by default)'
         '500':
           description: 'Internal server error'
   /llm-keys/status:
@@ -16782,6 +17878,7 @@ paths:
       tags:
         - 'LLM Keys'
       summary: 'Get L L M Key'
+      description: 'Callers without the llmKeys.admin permission get custom_headers as null and, for Custom providers, only the origin (scheme and host) of the URL. The API key itself is never returned.'
       operationId: getLLMKey
       security:
         -
@@ -16826,6 +17923,8 @@ paths:
           description: Success
         '401':
           description: Unauthorized
+        '403':
+          description: 'Forbidden - requires the llmKeys.admin permission (Admin by default)'
         '500':
           description: 'Internal server error'
     delete:
@@ -16848,6 +17947,8 @@ paths:
           description: 'Deleted successfully'
         '401':
           description: Unauthorized
+        '403':
+          description: 'Forbidden - requires the llmKeys.admin permission (Admin by default)'
         '500':
           description: 'Internal server error'
   /nist-ai-rmf/functions:
@@ -17139,53 +18240,21 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
-  /evidenceHub/settings:
-    get:
-      tags:
-        - Evidence
-      summary: 'Get Evidence Hub Org Settings'
-      description: 'Org-level Evidence Hub retention settings. A missing settings row resolves to defaults (no default retention period, archival off).'
-      operationId: getEvidenceHubSettingsHandler
-      security:
-        -
-          bearerAuth: []
+  /evidenceHub/freshness-sweep:
+    post:
+      summary: 'Run Freshness Sweep'
       responses:
         '200':
           description: Success
-        '401':
-          description: Unauthorized
         '500':
           description: 'Internal server error'
-    put:
       tags:
         - Evidence
-      summary: 'Update Evidence Hub Org Settings'
-      description: 'PARTIAL update. default_retention_period: one of 30_days, 90_days, 6_months, 1_year, 3_years, 5_years, 7_years, indefinite, or null to clear. archive_on_expiry only takes effect when the server also sets EVIDENCE_RETENTION_ARCHIVE_ENABLED=true; archival is a soft archive, never a delete.'
-      operationId: updateEvidenceHubSettingsHandler
+      operationId: runFreshnessSweep
       security:
         -
           bearerAuth: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                default_retention_period:
-                  type: string
-                  nullable: true
-                  enum: [30_days, 90_days, 6_months, 1_year, 3_years, 5_years, 7_years, indefinite]
-                archive_on_expiry:
-                  type: boolean
-      responses:
-        '200':
-          description: Success
-        '400':
-          description: 'Bad request'
-        '401':
-          description: Unauthorized
-        '500':
-          description: 'Internal server error'
+      description: 'Requires role: Admin'
   /evidenceHub:
     get:
       tags:
@@ -24693,6 +25762,28 @@ paths:
       security:
         -
           bearerAuth: []
+  /health/live:
+    get:
+      summary: 'Liveness probe'
+      description: 'Returns 200 while the process is serving HTTP. Checks no dependencies, so an outage elsewhere never fails liveness.'
+      responses:
+        '200':
+          description: Success
+      tags:
+        - System
+      operationId: healthCheck_live
+  /health/ready:
+    get:
+      summary: 'Readiness probe'
+      description: 'Checks PostgreSQL and Redis (2s timeout each). Returns 503 with status "degraded" when either fails.'
+      responses:
+        '200':
+          description: Success
+        '503':
+          description: 'A data store is unavailable'
+      tags:
+        - System
+      operationId: healthCheck_ready
   /health:
     get:
       summary: 'Health Check'

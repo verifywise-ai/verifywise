@@ -393,6 +393,27 @@ export const validateForeignKey = (
 };
 
 /**
+ * An id off the wire, or NaN.
+ *
+ * Unlike everything else here this returns a number rather than a
+ * `ValidationResult`: it is a parser the caller then guards, for the common
+ * `const id = toId(req.params.id); if (isNaN(id)) return 400;` shape.
+ *
+ * It exists because `parseInt(String(value), 10)` salvages a numeric prefix —
+ * `"2abc"`, `[2]` and `2.9` all come back as 2, so a request naming a record
+ * that does not exist quietly acts on a different record that does, and the
+ * `isNaN` guard beside it never fires. Ids arrive from URLs, query strings and
+ * JSON bodies, where a client can send any type, so only an exact integer is
+ * accepted. `Number()` is not enough on its own: it accepts `[2]`, `"2e0"` and
+ * `"0x2"`.
+ */
+export const toId = (value: unknown): number => {
+  if (typeof value === "number") return Number.isInteger(value) ? value : NaN;
+  if (typeof value === "string" && /^-?\d+$/.test(value.trim())) return Number(value.trim());
+  return NaN;
+};
+
+/**
  * Validation schema validator - validates an object against a schema
  */
 export const validateSchema = (

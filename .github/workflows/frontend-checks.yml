@@ -110,13 +110,28 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
+      # Each shard also collects raw coverage into its blob report.
+      # VITEST_SHARD_RUN turns off per-shard thresholds and report files
+      # (see vite.config.ts); the Coverage job merges and enforces them.
       - name: Run tests (shard ${{ matrix.shard }}/4)
-        run: npx vitest run --shard=${{ matrix.shard }}/4
+        env:
+          VITEST_SHARD_RUN: "1"
+        run: npx vitest run --shard=${{ matrix.shard }}/4 --reporter=blob --coverage
 
-  # Runs the CI test command with coverage on every push and pull request,
-  # uploading the coverage report and enforcing the configured thresholds.
+      - name: Upload blob report
+        uses: actions/upload-artifact@v7
+        with:
+          name: vitest-blob-${{ matrix.shard }}
+          path: Clients/.vitest/blob/
+          include-hidden-files: true
+          retention-days: 1
+          if-no-files-found: error
+
+  # Merges the shards' blob reports instead of re-running the whole suite:
+  # writes the coverage report and enforces the configured thresholds.
   coverage:
     name: Coverage
+    needs: unit-and-component-tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -135,13 +150,15 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
-      - name: Run tests with coverage
-        run: npm run test:ci
+      - name: Download blob reports
+        uses: actions/download-artifact@v8
+        with:
+          pattern: vitest-blob-*
+          path: Clients/.vitest/blob/
+          merge-multiple: true
 
-      - name: Dependency vulnerability audit
-        run: |
-          npm audit --audit-level=high --omit=dev || true
-          node $GITHUB_WORKSPACE/scripts/security/npm-audit-gate.js .
+      - name: Merge shard reports and check coverage
+        run: npx vitest --merge-reports --coverage
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v7

@@ -6,12 +6,12 @@ import { invitationResendLimiter } from "../middleware/rateLimit.middleware";
 
 const router = express.Router();
 
-router.get("/", authenticateJWT, authorize(["Admin", "SuperAdmin"]), getInvitations);
-router.delete("/:id", authenticateJWT, authorize(["Admin", "SuperAdmin"]), revokeInvitation);
+router.get("/", authenticateJWT, authorize("invitation.super"), getInvitations);
+router.delete("/:id", authenticateJWT, authorize("invitation.super"), revokeInvitation);
 router.post(
   "/:id/resend",
   authenticateJWT,
-  authorize(["Admin", "SuperAdmin"]),
+  authorize("invitation.super"),
   invitationResendLimiter,
   resendInvitation,
 );

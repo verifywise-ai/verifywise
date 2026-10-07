@@ -27,6 +27,7 @@ import { getAllEntities } from "../../../../application/repository/entity.reposi
 import { User } from "../../../../domain/types/User";
 import dayjs, { Dayjs } from "dayjs";
 import utc from "dayjs/plugin/utc";
+import { earliestFileExpiry } from "../../../../application/utils/fileExpiry";
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
 import modelInventoryOptions from "../../../utils/model-inventory.json";
 import { useProjects } from "../../../../application/hooks/useProjects";
@@ -46,6 +47,7 @@ import { CirclePlus as AddCircleOutlineIcon } from "lucide-react";
 import { VWLink } from "../../Link/VWLink";
 import { useQueryClient } from "@tanstack/react-query";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
+import { focusFormFieldById } from "../../../../application/utils/formValidationFocus";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
 
 dayjs.extend(utc);
@@ -210,7 +212,7 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
     [],
   );
 
-  const { errors, validateAll, clearFieldError, resetErrors } =
+  const { errors, validateAll, clearFieldError, resetErrors, setServerErrors } =
     useFormValidation<NewModelInventoryFormValues>(validators);
 
   // Prefetch history data when modal opens in edit mode
@@ -497,6 +499,16 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
         handleClose();
       } catch (error: any) {
         setIsSubmitting(false);
+        // Surface a duplicate external key (409) as a field-level error so the
+        // user sees it next to the input, not only as a toast (issue #4755).
+        if (error?.response?.status === 409) {
+          const message =
+            error?.response?.data?.data ||
+            error?.response?.data?.message ||
+            "A model with this external key already exists in your organization.";
+          setServerErrors({ external_key: message });
+          focusFormFieldById("external_key");
+        }
         // Propagate error to parent for toast notification
         if (onError) {
           onError(error);
@@ -512,14 +524,18 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
     }
 
     // Map data to rows
-    const rows = data.map((item) => ({
-      "ID": item.id,
-      "Title": item.evidence_name || "",
-      "Type": item.evidence_type || "",
-      "Mapped Models": item.mapped_model_ids?.join(", ") || "",
-      "DESCRIPTION": item.description,
-      "EXPIRY_DATE": item.expiry_date ? dayjs.utc(item.expiry_date).format("YYYY-MM-DD") : "-",
-    }));
+    const rows = data.map((item) => {
+      // Expiry lives on the linked files; the earliest one represents the row.
+      const expiryDate = earliestFileExpiry(item.evidence_files);
+      return {
+        "ID": item.id,
+        "Title": item.evidence_name || "",
+        "Type": item.evidence_type || "",
+        "Mapped Models": item.mapped_model_ids?.join(", ") || "",
+        "DESCRIPTION": item.description,
+        "EXPIRY_DATE": expiryDate ? dayjs.utc(expiryDate).format("YYYY-MM-DD") : "-",
+      };
+    });
 
     // Extract CSV header from object keys
     const header = Object.keys(rows[0]).join(",");
@@ -812,6 +828,7 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
           width={"50%"}
           value={values.external_key ?? ""}
           onChange={handleOnTextFieldChange("external_key")}
+          error={errors.external_key}
           sx={fieldStyle}
           placeholder="eg. credit-scoring-v3"
         />

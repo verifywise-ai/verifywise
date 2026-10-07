@@ -51,7 +51,8 @@ import {
   SortableTableHead,
 } from "./constants";
 import { palette } from "../../themes/palette";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import { pageOfLabel } from "../../components/Table/pageOfLabel";
 
 interface UserDetailData {
   email: string;
@@ -80,6 +81,7 @@ const BASE_TABS = [
 const DEPT_PER_PAGE = 10;
 
 export default function UserActivityPage() {
+  const formatDate = useFormattedDate();
   const location = useLocation();
   const navigate = useNavigate();
   const theme = useTheme();
@@ -361,7 +363,7 @@ export default function UserActivityPage() {
                           {t.event_count}
                         </TableCell>
                         <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                          {displayFormattedDate(t.last_used)}
+                          {formatDate(t.last_used)}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -506,7 +508,7 @@ export default function UserActivityPage() {
                     ActionsComponent={(props) => <TablePaginationActions {...props} />}
                     labelRowsPerPage=""
                     labelDisplayedRows={({ page: p, count }) =>
-                      `Page ${p + 1} of ${Math.max(0, Math.ceil(count / 20))}`
+                      pageOfLabel(p + 1, Math.max(0, Math.ceil(count / 20)))
                     }
                     slotProps={{
                       select: {
@@ -615,7 +617,7 @@ export default function UserActivityPage() {
                     ActionsComponent={(props) => <TablePaginationActions {...props} />}
                     labelRowsPerPage=""
                     labelDisplayedRows={({ page: p, count }) =>
-                      `Page ${p + 1} of ${Math.max(0, Math.ceil(count / DEPT_PER_PAGE))}`
+                      pageOfLabel(p + 1, Math.max(0, Math.ceil(count / DEPT_PER_PAGE)))
                     }
                     slotProps={{
                       select: {

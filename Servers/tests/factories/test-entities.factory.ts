@@ -16,12 +16,20 @@ export interface CreateTestProjectOptions {
   uc_id?: string;
 }
 
+// Any generated value that lands in a UNIQUE column must not come from the
+// clock alone: two calls in the same millisecond produce the same value, and
+// the resulting error is close to undiagnosable — sequelize's ValidationError
+// assigns this.message after super(), so the stack it bakes reads "Error: "
+// and jest, which renders from the stack, prints a blank message.
+let seq = 0;
+const uniqueSuffix = (): string => `${Date.now()}-${++seq}`;
+
 export async function createTestProject(
   orgId: number,
   ownerId: number,
   options: CreateTestProjectOptions = {},
 ): Promise<number> {
-  const suffix = Date.now();
+  const suffix = uniqueSuffix();
   const title = options.project_title ?? `Test Project ${suffix}`;
   const ucId = options.uc_id ?? `UC-${suffix}`;
   const [result] = await sequelize.query(
@@ -60,7 +68,13 @@ export async function createTestFile(
 
 export interface CreateTestRiskOptions {
   risk_name?: string;
+  risk_description?: string;
   risk_owner?: number;
+  /** Scoring signals. Omitted columns stay NULL, which never matches. */
+  risk_category?: string[];
+  controls_mapping?: string;
+  assessment_mapping?: string;
+  ai_lifecycle_phase?: string;
 }
 
 export async function createTestRisk(
@@ -69,13 +83,27 @@ export async function createTestRisk(
 ): Promise<number> {
   const name = options.risk_name ?? `Risk ${Date.now()}`;
   const [result] = await sequelize.query(
-    `INSERT INTO risks (organization_id, risk_name, risk_owner, created_at, updated_at)
-     VALUES (:orgId, :name, :riskOwner, NOW(), NOW()) RETURNING id`,
+    `INSERT INTO risks (organization_id, risk_name, risk_description, risk_owner, risk_category,
+                        controls_mapping, assessment_mapping, ai_lifecycle_phase,
+                        created_at, updated_at)
+     VALUES (:orgId, :name, :description, :riskOwner,
+             CAST(:riskCategory AS enum_projectrisks_risk_category[]),
+             :controlsMapping, :assessmentMapping,
+             CAST(:aiLifecyclePhase AS enum_projectrisks_ai_lifecycle_phase),
+             NOW(), NOW())
+     RETURNING id`,
     {
       replacements: {
         orgId,
         name,
+        description: options.risk_description ?? null,
         riskOwner: options.risk_owner ?? null,
+        riskCategory: options.risk_category
+          ? `{${options.risk_category.map((value) => `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`).join(",")}}`
+          : null,
+        controlsMapping: options.controls_mapping ?? null,
+        assessmentMapping: options.assessment_mapping ?? null,
+        aiLifecyclePhase: options.ai_lifecycle_phase ?? null,
       },
     },
   );
@@ -184,6 +212,25 @@ export async function createTestControlEU(
   return (result as any[])[0].id;
 }
 
+/**
+ * Attach a risk to an EU AI Act control instance.
+ *
+ * `controls_eu__risks` has no foreign key on `control_id`, so `controlId` need
+ * not exist in `controls_eu`. That is exactly what lets a test seed the
+ * cross-org element collision the schema otherwise makes unreachable.
+ */
+export async function attachRiskToEuControl(
+  orgId: number,
+  riskId: number,
+  controlId: number,
+): Promise<void> {
+  await sequelize.query(
+    `INSERT INTO controls_eu__risks (organization_id, control_id, projects_risks_id)
+     VALUES (:orgId, :controlId, :riskId)`,
+    { replacements: { orgId, controlId, riskId } },
+  );
+}
+
 export async function createTestProjectFramework(
   orgId: number,
   projectId: number,
@@ -220,6 +267,21 @@ export async function linkVendorToProject(
      VALUES (:orgId, :vendorId, :projectId)
      ON CONFLICT (vendor_id, project_id) DO NOTHING`,
     { replacements: { orgId, vendorId, projectId } },
+  );
+}
+
+export async function linkModelToProject(
+  orgId: number,
+  modelInventoryId: number,
+  projectId: number,
+  frameworkId: number,
+): Promise<void> {
+  await sequelize.query(
+    `INSERT INTO model_inventories_projects_frameworks
+       (organization_id, model_inventory_id, project_id, framework_id)
+     VALUES (:orgId, :modelInventoryId, :projectId, :frameworkId)
+     ON CONFLICT (model_inventory_id, project_id, framework_id) DO NOTHING`,
+    { replacements: { orgId, modelInventoryId, projectId, frameworkId } },
   );
 }
 
@@ -406,6 +468,62 @@ export async function createTestModelInventory(
   return (result as any[])[0].id;
 }
 
+export interface CreateTestModelRiskOptions {
+  model_id?: number;
+  risk_name?: string | null;
+  risk_level?: "Low" | "Medium" | "High" | "Critical";
+  owner?: number | null;
+}
+
+export async function createTestModelRisk(
+  orgId: number,
+  options: CreateTestModelRiskOptions = {},
+): Promise<number> {
+  const suffix = Date.now();
+  const [result] = await sequelize.query(
+    `INSERT INTO model_risks (organization_id, model_id, risk_name, risk_level, owner, created_at, updated_at, is_deleted)
+     VALUES (:orgId, :modelId, :name, :level, :owner, NOW(), NOW(), false) RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        modelId: options.model_id ?? null,
+        name: options.risk_name === undefined ? `Model risk ${suffix}` : options.risk_name,
+        level: options.risk_level ?? "High",
+        owner: options.owner ?? null,
+      },
+    },
+  );
+  return (result as any[])[0].id;
+}
+
+export interface CreateTestVendorRiskOptions {
+  vendor_id?: number;
+  risk_description?: string;
+  risk_level?: string;
+  action_owner?: number | null;
+}
+
+export async function createTestVendorRisk(
+  orgId: number,
+  options: CreateTestVendorRiskOptions = {},
+): Promise<number> {
+  const suffix = Date.now();
+  const [result] = await sequelize.query(
+    `INSERT INTO vendorrisks (organization_id, vendor_id, risk_description, risk_level, action_owner, is_demo, created_at, updated_at, is_deleted)
+     VALUES (:orgId, :vendorId, :description, :level, :owner, false, NOW(), NOW(), false) RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        vendorId: options.vendor_id ?? null,
+        description: options.risk_description ?? `Vendor risk ${suffix}`,
+        level: options.risk_level ?? "High",
+        owner: options.action_owner ?? null,
+      },
+    },
+  );
+  return (result as any[])[0].id;
+}
+
 export interface CreateTestMrmValidationOptions {
   model_inventory_id?: number;
   validator_id?: number;
@@ -502,7 +620,7 @@ export async function createTestMrmMetricKey(
   orgId: number,
   options: CreateTestMrmMetricKeyOptions = {},
 ): Promise<number> {
-  const suffix = Date.now();
+  const suffix = uniqueSuffix();
   const [result] = await sequelize.query(
     `INSERT INTO mrm_metric_keys (organization_id, key, display_name, created_at)
      VALUES (:orgId, :key, :displayName, NOW()) RETURNING id`,
@@ -574,7 +692,7 @@ export async function createTestMrmIngestionToken(
   orgId: number,
   options: CreateTestMrmIngestionTokenOptions = {},
 ): Promise<number> {
-  const suffix = Date.now();
+  const suffix = uniqueSuffix();
   const [result] = await sequelize.query(
     `INSERT INTO mrm_ingestion_tokens
        (organization_id, name, token_hash, model_inventory_id, revoked_at, created_by, created_at)

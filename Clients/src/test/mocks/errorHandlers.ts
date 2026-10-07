@@ -21,7 +21,7 @@
  * only the former exercises the "network is down" branch.
  */
 
-import { http, HttpResponse, type HttpHandler } from "msw";
+import { http, HttpResponse, type HttpHandler } from "msw/http";
 
 type Method = "get" | "post" | "patch" | "put" | "delete";
 

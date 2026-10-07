@@ -12,6 +12,7 @@ jest.mock("../../utils/user.utils", () => ({
   getUserProfilePhotoQuery: jest.fn(),
   resetPasswordQuery: jest.fn(),
   updateUserByIdQuery: jest.fn(),
+  isLastAdminQuery: jest.fn(async () => false),
 }));
 jest.mock("bcrypt", () => ({
   compare: jest.fn().mockResolvedValue(true),
@@ -108,7 +109,7 @@ jest.mock("../../utils/role.utils", () => ({
   getRoleByIdQuery: jest.fn().mockResolvedValue({ name: "Admin" }),
 }));
 jest.mock("../../utils/invitation.utils", () => ({
-  markInvitationAcceptedQuery: jest.fn().mockResolvedValue(undefined),
+  markInvitationAcceptedQuery: jest.fn().mockResolvedValue(1),
 }));
 jest.mock("../../utils/userPreference.utils", () => ({
   getPreferencesByUserQuery: jest.fn(),
@@ -176,7 +177,9 @@ jest.mock("../../domain.layer/models/userPreferences/userPreferences.model", () 
   return { UserPreferencesModel };
 });
 
+import { ForeignKeyConstraintError } from "sequelize";
 import { buildUser } from "../../tests/factories/user.factory";
+import { getRoleByIdQuery } from "../../utils/role.utils";
 import {
   getAllUsers,
   getUserByEmail,
@@ -207,8 +210,10 @@ import {
   checkUserExistsQuery,
   getUserProfilePhotoQuery,
   deleteUserProfilePhotoQuery,
+  isLastAdminQuery,
 } from "../../utils/user.utils";
-import { getRoleByIdQuery } from "../../utils/role.utils";
+import { markInvitationAcceptedQuery } from "../../utils/invitation.utils";
+import { sequelize } from "../../database/db";
 import {
   getPreferencesByUserQuery,
   createNewUserPreferencesQuery,
@@ -221,6 +226,7 @@ const mockGetById = getUserByIdQuery as jest.MockedFunction<typeof getUserByIdQu
 const mockCreate = createNewUserQuery as jest.MockedFunction<typeof createNewUserQuery>;
 const mockUpdate = updateUserByIdQuery as jest.MockedFunction<typeof updateUserByIdQuery>;
 const mockDelete = deleteUserByIdQuery as jest.MockedFunction<typeof deleteUserByIdQuery>;
+const mockIsLastAdmin = isLastAdminQuery as jest.MockedFunction<typeof isLastAdminQuery>;
 const mockGetPreferences = getPreferencesByUserQuery as jest.MockedFunction<
   typeof getPreferencesByUserQuery
 >;
@@ -268,6 +274,9 @@ function mockUser(data: any) {
     isDemoUser: jest.fn().mockReturnValue(false),
   };
 }
+
+/** The invitation as register.middleware checked it. */
+const CHECKED_INVITATION = { id: 41, roleId: 1, expiresAtMs: 1793448000000 };
 
 describe("user.ctrl", () => {
   beforeEach(() => jest.clearAllMocks());
@@ -322,12 +331,12 @@ describe("user.ctrl", () => {
   });
 
   describe("getUserById", () => {
-    it("should return 403 when access is denied", async () => {
+    it("should answer 404, like a missing user, for a user in another organization", async () => {
       mockGetById.mockResolvedValue(mockUser(buildUser({ id: 2, organization_id: 99 })) as any);
       const req = createReq({ params: { id: "2" }, userId: 1, isSuperAdmin: false });
       const res = createRes();
       await getUserById(req, res);
-      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.status).toHaveBeenCalledWith(404);
     });
     it("should return 200 when user is found", async () => {
       mockGetById.mockResolvedValue(mockUser(buildUser()) as any);
@@ -336,12 +345,12 @@ describe("user.ctrl", () => {
       await getUserById(req, res);
       expect(res.status).toHaveBeenCalledWith(200);
     });
-    it("should return 500 when user is not found (null access before check)", async () => {
+    it("should return 404 when user is not found", async () => {
       mockGetById.mockResolvedValue(null as any);
       const req = createReq({ params: { id: "99" } });
       const res = createRes();
       await getUserById(req, res);
-      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.status).toHaveBeenCalledWith(404);
     });
     it("should return 500 on error", async () => {
       mockGetById.mockRejectedValue(new Error("DB error"));
@@ -367,8 +376,87 @@ describe("user.ctrl", () => {
         },
       });
       const res = createRes();
+      res.locals = { invitation: CHECKED_INVITATION };
       await createNewUser(req, res);
       expect(res.status).toHaveBeenCalledWith(201);
+    });
+    it("marks the invitation accepted inside the user's transaction, before commit", async () => {
+      // A link works once: the user and the accepted invitation commit together.
+      mockGetByEmail.mockResolvedValue(null as any);
+      mockCreate.mockResolvedValue(mockUser(buildUser()) as any);
+      const tx: any = await (sequelize.transaction as any)();
+      const mockMark = markInvitationAcceptedQuery as jest.Mock;
+      const req = createReq({
+        body: {
+          name: "A",
+          surname: "B",
+          email: "a@b.com",
+          password: "pass",
+          roleId: 1,
+          organizationId: 1,
+        },
+      });
+      const res = createRes();
+      res.locals = { invitation: CHECKED_INVITATION };
+      await createNewUser(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(mockMark).toHaveBeenCalledWith(1, CHECKED_INVITATION, tx);
+      expect(mockMark.mock.invocationCallOrder[0]).toBeLessThan(
+        tx.commit.mock.invocationCallOrder.at(-1),
+      );
+    });
+    it("rolls back the user when the invitation cannot be marked accepted", async () => {
+      mockGetByEmail.mockResolvedValue(null as any);
+      mockCreate.mockResolvedValue(mockUser(buildUser()) as any);
+      const tx: any = await (sequelize.transaction as any)();
+      tx.commit.mockClear();
+      (markInvitationAcceptedQuery as jest.Mock).mockRejectedValueOnce(
+        new Error("db down") as never,
+      );
+      const req = createReq({
+        body: {
+          name: "A",
+          surname: "B",
+          email: "a@b.com",
+          password: "pass",
+          roleId: 1,
+          organizationId: 1,
+        },
+      });
+      const res = createRes();
+      res.locals = { invitation: CHECKED_INVITATION };
+      await createNewUser(req, res);
+
+      expect(tx.rollback).toHaveBeenCalled();
+      expect(tx.commit).not.toHaveBeenCalled();
+      expect(res.status).not.toHaveBeenCalledWith(201);
+    });
+    it("refuses and rolls back when the invitation was revoked before acceptance", async () => {
+      // The middleware saw a pending invitation, then an admin revoked it:
+      // marking it accepted matches no row, so the link no longer counts.
+      mockGetByEmail.mockResolvedValue(null as any);
+      mockCreate.mockResolvedValue(mockUser(buildUser()) as any);
+      const tx: any = await (sequelize.transaction as any)();
+      tx.commit.mockClear();
+      (markInvitationAcceptedQuery as jest.Mock).mockResolvedValueOnce(0 as never);
+      const req = createReq({
+        body: {
+          name: "A",
+          surname: "B",
+          email: "a@b.com",
+          password: "pass",
+          roleId: 1,
+          organizationId: 1,
+        },
+      });
+      const res = createRes();
+      res.locals = { invitation: CHECKED_INVITATION };
+      await createNewUser(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(tx.rollback).toHaveBeenCalled();
+      expect(tx.commit).not.toHaveBeenCalled();
     });
     it("should return 409 when user already exists", async () => {
       mockGetByEmail.mockResolvedValue(mockUser(buildUser()) as any);
@@ -383,6 +471,7 @@ describe("user.ctrl", () => {
         },
       });
       const res = createRes();
+      res.locals = { invitation: CHECKED_INVITATION };
       await createNewUser(req, res);
       expect(res.status).toHaveBeenCalledWith(409);
     });
@@ -399,6 +488,7 @@ describe("user.ctrl", () => {
         },
       });
       const res = createRes();
+      res.locals = { invitation: CHECKED_INVITATION };
       await createNewUser(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
     });
@@ -490,12 +580,13 @@ describe("user.ctrl", () => {
   });
 
   describe("updateUserById", () => {
-    it("should return 403 when org mismatch", async () => {
+    it("should answer 404, like a missing user, for a user in another organization", async () => {
       mockGetById.mockResolvedValue(mockUser(buildUser({ id: 2, organization_id: 99 })) as any);
       const req = createReq({ params: { id: "2" }, body: { name: "X" } });
       const res = createRes();
       await updateUserById(req, res);
-      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(mockUpdate).not.toHaveBeenCalled();
     });
     it("should return 202 when user is updated", async () => {
       const u = mockUser(buildUser({ name: "A", surname: "B" }));
@@ -505,13 +596,6 @@ describe("user.ctrl", () => {
       const res = createRes();
       await updateUserById(req, res);
       expect(res.status).toHaveBeenCalledWith(202);
-    });
-    it("should return 500 when user is not found (null access before check)", async () => {
-      mockGetById.mockResolvedValue(null as any);
-      const req = createReq({ params: { id: "99" }, body: { name: "X" } });
-      const res = createRes();
-      await updateUserById(req, res);
-      expect(res.status).toHaveBeenCalledWith(500);
     });
     it("should return 500 on error", async () => {
       mockGetById.mockRejectedValue(new Error("DB error"));
@@ -523,19 +607,143 @@ describe("user.ctrl", () => {
     // SuperAdmin is no longer a role (role_id=5 removed); it's a mapping-
     // table overlay. The old "cannot assign role 5" / "cannot change role
     // 5" guards are gone. Assigning a non-existent role (e.g. 5) falls
-    // through to the getRoleByIdQuery check → 400 (see "role does not
-    // exist" test below). Editing a pure SuperAdmin (NULL role + NULL org)
-    // through this endpoint is prevented separately.
-    it("should return 400 when the requested role does not exist", async () => {
-      const mockGetRole = getRoleByIdQuery as jest.MockedFunction<typeof getRoleByIdQuery>;
-      mockGetRole.mockResolvedValueOnce(null as any);
-      mockGetById.mockResolvedValue(
-        mockUser(buildUser({ id: 2, organization_id: 1, role_id: 1 })) as any,
-      );
-      const req = createReq({ params: { id: "2" }, body: { name: "X", roleId: 99 } });
+    // through to the role lookup → 400 (see "role does not exist" test
+    // below). Editing a pure SuperAdmin (NULL role + NULL org) through this
+    // endpoint is prevented separately.
+    describe("role assignment scope", () => {
+      // Read from the database (not the role cache), so a role created or
+      // deleted a moment ago is judged correctly.
+      const mockRoleById = getRoleByIdQuery as jest.MockedFunction<typeof getRoleByIdQuery>;
+
+      // Caller is an Admin of org 1 (createReq defaults); target user 2 is in
+      // org 1 with the built-in Admin role (id 1).
+      async function assignRole(roleId: number) {
+        mockGetById.mockResolvedValue(
+          mockUser(buildUser({ id: 2, organization_id: 1, role_id: 1 })) as any,
+        );
+        mockUpdate.mockResolvedValue(mockUser(buildUser({ id: 2, role_id: roleId })) as any);
+        const req = createReq({ params: { id: "2" }, body: { name: "X", roleId } });
+        const res = createRes();
+        await updateUserById(req, res);
+        return res;
+      }
+
+      it("should refuse to demote the organization's last Admin", async () => {
+        mockRoleById.mockResolvedValueOnce({ id: 3, name: "Editor", organization_id: null } as any);
+        mockIsLastAdmin.mockResolvedValueOnce(true);
+        const res = await assignRole(3);
+        expect(mockIsLastAdmin).toHaveBeenCalledWith(1, 2, expect.anything());
+        expect(res.status).toHaveBeenCalledWith(409);
+        expect(mockUpdate).not.toHaveBeenCalled();
+      });
+
+      it("should answer 400 when the role is deleted before the update lands", async () => {
+        mockRoleById.mockResolvedValueOnce({ id: 3, name: "Editor", organization_id: null } as any);
+        mockGetById.mockResolvedValue(
+          mockUser(buildUser({ id: 2, organization_id: 1, role_id: 1 })) as any,
+        );
+        mockUpdate.mockRejectedValueOnce(
+          new ForeignKeyConstraintError({ message: "violates foreign key constraint" } as any),
+        );
+        const req = createReq({ params: { id: "2" }, body: { name: "X", roleId: 3 } });
+        const res = createRes();
+        await updateUserById(req, res);
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: "Unknown role" }));
+      });
+
+      it("should return 400 when the requested role does not exist", async () => {
+        mockRoleById.mockResolvedValueOnce(null);
+        const res = await assignRole(99);
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: "Unknown role" }));
+        expect(mockUpdate).not.toHaveBeenCalled();
+      });
+
+      it("should return 400 and not update when assigning another organization's custom role", async () => {
+        mockRoleById.mockResolvedValueOnce({
+          id: 40,
+          name: "Auditor Plus",
+          organization_id: 2,
+        } as any);
+        const res = await assignRole(40);
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: "Unknown role" }));
+        expect(mockUpdate).not.toHaveBeenCalled();
+      });
+
+      it("should return 400 and not update when assigning a role named SuperAdmin", async () => {
+        mockRoleById.mockResolvedValueOnce({
+          id: 5,
+          name: "SuperAdmin",
+          organization_id: null,
+        } as any);
+        const res = await assignRole(5);
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: "Unknown role" }));
+        expect(mockUpdate).not.toHaveBeenCalled();
+      });
+
+      it("should return 400 for a role id that is not a positive integer", async () => {
+        // true would become 1 (Admin) with Number(); only digits count.
+        for (const roleId of ["abc", "5abc", -1, 1.5, true, [3], "0x2", " 2 ", "2e0"] as any[]) {
+          mockRoleById.mockClear();
+          mockGetById.mockResolvedValue(
+            mockUser(buildUser({ id: 2, organization_id: 1, role_id: 1 })) as any,
+          );
+          const req = createReq({ params: { id: "2" }, body: { name: "X", roleId } });
+          const res = createRes();
+          await updateUserById(req, res);
+          expect(res.status).toHaveBeenCalledWith(400);
+          expect(mockRoleById).not.toHaveBeenCalled();
+        }
+        expect(mockUpdate).not.toHaveBeenCalled();
+      });
+
+      it("should refuse a role row without an organization field instead of reading it as built-in", async () => {
+        mockRoleById.mockResolvedValueOnce({ id: 40, name: "Partial" } as any);
+        const res = await assignRole(40);
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(mockUpdate).not.toHaveBeenCalled();
+      });
+
+      it("should allow assigning the caller's own organization's custom role", async () => {
+        mockRoleById.mockResolvedValueOnce({
+          id: 41,
+          name: "Risk Lead",
+          organization_id: 1,
+        } as any);
+        const res = await assignRole(41);
+        expect(res.status).toHaveBeenCalledWith(202);
+        expect(mockUpdate).toHaveBeenCalledWith(
+          2,
+          expect.objectContaining({ role_id: 41 }),
+          expect.anything(),
+        );
+      });
+
+      it("should allow assigning a built-in role", async () => {
+        mockRoleById.mockResolvedValueOnce({
+          id: 2,
+          name: "Reviewer",
+          organization_id: null,
+        } as any);
+        const res = await assignRole(2);
+        expect(res.status).toHaveBeenCalledWith(202);
+        expect(mockUpdate).toHaveBeenCalledWith(
+          2,
+          expect.objectContaining({ role_id: 2 }),
+          expect.anything(),
+        );
+      });
+    });
+    it("should return 404 for a user that does not exist", async () => {
+      mockGetById.mockResolvedValue(undefined as any);
+      const req = createReq({ params: { id: "999999" }, body: { name: "X" } });
       const res = createRes();
       await updateUserById(req, res);
-      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(mockUpdate).not.toHaveBeenCalled();
     });
     it("should return 403 when a non-admin updates another user", async () => {
       mockGetById.mockResolvedValue(mockUser(buildUser({ id: 2, organization_id: 1 })) as any);
@@ -547,14 +755,32 @@ describe("user.ctrl", () => {
   });
 
   describe("deleteUserById", () => {
-    it("should return 403 for pure super-admin (no role, no org)", async () => {
+    it("should answer 404 for a pure super-admin (no role, no org)", async () => {
       mockGetById.mockResolvedValue(
         mockUser(buildUser({ role_id: null as any, organization_id: null as any })) as any,
       );
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
       await deleteUserById(req, res);
-      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(mockDelete).not.toHaveBeenCalled();
+    });
+    it("should answer 404, like a missing user, for a user in another organization", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser({ id: 2, organization_id: 99 })) as any);
+      const req = createReq({ params: { id: "2" } });
+      const res = createRes();
+      await deleteUserById(req, res);
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(mockDelete).not.toHaveBeenCalled();
+    });
+    it("should refuse to delete the organization's last Admin", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser()) as any);
+      mockIsLastAdmin.mockResolvedValueOnce(true);
+      const req = createReq({ params: { id: "1" } });
+      const res = createRes();
+      await deleteUserById(req, res);
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(mockDelete).not.toHaveBeenCalled();
     });
     it("should return 403 for demo user", async () => {
       const u = mockUser(buildUser());
@@ -573,12 +799,12 @@ describe("user.ctrl", () => {
       await deleteUserById(req, res);
       expect(res.status).toHaveBeenCalledWith(202);
     });
-    it("should return 500 when user is not found (null access before check)", async () => {
+    it("should return 404 when user is not found", async () => {
       mockGetById.mockResolvedValue(null as any);
       const req = createReq({ params: { id: "99" } });
       const res = createRes();
       await deleteUserById(req, res);
-      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.status).toHaveBeenCalledWith(404);
     });
     it("should return 500 on error", async () => {
       mockGetById.mockRejectedValue(new Error("DB error"));
@@ -738,12 +964,16 @@ describe("user.ctrl", () => {
   });
 
   describe("getUserProfilePhoto", () => {
-    it("should return 403 when org mismatch", async () => {
-      mockGetById.mockResolvedValue(mockUser(buildUser({ id: 2, organization_id: 99 })) as any);
+    // Another organization's user and a missing one answer alike (no id oracle).
+    it.each([
+      ["another organization's user", mockUser(buildUser({ id: 2, organization_id: 99 }))],
+      ["a missing user", null],
+    ])("should return 404 for %s", async (_label, user) => {
+      mockGetById.mockResolvedValue(user as any);
       const req = createReq({ params: { id: "2" } });
       const res = createRes();
       await getUserProfilePhoto(req, res);
-      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.status).toHaveBeenCalledWith(404);
     });
     it("should return 200 when photo exists", async () => {
       mockGetById.mockResolvedValue(mockUser(buildUser()) as any);
@@ -777,12 +1007,16 @@ describe("user.ctrl", () => {
   });
 
   describe("deleteUserProfilePhoto", () => {
-    it("should return 403 when org mismatch", async () => {
-      mockGetById.mockResolvedValue(mockUser(buildUser({ id: 2, organization_id: 99 })) as any);
+    // Another organization's user and a missing one answer alike (no id oracle).
+    it.each([
+      ["another organization's user", mockUser(buildUser({ id: 2, organization_id: 99 }))],
+      ["a missing user", null],
+    ])("should return 404 for %s", async (_label, user) => {
+      mockGetById.mockResolvedValue(user as any);
       const req = createReq({ params: { id: "2" } });
       const res = createRes();
       await deleteUserProfilePhoto(req, res);
-      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.status).toHaveBeenCalledWith(404);
     });
     it("should return 200 when photo is deleted", async () => {
       mockGetById.mockResolvedValue(mockUser(buildUser()) as any);

@@ -129,7 +129,7 @@ router.post(
   "/",
   fileOperationsLimiter,
   authenticateJWT,
-  authorize(["Admin", "Reviewer", "Editor"]),
+  authorize("fileManager.contribute"),
   upload.single("file"),
   handleMulterError,
   uploadFile,
@@ -242,7 +242,7 @@ router.patch(
   "/:id/metadata",
   fileOperationsLimiter,
   authenticateJWT,
-  authorize(["Admin", "Reviewer", "Editor"]),
+  authorize("fileManager.contribute"),
   validateUpdateFileMetadata,
   updateMetadata,
 );
@@ -280,7 +280,7 @@ router.delete(
   "/:id",
   fileOperationsLimiter,
   authenticateJWT,
-  authorize(["Admin", "Reviewer", "Editor"]),
+  authorize("fileManager.contribute"),
   validateFileIdParam,
   removeFile,
 );

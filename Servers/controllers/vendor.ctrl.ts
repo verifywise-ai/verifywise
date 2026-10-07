@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 
 import { STATUS_CODE } from "../utils/statusCode.utils";
+import { toId } from "../utils/validations/validation.utils";
 import {
   createNewVendorQuery,
   deleteVendorByIdQuery,
@@ -22,7 +23,12 @@ import {
   recordMultipleFieldChanges,
 } from "../utils/vendorChangeHistory.utils";
 import { notifyUserAssigned } from "../services/inAppNotification.service";
+import { getVendorRiskSuggestions as getVendorRiskSuggestionsService } from "../services/vendors/riskSuggestions";
 import { triggerVendorOnboarding } from "../services/workflows/triggers";
+import { notifyVendorRiskCandidates } from "../services/riskLinks/vendorCandidates";
+import { enqueueVendorRiskLinkRecomputeBatch } from "../services/automations/automationProducer";
+import { getActiveVendorRiskIdsQuery } from "../utils/vendorRiskLink.utils";
+import logger from "../utils/logger/fileLogger";
 import { QueryTypes } from "sequelize";
 
 import { translateError } from "../utils/i18n.utils";
@@ -183,6 +189,63 @@ export async function getVendorByProjectId(req: Request, res: Response): Promise
   }
 }
 
+/**
+ * Read-only report: the vendor risks this vendor's questionnaire answers imply,
+ * minus the ones it already has. Writes nothing and opens no transaction.
+ */
+export async function getVendorRiskSuggestions(req: Request, res: Response): Promise<any> {
+  const vendorId = toId(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  if (isNaN(vendorId) || vendorId <= 0) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid vendor ID")));
+  }
+
+  logProcessing({
+    description: `starting getVendorRiskSuggestions for ID ${vendorId}`,
+    functionName: "getVendorRiskSuggestions",
+    fileName: "vendor.ctrl.ts",
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+
+  try {
+    const report = await getVendorRiskSuggestionsService(vendorId, req.organizationId!);
+
+    if (!report) {
+      await logSuccess({
+        eventType: "Read",
+        description: `Vendor not found for risk suggestions: ID ${vendorId}`,
+        functionName: "getVendorRiskSuggestions",
+        fileName: "vendor.ctrl.ts",
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
+      return res.status(404).json(STATUS_CODE[404]({}));
+    }
+
+    await logSuccess({
+      eventType: "Read",
+      description: `Derived ${report.suggestions.length} risk suggestions for vendor ID ${vendorId}`,
+      functionName: "getVendorRiskSuggestions",
+      fileName: "vendor.ctrl.ts",
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+
+    return res.status(200).json(STATUS_CODE[200](report));
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: "failed to fetch vendor risk suggestions",
+      functionName: "getVendorRiskSuggestions",
+      fileName: "vendor.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
 export async function createVendor(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
   const vendorData = req.body;
@@ -253,6 +316,15 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
       triggerVendorOnboarding(req.organizationId!, createdVendor.id!).catch((err) =>
         console.error("Failed to trigger vendor_onboarding workflow:", err),
       );
+
+      // A new vendor normally has no vendor risks yet, so this usually finds
+      // nothing. Fire-and-forget, like the model counterpart.
+      notifyVendorRiskCandidates({
+        organizationId: req.organizationId!,
+        vendorId: createdVendor.id!,
+        vendorName: createdVendor.vendor_name,
+        projectIds: vendorData.projects || [],
+      }).catch((err) => logger.error("Vendor risk candidate notice failed:", err));
 
       // Send assignment notifications (fire-and-forget)
       const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
@@ -459,6 +531,38 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
         userId: req.userId!,
         organizationId: req.organizationId!,
       });
+
+      // Only use cases this update added. A plain field edit sends no
+      // projects, so the diff is empty and nothing fires.
+      const projectIdsBefore = (existingVendor.projects ?? []).map(Number);
+      const addedProjectIds = Array.isArray(updateData.projects)
+        ? (updateData.projects as unknown[])
+            .map(Number)
+            .filter((id) => Number.isInteger(id) && !projectIdsBefore.includes(id))
+        : [];
+      if (addedProjectIds.length > 0) {
+        notifyVendorRiskCandidates({
+          organizationId: req.organizationId!,
+          vendorId,
+          vendorName: vendor.vendor_name,
+          projectIds: addedProjectIds,
+        }).catch((err) => logger.error("Vendor risk candidate notice failed:", err));
+      }
+
+      // Use cases shared with another vendor feed the related vendor risk
+      // score, so a change in either direction rescores this vendor's risks.
+      const removedProjectIds = Array.isArray(updateData.projects)
+        ? projectIdsBefore.filter(
+            (id) => !(updateData.projects as unknown[]).map(Number).includes(id),
+          )
+        : [];
+      if (addedProjectIds.length > 0 || removedProjectIds.length > 0) {
+        getActiveVendorRiskIdsQuery(req.organizationId!, vendorId)
+          .then((ids) =>
+            enqueueVendorRiskLinkRecomputeBatch(req.organizationId!, ids, `vendor-${vendorId}`),
+          )
+          .catch((err) => logger.error("Vendor risk link recompute enqueue failed:", err));
+      }
 
       // Send assignment notifications for newly assigned users (fire-and-forget)
       const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";

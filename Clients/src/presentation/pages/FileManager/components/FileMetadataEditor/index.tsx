@@ -17,6 +17,10 @@ import {
   ReviewStatus,
   UpdateFileMetadataInput,
 } from "../../../../../application/repository/file.repository";
+import {
+  RETENTION_POLICY_OPTIONS,
+  type RetentionPolicy,
+} from "../../../../../domain/enums/retention.enum";
 import Field from "../../../../components/Inputs/Field";
 import Select from "../../../../components/Inputs/Select";
 import DatePicker from "../../../../components/Inputs/Datepicker";
@@ -54,6 +58,7 @@ export const FileMetadataEditor: React.FC<FileMetadataEditorProps> = ({
   const [reviewStatus, setReviewStatus] = useState<ReviewStatus>("draft");
   const [version, setVersion] = useState("");
   const [expiryDate, setExpiryDate] = useState<Dayjs | null>(null);
+  const [retentionPolicy, setRetentionPolicy] = useState<RetentionPolicy | "">("");
   const [description, setDescription] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -64,6 +69,7 @@ export const FileMetadataEditor: React.FC<FileMetadataEditorProps> = ({
       setReviewStatus(file.review_status || "draft");
       setVersion(file.version || "1.0");
       setExpiryDate(file.expiry_date ? dayjs(file.expiry_date) : null);
+      setRetentionPolicy(file.retention_policy ?? "");
       setDescription(file.description || "");
       setErrors({});
     }
@@ -84,12 +90,16 @@ export const FileMetadataEditor: React.FC<FileMetadataEditorProps> = ({
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
+    // When retention_policy is set but expiry_date is left empty, the backend
+    // derives expiry_date from the policy on save. Sending both = explicit
+    // expiry_date wins.
     const updates: UpdateFileMetadataInput = {
       tags,
       // Don't include review_status if file has an active approval workflow
       ...(file?.approval_workflow_id ? {} : { review_status: reviewStatus }),
       version: version || undefined,
       expiry_date: expiryDate ? expiryDate.format("YYYY-MM-DD") : null,
+      retention_policy: retentionPolicy || null,
       description: description || null,
     };
 
@@ -188,6 +198,15 @@ export const FileMetadataEditor: React.FC<FileMetadataEditorProps> = ({
           placeholder="1.0"
           error={errors.version}
           helperText="Format: X.Y or X.Y.Z (e.g., 1.0 or 2.1.3)"
+        />
+
+        {/* Retention policy — drives expiry_date when no explicit date is set. */}
+        <Select
+          id="retention-policy"
+          label="Retention policy"
+          value={retentionPolicy}
+          items={RETENTION_POLICY_OPTIONS}
+          onChange={(e) => setRetentionPolicy(e.target.value as RetentionPolicy | "")}
         />
 
         {/* Expiry Date */}

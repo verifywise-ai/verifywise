@@ -33,7 +33,7 @@ import {
   IntakeEntityType,
 } from "../../../application/repository/intakeForm.repository";
 import CustomAxios from "../../../infrastructure/api/customAxios";
-import { LLMKeysModel } from "../../../domain/models/Common/llmKeys/llmKeys.model";
+import { useLLMKeys } from "../../../application/hooks/useLLMKeys";
 import {
   FieldPalette,
   SuggestedQuestionsPanel,
@@ -92,7 +92,9 @@ export function IntakeFormBuilder() {
   const [isDirty, setIsDirty] = useState(false);
   const [isLoadingForm, setIsLoadingForm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [llmKeys, setLlmKeys] = useState<LLMKeysModel[]>([]);
+  // Shared, per-organization cache: refreshed wherever a key changes. A failed
+  // load leaves the picker with only "None", as before.
+  const { keys: llmKeys } = useLLMKeys();
   const [formSettingsOpen, setFormSettingsOpen] = useState(true);
   const [orgUsers, setOrgUsers] = useState<
     Array<{ id: number; name: string; surname?: string; email: string }>
@@ -136,14 +138,8 @@ export function IntakeFormBuilder() {
     }
   }, [formId, isEditing, entityTypeParam]);
 
-  // Load LLM keys & users (once)
+  // Load users (once)
   useEffect(() => {
-    CustomAxios.get("/llm-keys")
-      .then((res) => {
-        const data = res.data?.data ?? res.data ?? [];
-        setLlmKeys(Array.isArray(data) ? data : []);
-      })
-      .catch(() => {});
     CustomAxios.get("/users")
       .then((res) => {
         const users = res.data?.data || res.data || [];

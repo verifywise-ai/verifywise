@@ -1,3 +1,5 @@
+import { vi } from "vitest";
+import userEvent from "@testing-library/user-event";
 import { screen } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import RiskHeatMap from "../RiskHeatMap";
@@ -68,5 +70,59 @@ describe("RiskHeatMap", () => {
     renderWithProviders(<RiskHeatMap risks={[]} />);
 
     expect(screen.queryByText(/^L\d+$/)).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Cell-select mode, used by the vendor risk heat map: a cell with risks in it
+ * is a toggle button that hands the caller its coordinates.
+ */
+describe("RiskHeatMap cell selection", () => {
+  const vendorRisks = [
+    { id: 1, risk_name: "Data leak", likelihood: "Possible", severity: "Major" },
+    { id: 2, risk_name: "Outage", likelihood: "Possible", severity: "Major" },
+  ];
+
+  it("makes only populated cells buttons, labelled with their position and count", () => {
+    renderWithProviders(<RiskHeatMap risks={vendorRisks} onCellSelect={vi.fn()} />);
+
+    const buttons = screen.getAllByRole("button");
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]).toHaveAccessibleName("Medium likelihood, High severity: 2 risks");
+    expect(buttons[0]).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("hands back the cell's coordinates on click, Enter and Space", async () => {
+    const onCellSelect = vi.fn();
+    renderWithProviders(<RiskHeatMap risks={vendorRisks} onCellSelect={onCellSelect} />);
+    const cell = screen.getByRole("button");
+
+    await userEvent.click(cell);
+    cell.focus();
+    await userEvent.keyboard("{Enter}");
+    await userEvent.keyboard(" ");
+
+    expect(onCellSelect).toHaveBeenCalledTimes(3);
+    for (const [arg] of onCellSelect.mock.calls) {
+      expect(arg).toEqual({ likelihood: 3, severity: 4 });
+    }
+  });
+
+  it("marks the selected cell pressed", () => {
+    renderWithProviders(
+      <RiskHeatMap
+        risks={vendorRisks}
+        onCellSelect={vi.fn()}
+        selectedCell={{ likelihood: 3, severity: 4 }}
+      />,
+    );
+
+    expect(screen.getByRole("button")).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("keeps the project risks view pointer-only", () => {
+    renderWithProviders(<RiskHeatMap risks={asRisks(vendorRisks)} onRiskSelect={vi.fn()} />);
+
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });

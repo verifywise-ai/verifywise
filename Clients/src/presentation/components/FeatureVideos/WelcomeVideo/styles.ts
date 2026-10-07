@@ -63,7 +63,7 @@ export const FEATURES = [
     category: "COMPLIANCE",
     title: "Compliance\nframeworks",
     description:
-      "EU AI Act, ISO 42001, NIST AI RMF, SOC 2, GDPR, and more with pluggable framework support.",
+      "EU AI Act, ISO 42001, NIST AI RMF, SOC 2, GDPR, and 20 more frameworks, all built in.",
   },
   {
     number: "07",
@@ -75,9 +75,9 @@ export const FEATURES = [
   {
     number: "08",
     category: "PLATFORM",
-    title: "Plugin\nmarketplace",
+    title: "Built-in\nextensions",
     description:
-      "Extend the platform with 30+ plugins for frameworks, integrations, and custom workflows.",
+      "Connect Slack, MLflow, Azure AI Foundry, Jira Assets, and more with extensions that admins enable.",
   },
 ] as const;
 

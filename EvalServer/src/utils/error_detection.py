@@ -5,7 +5,8 @@ Detects API errors that are unrecoverable (won't succeed on retry)
 and should stop the experiment early to avoid wasting time.
 """
 
-from typing import Tuple, Optional
+import re
+from typing import List, Optional, Tuple
 
 # Fatal error patterns that won't recover - experiment should stop
 # Format: (pattern_to_match, error_code, user_friendly_message)
@@ -245,3 +246,96 @@ class FatalErrorTracker:
             return f"Fatal error: {self.last_error_message[:200]}"
         else:
             return "Unknown fatal error"
+
+
+NO_RESPONSES_MESSAGE = "No responses generated"
+MAX_FIRST_ERROR_CHARS = 300
+
+# Credentials that provider and HTTP client errors can echo back (request URL,
+# headers, request body). Stored failure reasons are shown to every user of the
+# organization. A value after password/secret/api_key/access_token is always
+# redacted. After Bearer/Basic or a bare key/token it is redacted only when it
+# looks like a credential, so error text such as
+# "Unexpected token: <", "Basic authentication is not supported" or
+# "Missing required key: messages_template" keeps its cause.
+_TOKEN = r"[A-Za-z0-9._~+/=-]"
+_SCHEME_VALUE = re.compile(r"(?i)\b(bearer|basic)(\s+)(" + _TOKEN + r"{8,})")
+# A label starts after a non-alphanumeric character, not at a word boundary,
+# so an env-style name ("OPENAI_API_KEY=", "x_api_key:") still matches.
+_LABEL_START = r"(?<![A-Za-z0-9])"
+# Labels that always introduce a secret: the value is redacted whatever it looks like.
+# The value runs to the next whitespace, quote or separator, so a password
+# with symbols ("a!b@c#d$") is redacted whole, not cut at the first symbol.
+_STRONG_LABEL_VALUE = re.compile(
+    r"(?i)" + _LABEL_START + r"(password|passwd|secret|client[_-]?secret|api[_-]?key|access[_-]?token|auth[_-]?token)"
+    r"([\"']?\s*[:=]\s*[\"']?)([^\s\"',;&]+)"
+)
+# user:password@ (or :password@, as Redis URLs carry it) in a URL the error
+# echoes (e.g. a proxy or database URL). The password runs to the last "@"
+# before the host, so one containing "@" or "/" is redacted whole. Text
+# like "host:8080/a@b" reads the same as "user:1234/abc@host", so it is
+# redacted too: losing a port from an error beats leaking a password.
+_URL_USERINFO = re.compile(r"(://[^/\s:@]*:)(\S+)(@)(?=[^@\s]*(?:\s|$))")
+# Labels that also appear in ordinary error text ("Missing required key: x").
+_WEAK_LABEL_VALUE = re.compile(
+    r"(?i)" + _LABEL_START + r"(key|token)([\"']?\s*[:=]\s*[\"']?)(" + _TOKEN + r"{12,})"
+)
+_PREFIXED_SECRETS = [
+    re.compile(r"\b(?:sk|pk|rk)-[A-Za-z0-9_-]{8,}"),
+    re.compile(r"\b(?:hf|gsk|xox[bpas]|ghp|gho|github_pat)_[A-Za-z0-9_]{10,}"),
+    re.compile(r"\bAIza[0-9A-Za-z_-]{10,}"),
+    re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"),
+]
+
+
+def _looks_like_secret(value: str) -> bool:
+    """A credential has a digit, mixed case, base64 padding, or is very long."""
+    return (
+        len(value) >= 24
+        or any(c.isdigit() for c in value)
+        or (any(c.isupper() for c in value) and any(c.islower() for c in value))
+        or value.endswith("=")
+    )
+
+
+def redact_secrets(text: str) -> str:
+    """Replace credential-looking values in an error message with [redacted]."""
+
+    def _keep_label(match: "re.Match[str]") -> str:
+        label, sep, value = match.groups()
+        return f"{label}{sep}[redacted]" if _looks_like_secret(value) else match.group(0)
+
+    text = _URL_USERINFO.sub(lambda m: f"{m.group(1)}[redacted]{m.group(3)}", text)
+    text = _STRONG_LABEL_VALUE.sub(lambda m: f"{m.group(1)}{m.group(2)}[redacted]", text)
+    text = _SCHEME_VALUE.sub(_keep_label, text)
+    text = _WEAK_LABEL_VALUE.sub(_keep_label, text)
+    for pattern in _PREFIXED_SECRETS:
+        text = pattern.sub("[redacted]", text)
+    return text
+
+
+def build_no_responses_message(total_prompts: int, errors: List[str]) -> str:
+    """
+    Build the failure reason for a run in which no prompt produced a response.
+
+    Each failed prompt already has its own error log; this summarises them so
+    the experiment's error_message says why the run failed, not only that it did.
+
+    Args:
+        total_prompts: Number of prompts the run attempted
+        errors: Per-prompt error messages, in the order they occurred
+
+    Returns:
+        "No responses generated: <failed>/<total> prompts failed. First error: <error>",
+        or the bare "No responses generated" when no error was recorded.
+    """
+    first_error = next((" ".join(e.split()) for e in errors if e and e.strip()), None)
+    if first_error is None:
+        return NO_RESPONSES_MESSAGE
+    first_error = redact_secrets(first_error)
+    if len(first_error) > MAX_FIRST_ERROR_CHARS:
+        first_error = first_error[:MAX_FIRST_ERROR_CHARS] + "…"
+    return (
+        f"{NO_RESPONSES_MESSAGE}: {len(errors)}/{total_prompts} prompts failed. "
+        f"First error: {first_error}"
+    )

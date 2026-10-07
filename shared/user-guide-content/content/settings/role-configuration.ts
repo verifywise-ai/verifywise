@@ -24,7 +24,7 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise has four predefined roles:',
+      text: 'VerifyWise has four built-in roles. Organizations can also create custom roles (see Custom roles below).',
     },
     {
       type: 'icon-cards',
@@ -200,13 +200,23 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'custom-roles',
+      level: 2,
+      text: 'Custom roles',
+    },
+    {
+      type: 'paragraph',
+      text: 'Go to **Settings → Roles** to create roles for your organization and choose exactly which permissions each one has. The built-in roles are fixed and cannot be changed. A custom role with no permissions can sign in but cannot do anything. The Roles tab is available to users with permission to manage roles.',
+    },
+    {
+      type: 'heading',
       id: 'assigning-roles',
       level: 2,
       text: 'Assigning roles',
     },
     {
       type: 'paragraph',
-      text: 'Roles are assigned in two ways:',
+      text: 'Built-in and custom roles are assigned the same way, in two places:',
     },
     {
       type: 'heading',
@@ -299,7 +309,7 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Not right now. VerifyWise has four predefined roles (Admin, Reviewer, Editor, Auditor). Custom role configuration isn\'t available in this version.',
+      text: 'Yes. Go to **Settings → Roles** to create custom roles for your organization and choose exactly which permissions each one has. The four built-in roles (Admin, Reviewer, Editor, Auditor) are fixed and cannot be changed. A custom role with no permissions can sign in but cannot do anything. The Roles tab is available to users with permission to manage roles.',
     },
     {
       type: 'heading',

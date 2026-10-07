@@ -147,20 +147,24 @@ export const addVendorProjects = async (
   organizationId: number,
   transaction: Transaction,
 ) => {
-  let vendorsProjectFlat = [];
-  let placeholdersArray = [];
-  for (let project of projects) {
-    vendorsProjectFlat.push(organizationId, vendorId, project);
-    placeholdersArray.push("(?, ?, ?)");
-  }
-  let placeholders = placeholdersArray.join(", ");
-  const query = `INSERT INTO vendors_projects (organization_id, vendor_id, project_id) VALUES ${placeholders} RETURNING *`;
-  const vendors_projects = await sequelize.query(query, {
-    replacements: vendorsProjectFlat,
-    mapToModel: true,
-    model: VendorsProjectsModel,
-    transaction,
-  });
+  if (projects.length === 0) return [];
+  // Selecting the project rows rather than inserting bare values does three
+  // things: it tags the link with the project's is_demo (the way
+  // projects_frameworks and projects_members are tagged), it keeps the link
+  // inside the organization, and it drops duplicate ids.
+  const vendors_projects = await sequelize.query(
+    `INSERT INTO vendors_projects (organization_id, vendor_id, project_id, is_demo)
+     SELECT :organizationId, :vendorId, p.id, p.is_demo
+       FROM projects p
+      WHERE p.organization_id = :organizationId AND p.id IN (:projects)
+     RETURNING *`,
+    {
+      replacements: { organizationId, vendorId, projects },
+      mapToModel: true,
+      model: VendorsProjectsModel,
+      transaction,
+    },
+  );
   return vendors_projects;
 };
 

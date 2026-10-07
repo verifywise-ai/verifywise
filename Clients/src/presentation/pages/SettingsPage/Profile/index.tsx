@@ -336,7 +336,13 @@ const ProfileForm: React.FC = () => {
             response?.status || "undefined"
           }, Response: ${JSON.stringify(response)}`,
         });
-        showAlert("error", "Error", "Failed to delete account. Please try again.");
+        showAlert(
+          "error",
+          "Error",
+          response?.status === 409 && response.data?.message
+            ? response.data.message
+            : "Failed to delete account. Please try again.",
+        );
       }
     } catch (error) {
       logEngine({

@@ -26,6 +26,7 @@ const RisksView = ({
   fetchRisks,
   title,
   headerContent,
+  actions,
   refreshTrigger,
   readOnly = false,
   emptyMessage,
@@ -290,9 +291,12 @@ const RisksView = ({
             mb: 10,
           }}
         >
-          <Typography sx={{ fontSize: 16, fontWeight: 600, color: "text.primary" }}>
-            {title}
-          </Typography>
+          <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Typography sx={{ fontSize: 16, fontWeight: 600, color: "text.primary" }}>
+              {title}
+            </Typography>
+            {actions}
+          </Stack>
 
           {readOnly && (
             <Box
@@ -303,7 +307,7 @@ const RisksView = ({
               }}
             >
               <Typography variant="body2" color="text.secondary">
-                This is a read-only view. To add or edit risks, go to the{" "}
+                New risks can be added here. To edit or delete an existing risk, go to the{" "}
                 <Typography
                   component="a"
                   href="/risk-management"

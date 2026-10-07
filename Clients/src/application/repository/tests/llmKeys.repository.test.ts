@@ -338,6 +338,22 @@ describe("Test LLM Keys Repository", () => {
       expect(result.providers).toEqual([]);
     });
 
+    it("should treat a response without a status as a failed load, not as no keys", async () => {
+      vi.mocked(apiServices.get).mockResolvedValue({ data: {}, status: 200, statusText: "OK" });
+
+      await expect(getLLMKeyStatus()).rejects.toThrow("Unexpected LLM key status response");
+    });
+
+    it("should treat a malformed status as a failed load", async () => {
+      vi.mocked(apiServices.get).mockResolvedValue({
+        data: { data: "<html>" },
+        status: 200,
+        statusText: "OK",
+      });
+
+      await expect(getLLMKeyStatus()).rejects.toThrow("Unexpected LLM key status response");
+    });
+
     it("should throw an error if the API call fails", async () => {
       const mockError = {
         response: { status: 500, data: { message: "Internal Server Error" } },

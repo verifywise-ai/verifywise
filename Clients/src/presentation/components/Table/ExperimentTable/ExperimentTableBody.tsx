@@ -15,6 +15,7 @@ import singleTheme from "../../../themes/v1SingleTheme";
 import { palette } from "../../../themes/palette";
 import ConfirmationModal from "../../Dialogs/ConfirmationModal";
 import { CustomizableButton } from "../../button/customizable-button";
+import VWTooltip from "../../VWTooltip";
 import type { IExperimentRow, IExperimentTableBodyProps } from "../../../types/interfaces/i.table";
 
 // Pulse animation for "Running..." text in the experiment name cell.
@@ -138,11 +139,31 @@ const ExperimentTableBody: React.FC<IExperimentTableBodyProps> = ({
                   </Typography>
                 </Box>
               ) : row.status === "Failed" ? (
-                <Typography
-                  sx={{ fontSize: 13, color: palette.status.error.text, fontWeight: 500 }}
-                >
-                  Failed
-                </Typography>
+                row.errorMessage?.trim() ? (
+                  <VWTooltip
+                    content={<Box sx={{ wordBreak: "break-word" }}>{row.errorMessage.trim()}</Box>}
+                    placement="top-start"
+                  >
+                    <Typography
+                      component="span"
+                      sx={{
+                        fontSize: 13,
+                        color: palette.status.error.text,
+                        fontWeight: 500,
+                        textDecoration: "underline dotted",
+                        textUnderlineOffset: "3px",
+                      }}
+                    >
+                      Failed
+                    </Typography>
+                  </VWTooltip>
+                ) : (
+                  <Typography
+                    sx={{ fontSize: 13, color: palette.status.error.text, fontWeight: 500 }}
+                  >
+                    Failed
+                  </Typography>
+                )
               ) : (
                 <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{row.name || row.id}</Typography>
               )}

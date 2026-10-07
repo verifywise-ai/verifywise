@@ -30,6 +30,24 @@
       "package": "image-size",
       "title": "image-size: JXL and HEIF parsers allow denial of service through infinite loops",
       "justification": "The advisory affects all published versions of image-size. The library is only used transitively by @mastra/memory for parsing image metadata, and the application does not pass untrusted image data to it directly. We will revisit once a patched version is released."
+    },
+    {
+      "id": "ghsa-vfj7-8cjw-p6xm",
+      "package": "braces",
+      "title": "braces: Stack-exhaustion DoS through deeply nested patterns",
+      "justification": "No patched 3.x release exists; braces@3.0.3 is the latest 3.x and micromatch@4 (a runtime dependency of http-proxy-middleware) requires ^3.0.3, so the 4.x fix line cannot be taken without breaking dependency constraints. The application does not feed user-controlled input to brace pattern expansion, so practical DoS exposure is limited. The exception will be removed once micromatch accepts a patched braces or a compatible patched 3.x is published."
+    },
+    {
+      "id": "ghsa-p6vx-979v-rg4c",
+      "package": "seroval",
+      "title": "Seroval: fromJSON() Promise thenable assimilation invokes plugin-produced callables (bypass of GHSA-mv8w-475r-vwqw)",
+      "justification": "No upstream fix is reachable through the dependency chain: seroval <=1.6.2 is pulled in only via @tanstack/react-query-devtools -> @tanstack/query-devtools -> solid-js, and even the latest solid-js (1.9.15) pins seroval ~1.5.4 (inside the affected range), so no API-compatible release chain reaches the patched seroval >=1.6.3. The affected code runs only in the opt-in React Query devtools panel during local development, never in production bundles. The exception will be removed once solid-js/@tanstack query-devtools release a compatible version depending on seroval >=1.6.3."
+    },
+    {
+      "id": "ghsa-jp82-f5mq-hwhp",
+      "package": "seroval",
+      "title": "Seroval: Memory exhaustion via unchecked TypedArray length in JSON deserialization",
+      "justification": "Same unreachable-fix situation as ghsa-p6vx-979v-rg4c: seroval <=1.6.2 comes only via @tanstack/react-query-devtools -> @tanstack/query-devtools -> solid-js, and the latest solid-js (1.9.15) still pins seroval ~1.5.4. Exposure is limited to the local-development React Query devtools panel; the deserialization path is not exposed to untrusted production input. The exception will be removed once a compatible upstream chain depending on seroval >=1.6.3 is available."
     }
   ]
 }

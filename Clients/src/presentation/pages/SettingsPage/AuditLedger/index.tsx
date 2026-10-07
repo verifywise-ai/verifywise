@@ -39,6 +39,7 @@ import singleTheme from "../../../themes/v1SingleTheme";
 import { useAuditLedger } from "./hooks/useAuditLedger";
 import { useFeatureSettings } from "../../../../application/hooks/useFeatureSettings";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import { pageOfLabel } from "../../../components/Table/pageOfLabel";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
@@ -370,9 +371,17 @@ export default function AuditLedger() {
                         opacity: 0.7,
                       }}
                     >
-                      {filters.searchUser
-                        ? `Showing ${entries.length} matching of ${total.toLocaleString()} entries`
-                        : `Showing ${Math.min(page * rowsPerPage + 1, total)}–${Math.min((page + 1) * rowsPerPage, total)} of ${total.toLocaleString()} entries`}
+                      {filters.searchUser ? (
+                        <>
+                          Showing {entries.length} matching of {total.toLocaleString()} entries
+                        </>
+                      ) : (
+                        <>
+                          Showing {Math.min(page * rowsPerPage + 1, total)}–
+                          {Math.min((page + 1) * rowsPerPage, total)} of {total.toLocaleString()}{" "}
+                          entries
+                        </>
+                      )}
                     </TableCell>
                     <TablePagination
                       count={total}
@@ -384,7 +393,7 @@ export default function AuditLedger() {
                       ActionsComponent={(props) => <TablePaginationActions {...props} />}
                       labelRowsPerPage="Rows per page"
                       labelDisplayedRows={({ page: p, count }) =>
-                        `Page ${p + 1} of ${Math.max(1, Math.ceil(count / rowsPerPage))}`
+                        pageOfLabel(p + 1, Math.max(1, Math.ceil(count / rowsPerPage)))
                       }
                       slotProps={{
                         select: {

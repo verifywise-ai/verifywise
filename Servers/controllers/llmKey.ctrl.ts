@@ -17,7 +17,56 @@ import {
 import { ILLMKey, LLMProvider } from "../domain.layer/interfaces/i.llmKey";
 
 import { translateError } from "../utils/i18n.utils";
+import { roleHasPermission } from "../utils/rolePermissions.utils";
+import { BUILTIN_ROLE_PERMISSIONS } from "../config/rolePermissions.config";
 const fileName = "llmKey.ctrl.ts";
+
+/**
+ * Only the scheme and host of a provider URL. A credential can sit in the
+ * user info, query string, path or fragment, and readers without
+ * llmKeys.admin only need to see which endpoint is used.
+ */
+const urlOrigin = (url: string | null | undefined): string | null | undefined => {
+  if (!url) return url;
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * A Custom provider's credentials usually sit in its headers, and sometimes
+ * in its URL (user:token@, ?api-key=, a path segment), so only roles that
+ * manage keys (llmKeys.admin) see them. Everyone else gets the rest of the
+ * row: the Advisor, reporting and Start here only need to know a key exists
+ * and which provider/model it is. Built-in providers' URLs are fixed public
+ * constants and stay as they are.
+ *
+ * If the permission lookup fails, the built-in role matrix (no database)
+ * decides, so an Admin still gets full data: the edit form would otherwise
+ * load the masked values and save them back over the real ones.
+ */
+const hideCredentialsUnlessManager = async <
+  T extends { name?: string; custom_headers?: unknown; url?: string | null },
+>(
+  req: Request,
+  keys: T[],
+): Promise<T[]> => {
+  let canManage: boolean;
+  try {
+    canManage = await roleHasPermission(req.organizationId ?? null, req.role!, "llmKeys.admin");
+  } catch (error) {
+    logger.error("Could not resolve llmKeys.admin; using the built-in role matrix:", error);
+    canManage = BUILTIN_ROLE_PERMISSIONS[req.role!]?.has("llmKeys.admin") ?? false;
+  }
+  if (canManage) return keys;
+  return keys.map((key) =>
+    key.name === "Custom"
+      ? { ...key, custom_headers: null, url: urlOrigin(key.url) }
+      : { ...key, custom_headers: null },
+  );
+};
 
 /**
  * Validate that custom_headers is a plain object with string keys and string values.
@@ -60,7 +109,10 @@ export const getLLMKeys = async (req: Request, res: Response) => {
   logger.debug(`Fetching LLM Keys`);
   logStructured("processing", `starting LLM Keys fetch`, functionName, fileName);
   try {
-    const llmKeys = await getLLMKeysQuery(req.organizationId!);
+    const llmKeys = await hideCredentialsUnlessManager(
+      req,
+      await getLLMKeysQuery(req.organizationId!),
+    );
     logStructured("successful", `fetched ${llmKeys.length} LLM Keys`, functionName, fileName);
     logger.debug(`Fetched ${llmKeys.length} LLM Keys`);
     return res.status(200).json(STATUS_CODE[200](llmKeys));
@@ -84,7 +136,10 @@ export const getLLMKey = async (req: Request, res: Response) => {
   logStructured("processing", `starting LLM Key fetch`, functionName, fileName);
   try {
     const name = req.params.name as string;
-    const llmKey = await getLLMKeyQuery(req.organizationId!, name);
+    const llmKey = await hideCredentialsUnlessManager(
+      req,
+      await getLLMKeyQuery(req.organizationId!, name),
+    );
     logStructured("successful", `fetched LLM Key`, functionName, fileName);
     logger.debug(`Fetched LLM Key with name: ${name}`);
     return res.status(200).json(STATUS_CODE[200](llmKey));

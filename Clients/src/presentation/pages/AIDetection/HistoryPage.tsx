@@ -58,6 +58,7 @@ import {
 import { Scan, ScansResponse, ScanStatus } from "../../../domain/ai-detection/types";
 import { useAIDetectionSidebarContext } from "../../../application/contexts/AIDetectionSidebar.context";
 import { palette } from "../../themes/palette";
+import { pageOfLabel } from "../../components/Table/pageOfLabel";
 
 function getGradeColor(grade: string | null | undefined): string {
   switch (grade) {
@@ -833,7 +834,7 @@ export default function HistoryPage() {
                       ActionsComponent={(props) => <TablePaginationActions {...props} />}
                       labelRowsPerPage="Rows per page"
                       labelDisplayedRows={({ page: currentPage, count }) =>
-                        `Page ${currentPage + 1} of ${Math.max(1, Math.ceil(count / rowsPerPage))}`
+                        pageOfLabel(currentPage + 1, Math.max(1, Math.ceil(count / rowsPerPage)))
                       }
                       slotProps={{
                         select: {

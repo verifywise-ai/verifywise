@@ -59,7 +59,12 @@ const MITIGATION_SERVER_FIELD_MAP: Record<string, keyof MitigationFormValues> = 
   date_of_assessment: "dateOfAssessment",
 };
 
-const riskInitialState: RiskFormValues = {
+/**
+ * Empty risk form state. Exported so callers that open the form pre-bound to an
+ * entity (e.g. the use case risks tab) can seed a field without restating every
+ * default.
+ */
+export const riskInitialState: RiskFormValues = {
   riskName: "",
   actionOwner: 0,
   aiLifecyclePhase: 0,

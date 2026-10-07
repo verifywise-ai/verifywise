@@ -1,6 +1,6 @@
 # Servers — Backend Development Guide
 
-> **Last Updated:** 2026-07-20
+> **Last Updated:** 2026-09-28
 
 ---
 
@@ -126,6 +126,16 @@ This is for local developer convenience only — never enable on shared environm
 
 ---
 
+## Seeders
+
+Demo data seeders live in `scripts/seeds/` with npm commands (`seed:demo`,
+`seed:demo-org`, `seed:incidents`, `seed:automation-logs`, `seed:e2e`). See
+`scripts/seeds/README.md` for every seeder in the repo, including the E2E
+seeders that stay in `scripts/` because CI references them by path, `reset-db`,
+and the reference-data seeds that run with migrations.
+
+---
+
 ## Backend Development
 
 ### Layer Flow
@@ -141,6 +151,11 @@ This is for local developer convenience only — never enable on shared environm
 import entityRoutes from "./routes/entity.route";
 app.use("/api/entities", entityRoutes);
 ```
+
+### Frameworks and Extensions
+
+- **Frameworks 5–25** (SOC 2, GDPR, HIPAA, ...) are declared in `structures/<Name>/*.structure.ts` (registry `structures/index.ts`) and served by the generic `routes/frameworkImpl.route.ts`. Migrations `require("../../dist/structures")`, so run `npm run build` before `npm run migrate-db`. Guide: `docs/technical/guides/adding-new-framework.md`.
+- **Extensions** live in `extensions/<key>/`. They are mounted at `/api/extensions/<key>` **after** the `/api/extensions` catalog router, and gated with `requireExtensionEnabled("<key>")`. Read config with `ExtensionService.getRuntimeConfiguration(key, orgId)`. Reference: `docs/technical/infrastructure/extensions.md`.
 
 ---
 
@@ -214,6 +229,7 @@ Read the relevant file BEFORE implementing changes in that area:
 | Controller/route/utils patterns           | `docs/technical/guides/backend-patterns.md`       |
 | Adding a new feature (full guide)         | `docs/technical/guides/adding-new-feature.md`     |
 | Adding a new framework                    | `docs/technical/guides/adding-new-framework.md`   |
+| Extensions (catalog, gate, config)        | `docs/technical/infrastructure/extensions.md`     |
 | API conventions                           | `docs/technical/guides/api-conventions.md`        |
 | Code style (short version)                | `docs/technical/guides/code-style.md`             |
 | Detailed backend coding standards         | `CodeRules/04-backend/`                           |

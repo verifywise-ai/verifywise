@@ -9,12 +9,12 @@ import { useNavigate } from "react-router";
 import { logEngine } from "../../../../application/tools/log.engine";
 import { useDispatch } from "react-redux";
 import {
-  setAuthToken,
   setExpiration,
   setOnboardingStatus,
   setIsOrgCreator,
   setIsSuperAdmin,
 } from "../../../../application/redux/auth/authSlice";
+import { startSession } from "../../../../application/utils/clearSession";
 import Alert from "../../../components/Alert";
 import { ENV_VARs } from "../../../../../env.vars";
 import { loginUser } from "../../../../application/repository/user.repository";
@@ -212,14 +212,8 @@ const Login: React.FC = () => {
           const token = response.data.data.token;
           const isSuperAdminFlag = response.data.data.isSuperAdmin || false;
 
-          if (values.rememberMe) {
-            const expirationDate = Date.now() + 30 * 24 * 60 * 60 * 1000;
-            dispatch(setAuthToken(token));
-            dispatch(setExpiration(expirationDate));
-          } else {
-            dispatch(setAuthToken(token));
-            dispatch(setExpiration(null));
-          }
+          startSession(dispatch, token);
+          dispatch(setExpiration(values.rememberMe ? Date.now() + 30 * 24 * 60 * 60 * 1000 : null));
 
           dispatch(setIsSuperAdmin(isSuperAdminFlag));
 

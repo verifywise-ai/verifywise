@@ -403,7 +403,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Filter mappings by governance domain": "[DE] Filter mappings by governance domain",
     "Framework axis": "[DE] Framework axis",
     "Framework containing the source control": "[DE] Framework containing the source control",
-    "Framework coverage": "[DE] Framework coverage",
+    "Framework coverage": "Rahmenwerksabdeckung",
     "Framework receiving the mapped control": "[DE] Framework receiving the mapped control",
     "Frameworks assigned to the current project": "[DE] Frameworks in current project",
     "Frameworks assigned to the selected project": "[DE] Frameworks assigned to project",
@@ -593,6 +593,13 @@ export const translations: Record<string, Record<string, string>> = {
     "Add new": "Neu hinzufügen",
     "Add agent": "Agent hinzufügen",
     "Add new risk": "Neues Risiko hinzufügen",
+    "Add a new risk": "Neues Risiko hinzufügen",
+    "Create a detailed breakdown of risks and their mitigation strategies to assist in documenting your risk management activities effectively.":
+      "Erstellen Sie eine detaillierte Aufschlüsselung der Risiken und ihrer Minderungsstrategien, um Ihre Risikomanagement-Aktivitäten wirksam zu dokumentieren.",
+    "Manage all organization risks in risk management":
+      "Alle Risiken der Organisation im Risikomanagement verwalten",
+    "View and add risks for this use case":
+      "Risiken für diesen Anwendungsfall anzeigen und hinzufügen",
     "Add new risks": "Neue Risiken hinzufügen",
     "Add new risk manually": "Neues Risiko manuell hinzufügen",
     "Add new risk menu": "Menü für neues Risiko",
@@ -1000,13 +1007,17 @@ export const translations: Record<string, Record<string, string>> = {
     "SOC2 Type I": "SOC 2 Typ I",
     "SOC2 Type II": "SOC 2 Typ II",
     "AI regulation in the Middle East": "KI-Regulierung im Nahen Osten",
-    "We graded 205 AI apps on data transparency":
-      "Wir haben 205 KI-Apps zur Datentransparenz bewertet",
-    "OSFI Guideline E-23: AI model risk rules": "OSFI-Leitlinie E-23: Regeln für KI-Modellrisiken",
-    "What we found running GRS across 15 AI models":
-      "Was wir bei der Anwendung von GRS auf 15 KI-Modelle herausfanden",
-    "AI governance salaries 2026": "Gehälter im Bereich KI-Governance 2026",
+    "VerifyWise on the Wavestone UK Cybersecurity Startup Radar":
+      "VerifyWise im UK Cybersecurity Startup Radar von Wavestone",
+    "VerifyWise 2.5: reporting, observability, and extensions":
+      "VerifyWise 2.5: Reporting, Observability und Extensions",
+    "Stop shopping for DORA compliance software":
+      "Hören Sie auf, DORA-Compliance-Software zu suchen",
+    "Model risk management for AI and ML": "Modellrisikomanagement für KI und ML",
     "Clauses": "Klauseln",
+    "No regulation connected": "Keine Regulierung verbunden",
+    "link a framework to track progress": "Rahmenwerk verknüpfen, um den Fortschritt zu verfolgen",
+    "{items}: {done} of {total} completed": "{items}: {done} von {total} abgeschlossen",
     "Annexes": "Anhänge",
     "AI models mapped to this framework": "Diesem Rahmenwerk zugeordnete KI-Modelle",
     "Organizational Frameworks": "Organisatorische Rahmenwerke",
@@ -1032,6 +1043,58 @@ export const translations: Record<string, Record<string, string>> = {
     // Stepper counter ("Step X of Y") — split into separate text nodes
     "Step": "Schritt",
     "of": "von",
+    "Page": "Seite",
+    "Showing": "Anzeige",
+    "matching of": "passende von",
+    "entries": "Einträgen",
+    "items": "Elementen",
+    "users": "Benutzern",
+    "departments": "Abteilungen",
+    "tool(s)": "Tools",
+    "risk(s)": "Risiken",
+    "project risk(s)": "Projektrisiken",
+    "evidence(s)": "Nachweisen",
+    "project report(s)": "Projektberichten",
+    "vendor(s)": "Anbieter",
+    "item(s)": "Elementen",
+    "use case(s)": "Anwendungsfällen",
+    "scan(s)": "Scans",
+    "model(s)": "Modellen",
+    "datasets": "Datensätzen",
+    "model risk(s)": "Modellrisiken",
+    "form(s)": "Formularen",
+    "agent(s)": "Agenten",
+    "battle": "Vergleich",
+    "battles": "Vergleichen",
+    "dataset": "Datensatz",
+    "experiment": "Experiment",
+    "experiments": "Experimenten",
+    "incident": "Vorfall",
+    "incidents": "Vorfällen",
+    "model": "Modell",
+    "models": "Modellen",
+    "policy": "Richtlinie",
+    "policies": "Richtlinien",
+    "project": "Projekt",
+    "projects": "Projekten",
+    "report": "Bericht",
+    "reports": "Berichten",
+    "risk": "Risiko",
+    "risks": "Risiken",
+    "scorer": "Bewerter",
+    "scorers": "Bewertern",
+    "task": "Aufgabe",
+    "tasks": "Aufgaben",
+    "training": "Schulung",
+    "trainings": "Schulungen",
+    "vendor risk": "Anbieterrisiko",
+    "vendor risks": "Anbieterrisiken",
+    "workflow": "Workflow",
+    "workflows": "Workflows",
+    "signal": "Signal",
+    "signals": "Signalen",
+    "reason": "Grund",
+    "reasons": "Gründen",
 
     // Filters / search
     "Search": "Suchen",
@@ -1668,6 +1731,16 @@ export const translations: Record<string, Record<string, string>> = {
     "Connect your GitHub repositories": "GitHub-Repositories verbinden",
     "Copy key": "Schlüssel kopieren",
     "Copy link": "Link kopieren",
+    "Copied": "Kopiert",
+    "Could not copy the link. Select it and copy it manually.":
+      "Der Link konnte nicht kopiert werden. Markieren Sie ihn und kopieren Sie ihn manuell.",
+    "Invitation link": "Einladungslink",
+    "Share the invitation link": "Einladungslink teilen",
+    "The email service is unavailable, so the invitation could not be resent. Links sent earlier no longer work. Share this link with the invitee instead.":
+      "Der E-Mail-Dienst ist nicht verfügbar, daher konnte die Einladung nicht erneut gesendet werden. Zuvor gesendete Links funktionieren nicht mehr. Teilen Sie stattdessen diesen Link mit der eingeladenen Person.",
+    "The invitation was created, but the email could not be sent. Share this link with the invitee so they can create an account.":
+      "Die Einladung wurde erstellt, aber die E-Mail konnte nicht gesendet werden. Teilen Sie diesen Link mit der eingeladenen Person, damit sie ein Konto erstellen kann.",
+    "The invitation email could not be sent": "Die Einladungs-E-Mail konnte nicht gesendet werden",
     "Copy response": "Antwort kopieren",
     "Copy the key below. It will not be shown again.":
       "Kopieren Sie den Schlüssel unten. Er wird nicht erneut angezeigt.",
@@ -1741,7 +1814,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Deny": "Ablehnen",
     "Discard": "Verwerfen",
     "Discard unsaved automation": "Ungespeicherte Automatisierung verwerfen",
-    "Dismiss": "Schließen",
+    "Dismiss": "Verwerfen",
     "Dismiss suggestion": "Vorschlag verwerfen",
     "Dismiss welcome message": "Willkommensnachricht schließen",
     "Do you want to create demo data?": "Möchten Sie Demodaten erstellen?",
@@ -2218,6 +2291,14 @@ export const translations: Record<string, Record<string, string>> = {
     "Linked Operational Objects": "Verknüpfte operative Objekte",
     "Linked Policies Objects": "Verknüpfte Richtlinien-Objekte",
     "Linked risk": "Verknüpftes Risiko",
+    "Configure an LLM API key so Advisor and reporting can run.":
+      "Konfigurieren Sie einen LLM-API-Schlüssel, damit KI-Berater und Berichte funktionieren.",
+    "Advisor and reporting need an LLM API key. Contact your administrator.":
+      "KI-Berater und Berichte benötigen einen LLM-API-Schlüssel. Wenden Sie sich an Ihren Administrator.",
+    "Configure an LLM API key to send messages.":
+      "Konfigurieren Sie einen LLM-API-Schlüssel, um Nachrichten zu senden.",
+    "Sending messages requires an LLM API key. Contact your administrator.":
+      "Zum Senden von Nachrichten ist ein LLM-API-Schlüssel erforderlich. Wenden Sie sich an Ihren Administrator.",
     "LLM Arena": "LLM-Arena",
     "LLM provider": "LLM-Anbieter",
     "LLM providers": "LLM-Anbieter",
@@ -4876,6 +4957,8 @@ export const translations: Record<string, Record<string, string>> = {
     "LLM key": "LLM-Schlüssel",
     "LLM use case": "LLM-Anwendungsfall",
     "LLM-enhanced analysis": "LLM-gestützte Analyse",
+    "Couldn't load LLM keys. Reload the page to try again.":
+      "LLM-Schlüssel konnten nicht geladen werden. Laden Sie die Seite neu, um es erneut zu versuchen.",
     "LangChain agents, CrewAI, AutoGen, MCP servers, and other autonomous AI systems will appear here":
       "LangChain-Agenten, CrewAI, AutoGen, MCP-Server und andere autonome KI-Systeme erscheinen hier",
     "Last login": "Letzte Anmeldung",
@@ -5566,8 +5649,10 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Chatbot for Customer Support": "KI-Chatbot für den Kundensupport",
     "AI Gateway": "AI Gateway",
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar und CI/CD-Scanning",
-    "Custom frameworks, Model Risk Management, and Extensions":
-      "Custom Frameworks, Model Risk Management und Extensions",
+    "Custom roles, risk inheritance, and evidence retention":
+      "Benutzerdefinierte Rollen, Risikovererbung und Aufbewahrung von Nachweisen",
+    "Built-in frameworks, Model Risk Management, and Extensions":
+      "Integrierte Frameworks, Model Risk Management und Extensions",
     "AI Trust Index, AI Apps inventory, and Agent Control":
       "AI Trust Index, AI Apps inventory und Agent Control",
     "EU AI Act control workflow, clearable selects, and AI advisor fix":
@@ -5655,8 +5740,16 @@ export const translations: Record<string, Record<string, string>> = {
     "Activate the compliance frameworks relevant to your organization.":
       "Aktivieren Sie die für Ihre Organisation relevanten Compliance-Rahmenwerke.",
     "Active incidents": "Aktive Vorfälle",
-    "Add SOC 2, GDPR, HIPAA, and other compliance frameworks as plugins with full controls.":
-      "Fügen Sie SOC 2, GDPR, HIPAA und andere Compliance-Rahmenwerke als Plugins mit vollständigen Kontrollen hinzu.",
+    "SOC 2, GDPR, HIPAA, DORA, and 17 more frameworks are built in, with requirements, evidence, and risk tracking.":
+      "SOC 2, GDPR, HIPAA, DORA und 17 weitere Rahmenwerke sind integriert, mit Anforderungen, Nachweisen und Risikoverfolgung.",
+    "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import, and Dataset Bulk Upload.":
+      "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import und Dataset Bulk Upload.",
+    "Admins enable, configure, and disable extensions from the Extensions page. Nothing to install.":
+      "Administratoren aktivieren, konfigurieren und deaktivieren Extensions auf der Seite Extensions. Keine Installation erforderlich.",
+    "Import risks from Excel, bulk upload datasets with PII detection, and define model lifecycle phases.":
+      "Importieren Sie Risiken aus Excel, laden Sie Datensätze gesammelt mit PII-Erkennung hoch und definieren Sie Phasen des Modelllebenszyklus.",
+    "Connect Slack, MLflow, Azure AI Foundry, Jira Assets, and more with extensions that admins enable.":
+      "Verbinden Sie Slack, MLflow, Azure AI Foundry, Jira Assets und mehr mit Extensions, die Administratoren aktivieren.",
     "Add at least one field before publishing":
       "Fügen Sie mindestens ein Feld hinzu, bevor Sie veröffentlichen",
     "Add colleagues to collaborate on compliance and risk management tasks.":
@@ -6003,8 +6096,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Conformity assessment topics": "Themen der Konformitätsbewertung",
     "Congratulations": "Glückwunsch",
     "Connect": "Verbinden",
-    "Connect Slack, Jira, MLflow, Azure AI, and more for seamless workflow integration.":
-      "Verbinden Sie Slack, Jira, MLflow, Azure AI und mehr für eine nahtlose Workflow-Integration.",
+    "Send notifications to Slack, sync models from MLflow and Azure AI Foundry, and import use cases from Jira Assets.":
+      "Senden Sie Benachrichtigungen an Slack, synchronisieren Sie Modelle aus MLflow und Azure AI Foundry und importieren Sie Anwendungsfälle aus Jira Assets.",
     "Connect a GitHub token to scan private repositories":
       "Verbinden Sie ein GitHub-Token, um private Repositories zu scannen",
     "Connect with ML platforms to track experiments, models, and deployments.":
@@ -6247,8 +6340,8 @@ export const translations: Record<string, Record<string, string>> = {
     "EU AI Act Compliance Dashboard": "EU-KI-Verordnungs-Compliance-Dashboard",
     "EU AI Act only (specific to an AI system/project)":
       "Nur EU-KI-Verordnung (spezifisch für ein KI-System/Projekt)",
-    "EU AI Act, ISO 42001, NIST AI RMF, SOC 2, GDPR, and more with pluggable framework support.":
-      "EU-KI-Verordnung, ISO 42001, NIST AI RMF, SOC 2, GDPR und mehr mit Plugin-fähiger Rahmenwerk-Unterstützung.",
+    "EU AI Act, ISO 42001, NIST AI RMF, SOC 2, GDPR, and 20 more frameworks, all built in.":
+      "EU-KI-Verordnung, ISO 42001, NIST AI RMF, SOC 2, GDPR und 20 weitere Rahmenwerke, alle integriert.",
     "EU AI act": "EU-KI-Verordnung",
     "EU Database Data Entry Timeliness": "Zeitnähe der EU-Datenbank-Dateneingabe",
     "EU Database Registration": "EU-Datenbank-Registrierung",
@@ -6397,6 +6490,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Failed to create the vendor risk. Please try again.":
       "Erstellen des Anbieterrisikos fehlgeschlagen. Bitte erneut versuchen.",
     "Failed to delete": "Löschen fehlgeschlagen",
+    "Failed to delete account. Please try again.":
+      "Konto konnte nicht gelöscht werden. Bitte versuchen Sie es erneut.",
     "Failed to delete API key": "Löschen des API-Schlüssels fehlgeschlagen",
     "Failed to delete comparison": "Löschen des Vergleichs fehlgeschlagen",
     "Failed to delete dataset. Please try again.":
@@ -7355,8 +7450,8 @@ export const translations: Record<string, Record<string, string>> = {
     "References to AI models in the codebase": "Verweise auf KI-Modelle im Code",
     "Register AI-related training programs and educational resources. Track completion status, certifications, and learning progress across your team.":
       "Registrieren Sie KI-bezogene Schulungsprogramme und Bildungsressourcen. Verfolgen Sie den Abschlussstatus, Zertifizierungen und den Lernfortschritt in Ihrem Team.",
-    "Register and track AI models with details like hosting, biases, and limitations. Extend with the lifecycle plugin.":
-      "Registrieren und verfolgen Sie KI-Modelle mit Details wie Hosting, Verzerrungen und Einschränkungen. Erweitern Sie mit dem Lebenszyklus-Plugin.",
+    "Register and track AI models with details like hosting, biases, and limitations. Extend with the Model Lifecycle extension.":
+      "Registrieren und verfolgen Sie KI-Modelle mit Details wie Hosting, Verzerrungen und Einschränkungen. Erweitern Sie mit der Extension Model Lifecycle.",
     "Register external AI providers and third-party services. Document vendor information, contracts, and compliance requirements in one centralized location.":
       "Registrieren Sie externe KI-Anbieter und Drittanbieterdienste. Dokumentieren Sie Anbieterinformationen, Verträge und Compliance-Anforderungen an einem zentralen Ort.",
     "Register providers, authorized representatives, and deployers, along with their AI systems, in the EU database as required by the AI Act.":
@@ -9001,6 +9096,303 @@ export const translations: Record<string, Record<string, string>> = {
       "Welchem geschäftlichen Zweck dient der Anwendungsfall?",
     "Who is the intended audience for the use case?":
       "Wer ist die gewünschte Zielgruppe für den Anwendungsfall?",
+    // Risk inheritance (graph, key, coverage, dismissal and duplicate reports)
+    "Risk inheritance": "Risikovererbung",
+    "Risk inheritance graph": "Risikovererbungsgraph",
+    "Loading risk inheritance graph...": "Risikovererbungsgraph wird geladen...",
+    "Failed to load the risk graph": "Der Risikograph konnte nicht geladen werden",
+    "No risk links yet. Open a risk and run the link scan from its Linked risks panel.":
+      "Noch keine Risikoverknüpfungen. Öffnen Sie ein Risiko und starten Sie den Verknüpfungs-Scan im Bereich „Verknüpfte Risiken“.",
+    "Showing the first 500 links. Filter by status to narrow the graph.":
+      "Es werden die ersten 500 Verknüpfungen angezeigt. Filtern Sie nach Status, um den Graphen einzugrenzen.",
+    "Only admins can view the risk inheritance graph.":
+      "Nur Administratoren können den Risikovererbungsgraphen anzeigen.",
+    "Link types": "Verknüpfungstypen",
+    "Inherits": "Erbt",
+    "Suggested": "Vorgeschlagen",
+    "Competing": "Konkurrierend",
+    "{risks} risks, {links} links": "{risks} Risiken, {links} Verknüpfungen",
+    "Click the canvas to clear the selection.":
+      "Klicken Sie auf die Zeichenfläche, um die Auswahl aufzuheben.",
+    "Select a risk to trace its links.":
+      "Wählen Sie ein Risiko aus, um seinen Verknüpfungen zu folgen.",
+    "Risk {id}": "Risiko {id}",
+    "Risk level: {level}": "Risikostufe: {level}",
+    "Parent level changed": "Übergeordnete Stufe geändert",
+    "Parent level changed.": "Übergeordnete Stufe geändert.",
+    "Map key": "Legende",
+    "What is this map?": "Was ist diese Karte?",
+    'Each box is a risk, coloured by type. Arrows run from a parent risk to the risks that inherit from it. "Parent level changed" marks a risk whose parent moved and needs a second look.':
+      "Jedes Kästchen ist ein Risiko, nach Typ eingefärbt. Pfeile führen von einem übergeordneten Risiko zu den Risiken, die von ihm erben. „Übergeordnete Stufe geändert“ kennzeichnet ein Risiko, dessen übergeordnetes Risiko die Stufe gewechselt hat und das erneut geprüft werden sollte.",
+    "Control coverage": "Kontrollabdeckung",
+    "Which active risks are not mitigated by any control yet.":
+      "Welche aktiven Risiken noch durch keine Kontrolle gemindert werden.",
+    "Active risks": "Aktive Risiken",
+    "Covered by a control": "Durch eine Kontrolle abgedeckt",
+    "Coverage gaps": "Abdeckungslücken",
+    "No framework yet": "Noch kein Rahmenwerk",
+    "Level": "Stufe",
+    "Assessment links": "Bewertungsverknüpfungen",
+    "no framework": "kein Rahmenwerk",
+    "No active risks to check for control coverage yet.":
+      "Noch keine aktiven Risiken, deren Kontrollabdeckung geprüft werden kann.",
+    "More risks matched than a single report lists. The counts above are complete; the tables below show the worst of each list.":
+      "Es gibt mehr passende Risiken, als ein einzelner Bericht auflistet. Die Zahlen oben sind vollständig; die Tabellen unten zeigen jeweils die schwerwiegendsten.",
+    "Every active risk is linked to at least one control.":
+      "Jedes aktive Risiko ist mit mindestens einer Kontrolle verknüpft.",
+    "These risks sit in a project that has a framework attached but are not linked to any control. Assessment links are shown for context and do not count as coverage.":
+      "Diese Risiken gehören zu einem Projekt, dem ein Rahmenwerk zugeordnet ist, sind aber mit keiner Kontrolle verknüpft. Bewertungsverknüpfungen werden nur als Kontext angezeigt und zählen nicht als Abdeckung.",
+    "None of these risks' projects has a framework attached, so there are no controls to map to. Not a finding — attach a framework first.":
+      "Keinem der Projekte dieser Risiken ist ein Rahmenwerk zugeordnet, daher gibt es keine Kontrollen, denen sie zugeordnet werden könnten. Kein Befund – ordnen Sie zuerst ein Rahmenwerk zu.",
+    "Failed to fetch control coverage": "Die Kontrollabdeckung konnte nicht abgerufen werden",
+    "No risk": "Kein Risiko",
+    "On Hold": "Pausiert",
+    "Deferred": "Zurückgestellt",
+    "Canceled": "Abgebrochen",
+    "Requires review": "Überprüfung erforderlich",
+    "Dismissal analytics": "Verwerfungsanalyse",
+    "Which suggested links people reject, and why, so the suggestions can be tuned.":
+      "Welche vorgeschlagenen Verknüpfungen abgelehnt werden und warum, damit die Vorschläge verbessert werden können.",
+    "Current signals on decided links": "Aktuelle Signale bei entschiedenen Verknüpfungen",
+    "Signals are recomputed on every save, so they describe the pair today, not the moment of the decision.":
+      "Signale werden bei jedem Speichern neu berechnet und beschreiben daher das Paar von heute, nicht den Zeitpunkt der Entscheidung.",
+    "Signal": "Signal",
+    "Decided": "Entschieden",
+    "Dismiss rate": "Verwerfungsrate",
+    "Top reason": "Häufigster Grund",
+    "Why suggestions get dismissed": "Warum Vorschläge verworfen werden",
+    "The “No reason given” bucket also holds links that were un-linked after being accepted: confirming then dismissing a pair necessarily writes a NULL reason, and no column records the prior status — so that bucket is not pure suggester feedback.":
+      "Die Kategorie „Kein Grund angegeben“ enthält auch Verknüpfungen, die nach der Annahme wieder aufgehoben wurden: Wer ein Paar bestätigt und dann verwirft, schreibt zwangsläufig einen NULL-Grund, und keine Spalte hält den früheren Status fest – diese Kategorie ist daher kein reines Feedback zum Vorschlagssystem.",
+    "No reason given": "Kein Grund angegeben",
+    "Recent notes": "Neueste Notizen",
+    "{relation} · {source} — {dismissed} of {decided} dismissed ({rate})":
+      "{relation} · {source} — {dismissed} von {decided} verworfen ({rate})",
+    "No decided links yet — numbers appear once suggestions are confirmed or dismissed.":
+      "Noch keine entschiedenen Verknüpfungen – Zahlen erscheinen, sobald Vorschläge bestätigt oder verworfen wurden.",
+    "Failed to fetch dismissal analytics": "Die Verwerfungsanalyse konnte nicht abgerufen werden",
+    "Cross entity hierarchy": "Entitätsübergreifende Hierarchie",
+    "Hierarchy": "Hierarchie",
+    "Same lifecycle phase": "Gleiche Lebenszyklusphase",
+    "Shared assessment mapping": "Gemeinsame Bewertungszuordnung",
+    "Remove link": "Verknüpfung entfernen",
+    "Shared control mapping": "Gemeinsame Kontrollzuordnung",
+    "Shared category": "Gemeinsame Kategorie",
+    "Shared framework element": "Gemeinsames Rahmenwerkelement",
+    "Shared project": "Gemeinsames Projekt",
+    "Inherits from": "Erbt von",
+    "Related to": "Verwandt mit",
+    "Derived": "Abgeleitet",
+    "These aren't actually related": "Diese sind in Wirklichkeit nicht verwandt",
+    "Related, but not worth a link": "Verwandt, aber keine Verknüpfung wert",
+    "Another link already covers this": "Eine andere Verknüpfung deckt dies bereits ab",
+    "The direction is backwards": "Die Richtung ist vertauscht",
+    "Right that it's a child, wrong parent":
+      "Als untergeordnet richtig, aber falsches übergeordnetes Risiko",
+    "Related, but not parent and child": "Verwandt, aber nicht übergeordnet und untergeordnet",
+    "Duplicate candidates": "Duplikatkandidaten",
+    "Pairs of risks worded so alike that they may be the same risk entered twice.":
+      "Risikopaare, die so ähnlich formuliert sind, dass es sich um dasselbe, doppelt erfasste Risiko handeln könnte.",
+    "Possible duplicate of": "Mögliches Duplikat von",
+    "Similarity": "Ähnlichkeit",
+    "Words in common": "Gemeinsame Wörter",
+    "Also shares": "Weitere Gemeinsamkeiten",
+    "No risks to scan yet.": "Noch keine Risiken zum Scannen.",
+    "No likely duplicates. {compared} pairs compared and none scored above the threshold.":
+      "Keine wahrscheinlichen Duplikate. {compared} Paare verglichen, keines lag über dem Schwellenwert.",
+    "This scan hit its size limit, so the list below is a sample rather than every pair in the organization.":
+      "Dieser Scan hat sein Größenlimit erreicht; die Liste unten ist daher eine Stichprobe und nicht jedes Paar der Organisation.",
+    "Showing the {shown} closest of {matched} matching pairs.":
+      "Die {shown} ähnlichsten von {matched} übereinstimmenden Paaren werden angezeigt.",
+    "{scanned} risks scanned, {compared} pairs compared in the same category. Scores are the share of words the two risks have in common — a prompt to compare them, not a merge.":
+      "{scanned} Risiken gescannt, {compared} Paare innerhalb derselben Kategorie verglichen. Die Werte geben den Anteil gemeinsamer Wörter beider Risiken an – ein Anstoß zum Vergleich, keine Zusammenführung.",
+    "{percent} percent similar": "{percent} Prozent ähnlich",
+    "more": "weitere",
+    "category": "Kategorie",
+    "lifecycle": "Lebenszyklus",
+    "Failed to fetch duplicate candidates": "Die Duplikatkandidaten konnten nicht abgerufen werden",
+    "Duplicate pair actions": "Aktionen für Duplikatpaar",
+    "Open risk #{id}": "Risiko #{id} öffnen",
+    "Link as related": "Als verwandt verknüpfen",
+    "Linked as related": "Als verwandt verknüpft",
+    "Delete risk #{id}": "Risiko #{id} löschen",
+    "Delete this risk?": "Dieses Risiko löschen?",
+    "Delete risk": "Risiko löschen",
+    "“{name}” (#{id}) will be deleted. Its possible duplicate “{otherName}” (#{otherId}) stays.":
+      "„{name}“ (#{id}) wird gelöscht. Das mögliche Duplikat „{otherName}“ (#{otherId}) bleibt erhalten.",
+    "The two risks are now linked as related.":
+      "Die beiden Risiken sind jetzt als verwandt verknüpft.",
+    "Failed to link the risks.": "Die Risiken konnten nicht verknüpft werden.",
+    "Failed to delete the risk.": "Das Risiko konnte nicht gelöscht werden.",
+    "Risk deleted but failed to remove it from some linked policies.":
+      "Risiko gelöscht, konnte aber nicht aus einigen verknüpften Richtlinien entfernt werden.",
+    'Deleted "{name}".': "„{name}“ wurde gelöscht.",
+    "Pairs per page": "Paare pro Seite",
+    "Vendors per page": "Anbieter pro Seite",
+    "Risks per page": "Risiken pro Seite",
+    "Signals per page": "Signale pro Seite",
+    "Reasons per page": "Gründe pro Seite",
+    // Risk links (Linked risks panel, link and dismiss forms, Evidence Hub, risk table)
+    "Parent risk": "Übergeordnetes Risiko",
+    "Child risks": "Untergeordnete Risiken",
+    "Relates to": "Bezieht sich auf",
+    "Is inherited by": "Wird vererbt an",
+    "Restore": "Wiederherstellen",
+    "Link a risk": "Risiko verknüpfen",
+    "Suggest hierarchy": "Hierarchie vorschlagen",
+    "Hide dismissed": "Verworfene ausblenden",
+    "Show dismissed": "Verworfene anzeigen",
+    "No linked risks yet.": "Noch keine verknüpften Risiken.",
+    "Scan for related risks": "Nach verwandten Risiken suchen",
+    "Links appear as risks are saved, or after an administrator runs a scan.":
+      "Verknüpfungen erscheinen, wenn Risiken gespeichert werden oder nachdem ein Administrator einen Scan ausgeführt hat.",
+    "Failed to load linked risks.": "Verknüpfte Risiken konnten nicht geladen werden.",
+    // Vendor risk insights, value-chain reach and the vendor filter on the map
+    "Suggest children": "Untergeordnete vorschlagen",
+    "No clusters of related risks in the use cases of this vendor yet. Related risks are grouped once a scan has linked them.":
+      "In den Anwendungsfällen dieses Anbieters gibt es noch keine Gruppen verwandter Risiken. Verwandte Risiken werden gruppiert, sobald ein Scan sie verknüpft hat.",
+    "inherited by": "vererbt an",
+    "Inherited by": "Vererbt an",
+    "1 project risk": "1 Projektrisiko",
+    "{count} project risks": "{count} Projektrisiken",
+    "{count} suggested": "{count} vorgeschlagen",
+    "{likelihood} likelihood, {severity} severity: {count} risks":
+      "Wahrscheinlichkeit {likelihood}, Schweregrad {severity}: {count} Risiken",
+    "Filtering by heat map cell": "Gefiltert nach Heatmap-Zelle",
+    "The table now shows only vendor risks in the selected cell. Select the cell again to see all risks.":
+      "Die Tabelle zeigt jetzt nur Anbieterrisiken in der gewählten Zelle. Wählen Sie die Zelle erneut, um alle Risiken zu sehen.",
+    "Vendor risks by likelihood and severity. Select a cell to filter the table.":
+      "Anbieterrisiken nach Wahrscheinlichkeit und Schweregrad. Wählen Sie eine Zelle, um die Tabelle zu filtern.",
+    "Each cell counts vendor risks by likelihood and severity. Select a cell to filter the table below, and select it again to show every risk.":
+      "Jede Zelle zählt Anbieterrisiken nach Wahrscheinlichkeit und Schweregrad. Wählen Sie eine Zelle, um die Tabelle unten zu filtern, und wählen Sie sie erneut, um alle Risiken anzuzeigen.",
+    "Blast radius": "Wirkungsradius",
+    "How many project risks and use cases inherit from the risks of each vendor.":
+      "Wie viele Projektrisiken und Anwendungsfälle von den Risiken jedes Anbieters erben.",
+    "Vendor {id}": "Anbieter {id}",
+    "Vendor risk {id}": "Anbieterrisiko {id}",
+    "{linked} of {total}": "{linked} von {total}",
+    "Vendors with reach": "Anbieter mit Reichweite",
+    "Inheriting project risks": "Erbende Projektrisiken",
+    "Affected use cases": "Betroffene Anwendungsfälle",
+    "Vendor risks with children": "Anbieterrisiken mit untergeordneten Risiken",
+    "Vendor risks with no children": "Anbieterrisiken ohne untergeordnete Risiken",
+    "View on map": "Auf der Karte anzeigen",
+    "No vendor risks yet.": "Noch keine Anbieterrisiken.",
+    "No project risk inherits from a vendor risk yet. Open a vendor risk and link the project risks it applies to from its Linked risks tab.":
+      "Noch erbt kein Projektrisiko von einem Anbieterrisiko. Öffnen Sie ein Anbieterrisiko und verknüpfen Sie auf dessen Registerkarte „Verknüpfte Risiken“ die Projektrisiken, für die es gilt.",
+    "Duplicate vendor risks": "Doppelte Anbieterrisiken",
+    "Risks of the same vendor that look like one risk entered twice.":
+      "Risiken desselben Anbieters, die wie ein doppelt erfasstes Risiko aussehen.",
+    "{scanned} vendor risks scanned, {compared} pairs compared.":
+      "{scanned} Anbieterrisiken geprüft, {compared} Paare verglichen.",
+    "Only risks of the same vendor are compared: the same risk at two vendors is a pattern, not a duplicate.":
+      "Nur Risiken desselben Anbieters werden verglichen: Dasselbe Risiko bei zwei Anbietern ist ein Muster, kein Duplikat.",
+    "This scan hit its size limit, so the list below is a sample rather than every pair.":
+      "Dieser Scan hat seine Größenbegrenzung erreicht, daher ist die Liste unten eine Stichprobe und nicht jedes Paar.",
+    "No likely duplicates among vendor risks.":
+      "Keine wahrscheinlichen Duplikate unter den Anbieterrisiken.",
+    "Which vendor risks are not mapped to a framework yet.":
+      "Welche Anbieterrisiken noch keinem Rahmenwerk zugeordnet sind.",
+    "Active vendor risks": "Aktive Anbieterrisiken",
+    "Mapped to a framework": "Einem Rahmenwerk zugeordnet",
+    "Frameworks in its use cases": "Rahmenwerke in seinen Anwendungsfällen",
+    "Every active vendor risk is mapped to at least one framework.":
+      "Jedes aktive Anbieterrisiko ist mindestens einem Rahmenwerk zugeordnet.",
+    "The vendor serves a use case that has a framework attached, but these risks are not mapped to any framework. Map them from the risk itself.":
+      "Der Anbieter bedient einen Anwendungsfall mit zugeordnetem Rahmenwerk, aber diese Risiken sind keinem Rahmenwerk zugeordnet. Ordnen Sie sie direkt im Risiko zu.",
+    "None of the use cases these vendors serve has a framework attached, so there is nothing to map to. Not a finding: attach a framework to the use case first.":
+      "Keinem der Anwendungsfälle dieser Anbieter ist ein Rahmenwerk zugeordnet, daher gibt es nichts zuzuordnen. Kein Befund: Ordnen Sie dem Anwendungsfall zuerst ein Rahmenwerk zu.",
+    "All vendors": "Alle Anbieter",
+    "This vendor has no risks on the map yet.":
+      "Dieser Anbieter hat noch keine Risiken auf der Karte.",
+    "Show all vendors": "Alle Anbieter anzeigen",
+    // Vendor risk Linked risks tab
+    "Link a project risk": "Projektrisiko verknüpfen",
+    "When the level of this risk changes, each child is flagged for review.":
+      "Ändert sich die Stufe dieses Risikos, wird jedes untergeordnete Risiko zur Prüfung markiert.",
+    "A project risk can have only one parent, and a risk with child risks of its own cannot become a child.":
+      "Ein Projektrisiko kann nur ein übergeordnetes Risiko haben, und ein Risiko mit eigenen untergeordneten Risiken kann nicht selbst untergeordnet werden.",
+    "Mark reviewed": "Als geprüft markieren",
+    "One of these risks no longer exists": "Eines dieser Risiken existiert nicht mehr",
+    "Failed to update the link": "Die Verknüpfung konnte nicht aktualisiert werden",
+    "Failed to start the scan": "Der Scan konnte nicht gestartet werden",
+    "Failed to start the hierarchy suggestions":
+      "Die Hierarchievorschläge konnten nicht gestartet werden",
+    "Scan finished. No related risks found.":
+      "Scan abgeschlossen. Keine verwandten Risiken gefunden.",
+    "No clusters of related risks to group yet. Run a scan for related risks first.":
+      "Noch keine Cluster verwandter Risiken zum Gruppieren. Führen Sie zuerst einen Scan nach verwandten Risiken aus.",
+    "Still grouping. Reopen this tab to check for new suggestions.":
+      "Die Gruppierung läuft noch. Öffnen Sie diesen Tab erneut, um neue Vorschläge zu sehen.",
+    "Scanning {count} risks. Links will appear as the scan completes.":
+      "{count} Risiken werden gescannt. Verknüpfungen erscheinen, sobald der Scan abgeschlossen ist.",
+    "Grouping {count} clusters of related risks. Suggestions appear here as they finish.":
+      "{count} Cluster verwandter Risiken werden gruppiert. Vorschläge erscheinen hier, sobald sie fertig sind.",
+    "{count} clusters were too large to group in one pass.":
+      "{count} Cluster waren zu groß, um sie in einem Durchgang zu gruppieren.",
+    "Score {score}": "Punktzahl {score}",
+    "Why {name} is linked": "Warum {name} verknüpft ist",
+    "risk {id}": "Risiko {id}",
+    "This risk already has a parent, so it can only relate to other risks.":
+      "Dieses Risiko hat bereits ein übergeordnetes Risiko und kann daher nur mit anderen Risiken in Beziehung stehen.",
+    "This risk has child risks, so it cannot become a child of another risk.":
+      "Dieses Risiko hat untergeordnete Risiken und kann daher nicht selbst einem anderen Risiko untergeordnet werden.",
+    "Search risks": "Risiken suchen",
+    "Link": "Verknüpfen",
+    "Failed to create the link": "Die Verknüpfung konnte nicht erstellt werden",
+    "Untitled vendor risk": "Unbenanntes Anbieterrisiko",
+    "Untitled model risk": "Unbenanntes Modellrisiko",
+    "Same project: {name}": "Gleiches Projekt: {name}",
+    "Same project: {name} +{count}": "Gleiches Projekt: {name} +{count}",
+    // Related vendor risks
+    "Related vendor risks": "Verwandte Anbieterrisiken",
+    "Vendor risks that describe the same exposure, at this vendor or another one.":
+      "Anbieterrisiken, die dieselbe Gefährdung beschreiben, bei diesem oder einem anderen Anbieter.",
+    "Relate a vendor risk": "Verwandtes Anbieterrisiko verknüpfen",
+    "Link a project risk that this vendor risk applies to, or relate another vendor risk. Suggestions appear here too.":
+      "Verknüpfen Sie ein Projektrisiko, für das dieses Anbieterrisiko gilt, oder ein verwandtes Anbieterrisiko. Vorschläge erscheinen ebenfalls hier.",
+    "Scan for related vendor risks": "Nach verwandten Anbieterrisiken suchen",
+    "Related vendor risks appear as vendor risks are saved, or after an administrator runs a scan.":
+      "Verwandte Anbieterrisiken erscheinen, sobald Anbieterrisiken gespeichert werden oder ein Administrator einen Scan ausführt.",
+    "Scanning {count} vendor risks. Related vendor risks appear here as the scan completes.":
+      "{count} Anbieterrisiken werden gescannt. Verwandte Anbieterrisiken erscheinen hier, sobald der Scan abgeschlossen ist.",
+    "Scan finished. No related vendor risks found.":
+      "Scan abgeschlossen. Keine verwandten Anbieterrisiken gefunden.",
+    "Search vendor risks": "Anbieterrisiken suchen",
+    "Related vendor risks describe the same exposure, at this vendor or another one. Neither inherits from the other.":
+      "Verwandte Anbieterrisiken beschreiben dieselbe Gefährdung, bei diesem oder einem anderen Anbieter. Keines erbt vom anderen.",
+    "Similar wording": "Ähnliche Formulierung",
+    "Same vendor": "Gleicher Anbieter",
+    "Shared framework": "Gemeinsames Rahmenwerk",
+    "Shared use case": "Gemeinsamer Anwendungsfall",
+    "Why are you dismissing {name}?": "Warum verwerfen Sie {name}?",
+    "What happened?": "Was ist passiert?",
+    "Failed to fetch linked risks": "Verknüpfte Risiken konnten nicht abgerufen werden",
+    "Failed to acknowledge the parent-level change":
+      "Die Änderung der übergeordneten Stufe konnte nicht bestätigt werden",
+    "Failed to fetch the risk graph": "Der Risikograph konnte nicht abgerufen werden",
+    "Failed to fetch shared projects": "Gemeinsame Projekte konnten nicht abgerufen werden",
+    "Mapped risks": "Zugeordnete Risiken",
+    "Select risks": "Risiken auswählen",
+    "Evidence stale": "Nachweis veraltet",
+    // Risk links (framework elements named in a link's reasons)
+    "ISO 42001 subclause": "ISO-42001-Unterklausel",
+    "ISO 42001 subclauses": "ISO-42001-Unterklauseln",
+    "ISO 27001 subclause": "ISO-27001-Unterklausel",
+    "ISO 27001 subclauses": "ISO-27001-Unterklauseln",
+    "ISO 42001 annex category": "ISO-42001-Anhangskategorie",
+    "ISO 42001 annex categories": "ISO-42001-Anhangskategorien",
+    "ISO 27001 annex control": "ISO-27001-Anhangskontrolle",
+    "ISO 27001 annex controls": "ISO-27001-Anhangskontrollen",
+    "EU AI Act control": "Kontrolle der EU-KI-Verordnung",
+    "EU AI Act controls": "Kontrollen der EU-KI-Verordnung",
+    "EU AI Act subcontrol": "Unterkontrolle der EU-KI-Verordnung",
+    "EU AI Act subcontrols": "Unterkontrollen der EU-KI-Verordnung",
+    "EU AI Act assessment answer": "Bewertungsantwort der EU-KI-Verordnung",
+    "EU AI Act assessment answers": "Bewertungsantworten der EU-KI-Verordnung",
+    "NIST AI RMF subcategory": "NIST-AI-RMF-Unterkategorie",
+    "NIST AI RMF subcategories": "NIST-AI-RMF-Unterkategorien",
+    "custom framework item": "benutzerdefiniertes Rahmenwerkelement",
+    "custom framework items": "benutzerdefinierte Rahmenwerkelemente",
     // Reporting, readiness and AI observability
     "AI analyses": "KI-Analysen",
     "AI observability": "KI-Observability",
@@ -9285,6 +9677,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Invite via email": "Per E-Mail einladen",
     "Must include an uppercase letter, a lowercase letter, and a digit. Minimum 8 characters.":
       "Muss einen Großbuchstaben, einen Kleinbuchstaben und eine Ziffer enthalten. Mindestens 8 Zeichen.",
+    "Default retention policy": "Standard-Aufbewahrungsrichtlinie",
+    "Expired files": "Abgelaufene Dateien",
+    "File Manager": "Dateimanager",
+    "File retention": "Dateiaufbewahrung",
+    "Retention policy": "Aufbewahrungsrichtlinie",
     "Create API tokens for the super admin API":
       "API-Tokens für die Super-Administrator-API erstellen",
     "Install": "Installieren",
@@ -9675,7 +10072,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Filter mappings by governance domain": "[FR] Filter mappings by governance domain",
     "Framework axis": "[FR] Framework axis",
     "Framework containing the source control": "[FR] Framework containing the source control",
-    "Framework coverage": "[FR] Framework coverage",
+    "Framework coverage": "Couverture des référentiels",
     "Framework receiving the mapped control": "[FR] Framework receiving the mapped control",
     "Frameworks assigned to the current project": "[FR] Frameworks in current project",
     "Frameworks assigned to the selected project": "[FR] Frameworks assigned to project",
@@ -9865,6 +10262,12 @@ export const translations: Record<string, Record<string, string>> = {
     "Add new": "Ajouter",
     "Add agent": "Ajouter un agent",
     "Add new risk": "Ajouter un nouveau risque",
+    "Add a new risk": "Ajouter un nouveau risque",
+    "Create a detailed breakdown of risks and their mitigation strategies to assist in documenting your risk management activities effectively.":
+      "Créez une description détaillée des risques et de leurs stratégies d'atténuation afin de documenter efficacement vos activités de gestion des risques.",
+    "Manage all organization risks in risk management":
+      "Gérer tous les risques de l'organisation dans la gestion des risques",
+    "View and add risks for this use case": "Consulter et ajouter des risques pour ce cas d'usage",
     "Add new risks": "Ajouter de nouveaux risques",
     "Add new vendor": "Ajouter un nouveau fournisseur",
     "Add new policy": "Ajouter une nouvelle politique",
@@ -9928,7 +10331,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Archive": "Archiver",
     "Duplicate": "Dupliquer",
     "Ignore": "Ignorer",
-    "Dismiss": "Fermer",
+    "Dismiss": "Rejeter",
     "Skip": "Passer",
     "Stop": "Arrêter",
     "Send": "Envoyer",
@@ -10136,6 +10539,58 @@ export const translations: Record<string, Record<string, string>> = {
     // Stepper counter ("Step X of Y") — split into separate text nodes
     "Step": "Étape",
     "of": "sur",
+    "Page": "Page",
+    "Showing": "Affichage",
+    "matching of": "correspondantes sur",
+    "entries": "entrées",
+    "items": "éléments",
+    "users": "utilisateurs",
+    "departments": "départements",
+    "tool(s)": "outil(s)",
+    "risk(s)": "risque(s)",
+    "project risk(s)": "risque(s) de projet",
+    "evidence(s)": "preuve(s)",
+    "project report(s)": "rapport(s) de projet",
+    "vendor(s)": "fournisseur(s)",
+    "item(s)": "élément(s)",
+    "use case(s)": "cas d'usage",
+    "scan(s)": "analyse(s)",
+    "model(s)": "modèle(s)",
+    "datasets": "jeux de données",
+    "model risk(s)": "risque(s) de modèle",
+    "form(s)": "formulaire(s)",
+    "agent(s)": "agent(s)",
+    "battle": "duel",
+    "battles": "duels",
+    "dataset": "jeu de données",
+    "experiment": "expérience",
+    "experiments": "expériences",
+    "incident": "incident",
+    "incidents": "incidents",
+    "model": "modèle",
+    "models": "modèles",
+    "policy": "politique",
+    "policies": "politiques",
+    "project": "projet",
+    "projects": "projets",
+    "report": "rapport",
+    "reports": "rapports",
+    "risk": "risque",
+    "risks": "risques",
+    "scorer": "évaluateur",
+    "scorers": "évaluateurs",
+    "task": "tâche",
+    "tasks": "tâches",
+    "training": "formation",
+    "trainings": "formations",
+    "vendor risk": "risque fournisseur",
+    "vendor risks": "risques fournisseurs",
+    "workflow": "flux de travail",
+    "workflows": "flux de travail",
+    "signal": "signal",
+    "signals": "signaux",
+    "reason": "raison",
+    "reasons": "raisons",
 
     // Frameworks
     "EU AI Act": "Règlement IA de l'UE",
@@ -10146,6 +10601,9 @@ export const translations: Record<string, Record<string, string>> = {
     "HIPAA": "HIPAA",
     "CCPA": "CCPA",
     "Clauses": "Clauses",
+    "No regulation connected": "Aucune réglementation connectée",
+    "link a framework to track progress": "associez un cadre pour suivre la progression",
+    "{items}: {done} of {total} completed": "{items} : {done} sur {total} terminés",
     "Annexes": "Annexes",
 
     // Empty / loading / error
@@ -10546,13 +11004,13 @@ export const translations: Record<string, Record<string, string>> = {
     "SOC2 Type I": "SOC 2 Type I",
     "SOC2 Type II": "SOC 2 Type II",
     "AI regulation in the Middle East": "Réglementation IA au Moyen-Orient",
-    "We graded 205 AI apps on data transparency":
-      "Nous avons évalué 205 applications d'IA sur la transparence des données",
-    "OSFI Guideline E-23: AI model risk rules":
-      "Ligne directrice E-23 du BSIF : règles sur le risque des modèles d'IA",
-    "What we found running GRS across 15 AI models":
-      "Ce que nous avons constaté en appliquant le GRS à 15 modèles d'IA",
-    "AI governance salaries 2026": "Salaires en gouvernance de l'IA 2026",
+    "VerifyWise on the Wavestone UK Cybersecurity Startup Radar":
+      "VerifyWise dans le UK Cybersecurity Startup Radar de Wavestone",
+    "VerifyWise 2.5: reporting, observability, and extensions":
+      "VerifyWise 2.5 : reporting, observabilité et extensions",
+    "Stop shopping for DORA compliance software":
+      "Arrêtez de chercher un logiciel de conformité DORA",
+    "Model risk management for AI and ML": "Gestion du risque de modèle pour l'IA et le ML",
     "AI models mapped to this framework": "Modèles IA rattachés à ce référentiel",
     "Organizational Frameworks": "Référentiels organisationnels",
     "Organizational policies": "Politiques organisationnelles",
@@ -11080,6 +11538,16 @@ export const translations: Record<string, Record<string, string>> = {
     "Connect your GitHub repositories": "Connectez vos dépôts GitHub",
     "Copy key": "Copier la clé",
     "Copy link": "Copier le lien",
+    "Copied": "Copié",
+    "Could not copy the link. Select it and copy it manually.":
+      "Impossible de copier le lien. Sélectionnez-le et copiez-le manuellement.",
+    "Invitation link": "Lien d'invitation",
+    "Share the invitation link": "Partager le lien d'invitation",
+    "The email service is unavailable, so the invitation could not be resent. Links sent earlier no longer work. Share this link with the invitee instead.":
+      "Le service de messagerie est indisponible, l'invitation n'a donc pas pu être renvoyée. Les liens envoyés précédemment ne fonctionnent plus. Partagez plutôt ce lien avec la personne invitée.",
+    "The invitation was created, but the email could not be sent. Share this link with the invitee so they can create an account.":
+      "L'invitation a été créée, mais l'e-mail n'a pas pu être envoyé. Partagez ce lien avec la personne invitée pour qu'elle puisse créer un compte.",
+    "The invitation email could not be sent": "L'e-mail d'invitation n'a pas pu être envoyé",
     "Copy response": "Copier la réponse",
     "Copy the key below. It will not be shown again.":
       "Copiez la clé ci-dessous. Elle ne sera plus affichée.",
@@ -11610,6 +12078,14 @@ export const translations: Record<string, Record<string, string>> = {
     "Linked Operational Objects": "Objets opérationnels liés",
     "Linked Policies Objects": "Objets de politiques liés",
     "Linked risk": "Risque lié",
+    "Configure an LLM API key so Advisor and reporting can run.":
+      "Configurez une clé API LLM pour que le conseiller IA et les rapports puissent fonctionner.",
+    "Advisor and reporting need an LLM API key. Contact your administrator.":
+      "Le conseiller IA et les rapports ont besoin d'une clé API LLM. Contactez votre administrateur.",
+    "Configure an LLM API key to send messages.":
+      "Configurez une clé API LLM pour envoyer des messages.",
+    "Sending messages requires an LLM API key. Contact your administrator.":
+      "L'envoi de messages nécessite une clé API LLM. Contactez votre administrateur.",
     "LLM Arena": "Arène LLM",
     "LLM provider": "Fournisseur LLM",
     "LLM providers": "Fournisseurs LLM",
@@ -14099,6 +14575,8 @@ export const translations: Record<string, Record<string, string>> = {
     "LLM key": "Clé LLM",
     "LLM use case": "Cas d'usage LLM",
     "LLM-enhanced analysis": "Analyse améliorée par LLM",
+    "Couldn't load LLM keys. Reload the page to try again.":
+      "Impossible de charger les clés LLM. Rechargez la page pour réessayer.",
     "LangChain agents, CrewAI, AutoGen, MCP servers, and other autonomous AI systems will appear here":
       "Les agents LangChain, CrewAI, AutoGen, les serveurs MCP et d'autres systèmes IA autonomes apparaîtront ici",
     "Last login": "Dernière connexion",
@@ -14789,8 +15267,10 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Chatbot for Customer Support": "Chatbot IA pour le support client",
     "AI Gateway": "AI Gateway",
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar et analyse CI/CD",
-    "Custom frameworks, Model Risk Management, and Extensions":
-      "Custom Frameworks, Model Risk Management et Extensions",
+    "Custom roles, risk inheritance, and evidence retention":
+      "Rôles personnalisés, héritage des risques et conservation des preuves",
+    "Built-in frameworks, Model Risk Management, and Extensions":
+      "Référentiels intégrés, Model Risk Management et Extensions",
     "AI Trust Index, AI Apps inventory, and Agent Control":
       "AI Trust Index, AI Apps inventory et Agent Control",
     "EU AI Act control workflow, clearable selects, and AI advisor fix":
@@ -14876,8 +15356,16 @@ export const translations: Record<string, Record<string, string>> = {
     "Activate the compliance frameworks relevant to your organization.":
       "Activez les référentiels de conformité pertinents pour votre organisation.",
     "Active incidents": "Incidents actifs",
-    "Add SOC 2, GDPR, HIPAA, and other compliance frameworks as plugins with full controls.":
-      "Ajoutez SOC 2, GDPR, HIPAA et d'autres référentiels de conformité en tant que plugins avec contrôles complets.",
+    "SOC 2, GDPR, HIPAA, DORA, and 17 more frameworks are built in, with requirements, evidence, and risk tracking.":
+      "SOC 2, RGPD, HIPAA, DORA et 17 autres référentiels sont intégrés, avec exigences, preuves et suivi des risques.",
+    "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import, and Dataset Bulk Upload.":
+      "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import et Dataset Bulk Upload.",
+    "Admins enable, configure, and disable extensions from the Extensions page. Nothing to install.":
+      "Les administrateurs activent, configurent et désactivent les extensions depuis la page Extensions. Rien à installer.",
+    "Import risks from Excel, bulk upload datasets with PII detection, and define model lifecycle phases.":
+      "Importez des risques depuis Excel, téléversez des jeux de données en masse avec détection des PII et définissez les phases du cycle de vie des modèles.",
+    "Connect Slack, MLflow, Azure AI Foundry, Jira Assets, and more with extensions that admins enable.":
+      "Connectez Slack, MLflow, Azure AI Foundry, Jira Assets et plus avec des extensions activées par les administrateurs.",
     "Add at least one field before publishing": "Ajoutez au moins un champ avant de publier",
     "Add colleagues to collaborate on compliance and risk management tasks.":
       "Ajoutez des collègues pour collaborer aux tâches de conformité et de gestion des risques.",
@@ -15223,8 +15711,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Conformity assessment topics": "Thèmes d'évaluation de conformité",
     "Congratulations": "Félicitations",
     "Connect": "Connecter",
-    "Connect Slack, Jira, MLflow, Azure AI, and more for seamless workflow integration.":
-      "Connectez Slack, Jira, MLflow, Azure AI, et plus pour une intégration de flux de travail transparente.",
+    "Send notifications to Slack, sync models from MLflow and Azure AI Foundry, and import use cases from Jira Assets.":
+      "Envoyez des notifications vers Slack, synchronisez les modèles depuis MLflow et Azure AI Foundry, et importez des cas d'usage depuis Jira Assets.",
     "Connect a GitHub token to scan private repositories":
       "Connectez un jeton GitHub pour analyser les dépôts privés",
     "Connect with ML platforms to track experiments, models, and deployments.":
@@ -15466,8 +15954,8 @@ export const translations: Record<string, Record<string, string>> = {
     "EU AI Act Compliance Dashboard": "Tableau de bord de conformité au Règlement IA de l'UE",
     "EU AI Act only (specific to an AI system/project)":
       "Règlement IA de l'UE uniquement (spécifique à un système/projet IA)",
-    "EU AI Act, ISO 42001, NIST AI RMF, SOC 2, GDPR, and more with pluggable framework support.":
-      "Règlement IA de l'UE, ISO 42001, NIST AI RMF, SOC 2, RGPD et plus avec prise en charge de référentiels enfichables.",
+    "EU AI Act, ISO 42001, NIST AI RMF, SOC 2, GDPR, and 20 more frameworks, all built in.":
+      "Règlement IA de l'UE, ISO 42001, NIST AI RMF, SOC 2, RGPD et 20 autres référentiels, tous intégrés.",
     "EU AI act": "Règlement IA de l'UE",
     "EU Database Data Entry Timeliness": "Rapidité de saisie des données dans la base UE",
     "EU Database Registration": "Enregistrement dans la base UE",
@@ -15617,6 +16105,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Failed to create the vendor risk. Please try again.":
       "Échec de la création du risque fournisseur. Veuillez réessayer.",
     "Failed to delete": "Échec de la suppression",
+    "Failed to delete account. Please try again.":
+      "Échec de la suppression du compte. Veuillez réessayer.",
     "Failed to delete API key": "Échec de la suppression de la clé API",
     "Failed to delete comparison": "Échec de la suppression de la comparaison",
     "Failed to delete dataset. Please try again.":
@@ -16577,8 +17067,8 @@ export const translations: Record<string, Record<string, string>> = {
     "References to AI models in the codebase": "Références aux modèles IA dans le code",
     "Register AI-related training programs and educational resources. Track completion status, certifications, and learning progress across your team.":
       "Enregistrez les programmes de formation et ressources éducatives liés à l'IA. Suivez l'état d'achèvement, les certifications et la progression de l'apprentissage dans votre équipe.",
-    "Register and track AI models with details like hosting, biases, and limitations. Extend with the lifecycle plugin.":
-      "Enregistrez et suivez les modèles IA avec des détails comme l'hébergement, les biais et les limitations. Étendez avec le plugin de cycle de vie.",
+    "Register and track AI models with details like hosting, biases, and limitations. Extend with the Model Lifecycle extension.":
+      "Enregistrez et suivez les modèles IA avec des détails comme l'hébergement, les biais et les limitations. Étendez avec l'extension Model Lifecycle.",
     "Register external AI providers and third-party services. Document vendor information, contracts, and compliance requirements in one centralized location.":
       "Enregistrez les fournisseurs IA externes et les services tiers. Documentez les informations sur les fournisseurs, contrats et exigences de conformité dans un emplacement centralisé.",
     "Register providers, authorized representatives, and deployers, along with their AI systems, in the EU database as required by the AI Act.":
@@ -18226,6 +18716,299 @@ export const translations: Record<string, Record<string, string>> = {
     "What business purpose does the use case serve?":
       "Quel objectif commercial sert le cas d'usage ?",
     "Who is the intended audience for the use case?": "Quel est le public cible du cas d'usage ?",
+    // Risk inheritance (graph, key, coverage, dismissal and duplicate reports)
+    "Risk inheritance": "Héritage des risques",
+    "Risk inheritance graph": "Graphe d'héritage des risques",
+    "Loading risk inheritance graph...": "Chargement du graphe d'héritage des risques...",
+    "Failed to load the risk graph": "Impossible de charger le graphe des risques",
+    "No risk links yet. Open a risk and run the link scan from its Linked risks panel.":
+      "Aucun lien de risque pour l'instant. Ouvrez un risque et lancez l'analyse des liens depuis son panneau « Risques liés ».",
+    "Showing the first 500 links. Filter by status to narrow the graph.":
+      "Affichage des 500 premiers liens. Filtrez par statut pour affiner le graphe.",
+    "Only admins can view the risk inheritance graph.":
+      "Seuls les administrateurs peuvent consulter le graphe d'héritage des risques.",
+    "Link types": "Types de liens",
+    "Inherits": "Hérite",
+    "Suggested": "Suggéré",
+    "Competing": "Concurrent",
+    "{risks} risks, {links} links": "{risks} risques, {links} liens",
+    "Click the canvas to clear the selection.": "Cliquez sur le canevas pour effacer la sélection.",
+    "Select a risk to trace its links.": "Sélectionnez un risque pour suivre ses liens.",
+    "Risk {id}": "Risque {id}",
+    "Risk level: {level}": "Niveau de risque : {level}",
+    "Parent level changed": "Niveau parent modifié",
+    "Parent level changed.": "Niveau parent modifié.",
+    "Map key": "Légende",
+    "What is this map?": "Qu'est-ce que cette carte ?",
+    'Each box is a risk, coloured by type. Arrows run from a parent risk to the risks that inherit from it. "Parent level changed" marks a risk whose parent moved and needs a second look.':
+      "Chaque case est un risque, coloré selon son type. Les flèches vont d'un risque parent vers les risques qui en héritent. « Niveau parent modifié » signale un risque dont le parent a changé de niveau et qui mérite un nouvel examen.",
+    "Control coverage": "Couverture des contrôles",
+    "Which active risks are not mitigated by any control yet.":
+      "Quels risques actifs ne sont encore atténués par aucun contrôle.",
+    "Active risks": "Risques actifs",
+    "Covered by a control": "Couverts par un contrôle",
+    "Coverage gaps": "Lacunes de couverture",
+    "No framework yet": "Pas encore de référentiel",
+    "Level": "Niveau",
+    "Assessment links": "Liens d'évaluation",
+    "no framework": "sans référentiel",
+    "No active risks to check for control coverage yet.":
+      "Aucun risque actif dont vérifier la couverture par les contrôles pour le moment.",
+    "More risks matched than a single report lists. The counts above are complete; the tables below show the worst of each list.":
+      "Plus de risques correspondent que ce qu'un seul rapport peut lister. Les totaux ci-dessus sont complets ; les tableaux ci-dessous montrent les pires de chaque liste.",
+    "Every active risk is linked to at least one control.":
+      "Chaque risque actif est lié à au moins un contrôle.",
+    "These risks sit in a project that has a framework attached but are not linked to any control. Assessment links are shown for context and do not count as coverage.":
+      "Ces risques appartiennent à un projet auquel un référentiel est rattaché, mais ne sont liés à aucun contrôle. Les liens d'évaluation sont affichés à titre de contexte et ne comptent pas comme couverture.",
+    "None of these risks' projects has a framework attached, so there are no controls to map to. Not a finding — attach a framework first.":
+      "Aucun des projets de ces risques n'a de référentiel rattaché, il n'y a donc aucun contrôle auquel les associer. Ce n'est pas un constat : rattachez d'abord un référentiel.",
+    "Failed to fetch control coverage": "Impossible de récupérer la couverture des contrôles",
+    "No risk": "Aucun risque",
+    "On Hold": "En pause",
+    "Deferred": "Reporté",
+    "Canceled": "Annulé",
+    "Requires review": "Révision requise",
+    "Dismissal analytics": "Analyse des rejets",
+    "Which suggested links people reject, and why, so the suggestions can be tuned.":
+      "Quels liens suggérés sont rejetés, et pourquoi, afin d'affiner les suggestions.",
+    "Current signals on decided links": "Signaux actuels sur les liens décidés",
+    "Signals are recomputed on every save, so they describe the pair today, not the moment of the decision.":
+      "Les signaux sont recalculés à chaque enregistrement ; ils décrivent donc la paire aujourd'hui, et non au moment de la décision.",
+    "Signal": "Signal",
+    "Decided": "Décidés",
+    "Dismiss rate": "Taux de rejet",
+    "Top reason": "Raison principale",
+    "Why suggestions get dismissed": "Pourquoi les suggestions sont rejetées",
+    "The “No reason given” bucket also holds links that were un-linked after being accepted: confirming then dismissing a pair necessarily writes a NULL reason, and no column records the prior status — so that bucket is not pure suggester feedback.":
+      "Le groupe « Aucune raison fournie » inclut aussi des liens supprimés après avoir été acceptés : confirmer puis rejeter une paire enregistre forcément une raison NULL, et aucune colonne ne conserve le statut précédent — ce groupe n'est donc pas un pur retour sur les suggestions.",
+    "No reason given": "Aucune raison fournie",
+    "Recent notes": "Notes récentes",
+    "{relation} · {source} — {dismissed} of {decided} dismissed ({rate})":
+      "{relation} · {source} — {dismissed} sur {decided} rejetés ({rate})",
+    "No decided links yet — numbers appear once suggestions are confirmed or dismissed.":
+      "Aucun lien décidé pour l'instant — les chiffres apparaissent dès que des suggestions sont confirmées ou rejetées.",
+    "Failed to fetch dismissal analytics": "Impossible de récupérer l'analyse des rejets",
+    "Cross entity hierarchy": "Hiérarchie inter-entités",
+    "Hierarchy": "Hiérarchie",
+    "Same lifecycle phase": "Même phase du cycle de vie",
+    "Shared assessment mapping": "Correspondance d'évaluation commune",
+    "Remove link": "Supprimer le lien",
+    "Shared control mapping": "Correspondance de contrôle commune",
+    "Shared category": "Catégorie commune",
+    "Shared framework element": "Élément de référentiel commun",
+    "Shared project": "Projet commun",
+    "Inherits from": "Hérite de",
+    "Related to": "Lié à",
+    "Derived": "Dérivé",
+    "These aren't actually related": "Ces risques ne sont en fait pas liés",
+    "Related, but not worth a link": "Liés, mais cela ne justifie pas un lien",
+    "Another link already covers this": "Un autre lien couvre déjà ce cas",
+    "The direction is backwards": "La direction est inversée",
+    "Right that it's a child, wrong parent": "Bien un enfant, mais le mauvais parent",
+    "Related, but not parent and child": "Liés, mais sans relation parent-enfant",
+    "Duplicate candidates": "Doublons potentiels",
+    "Pairs of risks worded so alike that they may be the same risk entered twice.":
+      "Paires de risques formulés de façon si proche qu'il pourrait s'agir du même risque saisi deux fois.",
+    "Possible duplicate of": "Doublon possible de",
+    "Similarity": "Similarité",
+    "Words in common": "Mots en commun",
+    "Also shares": "Autres points communs",
+    "No risks to scan yet.": "Aucun risque à analyser pour l'instant.",
+    "No likely duplicates. {compared} pairs compared and none scored above the threshold.":
+      "Aucun doublon probable. {compared} paires comparées, aucune n'a dépassé le seuil.",
+    "This scan hit its size limit, so the list below is a sample rather than every pair in the organization.":
+      "Cette analyse a atteint sa limite de taille ; la liste ci-dessous est donc un échantillon et non l'ensemble des paires de l'organisation.",
+    "Showing the {shown} closest of {matched} matching pairs.":
+      "Affichage des {shown} paires les plus proches sur {matched} paires correspondantes.",
+    "{scanned} risks scanned, {compared} pairs compared in the same category. Scores are the share of words the two risks have in common — a prompt to compare them, not a merge.":
+      "{scanned} risques analysés, {compared} paires comparées dans la même catégorie. Les scores correspondent à la part de mots que les deux risques ont en commun — une invitation à les comparer, pas une fusion.",
+    "{percent} percent similar": "{percent} pour cent de similarité",
+    "more": "de plus",
+    "category": "catégorie",
+    "lifecycle": "cycle de vie",
+    "Failed to fetch duplicate candidates": "Impossible de récupérer les doublons potentiels",
+    "Duplicate pair actions": "Actions pour la paire de doublons",
+    "Open risk #{id}": "Ouvrir le risque #{id}",
+    "Link as related": "Lier comme connexe",
+    "Linked as related": "Lié comme connexe",
+    "Delete risk #{id}": "Supprimer le risque #{id}",
+    "Delete this risk?": "Supprimer ce risque ?",
+    "Delete risk": "Supprimer le risque",
+    "“{name}” (#{id}) will be deleted. Its possible duplicate “{otherName}” (#{otherId}) stays.":
+      "« {name} » (#{id}) sera supprimé. Son doublon possible « {otherName} » (#{otherId}) est conservé.",
+    "The two risks are now linked as related.":
+      "Les deux risques sont maintenant liés comme connexes.",
+    "Failed to link the risks.": "Impossible de lier les risques.",
+    "Failed to delete the risk.": "Impossible de supprimer le risque.",
+    "Risk deleted but failed to remove it from some linked policies.":
+      "Risque supprimé, mais impossible de le retirer de certaines politiques liées.",
+    'Deleted "{name}".': "« {name} » a été supprimé.",
+    "Pairs per page": "Paires par page",
+    "Vendors per page": "Fournisseurs par page",
+    "Risks per page": "Risques par page",
+    "Signals per page": "Signaux par page",
+    "Reasons per page": "Raisons par page",
+    // Risk links (Linked risks panel, link and dismiss forms, Evidence Hub, risk table)
+    "Parent risk": "Risque parent",
+    "Child risks": "Risques enfants",
+    "Relates to": "Se rapporte à",
+    "Is inherited by": "Est hérité par",
+    "Restore": "Restaurer",
+    "Link a risk": "Lier un risque",
+    "Suggest hierarchy": "Suggérer une hiérarchie",
+    "Hide dismissed": "Masquer les rejetés",
+    "Show dismissed": "Afficher les rejetés",
+    "No linked risks yet.": "Aucun risque lié pour l'instant.",
+    "Scan for related risks": "Rechercher des risques connexes",
+    "Links appear as risks are saved, or after an administrator runs a scan.":
+      "Les liens apparaissent à l'enregistrement des risques ou après qu'un administrateur a lancé une analyse.",
+    "Failed to load linked risks.": "Impossible de charger les risques liés.",
+    // Vendor risk insights, value-chain reach and the vendor filter on the map
+    "Suggest children": "Suggérer des risques enfants",
+    "No clusters of related risks in the use cases of this vendor yet. Related risks are grouped once a scan has linked them.":
+      "Aucun groupe de risques connexes dans les cas d'usage de ce fournisseur pour l'instant. Les risques connexes sont regroupés une fois qu'une analyse les a liés.",
+    "inherited by": "hérité par",
+    "Inherited by": "Hérité par",
+    "1 project risk": "1 risque de projet",
+    "{count} project risks": "{count} risques de projet",
+    "{count} suggested": "{count} suggéré(s)",
+    "{likelihood} likelihood, {severity} severity: {count} risks":
+      "Probabilité {likelihood}, gravité {severity} : {count} risques",
+    "Filtering by heat map cell": "Filtrage par cellule de la carte thermique",
+    "The table now shows only vendor risks in the selected cell. Select the cell again to see all risks.":
+      "Le tableau n'affiche plus que les risques fournisseurs de la cellule sélectionnée. Sélectionnez à nouveau la cellule pour voir tous les risques.",
+    "Vendor risks by likelihood and severity. Select a cell to filter the table.":
+      "Risques fournisseurs par probabilité et gravité. Sélectionnez une cellule pour filtrer le tableau.",
+    "Each cell counts vendor risks by likelihood and severity. Select a cell to filter the table below, and select it again to show every risk.":
+      "Chaque cellule compte les risques fournisseurs par probabilité et gravité. Sélectionnez une cellule pour filtrer le tableau ci-dessous, puis sélectionnez-la à nouveau pour afficher tous les risques.",
+    "Blast radius": "Rayon d'impact",
+    "How many project risks and use cases inherit from the risks of each vendor.":
+      "Combien de risques de projet et de cas d'usage héritent des risques de chaque fournisseur.",
+    "Vendor {id}": "Fournisseur {id}",
+    "Vendor risk {id}": "Risque fournisseur {id}",
+    "{linked} of {total}": "{linked} sur {total}",
+    "Vendors with reach": "Fournisseurs avec portée",
+    "Inheriting project risks": "Risques de projet héritiers",
+    "Affected use cases": "Cas d'usage concernés",
+    "Vendor risks with children": "Risques fournisseurs avec enfants",
+    "Vendor risks with no children": "Risques fournisseurs sans enfants",
+    "View on map": "Voir sur la carte",
+    "No vendor risks yet.": "Aucun risque fournisseur pour l'instant.",
+    "No project risk inherits from a vendor risk yet. Open a vendor risk and link the project risks it applies to from its Linked risks tab.":
+      "Aucun risque de projet n'hérite encore d'un risque fournisseur. Ouvrez un risque fournisseur et liez les risques de projet auxquels il s'applique depuis son onglet « Risques liés ».",
+    "Duplicate vendor risks": "Risques fournisseurs en double",
+    "Risks of the same vendor that look like one risk entered twice.":
+      "Risques d'un même fournisseur qui ressemblent à un seul risque saisi deux fois.",
+    "{scanned} vendor risks scanned, {compared} pairs compared.":
+      "{scanned} risques fournisseurs analysés, {compared} paires comparées.",
+    "Only risks of the same vendor are compared: the same risk at two vendors is a pattern, not a duplicate.":
+      "Seuls les risques d'un même fournisseur sont comparés : le même risque chez deux fournisseurs est une tendance, pas un doublon.",
+    "This scan hit its size limit, so the list below is a sample rather than every pair.":
+      "Cette analyse a atteint sa limite de taille ; la liste ci-dessous est donc un échantillon et non l'ensemble des paires.",
+    "No likely duplicates among vendor risks.":
+      "Aucun doublon probable parmi les risques fournisseurs.",
+    "Which vendor risks are not mapped to a framework yet.":
+      "Quels risques fournisseurs ne sont pas encore associés à un référentiel.",
+    "Active vendor risks": "Risques fournisseurs actifs",
+    "Mapped to a framework": "Associés à un référentiel",
+    "Frameworks in its use cases": "Référentiels de ses cas d'usage",
+    "Every active vendor risk is mapped to at least one framework.":
+      "Chaque risque fournisseur actif est associé à au moins un référentiel.",
+    "The vendor serves a use case that has a framework attached, but these risks are not mapped to any framework. Map them from the risk itself.":
+      "Le fournisseur sert un cas d'usage auquel un référentiel est rattaché, mais ces risques ne sont associés à aucun référentiel. Associez-les depuis le risque lui-même.",
+    "None of the use cases these vendors serve has a framework attached, so there is nothing to map to. Not a finding: attach a framework to the use case first.":
+      "Aucun des cas d'usage servis par ces fournisseurs n'a de référentiel rattaché ; il n'y a donc rien à associer. Ce n'est pas un constat : rattachez d'abord un référentiel au cas d'usage.",
+    "All vendors": "Tous les fournisseurs",
+    "This vendor has no risks on the map yet.":
+      "Ce fournisseur n'a encore aucun risque sur la carte.",
+    "Show all vendors": "Afficher tous les fournisseurs",
+    // Vendor risk Linked risks tab
+    "Link a project risk": "Lier un risque de projet",
+    "When the level of this risk changes, each child is flagged for review.":
+      "Lorsque le niveau de ce risque change, chaque risque enfant est signalé pour révision.",
+    "A project risk can have only one parent, and a risk with child risks of its own cannot become a child.":
+      "Un risque de projet ne peut avoir qu'un seul parent, et un risque qui a ses propres risques enfants ne peut pas devenir enfant.",
+    "Mark reviewed": "Marquer comme examiné",
+    "One of these risks no longer exists": "L'un de ces risques n'existe plus",
+    "Failed to update the link": "Impossible de mettre à jour le lien",
+    "Failed to start the scan": "Impossible de lancer l'analyse",
+    "Failed to start the hierarchy suggestions":
+      "Impossible de lancer les suggestions de hiérarchie",
+    "Scan finished. No related risks found.": "Analyse terminée. Aucun risque connexe trouvé.",
+    "No clusters of related risks to group yet. Run a scan for related risks first.":
+      "Aucun groupe de risques connexes à regrouper pour l'instant. Lancez d'abord une analyse des risques connexes.",
+    "Still grouping. Reopen this tab to check for new suggestions.":
+      "Regroupement en cours. Rouvrez cet onglet pour voir les nouvelles suggestions.",
+    "Scanning {count} risks. Links will appear as the scan completes.":
+      "Analyse de {count} risques en cours. Les liens apparaîtront à la fin de l'analyse.",
+    "Grouping {count} clusters of related risks. Suggestions appear here as they finish.":
+      "Regroupement de {count} groupes de risques connexes. Les suggestions apparaîtront ici au fur et à mesure.",
+    "{count} clusters were too large to group in one pass.":
+      "{count} groupes étaient trop volumineux pour être regroupés en une seule passe.",
+    "Score {score}": "Score {score}",
+    "Why {name} is linked": "Pourquoi {name} est lié",
+    "risk {id}": "risque {id}",
+    "This risk already has a parent, so it can only relate to other risks.":
+      "Ce risque a déjà un parent ; il ne peut donc qu'être connexe à d'autres risques.",
+    "This risk has child risks, so it cannot become a child of another risk.":
+      "Ce risque a des risques enfants ; il ne peut donc pas devenir l'enfant d'un autre risque.",
+    "Search risks": "Rechercher des risques",
+    "Link": "Lier",
+    "Failed to create the link": "Impossible de créer le lien",
+    "Untitled vendor risk": "Risque fournisseur sans titre",
+    "Untitled model risk": "Risque de modèle sans titre",
+    "Same project: {name}": "Même projet : {name}",
+    "Same project: {name} +{count}": "Même projet : {name} +{count}",
+    // Related vendor risks
+    "Related vendor risks": "Risques fournisseurs connexes",
+    "Vendor risks that describe the same exposure, at this vendor or another one.":
+      "Risques fournisseurs qui décrivent la même exposition, chez ce fournisseur ou un autre.",
+    "Relate a vendor risk": "Lier un risque fournisseur connexe",
+    "Link a project risk that this vendor risk applies to, or relate another vendor risk. Suggestions appear here too.":
+      "Liez un risque de projet auquel ce risque fournisseur s'applique, ou un autre risque fournisseur connexe. Les suggestions apparaissent également ici.",
+    "Scan for related vendor risks": "Rechercher des risques fournisseurs connexes",
+    "Related vendor risks appear as vendor risks are saved, or after an administrator runs a scan.":
+      "Les risques fournisseurs connexes apparaissent à l'enregistrement des risques fournisseurs, ou après une analyse lancée par un administrateur.",
+    "Scanning {count} vendor risks. Related vendor risks appear here as the scan completes.":
+      "Analyse de {count} risques fournisseurs en cours. Les risques fournisseurs connexes apparaîtront ici à la fin de l'analyse.",
+    "Scan finished. No related vendor risks found.":
+      "Analyse terminée. Aucun risque fournisseur connexe trouvé.",
+    "Search vendor risks": "Rechercher des risques fournisseurs",
+    "Related vendor risks describe the same exposure, at this vendor or another one. Neither inherits from the other.":
+      "Des risques fournisseurs connexes décrivent la même exposition, chez ce fournisseur ou un autre. Aucun n'hérite de l'autre.",
+    "Similar wording": "Formulation similaire",
+    "Same vendor": "Même fournisseur",
+    "Shared framework": "Cadre commun",
+    "Shared use case": "Cas d'usage commun",
+    "Why are you dismissing {name}?": "Pourquoi rejetez-vous {name} ?",
+    "What happened?": "Que s'est-il passé ?",
+    "Failed to fetch linked risks": "Impossible de récupérer les risques liés",
+    "Failed to acknowledge the parent-level change":
+      "Impossible d'acquitter le changement de niveau du parent",
+    "Failed to fetch the risk graph": "Impossible de récupérer le graphe des risques",
+    "Failed to fetch shared projects": "Impossible de récupérer les projets communs",
+    "Mapped risks": "Risques associés",
+    "Select risks": "Sélectionner des risques",
+    "Evidence stale": "Preuve obsolète",
+    // Risk links (framework elements named in a link's reasons)
+    "ISO 42001 subclause": "sous-clause ISO 42001",
+    "ISO 42001 subclauses": "sous-clauses ISO 42001",
+    "ISO 27001 subclause": "sous-clause ISO 27001",
+    "ISO 27001 subclauses": "sous-clauses ISO 27001",
+    "ISO 42001 annex category": "catégorie d'annexe ISO 42001",
+    "ISO 42001 annex categories": "catégories d'annexe ISO 42001",
+    "ISO 27001 annex control": "contrôle d'annexe ISO 27001",
+    "ISO 27001 annex controls": "contrôles d'annexe ISO 27001",
+    "EU AI Act control": "contrôle du Règlement IA de l'UE",
+    "EU AI Act controls": "contrôles du Règlement IA de l'UE",
+    "EU AI Act subcontrol": "sous-contrôle du Règlement IA de l'UE",
+    "EU AI Act subcontrols": "sous-contrôles du Règlement IA de l'UE",
+    "EU AI Act assessment answer": "réponse d'évaluation du Règlement IA de l'UE",
+    "EU AI Act assessment answers": "réponses d'évaluation du Règlement IA de l'UE",
+    "NIST AI RMF subcategory": "sous-catégorie NIST AI RMF",
+    "NIST AI RMF subcategories": "sous-catégories NIST AI RMF",
+    "custom framework item": "élément de référentiel personnalisé",
+    "custom framework items": "éléments de référentiel personnalisés",
     // Reporting, readiness and AI observability
     "AI analyses": "Analyses IA",
     "AI observability": "Observabilité IA",
@@ -18509,6 +19292,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Invite via email": "Inviter par e-mail",
     "Must include an uppercase letter, a lowercase letter, and a digit. Minimum 8 characters.":
       "Doit contenir une majuscule, une minuscule et un chiffre. Minimum 8 caractères.",
+    "Default retention policy": "Politique de rétention par défaut",
+    "Expired files": "Fichiers expirés",
+    "File Manager": "Gestionnaire de fichiers",
+    "File retention": "Rétention des fichiers",
+    "Retention policy": "Politique de rétention",
     "Create API tokens for the super admin API":
       "Créer des tokens d'API pour l'API super administrateur",
     "Install": "Installer",
@@ -18875,6 +19663,12 @@ export const translations: Record<string, Record<string, string>> = {
     "Add new": "Añadir nuevo",
     "Add agent": "Añadir agente",
     "Add new risk": "Añadir nuevo riesgo",
+    "Add a new risk": "Añadir un nuevo riesgo",
+    "Create a detailed breakdown of risks and their mitigation strategies to assist in documenting your risk management activities effectively.":
+      "Cree un desglose detallado de los riesgos y sus estrategias de mitigación para documentar eficazmente sus actividades de gestión de riesgos.",
+    "Manage all organization risks in risk management":
+      "Gestionar todos los riesgos de la organización en gestión de riesgos",
+    "View and add risks for this use case": "Ver y añadir riesgos para este caso de uso",
     "Add new risks": "Añadir nuevos riesgos",
     "Add new risk manually": "Añadir nuevo riesgo manualmente",
     "Add new risk menu": "Menú de nuevo riesgo",
@@ -19263,14 +20057,16 @@ export const translations: Record<string, Record<string, string>> = {
     "SOC2 Type I": "SOC2 Type I",
     "SOC2 Type II": "SOC2 Type II",
     "AI regulation in the Middle East": "Regulación de la IA en Oriente Medio",
-    "We graded 205 AI apps on data transparency":
-      "Evaluamos 205 aplicaciones de IA en transparencia de datos",
-    "OSFI Guideline E-23: AI model risk rules":
-      "Directriz E-23 del OSFI: reglas de riesgo de modelos de IA",
-    "What we found running GRS across 15 AI models":
-      "Lo que encontramos al aplicar GRS a 15 modelos de IA",
-    "AI governance salaries 2026": "Salarios en gobernanza de IA 2026",
+    "VerifyWise on the Wavestone UK Cybersecurity Startup Radar":
+      "VerifyWise en el UK Cybersecurity Startup Radar de Wavestone",
+    "VerifyWise 2.5: reporting, observability, and extensions":
+      "VerifyWise 2.5: informes, observabilidad y extensiones",
+    "Stop shopping for DORA compliance software": "Deje de buscar software de cumplimiento de DORA",
+    "Model risk management for AI and ML": "Gestión del riesgo de modelos para IA y ML",
     "Clauses": "Cláusulas",
+    "No regulation connected": "Ninguna regulación conectada",
+    "link a framework to track progress": "vincule un marco para seguir el progreso",
+    "{items}: {done} of {total} completed": "{items}: {done} de {total} completados",
     "Annexes": "Anexos",
     "AI models mapped to this framework": "Modelos de IA mapeados a este marco",
     "Organizational Frameworks": "Marcos organizativos",
@@ -19288,6 +20084,58 @@ export const translations: Record<string, Record<string, string>> = {
     "Is your system an AI system?": "¿Es tu sistema un sistema de IA?",
     "Step": "Paso",
     "of": "de",
+    "Page": "Página",
+    "Showing": "Mostrando",
+    "matching of": "coincidentes de",
+    "entries": "entradas",
+    "items": "elementos",
+    "users": "usuarios",
+    "departments": "departamentos",
+    "tool(s)": "herramienta(s)",
+    "risk(s)": "riesgo(s)",
+    "project risk(s)": "riesgo(s) del proyecto",
+    "evidence(s)": "evidencia(s)",
+    "project report(s)": "informe(s) del proyecto",
+    "vendor(s)": "proveedor(es)",
+    "item(s)": "elemento(s)",
+    "use case(s)": "caso(s) de uso",
+    "scan(s)": "escaneo(s)",
+    "model(s)": "modelo(s)",
+    "datasets": "conjuntos de datos",
+    "model risk(s)": "riesgo(s) del modelo",
+    "form(s)": "formulario(s)",
+    "agent(s)": "agente(s)",
+    "battle": "enfrentamiento",
+    "battles": "enfrentamientos",
+    "dataset": "conjunto de datos",
+    "experiment": "experimento",
+    "experiments": "experimentos",
+    "incident": "incidente",
+    "incidents": "incidentes",
+    "model": "modelo",
+    "models": "modelos",
+    "policy": "política",
+    "policies": "políticas",
+    "project": "proyecto",
+    "projects": "proyectos",
+    "report": "informe",
+    "reports": "informes",
+    "risk": "riesgo",
+    "risks": "riesgos",
+    "scorer": "evaluador",
+    "scorers": "evaluadores",
+    "task": "tarea",
+    "tasks": "tareas",
+    "training": "formación",
+    "trainings": "formaciones",
+    "vendor risk": "riesgo de proveedor",
+    "vendor risks": "riesgos de proveedores",
+    "workflow": "flujo de trabajo",
+    "workflows": "flujos de trabajo",
+    "signal": "señal",
+    "signals": "señales",
+    "reason": "motivo",
+    "reasons": "motivos",
     "Search": "Buscar",
     "Filter": "Filtrar",
     "Sort": "Ordenar",
@@ -19702,6 +20550,17 @@ export const translations: Record<string, Record<string, string>> = {
     "Connect your GitHub repositories": "Conecte sus repositorios de GitHub",
     "Copy key": "Copiar clave",
     "Copy link": "Copiar enlace",
+    "Copied": "Copiado",
+    "Could not copy the link. Select it and copy it manually.":
+      "No se pudo copiar el enlace. Selecciónelo y cópielo manualmente.",
+    "Invitation link": "Enlace de invitación",
+    "Share the invitation link": "Compartir el enlace de invitación",
+    "The email service is unavailable, so the invitation could not be resent. Links sent earlier no longer work. Share this link with the invitee instead.":
+      "El servicio de correo electrónico no está disponible, por lo que no se pudo reenviar la invitación. Los enlaces enviados anteriormente ya no funcionan. Comparta este enlace con la persona invitada.",
+    "The invitation was created, but the email could not be sent. Share this link with the invitee so they can create an account.":
+      "La invitación se creó, pero no se pudo enviar el correo electrónico. Comparta este enlace con la persona invitada para que pueda crear una cuenta.",
+    "The invitation email could not be sent":
+      "No se pudo enviar el correo electrónico de invitación",
     "Copy response": "Copiar respuesta",
     "Copy the key below. It won": "Copie la clave de abajo. No se",
     "Copy to my datasets?": "¿Copiar a mis conjuntos de datos?",
@@ -20232,6 +21091,14 @@ export const translations: Record<string, Record<string, string>> = {
     "Linked Operational Objects": "Objetos operativos vinculados",
     "Linked Policies Objects": "Objetos de políticas vinculados",
     "Linked risk": "Riesgo vinculado",
+    "Configure an LLM API key so Advisor and reporting can run.":
+      "Configure una clave de API de LLM para que el asesor de IA y los informes puedan funcionar.",
+    "Advisor and reporting need an LLM API key. Contact your administrator.":
+      "El asesor de IA y los informes necesitan una clave de API de LLM. Póngase en contacto con su administrador.",
+    "Configure an LLM API key to send messages.":
+      "Configure una clave de API de LLM para enviar mensajes.",
+    "Sending messages requires an LLM API key. Contact your administrator.":
+      "Para enviar mensajes se necesita una clave de API de LLM. Póngase en contacto con su administrador.",
     "LLM Arena": "LLM Arena",
     "LLM provider": "Proveedor de LLM",
     "LLM providers": "Proveedores de LLM",
@@ -21618,6 +22485,8 @@ export const translations: Record<string, Record<string, string>> = {
     "LLM key": "Clave de LLM",
     "LLM use case": "Caso de uso de LLM",
     "LLM-enhanced analysis": "Análisis mejorado con LLM",
+    "Couldn't load LLM keys. Reload the page to try again.":
+      "No se pudieron cargar las claves LLM. Recarga la página para volver a intentarlo.",
     "Last login": "Último inicio de sesión",
     "Linked": "Vinculado",
     "Linked Items": "Elementos vinculados",
@@ -22001,8 +22870,10 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Chatbot for Customer Support": "Chatbot de IA para atención al cliente",
     "AI Gateway": "AI Gateway",
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar y análisis de CI/CD",
-    "Custom frameworks, Model Risk Management, and Extensions":
-      "Custom Frameworks, Model Risk Management y Extensions",
+    "Custom roles, risk inheritance, and evidence retention":
+      "Roles personalizados, herencia de riesgos y retención de evidencias",
+    "Built-in frameworks, Model Risk Management, and Extensions":
+      "Marcos integrados, Model Risk Management y Extensions",
     "AI Trust Index, AI Apps inventory, and Agent Control":
       "AI Trust Index, AI Apps inventory y Agent Control",
     "AI Lifecycle Risk Management": "Gestión de riesgos del ciclo de vida de la IA",
@@ -22399,6 +23270,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Failed to create scorer": "Error al crear el evaluador",
     "Failed to create suppression rule": "Error al crear la regla de supresión",
     "Failed to delete": "Error al eliminar",
+    "Failed to delete account. Please try again.":
+      "No se pudo eliminar la cuenta. Inténtelo de nuevo.",
     "Failed to delete API key": "Error al eliminar la clave de API",
     "Failed to delete comparison": "Error al eliminar la comparación",
     "Failed to delete demo data.": "Error al eliminar los datos de demostración.",
@@ -25287,8 +26160,16 @@ export const translations: Record<string, Record<string, string>> = {
       "Acciones para abordar riesgos y oportunidades (incluye evaluación de riesgos, tratamiento y evaluación de impacto)",
     "Activate the compliance frameworks relevant to your organization.":
       "Active los marcos de cumplimiento relevantes para su organización.",
-    "Add SOC 2, GDPR, HIPAA, and other compliance frameworks as plugins with full controls.":
-      "Añada SOC 2, GDPR, HIPAA y otros marcos de cumplimiento como complementos con controles completos.",
+    "SOC 2, GDPR, HIPAA, DORA, and 17 more frameworks are built in, with requirements, evidence, and risk tracking.":
+      "SOC 2, GDPR, HIPAA, DORA y 17 marcos más están integrados, con requisitos, evidencias y seguimiento de riesgos.",
+    "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import, and Dataset Bulk Upload.":
+      "Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import y Dataset Bulk Upload.",
+    "Admins enable, configure, and disable extensions from the Extensions page. Nothing to install.":
+      "Los administradores activan, configuran y desactivan extensiones desde la página Extensions. No hay nada que instalar.",
+    "Import risks from Excel, bulk upload datasets with PII detection, and define model lifecycle phases.":
+      "Importe riesgos desde Excel, cargue conjuntos de datos en bloque con detección de PII y defina fases del ciclo de vida de los modelos.",
+    "Connect Slack, MLflow, Azure AI Foundry, Jira Assets, and more with extensions that admins enable.":
+      "Conecte Slack, MLflow, Azure AI Foundry, Jira Assets y más con extensiones que activan los administradores.",
     "Add colleagues to collaborate on compliance and risk management tasks.":
       "Añada colegas para colaborar en tareas de cumplimiento y gestión de riesgos.",
     "Add new AI models to your inventory with comprehensive metadata including provider, version, capabilities, security assessment, and usage details.":
@@ -25475,8 +26356,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Configure la precisión, la relevancia, la toxicidad, el sesgo y métricas personalizadas para cada evaluación.",
     "Configure automated alerts when new AI tools are detected or usage thresholds are exceeded.":
       "Configure alertas automatizadas cuando se detecten nuevas herramientas de IA o se superen los umbrales de uso.",
-    "Connect Slack, Jira, MLflow, Azure AI, and more for seamless workflow integration.":
-      "Conecte Slack, Jira, MLflow, Azure AI y más para una integración fluida del flujo de trabajo.",
+    "Send notifications to Slack, sync models from MLflow and Azure AI Foundry, and import use cases from Jira Assets.":
+      "Envíe notificaciones a Slack, sincronice modelos desde MLflow y Azure AI Foundry, e importe casos de uso desde Jira Assets.",
     "Connect a GitHub token to scan private repositories":
       "Conecte un token de GitHub para analizar repositorios privados",
     "Connect with ML platforms to track experiments, models, and deployments.":
@@ -25619,8 +26500,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Redacte nuevas políticas de gobernanza alineadas con los requisitos normativos. Use plantillas y mejores prácticas para garantizar una cobertura exhaustiva.",
     "EU AI Act only (specific to an AI system/project)":
       "Solo EU AI Act (específico de un sistema/proyecto de IA)",
-    "EU AI Act, ISO 42001, NIST AI RMF, SOC 2, GDPR, and more with pluggable framework support.":
-      "EU AI Act, ISO 42001, NIST AI RMF, SOC 2, GDPR y más, con soporte de marcos conectables.",
+    "EU AI Act, ISO 42001, NIST AI RMF, SOC 2, GDPR, and 20 more frameworks, all built in.":
+      "EU AI Act, ISO 42001, NIST AI RMF, SOC 2, GDPR y 20 marcos más, todos integrados.",
     "EU conformity assessment and CE marking status":
       "Estado de la evaluación de conformidad de la UE y del marcado CE",
     "Effective mechanisms ensure non-conforming systems can be removed or disabled to prevent further risks.":
@@ -26122,8 +27003,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Controles de referencia (Declaración de aplicabilidad)",
     "Register AI-related training programs and educational resources. Track completion status, certifications, and learning progress across your team.":
       "Registre programas de formación y recursos educativos relacionados con la IA. Haga seguimiento del estado de finalización, las certificaciones y el progreso de aprendizaje de todo su equipo.",
-    "Register and track AI models with details like hosting, biases, and limitations. Extend with the lifecycle plugin.":
-      "Registre y haga seguimiento de los modelos de IA con detalles como el alojamiento, los sesgos y las limitaciones. Amplíe con el complemento de ciclo de vida.",
+    "Register and track AI models with details like hosting, biases, and limitations. Extend with the Model Lifecycle extension.":
+      "Registre y haga seguimiento de los modelos de IA con detalles como el alojamiento, los sesgos y las limitaciones. Amplíe con la extensión Model Lifecycle.",
     "Register external AI providers and third-party services. Document vendor information, contracts, and compliance requirements in one centralized location.":
       "Registre proveedores de IA externos y servicios de terceros. Documente la información de los proveedores, los contratos y los requisitos de cumplimiento en una ubicación centralizada.",
     "Register providers, authorized representatives, and deployers, along with their AI systems, in the EU database as required by the AI Act.":
@@ -26666,6 +27547,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Define campos específicos de la organización en entidades como Proveedores, Políticas, etc.",
     "Only Admins can manage custom fields.":
       "Solo los administradores pueden gestionar los campos personalizados.",
+
     "Configure Microsoft Entra ID single sign-on":
       "Configura el inicio de sesión único de Microsoft Entra ID",
     "Found in Azure Portal &gt; Microsoft Entra ID &gt; Overview &gt; Tenant ID":
@@ -27369,6 +28251,300 @@ export const translations: Record<string, Record<string, string>> = {
       "¿Qué propósito empresarial cumple el caso de uso?",
     "Who is the intended audience for the use case?":
       "¿Quién es la audiencia prevista para el caso de uso?",
+    // Risk inheritance (graph, key, coverage, dismissal and duplicate reports)
+    "Risk inheritance": "Herencia de riesgos",
+    "Risk inheritance graph": "Gráfico de herencia de riesgos",
+    "Loading risk inheritance graph...": "Cargando el gráfico de herencia de riesgos...",
+    "Failed to load the risk graph": "No se pudo cargar el gráfico de riesgos",
+    "No risk links yet. Open a risk and run the link scan from its Linked risks panel.":
+      "Aún no hay vínculos entre riesgos. Abre un riesgo y ejecuta el análisis de vínculos desde su panel «Riesgos vinculados».",
+    "Showing the first 500 links. Filter by status to narrow the graph.":
+      "Se muestran los primeros 500 vínculos. Filtra por estado para acotar el gráfico.",
+    "Only admins can view the risk inheritance graph.":
+      "Solo los administradores pueden ver el gráfico de herencia de riesgos.",
+    "Link types": "Tipos de vínculos",
+    "Inherits": "Hereda",
+    "Suggested": "Sugerido",
+    "Competing": "En competencia",
+    "{risks} risks, {links} links": "{risks} riesgos, {links} vínculos",
+    "Click the canvas to clear the selection.": "Haz clic en el lienzo para borrar la selección.",
+    "Select a risk to trace its links.": "Selecciona un riesgo para seguir sus vínculos.",
+    "Risk {id}": "Riesgo {id}",
+    "Risk level: {level}": "Nivel de riesgo: {level}",
+    "Parent level changed": "Nivel principal modificado",
+    "Parent level changed.": "Nivel principal modificado.",
+    "Map key": "Leyenda",
+    "What is this map?": "¿Qué es este mapa?",
+    'Each box is a risk, coloured by type. Arrows run from a parent risk to the risks that inherit from it. "Parent level changed" marks a risk whose parent moved and needs a second look.':
+      "Cada recuadro es un riesgo, coloreado según su tipo. Las flechas van de un riesgo principal a los riesgos que heredan de él. «Nivel principal modificado» marca un riesgo cuyo principal ha cambiado de nivel y conviene revisar de nuevo.",
+    "Control coverage": "Cobertura de controles",
+    "Which active risks are not mitigated by any control yet.":
+      "Qué riesgos activos aún no están mitigados por ningún control.",
+    "Active risks": "Riesgos activos",
+    "Covered by a control": "Cubiertos por un control",
+    "Coverage gaps": "Brechas de cobertura",
+    "No framework yet": "Aún sin marco",
+    "Level": "Nivel",
+    "Assessment links": "Vínculos de evaluación",
+    "no framework": "sin marco",
+    "No active risks to check for control coverage yet.":
+      "Aún no hay riesgos activos para comprobar su cobertura de controles.",
+    "More risks matched than a single report lists. The counts above are complete; the tables below show the worst of each list.":
+      "Hay más riesgos coincidentes de los que caben en un solo informe. Los totales de arriba están completos; las tablas de abajo muestran los peores de cada lista.",
+    "Every active risk is linked to at least one control.":
+      "Cada riesgo activo está vinculado al menos a un control.",
+    "These risks sit in a project that has a framework attached but are not linked to any control. Assessment links are shown for context and do not count as coverage.":
+      "Estos riesgos pertenecen a un proyecto con un marco asociado, pero no están vinculados a ningún control. Los vínculos de evaluación se muestran como contexto y no cuentan como cobertura.",
+    "None of these risks' projects has a framework attached, so there are no controls to map to. Not a finding — attach a framework first.":
+      "Ningún proyecto de estos riesgos tiene un marco asociado, por lo que no hay controles a los que vincularlos. No es un hallazgo: asocia primero un marco.",
+    "Failed to fetch control coverage": "No se pudo obtener la cobertura de controles",
+    "No risk": "Sin riesgo",
+    "On Hold": "En pausa",
+    "Deferred": "Aplazado",
+    "Canceled": "Cancelado",
+    "Requires review": "Requiere revisión",
+    "Dismissal analytics": "Análisis de descartes",
+    "Which suggested links people reject, and why, so the suggestions can be tuned.":
+      "Qué vínculos sugeridos se rechazan y por qué, para poder afinar las sugerencias.",
+    "Current signals on decided links": "Señales actuales en vínculos decididos",
+    "Signals are recomputed on every save, so they describe the pair today, not the moment of the decision.":
+      "Las señales se recalculan en cada guardado, por lo que describen el par hoy, no en el momento de la decisión.",
+    "Signal": "Señal",
+    "Decided": "Decididos",
+    "Dismiss rate": "Tasa de descarte",
+    "Top reason": "Motivo principal",
+    "Why suggestions get dismissed": "Por qué se descartan las sugerencias",
+    "The “No reason given” bucket also holds links that were un-linked after being accepted: confirming then dismissing a pair necessarily writes a NULL reason, and no column records the prior status — so that bucket is not pure suggester feedback.":
+      "El grupo «Sin motivo indicado» también incluye vínculos que se desvincularon tras aceptarse: confirmar y luego descartar un par escribe necesariamente un motivo NULL, y ninguna columna registra el estado anterior, así que ese grupo no es solo opinión sobre las sugerencias.",
+    "No reason given": "Sin motivo indicado",
+    "Recent notes": "Notas recientes",
+    "{relation} · {source} — {dismissed} of {decided} dismissed ({rate})":
+      "{relation} · {source} — {dismissed} de {decided} descartados ({rate})",
+    "No decided links yet — numbers appear once suggestions are confirmed or dismissed.":
+      "Aún no hay vínculos decididos — las cifras aparecen cuando se confirman o descartan sugerencias.",
+    "Failed to fetch dismissal analytics": "No se pudo obtener el análisis de descartes",
+    "Cross entity hierarchy": "Jerarquía entre entidades",
+    "Hierarchy": "Jerarquía",
+    "Same lifecycle phase": "Misma fase del ciclo de vida",
+    "Shared assessment mapping": "Mapeo de evaluación compartido",
+    "Remove link": "Quitar vínculo",
+    "Shared control mapping": "Mapeo de control compartido",
+    "Shared category": "Categoría compartida",
+    "Shared framework element": "Elemento de marco compartido",
+    "Shared project": "Proyecto compartido",
+    "Inherits from": "Hereda de",
+    "Related to": "Relacionado con",
+    "Derived": "Derivado",
+    "These aren't actually related": "En realidad no están relacionados",
+    "Related, but not worth a link": "Relacionados, pero no merece un vínculo",
+    "Another link already covers this": "Otro vínculo ya cubre esto",
+    "The direction is backwards": "La dirección está invertida",
+    "Right that it's a child, wrong parent": "Correcto como dependiente, pero el principal es otro",
+    "Related, but not parent and child": "Relacionados, pero sin relación principal-dependiente",
+    "Duplicate candidates": "Posibles duplicados",
+    "Pairs of risks worded so alike that they may be the same risk entered twice.":
+      "Pares de riesgos redactados de forma tan parecida que podrían ser el mismo riesgo introducido dos veces.",
+    "Possible duplicate of": "Posible duplicado de",
+    "Similarity": "Similitud",
+    "Words in common": "Palabras en común",
+    "Also shares": "También comparten",
+    "No risks to scan yet.": "Aún no hay riesgos que analizar.",
+    "No likely duplicates. {compared} pairs compared and none scored above the threshold.":
+      "No hay duplicados probables. Se compararon {compared} pares y ninguno superó el umbral.",
+    "This scan hit its size limit, so the list below is a sample rather than every pair in the organization.":
+      "Este análisis alcanzó su límite de tamaño, por lo que la lista de abajo es una muestra y no todos los pares de la organización.",
+    "Showing the {shown} closest of {matched} matching pairs.":
+      "Se muestran los {shown} pares más cercanos de {matched} pares coincidentes.",
+    "{scanned} risks scanned, {compared} pairs compared in the same category. Scores are the share of words the two risks have in common — a prompt to compare them, not a merge.":
+      "{scanned} riesgos analizados, {compared} pares comparados dentro de la misma categoría. Las puntuaciones indican la proporción de palabras que comparten los dos riesgos: una invitación a compararlos, no una fusión.",
+    "{percent} percent similar": "{percent} por ciento de similitud",
+    "more": "más",
+    "category": "categoría",
+    "lifecycle": "ciclo de vida",
+    "Failed to fetch duplicate candidates": "No se pudieron obtener los posibles duplicados",
+    "Duplicate pair actions": "Acciones del par duplicado",
+    "Open risk #{id}": "Abrir riesgo #{id}",
+    "Link as related": "Vincular como relacionado",
+    "Linked as related": "Vinculado como relacionado",
+    "Delete risk #{id}": "Eliminar riesgo #{id}",
+    "Delete this risk?": "¿Eliminar este riesgo?",
+    "Delete risk": "Eliminar riesgo",
+    "“{name}” (#{id}) will be deleted. Its possible duplicate “{otherName}” (#{otherId}) stays.":
+      "«{name}» (#{id}) se eliminará. Su posible duplicado «{otherName}» (#{otherId}) se conserva.",
+    "The two risks are now linked as related.":
+      "Los dos riesgos ahora están vinculados como relacionados.",
+    "Failed to link the risks.": "No se pudieron vincular los riesgos.",
+    "Failed to delete the risk.": "No se pudo eliminar el riesgo.",
+    "Risk deleted but failed to remove it from some linked policies.":
+      "Riesgo eliminado, pero no se pudo quitar de algunas políticas vinculadas.",
+    'Deleted "{name}".': "«{name}» eliminado.",
+    "Pairs per page": "Pares por página",
+    "Vendors per page": "Proveedores por página",
+    "Risks per page": "Riesgos por página",
+    "Signals per page": "Señales por página",
+    "Reasons per page": "Motivos por página",
+    // Risk links (Linked risks panel, link and dismiss forms, Evidence Hub, risk table)
+    "Parent risk": "Riesgo principal",
+    "Child risks": "Riesgos dependientes",
+    "Relates to": "Se relaciona con",
+    "Is inherited by": "Es heredado por",
+    "Restore": "Restaurar",
+    "Link a risk": "Vincular un riesgo",
+    "Suggest hierarchy": "Sugerir jerarquía",
+    "Hide dismissed": "Ocultar descartados",
+    "Show dismissed": "Mostrar descartados",
+    "No linked risks yet.": "Aún no hay riesgos vinculados.",
+    "Scan for related risks": "Buscar riesgos relacionados",
+    "Links appear as risks are saved, or after an administrator runs a scan.":
+      "Los vínculos aparecen al guardar los riesgos o cuando un administrador ejecuta un análisis.",
+    "Failed to load linked risks.": "No se pudieron cargar los riesgos vinculados.",
+    // Vendor risk insights, value-chain reach and the vendor filter on the map
+    "Suggest children": "Sugerir riesgos dependientes",
+    "No clusters of related risks in the use cases of this vendor yet. Related risks are grouped once a scan has linked them.":
+      "Todavía no hay grupos de riesgos relacionados en los casos de uso de este proveedor. Los riesgos relacionados se agrupan cuando un análisis los ha vinculado.",
+    "inherited by": "heredado por",
+    "Inherited by": "Heredado por",
+    "1 project risk": "1 riesgo de proyecto",
+    "{count} project risks": "{count} riesgos de proyecto",
+    "{count} suggested": "{count} sugeridos",
+    "{likelihood} likelihood, {severity} severity: {count} risks":
+      "Probabilidad {likelihood}, gravedad {severity}: {count} riesgos",
+    "Filtering by heat map cell": "Filtrando por celda del mapa de calor",
+    "The table now shows only vendor risks in the selected cell. Select the cell again to see all risks.":
+      "La tabla ahora muestra solo los riesgos del proveedor de la celda seleccionada. Seleccione la celda de nuevo para ver todos los riesgos.",
+    "Vendor risks by likelihood and severity. Select a cell to filter the table.":
+      "Riesgos del proveedor por probabilidad y gravedad. Seleccione una celda para filtrar la tabla.",
+    "Each cell counts vendor risks by likelihood and severity. Select a cell to filter the table below, and select it again to show every risk.":
+      "Cada celda cuenta los riesgos del proveedor por probabilidad y gravedad. Seleccione una celda para filtrar la tabla de abajo y selecciónela de nuevo para mostrar todos los riesgos.",
+    "Blast radius": "Radio de impacto",
+    "How many project risks and use cases inherit from the risks of each vendor.":
+      "Cuántos riesgos de proyecto y casos de uso heredan de los riesgos de cada proveedor.",
+    "Vendor {id}": "Proveedor {id}",
+    "Vendor risk {id}": "Riesgo del proveedor {id}",
+    "{linked} of {total}": "{linked} de {total}",
+    "Vendors with reach": "Proveedores con alcance",
+    "Inheriting project risks": "Riesgos de proyecto que heredan",
+    "Affected use cases": "Casos de uso afectados",
+    "Vendor risks with children": "Riesgos del proveedor con dependientes",
+    "Vendor risks with no children": "Riesgos del proveedor sin dependientes",
+    "View on map": "Ver en el mapa",
+    "No vendor risks yet.": "Todavía no hay riesgos del proveedor.",
+    "No project risk inherits from a vendor risk yet. Open a vendor risk and link the project risks it applies to from its Linked risks tab.":
+      "Ningún riesgo de proyecto hereda todavía de un riesgo del proveedor. Abra un riesgo del proveedor y vincule los riesgos de proyecto a los que se aplica desde su pestaña «Riesgos vinculados».",
+    "Duplicate vendor risks": "Riesgos del proveedor duplicados",
+    "Risks of the same vendor that look like one risk entered twice.":
+      "Riesgos del mismo proveedor que parecen un solo riesgo introducido dos veces.",
+    "{scanned} vendor risks scanned, {compared} pairs compared.":
+      "{scanned} riesgos del proveedor analizados, {compared} pares comparados.",
+    "Only risks of the same vendor are compared: the same risk at two vendors is a pattern, not a duplicate.":
+      "Solo se comparan riesgos del mismo proveedor: el mismo riesgo en dos proveedores es un patrón, no un duplicado.",
+    "This scan hit its size limit, so the list below is a sample rather than every pair.":
+      "Este análisis alcanzó su límite de tamaño, así que la lista de abajo es una muestra y no todos los pares.",
+    "No likely duplicates among vendor risks.":
+      "No hay duplicados probables entre los riesgos del proveedor.",
+    "Which vendor risks are not mapped to a framework yet.":
+      "Qué riesgos del proveedor aún no están asignados a un marco.",
+    "Active vendor risks": "Riesgos del proveedor activos",
+    "Mapped to a framework": "Asignados a un marco",
+    "Frameworks in its use cases": "Marcos en sus casos de uso",
+    "Every active vendor risk is mapped to at least one framework.":
+      "Cada riesgo del proveedor activo está asignado al menos a un marco.",
+    "The vendor serves a use case that has a framework attached, but these risks are not mapped to any framework. Map them from the risk itself.":
+      "El proveedor da servicio a un caso de uso con un marco asociado, pero estos riesgos no están asignados a ningún marco. Asígnelos desde el propio riesgo.",
+    "None of the use cases these vendors serve has a framework attached, so there is nothing to map to. Not a finding: attach a framework to the use case first.":
+      "Ninguno de los casos de uso que atienden estos proveedores tiene un marco asociado, así que no hay nada que asignar. No es un hallazgo: asocie primero un marco al caso de uso.",
+    "All vendors": "Todos los proveedores",
+    "This vendor has no risks on the map yet.":
+      "Este proveedor todavía no tiene riesgos en el mapa.",
+    "Show all vendors": "Mostrar todos los proveedores",
+    // Vendor risk Linked risks tab
+    "Link a project risk": "Vincular un riesgo del proyecto",
+    "When the level of this risk changes, each child is flagged for review.":
+      "Cuando cambia el nivel de este riesgo, cada riesgo dependiente se marca para revisión.",
+    "A project risk can have only one parent, and a risk with child risks of its own cannot become a child.":
+      "Un riesgo del proyecto solo puede tener un riesgo principal, y un riesgo con riesgos dependientes propios no puede convertirse en dependiente.",
+    "Mark reviewed": "Marcar como revisado",
+    "One of these risks no longer exists": "Uno de estos riesgos ya no existe",
+    "Failed to update the link": "No se pudo actualizar el vínculo",
+    "Failed to start the scan": "No se pudo iniciar el análisis",
+    "Failed to start the hierarchy suggestions":
+      "No se pudieron iniciar las sugerencias de jerarquía",
+    "Scan finished. No related risks found.":
+      "Análisis finalizado. No se encontraron riesgos relacionados.",
+    "No clusters of related risks to group yet. Run a scan for related risks first.":
+      "Aún no hay grupos de riesgos relacionados que agrupar. Ejecuta primero un análisis de riesgos relacionados.",
+    "Still grouping. Reopen this tab to check for new suggestions.":
+      "Aún se está agrupando. Vuelve a abrir esta pestaña para ver nuevas sugerencias.",
+    "Scanning {count} risks. Links will appear as the scan completes.":
+      "Analizando {count} riesgos. Los vínculos aparecerán cuando termine el análisis.",
+    "Grouping {count} clusters of related risks. Suggestions appear here as they finish.":
+      "Agrupando {count} grupos de riesgos relacionados. Las sugerencias aparecerán aquí a medida que terminen.",
+    "{count} clusters were too large to group in one pass.":
+      "{count} grupos eran demasiado grandes para agruparse en una sola pasada.",
+    "Score {score}": "Puntuación {score}",
+    "Why {name} is linked": "Por qué {name} está vinculado",
+    "risk {id}": "riesgo {id}",
+    "This risk already has a parent, so it can only relate to other risks.":
+      "Este riesgo ya tiene un principal, así que solo puede relacionarse con otros riesgos.",
+    "This risk has child risks, so it cannot become a child of another risk.":
+      "Este riesgo tiene riesgos dependientes, así que no puede convertirse en dependiente de otro riesgo.",
+    "Search risks": "Buscar riesgos",
+    "Link": "Vincular",
+    "Failed to create the link": "No se pudo crear el vínculo",
+    "Untitled vendor risk": "Riesgo de proveedor sin título",
+    "Untitled model risk": "Riesgo del modelo sin título",
+    "Same project: {name}": "Mismo proyecto: {name}",
+    "Same project: {name} +{count}": "Mismo proyecto: {name} +{count}",
+    // Related vendor risks
+    "Related vendor risks": "Riesgos de proveedor relacionados",
+    "Vendor risks that describe the same exposure, at this vendor or another one.":
+      "Riesgos de proveedor que describen la misma exposición, en este proveedor o en otro.",
+    "Relate a vendor risk": "Relacionar un riesgo de proveedor",
+    "Link a project risk that this vendor risk applies to, or relate another vendor risk. Suggestions appear here too.":
+      "Vincula un riesgo de proyecto al que se aplica este riesgo de proveedor, o relaciona otro riesgo de proveedor. Las sugerencias también aparecen aquí.",
+    "Scan for related vendor risks": "Buscar riesgos de proveedor relacionados",
+    "Related vendor risks appear as vendor risks are saved, or after an administrator runs a scan.":
+      "Los riesgos de proveedor relacionados aparecen al guardar los riesgos de proveedor, o después de que un administrador ejecute un análisis.",
+    "Scanning {count} vendor risks. Related vendor risks appear here as the scan completes.":
+      "Analizando {count} riesgos de proveedor. Los riesgos de proveedor relacionados aparecerán aquí cuando termine el análisis.",
+    "Scan finished. No related vendor risks found.":
+      "Análisis finalizado. No se encontraron riesgos de proveedor relacionados.",
+    "Search vendor risks": "Buscar riesgos de proveedor",
+    "Related vendor risks describe the same exposure, at this vendor or another one. Neither inherits from the other.":
+      "Los riesgos de proveedor relacionados describen la misma exposición, en este proveedor o en otro. Ninguno hereda del otro.",
+    "Similar wording": "Redacción similar",
+    "Same vendor": "Mismo proveedor",
+    "Shared framework": "Marco compartido",
+    "Shared use case": "Caso de uso compartido",
+    "Why are you dismissing {name}?": "¿Por qué descartas {name}?",
+    "What happened?": "¿Qué ocurrió?",
+    "Failed to fetch linked risks": "No se pudieron obtener los riesgos vinculados",
+    "Failed to acknowledge the parent-level change":
+      "No se pudo confirmar el cambio de nivel del principal",
+    "Failed to fetch the risk graph": "No se pudo obtener el gráfico de riesgos",
+    "Failed to fetch shared projects": "No se pudieron obtener los proyectos compartidos",
+    "Mapped risks": "Riesgos asociados",
+    "Select risks": "Seleccionar riesgos",
+    "Evidence stale": "Evidencia obsoleta",
+    // Risk links (framework elements named in a link's reasons)
+    "ISO 42001 subclause": "subcláusula de ISO 42001",
+    "ISO 42001 subclauses": "subcláusulas de ISO 42001",
+    "ISO 27001 subclause": "subcláusula de ISO 27001",
+    "ISO 27001 subclauses": "subcláusulas de ISO 27001",
+    "ISO 42001 annex category": "categoría de anexo de ISO 42001",
+    "ISO 42001 annex categories": "categorías de anexo de ISO 42001",
+    "ISO 27001 annex control": "control de anexo de ISO 27001",
+    "ISO 27001 annex controls": "controles de anexo de ISO 27001",
+    "EU AI Act control": "control de EU AI Act",
+    "EU AI Act controls": "controles de EU AI Act",
+    "EU AI Act subcontrol": "subcontrol de EU AI Act",
+    "EU AI Act subcontrols": "subcontroles de EU AI Act",
+    "EU AI Act assessment answer": "respuesta de evaluación de EU AI Act",
+    "EU AI Act assessment answers": "respuestas de evaluación de EU AI Act",
+    "NIST AI RMF subcategory": "subcategoría de NIST AI RMF",
+    "NIST AI RMF subcategories": "subcategorías de NIST AI RMF",
+    "custom framework item": "elemento de marco personalizado",
+    "custom framework items": "elementos de marco personalizados",
     // Reporting, readiness and AI observability
     "AI analyses": "Análisis de IA",
     "AI observability": "Observabilidad de IA",
@@ -27652,6 +28828,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Invite via email": "Invitar por correo",
     "Must include an uppercase letter, a lowercase letter, and a digit. Minimum 8 characters.":
       "Debe incluir una mayúscula, una minúscula y un dígito. Mínimo 8 caracteres.",
+    "Default retention policy": "Política de retención predeterminada",
+    "Expired files": "Archivos caducados",
+    "File Manager": "Gestor de archivos",
+    "File retention": "Retención de archivos",
+    "Retention policy": "Política de retención",
     "Create API tokens for the super admin API":
       "Crear tokens de API para la API de superadministrador",
     "Install": "Instalar",

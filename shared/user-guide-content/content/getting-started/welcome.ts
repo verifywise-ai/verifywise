@@ -73,7 +73,7 @@ export const welcomeContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You can also install additional frameworks (SOC 2, GDPR, HIPAA and others) through the plugin system.',
+      text: 'Another 21 frameworks are built in and ready to add, including SOC 2, GDPR, HIPAA, DORA and the NIST Cybersecurity Framework. There is nothing to install: add them from the Frameworks page or from a use case.',
     },
     {
       type: 'heading',
@@ -91,7 +91,7 @@ export const welcomeContent: ArticleContent = {
         'Incident management for logging AI-related incidents and corrective actions',
         'Role-based access (Admin, Reviewer, Editor, Auditor) with organization-level isolation',
         'Event tracker with a full audit trail of who did what and when',
-        'Integrations with Slack, MLflow, and custom webhooks via automations',
+        'Built-in extensions for Slack, MLflow, Azure AI Foundry, Jira Assets and more, plus custom webhooks via automations',
       ],
     },
     {
@@ -147,6 +147,12 @@ export const welcomeContent: ArticleContent = {
           articleId: 'quick-start',
           title: 'Quick start',
           description: 'Create a use case, add a framework and upload your first evidence',
+        },
+        {
+          collectionId: 'compliance',
+          articleId: 'adding-frameworks',
+          title: 'Adding frameworks',
+          description: 'Add any of the built-in frameworks to your organization or a use case',
         },
       ],
     },

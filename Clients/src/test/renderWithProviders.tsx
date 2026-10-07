@@ -40,6 +40,8 @@ interface ExtendedRenderOptions extends Omit<RenderOptions, "queries"> {
   preloadedAuth?: PreloadedAuthState;
   /** Full preloaded state for the store */
   preloadedState?: Record<string, unknown>;
+  /** Query client to render with, e.g. one seeded with cached data (default: a fresh one) */
+  queryClient?: QueryClient;
 }
 
 // ---- Helpers ----
@@ -83,10 +85,14 @@ function createTestQueryClient() {
 
 export function renderWithProviders(
   ui: React.ReactElement,
-  { route = "/", preloadedAuth, ...renderOptions }: ExtendedRenderOptions = {},
+  {
+    route = "/",
+    preloadedAuth,
+    queryClient = createTestQueryClient(),
+    ...renderOptions
+  }: ExtendedRenderOptions = {},
 ) {
   const store = createTestStore(preloadedAuth);
-  const queryClient = createTestQueryClient();
 
   function Wrapper({ children }: PropsWithChildren) {
     return (

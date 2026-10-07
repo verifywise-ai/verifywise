@@ -18,7 +18,7 @@ import { validateId } from "../domain.layer/validations/id.valid";
 router.post(
   "/generate-report",
   authenticateJWT,
-  authorize(["Admin"]),
+  authorize("reporting.admin"),
   validateId("projectId"),
   validateId("frameworkId"),
   validateId("projectFrameworkId"),
@@ -29,7 +29,7 @@ router.post(
 router.post(
   "/v2/generate-report",
   authenticateJWT,
-  authorize(["Admin"]),
+  authorize("reporting.admin"),
   validateId("projectId"),
   validateId("frameworkId"),
   validateId("projectFrameworkId"),

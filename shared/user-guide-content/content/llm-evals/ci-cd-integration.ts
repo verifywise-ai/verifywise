@@ -43,6 +43,12 @@ export const ciCdIntegrationContent: ArticleContent = {
       text: 'Add this file to your repository at `.github/workflows/llm-eval.yml`:',
     },
     {
+      type: 'callout',
+      variant: 'info',
+      title: 'Why the action is pinned to a commit',
+      text: 'The action is referenced by full commit SHA rather than a version tag. Pinning to an immutable commit is the recommended practice for third-party actions: a branch or tag can be moved to point at different code later, and your workflow would pick that up silently. Check the repository for a newer commit when you want to update.',
+    },
+    {
       type: 'code',
       language: 'yaml',
       code: `name: LLM Quality Gate
@@ -62,7 +68,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run evaluation
-        uses: verifywise-ai/verifywise-eval-action@v1
+        uses: verifywise-ai/verifywise-eval-action@e6b45998a6560267ca97b778cddc819a09b4bcb3
         with:
           api_url: https://your-verifywise-instance.com
           project_id: proj_abc
@@ -188,7 +194,7 @@ python ci_eval_runner.py \\
     },
     {
       type: 'paragraph',
-      text: 'The script exits with code 0 if all metrics pass, 1 if any metric fails and 2 on errors. Download ci_eval_runner.py from the verifywise-eval-action repository.',
+      text: 'The script exits with code 0 if all metrics pass, 1 if any metric fails and 2 on errors. Download ci_eval_runner.py from github.com/verifywise-ai/verifywise-eval-action.',
     },
     {
       type: 'heading',
@@ -198,12 +204,12 @@ python ci_eval_runner.py \\
     },
     {
       type: 'paragraph',
-      text: 'For more control, install the Python SDK and call the API directly:',
+      text: 'For more control, install the Python SDK and call the API directly. The SDK is distributed from its repository rather than PyPI, pinned to a commit for the reasons above:',
     },
     {
       type: 'code',
       language: 'python',
-      code: `pip install verifywise
+      code: `pip install "git+https://github.com/verifywise-ai/verifywise-eval-action.git@e6b45998a6560267ca97b778cddc819a09b4bcb3#subdirectory=sdk"
 
 from verifywise import VerifyWiseClient
 

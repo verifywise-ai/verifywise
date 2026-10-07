@@ -89,9 +89,6 @@ spec:
           valueFrom:
             secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: EVAL_SERVER_INTERNAL_KEY }
 
-        - name: MOCK_DATA_ON
-          valueFrom:
-            configMapKeyRef: { name: verifywise-config, key: MOCK_DATA_ON }
         - name: MULTI_TENANCY_ENABLED
           valueFrom:
             configMapKeyRef: { name: verifywise-config, key: MULTI_TENANCY_ENABLED }
@@ -160,13 +157,13 @@ spec:
             secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: ENCRYPTION_KEY }
 
         livenessProbe:
-          httpGet: { path: /health, port: 3000 }
+          httpGet: { path: /health/live, port: 3000 }
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
         readinessProbe:
-          httpGet: { path: /health, port: 3000 }
+          httpGet: { path: /health/ready, port: 3000 }
           initialDelaySeconds: 10
           periodSeconds: 5
           timeoutSeconds: 3

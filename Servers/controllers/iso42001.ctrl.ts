@@ -36,6 +36,7 @@ import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper
 import logger from "../utils/logger/fileLogger";
 
 import { translateError } from "../utils/i18n.utils";
+import { toId } from "../utils/validations/validation.utils";
 // Helper function to get user name
 async function getUserNameById(userId: number): Promise<string> {
   const result = await sequelize.query<{ name: string; surname: string }>(
@@ -864,9 +865,9 @@ export async function saveClauses(req: RequestWithFile, res: Response): Promise<
 
     // Notify owner, reviewer, approver if changed
     const entityName = currentData.title || `Subclause #${subClauseId}`;
-    const newOwner = subClause.owner ? parseInt(String(subClause.owner)) : null;
-    const newReviewer = subClause.reviewer ? parseInt(String(subClause.reviewer)) : null;
-    const newApprover = subClause.approver ? parseInt(String(subClause.approver)) : null;
+    const newOwner = subClause.owner ? toId(subClause.owner) : null;
+    const newReviewer = subClause.reviewer ? toId(subClause.reviewer) : null;
+    const newApprover = subClause.approver ? toId(subClause.approver) : null;
 
     if (newOwner) {
       notifyIso42001Assignment(
@@ -1017,13 +1018,9 @@ export async function saveAnnexes(req: RequestWithFile, res: Response): Promise<
 
     // Notify owner, reviewer, approver if changed
     const annexEntityName = currentAnnexData.title || `Annex Category #${annexCategoryId}`;
-    const newAnnexOwner = annexCategory.owner ? parseInt(String(annexCategory.owner)) : null;
-    const newAnnexReviewer = annexCategory.reviewer
-      ? parseInt(String(annexCategory.reviewer))
-      : null;
-    const newAnnexApprover = annexCategory.approver
-      ? parseInt(String(annexCategory.approver))
-      : null;
+    const newAnnexOwner = annexCategory.owner ? toId(annexCategory.owner) : null;
+    const newAnnexReviewer = annexCategory.reviewer ? toId(annexCategory.reviewer) : null;
+    const newAnnexApprover = annexCategory.approver ? toId(annexCategory.approver) : null;
 
     if (newAnnexOwner) {
       notifyIso42001Assignment(

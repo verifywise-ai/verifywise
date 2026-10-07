@@ -121,7 +121,14 @@ export function HistorySidebar({
   // Fetch avatars for all users in the history
   React.useEffect(() => {
     const fetchAvatars = async () => {
-      const uniqueUserIds = Array.from(new Set(history.map((entry) => entry.changed_by_user_id)));
+      // A system change or a deleted user has no id, so there is no photo to fetch.
+      const uniqueUserIds = Array.from(
+        new Set(
+          history
+            .map((entry) => entry.changed_by_user_id)
+            .filter((userId): userId is number => userId != null),
+        ),
+      );
 
       // Batch fetch all avatars to avoid multiple re-renders
       const newAvatarUrls: { [userId: number]: string | null } = {};
@@ -175,14 +182,16 @@ export function HistorySidebar({
 
     const isCurrentUser = creationEntry.changed_by_user_id === currentUserId;
 
-    // Handle deleted users (changed_by_user_id is NULL)
-    const creatorName = !creationEntry.changed_by_user_id
-      ? "a deleted user"
-      : isCurrentUser
-        ? "you"
-        : creationEntry.user_name && creationEntry.user_surname
-          ? `${creationEntry.user_name} ${creationEntry.user_surname}`
-          : creationEntry.user_email || "an unknown user";
+    // changed_by_user_id is NULL for a system change or a since-deleted user
+    const creatorName = creationEntry.changed_by_system
+      ? "the system"
+      : !creationEntry.changed_by_user_id
+        ? "a deleted user"
+        : isCurrentUser
+          ? "you"
+          : creationEntry.user_name && creationEntry.user_surname
+            ? `${creationEntry.user_name} ${creationEntry.user_surname}`
+            : creationEntry.user_email || "an unknown user";
 
     const creationDate = displayFormattedDate(creationEntry.changed_at);
     const creationTime = displayFormattedTime(creationEntry.changed_at);
@@ -265,14 +274,16 @@ export function HistorySidebar({
     const firstEntry = group[0];
     const isCurrentUser = firstEntry.changed_by_user_id === currentUserId;
 
-    // Handle deleted users (changed_by_user_id is NULL)
-    const userName = !firstEntry.changed_by_user_id
-      ? "Deleted User"
-      : isCurrentUser
-        ? "You"
-        : firstEntry.user_name && firstEntry.user_surname
-          ? `${firstEntry.user_name} ${firstEntry.user_surname}`
-          : firstEntry.user_email || "Unknown User";
+    // changed_by_user_id is NULL for a system change or a since-deleted user
+    const userName = firstEntry.changed_by_system
+      ? "System"
+      : !firstEntry.changed_by_user_id
+        ? "Deleted User"
+        : isCurrentUser
+          ? "You"
+          : firstEntry.user_name && firstEntry.user_surname
+            ? `${firstEntry.user_name} ${firstEntry.user_surname}`
+            : firstEntry.user_email || "Unknown User";
 
     const relativeTime = formatRelativeTime(firstEntry.changed_at);
 
@@ -292,7 +303,10 @@ export function HistorySidebar({
             user={{
               firstname: firstEntry.user_name || userName,
               lastname: firstEntry.user_surname || "",
-              pathToImage: avatarUrls[firstEntry.changed_by_user_id] || undefined,
+              pathToImage:
+                firstEntry.changed_by_user_id != null
+                  ? avatarUrls[firstEntry.changed_by_user_id] || undefined
+                  : undefined,
             }}
             size="small"
             sx={{

@@ -574,7 +574,7 @@ paths:
     get:
       tags: [Project Risks]
       summary: Get project risks by project ID
-      description: Returns project risks linked to a specific project. Non-numeric IDs (e.g. plugin-sourced) return an empty array.
+      description: Returns project risks linked to a specific project. Non-numeric IDs return an empty array.
       security:
         - bearerAuth: []
       parameters:

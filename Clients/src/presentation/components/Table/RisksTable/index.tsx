@@ -22,6 +22,8 @@ import { VendorRisk } from "../../../../domain/types/VendorRisk";
 import { User } from "../../../../domain/types/User";
 import { IRiskTableProps } from "../../../types/interfaces/i.table";
 import { VWLink } from "../../Link";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
 import { VendorModel } from "../../../../domain/models/Common/vendor/vendor.model";
 import { useStandardTable } from "../../../../application/hooks/useStandardTable";
 import StandardTableHead from "../StandardTableHead";
@@ -37,10 +39,16 @@ const titleOfTableColumns: StandardColumn[] = [
   { id: "action_owner", label: "action owner", sortable: true },
   { id: "risk_severity", label: "risk severity", sortable: true },
   { id: "risk_level", label: "risk level", sortable: true },
+  { id: "inherited_by", label: "inherited by", sortable: true },
   { id: "actions", label: " ", sortable: false },
 ];
 
-type EnrichedRisk = VendorRisk & { project_titles: string; vendor_name?: string };
+type EnrichedRisk = VendorRisk & {
+  project_titles: string;
+  vendor_name?: string;
+  /** Confirmed child count from the exposure report; 0 when it has not loaded. */
+  inherited_by: number;
+};
 
 const getSeverityValue = (severity: string): number => {
   const s = severity.toLowerCase();
@@ -91,6 +99,8 @@ function riskSortComparator(a: EnrichedRisk, b: EnrichedRisk, key: string): numb
       return getLikelihoodValue(a.likelihood) - getLikelihoodValue(b.likelihood);
     case "risk_level":
       return getRiskLevelValue(a.risk_level) - getRiskLevelValue(b.risk_level);
+    case "inherited_by":
+      return a.inherited_by - b.inherited_by;
     default:
       return 0;
   }
@@ -105,8 +115,11 @@ const RiskTable: React.FC<IRiskTableProps> = ({
   isDeletingAllowed = true,
   hidePagination = false,
   visibleColumns,
+  exposure,
+  onOpenLinks,
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation();
   const cellStyle = singleTheme.tableStyles.primary.body.cell;
 
   const isVisible = useCallback(
@@ -169,8 +182,9 @@ const RiskTable: React.FC<IRiskTableProps> = ({
     return Object.values(groupedRisks).map((risk) => ({
       ...risk,
       project_titles: Array.from(new Set(risk.project_titles)).join(", "),
+      inherited_by: exposure?.get(risk.risk_id!)?.children ?? 0,
     }));
-  }, [vendorRisks]);
+  }, [vendorRisks, exposure]);
 
   const {
     sortConfig,
@@ -390,6 +404,46 @@ const RiskTable: React.FC<IRiskTableProps> = ({
                     </VWLink>
                   </TableCell>
                 )}
+                {isVisible("inherited_by") && (
+                  <TableCell
+                    sx={{
+                      ...getCellStyle(row),
+                      backgroundColor:
+                        sortConfig.key === "inherited_by" ? "background.surface" : "inherit",
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {(() => {
+                      const reach = exposure?.get(row.risk_id!);
+                      if (reach && reach.children > 0) {
+                        const label =
+                          reach.children === 1
+                            ? t("1 project risk")
+                            : fill(t("{count} project risks"), { count: reach.children });
+                        return (
+                          <Tooltip
+                            title={reach.use_cases.map((useCase) => useCase.name).join(", ")}
+                            arrow
+                          >
+                            <span>
+                              <VWLink
+                                onClick={() => (onOpenLinks ?? onEdit)(row.risk_id!)}
+                                showUnderline={false}
+                                showIcon={false}
+                              >
+                                {label}
+                              </VWLink>
+                            </span>
+                          </Tooltip>
+                        );
+                      }
+                      if (reach && reach.suggested > 0) {
+                        return fill(t("{count} suggested"), { count: reach.suggested });
+                      }
+                      return "-";
+                    })()}
+                  </TableCell>
+                )}
                 {customFieldDefs.map((def) => {
                   const match = (row as any).custom_fields?.find(
                     (cf: { definition_id: number; value: unknown }) => cf.definition_id === def.id,
@@ -445,6 +499,9 @@ const RiskTable: React.FC<IRiskTableProps> = ({
       hidePagination,
       sortConfig.key,
       isVisible,
+      exposure,
+      onOpenLinks,
+      t,
     ],
   );
 

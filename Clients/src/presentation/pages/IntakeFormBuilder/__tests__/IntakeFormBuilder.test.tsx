@@ -1,5 +1,24 @@
+import { screen, fireEvent, waitFor, within, act } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
+import { invalidateLLMKeyQueries } from "../../../../application/hooks/useLLMKeys";
+import CustomAxios from "../../../../infrastructure/api/customAxios";
 import { IntakeFormBuilder } from "../index";
+
+// The key list is cached per organization; give the page one.
+const ORG_ID = 7;
+vi.mock("../../../../application/hooks/useAuth", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../../application/hooks/useAuth")>();
+  return { useAuth: () => ({ ...actual.useAuth(), organizationId: ORG_ID }) };
+});
+
+const mockGetLLMKeys = vi.fn();
+vi.mock("../../../../application/repository/llmKeys.repository", () => ({
+  getLLMKeys: (...args: unknown[]) => mockGetLLMKeys(...args),
+}));
+
+const openAIKey = { id: 3, name: "OpenAI", key: "sk-***", model: "gpt-4o" };
+const anthropicKey = { id: 4, name: "Anthropic", key: "sk-ant-***", model: "claude-x" };
 
 // Mock repository functions
 vi.mock("../../../../application/repository/intakeForm.repository", () => ({
@@ -17,7 +36,7 @@ vi.mock("../../../../application/repository/intakeForm.repository", () => ({
   },
 }));
 
-// Mock CustomAxios for LLM keys and users loading
+// Mock CustomAxios for users loading
 vi.mock("../../../../infrastructure/api/customAxios", () => ({
   __esModule: true,
   default: {
@@ -48,11 +67,51 @@ vi.mock("../DesignPanel", () => ({
 }));
 
 describe("IntakeFormBuilder Page", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetLLMKeys.mockResolvedValue({ data: { data: [] } });
+  });
+
+  const openLLMKeyOptions = () => {
+    const label = screen.getByText("LLM key");
+    fireEvent.mouseDown(within(label.parentElement as HTMLElement).getByRole("combobox"));
+    return screen.getByRole("listbox");
+  };
+
   it("renders without crashing for a new form", () => {
     const { container } = renderWithProviders(<IntakeFormBuilder />, {
       route: "/intake-forms/new/edit",
     });
 
     expect(container).toBeInTheDocument();
+  });
+
+  it("lists the keys from the shared query cache without fetching them again", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    queryClient.setQueryData(["llmKeys", ORG_ID], [openAIKey]);
+
+    renderWithProviders(<IntakeFormBuilder />, { route: "/intake-forms/new/edit", queryClient });
+
+    expect(within(openLLMKeyOptions()).getByText("OpenAI — gpt-4o")).toBeInTheDocument();
+    expect(mockGetLLMKeys).not.toHaveBeenCalled();
+    expect(CustomAxios.get).not.toHaveBeenCalledWith("/llm-keys");
+  });
+
+  it("refreshes the key options when the key queries are invalidated", async () => {
+    mockGetLLMKeys.mockResolvedValue({ data: { data: [openAIKey] } });
+    const { queryClient } = renderWithProviders(<IntakeFormBuilder />, {
+      route: "/intake-forms/new/edit",
+    });
+    await waitFor(() => expect(mockGetLLMKeys).toHaveBeenCalledTimes(1));
+
+    // A key is added elsewhere (e.g. Settings > LLM keys).
+    mockGetLLMKeys.mockResolvedValue({ data: { data: [openAIKey, anthropicKey] } });
+    await act(() => invalidateLLMKeyQueries(queryClient));
+
+    await waitFor(() => {
+      expect(within(openLLMKeyOptions()).getByText("Anthropic — claude-x")).toBeInTheDocument();
+    });
   });
 });

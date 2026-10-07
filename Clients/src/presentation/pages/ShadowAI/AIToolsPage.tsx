@@ -46,7 +46,7 @@ import TablePaginationActions from "../../components/TablePagination";
 import GovernanceWizardModal from "./GovernanceWizardModal";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import Alert from "../../components/Alert";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import {
   SelectorVertical,
   SortableColumn,
@@ -54,6 +54,7 @@ import {
   useSortedRows,
   SortableTableHead,
 } from "./constants";
+import { pageOfLabel } from "../../components/Table/pageOfLabel";
 
 const ROWS_PER_PAGE = 20;
 
@@ -101,6 +102,7 @@ function ToolIcon({ vendor, size = 18 }: { vendor?: string; size?: number }) {
 }
 
 export default function AIToolsPage() {
+  const formatDate = useFormattedDate();
   const theme = useTheme();
   const navigate = useNavigate();
   const { toolId } = useParams<{ toolId?: string }>();
@@ -322,17 +324,13 @@ export default function AIToolsPage() {
               <DashboardHeaderCard
                 title="First detected"
                 count={
-                  selectedTool.first_detected_at
-                    ? displayFormattedDate(selectedTool.first_detected_at)
-                    : "—"
+                  selectedTool.first_detected_at ? formatDate(selectedTool.first_detected_at) : "—"
                 }
                 disableNavigation
               />
               <DashboardHeaderCard
                 title="Last seen"
-                count={
-                  selectedTool.last_seen_at ? displayFormattedDate(selectedTool.last_seen_at) : "—"
-                }
+                count={selectedTool.last_seen_at ? formatDate(selectedTool.last_seen_at) : "—"}
                 disableNavigation
               />
             </Box>
@@ -585,7 +583,7 @@ export default function AIToolsPage() {
                       {t.risk_score ?? 0}
                     </TableCell>
                     <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                      {t.last_seen_at ? displayFormattedDate(t.last_seen_at) : "—"}
+                      {t.last_seen_at ? formatDate(t.last_seen_at) : "—"}
                     </TableCell>
                   </TableRow>
                 );
@@ -619,7 +617,7 @@ export default function AIToolsPage() {
                   ActionsComponent={(props) => <TablePaginationActions {...props} />}
                   labelRowsPerPage=""
                   labelDisplayedRows={({ page: p, count }) =>
-                    `Page ${p + 1} of ${Math.max(0, Math.ceil(count / ROWS_PER_PAGE))}`
+                    pageOfLabel(p + 1, Math.max(0, Math.ceil(count / ROWS_PER_PAGE)))
                   }
                   slotProps={{
                     select: {

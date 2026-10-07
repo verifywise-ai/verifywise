@@ -1,9 +1,15 @@
 import React, { useMemo } from "react";
 import { Box, Typography, Tooltip, Stack, useTheme } from "@mui/material";
-import { IRiskHeatMapProps } from "../../types/interfaces/i.risk";
+import { HeatMapRisk, IRiskHeatMapProps } from "../../types/interfaces/i.risk";
 import { IHeatMapCell } from "../../../domain/interfaces/i.widget";
 import { RiskCalculator } from "../../tools/riskCalculator";
 import { RiskLikelihood, RiskSeverity } from "../RiskLevel/riskValues";
+import { RiskModel } from "../../../domain/models/Common/risks/risk.model";
+import { useTranslation } from "../../../application/hooks/useTranslation";
+import { fill } from "../../../i18n/fill";
+
+/** IHeatMapCell, over whichever risk type is being plotted. */
+type HeatMapCell<T> = Omit<IHeatMapCell, "risks"> & { risks: T[] };
 
 // Index 0 is unused so the arrays line up with the 1-5 scale used by the grid.
 const LIKELIHOOD_BY_VALUE = [
@@ -43,8 +49,15 @@ const withAlpha = (hex: string, alpha: number): string => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 };
 
-const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({ risks, onRiskSelect, selectedRisk }) => {
+function RiskHeatMap<T extends HeatMapRisk = RiskModel>({
+  risks,
+  onRiskSelect,
+  selectedRisk,
+  onCellSelect,
+  selectedCell,
+}: IRiskHeatMapProps<T>) {
   const theme = useTheme();
+  const { t } = useTranslation();
 
   // Helper functions to convert string values to numeric
   const getLikelihoodNumeric = (likelihood: string): number => {
@@ -83,10 +96,10 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({ risks, onRiskSelect, selecte
   };
 
   const heatMapData = useMemo(() => {
-    const grid: IHeatMapCell[][] = [];
+    const grid: HeatMapCell<T>[][] = [];
 
     for (let severity = 5; severity >= 1; severity--) {
-      const row: IHeatMapCell[] = [];
+      const row: HeatMapCell<T>[] = [];
       for (let likelihood = 1; likelihood <= 5; likelihood++) {
         const cellRisks = risks.filter((risk) => {
           // Pair `likelihood` with `severity` — both describe the current risk.
@@ -138,8 +151,16 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({ risks, onRiskSelect, selecte
     return labels[likelihood];
   };
 
-  const renderCell = (cell: IHeatMapCell) => {
-    const isSelected = selectedRisk && cell.risks.some((r) => r.id === selectedRisk.id);
+  const renderCell = (cell: HeatMapCell<T>) => {
+    const isSelected = selectedCell
+      ? selectedCell.likelihood === cell.likelihood && selectedCell.severity === cell.severity
+      : selectedRisk && cell.risks.some((r) => r.id === selectedRisk.id);
+    const selectable = Boolean(onCellSelect) && cell.risks.length > 0;
+    const select = () => {
+      if (cell.risks.length === 0) return;
+      if (onCellSelect) onCellSelect({ likelihood: cell.likelihood, severity: cell.severity });
+      else if (onRiskSelect) onRiskSelect(cell.risks[0]);
+    };
 
     return (
       <Tooltip
@@ -203,11 +224,25 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({ risks, onRiskSelect, selecte
                   }
                 : {},
           }}
-          onClick={() => {
-            if (cell.risks.length > 0 && onRiskSelect) {
-              onRiskSelect(cell.risks[0]);
-            }
-          }}
+          onClick={select}
+          // Keyboard-reachable only where a click does something for the
+          // caller; the project risks view keeps its pointer-only cells.
+          {...(selectable && {
+            "role": "button",
+            "tabIndex": 0,
+            "aria-pressed": Boolean(isSelected),
+            "aria-label": fill(t("{likelihood} likelihood, {severity} severity: {count} risks"), {
+              likelihood: t(getLikelihoodLabel(cell.likelihood)),
+              severity: t(getSeverityLabel(cell.severity)),
+              count: cell.risks.length,
+            }),
+            "onKeyDown": (event: React.KeyboardEvent) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                select();
+              }
+            },
+          })}
         >
           <Typography
             variant="h6"
@@ -429,6 +464,6 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({ risks, onRiskSelect, selecte
       </Stack>
     </Box>
   );
-};
+}
 
 export default RiskHeatMap;

@@ -86,7 +86,8 @@ We are democratizing AI best practices with a solution that can be hosted on-pre
   - Detailed reports with PDF and DOCX export
   - Event logs (audits) for enterprise organizations
   - AI incident management
-  - Plugins support with more than 15+ plugins (and counting)
+  - 25 built-in compliance frameworks: the four above plus 21 more, including SOC 2, GDPR, HIPAA, DORA, CCPA, NIST CSF and NYC Local Law 144
+  - Built-in extensions an admin can enable per organization: Slack, MLflow, Azure AI Foundry, Jira Assets, Model Lifecycle, Risk Import (Excel) and Dataset Bulk Upload
   - Automations (when an entity changes, do this, or send period reports, or send webhooks)
   - Google OAuth2 and Entra ID (enterprise edition) support for authentication
 

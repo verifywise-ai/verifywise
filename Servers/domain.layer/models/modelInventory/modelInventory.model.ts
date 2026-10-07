@@ -444,6 +444,9 @@ export class ModelInventoryModel extends Model<ModelInventoryModel> implements I
    * Create a new ModelInventoryModel instance with minimal validations
    */
   static createNewModelInventory(data: Partial<IModelInventory>): ModelInventoryModel {
+    // Blank or whitespace-only values must become NULL so they are excluded
+    // from the partial unique index on (organization_id, external_key) (issue #4755).
+    const trimmedExternalKey = data.external_key?.trim() || undefined;
     const modelInventory = new ModelInventoryModel({
       provider_model: data.provider_model || "", // Keep for backward compatibility
       provider: data.provider || "",
@@ -464,7 +467,7 @@ export class ModelInventoryModel extends Model<ModelInventoryModel> implements I
       intended_use: data.intended_use ?? undefined,
       security_assessment_data: data.security_assessment_data || [],
       is_demo: data.is_demo || false,
-      external_key: data.external_key || undefined, // empty string must become NULL (partial unique index on external_key)
+      external_key: trimmedExternalKey,
       created_at: new Date(),
       updated_at: new Date(),
     });
@@ -534,7 +537,9 @@ export class ModelInventoryModel extends Model<ModelInventoryModel> implements I
       existingModel.is_demo = data.is_demo;
     }
     if (data.external_key !== undefined) {
-      existingModel.external_key = data.external_key || undefined;
+      // Blank or whitespace-only values must become NULL (partial unique index,
+      // issue #4755) — same normalization as createNewModelInventory.
+      existingModel.external_key = data.external_key.trim() || undefined;
     }
 
     // Always update the updated_at timestamp

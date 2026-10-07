@@ -10,39 +10,44 @@ vi.mock("../../../ProjectCard/ProgressBar", () => ({
 
 describe("StatsCard", () => {
   it("renders completed out of total", () => {
-    renderWithProviders(
-      <StatsCard title="tasks" completed={5} total={10} progressbarColor="#4caf50" />,
-    );
-    expect(screen.getByText("5 tasks out of 10 is completed")).toBeInTheDocument();
+    renderWithProviders(<StatsCard title="Tasks" completed={5} total={10} />);
+    expect(screen.getByText("Tasks: 5 of 10 completed")).toBeInTheDocument();
     expect(screen.getByText("50%")).toBeInTheDocument();
+    expect(screen.getByTestId("progress-bar")).toHaveAttribute("data-progress", "5/10");
   });
 
-  it("renders 0% when total is 0", () => {
-    renderWithProviders(
-      <StatsCard title="items" completed={0} total={0} progressbarColor="#4caf50" />,
-    );
-    expect(screen.getByText("0%")).toBeInTheDocument();
-    expect(screen.getByText("0 items out of 0 is completed")).toBeInTheDocument();
+  // Callers pass undefined/null until their progress request returns, so a
+  // 0 is never shown (or read as "nothing connected") before the data says so.
+  it.each([undefined, null])("shows a skeleton while total is %p", (total) => {
+    renderWithProviders(<StatsCard title="Clauses" completed={undefined} total={total} />);
+    expect(screen.queryByText(/no regulation connected/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("0%")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("progress-bar")).not.toBeInTheDocument();
+  });
+
+  it("renders the empty state once loaded with a total of 0", () => {
+    renderWithProviders(<StatsCard title="Clauses" completed={0} total={0} />);
+    expect(screen.getByText(/no regulation connected/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "link a framework to track progress" }),
+    ).toHaveAttribute("href", "/framework");
+    expect(screen.queryByText("0%")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("progress-bar")).not.toBeInTheDocument();
   });
 
   it("handles NaN completed gracefully", () => {
-    renderWithProviders(
-      <StatsCard title="tasks" completed={NaN} total={10} progressbarColor="#4caf50" />,
-    );
-    expect(screen.getByText("0 tasks out of 10 is completed")).toBeInTheDocument();
+    renderWithProviders(<StatsCard title="Tasks" completed={NaN} total={10} />);
+    expect(screen.getByText("Tasks: 0 of 10 completed")).toBeInTheDocument();
+    expect(screen.getByText("0%")).toBeInTheDocument();
   });
 
-  it("handles negative values gracefully", () => {
-    renderWithProviders(
-      <StatsCard title="tasks" completed={-5} total={10} progressbarColor="#4caf50" />,
-    );
-    expect(screen.getByText("0 tasks out of 10 is completed")).toBeInTheDocument();
+  it("clamps negative completed to 0", () => {
+    renderWithProviders(<StatsCard title="Tasks" completed={-5} total={10} />);
+    expect(screen.getByText("Tasks: 0 of 10 completed")).toBeInTheDocument();
   });
 
-  it("renders progress bar with correct progress", () => {
-    renderWithProviders(
-      <StatsCard title="tests" completed={7} total={10} progressbarColor="#4caf50" />,
-    );
-    expect(screen.getByTestId("progress-bar")).toHaveAttribute("data-progress", "7/10");
+  it("floors the percentage", () => {
+    renderWithProviders(<StatsCard title="Tests" completed={7} total={9} />);
+    expect(screen.getByText("77%")).toBeInTheDocument();
   });
 });

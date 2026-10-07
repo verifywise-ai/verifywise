@@ -5,7 +5,6 @@ install_dir: /verifywise
 backend_port: 3000
 frontend_port: 8080
 node_env: production
-mock_data_on: "false"
 multi_tenancy_enabled: "false"
 
 # Database

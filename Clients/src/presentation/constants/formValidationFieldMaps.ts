@@ -52,7 +52,6 @@ export const MITIGATION_FORM_FIELD_ORDER: (keyof MitigationFormValues)[] = [
   "approver",
   "approvalStatus",
   "dateOfAssessment",
-  "recommendations",
 ];
 
 export const MITIGATION_FORM_FIELD_IDS: Partial<Record<keyof MitigationFormValues, string>> = {
@@ -64,7 +63,6 @@ export const MITIGATION_FORM_FIELD_IDS: Partial<Record<keyof MitigationFormValue
   approver: "approver-input",
   approvalStatus: "approval-status-input",
   dateOfAssessment: "mitigation-assessment-date-input",
-  recommendations: "recommendations-input",
 };
 
 export const VENDOR_RISK_FORM_FIELD_ORDER: (keyof VendorRiskFormValues)[] = [
@@ -114,3 +112,58 @@ export const VENDOR_RISK_MODAL_FIELD_IDS: Partial<Record<keyof VendorRiskModalFo
     likelihood: "likelihood-input",
     risk_severity: "risk-severity-input",
   };
+
+/** Incident drawer modal (`Modals/NewIncident`) — validator keys and DOM ids. */
+export interface IncidentFormValues {
+  ai_project: string;
+  occurred_date: string;
+  date_detected: string;
+  reporter: string;
+  description: string;
+  categories_of_harm: string[];
+}
+
+export const INCIDENT_FORM_FIELD_ORDER: (keyof IncidentFormValues)[] = [
+  "ai_project",
+  "occurred_date",
+  "date_detected",
+  "reporter",
+  "description",
+  "categories_of_harm",
+];
+
+export const INCIDENT_FORM_FIELD_IDS: Partial<Record<string, string>> = {
+  ai_project: "ai_project",
+  reporter: "reporter",
+  description: "description",
+  // Focus wrapper around the harm-category checkbox group (first checkbox is focused).
+  categories_of_harm: "categories-of-harm",
+};
+
+/** Training modal (`Modals/NewTraining`) — validator keys and DOM ids. */
+export interface TrainingFormValues {
+  training_name: string;
+  duration: string;
+  provider: string;
+  department: string;
+  status: string;
+  numberOfPeople: number | undefined;
+}
+
+export const TRAINING_FORM_FIELD_ORDER: (keyof TrainingFormValues)[] = [
+  "training_name",
+  "duration",
+  "provider",
+  "department",
+  "status",
+  "numberOfPeople",
+];
+
+export const TRAINING_FORM_FIELD_IDS: Partial<Record<string, string>> = {
+  training_name: "training-name",
+  duration: "duration",
+  provider: "provider",
+  department: "department",
+  status: "status",
+  numberOfPeople: "number-of-people",
+};

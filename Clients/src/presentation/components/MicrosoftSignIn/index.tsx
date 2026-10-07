@@ -2,7 +2,8 @@ import { Button, useTheme } from "@mui/material";
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router";
-import { setAuthToken, setExpiration } from "../../../application/redux/auth/authSlice";
+import { setExpiration } from "../../../application/redux/auth/authSlice";
+import { startSession } from "../../../application/utils/clearSession";
 import { ReactComponent as MicrosoftIcon } from "../../assets/icons/microsoft-icon.svg";
 
 interface MicrosoftSignInProps {
@@ -32,7 +33,7 @@ export const MicrosoftSignIn: React.FC<MicrosoftSignInProps> = ({
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
       if (event.data?.type === "MICROSOFT_AUTH_SUCCESS") {
-        dispatch(setAuthToken(event.data.token));
+        startSession(dispatch, event.data.token);
         dispatch(setExpiration(event.data.expirationDate));
         localStorage.setItem("root_version", __APP_VERSION__);
         setIsSubmitting(false);

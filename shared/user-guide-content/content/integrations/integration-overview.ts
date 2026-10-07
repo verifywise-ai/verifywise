@@ -10,129 +10,51 @@ export const integrationOverviewContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Integrations connect VerifyWise with external tools and services. They help you automate data sync and keep your team informed through channels they already use.',
+      text: 'Integrations connect VerifyWise with the tools your team already uses. There are three ways to do it:',
     },
     {
-      type: 'paragraph',
-      text: 'From the Integrations page, you can see what\'s available, check connection status and configure each integration.',
+      type: 'bullet-list',
+      items: [
+        { bold: 'Extensions', text: 'Built-in connections and tools that an Admin turns on from the **Extensions** page, such as Slack, MLflow and Jira Assets.' },
+        { bold: 'API keys', text: 'Tokens that let your own scripts and systems call the VerifyWise API.' },
+        { bold: 'Automations', text: 'Trigger-condition-action rules that react to events in VerifyWise.' },
+      ],
     },
     {
       type: 'heading',
-      id: 'accessing-integrations',
+      id: 'extensions',
       level: 2,
-      text: 'Accessing integrations',
+      text: 'Extensions',
     },
     {
       type: 'paragraph',
-      text: 'To access integrations:',
-    },
-    {
-      type: 'ordered-list',
-      items: [
-        { text: 'Click on Integrations in the main navigation' },
-        { text: 'View the available integration cards' },
-        { text: 'Click Configure or Manage to set up or modify an integration' },
-      ],
+      text: 'To manage extensions, click the **Extensions** button in the top header, or open **Start here** and click the **Extensions** card. Each extension is off until an Admin enables it.',
     },
     {
       type: 'callout',
       variant: 'info',
-      text: 'Only users with the Admin role can access and configure integrations. If you don\'t see the Integrations menu item, contact your administrator.',
-    },
-    {
-      type: 'heading',
-      id: 'available-integrations',
-      level: 2,
-      text: 'Available integrations',
+      text: 'Only Admins can open the Extensions page. Other roles see the Extensions button greyed out with the tooltip "Admin access required."',
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise currently offers the following integrations:',
+      text: 'VerifyWise includes seven extensions:',
     },
     {
-      type: 'icon-cards',
+      type: 'grid-cards',
+      columns: 2,
       items: [
-        {
-          icon: 'MessageSquare',
-          title: 'Slack',
-          description: 'Send real-time notifications about AI governance activities to your Slack workspace.',
-        },
-        {
-          icon: 'Activity',
-          title: 'MLflow',
-          description: 'Sync machine learning models and experiments from your MLflow tracking server.',
-        },
+        { title: 'Slack', description: 'Send VerifyWise notifications to channels in your Slack workspace.' },
+        { title: 'MLflow', description: 'Pull models and runs from your MLflow tracking server into Model inventory.' },
+        { title: 'Azure AI Foundry', description: 'Import model deployments from an Azure AI Foundry project into Model inventory.' },
+        { title: 'Model Lifecycle', description: 'Define lifecycle phases, with approvals, documents and people, for each model.' },
+        { title: 'Risk Import', description: 'Create many risks at once from an Excel template.' },
+        { title: 'Jira Assets Integration', description: 'Import AI System objects from Jira Service Management Assets as use cases.' },
+        { title: 'Dataset Bulk Upload', description: 'Upload up to 20 dataset files at once, with PII detection.' },
       ],
     },
     {
-      type: 'image',
-      src: '/images/user-guide/integrations.png',
-      alt: 'Integrations page showing Slack and MLflow integration cards with configuration status and descriptions',
-      caption: 'The Integrations page shows available integrations with their current status.',
-    },
-    {
-      type: 'heading',
-      id: 'integration-status',
-      level: 2,
-      text: 'Integration status',
-    },
-    {
       type: 'paragraph',
-      text: 'Each integration card shows its current status:',
-    },
-    {
-      type: 'bullet-list',
-      items: [
-        { bold: 'Not configured', text: 'The integration hasn\'t been set up yet. Click Configure to get started.' },
-        { bold: 'Configured', text: 'The integration is active and connected. Click Manage to view or change settings.' },
-        { bold: 'Error', text: 'Something went wrong. Click Manage to troubleshoot.' },
-      ],
-    },
-    {
-      type: 'heading',
-      id: 'slack-integration',
-      level: 2,
-      text: 'Slack integration',
-    },
-    {
-      type: 'paragraph',
-      text: 'The Slack integration sends notifications directly to your Slack workspace. You can route different notification types to specific channels, so your team stays up to date on governance activities without leaving Slack.',
-    },
-    {
-      type: 'paragraph',
-      text: 'Key features:',
-    },
-    {
-      type: 'bullet-list',
-      items: [
-        { text: 'Real-time notifications for governance events' },
-        { text: 'Route notifications to specific channels' },
-        { text: 'Multiple workspace connections' },
-        { text: 'Customizable notification routing' },
-      ],
-    },
-    {
-      type: 'heading',
-      id: 'mlflow-integration',
-      level: 2,
-      text: 'MLflow integration',
-    },
-    {
-      type: 'paragraph',
-      text: 'The MLflow integration connects to your MLflow tracking server and automatically syncs machine learning models. This keeps your model inventory current without manual data entry.',
-    },
-    {
-      type: 'paragraph',
-      text: 'Key features:',
-    },
-    {
-      type: 'bullet-list',
-      items: [
-        { text: 'On-demand model sync' },
-        { text: 'Multiple authentication methods (none, basic auth, API token)' },
-        { text: 'Connection status monitoring' },
-        { text: 'Manual sync trigger from the integration page' },
-      ],
+      text: 'See **Extensions** for how to enable, configure and disable each one, and where it shows up in the app.',
     },
     {
       type: 'heading',
@@ -142,11 +64,17 @@ export const integrationOverviewContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Beyond the built-in integrations, VerifyWise offers API access for custom integrations. API keys let you interact with VerifyWise data and features programmatically from external applications or scripts.',
+      text: 'For anything the extensions don\'t cover, use the API. API keys let external applications and scripts work with VerifyWise data. See **API access** for creating and managing keys.',
+    },
+    {
+      type: 'heading',
+      id: 'automations',
+      level: 2,
+      text: 'Automations',
     },
     {
       type: 'paragraph',
-      text: 'API keys are managed from Settings > API keys. See the API access article for details on creating and managing tokens.',
+      text: 'Automations run actions when something happens in VerifyWise, without code. See **Automations** for the available triggers and actions.',
     },
     {
       type: 'heading',
@@ -155,17 +83,13 @@ export const integrationOverviewContent: ArticleContent = {
       text: 'Security considerations',
     },
     {
-      type: 'paragraph',
-      text: 'Keep these practices in mind when configuring integrations:',
-    },
-    {
       type: 'bullet-list',
       items: [
-        { bold: 'Limit access', text: 'Only admins can configure integrations, which reduces the risk of unauthorized changes' },
-        { bold: 'Review permissions', text: 'Understand what each integration needs before connecting' },
-        { bold: 'Monitor connections', text: 'Check active integrations regularly and disconnect any you no longer use' },
-        { bold: 'Protect credentials', text: 'Don\'t share API keys or integration credentials with unauthorized users' },
-        { bold: 'Use SSL', text: 'Make sure external services use secure HTTPS connections' },
+        { bold: 'Limit access', text: 'Only Admins can enable or configure extensions, which reduces the risk of unauthorized changes' },
+        { bold: 'Protect credentials', text: 'Passwords and tokens entered in extension settings are stored encrypted. Share them only with the people who need them' },
+        { bold: 'Review what you connect', text: 'Understand what each external service can see before you connect it' },
+        { bold: 'Turn off what you don\'t use', text: 'Disable extensions you no longer need. Disabling keeps their configuration and data, so you can turn them back on later' },
+        { bold: 'Use HTTPS', text: 'Make sure external services such as MLflow use secure HTTPS connections' },
       ],
     },
     {
@@ -176,16 +100,16 @@ export const integrationOverviewContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'If an integration isn\'t working as expected:',
+      text: 'If an extension isn\'t working as expected:',
     },
     {
       type: 'ordered-list',
       items: [
-        { text: 'Check the integration status on the Integrations page' },
-        { text: 'Verify that connection credentials are correct' },
-        { text: 'Test the connection using the built-in test feature' },
-        { text: 'Check if the external service is accessible and running' },
-        { text: 'Review any error messages in the integration settings' },
+        { text: 'Check on the Extensions page that it shows the **Enabled** badge' },
+        { text: 'Open its settings with **Configure** and check the connection details' },
+        { text: 'For MLflow and Azure AI Foundry, click **Test connection**. For Jira Assets, use **Test Connection** in its panel' },
+        { text: 'Check that the external service is running and reachable from VerifyWise' },
+        { text: 'Read the error message shown on the settings page' },
       ],
     },
     {
@@ -202,7 +126,7 @@ export const integrationOverviewContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Only users with the Admin role can access the Integrations page and set up connections. This keeps integration credentials and settings in the hands of authorized people.',
+      text: 'Only Admins can open the Extensions page and enable or configure extensions.',
     },
     {
       type: 'heading',
@@ -212,7 +136,7 @@ export const integrationOverviewContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Yes. You can add multiple Slack workspace connections, each with its own notification routing rules.',
+      text: 'Yes. Click **Add to Slack** again to add another workspace or channel.',
     },
     {
       type: 'heading',
@@ -222,12 +146,18 @@ export const integrationOverviewContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Go to the integration\'s management page and look for disconnect or delete options. For Slack, you can remove individual workspace connections. For MLflow, clear the configuration to disconnect.',
+      text: 'Click **Disable** on the extension\'s card. Its configuration and data are kept. For Slack you can also delete individual workspace connections from the Slack settings panel.',
     },
     {
       type: 'article-links',
       title: 'Related articles',
       items: [
+        {
+          collectionId: 'integrations',
+          articleId: 'extensions',
+          title: 'Extensions',
+          description: 'Enable and configure each extension',
+        },
         {
           collectionId: 'integrations',
           articleId: 'slack-integration',
@@ -239,6 +169,12 @@ export const integrationOverviewContent: ArticleContent = {
           articleId: 'api-access',
           title: 'API access',
           description: 'Manage API keys for custom integrations',
+        },
+        {
+          collectionId: 'integrations',
+          articleId: 'automations',
+          title: 'Automations',
+          description: 'Automate governance tasks with rules',
         },
       ],
     },

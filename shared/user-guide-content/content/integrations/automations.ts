@@ -10,7 +10,7 @@ export const automationsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Automations let you set up rules that run when certain conditions are met. Instead of doing repetitive governance tasks by hand, you define a trigger, set conditions and choose an action. VerifyWise handles the rest.',
+      text: 'Automations let you set up rules that run when something happens in VerifyWise. Instead of sending routine updates by hand, you choose a trigger and an action. VerifyWise handles the rest.',
     },
     {
       type: 'heading',
@@ -20,14 +20,13 @@ export const automationsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Each automation has 3 parts:',
+      text: 'Each automation has 2 parts:',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Trigger', text: 'What event starts the automation (e.g., a risk is created, a policy status changes, a model is registered).' },
-        { bold: 'Conditions', text: 'Optional filters that narrow when the automation fires (e.g., only for high-severity risks, only in a specific project).' },
-        { bold: 'Action', text: 'What happens when the trigger fires and conditions are met (e.g., send a notification, create a task, update a field).' },
+        { bold: 'Trigger', text: 'What event starts the automation: a vendor, model, project, task, risk, training, policy or incident is added, updated or deleted; a vendor review date is approaching; or a scheduled report is due.' },
+        { bold: 'Action', text: 'What happens when the trigger fires. Today the available action is Send email, which emails the recipients you choose. For update triggers, the email can include a summary of the fields that changed.' },
       ],
     },
     {
@@ -40,10 +39,10 @@ export const automationsContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { text: 'Go to **Automations** from the sidebar.' },
-        { text: 'Click **Create automation**.' },
+        { text: 'Click **New automation**.' },
         { text: 'Give it a name and description.' },
         { text: 'Select a trigger event from the dropdown.' },
-        { text: 'Optionally add conditions to filter when the automation runs.' },
+        { text: 'Configure the trigger if it has settings, for example how many days before a vendor review date to notify, or the schedule and scope of a scheduled report.' },
         { text: 'Choose the action and configure its parameters.' },
         { text: 'Toggle the automation **Active** and click **Save**.' },
       ],
@@ -62,7 +61,7 @@ export const automationsContent: ArticleContent = {
       type: 'callout',
       variant: 'tip',
       title: 'Start simple',
-      text: 'Begin with a single automation for your most common manual task. Once you see it working, add conditions and create more. Overcomplicating automations early makes them harder to debug.',
+      text: 'Begin with a single automation for your most common manual task. Once you see it working, create more. An automation runs on every event of its trigger type, so pick recipients who need every update.',
     },
     {
       type: 'heading',

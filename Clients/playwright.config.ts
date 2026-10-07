@@ -15,6 +15,7 @@ dotenv.config({ quiet: true });
 
 const CRITICAL_PATH_SPECS = /(use-cases|risk-management|tasks|critical-journey)\.spec\.ts/;
 const SUPER_ADMIN_SPECS = /super-admin\.spec\.ts/;
+const RISK_INHERITANCE_SPECS = /risk-inheritance\.spec\.ts/;
 // Feature-coverage specs that all run against the seeded org Admin auth state.
 // Deliberately excluded:
 //   - plugins.spec.ts: quarantined (targets the removed /plugins route,
@@ -72,6 +73,24 @@ export default defineConfig({
         ...devices["Desktop Chrome"],
         channel: browserChannel,
         storageState: "e2e/.auth/user.json",
+      },
+    },
+    // Risk-inheritance reports: need an org that already has risks, so they
+    // use their own setup and auth state rather than the empty org that
+    // global.setup.ts creates.
+    {
+      name: "risk-inheritance-setup",
+      testMatch: /risk-inheritance\.setup\.ts/,
+      use: { ...devices["Desktop Chrome"], channel: browserChannel },
+    },
+    {
+      name: "risk-inheritance",
+      testMatch: RISK_INHERITANCE_SPECS,
+      dependencies: ["risk-inheritance-setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        channel: browserChannel,
+        storageState: "e2e/.auth/risk-inheritance-admin.json",
       },
     },
     // Critical-journey tests: reuse the stored admin auth state

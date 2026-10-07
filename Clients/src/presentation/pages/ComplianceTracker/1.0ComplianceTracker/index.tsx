@@ -17,7 +17,6 @@ import {
   getComplianceProgress,
   getControlsByControlCategoryId,
 } from "../../../../application/repository/control_eu_act.repository";
-import { brand } from "../../../themes/palette";
 
 const ComplianceTracker = ({
   project,
@@ -197,7 +196,6 @@ const ComplianceTracker = ({
             completed={complianceData.allDonesubControls}
             total={complianceData.allsubControls}
             title="Controls"
-            progressbarColor={brand.primary}
           />
         </Stack>
       )}

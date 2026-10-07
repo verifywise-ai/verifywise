@@ -44,7 +44,8 @@ import {
   agentPagination,
 } from "./style";
 import { AgentTableProps } from "src/domain/interfaces/i.agentDiscovery";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import { pageOfLabel } from "../../components/Table/pageOfLabel";
 
 const cellStyle = singleTheme.tableStyles.primary.body.cell;
 
@@ -72,6 +73,7 @@ const AgentTable: React.FC<AgentTableProps> = ({
   isSyncing,
   visibleColumns,
 }) => {
+  const formatUserDate = useFormattedDate();
   const theme = useTheme();
   const navigate = useNavigate();
   const { isEnabled } = useExtensions();
@@ -160,7 +162,7 @@ const AgentTable: React.FC<AgentTableProps> = ({
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "—";
-    return displayFormattedDate(dateStr);
+    return formatUserDate(dateStr);
   };
 
   const getRange = useMemo(() => {
@@ -387,7 +389,7 @@ const AgentTable: React.FC<AgentTableProps> = ({
               ActionsComponent={(props) => <TablePaginationActions {...props} />}
               labelRowsPerPage="Rows per page"
               labelDisplayedRows={({ page, count }) =>
-                `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
+                pageOfLabel(page + 1, Math.max(0, Math.ceil(count / rowsPerPage)))
               }
               slotProps={{
                 select: {

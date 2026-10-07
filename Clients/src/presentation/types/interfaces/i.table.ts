@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { LucideIcon } from "lucide-react";
+import type { VendorRiskExposure } from "../../../domain/interfaces/i.riskLink";
 import { VendorModel } from "../../../domain/models/Common/vendor/vendor.model";
 import { RiskModel } from "../../../domain/models/Common/risks/risk.model";
 import { FileModel } from "../../../domain/models/Common/file/file.model";
@@ -69,6 +70,8 @@ export interface IExperimentRow {
   linkedModel?: number | null;
   date?: string;
   status: "In Progress" | "Completed" | "Failed" | "Pending" | "Running" | "Available";
+  /** Why a failed experiment failed (shown as a tooltip on failed rows) */
+  errorMessage?: string;
 }
 
 export interface IExperimentTableBodyProps {
@@ -149,6 +152,8 @@ export interface IFileTableProps {
   visibleColumnKeys?: FileColumn[];
   canRunBulkActions?: boolean;
   onBulkActionSuccess?: (result: FileBulkActionResult) => void;
+  /** Override the empty-state message; defaults to the standard "no files" copy. */
+  emptyMessage?: string;
 }
 
 export interface IProjectRiskTableBodyProps {
@@ -241,6 +246,10 @@ export interface IRiskTableProps {
   isDeletingAllowed?: boolean;
   hidePagination?: boolean;
   visibleColumns?: Set<string>;
+  /** Blast radius per vendor risk id, for the "Inherited by" column. */
+  exposure?: Map<number, VendorRiskExposure>;
+  /** Opens a vendor risk on its Linked risks tab; falls back to onEdit. */
+  onOpenLinks?: (riskId: number) => void;
 }
 
 export interface ITasksTableProps {

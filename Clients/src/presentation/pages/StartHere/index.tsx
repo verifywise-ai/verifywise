@@ -22,9 +22,12 @@ import {
   ArrowRight,
   Play,
   Sparkles,
+  Key,
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { useAuth } from "../../../application/hooks/useAuth";
+import { useLLMKeyStatus } from "../../../application/hooks/useLLMKeyStatus";
+import LLMKeyRequiredNotice from "../../components/LLMKeyRequiredNotice";
 import { useProjects } from "../../../application/hooks/useProjects";
 import useUsers from "../../../application/hooks/useUsers";
 import { getAllProjectRisks } from "../../../application/repository/projectRisk.repository";
@@ -35,7 +38,7 @@ import { WelcomeVideoPlayer } from "../../components/FeatureVideos/WelcomeVideo"
 import { VideoPlayerModal } from "../../components/FeatureVideos/player/VideoPlayerModal";
 import { buildExploreConfig } from "../../components/FeatureVideos/shared/buildExploreConfig";
 import { EXPLORE_VIDEO_DATA } from "../../components/FeatureVideos/exploreVideos";
-import { background, brand } from "../../themes/palette";
+import { background, border, brand } from "../../themes/palette";
 
 // ── Keyframe animations ──
 const fadeInUp = keyframes`
@@ -252,24 +255,24 @@ const RESOURCES = [
 
 const WHATS_NEW = [
   {
-    label: "We graded 205 AI apps on data transparency",
-    sub: "June 21, 2026",
-    url: "https://verifywise.ai/blog/we-graded-205-ai-apps-on-data-transparency",
+    label: "VerifyWise on the Wavestone UK Cybersecurity Startup Radar",
+    sub: "August 26, 2026",
+    url: "https://verifywise.ai/blog/verifywise-wavestone-uk-cybersecurity-startup-radar-2026",
   },
   {
-    label: "OSFI Guideline E-23: AI model risk rules",
-    sub: "June 4, 2026",
-    url: "https://verifywise.ai/blog/osfi-e-23-ai-model-risk-management-canada",
+    label: "VerifyWise 2.5: reporting, observability, and extensions",
+    sub: "August 23, 2026",
+    url: "https://verifywise.ai/blog/verifywise-2-5-announcement",
   },
   {
-    label: "What we found running GRS across 15 AI models",
-    sub: "May 30, 2026",
-    url: "https://verifywise.ai/blog/grs-15-models-evaluation",
+    label: "Stop shopping for DORA compliance software",
+    sub: "August 11, 2026",
+    url: "https://verifywise.ai/blog/stop-shopping-for-dora-compliance-software",
   },
   {
-    label: "AI governance salaries 2026",
-    sub: "May 28, 2026",
-    url: "https://verifywise.ai/blog/ai-governance-salary-report-2026",
+    label: "Model risk management for AI and ML",
+    sub: "July 6, 2026",
+    url: "https://verifywise.ai/blog/model-risk-management-ai-ml",
   },
 ] as const;
 
@@ -302,6 +305,9 @@ const StartHere = () => {
   const navigate = useNavigate();
   const exploreScrollRef = useRef<HTMLDivElement>(null);
   const { userToken, userId } = useAuth();
+  const { data: llmKeyStatus, loading: llmKeyLoading, error: llmKeyError } = useLLMKeyStatus();
+  // Only when the status is known: not while loading, and not on an error.
+  const missingLLMKey = !llmKeyLoading && !llmKeyError && llmKeyStatus?.hasKeys === false;
   const { users } = useUsers();
   const { data: projects } = useProjects();
   const [hasRisks, setHasRisks] = useState(() => getCachedProgress()[4]);
@@ -467,6 +473,23 @@ const StartHere = () => {
             Here is an overview of your AI governance journey
           </Typography>
         </Box>
+
+        {missingLLMKey && (
+          <Box sx={{ animation: `${fadeInUp} 0.5s ease-out 0.05s both` }}>
+            <LLMKeyRequiredNotice
+              adminMessage="Configure an LLM API key so Advisor and reporting can run."
+              memberMessage="Advisor and reporting need an LLM API key. Contact your administrator."
+              icon={<Key size={16} color={brand.primary} />}
+              iconBackground={brand.primaryLight}
+              sx={{
+                p: "12px 16px",
+                borderRadius: "4px",
+                border: `1px solid ${border.dark}`,
+                backgroundColor: background.accent,
+              }}
+            />
+          </Box>
+        )}
 
         {/* Row 1: Getting started */}
         <Box sx={{ animation: `${fadeInUp} 0.5s ease-out 0.1s both` }}>

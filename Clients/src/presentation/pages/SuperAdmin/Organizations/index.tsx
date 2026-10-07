@@ -34,7 +34,7 @@ import UserFormFields, {
 import { passwordValidation } from "../../../../application/validations/passwordValidation";
 import { EmailAvailabilityStatus } from "../../../../application/hooks/useEmailAvailability";
 import singleTheme from "../../../themes/v1SingleTheme";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 
 const EMPTY_USER_FORM: UserFormValues = {
   email: "",
@@ -215,6 +215,7 @@ const DeleteOrgModal = ({
 };
 
 const Organizations = () => {
+  const formatDate = useFormattedDate();
   const navigate = useNavigate();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
@@ -371,9 +372,7 @@ const Organizations = () => {
                   <TableCell sx={tableStyles.body.cell}>
                     <Typography sx={{ fontSize: 13 }}>{org.user_count ?? 0}</Typography>
                   </TableCell>
-                  <TableCell sx={tableStyles.body.cell}>
-                    {displayFormattedDate(org.created_at)}
-                  </TableCell>
+                  <TableCell sx={tableStyles.body.cell}>{formatDate(org.created_at)}</TableCell>
                   <TableCell sx={{ ...tableStyles.body.cell, textAlign: "right" }}>
                     <Stack direction="row" justifyContent="flex-end" gap="8px">
                       <Button
