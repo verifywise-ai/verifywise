@@ -37,13 +37,12 @@ import StandardModal from "../StandardModal";
 import TabBar from "../../TabBar";
 import { RiskCalculator } from "../../../tools/riskCalculator";
 import { RiskLikelihood, RiskSeverity } from "../../RiskLevel/riskValues";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useResourceAccess } from "../../../../application/hooks/useResourceAccess";
 import { SelectChangeEvent } from "@mui/material";
 import {
   useCreateVendorRisk,
   useUpdateVendorRisk,
 } from "../../../../application/hooks/useVendorRiskMutations";
-import { useAuth } from "../../../../application/hooks/useAuth";
 import { HistorySidebar } from "../../Common/HistorySidebar";
 import VendorRiskLinksPanel from "../../LinkedRisksPanel/VendorRiskLinksPanel";
 import CustomFieldsSection, { type CustomFieldsSectionHandle } from "../../CustomFieldsSection";
@@ -102,8 +101,8 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
   vendors,
   initialTab,
 }) => {
-  const { userRoleName } = useAuth();
-  const isEditingDisabled = !allowedRoles.vendors.edit.includes(userRoleName);
+  const { canAccess } = useResourceAccess();
+  const isEditingDisabled = !canAccess("vendors", "edit");
   const VENDOR_OPTIONS =
     vendors?.length > 0
       ? vendors
