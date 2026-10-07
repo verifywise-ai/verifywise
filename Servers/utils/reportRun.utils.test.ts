@@ -9,6 +9,15 @@ jest.mock("../database/db", () => ({
 
 import { listRunsQuery, setRunArchivedQuery, deleteRunQuery } from "./reportRun.utils";
 
+// The visibility helper consults the roles table + permission matrix. Pin it
+// to the legacy literal behavior so this suite keeps asserting raw SQL shape
+// without a role-map query shifting the mock call order.
+jest.mock("./rolePermissions.utils", () => ({
+  ...jest.requireActual("./rolePermissions.utils"),
+  hasUnrestrictedVisibility: async (_org: number | null, role: string) =>
+    role === "Admin" || role === "SuperAdmin",
+}));
+
 const ADMIN = { userId: 1, role: "Admin" };
 const AUDITOR = { userId: 42, role: "Auditor" };
 
