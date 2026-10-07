@@ -2,6 +2,7 @@ import { FC, memo } from "react";
 import { Stack, Tooltip, Box, Typography, useTheme } from "@mui/material";
 import { Shield, FlaskConical, ScanSearch, Eye, Router, Crown, Gauge } from "lucide-react";
 import { AppModule } from "../../../application/redux/ui/uiSlice";
+import { useMyPermissions } from "../../../application/hooks/useRolePermissions";
 import "./index.css";
 
 interface AppSwitcherProps {
@@ -72,15 +73,24 @@ const AppSwitcher: FC<AppSwitcherProps> = ({
   hasOrg = false,
 }) => {
   const theme = useTheme();
+  // Fail-closed module gate (issue #4588): the AI Detection module's pages and
+  // sidebar call endpoints guarded by aiDetection.read; users without that
+  // grant (e.g. custom roles) must not see the module at all instead of
+  // getting 403/500 noise. Visible while permissions load to avoid flicker.
+  const { can, isLoading: permissionsLoading } = useMyPermissions();
 
   // Bootstrap SuperAdmin (no org): only super-admin module.
   // Elected SuperAdmin (has org + isSuperAdmin): tenant modules + super-admin.
   // Regular user: tenant modules only.
-  const visibleModules = isSuperAdmin
-    ? hasOrg
-      ? [...modules, superAdminModule]
-      : [superAdminModule]
-    : modules;
+  const visibleModules = (
+    isSuperAdmin
+      ? hasOrg
+        ? [...modules, superAdminModule]
+        : [superAdminModule]
+      : modules
+  ).filter(
+    (module) => module.id !== "ai-detection" || (permissionsLoading || can("aiDetection.read")),
+  );
 
   return (
     <Stack className="app-switcher">
