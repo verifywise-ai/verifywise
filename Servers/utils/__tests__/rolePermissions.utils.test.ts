@@ -48,6 +48,18 @@ describe("roleHasPermission", () => {
     await expect(roleHasPermission(1, "Ghost", "risks.edit")).resolves.toBe(false);
   });
 
+  it("resolves SuperAdmin against the static matrix when no roles-table row exists", async () => {
+    // SuperAdmin is a mapping, not a roles row (dropped by migration
+    // 20260813133028-drop-superadmin-role) — the no-row fallback must still
+    // honor its super-tier keys, matching the legacy authorize([...]) lists.
+    mockGetRoleByName.mockResolvedValue(undefined);
+    await expect(roleHasPermission(1, "SuperAdmin", "invitation.super")).resolves.toBe(true);
+    await expect(roleHasPermission(1, "SuperAdmin", "auditLedger.super")).resolves.toBe(true);
+    await expect(roleHasPermission(1, "SuperAdmin", "risks.edit")).resolves.toBe(false);
+    await expect(roleHasPermission(1, "SuperAdmin", "ssoConfig.admin")).resolves.toBe(false);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["Admin", "risks.edit", true],
     ["Admin", "ssoConfig.admin", true],
@@ -124,5 +136,13 @@ describe("getEffectivePermissions", () => {
     mockGetRoleByName.mockResolvedValue(undefined);
     const permissions = await getEffectivePermissions(1, "Ghost");
     expect(permissions.size).toBe(0);
+  });
+
+  it("returns the super-tier matrix for SuperAdmin without a roles-table row", async () => {
+    mockGetRoleByName.mockResolvedValue(undefined);
+    const permissions = await getEffectivePermissions(null, "SuperAdmin");
+    expect(permissions.has("invitation.super")).toBe(true);
+    expect(permissions.has("auditLedger.super")).toBe(true);
+    expect(permissions.has("risks.edit")).toBe(false);
   });
 });
