@@ -11,7 +11,7 @@ import { handleAlert } from "../../../application/tools/alertUtils";
 import { FileData } from "../../../domain/types/File";
 import { Button } from "../button";
 import Select from "../Inputs/Select";
-import allowedRoles from "../../../application/constants/permissions";
+import { useResourceAccess } from "../../../application/hooks/useResourceAccess";
 import { LinkedRisksPopup } from "../LinkedRisks";
 import AuditRiskPopup from "../RiskPopup/AuditRiskPopup";
 import { updateEUAIActAnswerById } from "../../../application/repository/question.repository";
@@ -36,7 +36,8 @@ import { border as borderPalette } from "../../themes/palette";
  */
 const QuestionFrame = ({ question, setRefreshKey, currentProjectId }: IQuestionProps) => {
   const theme = useTheme();
-  const { userRoleName, userId } = useAuth();
+  const { userId } = useAuth();
+  const { canAccess } = useResourceAccess();
   const [values, setValues] = useState<Question>({
     ...question,
     risks: question.risks || [],
@@ -53,7 +54,7 @@ const QuestionFrame = ({ question, setRefreshKey, currentProjectId }: IQuestionP
   const [pendingFiles, setPendingFiles] = useState<FileData[]>([]);
   const [deletedFileIds, setDeletedFileIds] = useState<number[]>([]);
 
-  const isEditingDisabled = !(allowedRoles?.frameworks?.edit || []).includes(userRoleName || "");
+  const isEditingDisabled = !canAccess("frameworks", "edit");
 
   const STATUS_OPTIONS = [
     { _id: "notStarted", name: "Not started" },
