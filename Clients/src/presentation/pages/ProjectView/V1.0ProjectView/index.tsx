@@ -16,9 +16,8 @@ import CEMarking from "../CEMarking";
 import Activity from "../Activity";
 import PostMarketMonitoring from "../PostMarketMonitoring";
 import FriaAssessment from "../Fria";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useResourceAccess } from "../../../../application/hooks/useResourceAccess";
 import { PageBreadcrumbs } from "../../../components/breadcrumbs/PageBreadcrumbs";
-import { useAuth } from "../../../../application/hooks/useAuth";
 import { BreadcrumbItem } from "../../../types/interfaces/i.breadcrumbs";
 import { getRouteIcon } from "../../../components/breadcrumbs/routeMapping";
 import { FileText as FileTextIcon } from "lucide-react";
@@ -31,7 +30,7 @@ import { JiraUseCaseMonitoring } from "../../Extensions/jira-assets/JiraUseCaseM
 import { JiraUseCaseSettings } from "../../Extensions/jira-assets/JiraUseCaseSettings";
 
 const VWProjectView = () => {
-  const { userRoleName } = useAuth();
+  const { canAccess } = useResourceAccess();
   const [searchParams, setSearchParams] = useSearchParams();
   const projectId = searchParams.get("projectId") ?? "1";
   // Extract numeric ID from composite IDs (e.g., "prefix-123" -> 123)
@@ -257,7 +256,7 @@ const VWProjectView = () => {
                 label: "Settings",
                 value: "settings",
                 icon: "Settings",
-                disabled: isApprovalBlocked || !allowedRoles.projects.edit.includes(userRoleName),
+                disabled: isApprovalBlocked || !canAccess("projects", "edit"),
                 tooltip: "Use case configuration and permissions",
               },
             ]}
