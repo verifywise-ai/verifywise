@@ -39,7 +39,7 @@ import {
 } from "../../../../application/repository/entity.repository";
 import { attachFilesToEntity } from "../../../../application/repository/file.repository";
 import { GetAnnexControlISO27001ById } from "../../../../application/repository/annex_struct_iso.repository";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useResourceAccess } from "../../../../application/hooks/useResourceAccess";
 
 const FRAMEWORK_TYPE = "iso_27001";
 const ENTITY_TYPE = "annex_control";
@@ -126,7 +126,8 @@ const VWISO27001AnnexDrawerDialog = ({
   project_id,
   onSaveSuccess,
 }: VWISO27001AnnexDrawerDialogProps) => {
-  const { userId, userRoleName } = useAuth();
+  const { userId } = useAuth();
+  const { canAccess } = useResourceAccess();
   const { users } = useUsers();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -178,8 +179,8 @@ const VWISO27001AnnexDrawerDialog = ({
     [users],
   );
 
-  const isEditingDisabled = !allowedRoles.frameworks.edit.includes(userRoleName);
-  const isAuditingDisabled = !allowedRoles.frameworks.audit.includes(userRoleName);
+  const isEditingDisabled = !canAccess("frameworks", "edit");
+  const isAuditingDisabled = !canAccess("frameworks", "audit");
 
   const fetchLinkedRisks = async (riskIds?: number[]) => {
     if (!fetchedAnnex?.id) return;
