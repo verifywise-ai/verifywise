@@ -20,8 +20,7 @@ import {
 import type { FilterColumn } from "../../../components/Table/FilterBy";
 import { useTableGrouping, useGroupByState } from "../../../../application/hooks/useTableGrouping";
 import { useFilterBy } from "../../../../application/hooks/useFilterBy";
-import { useAuth } from "../../../../application/hooks/useAuth";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useResourceAccess } from "../../../../application/hooks/useResourceAccess";
 import type { ExampleTurnType, ExampleUseCase } from "./exampleDatasetPayloads";
 import type { BuiltInDataset, TemplateWithCategory } from "./types";
 
@@ -31,9 +30,9 @@ export type UseProjectDatasetsArgs = {
 
 export function useProjectDatasets({ orgId }: UseProjectDatasetsArgs) {
   // RBAC permissions
-  const { userRoleName } = useAuth();
-  const canUploadDataset = allowedRoles.evals.uploadDataset.includes(userRoleName);
-  const canDeleteDataset = allowedRoles.evals.deleteDataset.includes(userRoleName);
+  const { canAccess } = useResourceAccess();
+  const canUploadDataset = canAccess("evals", "uploadDataset");
+  const canDeleteDataset = canAccess("evals", "deleteDataset");
 
   // Tab state: "my" for user datasets, "templates" for built-in datasets
   const [activeTab, setActiveTab] = useState<"my" | "templates">("my");
