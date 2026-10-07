@@ -18,8 +18,7 @@ import { extractUserToken } from "../../../application/tools/extractToken";
 import useUsers from "../../../application/hooks/useUsers";
 import { CreateProjectFormValues } from "../../../domain/interfaces/i.form";
 import { CreateProjectFormErrors } from "../../types/form.props";
-import allowedRoles from "../../../application/constants/permissions";
-import { useAuth } from "../../../application/hooks/useAuth";
+import { useResourceAccess } from "../../../application/hooks/useResourceAccess";
 import { createProject } from "../../../application/repository/project.repository";
 import { Project } from "../../../domain/types/Project";
 import { createProjectFormStyles } from "./styles";
@@ -68,7 +67,7 @@ interface CreateProjectFormProps {
 
 export function CreateProjectForm({ closePopup, onNewProject }: CreateProjectFormProps) {
   const theme = useTheme();
-  const { userRoleName } = useAuth();
+  const { canAccess } = useResourceAccess();
   const [values, setValues] = useState<CreateProjectFormValues>(initialState);
   const [errors, setErrors] = useState<CreateProjectFormErrors>({});
   const { users } = useUsers();
@@ -290,7 +289,7 @@ export function CreateProjectForm({ closePopup, onNewProject }: CreateProjectFor
             </Typography>
             <Autocomplete
               multiple
-              readOnly={!allowedRoles.projects.editTeamMembers.includes(userRoleName)}
+              readOnly={!canAccess("projects", "editTeamMembers")}
               id="users-input"
               size="small"
               value={values.members}
