@@ -51,10 +51,13 @@ describe("useResourceAccess", () => {
     expect(check("organizations", "edit")).toBe(false);
   });
 
-  it("denies custom roles when no backend permission key exists (fail-closed)", () => {
+  it("allows custom roles for newly-mapped pairs only when the key is granted", () => {
     state.userRoleName = "AI Engineer";
-    // vendors.* has no backend-guarded counterpart.
+    // vendors.create now maps to the vendors.create catalog key (issue #4588
+    // migration follow-up): denied without a grant, allowed with one.
     expect(check("vendors", "create")).toBe(false);
+    state.permissions = new Set(["vendors.create"]);
+    expect(check("vendors", "create")).toBe(true);
   });
 
   it("allows custom roles when the matrix grants the mapped key", () => {
