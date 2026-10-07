@@ -8,6 +8,7 @@ import { ClauseStructISOModel } from "../domain.layer/frameworks/ISO-42001/claus
 import { ISO27001AnnexStructModel } from "../domain.layer/frameworks/ISO-27001/ISO27001AnnexStruct.model";
 import { ISO27001ClauseStructModel } from "../domain.layer/frameworks/ISO-27001/ISO27001ClauseStruct.model";
 import { IProjectsMembers } from "../domain.layer/interfaces/i.projectMember";
+import { hasUnrestrictedVisibility } from "./rolePermissions.utils";
 
 /**
  * Retrieves all project risk data from the `projectrisks` table,
@@ -74,7 +75,7 @@ export const getGeneratedReportsQuery = async (
     "All reports",
   ];
 
-  const isAdmin = role === "Admin" || role === "SuperAdmin";
+  const unrestricted = await hasUnrestrictedVisibility(organizationId, role, "reports.viewAll");
 
   const baseQueryParts = [
     `SELECT
@@ -97,7 +98,7 @@ export const getGeneratedReportsQuery = async (
   ];
   const replacements: any = { sources: validSources, organizationId };
 
-  if (!isAdmin) {
+  if (!unrestricted) {
     baseQueryParts.push(
       `LEFT JOIN projects_members pm ON pm.project_id = p.id AND pm.organization_id = :organizationId`,
     );
