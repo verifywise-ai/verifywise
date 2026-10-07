@@ -28,7 +28,7 @@ import {
   getApiTokens,
   revokeApiToken,
 } from "../../../../application/repository/tokens.repository";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useResourceAccess } from "../../../../application/hooks/useResourceAccess";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import { ApiTokenModel } from "../../../../domain/models/Common/apiToken/apiToken.model";
 import LLMKeys from "../LLMKeys";
@@ -60,11 +60,12 @@ interface ApiKeysProps {
 }
 
 const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
-  const { userRoleName, isSuperAdmin } = useAuth();
+  const { isSuperAdmin } = useAuth();
+  const { canAccess } = useResourceAccess();
   const theme = useTheme();
   // A pure super admin has no organization role, so the role list alone would
   // lock them out. The backend applies the same rule (tokens.middleware.ts).
-  const isDisabled = !isSuperAdmin && !allowedRoles.apiKeys?.manage?.includes(userRoleName);
+  const isDisabled = !isSuperAdmin && !canAccess("apiKeys", "manage");
 
   const [tokens, setTokens] = useState<ApiTokenModel[]>([]);
   const [isLoading, setIsLoading] = useState(false);
