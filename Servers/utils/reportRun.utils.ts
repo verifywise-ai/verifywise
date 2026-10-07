@@ -1,6 +1,7 @@
 import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
 import { deleteFileById } from "./fileUpload.utils";
+import { hasUnrestrictedVisibility } from "./rolePermissions.utils";
 
 export async function createRunQuery(input: any): Promise<any> {
   const rows: any[] = await sequelize.query(
@@ -103,8 +104,12 @@ const RUN_FROM_SQL = `FROM report_runs rr
  * the spec calls the legacy inner join to `projects` a bug precisely because it
  * hid those.
  */
-function viewerVisibilitySql(viewer: ReportRunViewer): string | null {
-  if (viewer.role === "Admin" || viewer.role === "SuperAdmin") return null;
+async function viewerVisibilitySql(
+  viewer: ReportRunViewer,
+  organization_id: number,
+): Promise<string | null> {
+  if (await hasUnrestrictedVisibility(organization_id, viewer.role ?? "", "reports.viewAll"))
+    return null;
   return `(${RUN_PROJECT_ID_SQL} IS NULL OR EXISTS (
        SELECT 1 FROM projects p
        LEFT JOIN projects_members pm
@@ -142,7 +147,7 @@ export async function canViewRunQuery(
   const where: string[] = ["rr.id = :id", "rr.organization_id = :organization_id"];
   const replacements: any = { id, organization_id };
 
-  const visibility = viewerVisibilitySql(viewer);
+  const visibility = await viewerVisibilitySql(viewer, organization_id);
   if (visibility) {
     where.push(visibility);
     replacements.viewerUserId = viewer.userId;
@@ -193,7 +198,7 @@ export async function listRunsQuery(
     where.push("rr.archived_at IS NULL");
   }
 
-  const visibility = viewerVisibilitySql(viewer);
+  const visibility = await viewerVisibilitySql(viewer, organization_id);
   if (visibility) {
     where.push(visibility);
     // NULL here means "no user", which matches no project owner and no member
