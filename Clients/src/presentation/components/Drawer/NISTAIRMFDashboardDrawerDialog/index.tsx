@@ -36,7 +36,7 @@ import useUsers from "../../../../application/hooks/useUsers";
 import { User } from "../../../../domain/types/User";
 import { FileData } from "../../../../domain/types/File";
 import { attachFilesToEntity } from "../../../../application/repository/file.repository";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useResourceAccess } from "../../../../application/hooks/useResourceAccess";
 
 const FRAMEWORK_TYPE = "nist_ai_rmf";
 const ENTITY_TYPE = "subcategory";
@@ -80,7 +80,8 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
   function: functionType,
 }) => {
   const theme = useTheme();
-  const { userRoleName, userId } = useAuth();
+  const { userId } = useAuth();
+  const { canAccess } = useResourceAccess();
   const { users } = useUsers();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -128,8 +129,8 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
     [users],
   );
 
-  const isEditingDisabled = !allowedRoles.frameworks.edit.includes(userRoleName);
-  const isAuditingDisabled = !allowedRoles.frameworks.audit.includes(userRoleName);
+  const isEditingDisabled = !canAccess("frameworks", "edit");
+  const isAuditingDisabled = !canAccess("frameworks", "audit");
 
   // Populate form when subcategory prop changes and (re)load evidence files.
   useEffect(() => {
