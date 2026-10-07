@@ -9,7 +9,7 @@ import useMultipleOnScreen from "../../../../application/hooks/useMultipleOnScre
 import { useDashboard } from "../../../../application/hooks/useDashboard";
 import ProjectList from "../../../components/ProjectsList/ProjectsList";
 import { CustomizableButton } from "../../../components/button/customizable-button";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useResourceAccess } from "../../../../application/hooks/useResourceAccess";
 import { CirclePlus as AddCircleOutlineIcon } from "lucide-react";
 import StandardModal from "../../../components/Modals/StandardModal";
 import AiOrNotScreening from "../../../components/Modals/AiOrNotScreening";
@@ -20,8 +20,9 @@ import { testIds } from "../../../test-ids";
 const Home = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { componentsVisible, changeComponentVisibility, refreshUsers, userRoleName } =
+  const { componentsVisible, changeComponentVisibility, refreshUsers } =
     useContext(VerifyWiseContext);
+  const { canAccess } = useResourceAccess();
   const [isProjectFormModalOpen, setIsProjectFormModalOpen] = useState<boolean>(false);
   const [isScreeningOpen, setIsScreeningOpen] = useState<boolean>(false);
   const [refreshProjectsFlag, setRefreshProjectsFlag] = useState<boolean>(false);
@@ -97,7 +98,7 @@ const Home = () => {
               icon={<AddCircleOutlineIcon size={16} />}
               testId={testIds.overview.newUseCaseButton}
               onClick={() => setIsScreeningOpen(true)}
-              isDisabled={!allowedRoles.projects.create.includes(userRoleName)}
+              isDisabled={!canAccess("projects", "create")}
             />
           </div>
         }
