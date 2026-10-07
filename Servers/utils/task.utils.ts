@@ -23,6 +23,7 @@ import {
 import { replaceTemplateVariables } from "./automation/automation.utils";
 import { enqueueAutomationAction } from "../services/automations/automationProducer";
 import { getTaskEntityLinksQuery } from "./taskEntityLink.utils";
+import { hasUnrestrictedVisibility } from "./rolePermissions.utils";
 
 interface GetTasksOptions {
   userId: number;
@@ -56,7 +57,7 @@ const addVisibilityLogic = (
   baseQueryParts: string[],
   whereConditions: string[],
   replacements: QueryReplacements,
-  { userId, role }: GetTasksOptions,
+  { userId, unrestricted }: { userId: number; unrestricted: boolean },
   organizationId: number,
   joinAlias: string = "ta",
 ): void => {
@@ -64,7 +65,7 @@ const addVisibilityLogic = (
   whereConditions.push("t.organization_id = :organizationId");
   replacements.organizationId = organizationId;
 
-  if (role !== "Admin" && role !== "SuperAdmin") {
+  if (!unrestricted) {
     baseQueryParts.push(
       `LEFT JOIN task_assignees ${joinAlias} ON ${joinAlias}.task_id = t.id AND ${joinAlias}.organization_id = :organizationId AND ${joinAlias}.user_id = :userId`,
     );
@@ -234,11 +235,12 @@ export const getTasksQuery = async (
   }
 
   // Enforce visibility rules: admins see all, others see tasks where they're creator or assignee
+  const unrestricted = await hasUnrestrictedVisibility(organizationId, role, "tasks.viewAll");
   addVisibilityLogic(
     baseQueryParts,
     whereConditions,
     replacements,
-    { userId, role },
+    { userId, unrestricted },
     organizationId,
   );
 
@@ -282,13 +284,13 @@ export const getTasksQuery = async (
 
   if (filters.assignee && filters.assignee.length > 0) {
     // Add LEFT JOIN for assignee filter if not already added
-    if (role === "Admin" || role === "SuperAdmin") {
+    if (unrestricted) {
       baseQueryParts.push(
         `LEFT JOIN task_assignees ta_filter ON ta_filter.task_id = t.id AND ta_filter.organization_id = :organizationId`,
       );
     }
     const assigneeList = filters.assignee.map((_, i) => `:assignee${i}`).join(", ");
-    const joinAlias = role === "Admin" || role === "SuperAdmin" ? "ta_filter" : "ta";
+    const joinAlias = unrestricted ? "ta_filter" : "ta";
     whereConditions.push(`${joinAlias}.user_id IN (${assigneeList})`);
     filters.assignee.forEach((assignee, i) => {
       replacements[`assignee${i}`] = assignee;
@@ -415,11 +417,12 @@ export const getTaskByIdQuery = async (
   };
 
   // Role-based visibility rules
+  const unrestricted = await hasUnrestrictedVisibility(organizationId, role, "tasks.viewAll");
   addVisibilityLogic(
     baseQueryParts,
     whereConditions,
     replacements,
-    { userId, role },
+    { userId, unrestricted },
     organizationId,
   );
 
@@ -696,11 +699,12 @@ const getTaskByIdIncludingArchivedQuery = async (
   const replacements: QueryReplacements = { taskId };
 
   // Role-based visibility rules (without excluding deleted tasks)
+  const unrestricted = await hasUnrestrictedVisibility(organizationId, role, "tasks.viewAll");
   addVisibilityLogic(
     baseQueryParts,
     whereConditions,
     replacements,
-    { userId, role },
+    { userId, unrestricted },
     organizationId,
   );
 
