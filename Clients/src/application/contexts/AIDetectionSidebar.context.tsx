@@ -25,6 +25,7 @@ import {
 } from "react";
 import { getActiveScan, getScans, getScanStatus } from "../repository/aiDetection.repository";
 import { getRepositoryCount } from "../repository/aiDetectionRepository.repository";
+import { useMyPermissions } from "../hooks/useRolePermissions";
 import { ScanStatus, ScansResponse } from "../../domain/ai-detection/types";
 
 interface RecentScan {
@@ -62,6 +63,14 @@ const ACTIVE_STATUSES: ScanStatus[] = ["pending", "cloning", "scanning"];
 const ACTIVE_SCAN_POLL_INTERVAL_MS = 2000; // Poll faster when tracking active scan
 
 export const AIDetectionSidebarProvider: FC<{ children: ReactNode }> = ({ children }) => {
+  // Fail-closed permission gates (issue #4588): these endpoints are guarded
+  // backend-side by aiDetection.read / aiDetectionRepository.read, so users
+  // without those grants (e.g. custom roles) must not fire the requests at
+  // all — otherwise every login logs a burst of expected 403s.
+  const { can, isLoading: permissionsLoading } = useMyPermissions();
+  const canReadScans = can("aiDetection.read");
+  const canReadRepositories = can("aiDetectionRepository.read");
+
   const [activeTab, setActiveTab] = useState("scan");
   const [historyCount, setHistoryCount] = useState(0);
   const [repositoryCount, setRepositoryCount] = useState(0);
@@ -143,18 +152,20 @@ export const AIDetectionSidebarProvider: FC<{ children: ReactNode }> = ({ childr
     };
   }, [trackedScan]);
 
-  // Load repository count for sidebar badge
+  // Load repository count for sidebar badge (only with aiDetectionRepository.read)
   const refreshRepositoryCount = useCallback(async () => {
+    if (permissionsLoading || !canReadRepositories) return;
     try {
       const count = await getRepositoryCount();
       setRepositoryCount(count);
     } catch (error) {
       console.error("Failed to load repository count:", error);
     }
-  }, []);
+  }, [permissionsLoading, canReadRepositories]);
 
-  // Load recent scans for sidebar on mount
+  // Load recent scans for sidebar on mount (only with aiDetection.read)
   const refreshRecentScans = useCallback(async () => {
+    if (permissionsLoading || !canReadScans) return;
     try {
       const response: ScansResponse = await getScans({ page: 1, limit: 5 });
       setHistoryCount(response.pagination.total);
@@ -167,7 +178,7 @@ export const AIDetectionSidebarProvider: FC<{ children: ReactNode }> = ({ childr
     } catch (error) {
       console.error("Failed to load recent scans:", error);
     }
-  }, []);
+  }, [permissionsLoading, canReadScans]);
 
   useEffect(() => {
     refreshRecentScans();
@@ -176,6 +187,7 @@ export const AIDetectionSidebarProvider: FC<{ children: ReactNode }> = ({ childr
 
   // On mount, check once for any active scan (e.g., page refresh during scan)
   useEffect(() => {
+    if (permissionsLoading || !canReadScans) return;
     const checkForExistingActiveScan = async () => {
       try {
         const activeScan = await getActiveScan();
@@ -192,7 +204,7 @@ export const AIDetectionSidebarProvider: FC<{ children: ReactNode }> = ({ childr
     };
 
     checkForExistingActiveScan();
-  }, []);
+  }, [permissionsLoading, canReadScans]);
 
   return (
     <AIDetectionSidebarContext.Provider
