@@ -20,7 +20,7 @@ import { alertState } from "../../../../domain/interfaces/i.alert";
 import useUsers from "../../../../application/hooks/useUsers";
 import { useProjects } from "../../../../application/hooks/useProjects";
 import useFrameworks from "../../../../application/hooks/useFrameworks";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useResourceAccess } from "../../../../application/hooks/useResourceAccess";
 import AutoCompleteField from "../../Inputs/Autocomplete";
 import {
   useFormValidation,
@@ -92,14 +92,14 @@ const RiskSection: FC<RiskSectionProps> = ({
   setRiskValues,
   validateRef,
   firstInvalidFieldRef,
-  userRoleName,
   disableInternalScroll = false,
   compactMode = false,
   serverErrors,
   onValidityChange,
 }) => {
   const theme = useTheme();
-  const isEditingDisabled = !allowedRoles.projectRisks.edit.includes(userRoleName);
+  const { canAccess } = useResourceAccess();
+  const isEditingDisabled = !canAccess("projectRisks", "edit");
 
   // Dynamic layout based on compactMode - squeeze into 990px when sidebar is open
   const contentWidth = compactMode
