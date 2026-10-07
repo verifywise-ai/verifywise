@@ -4,6 +4,7 @@ import { FileModel, FileSource } from "../domain.layer/models/file/file.model";
 import { Transaction, QueryTypes } from "sequelize";
 import { ProjectModel } from "../domain.layer/models/project/project.model";
 import { resolveFileExpiryOnCreate } from "./retention.utils";
+import { hasUnrestrictedVisibility } from "./rolePermissions.utils";
 
 const sanitizeFilename = (name: string) => name.replace(/[^a-zA-Z0-9-_\.]/g, "_");
 
@@ -127,7 +128,7 @@ export const canUserAccessFile = async (
   userOrgId?: number,
 ): Promise<boolean> => {
   // Admins can access all files
-  if (role === "Admin" || role === "SuperAdmin") {
+  if (await hasUnrestrictedVisibility(organizationId, role, "files.viewAll")) {
     return true;
   }
 
