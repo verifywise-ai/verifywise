@@ -1,5 +1,6 @@
 import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
+import { hasUnrestrictedVisibility } from "../../utils/rolePermissions.utils";
 
 /**
  * Who may produce a report, and over what.
@@ -19,13 +20,20 @@ export interface ReportScopeCheck {
   scope: string | undefined;
   projectId: number | null | undefined;
   isMember: boolean;
+  /**
+   * Permission-matrix resolution of "may see every report" (Admin/SuperAdmin,
+   * or a custom role granted reports.viewAll). When omitted, the built-in
+   * Admin/SuperAdmin literal check applies — keeps the pure rule testable
+   * without a database.
+   */
+  unrestricted?: boolean;
 }
 
 const UNRESTRICTED_ROLES = ["Admin", "SuperAdmin"];
 
 /** Returns [] when permitted, else one or more human-readable reasons. */
 export function reportScopeErrors(input: ReportScopeCheck): string[] {
-  if (input.role && UNRESTRICTED_ROLES.includes(input.role)) return [];
+  if (input.unrestricted ?? (input.role && UNRESTRICTED_ROLES.includes(input.role))) return [];
 
   // An omitted scope is organization scope: reportTemplate.ctrl defaults it
   // that way, so falling through here would leave the widest case ungated.
@@ -52,10 +60,12 @@ export async function assertReportScopeAllowed(input: {
   scope: string | undefined;
   projectId: number | null | undefined;
 }): Promise<string[]> {
-  const needsMembership =
-    input.scope === "project" &&
-    !!input.projectId &&
-    !(input.role && UNRESTRICTED_ROLES.includes(input.role));
+  const unrestricted = await hasUnrestrictedVisibility(
+    input.organizationId,
+    input.role ?? "",
+    "reports.viewAll",
+  );
+  const needsMembership = input.scope === "project" && !!input.projectId && !unrestricted;
 
   let isMember = false;
   if (needsMembership) {
@@ -85,5 +95,6 @@ export async function assertReportScopeAllowed(input: {
     scope: input.scope,
     projectId: input.projectId,
     isMember,
+    unrestricted,
   });
 }
