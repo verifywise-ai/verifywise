@@ -38,7 +38,7 @@ import CustomFieldsSection, {
 import { useRequiredCustomFieldsGate } from "../../../components/CustomFieldsSection/RequiredCustomFieldsGate";
 import useFrameworks from "../../../../application/hooks/useFrameworks";
 import { Framework } from "../../../../domain/types/Framework";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useResourceAccess } from "../../../../application/hooks/useResourceAccess";
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
 import { User } from "../../../../domain/types/User";
 import {
@@ -192,7 +192,8 @@ const initialState: FormValues = {
 const ProjectSettings = React.memo(
   ({ triggerRefresh = () => {} }: { triggerRefresh?: (isUpdate: boolean) => void }) => {
     const { setProjects } = useContext(VerifyWiseContext);
-    const { userRoleName, userId } = useAuth();
+    const { userId } = useAuth();
+    const { canAccess } = useResourceAccess();
     const [searchParams] = useSearchParams();
     const projectId = searchParams.get("projectId") ?? "1"; // default project ID is 2
     const theme = useTheme();
@@ -1263,7 +1264,7 @@ const ProjectSettings = React.memo(
                   </Box>
                   <Autocomplete
                     multiple
-                    readOnly={!allowedRoles.projects.editTeamMembers.includes(userRoleName)}
+                    readOnly={!canAccess("projects", "editTeamMembers")}
                     id="users-input"
                     size="small"
                     value={users.filter((user) => values.members.includes(Number(user.id)))}
@@ -1595,7 +1596,7 @@ const ProjectSettings = React.memo(
                   variant="contained"
                   onClick={handleOpenDeleteDialog}
                   text="Delete use case"
-                  isDisabled={!allowedRoles.projects.delete.includes(userRoleName)}
+                  isDisabled={!canAccess("projects", "delete")}
                 />
               </Stack>
             </Stack>
