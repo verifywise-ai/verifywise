@@ -8,8 +8,8 @@ import TeamManagement from "./Team/index";
 import Organization from "./Organization";
 import Preferences from "./Preferences/index";
 import Features from "./Features/index";
-import allowedRoles from "../../../application/constants/permissions";
 import { useAuth } from "../../../application/hooks/useAuth";
+import { useResourceAccess } from "../../../application/hooks/useResourceAccess";
 import ApiKeys from "./ApiKeys";
 import AuditLedger from "./AuditLedger";
 import EntraIdConfig from "./EntraIdConfig";
@@ -49,14 +49,15 @@ export default function ProfilePage() {
   const ssoFeatureEnabled = useSsoFeatureEnabled();
   const location = useLocation();
   const navigate = useNavigate();
-  const isTeamManagementDisabled = !allowedRoles.projects.editTeamMembers.includes(userRoleName);
-  const isApiKeysDisabled = !allowedRoles.apiKeys?.view?.includes(userRoleName);
-  const isFeaturesDisabled = !allowedRoles.features?.manage?.includes(userRoleName);
-  const isAuditLedgerDisabled = userRoleName !== "Admin";
-  const isCustomFieldsDisabled = userRoleName !== "Admin";
+  const { canAccess } = useResourceAccess();
   // Permission-aware gate (issue #4588): any role holding roles.manage —
   // including a custom role — can manage roles, matching the backend.
   const { can } = useMyPermissions();
+  const isTeamManagementDisabled = !canAccess("projects", "editTeamMembers");
+  const isApiKeysDisabled = !canAccess("apiKeys", "view");
+  const isFeaturesDisabled = !canAccess("features", "manage");
+  const isAuditLedgerDisabled = userRoleName !== "Admin" && !can("auditLedger.admin");
+  const isCustomFieldsDisabled = userRoleName !== "Admin" && !can("customField.admin");
   const isRolesDisabled = !can("roles.manage");
 
   const { tab } = useParams<{ tab?: string }>();
