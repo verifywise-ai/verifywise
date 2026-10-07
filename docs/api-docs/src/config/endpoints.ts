@@ -8800,6 +8800,28 @@ export const projectRiskEndpoints: Endpoint[] = [
     ],
     tag: "Project Risks",
   },
+  {
+    method: 'POST',
+    path: '/projectRisks/suggest-ai',
+    summary: "Suggest Risks With AI",
+    description: "Read-only: the org-configured LLM returns matching entries from the built-in MIT and IBM risk catalogs plus free-form suggested risks for the use case of the project. Nothing is persisted. Rate limited to 10 requests per hour per user.",
+    requiresAuth: true,
+    requestBody: {
+      "projectId": "integer (required)",
+      "technologySummary": "string (optional)",
+      "llmKeyId": "integer (optional)",
+    },
+    responses: [
+      { status: 200, description: "Suggestions generated" },
+      { status: 400, description: "Invalid request, or no LLM keys configured for the organization" },
+      { status: 401, description: "Unauthorized" },
+      { status: 404, description: "Project not found" },
+      { status: 429, description: "Rate limit exceeded (10 requests per hour per user)" },
+      { status: 500, description: "Internal server error" },
+      { status: 502, description: "The configured AI provider rejected or failed the request" },
+    ],
+    tag: "Project Risks",
+  },
 ];
 
 // Quantitative Risks endpoints

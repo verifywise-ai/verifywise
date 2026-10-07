@@ -40,11 +40,16 @@ export const CATALOG_CATEGORY_NORMALIZATION: Record<string, string | null> = {
   "Educational risk": null,
 };
 
-/** Typed failure for the whole pass; the controller maps it to a 502/503. */
+/** Typed failure for the whole pass; the controller maps it to a 502. */
 export class RiskSuggestionError extends Error {
   constructor(message: string, options?: { cause?: unknown }) {
-    super(message, options);
+    // `super(message, options)` needs ES2022; this package targets ES6, so the
+    // cause is assigned by hand.
+    super(message);
     this.name = "RiskSuggestionError";
+    if (options && "cause" in options) {
+      (this as { cause?: unknown }).cause = options.cause;
+    }
   }
 }
 
