@@ -2,6 +2,20 @@ import { screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
 // Mock hooks
+// useResourceAccess: mirror the legacy built-in matrix for the Admin role
+// used throughout this file (the JWT-derived role is empty in tests).
+vi.mock("../../../../application/hooks/useResourceAccess", () => ({
+  useResourceAccess: () => ({
+    canAccess: (resource: string, action: string) => {
+      const perms = (allowedRoles as Record<string, Record<string, string[]>>)[resource];
+      return !!perms?.[action]?.includes("Admin");
+    },
+    isLoading: false,
+  }),
+}));
+
+import allowedRoles from "../../../../application/constants/permissions";
+
 vi.mock("../../../../application/hooks/useMultipleOnScreen", () => ({
   default: () => ({
     refs: [{ current: null }],
