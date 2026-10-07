@@ -26,6 +26,13 @@ vi.mock("../../../../application/hooks/useAuth", () => ({
   useAuth: () => ({ userRoleName: "Admin", userId: 1, userToken: { name: "Test User" } }),
 }));
 
+// Permission gates are not the subject of this suite — keep them open so the
+// cross-org guard assertions are unaffected by the /roles/my-permissions call
+// that useResourceAccess would otherwise trigger.
+vi.mock("../../../../application/hooks/useResourceAccess", () => ({
+  useResourceAccess: () => ({ canAccess: () => true, isLoading: false }),
+}));
+
 // renderWithProviders mounts <ExtensionsProvider>, so the mock re-exports it
 // as a passthrough.
 vi.mock("../../../../application/contexts/Extensions.context", () => ({
