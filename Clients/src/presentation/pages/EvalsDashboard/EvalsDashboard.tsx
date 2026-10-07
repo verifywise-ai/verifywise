@@ -33,8 +33,7 @@ import {
 import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
 import { PageHeader } from "../../components/Layout/PageHeader";
 import { useEvalsSidebarContext } from "../../../application/contexts/EvalsSidebar.context";
-import { useAuth } from "../../../application/hooks/useAuth";
-import allowedRoles from "../../../application/constants/permissions";
+import { useResourceAccess } from "../../../application/hooks/useResourceAccess";
 import ModalStandard from "../../components/Modals/StandardModal";
 import Field from "../../components/Inputs/Field";
 import Alert from "../../components/Alert";
@@ -234,10 +233,10 @@ export default function EvalsDashboard() {
   const { projectId } = useParams<{ projectId?: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { userRoleName } = useAuth();
+  const { canAccess } = useResourceAccess();
 
   // Helper to check if user can perform write operations
-  const canManageApiKeys = allowedRoles.evals.manageApiKeys.includes(userRoleName);
+  const canManageApiKeys = canAccess("evals", "manageApiKeys");
 
   // Determine tab from URL hash or default
   const [openModelsAddModal, setOpenModelsAddModal] = useState(false);
