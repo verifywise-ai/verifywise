@@ -33,7 +33,7 @@ import ISO42001Annex from "./ISO42001/Annex";
 import { getAllEntities } from "../../../application/repository/entity.repository";
 import { ProjectForm } from "../../components/Forms/ProjectForm";
 import AddFrameworkModal from "../ProjectView/AddNewFramework";
-import allowedRoles from "../../../application/constants/permissions";
+import { useResourceAccess } from "../../../application/hooks/useResourceAccess";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import StandardModal from "../../components/Modals/StandardModal";
@@ -108,8 +108,8 @@ const Framework = () => {
   const categoryId = searchParams.get("categoryId");
   const subcategoryId = searchParams.get("subcategoryId");
 
-  const { changeComponentVisibility, projects, userRoleName, setProjects } =
-    useContext(VerifyWiseContext);
+  const { changeComponentVisibility, projects, setProjects } = useContext(VerifyWiseContext);
+  const { canAccess } = useResourceAccess();
   const { refs, allVisible } = useMultipleOnScreen<HTMLElement>({
     countToTrigger: 1,
   });
@@ -803,9 +803,9 @@ const Framework = () => {
                     handleManageProjectClick(event as React.MouseEvent<any>);
                   }}
                   isDisabled={
-                    !allowedRoles.frameworks.manage.includes(userRoleName) &&
-                    !allowedRoles.projects.edit.includes(userRoleName) &&
-                    !allowedRoles.projects.delete.includes(userRoleName)
+                    !canAccess("frameworks", "manage") &&
+                    !canAccess("projects", "edit") &&
+                    !canAccess("projects", "delete")
                   }
                   sx={{
                     "backgroundColor": "brand.primary",
@@ -841,7 +841,7 @@ const Framework = () => {
                 >
                   <MenuItem
                     onClick={handleManageFrameworksClick}
-                    disabled={!allowedRoles.frameworks.manage.includes(userRoleName)}
+                    disabled={!canAccess("frameworks", "manage")}
                   >
                     <ListItemIcon sx={{ minWidth: 32 }}>
                       <SettingsIcon
@@ -862,7 +862,7 @@ const Framework = () => {
                   </MenuItem>
                   <MenuItem
                     onClick={handleEditProjectClick}
-                    disabled={!allowedRoles.projects.edit.includes(userRoleName)}
+                    disabled={!canAccess("projects", "edit")}
                   >
                     <ListItemIcon sx={{ minWidth: 32 }}>
                       <EditIconGrey
@@ -884,7 +884,7 @@ const Framework = () => {
                   <Divider sx={{ my: 0.5 }} />
                   <MenuItem
                     onClick={handleDeleteProjectClick}
-                    disabled={!allowedRoles.projects.delete.includes(userRoleName)}
+                    disabled={!canAccess("projects", "delete")}
                   >
                     <ListItemIcon sx={{ minWidth: 32 }}>
                       <DeleteIconRed
@@ -911,7 +911,7 @@ const Framework = () => {
                 text="New Project"
                 startIcon={<AddCircleOutlineIcon size={16} />}
                 onClick={() => setIsProjectFormModalOpen(true)}
-                isDisabled={!allowedRoles.projects.create.includes(userRoleName)}
+                isDisabled={!canAccess("projects", "create")}
               />
             )}
           </Box>
