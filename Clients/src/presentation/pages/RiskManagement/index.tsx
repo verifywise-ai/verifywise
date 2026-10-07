@@ -15,7 +15,7 @@ import Alert from "../../components/Alert";
 import { deleteEntityById, getEntityById } from "../../../application/repository/entity.repository";
 import CustomizableToast from "../../components/Toast";
 import CustomizableSkeleton from "../../components/Skeletons";
-import allowedRoles from "../../../application/constants/permissions";
+import { useResourceAccess } from "../../../application/hooks/useResourceAccess";
 import AddNewRiskMITModal from "../../components/AddNewRiskMITForm";
 import AddNewRiskIBMModal from "../../components/AddNewRiskIBMForm";
 import { getAllProjectRisks } from "../../../application/repository/projectRisk.repository";
@@ -75,6 +75,7 @@ const RiskManagement = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const hasProcessedUrlParam = useRef(false);
   const { userRoleName } = useAuth();
+  const { canAccess } = useResourceAccess();
   const { users, loading: usersLoading } = useUsers();
   const { isEnabled } = useExtensions();
   const [refreshKey, setRefreshKey] = useState(0); // Add refreshKey state
@@ -868,7 +869,7 @@ const RiskManagement = () => {
                 sx={addNewRiskButtonStyle}
                 onClick={handleInsertFromMenuOpen as (event: unknown) => void}
                 icon={<ChevronDown size={16} />}
-                isDisabled={!allowedRoles.projectRisks.create.includes(userRoleName)}
+                isDisabled={!canAccess("projectRisks", "create")}
               />
               <Popover
                 id="insert-risk-mega-dropdown"
