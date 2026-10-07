@@ -20,6 +20,7 @@ import {
   deleteAllCustomFieldValuesForEntityQuery,
   fetchCustomFieldsForEntities,
 } from "./customField.utils";
+import { hasUnrestrictedVisibility } from "./rolePermissions.utils";
 
 // Function to generate the next sequential UC ID
 // Using a database sequence to fetch the next value
@@ -54,7 +55,7 @@ export const getUserProjects = async (
   const whereConditions: string[] = ["p.organization_id = :organizationId"];
   const replacements: { [key: string]: any } = { organizationId };
 
-  if (role !== "Admin" && role !== "SuperAdmin") {
+  if (!(await hasUnrestrictedVisibility(organizationId, role, "projects.viewAll"))) {
     baseQueryParts.push(
       `LEFT JOIN projects_members pm ON pm.project_id = p.id AND pm.organization_id = :organizationId`,
     );
