@@ -53,8 +53,7 @@ import {
 } from "../../../application/repository/deepEval.repository";
 import singleTheme from "../../themes/v1SingleTheme";
 import type { DeepEvalProject } from "./types";
-import { useAuth } from "../../../application/hooks/useAuth";
-import allowedRoles from "../../../application/constants/permissions";
+import { useResourceAccess } from "../../../application/hooks/useResourceAccess";
 import { palette } from "../../themes/palette";
 
 const columns: StandardColumn[] = [
@@ -79,10 +78,10 @@ export default function ProjectsList() {
   } | null>(null);
 
   // RBAC permissions
-  const { userRoleName } = useAuth();
-  const canCreateProject = allowedRoles.evals.createProject.includes(userRoleName);
-  const canEditProject = allowedRoles.evals.editProject.includes(userRoleName);
-  const canDeleteProject = allowedRoles.evals.deleteProject.includes(userRoleName);
+  const { canAccess } = useResourceAccess();
+  const canCreateProject = canAccess("evals", "createProject");
+  const canEditProject = canAccess("evals", "editProject");
+  const canDeleteProject = canAccess("evals", "deleteProject");
 
   // Search and filter state
   const [searchTerm, setSearchTerm] = useState("");
