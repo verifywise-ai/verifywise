@@ -41,7 +41,7 @@ import AddNewRiskForm from "../../AddNewRiskForm";
 import { AlertBox, styles } from "../../../pages/ComplianceTracker/1.0ComplianceTracker/styles";
 import { handleAlert } from "../../../../application/tools/alertUtils";
 import { AlertProps } from "../../../types/alert.types";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useResourceAccess } from "../../../../application/hooks/useResourceAccess";
 import { updateControl } from "../../../../application/repository/control_eu_act.repository";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import useUsers from "../../../../application/hooks/useUsers";
@@ -104,7 +104,8 @@ const NewControlPane = ({
   onComplianceUpdate?: () => void;
   projectId: number;
 }) => {
-  const { userRoleName, userId } = useAuth();
+  const { userId } = useAuth();
+  const { canAccess } = useResourceAccess();
   const { users } = useUsers();
 
   // ========================================================================
@@ -138,8 +139,8 @@ const NewControlPane = ({
   // PERMISSIONS
   // ========================================================================
 
-  const isEditingDisabled = !allowedRoles.frameworks.edit.includes(userRoleName);
-  const isAuditingDisabled = !allowedRoles.frameworks.audit.includes(userRoleName);
+  const isEditingDisabled = !canAccess("frameworks", "edit");
+  const isAuditingDisabled = !canAccess("frameworks", "audit");
 
   // ========================================================================
   // STATE - FORM DATA (Per-subcontrol map)
