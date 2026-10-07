@@ -38,7 +38,7 @@ import {
 } from "../../../../application/repository/entity.repository";
 import { attachFilesToEntity } from "../../../../application/repository/file.repository";
 import { ISO27001GetSubClauseById } from "../../../../application/repository/subClause_iso.repository";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useResourceAccess } from "../../../../application/hooks/useResourceAccess";
 
 const FRAMEWORK_TYPE = "iso_27001";
 const ENTITY_TYPE = "subclause";
@@ -122,7 +122,8 @@ const VWISO27001ClauseDrawerDialog = ({
   index,
   project_id,
 }: VWISO27001ClauseDrawerDialogProps) => {
-  const { userId, userRoleName } = useAuth();
+  const { userId } = useAuth();
+  const { canAccess } = useResourceAccess();
   const { users } = useUsers();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -170,8 +171,8 @@ const VWISO27001ClauseDrawerDialog = ({
     [users],
   );
 
-  const isEditingDisabled = !allowedRoles.frameworks.edit.includes(userRoleName);
-  const isAuditingDisabled = !allowedRoles.frameworks.audit.includes(userRoleName);
+  const isEditingDisabled = !canAccess("frameworks", "edit");
+  const isAuditingDisabled = !canAccess("frameworks", "audit");
 
   const fetchLinkedRisks = async (riskIds?: number[]) => {
     const ids = riskIds
