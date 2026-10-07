@@ -28,8 +28,7 @@ import { useNavigate } from "react-router";
 import { PageHeader } from "../../components/Layout/PageHeader";
 import HelperIcon from "../../components/HelperIcon";
 import TipBox from "../../components/TipBox";
-import { useAuth } from "../../../application/hooks/useAuth";
-import allowedRoles from "../../../application/constants/permissions";
+import { useResourceAccess } from "../../../application/hooks/useResourceAccess";
 import { palette } from "../../themes/palette";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
@@ -164,8 +163,8 @@ export default function ProjectOverview({
   const [newExperimentModalOpen, setNewExperimentModalOpen] = useState(false);
 
   // RBAC permissions
-  const { userRoleName } = useAuth();
-  const canCreateExperiment = allowedRoles.evals.createExperiment.includes(userRoleName);
+  const { canAccess } = useResourceAccess();
+  const canCreateExperiment = canAccess("evals", "createExperiment");
 
   const loadOverviewData = useCallback(async () => {
     try {
