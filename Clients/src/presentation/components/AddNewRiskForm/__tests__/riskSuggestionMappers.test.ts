@@ -4,11 +4,11 @@ import {
   getRiskLevelLabel,
   mapSuggestionToRiskForm,
   mapSuggestionToMitigationForm,
-} from "../suggestedRiskMappers";
-import { palette } from "../../../../themes/palette";
-import type { SuggestedRisk } from "../../../../../domain/ai-detection/riskScoringTypes";
+} from "../riskSuggestionMappers";
+import { palette } from "../../../themes/palette";
+import type { SuggestedRisk } from "../../../../domain/ai-detection/riskScoringTypes";
 
-describe("suggestedRiskMappers", () => {
+describe("riskSuggestionMappers", () => {
   describe("mapCategoryNamesToIds", () => {
     it("maps known category names to their ids", () => {
       const ids = mapCategoryNamesToIds(["Strategic risk", "Cybersecurity risk"]);
@@ -111,6 +111,13 @@ describe("suggestedRiskMappers", () => {
     it("omits related findings text when finding_refs is empty", () => {
       const form = mapSuggestionToRiskForm({ ...suggestion, finding_refs: [] });
       expect(form.reviewNotes).toBe("Suggested by AI scan analysis.");
+    });
+
+    it("uses a custom source label in review notes when provided", () => {
+      const form = mapSuggestionToRiskForm(suggestion, { sourceLabel: "AI assistant" });
+      expect(form.reviewNotes).toBe(
+        "Suggested by AI assistant. Related findings: finding-1, finding-2",
+      );
     });
   });
 

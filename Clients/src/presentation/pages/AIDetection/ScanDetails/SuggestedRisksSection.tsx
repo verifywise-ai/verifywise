@@ -21,7 +21,7 @@ import {
   getRiskLevelLabel,
   mapSuggestionToMitigationForm,
   mapSuggestionToRiskForm,
-} from "./suggestedRiskMappers";
+} from "../../../components/AddNewRiskForm/riskSuggestionMappers";
 
 interface SuggestedRisksSectionProps {
   suggestions: SuggestedRisk[];
@@ -63,7 +63,9 @@ export function SuggestedRisksSection({
 
   const handleAddSuggestedRisk = (suggestion: SuggestedRisk, index: number) => {
     addedSuggestionIndexRef.current = index;
-    setSelectedSuggestedRisk(mapSuggestionToRiskForm(suggestion));
+    setSelectedSuggestedRisk(
+      mapSuggestionToRiskForm(suggestion, { sourceLabel: "AI scan analysis" }),
+    );
     setSelectedSuggestedMitigation(mapSuggestionToMitigationForm(suggestion));
     setIsSuggestedRiskModalOpen(true);
   };
