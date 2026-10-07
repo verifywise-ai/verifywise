@@ -14,7 +14,7 @@ import { ArrowRight as RightArrowBlack } from "lucide-react";
 import { useSearchParams } from "react-router";
 import StatusDropdown from "../../../../components/StatusDropdown";
 import { useAuth } from "../../../../../application/hooks/useAuth";
-import allowedRoles from "../../../../../application/constants/permissions";
+import { useResourceAccess } from "../../../../../application/hooks/useResourceAccess";
 import { Project } from "../../../../../domain/types/Project";
 import { handleAlert } from "../../../../../application/tools/alertUtils";
 import Alert from "../../../../components/Alert";
@@ -48,7 +48,8 @@ const NISTAIRMFMap = ({
   initialCategoryId,
   initialSubcategoryId,
 }: NISTAIRMFMapProps) => {
-  const { userId: _userId, userRoleName } = useAuth();
+  const { userId: _userId } = useAuth();
+  const { canAccess } = useResourceAccess();
   const [categories, setCategories] = useState<any[]>([]);
   const [expanded, setExpanded] = useState<number | false>(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -381,8 +382,7 @@ const NISTAIRMFMap = ({
                 currentStatus={subcategory.status ?? "Not started"}
                 onStatusChange={(newStatus) => handleStatusUpdate(newStatus, subcategory, index)}
                 size="small"
-                allowedRoles={allowedRoles.frameworks.edit}
-                userRole={userRoleName}
+                disabled={!canAccess("frameworks", "edit")}
               />
             </Stack>
           ))
