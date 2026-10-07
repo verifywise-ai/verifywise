@@ -51,13 +51,31 @@ async function releaseLock(key: string): Promise<void> {
   await redisClient.del(key);
 }
 
+/** Startup race: `npm run watch` starts the worker in parallel with
+ * `migrate-db`, so a repeatable tick can fire before the schema exists.
+ * The next scheduled run lands after migrations finish, so these are safe
+ * to skip quietly instead of logging a scary full-stack error.
+ */
+export function isDatabaseNotReady(error: unknown): boolean {
+  const e = error as {
+    original?: { code?: string };
+    parent?: { code?: string };
+    name?: string;
+  };
+  return (
+    e?.original?.code === "42P01" || // relation does not exist (migrations pending)
+    e?.parent?.code === "42P01" ||
+    e?.name === "SequelizeConnectionError" ||
+    e?.original?.code === "ECONNREFUSED"
+  );
+}
+
 export async function processScheduledAiDetectionScans(): Promise<void> {
   logger.info("Processing scheduled AI detection scans...");
   console.log(`[ScheduledScan] ${new Date().toISOString()} — Starting scheduled scan check`);
 
   try {
-    const organizations = await getAllOrganizationsQuery();
-    console.log(`[ScheduledScan] Found ${organizations.length} organization(s) to check`);
+    const organizations = await getAllOrganizationsQuery();    console.log(`[ScheduledScan] Found ${organizations.length} organization(s) to check`);
 
     for (const org of organizations) {
       const orgId = org.id!;
@@ -168,6 +186,12 @@ export async function processScheduledAiDetectionScans(): Promise<void> {
     console.log(`[ScheduledScan] ${new Date().toISOString()} — Check completed`);
     logger.info("Scheduled AI detection scan check completed");
   } catch (error) {
+    if (isDatabaseNotReady(error)) {
+      logger.warn(
+        "Scheduled AI detection scan check skipped: database schema not ready yet (migrations still running)",
+      );
+      return;
+    }
     console.error(`[ScheduledScan] FATAL ERROR:`, error);
     logger.error("Failed to process scheduled AI detection scans:", error);
   }
