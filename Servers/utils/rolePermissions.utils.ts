@@ -6,9 +6,12 @@
  *   - Built-in roles (global rows, organization_id IS NULL) resolve against
  *     the static BUILTIN_ROLE_PERMISSIONS matrix — byte-for-byte parity with
  *     the old hardcoded `authorize(["Admin", ...])` allowlists.
+ *   - SuperAdmin has no roles-table row (it is a mapping); it resolves
+ *     against the same static matrix (its super-tier keys only).
  *   - Custom roles (org-scoped rows) resolve against the `role_permissions`
  *     table; a missing row means DENIED, so a freshly created custom role can
  *     authenticate but cannot do anything until an Admin grants permissions.
+ *   - Any other unknown role name is denied (fail-closed).
  *
  * Custom-role permission sets are cached in-memory with a TTL and coalesced
  * loads (same strategy as roleMap.ts); role.ctrl/rolePermissions.ctrl call
@@ -102,7 +105,15 @@ export async function roleHasPermission(
   assertValidPermissionKey(permissionKey);
 
   const role = await getRoleByName(organizationId, roleName);
-  if (!role) return false; // unknown role: deny (fail-closed, as before)
+  if (!role) {
+    // No roles-table row. The only supported role without a row is
+    // "SuperAdmin" (a mapping, not a row — see migration
+    // 20260813133028-drop-superadmin-role); resolve it against the static
+    // matrix so the super-tier routes keep their legacy
+    // authorize(["Admin", "SuperAdmin"]) behavior. Any other unknown role
+    // stays denied (fail-closed).
+    return BUILTIN_ROLE_PERMISSIONS[roleName]?.has(permissionKey) ?? false;
+  }
 
   if (role.organizationId === null) {
     return BUILTIN_ROLE_PERMISSIONS[role.name]?.has(permissionKey) ?? false;
@@ -125,7 +136,11 @@ export async function getEffectivePermissions(
   roleName: string,
 ): Promise<ReadonlySet<string>> {
   const role = await getRoleByName(organizationId, roleName);
-  if (!role) return new Set<string>();
+  if (!role) {
+    // SuperAdmin is a mapping, not a roles-table row — resolve statically so
+    // the client's permission context is not empty (see roleHasPermission).
+    return BUILTIN_ROLE_PERMISSIONS[roleName] ?? new Set<string>();
+  }
   if (role.organizationId === null) {
     return BUILTIN_ROLE_PERMISSIONS[role.name] ?? new Set<string>();
   }
