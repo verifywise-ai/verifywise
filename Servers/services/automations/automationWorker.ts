@@ -25,7 +25,7 @@ import {
   runNightlyRiskScoring,
 } from "../shadowAiAggregation.service";
 import { runAgentDiscoverySync } from "../agentDiscovery/agentDiscoverySync.service";
-import { processScheduledAiDetectionScans } from "../aiDetection/scheduledScanProcessor";
+import { processScheduledAiDetectionScans, isDatabaseNotReady } from "../aiDetection/scheduledScanProcessor";
 import { syncAiTrustIndex } from "./actions/syncAiTrustIndex";
 import { runRevalidationSweepAllOrgs } from "./actions/mrmRevalidationSweep";
 import { runRetentionPruneAllOrgs } from "./actions/mrmRetentionPrune";
@@ -855,6 +855,14 @@ export const createAutomationWorker = () => {
           }
         }
       } catch (error) {
+        // Startup race: `npm run watch` runs the worker in parallel with
+        // `migrate-db`, so a repeatable tick can fire before the schema
+        // exists. Skip quietly — the next scheduled run lands after
+        // migrations finish.
+        if (isDatabaseNotReady(error)) {
+          console.log(`Job ${name} skipped: database schema not ready yet`);
+          return;
+        }
         // Log failed execution if we have automation context
         if (automationId) {
           await logAutomationExecution(
