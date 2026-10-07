@@ -1,5 +1,16 @@
 import { screen, fireEvent } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
+
+// Permission context: the AI Detection module gate consults useMyPermissions.
+// Tests default to full permissions; the fail-closed test below flips `state`.
+const state: { can: (key: string) => boolean; isLoading: boolean } = {
+  can: () => true,
+  isLoading: false,
+};
+
+vi.mock("../../../../application/hooks/useRolePermissions", () => ({
+  useMyPermissions: () => ({ can: state.can, isLoading: state.isLoading }),
+}));
 import AppSwitcher from "../index";
 import { AppModule } from "../../../../application/redux/ui/uiSlice";
 
@@ -11,6 +22,16 @@ describe("AppSwitcher", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    state.can = () => true;
+    state.isLoading = false;
+  });
+
+  it("hides the AI Detection module when aiDetection.read is not granted", () => {
+    state.can = (key: string) => key !== "aiDetection.read";
+    renderWithProviders(<AppSwitcher {...defaultProps} />);
+
+    expect(screen.queryByLabelText("AI Detection")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Governance")).toBeInTheDocument();
   });
 
   it("renders all 5 module buttons", () => {
