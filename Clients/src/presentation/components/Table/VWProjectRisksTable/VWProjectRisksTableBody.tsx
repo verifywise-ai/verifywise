@@ -17,11 +17,10 @@ import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.c
 import IconButton from "../../IconButton";
 import ViewRelationshipsButton from "../../ViewRelationshipsButton";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useResourceAccess } from "../../../../application/hooks/useResourceAccess";
 import { useSearchParams } from "react-router";
 import { ProjectRiskMitigation } from "../../ProjectRiskMitigation/ProjectRiskMitigation";
 import useUsers from "../../../../application/hooks/useUsers";
-import { useAuth } from "../../../../application/hooks/useAuth";
 import { IVWProjectRisksTableRow } from "../../../types/interfaces/i.risk";
 import { RiskModel } from "../../../../domain/models/Common/risks/risk.model";
 import { User } from "../../../../domain/types/User";
@@ -76,9 +75,9 @@ const VWProjectRisksTableBody = ({
   const isColVisible = (colId: string) => !visibleColumns || visibleColumns.has(colId);
   const theme = useTheme();
   const { setInputValues } = useContext(VerifyWiseContext);
-  const { userRoleName } = useAuth();
+  const { canAccess } = useResourceAccess();
   const { users } = useUsers();
-  const isDeletingAllowed = allowedRoles.projectRisks.delete.includes(userRoleName);
+  const isDeletingAllowed = canAccess("projectRisks", "delete");
   const cellStyle = singleTheme.tableStyles.primary.body.cell;
 
   const getCellStyle = (row: RiskModel) => ({
