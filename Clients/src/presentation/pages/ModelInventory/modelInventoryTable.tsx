@@ -15,8 +15,7 @@ import CustomIconButton from "../../components/IconButton";
 import ViewRelationshipsButton from "../../components/ViewRelationshipsButton";
 import { useExtensions } from "../../../application/contexts/Extensions.context";
 import ViewLifecycleButton from "../Extensions/model-lifecycle/ViewLifecycleButton";
-import allowedRoles from "../../../application/constants/permissions";
-import { useAuth } from "../../../application/hooks/useAuth";
+import { useResourceAccess } from "../../../application/hooks/useResourceAccess";
 import { Cpu, Layers, BarChart3, Link2 } from "lucide-react";
 import { EmptyState } from "../../components/EmptyState";
 import CustomizableSkeleton from "../../components/Skeletons";
@@ -96,7 +95,7 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
   visibleColumns,
 }) => {
   const formatDate = useFormattedDate();
-  const { userRoleName } = useAuth();
+  const { canAccess } = useResourceAccess();
   const { isEnabled } = useExtensions();
   const [users, setUsers] = useState<User[]>([]);
 
@@ -160,7 +159,7 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
     return map;
   }, [users]);
 
-  const isDeletingAllowed = allowedRoles.modelInventory?.delete?.includes(userRoleName);
+  const isDeletingAllowed = canAccess("modelInventory", "delete");
 
   // Get risk count for a specific model
   const getModelRiskCount = useCallback(
