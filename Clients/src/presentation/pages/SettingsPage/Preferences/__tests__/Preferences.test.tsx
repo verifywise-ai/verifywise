@@ -92,6 +92,7 @@ describe("Preferences", () => {
       expect(mockUpdateCurrentUserPreferences).toHaveBeenCalledWith({
         date_format: UserDateFormat.DD_MM_YYYY_DASH,
         language: "en",
+        parallel_agents: false,
       });
     });
     await waitFor(() => {
@@ -120,6 +121,7 @@ describe("Preferences", () => {
       expect(mockUpdateCurrentUserPreferences).toHaveBeenCalledWith({
         date_format: UserDateFormat.MM_DD_YYYY_DASH,
         language: "en",
+        parallel_agents: false,
       });
     });
     await waitFor(() => {
@@ -159,6 +161,52 @@ describe("Preferences", () => {
     await waitFor(() => {
       expect(screen.getByText("Server down")).toBeInTheDocument();
     });
+  });
+
+  it("explains parallel agents and saves the toggle with the other preferences", async () => {
+    mockUpdateCurrentUserPreferences.mockResolvedValue({ id: 1 });
+    const user = userEvent.setup();
+    renderWithProviders(<Preferences />);
+
+    expect(screen.getByText("Advisor")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "When enabled, the Advisor runs independent sub-tasks in parallel for faster answers; disable if responses seem inconsistent.",
+      ),
+    ).toBeInTheDocument();
+
+    const toggle = screen.getByRole("switch", { name: "Parallel agents" });
+    expect(toggle).not.toBeChecked();
+    await user.click(toggle);
+
+    const saveButton = await waitFor(() => {
+      const btn = screen.getByText("Save").closest("button")!;
+      expect(btn).not.toBeDisabled();
+      return btn;
+    });
+    await user.click(saveButton);
+
+    await waitFor(() => {
+      expect(mockUpdateCurrentUserPreferences).toHaveBeenCalledWith({
+        date_format: UserDateFormat.DD_MM_YYYY_DASH,
+        language: "en",
+        parallel_agents: true,
+      });
+    });
+  });
+
+  it("shows parallel agents on when the saved preference is enabled", () => {
+    mockHookState = {
+      ...mockHookState,
+      userPreferences: {
+        date_format: UserDateFormat.DD_MM_YYYY_DASH,
+        language: "en",
+        theme: "light",
+        parallel_agents: true,
+      },
+    };
+    renderWithProviders(<Preferences />);
+    expect(screen.getByRole("switch", { name: "Parallel agents" })).toBeChecked();
   });
 
   it("syncs local language when the server language differs from the stored one", async () => {

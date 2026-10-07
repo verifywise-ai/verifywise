@@ -1,21 +1,12 @@
-import {
-  Box,
-  Stack,
-  useTheme,
-  Typography,
-  Paper,
-  CircularProgress,
-  SxProps,
-  Theme,
-} from "@mui/material";
+import { Box, useTheme, Typography, Paper, CircularProgress, SxProps, Theme } from "@mui/material";
 import { AssistantRuntimeProvider } from "@assistant-ui/react";
 import { useAdvisorRuntime } from "./useAdvisorRuntime";
 import { CustomThread } from "./CustomThread";
 import { AdvisorHeader } from "./AdvisorHeader";
 import { AdvisorDomain } from "./advisorConfig";
-import Toggle from "../Inputs/Toggle";
 import { useAdvisorConversationSafe } from "../../../application/contexts/AdvisorConversation.context";
-import { useEffect, useRef, useMemo, useState, memo } from "react";
+import useUserPreferences from "../../../application/hooks/useUserPreferences";
+import { useEffect, useRef, useMemo, memo } from "react";
 
 // Extracted style functions for performance (created once per theme)
 const createPaperStyles = (theme: Theme): SxProps<Theme> => ({
@@ -59,11 +50,13 @@ const AdvisorChatInner = ({
   isLoadingLLMKeys?: boolean;
 }) => {
   const theme = useTheme();
-  // When enabled, one prompt is decomposed into independent subtasks and run
-  // by parallel advisor workers server-side (see advisor/orchestrator). Sent
-  // to the backend via the transport body flag inside useAdvisorRuntime.
-  const [parallelAgents, setParallelAgents] = useState(false);
-  const runtime = useAdvisorRuntime(selectedLLMKeyId, pageContext, parallelAgents);
+  // Saved in Settings → Preferences. The transport still sends it as `parallel`.
+  const { userPreferences } = useUserPreferences();
+  const runtime = useAdvisorRuntime(
+    selectedLLMKeyId,
+    pageContext,
+    userPreferences.parallel_agents ?? false,
+  );
 
   return (
     <Box
@@ -77,22 +70,6 @@ const AdvisorChatInner = ({
     >
       {runtime ? (
         <AssistantRuntimeProvider runtime={runtime}>
-          <Stack
-            direction="row"
-            alignItems="center"
-            justifyContent="flex-end"
-            spacing="4px"
-            sx={{ px: "12px", py: "4px" }}
-          >
-            <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
-              Parallel agents
-            </Typography>
-            <Toggle
-              checked={parallelAgents}
-              onChange={(e) => setParallelAgents(e.target.checked)}
-              inputProps={{ "aria-label": "parallel-agents-toggle" }}
-            />
-          </Stack>
           <CustomThread
             pageContext={pageContext}
             hasLLMKeys={hasLLMKeys}

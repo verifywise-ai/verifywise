@@ -1,4 +1,4 @@
-import { Box, SelectChangeEvent, Stack, useTheme } from "@mui/material";
+import { Box, SelectChangeEvent, Stack, Typography, useTheme } from "@mui/material";
 import useUserPreferences from "../../../../application/hooks/useUserPreferences";
 import React, { useEffect, useState } from "react";
 import CustomizableSkeleton from "../../../components/Skeletons";
@@ -9,9 +9,14 @@ import { SaveIcon } from "lucide-react";
 import { UserDateFormat } from "../../../../domain/enums/userDateFormat.enum";
 import { updateCurrentUserPreferences } from "../../../../application/repository/userPreferences.repository";
 import Select from "../../../components/Inputs/Select";
-import { brand } from "../../../themes/palette";
+import Toggle from "../../../components/Inputs/Toggle";
+import { brand, text } from "../../../themes/palette";
 import { setLanguage, getLanguage } from "../../../../i18n/domTranslator";
 import type { Lang } from "../../../../i18n/translations";
+import { textStyles } from "../../../themes/typography";
+
+const PARALLEL_AGENTS_DESCRIPTION =
+  "When enabled, the Advisor runs independent sub-tasks in parallel for faster answers; disable if responses seem inconsistent.";
 
 const LANGUAGE_OPTIONS: { _id: Lang; name: string }[] = [
   { _id: "en", name: "English" },
@@ -25,6 +30,7 @@ const Preferences: React.FC = () => {
   const { userPreferences, isDefault, loading, refreshUserPreferences } = useUserPreferences();
   const [isSaveDisabled, setIsSaveDisabled] = useState(true);
   const [dateFormat, setDateFormat] = useState<UserDateFormat>(UserDateFormat.DD_MM_YYYY_DASH);
+  const [parallelAgents, setParallelAgents] = useState(false);
 
   const [language, setLang] = useState<Lang>("en");
 
@@ -58,6 +64,7 @@ const Preferences: React.FC = () => {
       // Guard against a null/undefined date_format from the server so the
       // Select stays controlled (avoids the controlled->uncontrolled warning).
       setDateFormat(userPreferences.date_format ?? UserDateFormat.DD_MM_YYYY_DASH);
+      setParallelAgents(userPreferences.parallel_agents ?? false);
       const serverLang = (userPreferences.language ?? "en") as Lang;
       setLang(serverLang);
       // Server is the source of truth — apply it locally if it differs.
@@ -80,6 +87,7 @@ const Preferences: React.FC = () => {
       const updated = await updateCurrentUserPreferences({
         date_format: dateFormat,
         language,
+        parallel_agents: parallelAgents,
       });
 
       if (updated) {
@@ -166,6 +174,42 @@ const Preferences: React.FC = () => {
                 onChange={handleLanguageChange}
                 items={LANGUAGE_OPTIONS}
               />
+            </Box>
+            <Box sx={{ mt: theme.spacing(8) }}>
+              <Typography
+                sx={{ ...textStyles.cardTitle, color: text.primary, mb: theme.spacing(4) }}
+              >
+                Advisor
+              </Typography>
+              <Box
+                sx={{
+                  border: `1px solid ${theme.palette.border.light}`,
+                  borderRadius: "4px",
+                  p: theme.spacing(8),
+                  backgroundColor: theme.palette.background.main,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: theme.spacing(4),
+                }}
+              >
+                <Box>
+                  <Typography sx={{ ...textStyles.subsectionTitle, color: text.primary }}>
+                    Parallel agents
+                  </Typography>
+                  <Typography sx={{ ...textStyles.body, color: text.secondary, mt: 0.5 }}>
+                    {PARALLEL_AGENTS_DESCRIPTION}
+                  </Typography>
+                </Box>
+                <Toggle
+                  checked={parallelAgents}
+                  onChange={(_event, checked) => {
+                    setParallelAgents(checked);
+                    setIsSaveDisabled(false);
+                  }}
+                  ariaLabel="Parallel agents"
+                />
+              </Box>
             </Box>
             <Stack
               sx={{

@@ -12,7 +12,7 @@ export async function getCurrentUserPreferences(): Promise<any> {
 }
 
 export async function updateCurrentUserPreferences(
-  data: Partial<Pick<UserPreferencesModel, "date_format" | "language">>,
+  data: Partial<Pick<UserPreferencesModel, "date_format" | "language" | "parallel_agents">>,
 ): Promise<any> {
   const response = await apiServices.patch("/users/me/preferences", data);
   return response.data;
