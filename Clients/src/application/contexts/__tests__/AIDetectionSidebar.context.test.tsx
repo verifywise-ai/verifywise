@@ -19,6 +19,10 @@ const mockGetActiveScan = vi.fn().mockResolvedValue(null);
 const mockGetScanStatus = vi.fn().mockResolvedValue({ status: "completed" });
 const mockGetRepositoryCount = vi.fn().mockResolvedValue(5);
 
+vi.mock("../../hooks/useRolePermissions", () => ({
+  useMyPermissions: () => ({ can: () => true, isLoading: false }),
+}));
+
 vi.mock("../../repository/aiDetection.repository", () => ({
   getScans: (...args: unknown[]) => mockGetScans(...args),
   getActiveScan: (...args: unknown[]) => mockGetActiveScan(...args),

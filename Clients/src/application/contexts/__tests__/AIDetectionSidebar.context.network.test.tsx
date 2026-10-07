@@ -26,6 +26,10 @@ import {
   useAIDetectionSidebarContext,
 } from "../AIDetectionSidebar.context";
 
+vi.mock("../../hooks/useRolePermissions", () => ({
+  useMyPermissions: () => ({ can: () => true, isLoading: false }),
+}));
+
 function wrapper({ children }: { children: React.ReactNode }) {
   return React.createElement(AIDetectionSidebarProvider, null, children);
 }
