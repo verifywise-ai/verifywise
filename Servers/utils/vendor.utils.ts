@@ -157,6 +157,7 @@ export const addVendorProjects = async (
      SELECT :organizationId, :vendorId, p.id, p.is_demo
        FROM projects p
       WHERE p.organization_id = :organizationId AND p.id IN (:projects)
+     ON CONFLICT DO NOTHING
      RETURNING *`,
     {
       replacements: { organizationId, vendorId, projects },
