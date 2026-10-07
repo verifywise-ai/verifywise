@@ -1,4 +1,5 @@
 import { apiServices } from "../../infrastructure/api/networkServices";
+import { SuggestRisksRequest, SuggestRisksResponse } from "../../domain/types/riskSuggestion.types";
 
 export async function getProjectRiskById({
   id,
@@ -75,6 +76,25 @@ export async function getNonMitigatedProjectRisks({
 export async function createProjectRisk({ body }: { body: any }): Promise<any> {
   const response = await apiServices.post("/projectRisks", body);
   return response;
+}
+
+/**
+ * Ask the backend for AI-assisted risk suggestions for a project: catalog
+ * matches (MIT/IBM) plus free-form LLM risks.
+ *
+ * The backend wraps the payload as STATUS_CODE[200](data) → { message, data },
+ * so the real payload is at response.data.data.
+ */
+export async function suggestRisksWithAI({
+  body,
+}: {
+  body: SuggestRisksRequest;
+}): Promise<SuggestRisksResponse> {
+  const response = await apiServices.post<{ data: SuggestRisksResponse }>(
+    "/projectRisks/suggest-ai",
+    body,
+  );
+  return response.data.data;
 }
 
 export async function updateProjectRisk({ id, body }: { id: number; body: any }): Promise<any> {

@@ -13,9 +13,15 @@
 
 import { SuggestedRisk } from "../../../domain/ai-detection/riskScoringTypes";
 import type { RiskFormValues, MitigationFormValues } from "../../../domain/types/riskForm.types";
+import type {
+  MatchedCatalogRisk,
+  RiskSuggestionSource,
+  SuggestedFreeformRisk,
+} from "../../../domain/types/riskSuggestion.types";
 import { Likelihood, Severity } from "../RiskLevel/constants";
 import { DEFAULT_VALUES } from "../RiskDatabaseModal/types";
 import { riskCategoryItems, aiLifecyclePhase } from "./projectRiskValue";
+import { riskInitialState } from "./hooks/useRiskForm";
 import { palette } from "../../themes/palette";
 
 export function mapCategoryNamesToIds(names: string[]): number[] {
@@ -178,3 +184,86 @@ export const mapRiskCategories = (riskCategories: string): number[] => {
 
   return mappedCategories.length > 0 ? mappedCategories : [DEFAULT_VALUES.DEFAULT_CATEGORY_ID];
 };
+
+// ============================================================================
+// POST /api/projectRisks/suggest-ai prefill mappers
+// ============================================================================
+
+/**
+ * Display labels for the risk catalogs a matched entry can come from.
+ */
+export const RISK_SUGGESTION_SOURCE_LABELS: Record<RiskSuggestionSource, string> = {
+  mit: "MIT AI Risk Repository",
+  ibm: "IBM AI Risk Atlas",
+};
+
+const CATALOG_SEVERITY_MAPPERS: Record<RiskSuggestionSource, (severity: string) => Severity> = {
+  mit: mapSeverityMIT,
+  ibm: mapSeverityIBM,
+};
+
+const CATALOG_LIKELIHOOD_MAPPERS: Record<RiskSuggestionSource, (likelihood: string) => Likelihood> =
+  {
+    mit: mapLikelihoodMIT,
+    ibm: mapLikelihoodIBM,
+  };
+
+/**
+ * Category names → form ids, falling back to the initial-state default ([1])
+ * when nothing matches, so the form's required category field stays valid.
+ */
+function mapCategoryNamesWithFallback(names: string[]): number[] {
+  const ids = mapCategoryNamesToIds(names);
+  return ids.length > 0 ? ids : riskInitialState.riskCategory;
+}
+
+/**
+ * Maps a matched MIT/IBM catalog entry from POST /projectRisks/suggest-ai into
+ * risk form values. Severity/likelihood catalog strings are converted with the
+ * per-source string→enum mappers (the enums are the 1-5 ids the form stores).
+ */
+export function mapMatchedCatalogEntryToRiskForm(entry: MatchedCatalogRisk): RiskFormValues {
+  const sourceLabel = RISK_SUGGESTION_SOURCE_LABELS[entry.source];
+  return {
+    ...riskInitialState,
+    riskName: entry.summary,
+    riskDescription: entry.description,
+    riskCategory: mapCategoryNamesWithFallback(entry.risk_category),
+    aiLifecyclePhase: entry.ai_lifecycle_phase
+      ? mapPhaseNameToId(entry.ai_lifecycle_phase)
+      : riskInitialState.aiLifecyclePhase,
+    likelihood: CATALOG_LIKELIHOOD_MAPPERS[entry.source](entry.likelihood),
+    riskSeverity: CATALOG_SEVERITY_MAPPERS[entry.source](entry.severity),
+    reviewNotes: `Imported from ${sourceLabel} — AI suggestion for this use case. ${entry.reason}`,
+  };
+}
+
+/**
+ * Maps a free-form LLM suggestion from POST /projectRisks/suggest-ai into risk
+ * form values. Likelihood/severity arrive as 1-5 ints and pass straight through.
+ */
+export function mapFreeformSuggestionToRiskForm(s: SuggestedFreeformRisk): RiskFormValues {
+  return {
+    ...riskInitialState,
+    riskName: s.risk_name,
+    riskDescription: s.risk_description,
+    riskCategory: mapCategoryNamesWithFallback(s.risk_category),
+    aiLifecyclePhase: s.ai_lifecycle_phase
+      ? mapPhaseNameToId(s.ai_lifecycle_phase)
+      : riskInitialState.aiLifecyclePhase,
+    likelihood: s.likelihood,
+    riskSeverity: s.severity,
+    potentialImpact: s.impact,
+    reviewNotes: "Suggested by AI based on the use case description.",
+  };
+}
+
+export function mapFreeformSuggestionToMitigationForm(
+  s: SuggestedFreeformRisk,
+): Partial<MitigationFormValues> {
+  return {
+    mitigationPlan: s.mitigation_plan,
+    likelihood: s.likelihood,
+    riskSeverity: s.severity,
+  };
+}
