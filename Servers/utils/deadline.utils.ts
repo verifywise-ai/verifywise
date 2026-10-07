@@ -19,6 +19,7 @@ import { QueryTypes } from "sequelize";
 import { sequelize } from "../database/db";
 import { TaskStatus } from "../domain.layer/enums/task-status.enum";
 import { ModelRiskStatus } from "../domain.layer/enums/model-risk-status.enum";
+import { hasUnrestrictedVisibility } from "./rolePermissions.utils";
 
 export interface TasksDeadlineSummaryOptions {
   userId: number;
@@ -55,17 +56,17 @@ export async function getTasksDeadlineSummaryQuery({
   threshold,
 }: TasksDeadlineSummaryOptions): Promise<TasksDeadlineSummary> {
   const days = clampDeadlineThreshold(threshold);
-  const isAdmin = role === "Admin" || role === "SuperAdmin";
+  const unrestricted = await hasUnrestrictedVisibility(organizationId, role, "deadlines.viewAll");
 
   // Non-admins only see tasks they created or are assignees of — mirrors the
   // addVisibilityLogic helper in task.utils.ts.
-  const visibilityJoin = isAdmin
+  const visibilityJoin = unrestricted
     ? ""
     : `LEFT JOIN task_assignees ta
          ON ta.task_id = t.id
         AND ta.organization_id = :organizationId
         AND ta.user_id = :userId`;
-  const visibilityWhere = isAdmin ? "" : `AND (t.creator_id = :userId OR ta.user_id IS NOT NULL)`;
+  const visibilityWhere = unrestricted ? "" : `AND (t.creator_id = :userId OR ta.user_id IS NOT NULL)`;
 
   const query = `
     SELECT
