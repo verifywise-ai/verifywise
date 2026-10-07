@@ -22,7 +22,7 @@ import selectValidation from "../../../../application/validations/selectValidati
 import useUsers from "../../../../application/hooks/useUsers";
 import { mitigationStatusItems, riskLevelItems, approvalStatusItems } from "../projectRiskValue";
 import { alertState } from "../../../../domain/interfaces/i.alert";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useResourceAccess } from "../../../../application/hooks/useResourceAccess";
 
 // Layout constants - matching RisksSection
 const LAYOUT = {
@@ -80,14 +80,14 @@ const MitigationSection: FC<MitigationSectionProps> = ({
   setMitigationValues,
   validateRef,
   firstInvalidFieldRef,
-  userRoleName,
   disableInternalScroll = false,
   compactMode = false,
   serverErrors,
   onValidityChange,
 }) => {
   const theme = useTheme();
-  const isEditingDisabled = !allowedRoles.projectRisks.edit.includes(userRoleName);
+  const { canAccess } = useResourceAccess();
+  const isEditingDisabled = !canAccess("projectRisks", "edit");
 
   const [alert, setAlert] = useState<alertState | null>(null);
 
