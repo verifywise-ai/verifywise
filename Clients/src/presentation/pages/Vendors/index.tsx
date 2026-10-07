@@ -7,9 +7,6 @@ import TableWithPlaceholder from "../../components/Table/WithPlaceholder/index";
 import RiskTable from "../../components/Table/RisksTable";
 import { Suspense, useEffect, useState, useMemo, useCallback, useRef } from "react";
 import AddNewVendor from "../../components/Modals/NewVendor";
-import { useSelector } from "react-redux";
-import { extractUserToken } from "../../../application/tools/extractToken";
-import { AppState } from "../../../application/interfaces/appStates";
 import useUsers from "../../../application/hooks/useUsers";
 import { tabPanelStyle } from "./style";
 import { logEngine } from "../../../application/tools/log.engine";
@@ -27,7 +24,7 @@ import CustomizableToast from "../../components/Toast";
 import { StatusTileCards, StatusTileItem } from "../../components/Cards/StatusTileCards";
 import useVendorRisks from "../../../application/hooks/useVendorRisks";
 import Select from "../../components/Inputs/Select";
-import allowedRoles from "../../../application/constants/permissions";
+import { useResourceAccess } from "../../../application/hooks/useResourceAccess";
 import SearchBox from "../../components/Search/SearchBox";
 import { useVendors, useDeleteVendor } from "../../../application/hooks/useVendors";
 import { useProjects } from "../../../application/hooks/useProjects";
@@ -99,9 +96,7 @@ const Vendors = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isRiskModalOpen, setIsRiskModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const authToken = useSelector((state: AppState) => state.auth.authToken);
-  const userToken = extractUserToken(authToken);
-  const userRoleName = userToken?.roleName || "";
+  const { canAccess } = useResourceAccess();
   const { users } = useUsers();
 
   const [selectedVendor, setSelectedVendor] = useState<VendorModel | null>(null);
@@ -519,9 +514,8 @@ const Vendors = () => {
     countToTrigger: 1,
   });
 
-  const isCreatingDisabled =
-    !allowedRoles.vendors.create.includes(userRoleName) || projects.length === 0;
-  const isDeletingAllowed = allowedRoles.vendors.delete.includes(userRoleName);
+  const isCreatingDisabled = !canAccess("vendors", "create") || projects.length === 0;
+  const isDeletingAllowed = canAccess("vendors", "delete");
 
   const openAddNewVendor = () => {
     setIsOpen(true);
