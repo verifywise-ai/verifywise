@@ -35,8 +35,7 @@ import { CustomizableButton } from "../../../components/button/customizable-butt
 import Alert from "../../../components/Alert";
 import useUsers from "../../../../application/hooks/useUsers";
 import useProjectData from "../../../../application/hooks/useProjectData";
-import { useAuth } from "../../../../application/hooks/useAuth";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useResourceAccess } from "../../../../application/hooks/useResourceAccess";
 import { pmmService } from "../../../../infrastructure/api/postMarketMonitoringService";
 import {
   PMMConfigWithDetails,
@@ -207,10 +206,10 @@ const PostMarketMonitoring: React.FC = () => {
 
   const { users } = useUsers();
   const { project } = useProjectData({ projectId: projectId.toString() });
-  const { userRoleName } = useAuth();
+  const { canAccess } = useResourceAccess();
 
   // Check if user can edit PMM settings
-  const canEdit = allowedRoles.postMarketMonitoring.edit.includes(userRoleName);
+  const canEdit = canAccess("postMarketMonitoring", "edit");
 
   // State
   const [isLoading, setIsLoading] = useState(true);
