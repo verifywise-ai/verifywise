@@ -27,7 +27,6 @@ import { useFormValidation } from "../../../../application/hooks/useFormValidati
 import dayjs, { Dayjs } from "dayjs";
 import Alert from "../../Alert";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
-import { useAuth } from "../../../../application/hooks/useAuth";
 import { useProjects } from "../../../../application/hooks/useProjects";
 import useUsers from "../../../../application/hooks/useUsers";
 import CustomizableToast from "../../Toast";
@@ -37,7 +36,7 @@ import CustomFieldsSection, { type CustomFieldsSectionHandle } from "../../Custo
 import { useRequiredCustomFieldsGate } from "../../CustomFieldsSection/RequiredCustomFieldsGate";
 import TabBar from "../../TabBar";
 import { EnhancedTooltip } from "../../EnhancedTooltip";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useResourceAccess } from "../../../../application/hooks/useResourceAccess";
 import { useCreateVendor, useUpdateVendor } from "../../../../application/hooks/useVendors";
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
 import { User } from "../../../../domain/types/User";
@@ -176,7 +175,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
   const [projectOptions, setProjectOptions] = useState<{ _id: number; name: string }[]>([]);
   const [isScorecardExpanded, setIsScorecardExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
-  const { userRoleName } = useAuth();
+  const { canAccess } = useResourceAccess();
   const { users } = useUsers();
   const { approvedProjects } = useProjects();
   const queryClient = useQueryClient();
@@ -191,7 +190,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
   // Prefetch history data when modal opens in edit mode
   useEntityChangeHistory("vendor", existingVendor?.id);
 
-  const isEditingDisabled = !allowedRoles.vendors.edit.includes(userRoleName);
+  const isEditingDisabled = !canAccess("vendors", "edit");
   const customFieldsGate = useRequiredCustomFieldsGate("vendor", existingVendor?.id ?? null);
 
   const formattedUsers = users?.map((user: User) => ({
