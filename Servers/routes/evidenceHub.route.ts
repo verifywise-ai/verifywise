@@ -14,7 +14,7 @@ import {
 // Manual trigger for the nightly evidence-freshness sweep. Exists so the job
 // is testable by hand — mirrors POST /riskLinks/recompute. Declared before
 // GET /:id so the literal segment is never parsed as an id.
-router.post("/freshness-sweep", authenticateJWT, authorize(["Admin"]), runFreshnessSweep);
+router.post("/freshness-sweep", authenticateJWT, authorize("evidenceHub.admin"), runFreshnessSweep);
 
 // GET all evidences
 router.get("/", authenticateJWT, getAllEvidences);
