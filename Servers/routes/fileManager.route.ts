@@ -37,6 +37,10 @@ import {
 } from "../controllers/fileManager.ctrl";
 import authenticateJWT from "../middleware/auth.middleware";
 import authorize from "../middleware/accessControl.middleware";
+import {
+  getFileOrgSettingsHandler,
+  updateFileOrgSettingsHandler,
+} from "../controllers/fileOrgSettings.ctrl";
 import { fileOperationsLimiter } from "../middleware/rateLimit.middleware";
 import {
   validateFileIdParam,
@@ -177,6 +181,34 @@ router.get(
   authenticateJWT,
   validatePaginationQuery,
   listFilesWithMetadata,
+);
+
+/**
+ * @route   GET /file-manager/org-settings
+ * @desc    Get the organization's file settings (default retention policy)
+ * @access  All authenticated users
+ * @returns {200} Org file settings (defaults when no row exists)
+ *
+ * NOTE: declared before GET /:id so "org-settings" is never parsed as a
+ * file id (the param route would otherwise 400 on validateFileIdParam).
+ */
+router.get("/org-settings", fileOperationsLimiter, authenticateJWT, getFileOrgSettingsHandler);
+
+/**
+ * @route   PUT /file-manager/org-settings
+ * @desc    Update the organization's file settings (default retention policy)
+ * @access  Admin only
+ * @body    { default_retention_policy: RetentionPolicy | null }
+ * @returns {200} Updated org file settings
+ * @returns {400} Missing or invalid payload
+ * @returns {403} Access denied (non-Admin role)
+ */
+router.put(
+  "/org-settings",
+  fileOperationsLimiter,
+  authenticateJWT,
+  authorize("organization.admin"),
+  updateFileOrgSettingsHandler,
 );
 
 /**
