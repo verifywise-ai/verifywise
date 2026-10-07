@@ -13,14 +13,75 @@ const BUILTIN_ROLE_NAMES = new Set(["Admin", "Editor", "Reviewer", "Auditor"]);
  * Maps frontend resource/action pairs to the backend permission key that
  * actually guards the corresponding API endpoints (issue #4588).
  *
- * Only pairs with a real backend counterpart belong here. Resources whose
- * routes are not permission-garded backend-side have no entry — for custom
- * roles those resolve to DENIED, mirroring the backend's fail-closed rule
- * (a custom role with no matrix row can do nothing until granted a real,
- * enforced permission).
+ * Every resource/action pair gated in the UI maps to the backend permission
+ * key that guards the corresponding capability (issue #4588). Built-in roles
+ * keep the legacy static-matrix behavior via `allowedRoles`; custom roles
+ * resolve through their granted matrix — fail-closed when not granted, like
+ * the backend.
  */
 export const RESOURCE_ACTION_PERMISSION_KEY: Record<string, string> = {
+  // Organization
+  "organizations.view": "organizations.view",
+  "organizations.create": "organization.admin",
   "organizations.edit": "organization.admin",
+  // Projects
+  "projects.view": "projects.view",
+  "projects.create": "projects.create",
+  "projects.edit": "projects.edit",
+  "projects.delete": "projects.delete",
+  "projects.editTeamMembers": "projects.editTeamMembers",
+  // Project risks (backend-enforced by the risks.* keys)
+  "projectRisks.view": "risks.view",
+  "projectRisks.create": "risks.edit",
+  "projectRisks.edit": "risks.edit",
+  "projectRisks.delete": "risks.edit",
+  "projectRisks.bulkEdit": "risks.edit",
+  // Vendors
+  "vendors.view": "vendors.view",
+  "vendors.create": "vendors.create",
+  "vendors.edit": "vendors.edit",
+  "vendors.delete": "vendors.delete",
+  // Frameworks
+  "frameworks.view": "frameworks.view",
+  "frameworks.edit": "frameworks.edit",
+  "frameworks.manage": "frameworks.manage",
+  "frameworks.audit": "frameworks.audit",
+  // Training
+  "training.view": "training.view",
+  "training.create": "training.create",
+  "training.edit": "training.edit",
+  "training.delete": "training.delete",
+  // Model inventory
+  "modelInventory.view": "modelInventory.view",
+  "modelInventory.create": "modelInventory.create",
+  "modelInventory.edit": "modelInventory.edit",
+  "modelInventory.delete": "modelInventory.delete",
+  // Slack & features
+  "slack.view": "slack.view",
+  "slack.manage": "slack.manage",
+  "features.manage": "features.manage",
+  // API keys & LLM keys
+  "apiKeys.view": "apiKeys.view",
+  "apiKeys.manage": "apiKeys.manage",
+  "llmKeys.view": "llmKeys.admin",
+  "llmKeys.manage": "llmKeys.admin",
+  // Evaluations
+  "evals.view": "evals.view",
+  "evals.createProject": "evals.createProject",
+  "evals.editProject": "evals.editProject",
+  "evals.deleteProject": "evals.deleteProject",
+  "evals.createExperiment": "evals.createExperiment",
+  "evals.deleteExperiment": "evals.deleteExperiment",
+  "evals.createScorer": "evals.createScorer",
+  "evals.editScorer": "evals.editScorer",
+  "evals.deleteScorer": "evals.deleteScorer",
+  "evals.uploadDataset": "evals.uploadDataset",
+  "evals.deleteDataset": "evals.deleteDataset",
+  "evals.manageApiKeys": "evals.manageApiKeys",
+  // Post-market monitoring
+  "postMarketMonitoring.view": "postMarketMonitoring.view",
+  "postMarketMonitoring.edit": "postMarketMonitoring.edit",
+  // Reporting & other already-enforced keys
   "risks.bulkEdit": "risks.edit",
   "reporting.generate": "reporting.admin",
   "reports.schedule": "scheduledReport.edit",
