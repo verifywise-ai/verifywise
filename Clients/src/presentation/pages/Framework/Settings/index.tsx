@@ -13,8 +13,7 @@ import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { deleteProject } from "../../../../application/repository/project.repository";
 import { FrameworkTypeEnum } from "../../../components/Forms/ProjectForm/constants";
-import allowedRoles from "../../../../application/constants/permissions";
-import { useAuth } from "../../../../application/hooks/useAuth";
+import { useResourceAccess } from "../../../../application/hooks/useResourceAccess";
 import {
   assignFrameworkToProject,
   deleteEntityById,
@@ -40,7 +39,7 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
   onFrameworksChanged,
   setProjects,
 }) => {
-  const { userRoleName } = useAuth();
+  const { canAccess } = useResourceAccess();
   const [isEditProjectModalOpen, setIsEditProjectModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -262,7 +261,7 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
                 icon={<EditIconGrey size={16} />}
                 text="Edit framework"
                 onClick={handleEditProjectClick}
-                isDisabled={!allowedRoles.projects.edit.includes(userRoleName)}
+                isDisabled={!canAccess("projects", "edit")}
                 sx={{
                   "borderColor": "#D1D5DB",
                   "width": "170px",
@@ -279,7 +278,7 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
                 icon={<DeleteIconRed size={16} />}
                 text="Delete framework"
                 onClick={handleDeleteProjectClick}
-                isDisabled={!allowedRoles.projects.delete.includes(userRoleName)}
+                isDisabled={!canAccess("projects", "delete")}
                 sx={{
                   "borderColor": "#F87171",
                   "width": "170px",
@@ -371,9 +370,7 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
                       variant="outlined"
                       text="Remove"
                       isDisabled={
-                        isLoading ||
-                        onlyOneFramework ||
-                        !allowedRoles.frameworks.manage.includes(userRoleName)
+                        isLoading || onlyOneFramework || !canAccess("frameworks", "manage")
                       }
                       onClick={() => {
                         setFrameworkToRemove(fw);
@@ -393,9 +390,7 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
                     <CustomizableButton
                       variant="contained"
                       text="Add"
-                      isDisabled={
-                        isLoading || !allowedRoles.frameworks.manage.includes(userRoleName)
-                      }
+                      isDisabled={isLoading || !canAccess("frameworks", "manage")}
                       onClick={() => handleAddFramework(fw)}
                       sx={{
                         "minWidth": 100,
