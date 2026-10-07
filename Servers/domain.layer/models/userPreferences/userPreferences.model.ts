@@ -6,6 +6,17 @@ import { ValidationException } from "../../exceptions/custom.exception";
 
 const VALID_LANGUAGES: UserLanguage[] = ["en", "de", "fr", "es"];
 
+function assertParallelAgents(value: unknown): void {
+  if (value !== undefined && typeof value !== "boolean") {
+    throw new ValidationException(
+      "Invalid parallel_agents. Must be a boolean",
+      undefined,
+      undefined,
+      { i18nKey: "Invalid parallel_agents. Must be a boolean" },
+    );
+  }
+}
+
 @Table({
   tableName: "user_preferences",
   timestamps: true,
@@ -41,6 +52,16 @@ export class UserPreferencesModel extends Model<UserPreferencesModel> implements
   })
   language!: UserLanguage;
 
+  /**
+   * Stored inside the JSONB `preferences` column, not as its own table column.
+   * Surfaced by the SELECT alias in getPreferencesByUserQuery.
+   */
+  @Column({
+    type: DataType.BOOLEAN,
+    allowNull: true,
+  })
+  parallel_agents?: boolean;
+
   @Column({
     type: DataType.DATE,
     allowNull: false,
@@ -63,6 +84,7 @@ export class UserPreferencesModel extends Model<UserPreferencesModel> implements
     user_id: number,
     date_format: UserDateFormat,
     language?: UserLanguage,
+    parallel_agents?: boolean,
   ): Promise<UserPreferencesModel> {
     const userPreferencesData = new UserPreferencesModel();
 
@@ -87,9 +109,14 @@ export class UserPreferencesModel extends Model<UserPreferencesModel> implements
       );
     }
 
+    assertParallelAgents(parallel_agents);
+
     userPreferencesData.user_id = user_id;
     userPreferencesData.date_format = date_format;
     userPreferencesData.language = language ?? "en";
+    if (parallel_agents !== undefined) {
+      userPreferencesData.parallel_agents = parallel_agents;
+    }
 
     return userPreferencesData;
   }
@@ -102,12 +129,16 @@ export class UserPreferencesModel extends Model<UserPreferencesModel> implements
   async updateUserPreferences(updatedUserPreferences: {
     date_format?: UserDateFormat;
     language?: UserLanguage;
+    parallel_agents?: boolean;
   }): Promise<void> {
     if (updatedUserPreferences.date_format !== undefined) {
       this.date_format = updatedUserPreferences.date_format;
     }
     if (updatedUserPreferences.language !== undefined) {
       this.language = updatedUserPreferences.language;
+    }
+    if (updatedUserPreferences.parallel_agents !== undefined) {
+      this.parallel_agents = updatedUserPreferences.parallel_agents;
     }
 
     await this.validateUserPreferences();
@@ -141,6 +172,7 @@ export class UserPreferencesModel extends Model<UserPreferencesModel> implements
         { i18nKey: "Invalid language. Must be one of: {options}", i18nVars: { options } },
       );
     }
+    assertParallelAgents(this.parallel_agents);
   }
 
   /**
@@ -153,6 +185,7 @@ export class UserPreferencesModel extends Model<UserPreferencesModel> implements
       user_id: this.user_id,
       date_format: this.date_format,
       language: this.language,
+      parallel_agents: this.parallel_agents ?? false,
     };
   }
 }

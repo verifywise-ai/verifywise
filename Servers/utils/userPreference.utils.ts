@@ -7,10 +7,10 @@ export const getPreferencesByUserQuery = async (
   userId: number,
 ): Promise<UserPreferencesModel | null> => {
   try {
-    // date_format lives inside the JSONB `preferences` column; surface it as a
-    // top-level field so mapToModel hydrates the model's date_format property.
+    // date_format and parallel_agents live inside the JSONB `preferences`
+    // column; surface them as top-level fields so mapToModel can hydrate them.
     const [preference] = await sequelize.query(
-      `SELECT *, (preferences->>'date_format') AS date_format FROM user_preferences WHERE user_id = :id`,
+      `SELECT *, (preferences->>'date_format') AS date_format, (preferences->>'parallel_agents')::boolean AS parallel_agents FROM user_preferences WHERE user_id = :id`,
       {
         replacements: { id: userId },
         mapToModel: true,
@@ -49,16 +49,24 @@ export const createNewUserPreferencesQuery = async (
   data: Omit<UserPreferencesModel, "id">,
   transaction: Transaction,
 ): Promise<UserPreferencesModel> => {
-  // NOTE: date_format is stored inside the JSONB `preferences` column on this
-  // table, not as a top-level column. We persist `language` as a real column
-  // (added in migration 20260424194346) and stash other prefs in JSONB.
+  // NOTE: date_format and parallel_agents are stored inside the JSONB
+  // `preferences` column, not as top-level columns. `language` is a real
+  // column (added in migration 20260424194346).
+  const preferences: Record<string, unknown> = {};
+  if (data.date_format) {
+    preferences.date_format = data.date_format;
+  }
+  if (typeof data.parallel_agents === "boolean") {
+    preferences.parallel_agents = data.parallel_agents;
+  }
+
   const result = await sequelize.query(
     `INSERT INTO user_preferences (user_id, language, preferences) VALUES (:user_id, :language, :preferences::jsonb) RETURNING *`,
     {
       replacements: {
         user_id: data.user_id,
         language: data.language ?? "en",
-        preferences: JSON.stringify(data.date_format ? { date_format: data.date_format } : {}),
+        preferences: JSON.stringify(preferences),
       },
       mapToModel: true,
       model: UserPreferencesModel,
@@ -73,20 +81,30 @@ export const updateUserPreferencesByIdQuery = async (
   data: Partial<UserPreferencesModel>,
   transaction: Transaction,
 ): Promise<UserPreferencesModel | null> => {
-  // language is a top-level column; date_format lives inside the JSONB
-  // `preferences` column. Build the SET clause accordingly.
+  // language is a top-level column. date_format and parallel_agents live inside
+  // the JSONB `preferences` column and must be merged in a single assignment:
+  // PostgreSQL uses the original row for every SET expression, so two
+  // assignments to `preferences` would drop the first key.
   const setParts: string[] = [];
   const replacements: Record<string, any> = { id };
+  const preferenceEntries: string[] = [];
 
   if (data.language !== undefined) {
     setParts.push("language = :language");
     replacements.language = data.language;
   }
   if (data.date_format !== undefined) {
-    setParts.push(
-      "preferences = COALESCE(preferences, '{}'::jsonb) || jsonb_build_object('date_format', :date_format::text)",
-    );
+    preferenceEntries.push("'date_format', :date_format::text");
     replacements.date_format = data.date_format;
+  }
+  if (typeof data.parallel_agents === "boolean") {
+    preferenceEntries.push("'parallel_agents', :parallel_agents::boolean");
+    replacements.parallel_agents = data.parallel_agents;
+  }
+  if (preferenceEntries.length > 0) {
+    setParts.push(
+      `preferences = COALESCE(preferences, '{}'::jsonb) || jsonb_build_object(${preferenceEntries.join(", ")})`,
+    );
   }
 
   if (setParts.length === 0) {
