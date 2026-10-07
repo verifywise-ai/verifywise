@@ -184,6 +184,31 @@ export const ROLE_PERMISSIONS = {
     description: "Edit project team members",
     legacyRoles: ADMIN,
   },
+  "projects.viewAll": {
+    module: "Projects",
+    description: "View all projects in the organization (not only owned or member projects)",
+    legacyRoles: ADMIN,
+  },
+  "tasks.viewAll": {
+    module: "Tasks",
+    description: "View all tasks in the organization (not only own or assigned tasks)",
+    legacyRoles: ADMIN,
+  },
+  "deadlines.viewAll": {
+    module: "Deadlines",
+    description: "View all deadlines in the organization (not only own tasks' deadlines)",
+    legacyRoles: ADMIN,
+  },
+  "reports.viewAll": {
+    module: "Reporting",
+    description: "View and run reports for all projects (not only member projects)",
+    legacyRoles: ADMIN,
+  },
+  "files.viewAll": {
+    module: "Files",
+    description: "View all files in the organization (not only own uploads)",
+    legacyRoles: ADMIN,
+  },
   "evals.manageApiKeys": {
     module: "Evaluations",
     description: "Manage evaluation API keys",
