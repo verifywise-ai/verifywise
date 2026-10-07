@@ -134,6 +134,61 @@ export const ROLE_PERMISSIONS = {
     description: "Create, update and delete custom organization roles",
     legacyRoles: ADMIN,
   },
+  "evidenceHub.admin": {
+    module: "Evidence hub",
+    description: "Trigger evidence maintenance jobs",
+    legacyRoles: ADMIN,
+  },
+  "features.manage": {
+    module: "Features",
+    description: "Manage feature settings",
+    legacyRoles: ADMIN,
+  },
+  "riskLinks.admin": {
+    module: "Risk links",
+    description: "Recompute risk links and read the org-wide risk graph",
+    legacyRoles: SUPER,
+  },
+  "slack.manage": {
+    module: "Slack",
+    description: "Configure the Slack integration",
+    legacyRoles: ADMIN,
+  },
+  "apiKeys.view": {
+    module: "API keys",
+    description: "View API keys",
+    legacyRoles: ADMIN,
+  },
+  "apiKeys.manage": {
+    module: "API keys",
+    description: "Create, rotate and delete API keys",
+    legacyRoles: ADMIN,
+  },
+  "training.create": {
+    module: "Training",
+    description: "Create training items",
+    legacyRoles: ADMIN,
+  },
+  "training.edit": {
+    module: "Training",
+    description: "Update training items",
+    legacyRoles: ADMIN,
+  },
+  "training.delete": {
+    module: "Training",
+    description: "Delete training items",
+    legacyRoles: ADMIN,
+  },
+  "projects.editTeamMembers": {
+    module: "Projects",
+    description: "Edit project team members",
+    legacyRoles: ADMIN,
+  },
+  "evals.manageApiKeys": {
+    module: "Evaluations",
+    description: "Manage evaluation API keys",
+    legacyRoles: ADMIN,
+  },
   "ssoConfig.admin": {
     module: "SSO",
     description: "Configure SSO",
@@ -176,6 +231,11 @@ export const ROLE_PERMISSIONS = {
     description: "Bulk-tag files",
     legacyRoles: EDITOR,
   },
+  "frameworks.manage": {
+    module: "Frameworks",
+    description: "Assign and manage framework implementations",
+    legacyRoles: EDITOR,
+  },
   "intakeForm.edit": {
     module: "Intake forms",
     description: "Create and manage intake forms and submissions",
@@ -199,6 +259,171 @@ export const ROLE_PERMISSIONS = {
   "reportRun.edit": {
     module: "Reporting",
     description: "Run reports",
+    legacyRoles: EDITOR,
+  },
+  "risks.view": {
+    module: "Risks",
+    description: "View risks",
+    legacyRoles: READER,
+  },
+  "riskLinks.status": {
+    module: "Risk links",
+    description: "Update risk link status (approvals)",
+    legacyRoles: CONTRIBUTOR,
+  },
+  "projects.view": {
+    module: "Projects",
+    description: "View projects",
+    legacyRoles: READER,
+  },
+  "projects.create": {
+    module: "Projects",
+    description: "Create projects",
+    legacyRoles: EDITOR,
+  },
+  "projects.edit": {
+    module: "Projects",
+    description: "Update projects",
+    legacyRoles: EDITOR,
+  },
+  "projects.delete": {
+    module: "Projects",
+    description: "Delete projects",
+    legacyRoles: EDITOR,
+  },
+  "vendors.view": {
+    module: "Vendors",
+    description: "View vendors",
+    legacyRoles: READER,
+  },
+  "vendors.create": {
+    module: "Vendors",
+    description: "Create vendors",
+    legacyRoles: EDITOR,
+  },
+  "vendors.edit": {
+    module: "Vendors",
+    description: "Update vendors",
+    legacyRoles: EDITOR,
+  },
+  "vendors.delete": {
+    module: "Vendors",
+    description: "Delete vendors",
+    legacyRoles: EDITOR,
+  },
+  "frameworks.view": {
+    module: "Frameworks",
+    description: "View frameworks",
+    legacyRoles: READER,
+  },
+  "frameworks.edit": {
+    module: "Frameworks",
+    description: "Update framework assessments",
+    legacyRoles: EDITOR,
+  },
+  "frameworks.audit": {
+    module: "Frameworks",
+    description: "Audit framework assessments",
+    legacyRoles: ["Admin", "Editor", "Auditor"],
+  },
+  "organizations.view": {
+    module: "Organization",
+    description: "View organization settings",
+    legacyRoles: READER,
+  },
+  "training.view": {
+    module: "Training",
+    description: "View training items",
+    legacyRoles: READER,
+  },
+  "modelInventory.view": {
+    module: "Model inventory",
+    description: "View models and datasets",
+    legacyRoles: READER,
+  },
+  "modelInventory.create": {
+    module: "Model inventory",
+    description: "Register models and datasets",
+    legacyRoles: EDITOR,
+  },
+  "modelInventory.edit": {
+    module: "Model inventory",
+    description: "Update models and datasets",
+    legacyRoles: EDITOR,
+  },
+  "modelInventory.delete": {
+    module: "Model inventory",
+    description: "Delete models and datasets",
+    legacyRoles: EDITOR,
+  },
+  "slack.view": {
+    module: "Slack",
+    description: "View the Slack integration",
+    legacyRoles: ADMIN,
+  },
+  "evals.view": {
+    module: "Evaluations",
+    description: "View evaluation projects, experiments and scorers",
+    legacyRoles: READER,
+  },
+  "evals.createProject": {
+    module: "Evaluations",
+    description: "Create evaluation projects",
+    legacyRoles: EDITOR,
+  },
+  "evals.editProject": {
+    module: "Evaluations",
+    description: "Update evaluation projects",
+    legacyRoles: EDITOR,
+  },
+  "evals.deleteProject": {
+    module: "Evaluations",
+    description: "Delete evaluation projects",
+    legacyRoles: EDITOR,
+  },
+  "evals.createExperiment": {
+    module: "Evaluations",
+    description: "Create experiments",
+    legacyRoles: EDITOR,
+  },
+  "evals.deleteExperiment": {
+    module: "Evaluations",
+    description: "Delete experiments",
+    legacyRoles: EDITOR,
+  },
+  "evals.createScorer": {
+    module: "Evaluations",
+    description: "Create scorers",
+    legacyRoles: EDITOR,
+  },
+  "evals.editScorer": {
+    module: "Evaluations",
+    description: "Update scorers",
+    legacyRoles: EDITOR,
+  },
+  "evals.deleteScorer": {
+    module: "Evaluations",
+    description: "Delete scorers",
+    legacyRoles: EDITOR,
+  },
+  "evals.uploadDataset": {
+    module: "Evaluations",
+    description: "Upload datasets",
+    legacyRoles: EDITOR,
+  },
+  "evals.deleteDataset": {
+    module: "Evaluations",
+    description: "Delete datasets",
+    legacyRoles: EDITOR,
+  },
+  "postMarketMonitoring.view": {
+    module: "Post-market monitoring",
+    description: "View post-market monitoring",
+    legacyRoles: READER,
+  },
+  "postMarketMonitoring.edit": {
+    module: "Post-market monitoring",
+    description: "Update post-market monitoring",
     legacyRoles: EDITOR,
   },
   "reportTemplate.edit": {
