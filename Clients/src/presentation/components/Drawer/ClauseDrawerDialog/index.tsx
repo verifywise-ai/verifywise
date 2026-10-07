@@ -42,7 +42,7 @@ import {
   updateEntityById,
 } from "../../../../application/repository/entity.repository";
 import { attachFilesToEntity } from "../../../../application/repository/file.repository";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useResourceAccess } from "../../../../application/hooks/useResourceAccess";
 
 const FRAMEWORK_TYPE = "iso_42001";
 const ENTITY_TYPE = "subclause";
@@ -73,7 +73,8 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
   projectFrameworkId,
   project_id,
 }) => {
-  const { userRoleName, userId } = useAuth();
+  const { userId } = useAuth();
+  const { canAccess } = useResourceAccess();
   const { users } = useUsers();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -119,8 +120,8 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
     [users],
   );
 
-  const isEditingDisabled = !allowedRoles.frameworks.edit.includes(userRoleName);
-  const isAuditingDisabled = !allowedRoles.frameworks.audit.includes(userRoleName);
+  const isEditingDisabled = !canAccess("frameworks", "edit");
+  const isAuditingDisabled = !canAccess("frameworks", "audit");
 
   const fetchClauseData = async () => {
     if (!subclause?.id) return;
