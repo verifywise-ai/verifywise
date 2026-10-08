@@ -35,7 +35,16 @@ import { ProjectStatus } from "../domain.layer/enums/project-status.enum";
 import { AiRiskClassification } from "../domain.layer/enums/ai-risk-classification.enum";
 import { ModelInventoryModel } from "../domain.layer/models/modelInventory/modelInventory.model";
 import { IIntakeFormSchema } from "../domain.layer/interfaces/i.intakeForm";
-import { validateIntakeFormSchemaLabels } from "../utils/intakeFormSchema.validation";
+import {
+  validateIntakeFormSchemaLabels,
+  resolveEuAiActRiskStep,
+} from "../utils/intakeFormSchema.validation";
+import {
+  getQuestionnaire,
+  CURRENT_QUESTIONNAIRE_VERSION,
+  type Answers,
+} from "../services/euAiActClassification";
+import { getLatestRunForSubmissionQuery } from "../utils/euAiActClassification.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { sanitizeUserHtml } from "../utils/sanitization.utils";
 import logger from "../utils/logger/fileLogger";
@@ -357,6 +366,7 @@ export async function createIntakeForm(req: Request, res: Response) {
       riskAssessmentConfig,
       llmKeyId,
       suggestedQuestionsEnabled,
+      euAiActRiskStepEnabled,
       designSettings,
     } = req.body;
 
@@ -384,6 +394,16 @@ export async function createIntakeForm(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](schemaErrors.join("; ")));
     }
 
+    const riskStep = resolveEuAiActRiskStep({
+      entityType: entityType,
+      enabled: Boolean(euAiActRiskStepEnabled),
+      schema: schema,
+    });
+    if (riskStep.errors.length > 0) {
+      await transaction.rollback();
+      return res.status(400).json(STATUS_CODE[400](req.t!(riskStep.errors[0])));
+    }
+
     const form = await createIntakeFormQuery(
       {
         name,
@@ -399,6 +419,7 @@ export async function createIntakeForm(req: Request, res: Response) {
         riskAssessmentConfig,
         llmKeyId,
         suggestedQuestionsEnabled,
+        euAiActRiskStepEnabled: riskStep.enabled,
         designSettings,
         createdBy: req.userId!,
       },
@@ -474,6 +495,7 @@ export async function updateIntakeForm(req: Request, res: Response) {
       riskAssessmentConfig,
       llmKeyId,
       suggestedQuestionsEnabled,
+      euAiActRiskStepEnabled,
       designSettings,
     } = req.body;
 
@@ -496,6 +518,16 @@ export async function updateIntakeForm(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](schemaErrors.join("; ")));
     }
 
+    const riskStep = resolveEuAiActRiskStep({
+      entityType: entityType ?? existingForm.entityType,
+      enabled: euAiActRiskStepEnabled ?? existingForm.euAiActRiskStepEnabled,
+      schema: schema ?? existingForm.schema,
+    });
+    if (riskStep.errors.length > 0) {
+      await transaction.rollback();
+      return res.status(400).json(STATUS_CODE[400](req.t!(riskStep.errors[0])));
+    }
+
     const form = await updateIntakeFormQuery(
       formId,
       {
@@ -512,6 +544,7 @@ export async function updateIntakeForm(req: Request, res: Response) {
         riskAssessmentConfig,
         llmKeyId,
         suggestedQuestionsEnabled,
+        euAiActRiskStepEnabled: riskStep.enabled,
         designSettings,
       },
       req.organizationId!,
@@ -1414,6 +1447,7 @@ export async function getPublicFormByPublicId(req: Request, res: Response) {
     let previousData: Record<string, unknown> | undefined;
     let previousSubmitterName: string | undefined;
     let previousSubmitterEmail: string | undefined;
+    let previousRiskAnswers: Answers | undefined;
     if (resubmissionToken) {
       const decoded = verifySignedToken<{
         submissionId: number;
@@ -1439,6 +1473,9 @@ export async function getPublicFormByPublicId(req: Request, res: Response) {
             previousData = previousSubmission.data as Record<string, unknown>;
             previousSubmitterName = previousSubmission.submitterName ?? undefined;
             previousSubmitterEmail = previousSubmission.submitterEmail ?? undefined;
+            previousRiskAnswers = (
+              await getLatestRunForSubmissionQuery(previousSubmission.id!, tenantInfo.orgId)
+            )?.answers;
           }
         }
       }
@@ -1461,6 +1498,10 @@ export async function getPublicFormByPublicId(req: Request, res: Response) {
         previousData,
         previousSubmitterName,
         previousSubmitterEmail,
+        euAiActRiskStep: form.euAiActRiskStepEnabled
+          ? { questionnaire: getQuestionnaire(CURRENT_QUESTIONNAIRE_VERSION) }
+          : null,
+        previousRiskAnswers,
       }),
     );
   } catch (error) {
@@ -1733,6 +1774,7 @@ export async function getPublicForm(req: Request, res: Response) {
     let previousData: Record<string, unknown> | undefined;
     let previousSubmitterName: string | undefined;
     let previousSubmitterEmail: string | undefined;
+    let previousRiskAnswers: Answers | undefined;
     if (resubmissionToken) {
       const decoded = verifySignedToken<{
         submissionId: number;
@@ -1758,6 +1800,9 @@ export async function getPublicForm(req: Request, res: Response) {
             previousData = previousSubmission.data as Record<string, unknown>;
             previousSubmitterName = previousSubmission.submitterName ?? undefined;
             previousSubmitterEmail = previousSubmission.submitterEmail ?? undefined;
+            previousRiskAnswers = (
+              await getLatestRunForSubmissionQuery(previousSubmission.id!, tenantInfo.id)
+            )?.answers;
           }
         }
       }
@@ -1780,6 +1825,10 @@ export async function getPublicForm(req: Request, res: Response) {
         previousData,
         previousSubmitterName,
         previousSubmitterEmail,
+        euAiActRiskStep: form.euAiActRiskStepEnabled
+          ? { questionnaire: getQuestionnaire(CURRENT_QUESTIONNAIRE_VERSION) }
+          : null,
+        previousRiskAnswers,
       }),
     );
   } catch (error) {

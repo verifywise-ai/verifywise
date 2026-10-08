@@ -58,6 +58,7 @@ export interface IIntakeForm {
   riskAssessmentConfig: Record<string, unknown> | null;
   llmKeyId: number | null;
   suggestedQuestionsEnabled: boolean;
+  euAiActRiskStepEnabled: boolean;
   designSettings: Record<string, unknown> | null;
   createdBy: number;
   createdAt: Date;
@@ -81,6 +82,7 @@ export interface ICreateIntakeFormInput {
   riskAssessmentConfig?: Record<string, unknown>;
   llmKeyId?: number | null;
   suggestedQuestionsEnabled?: boolean;
+  euAiActRiskStepEnabled?: boolean;
   designSettings?: Record<string, unknown> | null;
   createdBy: number;
 }
@@ -102,6 +104,7 @@ export interface IUpdateIntakeFormInput {
   riskAssessmentConfig?: Record<string, unknown>;
   llmKeyId?: number | null;
   suggestedQuestionsEnabled?: boolean;
+  euAiActRiskStepEnabled?: boolean;
   designSettings?: Record<string, unknown> | null;
 }
 
@@ -117,5 +120,6 @@ export interface IPublicIntakeForm {
   schema: IIntakeFormSchema;
   submitButtonText: string;
   publicId: string | null;
+  euAiActRiskStepEnabled: boolean;
   designSettings: Record<string, unknown> | null;
 }

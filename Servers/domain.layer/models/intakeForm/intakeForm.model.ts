@@ -125,6 +125,14 @@ export class IntakeFormModel extends Model<IntakeFormModel> implements IIntakeFo
   suggestedQuestionsEnabled!: boolean;
 
   @Column({
+    type: DataType.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+    field: "eu_ai_act_risk_step_enabled",
+  })
+  euAiActRiskStepEnabled!: boolean;
+
+  @Column({
     type: DataType.JSONB,
     allowNull: true,
     field: "design_settings",
@@ -258,6 +266,7 @@ export class IntakeFormModel extends Model<IntakeFormModel> implements IIntakeFo
       riskAssessmentConfig: this.riskAssessmentConfig,
       llmKeyId: this.llmKeyId,
       suggestedQuestionsEnabled: this.suggestedQuestionsEnabled,
+      euAiActRiskStepEnabled: this.euAiActRiskStepEnabled,
       designSettings: this.designSettings,
       createdBy: this.createdBy,
       createdAt: this.createdAt,

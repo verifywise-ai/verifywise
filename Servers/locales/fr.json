@@ -813,5 +813,6 @@
   "This invitation link is invalid.": "Ce lien d'invitation n'est pas valide.",
   "This invitation link is no longer valid. Use the most recent invitation email, or ask your administrator to resend it.": "Ce lien d'invitation n'est plus valide. Utilisez l'e-mail d'invitation le plus récent ou demandez à votre administrateur de le renvoyer.",
   "The EU AI Act risk classification answers are invalid": "Les réponses à la classification des risques selon l'AI Act de l'UE ne sont pas valides",
-  "Complete the EU AI Act risk classification step": "Terminez l'étape de classification des risques selon l'AI Act de l'UE"
+  "Complete the EU AI Act risk classification step": "Terminez l'étape de classification des risques selon l'AI Act de l'UE",
+  "Remove the AI risk classification mapping from the form's questions before turning on the EU AI Act risk classification step": "Supprimez l'association à la classification des risques IA des questions du formulaire avant d'activer l'étape de classification des risques selon l'AI Act de l'UE"
 }
