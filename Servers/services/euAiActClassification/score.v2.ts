@@ -174,7 +174,17 @@ const TRANSPARENCY: Record<
   },
 };
 
-const HIGH_RISK_PROVIDER: ClassificationReason[] = [
+// High-risk obligations depend on the route that made the system high risk.
+type HighRiskRoute = "annex_iii" | "annex_iii_point_2" | "section_a" | "section_b";
+
+const ROUTE_DATES: Record<HighRiskRoute, string> = {
+  annex_iii: DATES.annexIII,
+  annex_iii_point_2: DATES.annexIII,
+  section_a: DATES.annexI,
+  section_b: DATES.annexI,
+};
+
+const PROVIDER_REQUIREMENTS: ClassificationReason[] = [
   { article: "Article 9", text: "Establish a risk management system." },
   {
     article: "Article 10",
@@ -186,16 +196,39 @@ const HIGH_RISK_PROVIDER: ClassificationReason[] = [
   { article: "Article 14", text: "Design the system for effective human oversight." },
   { article: "Article 15", text: "Achieve appropriate accuracy, robustness and cybersecurity." },
   { article: "Article 17", text: "Put a quality management system in place." },
-  {
-    article: "Article 43",
-    text: "Complete the conformity assessment before placing the system on the market.",
-  },
-  { article: "Article 49", text: "Register the system in the EU database." },
+];
+
+const PROVIDER_POST_MARKET: ClassificationReason[] = [
   { article: "Article 72", text: "Run post-market monitoring." },
   { article: "Article 73", text: "Report serious incidents." },
 ];
 
-const HIGH_RISK_DEPLOYER: ClassificationReason[] = [
+const CONFORMITY_ASSESSMENT: ClassificationReason = {
+  article: "Article 43",
+  text: "Complete the conformity assessment before placing the system on the market.",
+};
+
+const SECTORAL_CONFORMITY_ASSESSMENT: ClassificationReason = {
+  article: "Article 43(3)",
+  text: "Complete the conformity assessment under the product's sectoral procedure before placing the system on the market.",
+};
+
+const EU_DATABASE_REGISTRATION: ClassificationReason = {
+  article: "Article 49(1)",
+  text: "Register the system in the EU database.",
+};
+
+const NATIONAL_REGISTRATION: ClassificationReason = {
+  article: "Article 49(5)",
+  text: "Register the system at national level.",
+};
+
+const SECTORAL_LEGISLATION: ClassificationReason = {
+  article: "Article 2(2) and Articles 102-109",
+  text: "Meet the AI requirements set through the product's sectoral legislation.",
+};
+
+const DEPLOYER_DUTIES: ClassificationReason[] = [
   { article: "Article 26(1)", text: "Use the system according to the provider's instructions." },
   { article: "Article 26(2)", text: "Assign human oversight to competent people." },
   {
@@ -214,15 +247,64 @@ const HIGH_RISK_DEPLOYER: ClassificationReason[] = [
     article: "Article 26(7)",
     text: "Inform workers' representatives and affected workers before use at the workplace.",
   },
-  {
-    article: "Article 26(11)",
-    text: "Inform people that decisions about them are supported by a high-risk AI system.",
-  },
-  {
-    article: "Article 27",
-    text: "Carry out a fundamental rights impact assessment where required (public bodies, public services, credit scoring, and life or health insurance).",
-  },
 ];
+
+const DEPLOYER_INFORM_PEOPLE: ClassificationReason = {
+  article: "Article 26(11)",
+  text: "Inform people that decisions about them are supported by a high-risk AI system.",
+};
+
+// Article 27(1) excludes the Annex III point 2 area from the assessment.
+const DEPLOYER_FRIA: ClassificationReason = {
+  article: "Article 27",
+  text: "Carry out a fundamental rights impact assessment where required (public bodies, public services, credit scoring, and life or health insurance).",
+};
+
+const PROVIDER_OBLIGATIONS: Record<HighRiskRoute, ClassificationReason[]> = {
+  annex_iii: [
+    ...PROVIDER_REQUIREMENTS,
+    CONFORMITY_ASSESSMENT,
+    EU_DATABASE_REGISTRATION,
+    ...PROVIDER_POST_MARKET,
+  ],
+  annex_iii_point_2: [
+    ...PROVIDER_REQUIREMENTS,
+    CONFORMITY_ASSESSMENT,
+    NATIONAL_REGISTRATION,
+    ...PROVIDER_POST_MARKET,
+  ],
+  section_a: [...PROVIDER_REQUIREMENTS, SECTORAL_CONFORMITY_ASSESSMENT, ...PROVIDER_POST_MARKET],
+  section_b: [SECTORAL_LEGISLATION],
+};
+
+const DEPLOYER_OBLIGATIONS: Record<HighRiskRoute, ClassificationReason[]> = {
+  annex_iii: [...DEPLOYER_DUTIES, DEPLOYER_INFORM_PEOPLE, DEPLOYER_FRIA],
+  annex_iii_point_2: [...DEPLOYER_DUTIES, DEPLOYER_INFORM_PEOPLE],
+  section_a: DEPLOYER_DUTIES,
+  section_b: [SECTORAL_LEGISLATION],
+};
+
+// Annex III routes come first so a duty shared with an Annex I route keeps the
+// earlier date.
+const ROUTE_ORDER: HighRiskRoute[] = ["annex_iii", "annex_iii_point_2", "section_a", "section_b"];
+
+const highRiskObligations = (
+  routes: Set<HighRiskRoute>,
+  role: ClassificationRole | null,
+): ClassificationReason[] => {
+  const seen = new Set<string>();
+  const obligations: ClassificationReason[] = [];
+  for (const route of ROUTE_ORDER.filter((r) => routes.has(r))) {
+    const list = role === "Provider" ? PROVIDER_OBLIGATIONS[route] : DEPLOYER_OBLIGATIONS[route];
+    for (const obligation of list) {
+      const key = `${obligation.article}|${obligation.text}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      obligations.push({ ...obligation, appliesFrom: ROUTE_DATES[route] });
+    }
+  }
+  return obligations;
+};
 
 const AI_LITERACY: ClassificationReason = {
   article: "Article 4",
@@ -256,7 +338,7 @@ export const scoreV2 = (answers: Answers, now: Date = new Date()): Classificatio
       [
         {
           article: "Article 2(6) and 2(8)",
-          text: "AI systems developed and used only for scientific research and development, before being placed on the market or put into service, are outside the scope of the EU AI Act.",
+          text: "AI systems developed and put into service only for scientific research and development, and research, testing or development before a system is placed on the market or put into service, are outside the scope of the EU AI Act.",
         },
       ],
       [],
@@ -282,19 +364,33 @@ export const scoreV2 = (answers: Answers, now: Date = new Date()): Classificatio
     });
   }
   if (prohibited.length > 0) {
-    return result("Prohibited", prohibited, [
-      {
-        article: "Article 5",
-        text: "Do not place this system on the market, put it into service or use it in the EU.",
-      },
-    ]);
+    const onlyUpcomingBan = prohibited.every((p) => p.text === OMNIBUS_BAN.upcoming.text);
+    return result(
+      "Prohibited",
+      prohibited,
+      onlyUpcomingBan
+        ? [
+            {
+              article: "Article 5",
+              text: "From 2 December 2026, do not place this system on the market, put it into service or use it in the EU.",
+              appliesFrom: DATES.omnibusBans,
+            },
+          ]
+        : [
+            {
+              article: "Article 5",
+              text: "Do not place this system on the market, put it into service or use it in the EU.",
+            },
+          ],
+    );
   }
 
   const high: ClassificationReason[] = [];
+  const routes = new Set<HighRiskRoute>();
   const notes: ClassificationReason[] = [];
-  const extraObligations: ClassificationReason[] = [];
 
   if (answers.rbi_law_enforcement === "yes") {
+    routes.add("annex_iii");
     high.push({
       article: "Article 5(2)-(3) and Annex III, point 1(a)",
       text: "Real-time remote biometric identification for an authorised objective needs prior authorisation and is a high-risk system.",
@@ -302,6 +398,7 @@ export const scoreV2 = (answers: Answers, now: Date = new Date()): Classificatio
     });
   }
   if (answers.safety_function === "section_a") {
+    routes.add("section_a");
     high.push({
       article: "Article 6(1) and Annex I, Section A",
       text: "The system is a product, or performs a safety function in a product, under Annex I Section A legislation that requires a third-party conformity assessment.",
@@ -309,6 +406,7 @@ export const scoreV2 = (answers: Answers, now: Date = new Date()): Classificatio
     });
   }
   if (answers.safety_function === "section_b") {
+    routes.add("section_b");
     high.push({
       article: "Article 6(1), Article 2(2) and Annex I, Section B",
       text: "The system is part of a product under Annex I Section B. Its high-risk requirements apply through that sector's legislation.",
@@ -326,19 +424,34 @@ export const scoreV2 = (answers: Answers, now: Date = new Date()): Classificatio
   const annexMatches = Object.entries(ANNEX_III_HIGH_RISK_USES).filter(([question, values]) =>
     asList(answers[question]).some((value) => values.includes(value)),
   );
+  const addAnnexIII = (question: string, text: string) => {
+    routes.add(question === "critical_infrastructure_use" ? "annex_iii_point_2" : "annex_iii");
+    high.push({ article: ANNEX_III_ARTICLE[question], text, appliesFrom: DATES.annexIII });
+  };
+  // The Article 6(3) derogation only counts when nothing else makes the system
+  // high risk.
+  let derogation: ClassificationReason | undefined;
   if (annexMatches.length > 0) {
-    const derogation = answers.derogation as string | undefined;
+    const derogationAnswer = answers.derogation as string | undefined;
     if (answers.profiling === "yes") {
       for (const [question] of annexMatches) {
-        high.push({
-          article: ANNEX_III_ARTICLE[question],
-          text: "The system is used for a listed high-risk purpose and profiles people, so the Article 6(3) exemption cannot apply.",
-          appliesFrom: DATES.annexIII,
-        });
+        addAnnexIII(
+          question,
+          "The system is used for a listed high-risk purpose and profiles people, so the Article 6(3) exemption cannot apply.",
+        );
       }
-    } else if (derogation && derogation !== "none") {
-      notes.push({ ...DEROGATIONS[derogation], appliesFrom: DATES.annexIII });
-      extraObligations.push(
+    } else if (derogationAnswer && derogationAnswer !== "none") {
+      derogation = DEROGATIONS[derogationAnswer];
+    } else {
+      for (const [question] of annexMatches) {
+        addAnnexIII(question, "The system is used for a purpose listed as high risk in Annex III.");
+      }
+    }
+  }
+  const appliedDerogation = high.length === 0 ? derogation : undefined;
+  if (appliedDerogation) notes.push({ ...appliedDerogation, appliesFrom: DATES.annexIII });
+  const derogationObligations: ClassificationReason[] = appliedDerogation
+    ? [
         {
           article: "Article 6(4)",
           text: "The provider documents the assessment that the system is not high risk before placing it on the market or putting it into service.",
@@ -349,17 +462,8 @@ export const scoreV2 = (answers: Answers, now: Date = new Date()): Classificatio
           text: "The provider registers the system in the EU database.",
           appliesFrom: DATES.annexIII,
         },
-      );
-    } else {
-      for (const [question] of annexMatches) {
-        high.push({
-          article: ANNEX_III_ARTICLE[question],
-          text: "The system is used for a purpose listed as high risk in Annex III.",
-          appliesFrom: DATES.annexIII,
-        });
-      }
-    }
-  }
+      ]
+    : [];
 
   const transparencyKeys = asList(answers.transparency).filter((t) => t !== "none");
   const transparencyReasons = transparencyKeys.map((t) => TRANSPARENCY[t].reason);
@@ -369,17 +473,11 @@ export const scoreV2 = (answers: Answers, now: Date = new Date()): Classificatio
 
   const level: ClassificationLevel =
     high.length > 0 ? "High risk" : transparencyKeys.length > 0 ? "Limited risk" : "Minimal risk";
-  const highObligations =
-    level === "High risk"
-      ? (role === "Provider" ? HIGH_RISK_PROVIDER : HIGH_RISK_DEPLOYER).map((o) => ({
-          ...o,
-          appliesFrom: high[0].appliesFrom,
-        }))
-      : [];
+  const highObligations = level === "High risk" ? highRiskObligations(routes, role) : [];
 
   return result(
     level,
     [...high, ...notes, ...transparencyReasons],
-    [...highObligations, ...extraObligations, ...transparencyObligations, AI_LITERACY],
+    [...highObligations, ...derogationObligations, ...transparencyObligations, AI_LITERACY],
   );
 };

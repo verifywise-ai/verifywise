@@ -204,8 +204,163 @@ describe("scoreV2", () => {
   it("high-risk obligations differ for providers and deployers", () => {
     const provider = score({ role: "provider", safety_function: "section_a" });
     const deployer = score({ role: "deployer", safety_function: "section_a" });
-    expect(provider.obligations.map((o) => o.article)).toContain("Article 43");
+    expect(provider.obligations.map((o) => o.article)).toContain("Article 43(3)");
     expect(deployer.obligations.map((o) => o.article)).toContain("Article 26(1)");
-    expect(deployer.obligations.map((o) => o.article)).not.toContain("Article 43");
+    expect(deployer.obligations.map((o) => o.article)).not.toContain("Article 43(3)");
+  });
+
+  it("the Omnibus ban switches exactly at 2 December 2026 00:00 UTC", () => {
+    const answers = { intimate_content: "yes", intimate_content_safeguards: "no" };
+    const lastSecond = score(answers, new Date("2026-12-01T23:59:59Z"));
+    const firstSecond = score(answers, new Date("2026-12-02T00:00:00Z"));
+    expect(lastSecond.level).toBe("Prohibited");
+    expect(firstSecond.level).toBe("Prohibited");
+    expect(lastSecond.reasons[0].text).toMatch(/^Prohibited from 2 December 2026/);
+    expect(firstSecond.reasons[0].text).not.toMatch(/^Prohibited from/);
+  });
+
+  it("an upcoming Omnibus ban alone says the obligation applies from 2 December 2026", () => {
+    const answers = { intimate_content: "yes", intimate_content_safeguards: "no" };
+    const before = score(answers, BEFORE_OMNIBUS);
+    const after = score(answers, AFTER_OMNIBUS);
+    expect(before.obligations).toEqual([
+      expect.objectContaining({ article: "Article 5", appliesFrom: "2026-12-02" }),
+    ]);
+    expect(before.obligations[0].text).toMatch(/^From 2 December 2026/);
+    expect(after.obligations[0].text).not.toMatch(/2 December 2026/);
+    const withArticle5 = score({ ...answers, art5_practices: ["manipulation"] }, BEFORE_OMNIBUS);
+    expect(withArticle5.obligations[0].text).not.toMatch(/2 December 2026/);
+  });
+
+  describe("high-risk obligations follow the route", () => {
+    const articles = (r: { obligations: { article: string }[] }) =>
+      r.obligations.map((o) => o.article);
+
+    it.each(["provider", "deployer"])(
+      "Annex I Section B (%s) only meets the sectoral legislation requirements",
+      (role) => {
+        const result = score({ role, safety_function: "section_b" });
+        const high = result.obligations.filter((o) => o.article !== "Article 4");
+        expect(high).toEqual([
+          {
+            article: "Article 2(2) and Articles 102-109",
+            text: "Meet the AI requirements set through the product's sectoral legislation.",
+            appliesFrom: "2028-08-02",
+          },
+        ]);
+        expect(articles(result).some((a) => /^Article (9|43|49|26)/.test(a))).toBe(false);
+      },
+    );
+
+    it("Annex I Section A providers do not register and use the sectoral conformity procedure", () => {
+      const result = score({ role: "provider", safety_function: "section_a" });
+      expect(articles(result).some((a) => a.startsWith("Article 49"))).toBe(false);
+      expect(articles(result)).toContain("Article 43(3)");
+      expect(articles(result)).not.toContain("Article 43");
+      expect(result.obligations.find((o) => o.article === "Article 9")?.appliesFrom).toBe(
+        "2028-08-02",
+      );
+    });
+
+    it("Annex I deployers have no Article 26(11) or 27 duties", () => {
+      const result = score({ role: "deployer", safety_function: "section_a" });
+      expect(articles(result)).toContain("Article 26(1)");
+      expect(articles(result)).not.toContain("Article 26(11)");
+      expect(articles(result)).not.toContain("Article 27");
+    });
+
+    const criticalInfrastructure = {
+      annex_iii_areas: ["critical_infrastructure"],
+      critical_infrastructure_use: ["safety_component"],
+      profiling: "no",
+      derogation: "none",
+    };
+
+    it("Annex III point 2 providers register at national level", () => {
+      const result = score({ role: "provider", ...criticalInfrastructure });
+      expect(articles(result)).toContain("Article 49(5)");
+      expect(articles(result)).not.toContain("Article 49(1)");
+      expect(result.obligations.find((o) => o.article === "Article 9")?.appliesFrom).toBe(
+        "2027-12-02",
+      );
+    });
+
+    it("other Annex III providers register in the EU database", () => {
+      const result = score({
+        role: "provider",
+        annex_iii_areas: ["employment"],
+        employment_use: ["recruitment"],
+        profiling: "no",
+        derogation: "none",
+      });
+      expect(articles(result)).toEqual(
+        expect.arrayContaining(["Article 9", "Article 43", "Article 49(1)", "Article 72"]),
+      );
+      expect(articles(result)).not.toContain("Article 49(5)");
+    });
+
+    it("Annex III deployers inform affected people and assess fundamental rights", () => {
+      const result = score({
+        role: "deployer",
+        annex_iii_areas: ["employment"],
+        employment_use: ["recruitment"],
+        profiling: "no",
+        derogation: "none",
+      });
+      expect(articles(result)).toEqual(expect.arrayContaining(["Article 26(11)", "Article 27"]));
+    });
+
+    it("Annex III point 2 deployers have no fundamental rights impact assessment (Article 27(1))", () => {
+      const result = score({ role: "deployer", ...criticalInfrastructure });
+      expect(articles(result)).toContain("Article 26(11)");
+      expect(articles(result)).not.toContain("Article 27");
+    });
+
+    it("the RBI route is an Annex III route", () => {
+      const result = score({
+        role: "deployer",
+        rbi_law_enforcement: "yes",
+        rbi_objective: "victims_missing",
+      });
+      expect(articles(result)).toEqual(expect.arrayContaining(["Article 26(11)", "Article 27"]));
+    });
+
+    it("each matched route adds its obligations once, with its own date", () => {
+      const result = score({
+        role: "provider",
+        rbi_law_enforcement: "yes",
+        rbi_objective: "victims_missing",
+        safety_function: "section_a",
+      });
+      const list = articles(result);
+      expect(list.filter((a) => a === "Article 9")).toHaveLength(1);
+      expect(list).toEqual(
+        expect.arrayContaining(["Article 43", "Article 43(3)", "Article 49(1)"]),
+      );
+      expect(result.obligations.find((o) => o.article === "Article 49(1)")?.appliesFrom).toBe(
+        "2027-12-02",
+      );
+      expect(result.obligations.find((o) => o.article === "Article 43(3)")?.appliesFrom).toBe(
+        "2028-08-02",
+      );
+    });
+  });
+
+  it("an Article 6(3) derogation is ignored when the RBI route makes the system high risk", () => {
+    const result = score({
+      role: "provider",
+      rbi_law_enforcement: "yes",
+      rbi_objective: "victims_missing",
+      annex_iii_areas: ["biometrics"],
+      biometrics_use: ["remote_identification"],
+      profiling: "no",
+      derogation: "narrow_procedural",
+    });
+    expect(result.level).toBe("High risk");
+    expect(result.reasons.some((r) => r.text.includes("not high risk"))).toBe(false);
+    expect(result.obligations.map((o) => o.article)).not.toEqual(
+      expect.arrayContaining(["Article 6(4)"]),
+    );
+    expect(result.obligations.map((o) => o.article)).not.toContain("Article 49(2)");
   });
 });
