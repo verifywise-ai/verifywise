@@ -98,6 +98,7 @@ export interface IntakeForm {
   riskAssessmentConfig?: Record<string, unknown> | null;
   llmKeyId?: number | null;
   suggestedQuestionsEnabled?: boolean;
+  euAiActRiskStepEnabled?: boolean;
   designSettings?: FormDesignSettings | null;
   createdBy?: number;
   createdAt?: Date;
@@ -120,6 +121,7 @@ export interface CreateIntakeFormInput {
   riskTierSystem?: string;
   llmKeyId?: number | null;
   suggestedQuestionsEnabled?: boolean;
+  euAiActRiskStepEnabled?: boolean;
   designSettings?: FormDesignSettings | null;
 }
 
@@ -138,6 +140,7 @@ export interface UpdateIntakeFormInput {
   riskTierSystem?: string;
   llmKeyId?: number | null;
   suggestedQuestionsEnabled?: boolean;
+  euAiActRiskStepEnabled?: boolean;
   designSettings?: FormDesignSettings | null;
 }
 
@@ -748,6 +751,7 @@ export function createEmptyForm(entityType?: IntakeEntityType): IntakeForm {
     riskTierSystem: "eu_ai_act",
     llmKeyId: null,
     suggestedQuestionsEnabled: false,
+    euAiActRiskStepEnabled: false,
     designSettings: { ...DEFAULT_DESIGN_SETTINGS },
   };
 }

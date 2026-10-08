@@ -82,6 +82,7 @@ export interface IntakeForm {
   riskAssessmentConfig?: Record<string, unknown> | null;
   llmKeyId?: number | null;
   suggestedQuestionsEnabled?: boolean;
+  euAiActRiskStepEnabled?: boolean;
   designSettings?: FormDesignSettings | null;
   createdBy: number;
   createdAt: Date;
@@ -206,6 +207,7 @@ export async function createIntakeForm(
     riskTierSystem?: string;
     llmKeyId?: number | null;
     suggestedQuestionsEnabled?: boolean;
+    euAiActRiskStepEnabled?: boolean;
     designSettings?: FormDesignSettings | null;
   },
   signal?: AbortSignal,
@@ -231,6 +233,7 @@ export async function updateIntakeForm(
     riskTierSystem?: string;
     llmKeyId?: number | null;
     suggestedQuestionsEnabled?: boolean;
+    euAiActRiskStepEnabled?: boolean;
     designSettings?: FormDesignSettings | null;
   },
   signal?: AbortSignal,
