@@ -1,23 +1,22 @@
-import { Box, FormControl, Stack, Typography } from "@mui/material";
+import { Box, FormControl, Stack, Typography, type Theme } from "@mui/material";
 import Checkbox from "../Inputs/Checkbox";
 import Radio from "../Inputs/Radio";
-import { brand, background } from "../../themes/palette";
 import type { Answers, Question } from "../../../domain/types/euAiActClassification";
 
-const optionStyle = {
+const optionStyle = (theme: Theme) => ({
   "width": "100%",
-  "border": "1px solid #d0d5dd",
+  "border": `1px solid ${theme.palette.border.dark}`,
   "borderRadius": "4px",
-  "backgroundColor": `${background.main}`,
+  "backgroundColor": theme.palette.background.main,
   "cursor": "pointer",
   "transition": "all 0.2s ease-in-out",
   "padding": "10px",
   "margin": 0,
   "&:hover": {
-    borderColor: `${brand.primary}`,
-    backgroundColor: "#F9F9F9",
+    borderColor: theme.palette.primary.main,
+    backgroundColor: theme.palette.background.accent,
   },
-};
+});
 
 interface QuestionViewProps {
   question: Question;
@@ -54,7 +53,7 @@ const QuestionView = ({ question, answers, onSelect }: QuestionViewProps) => {
         {question.options.map((option) => {
           const inputId = `${question.id}-${option.value}`;
           return (
-            <Box key={option.value} sx={{ "& > label": optionStyle }}>
+            <Box key={option.value} sx={(theme) => ({ "& > label": optionStyle(theme) })}>
               {question.inputType === "single_select" ? (
                 <Radio
                   id={inputId}

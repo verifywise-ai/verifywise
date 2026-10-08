@@ -27,7 +27,12 @@ const ReasonList: React.FC<{ heading: string; items: ClassificationReason[] }> =
     <Stack sx={{ gap: "8px" }}>
       <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{heading}</Typography>
       <Stack
-        sx={{ gap: "8px", border: "1px solid #d0d5dd", borderRadius: "4px", padding: "12px 16px" }}
+        sx={(theme) => ({
+          gap: "8px",
+          border: `1px solid ${theme.palette.border.dark}`,
+          borderRadius: "4px",
+          padding: "12px 16px",
+        })}
       >
         {items.map((item, index) => (
           <Stack key={`${item.article}-${index}`} sx={{ gap: "2px" }}>
