@@ -22,8 +22,6 @@ const EuAiActStepToggle = ({
   const theme = useTheme();
   if (entityType !== "use_case") return null;
 
-  const description = hasRiskMapping ? `${DESCRIPTION} ${UNMAP_NOTE}` : DESCRIPTION;
-
   return (
     <Box
       sx={{ display: "flex", alignItems: "flex-start", gap: "4px", cursor: "pointer", mt: "12px" }}
@@ -33,7 +31,7 @@ const EuAiActStepToggle = ({
         id="eu-ai-act-risk-step"
         isChecked={enabled}
         value="euAiActRiskStepEnabled"
-        onChange={() => onToggle(!enabled)}
+        onChange={() => {}}
         size="small"
         label=""
         sx={{ p: 0, mt: "1px", flexShrink: 0 }}
@@ -43,8 +41,13 @@ const EuAiActStepToggle = ({
           EU AI Act risk classification step
         </Typography>
         <Typography sx={{ fontSize: "11px", color: theme.palette.text.accent }}>
-          {description}
+          {DESCRIPTION}
         </Typography>
+        {hasRiskMapping && (
+          <Typography sx={{ fontSize: "11px", color: theme.palette.text.accent, mt: "4px" }}>
+            {UNMAP_NOTE}
+          </Typography>
+        )}
       </Box>
     </Box>
   );

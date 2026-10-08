@@ -29,7 +29,7 @@ describe("EuAiActStepToggle", () => {
         onToggle={onToggle}
       />,
     );
-    expect(screen.queryByText(new RegExp("unmaps the question"))).toBeNull();
+    expect(screen.queryByText(UNMAP_NOTE)).toBeNull();
     fireEvent.click(screen.getByText("EU AI Act risk classification step"));
     expect(onToggle).toHaveBeenCalledTimes(1);
     expect(onToggle).toHaveBeenCalledWith(true);
@@ -45,7 +45,9 @@ describe("EuAiActStepToggle", () => {
         onToggle={onToggle}
       />,
     );
-    expect(screen.getByText(new RegExp(UNMAP_NOTE))).toBeTruthy();
+    const note = screen.getByText(UNMAP_NOTE);
+    const desc = screen.getByText(/^Submitters answer the EU AI Act risk questionnaire/);
+    expect(note).not.toBe(desc);
     fireEvent.click(screen.getByText("EU AI Act risk classification step"));
     expect(onToggle).toHaveBeenCalledWith(true);
   });
@@ -61,6 +63,36 @@ describe("EuAiActStepToggle", () => {
       />,
     );
     fireEvent.click(screen.getByText("EU AI Act risk classification step"));
+    expect(onToggle).toHaveBeenCalledWith(false);
+  });
+
+  it("fires once when the checkbox itself is clicked", () => {
+    const onToggle = vi.fn();
+    renderWithProviders(
+      <EuAiActStepToggle
+        entityType="use_case"
+        enabled={false}
+        hasRiskMapping={false}
+        onToggle={onToggle}
+      />,
+    );
+    fireEvent.click(screen.getByRole("checkbox"));
+    expect(onToggle).toHaveBeenCalledTimes(1);
+    expect(onToggle).toHaveBeenCalledWith(true);
+  });
+
+  it("fires once when the description row is clicked", () => {
+    const onToggle = vi.fn();
+    renderWithProviders(
+      <EuAiActStepToggle
+        entityType="use_case"
+        enabled
+        hasRiskMapping={false}
+        onToggle={onToggle}
+      />,
+    );
+    fireEvent.click(screen.getByText(/^Submitters answer/));
+    expect(onToggle).toHaveBeenCalledTimes(1);
     expect(onToggle).toHaveBeenCalledWith(false);
   });
 });
