@@ -22,6 +22,7 @@ jest.mock("../../utils/intakeForm.utils", () => ({
 jest.mock("../../utils/euAiActClassification.utils", () => ({
   insertClassificationRunQuery: jest.fn(),
   getLatestRunForSubmissionQuery: jest.fn(),
+  setUseCaseClassificationQuery: jest.fn<any>().mockResolvedValue(true),
 }));
 jest.mock("../../utils/project.utils", () => ({ createNewProjectQuery: jest.fn() }));
 jest.mock("../../utils/modelInventory.utils", () => ({ createNewModelInventoryQuery: jest.fn() }));
@@ -74,6 +75,8 @@ jest.mock("../../database/db", () => ({
 const ctrl = require("../intakeForm.ctrl") as typeof import("../intakeForm.ctrl");
 const intake = require("../../utils/intakeForm.utils");
 const runs = require("../../utils/euAiActClassification.utils");
+const projects = require("../../utils/project.utils");
+const history = require("../../utils/useCaseChangeHistory.utils");
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 /** Same format as the controller's private createSignedToken. */
@@ -204,4 +207,140 @@ describe("public submit with the EU AI Act step", () => {
       expect(runs.insertClassificationRunQuery).not.toHaveBeenCalled();
     },
   );
+});
+
+const RUN = {
+  id: 3,
+  questionnaireVersion: 2,
+  role: "Deployer",
+  answers: ANSWERS,
+  result: {
+    questionnaireVersion: 2,
+    level: "Limited risk",
+    role: "Deployer",
+    reasons: [],
+    obligations: [],
+  },
+  createdAt: new Date("2026-10-08T00:00:00Z"),
+};
+const approve = async (body: object) => {
+  const r = res();
+  await ctrl.approveSubmission(req({ params: { id: "9" }, body }) as any, r);
+  return r;
+};
+
+describe("approval with the EU AI Act step", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    intake.getSubmissionByIdQuery.mockResolvedValue({
+      id: 9,
+      status: "pending",
+      formId: 1,
+      entityType: "use_case",
+      data: {},
+      submitterEmail: null,
+    });
+    intake.getIntakeFormByIdQuery.mockResolvedValue({
+      id: 1,
+      name: "F",
+      schema: { version: "1.0", fields: [] },
+    });
+    intake.approveSubmissionQuery.mockResolvedValue({ id: 9 });
+    projects.createNewProjectQuery.mockResolvedValue({ id: 50 });
+    runs.insertClassificationRunQuery.mockResolvedValue({ id: 4 });
+  });
+
+  it("without a run, approval behaves as before", async () => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue(null);
+    const r = await approve({
+      confirmedEntityData: { project_title: "P", ai_risk_classification: "high" },
+    });
+    expect(r.status).toHaveBeenCalledWith(200);
+    expect(projects.createNewProjectQuery.mock.calls[0][0].ai_risk_classification).toBe(
+      "High risk",
+    );
+    expect(runs.insertClassificationRunQuery).not.toHaveBeenCalled();
+  });
+
+  it("sets the computed level and role, copies the run and records history", async () => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue(RUN);
+    const r = await approve({
+      confirmedEntityData: { project_title: "P", ai_risk_classification: "minimal" },
+    });
+    expect(r.status).toHaveBeenCalledWith(200);
+    expect(projects.createNewProjectQuery.mock.calls[0][0]).toMatchObject({
+      ai_risk_classification: "Limited risk",
+      type_of_high_risk_role: "Deployer",
+    });
+    expect(runs.setUseCaseClassificationQuery.mock.calls[0].slice(0, 3)).toEqual([
+      50,
+      "Limited risk",
+      "Deployer",
+    ]);
+    expect(runs.insertClassificationRunQuery.mock.calls[0][0]).toMatchObject({
+      useCaseId: 50,
+      intakeSubmissionId: null,
+      source: "intake",
+      reviewerLevel: null,
+    });
+    expect(history.recordMultipleFieldChanges.mock.calls[0][3]).toEqual([
+      {
+        fieldName: "AI risk classification",
+        oldValue: "-",
+        newValue: "Limited risk (from the intake EU AI Act classification)",
+      },
+    ]);
+  });
+
+  it("rejects a changed level without a justification", async () => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue(RUN);
+    const r = await approve({ euAiActOverride: { level: "High risk", justification: "short" } });
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(projects.createNewProjectQuery).not.toHaveBeenCalled();
+  });
+
+  it("accepts a changed level with a justification and records it", async () => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue(RUN);
+    const r = await approve({
+      euAiActOverride: { level: "High risk", justification: "Customer-facing hiring tool" },
+    });
+    expect(r.status).toHaveBeenCalledWith(200);
+    expect(projects.createNewProjectQuery.mock.calls[0][0].ai_risk_classification).toBe(
+      "High risk",
+    );
+    expect(runs.insertClassificationRunQuery.mock.calls[0][0]).toMatchObject({
+      reviewerLevel: "High risk",
+      reviewerJustification: "Customer-facing hiring tool",
+      reviewedBy: 7,
+    });
+    expect(history.recordMultipleFieldChanges.mock.calls[0][3][0].newValue).toBe(
+      "High risk (computed Limited risk; changed by reviewer: Customer-facing hiring tool)",
+    );
+  });
+
+  it.each(["Catastrophic", "GPAI"])("rejects the level %s", async (level) => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue(RUN);
+    const r = await approve({ euAiActOverride: { level, justification: "A long enough reason" } });
+    expect(r.status).toHaveBeenCalledWith(400);
+  });
+
+  it("preview returns the current result and flags a change since submission", async () => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue({
+      ...RUN,
+      result: { ...RUN.result, level: "Minimal risk" },
+    });
+    const r = res();
+    await ctrl.getSubmissionPreview(req({ params: { id: "9" } }) as any, r);
+    const panel = r.json.mock.calls[0][0].data.euAiActClassification;
+    expect(panel.current.level).toBe("Limited risk");
+    expect(panel.changedSinceSubmission).toBe(true);
+  });
+
+  it("preview shows no panel for an unknown questionnaire version instead of failing", async () => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue({ ...RUN, questionnaireVersion: 99 });
+    const r = res();
+    await ctrl.getSubmissionPreview(req({ params: { id: "9" } }) as any, r);
+    expect(r.status).toHaveBeenCalledWith(200);
+    expect(r.json.mock.calls[0][0].data.euAiActClassification).toBeNull();
+  });
 });

@@ -43,12 +43,16 @@ import {
   getQuestionnaire,
   CURRENT_QUESTIONNAIRE_VERSION,
   prepareIntakeRiskStep,
+  scoreClassification,
   type Answers,
+  type ClassificationResult,
 } from "../services/euAiActClassification";
 import {
   getLatestRunForSubmissionQuery,
   insertClassificationRunQuery,
+  setUseCaseClassificationQuery,
 } from "../utils/euAiActClassification.utils";
+import { recordMultipleFieldChanges } from "../utils/useCaseChangeHistory.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { sanitizeUserHtml } from "../utils/sanitization.utils";
 import logger from "../utils/logger/fileLogger";
@@ -862,6 +866,25 @@ export async function getSubmissionPreview(req: Request, res: Response) {
       form.schema,
     );
 
+    const run = await getLatestRunForSubmissionQuery(submission.id!, req.organizationId!);
+    // A run made under a version this server no longer knows shows no panel
+    // rather than failing the whole preview.
+    const runQuestionnaire = run ? getQuestionnaire(run.questionnaireVersion) : null;
+    const euAiActClassification =
+      run && runQuestionnaire
+        ? (() => {
+            const current = scoreClassification(run.questionnaireVersion, run.answers);
+            return {
+              questionnaire: runQuestionnaire,
+              answers: run.answers,
+              role: run.role,
+              current,
+              changedSinceSubmission: current.level !== run.result.level,
+              submittedAt: run.createdAt,
+            };
+          })()
+        : null;
+
     return res.status(200).json(
       STATUS_CODE[200]({
         submission,
@@ -876,6 +899,7 @@ export async function getSubmissionPreview(req: Request, res: Response) {
         riskTier: submission.riskTier,
         riskOverride: submission.riskOverride,
         entityPreview: entityData,
+        euAiActClassification,
       }),
     );
   } catch (error) {
@@ -1067,10 +1091,68 @@ export async function approveSubmission(req: Request, res: Response) {
     const formName = form.name;
 
     // Use confirmed entity data from admin if provided, otherwise build from mapping
-    const { confirmedEntityData, riskOverride } = req.body;
-    const entityData =
+    const { confirmedEntityData, riskOverride, euAiActOverride } = req.body;
+    let entityData: Record<string, unknown> =
       confirmedEntityData ||
       buildEntityDataFromSubmission(submission.data as Record<string, unknown>, form.schema);
+
+    // The EU AI Act step owns the use case's level and role: score the stored
+    // answers again, apply a justified reviewer change, and ignore whatever
+    // the dialog sent for those fields.
+    const run =
+      submission.entityType === IntakeEntityType.USE_CASE
+        ? await getLatestRunForSubmissionQuery(submissionId, req.organizationId!, transaction)
+        : null;
+    let classification: {
+      computed: ClassificationResult;
+      finalLevel: string;
+      justification: string | null;
+    } | null = null;
+    if (run) {
+      const computed = scoreClassification(run.questionnaireVersion, run.answers);
+      const finalLevel = euAiActOverride?.level ?? computed.level;
+      // The levels the questionnaire can produce; GPAI and General Risk are not
+      // offered here.
+      const ALLOWED_LEVELS: string[] = [
+        AiRiskClassification.PROHIBITED,
+        AiRiskClassification.HIGH_RISK,
+        AiRiskClassification.LIMITED_RISK,
+        AiRiskClassification.MINIMAL_RISK,
+        AiRiskClassification.OUT_OF_SCOPE,
+      ];
+      if (!ALLOWED_LEVELS.includes(finalLevel)) {
+        await transaction.rollback();
+        return res
+          .status(400)
+          .json(STATUS_CODE[400](req.t!("Invalid EU AI Act classification level")));
+      }
+      const justification =
+        typeof euAiActOverride?.justification === "string"
+          ? euAiActOverride.justification.trim()
+          : "";
+      if (finalLevel !== computed.level && justification.length < 10) {
+        await transaction.rollback();
+        return res
+          .status(400)
+          .json(
+            STATUS_CODE[400](
+              req.t!(
+                "A justification of at least 10 characters is required when changing the computed EU AI Act classification",
+              ),
+            ),
+          );
+      }
+      classification = {
+        computed,
+        finalLevel,
+        justification: finalLevel !== computed.level ? justification : null,
+      };
+      entityData = {
+        ...entityData,
+        ai_risk_classification: finalLevel,
+        ...(computed.role ? { type_of_high_risk_role: computed.role } : {}),
+      };
+    }
 
     // Apply risk override if provided
     if (riskOverride && riskOverride.tier && riskOverride.justification) {
@@ -1138,6 +1220,48 @@ export async function approveSubmission(req: Request, res: Response) {
         transaction,
       );
       entityId = createdProject.id!;
+      if (run && classification) {
+        await setUseCaseClassificationQuery(
+          entityId,
+          classification.finalLevel,
+          classification.computed.role,
+          req.userId!,
+          req.organizationId!,
+          transaction,
+        );
+        await insertClassificationRunQuery(
+          {
+            useCaseId: entityId,
+            intakeSubmissionId: null,
+            questionnaireVersion: run.questionnaireVersion,
+            role: run.role,
+            answers: run.answers,
+            result: classification.computed,
+            reviewerLevel: classification.justification ? classification.finalLevel : null,
+            reviewerJustification: classification.justification,
+            reviewedBy: classification.justification ? req.userId! : null,
+            source: "intake",
+            createdBy: req.userId!,
+          },
+          req.organizationId!,
+          transaction,
+        );
+        await recordMultipleFieldChanges(
+          entityId,
+          req.userId!,
+          req.organizationId!,
+          [
+            {
+              fieldName: "AI risk classification",
+              oldValue: "-",
+              newValue: classification.justification
+                ? `${classification.finalLevel} (computed ${classification.computed.level}; changed by reviewer: ${classification.justification})`
+                : `${classification.finalLevel} (from the intake EU AI Act classification)`,
+            },
+          ],
+          transaction,
+        );
+      }
     } else {
       await transaction.rollback();
       return res.status(400).json(STATUS_CODE[400](req.t!("Unsupported entity type")));

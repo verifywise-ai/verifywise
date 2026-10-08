@@ -814,5 +814,7 @@
   "This invitation link is no longer valid. Use the most recent invitation email, or ask your administrator to resend it.": "This invitation link is no longer valid. Use the most recent invitation email, or ask your administrator to resend it.",
   "The EU AI Act risk classification answers are invalid": "The EU AI Act risk classification answers are invalid",
   "Complete the EU AI Act risk classification step": "Complete the EU AI Act risk classification step",
-  "Remove the AI risk classification mapping from the form's questions before turning on the EU AI Act risk classification step": "Remove the AI risk classification mapping from the form's questions before turning on the EU AI Act risk classification step"
+  "Remove the AI risk classification mapping from the form's questions before turning on the EU AI Act risk classification step": "Remove the AI risk classification mapping from the form's questions before turning on the EU AI Act risk classification step",
+  "A justification of at least 10 characters is required when changing the computed EU AI Act classification": "A justification of at least 10 characters is required when changing the computed EU AI Act classification",
+  "Invalid EU AI Act classification level": "Invalid EU AI Act classification level"
 }
