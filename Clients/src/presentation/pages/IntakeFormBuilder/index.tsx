@@ -461,6 +461,12 @@ export function IntakeFormBuilder() {
     ? form.schema.fields.find((f) => f.id === fieldToDelete)?.label || "this field"
     : "this field";
 
+  // A stored id can outlive its key (deleted elsewhere). Only an id that is
+  // one of the organization's keys counts, otherwise the form behaves as if
+  // no key were selected.
+  const activeLlmKeyId =
+    form.llmKeyId && llmKeys.some((key) => key.id === form.llmKeyId) ? form.llmKeyId : null;
+
   const llmKeyItems = [
     { _id: "", name: "None" },
     ...llmKeys.map((key) => ({
@@ -776,7 +782,7 @@ export function IntakeFormBuilder() {
                       fieldCount={form.schema.fields.length}
                       existingFieldLabels={form.schema.fields.map((f) => f.label)}
                       entityType={form.entityType}
-                      llmKeyId={form.llmKeyId}
+                      llmKeyId={activeLlmKeyId}
                       onAdd={addField}
                     />
                   )}
@@ -795,7 +801,7 @@ export function IntakeFormBuilder() {
                     usedEntityMappings={form.schema.fields
                       .filter((f) => f.id !== selectedField.id && f.entityFieldMapping)
                       .map((f) => f.entityFieldMapping!)}
-                    llmKeyId={form.llmKeyId}
+                    llmKeyId={activeLlmKeyId}
                     onChange={updateField}
                     onClose={() => setSelectedFieldId(null)}
                   />
@@ -1067,7 +1073,7 @@ export function IntakeFormBuilder() {
                           <Select
                             id="llm-key"
                             label=""
-                            value={form.llmKeyId ? String(form.llmKeyId) : ""}
+                            value={activeLlmKeyId ? String(activeLlmKeyId) : ""}
                             onChange={(e) =>
                               updateForm({
                                 llmKeyId: e.target.value === "" ? null : Number(e.target.value),
@@ -1089,13 +1095,13 @@ export function IntakeFormBuilder() {
                               lineHeight: 1.4,
                             }}
                           >
-                            {form.llmKeyId
+                            {activeLlmKeyId
                               ? "Submissions will be scored using AI-enhanced risk analysis. You can also generate suggested questions and field guidance text with AI."
                               : "Without an LLM key, submissions are scored using rule-based risk analysis only. Add a key in Settings > LLM keys to enable AI features."}
                           </Typography>
                         </Box>
 
-                        {form.llmKeyId && (
+                        {activeLlmKeyId && (
                           <Box
                             sx={{
                               display: "flex",

@@ -1,9 +1,11 @@
 import { screen, fireEvent, waitFor, within, act } from "@testing-library/react";
+import { Routes, Route } from "react-router";
 import { QueryClient } from "@tanstack/react-query";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import { invalidateLLMKeyQueries } from "../../../../application/hooks/useLLMKeys";
 import CustomAxios from "../../../../infrastructure/api/customAxios";
 import { IntakeFormBuilder } from "../index";
+import { getIntakeForm } from "../../../../application/repository/intakeForm.repository";
 
 // The key list is cached per organization; give the page one.
 const ORG_ID = 7;
@@ -49,7 +51,9 @@ vi.mock("../../../../infrastructure/api/customAxios", () => ({
 // Mock child components to isolate the page
 vi.mock("../FieldPalette", () => ({
   FieldPalette: () => <div data-testid="field-palette" />,
-  SuggestedQuestionsPanel: () => <div data-testid="suggested-questions" />,
+  SuggestedQuestionsPanel: ({ llmKeyId }: { llmKeyId?: number | null }) => (
+    <div data-testid="suggested-questions" data-llm-key={String(llmKeyId ?? null)} />
+  ),
   SuggestedQuestionsPanelHandle: {},
 }));
 
@@ -112,6 +116,48 @@ describe("IntakeFormBuilder Page", () => {
 
     await waitFor(() => {
       expect(within(openLLMKeyOptions()).getByText("Anthropic — claude-x")).toBeInTheDocument();
+    });
+  });
+
+  describe("a form whose stored LLM key no longer exists", () => {
+    const savedForm = (llmKeyId: number) => ({
+      data: {
+        id: 5,
+        name: "Intake",
+        entityType: "use_case",
+        status: "draft",
+        schema: { version: "1.0", fields: [] },
+        suggestedQuestionsEnabled: true,
+        llmKeyId,
+      },
+    });
+
+    const renderEditRoute = () =>
+      renderWithProviders(
+        <Routes>
+          <Route path="/intake-forms/:formId/edit" element={<IntakeFormBuilder />} />
+        </Routes>,
+        { route: "/intake-forms/5/edit" },
+      );
+
+    it("treats the form as having no key, so nothing is fetched", async () => {
+      mockGetLLMKeys.mockResolvedValue({ data: { data: [openAIKey] } });
+      vi.mocked(getIntakeForm).mockResolvedValue(savedForm(8) as never);
+      renderEditRoute();
+
+      const panel = await screen.findByTestId("suggested-questions");
+      await waitFor(() => expect(mockGetLLMKeys).toHaveBeenCalled());
+      expect(panel).toHaveAttribute("data-llm-key", "null");
+    });
+
+    it("passes the key through when it is one of the organization's keys", async () => {
+      mockGetLLMKeys.mockResolvedValue({ data: { data: [openAIKey] } });
+      vi.mocked(getIntakeForm).mockResolvedValue(savedForm(3) as never);
+      renderEditRoute();
+
+      await waitFor(() =>
+        expect(screen.getByTestId("suggested-questions")).toHaveAttribute("data-llm-key", "3"),
+      );
     });
   });
 });
