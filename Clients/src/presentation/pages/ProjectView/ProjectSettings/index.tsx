@@ -1648,10 +1648,17 @@ const ProjectSettings = React.memo(
               console.error(`Unknown classification: ${classification}`);
               return;
             }
-            setValues({
-              ...values,
+            // Same as picking it from the dropdown: set the value and clear any
+            // earlier "required" error on the field.
+            setValues((prevValues) => ({ ...prevValues, riskClassification: match._id }));
+            setErrors((prevErrors) => ({ ...prevErrors, riskClassification: "" }));
+            // The wizard has already saved this value, so it is not an unsaved change.
+            initialValuesRef.current = {
+              ...initialValuesRef.current,
               riskClassification: match._id,
-            });
+            };
+            // Refresh the rest of the use case view (header, overview), as a normal Save does.
+            triggerRefresh(true);
           }}
         />
       </Stack>

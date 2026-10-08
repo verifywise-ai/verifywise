@@ -68,7 +68,13 @@ vi.mock("../../../components/CustomFieldsSection/RequiredCustomFieldsGate", () =
 }));
 
 vi.mock("../RiskAnalysisModal", () => ({
-  default: ({ isOpen }: any) => <div data-testid="risk-analysis-modal" data-open={isOpen} />,
+  default: ({ isOpen, updateClassification }: any) => (
+    <div data-testid="risk-analysis-modal" data-open={isOpen}>
+      <button type="button" onClick={() => updateClassification("Limited risk")}>
+        Finish risk wizard
+      </button>
+    </div>
+  ),
 }));
 
 import ProjectSettings from "./index";
@@ -115,6 +121,65 @@ describe("ProjectSettings", () => {
     expect(screen.getByText("Team & Compliance")).toBeInTheDocument();
     expect(screen.getByTestId("intake-submission-card")).toBeInTheDocument();
     expect(screen.getByTestId("custom-fields-section")).toBeInTheDocument();
+  });
+
+  it("clears the required error when the risk wizard fills in the classification", async () => {
+    mockUseFrameworks.mockReturnValue({
+      filteredFrameworks: [euAiActFramework],
+      allFrameworks: [euAiActFramework, iso42001Framework],
+    });
+    mockUseProjectData.mockReturnValue({
+      project: {
+        ...baseProject,
+        framework: [{ project_framework_id: 1, framework_id: 1, name: "EU AI Act" }],
+      },
+    });
+
+    renderWithProviders(<ProjectSettings />);
+    await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());
+
+    // Saving with an empty classification shows the required error
+    fireEvent.change(screen.getByDisplayValue("Chatbot Assistant"), {
+      target: { value: "Renamed Assistant" },
+    });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).not.toBeDisabled());
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(
+      await screen.findByText("AI risk classification is required when EU AI Act is selected."),
+    ).toBeInTheDocument();
+
+    // The wizard reports its result: the error goes away
+    fireEvent.click(screen.getByRole("button", { name: "Finish risk wizard" }));
+    await waitFor(() =>
+      expect(
+        screen.queryByText("AI risk classification is required when EU AI Act is selected."),
+      ).not.toBeInTheDocument(),
+    );
+    expect(screen.getByText("Limited risk")).toBeInTheDocument();
+  });
+
+  it("keeps Save disabled after the risk wizard, since the wizard already saved the value", async () => {
+    mockUseFrameworks.mockReturnValue({
+      filteredFrameworks: [euAiActFramework],
+      allFrameworks: [euAiActFramework, iso42001Framework],
+    });
+    mockUseProjectData.mockReturnValue({
+      project: {
+        ...baseProject,
+        framework: [{ project_framework_id: 1, framework_id: 1, name: "EU AI Act" }],
+      },
+    });
+
+    const triggerRefresh = vi.fn();
+    renderWithProviders(<ProjectSettings triggerRefresh={triggerRefresh} />);
+    await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Finish risk wizard" }));
+    await waitFor(() => expect(screen.getByText("Limited risk")).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    // The rest of the use case view is refreshed, as after a normal Save
+    expect(triggerRefresh).toHaveBeenCalledWith(true);
   });
 
   it("disables the Save button until a field is modified", async () => {

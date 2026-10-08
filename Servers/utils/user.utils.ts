@@ -134,9 +134,12 @@ export const getUserByEmailQuery = async (
 export const getUserByIdQuery = async (
   id: number,
   transaction: Transaction | null = null,
+  /** When given, only a user of this organization is returned. */
+  organizationId?: number,
 ): Promise<UserModel> => {
-  const users = await sequelize.query<UserModel>("SELECT * FROM users WHERE id = :id", {
-    replacements: { id },
+  const orgFilter = organizationId !== undefined ? " AND organization_id = :organizationId" : "";
+  const users = await sequelize.query<UserModel>(`SELECT * FROM users WHERE id = :id${orgFilter}`, {
+    replacements: { id, organizationId },
     model: UserModel,
     mapToModel: true, // converts results into UserModel instances
     ...(transaction ? { transaction } : {}), // include transaction if provided
@@ -162,6 +165,30 @@ export const getUserByIdQuery = async (
  * console.log(user.name);
  * ```
  */
+/** Returns the ids in `userIds` that are not users of `organizationId` (invalid ids are ignored). */
+export const findUsersNotInOrganization = async (
+  userIds: number[],
+  organizationId: number,
+  transaction: Transaction | null = null,
+): Promise<number[]> => {
+  const unique = Array.from(new Set(userIds.filter((id) => Number.isInteger(id) && id > 0)));
+  if (unique.length === 0) return [];
+
+  const rows = (await sequelize.query(
+    `SELECT id FROM users
+     WHERE organization_id = :organizationId
+       AND id IN (:userIds);`,
+    {
+      replacements: { organizationId, userIds: unique },
+      type: QueryTypes.SELECT,
+      ...(transaction ? { transaction } : {}),
+    },
+  )) as { id: number }[];
+
+  const found = new Set(rows.map((r) => r.id));
+  return unique.filter((id) => !found.has(id));
+};
+
 export const getUserByIdOrThrow = async (id: number): Promise<UserModel> => {
   const user = await getUserByIdQuery(id);
   if (!user) {

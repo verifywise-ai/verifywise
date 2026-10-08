@@ -1,5 +1,6 @@
 import { getUserProjects } from "../../utils/project.utils";
 import { calculateProjectRisks } from "../../utils/project.utils";
+import { findUsersNotInOrganization } from "../../utils/user.utils";
 import logger from "../../utils/logger/fileLogger";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
@@ -300,6 +301,26 @@ const agentAddMemberToUseCase = createWriteToolFn({
   descriptionFn: (params) =>
     `Add user #${params.user_id} as member to use case #${params.use_case_id}`,
   executeFn: async (params, organizationId) => {
+    // Both ids come from the model: only link a use case and a user of this organization
+    const useCase = await sequelize.query(
+      `SELECT id FROM projects WHERE organization_id = :organizationId AND id = :project_id`,
+      {
+        replacements: { organizationId, project_id: params.use_case_id },
+        type: QueryTypes.SELECT,
+      },
+    );
+    if (useCase.length === 0) {
+      return { success: false, message: `Use case #${params.use_case_id} not found` };
+    }
+    const userId = Number(params.user_id);
+    if (
+      !Number.isInteger(userId) ||
+      userId <= 0 ||
+      (await findUsersNotInOrganization([userId], organizationId)).length > 0
+    ) {
+      return { success: false, message: `User #${params.user_id} is not in this organization` };
+    }
+
     // Check if membership already exists
     const existing = await sequelize.query(
       `SELECT id FROM projects_members WHERE organization_id = :organizationId AND project_id = :project_id AND user_id = :user_id`,
@@ -307,7 +328,7 @@ const agentAddMemberToUseCase = createWriteToolFn({
         replacements: {
           organizationId,
           project_id: params.use_case_id,
-          user_id: params.user_id,
+          user_id: userId,
         },
         type: QueryTypes.SELECT,
       },
@@ -323,7 +344,7 @@ const agentAddMemberToUseCase = createWriteToolFn({
         replacements: {
           organizationId,
           project_id: params.use_case_id,
-          user_id: params.user_id,
+          user_id: userId,
         },
       },
     );
