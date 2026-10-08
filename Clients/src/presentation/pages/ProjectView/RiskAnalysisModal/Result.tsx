@@ -25,8 +25,7 @@ const Results: React.FC<ResultProps> = ({ result, onRestart, onSave, isSaving })
           bgColor: "#FFEBEE",
           icon: <AlertCircle size={32} />,
           title: "Prohibited AI system",
-          description:
-            "This system falls under a prohibited practice and cannot be placed on the market or used in the EU.",
+          description: "The system falls under a prohibited practice in Article 5.",
         };
       case "High risk":
         return {
@@ -105,6 +104,7 @@ const Results: React.FC<ResultProps> = ({ result, onRestart, onSave, isSaving })
             text="Start new assessment"
             icon={<RotateCcw size={16} />}
             onClick={onRestart}
+            isDisabled={isSaving}
           />
         )}
         {onSave && (

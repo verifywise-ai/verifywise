@@ -68,7 +68,24 @@ vi.mock("../../../components/CustomFieldsSection/RequiredCustomFieldsGate", () =
 }));
 
 vi.mock("../RiskAnalysisModal", () => ({
-  default: ({ isOpen }: any) => <div data-testid="risk-analysis-modal" data-open={isOpen} />,
+  default: ({ isOpen, updateClassification }: any) => (
+    <div data-testid="risk-analysis-modal" data-open={isOpen}>
+      <button
+        type="button"
+        onClick={() =>
+          updateClassification({
+            questionnaireVersion: 2,
+            level: "High risk",
+            role: "Provider",
+            reasons: [],
+            obligations: [],
+          })
+        }
+      >
+        mock wizard save
+      </button>
+    </div>
+  ),
 }));
 
 import ProjectSettings from "./index";
@@ -222,6 +239,51 @@ describe("ProjectSettings", () => {
     fireEvent.click(screen.getByText("Calculate your AI risk classification"));
 
     expect(screen.getByTestId("risk-analysis-modal")).toHaveAttribute("data-open", "true");
+  });
+
+  const euAiActProject = {
+    ...baseProject,
+    ai_risk_classification: "Minimal risk",
+    type_of_high_risk_role: "Deployer",
+    framework: [{ project_framework_id: 1, framework_id: 1, name: "EU AI Act" }],
+  };
+  const useEuAiAct = () => {
+    mockUseFrameworks.mockReturnValue({
+      filteredFrameworks: [euAiActFramework],
+      allFrameworks: [euAiActFramework, iso42001Framework],
+    });
+    mockUseProjectData.mockReturnValue({ project: euAiActProject });
+  };
+
+  it("takes the level and role the wizard saved, without marking the form as changed", async () => {
+    useEuAiAct();
+    mockUpdateProject.mockResolvedValue({ status: 202 });
+    renderWithProviders(<ProjectSettings />);
+    await screen.findByText("AI risk classification *");
+
+    fireEvent.click(screen.getByText("mock wizard save"));
+
+    await waitFor(() => expect(screen.getByText("High risk")).toBeInTheDocument());
+    expect(screen.getByText("Provider")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+
+    fireEvent.change(screen.getByDisplayValue("Chatbot Assistant"), {
+      target: { value: "Renamed Assistant" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(mockUpdateProject).toHaveBeenCalled());
+    expect(mockUpdateProject.mock.calls[0][0].body).toMatchObject({
+      ai_risk_classification: "High risk",
+      type_of_high_risk_role: "Provider",
+    });
+  });
+
+  it.each(["Reviewer", "Auditor"])("hides the classification wizard link from %s", async (role) => {
+    mockUserRoleName = role;
+    useEuAiAct();
+    renderWithProviders(<ProjectSettings />);
+    await screen.findByText("AI risk classification *");
+    expect(screen.queryByText("Calculate your AI risk classification")).not.toBeInTheDocument();
   });
 
   it("opens the delete confirmation dialog and deletes the project on confirm", async () => {

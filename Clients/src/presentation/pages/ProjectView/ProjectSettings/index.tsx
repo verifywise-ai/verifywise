@@ -49,6 +49,7 @@ import { useAuth } from "../../../../application/hooks/useAuth";
 import { AiRiskClassification } from "../../../../domain/enums/aiRiskClassification.enum";
 import { HighRiskRole } from "../../../../domain/enums/highRiskRole.enum";
 import RiskAnalysisModal from "../RiskAnalysisModal";
+import type { ClassificationResult } from "../../../../domain/types/euAiActClassification";
 import { getAutocompleteStyles } from "../../../utils/inputStyles";
 import { useStyles } from "./styles";
 
@@ -202,6 +203,7 @@ const ProjectSettings = React.memo(
     const [pendingOwnerId, setPendingOwnerId] = useState<User | null>(null);
     const [removedOwner, setRemovedOwner] = useState<User | null>(null);
     const [isRiskModalOpen, setIsRiskModalOpen] = useState(false);
+    const canClassify = allowedRoles.projects.classify.includes(userRoleName);
 
     const { project } = useProjectData({ projectId });
     const navigate = useNavigate();
@@ -1384,12 +1386,14 @@ const ProjectSettings = React.memo(
                         <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                           AI risk classification *
                         </Typography>
-                        <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
-                          Not sure about your risk level?&nbsp;
-                          <VWLink onClick={() => setIsRiskModalOpen(true)}>
-                            Calculate your AI risk classification
-                          </VWLink>
-                        </Typography>
+                        {canClassify && (
+                          <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                            Not sure about your risk level?&nbsp;
+                            <VWLink onClick={() => setIsRiskModalOpen(true)}>
+                              Calculate your AI risk classification
+                            </VWLink>
+                          </Typography>
+                        )}
                       </Box>
                       <Stack gap={1}>
                         <Select
@@ -1643,16 +1647,25 @@ const ProjectSettings = React.memo(
           setIsOpen={setIsRiskModalOpen}
           projectId={projectId}
           setAlert={setAlert}
-          updateClassification={(classification: string) => {
-            const match = riskClassificationItems.find((item) => item.name === classification);
-            if (!match) {
-              console.error(`Unknown classification: ${classification}`);
+          updateClassification={(result: ClassificationResult) => {
+            const level = riskClassificationItems.find((item) => item.name === result.level);
+            if (!level) {
+              console.error(`Unknown classification: ${result.level}`);
               return;
             }
-            setValues({
-              ...values,
-              riskClassification: match._id,
-            });
+            // The server stored the level, and the role unless the result has
+            // none, so both become the saved baseline and the form stays clean.
+            const role = highRiskRoleItems.find((item) => item.name === result.role);
+            const saved = {
+              riskClassification: level._id,
+              typeOfHighRiskRole: role?._id ?? initialValuesRef.current.typeOfHighRiskRole,
+            };
+            initialValuesRef.current = { ...initialValuesRef.current, ...saved };
+            setValues((prev) => ({
+              ...prev,
+              riskClassification: saved.riskClassification,
+              ...(role ? { typeOfHighRiskRole: role._id } : {}),
+            }));
           }}
         />
       </Stack>

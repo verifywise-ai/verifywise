@@ -29,7 +29,8 @@ interface RiskAnalysisModalProps {
       visible: boolean;
     } | null,
   ) => void;
-  updateClassification: (classification: string) => void;
+  /** Called with the saved result; the server has already stored its level and role. */
+  updateClassification: (result: ClassificationResult) => void;
 }
 
 const RiskAnalysisModal: React.FC<RiskAnalysisModalProps> = ({
@@ -121,7 +122,7 @@ const RiskAnalysisModal: React.FC<RiskAnalysisModalProps> = ({
         // ignore
       }
       setAlert({ variant: "success", body: "Classification saved", isToast: true, visible: true });
-      updateClassification(saved.result.level);
+      updateClassification(saved.result);
       setIsOpen(false);
     } catch {
       setAlert({

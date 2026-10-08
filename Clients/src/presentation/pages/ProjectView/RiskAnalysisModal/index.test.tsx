@@ -60,7 +60,7 @@ describe("RiskAnalysisModal", () => {
     });
     repo.saveUseCaseClassification.mockResolvedValue({
       run: { id: 1 },
-      result: { level: "Out of scope" },
+      result: { level: "Out of scope", role: null },
     });
   });
 
@@ -89,7 +89,22 @@ describe("RiskAnalysisModal", () => {
     await waitFor(() =>
       expect(repo.saveUseCaseClassification).toHaveBeenCalledWith(12, { scope: "research_only" }),
     );
-    await waitFor(() => expect(updateClassification).toHaveBeenCalledWith("Out of scope"));
+    await waitFor(() =>
+      expect(updateClassification).toHaveBeenCalledWith(
+        expect.objectContaining({ level: "Out of scope", role: null }),
+      ),
+    );
+  });
+
+  it("disables Start new assessment while saving", async () => {
+    repo.saveUseCaseClassification.mockReturnValue(new Promise(() => {}));
+    renderModal();
+    fireEvent.click(await screen.findByLabelText("Research"));
+    fireEvent.click(screen.getByRole("button", { name: /view results/i }));
+    fireEvent.click(await screen.findByRole("button", { name: /save results/i }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /start new assessment/i })).toBeDisabled(),
+    );
   });
 
   it("surfaces a save failure through setAlert", async () => {

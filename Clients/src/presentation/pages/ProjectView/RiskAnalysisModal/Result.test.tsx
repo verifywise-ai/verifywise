@@ -33,6 +33,13 @@ describe("Result", () => {
     expect(screen.getByText(title)).toBeInTheDocument();
   });
 
+  it("describes a prohibited result without claiming a date", () => {
+    renderResult(make("Prohibited"));
+    expect(
+      screen.getByText("The system falls under a prohibited practice in Article 5."),
+    ).toBeInTheDocument();
+  });
+
   it("lists each reason's article and text", () => {
     renderResult(
       make("High risk", {
