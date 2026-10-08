@@ -1,4 +1,5 @@
 import { ProjectModel } from "../domain.layer/models/project/project.model";
+import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 import { sequelize } from "../database/db";
 import { ProjectsMembersModel } from "../domain.layer/models/projectsMembers/projectsMembers.model";
 import { QueryTypes, Transaction } from "sequelize";
@@ -475,25 +476,22 @@ export const updateProjectByIdQuery = async (
   transaction: Transaction,
 ): Promise<(IProjectAttributes & { members: number[] }) | null> => {
   const oldProject = await getProjectByIdQuery(id, organizationId);
-  const _currentMembers = await sequelize.query(
-    `SELECT user_id FROM projects_members WHERE organization_id = :organizationId AND project_id = :project_id`,
-    {
-      replacements: { organizationId, project_id: id },
-      mapToModel: true,
-      model: ProjectsMembersModel,
-      transaction,
-    },
-  );
-  const currentMembers = _currentMembers.map((m) => Number(m.user_id));
   // A partial update (e.g. only ai_risk_classification or status) must not
   // touch members: treating a missing list as [] removed every member.
   // Clients send ids as strings ("7") while the table holds numbers, so
   // normalise and de-duplicate before diffing; otherwise every save deleted
   // and re-inserted all members, and a repeated id failed on the unique key.
-  const memberIds =
-    members === undefined
-      ? undefined
-      : [...new Set(members.map(Number).filter((m) => Number.isInteger(m) && m > 0))];
+  let memberIds: number[] | undefined;
+  if (members !== undefined) {
+    const numericIds = members.map(Number);
+    if (numericIds.some((m) => !Number.isInteger(m) || m <= 0)) {
+      throw new ValidationException("each member must be a positive integer", "members", members);
+    }
+    memberIds = [...new Set(numericIds)];
+  }
+  const currentMembers = memberIds
+    ? (await getCurrentProjectMembers(id, organizationId, transaction)).map(Number)
+    : [];
   const deletedMembers = memberIds ? currentMembers.filter((m) => !memberIds.includes(m)) : [];
   const newMembers = memberIds ? memberIds.filter((m) => !currentMembers.includes(m)) : [];
 
@@ -568,16 +566,13 @@ export const updateProjectByIdQuery = async (
     transaction,
   });
 
-  const updatedMembers = await sequelize.query(
-    `SELECT user_id FROM projects_members WHERE organization_id = :organizationId AND project_id = :project_id`,
-    {
-      replacements: { organizationId, project_id: id },
-      mapToModel: true,
-      model: ProjectsMembersModel,
-      transaction,
-    },
-  );
   const updatedProject = result[0];
+  // Row gone (e.g. deleted concurrently): let the caller send 404 rather than
+  // failing below on updatedProject.dataValues.
+  if (!updatedProject) return null;
+  const updatedMembers = (await getCurrentProjectMembers(id, organizationId, transaction)).map(
+    Number,
+  );
   const automations = (await sequelize.query(
     `SELECT
       pat.key AS trigger_key,
@@ -598,7 +593,8 @@ export const updateProjectByIdQuery = async (
     })[],
     number,
   ];
-  if (automations[0].length > 0) {
+  // No project column changed (e.g. members only): nothing for "project updated" to report.
+  if (setClause && automations[0].length > 0) {
     const automation = automations[0][0];
     if (automation["trigger_key"] === "project_updated") {
       const owner_name = (await sequelize.query(
@@ -634,12 +630,10 @@ export const updateProjectByIdQuery = async (
       console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
     }
   }
-  return result.length
-    ? {
-        ...updatedProject.dataValues,
-        members: updatedMembers.map((m) => m.user_id),
-      }
-    : null;
+  return {
+    ...updatedProject.dataValues,
+    members: updatedMembers,
+  };
 };
 
 const deleteTable = async (

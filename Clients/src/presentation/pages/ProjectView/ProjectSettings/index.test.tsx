@@ -170,13 +170,16 @@ describe("ProjectSettings", () => {
       },
     });
 
-    renderWithProviders(<ProjectSettings />);
+    const triggerRefresh = vi.fn();
+    renderWithProviders(<ProjectSettings triggerRefresh={triggerRefresh} />);
     await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());
     expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
 
     fireEvent.click(screen.getByRole("button", { name: "Finish risk wizard" }));
     await waitFor(() => expect(screen.getByText("Limited risk")).toBeInTheDocument());
     expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    // The rest of the use case view is refreshed, as after a normal Save
+    expect(triggerRefresh).toHaveBeenCalledWith(true);
   });
 
   it("disables the Save button until a field is modified", async () => {

@@ -1657,6 +1657,8 @@ const ProjectSettings = React.memo(
               ...initialValuesRef.current,
               riskClassification: match._id,
             };
+            // Refresh the rest of the use case view (header, overview), as a normal Save does.
+            triggerRefresh(true);
           }}
         />
       </Stack>

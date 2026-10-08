@@ -102,6 +102,13 @@ jest.mock("../../domain.layer/exceptions/custom.exception", () => ({
 }));
 
 import { buildProject, buildManyProject } from "../../tests/factories/project.factory";
+import { sequelize } from "../../database/db";
+
+/** The transaction the handler under test opened (the mock hands out one shared object). */
+async function openedTransaction(): Promise<any> {
+  const results = (sequelize.transaction as unknown as jest.Mock).mock.results;
+  return results[results.length - 1].value;
+}
 import {
   getAllProjects,
   getProjectById,
@@ -319,6 +326,28 @@ describe("project.ctrl", () => {
         expect.anything(),
       );
     });
+    it("rolls back its transaction when the row is gone at update time", async () => {
+      mockGetById.mockResolvedValue({ ...buildProject(), owner: 1 } as any);
+      mockGetMembers.mockResolvedValue([] as any);
+      mockUpdate.mockResolvedValue(null as any);
+      const req = createReq({ params: { id: "1" }, body: { project_title: "P2" } });
+      const res = createRes();
+      await updateProjectById(req, res);
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect((await openedTransaction()).rollback).toHaveBeenCalled();
+    });
+    it("rolls back its transaction on 401", async () => {
+      const req = createReq({
+        params: { id: "1" },
+        body: { project_title: "P2" },
+        userId: undefined,
+        role: undefined,
+      });
+      const res = createRes();
+      await updateProjectById(req, res);
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect((await openedTransaction()).rollback).toHaveBeenCalled();
+    });
     it("treats members: null as clearing the list, as before", async () => {
       const existing = { ...buildProject(), owner: 1 };
       mockGetById.mockResolvedValue(existing as any);
@@ -351,6 +380,14 @@ describe("project.ctrl", () => {
   });
 
   describe("updateProjectStatus", () => {
+    it("rolls back its transaction when the use case does not exist", async () => {
+      mockGetById.mockResolvedValue(null as any);
+      const req = createReq({ params: { id: "999" }, body: { status: "In progress" } });
+      const res = createRes();
+      await updateProjectStatus(req, res);
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect((await openedTransaction()).rollback).toHaveBeenCalled();
+    });
     it("changes the status without touching members", async () => {
       const existing = { ...buildProject(), owner: 1, status: "Not started" };
       mockGetById.mockResolvedValue(existing as any);

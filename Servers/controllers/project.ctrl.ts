@@ -483,6 +483,7 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
         userId: req.userId!,
         organizationId: req.organizationId!,
       });
+      await transaction.rollback();
       return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
@@ -667,6 +668,9 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
       return res.status(202).json(STATUS_CODE[202](project));
     }
 
+    // The row disappeared between the existence check and the update: undo any
+    // member changes made inside the transaction and release its connection.
+    await transaction.rollback();
     await logSuccess({
       eventType: "Update",
       description: `Project not found for update: ID ${projectId}`,
@@ -1328,6 +1332,7 @@ export async function updateProjectStatus(req: Request, res: Response): Promise<
         organizationId: req.organizationId!,
       });
 
+      await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404]({}));
     }
 
