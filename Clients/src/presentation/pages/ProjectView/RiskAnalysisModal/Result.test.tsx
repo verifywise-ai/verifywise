@@ -1,55 +1,68 @@
-import { screen, fireEvent } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import Result from "./Result";
+import type {
+  ClassificationLevel,
+  ClassificationResult,
+} from "../../../../domain/types/euAiActClassification";
+
+const make = (
+  level: ClassificationLevel,
+  extra: Partial<ClassificationResult> = {},
+): ClassificationResult => ({
+  questionnaireVersion: 2,
+  level,
+  role: null,
+  reasons: [],
+  obligations: [],
+  ...extra,
+});
+
+const renderResult = (result: ClassificationResult) =>
+  renderWithProviders(<Result result={result} />);
 
 describe("Result", () => {
-  it("renders the prohibited classification", () => {
-    renderWithProviders(<Result classification={{ level: "PROHIBITED" }} answers={{}} />);
-    expect(screen.getByText("Prohibited AI system")).toBeInTheDocument();
+  it.each([
+    ["Prohibited", "Prohibited AI system"],
+    ["High risk", "High-risk AI system"],
+    ["Limited risk", "Limited risk"],
+    ["Minimal risk", "Minimal risk"],
+    ["Out of scope", "Outside the EU AI Act"],
+  ] as const)("renders the title for %s", (level, title) => {
+    renderResult(make(level));
+    expect(screen.getByText(title)).toBeInTheDocument();
   });
 
-  it("renders the high-risk classification", () => {
-    renderWithProviders(<Result classification={{ level: "HIGH_RISK" }} answers={{}} />);
-    expect(screen.getByText("High-Risk AI system")).toBeInTheDocument();
-  });
-
-  it("renders the limited-risk classification", () => {
-    renderWithProviders(<Result classification={{ level: "LIMITED_RISK" }} answers={{}} />);
-    expect(screen.getByText("Limited risk")).toBeInTheDocument();
-  });
-
-  it("renders the minimal-risk classification", () => {
-    renderWithProviders(<Result classification={{ level: "MINIMAL_RISK" }} answers={{}} />);
-    expect(screen.getByText("Minimal risk")).toBeInTheDocument();
-  });
-
-  it("renders a pending/default state for unrecognized levels", () => {
-    renderWithProviders(<Result classification={{ level: "PENDING" }} answers={{}} />);
-    expect(screen.getByText("Assessment pending")).toBeInTheDocument();
-  });
-
-  it("does not render action buttons when no callbacks are passed", () => {
-    renderWithProviders(<Result classification={{ level: "MINIMAL_RISK" }} answers={{}} />);
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
-  });
-
-  it("calls onRestart when 'Start new assessment' is clicked", () => {
-    const onRestart = vi.fn();
-    renderWithProviders(
-      <Result classification={{ level: "MINIMAL_RISK" }} answers={{}} onRestart={onRestart} />,
+  it("lists each reason's article and text", () => {
+    renderResult(
+      make("High risk", {
+        reasons: [
+          { article: "Article 6(2)", text: "Annex III use." },
+          { article: "Article 9", text: "Risk management." },
+        ],
+      }),
     );
-
-    fireEvent.click(screen.getByRole("button", { name: /start new assessment/i }));
-    expect(onRestart).toHaveBeenCalled();
+    expect(screen.getByText("Article 6(2)")).toBeInTheDocument();
+    expect(screen.getByText("Annex III use.")).toBeInTheDocument();
+    expect(screen.getByText("Article 9")).toBeInTheDocument();
   });
 
-  it("calls onSave when 'Save results' is clicked", () => {
-    const onSave = vi.fn();
-    renderWithProviders(
-      <Result classification={{ level: "MINIMAL_RISK" }} answers={{}} onSave={onSave} />,
+  it("lists obligations and shows appliesFrom as separate text nodes", () => {
+    renderResult(
+      make("High risk", {
+        obligations: [
+          { article: "Article 26", text: "Deployer duties.", appliesFrom: "2027-12-02" },
+        ],
+      }),
     );
+    expect(screen.getByText("Article 26")).toBeInTheDocument();
+    expect(screen.getByText("Deployer duties.")).toBeInTheDocument();
+    expect(screen.getByText("Applies from")).toBeInTheDocument();
+    expect(screen.getByText("2 Dec 2027")).toBeInTheDocument();
+  });
 
-    fireEvent.click(screen.getByRole("button", { name: /save results/i }));
-    expect(onSave).toHaveBeenCalled();
+  it("hides the obligations section when there are none", () => {
+    renderResult(make("Minimal risk"));
+    expect(screen.queryByText("Obligations")).not.toBeInTheDocument();
   });
 });
