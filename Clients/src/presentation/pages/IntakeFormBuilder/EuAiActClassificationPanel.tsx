@@ -1,6 +1,7 @@
-import { Alert, Box, Typography, useTheme } from "@mui/material";
+import { Box, Typography, useTheme } from "@mui/material";
 import { Scale } from "lucide-react";
 import ReasonList from "../../components/EuAiActQuestionnaire/ReasonList";
+import Alert from "../../components/Alert";
 import Chip from "../../components/Chip";
 import Field from "../../components/Inputs/Field";
 import Select from "../../components/Inputs/Select";
@@ -127,9 +128,12 @@ export default function EuAiActClassificationPanel({
             />
           )}
           {selectedLevel === AiRiskClassification.PROHIBITED && (
-            <Alert severity="warning" sx={{ fontSize: "13px" }}>
-              Approving creates a use case classified as prohibited.
-            </Alert>
+            <Alert
+              variant="warning"
+              body="Approving creates a use case classified as prohibited."
+              isToast={false}
+              sx={{ position: "static" }}
+            />
           )}
         </Box>
       )}

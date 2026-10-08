@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Box, CircularProgress } from "@mui/material";
+import { Box, CircularProgress } from "@mui/material";
+import Alert from "../../../components/Alert";
 import StandardModal from "../../../components/Modals/StandardModal";
 import EuAiActQuestionnaire from "../../../components/EuAiActQuestionnaire";
 import Result from "./Result";
@@ -151,7 +152,7 @@ const RiskAnalysisModal: React.FC<RiskAnalysisModalProps> = ({
       hideFooter
     >
       {loadError ? (
-        <Alert severity="error">{loadError}</Alert>
+        <Alert variant="error" body={loadError} isToast={false} sx={{ position: "static" }} />
       ) : !questionnaire ? (
         <Box sx={{ display: "flex", justifyContent: "center", padding: "24px" }}>
           <CircularProgress size={24} />
