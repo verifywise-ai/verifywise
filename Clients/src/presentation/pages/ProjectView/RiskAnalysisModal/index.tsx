@@ -53,6 +53,9 @@ const RiskAnalysisModal: React.FC<RiskAnalysisModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
+    setResult(null);
+    setIsBusy(false);
+    setLoadError(null);
     (async () => {
       try {
         const [definition, latest] = await Promise.all([
