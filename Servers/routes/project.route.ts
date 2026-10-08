@@ -65,7 +65,12 @@ router.get(
   projectAssessmentProgress,
 );
 
-router.get("/:id/eu-ai-act-classification", authenticateJWT, getUseCaseClassification);
+router.get(
+  "/:id/eu-ai-act-classification",
+  authenticateJWT,
+  validateProjectIdParam,
+  getUseCaseClassification,
+);
 router.get("/all/compliance/progress", authenticateJWT, allProjectsComplianceProgress);
 router.get("/all/assessment/progress", authenticateJWT, allProjectsAssessmentProgress);
 
@@ -74,6 +79,7 @@ router.post("/", authenticateJWT, validateCreateProject, createProject);
 router.post(
   "/:id/eu-ai-act-classification",
   authenticateJWT,
+  validateProjectIdParam,
   authorize("useCase.classify"),
   classifyUseCase,
 );

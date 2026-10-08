@@ -50,7 +50,6 @@ import {
 import {
   getLatestRunForSubmissionQuery,
   insertClassificationRunQuery,
-  setUseCaseClassificationQuery,
 } from "../utils/euAiActClassification.utils";
 import { recordMultipleFieldChanges } from "../utils/useCaseChangeHistory.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
@@ -528,7 +527,10 @@ export async function updateIntakeForm(req: Request, res: Response) {
 
     const riskStep = resolveEuAiActRiskStep({
       entityType: entityType ?? existingForm.entityType,
-      enabled: euAiActRiskStepEnabled ?? existingForm.euAiActRiskStepEnabled,
+      enabled:
+        euAiActRiskStepEnabled != null
+          ? Boolean(euAiActRiskStepEnabled)
+          : existingForm.euAiActRiskStepEnabled,
       schema: schema ?? existingForm.schema,
     });
     if (riskStep.errors.length > 0) {
@@ -1096,13 +1098,16 @@ export async function approveSubmission(req: Request, res: Response) {
       confirmedEntityData ||
       buildEntityDataFromSubmission(submission.data as Record<string, unknown>, form.schema);
 
-    // The EU AI Act step owns the use case's level and role: score the stored
-    // answers again, apply a justified reviewer change, and ignore whatever
-    // the dialog sent for those fields.
-    const run =
+    // The EU AI Act step owns the use case's level: score the stored answers
+    // again and apply a justified reviewer change; the dialog's level is
+    // ignored. The computed role replaces the dialog's role, which stays only
+    // when the result has no role (Out of scope). A run from a questionnaire
+    // version this server no longer knows is treated as no run.
+    const storedRun =
       submission.entityType === IntakeEntityType.USE_CASE
         ? await getLatestRunForSubmissionQuery(submissionId, req.organizationId!, transaction)
         : null;
+    const run = storedRun && getQuestionnaire(storedRun.questionnaireVersion) ? storedRun : null;
     let classification: {
       computed: ClassificationResult;
       finalLevel: string;
@@ -1221,14 +1226,6 @@ export async function approveSubmission(req: Request, res: Response) {
       );
       entityId = createdProject.id!;
       if (run && classification) {
-        await setUseCaseClassificationQuery(
-          entityId,
-          classification.finalLevel,
-          classification.computed.role,
-          req.userId!,
-          req.organizationId!,
-          transaction,
-        );
         await insertClassificationRunQuery(
           {
             useCaseId: entityId,
@@ -1710,7 +1707,7 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
       }
     }
 
-    // Validate CAPTCHA
+    // Score the EU AI Act step on the server when the form has it
     const riskStep = prepareIntakeRiskStep(
       Boolean(form.euAiActRiskStepEnabled),
       euAiActRiskAnswers,
@@ -1725,6 +1722,7 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
       );
     }
 
+    // Validate CAPTCHA
     if (!captchaToken || captchaAnswer === undefined) {
       return res.status(400).json(STATUS_CODE[400](req.t!("CAPTCHA verification required")));
     }
@@ -2075,6 +2073,7 @@ export async function submitPublicForm(req: Request, res: Response) {
       }
     }
 
+    // Score the EU AI Act step on the server when the form has it
     const riskStep = prepareIntakeRiskStep(
       Boolean(form.euAiActRiskStepEnabled),
       euAiActRiskAnswers,
@@ -2089,6 +2088,7 @@ export async function submitPublicForm(req: Request, res: Response) {
       );
     }
 
+    // Validate CAPTCHA
     if (!captchaToken || captchaAnswer === undefined) {
       return res.status(400).json(STATUS_CODE[400](req.t!("CAPTCHA verification required")));
     }

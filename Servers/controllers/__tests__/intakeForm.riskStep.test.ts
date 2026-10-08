@@ -18,11 +18,11 @@ jest.mock("../../utils/intakeForm.utils", () => ({
   approveSubmissionQuery: jest.fn(),
   updateSubmissionRiskQuery: jest.fn<any>().mockResolvedValue(undefined),
   updateSubmissionRiskOverrideQuery: jest.fn<any>().mockResolvedValue(undefined),
+  updateIntakeFormQuery: jest.fn<any>().mockResolvedValue({ id: 1 }),
 }));
 jest.mock("../../utils/euAiActClassification.utils", () => ({
   insertClassificationRunQuery: jest.fn(),
   getLatestRunForSubmissionQuery: jest.fn(),
-  setUseCaseClassificationQuery: jest.fn<any>().mockResolvedValue(true),
 }));
 jest.mock("../../utils/project.utils", () => ({ createNewProjectQuery: jest.fn() }));
 jest.mock("../../utils/modelInventory.utils", () => ({ createNewModelInventoryQuery: jest.fn() }));
@@ -262,6 +262,42 @@ describe("approval with the EU AI Act step", () => {
       "High risk",
     );
     expect(runs.insertClassificationRunQuery).not.toHaveBeenCalled();
+    expect(history.recordMultipleFieldChanges).not.toHaveBeenCalled();
+  });
+
+  it("treats a run with an unknown questionnaire version as no run", async () => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue({ ...RUN, questionnaireVersion: 99 });
+    const r = await approve({
+      confirmedEntityData: {
+        project_title: "P",
+        ai_risk_classification: "high",
+        type_of_high_risk_role: "Provider",
+      },
+    });
+    expect(r.status).toHaveBeenCalledWith(200);
+    expect(projects.createNewProjectQuery.mock.calls[0][0]).toMatchObject({
+      ai_risk_classification: "High risk",
+      type_of_high_risk_role: "Provider",
+    });
+    expect(runs.insertClassificationRunQuery).not.toHaveBeenCalled();
+    expect(history.recordMultipleFieldChanges).not.toHaveBeenCalled();
+  });
+
+  it("keeps the reviewer's role when the computed role is empty", async () => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue({
+      ...RUN,
+      role: null,
+      answers: { scope: "research_only" },
+      result: { ...RUN.result, level: "Out of scope", role: null },
+    });
+    const r = await approve({
+      confirmedEntityData: { project_title: "P", type_of_high_risk_role: "Provider" },
+    });
+    expect(r.status).toHaveBeenCalledWith(200);
+    expect(projects.createNewProjectQuery.mock.calls[0][0]).toMatchObject({
+      ai_risk_classification: "Out of scope",
+      type_of_high_risk_role: "Provider",
+    });
   });
 
   it("sets the computed level and role, copies the run and records history", async () => {
@@ -274,11 +310,6 @@ describe("approval with the EU AI Act step", () => {
       ai_risk_classification: "Limited risk",
       type_of_high_risk_role: "Deployer",
     });
-    expect(runs.setUseCaseClassificationQuery.mock.calls[0].slice(0, 3)).toEqual([
-      50,
-      "Limited risk",
-      "Deployer",
-    ]);
     expect(runs.insertClassificationRunQuery.mock.calls[0][0]).toMatchObject({
       useCaseId: 50,
       intakeSubmissionId: null,
@@ -344,5 +375,31 @@ describe("approval with the EU AI Act step", () => {
     await ctrl.getSubmissionPreview(req({ params: { id: "9" } }) as any, r);
     expect(r.status).toHaveBeenCalledWith(200);
     expect(r.json.mock.calls[0][0].data.euAiActClassification).toBeNull();
+  });
+});
+
+describe("updating a form's EU AI Act step", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    intake.getIntakeFormByIdQuery.mockResolvedValue({
+      id: 1,
+      entityType: "use_case",
+      euAiActRiskStepEnabled: false,
+      schema: { version: "1.0", fields: [] },
+    });
+  });
+
+  it.each([
+    [1, true],
+    [0, false],
+    [undefined, false],
+  ])("stores %p as %p", async (value, expected) => {
+    const r = res();
+    await ctrl.updateIntakeForm(
+      req({ params: { id: "1" }, body: { euAiActRiskStepEnabled: value } }) as any,
+      r,
+    );
+    expect(r.status).toHaveBeenCalledWith(200);
+    expect(intake.updateIntakeFormQuery.mock.calls[0][1].euAiActRiskStepEnabled).toBe(expected);
   });
 });
