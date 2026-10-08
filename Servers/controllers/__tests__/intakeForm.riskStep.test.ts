@@ -25,6 +25,7 @@ jest.mock("../../utils/euAiActClassification.utils", () => ({
   getLatestRunForSubmissionQuery: jest.fn(),
 }));
 jest.mock("../../utils/project.utils", () => ({ createNewProjectQuery: jest.fn() }));
+jest.mock("../../utils/eu.utils", () => ({ createEUFrameworkQuery: jest.fn() }));
 jest.mock("../../utils/modelInventory.utils", () => ({ createNewModelInventoryQuery: jest.fn() }));
 jest.mock("../../utils/useCaseChangeHistory.utils", () => ({
   recordMultipleFieldChanges: jest.fn<any>().mockResolvedValue(undefined),
@@ -76,6 +77,7 @@ const ctrl = require("../intakeForm.ctrl") as typeof import("../intakeForm.ctrl"
 const intake = require("../../utils/intakeForm.utils");
 const runs = require("../../utils/euAiActClassification.utils");
 const projects = require("../../utils/project.utils");
+const euFramework = require("../../utils/eu.utils");
 const history = require("../../utils/useCaseChangeHistory.utils");
 const fileLogger = require("../../utils/logger/fileLogger").default;
 /* eslint-enable @typescript-eslint/no-require-imports */
@@ -264,6 +266,21 @@ describe("approval with the EU AI Act step", () => {
     );
     expect(runs.insertClassificationRunQuery).not.toHaveBeenCalled();
     expect(history.recordMultipleFieldChanges).not.toHaveBeenCalled();
+    expect(projects.createNewProjectQuery.mock.calls[0][2]).toEqual([]);
+    expect(euFramework.createEUFrameworkQuery).not.toHaveBeenCalled();
+  });
+
+  it("attaches the EU AI Act framework when the approval carries over a run", async () => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue(RUN);
+    const r = await approve({ confirmedEntityData: { project_title: "P" } });
+    expect(r.status).toHaveBeenCalledWith(200);
+    expect(projects.createNewProjectQuery.mock.calls[0][2]).toEqual([1]);
+    expect(euFramework.createEUFrameworkQuery).toHaveBeenCalledWith(
+      50,
+      false,
+      5,
+      expect.anything(),
+    );
   });
 
   it("treats a run with an unknown questionnaire version as no run", async () => {
@@ -392,6 +409,7 @@ describe("approval with the EU AI Act step", () => {
       },
     });
     expect(r.status).toHaveBeenCalledWith(200);
+    expect(projects.createNewProjectQuery.mock.calls[0][2]).toEqual([]);
     expect(projects.createNewProjectQuery.mock.calls[0][0]).toMatchObject({
       ai_risk_classification: "High risk",
       type_of_high_risk_role: "Provider",

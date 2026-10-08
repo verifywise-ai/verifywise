@@ -28,6 +28,8 @@ import {
 } from "../utils/intakeForm.utils";
 import { createNewModelInventoryQuery } from "../utils/modelInventory.utils";
 import { createNewProjectQuery } from "../utils/project.utils";
+import { createEUFrameworkQuery } from "../utils/eu.utils";
+import { EU_AI_ACT_FRAMEWORK_ID } from "../utils/validations/projectValidation.utils";
 import { IntakeFormStatus } from "../domain.layer/enums/intake-form-status.enum";
 import { IntakeSubmissionStatus } from "../domain.layer/enums/intake-submission-status.enum";
 import { IntakeEntityType } from "../domain.layer/enums/intake-entity-type.enum";
@@ -1349,13 +1351,15 @@ export async function approveSubmission(req: Request, res: Response) {
           status: ProjectStatus.UNDER_REVIEW,
         },
         [],
-        [],
+        // A carried-over EU AI Act classification brings its framework along.
+        classification ? [EU_AI_ACT_FRAMEWORK_ID] : [],
         req.organizationId!,
         req.userId!,
         transaction,
       );
       entityId = createdProject.id!;
       if (classification) {
+        await createEUFrameworkQuery(entityId, false, req.organizationId!, transaction);
         await insertClassificationRunQuery(
           {
             useCaseId: entityId,

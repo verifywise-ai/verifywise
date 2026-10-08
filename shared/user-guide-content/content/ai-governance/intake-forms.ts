@@ -548,7 +548,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You can pick a different level under **Classification for the new use case**. Only the five levels above are offered, and a change needs a justification of at least 10 characters. On approval the use case gets the chosen level and the role, the answers are copied to the use case, and its change history records the level together with the computed level and your justification when you changed it. When the selected level is Prohibited, the panel warns that approving creates a use case classified as prohibited.',
+      text: 'You can pick a different level under **Classification for the new use case**. Only the five levels above are offered, and a change needs a justification of at least 10 characters. On approval the use case gets the chosen level and the role, the answers are copied to the use case, and its change history records the level together with the computed level and your justification when you changed it. The new use case also gets the EU AI Act framework, with its assessment and controls. When the selected level is Prohibited, the panel warns that approving creates a use case classified as prohibited.',
     },
     {
       type: 'callout',
