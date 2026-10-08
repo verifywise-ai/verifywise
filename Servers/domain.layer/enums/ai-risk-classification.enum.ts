@@ -5,4 +5,5 @@ export enum AiRiskClassification {
   MINIMAL_RISK = "Minimal risk",
   GPAI = "GPAI",
   GENERAL_RISK = "General Risk",
+  OUT_OF_SCOPE = "Out of scope",
 }

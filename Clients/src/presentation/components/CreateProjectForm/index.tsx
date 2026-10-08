@@ -198,6 +198,7 @@ export function CreateProjectForm({ closePopup, onNewProject }: CreateProjectFor
       { _id: 2, name: AiRiskClassification.HIGH_RISK },
       { _id: 3, name: AiRiskClassification.LIMITED_RISK },
       { _id: 4, name: AiRiskClassification.MINIMAL_RISK },
+      { _id: 5, name: AiRiskClassification.OUT_OF_SCOPE },
     ],
     [],
   );

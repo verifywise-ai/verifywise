@@ -74,6 +74,7 @@ function mapToAiRiskClassification(value: string): AiRiskClassification | string
     "limited risk": AiRiskClassification.LIMITED_RISK,
     "high risk": AiRiskClassification.HIGH_RISK,
     prohibited: AiRiskClassification.PROHIBITED,
+    "out of scope": AiRiskClassification.OUT_OF_SCOPE,
   };
   return map[value?.toLowerCase()?.trim()] || value || "";
 }

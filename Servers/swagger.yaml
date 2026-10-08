@@ -45,6 +45,7 @@ components:
         - 'Minimal risk'
         - GPAI
         - 'General Risk'
+        - 'Out of scope'
       description: 'EU AI Act risk classification level'
     HighRiskRole:
       type: string
