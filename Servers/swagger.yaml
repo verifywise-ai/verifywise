@@ -10249,37 +10249,7 @@ paths:
                 type: object
                 properties:
                   message: {type: string}
-                  data:
-                    type: object
-                    properties:
-                      matched:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            source: {type: string, enum: [mit, ibm]}
-                            id: {type: integer}
-                            summary: {type: string}
-                            description: {type: string}
-                            risk_category: {type: array, items: {type: string}}
-                            likelihood: {type: string}
-                            severity: {type: string}
-                            reason: {type: string}
-                            ai_lifecycle_phase: {type: string}
-                      suggested:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            risk_name: {type: string}
-                            risk_description: {type: string}
-                            risk_category: {type: array, items: {type: string}}
-                            ai_lifecycle_phase: {type: string}
-                            likelihood: {type: integer, minimum: 1, maximum: 5}
-                            severity: {type: integer, minimum: 1, maximum: 5}
-                            impact: {type: string}
-                            mitigation_plan: {type: string}
-                      suppressed_count: {type: integer}
+                  data: {type: object, properties: {matched: {type: array, items: {type: object, properties: {source: {type: string, enum: [mit, ibm]}, id: {type: integer}, summary: {type: string}, description: {type: string}, risk_category: {type: array, items: {type: string}}, likelihood: {type: string}, severity: {type: string}, reason: {type: string}, ai_lifecycle_phase: {type: string}}}}, suggested: {type: array, items: {type: object, properties: {risk_name: {type: string}, risk_description: {type: string}, risk_category: {type: array, items: {type: string}}, ai_lifecycle_phase: {type: string}, likelihood: {type: integer, minimum: 1, maximum: 5}, severity: {type: integer, minimum: 1, maximum: 5}, impact: {type: string}, mitigation_plan: {type: string}}}}, suppressed_count: {type: integer}}}
         '400':
           description: 'Invalid request, or no LLM keys configured for the organization'
         '401':
@@ -10298,11 +10268,7 @@ paths:
       security:
         -
           bearerAuth: []
-      description: >-
-        Read-only: the org-configured LLM returns matching entries from the
-        built-in MIT and IBM risk catalogs plus free-form suggested risks for
-        the use case of the project. Nothing is persisted. Rate limited to 10
-        requests per hour per user.
+      description: 'Read-only: the org-configured LLM returns matching entries from the built-in MIT and IBM risk catalogs plus free-form suggested risks for the use case of the project. Nothing is persisted. Rate limited to 10 requests per hour per user.'
       requestBody:
         required: true
         content:
@@ -10312,7 +10278,9 @@ paths:
               required:
                 - projectId
               properties:
-                projectId: {type: integer, minimum: 1}
+                projectId:
+                  type: integer
+                  minimum: 1
                 technologySummary:
                   type: string
                   maxLength: 2000
