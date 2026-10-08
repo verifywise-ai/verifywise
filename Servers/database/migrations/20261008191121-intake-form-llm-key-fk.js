@@ -14,7 +14,11 @@ const CONSTRAINT = "intake_forms_llm_key_id_fkey";
 
 module.exports = {
   async up(queryInterface) {
-    await queryInterface.sequelize.query(`
+    // One transaction: if adding the constraint fails, the cleanup is rolled
+    // back with it instead of leaving the data half migrated.
+    await queryInterface.sequelize.transaction(async (transaction) => {
+      await queryInterface.sequelize.query(
+        `
       UPDATE verifywise.intake_forms f
          SET llm_key_id = NULL
        WHERE f.llm_key_id IS NOT NULL
@@ -23,9 +27,12 @@ module.exports = {
             WHERE k.id = f.llm_key_id
               AND k.organization_id = f.organization_id
          );
-    `);
+    `,
+        { transaction },
+      );
 
-    await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
       DO $$
       BEGIN
         IF NOT EXISTS (
@@ -38,7 +45,10 @@ module.exports = {
             FOREIGN KEY (llm_key_id) REFERENCES verifywise.llm_keys(id) ON DELETE SET NULL;
         END IF;
       END $$;
-    `);
+    `,
+        { transaction },
+      );
+    });
   },
 
   async down(queryInterface) {
