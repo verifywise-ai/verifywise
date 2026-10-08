@@ -503,7 +503,8 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
     }
 
     const updatedProject: Partial<ProjectModel> & { members?: number[] } = updateData;
-    const members = updatedProject.members || [];
+    // Only replace members when the request sends a list; undefined leaves them unchanged.
+    const members = Array.isArray(updatedProject.members) ? updatedProject.members : undefined;
 
     delete updatedProject.members;
     delete updatedProject.id;
@@ -1332,7 +1333,7 @@ export async function updateProjectStatus(req: Request, res: Response): Promise<
     const updatedProject = await updateProjectByIdQuery(
       projectId,
       { status, last_updated: new Date(), last_updated_by: req.userId! },
-      [], // no members update
+      undefined, // leave members unchanged
       req.organizationId!,
       transaction,
     );

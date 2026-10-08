@@ -469,7 +469,8 @@ export const updateProjectUpdatedByIdQuery = async (
 export const updateProjectByIdQuery = async (
   id: number,
   project: Partial<ProjectModel>,
-  members: number[],
+  /** The full member list to store, or undefined to leave members unchanged. */
+  members: number[] | undefined,
   organizationId: number,
   transaction: Transaction,
 ): Promise<(IProjectAttributes & { members: number[] }) | null> => {
@@ -484,8 +485,10 @@ export const updateProjectByIdQuery = async (
     },
   );
   const currentMembers = _currentMembers.map((m) => m.user_id);
-  const deletedMembers = currentMembers.filter((m) => !members.includes(m));
-  const newMembers = members.filter((m) => !currentMembers.includes(m));
+  // A partial update (e.g. only ai_risk_classification or status) must not
+  // touch members: treating a missing list as [] removed every member.
+  const deletedMembers = members ? currentMembers.filter((m) => !members.includes(m)) : [];
+  const newMembers = members ? members.filter((m) => !currentMembers.includes(m)) : [];
 
   for (let member of deletedMembers) {
     await sequelize.query(
@@ -542,7 +545,11 @@ export const updateProjectByIdQuery = async (
     .map((f) => `${f} = :${f}`)
     .join(", ");
 
-  const query = `UPDATE projects SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
+  // With no column to change (e.g. a members-only update), "UPDATE projects SET WHERE"
+  // is invalid SQL; read the row instead so the caller still gets the project back.
+  const query = setClause
+    ? `UPDATE projects SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`
+    : `SELECT * FROM projects WHERE organization_id = :organizationId AND id = :id;`;
 
   updateProject.id = id;
   updateProject.organizationId = organizationId;

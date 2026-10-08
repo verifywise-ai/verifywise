@@ -295,6 +295,40 @@ describe("project.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(202);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: updated }));
     });
+    it("leaves members unchanged when the body has no members (partial update)", async () => {
+      const existing = { ...buildProject(), owner: 1 };
+      const updated = { ...existing, ai_risk_classification: "Minimal risk", members: [7, 6] };
+      mockGetById.mockResolvedValue(existing as any);
+      mockGetMembers.mockResolvedValue([7, 6] as any);
+      mockUpdate.mockResolvedValue(updated as any);
+      mockGetUser.mockResolvedValue({ id: 1, name: "A", surname: "B", role_id: 1 } as any);
+      // Exactly what the EU AI Act risk wizard sends
+      const req = createReq({
+        params: { id: "1" },
+        body: { id: "1", ai_risk_classification: "Minimal risk" },
+      });
+      const res = createRes();
+      await updateProjectById(req, res);
+      expect(res.status).toHaveBeenCalledWith(202);
+      expect(mockUpdate).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ ai_risk_classification: "Minimal risk" }),
+        undefined,
+        1,
+        expect.anything(),
+      );
+    });
+    it("passes an explicit empty members list through, so members can still be cleared", async () => {
+      const existing = { ...buildProject(), owner: 1 };
+      mockGetById.mockResolvedValue(existing as any);
+      mockGetMembers.mockResolvedValue([7] as any);
+      mockUpdate.mockResolvedValue({ ...existing, members: [] } as any);
+      mockGetUser.mockResolvedValue({ id: 1, name: "A", surname: "B", role_id: 1 } as any);
+      const req = createReq({ params: { id: "1" }, body: { project_title: "P2", members: [] } });
+      const res = createRes();
+      await updateProjectById(req, res);
+      expect(mockUpdate).toHaveBeenCalledWith(1, expect.anything(), [], 1, expect.anything());
+    });
     it("should return 500 on error", async () => {
       mockGetById.mockRejectedValue(new Error("DB error"));
       const req = createReq({ params: { id: "1" }, body: { project_title: "P2" } });
