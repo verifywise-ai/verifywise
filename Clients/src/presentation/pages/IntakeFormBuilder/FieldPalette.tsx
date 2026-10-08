@@ -491,6 +491,9 @@ export const SuggestedQuestionsPanel = forwardRef<
     }
     return () => {
       if (abortRef.current) abortRef.current.abort();
+      // An aborted fetch leaves loading as is (its finally skips aborted
+      // requests), which would block the fetch when a key is set again.
+      setLlmLoading(false);
     };
   }, [hasLLM]); // eslint-disable-line react-hooks/exhaustive-deps
 
