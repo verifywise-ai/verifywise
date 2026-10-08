@@ -128,6 +128,7 @@ import {
   hasPendingApprovalQuery,
 } from "../../utils/project.utils";
 import { getUserByIdQuery } from "../../utils/user.utils";
+import { trackUseCaseChanges } from "../../utils/useCaseChangeHistory.utils";
 import {
   getPendingApprovalRequestIdQuery,
   withdrawApprovalRequestQuery,
@@ -145,6 +146,7 @@ const mockHasPending = hasPendingApprovalQuery as jest.MockedFunction<
   typeof hasPendingApprovalQuery
 >;
 const mockGetUser = getUserByIdQuery as jest.MockedFunction<typeof getUserByIdQuery>;
+const mockTrackChanges = trackUseCaseChanges as jest.MockedFunction<typeof trackUseCaseChanges>;
 const mockGetPendingApproval = getPendingApprovalRequestIdQuery as jest.MockedFunction<
   typeof getPendingApprovalRequestIdQuery
 >;
@@ -370,6 +372,39 @@ describe("project.ctrl", () => {
       await updateProjectById(req, res);
       expect(mockUpdate).toHaveBeenCalledWith(1, expect.anything(), [], 1, expect.anything());
     });
+    it("records member changes in the use case history, ignoring order", async () => {
+      const existing = { ...buildProject(), owner: 1 };
+      mockGetById.mockResolvedValue(existing as any);
+      mockGetMembers.mockResolvedValue([7] as any);
+      mockUpdate.mockResolvedValue({ ...existing, members: [7, 6] } as any);
+      mockGetUser.mockResolvedValue({ id: 6, name: "A", surname: "B", role_id: 3 } as any);
+      const req = createReq({ params: { id: "1" }, body: { members: [7, 6] } });
+      const res = createRes();
+      await updateProjectById(req, res);
+      expect(mockTrackChanges).toHaveBeenCalledWith({ members: [7] }, { members: [6, 7] });
+    });
+    it("does not compare members when the body has none", async () => {
+      const existing = { ...buildProject(), owner: 1 };
+      mockGetById.mockResolvedValue(existing as any);
+      mockGetMembers.mockResolvedValue([7] as any);
+      mockUpdate.mockResolvedValue({ ...existing, members: [7] } as any);
+      const req = createReq({ params: { id: "1" }, body: { project_title: "P2" } });
+      const res = createRes();
+      await updateProjectById(req, res);
+      expect(mockTrackChanges).toHaveBeenCalledTimes(1);
+      expect(mockTrackChanges).toHaveBeenCalledWith(existing, { project_title: "P2" });
+    });
+    it("looks up added members within the organization only", async () => {
+      const existing = { ...buildProject(), owner: 1 };
+      mockGetById.mockResolvedValue(existing as any);
+      mockGetMembers.mockResolvedValue([] as any);
+      mockUpdate.mockResolvedValue({ ...existing, members: [6] } as any);
+      mockGetUser.mockResolvedValue({ id: 6, name: "A", surname: "B", role_id: 3 } as any);
+      const req = createReq({ params: { id: "1" }, body: { members: [6] } });
+      const res = createRes();
+      await updateProjectById(req, res);
+      expect(mockGetUser).toHaveBeenCalledWith(6, null, 1);
+    });
     it("should return 500 on error", async () => {
       mockGetById.mockRejectedValue(new Error("DB error"));
       const req = createReq({ params: { id: "1" }, body: { project_title: "P2" } });
@@ -380,6 +415,15 @@ describe("project.ctrl", () => {
   });
 
   describe("updateProjectStatus", () => {
+    it("returns 404 and rolls back when the row is gone at update time", async () => {
+      mockGetById.mockResolvedValue({ ...buildProject(), owner: 1 } as any);
+      mockUpdate.mockResolvedValue(null as any);
+      const req = createReq({ params: { id: "1" }, body: { status: "In progress" } });
+      const res = createRes();
+      await updateProjectStatus(req, res);
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect((await openedTransaction()).rollback).toHaveBeenCalled();
+    });
     it("rolls back its transaction when the use case does not exist", async () => {
       mockGetById.mockResolvedValue(null as any);
       const req = createReq({ params: { id: "999" }, body: { status: "In progress" } });

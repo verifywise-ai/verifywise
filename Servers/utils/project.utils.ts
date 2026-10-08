@@ -21,6 +21,30 @@ import {
   deleteAllCustomFieldValuesForEntityQuery,
   fetchCustomFieldsForEntities,
 } from "./customField.utils";
+import { findUsersNotInOrganization } from "./eu.utils";
+
+/**
+ * Turn a client member list into the ids to store. Clients send "7" for 7, and
+ * a repeated id would fail on the unique key, so normalise and de-duplicate.
+ * Reject ids that are not users of this organization: otherwise any user id
+ * could be added, and the "added to use case" email went to other tenants.
+ */
+const normaliseMemberIds = async (
+  members: unknown[],
+  organizationId: number,
+  transaction: Transaction,
+): Promise<number[]> => {
+  const numericIds = members.map(Number);
+  if (numericIds.some((m) => !Number.isInteger(m) || m <= 0)) {
+    throw new ValidationException("each member must be a positive integer", "members", members);
+  }
+  const memberIds = [...new Set(numericIds)];
+  const outside = await findUsersNotInOrganization(memberIds, organizationId, transaction);
+  if (outside.length > 0) {
+    throw new ValidationException("members must be users of this organization", "members", outside);
+  }
+  return memberIds;
+};
 
 // Function to generate the next sequential UC ID
 // Using a database sequence to fetch the next value
@@ -250,6 +274,7 @@ export const createNewProjectQuery = async (
   transaction: Transaction,
   isDemo: boolean = false,
 ): Promise<ProjectModel> => {
+  const memberIds = await normaliseMemberIds(members, organizationId, transaction);
   // Frameworks are optional for use cases; default to empty array
   const projectFrameworks = frameworks || [];
   const allowedFrameworks: number[] = [];
@@ -325,7 +350,7 @@ export const createNewProjectQuery = async (
   console.log("Project created with ID:", createdProject.id);
   console.log("createdProject.approval_workflow_id:", (createdProject as any).approval_workflow_id);
   (createdProject.dataValues as any)["members"] = [];
-  for (let member of members) {
+  for (let member of memberIds) {
     await sequelize.query(
       `INSERT INTO projects_members (organization_id, project_id, user_id, is_demo) VALUES (:organization_id, :project_id, :user_id, :is_demo) RETURNING *`,
       {
@@ -478,17 +503,12 @@ export const updateProjectByIdQuery = async (
   const oldProject = await getProjectByIdQuery(id, organizationId);
   // A partial update (e.g. only ai_risk_classification or status) must not
   // touch members: treating a missing list as [] removed every member.
-  // Clients send ids as strings ("7") while the table holds numbers, so
-  // normalise and de-duplicate before diffing; otherwise every save deleted
-  // and re-inserted all members, and a repeated id failed on the unique key.
-  let memberIds: number[] | undefined;
-  if (members !== undefined) {
-    const numericIds = members.map(Number);
-    if (numericIds.some((m) => !Number.isInteger(m) || m <= 0)) {
-      throw new ValidationException("each member must be a positive integer", "members", members);
-    }
-    memberIds = [...new Set(numericIds)];
-  }
+  // Ids are normalised before diffing; otherwise "7" never matched 7 and every
+  // save deleted and re-inserted all members.
+  const memberIds =
+    members !== undefined
+      ? await normaliseMemberIds(members, organizationId, transaction)
+      : undefined;
   const currentMembers = memberIds
     ? (await getCurrentProjectMembers(id, organizationId, transaction)).map(Number)
     : [];
@@ -573,8 +593,18 @@ export const updateProjectByIdQuery = async (
   const updatedMembers = (await getCurrentProjectMembers(id, organizationId, transaction)).map(
     Number,
   );
-  const automations = (await sequelize.query(
-    `SELECT
+  type AutomationRows = [
+    (TenantAutomationActionModel & {
+      trigger_key: string;
+      action_key: string;
+      automation_id: number;
+    })[],
+    number,
+  ];
+  // No project column changed (e.g. members only): nothing for "project updated" to report.
+  const automations: AutomationRows = setClause
+    ? ((await sequelize.query(
+        `SELECT
       pat.key AS trigger_key,
       paa.key AS action_key,
       a.id AS automation_id,
@@ -584,17 +614,10 @@ export const updateProjectByIdQuery = async (
     JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId
     JOIN automation_actions paa ON aa.action_type_id = paa.id
     WHERE pat.key = 'project_updated' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  // No project column changed (e.g. members only): nothing for "project updated" to report.
-  if (setClause && automations[0].length > 0) {
+        { replacements: { organizationId }, transaction },
+      )) as AutomationRows)
+    : [[], 0];
+  if (automations[0].length > 0) {
     const automation = automations[0][0];
     if (automation["trigger_key"] === "project_updated") {
       const owner_name = (await sequelize.query(

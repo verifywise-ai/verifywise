@@ -134,9 +134,12 @@ export const getUserByEmailQuery = async (
 export const getUserByIdQuery = async (
   id: number,
   transaction: Transaction | null = null,
+  /** When given, only a user of this organization is returned. */
+  organizationId?: number,
 ): Promise<UserModel> => {
-  const users = await sequelize.query<UserModel>("SELECT * FROM users WHERE id = :id", {
-    replacements: { id },
+  const orgFilter = organizationId !== undefined ? " AND organization_id = :organizationId" : "";
+  const users = await sequelize.query<UserModel>(`SELECT * FROM users WHERE id = :id${orgFilter}`, {
+    replacements: { id, organizationId },
     model: UserModel,
     mapToModel: true, // converts results into UserModel instances
     ...(transaction ? { transaction } : {}), // include transaction if provided

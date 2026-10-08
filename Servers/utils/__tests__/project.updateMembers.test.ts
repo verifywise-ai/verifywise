@@ -10,7 +10,7 @@ jest.mock("../automation/project.automation.utils", () => ({
   buildProjectUpdateReplacements: jest.fn(() => ({})),
 }));
 
-import { updateProjectByIdQuery } from "../project.utils";
+import { createNewProjectQuery, updateProjectByIdQuery } from "../project.utils";
 import { sequelize } from "../../database/db";
 import { enqueueAutomationAction } from "../../services/automations/automationProducer";
 import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
@@ -19,7 +19,8 @@ const query = sequelize.query as unknown as jest.Mock<(...args: any[]) => Promis
 const transaction = {} as any;
 
 /**
- * Route each SQL statement to a canned result; members 7 and 6 exist.
+ * Route each SQL statement to a canned result; members 7 and 6 exist, and
+ * users 6, 7 and 8 belong to the organization (99 does not).
  * `rowExists: false` simulates the row being deleted concurrently;
  * `automationActive` adds an active "project_updated" automation.
  */
@@ -29,7 +30,12 @@ function mockDb({
   automationActive = false,
 }: { currentMembers?: number[]; rowExists?: boolean; automationActive?: boolean } = {}) {
   const row = rowExists ? [{ dataValues: { owner: 1 } }] : [];
+  const orgUsers = [6, 7, 8];
   query.mockImplementation(async (sql: string, opts: any = {}) => {
+    if (sql.startsWith("SELECT id FROM users"))
+      return opts.replacements.userIds
+        .filter((id: number) => orgUsers.includes(id))
+        .map((id: number) => ({ id }));
     if (sql.includes("FROM projects_members"))
       return currentMembers.map((user_id) => ({ user_id }));
     if (sql.startsWith("UPDATE projects SET")) return row;
@@ -107,6 +113,26 @@ describe("updateProjectByIdQuery members handling", () => {
       updateProjectByIdQuery(1, { project_title: "P" } as any, ["abc"] as any, 1, transaction),
     ).rejects.toBeInstanceOf(ValidationException);
     expect(deletes()).toHaveLength(0);
+  });
+
+  it("rejects a user from another organization before changing members", async () => {
+    await expect(
+      updateProjectByIdQuery(1, { project_title: "P" } as any, [7, 99], 1, transaction),
+    ).rejects.toBeInstanceOf(ValidationException);
+    expect(deletes()).toHaveLength(0);
+    expect(inserts()).toHaveLength(0);
+  });
+
+  it("rejects a user from another organization before creating the use case", async () => {
+    await expect(
+      createNewProjectQuery({ project_title: "P" } as any, [99], [], 1, 1, transaction),
+    ).rejects.toBeInstanceOf(ValidationException);
+    expect(statements().some((s) => s.startsWith("INSERT"))).toBe(false);
+  });
+
+  it("does not look up automations when no project field changed", async () => {
+    await updateProjectByIdQuery(1, {} as any, [7], 1, transaction);
+    expect(statements().some((s) => s.includes("FROM automation_triggers"))).toBe(false);
   });
 
   it("returns null when the row is gone, even with an active automation", async () => {
