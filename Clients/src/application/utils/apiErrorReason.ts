@@ -12,3 +12,15 @@ export function getApiErrorReason(error: unknown): string | null {
   if (typeof body?.data === "string" && body.data) return body.data;
   return null;
 }
+
+/**
+ * The server's reason for a rejected request (4xx), safe to show the user.
+ * Returns null for anything else: a 5xx reason can carry internal details,
+ * so it is never surfaced.
+ */
+export function getClientErrorReason(error: unknown): string | null {
+  const status = (error as { status?: unknown } | null)?.status;
+  if (typeof status !== "number" || status < 400 || status >= 500) return null;
+  const body = (error as { response?: { data?: unknown } }).response;
+  return typeof body?.data === "string" && body.data ? body.data : null;
+}

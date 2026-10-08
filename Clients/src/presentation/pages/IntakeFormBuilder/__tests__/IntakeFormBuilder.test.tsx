@@ -5,6 +5,7 @@ import { renderWithProviders } from "../../../../test/renderWithProviders";
 import { invalidateLLMKeyQueries } from "../../../../application/hooks/useLLMKeys";
 import CustomAxios from "../../../../infrastructure/api/customAxios";
 import { IntakeFormBuilder } from "../index";
+import CustomException from "../../../../infrastructure/exceptions/customeException";
 import {
   getIntakeForm,
   updateIntakeForm,
@@ -215,6 +216,39 @@ describe("IntakeFormBuilder Page", () => {
       expect(screen.getByText(AI_SCORING)).toBeInTheDocument();
       expect(toggle()).toBeInTheDocument();
       expect(await savedLlmKeyId()).toBe(3);
+    });
+
+    it("shows the server's reason when the save is rejected with a 4xx", async () => {
+      mockGetLLMKeys.mockResolvedValue({ data: { data: [openAIKey] } });
+      vi.mocked(getIntakeForm).mockResolvedValue(savedForm(3) as never);
+      vi.mocked(updateIntakeForm).mockRejectedValue(
+        new CustomException("LLM key not found", 400, {
+          message: "Bad Request",
+          data: "LLM key not found",
+        }) as never,
+      );
+      renderEditRoute();
+      await formLoaded();
+      await savedLlmKeyId();
+
+      expect(await screen.findByText("LLM key not found")).toBeInTheDocument();
+      expect(screen.queryByText("Failed to save form")).not.toBeInTheDocument();
+    });
+
+    it("keeps the generic message when the save fails with a 5xx", async () => {
+      vi.mocked(getIntakeForm).mockResolvedValue(savedForm(null, true) as never);
+      vi.mocked(updateIntakeForm).mockRejectedValue(
+        new CustomException("relation does not exist", 500, {
+          message: "Internal Server Error",
+          error: "relation does not exist",
+        }) as never,
+      );
+      renderEditRoute();
+      await formLoaded();
+      await savedLlmKeyId();
+
+      expect(await screen.findByText("Failed to save form")).toBeInTheDocument();
+      expect(screen.queryByText("relation does not exist")).not.toBeInTheDocument();
     });
 
     it("shows the suggested questions toggle when the panel is on without a key", async () => {

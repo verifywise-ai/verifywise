@@ -34,6 +34,7 @@ import {
 } from "../../../application/repository/intakeForm.repository";
 import CustomAxios from "../../../infrastructure/api/customAxios";
 import { useLLMKeys } from "../../../application/hooks/useLLMKeys";
+import { getClientErrorReason } from "../../../application/utils/apiErrorReason";
 import {
   FieldPalette,
   SuggestedQuestionsPanel,
@@ -302,10 +303,10 @@ export function IntakeFormBuilder() {
         }
       }
       return null;
-    } catch {
+    } catch (error) {
       setSnackbar({
         open: true,
-        message: "Failed to save form",
+        message: getClientErrorReason(error) ?? "Failed to save form",
         severity: "error",
       });
       return null;
@@ -347,10 +348,10 @@ export function IntakeFormBuilder() {
         message: "Form published successfully",
         severity: "success",
       });
-    } catch {
+    } catch (error) {
       setSnackbar({
         open: true,
-        message: "Failed to publish form",
+        message: getClientErrorReason(error) ?? "Failed to publish form",
         severity: "error",
       });
     } finally {
