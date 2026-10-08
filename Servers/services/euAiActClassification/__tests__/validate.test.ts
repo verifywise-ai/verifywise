@@ -74,7 +74,7 @@ describe("validateAnswers", () => {
   it("drops answers to questions that are hidden by earlier answers", () => {
     const { errors, answers } = validateAnswers(QUESTIONNAIRE_V2, {
       ...MINIMAL,
-      employment_use: "recruitment", // hidden: annex_iii_areas is "none"
+      employment_use: ["recruitment"], // hidden: annex_iii_areas is "none"
     });
     expect(errors).toEqual([]);
     expect(answers.employment_use).toBeUndefined();
@@ -93,5 +93,28 @@ describe("validateAnswers", () => {
     const { errors, answers } = validateAnswers(QUESTIONNAIRE_V2, { scope: "research_only" });
     expect(errors).toEqual([]);
     expect(answers).toEqual({ scope: "research_only" });
+  });
+
+  it("accepts multiple uses in one Annex III area", () => {
+    const { errors, answers } = validateAnswers(QUESTIONNAIRE_V2, {
+      ...MINIMAL,
+      annex_iii_areas: ["essential_services"],
+      essential_services_use: ["fraud_detection", "creditworthiness"],
+      profiling: "yes",
+    });
+    expect(errors).toEqual([]);
+    expect(answers.essential_services_use).toEqual(["fraud_detection", "creditworthiness"]);
+  });
+
+  it("rejects a string for a multi-select Annex III follow-up", () => {
+    const { errors } = validateAnswers(QUESTIONNAIRE_V2, {
+      ...MINIMAL,
+      annex_iii_areas: ["essential_services"],
+      essential_services_use: "fraud_detection", // should be an array
+      profiling: "yes",
+    });
+    expect(errors).toEqual(
+      expect.arrayContaining(['question "essential_services_use" takes a list of answers']),
+    );
   });
 });

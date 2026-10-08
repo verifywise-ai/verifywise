@@ -60,7 +60,7 @@ const followUp = (def: {
   id: def.id,
   text: def.text,
   articleRef: def.articleRef,
-  inputType: "single_select",
+  inputType: "multi_select",
   options: [...def.options, OTHER],
   showWhen: [[{ questionId: "annex_iii_areas", anyOf: [def.area] }]],
 });
