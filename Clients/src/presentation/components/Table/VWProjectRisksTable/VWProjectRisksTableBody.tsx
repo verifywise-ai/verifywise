@@ -353,7 +353,7 @@ const VWProjectRisksTableBody = ({
                           flashRow === row.id ? singleTheme.flashColors.background : "",
                       }}
                     >
-                      {formatCustomFieldValue(def, match?.value, users as User[])}
+                      {formatCustomFieldValue(def, match?.value, users as User[], formatDate)}
                     </TableCell>
                   );
                 })}
