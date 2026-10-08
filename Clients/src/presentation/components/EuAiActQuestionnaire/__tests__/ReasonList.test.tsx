@@ -1,19 +1,12 @@
 import { describe, it, expect, afterEach } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { ThemeProvider } from "@mui/material";
-import { light } from "../../../themes";
+import { screen } from "@testing-library/react";
 import ReasonList from "../ReasonList";
+import { renderWithProviders } from "../../../../test/renderWithProviders";
 import { setLanguage } from "../../../../test/i18nHelpers";
 import { storageService } from "../../../../infrastructure/storage";
 
 const items = [{ article: "Article 50", text: "Disclosure.", appliesFrom: "2026-08-02" }];
-// ReasonList reads theme.palette.border.dark, which MUI's default theme lacks.
-const renderList = () =>
-  render(
-    <ThemeProvider theme={light}>
-      <ReasonList heading="Why" items={items} />
-    </ThemeProvider>,
-  );
+const renderList = () => renderWithProviders(<ReasonList heading="Why" items={items} />);
 const dateIn = (locale: string) =>
   new Date("2026-08-02").toLocaleDateString(locale, {
     day: "numeric",
