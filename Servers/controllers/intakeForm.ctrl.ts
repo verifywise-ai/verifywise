@@ -42,9 +42,13 @@ import {
 import {
   getQuestionnaire,
   CURRENT_QUESTIONNAIRE_VERSION,
+  prepareIntakeRiskStep,
   type Answers,
 } from "../services/euAiActClassification";
-import { getLatestRunForSubmissionQuery } from "../utils/euAiActClassification.utils";
+import {
+  getLatestRunForSubmissionQuery,
+  insertClassificationRunQuery,
+} from "../utils/euAiActClassification.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { sanitizeUserHtml } from "../utils/sanitization.utils";
 import logger from "../utils/logger/fileLogger";
@@ -1548,6 +1552,7 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
       captchaToken,
       captchaAnswer,
       resubmissionToken,
+      euAiActRiskAnswers,
     } = req.body;
 
     // Validate contact info (always required)
@@ -1582,6 +1587,16 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
     }
 
     // Validate CAPTCHA
+    const riskStep = prepareIntakeRiskStep(
+      Boolean(form.euAiActRiskStepEnabled),
+      euAiActRiskAnswers,
+    );
+    if (!riskStep.ok) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400]({ message: req.t!(riskStep.message), errors: riskStep.errors }));
+    }
+
     if (!captchaToken || captchaAnswer === undefined) {
       return res.status(400).json(STATUS_CODE[400](req.t!("CAPTCHA verification required")));
     }
@@ -1650,6 +1665,26 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
         tenantInfo.orgId,
         transaction,
       );
+
+      if (riskStep.prepared) {
+        await insertClassificationRunQuery(
+          {
+            useCaseId: null,
+            intakeSubmissionId: submission.id,
+            questionnaireVersion: riskStep.prepared.questionnaireVersion,
+            role: riskStep.prepared.result.role,
+            answers: riskStep.prepared.answers,
+            result: riskStep.prepared.result,
+            reviewerLevel: null,
+            reviewerJustification: null,
+            reviewedBy: null,
+            source: "intake",
+            createdBy: null,
+          },
+          tenantInfo.orgId,
+          transaction,
+        );
+      }
 
       await transaction.commit();
 
@@ -1878,6 +1913,7 @@ export async function submitPublicForm(req: Request, res: Response) {
       captchaToken,
       captchaAnswer,
       resubmissionToken,
+      euAiActRiskAnswers,
     } = req.body;
 
     // Validate contact info (always required)
@@ -1909,6 +1945,16 @@ export async function submitPublicForm(req: Request, res: Response) {
           }),
         );
       }
+    }
+
+    const riskStep = prepareIntakeRiskStep(
+      Boolean(form.euAiActRiskStepEnabled),
+      euAiActRiskAnswers,
+    );
+    if (!riskStep.ok) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400]({ message: req.t!(riskStep.message), errors: riskStep.errors }));
     }
 
     if (!captchaToken || captchaAnswer === undefined) {
@@ -1979,6 +2025,26 @@ export async function submitPublicForm(req: Request, res: Response) {
         tenantInfo.id,
         transaction,
       );
+
+      if (riskStep.prepared) {
+        await insertClassificationRunQuery(
+          {
+            useCaseId: null,
+            intakeSubmissionId: submission.id,
+            questionnaireVersion: riskStep.prepared.questionnaireVersion,
+            role: riskStep.prepared.result.role,
+            answers: riskStep.prepared.answers,
+            result: riskStep.prepared.result,
+            reviewerLevel: null,
+            reviewerJustification: null,
+            reviewedBy: null,
+            source: "intake",
+            createdBy: null,
+          },
+          tenantInfo.id,
+          transaction,
+        );
+      }
 
       await transaction.commit();
 
