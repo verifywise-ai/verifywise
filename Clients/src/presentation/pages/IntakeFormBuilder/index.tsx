@@ -455,8 +455,11 @@ export function IntakeFormBuilder() {
   // ============================================================================
 
   const mappingCoverage = useMemo(
-    () => analyzeMappingCoverage(form.schema.fields, form.entityType),
-    [form.schema.fields, form.entityType],
+    () =>
+      analyzeMappingCoverage(form.schema.fields, form.entityType, {
+        riskStepEnabled: form.euAiActRiskStepEnabled ?? false,
+      }),
+    [form.schema.fields, form.entityType, form.euAiActRiskStepEnabled],
   );
 
   const selectedField = form.schema.fields.find((f) => f.id === selectedFieldId);

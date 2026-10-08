@@ -588,8 +588,13 @@ export interface MappingCoverage {
 export function analyzeMappingCoverage(
   fields: FormField[],
   entityType: IntakeEntityType,
+  options: { riskStepEnabled?: boolean } = {},
 ): MappingCoverage {
-  const entityMappings = ENTITY_FIELD_MAPPINGS[entityType] || [];
+  // With the EU AI Act risk step on, the server sets ai_risk_classification
+  // itself and rejects a form field mapped to it, so it is never offered.
+  const entityMappings = (ENTITY_FIELD_MAPPINGS[entityType] || []).filter(
+    (m) => !(options.riskStepEnabled && m.field === "ai_risk_classification"),
+  );
   const mappedKeys = new Set(
     fields.filter((f) => f.entityFieldMapping).map((f) => f.entityFieldMapping!),
   );
