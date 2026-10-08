@@ -5,7 +5,10 @@ import { renderWithProviders } from "../../../../test/renderWithProviders";
 import { invalidateLLMKeyQueries } from "../../../../application/hooks/useLLMKeys";
 import CustomAxios from "../../../../infrastructure/api/customAxios";
 import { IntakeFormBuilder } from "../index";
-import { getIntakeForm } from "../../../../application/repository/intakeForm.repository";
+import {
+  getIntakeForm,
+  updateIntakeForm,
+} from "../../../../application/repository/intakeForm.repository";
 
 // The key list is cached per organization; give the page one.
 const ORG_ID = 7;
@@ -73,12 +76,21 @@ vi.mock("../DesignPanel", () => ({
 describe("IntakeFormBuilder Page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetLLMKeys.mockResolvedValue({ data: { data: [] } });
+    // Reset implementations too, so a per-test form or key list never leaks.
+    mockGetLLMKeys.mockReset().mockResolvedValue({ data: { data: [] } });
+    vi.mocked(getIntakeForm)
+      .mockReset()
+      .mockResolvedValue({ data: null } as never);
+    vi.mocked(updateIntakeForm)
+      .mockReset()
+      .mockResolvedValue({ data: {} } as never);
   });
 
+  const llmKeyPicker = () =>
+    within(screen.getByText("LLM key").parentElement as HTMLElement).getByRole("combobox");
+
   const openLLMKeyOptions = () => {
-    const label = screen.getByText("LLM key");
-    fireEvent.mouseDown(within(label.parentElement as HTMLElement).getByRole("combobox"));
+    fireEvent.mouseDown(llmKeyPicker());
     return screen.getByRole("listbox");
   };
 
@@ -119,15 +131,15 @@ describe("IntakeFormBuilder Page", () => {
     });
   });
 
-  describe("a form whose stored LLM key no longer exists", () => {
-    const savedForm = (llmKeyId: number) => ({
+  describe("a form's stored LLM key", () => {
+    const savedForm = (llmKeyId: number | null, suggestedQuestionsEnabled = true) => ({
       data: {
         id: 5,
         name: "Intake",
         entityType: "use_case",
         status: "draft",
         schema: { version: "1.0", fields: [] },
-        suggestedQuestionsEnabled: true,
+        suggestedQuestionsEnabled,
         llmKeyId,
       },
     });
@@ -140,14 +152,31 @@ describe("IntakeFormBuilder Page", () => {
         { route: "/intake-forms/5/edit" },
       );
 
-    it("treats the form as having no key, so nothing is fetched", async () => {
+    const AI_SCORING = /Submissions will be scored using AI-enhanced risk analysis/;
+    const toggle = () => screen.queryByText("Suggested questions");
+    // The breadcrumb shows the saved form name once it has loaded.
+    const formLoaded = () => screen.findAllByText("Intake");
+    // Flip the suggested questions toggle to make the form dirty, then save.
+    const savedLlmKeyId = async () => {
+      fireEvent.click(toggle()!);
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(updateIntakeForm).toHaveBeenCalled());
+      return (vi.mocked(updateIntakeForm).mock.calls[0][1] as { llmKeyId: unknown }).llmKeyId;
+    };
+
+    it("is treated as no key once the key list has loaded without it", async () => {
       mockGetLLMKeys.mockResolvedValue({ data: { data: [openAIKey] } });
       vi.mocked(getIntakeForm).mockResolvedValue(savedForm(8) as never);
       renderEditRoute();
+      await formLoaded();
 
-      const panel = await screen.findByTestId("suggested-questions");
-      await waitFor(() => expect(mockGetLLMKeys).toHaveBeenCalled());
-      expect(panel).toHaveAttribute("data-llm-key", "null");
+      // Wait for the key list itself before judging the stored key.
+      expect(await within(openLLMKeyOptions()).findByText("OpenAI — gpt-4o")).toBeInTheDocument();
+      fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
+
+      expect(screen.getByTestId("suggested-questions")).toHaveAttribute("data-llm-key", "null");
+      expect(screen.queryByText(AI_SCORING)).not.toBeInTheDocument();
+      expect(await savedLlmKeyId()).toBeNull();
     });
 
     it("passes the key through when it is one of the organization's keys", async () => {
@@ -158,6 +187,52 @@ describe("IntakeFormBuilder Page", () => {
       await waitFor(() =>
         expect(screen.getByTestId("suggested-questions")).toHaveAttribute("data-llm-key", "3"),
       );
+    });
+
+    it("still counts while the key list is loading", async () => {
+      mockGetLLMKeys.mockReturnValue(new Promise(() => {}));
+      vi.mocked(getIntakeForm).mockResolvedValue(savedForm(3, false) as never);
+      renderEditRoute();
+      await formLoaded();
+
+      expect(mockGetLLMKeys).toHaveBeenCalled();
+      expect(llmKeyPicker()).toHaveTextContent("Saved key");
+      expect(screen.getByText(AI_SCORING)).toBeInTheDocument();
+      expect(toggle()).toBeInTheDocument();
+      expect(await savedLlmKeyId()).toBe(3);
+    });
+
+    it("still counts when the key list fails to load", async () => {
+      mockGetLLMKeys.mockRejectedValue(new Error("network"));
+      vi.mocked(getIntakeForm).mockResolvedValue(savedForm(3, false) as never);
+      const { queryClient } = renderEditRoute();
+      await formLoaded();
+      await waitFor(() =>
+        expect(queryClient.getQueryState(["llmKeys", ORG_ID])?.status).toBe("error"),
+      );
+
+      expect(llmKeyPicker()).toHaveTextContent("Saved key");
+      expect(screen.getByText(AI_SCORING)).toBeInTheDocument();
+      expect(toggle()).toBeInTheDocument();
+      expect(await savedLlmKeyId()).toBe(3);
+    });
+
+    it("shows the suggested questions toggle when the panel is on without a key", async () => {
+      vi.mocked(getIntakeForm).mockResolvedValue(savedForm(null, true) as never);
+      renderEditRoute();
+      await formLoaded();
+
+      expect(screen.getByTestId("suggested-questions")).toBeInTheDocument();
+      expect(toggle()).toBeInTheDocument();
+    });
+
+    it("hides the toggle when there is no key and the panel is off", async () => {
+      vi.mocked(getIntakeForm).mockResolvedValue(savedForm(null, false) as never);
+      renderEditRoute();
+      await formLoaded();
+      await waitFor(() => expect(mockGetLLMKeys).toHaveBeenCalled());
+
+      expect(toggle()).not.toBeInTheDocument();
     });
   });
 });

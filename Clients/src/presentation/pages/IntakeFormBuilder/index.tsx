@@ -94,7 +94,15 @@ export function IntakeFormBuilder() {
   const [isSaving, setIsSaving] = useState(false);
   // Shared, per-organization cache: refreshed wherever a key changes. A failed
   // load leaves the picker with only "None", as before.
-  const { keys: llmKeys } = useLLMKeys();
+  const { keys: llmKeys, loading: llmKeysLoading, isError: llmKeysError } = useLLMKeys();
+  // A stored id can outlive its key (deleted elsewhere). Once the key list has
+  // loaded, an id that is not in it counts as no key. While the list is
+  // loading or failed to load, the stored id is trusted as is.
+  const llmKeysLoaded = !llmKeysLoading && !llmKeysError;
+  const activeLlmKeyId =
+    form.llmKeyId && (!llmKeysLoaded || llmKeys.some((key) => key.id === form.llmKeyId))
+      ? form.llmKeyId
+      : null;
   const [formSettingsOpen, setFormSettingsOpen] = useState(true);
   const [orgUsers, setOrgUsers] = useState<
     Array<{ id: number; name: string; surname?: string; email: string }>
@@ -263,7 +271,7 @@ export function IntakeFormBuilder() {
         slug: form.slug || generateSlug(form.name),
         recipients: form.recipients ?? [],
         riskTierSystem: form.riskTierSystem ?? "eu_ai_act",
-        llmKeyId: form.llmKeyId ?? null,
+        llmKeyId: activeLlmKeyId,
         suggestedQuestionsEnabled: form.suggestedQuestionsEnabled ?? false,
       };
       if (isEditing && formId) {
@@ -314,7 +322,7 @@ export function IntakeFormBuilder() {
         slug: form.slug || generateSlug(form.name),
         recipients: form.recipients ?? [],
         riskTierSystem: form.riskTierSystem ?? "eu_ai_act",
-        llmKeyId: form.llmKeyId ?? null,
+        llmKeyId: activeLlmKeyId,
         suggestedQuestionsEnabled: form.suggestedQuestionsEnabled ?? false,
         status: IntakeFormStatus.ACTIVE,
       };
@@ -461,18 +469,17 @@ export function IntakeFormBuilder() {
     ? form.schema.fields.find((f) => f.id === fieldToDelete)?.label || "this field"
     : "this field";
 
-  // A stored id can outlive its key (deleted elsewhere). Only an id that is
-  // one of the organization's keys counts, otherwise the form behaves as if
-  // no key were selected.
-  const activeLlmKeyId =
-    form.llmKeyId && llmKeys.some((key) => key.id === form.llmKeyId) ? form.llmKeyId : null;
-
   const llmKeyItems = [
     { _id: "", name: "None" },
     ...llmKeys.map((key) => ({
       _id: String(key.id),
       name: `${key.name} — ${key.model}`,
     })),
+    // The stored key while the list is loading or failed to load, so the
+    // picker shows it rather than an empty value.
+    ...(activeLlmKeyId && !llmKeys.some((key) => key.id === activeLlmKeyId)
+      ? [{ _id: String(activeLlmKeyId), name: "Saved key" }]
+      : []),
   ];
 
   // ============================================================================
@@ -1101,7 +1108,8 @@ export function IntakeFormBuilder() {
                           </Typography>
                         </Box>
 
-                        {activeLlmKeyId && (
+                        {/* Shown whenever the panel can render, so it can always be turned off. */}
+                        {(activeLlmKeyId || form.suggestedQuestionsEnabled) && (
                           <Box
                             sx={{
                               display: "flex",
