@@ -27,9 +27,7 @@ const FORM_SELECT_COLUMNS = `
   ttl_expires_at as "ttlExpiresAt", public_id as "publicId",
   recipients, risk_tier_system as "riskTierSystem",
   risk_assessment_config as "riskAssessmentConfig",
-  (SELECT k.id FROM llm_keys k
-    WHERE k.id = intake_forms.llm_key_id
-      AND k.organization_id = intake_forms.organization_id) as "llmKeyId",
+  llm_key_id as "llmKeyId",
   suggested_questions_enabled as "suggestedQuestionsEnabled",
   design_settings as "designSettings",
   created_by as "createdBy",
