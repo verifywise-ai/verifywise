@@ -147,6 +147,39 @@ function isLlmKeyFkViolation(error: unknown): boolean {
   return error.index === LLM_KEY_FK || parent?.constraint === LLM_KEY_FK;
 }
 
+/**
+ * Shared shell of the LLM endpoints: answers 400 for a missing or invalid key
+ * id, 404 when the key is not one of the organization's, and 500 otherwise.
+ * `missingMessage` is the translated 400 message when required input is
+ * missing, or null.
+ */
+async function handleLlmKeyRequest(
+  req: Request,
+  res: Response,
+  functionName: string,
+  missingMessage: string | null,
+  generate: (keyId: number) => Promise<Response>,
+): Promise<Response> {
+  try {
+    if (missingMessage) {
+      return res.status(400).json(STATUS_CODE[400](missingMessage));
+    }
+    const keyId = parseLlmKeyId(req.body?.llmKeyId);
+    if (isNaN(keyId)) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400](req.t!("LLM key ID must be a positive integer")));
+    }
+    return await generate(keyId);
+  } catch (error) {
+    if (error instanceof NotFoundException) {
+      return res.status(404).json(STATUS_CODE[404]({ message: req.t!("LLM key not found") }));
+    }
+    logger.error(`Error in ${functionName}:`, error);
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
 // ============================================================================
 // SERVER-SIDE FORM DATA VALIDATION
 // ============================================================================
@@ -1335,80 +1368,50 @@ export async function rejectSubmission(req: Request, res: Response) {
  * Get LLM-suggested questions
  */
 export async function getLLMSuggestedQuestions(req: Request, res: Response) {
-  try {
-    const { entityType, context, llmKeyId } = req.body;
-
-    if (!llmKeyId) {
-      return res.status(400).json(STATUS_CODE[400](req.t!("LLM key ID is required")));
-    }
-
-    const keyId = parseLlmKeyId(llmKeyId);
-    if (isNaN(keyId)) {
-      return res
-        .status(400)
-        .json(STATUS_CODE[400](req.t!("LLM key ID must be a positive integer")));
-    }
-
-    const questions = await generateSuggestedQuestions(
-      entityType || "use_case",
-      context || "",
-      keyId,
-      req.organizationId!,
-    );
-
-    if (!questions) {
-      return res.status(500).json(STATUS_CODE[500](req.t!("Failed to generate questions")));
-    }
-
-    return res.status(200).json(STATUS_CODE[200](questions));
-  } catch (error) {
-    if (error instanceof NotFoundException) {
-      return res.status(404).json(STATUS_CODE[404]({ message: req.t!("LLM key not found") }));
-    }
-    logger.error("Error in getLLMSuggestedQuestions:", error);
-    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
-  }
+  const { entityType, context, llmKeyId } = req.body ?? {};
+  return handleLlmKeyRequest(
+    req,
+    res,
+    "getLLMSuggestedQuestions",
+    llmKeyId ? null : req.t!("LLM key ID is required"),
+    async (keyId) => {
+      const questions = await generateSuggestedQuestions(
+        entityType || "use_case",
+        context || "",
+        keyId,
+        req.organizationId!,
+      );
+      if (!questions) {
+        return res.status(500).json(STATUS_CODE[500](req.t!("Failed to generate questions")));
+      }
+      return res.status(200).json(STATUS_CODE[200](questions));
+    },
+  );
 }
 
 /**
  * Generate field guidance text
  */
 export async function getFieldGuidance(req: Request, res: Response) {
-  try {
-    const { fieldLabel, entityType, llmKeyId } = req.body;
-
-    if (!fieldLabel || !llmKeyId) {
-      return res
-        .status(400)
-        .json(STATUS_CODE[400](req.t!("Field label and LLM key ID are required")));
-    }
-
-    const keyId = parseLlmKeyId(llmKeyId);
-    if (isNaN(keyId)) {
-      return res
-        .status(400)
-        .json(STATUS_CODE[400](req.t!("LLM key ID must be a positive integer")));
-    }
-
-    const guidanceText = await generateFieldGuidance(
-      fieldLabel,
-      entityType || "use_case",
-      keyId,
-      req.organizationId!,
-    );
-
-    if (!guidanceText) {
-      return res.status(500).json(STATUS_CODE[500](req.t!("Failed to generate guidance")));
-    }
-
-    return res.status(200).json(STATUS_CODE[200]({ guidanceText }));
-  } catch (error) {
-    if (error instanceof NotFoundException) {
-      return res.status(404).json(STATUS_CODE[404]({ message: req.t!("LLM key not found") }));
-    }
-    logger.error("Error in getFieldGuidance:", error);
-    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
-  }
+  const { fieldLabel, entityType, llmKeyId } = req.body ?? {};
+  return handleLlmKeyRequest(
+    req,
+    res,
+    "getFieldGuidance",
+    fieldLabel && llmKeyId ? null : req.t!("Field label and LLM key ID are required"),
+    async (keyId) => {
+      const guidanceText = await generateFieldGuidance(
+        fieldLabel,
+        entityType || "use_case",
+        keyId,
+        req.organizationId!,
+      );
+      if (!guidanceText) {
+        return res.status(500).json(STATUS_CODE[500](req.t!("Failed to generate guidance")));
+      }
+      return res.status(200).json(STATUS_CODE[200]({ guidanceText }));
+    },
+  );
 }
 
 // ============================================================================

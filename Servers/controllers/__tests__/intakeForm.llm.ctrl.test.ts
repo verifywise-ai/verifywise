@@ -134,6 +134,32 @@ describe("intake LLM endpoints", () => {
     expect(res.status).toHaveBeenCalledWith(500);
   });
 
+  it("suggested questions answers 400 when the key id is missing", async () => {
+    const res = createRes();
+    await getLLMSuggestedQuestions(req({}), res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json.mock.calls[0][0].data).toBe("LLM key ID is required");
+    expect(mockQuestions).not.toHaveBeenCalled();
+  });
+
+  it("field guidance answers 400 when the field label is missing", async () => {
+    const res = createRes();
+    await getFieldGuidance(req({ llmKeyId: 8 }), res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json.mock.calls[0][0].data).toBe("Field label and LLM key ID are required");
+    expect(mockGuidance).not.toHaveBeenCalled();
+  });
+
+  it("field guidance answers 500 when an unexpected error is thrown", async () => {
+    mockGuidance.mockRejectedValueOnce(new Error("boom") as never);
+    const res = createRes();
+    await getFieldGuidance(req({ fieldLabel: "Owner", llmKeyId: 8 }), res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+  });
+
   it("returns questions for a real key", async () => {
     mockQuestions.mockResolvedValueOnce([{ label: "Q" }] as never);
     const res = createRes();
