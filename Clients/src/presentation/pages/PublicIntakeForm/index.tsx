@@ -297,12 +297,14 @@ export function PublicIntakeForm() {
     } catch (err: unknown) {
       console.error("Failed to submit form:", err);
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
-      const serverResponse = (
-        err as { response?: { status?: number; data?: { message?: string; errors?: unknown } } }
-      )?.response;
-      if (riskStep && serverResponse?.status === 400 && serverResponse.data?.errors) {
+      // apiServices throws CustomException: status on the error, the server envelope
+      // ({ message, data: { message, errors } }) on `response`.
+      const status = (err as { status?: number })?.status;
+      const detail = (err as { response?: { data?: { message?: string; errors?: unknown } } })
+        ?.response?.data;
+      if (riskStep && status === 400 && detail?.errors) {
         // The server rejected the risk answers: send the submitter back to that step.
-        setError(serverResponse.data.message || "Please review your risk classification answers.");
+        setError(detail.message || "Please review your risk classification answers.");
         setStep("risk");
         setCaptchaValue("");
         setCaptchaRefreshTrigger((prev) => prev + 1);

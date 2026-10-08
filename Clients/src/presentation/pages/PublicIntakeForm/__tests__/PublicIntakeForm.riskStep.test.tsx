@@ -3,6 +3,7 @@ import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { Route, Routes } from "react-router";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import { PublicIntakeForm } from "..";
+import CustomException from "../../../../infrastructure/exceptions/customeException";
 
 const repo = vi.hoisted(() => ({
   getPublicFormById: vi.fn(),
@@ -133,13 +134,13 @@ describe("PublicIntakeForm risk step", () => {
     repo.getPublicFormById.mockResolvedValue(
       formResponse({ euAiActRiskStep: { questionnaire: QUESTIONNAIRE } }),
     );
-    repo.submitPublicFormById.mockRejectedValue({
-      message: "Request failed with status code 400",
-      response: {
-        status: 400,
+    repo.submitPublicFormById.mockRejectedValue(
+      // Same shape apiServices.handleError builds from the server's 400 envelope.
+      new CustomException("Risk classification answers are invalid", 400, {
+        message: "Bad Request",
         data: { message: "Risk classification answers are invalid", errors: [{ id: "scope" }] },
-      },
-    });
+      }),
+    );
     vi.spyOn(console, "error").mockImplementation(() => {});
     renderPage();
 
