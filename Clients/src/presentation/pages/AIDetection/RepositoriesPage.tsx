@@ -52,7 +52,7 @@ import AddRepositoryModal from "./AddRepositoryModal";
 import { palette } from "../../themes/palette";
 import singleTheme from "../../themes/v1SingleTheme";
 import { keyframes } from "@mui/system";
-import { displayFormattedDate, displayFormattedDateTime } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 const spin = keyframes`from { transform: rotate(0deg); } to { transform: rotate(360deg); }`;
 
@@ -89,7 +89,10 @@ function formatSchedule(repo: AIDetectionRepository): string {
   }
 }
 
-function formatRelativeTime(dateStr: string | null | undefined): string {
+function formatRelativeTime(
+  dateStr: string | null | undefined,
+  formatDate: ReturnType<typeof useFormattedDate>,
+): string {
   if (!dateStr) return "—";
   const date = new Date(dateStr);
   const now = new Date();
@@ -102,12 +105,15 @@ function formatRelativeTime(dateStr: string | null | undefined): string {
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 30) return `${diffDays}d ago`;
-  return displayFormattedDate(date);
+  return formatDate(date);
 }
 
-function formatNextScan(dateStr: string | null | undefined): string {
+function formatNextScan(
+  dateStr: string | null | undefined,
+  formatDate: ReturnType<typeof useFormattedDate>,
+): string {
   if (!dateStr) return "—";
-  return displayFormattedDateTime(dateStr);
+  return formatDate(dateStr, { includeTime: true });
 }
 
 function getStatusChipColor(
@@ -136,6 +142,7 @@ const TABLE_COLUMNS = [
 ];
 
 export default function RepositoriesPage() {
+  const formatDate = useFormattedDate();
   const theme = useTheme();
   const { startTrackingScan, refreshRecentScans, refreshRepositoryCount } =
     useAIDetectionSidebarContext();
@@ -490,7 +497,7 @@ export default function RepositoriesPage() {
                       {repo.last_scan_at ? (
                         <Stack direction="row" alignItems="center" gap="8px">
                           <Typography sx={{ fontSize: "13px" }}>
-                            {formatRelativeTime(repo.last_scan_at)}
+                            {formatRelativeTime(repo.last_scan_at, formatDate)}
                           </Typography>
                           {repo.last_scan_status && (
                             <Chip
@@ -509,7 +516,9 @@ export default function RepositoriesPage() {
                     {/* Next scan */}
                     <TableCell sx={bodyCellStyle}>
                       <Typography sx={{ fontSize: "13px", color: palette.text.accent }}>
-                        {repo.schedule_enabled ? formatNextScan(repo.next_scan_at) : "—"}
+                        {repo.schedule_enabled
+                          ? formatNextScan(repo.next_scan_at, formatDate)
+                          : "—"}
                       </Typography>
                     </TableCell>
 

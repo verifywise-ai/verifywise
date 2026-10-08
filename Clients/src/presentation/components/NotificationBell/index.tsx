@@ -16,7 +16,7 @@ import VWTooltip from "../VWTooltip";
 import "../Layout/icon-shake.css";
 
 import { text } from "../../themes/palette";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 /**
  * Rewrite legacy action_url values that were stored in older notifications
@@ -48,7 +48,10 @@ const repairLegacyActionUrl = (url: string): string => {
 /**
  * Format relative time from ISO string
  */
-const formatRelativeTime = (dateString: string): string => {
+const formatRelativeTime = (
+  dateString: string,
+  formatDate: ReturnType<typeof useFormattedDate>,
+): string => {
   const date = new Date(dateString);
   const now = new Date();
   const diff = now.getTime() - date.getTime();
@@ -61,7 +64,7 @@ const formatRelativeTime = (dateString: string): string => {
   if (minutes < 60) return `${minutes}m ago`;
   if (hours < 24) return `${hours}h ago`;
   if (days < 7) return `${days}d ago`;
-  return displayFormattedDate(date);
+  return formatDate(date);
 };
 
 /**
@@ -104,6 +107,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
   onNavigate,
   onDelete,
 }) => {
+  const formatDate = useFormattedDate();
   const isRead = notification.is_read;
   const color = getNotificationColor(notification.type);
 
@@ -180,7 +184,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
             mt: 0.5,
           }}
         >
-          {notification.created_at && formatRelativeTime(notification.created_at)}
+          {notification.created_at && formatRelativeTime(notification.created_at, formatDate)}
         </Typography>
       </Box>
 
