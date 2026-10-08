@@ -108,6 +108,17 @@ export const updateLLMKeyByIdQuery = async (
   return result[0];
 };
 
+export const llmKeyExistsQuery = async (id: number, organizationId: number): Promise<boolean> => {
+  const rows = await sequelize.query(
+    `SELECT id FROM llm_keys WHERE organization_id = :organizationId AND id = :id LIMIT 1;`,
+    {
+      replacements: { organizationId, id },
+      type: QueryTypes.SELECT,
+    },
+  );
+  return rows.length > 0;
+};
+
 export const deleteLLMKeyQuery = async (id: number, organizationId: number) => {
   const result = await sequelize.query(
     `DELETE FROM llm_keys WHERE organization_id = :organizationId AND id = :id RETURNING *;`,

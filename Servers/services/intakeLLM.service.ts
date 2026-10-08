@@ -2,6 +2,7 @@ import { generateText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { getLLMKeysWithKeyQuery } from "../utils/llmKey.utils";
+import { NotFoundException } from "../domain.layer/exceptions/custom.exception";
 import logger from "../utils/logger/fileLogger";
 
 // ============================================================================
@@ -21,11 +22,15 @@ export interface SuggestedQuestion {
 // HELPERS
 // ============================================================================
 
+/**
+ * Throws NotFoundException when the organization has no key with this id, so
+ * callers can tell a missing key apart from a failed generation.
+ */
 async function getModelFromKey(llmKeyId: number, organizationId: number) {
   const keys = await getLLMKeysWithKeyQuery(organizationId);
   const llmKey = keys.find((k: any) => k.id === llmKeyId);
 
-  if (!llmKey) return null;
+  if (!llmKey) throw new NotFoundException("LLM key not found", "llm_key", llmKeyId);
 
   const keyName = ((llmKey as any).name || "").toLowerCase();
   if (keyName.includes("anthropic") || keyName.includes("claude")) {
@@ -59,7 +64,6 @@ export async function generateSuggestedQuestions(
 ): Promise<SuggestedQuestion[] | null> {
   try {
     const model = await getModelFromKey(llmKeyId, organizationId);
-    if (!model) return null;
 
     const prompt = `You are an AI governance expert. Generate 5 additional intake form questions for a "${entityType}" entity type.
 
@@ -88,6 +92,7 @@ Return ONLY valid JSON array. Each question should help assess AI governance ris
 
     return JSON.parse(jsonMatch[0]) as SuggestedQuestion[];
   } catch (error) {
+    if (error instanceof NotFoundException) throw error;
     logger.error("Failed to generate suggested questions:", error);
     return null;
   }
@@ -105,7 +110,6 @@ export async function generateFieldGuidance(
 ): Promise<string | null> {
   try {
     const model = await getModelFromKey(llmKeyId, organizationId);
-    if (!model) return null;
 
     const prompt = `You are an AI governance expert. Write a brief guidance text (1-2 sentences, max 150 characters) explaining why this field matters for AI governance compliance.
 
@@ -123,6 +127,7 @@ Return ONLY the guidance text, no quotes or formatting.`;
 
     return result.text.trim();
   } catch (error) {
+    if (error instanceof NotFoundException) throw error;
     logger.error("Failed to generate field guidance:", error);
     return null;
   }

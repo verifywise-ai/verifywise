@@ -2,7 +2,7 @@
  * @fileoverview Intake LLM Service Tests
  *
  * Tests for generateSuggestedQuestions and generateFieldGuidance:
- * model resolution, prompt building, response parsing, key not found fallback.
+ * model resolution, prompt building, response parsing, key not found error.
  *
  * @module tests/intakeLLM.service
  */
@@ -35,6 +35,7 @@ jest.mock("../../utils/logger/fileLogger", () => ({
 import { generateSuggestedQuestions, generateFieldGuidance } from "../intakeLLM.service";
 import { getLLMKeysWithKeyQuery } from "../../utils/llmKey.utils";
 import { generateText } from "ai";
+import { NotFoundException } from "../../domain.layer/exceptions/custom.exception";
 
 const mockGetLLMKeys = getLLMKeysWithKeyQuery as jest.MockedFunction<typeof getLLMKeysWithKeyQuery>;
 const mockGenerateText = generateText as jest.MockedFunction<typeof generateText>;
@@ -45,12 +46,14 @@ describe("intakeLLM.service", () => {
   });
 
   describe("generateSuggestedQuestions", () => {
-    it("should return null when LLM key is not found", async () => {
-      mockGetLLMKeys.mockResolvedValue([]);
+    it("should throw NotFoundException when LLM key is not found", async () => {
+      mockGetLLMKeys.mockResolvedValue([
+        { id: 2, name: "OpenAI", key: "sk-test", model: "gpt-4o-mini" },
+      ] as any);
 
-      const result = await generateSuggestedQuestions("MODEL", "context", 1, 10);
-
-      expect(result).toBeNull();
+      await expect(generateSuggestedQuestions("MODEL", "context", 1, 10)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
       expect(mockGenerateText).not.toHaveBeenCalled();
     });
 
@@ -111,12 +114,13 @@ describe("intakeLLM.service", () => {
   });
 
   describe("generateFieldGuidance", () => {
-    it("should return null when LLM key is not found", async () => {
+    it("should throw NotFoundException when LLM key is not found", async () => {
       mockGetLLMKeys.mockResolvedValue([]);
 
-      const result = await generateFieldGuidance("Risk Level", "MODEL", 1, 10);
-
-      expect(result).toBeNull();
+      await expect(generateFieldGuidance("Risk Level", "MODEL", 1, 10)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(mockGenerateText).not.toHaveBeenCalled();
     });
 
     it("should return trimmed guidance text", async () => {
