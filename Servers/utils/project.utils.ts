@@ -484,11 +484,18 @@ export const updateProjectByIdQuery = async (
       transaction,
     },
   );
-  const currentMembers = _currentMembers.map((m) => m.user_id);
+  const currentMembers = _currentMembers.map((m) => Number(m.user_id));
   // A partial update (e.g. only ai_risk_classification or status) must not
   // touch members: treating a missing list as [] removed every member.
-  const deletedMembers = members ? currentMembers.filter((m) => !members.includes(m)) : [];
-  const newMembers = members ? members.filter((m) => !currentMembers.includes(m)) : [];
+  // Clients send ids as strings ("7") while the table holds numbers, so
+  // normalise and de-duplicate before diffing; otherwise every save deleted
+  // and re-inserted all members, and a repeated id failed on the unique key.
+  const memberIds =
+    members === undefined
+      ? undefined
+      : [...new Set(members.map(Number).filter((m) => Number.isInteger(m) && m > 0))];
+  const deletedMembers = memberIds ? currentMembers.filter((m) => !memberIds.includes(m)) : [];
+  const newMembers = memberIds ? memberIds.filter((m) => !currentMembers.includes(m)) : [];
 
   for (let member of deletedMembers) {
     await sequelize.query(

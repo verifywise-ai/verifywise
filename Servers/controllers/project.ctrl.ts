@@ -503,8 +503,10 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
     }
 
     const updatedProject: Partial<ProjectModel> & { members?: number[] } = updateData;
-    // Only replace members when the request sends a list; undefined leaves them unchanged.
-    const members = Array.isArray(updatedProject.members) ? updatedProject.members : undefined;
+    // Only replace members when the request sends a list; a missing field leaves them
+    // unchanged. null still clears them, as it did before.
+    const rawMembers = updatedProject.members as number[] | null | undefined;
+    const members = rawMembers === null ? [] : Array.isArray(rawMembers) ? rawMembers : undefined;
 
     delete updatedProject.members;
     delete updatedProject.id;

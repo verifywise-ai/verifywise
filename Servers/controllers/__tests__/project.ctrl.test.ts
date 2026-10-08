@@ -107,6 +107,7 @@ import {
   getProjectById,
   createProject,
   updateProjectById,
+  updateProjectStatus,
   deleteProjectById,
   getProjectStatsById,
 } from "../project.ctrl";
@@ -318,6 +319,17 @@ describe("project.ctrl", () => {
         expect.anything(),
       );
     });
+    it("treats members: null as clearing the list, as before", async () => {
+      const existing = { ...buildProject(), owner: 1 };
+      mockGetById.mockResolvedValue(existing as any);
+      mockGetMembers.mockResolvedValue([7] as any);
+      mockUpdate.mockResolvedValue({ ...existing, members: [] } as any);
+      mockGetUser.mockResolvedValue({ id: 1, name: "A", surname: "B", role_id: 1 } as any);
+      const req = createReq({ params: { id: "1" }, body: { project_title: "P2", members: null } });
+      const res = createRes();
+      await updateProjectById(req, res);
+      expect(mockUpdate).toHaveBeenCalledWith(1, expect.anything(), [], 1, expect.anything());
+    });
     it("passes an explicit empty members list through, so members can still be cleared", async () => {
       const existing = { ...buildProject(), owner: 1 };
       mockGetById.mockResolvedValue(existing as any);
@@ -335,6 +347,24 @@ describe("project.ctrl", () => {
       const res = createRes();
       await updateProjectById(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+  });
+
+  describe("updateProjectStatus", () => {
+    it("changes the status without touching members", async () => {
+      const existing = { ...buildProject(), owner: 1, status: "Not started" };
+      mockGetById.mockResolvedValue(existing as any);
+      mockUpdate.mockResolvedValue({ ...existing, status: "In progress", members: [7, 6] } as any);
+      const req = createReq({ params: { id: "1" }, body: { status: "In progress" } });
+      const res = createRes();
+      await updateProjectStatus(req, res);
+      expect(mockUpdate).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ status: "In progress" }),
+        undefined,
+        1,
+        expect.anything(),
+      );
     });
   });
 

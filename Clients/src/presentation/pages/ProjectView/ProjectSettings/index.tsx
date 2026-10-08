@@ -1652,6 +1652,11 @@ const ProjectSettings = React.memo(
             // earlier "required" error on the field.
             setValues((prevValues) => ({ ...prevValues, riskClassification: match._id }));
             setErrors((prevErrors) => ({ ...prevErrors, riskClassification: "" }));
+            // The wizard has already saved this value, so it is not an unsaved change.
+            initialValuesRef.current = {
+              ...initialValuesRef.current,
+              riskClassification: match._id,
+            };
           }}
         />
       </Stack>

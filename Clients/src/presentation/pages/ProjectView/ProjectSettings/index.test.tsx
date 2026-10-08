@@ -158,6 +158,27 @@ describe("ProjectSettings", () => {
     expect(screen.getByText("Limited risk")).toBeInTheDocument();
   });
 
+  it("keeps Save disabled after the risk wizard, since the wizard already saved the value", async () => {
+    mockUseFrameworks.mockReturnValue({
+      filteredFrameworks: [euAiActFramework],
+      allFrameworks: [euAiActFramework, iso42001Framework],
+    });
+    mockUseProjectData.mockReturnValue({
+      project: {
+        ...baseProject,
+        framework: [{ project_framework_id: 1, framework_id: 1, name: "EU AI Act" }],
+      },
+    });
+
+    renderWithProviders(<ProjectSettings />);
+    await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Finish risk wizard" }));
+    await waitFor(() => expect(screen.getByText("Limited risk")).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+  });
+
   it("disables the Save button until a field is modified", async () => {
     renderWithProviders(<ProjectSettings />);
     await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());
