@@ -24,11 +24,6 @@ jest.mock("../../utils/euAiActClassification.utils", () => ({
   insertClassificationRunQuery: jest.fn(),
   getLatestRunForSubmissionQuery: jest.fn(),
 }));
-// Pass-through so a test can make re-scoring a stored run throw.
-jest.mock("../../services/euAiActClassification", () => {
-  const actual = jest.requireActual("../../services/euAiActClassification") as any;
-  return { ...actual, scoreClassification: jest.fn(actual.scoreClassification) };
-});
 jest.mock("../../utils/project.utils", () => ({ createNewProjectQuery: jest.fn() }));
 jest.mock("../../utils/modelInventory.utils", () => ({ createNewModelInventoryQuery: jest.fn() }));
 jest.mock("../../utils/useCaseChangeHistory.utils", () => ({
@@ -82,7 +77,6 @@ const intake = require("../../utils/intakeForm.utils");
 const runs = require("../../utils/euAiActClassification.utils");
 const projects = require("../../utils/project.utils");
 const history = require("../../utils/useCaseChangeHistory.utils");
-const classification = require("../../services/euAiActClassification");
 const fileLogger = require("../../utils/logger/fileLogger").default;
 /* eslint-enable @typescript-eslint/no-require-imports */
 
@@ -384,11 +378,12 @@ describe("approval with the EU AI Act step", () => {
     expect(r.json.mock.calls[0][0].data.euAiActClassification).toBeNull();
   });
 
-  it("treats a run whose stored answers no longer score as no run on approval", async () => {
-    runs.getLatestRunForSubmissionQuery.mockResolvedValue(RUN);
-    classification.scoreClassification.mockImplementationOnce(() => {
-      throw new Error("Unknown option");
-    });
+  // A stored answer the questionnaire no longer offers: the real scorer would
+  // still return a level for it, so validation must reject the run first.
+  const STALE_RUN = { ...RUN, answers: { ...ANSWERS, art5_practices: ["removed_practice"] } };
+
+  it("treats a run whose stored answers no longer validate as no run on approval", async () => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue(STALE_RUN);
     const r = await approve({
       confirmedEntityData: {
         project_title: "P",
@@ -406,16 +401,60 @@ describe("approval with the EU AI Act step", () => {
     expect(fileLogger.warn).toHaveBeenCalledWith(expect.stringContaining(String(RUN.id)));
   });
 
-  it("preview shows no panel when the stored answers no longer score", async () => {
-    runs.getLatestRunForSubmissionQuery.mockResolvedValue(RUN);
-    classification.scoreClassification.mockImplementationOnce(() => {
-      throw new Error("Unknown option");
-    });
+  it("preview shows no panel when the stored answers no longer validate", async () => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue(STALE_RUN);
     const r = res();
     await ctrl.getSubmissionPreview(req({ params: { id: "9" } }) as any, r);
     expect(r.status).toHaveBeenCalledWith(200);
     expect(r.json.mock.calls[0][0].data.euAiActClassification).toBeNull();
     expect(fileLogger.warn).toHaveBeenCalledWith(expect.stringContaining(String(RUN.id)));
+  });
+
+  it("stores and shows the computed role, not the role stored with the run", async () => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue({ ...RUN, role: "Provider" });
+    const r = await approve({ confirmedEntityData: { project_title: "P" } });
+    expect(r.status).toHaveBeenCalledWith(200);
+    expect(runs.insertClassificationRunQuery.mock.calls[0][0].role).toBe("Deployer");
+
+    const p = res();
+    await ctrl.getSubmissionPreview(req({ params: { id: "9" } }) as any, p);
+    expect(p.json.mock.calls[0][0].data.euAiActClassification.role).toBe("Deployer");
+  });
+});
+
+describe("public form with a resubmission token", () => {
+  const load = async (euAiActRiskStepEnabled: boolean) => {
+    intake.getTenantByPublicId.mockResolvedValue({ orgId: 5 });
+    intake.getFormByPublicIdQuery.mockResolvedValue({ ...FORM, euAiActRiskStepEnabled });
+    intake.getSubmissionByIdQuery.mockResolvedValue({
+      id: 9,
+      status: "pending",
+      data: {},
+      submitterEmail: "a@b.co",
+    });
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue(RUN);
+    const token = sign({ submissionId: 9, formId: 1, email: "a@b.co", timestamp: Date.now() });
+    const r = res();
+    await ctrl.getPublicFormByPublicId(
+      req({ params: { publicId: "abc" }, query: { token } }) as any,
+      r,
+    );
+    expect(r.status).toHaveBeenCalledWith(200);
+    return r.json.mock.calls[0][0].data;
+  };
+
+  beforeEach(() => jest.clearAllMocks());
+
+  it("returns the previous risk answers when the step is on", async () => {
+    const data = await load(true);
+    expect(data.previousRiskAnswers).toEqual(ANSWERS);
+  });
+
+  it("does not look up previous risk answers when the step is off", async () => {
+    const data = await load(false);
+    expect(runs.getLatestRunForSubmissionQuery).not.toHaveBeenCalled();
+    expect(data.previousRiskAnswers).toBeUndefined();
+    expect(data.euAiActRiskStep).toBeNull();
   });
 });
 

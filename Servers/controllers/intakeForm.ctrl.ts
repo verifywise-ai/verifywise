@@ -45,9 +45,11 @@ import {
   CURRENT_QUESTIONNAIRE_VERSION,
   prepareIntakeRiskStep,
   scoreClassification,
+  validateAnswers,
   type Answers,
   type ClassificationResult,
   type PreparedRun,
+  type Questionnaire,
 } from "../services/euAiActClassification";
 import {
   getLatestRunForSubmissionQuery,
@@ -153,26 +155,34 @@ async function resolveFormLlmKeyId(
 }
 
 // ============================================================================
-// SERVER-SIDE FORM DATA VALIDATION
+// EU AI ACT RISK STEP HELPERS
 // ============================================================================
 
 /**
- * Validate submitted form data against the form schema.
- * Returns an array of error messages (empty if valid).
- */
-/**
  * Scores a stored classification run again under its own questionnaire version.
  * Returns null when the version is unknown to this server or the stored answers
- * no longer score (e.g. an option was removed), so callers treat it as no run.
+ * no longer validate against it (e.g. an option was removed), so callers treat
+ * it as no run. The run is handed back with its questionnaire and result so a
+ * caller branches on this one value.
  */
-function rescoreStoredRun(run: {
-  id?: number;
-  questionnaireVersion: number;
-  answers: Answers;
-}): ClassificationResult | null {
-  if (!getQuestionnaire(run.questionnaireVersion)) return null;
+function rescoreStoredRun<
+  R extends { id?: number; questionnaireVersion: number; answers: Answers },
+>(run: R): { run: R; questionnaire: Questionnaire; result: ClassificationResult } | null {
+  const questionnaire = getQuestionnaire(run.questionnaireVersion);
+  if (!questionnaire) return null;
+  const { errors } = validateAnswers(questionnaire, run.answers);
+  if (errors.length > 0) {
+    logger.warn(
+      `EU AI Act classification run ${run.id} no longer validates; treating it as no run: ${errors.join("; ")}`,
+    );
+    return null;
+  }
   try {
-    return scoreClassification(run.questionnaireVersion, run.answers);
+    return {
+      run,
+      questionnaire,
+      result: scoreClassification(run.questionnaireVersion, run.answers),
+    };
   } catch (error) {
     logger.warn(
       `EU AI Act classification run ${run.id} could not be re-scored; treating it as no run: ${(error as Error).message}`,
@@ -216,21 +226,30 @@ async function buildPublicRiskStep(
   previousSubmissionId: number | undefined,
   organizationId: number,
 ): Promise<{
-  euAiActRiskStep: { questionnaire: ReturnType<typeof getQuestionnaire> } | null;
+  euAiActRiskStep: { questionnaire: Questionnaire | null } | null;
   previousRiskAnswers: Answers | undefined;
 }> {
+  if (!form.euAiActRiskStepEnabled) {
+    return { euAiActRiskStep: null, previousRiskAnswers: undefined };
+  }
   const previousRiskAnswers =
     previousSubmissionId !== undefined
       ? (await getLatestRunForSubmissionQuery(previousSubmissionId, organizationId))?.answers
       : undefined;
   return {
-    euAiActRiskStep: form.euAiActRiskStepEnabled
-      ? { questionnaire: getQuestionnaire(CURRENT_QUESTIONNAIRE_VERSION) }
-      : null,
+    euAiActRiskStep: { questionnaire: getQuestionnaire(CURRENT_QUESTIONNAIRE_VERSION) },
     previousRiskAnswers,
   };
 }
 
+// ============================================================================
+// SERVER-SIDE FORM DATA VALIDATION
+// ============================================================================
+
+/**
+ * Validate submitted form data against the form schema.
+ * Returns an array of error messages (empty if valid).
+ */
 function validateFormData(formData: Record<string, unknown>, schema: IIntakeFormSchema): string[] {
   const errors: string[] = [];
 
@@ -979,21 +998,20 @@ export async function getSubmissionPreview(req: Request, res: Response) {
       form.schema,
     );
 
-    const run = await getLatestRunForSubmissionQuery(submission.id!, req.organizationId!);
+    const storedRun = await getLatestRunForSubmissionQuery(submission.id!, req.organizationId!);
     // A run that can no longer be scored shows no panel rather than failing the
     // whole preview.
-    const current = run ? rescoreStoredRun(run) : null;
-    const euAiActClassification =
-      run && current
-        ? {
-            questionnaire: getQuestionnaire(run.questionnaireVersion),
-            answers: run.answers,
-            role: run.role,
-            current,
-            changedSinceSubmission: current.level !== run.result.level,
-            submittedAt: run.createdAt,
-          }
-        : null;
+    const rescored = storedRun ? rescoreStoredRun(storedRun) : null;
+    const euAiActClassification = rescored
+      ? {
+          questionnaire: rescored.questionnaire,
+          answers: rescored.run.answers,
+          role: rescored.result.role,
+          current: rescored.result,
+          changedSinceSubmission: rescored.result.level !== rescored.run.result.level,
+          submittedAt: rescored.run.createdAt,
+        }
+      : null;
 
     return res.status(200).json(
       STATUS_CODE[200]({
@@ -1215,14 +1233,16 @@ export async function approveSubmission(req: Request, res: Response) {
       submission.entityType === IntakeEntityType.USE_CASE
         ? await getLatestRunForSubmissionQuery(submissionId, req.organizationId!, transaction)
         : null;
-    const computed = storedRun ? rescoreStoredRun(storedRun) : null;
-    const run = computed ? storedRun : null;
+    const rescored = storedRun ? rescoreStoredRun(storedRun) : null;
     let classification: {
+      questionnaireVersion: number;
+      answers: Answers;
       computed: ClassificationResult;
       finalLevel: string;
       justification: string | null;
     } | null = null;
-    if (run && computed) {
+    if (rescored) {
+      const computed = rescored.result;
       const finalLevel = euAiActOverride?.level ?? computed.level;
       // The levels the questionnaire can produce; GPAI and General Risk are not
       // offered here.
@@ -1256,6 +1276,8 @@ export async function approveSubmission(req: Request, res: Response) {
           );
       }
       classification = {
+        questionnaireVersion: rescored.run.questionnaireVersion,
+        answers: rescored.run.answers,
         computed,
         finalLevel,
         justification: finalLevel !== computed.level ? justification : null,
@@ -1333,14 +1355,14 @@ export async function approveSubmission(req: Request, res: Response) {
         transaction,
       );
       entityId = createdProject.id!;
-      if (run && classification) {
+      if (classification) {
         await insertClassificationRunQuery(
           {
             useCaseId: entityId,
             intakeSubmissionId: null,
-            questionnaireVersion: run.questionnaireVersion,
-            role: run.role,
-            answers: run.answers,
+            questionnaireVersion: classification.questionnaireVersion,
+            role: classification.computed.role,
+            answers: classification.answers,
             result: classification.computed,
             reviewerLevel: classification.justification ? classification.finalLevel : null,
             reviewerJustification: classification.justification,
