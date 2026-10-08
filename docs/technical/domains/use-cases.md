@@ -481,9 +481,13 @@ A server-scored questionnaire that sets a use case's `ai_risk_classification` (a
 
 Annex III follow-up questions (`*_use`) are multi-select. The system is high risk when any selected use is in `ANNEX_III_HIGH_RISK_USES`; "Another use in this area" alone does not make it high risk.
 
+High-risk obligations depend on the route that matched: Annex I Section B gets only the sectoral-legislation obligation (Article 2(2), Articles 102-109); Annex I Section A has no Article 49 registration and uses the sectoral conformity procedure (Article 43(3)); Annex III point 2 registers at national level (Article 49(5)) and has no Article 27 assessment; other Annex III routes, including real-time biometric identification for an authorised objective, register under Article 49(1). Deployer Articles 26(11) and 27 apply only on Annex III routes. Each obligation carries its own route's date, and obligations shared by several routes are listed once. The Article 6(3) exemption counts only when no other route makes the system high risk.
+
 ### Versioning rule
 
-A stored run is always re-scored with the rules of the version it was answered under. To change questions or scoring, add `questionnaire.vN.ts` and `score.vN.ts`, register both in `registry.ts` and raise `CURRENT_QUESTIONNAIRE_VERSION`. Keep the old files: existing runs still reference them. A run whose version is no longer registered shows no panel in the intake review.
+A stored run is always re-scored with the rules of the version it was answered under. To change questions or scoring, add `questionnaire.vN.ts` and `score.vN.ts`, register both in `registry.ts` and raise `CURRENT_QUESTIONNAIRE_VERSION`. Keep the old files: existing runs still reference them. A run whose version is no longer registered shows no panel in the intake review, and approving that submission behaves as if it had no run.
+
+When you add `questionnaire.vN.ts` and `score.vN.ts`, also add both files to the `SOURCE` list in `Clients/src/i18n/__tests__/euAiActQuestionnaire.translations.test.ts`. That test reads the files by name, so strings in a new version are otherwise never checked for translations.
 
 User-facing text in both files must be whole string literals on `text`, `label`, `description` or `help` (no template strings). The DOM translator matches them against `Clients/src/i18n/translations.ts`, and `Clients/src/i18n/__tests__/euAiActQuestionnaire.translations.test.ts` fails when one lacks a de, fr or es entry.
 

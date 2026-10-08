@@ -16,9 +16,11 @@ const read = (file: string) => readFileSync(resolve(SOURCE_DIR, file), "utf8");
 const SOURCE = read("questionnaire.v2.ts") + read("score.v2.ts");
 const strings = [
   ...new Set(
-    [...SOURCE.matchAll(/\b(?:text|label|description|help):\s*"((?:[^"\\]|\\.)+)"/g)].map((m) =>
-      m[1].replace(/\\"/g, '"'),
-    ),
+    [
+      ...SOURCE.matchAll(
+        /\b(?:text|label|description|help):\s*(?:"((?:[^"\\]|\\.)+)"|'((?:[^'\\]|\\.)+)')/g,
+      ),
+    ].map((m) => (m[1] ?? m[2]).replace(/\\(["'])/g, "$1")),
   ),
 ];
 

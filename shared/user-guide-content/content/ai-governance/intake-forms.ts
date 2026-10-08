@@ -521,7 +521,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The public form opens on the risk questionnaire. Each answer decides which question comes next, so a system built only for research and development finishes after one question. After the last question the submitter moves on to the form, and can go back with **Back to risk classification**. Submitters do not see the resulting classification. The browser sends only the answers: VerifyWise checks and scores them on the server when the form is submitted. If the server rejects the answers, the form returns to the risk questionnaire.',
+      text: 'The public form opens on the risk questionnaire. Each answer decides which question comes next, so a system built only for research and development finishes after one question. The follow-up questions for each Annex III area accept several answers, and any listed use makes the system high risk. After the last question the submitter moves on to the form, and can go back with **Back to risk classification**. Submitters do not see the resulting classification. The browser sends only the answers: VerifyWise checks and scores them on the server when the form is submitted. If the server rejects the answers, the form returns to the risk questionnaire.',
     },
     {
       type: 'heading',
@@ -537,7 +537,7 @@ export const intakeFormsContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { text: 'The computed level: Prohibited, High risk, Limited risk, Minimal risk or Out of scope' },
-        { text: 'The reasons, each with its article and the date it applies from' },
+        { text: 'The reasons, each with its article and, where one applies, the date it applies from' },
         { text: 'The role (provider or deployer) the submitter chose' },
         { text: 'Every question and the answer given' },
       ],

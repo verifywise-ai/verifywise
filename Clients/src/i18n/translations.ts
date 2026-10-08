@@ -5308,7 +5308,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Risk approval": "Risikogenehmigung",
     "Risk assessment": "Risikobewertung",
     "Risk assessment (optional)": "Risikobewertung (optional)",
-    "Risk assessment pending...": "Risikobewertung ausstehend...",
+    "Intake risk score pending...": "Risikobewertung aus dem Eingangsformular ausstehend...",
     "Risk category data will appear here as risks are categorized.":
       "Risikokategoriedaten erscheinen hier, sobald Risiken kategorisiert werden.",
     "Risk register": "Risikoregister",
@@ -9686,11 +9686,12 @@ export const translations: Record<string, Record<string, string>> = {
     "No": "Nein",
     "Another use in this area": "Eine andere Verwendung in diesem Bereich",
     "None of these": "Nichts davon",
-    "Is the system developed and used only for scientific research and development, and not placed on the market or put into service?":
-      "Wird das System ausschließlich für die wissenschaftliche Forschung und Entwicklung entwickelt und verwendet, ohne in Verkehr gebracht oder in Betrieb genommen zu werden?",
-    "Yes, research and development only": "Ja, ausschließlich Forschung und Entwicklung",
-    "No, it is or will be placed on the market or used":
-      "Nein, es wird in Verkehr gebracht oder verwendet oder soll es werden",
+    "Is the system developed and put into service only for scientific research and development, or is it still being researched, tested or developed before being placed on the market or put into service?":
+      "Wird das System ausschließlich für die wissenschaftliche Forschung und Entwicklung entwickelt und in Betrieb genommen, oder wird es noch erforscht, getestet oder entwickelt, bevor es in Verkehr gebracht oder in Betrieb genommen wird?",
+    "Yes, only scientific research or pre-market research, testing or development":
+      "Ja, ausschließlich wissenschaftliche Forschung oder Forschung, Tests oder Entwicklung vor dem Inverkehrbringen",
+    "No, it is or will be placed on the market or put into service":
+      "Nein, es wird in Verkehr gebracht oder in Betrieb genommen oder soll es werden",
     "Are you the provider or the deployer of this AI system?":
       "Sind Sie Anbieter oder Betreiber dieses KI-Systems?",
     "We develop the system, or have it developed, and place it on the market or put it into service under our name.":
@@ -9736,7 +9737,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Ja: ein Produkt nach Anhang I Abschnitt A, das einer Konformitätsbewertung durch Dritte bedarf",
     "For example medical devices, in vitro diagnostic devices, toys, lifts, radio equipment, pressure equipment or personal protective equipment.":
       "Zum Beispiel Medizinprodukte, In-vitro-Diagnostika, Spielzeug, Aufzüge, Funkanlagen, Druckgeräte oder persönliche Schutzausrüstung.",
-    "Yes: a product under Annex I Section B": "Ja: ein Produkt nach Anhang I Abschnitt B",
+    "Yes: a product under Annex I Section B that needs a third-party conformity assessment":
+      "Ja: ein Produkt nach Anhang I Abschnitt B, das einer Konformitätsbewertung durch Dritte bedarf",
     "Vehicles, aviation, marine equipment, rail systems, agricultural and forestry vehicles, or machinery.":
       "Fahrzeuge, Luftfahrt, Schiffsausrüstung, Eisenbahnsysteme, land- und forstwirtschaftliche Fahrzeuge oder Maschinen.",
     "Is the system intended to be used in any of these areas?":
@@ -9921,8 +9923,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Führen Sie, sofern erforderlich, eine Grundrechte-Folgenabschätzung durch (öffentliche Stellen, öffentliche Dienste, Kreditwürdigkeitsprüfung sowie Lebens- oder Krankenversicherung).",
     "Ensure sufficient AI literacy of the staff who operate or use the system.":
       "Sorgen Sie für ausreichende KI-Kompetenz des Personals, das das System betreibt oder nutzt.",
-    "AI systems developed and used only for scientific research and development, before being placed on the market or put into service, are outside the scope of the EU AI Act.":
-      "KI-Systeme, die ausschließlich für die wissenschaftliche Forschung und Entwicklung entwickelt und verwendet werden, bevor sie in Verkehr gebracht oder in Betrieb genommen werden, fallen nicht in den Anwendungsbereich der EU-KI-Verordnung.",
+    "AI systems developed and put into service only for scientific research and development, and research, testing or development before a system is placed on the market or put into service, are outside the scope of the EU AI Act.":
+      "KI-Systeme, die ausschließlich für die wissenschaftliche Forschung und Entwicklung entwickelt und in Betrieb genommen werden, sowie Forschungs-, Test- und Entwicklungstätigkeiten, bevor ein System in Verkehr gebracht oder in Betrieb genommen wird, fallen nicht in den Anwendungsbereich der EU-KI-Verordnung.",
     "Real-time remote biometric identification in publicly accessible spaces for law enforcement, outside the authorised objectives, is prohibited.":
       "Biometrische Echtzeit-Fernidentifizierung in öffentlich zugänglichen Räumen zu Strafverfolgungszwecken ist außerhalb der zulässigen Ziele verboten.",
     "Do not place this system on the market, put it into service or use it in the EU.":
@@ -9972,6 +9974,21 @@ export const translations: Record<string, Record<string, string>> = {
     "Out of scope": "Außerhalb des Anwendungsbereichs",
     "Outside the EU AI Act": "Außerhalb der EU-KI-Verordnung",
     "Override intake risk score": "Risikobewertung aus dem Eingangsformular überschreiben",
+    'Only the uses listed here are high risk under Annex III. Choose "Another use in this area" if none of them applies.':
+      "Nur die hier aufgeführten Verwendungen sind nach Anhang III hochriskant. Wählen Sie „Eine andere Verwendung in diesem Bereich“, wenn keine davon zutrifft.",
+    "Complete the conformity assessment under the product's sectoral procedure before placing the system on the market.":
+      "Führen Sie die Konformitätsbewertung nach dem sektoralen Verfahren für das Produkt durch, bevor Sie das System in Verkehr bringen.",
+    "Register the system at national level.": "Registrieren Sie das System auf nationaler Ebene.",
+    "Meet the AI requirements set through the product's sectoral legislation.":
+      "Erfüllen Sie die KI-Anforderungen, die über die sektoralen Rechtsvorschriften für das Produkt festgelegt werden.",
+    "From 2 December 2026, do not place this system on the market, put it into service or use it in the EU.":
+      "Bringen Sie dieses System ab dem 2. Dezember 2026 in der EU nicht in Verkehr, nehmen Sie es nicht in Betrieb und verwenden Sie es nicht.",
+    "Justification is required when overriding the intake risk score.":
+      "Beim Überschreiben der Risikobewertung aus dem Eingangsformular ist eine Begründung erforderlich.",
+    "Review the intake risk score, EU AI Act classification and entity data before approving or rejecting":
+      "Prüfen Sie die Risikobewertung aus dem Eingangsformular, die Klassifizierung nach EU-KI-Verordnung und die Entitätsdaten, bevor Sie genehmigen oder ablehnen",
+    "Review the intake risk score and entity data before approving or rejecting":
+      "Prüfen Sie die Risikobewertung aus dem Eingangsformular und die Entitätsdaten, bevor Sie genehmigen oder ablehnen",
     "Please review your risk classification answers.":
       "Bitte überprüfen Sie Ihre Antworten zur Risikoklassifizierung.",
     "Prohibited": "Verboten",
@@ -9980,8 +9997,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Role:": "Rolle:",
     "Submitters answer the EU AI Act risk questionnaire before the form's questions. Reviewers see the result, and it becomes the use case's risk classification on approval.":
       "Einreicher beantworten den Risikofragebogen zur EU-KI-Verordnung vor den Fragen des Formulars. Prüfer sehen das Ergebnis, und bei Genehmigung wird es zur Risikoklassifizierung des Anwendungsfalls.",
-    "This system falls under a prohibited practice and cannot be placed on the market or used in the EU.":
-      "Dieses System fällt unter eine verbotene Praktik und darf in der EU weder in Verkehr gebracht noch verwendet werden.",
+    "The system falls under a prohibited practice in Article 5.":
+      "Das System fällt unter eine verbotene Praktik nach Artikel 5.",
     "This system has transparency obligations under Article 50.":
       "Für dieses System gelten Transparenzpflichten nach Artikel 50.",
     "This system is high risk and must meet the EU AI Act requirements for high-risk systems.":
@@ -15225,7 +15242,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Risk approval": "Approbation du risque",
     "Risk assessment": "Évaluation des risques",
     "Risk assessment (optional)": "Évaluation des risques (optionnelle)",
-    "Risk assessment pending...": "Évaluation des risques en attente...",
+    "Intake risk score pending...": "Score de risque du formulaire d'entrée en attente...",
     "Risk category data will appear here as risks are categorized.":
       "Les données de catégorie de risque apparaîtront ici à mesure que les risques sont catégorisés.",
     "Risk register": "Registre des risques",
@@ -19600,11 +19617,12 @@ export const translations: Record<string, Record<string, string>> = {
     "No": "Non",
     "Another use in this area": "Une autre utilisation dans ce domaine",
     "None of these": "Aucune de ces options",
-    "Is the system developed and used only for scientific research and development, and not placed on the market or put into service?":
-      "Le système est-il développé et utilisé uniquement à des fins de recherche et de développement scientifiques, sans être mis sur le marché ni mis en service ?",
-    "Yes, research and development only": "Oui, uniquement de la recherche et du développement",
-    "No, it is or will be placed on the market or used":
-      "Non, il est ou sera mis sur le marché ou utilisé",
+    "Is the system developed and put into service only for scientific research and development, or is it still being researched, tested or developed before being placed on the market or put into service?":
+      "Le système est-il développé et mis en service uniquement à des fins de recherche et de développement scientifiques, ou fait-il encore l'objet de recherches, d'essais ou de développement avant sa mise sur le marché ou sa mise en service ?",
+    "Yes, only scientific research or pre-market research, testing or development":
+      "Oui, uniquement de la recherche scientifique ou de la recherche, des essais ou du développement avant la mise sur le marché",
+    "No, it is or will be placed on the market or put into service":
+      "Non, il est ou sera mis sur le marché ou mis en service",
     "Are you the provider or the deployer of this AI system?":
       "Êtes-vous le fournisseur ou le déployeur de ce système d'IA ?",
     "We develop the system, or have it developed, and place it on the market or put it into service under our name.":
@@ -19651,7 +19669,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Oui : un produit relevant de l'annexe I, section A, qui nécessite une évaluation de la conformité par un tiers",
     "For example medical devices, in vitro diagnostic devices, toys, lifts, radio equipment, pressure equipment or personal protective equipment.":
       "Par exemple les dispositifs médicaux, les dispositifs médicaux de diagnostic in vitro, les jouets, les ascenseurs, les équipements radioélectriques, les équipements sous pression ou les équipements de protection individuelle.",
-    "Yes: a product under Annex I Section B": "Oui : un produit relevant de l'annexe I, section B",
+    "Yes: a product under Annex I Section B that needs a third-party conformity assessment":
+      "Oui : un produit relevant de l'annexe I, section B, qui nécessite une évaluation de la conformité par un tiers",
     "Vehicles, aviation, marine equipment, rail systems, agricultural and forestry vehicles, or machinery.":
       "Véhicules, aviation, équipements marins, systèmes ferroviaires, véhicules agricoles et forestiers, ou machines.",
     "Is the system intended to be used in any of these areas?":
@@ -19839,8 +19858,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Réalisez une analyse d'impact sur les droits fondamentaux lorsque cela est requis (organismes publics, services publics, évaluation de la solvabilité, et assurance vie ou maladie).",
     "Ensure sufficient AI literacy of the staff who operate or use the system.":
       "Veillez à un niveau suffisant de maîtrise de l'IA du personnel qui exploite ou utilise le système.",
-    "AI systems developed and used only for scientific research and development, before being placed on the market or put into service, are outside the scope of the EU AI Act.":
-      "Les systèmes d'IA développés et utilisés uniquement à des fins de recherche et de développement scientifiques, avant leur mise sur le marché ou leur mise en service, ne relèvent pas du champ d'application du règlement IA de l'UE.",
+    "AI systems developed and put into service only for scientific research and development, and research, testing or development before a system is placed on the market or put into service, are outside the scope of the EU AI Act.":
+      "Les systèmes d'IA développés et mis en service uniquement à des fins de recherche et de développement scientifiques, ainsi que les activités de recherche, d'essai ou de développement menées avant la mise sur le marché ou la mise en service d'un système, ne relèvent pas du champ d'application du règlement IA de l'UE.",
     "Real-time remote biometric identification in publicly accessible spaces for law enforcement, outside the authorised objectives, is prohibited.":
       "L'identification biométrique à distance en temps réel dans des espaces accessibles au public à des fins répressives est interdite en dehors des objectifs autorisés.",
     "Do not place this system on the market, put it into service or use it in the EU.":
@@ -19890,6 +19909,21 @@ export const translations: Record<string, Record<string, string>> = {
     "Out of scope": "Hors du champ d'application",
     "Outside the EU AI Act": "Hors du champ du règlement IA de l'UE",
     "Override intake risk score": "Remplacer le score de risque du formulaire d'entrée",
+    'Only the uses listed here are high risk under Annex III. Choose "Another use in this area" if none of them applies.':
+      "Seules les utilisations énumérées ici sont à haut risque au titre de l'annexe III. Choisissez « Une autre utilisation dans ce domaine » si aucune ne s'applique.",
+    "Complete the conformity assessment under the product's sectoral procedure before placing the system on the market.":
+      "Réalisez l'évaluation de la conformité selon la procédure sectorielle applicable au produit avant de mettre le système sur le marché.",
+    "Register the system at national level.": "Enregistrez le système au niveau national.",
+    "Meet the AI requirements set through the product's sectoral legislation.":
+      "Respectez les exigences en matière d'IA fixées par la législation sectorielle applicable au produit.",
+    "From 2 December 2026, do not place this system on the market, put it into service or use it in the EU.":
+      "À partir du 2 décembre 2026, ne mettez pas ce système sur le marché, ne le mettez pas en service et ne l'utilisez pas dans l'UE.",
+    "Justification is required when overriding the intake risk score.":
+      "Une justification est requise pour remplacer le score de risque du formulaire d'entrée.",
+    "Review the intake risk score, EU AI Act classification and entity data before approving or rejecting":
+      "Vérifiez le score de risque du formulaire d'entrée, la classification selon le règlement IA de l'UE et les données de l'entité avant d'approuver ou de rejeter",
+    "Review the intake risk score and entity data before approving or rejecting":
+      "Vérifiez le score de risque du formulaire d'entrée et les données de l'entité avant d'approuver ou de rejeter",
     "Please review your risk classification answers.":
       "Veuillez vérifier vos réponses à la classification des risques.",
     "Prohibited": "Interdit",
@@ -19898,8 +19932,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Role:": "Rôle :",
     "Submitters answer the EU AI Act risk questionnaire before the form's questions. Reviewers see the result, and it becomes the use case's risk classification on approval.":
       "Les soumetteurs répondent au questionnaire de risque du règlement IA de l'UE avant les questions du formulaire. Les relecteurs voient le résultat, qui devient la classification des risques du cas d'usage lors de l'approbation.",
-    "This system falls under a prohibited practice and cannot be placed on the market or used in the EU.":
-      "Ce système relève d'une pratique interdite et ne peut être ni mis sur le marché ni utilisé dans l'UE.",
+    "The system falls under a prohibited practice in Article 5.":
+      "Le système relève d'une pratique interdite au titre de l'article 5.",
     "This system has transparency obligations under Article 50.":
       "Ce système est soumis aux obligations de transparence de l'article 50.",
     "This system is high risk and must meet the EU AI Act requirements for high-risk systems.":
@@ -23309,7 +23343,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Risk approval": "Aprobación de riesgo",
     "Risk assessment": "Evaluación de riesgos",
     "Risk assessment (optional)": "Evaluación de riesgos (opcional)",
-    "Risk assessment pending...": "Evaluación de riesgos pendiente...",
+    "Intake risk score pending...": "Puntuación de riesgo del formulario de admisión pendiente...",
     "Risk register": "Registro de riesgos",
     "Risks to consider:": "Riesgos a tener en cuenta:",
     "Rounds": "Rondas",
@@ -29439,11 +29473,12 @@ export const translations: Record<string, Record<string, string>> = {
     "No": "No",
     "Another use in this area": "Otro uso en este ámbito",
     "None of these": "Ninguna de estas opciones",
-    "Is the system developed and used only for scientific research and development, and not placed on the market or put into service?":
-      "¿Se desarrolla y utiliza el sistema exclusivamente con fines de investigación y desarrollo científicos, sin introducirse en el mercado ni ponerse en servicio?",
-    "Yes, research and development only": "Sí, solo investigación y desarrollo",
-    "No, it is or will be placed on the market or used":
-      "No, se introduce o se introducirá en el mercado o se utiliza",
+    "Is the system developed and put into service only for scientific research and development, or is it still being researched, tested or developed before being placed on the market or put into service?":
+      "¿Se desarrolla y pone en servicio el sistema exclusivamente con fines de investigación y desarrollo científicos, o sigue en fase de investigación, prueba o desarrollo antes de su introducción en el mercado o puesta en servicio?",
+    "Yes, only scientific research or pre-market research, testing or development":
+      "Sí, solo investigación científica o investigación, pruebas o desarrollo previos a la introducción en el mercado",
+    "No, it is or will be placed on the market or put into service":
+      "No, se introduce o se introducirá en el mercado o se pone o pondrá en servicio",
     "Are you the provider or the deployer of this AI system?":
       "¿Es usted el proveedor o el responsable del despliegue de este sistema de IA?",
     "We develop the system, or have it developed, and place it on the market or put it into service under our name.":
@@ -29490,7 +29525,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Sí: un producto del anexo I, sección A, que requiere una evaluación de la conformidad por terceros",
     "For example medical devices, in vitro diagnostic devices, toys, lifts, radio equipment, pressure equipment or personal protective equipment.":
       "Por ejemplo, productos sanitarios, productos sanitarios para diagnóstico in vitro, juguetes, ascensores, equipos radioeléctricos, equipos a presión o equipos de protección individual.",
-    "Yes: a product under Annex I Section B": "Sí: un producto del anexo I, sección B",
+    "Yes: a product under Annex I Section B that needs a third-party conformity assessment":
+      "Sí: un producto del anexo I, sección B, que requiere una evaluación de la conformidad por terceros",
     "Vehicles, aviation, marine equipment, rail systems, agricultural and forestry vehicles, or machinery.":
       "Vehículos, aviación, equipos marinos, sistemas ferroviarios, vehículos agrícolas y forestales, o máquinas.",
     "Is the system intended to be used in any of these areas?":
@@ -29673,8 +29709,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Realice una evaluación de impacto relativa a los derechos fundamentales cuando proceda (organismos públicos, servicios públicos, calificación crediticia y seguros de vida o de salud).",
     "Ensure sufficient AI literacy of the staff who operate or use the system.":
       "Garantice un nivel suficiente de alfabetización en materia de IA del personal que opera o utiliza el sistema.",
-    "AI systems developed and used only for scientific research and development, before being placed on the market or put into service, are outside the scope of the EU AI Act.":
-      "Los sistemas de IA desarrollados y utilizados exclusivamente con fines de investigación y desarrollo científicos, antes de su introducción en el mercado o puesta en servicio, quedan fuera del ámbito de aplicación del Reglamento de IA de la UE.",
+    "AI systems developed and put into service only for scientific research and development, and research, testing or development before a system is placed on the market or put into service, are outside the scope of the EU AI Act.":
+      "Los sistemas de IA desarrollados y puestos en servicio exclusivamente con fines de investigación y desarrollo científicos, así como las actividades de investigación, prueba o desarrollo previas a la introducción en el mercado o puesta en servicio de un sistema, quedan fuera del ámbito de aplicación del Reglamento de IA de la UE.",
     "Real-time remote biometric identification in publicly accessible spaces for law enforcement, outside the authorised objectives, is prohibited.":
       "Está prohibida la identificación biométrica remota en tiempo real en espacios de acceso público con fines de garantía del cumplimiento del Derecho fuera de los objetivos autorizados.",
     "Do not place this system on the market, put it into service or use it in the EU.":
@@ -29725,6 +29761,21 @@ export const translations: Record<string, Record<string, string>> = {
     "Out of scope": "Fuera del ámbito de aplicación",
     "Outside the EU AI Act": "Fuera del Reglamento de IA de la UE",
     "Override intake risk score": "Anular la puntuación de riesgo del formulario de admisión",
+    'Only the uses listed here are high risk under Annex III. Choose "Another use in this area" if none of them applies.':
+      "Solo los usos enumerados aquí son de alto riesgo según el anexo III. Elija «Otro uso en este ámbito» si ninguno de ellos se aplica.",
+    "Complete the conformity assessment under the product's sectoral procedure before placing the system on the market.":
+      "Complete la evaluación de la conformidad conforme al procedimiento sectorial del producto antes de introducir el sistema en el mercado.",
+    "Register the system at national level.": "Registre el sistema a nivel nacional.",
+    "Meet the AI requirements set through the product's sectoral legislation.":
+      "Cumpla los requisitos de IA establecidos a través de la legislación sectorial del producto.",
+    "From 2 December 2026, do not place this system on the market, put it into service or use it in the EU.":
+      "A partir del 2 de diciembre de 2026, no introduzca este sistema en el mercado, no lo ponga en servicio ni lo utilice en la UE.",
+    "Justification is required when overriding the intake risk score.":
+      "Se requiere una justificación para anular la puntuación de riesgo del formulario de admisión.",
+    "Review the intake risk score, EU AI Act classification and entity data before approving or rejecting":
+      "Revise la puntuación de riesgo del formulario de admisión, la clasificación según el Reglamento de IA de la UE y los datos de la entidad antes de aprobar o rechazar",
+    "Review the intake risk score and entity data before approving or rejecting":
+      "Revise la puntuación de riesgo del formulario de admisión y los datos de la entidad antes de aprobar o rechazar",
     "Please review your risk classification answers.":
       "Revise sus respuestas a la clasificación de riesgos.",
     "Prohibited": "Prohibido",
@@ -29733,8 +29784,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Role:": "Rol:",
     "Submitters answer the EU AI Act risk questionnaire before the form's questions. Reviewers see the result, and it becomes the use case's risk classification on approval.":
       "Los remitentes responden al cuestionario de riesgos del Reglamento de IA de la UE antes de las preguntas del formulario. Los revisores ven el resultado, que se convierte en la clasificación de riesgos del caso de uso al aprobarlo.",
-    "This system falls under a prohibited practice and cannot be placed on the market or used in the EU.":
-      "Este sistema constituye una práctica prohibida y no puede introducirse en el mercado ni utilizarse en la UE.",
+    "The system falls under a prohibited practice in Article 5.":
+      "El sistema constituye una práctica prohibida en virtud del artículo 5.",
     "This system has transparency obligations under Article 50.":
       "Este sistema está sujeto a las obligaciones de transparencia del artículo 50.",
     "This system is high risk and must meet the EU AI Act requirements for high-risk systems.":
