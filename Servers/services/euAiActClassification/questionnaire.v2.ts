@@ -60,6 +60,7 @@ const followUp = (def: {
   id: def.id,
   text: def.text,
   articleRef: def.articleRef,
+  help: 'Only the uses listed here are high risk under Annex III. Choose "Another use in this area" if none of them applies.',
   inputType: "multi_select",
   options: [...def.options, OTHER],
   showWhen: [[{ questionId: "annex_iii_areas", anyOf: [def.area] }]],
@@ -68,12 +69,15 @@ const followUp = (def: {
 const QUESTIONS: Question[] = [
   {
     id: "scope",
-    text: "Is the system developed and used only for scientific research and development, and not placed on the market or put into service?",
+    text: "Is the system developed and put into service only for scientific research and development, or is it still being researched, tested or developed before being placed on the market or put into service?",
     articleRef: "Article 2(6) and 2(8)",
     inputType: "single_select",
     options: [
-      { value: "research_only", label: "Yes, research and development only" },
-      { value: "in_scope", label: "No, it is or will be placed on the market or used" },
+      {
+        value: "research_only",
+        label: "Yes, only scientific research or pre-market research, testing or development",
+      },
+      { value: "in_scope", label: "No, it is or will be placed on the market or put into service" },
     ],
   },
   {
@@ -206,7 +210,8 @@ const QUESTIONS: Question[] = [
       },
       {
         value: "section_b",
-        label: "Yes: a product under Annex I Section B",
+        label:
+          "Yes: a product under Annex I Section B that needs a third-party conformity assessment",
         description:
           "Vehicles, aviation, marine equipment, rail systems, agricultural and forestry vehicles, or machinery.",
       },

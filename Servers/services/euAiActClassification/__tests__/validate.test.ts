@@ -21,6 +21,14 @@ describe("validateAnswers", () => {
     expect(answers).toEqual(MINIMAL);
   });
 
+  it("rejects a value given twice in a multi-select answer", () => {
+    const { errors } = validateAnswers(QUESTIONNAIRE_V2, {
+      ...MINIMAL,
+      transparency: ["interacts", "interacts"],
+    });
+    expect(errors).toEqual(['duplicate answer "interacts" for question "transparency"']);
+  });
+
   it("rejects a non-object", () => {
     expect(validateAnswers(QUESTIONNAIRE_V2, ["scope"]).errors).toEqual([
       "answers must be an object",

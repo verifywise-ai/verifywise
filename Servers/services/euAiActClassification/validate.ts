@@ -37,6 +37,11 @@ export const validateAnswers = (
         errors.push(`invalid answer "${String(v)}" for question "${id}"`);
       }
     }
+    const seen = new Set<unknown>();
+    for (const v of values) {
+      if (seen.has(v)) errors.push(`duplicate answer "${String(v)}" for question "${id}"`);
+      seen.add(v);
+    }
     const exclusive = question.options.filter((o) => o.exclusive).map((o) => o.value);
     if (values.length > 1 && values.some((v) => exclusive.includes(v as string))) {
       errors.push(
