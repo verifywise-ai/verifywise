@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { createHmac, timingSafeEqual } from "crypto";
+import type { Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import {
   getAllIntakeFormsQuery,
@@ -46,6 +47,7 @@ import {
   scoreClassification,
   type Answers,
   type ClassificationResult,
+  type PreparedRun,
 } from "../services/euAiActClassification";
 import {
   getLatestRunForSubmissionQuery,
@@ -151,6 +153,56 @@ function rescoreStoredRun(run: {
     );
     return null;
   }
+}
+
+/** Stores the scored EU AI Act answers of a public submission as its classification run. */
+async function persistIntakeRiskRun(
+  submissionId: number,
+  prepared: PreparedRun,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> {
+  await insertClassificationRunQuery(
+    {
+      useCaseId: null,
+      intakeSubmissionId: submissionId,
+      questionnaireVersion: prepared.questionnaireVersion,
+      role: prepared.result.role,
+      answers: prepared.answers,
+      result: prepared.result,
+      reviewerLevel: null,
+      reviewerJustification: null,
+      reviewedBy: null,
+      source: "intake",
+      createdBy: null,
+    },
+    organizationId,
+    transaction,
+  );
+}
+
+/**
+ * The public form's EU AI Act step: the current questionnaire when the form has
+ * the step on, plus the answers of the submission being resubmitted, if any.
+ */
+async function buildPublicRiskStep(
+  form: { euAiActRiskStepEnabled?: boolean | null },
+  previousSubmissionId: number | undefined,
+  organizationId: number,
+): Promise<{
+  euAiActRiskStep: { questionnaire: ReturnType<typeof getQuestionnaire> } | null;
+  previousRiskAnswers: Answers | undefined;
+}> {
+  const previousRiskAnswers =
+    previousSubmissionId !== undefined
+      ? (await getLatestRunForSubmissionQuery(previousSubmissionId, organizationId))?.answers
+      : undefined;
+  return {
+    euAiActRiskStep: form.euAiActRiskStepEnabled
+      ? { questionnaire: getQuestionnaire(CURRENT_QUESTIONNAIRE_VERSION) }
+      : null,
+    previousRiskAnswers,
+  };
 }
 
 function validateFormData(formData: Record<string, unknown>, schema: IIntakeFormSchema): string[] {
@@ -1590,7 +1642,7 @@ export async function getPublicFormByPublicId(req: Request, res: Response) {
     let previousData: Record<string, unknown> | undefined;
     let previousSubmitterName: string | undefined;
     let previousSubmitterEmail: string | undefined;
-    let previousRiskAnswers: Answers | undefined;
+    let previousSubmissionId: number | undefined;
     if (resubmissionToken) {
       const decoded = verifySignedToken<{
         submissionId: number;
@@ -1616,9 +1668,7 @@ export async function getPublicFormByPublicId(req: Request, res: Response) {
             previousData = previousSubmission.data as Record<string, unknown>;
             previousSubmitterName = previousSubmission.submitterName ?? undefined;
             previousSubmitterEmail = previousSubmission.submitterEmail ?? undefined;
-            previousRiskAnswers = (
-              await getLatestRunForSubmissionQuery(previousSubmission.id!, tenantInfo.orgId)
-            )?.answers;
+            previousSubmissionId = previousSubmission.id;
           }
         }
       }
@@ -1641,10 +1691,7 @@ export async function getPublicFormByPublicId(req: Request, res: Response) {
         previousData,
         previousSubmitterName,
         previousSubmitterEmail,
-        euAiActRiskStep: form.euAiActRiskStepEnabled
-          ? { questionnaire: getQuestionnaire(CURRENT_QUESTIONNAIRE_VERSION) }
-          : null,
-        previousRiskAnswers,
+        ...(await buildPublicRiskStep(form, previousSubmissionId, tenantInfo.orgId)),
       }),
     );
   } catch (error) {
@@ -1811,20 +1858,9 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
       );
 
       if (riskStep.prepared) {
-        await insertClassificationRunQuery(
-          {
-            useCaseId: null,
-            intakeSubmissionId: submission.id,
-            questionnaireVersion: riskStep.prepared.questionnaireVersion,
-            role: riskStep.prepared.result.role,
-            answers: riskStep.prepared.answers,
-            result: riskStep.prepared.result,
-            reviewerLevel: null,
-            reviewerJustification: null,
-            reviewedBy: null,
-            source: "intake",
-            createdBy: null,
-          },
+        await persistIntakeRiskRun(
+          submission.id!,
+          riskStep.prepared,
           tenantInfo.orgId,
           transaction,
         );
@@ -1953,7 +1989,7 @@ export async function getPublicForm(req: Request, res: Response) {
     let previousData: Record<string, unknown> | undefined;
     let previousSubmitterName: string | undefined;
     let previousSubmitterEmail: string | undefined;
-    let previousRiskAnswers: Answers | undefined;
+    let previousSubmissionId: number | undefined;
     if (resubmissionToken) {
       const decoded = verifySignedToken<{
         submissionId: number;
@@ -1979,9 +2015,7 @@ export async function getPublicForm(req: Request, res: Response) {
             previousData = previousSubmission.data as Record<string, unknown>;
             previousSubmitterName = previousSubmission.submitterName ?? undefined;
             previousSubmitterEmail = previousSubmission.submitterEmail ?? undefined;
-            previousRiskAnswers = (
-              await getLatestRunForSubmissionQuery(previousSubmission.id!, tenantInfo.id)
-            )?.answers;
+            previousSubmissionId = previousSubmission.id;
           }
         }
       }
@@ -2004,10 +2038,7 @@ export async function getPublicForm(req: Request, res: Response) {
         previousData,
         previousSubmitterName,
         previousSubmitterEmail,
-        euAiActRiskStep: form.euAiActRiskStepEnabled
-          ? { questionnaire: getQuestionnaire(CURRENT_QUESTIONNAIRE_VERSION) }
-          : null,
-        previousRiskAnswers,
+        ...(await buildPublicRiskStep(form, previousSubmissionId, tenantInfo.id)),
       }),
     );
   } catch (error) {
@@ -2177,23 +2208,7 @@ export async function submitPublicForm(req: Request, res: Response) {
       );
 
       if (riskStep.prepared) {
-        await insertClassificationRunQuery(
-          {
-            useCaseId: null,
-            intakeSubmissionId: submission.id,
-            questionnaireVersion: riskStep.prepared.questionnaireVersion,
-            role: riskStep.prepared.result.role,
-            answers: riskStep.prepared.answers,
-            result: riskStep.prepared.result,
-            reviewerLevel: null,
-            reviewerJustification: null,
-            reviewedBy: null,
-            source: "intake",
-            createdBy: null,
-          },
-          tenantInfo.id,
-          transaction,
-        );
+        await persistIntakeRiskRun(submission.id!, riskStep.prepared, tenantInfo.id, transaction);
       }
 
       await transaction.commit();
