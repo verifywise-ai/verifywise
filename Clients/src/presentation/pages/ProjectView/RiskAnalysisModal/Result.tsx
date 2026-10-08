@@ -35,7 +35,7 @@ const Results: React.FC<ResultProps> = ({ result, onRestart, onSave, isSaving })
           icon: <AlertTriangle size={32} />,
           title: "High-risk AI system",
           description:
-            "This system is high risk and must meet the EU AI Act's requirements for high-risk systems.",
+            "This system is high risk and must meet the EU AI Act requirements for high-risk systems.",
         };
       case "Limited risk":
         return {

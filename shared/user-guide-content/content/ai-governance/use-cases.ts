@@ -39,7 +39,7 @@ export const useCasesContent: ArticleContent = {
         { bold: 'Goal', text: 'What the AI system is supposed to accomplish, up to 256 characters.' },
         { bold: 'Owner', text: 'Who is responsible. They get an email when you assign them.' },
         { bold: 'Start date', text: 'When work started or is expected to start.' },
-        { bold: 'AI risk classification', text: 'Pick one: Prohibited, High risk, Limited risk, or Minimal risk. This drives how much oversight the EU AI Act expects.' },
+        { bold: 'AI risk classification', text: 'Pick one: Prohibited, High risk, Limited risk, Minimal risk, or Out of scope. This drives how much oversight the EU AI Act expects. Not sure? Use the risk classification wizard described below.' },
         { bold: 'Type of high risk role', text: 'Your organization\'s relationship to the AI system: Deployer, Provider, Distributor, Importer, Product manufacturer, or Authorized representative.' },
         { bold: 'Geography', text: 'Where the system operates: Global, Europe, North America, South America, Asia, or Africa.' },
         { bold: 'Target industry', text: 'The sector where the AI system is used.' },
@@ -177,6 +177,29 @@ export const useCasesContent: ArticleContent = {
       type: 'callout',
       variant: 'warning',
       text: 'Deleting a use case cannot be undone. Any pending approval requests get withdrawn automatically.',
+    },
+    {
+      type: 'heading',
+      id: 'risk-classification-wizard',
+      level: 2,
+      text: 'EU AI Act risk classification wizard',
+    },
+    {
+      type: 'paragraph',
+      text: 'When the EU AI Act is one of the use case\'s frameworks, the **Settings** tab shows a **Calculate your AI risk classification** link next to the AI risk classification field. It opens a questionnaire that follows the EU AI Act: scope (Article 2), the prohibited practices (Article 5), products covered by Annex I and the high-risk areas of Annex III (Article 6, including the Article 6(3) exemption), and the transparency obligations of Article 50. Each answer decides which question comes next, and the role question asks whether you are the provider or the deployer.',
+    },
+    {
+      type: 'paragraph',
+      text: 'The result shows one of five levels: Prohibited, High risk, Limited risk, Minimal risk or **Out of scope** (systems used only for research and development and not placed on the market or put into service). Below the level you see why, with the article behind each reason and the date it applies from, and the obligations that follow for your role.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Saving sets the use case\'s AI risk classification and, when you answered the role question, its type of high risk role. The change history records both. VerifyWise keeps every saved classification, and the wizard opens with the answers from the most recent one. A use case created from an intake form with the EU AI Act risk step starts with the submitter\'s answers.',
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      text: 'Only Admins and Editors can save a classification. VerifyWise refuses a save from a Reviewer or Auditor.',
     },
     {
       type: 'heading',
