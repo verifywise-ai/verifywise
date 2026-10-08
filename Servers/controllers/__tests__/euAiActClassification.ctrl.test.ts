@@ -69,6 +69,8 @@ const MINIMAL = {
   transparency: ["none"],
 };
 
+const EU_FRAMEWORK = [{ project_framework_id: 1, framework_id: 1, name: "EU AI Act" }];
+
 describe("euAiActClassification.ctrl", () => {
   beforeEach(() => jest.clearAllMocks());
 
@@ -113,6 +115,7 @@ describe("euAiActClassification.ctrl", () => {
       id: 3,
       ai_risk_classification: "Minimal risk",
       type_of_high_risk_role: "Deployer",
+      dataValues: { framework: EU_FRAMEWORK },
     });
     (insertClassificationRunQuery as jest.Mock<any>).mockResolvedValue({ id: 12 });
     (setUseCaseClassificationQuery as jest.Mock<any>).mockResolvedValue(true);
@@ -141,11 +144,44 @@ describe("euAiActClassification.ctrl", () => {
   });
 
   it("rolls back and returns 404 when the use case vanished before the update", async () => {
-    (getProjectByIdQuery as jest.Mock<any>).mockResolvedValue({ id: 3 });
+    (getProjectByIdQuery as jest.Mock<any>).mockResolvedValue({
+      id: 3,
+      dataValues: { framework: EU_FRAMEWORK },
+    });
     (insertClassificationRunQuery as jest.Mock<any>).mockResolvedValue({ id: 12 });
     (setUseCaseClassificationQuery as jest.Mock<any>).mockResolvedValue(false);
     const r = res();
     await classifyUseCase(req({ params: { id: "3" }, body: { answers: MINIMAL } }) as any, r);
     expect(r.status).toHaveBeenCalledWith(404);
+  });
+
+  it("rejects an organizational project with 400 and writes nothing", async () => {
+    (getProjectByIdQuery as jest.Mock<any>).mockResolvedValue({
+      id: 3,
+      is_organizational: true,
+      dataValues: { framework: EU_FRAMEWORK },
+    });
+    const r = res();
+    await classifyUseCase(req({ params: { id: "3" }, body: { answers: MINIMAL } }) as any, r);
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(r.json.mock.calls[0][0].data).toMatchObject({
+      code: "ORGANIZATIONAL_PROJECT_AI_RISK_NOT_NULL",
+    });
+    expect(insertClassificationRunQuery).not.toHaveBeenCalled();
+    expect(setUseCaseClassificationQuery).not.toHaveBeenCalled();
+  });
+
+  it("rejects a use case without the EU AI Act framework with 400 and writes nothing", async () => {
+    (getProjectByIdQuery as jest.Mock<any>).mockResolvedValue({
+      id: 3,
+      is_organizational: false,
+      dataValues: { framework: [{ project_framework_id: 2, framework_id: 2, name: "ISO 42001" }] },
+    });
+    const r = res();
+    await classifyUseCase(req({ params: { id: "3" }, body: { answers: MINIMAL } }) as any, r);
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(r.json.mock.calls[0][0].data).toMatchObject({ code: "AI_RISK_WITHOUT_EU_AI_ACT" });
+    expect(insertClassificationRunQuery).not.toHaveBeenCalled();
+    expect(setUseCaseClassificationQuery).not.toHaveBeenCalled();
   });
 });
