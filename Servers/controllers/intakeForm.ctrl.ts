@@ -132,6 +132,27 @@ function parseId(param: string | string[]): number {
  * Validate submitted form data against the form schema.
  * Returns an array of error messages (empty if valid).
  */
+/**
+ * Scores a stored classification run again under its own questionnaire version.
+ * Returns null when the version is unknown to this server or the stored answers
+ * no longer score (e.g. an option was removed), so callers treat it as no run.
+ */
+function rescoreStoredRun(run: {
+  id?: number;
+  questionnaireVersion: number;
+  answers: Answers;
+}): ClassificationResult | null {
+  if (!getQuestionnaire(run.questionnaireVersion)) return null;
+  try {
+    return scoreClassification(run.questionnaireVersion, run.answers);
+  } catch (error) {
+    logger.warn(
+      `EU AI Act classification run ${run.id} could not be re-scored; treating it as no run: ${(error as Error).message}`,
+    );
+    return null;
+  }
+}
+
 function validateFormData(formData: Record<string, unknown>, schema: IIntakeFormSchema): string[] {
   const errors: string[] = [];
 
@@ -869,22 +890,19 @@ export async function getSubmissionPreview(req: Request, res: Response) {
     );
 
     const run = await getLatestRunForSubmissionQuery(submission.id!, req.organizationId!);
-    // A run made under a version this server no longer knows shows no panel
-    // rather than failing the whole preview.
-    const runQuestionnaire = run ? getQuestionnaire(run.questionnaireVersion) : null;
+    // A run that can no longer be scored shows no panel rather than failing the
+    // whole preview.
+    const current = run ? rescoreStoredRun(run) : null;
     const euAiActClassification =
-      run && runQuestionnaire
-        ? (() => {
-            const current = scoreClassification(run.questionnaireVersion, run.answers);
-            return {
-              questionnaire: runQuestionnaire,
-              answers: run.answers,
-              role: run.role,
-              current,
-              changedSinceSubmission: current.level !== run.result.level,
-              submittedAt: run.createdAt,
-            };
-          })()
+      run && current
+        ? {
+            questionnaire: getQuestionnaire(run.questionnaireVersion),
+            answers: run.answers,
+            role: run.role,
+            current,
+            changedSinceSubmission: current.level !== run.result.level,
+            submittedAt: run.createdAt,
+          }
         : null;
 
     return res.status(200).json(
@@ -1101,20 +1119,20 @@ export async function approveSubmission(req: Request, res: Response) {
     // The EU AI Act step owns the use case's level: score the stored answers
     // again and apply a justified reviewer change; the dialog's level is
     // ignored. The computed role replaces the dialog's role, which stays only
-    // when the result has no role (Out of scope). A run from a questionnaire
-    // version this server no longer knows is treated as no run.
+    // when the result has no role (Out of scope). A run that can no longer be
+    // scored is treated as no run.
     const storedRun =
       submission.entityType === IntakeEntityType.USE_CASE
         ? await getLatestRunForSubmissionQuery(submissionId, req.organizationId!, transaction)
         : null;
-    const run = storedRun && getQuestionnaire(storedRun.questionnaireVersion) ? storedRun : null;
+    const computed = storedRun ? rescoreStoredRun(storedRun) : null;
+    const run = computed ? storedRun : null;
     let classification: {
       computed: ClassificationResult;
       finalLevel: string;
       justification: string | null;
     } | null = null;
-    if (run) {
-      const computed = scoreClassification(run.questionnaireVersion, run.answers);
+    if (run && computed) {
       const finalLevel = euAiActOverride?.level ?? computed.level;
       // The levels the questionnaire can produce; GPAI and General Risk are not
       // offered here.

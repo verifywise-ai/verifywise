@@ -24,6 +24,11 @@ jest.mock("../../utils/euAiActClassification.utils", () => ({
   insertClassificationRunQuery: jest.fn(),
   getLatestRunForSubmissionQuery: jest.fn(),
 }));
+// Pass-through so a test can make re-scoring a stored run throw.
+jest.mock("../../services/euAiActClassification", () => {
+  const actual = jest.requireActual("../../services/euAiActClassification") as any;
+  return { ...actual, scoreClassification: jest.fn(actual.scoreClassification) };
+});
 jest.mock("../../utils/project.utils", () => ({ createNewProjectQuery: jest.fn() }));
 jest.mock("../../utils/modelInventory.utils", () => ({ createNewModelInventoryQuery: jest.fn() }));
 jest.mock("../../utils/useCaseChangeHistory.utils", () => ({
@@ -77,6 +82,8 @@ const intake = require("../../utils/intakeForm.utils");
 const runs = require("../../utils/euAiActClassification.utils");
 const projects = require("../../utils/project.utils");
 const history = require("../../utils/useCaseChangeHistory.utils");
+const classification = require("../../services/euAiActClassification");
+const fileLogger = require("../../utils/logger/fileLogger").default;
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 /** Same format as the controller's private createSignedToken. */
@@ -375,6 +382,40 @@ describe("approval with the EU AI Act step", () => {
     await ctrl.getSubmissionPreview(req({ params: { id: "9" } }) as any, r);
     expect(r.status).toHaveBeenCalledWith(200);
     expect(r.json.mock.calls[0][0].data.euAiActClassification).toBeNull();
+  });
+
+  it("treats a run whose stored answers no longer score as no run on approval", async () => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue(RUN);
+    classification.scoreClassification.mockImplementationOnce(() => {
+      throw new Error("Unknown option");
+    });
+    const r = await approve({
+      confirmedEntityData: {
+        project_title: "P",
+        ai_risk_classification: "high",
+        type_of_high_risk_role: "Provider",
+      },
+    });
+    expect(r.status).toHaveBeenCalledWith(200);
+    expect(projects.createNewProjectQuery.mock.calls[0][0]).toMatchObject({
+      ai_risk_classification: "High risk",
+      type_of_high_risk_role: "Provider",
+    });
+    expect(runs.insertClassificationRunQuery).not.toHaveBeenCalled();
+    expect(history.recordMultipleFieldChanges).not.toHaveBeenCalled();
+    expect(fileLogger.warn).toHaveBeenCalledWith(expect.stringContaining(String(RUN.id)));
+  });
+
+  it("preview shows no panel when the stored answers no longer score", async () => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue(RUN);
+    classification.scoreClassification.mockImplementationOnce(() => {
+      throw new Error("Unknown option");
+    });
+    const r = res();
+    await ctrl.getSubmissionPreview(req({ params: { id: "9" } }) as any, r);
+    expect(r.status).toHaveBeenCalledWith(200);
+    expect(r.json.mock.calls[0][0].data.euAiActClassification).toBeNull();
+    expect(fileLogger.warn).toHaveBeenCalledWith(expect.stringContaining(String(RUN.id)));
   });
 });
 
