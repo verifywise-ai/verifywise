@@ -1,6 +1,7 @@
 import { screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import SubmissionPreviewModal from "../SubmissionPreviewModal";
+import CustomException from "../../../../infrastructure/exceptions/customeException";
 import {
   getSubmissionPreview,
   approveSubmission,
@@ -145,6 +146,44 @@ describe("SubmissionPreviewModal EU AI Act risk step", () => {
       level: "Limited risk",
       justification: "Internal tool only.",
     });
+  });
+
+  it("shows the server's message when approval fails", async () => {
+    vi.mocked(approveSubmission).mockRejectedValue(
+      new CustomException("Bad Request", 400, {
+        message: "Bad Request",
+        data: "Invalid EU AI Act classification level",
+      }),
+    );
+    mockPreview();
+    renderModal();
+    await screen.findByText("EU AI Act classification");
+    clickApprove();
+    expect(await screen.findByText("Invalid EU AI Act classification level")).toBeInTheDocument();
+  });
+
+  it("falls back to a generic message when approval fails without a server message", async () => {
+    vi.mocked(approveSubmission).mockRejectedValue(
+      new CustomException("Network Error", undefined, undefined),
+    );
+    mockPreview();
+    renderModal();
+    await screen.findByText("EU AI Act classification");
+    clickApprove();
+    expect(
+      await screen.findByText("Failed to approve submission. Please try again."),
+    ).toBeInTheDocument();
+  });
+
+  it("names both results in the subtitle and the pending state", async () => {
+    mockPreview();
+    renderModal();
+    expect(
+      await screen.findByText(
+        "Review the intake risk score, EU AI Act classification and entity data before approving or rejecting",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Intake risk score pending...")).toBeInTheDocument();
   });
 
   it("sends no override when the level is unchanged", async () => {

@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 import { ChevronDown, ChevronUp, ShieldAlert } from "lucide-react";
 import StandardModal from "../../components/Modals/StandardModal";
+import CustomException from "../../../infrastructure/exceptions/customeException";
 import Field from "../../components/Inputs/Field";
 import Select from "../../components/Inputs/Select";
 import Chip from "../../components/Chip";
@@ -27,6 +28,15 @@ import EuAiActClassificationPanel, {
 // ============================================================================
 // Types
 // ============================================================================
+
+/** The message the server sent with a failed request, if any. */
+function serverErrorMessage(err: unknown): string | null {
+  if (!(err instanceof CustomException) || !err.status) return null;
+  const payload = err.response?.data;
+  if (typeof payload === "string" && payload.trim()) return payload;
+  if (typeof payload?.message === "string" && payload.message.trim()) return payload.message;
+  return null;
+}
 
 interface SubmissionPreviewModalProps {
   isOpen: boolean;
@@ -85,7 +95,7 @@ function RiskSection({ riskAssessment }: RiskSectionProps) {
       >
         <ShieldAlert size={18} color={theme.palette.text.accent} />
         <Typography sx={{ fontSize: "13px", color: theme.palette.other.icon }}>
-          Risk assessment pending...
+          Intake risk score pending...
         </Typography>
       </Box>
     );
@@ -326,7 +336,7 @@ function SubmissionPreviewModal({
     // Validate override if expanded — justification is required
     if (overrideExpanded) {
       if (!overrideJustification.trim()) {
-        setApproveError("Justification is required when overriding the risk assessment.");
+        setApproveError("Justification is required when overriding the intake risk score.");
         return;
       }
       if (overrideJustification.trim().length < 10) {
@@ -370,7 +380,7 @@ function SubmissionPreviewModal({
       onApproved();
       onClose();
     } catch (err) {
-      setApproveError("Failed to approve submission. Please try again.");
+      setApproveError(serverErrorMessage(err) ?? "Failed to approve submission. Please try again.");
     } finally {
       setIsApproving(false);
     }
@@ -433,7 +443,9 @@ function SubmissionPreviewModal({
       title="Review submission"
       description={
         isPending
-          ? "Review risk assessment and entity data before approving or rejecting"
+          ? euAiAct
+            ? "Review the intake risk score, EU AI Act classification and entity data before approving or rejecting"
+            : "Review the intake risk score and entity data before approving or rejecting"
           : `This submission has been ${previewData?.submissionStatus ?? "processed"}`
       }
       onSubmit={isPending ? (showRejectForm ? handleReject : handleApprove) : undefined}
