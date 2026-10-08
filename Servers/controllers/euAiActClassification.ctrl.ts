@@ -5,7 +5,10 @@ import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper
 import { translateError } from "../utils/i18n.utils";
 import { getProjectByIdQuery } from "../utils/project.utils";
 import { recordMultipleFieldChanges } from "../utils/useCaseChangeHistory.utils";
-import { extractFrameworkIds } from "../utils/validations/projectValidation.utils";
+import {
+  aiRiskClassificationIneligibility,
+  extractFrameworkIds,
+} from "../utils/validations/projectValidation.utils";
 import {
   getLatestRunForUseCaseQuery,
   insertClassificationRunQuery,
@@ -20,27 +23,27 @@ import {
 
 const parseId = (value: unknown) => parseInt(Array.isArray(value) ? value[0] : String(value), 10);
 
-const EU_AI_ACT_FRAMEWORK_ID = 1;
-
 /**
- * Mirrors the project validation rules for ai_risk_classification: organizational
- * projects never carry one, and it only applies when the EU AI Act framework is selected.
+ * Uses the project validation rule for ai_risk_classification: organizational
+ * projects never carry one, and it only applies when the EU AI Act framework
+ * is selected.
  */
 const classificationIneligibility = (project: any): { message: string; code: string } | null => {
-  if (project.is_organizational) {
+  const code = aiRiskClassificationIneligibility(
+    project.is_organizational,
+    extractFrameworkIds(project.dataValues?.framework ?? project.framework ?? []),
+  );
+  if (code === "ORGANIZATIONAL_PROJECT_AI_RISK_NOT_NULL") {
     return {
       message: "The EU AI Act risk classification does not apply to organizational projects",
-      code: "ORGANIZATIONAL_PROJECT_AI_RISK_NOT_NULL",
+      code,
     };
   }
-  const frameworkIds = extractFrameworkIds(
-    project.dataValues?.framework ?? project.framework ?? [],
-  );
-  if (!frameworkIds.includes(EU_AI_ACT_FRAMEWORK_ID)) {
+  if (code === "AI_RISK_WITHOUT_EU_AI_ACT") {
     return {
       message:
         "The EU AI Act risk classification requires the EU AI Act framework on this use case",
-      code: "AI_RISK_WITHOUT_EU_AI_ACT",
+      code,
     };
   }
   return null;
