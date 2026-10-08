@@ -1,5 +1,6 @@
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
+import CustomException from "../../../../infrastructure/exceptions/customeException";
 
 const { Q, repo } = vi.hoisted(() => {
   const Q = {
@@ -107,8 +108,7 @@ describe("RiskAnalysisModal", () => {
     );
   });
 
-  it("surfaces a save failure through setAlert", async () => {
-    repo.saveUseCaseClassification.mockRejectedValue(new Error("403"));
+  const saveAndGetAlert = async () => {
     const setAlert = vi.fn();
     const updateClassification = vi.fn();
     renderModal({ setAlert, updateClassification });
@@ -119,6 +119,31 @@ describe("RiskAnalysisModal", () => {
       expect(setAlert).toHaveBeenCalledWith(expect.objectContaining({ variant: "error" })),
     );
     expect(updateClassification).not.toHaveBeenCalled();
+    return setAlert.mock.calls[0][0];
+  };
+
+  it("shows the server's message when the save is rejected with a 4xx", async () => {
+    const message =
+      "The EU AI Act risk classification requires the EU AI Act framework on this use case";
+    repo.saveUseCaseClassification.mockRejectedValue(
+      new CustomException(message, 400, {
+        message: "Bad Request",
+        data: { message, code: "AI_RISK_WITHOUT_EU_AI_ACT" },
+      }),
+    );
+    expect((await saveAndGetAlert()).body).toBe(message);
+  });
+
+  it("shows a generic message when the save fails with a 5xx", async () => {
+    repo.saveUseCaseClassification.mockRejectedValue(
+      new CustomException("Internal Server Error", 500, { data: "boom" }),
+    );
+    expect((await saveAndGetAlert()).body).toBe("Could not save the classification. Try again.");
+  });
+
+  it("shows a generic message when the save fails without a response", async () => {
+    repo.saveUseCaseClassification.mockRejectedValue(new Error("Network Error"));
+    expect((await saveAndGetAlert()).body).toBe("Could not save the classification. Try again.");
   });
 
   it("shows the questionnaire again when reopened after viewing results", async () => {

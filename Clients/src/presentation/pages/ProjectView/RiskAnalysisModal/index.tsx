@@ -11,6 +11,7 @@ import {
   scoreEuAiActAnswers,
 } from "../../../../application/repository/euAiActClassification.repository";
 import { pruneHiddenAnswers } from "../../../../application/utils/euAiActQuestionnaire";
+import CustomException from "../../../../infrastructure/exceptions/customeException";
 import type {
   Answers,
   ClassificationResult,
@@ -125,10 +126,20 @@ const RiskAnalysisModal: React.FC<RiskAnalysisModalProps> = ({
       setAlert({ variant: "success", body: "Classification saved", isToast: true, visible: true });
       updateClassification(saved.result);
       setIsOpen(false);
-    } catch {
+    } catch (error) {
+      // A 4xx carries a message the user can act on (e.g. the use case lacks the
+      // EU AI Act framework); anything else gets the generic retry message.
+      const isClientError =
+        error instanceof CustomException &&
+        error.status !== undefined &&
+        error.status >= 400 &&
+        error.status < 500;
       setAlert({
         variant: "error",
-        body: "Could not save the classification. Try again.",
+        body:
+          isClientError && error.message
+            ? error.message
+            : "Could not save the classification. Try again.",
         isToast: true,
         visible: true,
       });
