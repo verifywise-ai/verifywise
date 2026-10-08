@@ -50,4 +50,35 @@ describe("eu_ai_act_classifications tenant isolation", () => {
     );
     expect(await getLatestRunForUseCaseQuery(projectId, attacker.orgId)).toBeNull();
   });
+
+  it("route: the owner can read the classification, another organization gets 404", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts();
+    const projectId = await createTestProject(owner.orgId, owner.userId);
+    // Positive control first, so a missing route cannot pass as "isolated".
+    expect(
+      (await owner.request.get(`/api/projects/${projectId}/eu-ai-act-classification`)).status,
+    ).toBe(200);
+    expect(
+      (await attacker.request.get(`/api/projects/${projectId}/eu-ai-act-classification`)).status,
+    ).toBe(404);
+  });
+
+  it("route: an Editor can classify; Reviewer and Auditor cannot", async () => {
+    const editor = (await seedTwoTenantContexts(3)).owner;
+    const editorProject = await createTestProject(editor.orgId, editor.userId);
+    const ok = await editor.request
+      .post(`/api/projects/${editorProject}/eu-ai-act-classification`)
+      .send({ answers: { scope: "research_only" } });
+    expect(ok.status).toBe(200);
+
+    for (const roleId of [2, 4]) {
+      await cleanupDatabase();
+      const { owner } = await seedTwoTenantContexts(roleId);
+      const projectId = await createTestProject(owner.orgId, owner.userId);
+      const denied = await owner.request
+        .post(`/api/projects/${projectId}/eu-ai-act-classification`)
+        .send({ answers: { scope: "research_only" } });
+      expect(denied.status).toBe(403);
+    }
+  });
 });

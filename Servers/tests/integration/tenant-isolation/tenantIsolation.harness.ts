@@ -25,7 +25,7 @@ export type { TwoOrgsSeed };
 export interface TenantContext {
   orgId: number;
   userId: number;
-  roleName: "Admin" | "Editor" | "SuperAdmin";
+  roleName: "Admin" | "Reviewer" | "Editor" | "Auditor" | "SuperAdmin";
   app: http.Server;
   request: Agent;
 }
@@ -50,9 +50,13 @@ export interface CrossTenantOptions {
   dbTable: string;
 }
 
-function roleNameFromId(roleId: number): "Admin" | "Editor" | "SuperAdmin" {
+function roleNameFromId(
+  roleId: number,
+): "Admin" | "Reviewer" | "Editor" | "Auditor" | "SuperAdmin" {
   if (roleId === 5) return "SuperAdmin";
+  if (roleId === 4) return "Auditor";
   if (roleId === 3) return "Editor";
+  if (roleId === 2) return "Reviewer";
   return "Admin";
 }
 

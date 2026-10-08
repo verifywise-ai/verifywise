@@ -88,6 +88,13 @@ describe("BUILTIN_ROLE_PERMISSIONS — legacy parity", () => {
     expect(BUILTIN_ROLE_PERMISSIONS["Reviewer"]).toEqual(new Set(expected));
   });
 
+  it("only Admin and Editor may classify a use case", () => {
+    expect(keysFor("Admin").has("useCase.classify")).toBe(true);
+    expect(keysFor("Editor").has("useCase.classify")).toBe(true);
+    expect(keysFor("Reviewer").has("useCase.classify")).toBe(false);
+    expect(keysFor("Auditor").has("useCase.classify")).toBe(false);
+  });
+
   it("Auditor holds only reader-tier permissions", () => {
     const expected = ALL_PERMISSION_KEYS.filter((key) =>
       ROLE_PERMISSIONS[key].legacyRoles.includes("Auditor"),
