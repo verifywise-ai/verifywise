@@ -135,6 +135,12 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     testFile: "file-org-settings.isolation.test.ts",
   },
   {
+    name: "eu_ai_act_classifications",
+    tables: ["eu_ai_act_classifications"],
+    baseRoute: "/api/projects/:id/eu-ai-act-classification",
+    testFile: "eu-ai-act-classifications.isolation.test.ts",
+  },
+  {
     name: "file_change_history",
     tables: ["file_change_history"],
     baseRoute: "/api/file-change-history",
