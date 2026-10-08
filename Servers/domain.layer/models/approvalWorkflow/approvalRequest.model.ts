@@ -82,6 +82,18 @@ export class ApprovalRequestModel
 
   @Column({
     type: DataType.DATE,
+    allowNull: true,
+  })
+  auto_approved_at?: Date | null;
+
+  @Column({
+    type: DataType.STRING(50),
+    allowNull: true,
+  })
+  auto_approval_risk_level?: string | null;
+
+  @Column({
+    type: DataType.DATE,
     allowNull: false,
     defaultValue: DataType.NOW,
   })

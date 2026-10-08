@@ -18,6 +18,8 @@ export enum NotificationType {
   APPROVAL_APPROVED = "approval_approved",
   APPROVAL_REJECTED = "approval_rejected",
   APPROVAL_COMPLETE = "approval_complete",
+  APPROVAL_STEP_OVERDUE_ESCALATION = "approval_step_overdue_escalation",
+  APPROVAL_AUTO_APPROVED = "approval_auto_approved",
 
   // Policy notifications
   POLICY_DUE_SOON = "policy_due_soon",
