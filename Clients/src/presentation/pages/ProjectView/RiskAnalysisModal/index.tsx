@@ -12,7 +12,7 @@ import { useCallback, useState, useEffect } from "react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import RiskAnalysisQuestion from "./RiskAnalysisQuestion";
 import Result from "./Result";
-import ProgressTracker from "./ProgressTracker";
+import ProgressTracker from "../../../components/EuAiActQuestionnaire/ProgressTracker";
 import { classifyRisk } from "../../../utils/riskClassification";
 import { updateProject } from "../../../../application/repository/project.repository";
 import { AiRiskClassification } from "../../../../domain/enums/aiRiskClassification.enum";
