@@ -242,6 +242,7 @@ export class IntakeFormModel extends Model<IntakeFormModel> implements IIntakeFo
       schema: this.schema,
       submitButtonText: this.submitButtonText,
       publicId: this.publicId,
+      euAiActRiskStepEnabled: this.euAiActRiskStepEnabled,
       designSettings: this.designSettings,
     };
   }
