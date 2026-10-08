@@ -402,7 +402,7 @@ export const deleteLLMKey = async (req: Request, res: Response) => {
         req.userId!,
         req.organizationId!,
       );
-      return res.status(404).json(STATUS_CODE[404]({ message: req.t!("LLM Key not found") }));
+      return res.status(404).json(STATUS_CODE[404]({ message: req.t!("LLM key not found") }));
     }
     logStructured("successful", `deleted LLM Key: ${id}`, functionName, fileName);
     logger.debug(`Deleted LLM Key: ${id}`);
