@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { createHmac, timingSafeEqual } from "crypto";
+import { ForeignKeyConstraintError } from "sequelize";
 import { sequelize } from "../database/db";
 import {
   getAllIntakeFormsQuery,
@@ -131,6 +132,19 @@ async function resolveFormLlmKeyId(
     return { error: req.t!("LLM key not found") };
   }
   return { llmKeyId: id };
+}
+
+/** The foreign key from intake_forms.llm_key_id to llm_keys. */
+const LLM_KEY_FK = "intake_forms_llm_key_id_fkey";
+
+/**
+ * True when a form write failed because its LLM key was deleted after
+ * resolveFormLlmKeyId checked it (the check runs outside the write).
+ */
+function isLlmKeyFkViolation(error: unknown): boolean {
+  if (!(error instanceof ForeignKeyConstraintError)) return false;
+  const parent = error.parent as { constraint?: string } | undefined;
+  return error.index === LLM_KEY_FK || parent?.constraint === LLM_KEY_FK;
 }
 
 // ============================================================================
@@ -451,6 +465,9 @@ export async function createIntakeForm(req: Request, res: Response) {
     return res.status(201).json(STATUS_CODE[201](form));
   } catch (error) {
     await transaction.rollback();
+    if (isLlmKeyFkViolation(error)) {
+      return res.status(400).json(STATUS_CODE[400](req.t!("LLM key not found")));
+    }
     await logFailure({
       eventType: "Create",
       description: "failed to create intake form",
@@ -569,6 +586,9 @@ export async function updateIntakeForm(req: Request, res: Response) {
     return res.status(200).json(STATUS_CODE[200](form));
   } catch (error) {
     await transaction.rollback();
+    if (isLlmKeyFkViolation(error)) {
+      return res.status(400).json(STATUS_CODE[400](req.t!("LLM key not found")));
+    }
     await logFailure({
       eventType: "Update",
       description: `failed to update intake form: ${formId}`,
