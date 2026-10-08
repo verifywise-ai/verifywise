@@ -4,6 +4,7 @@ import {
   IntakeEntityType,
   IntakeSubmissionStatus,
 } from "../../domain/intake/enums";
+import type { Answers, Questionnaire } from "../../domain/types/euAiActClassification";
 import type {
   FieldType,
   FormDesignSettings,
@@ -516,6 +517,8 @@ export async function getPublicForm(
     previousData?: Record<string, unknown>;
     previousSubmitterName?: string;
     previousSubmitterEmail?: string;
+    euAiActRiskStep?: { questionnaire: Questionnaire } | null;
+    previousRiskAnswers?: Answers;
   };
 }> {
   const queryParams = resubmissionToken ? `?token=${resubmissionToken}` : "";
@@ -538,6 +541,8 @@ export async function getPublicForm(
       previousData?: Record<string, unknown>;
       previousSubmitterName?: string;
       previousSubmitterEmail?: string;
+      euAiActRiskStep?: { questionnaire: Questionnaire } | null;
+      previousRiskAnswers?: Answers;
     };
   };
 }
@@ -555,6 +560,7 @@ export async function submitPublicForm(
     captchaToken: string;
     captchaAnswer: number;
     resubmissionToken?: string;
+    euAiActRiskAnswers?: Answers;
   },
 ): Promise<{
   data: {
@@ -591,6 +597,8 @@ export async function getPublicFormById(
     previousData?: Record<string, unknown>;
     previousSubmitterName?: string;
     previousSubmitterEmail?: string;
+    euAiActRiskStep?: { questionnaire: Questionnaire } | null;
+    previousRiskAnswers?: Answers;
   };
 }> {
   const queryParams = resubmissionToken ? `?token=${resubmissionToken}` : "";
@@ -611,6 +619,8 @@ export async function getPublicFormById(
       previousData?: Record<string, unknown>;
       previousSubmitterName?: string;
       previousSubmitterEmail?: string;
+      euAiActRiskStep?: { questionnaire: Questionnaire } | null;
+      previousRiskAnswers?: Answers;
     };
   };
 }
@@ -631,6 +641,7 @@ export async function submitPublicFormById(
     captchaToken: string;
     captchaAnswer: number;
     resubmissionToken?: string;
+    euAiActRiskAnswers?: Answers;
   },
 ): Promise<{
   data: {
