@@ -11,7 +11,7 @@ import {
   LinearProgress,
 } from "@mui/material";
 import Chip from "../../Chip";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 
 export interface UseCaseRow {
   id: number;
@@ -30,7 +30,10 @@ interface UseCasesTableProps {
   ariaLabel?: string;
 }
 
-const defaultFormatDate = (dateString: string): string => {
+const defaultFormatDate = (
+  dateString: string,
+  formatDate: ReturnType<typeof useFormattedDate>,
+): string => {
   if (!dateString) return "Unknown";
   const date = new Date(dateString);
   if (isNaN(date.getTime())) return "Unknown";
@@ -43,7 +46,7 @@ const defaultFormatDate = (dateString: string): string => {
   if (diffDays === 1) return "Yesterday";
   if (diffDays < 7) return `${diffDays} days ago`;
   if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-  return displayFormattedDate(date);
+  return formatDate(date);
 };
 
 const headerCellStyle = {
@@ -60,9 +63,13 @@ const bodyCellStyle = {
 const UseCasesTable: React.FC<UseCasesTableProps> = ({
   data,
   onRowClick,
-  formatDate = defaultFormatDate,
+  formatDate: formatDateOverride,
   ariaLabel = "Use cases",
 }) => {
+  const formatUserDate = useFormattedDate();
+  const formatDate =
+    formatDateOverride ?? ((date: string) => defaultFormatDate(date, formatUserDate));
+
   return (
     // TableContainer scrolls once the table overflows its card, and a scrollable
     // region that cannot be focused is unreachable by keyboard. tabIndex makes it

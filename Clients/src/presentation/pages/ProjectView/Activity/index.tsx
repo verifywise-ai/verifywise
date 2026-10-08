@@ -17,7 +17,8 @@ import { EntityType, getEntityHistoryConfig } from "../../../../config/changeHis
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { brand } from "../../../themes/palette";
-import { displayFormattedDate, displayFormattedTime } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import { displayFormattedTime } from "../../../tools/isoDateToString";
 
 dayjs.extend(relativeTime);
 
@@ -28,7 +29,10 @@ interface ActivityProps {
   entityId: number;
 }
 
-const formatRelativeTime = (date: string | Date): string => {
+const formatRelativeTime = (
+  date: string | Date,
+  formatDate: ReturnType<typeof useFormattedDate>,
+): string => {
   const now = dayjs();
   const targetDate = dayjs(date);
 
@@ -57,10 +61,11 @@ const formatRelativeTime = (date: string | Date): string => {
     return `Yesterday at ${displayFormattedTime(date)}`;
   }
 
-  return `${displayFormattedDate(date)} at ${displayFormattedTime(date)}`;
+  return `${formatDate(date)} at ${displayFormattedTime(date)}`;
 };
 
 const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
+  const formatDate = useFormattedDate();
   const theme = useTheme();
   const { userId: currentUserId } = useAuth();
   const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } =
@@ -143,11 +148,11 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
           ? `${creationEntry.user_name} ${creationEntry.user_surname}`
           : creationEntry.user_email || "an unknown user";
 
-    const creationDate = displayFormattedDate(creationEntry.changed_at);
+    const creationDate = formatDate(creationEntry.changed_at);
     const creationTime = displayFormattedTime(creationEntry.changed_at);
 
     return { creatorName, creationDate, creationTime };
-  }, [creationEntry, currentUserId]);
+  }, [creationEntry, currentUserId, formatDate]);
 
   const renderTruncatedValue = (entryId: number, value: string, type: "old" | "new") => {
     const key = `${entryId}-${type}`;
@@ -215,7 +220,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
             ? `${firstEntry.user_name} ${firstEntry.user_surname}`
             : firstEntry.user_email || "Unknown User";
 
-    const relativeTime = formatRelativeTime(firstEntry.changed_at);
+    const relativeTime = formatRelativeTime(firstEntry.changed_at, formatDate);
 
     return (
       <Box

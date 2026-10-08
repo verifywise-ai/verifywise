@@ -7,8 +7,14 @@
 
 import React from "react";
 import { Stack, Typography } from "@mui/material";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import DetailField from "./DetailField";
-import { getEntityTypeConfig, isEntityDeleted, EntityTypeConfig } from "./entityTypeConfig";
+import {
+  getEntityTypeConfig,
+  isEntityDeleted,
+  EntityTypeConfig,
+  DetailFieldConfig,
+} from "./entityTypeConfig";
 import { background, status } from "../../../themes/palette";
 
 interface EntityDetailsSectionProps {
@@ -16,6 +22,7 @@ interface EntityDetailsSectionProps {
 }
 
 const EntityDetailsSection: React.FC<EntityDetailsSectionProps> = ({ details }) => {
+  const formatDate = useFormattedDate();
   const entityType = details?.entityType;
   const config: EntityTypeConfig = getEntityTypeConfig(entityType);
 
@@ -33,6 +40,17 @@ const EntityDetailsSection: React.FC<EntityDetailsSectionProps> = ({ details }) 
     padding: "12px",
     borderRadius: "6px",
     border: "1px solid #F5C6CB",
+  };
+
+  const renderFieldValue = (field: DetailFieldConfig) => {
+    const value = details[field.key];
+    if (field.dateStyle === "datetime") {
+      return formatDate(value, { includeTime: true });
+    }
+    if (field.dateStyle === "date") {
+      return formatDate(value);
+    }
+    return field.format ? field.format(value) : value;
   };
 
   // Check if entity has been deleted
@@ -63,7 +81,7 @@ const EntityDetailsSection: React.FC<EntityDetailsSectionProps> = ({ details }) 
             key={field.key}
             icon={field.icon}
             label={field.label}
-            value={field.format ? field.format(details[field.key]) : details[field.key]}
+            value={renderFieldValue(field)}
             withWrap={
               field.key.toLowerCase().includes("description") ||
               field.key.toLowerCase().includes("goal")
