@@ -5662,6 +5662,7 @@ export const translations: Record<string, Record<string, string>> = {
     "AI objectives and planning to achieve them": "KI-Ziele und Planung zu deren Erreichung",
     "AI risk assessment (Operational)": "KI-Risikobewertung (Operativ)",
     "AI risk level": "KI-Risikoniveau",
+    "AI risk suggestions": "KI-Risikovorschläge",
     "AI risk treatment (Operational)": "KI-Risikobehandlung (Operativ)",
     "AI roles and responsibilities": "KI-Rollen und Verantwortlichkeiten",
     "AI system change documentation": "Dokumentation von KI-Systemänderungen",
@@ -6514,6 +6515,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Failed to fetch slack integrations": "Abrufen der Slack-Integrationen fehlgeschlagen",
     "Failed to fetch user data.": "Abrufen der Benutzerdaten fehlgeschlagen.",
     "Failed to generate demo data.": "Generieren der Demodaten fehlgeschlagen.",
+    "Failed to generate risk suggestions. Please try again.":
+      "Generieren der Risikovorschläge fehlgeschlagen. Bitte versuchen Sie es erneut.",
     "Failed to generate share link. Please try again.":
       "Generieren des Freigabelinks fehlgeschlagen. Bitte erneut versuchen.",
     "Failed to install plugin. Please try again.":
@@ -9430,6 +9433,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Quality": "Qualität",
     "Recommended actions": "Empfohlene Maßnahmen",
     "Report level": "Berichtsebene",
+    "Risk added": "Risiko hinzugefügt",
+    "Risk added to risk register": "Risiko zum Risikoregister hinzugefügt",
     "Risk analysis": "Risikoanalyse",
     "Save to storage": "Im Speicher ablegen",
     "Schedule:": "Zeitplan:",
@@ -9604,6 +9609,8 @@ export const translations: Record<string, Record<string, string>> = {
     "No lifecycle phases configured. Contact an administrator to set up the model lifecycle.":
       "Keine Lebenszyklusphasen konfiguriert. Wenden Sie sich an einen Administrator, um den Modelllebenszyklus einzurichten.",
     "No use case found": "Kein Anwendungsfall gefunden",
+    "No use case selected. Open a use case before asking for risk suggestions.":
+      "Kein Anwendungsfall ausgewählt. Öffnen Sie einen Anwendungsfall, bevor Sie Risikovorschläge anfordern.",
     "No workspaces connected": "Keine Workspaces verbunden",
     "Notification Routing": "Benachrichtigungsweiterleitung",
     "Object Type": "Objekttyp",
@@ -15264,6 +15271,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Objectifs IA et planification pour les atteindre",
     "AI risk assessment (Operational)": "Évaluation des risques IA (opérationnel)",
     "AI risk level": "Niveau de risque IA",
+    "AI risk suggestions": "Suggestions de risques IA",
     "AI risk treatment (Operational)": "Traitement des risques IA (opérationnel)",
     "AI roles and responsibilities": "Rôles et responsabilités IA",
     "AI system change documentation": "Documentation des modifications du système IA",
@@ -16113,6 +16121,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Failed to fetch slack integrations": "Échec de la récupération des intégrations Slack",
     "Failed to fetch user data.": "Échec de la récupération des données utilisateur.",
     "Failed to generate demo data.": "Échec de la génération des données de démonstration.",
+    "Failed to generate risk suggestions. Please try again.":
+      "Échec de la génération des suggestions de risques. Veuillez réessayer.",
     "Failed to generate share link. Please try again.":
       "Échec de la génération du lien de partage. Veuillez réessayer.",
     "Failed to install plugin. Please try again.":
@@ -19029,6 +19039,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Quality": "Qualité",
     "Recommended actions": "Actions recommandées",
     "Report level": "Niveau de rapport",
+    "Risk added": "Risque ajouté",
+    "Risk added to risk register": "Risque ajouté au registre des risques",
     "Risk analysis": "Analyse des risques",
     "Save to storage": "Enregistrer dans le stockage",
     "Schedule:": "Planification :",
@@ -19201,6 +19213,8 @@ export const translations: Record<string, Record<string, string>> = {
     "No lifecycle phases configured. Contact an administrator to set up the model lifecycle.":
       "Aucune phase de cycle de vie configurée. Contactez un administrateur pour configurer le cycle de vie du modèle.",
     "No use case found": "Aucun cas d'utilisation trouvé",
+    "No use case selected. Open a use case before asking for risk suggestions.":
+      "Aucun cas d'usage sélectionné. Ouvrez un cas d'usage avant de demander des suggestions de risques.",
     "No workspaces connected": "Aucun espace de travail connecté",
     "Notification Routing": "Routage des notifications",
     "Object Type": "Type d'objet",
@@ -22844,6 +22858,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Objetivos de IA y planificación para alcanzarlos",
     "AI risk assessment (Operational)": "Evaluación de riesgos de IA (operativa)",
     "AI risk level": "Nivel de riesgo de IA",
+    "AI risk suggestions": "Sugerencias de riesgos de IA",
     "AI risk treatment (Operational)": "Tratamiento de riesgos de IA (operativo)",
     "AI roles and responsibilities": "Roles y responsabilidades de IA",
     "AI system change documentation": "Documentación de cambios del sistema de IA",
@@ -23234,6 +23249,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Failed to fetch slack integrations": "Error al obtener las integraciones de Slack",
     "Failed to fetch user data.": "Error al obtener los datos del usuario.",
     "Failed to generate demo data.": "Error al generar los datos de demostración.",
+    "Failed to generate risk suggestions. Please try again.":
+      "Error al generar las sugerencias de riesgos. Inténtelo de nuevo.",
     "Failed to link model": "Error al vincular el modelo",
     "Failed to load API keys": "Error al cargar las claves de API",
     "Failed to load FRIA": "Error al cargar la FRIA",
@@ -28548,6 +28565,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Quality": "Calidad",
     "Recommended actions": "Acciones recomendadas",
     "Report level": "Nivel de informe",
+    "Risk added": "Riesgo añadido",
+    "Risk added to risk register": "Riesgo añadido al registro de riesgos",
     "Risk analysis": "Análisis de riesgos",
     "Save to storage": "Guardar en el almacenamiento",
     "Schedule:": "Programación:",
@@ -28720,6 +28739,8 @@ export const translations: Record<string, Record<string, string>> = {
     "No lifecycle phases configured. Contact an administrator to set up the model lifecycle.":
       "No hay fases del ciclo de vida configuradas. Póngase en contacto con un administrador para configurar el ciclo de vida del modelo.",
     "No use case found": "No se encontró ningún caso de uso",
+    "No use case selected. Open a use case before asking for risk suggestions.":
+      "No se ha seleccionado ningún caso de uso. Abra un caso de uso antes de solicitar sugerencias de riesgos.",
     "No workspaces connected": "No hay espacios de trabajo conectados",
     "Notification Routing": "Enrutamiento de notificaciones",
     "Object Type": "Tipo de objeto",
