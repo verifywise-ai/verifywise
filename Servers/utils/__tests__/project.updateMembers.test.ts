@@ -32,6 +32,7 @@ function mockDb({
   const row = rowExists ? [{ dataValues: { owner: 1 } }] : [];
   const orgUsers = [6, 7, 8];
   query.mockImplementation(async (sql: string, opts: any = {}) => {
+    if (sql.includes("FOR UPDATE")) return rowExists ? [{ id: 1 }] : [];
     if (sql.startsWith("SELECT id FROM users"))
       return opts.replacements.userIds
         .filter((id: number) => orgUsers.includes(id))
@@ -128,6 +129,32 @@ describe("updateProjectByIdQuery members handling", () => {
       createNewProjectQuery({ project_title: "P" } as any, [99], [], 1, 1, transaction),
     ).rejects.toBeInstanceOf(ValidationException);
     expect(statements().some((s) => s.startsWith("INSERT"))).toBe(false);
+  });
+
+  it("rejects an owner from another organization on update and on create", async () => {
+    await expect(
+      updateProjectByIdQuery(1, { owner: 99 } as any, undefined, 1, transaction),
+    ).rejects.toBeInstanceOf(ValidationException);
+    await expect(
+      createNewProjectQuery({ project_title: "P", owner: 99 } as any, [], [], 1, 1, transaction),
+    ).rejects.toBeInstanceOf(ValidationException);
+    expect(statements().some((s) => s.startsWith("INSERT") || s.startsWith("UPDATE"))).toBe(false);
+  });
+
+  it("accepts an owner from the organization and allows clearing it", async () => {
+    await updateProjectByIdQuery(1, { owner: 7 } as any, undefined, 1, transaction);
+    await updateProjectByIdQuery(1, { owner: null } as any, undefined, 1, transaction);
+    expect(statements().filter((s) => s.startsWith("UPDATE projects SET"))).toHaveLength(2);
+  });
+
+  it("returns null without touching members when the row is already gone", async () => {
+    query.mockReset();
+    mockDb({ rowExists: false });
+    await expect(
+      updateProjectByIdQuery(1, { project_title: "P" } as any, [8], 1, transaction),
+    ).resolves.toBeNull();
+    expect(deletes()).toHaveLength(0);
+    expect(inserts()).toHaveLength(0);
   });
 
   it("does not look up automations when no project field changed", async () => {

@@ -811,5 +811,7 @@
   "This link changed while you were deciding. Reload and try again.": "Ce lien a été modifié pendant votre décision. Rechargez et réessayez.",
   "This invitation was sent to a different email address.": "Cette invitation a été envoyée à une autre adresse e-mail.",
   "This invitation link is invalid.": "Ce lien d'invitation n'est pas valide.",
-  "This invitation link is no longer valid. Use the most recent invitation email, or ask your administrator to resend it.": "Ce lien d'invitation n'est plus valide. Utilisez l'e-mail d'invitation le plus récent ou demandez à votre administrateur de le renvoyer."
+  "This invitation link is no longer valid. Use the most recent invitation email, or ask your administrator to resend it.": "Ce lien d'invitation n'est plus valide. Utilisez l'e-mail d'invitation le plus récent ou demandez à votre administrateur de le renvoyer.",
+  "Members must be users of this organization": "Les membres doivent être des utilisateurs de cette organisation",
+  "Owner must be a user of this organization": "Le propriétaire doit être un utilisateur de cette organisation"
 }

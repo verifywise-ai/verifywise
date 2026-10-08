@@ -811,5 +811,7 @@
   "This link changed while you were deciding. Reload and try again.": "This link changed while you were deciding. Reload and try again.",
   "This invitation was sent to a different email address.": "This invitation was sent to a different email address.",
   "This invitation link is invalid.": "This invitation link is invalid.",
-  "This invitation link is no longer valid. Use the most recent invitation email, or ask your administrator to resend it.": "This invitation link is no longer valid. Use the most recent invitation email, or ask your administrator to resend it."
+  "This invitation link is no longer valid. Use the most recent invitation email, or ask your administrator to resend it.": "This invitation link is no longer valid. Use the most recent invitation email, or ask your administrator to resend it.",
+  "Members must be users of this organization": "Members must be users of this organization",
+  "Owner must be a user of this organization": "Owner must be a user of this organization"
 }

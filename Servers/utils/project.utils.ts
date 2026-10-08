@@ -21,7 +21,7 @@ import {
   deleteAllCustomFieldValuesForEntityQuery,
   fetchCustomFieldsForEntities,
 } from "./customField.utils";
-import { findUsersNotInOrganization } from "./eu.utils";
+import { findUsersNotInOrganization } from "./user.utils";
 
 /**
  * Turn a client member list into the ids to store. Clients send "7" for 7, and
@@ -36,14 +36,34 @@ const normaliseMemberIds = async (
 ): Promise<number[]> => {
   const numericIds = members.map(Number);
   if (numericIds.some((m) => !Number.isInteger(m) || m <= 0)) {
-    throw new ValidationException("each member must be a positive integer", "members", members);
+    throw new ValidationException("All member IDs must be positive integers", "members", members);
   }
   const memberIds = [...new Set(numericIds)];
   const outside = await findUsersNotInOrganization(memberIds, organizationId, transaction);
   if (outside.length > 0) {
-    throw new ValidationException("members must be users of this organization", "members", outside);
+    throw new ValidationException("Members must be users of this organization", "members", outside);
   }
   return memberIds;
+};
+
+/**
+ * Reject an owner who is not a user of this organization, for the same reason
+ * as members: the owner is notified by id. null (no owner) is allowed.
+ */
+const assertOwnerInOrganization = async (
+  owner: unknown,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> => {
+  if (owner === undefined || owner === null) return;
+  const ownerId = Number(owner);
+  if (
+    !Number.isInteger(ownerId) ||
+    ownerId <= 0 ||
+    (await findUsersNotInOrganization([ownerId], organizationId, transaction)).length > 0
+  ) {
+    throw new ValidationException("Owner must be a user of this organization", "owner", owner);
+  }
 };
 
 // Function to generate the next sequential UC ID
@@ -274,6 +294,7 @@ export const createNewProjectQuery = async (
   transaction: Transaction,
   isDemo: boolean = false,
 ): Promise<ProjectModel> => {
+  await assertOwnerInOrganization(project.owner, organizationId, transaction);
   const memberIds = await normaliseMemberIds(members, organizationId, transaction);
   // Frameworks are optional for use cases; default to empty array
   const projectFrameworks = frameworks || [];
@@ -500,6 +521,15 @@ export const updateProjectByIdQuery = async (
   organizationId: number,
   transaction: Transaction,
 ): Promise<(IProjectAttributes & { members: number[] }) | null> => {
+  // Lock the row before touching members. If it was deleted after the caller's
+  // existence check, return null (404) rather than failing the member INSERT on
+  // the projects foreign key (500).
+  const locked = await sequelize.query(
+    `SELECT id FROM projects WHERE organization_id = :organizationId AND id = :id FOR UPDATE`,
+    { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
+  );
+  if (locked.length === 0) return null;
+  await assertOwnerInOrganization(project.owner, organizationId, transaction);
   const oldProject = await getProjectByIdQuery(id, organizationId);
   // A partial update (e.g. only ai_risk_classification or status) must not
   // touch members: treating a missing list as [] removed every member.

@@ -1,6 +1,6 @@
 import { getUserProjects } from "../../utils/project.utils";
 import { calculateProjectRisks } from "../../utils/project.utils";
-import { findUsersNotInOrganization } from "../../utils/eu.utils";
+import { findUsersNotInOrganization } from "../../utils/user.utils";
 import logger from "../../utils/logger/fileLogger";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
@@ -328,7 +328,7 @@ const agentAddMemberToUseCase = createWriteToolFn({
         replacements: {
           organizationId,
           project_id: params.use_case_id,
-          user_id: params.user_id,
+          user_id: userId,
         },
         type: QueryTypes.SELECT,
       },
@@ -344,7 +344,7 @@ const agentAddMemberToUseCase = createWriteToolFn({
         replacements: {
           organizationId,
           project_id: params.use_case_id,
-          user_id: params.user_id,
+          user_id: userId,
         },
       },
     );
