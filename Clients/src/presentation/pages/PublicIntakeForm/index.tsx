@@ -300,9 +300,9 @@ export function PublicIntakeForm() {
       // apiServices throws CustomException: status on the error, the server envelope
       // ({ message, data: { message, errors } }) on `response`.
       const status = (err as { status?: number })?.status;
-      const detail = (err as { response?: { data?: { message?: string; errors?: unknown } } })
+      const detail = (err as { response?: { data?: { message?: string; step?: string } } })
         ?.response?.data;
-      if (riskStep && status === 400 && detail?.errors) {
+      if (riskStep && status === 400 && detail?.step === "eu_ai_act_risk") {
         // The server rejected the risk answers: send the submitter back to that step.
         setError(detail.message || "Please review your risk classification answers.");
         setStep("risk");

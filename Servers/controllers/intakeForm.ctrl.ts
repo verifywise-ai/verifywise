@@ -1716,9 +1716,13 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
       euAiActRiskAnswers,
     );
     if (!riskStep.ok) {
-      return res
-        .status(400)
-        .json(STATUS_CODE[400]({ message: req.t!(riskStep.message), errors: riskStep.errors }));
+      return res.status(400).json(
+        STATUS_CODE[400]({
+          message: req.t!(riskStep.message),
+          errors: riskStep.errors,
+          step: "eu_ai_act_risk",
+        }),
+      );
     }
 
     if (!captchaToken || captchaAnswer === undefined) {
@@ -2076,9 +2080,13 @@ export async function submitPublicForm(req: Request, res: Response) {
       euAiActRiskAnswers,
     );
     if (!riskStep.ok) {
-      return res
-        .status(400)
-        .json(STATUS_CODE[400]({ message: req.t!(riskStep.message), errors: riskStep.errors }));
+      return res.status(400).json(
+        STATUS_CODE[400]({
+          message: req.t!(riskStep.message),
+          errors: riskStep.errors,
+          step: "eu_ai_act_risk",
+        }),
+      );
     }
 
     if (!captchaToken || captchaAnswer === undefined) {

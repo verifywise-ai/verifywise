@@ -162,6 +162,7 @@ describe("public submit with the EU AI Act step", () => {
     async (route) => {
       const r = await submit(route, submitBody());
       expect(r.status).toHaveBeenCalledWith(400);
+      expect(r.json.mock.calls[0][0].data.step).toBe("eu_ai_act_risk");
       expect(intake.createSubmissionQuery).not.toHaveBeenCalled();
     },
   );
@@ -172,6 +173,7 @@ describe("public submit with the EU AI Act step", () => {
       submitBody({ euAiActRiskAnswers: { ...ANSWERS, level: "Minimal risk" } }),
     );
     expect(r.status).toHaveBeenCalledWith(400);
+    expect(r.json.mock.calls[0][0].data.step).toBe("eu_ai_act_risk");
     expect(runs.insertClassificationRunQuery).not.toHaveBeenCalled();
   });
 

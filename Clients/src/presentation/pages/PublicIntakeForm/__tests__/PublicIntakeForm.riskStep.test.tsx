@@ -138,7 +138,11 @@ describe("PublicIntakeForm risk step", () => {
       // Same shape apiServices.handleError builds from the server's 400 envelope.
       new CustomException("Risk classification answers are invalid", 400, {
         message: "Bad Request",
-        data: { message: "Risk classification answers are invalid", errors: [{ id: "scope" }] },
+        data: {
+          message: "Risk classification answers are invalid",
+          errors: [{ id: "scope" }],
+          step: "eu_ai_act_risk",
+        },
       }),
     );
     vi.spyOn(console, "error").mockImplementation(() => {});
@@ -150,6 +154,28 @@ describe("PublicIntakeForm risk step", () => {
 
     expect(await screen.findByRole("heading", { name: "Risk classification" })).toBeInTheDocument();
     expect(screen.getByText("Risk classification answers are invalid")).toBeInTheDocument();
+  });
+
+  it("keeps the form when a 400 is a form validation error, not a risk step rejection", async () => {
+    repo.getPublicFormById.mockResolvedValue(
+      formResponse({ euAiActRiskStep: { questionnaire: QUESTIONNAIRE } }),
+    );
+    repo.submitPublicFormById.mockRejectedValue(
+      new CustomException("Form validation failed", 400, {
+        message: "Bad Request",
+        data: { message: "Form validation failed", errors: [{ field: "name" }] },
+      }),
+    );
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    renderPage();
+
+    fireEvent.click(await screen.findByLabelText("Research"));
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    await fillAndSubmit();
+
+    expect(await screen.findByText("Failed to submit form. Please try again.")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Risk classification" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/Email/)).toBeInTheDocument();
   });
 
   it("a form without the step renders exactly as before", async () => {
