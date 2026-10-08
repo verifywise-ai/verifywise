@@ -20,6 +20,9 @@ import {
   RiskAssessment,
   FormSchema,
 } from "../../../application/repository/intakeForm.repository";
+import EuAiActClassificationPanel, {
+  type EuAiActClassificationData,
+} from "./EuAiActClassificationPanel";
 
 // ============================================================================
 // Types
@@ -40,6 +43,7 @@ interface PreviewData {
   formName: string;
   entityType: string;
   submissionStatus: string;
+  euAiActClassification: EuAiActClassificationData | null;
 }
 
 // ============================================================================
@@ -240,6 +244,10 @@ function SubmissionPreviewModal({
   const [overrideTier, setOverrideTier] = useState("High");
   const [overrideJustification, setOverrideJustification] = useState("");
 
+  // EU AI Act classification override
+  const [euAiActLevel, setEuAiActLevel] = useState<string>("");
+  const [euAiActJustification, setEuAiActJustification] = useState("");
+
   // Approval state
   const [isApproving, setIsApproving] = useState(false);
   const [approveError, setApproveError] = useState<string | null>(null);
@@ -266,6 +274,8 @@ function SubmissionPreviewModal({
       setOverrideExpanded(false);
       setOverrideTier("High");
       setOverrideJustification("");
+      setEuAiActLevel("");
+      setEuAiActJustification("");
       setApproveError(null);
       setShowRejectForm(false);
       setRejectReason("");
@@ -284,7 +294,9 @@ function SubmissionPreviewModal({
           formName: form?.name ?? "Unknown form",
           entityType: form?.entityType ?? "use_case",
           submissionStatus: sub?.status ?? "pending",
+          euAiActClassification: response.data.euAiActClassification ?? null,
         });
+        setEuAiActLevel(response.data.euAiActClassification?.current.level ?? "");
         setEditedEntityData({ ...(entityPreview || {}) });
       } catch (err) {
         if (cancelled) return;
@@ -323,6 +335,15 @@ function SubmissionPreviewModal({
       }
     }
 
+    const euAi = previewData?.euAiActClassification;
+    const changedLevel = euAi && euAiActLevel !== euAi.current.level;
+    if (changedLevel && euAiActJustification.trim().length < 10) {
+      setApproveError(
+        "A justification of at least 10 characters is required when changing the EU AI Act classification.",
+      );
+      return;
+    }
+
     setIsApproving(true);
     setApproveError(null);
 
@@ -335,6 +356,13 @@ function SubmissionPreviewModal({
         payload.riskOverride = {
           tier: overrideTier,
           justification: overrideJustification || `Manual override to ${overrideTier}`,
+        };
+      }
+
+      if (changedLevel) {
+        payload.euAiActOverride = {
+          level: euAiActLevel,
+          justification: euAiActJustification.trim(),
         };
       }
 
@@ -376,8 +404,18 @@ function SubmissionPreviewModal({
   }
 
   // Derived: mapped fields for entity preview
+  // Approval overwrites the classification (and role) with the computed values, so
+  // fields mapped to them are hidden while the EU AI Act panel is shown.
+  const euAiAct = previewData?.euAiActClassification ?? null;
   const mappedFields =
-    previewData?.formSchema?.fields?.filter((field) => Boolean(field.entityFieldMapping)) ?? [];
+    previewData?.formSchema?.fields?.filter((field) => {
+      if (!field.entityFieldMapping) return false;
+      if (euAiAct && field.entityFieldMapping === "ai_risk_classification") return false;
+      if (euAiAct?.current.role && field.entityFieldMapping === "type_of_high_risk_role") {
+        return false;
+      }
+      return true;
+    }) ?? [];
 
   // Derived: entity type label
   const entityLabel = previewData?.entityType === "model" ? "model inventory" : "use case";
@@ -444,7 +482,7 @@ function SubmissionPreviewModal({
               <Typography
                 sx={{ fontSize: "14px", fontWeight: 600, color: theme.palette.text.primary }}
               >
-                Risk assessment
+                Intake risk score
               </Typography>
             </Box>
 
@@ -477,7 +515,7 @@ function SubmissionPreviewModal({
                   ) : (
                     <ChevronDown size={15} strokeWidth={1.5} />
                   )}
-                  Override risk assessment
+                  Override intake risk score
                 </Box>
 
                 <Collapse in={overrideExpanded} timeout="auto" unmountOnExit>
@@ -493,6 +531,17 @@ function SubmissionPreviewModal({
               </>
             )}
           </Box>
+
+          {euAiAct && (
+            <EuAiActClassificationPanel
+              classification={euAiAct}
+              isPending={Boolean(isPending)}
+              selectedLevel={euAiActLevel}
+              onLevelChange={setEuAiActLevel}
+              justification={euAiActJustification}
+              onJustificationChange={setEuAiActJustification}
+            />
+          )}
 
           {/* ------------------------------------------------------------------ */}
           {/* Section 2: Entity preview (editable for pending, read-only otherwise) */}

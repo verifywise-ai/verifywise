@@ -4,7 +4,12 @@ import {
   IntakeEntityType,
   IntakeSubmissionStatus,
 } from "../../domain/intake/enums";
-import type { Answers, Questionnaire } from "../../domain/types/euAiActClassification";
+import type {
+  Answers,
+  ClassificationResult,
+  ClassificationRole,
+  Questionnaire,
+} from "../../domain/types/euAiActClassification";
 import type {
   FieldType,
   FormDesignSettings,
@@ -12,6 +17,16 @@ import type {
 
 // Re-export enums for convenience
 export { IntakeFormStatus, IntakeEntityType, IntakeSubmissionStatus };
+
+/** EU AI Act classification returned with a submission preview (null when the form had no risk step). */
+export interface EuAiActClassificationPreview {
+  questionnaire: Questionnaire;
+  answers: Answers;
+  role: ClassificationRole | null;
+  current: ClassificationResult;
+  changedSinceSubmission: boolean;
+  submittedAt: string;
+}
 
 /**
  * Base URL for intake form API
@@ -320,6 +335,7 @@ export async function getSubmissionPreview(
     };
     riskTier?: string | null;
     riskOverride?: RiskOverride | null;
+    euAiActClassification?: EuAiActClassificationPreview | null;
   };
 }> {
   const response = await apiServices.get(`${BASE_URL}/submissions/${submissionId}/preview`, {
@@ -339,6 +355,7 @@ export async function getSubmissionPreview(
       };
       riskTier?: string | null;
       riskOverride?: RiskOverride | null;
+      euAiActClassification?: EuAiActClassificationPreview | null;
     };
   };
 }
@@ -355,6 +372,7 @@ export async function approveSubmission(
       dimensionOverrides?: Record<string, number>;
       justification: string;
     };
+    euAiActOverride?: { level: string; justification: string };
   },
   signal?: AbortSignal,
 ): Promise<{ data: { submission: IntakeSubmission; createdEntity: unknown } }> {
