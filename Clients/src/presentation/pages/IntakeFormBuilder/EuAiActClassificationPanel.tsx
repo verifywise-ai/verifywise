@@ -1,5 +1,6 @@
 import { Alert, Box, Typography, useTheme } from "@mui/material";
 import { Scale } from "lucide-react";
+import ReasonList from "../../components/EuAiActQuestionnaire/ReasonList";
 import Chip from "../../components/Chip";
 import Field from "../../components/Inputs/Field";
 import Select from "../../components/Inputs/Select";
@@ -57,7 +58,7 @@ export default function EuAiActClassificationPanel({
       sx={{
         border: `1px solid ${theme.palette.border.dark}`,
         borderRadius: "4px",
-        p: 2.5,
+        p: "20px",
         backgroundColor: theme.palette.background.accent,
         display: "flex",
         flexDirection: "column",
@@ -85,20 +86,7 @@ export default function EuAiActClassificationPanel({
         )}
       </Box>
 
-      {current.reasons.length > 0 && (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          <Typography sx={{ fontSize: "13px", fontWeight: 600 }}>Why</Typography>
-          {current.reasons.map((reason, index) => (
-            <Box
-              key={`${reason.article}-${index}`}
-              sx={{ display: "flex", flexDirection: "column" }}
-            >
-              <Typography sx={{ fontSize: "13px", fontWeight: 600 }}>{reason.article}</Typography>
-              <Typography sx={{ fontSize: "13px" }}>{reason.text}</Typography>
-            </Box>
-          ))}
-        </Box>
-      )}
+      {current.reasons.length > 0 && <ReasonList heading="Why" items={current.reasons} />}
 
       {answered.length > 0 && (
         <Box sx={{ display: "flex", flexDirection: "column", gap: "8px" }}>

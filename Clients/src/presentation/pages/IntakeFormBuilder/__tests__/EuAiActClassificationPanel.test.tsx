@@ -40,7 +40,13 @@ const classification: EuAiActClassificationData = {
     questionnaireVersion: 1,
     level: "High risk",
     role: "Provider",
-    reasons: [{ article: "Annex III(4)", text: "Employment systems are high risk." }],
+    reasons: [
+      {
+        article: "Annex III(4)",
+        text: "Employment systems are high risk.",
+        appliesFrom: "2027-12-02",
+      },
+    ],
     obligations: [],
   },
   changedSinceSubmission: false,
@@ -71,6 +77,8 @@ describe("EuAiActClassificationPanel", () => {
     expect(screen.getByText("Annex III(4)")).toBeInTheDocument();
     expect(screen.getByText("Employment systems are high risk.")).toBeInTheDocument();
     expect(screen.getByText("Provider")).toBeInTheDocument();
+    expect(screen.getByText("Applies from")).toBeInTheDocument();
+    expect(screen.getByText("2 Dec 2027")).toBeInTheDocument();
     expect(screen.getByText("Which area does the system operate in?")).toBeInTheDocument();
     expect(screen.getByText("Employment and HR")).toBeInTheDocument();
     expect(screen.getByText("Provider of the system")).toBeInTheDocument();
