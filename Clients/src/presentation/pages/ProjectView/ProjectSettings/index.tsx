@@ -1648,10 +1648,10 @@ const ProjectSettings = React.memo(
               console.error(`Unknown classification: ${classification}`);
               return;
             }
-            setValues({
-              ...values,
-              riskClassification: match._id,
-            });
+            // Same as picking it from the dropdown: set the value and clear any
+            // earlier "required" error on the field.
+            setValues((prevValues) => ({ ...prevValues, riskClassification: match._id }));
+            setErrors((prevErrors) => ({ ...prevErrors, riskClassification: "" }));
           }}
         />
       </Stack>
