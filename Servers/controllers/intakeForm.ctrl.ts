@@ -37,6 +37,7 @@ import { ModelInventoryModel } from "../domain.layer/models/modelInventory/model
 import { IIntakeFormSchema } from "../domain.layer/interfaces/i.intakeForm";
 import { validateIntakeFormSchemaLabels } from "../utils/intakeFormSchema.validation";
 import { STATUS_CODE } from "../utils/statusCode.utils";
+import { NotFoundException } from "../domain.layer/exceptions/custom.exception";
 import { llmKeyExistsQuery } from "../utils/llmKey.utils";
 import { sanitizeUserHtml } from "../utils/sanitization.utils";
 import logger from "../utils/logger/fileLogger";
@@ -106,6 +107,30 @@ function verifySignedToken<T = Record<string, unknown>>(token: string): T | null
 /** Parse and validate an integer ID parameter. Returns NaN for invalid values. */
 function parseId(param: string | string[]): number {
   return toId(paramStr(param));
+}
+
+/** A positive integer LLM key id, or NaN. */
+function parseLlmKeyId(value: unknown): number {
+  const id = toId(value);
+  return id > 0 ? id : NaN;
+}
+
+/**
+ * Checks the llmKeyId of a form write. null/absent stays as is; anything else
+ * must be one of the caller's organization's keys (intake_forms.llm_key_id has
+ * a foreign key, but that alone would accept another organization's key).
+ */
+async function resolveFormLlmKeyId(
+  req: Request,
+  llmKeyId: unknown,
+): Promise<{ llmKeyId: number | null | undefined } | { error: string }> {
+  if (llmKeyId === undefined || llmKeyId === null) return { llmKeyId };
+  const id = parseLlmKeyId(llmKeyId);
+  if (isNaN(id)) return { error: req.t!("LLM key ID must be a positive integer") };
+  if (!(await llmKeyExistsQuery(id, req.organizationId!))) {
+    return { error: req.t!("LLM key not found") };
+  }
+  return { llmKeyId: id };
 }
 
 // ============================================================================
@@ -384,6 +409,12 @@ export async function createIntakeForm(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](schemaErrors.join("; ")));
     }
 
+    const llmKey = await resolveFormLlmKeyId(req, llmKeyId);
+    if ("error" in llmKey) {
+      await transaction.rollback();
+      return res.status(400).json(STATUS_CODE[400](llmKey.error));
+    }
+
     const form = await createIntakeFormQuery(
       {
         name,
@@ -397,7 +428,7 @@ export async function createIntakeForm(req: Request, res: Response) {
         recipients,
         riskTierSystem,
         riskAssessmentConfig,
-        llmKeyId,
+        llmKeyId: llmKey.llmKeyId,
         suggestedQuestionsEnabled,
         designSettings,
         createdBy: req.userId!,
@@ -496,6 +527,12 @@ export async function updateIntakeForm(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](schemaErrors.join("; ")));
     }
 
+    const llmKey = await resolveFormLlmKeyId(req, llmKeyId);
+    if ("error" in llmKey) {
+      await transaction.rollback();
+      return res.status(400).json(STATUS_CODE[400](llmKey.error));
+    }
+
     const form = await updateIntakeFormQuery(
       formId,
       {
@@ -510,7 +547,7 @@ export async function updateIntakeForm(req: Request, res: Response) {
         recipients,
         riskTierSystem,
         riskAssessmentConfig,
-        llmKeyId,
+        llmKeyId: llmKey.llmKeyId,
         suggestedQuestionsEnabled,
         designSettings,
       },
@@ -1285,14 +1322,17 @@ export async function getLLMSuggestedQuestions(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](req.t!("LLM key ID is required")));
     }
 
-    if (!(await llmKeyExistsQuery(Number(llmKeyId), req.organizationId!))) {
-      return res.status(400).json(STATUS_CODE[400](req.t!("LLM Key not found")));
+    const keyId = parseLlmKeyId(llmKeyId);
+    if (isNaN(keyId)) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400](req.t!("LLM key ID must be a positive integer")));
     }
 
     const questions = await generateSuggestedQuestions(
       entityType || "use_case",
       context || "",
-      llmKeyId,
+      keyId,
       req.organizationId!,
     );
 
@@ -1302,6 +1342,9 @@ export async function getLLMSuggestedQuestions(req: Request, res: Response) {
 
     return res.status(200).json(STATUS_CODE[200](questions));
   } catch (error) {
+    if (error instanceof NotFoundException) {
+      return res.status(404).json(STATUS_CODE[404]({ message: req.t!("LLM key not found") }));
+    }
     logger.error("Error in getLLMSuggestedQuestions:", error);
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -1320,14 +1363,17 @@ export async function getFieldGuidance(req: Request, res: Response) {
         .json(STATUS_CODE[400](req.t!("Field label and LLM key ID are required")));
     }
 
-    if (!(await llmKeyExistsQuery(Number(llmKeyId), req.organizationId!))) {
-      return res.status(400).json(STATUS_CODE[400](req.t!("LLM Key not found")));
+    const keyId = parseLlmKeyId(llmKeyId);
+    if (isNaN(keyId)) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400](req.t!("LLM key ID must be a positive integer")));
     }
 
     const guidanceText = await generateFieldGuidance(
       fieldLabel,
       entityType || "use_case",
-      llmKeyId,
+      keyId,
       req.organizationId!,
     );
 
@@ -1337,6 +1383,9 @@ export async function getFieldGuidance(req: Request, res: Response) {
 
     return res.status(200).json(STATUS_CODE[200]({ guidanceText }));
   } catch (error) {
+    if (error instanceof NotFoundException) {
+      return res.status(404).json(STATUS_CODE[404]({ message: req.t!("LLM key not found") }));
+    }
     logger.error("Error in getFieldGuidance:", error);
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
