@@ -37,6 +37,7 @@ import { ModelInventoryModel } from "../domain.layer/models/modelInventory/model
 import { IIntakeFormSchema } from "../domain.layer/interfaces/i.intakeForm";
 import { validateIntakeFormSchemaLabels } from "../utils/intakeFormSchema.validation";
 import { STATUS_CODE } from "../utils/statusCode.utils";
+import { llmKeyExistsQuery } from "../utils/llmKey.utils";
 import { sanitizeUserHtml } from "../utils/sanitization.utils";
 import logger from "../utils/logger/fileLogger";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
@@ -1284,6 +1285,10 @@ export async function getLLMSuggestedQuestions(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](req.t!("LLM key ID is required")));
     }
 
+    if (!(await llmKeyExistsQuery(Number(llmKeyId), req.organizationId!))) {
+      return res.status(400).json(STATUS_CODE[400](req.t!("LLM Key not found")));
+    }
+
     const questions = await generateSuggestedQuestions(
       entityType || "use_case",
       context || "",
@@ -1313,6 +1318,10 @@ export async function getFieldGuidance(req: Request, res: Response) {
       return res
         .status(400)
         .json(STATUS_CODE[400](req.t!("Field label and LLM key ID are required")));
+    }
+
+    if (!(await llmKeyExistsQuery(Number(llmKeyId), req.organizationId!))) {
+      return res.status(400).json(STATUS_CODE[400](req.t!("LLM Key not found")));
     }
 
     const guidanceText = await generateFieldGuidance(

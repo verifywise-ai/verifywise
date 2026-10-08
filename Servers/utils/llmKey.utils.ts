@@ -108,17 +108,41 @@ export const updateLLMKeyByIdQuery = async (
   return result[0];
 };
 
-export const deleteLLMKeyQuery = async (id: number, organizationId: number) => {
-  const result = await sequelize.query(
-    `DELETE FROM llm_keys WHERE organization_id = :organizationId AND id = :id RETURNING *;`,
+export const llmKeyExistsQuery = async (id: number, organizationId: number): Promise<boolean> => {
+  const rows = await sequelize.query(
+    `SELECT id FROM llm_keys WHERE organization_id = :organizationId AND id = :id LIMIT 1;`,
     {
       replacements: { organizationId, id },
-      mapToModel: true,
-      model: LLMKeyModel,
-      type: QueryTypes.DELETE,
+      type: QueryTypes.SELECT,
     },
   );
-  return result.length > 0;
+  return rows.length > 0;
+};
+
+export const deleteLLMKeyQuery = async (id: number, organizationId: number) => {
+  // Intake forms reference keys without a foreign key, so clear them here
+  // rather than leave a dangling llm_key_id behind.
+  return sequelize.transaction(async (transaction) => {
+    const result = await sequelize.query(
+      `DELETE FROM llm_keys WHERE organization_id = :organizationId AND id = :id RETURNING *;`,
+      {
+        replacements: { organizationId, id },
+        mapToModel: true,
+        model: LLMKeyModel,
+        type: QueryTypes.DELETE,
+        transaction,
+      },
+    );
+    await sequelize.query(
+      `UPDATE intake_forms SET llm_key_id = NULL WHERE organization_id = :organizationId AND llm_key_id = :id;`,
+      {
+        replacements: { organizationId, id },
+        type: QueryTypes.UPDATE,
+        transaction,
+      },
+    );
+    return result.length > 0;
+  });
 };
 
 const standardProviderUrls: Record<string, string> = {
