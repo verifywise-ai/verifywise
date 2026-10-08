@@ -102,11 +102,19 @@ jest.mock("../../domain.layer/exceptions/custom.exception", () => ({
 }));
 
 import { buildProject, buildManyProject } from "../../tests/factories/project.factory";
+import { sequelize } from "../../database/db";
+
+/** The transaction the handler under test opened (the mock hands out one shared object). */
+async function openedTransaction(): Promise<any> {
+  const results = (sequelize.transaction as unknown as jest.Mock).mock.results;
+  return results[results.length - 1].value;
+}
 import {
   getAllProjects,
   getProjectById,
   createProject,
   updateProjectById,
+  updateProjectStatus,
   deleteProjectById,
   getProjectStatsById,
 } from "../project.ctrl";
@@ -120,6 +128,7 @@ import {
   hasPendingApprovalQuery,
 } from "../../utils/project.utils";
 import { getUserByIdQuery } from "../../utils/user.utils";
+import { trackUseCaseChanges } from "../../utils/useCaseChangeHistory.utils";
 import {
   getPendingApprovalRequestIdQuery,
   withdrawApprovalRequestQuery,
@@ -137,6 +146,7 @@ const mockHasPending = hasPendingApprovalQuery as jest.MockedFunction<
   typeof hasPendingApprovalQuery
 >;
 const mockGetUser = getUserByIdQuery as jest.MockedFunction<typeof getUserByIdQuery>;
+const mockTrackChanges = trackUseCaseChanges as jest.MockedFunction<typeof trackUseCaseChanges>;
 const mockGetPendingApproval = getPendingApprovalRequestIdQuery as jest.MockedFunction<
   typeof getPendingApprovalRequestIdQuery
 >;
@@ -295,12 +305,147 @@ describe("project.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(202);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: updated }));
     });
+    it("leaves members unchanged when the body has no members (partial update)", async () => {
+      const existing = { ...buildProject(), owner: 1 };
+      const updated = { ...existing, ai_risk_classification: "Minimal risk", members: [7, 6] };
+      mockGetById.mockResolvedValue(existing as any);
+      mockGetMembers.mockResolvedValue([7, 6] as any);
+      mockUpdate.mockResolvedValue(updated as any);
+      mockGetUser.mockResolvedValue({ id: 1, name: "A", surname: "B", role_id: 1 } as any);
+      // Exactly what the EU AI Act risk wizard sends
+      const req = createReq({
+        params: { id: "1" },
+        body: { id: "1", ai_risk_classification: "Minimal risk" },
+      });
+      const res = createRes();
+      await updateProjectById(req, res);
+      expect(res.status).toHaveBeenCalledWith(202);
+      expect(mockUpdate).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ ai_risk_classification: "Minimal risk" }),
+        undefined,
+        1,
+        expect.anything(),
+      );
+    });
+    it("rolls back its transaction when the row is gone at update time", async () => {
+      mockGetById.mockResolvedValue({ ...buildProject(), owner: 1 } as any);
+      mockGetMembers.mockResolvedValue([] as any);
+      mockUpdate.mockResolvedValue(null as any);
+      const req = createReq({ params: { id: "1" }, body: { project_title: "P2" } });
+      const res = createRes();
+      await updateProjectById(req, res);
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect((await openedTransaction()).rollback).toHaveBeenCalled();
+    });
+    it("rolls back its transaction on 401", async () => {
+      const req = createReq({
+        params: { id: "1" },
+        body: { project_title: "P2" },
+        userId: undefined,
+        role: undefined,
+      });
+      const res = createRes();
+      await updateProjectById(req, res);
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect((await openedTransaction()).rollback).toHaveBeenCalled();
+    });
+    it("treats members: null as clearing the list, as before", async () => {
+      const existing = { ...buildProject(), owner: 1 };
+      mockGetById.mockResolvedValue(existing as any);
+      mockGetMembers.mockResolvedValue([7] as any);
+      mockUpdate.mockResolvedValue({ ...existing, members: [] } as any);
+      mockGetUser.mockResolvedValue({ id: 1, name: "A", surname: "B", role_id: 1 } as any);
+      const req = createReq({ params: { id: "1" }, body: { project_title: "P2", members: null } });
+      const res = createRes();
+      await updateProjectById(req, res);
+      expect(mockUpdate).toHaveBeenCalledWith(1, expect.anything(), [], 1, expect.anything());
+    });
+    it("passes an explicit empty members list through, so members can still be cleared", async () => {
+      const existing = { ...buildProject(), owner: 1 };
+      mockGetById.mockResolvedValue(existing as any);
+      mockGetMembers.mockResolvedValue([7] as any);
+      mockUpdate.mockResolvedValue({ ...existing, members: [] } as any);
+      mockGetUser.mockResolvedValue({ id: 1, name: "A", surname: "B", role_id: 1 } as any);
+      const req = createReq({ params: { id: "1" }, body: { project_title: "P2", members: [] } });
+      const res = createRes();
+      await updateProjectById(req, res);
+      expect(mockUpdate).toHaveBeenCalledWith(1, expect.anything(), [], 1, expect.anything());
+    });
+    it("records member changes in the use case history, ignoring order", async () => {
+      const existing = { ...buildProject(), owner: 1 };
+      mockGetById.mockResolvedValue(existing as any);
+      mockGetMembers.mockResolvedValue([7] as any);
+      mockUpdate.mockResolvedValue({ ...existing, members: [7, 6] } as any);
+      mockGetUser.mockResolvedValue({ id: 6, name: "A", surname: "B", role_id: 3 } as any);
+      const req = createReq({ params: { id: "1" }, body: { members: [7, 6] } });
+      const res = createRes();
+      await updateProjectById(req, res);
+      expect(mockTrackChanges).toHaveBeenCalledWith({ members: [7] }, { members: [6, 7] });
+    });
+    it("does not compare members when the body has none", async () => {
+      const existing = { ...buildProject(), owner: 1 };
+      mockGetById.mockResolvedValue(existing as any);
+      mockGetMembers.mockResolvedValue([7] as any);
+      mockUpdate.mockResolvedValue({ ...existing, members: [7] } as any);
+      const req = createReq({ params: { id: "1" }, body: { project_title: "P2" } });
+      const res = createRes();
+      await updateProjectById(req, res);
+      expect(mockTrackChanges).toHaveBeenCalledTimes(1);
+      expect(mockTrackChanges).toHaveBeenCalledWith(existing, { project_title: "P2" });
+    });
+    it("looks up added members within the organization only", async () => {
+      const existing = { ...buildProject(), owner: 1 };
+      mockGetById.mockResolvedValue(existing as any);
+      mockGetMembers.mockResolvedValue([] as any);
+      mockUpdate.mockResolvedValue({ ...existing, members: [6] } as any);
+      mockGetUser.mockResolvedValue({ id: 6, name: "A", surname: "B", role_id: 3 } as any);
+      const req = createReq({ params: { id: "1" }, body: { members: [6] } });
+      const res = createRes();
+      await updateProjectById(req, res);
+      expect(mockGetUser).toHaveBeenCalledWith(6, null, 1);
+    });
     it("should return 500 on error", async () => {
       mockGetById.mockRejectedValue(new Error("DB error"));
       const req = createReq({ params: { id: "1" }, body: { project_title: "P2" } });
       const res = createRes();
       await updateProjectById(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+  });
+
+  describe("updateProjectStatus", () => {
+    it("returns 404 and rolls back when the row is gone at update time", async () => {
+      mockGetById.mockResolvedValue({ ...buildProject(), owner: 1 } as any);
+      mockUpdate.mockResolvedValue(null as any);
+      const req = createReq({ params: { id: "1" }, body: { status: "In progress" } });
+      const res = createRes();
+      await updateProjectStatus(req, res);
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect((await openedTransaction()).rollback).toHaveBeenCalled();
+    });
+    it("rolls back its transaction when the use case does not exist", async () => {
+      mockGetById.mockResolvedValue(null as any);
+      const req = createReq({ params: { id: "999" }, body: { status: "In progress" } });
+      const res = createRes();
+      await updateProjectStatus(req, res);
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect((await openedTransaction()).rollback).toHaveBeenCalled();
+    });
+    it("changes the status without touching members", async () => {
+      const existing = { ...buildProject(), owner: 1, status: "Not started" };
+      mockGetById.mockResolvedValue(existing as any);
+      mockUpdate.mockResolvedValue({ ...existing, status: "In progress", members: [7, 6] } as any);
+      const req = createReq({ params: { id: "1" }, body: { status: "In progress" } });
+      const res = createRes();
+      await updateProjectStatus(req, res);
+      expect(mockUpdate).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ status: "In progress" }),
+        undefined,
+        1,
+        expect.anything(),
+      );
     });
   });
 

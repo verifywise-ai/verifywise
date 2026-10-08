@@ -1,4 +1,5 @@
 import { ProjectModel } from "../domain.layer/models/project/project.model";
+import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 import { sequelize } from "../database/db";
 import { ProjectsMembersModel } from "../domain.layer/models/projectsMembers/projectsMembers.model";
 import { QueryTypes, Transaction } from "sequelize";
@@ -20,6 +21,50 @@ import {
   deleteAllCustomFieldValuesForEntityQuery,
   fetchCustomFieldsForEntities,
 } from "./customField.utils";
+import { findUsersNotInOrganization } from "./user.utils";
+
+/**
+ * Turn a client member list into the ids to store. Clients send "7" for 7, and
+ * a repeated id would fail on the unique key, so normalise and de-duplicate.
+ * Reject ids that are not users of this organization: otherwise any user id
+ * could be added, and the "added to use case" email went to other tenants.
+ */
+const normaliseMemberIds = async (
+  members: unknown[],
+  organizationId: number,
+  transaction: Transaction,
+): Promise<number[]> => {
+  const numericIds = members.map(Number);
+  if (numericIds.some((m) => !Number.isInteger(m) || m <= 0)) {
+    throw new ValidationException("All member IDs must be positive integers", "members", members);
+  }
+  const memberIds = [...new Set(numericIds)];
+  const outside = await findUsersNotInOrganization(memberIds, organizationId, transaction);
+  if (outside.length > 0) {
+    throw new ValidationException("Members must be users of this organization", "members", outside);
+  }
+  return memberIds;
+};
+
+/**
+ * Reject an owner who is not a user of this organization, for the same reason
+ * as members: the owner is notified by id. null (no owner) is allowed.
+ */
+const assertOwnerInOrganization = async (
+  owner: unknown,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> => {
+  if (owner === undefined || owner === null) return;
+  const ownerId = Number(owner);
+  if (
+    !Number.isInteger(ownerId) ||
+    ownerId <= 0 ||
+    (await findUsersNotInOrganization([ownerId], organizationId, transaction)).length > 0
+  ) {
+    throw new ValidationException("Owner must be a user of this organization", "owner", owner);
+  }
+};
 
 // Function to generate the next sequential UC ID
 // Using a database sequence to fetch the next value
@@ -249,6 +294,8 @@ export const createNewProjectQuery = async (
   transaction: Transaction,
   isDemo: boolean = false,
 ): Promise<ProjectModel> => {
+  await assertOwnerInOrganization(project.owner, organizationId, transaction);
+  const memberIds = await normaliseMemberIds(members, organizationId, transaction);
   // Frameworks are optional for use cases; default to empty array
   const projectFrameworks = frameworks || [];
   const allowedFrameworks: number[] = [];
@@ -324,7 +371,7 @@ export const createNewProjectQuery = async (
   console.log("Project created with ID:", createdProject.id);
   console.log("createdProject.approval_workflow_id:", (createdProject as any).approval_workflow_id);
   (createdProject.dataValues as any)["members"] = [];
-  for (let member of members) {
+  for (let member of memberIds) {
     await sequelize.query(
       `INSERT INTO projects_members (organization_id, project_id, user_id, is_demo) VALUES (:organization_id, :project_id, :user_id, :is_demo) RETURNING *`,
       {
@@ -469,23 +516,34 @@ export const updateProjectUpdatedByIdQuery = async (
 export const updateProjectByIdQuery = async (
   id: number,
   project: Partial<ProjectModel>,
-  members: number[],
+  /** The full member list to store, or undefined to leave members unchanged. */
+  members: number[] | undefined,
   organizationId: number,
   transaction: Transaction,
 ): Promise<(IProjectAttributes & { members: number[] }) | null> => {
-  const oldProject = await getProjectByIdQuery(id, organizationId);
-  const _currentMembers = await sequelize.query(
-    `SELECT user_id FROM projects_members WHERE organization_id = :organizationId AND project_id = :project_id`,
-    {
-      replacements: { organizationId, project_id: id },
-      mapToModel: true,
-      model: ProjectsMembersModel,
-      transaction,
-    },
+  // Lock the row before touching members. If it was deleted after the caller's
+  // existence check, return null (404) rather than failing the member INSERT on
+  // the projects foreign key (500).
+  const locked = await sequelize.query(
+    `SELECT id FROM projects WHERE organization_id = :organizationId AND id = :id FOR UPDATE`,
+    { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
   );
-  const currentMembers = _currentMembers.map((m) => m.user_id);
-  const deletedMembers = currentMembers.filter((m) => !members.includes(m));
-  const newMembers = members.filter((m) => !currentMembers.includes(m));
+  if (locked.length === 0) return null;
+  await assertOwnerInOrganization(project.owner, organizationId, transaction);
+  const oldProject = await getProjectByIdQuery(id, organizationId);
+  // A partial update (e.g. only ai_risk_classification or status) must not
+  // touch members: treating a missing list as [] removed every member.
+  // Ids are normalised before diffing; otherwise "7" never matched 7 and every
+  // save deleted and re-inserted all members.
+  const memberIds =
+    members !== undefined
+      ? await normaliseMemberIds(members, organizationId, transaction)
+      : undefined;
+  const currentMembers = memberIds
+    ? (await getCurrentProjectMembers(id, organizationId, transaction)).map(Number)
+    : [];
+  const deletedMembers = memberIds ? currentMembers.filter((m) => !memberIds.includes(m)) : [];
+  const newMembers = memberIds ? memberIds.filter((m) => !currentMembers.includes(m)) : [];
 
   for (let member of deletedMembers) {
     await sequelize.query(
@@ -542,7 +600,11 @@ export const updateProjectByIdQuery = async (
     .map((f) => `${f} = :${f}`)
     .join(", ");
 
-  const query = `UPDATE projects SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
+  // With no column to change (e.g. a members-only update), "UPDATE projects SET WHERE"
+  // is invalid SQL; read the row instead so the caller still gets the project back.
+  const query = setClause
+    ? `UPDATE projects SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`
+    : `SELECT * FROM projects WHERE organization_id = :organizationId AND id = :id;`;
 
   updateProject.id = id;
   updateProject.organizationId = organizationId;
@@ -554,18 +616,25 @@ export const updateProjectByIdQuery = async (
     transaction,
   });
 
-  const updatedMembers = await sequelize.query(
-    `SELECT user_id FROM projects_members WHERE organization_id = :organizationId AND project_id = :project_id`,
-    {
-      replacements: { organizationId, project_id: id },
-      mapToModel: true,
-      model: ProjectsMembersModel,
-      transaction,
-    },
-  );
   const updatedProject = result[0];
-  const automations = (await sequelize.query(
-    `SELECT
+  // Row gone (e.g. deleted concurrently): let the caller send 404 rather than
+  // failing below on updatedProject.dataValues.
+  if (!updatedProject) return null;
+  const updatedMembers = (await getCurrentProjectMembers(id, organizationId, transaction)).map(
+    Number,
+  );
+  type AutomationRows = [
+    (TenantAutomationActionModel & {
+      trigger_key: string;
+      action_key: string;
+      automation_id: number;
+    })[],
+    number,
+  ];
+  // No project column changed (e.g. members only): nothing for "project updated" to report.
+  const automations: AutomationRows = setClause
+    ? ((await sequelize.query(
+        `SELECT
       pat.key AS trigger_key,
       paa.key AS action_key,
       a.id AS automation_id,
@@ -575,15 +644,9 @@ export const updateProjectByIdQuery = async (
     JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId
     JOIN automation_actions paa ON aa.action_type_id = paa.id
     WHERE pat.key = 'project_updated' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
+        { replacements: { organizationId }, transaction },
+      )) as AutomationRows)
+    : [[], 0];
   if (automations[0].length > 0) {
     const automation = automations[0][0];
     if (automation["trigger_key"] === "project_updated") {
@@ -620,12 +683,10 @@ export const updateProjectByIdQuery = async (
       console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
     }
   }
-  return result.length
-    ? {
-        ...updatedProject.dataValues,
-        members: updatedMembers.map((m) => m.user_id),
-      }
-    : null;
+  return {
+    ...updatedProject.dataValues,
+    members: updatedMembers,
+  };
 };
 
 const deleteTable = async (

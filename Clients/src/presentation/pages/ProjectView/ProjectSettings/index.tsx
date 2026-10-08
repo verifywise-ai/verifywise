@@ -1661,11 +1661,20 @@ const ProjectSettings = React.memo(
               typeOfHighRiskRole: role?._id ?? initialValuesRef.current.typeOfHighRiskRole,
             };
             initialValuesRef.current = { ...initialValuesRef.current, ...saved };
+            // Same as picking them from the dropdowns: set the values and clear any
+            // earlier "required" error on those fields.
             setValues((prev) => ({
               ...prev,
               riskClassification: saved.riskClassification,
               ...(role ? { typeOfHighRiskRole: role._id } : {}),
             }));
+            setErrors((prevErrors) => ({
+              ...prevErrors,
+              riskClassification: "",
+              ...(role ? { typeOfHighRiskRole: "" } : {}),
+            }));
+            // Refresh the rest of the use case view (header, overview), as a normal Save does.
+            triggerRefresh(true);
           }}
         />
       </Stack>

@@ -68,26 +68,22 @@ export const createNewProjectQuery = async (project: {
 ```typescript
 export const updateProjectByIdQuery = async (
   id: number,
-  project: Partial<{
-    project_title: string;
-    owner: string;
-    users: string;
-    start_date: Date;
-    ai_risk_classification: string;
-    type_of_high_risk_role: string;
-    goal: string;
-    last_updated: Date;
-    last_updated_by: string;
-  }>
-): Promise<Project | null>
+  project: Partial<ProjectModel>,
+  members: number[] | undefined,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<(IProjectAttributes & { members: number[] }) | null>
 ```
 
-- **Description**: Updates an existing project
+- **Description**: Updates an existing use case and, optionally, its member list
 - **Parameters**:
   - `id` - Project ID
-  - `project` - Partial project object with fields to update
-- **Returns**: Promise resolving to the updated Project object or null if not found
-- **SQL Query**: Dynamic UPDATE query based on provided fields
+  - `project` - Partial project object; only the columns present are updated
+  - `members` - The full member list to store, or `undefined` to leave members unchanged. Ids may arrive as strings from the client; they are converted to numbers and de-duplicated before the diff. An empty array removes every member. `PATCH /projects/:id` passes `undefined` when the body has no `members` field and `[]` for `members: null`; `PATCH /projects/:id/status` always passes `undefined`.
+  - `organizationId` - Tenant scope for every query
+  - `transaction` - Caller's transaction
+- **Returns**: Promise resolving to the updated project with its `members`, or null if not found
+- **SQL Query**: Dynamic UPDATE of the provided columns. When no column changes (a members-only update), the row is read with a SELECT instead, since `UPDATE projects SET WHERE` is invalid SQL.
 
 ### Delete Project
 

@@ -95,7 +95,15 @@ export function IntakeFormBuilder() {
   const [isSaving, setIsSaving] = useState(false);
   // Shared, per-organization cache: refreshed wherever a key changes. A failed
   // load leaves the picker with only "None", as before.
-  const { keys: llmKeys } = useLLMKeys();
+  const { keys: llmKeys, loading: llmKeysLoading, isError: llmKeysError } = useLLMKeys();
+  // A stored id can outlive its key (deleted elsewhere). Once the key list has
+  // loaded, an id that is not in it counts as no key. While the list is
+  // loading or failed to load, the stored id is trusted as is.
+  const llmKeysLoaded = !llmKeysLoading && !llmKeysError;
+  const activeLlmKeyId =
+    form.llmKeyId && (!llmKeysLoaded || llmKeys.some((key) => key.id === form.llmKeyId))
+      ? form.llmKeyId
+      : null;
   const [formSettingsOpen, setFormSettingsOpen] = useState(true);
   const [orgUsers, setOrgUsers] = useState<
     Array<{ id: number; name: string; surname?: string; email: string }>
@@ -264,7 +272,7 @@ export function IntakeFormBuilder() {
         slug: form.slug || generateSlug(form.name),
         recipients: form.recipients ?? [],
         riskTierSystem: form.riskTierSystem ?? "eu_ai_act",
-        llmKeyId: form.llmKeyId ?? null,
+        llmKeyId: activeLlmKeyId,
         suggestedQuestionsEnabled: form.suggestedQuestionsEnabled ?? false,
         euAiActRiskStepEnabled: form.euAiActRiskStepEnabled ?? false,
       };
@@ -316,7 +324,7 @@ export function IntakeFormBuilder() {
         slug: form.slug || generateSlug(form.name),
         recipients: form.recipients ?? [],
         riskTierSystem: form.riskTierSystem ?? "eu_ai_act",
-        llmKeyId: form.llmKeyId ?? null,
+        llmKeyId: activeLlmKeyId,
         suggestedQuestionsEnabled: form.suggestedQuestionsEnabled ?? false,
         euAiActRiskStepEnabled: form.euAiActRiskStepEnabled ?? false,
         status: IntakeFormStatus.ACTIVE,
@@ -473,6 +481,11 @@ export function IntakeFormBuilder() {
       _id: String(key.id),
       name: `${key.name} — ${key.model}`,
     })),
+    // The stored key while the list is loading or failed to load, so the
+    // picker shows it rather than an empty value.
+    ...(activeLlmKeyId && !llmKeys.some((key) => key.id === activeLlmKeyId)
+      ? [{ _id: String(activeLlmKeyId), name: "Saved key" }]
+      : []),
   ];
 
   // ============================================================================
@@ -782,7 +795,7 @@ export function IntakeFormBuilder() {
                       fieldCount={form.schema.fields.length}
                       existingFieldLabels={form.schema.fields.map((f) => f.label)}
                       entityType={form.entityType}
-                      llmKeyId={form.llmKeyId}
+                      llmKeyId={activeLlmKeyId}
                       onAdd={addField}
                     />
                   )}
@@ -804,7 +817,7 @@ export function IntakeFormBuilder() {
                         .map((f) => f.entityFieldMapping!),
                       ...(form.euAiActRiskStepEnabled ? ["ai_risk_classification"] : []),
                     ]}
-                    llmKeyId={form.llmKeyId}
+                    llmKeyId={activeLlmKeyId}
                     onChange={updateField}
                     onClose={() => setSelectedFieldId(null)}
                   />
@@ -1076,7 +1089,7 @@ export function IntakeFormBuilder() {
                           <Select
                             id="llm-key"
                             label=""
-                            value={form.llmKeyId ? String(form.llmKeyId) : ""}
+                            value={activeLlmKeyId ? String(activeLlmKeyId) : ""}
                             onChange={(e) =>
                               updateForm({
                                 llmKeyId: e.target.value === "" ? null : Number(e.target.value),
@@ -1098,13 +1111,14 @@ export function IntakeFormBuilder() {
                               lineHeight: 1.4,
                             }}
                           >
-                            {form.llmKeyId
+                            {activeLlmKeyId
                               ? "Submissions will be scored using AI-enhanced risk analysis. You can also generate suggested questions and field guidance text with AI."
                               : "Without an LLM key, submissions are scored using rule-based risk analysis only. Add a key in Settings > LLM keys to enable AI features."}
                           </Typography>
                         </Box>
 
-                        {form.llmKeyId && (
+                        {/* Shown whenever the panel can render, so it can always be turned off. */}
+                        {(activeLlmKeyId || form.suggestedQuestionsEnabled) && (
                           <Box
                             sx={{
                               display: "flex",

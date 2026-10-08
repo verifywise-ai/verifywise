@@ -483,6 +483,7 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
         userId: req.userId!,
         organizationId: req.organizationId!,
       });
+      await transaction.rollback();
       return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
@@ -503,7 +504,10 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
     }
 
     const updatedProject: Partial<ProjectModel> & { members?: number[] } = updateData;
-    const members = updatedProject.members || [];
+    // Only replace members when the request sends a list; a missing field leaves them
+    // unchanged. null still clears them, as it did before.
+    const rawMembers = updatedProject.members as number[] | null | undefined;
+    const members = rawMembers === null ? [] : Array.isArray(rawMembers) ? rawMembers : undefined;
 
     delete updatedProject.members;
     delete updatedProject.id;
@@ -536,7 +540,20 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
     if (project) {
       // Track and record changes for use case history
       if (req.userId && existingProject) {
-        const changes = await trackUseCaseChanges(existingProject, updatedProject);
+        // members is removed from updatedProject above, so compare it on its own.
+        // Sorted, so the same members in another order are not recorded as a change.
+        const byId = (a: number, b: number) => a - b;
+        const memberChanges =
+          members !== undefined
+            ? await trackUseCaseChanges(
+                { members: currentMembers.map(Number).sort(byId) } as any,
+                { members: [...project.members].sort(byId) } as any,
+              )
+            : [];
+        const changes = [
+          ...(await trackUseCaseChanges(existingProject, updatedProject)),
+          ...memberChanges,
+        ];
         if (changes.length > 0) {
           await recordMultipleFieldChanges(
             projectId,
@@ -590,7 +607,7 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
       for (const memberId of addedMembers) {
         try {
           // Get user details to check their role
-          const memberUser = await getUserByIdQuery(memberId);
+          const memberUser = await getUserByIdQuery(memberId, null, req.organizationId!);
 
           if (memberUser) {
             // Validate role_id is a number
@@ -664,6 +681,9 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
       return res.status(202).json(STATUS_CODE[202](project));
     }
 
+    // The row disappeared between the existence check and the update: undo any
+    // member changes made inside the transaction and release its connection.
+    await transaction.rollback();
     await logSuccess({
       eventType: "Update",
       description: `Project not found for update: ID ${projectId}`,
@@ -1325,6 +1345,7 @@ export async function updateProjectStatus(req: Request, res: Response): Promise<
         organizationId: req.organizationId!,
       });
 
+      await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404]({}));
     }
 
@@ -1332,7 +1353,7 @@ export async function updateProjectStatus(req: Request, res: Response): Promise<
     const updatedProject = await updateProjectByIdQuery(
       projectId,
       { status, last_updated: new Date(), last_updated_by: req.userId! },
-      [], // no members update
+      undefined, // leave members unchanged
       req.organizationId!,
       transaction,
     );
@@ -1369,8 +1390,17 @@ export async function updateProjectStatus(req: Request, res: Response): Promise<
       return res.status(200).json(STATUS_CODE[200](updatedProject));
     }
 
+    // The row disappeared between the existence check and the update.
     await transaction.rollback();
-    return res.status(500).json(STATUS_CODE[500](req.t!("Failed to update project status")));
+    await logSuccess({
+      eventType: "Update",
+      description: `Project not found for status update: ID ${projectId}`,
+      functionName: "updateProjectStatus",
+      fileName: "project.ctrl.ts",
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(404).json(STATUS_CODE[404]({}));
   } catch (error) {
     await transaction.rollback();
 
