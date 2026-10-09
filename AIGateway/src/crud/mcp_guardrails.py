@@ -13,6 +13,20 @@ def _to_text_array(lst) -> str:
     return "{}"
 
 
+async def get_mcp_guardrail_name(org_id: int, rule_id: int) -> Optional[str]:
+    """The name of one of the organization's MCP guardrail rules, or None."""
+    async with get_db() as db:
+        result = await db.execute(
+            text(
+                "SELECT name FROM ai_gateway_mcp_guardrail_rules "
+                "WHERE organization_id = :org_id AND id = :rule_id"
+            ),
+            {"org_id": org_id, "rule_id": rule_id},
+        )
+        row = result.fetchone()
+        return row[0] if row else None
+
+
 async def get_all_mcp_guardrails(org_id: int) -> list[dict]:
     """Fetch all MCP guardrail rules for an organization."""
     async with get_db() as db:
@@ -28,6 +42,7 @@ async def get_all_mcp_guardrails(org_id: int) -> list[dict]:
                     scope,
                     action,
                     applies_to_tools,
+                    applies_to_agent_keys,
                     is_active,
                     created_by,
                     created_at,
@@ -49,6 +64,7 @@ async def create_mcp_guardrail(org_id: int, data: dict) -> Optional[dict]:
     config_json = json.dumps(config_value) if config_value is not None else "{}"
 
     applies_to_tools = data.get("applies_to_tools") or []
+    applies_to_agent_keys = data.get("applies_to_agent_keys") or []
 
     async with get_db() as db:
         result = await db.execute(
@@ -62,6 +78,7 @@ async def create_mcp_guardrail(org_id: int, data: dict) -> Optional[dict]:
                     scope,
                     action,
                     applies_to_tools,
+                    applies_to_agent_keys,
                     is_active,
                     created_by
                 ) VALUES (
@@ -72,6 +89,7 @@ async def create_mcp_guardrail(org_id: int, data: dict) -> Optional[dict]:
                     :scope,
                     :action,
                     :applies_to_tools,
+                    :applies_to_agent_keys,
                     :is_active,
                     :created_by
                 )
@@ -84,6 +102,7 @@ async def create_mcp_guardrail(org_id: int, data: dict) -> Optional[dict]:
                     scope,
                     action,
                     applies_to_tools,
+                    applies_to_agent_keys,
                     is_active,
                     created_by,
                     created_at,
@@ -97,6 +116,7 @@ async def create_mcp_guardrail(org_id: int, data: dict) -> Optional[dict]:
                 "scope": data.get("scope", "input"),
                 "action": data.get("action", "block"),
                 "applies_to_tools": applies_to_tools,
+                "applies_to_agent_keys": applies_to_agent_keys,
                 "is_active": data.get("is_active", True),
                 "created_by": data.get("created_by"),
             },
@@ -139,6 +159,10 @@ async def update_mcp_guardrail(org_id: int, rule_id: int, data: dict) -> Optiona
         set_clauses.append("applies_to_tools = :applies_to_tools")
         params["applies_to_tools"] = data["applies_to_tools"] or []
 
+    if "applies_to_agent_keys" in data:
+        set_clauses.append("applies_to_agent_keys = :applies_to_agent_keys")
+        params["applies_to_agent_keys"] = data["applies_to_agent_keys"] or []
+
     if "is_active" in data:
         set_clauses.append("is_active = :is_active")
         params["is_active"] = data["is_active"]
@@ -162,6 +186,7 @@ async def update_mcp_guardrail(org_id: int, rule_id: int, data: dict) -> Optiona
             scope,
             action,
             applies_to_tools,
+            applies_to_agent_keys,
             is_active,
             created_by,
             created_at,

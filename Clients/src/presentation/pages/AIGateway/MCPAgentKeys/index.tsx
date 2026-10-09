@@ -11,6 +11,7 @@ import {
   Wrench,
   AlertTriangle,
   RotateCcw,
+  Activity,
 } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
 import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
@@ -32,6 +33,7 @@ import {
 } from "../shared";
 import MCPTable from "../MCPTable";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import AgentActivityDrawer from "../AgentActivityDrawer";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import dayjs from "dayjs";
 
@@ -64,6 +66,7 @@ export default function MCPAgentKeysPage() {
   const [keys, setKeys] = useState<AgentKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [activityKey, setActivityKey] = useState<{ id: number; name: string } | null>(null);
 
   // Create modal
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -312,6 +315,14 @@ export default function MCPAgentKeysPage() {
                   by {key.created_by_name} &middot; {formatDate(key.created_at)}
                 </Typography>,
                 <Stack direction="row" alignItems="center" justifyContent="flex-end" gap="4px">
+                  <IconButton
+                    size="small"
+                    onClick={() => setActivityKey({ id: key.id, name: key.name })}
+                    sx={{ p: 0.5 }}
+                    aria-label="View agent activity"
+                  >
+                    <Activity size={14} strokeWidth={1.5} color={palette.text.tertiary} />
+                  </IconButton>
                   {key.is_active && !key.revoked_at && (
                     <IconButton
                       size="small"
@@ -491,6 +502,14 @@ curl -H "Authorization: Bearer ${newKey}" \\
         onSubmit={handleRevoke}
         submitButtonText="Revoke key"
         maxWidth="440px"
+      />
+
+      {/* Per-agent activity view */}
+      <AgentActivityDrawer
+        agentKeyId={activityKey?.id ?? null}
+        agentKeyName={activityKey?.name}
+        open={!!activityKey}
+        onClose={() => setActivityKey(null)}
       />
     </>
   );

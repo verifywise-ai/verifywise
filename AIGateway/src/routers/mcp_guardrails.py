@@ -8,9 +8,42 @@ from crud.mcp_guardrails import (
     get_all_mcp_guardrails,
     update_mcp_guardrail,
 )
+from crud.mcp_agent_keys import get_org_agent_key_ids
 from middlewares.auth import verify_internal_key
 from utils.auth import get_org_id, get_user_id, require_admin
 from utils.notifications import notify_config_change
+
+# Upper bound on agent keys a single rule can be scoped to.
+MAX_RULE_AGENT_KEYS = 100
+
+
+async def _validated_agent_keys(request: Request, value: Any) -> list[int]:
+    """Validate applies_to_agent_keys: None/empty means every agent (org-wide);
+    otherwise a list of this organization's agent-key ids. An id that is not one
+    of the organization's keys is rejected, because a rule scoped only to keys
+    it can never match would silently stop applying."""
+    if value is None:
+        return []
+    if not isinstance(value, list) or not all(
+        isinstance(k, int) and not isinstance(k, bool) for k in value
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="applies_to_agent_keys must be an array of agent-key ids",
+        )
+    keys = list(dict.fromkeys(value))
+    if len(keys) > MAX_RULE_AGENT_KEYS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"applies_to_agent_keys can list at most {MAX_RULE_AGENT_KEYS} agent keys",
+        )
+    known = await get_org_agent_key_ids(get_org_id(request), keys)
+    if len(known) != len(keys):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="applies_to_agent_keys contains an agent key that does not exist",
+        )
+    return keys
 
 router = APIRouter(prefix="/mcp/guardrails", tags=["mcp-guardrails"])
 
@@ -123,6 +156,12 @@ async def create_guardrail(request: Request):
                 detail="applies_to_tools must be an array of strings",
             )
 
+    # Validate applies_to_agent_keys (optional, must be array of agent-key ids).
+    # Empty/omitted means the rule applies to every agent (org-wide).
+    applies_to_agent_keys = await _validated_agent_keys(
+        request, body.get("applies_to_agent_keys")
+    )
+
     # Validate is_active (optional, defaults to true)
     is_active = body.get("is_active", True)
     if not isinstance(is_active, bool):
@@ -141,6 +180,7 @@ async def create_guardrail(request: Request):
         "scope": scope,
         "action": action,
         "applies_to_tools": applies_to_tools or [],
+        "applies_to_agent_keys": applies_to_agent_keys or [],
         "is_active": is_active,
         "created_by": user_id,
     }
@@ -257,6 +297,12 @@ async def update_guardrail(rule_id: int, request: Request):
                     detail="applies_to_tools must be an array of strings",
                 )
         updates["applies_to_tools"] = applies_to_tools if applies_to_tools is not None else []
+
+    # applies_to_agent_keys
+    if "applies_to_agent_keys" in body:
+        updates["applies_to_agent_keys"] = await _validated_agent_keys(
+            request, body["applies_to_agent_keys"]
+        )
 
     # is_active
     if "is_active" in body:

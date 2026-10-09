@@ -90,4 +90,5 @@ jobs:
             tests/test_cache_service.py \
             tests/test_spend_by_day_sql.py \
             tests/test_model_catalog_contract.py \
+            tests/test_agent_policy_scope.py \
             -v

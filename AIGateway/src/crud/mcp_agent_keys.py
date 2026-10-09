@@ -2,7 +2,7 @@ import json
 import secrets
 import hashlib
 from typing import Any, Optional
-from sqlalchemy import text
+from sqlalchemy import bindparam, text
 from database.db import get_db
 
 
@@ -15,6 +15,21 @@ def generate_agent_key() -> dict:
         "key_hash": key_hash,
         "prefix": prefix,
     }
+
+
+async def get_org_agent_key_ids(org_id: int, key_ids: list[int]) -> set[int]:
+    """The subset of key_ids that are agent keys of this organization."""
+    if not key_ids:
+        return set()
+    async with get_db() as db:
+        result = await db.execute(
+            text(
+                "SELECT id FROM ai_gateway_mcp_agent_keys "
+                "WHERE organization_id = :org_id AND id IN :ids"
+            ).bindparams(bindparam("ids", expanding=True)),
+            {"org_id": org_id, "ids": list(key_ids)},
+        )
+        return {row[0] for row in result.fetchall()}
 
 
 async def get_all_agent_keys(org_id: int) -> list[dict]:
