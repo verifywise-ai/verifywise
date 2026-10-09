@@ -138,28 +138,22 @@ async function resolveFormLlmKeyId(
 }
 
 /**
- * Shared shell of the LLM endpoints: answers 400 for a missing or invalid key
- * id, 404 when the key is not one of the organization's, and 500 otherwise.
- * `missingMessage` is the translated 400 message when required input is
- * missing, or null.
+ * Shared shell of the LLM endpoints, run once the caller has checked its
+ * required input: answers 400 for an invalid key id, 404 when the key is not
+ * one of the organization's, and 500 for anything else.
  */
 async function handleLlmKeyRequest(
   req: Request,
   res: Response,
   functionName: string,
-  missingMessage: string | null,
+  llmKeyId: unknown,
   generate: (keyId: number) => Promise<Response>,
 ): Promise<Response> {
+  const keyId = parseLlmKeyId(llmKeyId);
+  if (isNaN(keyId)) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("LLM key ID must be a positive integer")));
+  }
   try {
-    if (missingMessage) {
-      return res.status(400).json(STATUS_CODE[400](missingMessage));
-    }
-    const keyId = parseLlmKeyId(req.body?.llmKeyId);
-    if (isNaN(keyId)) {
-      return res
-        .status(400)
-        .json(STATUS_CODE[400](req.t!("LLM key ID must be a positive integer")));
-    }
     return await generate(keyId);
   } catch (error) {
     if (error instanceof NotFoundException) {
@@ -1353,24 +1347,21 @@ export async function rejectSubmission(req: Request, res: Response) {
  */
 export async function getLLMSuggestedQuestions(req: Request, res: Response) {
   const { entityType, context, llmKeyId } = req.body ?? {};
-  return handleLlmKeyRequest(
-    req,
-    res,
-    "getLLMSuggestedQuestions",
-    llmKeyId ? null : req.t!("LLM key ID is required"),
-    async (keyId) => {
-      const questions = await generateSuggestedQuestions(
-        entityType || "use_case",
-        context || "",
-        keyId,
-        req.organizationId!,
-      );
-      if (!questions) {
-        return res.status(500).json(STATUS_CODE[500](req.t!("Failed to generate questions")));
-      }
-      return res.status(200).json(STATUS_CODE[200](questions));
-    },
-  );
+  if (!llmKeyId) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("LLM key ID is required")));
+  }
+  return handleLlmKeyRequest(req, res, "getLLMSuggestedQuestions", llmKeyId, async (keyId) => {
+    const questions = await generateSuggestedQuestions(
+      entityType || "use_case",
+      context || "",
+      keyId,
+      req.organizationId!,
+    );
+    if (!questions) {
+      return res.status(500).json(STATUS_CODE[500](req.t!("Failed to generate questions")));
+    }
+    return res.status(200).json(STATUS_CODE[200](questions));
+  });
 }
 
 /**
@@ -1378,24 +1369,23 @@ export async function getLLMSuggestedQuestions(req: Request, res: Response) {
  */
 export async function getFieldGuidance(req: Request, res: Response) {
   const { fieldLabel, entityType, llmKeyId } = req.body ?? {};
-  return handleLlmKeyRequest(
-    req,
-    res,
-    "getFieldGuidance",
-    fieldLabel && llmKeyId ? null : req.t!("Field label and LLM key ID are required"),
-    async (keyId) => {
-      const guidanceText = await generateFieldGuidance(
-        fieldLabel,
-        entityType || "use_case",
-        keyId,
-        req.organizationId!,
-      );
-      if (!guidanceText) {
-        return res.status(500).json(STATUS_CODE[500](req.t!("Failed to generate guidance")));
-      }
-      return res.status(200).json(STATUS_CODE[200]({ guidanceText }));
-    },
-  );
+  if (!fieldLabel || !llmKeyId) {
+    return res
+      .status(400)
+      .json(STATUS_CODE[400](req.t!("Field label and LLM key ID are required")));
+  }
+  return handleLlmKeyRequest(req, res, "getFieldGuidance", llmKeyId, async (keyId) => {
+    const guidanceText = await generateFieldGuidance(
+      fieldLabel,
+      entityType || "use_case",
+      keyId,
+      req.organizationId!,
+    );
+    if (!guidanceText) {
+      return res.status(500).json(STATUS_CODE[500](req.t!("Failed to generate guidance")));
+    }
+    return res.status(200).json(STATUS_CODE[200]({ guidanceText }));
+  });
 }
 
 // ============================================================================
