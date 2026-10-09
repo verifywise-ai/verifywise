@@ -185,7 +185,7 @@ async def get_audit_stats_by_agent(org_id: int, days: int = 7) -> list[dict]:
 
 async def get_agent_activity(org_id: int, agent_key_id: int, days: int = 30) -> dict:
     """Everything one agent has been doing over the last N days: a summary
-    (total calls, denials, approvals, avg latency, distinct tools) plus the tools
+    (calls, runs, denials, approvals, errors, avg latency, last active) plus the tools
     it used and its most recent tool calls. Powers the per-agent activity view."""
     params = {
         "org_id": org_id,
@@ -205,7 +205,6 @@ async def get_agent_activity(org_id: int, agent_key_id: int, days: int = 30) -> 
                     ) AS denied,
                     COUNT(*) FILTER (WHERE result_status = 'approval_required') AS approvals,
                     COUNT(*) FILTER (WHERE is_error) AS errors,
-                    COUNT(DISTINCT tool_name) AS unique_tools,
                     COUNT(DISTINCT agent_run_id) AS runs,
                     COALESCE(AVG(latency_ms), 0) AS avg_latency_ms,
                     MAX(created_at) AS last_active
@@ -250,7 +249,6 @@ async def get_agent_activity(org_id: int, agent_key_id: int, days: int = 30) -> 
             "denied": s.get("denied", 0),
             "approvals": s.get("approvals", 0),
             "errors": s.get("errors", 0),
-            "unique_tools": s.get("unique_tools", 0),
             "runs": s.get("runs", 0),
             "avg_latency_ms": round(float(s.get("avg_latency_ms", 0) or 0), 2),
             "last_active": s.get("last_active"),

@@ -105,7 +105,7 @@ async def scan_tool_input(
                       OR :tool_name = ANY(applies_to_tools)
                   )
                   AND (
-                      array_length(applies_to_agent_keys, 1) IS NULL
+                      agent_scope = 'all'
                       OR :agent_key_id = ANY(applies_to_agent_keys)
                   )
                 ORDER BY created_at
@@ -203,11 +203,21 @@ def blocking_rule(
     return detection.guardrail_id, result.rule_names.get(detection.guardrail_id)
 
 
-async def scan_result_blob(org_id: int, blob: str) -> str:
+async def scan_result_blob(
+    org_id: int,
+    blob: str,
+    *,
+    # Required for the same reason as in scan_tool_input.
+    agent_key_id: Optional[int],
+) -> str:
     """Mask PII / filtered content in a flat result string (tool stdout/stderr,
     serialized tool_response). Returns the masked string. Never blocks — a tool
     result has already been produced; we only sanitize what we store at rest.
-    Fails open (returns the original blob) on any error."""
+    Fails open (returns the original blob) on any error.
+
+    Rules apply by agent scope, as on the input side. Tool scope is not applied:
+    the result's tool name comes from the client, unauthenticated, while the
+    agent key is the caller's own credential."""
     if not blob or not blob.strip():
         return blob
     try:
@@ -217,9 +227,13 @@ async def scan_result_blob(org_id: int, blob: str) -> str:
                     SELECT id, name, rule_type, config, scope, action
                     FROM ai_gateway_mcp_guardrail_rules
                     WHERE organization_id = :org_id AND is_active = true
+                      AND (
+                          agent_scope = 'all'
+                          OR :agent_key_id = ANY(applies_to_agent_keys)
+                      )
                     ORDER BY created_at
                 """),
-                {"org_id": org_id},
+                {"org_id": org_id, "agent_key_id": agent_key_id},
             )
             mcp_rules = [dict(r) for r in rules_result.mappings().fetchall()]
             settings_result = await db.execute(

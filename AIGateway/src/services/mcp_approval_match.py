@@ -70,9 +70,9 @@ async def check_require_approval(
 ) -> Optional[dict]:
     """Return the first active require_approval rule matching the command, else None.
 
-    A rule applies to this call only when its agent-key scope matches: an empty
-    applies_to_agent_keys means the rule is org-wide (every agent), otherwise the
-    calling agent_key_id must be listed.
+    A rule applies to this call only when its agent scope matches: agent_scope
+    'all' means every agent, 'selected' means the calling agent_key_id must be in
+    applies_to_agent_keys.
     """
     input_text = _serialize(extract_scannable_content(tool_name, arguments))
     if not input_text.strip():
@@ -92,7 +92,7 @@ async def check_require_approval(
                       OR :tool_name = ANY(applies_to_tools)
                   )
                   AND (
-                      array_length(applies_to_agent_keys, 1) IS NULL
+                      agent_scope = 'all'
                       OR :agent_key_id = ANY(applies_to_agent_keys)
                   )
                 ORDER BY created_at

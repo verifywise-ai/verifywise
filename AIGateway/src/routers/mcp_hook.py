@@ -221,7 +221,7 @@ async def mcp_hook_result(request: Request):
     truncated = len(serialized.encode("utf-8")) > MCP_RESULT_CAP_BYTES
     if truncated:
         serialized = serialized.encode("utf-8")[:MCP_RESULT_CAP_BYTES].decode("utf-8", "ignore")
-    masked = await scan_result_blob(org_id, serialized)
+    masked = await scan_result_blob(org_id, serialized, agent_key_id=agent_key["id"])
     try:
         stored = json.loads(masked)
     except Exception:

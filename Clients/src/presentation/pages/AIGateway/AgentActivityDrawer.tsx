@@ -1,7 +1,8 @@
 import { Box, Drawer, Typography, Stack, IconButton, Divider } from "@mui/material";
-import { X } from "lucide-react";
+import { X, Activity, PlayCircle, ShieldX, UserCheck, AlertTriangle, Clock } from "lucide-react";
 import { useState, useEffect } from "react";
 import Chip from "../../components/Chip";
+import { StatCard } from "../../components/Cards/StatCard";
 import { EmptyState } from "../../components/EmptyState";
 import { apiServices } from "../../../infrastructure/api/networkServices";
 import palette from "../../themes/palette";
@@ -23,7 +24,6 @@ interface ActivitySummary {
   denied: number;
   approvals: number;
   errors: number;
-  unique_tools: number;
   runs: number;
   avg_latency_ms: number;
   last_active: string | null;
@@ -57,42 +57,6 @@ const labelSx = {
   color: palette.text.tertiary,
   mb: "6px",
 };
-
-/** A single summary metric tile. */
-function StatTile({
-  label,
-  value,
-  danger,
-}: {
-  label: string;
-  value: number | string;
-  danger?: boolean;
-}) {
-  return (
-    <Box
-      sx={{
-        flex: "1 1 0",
-        minWidth: 96,
-        p: "12px",
-        borderRadius: "4px",
-        border: `1px solid ${palette.border.light}`,
-        backgroundColor: palette.background.main,
-      }}
-    >
-      <Typography
-        sx={{
-          fontSize: 22,
-          fontWeight: 700,
-          fontVariantNumeric: "tabular-nums",
-          color: danger && value !== 0 ? palette.status.error.text : palette.text.primary,
-        }}
-      >
-        {value}
-      </Typography>
-      <Typography sx={{ fontSize: 11, color: palette.text.tertiary }}>{label}</Typography>
-    </Box>
-  );
-}
 
 /**
  * Per-agent activity view: everything one agent has been doing (summary metrics,
@@ -156,15 +120,35 @@ export default function AgentActivityDrawer({
           <EmptyState icon={X} message="No activity recorded for this agent yet" />
         ) : (
           <Stack gap="24px">
-            {/* Summary tiles */}
-            <Stack direction="row" flexWrap="wrap" gap="8px">
-              <StatTile label="Tool calls" value={s.total_calls} />
-              <StatTile label="Runs" value={s.runs} />
-              <StatTile label="Denied" value={s.denied} danger />
-              <StatTile label="Approvals" value={s.approvals} />
-              <StatTile label="Tools used" value={s.unique_tools} />
-              <StatTile label="Avg latency" value={`${s.avg_latency_ms} ms`} />
-            </Stack>
+            {/* Summary */}
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: { xs: "repeat(2, 1fr)", sm: "repeat(3, 1fr)" },
+                gap: "8px",
+              }}
+            >
+              <StatCard
+                title="Tool calls"
+                value={s.total_calls}
+                Icon={Activity}
+                subtitle={
+                  s.last_active
+                    ? fill(tr("Last active {date}"), { date: formatDate(s.last_active) })
+                    : undefined
+                }
+              />
+              <StatCard title="Runs" value={s.runs} Icon={PlayCircle} />
+              <StatCard title="Denied" value={s.denied} Icon={ShieldX} highlight={s.denied > 0} />
+              <StatCard title="Approvals" value={s.approvals} Icon={UserCheck} />
+              <StatCard
+                title="Errors"
+                value={s.errors}
+                Icon={AlertTriangle}
+                highlight={s.errors > 0}
+              />
+              <StatCard title="Avg latency" value={`${s.avg_latency_ms} ms`} Icon={Clock} />
+            </Box>
 
             <Divider />
 

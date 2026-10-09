@@ -6,52 +6,76 @@ from crud.mcp_guardrails import (
     create_mcp_guardrail,
     delete_mcp_guardrail,
     get_all_mcp_guardrails,
-    get_mcp_guardrail_agent_keys,
+    get_mcp_guardrail_agent_scope,
     update_mcp_guardrail,
 )
-from crud.mcp_agent_keys import get_org_agent_key_ids
+from crud.mcp_agent_keys import get_active_org_agent_key_ids
 from middlewares.auth import verify_internal_key
 from utils.auth import get_org_id, get_user_id, require_admin
 from utils.notifications import notify_config_change
 
 # Upper bound on agent keys a single rule can be scoped to.
 MAX_RULE_AGENT_KEYS = 100
+VALID_AGENT_SCOPES = {"all", "selected"}
 
 
-async def _validated_agent_keys(
-    request: Request, value: Any, current: list[int] | None = None
-) -> list[int]:
-    """Validate applies_to_agent_keys: None/empty means every agent (org-wide);
-    otherwise a list of this organization's agent-key ids.
+def _bad_request(detail: str) -> HTTPException:
+    return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=detail)
 
-    A newly added id must be one of the organization's keys: a rule scoped only
-    to keys it can never match would silently stop applying. Ids the rule
-    already has (`current`) are kept even if their key was deleted since, so
-    saving a rule never forces its scope to shrink to empty, which would widen
-    it to every agent."""
+
+async def _validated_agent_keys(request: Request, value: Any) -> list[int]:
+    """Validate applies_to_agent_keys: a list of this organization's active
+    (not revoked) agent-key ids, deduplicated in order."""
     if value is None:
         return []
     if not isinstance(value, list) or not all(
         isinstance(k, int) and not isinstance(k, bool) for k in value
     ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="applies_to_agent_keys must be an array of agent-key ids",
-        )
+        raise _bad_request("applies_to_agent_keys must be an array of agent-key ids")
     keys = list(dict.fromkeys(value))
     if len(keys) > MAX_RULE_AGENT_KEYS:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"applies_to_agent_keys can list at most {MAX_RULE_AGENT_KEYS} agent keys",
+        raise _bad_request(
+            f"applies_to_agent_keys can list at most {MAX_RULE_AGENT_KEYS} agent keys"
         )
-    added = [k for k in keys if k not in set(current or [])]
-    known = await get_org_agent_key_ids(get_org_id(request), added)
-    if len(known) != len(added):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="applies_to_agent_keys contains an agent key that does not exist",
+    active = await get_active_org_agent_key_ids(get_org_id(request), keys)
+    if len(active) != len(keys):
+        raise _bad_request(
+            "applies_to_agent_keys contains an agent key that does not exist or is revoked"
         )
     return keys
+
+
+async def _resolved_agent_scope(
+    request: Request,
+    body: dict[str, Any],
+    current: tuple[str, list[int]] | None = None,
+) -> tuple[str, list[int]]:
+    """The (agent_scope, applies_to_agent_keys) a create or update leaves the
+    rule with. `current` is the rule's stored scope on update.
+
+    'all' applies the rule to every agent and lists no keys. 'selected' applies
+    it only to the listed keys and needs at least one. When agent_scope is
+    omitted, sending keys means 'selected'; otherwise the current scope stays."""
+    scope = body.get("agent_scope")
+    if scope is not None and scope not in VALID_AGENT_SCOPES:
+        raise _bad_request("agent_scope must be one of: all, selected")
+
+    if "applies_to_agent_keys" in body:
+        keys = await _validated_agent_keys(request, body["applies_to_agent_keys"])
+    else:
+        keys = current[1] if current else []
+
+    if scope is None:
+        scope = "selected" if keys else (current[0] if current else "all")
+
+    if scope == "all":
+        if body.get("applies_to_agent_keys"):
+            raise _bad_request("applies_to_agent_keys must be empty when agent_scope is all")
+        return "all", []
+    if not keys:
+        raise _bad_request("A rule for selected agents needs at least one agent key")
+    return "selected", keys
+
 
 router = APIRouter(prefix="/mcp/guardrails", tags=["mcp-guardrails"])
 
@@ -164,11 +188,8 @@ async def create_guardrail(request: Request):
                 detail="applies_to_tools must be an array of strings",
             )
 
-    # Validate applies_to_agent_keys (optional, must be array of agent-key ids).
-    # Empty/omitted means the rule applies to every agent (org-wide).
-    applies_to_agent_keys = await _validated_agent_keys(
-        request, body.get("applies_to_agent_keys")
-    )
+    # Agent scope (optional): every agent, or only the selected agent keys.
+    agent_scope, applies_to_agent_keys = await _resolved_agent_scope(request, body)
 
     # Validate is_active (optional, defaults to true)
     is_active = body.get("is_active", True)
@@ -188,7 +209,8 @@ async def create_guardrail(request: Request):
         "scope": scope,
         "action": action,
         "applies_to_tools": applies_to_tools or [],
-        "applies_to_agent_keys": applies_to_agent_keys or [],
+        "agent_scope": agent_scope,
+        "applies_to_agent_keys": applies_to_agent_keys,
         "is_active": is_active,
         "created_by": user_id,
     }
@@ -306,13 +328,14 @@ async def update_guardrail(rule_id: int, request: Request):
                 )
         updates["applies_to_tools"] = applies_to_tools if applies_to_tools is not None else []
 
-    # applies_to_agent_keys
-    if "applies_to_agent_keys" in body:
-        updates["applies_to_agent_keys"] = await _validated_agent_keys(
-            request,
-            body["applies_to_agent_keys"],
-            current=await get_mcp_guardrail_agent_keys(get_org_id(request), rule_id),
-        )
+    # agent_scope / applies_to_agent_keys, resolved together against the
+    # rule's stored scope (a missing rule 404s below).
+    if "agent_scope" in body or "applies_to_agent_keys" in body:
+        current = await get_mcp_guardrail_agent_scope(get_org_id(request), rule_id)
+        (
+            updates["agent_scope"],
+            updates["applies_to_agent_keys"],
+        ) = await _resolved_agent_scope(request, body, current)
 
     # is_active
     if "is_active" in body:

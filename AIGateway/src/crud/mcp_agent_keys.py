@@ -17,15 +17,16 @@ def generate_agent_key() -> dict:
     }
 
 
-async def get_org_agent_key_ids(org_id: int, key_ids: list[int]) -> set[int]:
-    """The subset of key_ids that are agent keys of this organization."""
+async def get_active_org_agent_key_ids(org_id: int, key_ids: list[int]) -> set[int]:
+    """The subset of key_ids that are active (not revoked) agent keys of this
+    organization."""
     if not key_ids:
         return set()
     async with get_db() as db:
         result = await db.execute(
             text(
                 "SELECT id FROM ai_gateway_mcp_agent_keys "
-                "WHERE organization_id = :org_id AND id IN :ids"
+                "WHERE organization_id = :org_id AND is_active = true AND id IN :ids"
             ).bindparams(bindparam("ids", expanding=True)),
             {"org_id": org_id, "ids": list(key_ids)},
         )
@@ -238,8 +239,22 @@ async def revoke_agent_key(org_id: int, key_id: int) -> bool:
             """),
             {"org_id": org_id, "key_id": key_id},
         )
-        await db.commit()
         row = result.first()
+        if row is not None:
+            # A revoked key can never call again, so rules stop listing it. A
+            # rule left with no agents applies to none (agent_scope 'selected'
+            # matches only listed keys); it never widens to every agent.
+            await db.execute(
+                text("""
+                    UPDATE ai_gateway_mcp_guardrail_rules
+                    SET applies_to_agent_keys = array_remove(applies_to_agent_keys, :key_id),
+                        updated_at = NOW()
+                    WHERE organization_id = :org_id
+                      AND :key_id = ANY(applies_to_agent_keys)
+                """),
+                {"org_id": org_id, "key_id": key_id},
+            )
+        await db.commit()
         return row is not None
     return False
 
@@ -256,31 +271,7 @@ async def delete_agent_key(org_id: int, key_id: int) -> bool:
             """),
             {"org_id": org_id, "key_id": key_id},
         )
-        row = result.first()
-        if row is not None:
-            # Rules scoped to this key and other keys drop it and keep working
-            # for the rest. A rule scoped only to this key keeps the (now
-            # dangling) id and is switched off: an empty scope means "every
-            # agent", so emptying it would widen the rule if it were ever
-            # re-enabled. Same transaction as the delete.
-            await db.execute(
-                text("""
-                    UPDATE ai_gateway_mcp_guardrail_rules
-                    SET applies_to_agent_keys = CASE
-                            WHEN cardinality(applies_to_agent_keys) > 1
-                            THEN array_remove(applies_to_agent_keys, :key_id)
-                            ELSE applies_to_agent_keys
-                        END,
-                        is_active = CASE
-                            WHEN cardinality(applies_to_agent_keys) > 1 THEN is_active
-                            ELSE false
-                        END,
-                        updated_at = NOW()
-                    WHERE organization_id = :org_id
-                      AND :key_id = ANY(applies_to_agent_keys)
-                """),
-                {"org_id": org_id, "key_id": key_id},
-            )
         await db.commit()
+        row = result.first()
         return row is not None
     return False

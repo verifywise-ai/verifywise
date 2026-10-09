@@ -2062,14 +2062,19 @@ export const translations: Record<string, Record<string, string>> = {
     "View agent activity": "Agentenaktivität anzeigen",
     "All agents": "Alle Agenten",
     "Applies to agents": "Gilt für Agenten",
-    "Restrict this rule to specific agents. Leave empty to apply to every agent.":
-      "Diese Regel auf bestimmte Agenten beschränken. Leer lassen, um sie auf alle Agenten anzuwenden.",
     "No activity recorded for this agent yet":
       "Für diesen Agenten wurde noch keine Aktivität erfasst",
     "Failed to load agent activity": "Aktivität dieses Agenten konnte nicht geladen werden",
     "Blocked by rule": "Blockiert durch Regel",
-    "Deleted agent #{id}": "Gelöschter Agent #{id}",
     "Agent #{id}": "Agent #{id}",
+    "Selected agents": "Ausgewählte Agenten",
+    "Select agents": "Agenten auswählen",
+    "No agents": "Keine Agenten",
+    "Select at least one agent, or apply the rule to all agents":
+      "Wählen Sie mindestens einen Agenten aus oder wenden Sie die Regel auf alle Agenten an",
+    "The rule checks tool calls from these agents only. Revoked agent keys are not listed.":
+      "Die Regel prüft nur Tool-Aufrufe dieser Agenten. Widerrufene Agentenschlüssel werden nicht aufgeführt.",
+    "Last active {date}": "Zuletzt aktiv {date}",
     "Tool use ID": "Tool-Use-ID",
     "Approval required by rule": "Genehmigung erforderlich durch Regel",
     "This agent": "Dieser Agent",
@@ -12287,14 +12292,19 @@ export const translations: Record<string, Record<string, string>> = {
     "View agent activity": "Voir l'activité de l'agent",
     "All agents": "Tous les agents",
     "Applies to agents": "S'applique aux agents",
-    "Restrict this rule to specific agents. Leave empty to apply to every agent.":
-      "Limiter cette règle à des agents spécifiques. Laisser vide pour l'appliquer à tous les agents.",
     "No activity recorded for this agent yet":
       "Aucune activité enregistrée pour cet agent pour le moment",
     "Failed to load agent activity": "Échec du chargement de l'activité de cet agent",
     "Blocked by rule": "Bloqué par la règle",
-    "Deleted agent #{id}": "Agent supprimé #{id}",
     "Agent #{id}": "Agent #{id}",
+    "Selected agents": "Agents sélectionnés",
+    "Select agents": "Sélectionner des agents",
+    "No agents": "Aucun agent",
+    "Select at least one agent, or apply the rule to all agents":
+      "Sélectionnez au moins un agent, ou appliquez la règle à tous les agents",
+    "The rule checks tool calls from these agents only. Revoked agent keys are not listed.":
+      "La règle vérifie uniquement les appels d'outils de ces agents. Les clés d'agent révoquées ne sont pas listées.",
+    "Last active {date}": "Dernière activité {date}",
     "Tool use ID": "ID d'utilisation de l'outil",
     "Approval required by rule": "Approbation requise par la règle",
     "This agent": "Cet agent",
@@ -21751,13 +21761,18 @@ export const translations: Record<string, Record<string, string>> = {
     "View agent activity": "Ver actividad del agente",
     "All agents": "Todos los agentes",
     "Applies to agents": "Se aplica a los agentes",
-    "Restrict this rule to specific agents. Leave empty to apply to every agent.":
-      "Restringir esta regla a agentes específicos. Dejar vacío para aplicarla a todos los agentes.",
     "No activity recorded for this agent yet": "Aún no se ha registrado actividad para este agente",
     "Failed to load agent activity": "No se pudo cargar la actividad de este agente",
     "Blocked by rule": "Bloqueado por la regla",
-    "Deleted agent #{id}": "Agente eliminado #{id}",
     "Agent #{id}": "Agente #{id}",
+    "Selected agents": "Agentes seleccionados",
+    "Select agents": "Seleccionar agentes",
+    "No agents": "Ningún agente",
+    "Select at least one agent, or apply the rule to all agents":
+      "Selecciona al menos un agente o aplica la regla a todos los agentes",
+    "The rule checks tool calls from these agents only. Revoked agent keys are not listed.":
+      "La regla solo revisa las llamadas a herramientas de estos agentes. Las claves de agente revocadas no aparecen.",
+    "Last active {date}": "Última actividad {date}",
     "Tool use ID": "ID de uso de herramienta",
     "Approval required by rule": "Aprobación requerida por la regla",
     "This agent": "Este agente",

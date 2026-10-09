@@ -94,16 +94,22 @@ def _request():
 
 @pytest.fixture
 def known_keys(monkeypatch):
-    """Agent keys 1, 2 and 3 belong to the organization."""
+    """Agent keys 1, 2 and 3 are the organization's active keys."""
     lookup = AsyncMock(side_effect=lambda org_id, ids: {k for k in ids if k in {1, 2, 3}})
-    monkeypatch.setattr(guardrails_router, "get_org_agent_key_ids", lookup)
+    monkeypatch.setattr(guardrails_router, "get_active_org_agent_key_ids", lookup)
     monkeypatch.setattr(guardrails_router, "get_org_id", lambda request: 9)
     return lookup
 
 
-@pytest.mark.parametrize("value", [None, []])
-async def test_empty_scope_means_every_agent(known_keys, value):
-    assert await guardrails_router._validated_agent_keys(_request(), value) == []
+async def _resolve(body, current=None):
+    return await guardrails_router._resolved_agent_scope(_request(), body, current)
+
+
+async def _rejected(body, current=None):
+    with pytest.raises(HTTPException) as exc:
+        await _resolve(body, current)
+    assert exc.value.status_code == 400
+    return exc.value.detail
 
 
 async def test_scope_keeps_order_and_drops_duplicates(known_keys):
@@ -119,24 +125,12 @@ async def test_scope_rejects_non_id_values(known_keys, value):
     assert exc.value.status_code == 400
 
 
-async def test_scope_rejects_a_key_outside_the_organization(known_keys):
+async def test_scope_rejects_a_key_that_is_unknown_or_revoked(known_keys):
+    # Key 99 is another organization's, deleted, or revoked: never selectable.
     with pytest.raises(HTTPException) as exc:
         await guardrails_router._validated_agent_keys(_request(), [1, 99])
     assert exc.value.status_code == 400
-    assert "does not exist" in exc.value.detail
-
-
-async def test_ids_the_rule_already_has_are_kept_even_if_deleted(known_keys):
-    # Key 99 was deleted after the rule was scoped to it; saving keeps it, so
-    # the scope never shrinks to empty (which would mean every agent).
-    keys = await guardrails_router._validated_agent_keys(_request(), [99, 1], current=[99])
-    assert keys == [99, 1]
-    known_keys.assert_awaited_once_with(9, [1])
-
-
-async def test_a_newly_added_unknown_id_is_still_rejected(known_keys):
-    with pytest.raises(HTTPException):
-        await guardrails_router._validated_agent_keys(_request(), [99, 98], current=[99])
+    assert "revoked" in exc.value.detail
 
 
 async def test_scope_has_an_upper_bound(known_keys):
@@ -147,6 +141,54 @@ async def test_scope_has_an_upper_bound(known_keys):
     known_keys.assert_not_awaited()
 
 
+@pytest.mark.parametrize("body", [{}, {"agent_scope": "all"}, {"applies_to_agent_keys": []}])
+async def test_a_new_rule_applies_to_every_agent_by_default(known_keys, body):
+    assert await _resolve(body) == ("all", [])
+
+
+async def test_selected_agents(known_keys):
+    body = {"agent_scope": "selected", "applies_to_agent_keys": [2, 1]}
+    assert await _resolve(body) == ("selected", [2, 1])
+
+
+async def test_keys_without_a_scope_mean_selected(known_keys):
+    assert await _resolve({"applies_to_agent_keys": [1]}) == ("selected", [1])
+    assert await _resolve({"applies_to_agent_keys": [1]}, ("all", [])) == ("selected", [1])
+
+
+@pytest.mark.parametrize(
+    "body, current",
+    [
+        ({"agent_scope": "selected"}, None),
+        ({"agent_scope": "selected", "applies_to_agent_keys": []}, None),
+        # Every key the rule listed was revoked; saving it unchanged must not
+        # turn it into an every-agent rule.
+        ({"agent_scope": "selected", "applies_to_agent_keys": []}, ("selected", [])),
+        ({"applies_to_agent_keys": []}, ("selected", [4])),
+    ],
+)
+async def test_selected_needs_at_least_one_agent(known_keys, body, current):
+    assert "at least one" in await _rejected(body, current)
+
+
+async def test_switching_to_selected_keeps_the_stored_keys(known_keys):
+    assert await _resolve({"agent_scope": "selected"}, ("selected", [4])) == ("selected", [4])
+    known_keys.assert_not_awaited()
+
+
+async def test_switching_to_all_clears_the_keys(known_keys):
+    assert await _resolve({"agent_scope": "all"}, ("selected", [1, 2])) == ("all", [])
+
+
+async def test_all_with_keys_is_rejected(known_keys):
+    await _rejected({"agent_scope": "all", "applies_to_agent_keys": [1]})
+
+
+@pytest.mark.parametrize("scope", ["ALL", "some", 1, True])
+async def test_unknown_scope_is_rejected(known_keys, scope):
+    assert "agent_scope" in await _rejected({"agent_scope": scope})
+
+
 def _policy_calls(path):
     import ast
 
@@ -155,6 +197,7 @@ def _policy_calls(path):
         if isinstance(node, ast.Call) and getattr(node.func, "id", None) in {
             "scan_tool_input",
             "check_require_approval",
+            "scan_result_blob",
         }:
             yield node
 
@@ -171,6 +214,20 @@ def test_every_policy_check_passes_the_calling_agent_key(router):
         assert "agent_key_id" in kwargs, f"{router}:{call.lineno} omits agent_key_id"
         value = kwargs["agent_key_id"]
         assert not (isinstance(value, __import__("ast").Constant) and value.value is None)
+
+
+@pytest.mark.parametrize(
+    "service", ["mcp_guardrail_service.py", "mcp_approval_match.py"]
+)
+def test_rule_queries_match_by_agent_scope(service):
+    """Every rule query applies agent_scope, never an empty-list check, which
+    would widen a rule to every agent once its last key is removed."""
+    path = os.path.join(os.path.dirname(__file__), "..", "src", "services", service)
+    src = open(path).read()
+    queries = src.count("FROM ai_gateway_mcp_guardrail_rules")
+    assert queries >= 1
+    assert src.count("agent_scope = 'all'") == queries
+    assert "array_length(applies_to_agent_keys" not in src
 
 
 # --- Which rule caused a block -------------------------------------------------
@@ -211,19 +268,19 @@ def test_blocking_rule_without_a_rule_id():
     assert blocking_rule(result) == (None, None)
 
 
-# --- Deleting an agent key cleans up rule scopes ------------------------------
+# --- Revoking an agent key cleans up rule scopes ------------------------------
 
 import crud.mcp_agent_keys as agent_keys_crud
 
 
-def _fake_delete_db(deleted: bool):
+def _fake_revoke_db(revoked: bool):
     executed = []
     db = MagicMock()
 
     async def execute(stmt, params=None):
         executed.append((str(stmt), params))
         result = MagicMock()
-        result.first.return_value = (5,) if deleted else None
+        result.first.return_value = (5,) if revoked else None
         return result
 
     db.execute = execute
@@ -236,27 +293,27 @@ def _fake_delete_db(deleted: bool):
     return get_db, executed, db
 
 
-async def test_deleting_a_key_removes_it_from_rule_scopes(monkeypatch):
-    get_db, executed, db = _fake_delete_db(deleted=True)
+async def test_revoking_a_key_removes_it_from_rule_scopes(monkeypatch):
+    get_db, executed, db = _fake_revoke_db(revoked=True)
     monkeypatch.setattr(agent_keys_crud, "get_db", get_db)
 
-    assert await agent_keys_crud.delete_agent_key(org_id=2, key_id=5) is True
+    assert await agent_keys_crud.revoke_agent_key(org_id=2, key_id=5) is True
 
     assert len(executed) == 2
     cleanup_sql, params = executed[1]
     assert "array_remove(applies_to_agent_keys, :key_id)" in cleanup_sql
-    # Only removed when other keys remain; a rule scoped to just this key keeps
-    # the id (an empty scope would mean every agent) and is switched off.
-    assert "WHEN cardinality(applies_to_agent_keys) > 1" in cleanup_sql
-    assert "ELSE false" in cleanup_sql
     assert "organization_id = :org_id" in cleanup_sql
+    # Scope and activation are left alone: a 'selected' rule left with no keys
+    # applies to no agent.
+    assert "agent_scope" not in cleanup_sql and "is_active" not in cleanup_sql
     assert params == {"org_id": 2, "key_id": 5}
     db.commit.assert_awaited_once()
 
 
-async def test_no_cleanup_when_nothing_was_deleted(monkeypatch):
-    get_db, executed, _ = _fake_delete_db(deleted=False)
+async def test_no_cleanup_when_nothing_was_revoked(monkeypatch):
+    get_db, executed, db = _fake_revoke_db(revoked=False)
     monkeypatch.setattr(agent_keys_crud, "get_db", get_db)
 
-    assert await agent_keys_crud.delete_agent_key(org_id=2, key_id=5) is False
+    assert await agent_keys_crud.revoke_agent_key(org_id=2, key_id=5) is False
     assert len(executed) == 1
+    db.commit.assert_awaited_once()
