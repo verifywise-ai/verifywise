@@ -10024,8 +10024,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Für dieses System gelten Transparenzpflichten nach Artikel 50.",
     "This system is high risk and must meet the EU AI Act requirements for high-risk systems.":
       "Dieses System ist ein Hochrisiko-System und muss die Anforderungen der EU-KI-Verordnung an Hochrisiko-Systeme erfüllen.",
-    "Turning this on unmaps the question that sets the AI risk classification. The question stays on the form.":
-      "Beim Aktivieren wird die Zuordnung der Frage aufgehoben, die die KI-Risikoklassifizierung festlegt. Die Frage bleibt im Formular.",
+    "Turning this on unmaps the questions that set the AI risk classification and the high-risk role. They stay on the form; delete them so submitters are not asked twice.":
+      "Beim Aktivieren wird die Zuordnung der Fragen aufgehoben, die die KI-Risikoklassifizierung und die Hochrisiko-Rolle festlegen. Sie bleiben im Formular; löschen Sie sie, damit Einreichende nicht doppelt gefragt werden.",
     "Updated since submission": "Seit der Einreichung aktualisiert",
     "Why": "Warum",
   },
@@ -19980,8 +19980,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Ce système est soumis aux obligations de transparence de l'article 50.",
     "This system is high risk and must meet the EU AI Act requirements for high-risk systems.":
       "Ce système est à haut risque et doit satisfaire aux exigences du règlement IA de l'UE applicables aux systèmes à haut risque.",
-    "Turning this on unmaps the question that sets the AI risk classification. The question stays on the form.":
-      "L'activation supprime l'association de la question qui définit la classification du risque IA. La question reste dans le formulaire.",
+    "Turning this on unmaps the questions that set the AI risk classification and the high-risk role. They stay on the form; delete them so submitters are not asked twice.":
+      "L'activation supprime l'association des questions qui définissent la classification du risque IA et le rôle à haut risque. Elles restent dans le formulaire ; supprimez-les pour que les demandeurs ne répondent pas deux fois.",
     "Updated since submission": "Mis à jour depuis la soumission",
     "Why": "Pourquoi",
   },
@@ -29853,8 +29853,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Este sistema está sujeto a las obligaciones de transparencia del artículo 50.",
     "This system is high risk and must meet the EU AI Act requirements for high-risk systems.":
       "Este sistema es de alto riesgo y debe cumplir los requisitos del Reglamento de IA de la UE para los sistemas de alto riesgo.",
-    "Turning this on unmaps the question that sets the AI risk classification. The question stays on the form.":
-      "Al activarlo se elimina la asignación de la pregunta que establece la clasificación de riesgo de IA. La pregunta permanece en el formulario.",
+    "Turning this on unmaps the questions that set the AI risk classification and the high-risk role. They stay on the form; delete them so submitters are not asked twice.":
+      "Al activarlo se elimina la asignación de las preguntas que establecen la clasificación de riesgo de IA y el rol de alto riesgo. Permanecen en el formulario; elimínelas para que no se pregunte dos veces a los solicitantes.",
     "Updated since submission": "Actualizado desde el envío",
     "Why": "Por qué",
   },

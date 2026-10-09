@@ -11,7 +11,7 @@ interface EuAiActStepToggleProps {
 const DESCRIPTION =
   "Submitters answer the EU AI Act risk questionnaire before the form's questions. Reviewers see the result, and it becomes the use case's risk classification on approval.";
 const UNMAP_NOTE =
-  "Turning this on unmaps the question that sets the AI risk classification. The question stays on the form.";
+  "Turning this on unmaps the questions that set the AI risk classification and the high-risk role. They stay on the form; delete them so submitters are not asked twice.";
 
 const EuAiActStepToggle = ({
   entityType,

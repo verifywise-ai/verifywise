@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { analyzeMappingCoverage, usedEntityMappingsFor, type FormField } from "../types";
+import {
+  analyzeMappingCoverage,
+  isRiskStepSetField,
+  usedEntityMappingsFor,
+  type FormField,
+} from "../types";
 import { IntakeEntityType } from "../../../../domain/intake/enums";
 
 const RISK = "ai_risk_classification";
@@ -57,5 +62,17 @@ describe("usedEntityMappingsFor", () => {
 
   it("only blocks mappings taken by other fields while the step is off", () => {
     expect(usedEntityMappingsFor(fields, "a", false)).toEqual(["project_title"]);
+  });
+});
+
+describe("isRiskStepSetField", () => {
+  it("is true for the risk classification and the high-risk role", () => {
+    expect(isRiskStepSetField(RISK)).toBe(true);
+    expect(isRiskStepSetField(ROLE)).toBe(true);
+  });
+
+  it("is false for other mappings and for no mapping", () => {
+    expect(isRiskStepSetField("project_title")).toBe(false);
+    expect(isRiskStepSetField(undefined)).toBe(false);
   });
 });

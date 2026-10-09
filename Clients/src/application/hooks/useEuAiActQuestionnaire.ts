@@ -5,14 +5,18 @@ import type { Questionnaire } from "../../domain/types/euAiActClassification";
 
 export const EU_AI_ACT_QUESTIONNAIRE_QUERY_KEY = ["eu-ai-act-questionnaire"] as const;
 
-// The questionnaire only changes with a deploy, so a loaded copy never goes stale.
+// The questionnaire only changes with a deploy, but the server checks answers
+// against its current version, so a tab left open across a deploy must not keep
+// an old copy for long.
+const EU_AI_ACT_QUESTIONNAIRE_STALE_TIME_MS = 5 * 60 * 1000;
+
 const euAiActQuestionnaireQuery = {
   queryKey: EU_AI_ACT_QUESTIONNAIRE_QUERY_KEY,
   queryFn: () => getEuAiActQuestionnaire(),
-  staleTime: Infinity,
+  staleTime: EU_AI_ACT_QUESTIONNAIRE_STALE_TIME_MS,
 };
 
-/** The EU AI Act risk questionnaire, cached for the session. */
+/** The EU AI Act risk questionnaire, shared across the app through the query cache. */
 export const useEuAiActQuestionnaire = () => useQuery(euAiActQuestionnaireQuery);
 
 /**

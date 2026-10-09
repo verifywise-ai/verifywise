@@ -559,6 +559,11 @@ export interface MappingCoverage {
 /** Entity fields the EU AI Act risk step fills in, so the builder does not offer them. */
 const RISK_STEP_SET_FIELDS = new Set(["ai_risk_classification", "type_of_high_risk_role"]);
 
+/** True when the EU AI Act risk step sets `mapping`, so a field must not also map to it. */
+export function isRiskStepSetField(mapping: string | undefined): boolean {
+  return mapping !== undefined && RISK_STEP_SET_FIELDS.has(mapping);
+}
+
 /**
  * Entity mappings the field editor must not offer for `selectedFieldId`:
  * those taken by other fields, plus the ones the EU AI Act risk step sets

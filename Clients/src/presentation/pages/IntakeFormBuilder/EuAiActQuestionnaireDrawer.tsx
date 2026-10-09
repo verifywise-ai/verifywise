@@ -24,7 +24,8 @@ function FollowUpRule({
     <Typography sx={sx} data-testid="eu-ai-act-follow-up-rule">
       <span>Shown when</span>{" "}
       {labels.map((label, index) => (
-        <Fragment key={label}>
+        // Labels can repeat; the list is fixed, so the position is a stable key.
+        <Fragment key={index}>
           {index > 0 && (
             <>
               {" "}
