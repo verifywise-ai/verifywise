@@ -435,32 +435,6 @@ export const DEFAULT_USE_CASE_FIELDS: FormField[] = [
   {
     id: generateFieldId(),
     type: "select",
-    label: "AI risk classification",
-    guidanceText: "This classification determines the level of regulatory scrutiny required.",
-    options: [
-      { label: "Minimal risk", value: "minimal" },
-      { label: "Limited risk", value: "limited" },
-      { label: "High risk", value: "high" },
-      { label: "Unacceptable risk", value: "unacceptable" },
-    ],
-    entityFieldMapping: "ai_risk_classification",
-    order: 3,
-  },
-  {
-    id: generateFieldId(),
-    type: "select",
-    label: "High risk role type",
-    guidanceText: "Under the EU AI Act, your role determines your compliance obligations.",
-    options: [
-      { label: "Deployer", value: "Deployer" },
-      { label: "Provider", value: "Provider" },
-    ],
-    entityFieldMapping: "type_of_high_risk_role",
-    order: 4,
-  },
-  {
-    id: generateFieldId(),
-    type: "select",
     label: "Geography",
     guidanceText: "The geographic scope affects which regulations apply to this use case.",
     options: [
@@ -472,7 +446,7 @@ export const DEFAULT_USE_CASE_FIELDS: FormField[] = [
       { label: "Africa", value: "6" },
     ],
     entityFieldMapping: "geography",
-    order: 5,
+    order: 3,
   },
   {
     id: generateFieldId(),
@@ -485,7 +459,7 @@ export const DEFAULT_USE_CASE_FIELDS: FormField[] = [
       { label: "Partially — recommends but human decides", value: "partial" },
       { label: "Yes — makes decisions without human review", value: "yes" },
     ],
-    order: 6,
+    order: 4,
   },
   {
     id: generateFieldId(),
@@ -498,7 +472,7 @@ export const DEFAULT_USE_CASE_FIELDS: FormField[] = [
       { label: "Sensitive personal data (health, biometric)", value: "sensitive" },
       { label: "Special category data (racial, political)", value: "special" },
     ],
-    order: 7,
+    order: 5,
   },
 ];
 
@@ -756,7 +730,9 @@ export function createEmptyForm(entityType?: IntakeEntityType): IntakeForm {
     riskTierSystem: "eu_ai_act",
     llmKeyId: null,
     suggestedQuestionsEnabled: false,
-    euAiActRiskStepEnabled: false,
+    // New use case forms start with the EU AI Act step on; it replaces the
+    // old risk level and role questions of the template.
+    euAiActRiskStepEnabled: type === IntakeEntityType.USE_CASE,
     designSettings: { ...DEFAULT_DESIGN_SETTINGS },
   };
 }
