@@ -470,7 +470,7 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
                   );
                   return (
                     <TableCell key={`cf_${def.id}`} sx={singleTheme.tableStyles.primary.body.cell}>
-                      {formatCustomFieldValue(def, match?.value, users as any)}
+                      {formatCustomFieldValue(def, match?.value, users as any, formatDate)}
                     </TableCell>
                   );
                 })}

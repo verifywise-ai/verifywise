@@ -453,7 +453,7 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
               );
               return (
                 <TableCell key={`cf_${def.id}`} sx={cellStyle}>
-                  {formatCustomFieldValue(def, match?.value, users)}
+                  {formatCustomFieldValue(def, match?.value, users, formatDate)}
                 </TableCell>
               );
             })}

@@ -1,4 +1,3 @@
-import { displayFormattedDate } from "../../tools/isoDateToString";
 import type { CustomFieldType } from "../../../domain/interfaces/i.customField";
 
 export interface CustomFieldDefLike {
@@ -17,18 +16,20 @@ export interface RowCustomFieldValue {
 /**
  * Render a custom field value as a human-readable string for table cells.
  * Pass `users` (from useUsers) to resolve user-type values to "Name Surname".
+ * Pass `formatDate` from `useFormattedDate` so date fields follow the user preference.
  */
 export function formatCustomFieldValue(
   def: CustomFieldDefLike,
   raw: unknown,
-  users?: Array<{ id: number; name: string; surname?: string }>,
+  users: Array<{ id: number; name: string; surname?: string }> | undefined,
+  formatDate: (value: string) => string,
 ): string {
   if (raw === null || raw === undefined || raw === "") return "—";
   if (def.field_type === "boolean") return raw ? "Yes" : "No";
   if (def.field_type === "multiselect" && Array.isArray(raw)) return raw.join(", ");
   if (def.field_type === "date") {
     const s = String(raw);
-    return s ? displayFormattedDate(s) : "—";
+    return s ? formatDate(s) : "—";
   }
   if (def.field_type === "user") {
     const id = Number(raw);

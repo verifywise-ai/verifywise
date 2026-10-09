@@ -30,6 +30,7 @@ import StandardTableHead from "../StandardTableHead";
 import StandardTablePagination from "../StandardTablePagination";
 import type { StandardColumn } from "../../../../domain/types/standardTable";
 import { useCustomFieldDefinitions } from "../../../../application/hooks/useCustomFields";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { formatCustomFieldValue } from "../../CustomFieldsSection/formatCustomFieldValue";
 
 const titleOfTableColumns: StandardColumn[] = [
@@ -118,6 +119,7 @@ const RiskTable: React.FC<IRiskTableProps> = ({
   exposure,
   onOpenLinks,
 }) => {
+  const formatDate = useFormattedDate();
   const theme = useTheme();
   const { t } = useTranslation();
   const cellStyle = singleTheme.tableStyles.primary.body.cell;
@@ -450,7 +452,7 @@ const RiskTable: React.FC<IRiskTableProps> = ({
                   );
                   return (
                     <TableCell key={`cf_${def.id}`} sx={getCellStyle(row)}>
-                      {formatCustomFieldValue(def, match?.value, users)}
+                      {formatCustomFieldValue(def, match?.value, users, formatDate)}
                     </TableCell>
                   );
                 })}
@@ -502,6 +504,7 @@ const RiskTable: React.FC<IRiskTableProps> = ({
       exposure,
       onOpenLinks,
       t,
+      formatDate,
     ],
   );
 
