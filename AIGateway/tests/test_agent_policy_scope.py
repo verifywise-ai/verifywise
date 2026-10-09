@@ -126,6 +126,19 @@ async def test_scope_rejects_a_key_outside_the_organization(known_keys):
     assert "does not exist" in exc.value.detail
 
 
+async def test_ids_the_rule_already_has_are_kept_even_if_deleted(known_keys):
+    # Key 99 was deleted after the rule was scoped to it; saving keeps it, so
+    # the scope never shrinks to empty (which would mean every agent).
+    keys = await guardrails_router._validated_agent_keys(_request(), [99, 1], current=[99])
+    assert keys == [99, 1]
+    known_keys.assert_awaited_once_with(9, [1])
+
+
+async def test_a_newly_added_unknown_id_is_still_rejected(known_keys):
+    with pytest.raises(HTTPException):
+        await guardrails_router._validated_agent_keys(_request(), [99, 98], current=[99])
+
+
 async def test_scope_has_an_upper_bound(known_keys):
     too_many = list(range(1, guardrails_router.MAX_RULE_AGENT_KEYS + 2))
     with pytest.raises(HTTPException) as exc:
@@ -232,8 +245,10 @@ async def test_deleting_a_key_removes_it_from_rule_scopes(monkeypatch):
     assert len(executed) == 2
     cleanup_sql, params = executed[1]
     assert "array_remove(applies_to_agent_keys, :key_id)" in cleanup_sql
-    # A rule left with no agents is switched off, not made org-wide.
-    assert "THEN false" in cleanup_sql
+    # Only removed when other keys remain; a rule scoped to just this key keeps
+    # the id (an empty scope would mean every agent) and is switched off.
+    assert "WHEN cardinality(applies_to_agent_keys) > 1" in cleanup_sql
+    assert "ELSE false" in cleanup_sql
     assert "organization_id = :org_id" in cleanup_sql
     assert params == {"org_id": 2, "key_id": 5}
     db.commit.assert_awaited_once()

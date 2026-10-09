@@ -23,6 +23,8 @@ import StandardModal from "../../../components/Modals/StandardModal";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import palette from "../../../themes/palette";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
 import MCPTable from "../MCPTable";
 import CustomizableSkeleton from "../../../components/Skeletons";
 
@@ -111,18 +113,33 @@ export default function MCPGuardrailsPage() {
 
   // Agent keys — for scoping a rule to specific agents.
   const [agentKeys, setAgentKeys] = useState<{ _id: number; name: string }[]>([]);
+  const [agentKeysLoaded, setAgentKeysLoaded] = useState(false);
+  const { t } = useTranslation();
+
+  // A scoped id whose key isn't in the list: deleted (once the list loaded) or
+  // just unknown (if the list failed to load).
+  const agentKeyLabel = useCallback(
+    (id: number) =>
+      agentKeys.find((k) => k._id === id)?.name ??
+      fill(t(agentKeysLoaded ? "Deleted agent #{id}" : "Agent #{id}"), { id }),
+    [agentKeys, agentKeysLoaded, t],
+  );
 
   const loadData = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const [rulesRes, keysRes] = await Promise.all([
+      // Agent keys only name and fill the scope picker; if they fail to load,
+      // the rules list still shows.
+      const [rulesRes, keysRes] = await Promise.allSettled([
         apiServices.get<Record<string, any>>("/ai-gateway/mcp/guardrails"),
         apiServices.get<Record<string, any>>("/ai-gateway/mcp/agent-keys"),
       ]);
-      setRules(rulesRes?.data?.data || []);
-      const keys = keysRes?.data?.data || [];
+      if (rulesRes.status === "rejected") throw rulesRes.reason;
+      setRules(rulesRes.value?.data?.data || []);
+      const keys = keysRes.status === "fulfilled" ? keysRes.value?.data?.data || [] : [];
       setAgentKeys(keys.map((k: { id: number; name: string }) => ({ _id: k.id, name: k.name })));
+      setAgentKeysLoaded(keysRes.status === "fulfilled");
     } catch {
       setLoadError("Failed to load guardrails. Please try again.");
     } finally {
@@ -161,9 +178,10 @@ export default function MCPGuardrailsPage() {
       applies_to_tools: Array.isArray(rule.applies_to_tools)
         ? rule.applies_to_tools.join(", ")
         : "",
-      // Drop keys that no longer exist, so a stale id can't block saving.
+      // Keep every scoped id, including keys deleted since: dropping them
+      // could empty the scope, and an empty scope means every agent.
       applies_to_agent_keys: Array.isArray(rule.applies_to_agent_keys)
-        ? rule.applies_to_agent_keys.filter((id) => agentKeys.some((k) => k._id === id))
+        ? rule.applies_to_agent_keys
         : [],
       config: rule.config ? JSON.stringify(rule.config, null, 2) : "",
       is_active: rule.is_active ?? true,
@@ -374,11 +392,7 @@ export default function MCPGuardrailsPage() {
                 </Typography>
               ),
               rule.applies_to_agent_keys && rule.applies_to_agent_keys.length > 0 ? (
-                renderToolBadges(
-                  rule.applies_to_agent_keys.map(
-                    (id) => agentKeys.find((k) => k._id === id)?.name ?? `Agent #${id}`,
-                  ),
-                )
+                renderToolBadges(rule.applies_to_agent_keys.map(agentKeyLabel))
               ) : (
                 <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
                   All agents
@@ -514,7 +528,13 @@ export default function MCPGuardrailsPage() {
             label="Applies to agents"
             placeholder="All agents"
             value={form.applies_to_agent_keys}
-            items={agentKeys}
+            items={[
+              ...agentKeys,
+              // Scoped keys that no longer exist, so they show and can be removed.
+              ...form.applies_to_agent_keys
+                .filter((id) => !agentKeys.some((k) => k._id === id))
+                .map((id) => ({ _id: id, name: agentKeyLabel(id) })),
+            ]}
             onChange={(e) =>
               setForm((p) => ({ ...p, applies_to_agent_keys: e.target.value as number[] }))
             }

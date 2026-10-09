@@ -6,6 +6,7 @@ from crud.mcp_guardrails import (
     create_mcp_guardrail,
     delete_mcp_guardrail,
     get_all_mcp_guardrails,
+    get_mcp_guardrail_agent_keys,
     update_mcp_guardrail,
 )
 from crud.mcp_agent_keys import get_org_agent_key_ids
@@ -17,11 +18,17 @@ from utils.notifications import notify_config_change
 MAX_RULE_AGENT_KEYS = 100
 
 
-async def _validated_agent_keys(request: Request, value: Any) -> list[int]:
+async def _validated_agent_keys(
+    request: Request, value: Any, current: list[int] | None = None
+) -> list[int]:
     """Validate applies_to_agent_keys: None/empty means every agent (org-wide);
-    otherwise a list of this organization's agent-key ids. An id that is not one
-    of the organization's keys is rejected, because a rule scoped only to keys
-    it can never match would silently stop applying."""
+    otherwise a list of this organization's agent-key ids.
+
+    A newly added id must be one of the organization's keys: a rule scoped only
+    to keys it can never match would silently stop applying. Ids the rule
+    already has (`current`) are kept even if their key was deleted since, so
+    saving a rule never forces its scope to shrink to empty, which would widen
+    it to every agent."""
     if value is None:
         return []
     if not isinstance(value, list) or not all(
@@ -37,8 +44,9 @@ async def _validated_agent_keys(request: Request, value: Any) -> list[int]:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"applies_to_agent_keys can list at most {MAX_RULE_AGENT_KEYS} agent keys",
         )
-    known = await get_org_agent_key_ids(get_org_id(request), keys)
-    if len(known) != len(keys):
+    added = [k for k in keys if k not in set(current or [])]
+    known = await get_org_agent_key_ids(get_org_id(request), added)
+    if len(known) != len(added):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="applies_to_agent_keys contains an agent key that does not exist",
@@ -301,7 +309,9 @@ async def update_guardrail(rule_id: int, request: Request):
     # applies_to_agent_keys
     if "applies_to_agent_keys" in body:
         updates["applies_to_agent_keys"] = await _validated_agent_keys(
-            request, body["applies_to_agent_keys"]
+            request,
+            body["applies_to_agent_keys"],
+            current=await get_mcp_guardrail_agent_keys(get_org_id(request), rule_id),
         )
 
     # is_active

@@ -73,7 +73,6 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
     fontWeight: 600,
     color: palette.text.tertiary,
     letterSpacing: "0.5px",
-    textTransform: "uppercase" as const,
     mb: "6px",
   };
   const codeBlockSx = {
@@ -168,7 +167,7 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
           )}
 
           <Box>
-            <Typography sx={labelSx}>TOOL USE ID</Typography>
+            <Typography sx={labelSx}>Tool use ID</Typography>
             <Typography sx={{ fontSize: 12, fontFamily: "monospace", wordBreak: "break-all" }}>
               {row.tool_use_id || "—"}
             </Typography>
@@ -177,7 +176,7 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
           <Divider />
 
           <Box>
-            <Typography sx={labelSx}>ARGUMENTS</Typography>
+            <Typography sx={labelSx}>Arguments</Typography>
             <Box component="pre" sx={{ ...codeBlockSx, maxHeight: 200 }}>
               {JSON.stringify(row.arguments ?? {}, null, 2)}
             </Box>
@@ -186,7 +185,7 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
           <Divider />
 
           <Box>
-            <Typography sx={labelSx}>RESULT</Typography>
+            <Typography sx={labelSx}>Result</Typography>
             {row.result_response ? (
               <Box component="pre" sx={{ ...codeBlockSx, maxHeight: 280 }}>
                 {JSON.stringify(row.result_response, null, 2)}
@@ -202,7 +201,7 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
           <Divider />
 
           <Box>
-            <Typography sx={labelSx}>EVENTS</Typography>
+            <Typography sx={labelSx}>Events</Typography>
             <Stack gap="6px">
               {(row.events || []).map((e: InvocationEvent, i: number) => (
                 <Stack key={i} direction="row" justifyContent="space-between" gap="12px">

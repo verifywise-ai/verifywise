@@ -67,6 +67,8 @@ export default function MCPAgentKeysPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [activityKey, setActivityKey] = useState<{ id: number; name: string } | null>(null);
+  // Kept separately so the drawer keeps its agent's name while it slides out.
+  const [activityOpen, setActivityOpen] = useState(false);
 
   // Create modal
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -317,7 +319,10 @@ export default function MCPAgentKeysPage() {
                 <Stack direction="row" alignItems="center" justifyContent="flex-end" gap="4px">
                   <IconButton
                     size="small"
-                    onClick={() => setActivityKey({ id: key.id, name: key.name })}
+                    onClick={() => {
+                      setActivityKey({ id: key.id, name: key.name });
+                      setActivityOpen(true);
+                    }}
                     sx={{ p: 0.5 }}
                     aria-label="View agent activity"
                   >
@@ -508,8 +513,8 @@ curl -H "Authorization: Bearer ${newKey}" \\
       <AgentActivityDrawer
         agentKeyId={activityKey?.id ?? null}
         agentKeyName={activityKey?.name}
-        open={!!activityKey}
-        onClose={() => setActivityKey(null)}
+        open={activityOpen}
+        onClose={() => setActivityOpen(false)}
       />
     </>
   );

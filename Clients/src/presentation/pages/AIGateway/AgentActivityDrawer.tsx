@@ -54,7 +54,6 @@ const labelSx = {
   fontSize: 11,
   fontWeight: 600,
   letterSpacing: "0.04em",
-  textTransform: "uppercase" as const,
   color: palette.text.tertiary,
   mb: "6px",
 };
