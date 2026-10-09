@@ -1,62 +1,23 @@
 import { useState } from "react";
-import { Box, Stack, Typography, useTheme } from "@mui/material";
-import { ChevronDown, ChevronUp, ShieldCheck } from "lucide-react";
+import { Box, Typography, useTheme } from "@mui/material";
+import { PanelRightOpen, ShieldCheck } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { getEuAiActQuestionnaire } from "../../../application/repository/euAiActClassification.repository";
-import type { Question } from "../../../domain/types/euAiActClassification";
+import { EuAiActQuestionnaireDrawer } from "./EuAiActQuestionnaireDrawer";
 
 const EU_AI_ACT_QUESTIONNAIRE_QUERY_KEY = ["eu-ai-act-questionnaire"] as const;
-
-function QuestionPreview({ question }: { question: Question }) {
-  const theme = useTheme();
-  return (
-    <Box
-      data-testid="eu-ai-act-step-question"
-      sx={{
-        p: "12px",
-        border: `1px solid ${theme.palette.border.light}`,
-        borderRadius: "4px",
-        backgroundColor: theme.palette.background.main,
-      }}
-    >
-      <Typography sx={{ fontSize: "13px", fontWeight: 600, color: theme.palette.text.primary }}>
-        {question.text}
-      </Typography>
-      {question.articleRef && (
-        <Typography sx={{ fontSize: "12px", color: theme.palette.text.tertiary, mt: "2px" }}>
-          {question.articleRef}
-        </Typography>
-      )}
-      {question.showWhen && (
-        <Typography sx={{ fontSize: "12px", color: theme.palette.text.accent, mt: "4px" }}>
-          Asked depending on earlier answers
-        </Typography>
-      )}
-      <Box component="ul" sx={{ m: 0, mt: "8px", pl: "18px" }}>
-        {question.options.map((option) => (
-          <Typography
-            component="li"
-            key={option.value}
-            sx={{ fontSize: "12px", color: theme.palette.text.secondary }}
-          >
-            {option.label}
-          </Typography>
-        ))}
-      </Box>
-    </Box>
-  );
-}
 
 /**
  * Read-only preview of the EU AI Act risk step in the builder canvas. The step
  * is not part of the form schema: submitters answer it before the form's
- * questions, so it sits above them and cannot be edited or moved.
+ * questions, so it sits above them and cannot be edited or moved. The
+ * questions open read-only in a side drawer.
  */
 export function EuAiActStepCard() {
   const theme = useTheme();
-  const [expanded, setExpanded] = useState(false);
-  const { data, isLoading, isError } = useQuery({
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: EU_AI_ACT_QUESTIONNAIRE_QUERY_KEY,
     queryFn: getEuAiActQuestionnaire,
     staleTime: 5 * 60 * 1000,
@@ -102,30 +63,23 @@ export function EuAiActStepCard() {
             </Typography>
           )}
         </Box>
-        {questions.length > 0 && (
-          <CustomizableButton
-            variant="text"
-            size="small"
-            text={expanded ? "Hide questions" : "Show questions"}
-            startIcon={
-              expanded ? (
-                <ChevronUp size={14} strokeWidth={1.5} />
-              ) : (
-                <ChevronDown size={14} strokeWidth={1.5} />
-              )
-            }
-            onClick={() => setExpanded((prev) => !prev)}
-            aria-expanded={expanded}
-          />
-        )}
+        <CustomizableButton
+          variant="outlined"
+          size="small"
+          text="View questions"
+          startIcon={<PanelRightOpen size={14} strokeWidth={1.5} />}
+          onClick={() => setDrawerOpen(true)}
+          aria-haspopup="dialog"
+        />
       </Box>
-      {expanded && questions.length > 0 && (
-        <Stack sx={{ gap: "8px", mt: "12px" }}>
-          {questions.map((question) => (
-            <QuestionPreview key={question.id} question={question} />
-          ))}
-        </Stack>
-      )}
+      <EuAiActQuestionnaireDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        questionnaire={data}
+        isLoading={isLoading}
+        isError={isError}
+        onRetry={() => void refetch()}
+      />
     </Box>
   );
 }
