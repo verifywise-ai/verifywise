@@ -4,21 +4,31 @@ import { ProjectModel } from "../../domain.layer/models/project/project.model";
 import { ApprovalRequestModel } from "../../domain.layer/models/approvalWorkflow/approvalRequest.model";
 import { ApprovalRequestStatus } from "../../domain.layer/enums/approval-workflow.enum";
 import { getApprovalWorkflowByIdQuery } from "../../utils/approvalWorkflow.utils";
-import { createApprovalRequestQuery } from "../../utils/approvalRequest.utils";
+import {
+  createApprovalRequestQuery,
+  tryAutoApproveRequestQuery,
+} from "../../utils/approvalRequest.utils";
+
+export interface UseCaseApprovalRequestResult {
+  request: ApprovalRequestModel;
+  autoApproved: boolean;
+  riskLevel?: string;
+  threshold?: string;
+}
 
 /**
  * Create an approval request for a newly created use-case (project).
  *
- * Returns the created approval request, or `null` when no request is needed —
- * i.e. the project has no approval workflow assigned, or the assigned workflow
- * has no steps.
+ * Returns the created approval request and its auto-approval outcome, or
+ * `null` when no request is needed — i.e. the project has no approval
+ * workflow assigned, or the assigned workflow has no steps.
  */
 export const createUseCaseApprovalRequest = async (
   project: ProjectModel,
   requestedBy: number,
   organizationId: number,
   transaction: Transaction,
-): Promise<ApprovalRequestModel | null> => {
+): Promise<UseCaseApprovalRequestResult | null> => {
   if (!project.approval_workflow_id || !project.id) {
     return null;
   }
@@ -34,7 +44,7 @@ export const createUseCaseApprovalRequest = async (
     return null;
   }
 
-  return createApprovalRequestQuery(
+  const request = await createApprovalRequestQuery(
     {
       request_name: `Use Case: ${project.project_title}`,
       workflow_id: project.approval_workflow_id,
@@ -52,4 +62,23 @@ export const createUseCaseApprovalRequest = async (
     organizationId,
     transaction,
   );
+
+  // Risk-based auto-approval, evaluated from the project row (never the
+  // client payload), inside the project-creation transaction
+  const autoApproval = await tryAutoApproveRequestQuery(
+    request.id!,
+    workflow,
+    "use_case",
+    project.id,
+    organizationId,
+    transaction,
+  );
+
+  if (autoApproval.autoApproved) {
+    request.setDataValue("status", ApprovalRequestStatus.APPROVED);
+    request.setDataValue("auto_approved_at", new Date());
+    request.setDataValue("auto_approval_risk_level", autoApproval.riskLevel ?? null);
+  }
+
+  return { request, ...autoApproval };
 };

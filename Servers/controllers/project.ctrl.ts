@@ -52,7 +52,10 @@ import {
 // SSE notifications disabled for now - can be re-enabled later if needed
 // import { notifyStepApprovers } from "../services/notification.service";
 import { createUseCaseApprovalRequest } from "../services/projects/approvalRequest.service";
-import { notifyUserAssigned } from "../services/inAppNotification.service";
+import {
+  notifyUserAssigned,
+  notifyApprovalAutoApproved,
+} from "../services/inAppNotification.service";
 
 import { translateError } from "../utils/i18n.utils";
 export async function getAllProjects(req: Request, res: Response): Promise<any> {
@@ -305,7 +308,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
       }
 
       // Create approval request if an approval workflow is assigned to the use-case
-      await createUseCaseApprovalRequest(
+      const approvalResult = await createUseCaseApprovalRequest(
         createdProject,
         req.userId!,
         req.organizationId!,
@@ -313,6 +316,25 @@ export async function createProject(req: Request, res: Response): Promise<any> {
       );
 
       await transaction.commit();
+
+      // Auto-approved requests skip approver notifications; tell the
+      // requester instead (fire-and-forget, after commit)
+      if (approvalResult?.autoApproved) {
+        const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+        notifyApprovalAutoApproved(
+          req.organizationId!,
+          req.userId!,
+          {
+            id: approvalResult.request.id!,
+            name: approvalResult.request.request_name,
+          },
+          approvalResult.riskLevel!,
+          approvalResult.threshold!,
+          baseUrl,
+        ).catch((notifyError) => {
+          console.error("Failed to send auto-approval notification:", notifyError);
+        });
+      }
 
       await logSuccess({
         eventType: "Create",

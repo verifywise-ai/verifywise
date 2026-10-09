@@ -863,6 +863,50 @@ export const notifyApprovalComplete = async (
 };
 
 /**
+ * Notify requester that their request was auto-approved by risk level
+ */
+export const notifyApprovalAutoApproved = async (
+  organizationId: number,
+  requesterId: number,
+  useCase: {
+    id: number;
+    name: string;
+  },
+  riskLevel: string,
+  threshold: string,
+  baseUrl: string,
+): Promise<void> => {
+  const requester = await getUserById(requesterId);
+  const url = `/use-cases/${useCase.id}`;
+
+  await sendInAppNotification(
+    organizationId,
+    {
+      user_id: requesterId,
+      type: NotificationType.APPROVAL_AUTO_APPROVED,
+      title: "Use case auto-approved",
+      message: `Your use case "${useCase.name}" was auto-approved: risk level "${riskLevel}" is at or below the workflow threshold "${threshold}"`,
+      entity_type: NotificationEntityType.USE_CASE,
+      entity_id: useCase.id,
+      entity_name: useCase.name,
+      action_url: url,
+      metadata: { auto_approved: true, risk_level: riskLevel, threshold },
+    },
+    true,
+    {
+      template: EMAIL_TEMPLATES.APPROVAL_COMPLETE,
+      subject: `Approved: ${useCase.name}`,
+      variables: {
+        requester_name: requester ? `${requester.name}` : "User",
+        use_case_name: useCase.name,
+        total_steps: "0",
+        use_case_url: `${baseUrl}${url}`,
+      },
+    },
+  );
+};
+
+/**
  * Notify vendor review due
  */
 export const notifyVendorReviewDue = async (

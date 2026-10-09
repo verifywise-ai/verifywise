@@ -8,6 +8,7 @@ jest.mock("../../utils/approvalRequest.utils", () => ({
   getApprovalRequestByIdQuery: jest.fn(),
   processApprovalQuery: jest.fn(),
   withdrawApprovalRequestQuery: jest.fn(),
+  tryAutoApproveRequestQuery: jest.fn<any>().mockResolvedValue({ autoApproved: false }),
 }));
 
 jest.mock("../../utils/approvalWorkflow.utils", () => ({
@@ -52,6 +53,7 @@ jest.mock("../../utils/i18n.utils", () => ({
 jest.mock("../../services/inAppNotification.service", () => ({
   notifyApprovalRequested: jest.fn<any>().mockResolvedValue(undefined),
   notifyApprovalComplete: jest.fn<any>().mockResolvedValue(undefined),
+  notifyApprovalAutoApproved: jest.fn<any>().mockResolvedValue(undefined),
   sendInAppNotification: jest.fn<any>().mockResolvedValue(undefined),
 }));
 
