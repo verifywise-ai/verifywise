@@ -47,7 +47,7 @@ import {
 } from "../../services/intakeLLM.service";
 import { NotFoundException } from "../../domain.layer/exceptions/custom.exception";
 import { sequelize } from "../../database/db";
-import { ForeignKeyConstraintError } from "sequelize";
+import { logFailure } from "../../utils/logger/logHelper";
 
 const mockExists = llmKeyExistsQuery as unknown as jest.Mock;
 const mockCreate = createIntakeFormQuery as unknown as jest.Mock;
@@ -71,15 +71,6 @@ const createRes = (): any => {
 };
 
 const notFound = () => new NotFoundException("LLM key not found", "llm_key", 8);
-
-/** What Sequelize throws for a pg 23503 on the given constraint. */
-const fkViolation = (constraint: string) =>
-  new ForeignKeyConstraintError({
-    message: `insert or update on table "intake_forms" violates foreign key constraint "${constraint}"`,
-    index: constraint,
-    table: "intake_forms",
-    parent: Object.assign(new Error("fk"), { code: "23503", constraint }) as any,
-  });
 
 describe("intake LLM endpoints", () => {
   beforeEach(() => {
@@ -201,7 +192,7 @@ describe("intake form writes validate llmKeyId", () => {
     const res = createRes();
     await createIntakeForm(req(body(8)), res);
 
-    expect(mockExists).toHaveBeenCalledWith(8, 1);
+    expect(mockExists).toHaveBeenCalledWith(8, 1, mockTx);
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json.mock.calls[0][0].data).toBe("LLM key not found");
     expect(mockCreate).not.toHaveBeenCalled();
@@ -259,33 +250,38 @@ describe("intake form writes validate llmKeyId", () => {
     expect((mockUpdate.mock.calls[0][1] as any).llmKeyId).toBe(3);
   });
 
-  it("create answers 400 when the key is deleted between the check and the insert", async () => {
+  it("update checks the key inside the write transaction", async () => {
     mockExists.mockResolvedValueOnce(true as never);
-    mockCreate.mockRejectedValueOnce(fkViolation("intake_forms_llm_key_id_fkey") as never);
+    const res = createRes();
+    await updateIntakeForm(req(body(3), { id: "5" }), res);
+
+    expect(mockExists).toHaveBeenCalledWith(3, 1, mockTx);
+    expect(mockUpdate).toHaveBeenCalledWith(5, expect.anything(), 1, mockTx);
+  });
+
+  it("create logs and answers 500 when the write fails", async () => {
+    mockExists.mockResolvedValueOnce(true as never);
+    mockCreate.mockRejectedValueOnce(new Error("insert failed") as never);
     const res = createRes();
     await createIntakeForm(req(body(3)), res);
 
     expect(mockTx.rollback).toHaveBeenCalled();
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json.mock.calls[0][0].data).toBe("LLM key not found");
+    expect(logFailure).toHaveBeenCalledWith(
+      expect.objectContaining({ functionName: "createIntakeForm" }),
+    );
+    expect(res.status).toHaveBeenCalledWith(500);
   });
 
-  it("update answers 400 when the key is deleted between the check and the update", async () => {
-    mockExists.mockResolvedValueOnce(true as never);
-    mockUpdate.mockRejectedValueOnce(fkViolation("intake_forms_llm_key_id_fkey") as never);
+  it("update logs and answers 500 when the key check fails", async () => {
+    mockExists.mockRejectedValueOnce(new Error("lock timeout") as never);
     const res = createRes();
     await updateIntakeForm(req(body(3), { id: "5" }), res);
 
     expect(mockTx.rollback).toHaveBeenCalled();
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json.mock.calls[0][0].data).toBe("LLM key not found");
-  });
-
-  it("create still answers 500 for a foreign key violation on another constraint", async () => {
-    mockCreate.mockRejectedValueOnce(fkViolation("intake_forms_created_by_fkey") as never);
-    const res = createRes();
-    await createIntakeForm(req(body(null)), res);
-
+    expect(logFailure).toHaveBeenCalledWith(
+      expect.objectContaining({ functionName: "updateIntakeForm" }),
+    );
     expect(res.status).toHaveBeenCalledWith(500);
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 });

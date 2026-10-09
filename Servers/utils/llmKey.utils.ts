@@ -127,12 +127,23 @@ export const updateLLMKeyByIdQuery = async (
   return result[0];
 };
 
-export const llmKeyExistsQuery = async (id: number, organizationId: number): Promise<boolean> => {
+/**
+ * Whether the organization has an LLM key with this id. Inside a transaction
+ * the key row is locked (FOR KEY SHARE) until the transaction ends, so the
+ * key cannot be deleted between this check and a write that references it.
+ */
+export const llmKeyExistsQuery = async (
+  id: number,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<boolean> => {
+  const lock = transaction ? " FOR KEY SHARE" : "";
   const rows = await sequelize.query(
-    `SELECT id FROM llm_keys WHERE organization_id = :organizationId AND id = :id LIMIT 1;`,
+    `SELECT id FROM llm_keys WHERE organization_id = :organizationId AND id = :id LIMIT 1${lock};`,
     {
       replacements: { organizationId, id },
       type: QueryTypes.SELECT,
+      transaction,
     },
   );
   return rows.length > 0;
