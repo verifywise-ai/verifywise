@@ -37,6 +37,7 @@ import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { useExtensions } from "../../../application/contexts/Extensions.context";
 import Chip from "../../components/Chip";
 import { getAgentLifecycleStatus } from "./agentLifecycle";
+import { formatSourceLabel } from "./agentLabels";
 import TablePaginationActions from "../../components/TablePagination";
 import { singleTheme } from "../../themes";
 import {
@@ -66,20 +67,6 @@ const TABLE_COLUMNS = [
 
 type SortDirection = "asc" | "desc" | null;
 type SortConfig = { key: string; direction: SortDirection };
-
-// Friendly display names for known discovery sources. Falls back to the raw
-// source_system key (title-cased) for any source not listed here.
-const SOURCE_LABELS: Record<string, string> = {
-  "azure-ai-foundry": "Azure AI Foundry",
-};
-
-function formatSourceLabel(sourceSystem: string): string {
-  if (SOURCE_LABELS[sourceSystem]) return SOURCE_LABELS[sourceSystem];
-  return sourceSystem
-    .split(/[-_]/)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-}
 
 const AgentTable: React.FC<AgentTableProps> = ({
   agents,

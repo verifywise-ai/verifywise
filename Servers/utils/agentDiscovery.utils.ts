@@ -1,5 +1,5 @@
 import { sequelize } from "../database/db";
-import { QueryTypes } from "sequelize";
+import { QueryTypes, Transaction } from "sequelize";
 
 export interface AgentPrimitive {
   id: number;
@@ -129,26 +129,44 @@ export const getAgentPrimitiveByIdQuery = async (
 export const getAgentOwnersQuery = async (
   agentId: number,
   organizationId: number,
+  transaction?: Transaction,
 ): Promise<number[]> => {
   const rows = (await sequelize.query(
     `SELECT user_id FROM agent_primitive_owners
      WHERE organization_id = :organizationId AND agent_primitive_id = :agentId
      ORDER BY id ASC`,
-    { replacements: { organizationId, agentId }, type: QueryTypes.SELECT },
+    { replacements: { organizationId, agentId }, type: QueryTypes.SELECT, transaction },
   )) as { user_id: number }[];
   return rows.map((r) => r.user_id);
 };
 
 /**
- * Replace the full owner set for an agent primitive. The first id in `userIds`
- * is also written back to agent_primitives.owner_id as the primary owner (or
- * NULL when the list is empty), keeping the legacy single-owner column in sync.
+ * Return the subset of `userIds` that are users of the given organization.
+ * Used to reject owner ids that point at another tenant's users.
+ */
+export const getUserIdsInOrganizationQuery = async (
+  userIds: number[],
+  organizationId: number,
+): Promise<number[]> => {
+  if (userIds.length === 0) return [];
+  const rows = (await sequelize.query(
+    `SELECT id FROM users WHERE organization_id = :organizationId AND id IN (:ids)`,
+    { replacements: { organizationId, ids: userIds }, type: QueryTypes.SELECT },
+  )) as { id: number }[];
+  return rows.map((r) => Number(r.id));
+};
+
+/**
+ * Replace the full owner set for an agent primitive in the junction table.
+ * Callers are responsible for writing the primary owner (the first id) to
+ * agent_primitives.owner_id, and should run this inside the same transaction
+ * as that write.
  */
 export const setAgentOwnersQuery = async (
   agentId: number,
   userIds: number[],
   organizationId: number,
-  transaction?: any,
+  transaction?: Transaction,
 ): Promise<void> => {
   await sequelize.query(
     `DELETE FROM agent_primitive_owners
@@ -156,26 +174,18 @@ export const setAgentOwnersQuery = async (
     { replacements: { organizationId, agentId }, transaction },
   );
 
-  for (const userId of userIds) {
-    await sequelize.query(
-      `INSERT INTO agent_primitive_owners (organization_id, agent_primitive_id, user_id, created_at)
-       VALUES (:organizationId, :agentId, :userId, NOW())
-       ON CONFLICT (organization_id, agent_primitive_id, user_id) DO NOTHING`,
-      { replacements: { organizationId, agentId, userId }, transaction },
-    );
-  }
+  if (userIds.length === 0) return;
 
+  const replacements: Record<string, number> = { organizationId, agentId };
+  const values = userIds.map((userId, i) => {
+    replacements[`userId${i}`] = userId;
+    return `(:organizationId, :agentId, :userId${i}, NOW())`;
+  });
   await sequelize.query(
-    `UPDATE agent_primitives SET owner_id = :primary, updated_at = NOW()
-     WHERE organization_id = :organizationId AND id = :agentId`,
-    {
-      replacements: {
-        organizationId,
-        agentId,
-        primary: userIds.length > 0 ? String(userIds[0]) : null,
-      },
-      transaction,
-    },
+    `INSERT INTO agent_primitive_owners (organization_id, agent_primitive_id, user_id, created_at)
+     VALUES ${values.join(", ")}
+     ON CONFLICT (organization_id, agent_primitive_id, user_id) DO NOTHING`,
+    { replacements, transaction },
   );
 };
 
@@ -192,6 +202,7 @@ export const createAgentPrimitiveQuery = async (
     is_manual?: boolean;
   },
   organizationId: number,
+  transaction?: Transaction,
 ): Promise<AgentPrimitive> => {
   const externalId = data.external_id || `manual_${Date.now()}`;
   const [results] = await sequelize.query(
@@ -217,6 +228,7 @@ export const createAgentPrimitiveQuery = async (
         metadata: JSON.stringify(data.metadata || {}),
         is_manual: data.is_manual ?? true,
       },
+      transaction,
     },
   );
   return (results as AgentPrimitive[])[0];
@@ -231,6 +243,7 @@ export const updateAgentPrimitiveQuery = async (
     metadata?: Record<string, any>;
   },
   organizationId: number,
+  transaction?: Transaction,
 ): Promise<AgentPrimitive | null> => {
   const sets: string[] = [];
   const replacements: Record<string, any> = { organizationId, id };
@@ -256,7 +269,7 @@ export const updateAgentPrimitiveQuery = async (
 
   const [results] = await sequelize.query(
     `UPDATE agent_primitives SET ${sets.join(", ")} WHERE organization_id = :organizationId AND id = :id RETURNING *`,
-    { replacements },
+    { replacements, transaction },
   );
   return (results as AgentPrimitive[])[0] || null;
 };
@@ -544,6 +557,7 @@ export const createAuditLogQuery = async (
     performed_by?: number;
   },
   organizationId: number,
+  transaction?: Transaction,
 ): Promise<AuditLogEntry> => {
   const [results] = await sequelize.query(
     `INSERT INTO agent_audit_log
@@ -560,6 +574,7 @@ export const createAuditLogQuery = async (
         new_value: data.new_value || null,
         performed_by: data.performed_by || null,
       },
+      transaction,
     },
   );
   return (results as AuditLogEntry[])[0];

@@ -8,20 +8,11 @@ import { AgentPrimitiveRow } from "../../../../domain/interfaces/i.agentDiscover
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { getAllEntities } from "../../../../application/repository/entity.repository";
 import LinkModelModal from "./LinkModelModal";
-
-// Friendly display names for known discovery sources. Falls back to the raw
-// source_system key (title-cased) for any source not listed here.
-const SOURCE_LABELS: Record<string, string> = {
-  "azure-ai-foundry": "Azure AI Foundry",
-};
-
-function formatSourceLabel(sourceSystem: string): string {
-  if (SOURCE_LABELS[sourceSystem]) return SOURCE_LABELS[sourceSystem];
-  return sourceSystem
-    .split(/[-_]/)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-}
+import {
+  formatModelLabel,
+  formatSourceLabel,
+  ModelLabelSource,
+} from "../../../pages/AgentDiscovery/agentLabels";
 
 interface ReviewAgentModalProps {
   isOpen: boolean;
@@ -64,13 +55,8 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
       const response = await getAllEntities({ routeUrl: "/modelInventory" });
       const modelsData = Array.isArray(response?.data) ? response.data : [];
       const map: Record<string, string> = {};
-      modelsData.forEach((m: any) => {
-        const modelName = m.model || m.provider_model || m.model_name || m.name;
-        map[String(m.id)] = modelName
-          ? m.provider
-            ? `${m.provider} · ${modelName}`
-            : modelName
-          : `Model #${m.id}`;
+      modelsData.forEach((m: ModelLabelSource) => {
+        map[String(m.id)] = formatModelLabel(m);
       });
       setModelsMap(map);
     } catch (error) {

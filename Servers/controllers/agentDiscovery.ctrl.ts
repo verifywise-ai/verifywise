@@ -14,7 +14,10 @@ import {
   createAuditLogQuery,
   getAuditLogsForAgentQuery,
   setAgentOwnersQuery,
+  getAgentOwnersQuery,
+  getUserIdsInOrganizationQuery,
 } from "../utils/agentDiscovery.utils";
+import { sequelize } from "../database/db";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { logStructured } from "../utils/logger/fileLogger";
 import { runAgentDiscoverySyncForTenant } from "../services/agentDiscovery/agentDiscoverySync.service";
@@ -22,22 +25,79 @@ import { runAgentDiscoverySyncForTenant } from "../services/agentDiscovery/agent
 import { translateError } from "../utils/i18n.utils";
 const fileName = "agentDiscovery.ctrl.ts";
 
+/** Largest value a Postgres INTEGER user id can hold. */
+const MAX_USER_ID = 2147483647;
+
 /**
- * Normalize the owners of an agent into a deduplicated, ordered list of numeric
- * user ids. Accepts an `owner_ids` array (multi-owner) and/or a legacy single
- * `owner_id`; the legacy value is appended if not already present, so the first
- * entry is always the primary owner. Non-numeric/blank values are dropped.
+ * Parse one owner id. Accepts a number or a decimal string; returns null unless
+ * it is a positive safe integer that fits a Postgres INTEGER.
  */
-function normalizeOwnerIds(ownerIds: unknown, ownerId: unknown): number[] {
+function parseOwnerId(value: unknown): number | null {
+  let n: number;
+  if (typeof value === "number") {
+    n = value;
+  } else if (typeof value === "string" && /^\d+$/.test(value.trim())) {
+    n = Number(value.trim());
+  } else {
+    return null;
+  }
+  return Number.isSafeInteger(n) && n > 0 && n <= MAX_USER_ID ? n : null;
+}
+
+/**
+ * Normalize the owners of an agent into a deduplicated, ordered list of user
+ * ids. Accepts an `owner_ids` array (multi-owner) and/or a legacy single
+ * `owner_id`; the legacy value is appended if not already present, so the first
+ * entry is always the primary owner. A null/blank `owner_id` is treated as
+ * absent. Returns null when `owner_ids` is not an array or any id is invalid.
+ */
+function normalizeOwnerIds(ownerIds: unknown, ownerId: unknown): number[] | null {
+  if (ownerIds !== undefined && ownerIds !== null && !Array.isArray(ownerIds)) return null;
+  const raw: unknown[] = Array.isArray(ownerIds) ? [...ownerIds] : [];
+  if (ownerId !== undefined && ownerId !== null && ownerId !== "") raw.push(ownerId);
   const out: number[] = [];
-  const push = (v: unknown) => {
-    const n = typeof v === "number" ? v : parseInt(String(v ?? "").trim(), 10);
-    if (!Number.isNaN(n) && !out.includes(n)) out.push(n);
-  };
-  if (Array.isArray(ownerIds)) ownerIds.forEach(push);
-  if (ownerId !== undefined && ownerId !== null && ownerId !== "") push(ownerId);
+  for (const value of raw) {
+    const n = parseOwnerId(value);
+    if (n === null) return null;
+    if (!out.includes(n)) out.push(n);
+  }
   return out;
 }
+
+/**
+ * Derive the owner set for a legacy update that sends only `owner_id`: the new
+ * primary first, then the previous owners minus the old and new primary. A
+ * null/blank `owner_id` clears all owners. Returns null when `owner_id` is
+ * invalid.
+ */
+function deriveOwnersFromPrimary(ownerId: unknown, previousOwners: number[]): number[] | null {
+  if (ownerId === null || ownerId === "") return [];
+  const newPrimary = parseOwnerId(ownerId);
+  if (newPrimary === null) return null;
+  const oldPrimary = previousOwners[0];
+  return [newPrimary, ...previousOwners.filter((u) => u !== oldPrimary && u !== newPrimary)];
+}
+
+/** True when every id in `ownerIds` belongs to a user of the organization. */
+async function ownersBelongToOrganization(
+  ownerIds: number[],
+  organizationId: number,
+): Promise<boolean> {
+  if (ownerIds.length === 0) return true;
+  const found = await getUserIdsInOrganizationQuery(ownerIds, organizationId);
+  return ownerIds.every((id) => found.includes(id));
+}
+
+/** Current owners of an agent, falling back to the legacy owner_id column. */
+function withLegacyOwnerFallback(owners: number[], legacyOwnerId: string | null): number[] {
+  if (owners.length > 0) return owners;
+  const legacy = parseOwnerId(legacyOwnerId);
+  return legacy !== null ? [legacy] : [];
+}
+
+const sameOwnerSet = (a: number[], b: number[]) =>
+  a.length === b.length &&
+  [...a].sort((x, y) => x - y).join(",") === [...b].sort((x, y) => x - y).join(",");
 
 /**
  * Get all agent primitives with optional filters
@@ -173,26 +233,43 @@ export async function createAgentPrimitive(req: Request, res: Response) {
     // Normalize owners: accept an owner_ids array (multi-owner) and/or the legacy
     // single owner_id. The first owner is the primary.
     const owners = normalizeOwnerIds(owner_ids, owner_id);
-
-    const primitive = await createAgentPrimitiveQuery(
-      {
-        display_name,
-        primitive_type,
-        owner_id: owners.length > 0 ? String(owners[0]) : undefined,
-        permissions,
-        permission_categories,
-        metadata,
-        source_system: "manual",
-        external_id: `manual_${Date.now()}`,
-        is_manual: true,
-      },
-      req.organizationId!,
-    );
-
-    if (owners.length > 0) {
-      await setAgentOwnersQuery(primitive.id!, owners, req.organizationId!);
-      (primitive as any).owner_ids = owners;
+    if (owners === null) {
+      return res.status(400).json(STATUS_CODE[400](req.t!("Owner IDs must be valid user IDs")));
     }
+    if (!(await ownersBelongToOrganization(owners, req.organizationId!))) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400](req.t!("Owners must be users in your organization")));
+    }
+
+    const transaction = await sequelize.transaction();
+    let primitive;
+    try {
+      primitive = await createAgentPrimitiveQuery(
+        {
+          display_name,
+          primitive_type,
+          owner_id: owners.length > 0 ? String(owners[0]) : undefined,
+          permissions,
+          permission_categories,
+          metadata,
+          source_system: "manual",
+          external_id: `manual_${Date.now()}`,
+          is_manual: true,
+        },
+        req.organizationId!,
+        transaction,
+      );
+
+      if (owners.length > 0) {
+        await setAgentOwnersQuery(primitive.id!, owners, req.organizationId!, transaction);
+      }
+      await transaction.commit();
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+    (primitive as any).owner_ids = owners;
 
     logStructured("successful", "agent primitive created", functionName, fileName);
     return res.status(201).json(STATUS_CODE[201](primitive));
@@ -237,48 +314,114 @@ export async function updateAgentPrimitive(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](req.t!("No fields to update")));
     }
 
-    // When owners are supplied, they drive the primary owner_id too.
-    const owners = owner_ids !== undefined ? normalizeOwnerIds(owner_ids, owner_id) : undefined;
-    const primaryOwnerId =
-      owners !== undefined ? (owners.length > 0 ? String(owners[0]) : null) : owner_id;
+    const organizationId = req.organizationId!;
+    const ownersInRequest = owner_ids !== undefined || owner_id !== undefined;
 
-    const updated = await updateAgentPrimitiveQuery(
-      id,
-      { display_name, primitive_type, owner_id: primaryOwnerId, metadata },
-      req.organizationId!,
-    );
-
-    if (owners !== undefined) {
-      await setAgentOwnersQuery(id, owners, req.organizationId!);
-      if (updated) (updated as any).owner_ids = owners;
+    // Validate owner ids up front. A legacy owner_id-only update is validated
+    // here and expanded into a full owner set inside the transaction.
+    let requestedOwners: number[] | undefined;
+    if (owner_ids !== undefined) {
+      const normalized = normalizeOwnerIds(owner_ids, owner_id);
+      if (normalized === null) {
+        return res.status(400).json(STATUS_CODE[400](req.t!("Owner IDs must be valid user IDs")));
+      }
+      requestedOwners = normalized;
+    } else if (owner_id !== undefined) {
+      const derived = deriveOwnersFromPrimary(owner_id, []);
+      if (derived === null) {
+        return res.status(400).json(STATUS_CODE[400](req.t!("Owner IDs must be valid user IDs")));
+      }
+      requestedOwners = derived;
+    }
+    if (requestedOwners && !(await ownersBelongToOrganization(requestedOwners, organizationId))) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400](req.t!("Owners must be users in your organization")));
     }
 
-    // Create audit log entries for each changed field
-    const fieldsToCheck: Array<{ field: string; oldVal: any; newVal: any }> = [
-      { field: "display_name", oldVal: existing.display_name, newVal: display_name },
-      { field: "primitive_type", oldVal: existing.primitive_type, newVal: primitive_type },
-      { field: "owner_id", oldVal: existing.owner_id, newVal: owner_id },
-      {
-        field: "metadata",
-        oldVal: JSON.stringify(existing.metadata),
-        newVal: metadata !== undefined ? JSON.stringify(metadata) : undefined,
-      },
-    ];
+    // The new primary owner is known before touching the junction table: the
+    // first of owner_ids, or the legacy owner_id itself (null clears).
+    const primaryOwnerId: string | null | undefined = requestedOwners
+      ? requestedOwners.length > 0
+        ? String(requestedOwners[0])
+        : null
+      : undefined;
 
-    for (const { field, oldVal, newVal } of fieldsToCheck) {
-      if (newVal !== undefined && String(oldVal ?? "") !== String(newVal ?? "")) {
+    const transaction = await sequelize.transaction();
+    let updated;
+    try {
+      // Update the agent row first so its row lock serializes concurrent edits
+      // of the owner set below.
+      updated = await updateAgentPrimitiveQuery(
+        id,
+        { display_name, primitive_type, owner_id: primaryOwnerId, metadata },
+        organizationId,
+        transaction,
+      );
+
+      const previousOwners = withLegacyOwnerFallback(
+        await getAgentOwnersQuery(id, organizationId, transaction),
+        existing.owner_id,
+      );
+
+      let newOwners = previousOwners;
+      if (ownersInRequest) {
+        newOwners =
+          owner_ids !== undefined
+            ? requestedOwners!
+            : deriveOwnersFromPrimary(owner_id, previousOwners)!;
+        await setAgentOwnersQuery(id, newOwners, organizationId, transaction);
+      }
+      if (updated) (updated as any).owner_ids = newOwners;
+
+      // Create audit log entries for each changed field
+      const fieldsToCheck: Array<{ field: string; oldVal: any; newVal: any }> = [
+        { field: "display_name", oldVal: existing.display_name, newVal: display_name },
+        { field: "primitive_type", oldVal: existing.primitive_type, newVal: primitive_type },
+        { field: "owner_id", oldVal: existing.owner_id, newVal: primaryOwnerId },
+        {
+          field: "metadata",
+          oldVal: JSON.stringify(existing.metadata),
+          newVal: metadata !== undefined ? JSON.stringify(metadata) : undefined,
+        },
+      ];
+
+      for (const { field, oldVal, newVal } of fieldsToCheck) {
+        if (newVal !== undefined && String(oldVal ?? "") !== String(newVal ?? "")) {
+          await createAuditLogQuery(
+            {
+              agent_primitive_id: id,
+              action: "field_updated",
+              field_changed: field,
+              old_value: oldVal != null ? String(oldVal) : null,
+              new_value: newVal != null ? String(newVal) : null,
+              performed_by: req.userId!,
+            },
+            organizationId,
+            transaction,
+          );
+        }
+      }
+
+      if (ownersInRequest && !sameOwnerSet(previousOwners, newOwners)) {
         await createAuditLogQuery(
           {
             agent_primitive_id: id,
             action: "field_updated",
-            field_changed: field,
-            old_value: oldVal != null ? String(oldVal) : null,
-            new_value: newVal != null ? String(newVal) : null,
+            field_changed: "owner_ids",
+            old_value: previousOwners.join(",") || null,
+            new_value: newOwners.join(",") || null,
             performed_by: req.userId!,
           },
-          req.organizationId!,
+          organizationId,
+          transaction,
         );
       }
+
+      await transaction.commit();
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
     }
 
     logStructured("successful", "agent primitive updated", functionName, fileName);

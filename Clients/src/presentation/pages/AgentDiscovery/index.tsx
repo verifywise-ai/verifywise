@@ -307,7 +307,8 @@ const AgentDiscovery: React.FC = () => {
 
   const handleRowClick = (agent: AgentPrimitiveRow) => {
     // Row click opens the full detail page (lifecycle, ownership, activity).
-    // Quick review stays available via the row action menu (onEdit → review).
+    // The row action menu's "Edit" opens the review drawer instead (see
+    // handleEditAgent).
     navigate(`/agent-discovery/${agent.id}`);
   };
 
@@ -330,15 +331,12 @@ const AgentDiscovery: React.FC = () => {
     );
   };
 
+  // The row action menu's "Edit" opens the review drawer for every agent, so
+  // manual agents can be confirmed/rejected too. For manual agents the drawer's
+  // own Edit button opens the manual entry modal (wired below).
   const handleEditAgent = (agent: AgentPrimitiveRow) => {
-    if (agent.is_manual) {
-      setEditAgent(agent);
-      setIsManualModalOpen(true);
-    } else {
-      // Synced agents open the review modal instead of edit
-      setSelectedAgent(agent);
-      setIsReviewModalOpen(true);
-    }
+    setSelectedAgent(agent);
+    setIsReviewModalOpen(true);
   };
 
   const handleDeleteAgent = async (agent: AgentPrimitiveRow) => {
@@ -355,7 +353,7 @@ const AgentDiscovery: React.FC = () => {
 
   return (
     <PageHeaderExtended
-      title="AI Agents"
+      title="AI agents"
       description="Automatically discover and inventory AI agents across your organization. Review discovered agents, confirm or reject them, and link them to your model inventory for governance tracking."
       helpArticlePath="ai-governance/agent-discovery"
       summaryCards={

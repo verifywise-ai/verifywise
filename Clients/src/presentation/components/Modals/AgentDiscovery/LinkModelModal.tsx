@@ -5,6 +5,7 @@ import SelectComponent from "../../Inputs/Select";
 import { CustomizableButton } from "../../button/customizable-button";
 import { getAllEntities } from "../../../../application/repository/entity.repository";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
+import { formatModelLabel, ModelLabelSource } from "../../../pages/AgentDiscovery/agentLabels";
 
 interface LinkModelModalProps {
   isOpen: boolean;
@@ -36,20 +37,7 @@ const LinkModelModal: React.FC<LinkModelModalProps> = ({
         routeUrl: "/modelInventory",
       });
       const data = response?.data || [];
-      setModels(
-        data.map((m: any) => {
-          // The model inventory exposes the model name as `model` (with `provider`
-          // and `provider_model`). Prefer "<provider> · <model>" for a clear,
-          // unambiguous label, falling back progressively to whatever is present.
-          const modelName = m.model || m.provider_model || m.model_name || m.name;
-          const label = modelName
-            ? m.provider
-              ? `${m.provider} · ${modelName}`
-              : modelName
-            : `Model #${m.id}`;
-          return { _id: m.id, name: label };
-        }),
-      );
+      setModels(data.map((m: ModelLabelSource) => ({ _id: m.id, name: formatModelLabel(m) })));
     } catch (error) {
       console.error("Failed to fetch models:", error);
     }

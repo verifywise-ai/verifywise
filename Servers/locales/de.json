@@ -1,4 +1,6 @@
 {
+  "Owner IDs must be valid user IDs": "Eigentümer-IDs müssen gültige Benutzer-IDs sein",
+  "Owners must be users in your organization": "Eigentümer müssen Benutzer Ihrer Organisation sein",
   "{days} days overdue": "vor {days} Tagen",
   "{projectName} is created in VerifyWise": "{projectName} wurde in VerifyWise erstellt",
   "{type} with id {id} not found": "{type} mit ID {id} nicht gefunden",

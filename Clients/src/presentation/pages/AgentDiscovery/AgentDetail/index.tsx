@@ -9,13 +9,18 @@ import VWChip from "../../../components/Chip";
 import VWAvatar from "../../../components/Avatar/VWAvatar";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
-import { getAllEntities } from "../../../../application/repository/entity.repository";
+import {
+  getAllEntities,
+  getEntityById,
+} from "../../../../application/repository/entity.repository";
+import { logEngine } from "../../../../application/tools/log.engine";
 import {
   AgentPrimitiveRow,
   AgentAuditLogEntry,
 } from "../../../../domain/interfaces/i.agentDiscovery";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { getAgentLifecycle } from "../agentLifecycle";
+import { formatModelLabel, formatSourceLabel } from "../agentLabels";
 import { palette } from "../../../themes/palette";
 import LifecycleStepper from "./LifecycleStepper";
 import ActivityTimeline from "./ActivityTimeline";
@@ -26,16 +31,6 @@ const sectionCardStyle = {
   padding: "24px",
   backgroundColor: palette.background.main,
 };
-
-// Friendly source labels, shared with the table/drawer.
-const SOURCE_LABELS: Record<string, string> = { "azure-ai-foundry": "Azure AI Foundry" };
-function formatSourceLabel(sourceSystem: string): string {
-  if (SOURCE_LABELS[sourceSystem]) return SOURCE_LABELS[sourceSystem];
-  return sourceSystem
-    .split(/[-_]/)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-}
 
 const SectionTitle: React.FC<{ title: string; subtitle?: string }> = ({ title, subtitle }) => (
   <Box mb="16px">
@@ -60,64 +55,90 @@ const FieldBlock: React.FC<{ label: string; children: React.ReactNode }> = ({
   </Box>
 );
 
+/** Parse a route id; only a positive integer is a valid agent id. */
+function parseAgentId(id: string | undefined): number | null {
+  if (!id || !/^\d+$/.test(id)) return null;
+  const n = Number(id);
+  return Number.isSafeInteger(n) && n > 0 ? n : null;
+}
+
 export default function AgentDetail() {
   const navigate = useNavigate();
   const formatUserDate = useFormattedDate();
   const { id } = useParams<{ id: string }>();
-  const agentId = id ? parseInt(id, 10) : null;
+  const agentId = parseAgentId(id);
 
   const [agent, setAgent] = useState<AgentPrimitiveRow | null>(null);
   const [auditLogs, setAuditLogs] = useState<AgentAuditLogEntry[]>([]);
   const [usersMap, setUsersMap] = useState<Record<string, string>>({});
-  const [modelsMap, setModelsMap] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+  const [linkedModelLabel, setLinkedModelLabel] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(agentId !== null);
+  const [notFound, setNotFound] = useState(agentId === null);
 
   const fetchAll = useCallback(async () => {
-    if (!agentId) return;
-    setIsLoading(true);
-    try {
-      const [agentRes, usersRes, modelsRes, auditRes] = await Promise.all([
-        getAllEntities({ routeUrl: `/agent-primitives/${agentId}` }),
-        getAllEntities({ routeUrl: "/users" }),
-        getAllEntities({ routeUrl: "/modelInventory" }),
-        apiServices.get(`/agent-primitives/${agentId}/audit-logs`),
-      ]);
-
-      const agentData = (agentRes?.data as AgentPrimitiveRow) || null;
-      if (!agentData) {
-        setNotFound(true);
-        return;
-      }
-      setAgent(agentData);
-
-      const uMap: Record<string, string> = {};
-      (Array.isArray(usersRes?.data) ? usersRes.data : []).forEach(
-        (u: { id: number; name: string; surname: string }) => {
-          uMap[String(u.id)] = `${u.name} ${u.surname}`.trim();
-        },
-      );
-      setUsersMap(uMap);
-
-      const mMap: Record<string, string> = {};
-      (Array.isArray(modelsRes?.data) ? modelsRes.data : []).forEach((m: any) => {
-        const name = m.model || m.provider_model || m.model_name || m.name;
-        mMap[String(m.id)] = name
-          ? m.provider
-            ? `${m.provider} · ${name}`
-            : name
-          : `Model #${m.id}`;
-      });
-      setModelsMap(mMap);
-
-      const audit = (auditRes as any)?.data?.data || (auditRes as any)?.data || [];
-      setAuditLogs(Array.isArray(audit) ? audit : []);
-    } catch (error) {
-      console.error("Failed to load agent detail:", error);
+    // A non-numeric or non-positive id can never match an agent.
+    if (agentId === null) {
+      setAgent(null);
       setNotFound(true);
-    } finally {
       setIsLoading(false);
+      return;
     }
+    setIsLoading(true);
+    setNotFound(false);
+
+    // Only the agent request decides "not found". Users and the audit trail are
+    // supporting data: when they fail the page still renders, just without names
+    // or activity.
+    const [agentResult, usersResult, auditResult] = await Promise.allSettled([
+      getAllEntities({ routeUrl: `/agent-primitives/${agentId}` }),
+      getAllEntities({ routeUrl: "/users" }),
+      apiServices.get(`/agent-primitives/${agentId}/audit-logs`),
+    ]);
+
+    const agentData =
+      agentResult.status === "fulfilled"
+        ? ((agentResult.value?.data as AgentPrimitiveRow) ?? null)
+        : null;
+    if (!agentData) {
+      if (agentResult.status === "rejected") {
+        logEngine({ type: "error", message: `Failed to load agent ${agentId}` });
+      }
+      setAgent(null);
+      setNotFound(true);
+      setIsLoading(false);
+      return;
+    }
+
+    const usersData =
+      usersResult.status === "fulfilled" && Array.isArray(usersResult.value?.data)
+        ? usersResult.value.data
+        : [];
+    const uMap: Record<string, string> = {};
+    usersData.forEach((u: { id: number; name: string; surname: string }) => {
+      uMap[String(u.id)] = `${u.name} ${u.surname}`.trim();
+    });
+
+    const auditBody = auditResult.status === "fulfilled" ? (auditResult.value as any)?.data : null;
+    const audit = auditBody?.data ?? auditBody ?? [];
+
+    // Fetch only the linked model, not the whole inventory.
+    let modelLabel: string | null = null;
+    if (agentData.linked_model_inventory_id) {
+      try {
+        const modelRes = await getEntityById({
+          routeUrl: `/modelInventory/${agentData.linked_model_inventory_id}`,
+        });
+        if (modelRes?.data) modelLabel = formatModelLabel(modelRes.data);
+      } catch {
+        modelLabel = null;
+      }
+    }
+
+    setAgent(agentData);
+    setUsersMap(uMap);
+    setAuditLogs(Array.isArray(audit) ? audit : []);
+    setLinkedModelLabel(modelLabel);
+    setIsLoading(false);
   }, [agentId]);
 
   useEffect(() => {
@@ -125,13 +146,13 @@ export default function AgentDetail() {
   }, [fetchAll]);
 
   const breadcrumbItems = [
-    { label: "AI Agents", path: "/agent-discovery" },
-    { label: agent?.display_name || "Agent", path: `/agent-discovery/${agentId}` },
+    { label: "AI agents", path: "/agent-discovery" },
+    { label: agent?.display_name || "Agent", path: `/agent-discovery/${id ?? ""}` },
   ];
 
   if (isLoading) {
     return (
-      <PageHeaderExtended title="AI Agents" breadcrumbItems={breadcrumbItems}>
+      <PageHeaderExtended title="AI agents" breadcrumbItems={breadcrumbItems}>
         <CustomizableSkeleton variant="rectangular" width="100%" height={480} />
       </PageHeaderExtended>
     );
@@ -139,10 +160,10 @@ export default function AgentDetail() {
 
   if (notFound || !agent) {
     return (
-      <PageHeaderExtended title="AI Agents" breadcrumbItems={breadcrumbItems}>
+      <PageHeaderExtended title="AI agents" breadcrumbItems={breadcrumbItems}>
         <EmptyState icon={Bot} message="Agent not found">
           <CustomizableButton
-            text="Back to AI Agents"
+            text="Back to AI agents"
             variant="contained"
             onClick={() => navigate("/agent-discovery")}
           />
@@ -164,8 +185,7 @@ export default function AgentDetail() {
     return { id: oid, name, firstname: firstname || "", lastname: rest.join(" ") };
   });
   const linkedModelName = agent.linked_model_inventory_id
-    ? modelsMap[String(agent.linked_model_inventory_id)] ||
-      `Model #${agent.linked_model_inventory_id}`
+    ? linkedModelLabel || `Model #${agent.linked_model_inventory_id}`
     : null;
   const lifecycle = getAgentLifecycle(
     agent,

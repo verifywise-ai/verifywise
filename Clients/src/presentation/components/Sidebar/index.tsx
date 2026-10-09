@@ -143,7 +143,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         },
         {
           id: "agent-discovery",
-          label: "AI Agents",
+          label: "AI agents",
           icon: <Network size={16} strokeWidth={1.5} />,
           path: "/agent-discovery",
         },
