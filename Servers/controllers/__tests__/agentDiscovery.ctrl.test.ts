@@ -94,7 +94,7 @@ const createRes = () => {
 const manualAgent = (overrides: Record<string, unknown> = {}) => ({
   id: 10,
   display_name: "Agent",
-  primitive_type: "service_account",
+  primitive_type: "agent",
   owner_id: "1",
   metadata: {},
   is_manual: true,
@@ -115,7 +115,7 @@ beforeEach(() => {
 });
 
 describe("createAgentPrimitive owners", () => {
-  const body = { display_name: "Bot", primitive_type: "service_account" };
+  const body = { display_name: "Bot", primitive_type: "agent" };
 
   it.each([
     ["non-numeric", ["abc"]],
