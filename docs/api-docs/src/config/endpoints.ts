@@ -11075,7 +11075,7 @@ export const userEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/users/preferences',
     summary: "Get current user preferences",
-    description: "Returns the authenticated user's persisted preferences (date_format, language) from user_preferences. If no row exists, returns safe defaults including a transient theme default.",
+    description: "Returns the authenticated user's persisted preferences (date_format, language, parallel_agents) from user_preferences. If no row exists, returns safe defaults including a transient theme default and parallel_agents false.",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Preferences found or defaults returned" },
@@ -11088,7 +11088,7 @@ export const userEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/users/me/preferences',
     summary: "Get current user preferences",
-    description: "Returns the authenticated user's persisted preferences (date_format, language) from user_preferences. If no row exists, returns safe defaults including a transient theme default. Preferred alias of GET /users/preferences.",
+    description: "Returns the authenticated user's persisted preferences (date_format, language, parallel_agents) from user_preferences. If no row exists, returns safe defaults including a transient theme default and parallel_agents false. Preferred alias of GET /users/preferences.",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Preferences found or defaults returned" },
@@ -11102,11 +11102,12 @@ export const userEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/users/me/preferences',
     summary: "Update current user preferences",
-    description: "Upserts the authenticated user's date_format and/or language. At least one field is required. Unknown format strings and languages are rejected. Any user_id in the body is ignored; the JWT user is always the target.",
+    description: "Upserts the authenticated user's date_format, language, and/or parallel_agents. At least one field is required. Unknown format strings, languages, and non-boolean parallel_agents values are rejected. Any user_id in the body is ignored; the JWT user is always the target.",
     requiresAuth: true,
     requestBody: {
       "date_format": "DD-MM-YYYY | MM-DD-YYYY | DD/MM/YY | MM/DD/YY (optional)",
       "language": "en | de | fr | es (optional)",
+      "parallel_agents": "boolean (optional)",
     },
     responses: [
       { status: 200, description: "Preferences saved" },

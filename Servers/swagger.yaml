@@ -5254,6 +5254,8 @@ components:
       properties:
         date_format:
           type: string
+        parallel_agents:
+          type: boolean
     UserPreference:
       type: object
       properties:
@@ -5267,6 +5269,9 @@ components:
         language:
           type: string
           example: en
+        parallel_agents:
+          type: boolean
+          example: false
         theme:
           type: string
           example: light
@@ -7879,7 +7884,7 @@ paths:
   /users/preferences:
     get:
       summary: 'Get current user preferences'
-      description: "Returns the authenticated user's persisted preferences (date_format,\nlanguage) from user_preferences. If no row exists, returns safe\ndefaults including a transient theme default.\n"
+      description: "Returns the authenticated user's persisted preferences (date_format,\nlanguage, parallel_agents) from user_preferences. If no row exists, returns safe\ndefaults including a transient theme default and parallel_agents false.\n"
       tags:
         - Users
       security:
@@ -7903,7 +7908,7 @@ paths:
   /users/me/preferences:
     get:
       summary: 'Get current user preferences'
-      description: "Returns the authenticated user's persisted preferences (date_format,\nlanguage) from user_preferences. If no row exists, returns safe\ndefaults including a transient theme default. Preferred alias of\nGET /users/preferences.\n"
+      description: "Returns the authenticated user's persisted preferences (date_format,\nlanguage, parallel_agents) from user_preferences. If no row exists, returns safe\ndefaults including a transient theme default and parallel_agents false. Preferred alias of\nGET /users/preferences.\n"
       tags:
         - Users
       security:
@@ -7928,7 +7933,7 @@ paths:
       operationId: users_getPreferencesForCurrentUser
     patch:
       summary: 'Update current user preferences'
-      description: "Upserts the authenticated user's date_format and/or language. At least\none field is required. Unknown format strings and languages are rejected.\nAny user_id in the body is ignored; the JWT user is always the target.\n"
+      description: "Upserts the authenticated user's date_format, language, and/or\nparallel_agents. At least one field is required. Unknown format strings,\nlanguages, and non-boolean parallel_agents values are rejected.\nAny user_id in the body is ignored; the JWT user is always the target.\n"
       tags:
         - Users
       security:
@@ -7949,6 +7954,9 @@ paths:
                   type: string
                   enum: [en, de, fr, es]
                   example: en
+                parallel_agents:
+                  type: boolean
+                  example: false
       responses:
         '200':
           description: 'Preferences saved'

@@ -31,6 +31,16 @@ vi.mock("../../../../application/hooks/useAuth", () => ({
   useAuth: () => ({ userId: 1 }),
 }));
 
+let mockParallelAgents = false;
+vi.mock("../../../../application/hooks/useUserPreferences", () => ({
+  default: () => ({
+    userPreferences: { parallel_agents: mockParallelAgents },
+    loading: false,
+    isDefault: false,
+    refreshUserPreferences: vi.fn(),
+  }),
+}));
+
 vi.mock("react-router", () => ({
   MemoryRouter: ({ children }: any) => <>{children}</>,
   useNavigate: () => vi.fn(),
@@ -38,8 +48,14 @@ vi.mock("react-router", () => ({
 
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import AdvisorChat from "../index";
+import { useAdvisorRuntime } from "../useAdvisorRuntime";
 
 describe("AdvisorChat", () => {
+  beforeEach(() => {
+    mockParallelAgents = false;
+    vi.mocked(useAdvisorRuntime).mockClear();
+  });
+
   it("renders without crashing", () => {
     renderWithProviders(<AdvisorChat />);
     expect(document.body).toBeTruthy();
@@ -59,5 +75,12 @@ describe("AdvisorChat", () => {
     renderWithProviders(<AdvisorChat hasLLMKeys={false} isLoadingLLMKeys={false} />);
     expect(screen.queryByTestId("advisor-header")).toBeInTheDocument();
     expect(screen.queryByTestId("custom-thread")).toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "Parallel agents" })).not.toBeInTheDocument();
+  });
+
+  it("sends the saved parallel-agents preference to the advisor runtime", () => {
+    mockParallelAgents = true;
+    renderWithProviders(<AdvisorChat />);
+    expect(vi.mocked(useAdvisorRuntime)).toHaveBeenCalledWith(undefined, undefined, true);
   });
 });

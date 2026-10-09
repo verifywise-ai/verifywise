@@ -126,7 +126,7 @@ jest.mock("../../domain.layer/models/userPreferences/userPreferences.model", () 
   const validDateFormats = ["DD-MM-YYYY", "MM-DD-YYYY", "DD/MM/YY", "MM/DD/YY"];
   const validLanguages = ["en", "de", "fr", "es"];
 
-  function assertValid(dateFormat?: string, language?: string) {
+  function assertValid(dateFormat?: string, language?: string, parallelAgents?: unknown) {
     if (dateFormat !== undefined && dateFormat !== null && !validDateFormats.includes(dateFormat)) {
       throw new ValidationException(
         `Invalid date format. Must be one of: ${validDateFormats.join(", ")}`,
@@ -137,6 +137,9 @@ jest.mock("../../domain.layer/models/userPreferences/userPreferences.model", () 
         `Invalid language. Must be one of: ${validLanguages.join(", ")}`,
       );
     }
+    if (parallelAgents !== undefined && typeof parallelAgents !== "boolean") {
+      throw new ValidationException("Invalid parallel_agents. Must be a boolean");
+    }
   }
 
   class UserPreferencesModel {
@@ -144,15 +147,21 @@ jest.mock("../../domain.layer/models/userPreferences/userPreferences.model", () 
     user_id!: number;
     date_format!: string;
     language?: string;
+    parallel_agents?: boolean;
 
     constructor(data: Record<string, unknown> = {}) {
       Object.assign(this, data);
     }
 
-    async updateUserPreferences(updates: { date_format?: string; language?: string }) {
-      assertValid(updates.date_format, updates.language);
+    async updateUserPreferences(updates: {
+      date_format?: string;
+      language?: string;
+      parallel_agents?: boolean;
+    }) {
+      assertValid(updates.date_format, updates.language, updates.parallel_agents);
       if (updates.date_format !== undefined) this.date_format = updates.date_format;
       if (updates.language !== undefined) this.language = updates.language;
+      if (updates.parallel_agents !== undefined) this.parallel_agents = updates.parallel_agents;
     }
 
     toJSON() {
@@ -161,15 +170,22 @@ jest.mock("../../domain.layer/models/userPreferences/userPreferences.model", () 
         user_id: this.user_id,
         date_format: this.date_format,
         language: this.language,
+        parallel_agents: this.parallel_agents ?? false,
       };
     }
 
-    static async createNewUserPreferences(userId: number, dateFormat: string, language?: string) {
-      assertValid(dateFormat, language);
+    static async createNewUserPreferences(
+      userId: number,
+      dateFormat: string,
+      language?: string,
+      parallelAgents?: boolean,
+    ) {
+      assertValid(dateFormat, language, parallelAgents);
       return new UserPreferencesModel({
         user_id: userId,
         date_format: dateFormat,
         language: language ?? "en",
+        parallel_agents: parallelAgents,
       });
     }
   }
@@ -1056,6 +1072,7 @@ describe("user.ctrl", () => {
         user_id: 1,
         date_format: "MM-DD-YYYY",
         language: "de",
+        parallel_agents: true,
       }),
     };
 
@@ -1071,6 +1088,7 @@ describe("user.ctrl", () => {
           data: expect.objectContaining({
             date_format: "MM-DD-YYYY",
             language: "de",
+            parallel_agents: true,
           }),
         }),
       );
@@ -1089,6 +1107,7 @@ describe("user.ctrl", () => {
             date_format: "DD-MM-YYYY",
             language: "en",
             theme: "light",
+            parallel_agents: false,
           }),
         }),
       );
@@ -1221,13 +1240,70 @@ describe("user.ctrl", () => {
       expect(mockCreatePreferences).not.toHaveBeenCalled();
     });
 
-    it("should return 400 when the body has neither date_format nor language", async () => {
+    it("should return 400 when the body has neither date_format, language, nor parallel_agents", async () => {
       const req = createReq({ body: {} });
       const res = createRes();
       await patchPreferencesForCurrentUser(req, res);
 
       expect(res.status).toHaveBeenCalledWith(400);
       expect(mockGetById).not.toHaveBeenCalled();
+    });
+
+    it("should persist parallel_agents on an existing row when it is the only field", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser()) as any);
+      mockGetPreferences.mockResolvedValue({
+        user_id: 1,
+        date_format: "DD-MM-YYYY",
+        language: "en",
+        parallel_agents: false,
+      } as any);
+      mockUpdatePreferences.mockResolvedValue({} as any);
+
+      const req = createReq({ body: { parallel_agents: true } });
+      const res = createRes();
+      await patchPreferencesForCurrentUser(req, res);
+
+      expect(mockUpdatePreferences).toHaveBeenCalledTimes(1);
+      const updated = mockUpdatePreferences.mock.calls[0][1] as { parallel_agents?: boolean };
+      expect(updated.parallel_agents).toBe(true);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ parallel_agents: true }),
+        }),
+      );
+    });
+
+    it("should persist parallel_agents when creating a preferences row", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser()) as any);
+      mockGetPreferences.mockResolvedValue(null as any);
+      mockCreatePreferences.mockResolvedValue({} as any);
+
+      const req = createReq({ body: { parallel_agents: false } });
+      const res = createRes();
+      await patchPreferencesForCurrentUser(req, res);
+
+      expect(mockCreatePreferences).toHaveBeenCalledTimes(1);
+      const created = mockCreatePreferences.mock.calls[0][0] as { parallel_agents?: boolean };
+      expect(created.parallel_agents).toBe(false);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ parallel_agents: false }),
+        }),
+      );
+    });
+
+    it("should return 400 when parallel_agents is not a boolean", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser()) as any);
+      mockGetPreferences.mockResolvedValue(null as any);
+
+      const req = createReq({ body: { parallel_agents: "yes" } });
+      const res = createRes();
+      await patchPreferencesForCurrentUser(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockCreatePreferences).not.toHaveBeenCalled();
     });
 
     it("should return 404 when the user is not found", async () => {

@@ -9,6 +9,7 @@ export class UserPreferencesModel {
   date_format!: UserDateFormat;
   language?: UserLanguage;
   theme?: UserTheme;
+  parallel_agents?: boolean;
 
   constructor(data: UserPreferencesModel) {
     this.id = data.id;
@@ -16,6 +17,7 @@ export class UserPreferencesModel {
     this.date_format = data.date_format;
     this.language = data.language;
     this.theme = data.theme;
+    this.parallel_agents = data.parallel_agents;
   }
 
   static createNewUserPreferences(data: UserPreferencesModel): UserPreferencesModel {
