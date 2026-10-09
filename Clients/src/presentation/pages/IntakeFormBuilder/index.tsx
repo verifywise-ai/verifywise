@@ -54,6 +54,7 @@ import {
   DEFAULT_DESIGN_SETTINGS,
   analyzeMappingCoverage,
   createFieldFromMapping,
+  usedEntityMappingsFor,
 } from "./types";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import StandardModal from "../../components/Modals/StandardModal";
@@ -826,12 +827,11 @@ export function IntakeFormBuilder() {
                   <FieldEditor
                     field={selectedField}
                     entityType={form.entityType}
-                    usedEntityMappings={[
-                      ...form.schema.fields
-                        .filter((f) => f.id !== selectedField.id && f.entityFieldMapping)
-                        .map((f) => f.entityFieldMapping!),
-                      ...(form.euAiActRiskStepEnabled ? ["ai_risk_classification"] : []),
-                    ]}
+                    usedEntityMappings={usedEntityMappingsFor(
+                      form.schema.fields,
+                      selectedField.id,
+                      form.euAiActRiskStepEnabled,
+                    )}
                     llmKeyId={activeLlmKeyId}
                     onChange={updateField}
                     onClose={() => setSelectedFieldId(null)}

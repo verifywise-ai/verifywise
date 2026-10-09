@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { analyzeMappingCoverage } from "../types";
+import { analyzeMappingCoverage, usedEntityMappingsFor, type FormField } from "../types";
 import { IntakeEntityType } from "../../../../domain/intake/enums";
 
 const RISK = "ai_risk_classification";
@@ -24,5 +24,38 @@ describe("analyzeMappingCoverage with the EU AI Act risk step", () => {
     expect(missingOptional.map((m) => m.field)).not.toContain(ROLE);
     expect(missingRequired.map((m) => m.field)).not.toContain(ROLE);
     expect(missingOptional.length).toBeGreaterThan(0);
+  });
+});
+
+describe("analyzeMappingCoverage type checks with the EU AI Act risk step on", () => {
+  it.each([RISK, ROLE])("still flags a non-select field mapped to %s", (mapping) => {
+    const field: FormField = {
+      id: "f1",
+      type: "text",
+      label: "Mapped field",
+      entityFieldMapping: mapping,
+      order: 0,
+    };
+    const { typeMismatches } = analyzeMappingCoverage([field], IntakeEntityType.USE_CASE, {
+      riskStepEnabled: true,
+    });
+    expect(typeMismatches.map((m) => m.entityMapping.field)).toEqual([mapping]);
+  });
+});
+
+describe("usedEntityMappingsFor", () => {
+  const fields: FormField[] = [
+    { id: "a", type: "select", label: "Role", entityFieldMapping: ROLE, order: 0 },
+    { id: "b", type: "text", label: "Name", entityFieldMapping: "project_title", order: 1 },
+  ];
+
+  it("blocks the risk classification and role while the step is on", () => {
+    const used = usedEntityMappingsFor(fields, "b", true);
+    expect(used).toEqual(expect.arrayContaining([RISK, ROLE]));
+    expect(used).not.toContain("project_title");
+  });
+
+  it("only blocks mappings taken by other fields while the step is off", () => {
+    expect(usedEntityMappingsFor(fields, "a", false)).toEqual(["project_title"]);
   });
 });

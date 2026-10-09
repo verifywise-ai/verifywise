@@ -560,6 +560,24 @@ export interface MappingCoverage {
 const RISK_STEP_SET_FIELDS = new Set(["ai_risk_classification", "type_of_high_risk_role"]);
 
 /**
+ * Entity mappings the field editor must not offer for `selectedFieldId`:
+ * those taken by other fields, plus the ones the EU AI Act risk step sets
+ * while it is on. The editor still shows a field's own current mapping.
+ */
+export function usedEntityMappingsFor(
+  fields: FormField[],
+  selectedFieldId: string,
+  riskStepEnabled: boolean | undefined,
+): string[] {
+  return [
+    ...fields
+      .filter((f) => f.id !== selectedFieldId && f.entityFieldMapping)
+      .map((f) => f.entityFieldMapping!),
+    ...(riskStepEnabled ? [...RISK_STEP_SET_FIELDS] : []),
+  ];
+}
+
+/**
  * Analyze mapping coverage for a form's fields against the entity field definitions
  */
 export function analyzeMappingCoverage(
@@ -567,12 +585,7 @@ export function analyzeMappingCoverage(
   entityType: IntakeEntityType,
   options: { riskStepEnabled?: boolean } = {},
 ): MappingCoverage {
-  // With the EU AI Act risk step on, the server sets ai_risk_classification
-  // itself and rejects a form field mapped to it, and the step also sets the
-  // role, so neither is offered. A role field already on the form stays mapped.
-  const entityMappings = (ENTITY_FIELD_MAPPINGS[entityType] || []).filter(
-    (m) => !(options.riskStepEnabled && RISK_STEP_SET_FIELDS.has(m.field)),
-  );
+  const entityMappings = ENTITY_FIELD_MAPPINGS[entityType] || [];
   const mappedKeys = new Set(
     fields.filter((f) => f.entityFieldMapping).map((f) => f.entityFieldMapping!),
   );
@@ -581,6 +594,10 @@ export function analyzeMappingCoverage(
   const missingOptional: EntityFieldMapping[] = [];
 
   for (const mapping of entityMappings) {
+    // With the EU AI Act risk step on, the server sets ai_risk_classification
+    // itself and the step also sets the role, so neither is reported as
+    // missing. Type checks below still cover a field already mapped to them.
+    if (options.riskStepEnabled && RISK_STEP_SET_FIELDS.has(mapping.field)) continue;
     if (!mappedKeys.has(mapping.field)) {
       if (mapping.entityRequired) {
         missingRequired.push(mapping);
