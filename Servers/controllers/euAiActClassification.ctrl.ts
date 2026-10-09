@@ -8,6 +8,7 @@ import { recordMultipleFieldChanges } from "../utils/useCaseChangeHistory.utils"
 import {
   aiRiskClassificationIneligibility,
   extractFrameworkIds,
+  type IneligibilityCode,
 } from "../utils/validations/projectValidation.utils";
 import {
   getLatestRunForUseCaseQuery,
@@ -23,30 +24,27 @@ import {
 
 const parseId = (value: unknown) => parseInt(Array.isArray(value) ? value[0] : String(value), 10);
 
+/** One message per ineligibility code; a new code without a message fails typecheck. */
+const INELIGIBILITY_MESSAGES: Record<IneligibilityCode, string> = {
+  ORGANIZATIONAL_PROJECT_AI_RISK_NOT_NULL:
+    "The EU AI Act risk classification does not apply to organizational projects",
+  AI_RISK_WITHOUT_EU_AI_ACT:
+    "The EU AI Act risk classification requires the EU AI Act framework on this use case",
+};
+
 /**
  * Uses the project validation rule for ai_risk_classification: organizational
  * projects never carry one, and it only applies when the EU AI Act framework
  * is selected.
  */
-const classificationIneligibility = (project: any): { message: string; code: string } | null => {
+const classificationIneligibility = (
+  project: any,
+): { message: string; code: IneligibilityCode } | null => {
   const code = aiRiskClassificationIneligibility(
     project.is_organizational,
     extractFrameworkIds(project.dataValues?.framework ?? project.framework ?? []),
   );
-  if (code === "ORGANIZATIONAL_PROJECT_AI_RISK_NOT_NULL") {
-    return {
-      message: "The EU AI Act risk classification does not apply to organizational projects",
-      code,
-    };
-  }
-  if (code === "AI_RISK_WITHOUT_EU_AI_ACT") {
-    return {
-      message:
-        "The EU AI Act risk classification requires the EU AI Act framework on this use case",
-      code,
-    };
-  }
-  return null;
+  return code ? { message: INELIGIBILITY_MESSAGES[code], code } : null;
 };
 
 const validate = (raw: unknown) =>
