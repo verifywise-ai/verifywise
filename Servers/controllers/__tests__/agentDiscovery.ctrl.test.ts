@@ -52,7 +52,11 @@ jest.mock("../../utils/i18n.utils", () => ({
   translateError: jest.fn((_req: any, error: any) => (error as Error).message),
 }));
 
-import { createAgentPrimitive, updateAgentPrimitive } from "../agentDiscovery.ctrl";
+import {
+  createAgentPrimitive,
+  getAgentPrimitiveById,
+  updateAgentPrimitive,
+} from "../agentDiscovery.ctrl";
 import {
   getAgentPrimitiveByIdQuery,
   createAgentPrimitiveQuery,
@@ -162,6 +166,17 @@ describe("createAgentPrimitive owners", () => {
     expect(tx).toBeDefined();
     expect(mockSetOwners).toHaveBeenCalledWith(10, [2, 3], ORG_ID, tx);
     expect(mockCommit).toHaveBeenCalled();
+  });
+
+  it("puts a legacy owner_id sent with owner_ids first as the primary", async () => {
+    const res = createRes();
+    await createAgentPrimitive(
+      createReq({ body: { ...body, owner_ids: [2, 3], owner_id: "3" } }),
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(mockCreate.mock.calls[0][0]).toEqual(expect.objectContaining({ owner_id: "3" }));
+    expect(mockSetOwners).toHaveBeenCalledWith(10, [3, 2], ORG_ID, expect.anything());
   });
 
   it("rolls back when writing the owners fails", async () => {
@@ -287,18 +302,45 @@ describe("updateAgentPrimitive owners", () => {
     expect(mockAudit).not.toHaveBeenCalled();
   });
 
-  it("puts owner_ids before a legacy owner_id sent alongside them", async () => {
+  it("moves a legacy owner_id sent with owner_ids to the front as the primary", async () => {
     givenAgent({ owner_id: "1" });
     mockGetOwners.mockResolvedValue([1]);
     const res = createRes();
-    await updateAgentPrimitive(req({ owner_ids: [2], owner_id: 1 }), res);
-    // owner_id is appended after owner_ids, so the primary is 2.
-    expect(mockSetOwners).toHaveBeenCalledWith(10, [2, 1], ORG_ID, expect.anything());
-    expect(mockUpdate.mock.calls[0][1]).toEqual(expect.objectContaining({ owner_id: "2" }));
+    await updateAgentPrimitive(req({ owner_ids: [2, 1], owner_id: 1 }), res);
+    // owner_id always means the primary owner, wherever it sits in owner_ids.
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(mockSetOwners).toHaveBeenCalledWith(10, [1, 2], ORG_ID, expect.anything());
+    expect(mockUpdate.mock.calls[0][1]).toEqual(expect.objectContaining({ owner_id: "1" }));
     expect(auditRows().owner_ids).toEqual(
-      expect.objectContaining({ old_value: "1", new_value: "2,1" }),
+      expect.objectContaining({ old_value: "1", new_value: "1,2" }),
     );
     expect(auditRows().owner_id).toBeUndefined();
+  });
+
+  it("inserts a legacy owner_id missing from owner_ids at the front as the primary", async () => {
+    givenAgent({ owner_id: "1" });
+    mockGetOwners.mockResolvedValue([1]);
+    const res = createRes();
+    await updateAgentPrimitive(req({ owner_ids: [2, 3], owner_id: "4" }), res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(mockSetOwners).toHaveBeenCalledWith(10, [4, 2, 3], ORG_ID, expect.anything());
+    expect(mockUpdate.mock.calls[0][1]).toEqual(expect.objectContaining({ owner_id: "4" }));
+  });
+
+  it("returns 404 and rolls back when the agent is deleted before the row lock", async () => {
+    givenAgent();
+    mockLock.mockResolvedValue(null);
+    const res = createRes();
+    await updateAgentPrimitive(req({ display_name: "Renamed", owner_ids: [2] }), res);
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: "Agent primitive not found" }),
+    );
+    expect(mockRollback).toHaveBeenCalled();
+    expect(mockCommit).not.toHaveBeenCalled();
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockSetOwners).not.toHaveBeenCalled();
+    expect(mockAudit).not.toHaveBeenCalled();
   });
 
   it("derives the owner set from a legacy owner_id-only update", async () => {
@@ -357,5 +399,29 @@ describe("updateAgentPrimitive owners", () => {
     expect(res.status).toHaveBeenCalledWith(500);
     expect(mockRollback).toHaveBeenCalled();
     expect(mockCommit).not.toHaveBeenCalled();
+  });
+});
+
+describe("getAgentPrimitiveById", () => {
+  it("loads the agent with its owner set", async () => {
+    mockGetById.mockResolvedValue({ ...manualAgent(), owner_ids: [1, 2] });
+    const res = createRes();
+    await getAgentPrimitiveById(createReq({ params: { id: "10" } as any }), res);
+    expect(mockGetById).toHaveBeenCalledWith(10, ORG_ID, { includeOwners: true });
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
+});
+
+describe("updateAgentPrimitive existence check", () => {
+  it("loads the agent without its owner set (owners are read inside the transaction)", async () => {
+    givenAgent();
+    mockGetOwners.mockResolvedValue([1]);
+    const res = createRes();
+    await updateAgentPrimitive(
+      createReq({ params: { id: "10" } as any, body: { display_name: "Renamed" } }),
+      res,
+    );
+    expect(mockGetById).toHaveBeenCalledWith(10, ORG_ID);
+    expect(mockGetOwners).toHaveBeenCalledTimes(1);
   });
 });

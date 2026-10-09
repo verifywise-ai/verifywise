@@ -50,6 +50,7 @@ import {
 import { AgentTableProps } from "src/domain/interfaces/i.agentDiscovery";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { pageOfLabel } from "../../components/Table/pageOfLabel";
+import { palette } from "../../themes/palette";
 
 const cellStyle = singleTheme.tableStyles.primary.body.cell;
 
@@ -60,7 +61,6 @@ const TABLE_COLUMNS = [
   { id: "permissions", label: "PERMISSIONS", sortable: false },
   { id: "last_activity", label: "LAST ACTIVITY", sortable: true },
   { id: "review_status", label: "STATUS", sortable: true },
-  { id: "stale", label: "STALE", sortable: false },
   { id: "actions", label: "", sortable: false },
 ];
 
@@ -71,8 +71,10 @@ const AgentTable: React.FC<AgentTableProps> = ({
   agents,
   isLoading,
   onRowClick,
+  onReview,
   onEdit,
   onDelete,
+  canManage = false,
   onSync,
   onAddAgent,
   isSyncing,
@@ -203,7 +205,7 @@ const AgentTable: React.FC<AgentTableProps> = ({
           description="Each discovered agent can be confirmed, rejected, or linked to a model in your inventory for compliance tracking."
         />
         <Box sx={{ display: "flex", gap: "8px", mt: "16px" }}>
-          {azureInstalled ? (
+          {!canManage ? null : azureInstalled ? (
             <>
               <CustomizableButton
                 text={isSyncing ? "Syncing..." : "Sync now"}
@@ -235,7 +237,7 @@ const AgentTable: React.FC<AgentTableProps> = ({
               sx={{ height: 34 }}
             />
           )}
-          {onAddAgent && (
+          {canManage && onAddAgent && (
             <CustomizableButton
               text="Add agent"
               variant="outlined"
@@ -331,9 +333,9 @@ const AgentTable: React.FC<AgentTableProps> = ({
             <TableCell sx={cellStyle}>
               <Stack direction="row" alignItems="center" spacing={0.75}>
                 {agent.is_manual ? (
-                  <UserPen size={14} strokeWidth={1.5} color="#667085" />
+                  <UserPen size={14} strokeWidth={1.5} color={palette.text.icon} />
                 ) : (
-                  <Plug size={14} strokeWidth={1.5} color="#667085" />
+                  <Plug size={14} strokeWidth={1.5} color={palette.text.icon} />
                 )}
                 <span>
                   {agent.is_manual ? "Manually entered" : formatSourceLabel(agent.source_system)}
@@ -365,37 +367,50 @@ const AgentTable: React.FC<AgentTableProps> = ({
           )}
           {isColVisible("review_status") && (
             <TableCell sx={cellStyle}>
-              {(() => {
-                const s = getReviewStatusDisplay(agent.review_status);
-                return <Chip label={s.label} variant={s.variant} />;
-              })()}
-            </TableCell>
-          )}
-          {isColVisible("stale") && (
-            <TableCell sx={{ ...cellStyle, width: 40 }}>
-              {agent.is_stale && (
-                <Tooltip
-                  title="Stale: no activity from this agent for 30+ days. Re-sync or review whether it is still in use."
-                  arrow
-                  placement="top"
-                >
-                  <Box component="span" sx={{ display: "inline-flex", cursor: "help" }}>
-                    <AlertTriangle size={14} strokeWidth={1.5} color="#F9A825" />
-                  </Box>
-                </Tooltip>
-              )}
+              {/* Staleness sits next to the review status it qualifies, rather
+                  than in its own mostly empty column. */}
+              <Stack direction="row" alignItems="center" gap="8px">
+                {(() => {
+                  const s = getReviewStatusDisplay(agent.review_status);
+                  return <Chip label={s.label} variant={s.variant} />;
+                })()}
+                {agent.is_stale && (
+                  <Tooltip
+                    title="Stale: no activity from this agent for 30+ days. Re-sync or review whether it is still in use."
+                    arrow
+                    placement="top"
+                  >
+                    <Box
+                      component="span"
+                      data-testid="agent-stale-indicator"
+                      sx={{ display: "inline-flex", cursor: "help" }}
+                    >
+                      <AlertTriangle
+                        size={14}
+                        strokeWidth={1.5}
+                        color={palette.accent.amber.text}
+                      />
+                    </Box>
+                  </Tooltip>
+                )}
+              </Stack>
             </TableCell>
           )}
           {isColVisible("actions") && (
             <TableCell sx={{ ...cellStyle, width: 40 }} onClick={(e) => e.stopPropagation()}>
+              {/* Review for every agent; Edit only for manual agents (synced
+                  agents are read-only); Edit and Delete only for admins. */}
               <IconButton
                 id={agent.id}
+                onView={() => onReview(agent)}
                 onEdit={() => onEdit(agent)}
+                canEdit={canManage && agent.is_manual}
                 onDelete={() => onDelete(agent)}
+                canDelete={canManage}
                 onMouseEvent={() => {}}
                 warningTitle="Delete this agent?"
                 warningMessage="When you delete this agent, all data related to this agent will be removed. This action is non-recoverable."
-                type="Vendor"
+                type="agent"
               />
             </TableCell>
           )}

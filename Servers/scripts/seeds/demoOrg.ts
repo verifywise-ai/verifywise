@@ -696,7 +696,9 @@ const DEMO_AGENTS = [
 ];
 
 // Owner assignments by agent name (emails resolved via the users map). The first
-// email is the primary owner. Agents not listed fall back to the admin.
+// email is the primary owner. Agents not listed fall back to the admin. Only
+// manual agents get the full set: synced agents cannot have owners assigned in
+// VerifyWise, so they keep just the primary as the source-reported owner_id.
 const AGENT_OWNERS: Record<string, string[]> = {
   "Contract Review Agent": [
     ADMIN_EMAIL,
@@ -723,8 +725,8 @@ async function seedAgentPrimitives(ctx: Ctx, usersByEmail: Record<string, number
       ? { notes: "Added manually for governance tracking." }
       : { region: "eastus", project: "foundry-prod" };
     // Resolve this agent's owners; default to the admin. The first is the
-    // primary (agent_primitives.owner_id); the full set goes to
-    // agent_primitive_owners below so the two stay in sync.
+    // primary (agent_primitives.owner_id); for manual agents the full set goes
+    // to agent_primitive_owners below so the two stay in sync.
     const ownerEmails = AGENT_OWNERS[a.name] || [ADMIN_EMAIL];
     const resolvedOwners = ownerEmails.map((e) => usersByEmail[e]).filter((v): v is number => !!v);
     const ownerIds = Array.from(new Set(resolvedOwners.length > 0 ? resolvedOwners : [ctx.userId]));
@@ -786,11 +788,12 @@ async function seedAgentPrimitives(ctx: Ctx, usersByEmail: Record<string, number
 
     if (agentId) {
       // Full owner set (replace-all), primary first, matching owner_id above.
+      // Synced agents get no rows: their owner is only the source's owner_id.
       await sequelize.query(
         `DELETE FROM agent_primitive_owners WHERE organization_id = :orgId AND agent_primitive_id = :agentId`,
         { replacements: { orgId: ctx.orgId, agentId } },
       );
-      for (const userId of ownerIds) {
+      for (const userId of a.manual ? ownerIds : []) {
         await sequelize.query(
           `INSERT INTO agent_primitive_owners (organization_id, agent_primitive_id, user_id, created_at)
            VALUES (:orgId, :agentId, :userId, NOW())
@@ -825,7 +828,7 @@ async function seedAgentPrimitives(ctx: Ctx, usersByEmail: Record<string, number
     n++;
   }
   log(
-    `seeded ${n} agents (${DEMO_AGENTS.filter((a) => a.manual).length} manual + rest discovered; owners + audit trail attached)`,
+    `seeded ${n} agents (${DEMO_AGENTS.filter((a) => a.manual).length} manual + rest discovered; manual owners + audit trail attached)`,
   );
 }
 

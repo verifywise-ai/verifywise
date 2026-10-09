@@ -100,11 +100,11 @@ function nodeVisual(state: LifecycleStep["state"]): {
 } {
   switch (state) {
     case "done":
-      return { circleColor: palette.brand.primary, iconColor: "#FFFFFF" };
+      return { circleColor: palette.brand.primary, iconColor: palette.background.main };
     case "current":
       return { circleColor: palette.brand.primaryLight, iconColor: palette.brand.primary };
     case "rejected":
-      return { circleColor: palette.status.error.text, iconColor: "#FFFFFF" };
+      return { circleColor: palette.status.error.text, iconColor: palette.background.main };
     case "upcoming":
     default:
       return { circleColor: palette.background.main, iconColor: palette.text.accent };

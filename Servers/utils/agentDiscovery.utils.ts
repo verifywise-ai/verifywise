@@ -107,16 +107,22 @@ export const getAllAgentPrimitivesQuery = async (
   return results;
 };
 
+/**
+ * Load one agent primitive. Pass `includeOwners` to also attach its owner set as
+ * `owner_ids` (one extra query); callers that only check existence or read the
+ * row's own columns leave it off.
+ */
 export const getAgentPrimitiveByIdQuery = async (
   id: number,
   organizationId: number,
+  options: { includeOwners?: boolean } = {},
 ): Promise<AgentPrimitive | null> => {
   const results = await sequelize.query(
     `SELECT * FROM agent_primitives WHERE organization_id = :organizationId AND id = :id`,
     { replacements: { organizationId, id }, type: QueryTypes.SELECT },
   );
   const agent = (results as AgentPrimitive[])[0] || null;
-  if (agent) {
+  if (agent && options.includeOwners) {
     (agent as any).owner_ids = await getAgentOwnersQuery(id, organizationId);
   }
   return agent;
@@ -404,9 +410,8 @@ export const upsertAgentPrimitivesQuery = async (
     const batch = primitives.slice(i, i + BATCH_SIZE);
 
     for (const p of batch) {
-      // On re-sync, an agent whose owners were assigned in VerifyWise (rows in
-      // agent_primitive_owners) keeps its primary owner so the two stay in
-      // sync; otherwise the owner reported by the source system is taken.
+      // Synced agents cannot be edited, so they never have owners assigned in
+      // VerifyWise: the owner reported by the source system always wins.
       const [results] = await sequelize.query(
         `INSERT INTO agent_primitives (
           organization_id, source_system, primitive_type, external_id, display_name,
@@ -420,14 +425,7 @@ export const upsertAgentPrimitivesQuery = async (
         ON CONFLICT (organization_id, source_system, external_id) DO UPDATE SET
           display_name = EXCLUDED.display_name,
           primitive_type = EXCLUDED.primitive_type,
-          owner_id = CASE
-            WHEN EXISTS (
-              SELECT 1 FROM agent_primitive_owners apo
-              WHERE apo.organization_id = agent_primitives.organization_id
-                AND apo.agent_primitive_id = agent_primitives.id
-            ) THEN agent_primitives.owner_id
-            ELSE EXCLUDED.owner_id
-          END,
+          owner_id = EXCLUDED.owner_id,
           permissions = EXCLUDED.permissions,
           permission_categories = EXCLUDED.permission_categories,
           last_activity = EXCLUDED.last_activity,

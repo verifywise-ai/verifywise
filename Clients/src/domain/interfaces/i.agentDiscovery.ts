@@ -42,8 +42,16 @@ export interface AgentTableProps {
   agents: AgentPrimitiveRow[];
   isLoading: boolean;
   onRowClick: (agent: AgentPrimitiveRow) => void;
+  /** Opens the review drawer (every agent). */
+  onReview: (agent: AgentPrimitiveRow) => void;
+  /** Opens the edit form. Only offered for manually added agents. */
   onEdit: (agent: AgentPrimitiveRow) => void;
   onDelete: (agent: AgentPrimitiveRow) => void;
+  /**
+   * Whether the current user may change agents (Admin only on the server):
+   * shows Edit, Delete, Sync and Add agent.
+   */
+  canManage?: boolean;
   onSync?: () => void;
   onAddAgent?: () => void;
   isSyncing?: boolean;

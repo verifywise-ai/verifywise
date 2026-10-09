@@ -48,14 +48,16 @@ function parseOwnerId(value: unknown): number | null {
 /**
  * Normalize the owners of an agent into a deduplicated, ordered list of user
  * ids. Accepts an `owner_ids` array (multi-owner) and/or a legacy single
- * `owner_id`; the legacy value is appended if not already present, so the first
- * entry is always the primary owner. A null/blank `owner_id` is treated as
- * absent. Returns null when `owner_ids` is not an array or any id is invalid.
+ * `owner_id`. `owner_id` always means the primary owner, so when both are sent
+ * it is moved (or inserted) to the front of the set. A null/blank `owner_id` is
+ * treated as absent. Returns null when `owner_ids` is not an array or any id is
+ * invalid.
  */
 function normalizeOwnerIds(ownerIds: unknown, ownerId: unknown): number[] | null {
   if (ownerIds !== undefined && ownerIds !== null && !Array.isArray(ownerIds)) return null;
-  const raw: unknown[] = Array.isArray(ownerIds) ? [...ownerIds] : [];
+  const raw: unknown[] = [];
   if (ownerId !== undefined && ownerId !== null && ownerId !== "") raw.push(ownerId);
+  if (Array.isArray(ownerIds)) raw.push(...ownerIds);
   const out: number[] = [];
   for (const value of raw) {
     const n = parseOwnerId(value);
@@ -194,7 +196,9 @@ export async function getAgentPrimitiveById(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid agent primitive ID")));
     }
 
-    const primitive = await getAgentPrimitiveByIdQuery(id, req.organizationId!);
+    const primitive = await getAgentPrimitiveByIdQuery(id, req.organizationId!, {
+      includeOwners: true,
+    });
     if (!primitive) {
       logStructured("error", "agent primitive not found", functionName, fileName);
       return res.status(404).json(STATUS_CODE[404](req.t!("Agent primitive not found")));
@@ -337,7 +341,12 @@ export async function updateAgentPrimitive(req: Request, res: Response) {
     try {
       // Lock the agent row so concurrent edits of the owner set serialize.
       const locked = await lockAgentPrimitiveQuery(id, organizationId, transaction);
-      const previousPrimary = locked ? locked.owner_id : existing.owner_id;
+      if (!locked) {
+        // Deleted between the existence check and the lock.
+        await transaction.rollback();
+        return res.status(404).json(STATUS_CODE[404](req.t!("Agent primitive not found")));
+      }
+      const previousPrimary = locked.owner_id;
       const junctionOwners = await getAgentOwnersQuery(id, organizationId, transaction);
       const previousOwners = withLegacyOwnerFallback(junctionOwners, previousPrimary);
 

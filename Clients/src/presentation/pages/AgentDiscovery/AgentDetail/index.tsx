@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { Box, Stack, Typography, Divider } from "@mui/material";
-import { Bot } from "lucide-react";
+import { Bot, ClipboardCheck, Pencil } from "lucide-react";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { EmptyState } from "../../../components/EmptyState";
 import CustomizableSkeleton from "../../../components/Skeletons";
@@ -9,10 +9,7 @@ import VWChip from "../../../components/Chip";
 import VWAvatar from "../../../components/Avatar/VWAvatar";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
-import {
-  getAllEntities,
-  getEntityById,
-} from "../../../../application/repository/entity.repository";
+import { getEntityById } from "../../../../application/repository/entity.repository";
 import { logEngine } from "../../../../application/tools/log.engine";
 import {
   AgentPrimitiveRow,
@@ -21,8 +18,12 @@ import {
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
 import { getAgentLifecycle } from "../agentLifecycle";
-import { formatModelLabel, formatSourceLabel, getAgentOwnerIds } from "../agentLabels";
+import { formatSourceLabel, getAgentOwnerIds } from "../agentLabels";
 import { useUserNames } from "../useUserNames";
+import { useLinkedModelLabel } from "../useLinkedModelLabel";
+import ReviewAgentModal from "../../../components/Modals/AgentDiscovery/ReviewAgentModal";
+import { useIsAdmin } from "../../../../application/hooks/useIsAdmin";
+import ManualAgentModal from "../../../components/Modals/AgentDiscovery/ManualAgentModal";
 import { palette } from "../../../themes/palette";
 import LifecycleStepper from "./LifecycleStepper";
 import ActivityTimeline from "./ActivityTimeline";
@@ -67,75 +68,95 @@ function parseAgentId(id: string | undefined): number | null {
 export default function AgentDetail() {
   const navigate = useNavigate();
   const formatUserDate = useFormattedDate();
+  const isAdmin = useIsAdmin();
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const agentId = parseAgentId(id);
-  const { usersMap, formatUser } = useUserNames();
+  const { formatUser, avatarName } = useUserNames();
 
   const [agent, setAgent] = useState<AgentPrimitiveRow | null>(null);
   const [auditLogs, setAuditLogs] = useState<AgentAuditLogEntry[]>([]);
-  const [linkedModelLabel, setLinkedModelLabel] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(agentId !== null);
   const [notFound, setNotFound] = useState(agentId === null);
+  const [isReviewOpen, setIsReviewOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const linkedModelLabel = useLinkedModelLabel(agent?.linked_model_inventory_id);
+  // The in-flight load. A new load (another :id, or a refresh) aborts it, so a
+  // slower response for a previous request can never overwrite newer state.
+  const loadControllerRef = useRef<AbortController | null>(null);
 
-  const fetchAll = useCallback(async () => {
-    // A non-numeric or non-positive id can never match an agent.
-    if (agentId === null) {
-      setAgent(null);
-      setNotFound(true);
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(true);
-    setNotFound(false);
-
-    // Only the agent request decides "not found". The audit trail is supporting
-    // data: when it fails the page still renders, just without activity. User
-    // names come from the shared, cached users query (useUserNames).
-    const [agentResult, auditResult] = await Promise.allSettled([
-      getAllEntities({ routeUrl: `/agent-primitives/${agentId}` }),
-      apiServices.get(`/agent-primitives/${agentId}/audit-logs`),
-    ]);
-
-    const agentData =
-      agentResult.status === "fulfilled"
-        ? ((agentResult.value?.data as AgentPrimitiveRow) ?? null)
-        : null;
-    if (!agentData) {
-      if (agentResult.status === "rejected") {
-        logEngine({ type: "error", message: `Failed to load agent ${agentId}` });
+  /**
+   * Load the agent and its audit trail. `background` keeps the page on screen
+   * (no skeleton) for a refresh after a review or edit.
+   */
+  const fetchAll = useCallback(
+    async ({ background = false }: { background?: boolean } = {}) => {
+      loadControllerRef.current?.abort();
+      // A non-numeric or non-positive id can never match an agent.
+      if (agentId === null) {
+        loadControllerRef.current = null;
+        setAgent(null);
+        setNotFound(true);
+        setIsLoading(false);
+        return;
       }
-      setAgent(null);
-      setNotFound(true);
-      setIsLoading(false);
-      return;
-    }
-
-    const auditBody = auditResult.status === "fulfilled" ? (auditResult.value as any)?.data : null;
-    const audit = auditBody?.data ?? auditBody ?? [];
-
-    // Fetch only the linked model, not the whole inventory.
-    let modelLabel: string | null = null;
-    if (agentData.linked_model_inventory_id) {
-      try {
-        const modelRes = await getEntityById({
-          routeUrl: `/modelInventory/${agentData.linked_model_inventory_id}`,
-        });
-        if (modelRes?.data) modelLabel = formatModelLabel(modelRes.data);
-      } catch {
-        modelLabel = null;
+      const controller = new AbortController();
+      loadControllerRef.current = controller;
+      const { signal } = controller;
+      if (!background) {
+        setIsLoading(true);
+        setNotFound(false);
       }
-    }
 
-    setAgent(agentData);
-    setAuditLogs(Array.isArray(audit) ? audit : []);
-    setLinkedModelLabel(modelLabel);
-    setIsLoading(false);
-  }, [agentId]);
+      // Only the agent request decides "not found". The audit trail is supporting
+      // data: when it fails the page still renders, just without activity. User
+      // names come from the shared, cached users query (useUserNames).
+      const [agentResult, auditResult] = await Promise.allSettled([
+        getEntityById({ routeUrl: `/agent-primitives/${agentId}`, signal }),
+        apiServices.get(`/agent-primitives/${agentId}/audit-logs`, { signal }),
+      ]);
+      if (signal.aborted) return;
+
+      const agentData =
+        agentResult.status === "fulfilled"
+          ? ((agentResult.value?.data as AgentPrimitiveRow) ?? null)
+          : null;
+      if (!agentData) {
+        if (agentResult.status === "rejected") {
+          logEngine({ type: "error", message: `Failed to load agent ${agentId}` });
+        }
+        setAgent(null);
+        setNotFound(true);
+        setIsLoading(false);
+        return;
+      }
+
+      const auditBody =
+        auditResult.status === "fulfilled" ? (auditResult.value as any)?.data : null;
+      const audit = auditBody?.data ?? auditBody ?? [];
+
+      setAgent(agentData);
+      setNotFound(false);
+      setAuditLogs(Array.isArray(audit) ? audit : []);
+      setIsLoading(false);
+    },
+    [agentId],
+  );
 
   useEffect(() => {
     fetchAll();
+    return () => loadControllerRef.current?.abort();
   }, [fetchAll]);
+
+  const handleReviewSuccess = () => {
+    setIsReviewOpen(false);
+    fetchAll({ background: true });
+  };
+
+  const handleEditSuccess = () => {
+    setIsEditOpen(false);
+    fetchAll({ background: true });
+  };
 
   const breadcrumbItems = [
     { label: "AI agents", path: "/agent-discovery" },
@@ -164,13 +185,13 @@ export default function AgentDetail() {
     );
   }
 
-  // Resolve all owners, primary first (falls back to the legacy single owner_id).
-  const owners = getAgentOwnerIds(agent).map((oid) => {
-    const name = formatUser(oid);
-    // Initials only from a real name; the "User #id" fallback has none.
-    const [firstname, ...rest] = (usersMap[oid] ?? "").split(" ");
-    return { id: oid, name, firstname: firstname || "", lastname: rest.join(" ") };
-  });
+  // Resolve all owners, primary first (falls back to the legacy single owner_id,
+  // which for a synced agent is the owner reported by the source, e.g. an email).
+  const owners = getAgentOwnerIds(agent).map((oid) => ({
+    id: oid,
+    name: formatUser(oid),
+    ...avatarName(oid),
+  }));
   const linkedModelName = agent.linked_model_inventory_id
     ? linkedModelLabel || `Model #${agent.linked_model_inventory_id}`
     : null;
@@ -188,6 +209,28 @@ export default function AgentDetail() {
         agent.is_manual ? t("Manually entered") : formatSourceLabel(agent.source_system)
       }`}
       breadcrumbItems={breadcrumbItems}
+      actionButton={
+        <Stack direction="row" gap="8px">
+          {/* Edit only for manually added agents (synced agents are read-only),
+              and only for admins, who alone may change agents. */}
+          {isAdmin && agent.is_manual && (
+            <CustomizableButton
+              variant="outlined"
+              text="Edit"
+              icon={<Pencil size={14} strokeWidth={1.5} />}
+              onClick={() => setIsEditOpen(true)}
+              testId="agent-detail-edit"
+            />
+          )}
+          <CustomizableButton
+            variant="contained"
+            text="Review"
+            icon={<ClipboardCheck size={14} strokeWidth={1.5} />}
+            onClick={() => setIsReviewOpen(true)}
+            testId="agent-detail-review"
+          />
+        </Stack>
+      }
     >
       <Stack spacing="16px">
         {/* ── Lifecycle ─────────────────────────────────────────── */}
@@ -334,6 +377,20 @@ export default function AgentDetail() {
           <ActivityTimeline entries={auditLogs} formatUser={formatUser} />
         </Box>
       </Stack>
+
+      <ReviewAgentModal
+        isOpen={isReviewOpen}
+        setIsOpen={setIsReviewOpen}
+        agent={agent}
+        onSuccess={handleReviewSuccess}
+        onEdit={() => setIsEditOpen(true)}
+      />
+      <ManualAgentModal
+        isOpen={isEditOpen}
+        setIsOpen={setIsEditOpen}
+        onSuccess={handleEditSuccess}
+        agent={agent}
+      />
     </PageHeaderExtended>
   );
 }

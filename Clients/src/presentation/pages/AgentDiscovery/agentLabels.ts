@@ -93,16 +93,46 @@ export function buildUserNameMap(
   return map;
 }
 
+/** True for a value that can be a user id (a positive decimal integer). */
+function isUserIdLike(value: number | string): boolean {
+  return /^\d+$/.test(String(value).trim());
+}
+
 /**
- * A user's display name, or the translated "User #{id}" fallback for an id
- * that is not in the map (e.g. a deleted user). `t` is the translator from
- * useTranslation; the fallback is filled after translation so it reaches the
- * dictionary as one template.
+ * How to show an owner or other user reference:
+ * - a numeric id of a user in the map → that user's name;
+ * - a numeric id not in the map (e.g. a deleted user) → the translated
+ *   "User #{id}" fallback;
+ * - any other value → the value itself. Synced agents carry the owner reported
+ *   by the source system (e.g. an email), which is not a VerifyWise user id.
+ *
+ * `t` is the translator from useTranslation; the fallback is filled after
+ * translation so it reaches the dictionary as one template.
  */
 export function formatUserName(
   userId: number | string,
   usersMap: UserNameMap,
   t: (key: string) => string,
 ): string {
-  return usersMap[String(userId)] || fill(t("User #{id}"), { id: userId });
+  const key = String(userId).trim();
+  if (!isUserIdLike(key)) return key;
+  return usersMap[key] || fill(t("User #{id}"), { id: key });
+}
+
+/**
+ * First and last name for an owner's avatar initials. A known user gives their
+ * name; a source-reported value (e.g. an email) gives its first character; an
+ * unknown numeric id gives none, so the avatar shows "?".
+ */
+export function getAvatarName(
+  userId: number | string,
+  usersMap: UserNameMap,
+): { firstname: string; lastname: string } {
+  const key = String(userId).trim();
+  const name = usersMap[key];
+  if (name) {
+    const [firstname, ...rest] = name.split(" ");
+    return { firstname, lastname: rest.join(" ") };
+  }
+  return { firstname: isUserIdLike(key) ? "" : key, lastname: "" };
 }

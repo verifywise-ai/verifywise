@@ -484,4 +484,41 @@ describe("IconButton", () => {
     await renderWithMenuOpen({ type: "linkedobjectstype" });
     expect(getMenuItem("Remove")).toBeInTheDocument();
   });
+
+  describe("agent type", () => {
+    const menuItemNames = () =>
+      within(screen.getByRole("menu"))
+        .getAllByRole("menuitem")
+        .map((item) => item.textContent);
+
+    it("is labelled Agent actions", () => {
+      renderWithProviders(<IconButton {...defaultProps} type="agent" onView={vi.fn()} />);
+      expect(screen.getByRole("button", { name: "Agent actions" })).toBeInTheDocument();
+    });
+
+    it("offers Review, Edit and Delete when all are allowed", async () => {
+      const onView = vi.fn();
+      await renderWithMenuOpen({ type: "agent", onView, canDelete: true });
+      expect(menuItemNames()).toEqual(["Review", "Edit", "Delete"]);
+      await userEvent.click(getMenuItem("Review"));
+      expect(onView).toHaveBeenCalled();
+    });
+
+    it("hides Edit when canEdit is false and Delete without canDelete", async () => {
+      await renderWithMenuOpen({ type: "agent", onView: vi.fn(), canEdit: false });
+      expect(menuItemNames()).toEqual(["Review"]);
+    });
+
+    it("confirms a delete with Delete agent", async () => {
+      await renderWithMenuOpen({
+        type: "agent",
+        onView: vi.fn(),
+        canDelete: true,
+        warningTitle: "Delete this agent?",
+        warningMessage: "Gone for good.",
+      });
+      await userEvent.click(getMenuItem("Delete"));
+      expect(screen.getByTestId("proceed-btn")).toHaveTextContent("Delete agent");
+    });
+  });
 });

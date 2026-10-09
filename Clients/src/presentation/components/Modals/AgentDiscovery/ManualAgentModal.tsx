@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { Drawer, Stack, Typography, Divider, IconButton, useTheme } from "@mui/material";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { Drawer, Stack, Typography, Divider, IconButton } from "@mui/material";
 import { X } from "lucide-react";
 import Field from "../../Inputs/Field";
 import SelectComponent from "../../Inputs/Select";
@@ -12,6 +12,7 @@ import { useUserNames } from "../../../pages/AgentDiscovery/useUserNames";
 import { AgentPrimitiveRow } from "../../../../domain/interfaces/i.agentDiscovery";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
+import { palette } from "../../../themes/palette";
 
 interface ManualAgentModalProps {
   isOpen: boolean;
@@ -30,17 +31,28 @@ const PRIMITIVE_TYPES = [
   { _id: "other", name: "Other" },
 ];
 
+/** The agent's owners as user ids: the full set, else the legacy single owner_id. */
+function getInitialOwnerIds(agent: AgentPrimitiveRow): number[] {
+  if (agent.owner_ids && agent.owner_ids.length > 0) return agent.owner_ids;
+  if (!agent.owner_id || !/^\d+$/.test(agent.owner_id)) return [];
+  return [Number(agent.owner_id)];
+}
+
 const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
   isOpen,
   setIsOpen,
   onSuccess,
   agent,
 }) => {
-  const theme = useTheme();
   const isEditMode = Boolean(agent);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [ownerIds, setOwnerIds] = useState<number[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // True when owners who are no longer users of the organization were dropped
+  // from the form on open; they would be removed on save, so say so.
+  const [droppedUnknownOwners, setDroppedUnknownOwners] = useState(false);
+  // Whether this opening's owners have been checked against the user list yet.
+  const ownersCheckedRef = useRef(false);
   const { users: orgUsers, formatUser } = useUserNames();
   const users = useMemo(
     () => orgUsers.map((u) => ({ _id: u.id, name: formatUser(u.id) })),
@@ -68,29 +80,39 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setSaveError(null);
+      setDroppedUnknownOwners(false);
+      ownersCheckedRef.current = false;
       if (agent) {
         setFormData({
           display_name: agent.display_name || "",
           primitive_type: agent.primitive_type || "",
           notes: agent.metadata?.notes || "",
         });
-        // Prefer the full owner set; fall back to the legacy single owner_id.
-        const initialOwners =
-          agent.owner_ids && agent.owner_ids.length > 0
-            ? agent.owner_ids
-            : agent.owner_id
-              ? [parseInt(agent.owner_id, 10)].filter((n) => !Number.isNaN(n))
-              : [];
-        setOwnerIds(initialOwners);
+        setOwnerIds(getInitialOwnerIds(agent));
       }
     }
   }, [isOpen, agent]);
+
+  // Owner ids that are not in the user list (e.g. deleted users) cannot be
+  // shown in the owner picker, and the server drops them on save. Drop them
+  // from the form once the users have loaded, so what is shown is what is
+  // saved. An empty list means the users are not loaded (an organization
+  // always has at least the current user), so wait rather than drop everyone.
+  useEffect(() => {
+    if (!isOpen || !agent || ownersCheckedRef.current || orgUsers.length === 0) return;
+    ownersCheckedRef.current = true;
+    const known = new Set(orgUsers.map((u) => Number(u.id)));
+    if (getInitialOwnerIds(agent).every((id) => known.has(id))) return;
+    setOwnerIds((current) => current.filter((id) => known.has(id)));
+    setDroppedUnknownOwners(true);
+  }, [isOpen, agent, orgUsers]);
 
   const handleClose = () => {
     setIsOpen(false);
     setFormData({ display_name: "", primitive_type: "", notes: "" });
     setOwnerIds([]);
     setSaveError(null);
+    setDroppedUnknownOwners(false);
     resetErrors();
   };
 
@@ -129,7 +151,7 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
       open={isOpen}
       onClose={handleClose}
       PaperProps={{
-        sx: { width: 440, backgroundColor: theme.palette.background.modal || "#FCFCFD" },
+        sx: { width: 440, backgroundColor: palette.background.modal },
       }}
     >
       {/* Header */}
@@ -192,6 +214,16 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
           items={users}
           onChange={(e) => setOwnerIds(e.target.value as number[])}
         />
+        {droppedUnknownOwners && (
+          <Typography
+            fontSize={12}
+            color={palette.text.secondary}
+            data-testid="agent-dropped-owners-note"
+            sx={{ mt: "-12px" }}
+          >
+            Owners who are no longer in your organization will be removed when you save.
+          </Typography>
+        )}
 
         <Field
           id="notes"
@@ -209,7 +241,7 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
       <Stack direction="row" justifyContent="flex-end" gap={1} sx={{ p: "16px 24px" }}>
         <CustomizableButton
           variant="outlined"
-          sx={{ border: "1px solid #d0d5dd" }}
+          sx={{ border: `1px solid ${palette.border.dark}` }}
           onClick={handleClose}
         >
           Cancel

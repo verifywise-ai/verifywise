@@ -24,6 +24,11 @@ vi.mock("../../../../../application/repository/entity.repository", () => ({
   getAllEntities: vi.fn().mockResolvedValue({ data: [] }),
   getEntityById: vi.fn().mockResolvedValue({ data: null }),
 }));
+// Review, link and edit actions are Admin only; tests default to an admin.
+const adminState = vi.hoisted(() => ({ isAdmin: true }));
+vi.mock("../../../../../application/hooks/useIsAdmin", () => ({
+  useIsAdmin: () => adminState.isAdmin,
+}));
 vi.mock("../../../../../infrastructure/api/networkServices", () => ({
   apiServices: {
     post: vi.fn().mockResolvedValue({}),
@@ -160,6 +165,42 @@ describe("ManualAgentModal", () => {
     expect(await screen.findByText("Could not save the agent. Try again.")).toBeInTheDocument();
     expect(screen.queryByText("Internal Server Error")).not.toBeInTheDocument();
   });
+
+  it("drops owners who are no longer users, says so, and saves without them", async () => {
+    vi.mocked(apiServices.patch).mockClear();
+    renderWithProviders(
+      <ManualAgentModal
+        isOpen={true}
+        setIsOpen={vi.fn()}
+        onSuccess={vi.fn()}
+        agent={{ ...mockAgent, owner_id: "9", owner_ids: [9, 1] }}
+      />,
+    );
+
+    expect(
+      await screen.findByText(
+        "Owners who are no longer in your organization will be removed when you save.",
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByText("Save changes"));
+
+    await vi.waitFor(() => expect(apiServices.patch).toHaveBeenCalled());
+    expect(vi.mocked(apiServices.patch).mock.calls[0][1]).toEqual(
+      expect.objectContaining({ owner_ids: [1] }),
+    );
+  });
+
+  it("shows no removal note when every owner is still a user", () => {
+    renderWithProviders(
+      <ManualAgentModal
+        isOpen={true}
+        setIsOpen={vi.fn()}
+        onSuccess={vi.fn()}
+        agent={{ ...mockAgent, owner_ids: [2, 1] }}
+      />,
+    );
+    expect(screen.queryByTestId("agent-dropped-owners-note")).not.toBeInTheDocument();
+  });
 });
 
 describe("ReviewAgentModal", () => {
@@ -183,6 +224,48 @@ describe("ReviewAgentModal", () => {
     );
     expect(screen.getByText("Confirm")).toBeInTheDocument();
     expect(screen.getByText("Reject")).toBeInTheDocument();
+  });
+
+  it("shows a read-only view to a user who may not change agents", () => {
+    adminState.isAdmin = false;
+    try {
+      renderWithProviders(
+        <ReviewAgentModal
+          isOpen={true}
+          setIsOpen={vi.fn()}
+          agent={{ ...mockAgent, is_manual: true, linked_model_inventory_id: null }}
+          onSuccess={vi.fn()}
+          onEdit={vi.fn()}
+        />,
+      );
+      expect(screen.queryByText("Confirm")).not.toBeInTheDocument();
+      expect(screen.queryByText("Reject")).not.toBeInTheDocument();
+      expect(screen.queryByText("Link to model")).not.toBeInTheDocument();
+      expect(screen.queryByText("Edit")).not.toBeInTheDocument();
+      expect(screen.getByText("Not linked")).toBeInTheDocument();
+    } finally {
+      adminState.isAdmin = true;
+    }
+  });
+
+  it("shows the server's reason when a review is rejected", async () => {
+    vi.mocked(apiServices.patch).mockRejectedValueOnce(
+      new CustomException("You do not have permission to review agents", 403, {}),
+    );
+    const onSuccess = vi.fn();
+    renderWithProviders(
+      <ReviewAgentModal
+        isOpen={true}
+        setIsOpen={vi.fn()}
+        agent={{ ...mockAgent, review_status: "unreviewed" }}
+        onSuccess={onSuccess}
+      />,
+    );
+    fireEvent.click(screen.getByText("Confirm"));
+    expect(
+      await screen.findByText("You do not have permission to review agents"),
+    ).toBeInTheDocument();
+    expect(onSuccess).not.toHaveBeenCalled();
   });
 
   it("returns null when agent is null", () => {
@@ -229,6 +312,24 @@ describe("ReviewAgentModal", () => {
       />,
     );
     expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
+  });
+
+  it("shows a synced agent's source-reported owner as is", () => {
+    renderWithProviders(
+      <ReviewAgentModal
+        isOpen={true}
+        setIsOpen={vi.fn()}
+        agent={{
+          ...mockAgent,
+          is_manual: false,
+          source_system: "azure-ai-foundry",
+          owner_id: "alice@contoso.com",
+        }}
+        onSuccess={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("alice@contoso.com")).toBeInTheDocument();
+    expect(screen.queryByText(/User #/)).not.toBeInTheDocument();
   });
 
   it("fetches only the linked model, not the whole inventory", async () => {

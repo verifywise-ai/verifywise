@@ -1,5 +1,5 @@
-import { screen } from "@testing-library/react";
-import { Route, Routes } from "react-router";
+import { act, fireEvent, screen } from "@testing-library/react";
+import { Route, Routes, useNavigate } from "react-router";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import AgentDetail from "../AgentDetail";
 
@@ -22,6 +22,11 @@ vi.mock("../../../../application/tools/log.engine", () => ({
 
 // Users come from the shared, cached users hook rather than a page fetch.
 let mockUsers: { id: number; name: string; surname: string; email: string }[] = [];
+// Edit is Admin only; tests default to an admin.
+const adminState = vi.hoisted(() => ({ isAdmin: true }));
+vi.mock("../../../../application/hooks/useIsAdmin", () => ({
+  useIsAdmin: () => adminState.isAdmin,
+}));
 vi.mock("../../../../application/hooks/useUsers", () => ({
   default: () => ({ users: mockUsers, loading: false, error: null, refreshUsers: vi.fn() }),
 }));
@@ -69,13 +74,32 @@ const agent = {
   updated_at: "2026-10-01T00:00:00Z",
 };
 
+/** Lets a test move to another agent's page without remounting the router. */
+const GoTo: React.FC<{ to: string }> = ({ to }) => {
+  const navigate = useNavigate();
+  return <button onClick={() => navigate(to)}>go to {to}</button>;
+};
+
 const renderAt = (id: string) =>
   renderWithProviders(
-    <Routes>
-      <Route path="/agent-discovery/:id" element={<AgentDetail />} />
-    </Routes>,
+    <>
+      <GoTo to="/agent-discovery/6" />
+      <Routes>
+        <Route path="/agent-discovery/:id" element={<AgentDetail />} />
+      </Routes>
+    </>,
     { route: `/agent-discovery/${id}` },
   );
+
+/** Serve the agent (and optionally the linked model) by route. */
+const serve = (
+  agentData: Record<string, unknown> | Error,
+  model: Record<string, unknown> | Error = new Error("model down"),
+) =>
+  mockGetEntityById.mockImplementation(({ routeUrl }: { routeUrl: string }) => {
+    const value = routeUrl.startsWith("/modelInventory/") ? model : agentData;
+    return value instanceof Error ? Promise.reject(value) : Promise.resolve({ data: value });
+  });
 
 // Other header widgets (approvals) also call apiServices.get; only audit-log
 // requests are routed to the per-test handler.
@@ -85,6 +109,7 @@ const auditCalls = () =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  adminState.isAdmin = true;
   mockUsers = [];
   auditHandler = () => Promise.resolve({ data: { data: [] } });
   mockApiGet.mockImplementation((url: string) =>
@@ -98,25 +123,20 @@ describe("AgentDetail", () => {
     async (id) => {
       renderAt(id);
       expect(await screen.findByText("Agent not found")).toBeInTheDocument();
-      expect(mockGetAllEntities).not.toHaveBeenCalled();
+      expect(mockGetEntityById).not.toHaveBeenCalled();
       expect(auditCalls()).toHaveLength(0);
     },
   );
 
   it("shows not found when the agent request fails", async () => {
-    mockGetAllEntities.mockRejectedValue(new Error("404"));
+    serve(new Error("404"));
     renderAt("5");
     expect(await screen.findByText("Agent not found")).toBeInTheDocument();
   });
 
   it("still renders the agent when audit logs and the model fail to load", async () => {
-    mockGetAllEntities.mockImplementation(({ routeUrl }: { routeUrl: string }) =>
-      routeUrl === "/agent-primitives/5"
-        ? Promise.resolve({ data: agent })
-        : Promise.reject(new Error("unexpected request")),
-    );
+    serve(agent);
     auditHandler = () => Promise.reject(new Error("audit down"));
-    mockGetEntityById.mockRejectedValue(new Error("model down"));
     renderAt("5");
 
     expect((await screen.findAllByText("Invoice bot")).length).toBeGreaterThan(0);
@@ -127,11 +147,13 @@ describe("AgentDetail", () => {
 
   it("fetches only the linked model and labels it provider · model", async () => {
     mockUsers = [{ id: 1, name: "Ada", surname: "L", email: "ada@example.com" }];
-    mockGetAllEntities.mockResolvedValue({ data: agent });
-    mockGetEntityById.mockResolvedValue({ data: { id: 9, provider: "OpenAI", model: "gpt-4o" } });
+    serve(agent, { id: 9, provider: "OpenAI", model: "gpt-4o" });
     renderAt("5");
 
     expect(await screen.findByText("OpenAI · gpt-4o")).toBeInTheDocument();
+    expect(mockGetEntityById).toHaveBeenCalledWith(
+      expect.objectContaining({ routeUrl: "/agent-primitives/5" }),
+    );
     expect(mockGetEntityById).toHaveBeenCalledWith({ routeUrl: "/modelInventory/9" });
     expect(mockGetAllEntities).not.toHaveBeenCalledWith({ routeUrl: "/modelInventory" });
     expect(screen.getAllByText("Ada L").length).toBeGreaterThan(0);
@@ -140,13 +162,80 @@ describe("AgentDetail", () => {
   it("names every owner from the shared users list, without its own users request", async () => {
     mockUsers = [{ id: 1, name: "Ada", surname: "L", email: "ada@example.com" }];
     // User 7 is no longer in the organization: shown with the shared fallback.
-    mockGetAllEntities.mockResolvedValue({ data: { ...agent, owner_ids: [1, 7] } });
-    mockGetEntityById.mockResolvedValue({ data: { id: 9, provider: "OpenAI", model: "gpt-4o" } });
+    serve({ ...agent, owner_ids: [1, 7] }, { id: 9, provider: "OpenAI", model: "gpt-4o" });
     renderAt("5");
 
     expect(await screen.findByText("Accountable owners")).toBeInTheDocument();
     expect(screen.getAllByText("Ada L").length).toBeGreaterThan(0);
     expect(screen.getByText("User #7")).toBeInTheDocument();
     expect(mockGetAllEntities).not.toHaveBeenCalledWith({ routeUrl: "/users" });
+  });
+
+  it("shows a synced agent's source-reported owner as is, with its initial", async () => {
+    serve({
+      ...agent,
+      is_manual: false,
+      source_system: "azure-ai-foundry",
+      owner_id: "alice@contoso.com",
+      owner_ids: [],
+    });
+    renderAt("5");
+
+    expect(await screen.findByText("alice@contoso.com")).toBeInTheDocument();
+    expect(screen.queryByText(/User #/)).not.toBeInTheDocument();
+    expect(screen.getByText("A")).toBeInTheDocument();
+  });
+
+  it("offers Review and Edit for a manual agent, and opens each", async () => {
+    serve(agent);
+    renderAt("5");
+
+    fireEvent.click(await screen.findByTestId("agent-detail-review"));
+    expect(await screen.findByText("Agent details")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("agent-detail-edit"));
+    expect(await screen.findByText("Edit agent")).toBeInTheDocument();
+  });
+
+  it("offers only Review on a manual agent to a user who may not change agents", async () => {
+    adminState.isAdmin = false;
+    serve(agent);
+    renderAt("5");
+
+    expect(await screen.findByTestId("agent-detail-review")).toBeInTheDocument();
+    expect(screen.queryByTestId("agent-detail-edit")).not.toBeInTheDocument();
+  });
+
+  it("offers only Review for a synced agent", async () => {
+    serve({ ...agent, is_manual: false, source_system: "azure-ai-foundry" });
+    renderAt("5");
+
+    expect(await screen.findByTestId("agent-detail-review")).toBeInTheDocument();
+    expect(screen.queryByTestId("agent-detail-edit")).not.toBeInTheDocument();
+  });
+
+  it("ignores a slower response for the agent the user navigated away from", async () => {
+    let resolveFirst: (value: unknown) => void = () => {};
+    mockGetEntityById.mockImplementation(({ routeUrl }: { routeUrl: string }) => {
+      if (routeUrl === "/agent-primitives/5") {
+        return new Promise((resolve) => {
+          resolveFirst = resolve;
+        });
+      }
+      if (routeUrl === "/agent-primitives/6") {
+        return Promise.resolve({ data: { ...agent, id: 6, display_name: "Second bot" } });
+      }
+      return Promise.reject(new Error("model down"));
+    });
+    renderAt("5");
+
+    fireEvent.click(screen.getByText("go to /agent-discovery/6"));
+    expect((await screen.findAllByText("Second bot")).length).toBeGreaterThan(0);
+
+    await act(async () => {
+      resolveFirst({ data: agent });
+    });
+    expect(screen.getAllByText("Second bot").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Invoice bot")).not.toBeInTheDocument();
   });
 });

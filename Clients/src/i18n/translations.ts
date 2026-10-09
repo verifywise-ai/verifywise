@@ -845,6 +845,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Description": "Beschreibung",
     "Owner": "Verantwortlicher",
     "Owners": "Verantwortliche",
+    "Owners who are no longer in your organization will be removed when you save.":
+      "Verantwortliche, die nicht mehr zu Ihrer Organisation gehören, werden beim Speichern entfernt.",
+    "Delete agent": "Agent löschen",
     "OWNER": "VERANTWORTLICHER",
     "Owner name": "Name des Verantwortlichen",
     "Status": "Status",
@@ -10025,6 +10028,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Die Klassifizierung konnte nicht gespeichert werden. Versuchen Sie es erneut.",
     "Could not save the agent. Try again.":
       "Der Agent konnte nicht gespeichert werden. Versuchen Sie es erneut.",
+    "Could not update the agent. Try again.":
+      "Der Agent konnte nicht aktualisiert werden. Versuchen Sie es erneut.",
     "Could not score the answers. Try again.":
       "Die Antworten konnten nicht ausgewertet werden. Versuchen Sie es erneut.",
     "EU AI Act classification": "Klassifizierung nach EU-KI-Verordnung",
@@ -10906,6 +10911,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Description": "Description",
     "Owner": "Responsable",
     "Owners": "Responsables",
+    "Owners who are no longer in your organization will be removed when you save.":
+      "Les responsables qui ne font plus partie de votre organisation seront supprimés à l'enregistrement.",
+    "Delete agent": "Supprimer l'agent",
     "Owner name": "Nom du responsable",
     "Status": "Statut",
     "Action": "Action",
@@ -20046,6 +20054,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Could not save the classification. Try again.":
       "Impossible d'enregistrer la classification. Réessayez.",
     "Could not save the agent. Try again.": "Impossible d'enregistrer l'agent. Réessayez.",
+    "Could not update the agent. Try again.": "Impossible de mettre à jour l'agent. Réessayez.",
     "Could not score the answers. Try again.": "Impossible d'évaluer les réponses. Réessayez.",
     "EU AI Act classification": "Classification selon le règlement IA de l'UE",
     "EU AI Act risk classification step":
@@ -20708,6 +20717,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Description": "Descripción",
     "Owner": "Responsable",
     "Owners": "Responsables",
+    "Owners who are no longer in your organization will be removed when you save.":
+      "Los responsables que ya no pertenecen a su organización se eliminarán al guardar.",
+    "Delete agent": "Eliminar agente",
     "Select owners": "Seleccionar responsables",
     "OWNER": "RESPONSABLE",
     "Owner name": "Nombre del responsable",
@@ -29983,6 +29995,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Could not save the classification. Try again.":
       "No se pudo guardar la clasificación. Inténtelo de nuevo.",
     "Could not save the agent. Try again.": "No se pudo guardar el agente. Inténtelo de nuevo.",
+    "Could not update the agent. Try again.":
+      "No se pudo actualizar el agente. Inténtelo de nuevo.",
     "Could not score the answers. Try again.":
       "No se pudieron evaluar las respuestas. Inténtelo de nuevo.",
     "EU AI Act classification": "Clasificación según el Reglamento de IA de la UE",

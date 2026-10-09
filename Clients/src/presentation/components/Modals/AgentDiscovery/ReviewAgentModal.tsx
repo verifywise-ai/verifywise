@@ -1,20 +1,23 @@
-import React, { useState, useEffect } from "react";
-import { Drawer, Stack, Box, Typography, Divider, IconButton, useTheme } from "@mui/material";
+import React, { useEffect, useState } from "react";
+import { Drawer, Stack, Box, Typography, Divider, IconButton } from "@mui/material";
 import { X, Link as LinkIcon, Unlink, Pencil } from "lucide-react";
 import VWChip from "../../Chip";
 import { CustomizableButton } from "../../button/customizable-button";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { AgentPrimitiveRow } from "../../../../domain/interfaces/i.agentDiscovery";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
-import { getEntityById } from "../../../../application/repository/entity.repository";
 import LinkModelModal from "./LinkModelModal";
+import Alert from "../../Alert";
+import { getClientErrorReason } from "../../../../application/utils/apiErrorReason";
+import { useIsAdmin } from "../../../../application/hooks/useIsAdmin";
 import {
-  formatModelLabel,
   formatSourceLabel,
   getAgentOwnerIds,
   getReviewStatusDisplay,
 } from "../../../pages/AgentDiscovery/agentLabels";
 import { useUserNames } from "../../../pages/AgentDiscovery/useUserNames";
+import { useLinkedModelLabel } from "../../../pages/AgentDiscovery/useLinkedModelLabel";
+import { palette } from "../../../themes/palette";
 
 interface ReviewAgentModalProps {
   isOpen: boolean;
@@ -32,29 +35,21 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
   onEdit,
 }) => {
   const formatUserDate = useFormattedDate();
-  const theme = useTheme();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
-  const { formatUser } = useUserNames();
-  const [linkedModelLabel, setLinkedModelLabel] = useState<string | null>(null);
-  const linkedModelId = agent?.linked_model_inventory_id ?? null;
+  const [actionError, setActionError] = useState<string | null>(null);
+  // Review, link, unlink and edit are Admin only on the server; other roles
+  // get a read-only view.
+  const canManage = useIsAdmin();
 
-  // Fetch only the linked model, not the whole inventory.
   useEffect(() => {
-    setLinkedModelLabel(null);
-    if (!isOpen || !linkedModelId) return;
-    let cancelled = false;
-    getEntityById({ routeUrl: `/modelInventory/${linkedModelId}` })
-      .then((response) => {
-        if (!cancelled && response?.data) setLinkedModelLabel(formatModelLabel(response.data));
-      })
-      .catch(() => {
-        // Keep the "Model #id" fallback.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, linkedModelId]);
+    setActionError(null);
+  }, [isOpen, agent?.id]);
+  const { formatUser } = useUserNames();
+  // Fetched only while the drawer is open.
+  const linkedModelLabel = useLinkedModelLabel(
+    isOpen ? (agent?.linked_model_inventory_id ?? null) : null,
+  );
 
   if (!agent) return null;
 
@@ -69,24 +64,26 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
 
   const handleReview = async (status: "confirmed" | "rejected") => {
     setIsSubmitting(true);
+    setActionError(null);
     try {
       await apiServices.patch(`/agent-primitives/${agent.id}/review`, {
         review_status: status,
       });
       onSuccess();
     } catch (error) {
-      console.error("Failed to review agent:", error);
+      setActionError(getClientErrorReason(error) ?? "Could not update the agent. Try again.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleUnlink = async () => {
+    setActionError(null);
     try {
       await apiServices.patch(`/agent-primitives/${agent.id}/unlink-model`);
       onSuccess();
     } catch (error) {
-      console.error("Failed to unlink model:", error);
+      setActionError(getClientErrorReason(error) ?? "Could not update the agent. Try again.");
     }
   };
 
@@ -107,7 +104,7 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
         open={isOpen}
         onClose={() => setIsOpen(false)}
         PaperProps={{
-          sx: { width: 480, backgroundColor: theme.palette.background.modal || "#FCFCFD" },
+          sx: { width: 480, backgroundColor: palette.background.modal },
         }}
       >
         {/* Header */}
@@ -230,14 +227,18 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
             {agent.linked_model_inventory_id ? (
               <Stack direction="row" alignItems="center" gap="8px">
                 <Typography fontSize={13}>{linkedModelName}</Typography>
-                <IconButton size="small" onClick={handleUnlink} title="Unlink model">
-                  <Unlink size={14} strokeWidth={1.5} />
-                </IconButton>
+                {canManage && (
+                  <IconButton size="small" onClick={handleUnlink} title="Unlink model">
+                    <Unlink size={14} strokeWidth={1.5} />
+                  </IconButton>
+                )}
               </Stack>
+            ) : !canManage ? (
+              <Typography fontSize={13}>Not linked</Typography>
             ) : (
               <CustomizableButton
                 variant="outlined"
-                sx={{ border: "1px solid #d0d5dd" }}
+                sx={{ border: `1px solid ${palette.border.dark}` }}
                 icon={<LinkIcon size={14} strokeWidth={1.5} />}
                 text="Link to model"
                 onClick={() => setIsLinkModalOpen(true)}
@@ -256,8 +257,8 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
                 sx={{
                   p: "12px",
                   borderRadius: "4px",
-                  border: `1px solid ${theme.palette.border?.light || "#d0d5dd"}`,
-                  backgroundColor: "#f9f9f9",
+                  border: `1px solid ${palette.border.light}`,
+                  backgroundColor: palette.background.accent,
                   fontSize: 12,
                   fontFamily: "monospace",
                   whiteSpace: "pre-wrap",
@@ -272,6 +273,12 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
           )}
         </Stack>
 
+        {actionError && (
+          <Box sx={{ px: "24px", pb: "16px" }}>
+            <Alert variant="error" body={actionError} hasIcon={false} sx={{ position: "static" }} />
+          </Box>
+        )}
+
         {/* Footer */}
         <Divider />
         <Stack
@@ -282,10 +289,10 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
         >
           {/* Edit — only for manually added agents (synced agents aren't editable). */}
           <Box>
-            {agent.is_manual && onEdit && (
+            {canManage && agent.is_manual && onEdit && (
               <CustomizableButton
                 variant="outlined"
-                sx={{ border: "1px solid #d0d5dd" }}
+                sx={{ border: `1px solid ${palette.border.dark}` }}
                 icon={<Pencil size={14} strokeWidth={1.5} />}
                 text="Edit"
                 onClick={() => {
@@ -298,22 +305,25 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
           <Stack direction="row" gap="8px">
             <CustomizableButton
               variant="outlined"
-              sx={{ border: "1px solid #d0d5dd" }}
+              sx={{ border: `1px solid ${palette.border.dark}` }}
               onClick={() => setIsOpen(false)}
             >
-              Cancel
+              {canManage ? "Cancel" : "Close"}
             </CustomizableButton>
-            {agent.review_status !== "rejected" && (
+            {canManage && agent.review_status !== "rejected" && (
               <CustomizableButton
                 variant="outlined"
-                sx={{ border: "1px solid #d32f2f", color: "#d32f2f" }}
+                sx={{
+                  border: `1px solid ${palette.status.error.text}`,
+                  color: palette.status.error.text,
+                }}
                 onClick={() => handleReview("rejected")}
                 isDisabled={isSubmitting}
               >
                 Reject
               </CustomizableButton>
             )}
-            {agent.review_status !== "confirmed" && (
+            {canManage && agent.review_status !== "confirmed" && (
               <CustomizableButton
                 variant="contained"
                 onClick={() => handleReview("confirmed")}

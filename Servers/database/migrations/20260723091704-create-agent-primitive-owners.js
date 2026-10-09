@@ -16,7 +16,8 @@ module.exports = {
     await queryInterface.sequelize.query(`
       CREATE TABLE IF NOT EXISTS verifywise.agent_primitive_owners (
         id SERIAL PRIMARY KEY,
-        organization_id INTEGER NOT NULL,
+        organization_id INTEGER NOT NULL
+          REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
         agent_primitive_id INTEGER NOT NULL
           REFERENCES verifywise.agent_primitives(id) ON DELETE CASCADE,
         user_id INTEGER NOT NULL
