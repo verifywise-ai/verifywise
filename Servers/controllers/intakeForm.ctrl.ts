@@ -165,14 +165,15 @@ async function resolveFormLlmKeyId(
  * Returns null when the version is unknown to this server or the stored answers
  * no longer validate against it (e.g. an option was removed), so callers treat
  * it as no run. The run is handed back with its questionnaire and result so a
- * caller branches on this one value.
+ * caller branches on this one value; its answers are the validated ones, so
+ * answers to questions now hidden are neither scored nor copied.
  */
 function rescoreStoredRun<
   R extends { id?: number; questionnaireVersion: number; answers: Answers },
 >(run: R): { run: R; questionnaire: Questionnaire; result: ClassificationResult } | null {
   const questionnaire = getQuestionnaire(run.questionnaireVersion);
   if (!questionnaire) return null;
-  const { errors } = validateAnswers(questionnaire, run.answers);
+  const { errors, answers } = validateAnswers(questionnaire, run.answers);
   if (errors.length > 0) {
     logger.warn(
       `EU AI Act classification run ${run.id} no longer validates; treating it as no run: ${errors.join("; ")}`,
@@ -181,9 +182,9 @@ function rescoreStoredRun<
   }
   try {
     return {
-      run,
+      run: { ...run, answers },
       questionnaire,
-      result: scoreClassification(run.questionnaireVersion, run.answers),
+      result: scoreClassification(run.questionnaireVersion, answers),
     };
   } catch (error) {
     logger.warn(
@@ -222,6 +223,8 @@ async function persistIntakeRiskRun(
 /**
  * The public form's EU AI Act step: the current questionnaire when the form has
  * the step on, plus the answers of the submission being resubmitted, if any.
+ * Previous answers are returned only when they were given to the current
+ * questionnaire and still validate; otherwise the submitter starts afresh.
  */
 async function buildPublicRiskStep(
   form: { euAiActRiskStepEnabled?: boolean | null },
@@ -234,12 +237,18 @@ async function buildPublicRiskStep(
   if (!form.euAiActRiskStepEnabled) {
     return { euAiActRiskStep: null, previousRiskAnswers: undefined };
   }
-  const previousRiskAnswers =
+  const questionnaire = getQuestionnaire(CURRENT_QUESTIONNAIRE_VERSION);
+  const previousRun =
     previousSubmissionId !== undefined
-      ? (await getLatestRunForSubmissionQuery(previousSubmissionId, organizationId))?.answers
-      : undefined;
+      ? await getLatestRunForSubmissionQuery(previousSubmissionId, organizationId)
+      : null;
+  let previousRiskAnswers: Answers | undefined;
+  if (questionnaire && previousRun?.questionnaireVersion === CURRENT_QUESTIONNAIRE_VERSION) {
+    const { errors, answers } = validateAnswers(questionnaire, previousRun.answers);
+    if (errors.length === 0) previousRiskAnswers = answers;
+  }
   return {
-    euAiActRiskStep: { questionnaire: getQuestionnaire(CURRENT_QUESTIONNAIRE_VERSION) },
+    euAiActRiskStep: { questionnaire },
     previousRiskAnswers,
   };
 }
@@ -1010,7 +1019,9 @@ export async function getSubmissionPreview(req: Request, res: Response) {
           answers: rescored.run.answers,
           role: rescored.result.role,
           current: rescored.result,
-          changedSinceSubmission: rescored.result.level !== rescored.run.result.level,
+          changedSinceSubmission:
+            rescored.result.level !== rescored.run.result.level ||
+            (rescored.result.role ?? null) !== (rescored.run.result.role ?? null),
           submittedAt: rescored.run.createdAt,
         }
       : null;
@@ -1307,6 +1318,9 @@ export async function approveSubmission(req: Request, res: Response) {
 
     // Create the entity based on entity type
     let entityId: number;
+    const aiRiskClassification = mapToAiRiskClassification(
+      entityData.ai_risk_classification as string,
+    );
 
     if (submission.entityType === IntakeEntityType.MODEL) {
       const model = ModelInventoryModel.createNewModelInventory({
@@ -1343,23 +1357,24 @@ export async function approveSubmission(req: Request, res: Response) {
             : new Date(),
           goal: (entityData.goal as string) || (entityData.description as string) || "",
           owner: req.userId!,
-          ai_risk_classification: mapToAiRiskClassification(
-            entityData.ai_risk_classification as string,
-          ) as any,
+          ai_risk_classification: aiRiskClassification as any,
           type_of_high_risk_role: (entityData.type_of_high_risk_role as string as any) || undefined,
           geography: entityData.geography ? Number(entityData.geography) : 1,
           status: ProjectStatus.UNDER_REVIEW,
         },
         [],
-        // A carried-over EU AI Act classification brings its framework along.
-        classification ? [EU_AI_ACT_FRAMEWORK_ID] : [],
+        // A use case with an EU AI Act level (carried over from the run or set
+        // by the reviewer) brings the EU AI Act framework along.
+        aiRiskClassification ? [EU_AI_ACT_FRAMEWORK_ID] : [],
         req.organizationId!,
         req.userId!,
         transaction,
       );
       entityId = createdProject.id!;
-      if (classification) {
+      if (aiRiskClassification) {
         await createEUFrameworkQuery(entityId, false, req.organizationId!, transaction);
+      }
+      if (classification) {
         await insertClassificationRunQuery(
           {
             useCaseId: entityId,

@@ -255,7 +255,7 @@ describe("approval with the EU AI Act step", () => {
     runs.insertClassificationRunQuery.mockResolvedValue({ id: 4 });
   });
 
-  it("without a run, approval behaves as before", async () => {
+  it("without a run, approval keeps the reviewer's level and copies no run", async () => {
     runs.getLatestRunForSubmissionQuery.mockResolvedValue(null);
     const r = await approve({
       confirmedEntityData: { project_title: "P", ai_risk_classification: "high" },
@@ -266,8 +266,6 @@ describe("approval with the EU AI Act step", () => {
     );
     expect(runs.insertClassificationRunQuery).not.toHaveBeenCalled();
     expect(history.recordMultipleFieldChanges).not.toHaveBeenCalled();
-    expect(projects.createNewProjectQuery.mock.calls[0][2]).toEqual([]);
-    expect(euFramework.createEUFrameworkQuery).not.toHaveBeenCalled();
   });
 
   it("attaches the EU AI Act framework when the approval carries over a run", async () => {
@@ -281,6 +279,74 @@ describe("approval with the EU AI Act step", () => {
       5,
       expect.anything(),
     );
+  });
+
+  it("attaches the EU AI Act framework when there is no run but the use case gets a level", async () => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue(null);
+    const r = await approve({
+      confirmedEntityData: { project_title: "P", ai_risk_classification: "limited" },
+    });
+    expect(r.status).toHaveBeenCalledWith(200);
+    expect(projects.createNewProjectQuery.mock.calls[0][0].ai_risk_classification).toBe(
+      "Limited risk",
+    );
+    expect(projects.createNewProjectQuery.mock.calls[0][2]).toEqual([1]);
+    expect(euFramework.createEUFrameworkQuery).toHaveBeenCalledWith(
+      50,
+      false,
+      5,
+      expect.anything(),
+    );
+    expect(runs.insertClassificationRunQuery).not.toHaveBeenCalled();
+  });
+
+  it("attaches no framework when there is no run and no level", async () => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue(null);
+    const r = await approve({ confirmedEntityData: { project_title: "P" } });
+    expect(r.status).toHaveBeenCalledWith(200);
+    expect(projects.createNewProjectQuery.mock.calls[0][2]).toEqual([]);
+    expect(euFramework.createEUFrameworkQuery).not.toHaveBeenCalled();
+  });
+
+  // Answers to questions hidden by the scope answer: validation drops them.
+  const HIDDEN_ANSWERS_RUN = {
+    ...RUN,
+    answers: { ...ANSWERS, scope: "research_only" },
+    result: { ...RUN.result, level: "Out of scope", role: null },
+  };
+
+  it("scores and copies only the answers to visible questions", async () => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue(HIDDEN_ANSWERS_RUN);
+    const r = await approve({ confirmedEntityData: { project_title: "P" } });
+    expect(r.status).toHaveBeenCalledWith(200);
+    const copied = runs.insertClassificationRunQuery.mock.calls[0][0];
+    expect(copied.answers).toEqual({ scope: "research_only" });
+    expect(copied.result.level).toBe("Out of scope");
+
+    const p = res();
+    await ctrl.getSubmissionPreview(req({ params: { id: "9" } }) as any, p);
+    expect(p.json.mock.calls[0][0].data.euAiActClassification.answers).toEqual({
+      scope: "research_only",
+    });
+  });
+
+  it("preview flags a change since submission when only the role changed", async () => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue({
+      ...RUN,
+      result: { ...RUN.result, role: "Provider" },
+    });
+    const r = res();
+    await ctrl.getSubmissionPreview(req({ params: { id: "9" } }) as any, r);
+    const panel = r.json.mock.calls[0][0].data.euAiActClassification;
+    expect(panel.current.level).toBe("Limited risk");
+    expect(panel.changedSinceSubmission).toBe(true);
+  });
+
+  it("preview does not flag a change when level and role are the same", async () => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue(RUN);
+    const r = res();
+    await ctrl.getSubmissionPreview(req({ params: { id: "9" } }) as any, r);
+    expect(r.json.mock.calls[0][0].data.euAiActClassification.changedSinceSubmission).toBe(false);
   });
 
   it("treats a run with an unknown questionnaire version as no run", async () => {
@@ -409,7 +475,9 @@ describe("approval with the EU AI Act step", () => {
       },
     });
     expect(r.status).toHaveBeenCalledWith(200);
-    expect(projects.createNewProjectQuery.mock.calls[0][2]).toEqual([]);
+    // The reviewer's level still carries the framework along.
+    expect(projects.createNewProjectQuery.mock.calls[0][2]).toEqual([1]);
+    expect(euFramework.createEUFrameworkQuery).toHaveBeenCalledTimes(1);
     expect(projects.createNewProjectQuery.mock.calls[0][0]).toMatchObject({
       ai_risk_classification: "High risk",
       type_of_high_risk_role: "Provider",
@@ -441,7 +509,7 @@ describe("approval with the EU AI Act step", () => {
 });
 
 describe("public form with a resubmission token", () => {
-  const load = async (euAiActRiskStepEnabled: boolean) => {
+  const load = async (euAiActRiskStepEnabled: boolean, mockRun = true) => {
     intake.getTenantByPublicId.mockResolvedValue({ orgId: 5 });
     intake.getFormByPublicIdQuery.mockResolvedValue({ ...FORM, euAiActRiskStepEnabled });
     intake.getSubmissionByIdQuery.mockResolvedValue({
@@ -450,7 +518,7 @@ describe("public form with a resubmission token", () => {
       data: {},
       submitterEmail: "a@b.co",
     });
-    runs.getLatestRunForSubmissionQuery.mockResolvedValue(RUN);
+    if (mockRun) runs.getLatestRunForSubmissionQuery.mockResolvedValue(RUN);
     const token = sign({ submissionId: 9, formId: 1, email: "a@b.co", timestamp: Date.now() });
     const r = res();
     await ctrl.getPublicFormByPublicId(
@@ -466,6 +534,31 @@ describe("public form with a resubmission token", () => {
   it("returns the previous risk answers when the step is on", async () => {
     const data = await load(true);
     expect(data.previousRiskAnswers).toEqual(ANSWERS);
+  });
+
+  it("returns only the answers to visible questions", async () => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue({
+      ...RUN,
+      answers: { ...ANSWERS, scope: "research_only" },
+    });
+    const data = await load(true, false);
+    expect(data.previousRiskAnswers).toEqual({ scope: "research_only" });
+  });
+
+  it("omits previous risk answers from an older questionnaire version", async () => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue({ ...RUN, questionnaireVersion: 1 });
+    const data = await load(true, false);
+    expect(data.previousRiskAnswers).toBeUndefined();
+  });
+
+  it("omits previous risk answers that no longer validate", async () => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue({
+      ...RUN,
+      answers: { ...ANSWERS, art5_practices: ["removed_practice"] },
+    });
+    const data = await load(true, false);
+    expect(data.previousRiskAnswers).toBeUndefined();
+    expect(data.euAiActRiskStep.questionnaire).not.toBeNull();
   });
 
   it("does not look up previous risk answers when the step is off", async () => {
