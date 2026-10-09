@@ -2,7 +2,7 @@ import { Box } from "@mui/material";
 import { Link2 } from "lucide-react";
 import { useNavigate } from "react-router";
 import GovernanceTooltip from "./GovernanceTooltip";
-import { accent } from "../../themes/palette";
+import StatusBadge from "../StatusBadge";
 
 interface CrossMappingBadgeProps {
   mappingCount: number;
@@ -19,27 +19,11 @@ const CrossMappingBadge = ({ mappingCount }: CrossMappingBadgeProps) => {
       description="Number of mappings linked to this control"
     >
       <Box
+        component="span"
         onClick={() => navigate("/governance-os/mapper")}
-        sx={{
-          "display": "inline-flex",
-          "alignItems": "center",
-          "gap": "4px",
-          "height": 24,
-          "px": "8px",
-          "borderRadius": "4px",
-          "cursor": "pointer",
-          "fontSize": 12,
-          "fontWeight": 500,
-          "backgroundColor": accent.indigo.bg,
-          "color": accent.indigo.text,
-          "border": `1px solid ${accent.indigo.border}`,
-          "&:hover": {
-            backgroundColor: accent.indigo.border,
-          },
-        }}
+        sx={{ display: "inline-flex", cursor: "pointer" }}
       >
-        <Link2 size={14} />
-        {mappingCount}
+        <StatusBadge label={String(mappingCount)} variant="info" icon={<Link2 size={14} />} />
       </Box>
     </GovernanceTooltip>
   );

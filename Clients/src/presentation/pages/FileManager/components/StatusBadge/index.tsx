@@ -1,12 +1,12 @@
 /**
  * @fileoverview StatusBadge Component
  *
- * Displays the review status of a file using the shared StyleGuide Chip.
+ * Displays the review status of a file using the shared StatusBadge.
  *
  * @module presentation/pages/FileManager/components/StatusBadge
  */
 
-import Chip from "../../../../components/Chip";
+import SharedStatusBadge from "../../../../components/StatusBadge";
 import { ReviewStatus } from "../../../../../application/repository/file.repository";
 import { ChipSize } from "../../../../types/interfaces/i.chip";
 
@@ -25,14 +25,13 @@ const STATUS_LABELS: Record<ReviewStatus, string> = {
 };
 
 /**
- * StatusBadge — thin wrapper around Chip for file review status.
- * Matches Model Inventory / StyleGuide status chips.
+ * File review status. The label map stays here; StatusBadge paints the badge.
  */
 export function StatusBadge({ status, size = "small" }: StatusBadgeProps) {
   const effectiveStatus = status || "draft";
   const label = STATUS_LABELS[effectiveStatus] || STATUS_LABELS.draft;
 
-  return <Chip label={label} size={size} />;
+  return <SharedStatusBadge label={label} size={size} />;
 }
 
 export default StatusBadge;

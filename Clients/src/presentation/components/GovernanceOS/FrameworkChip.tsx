@@ -1,7 +1,8 @@
 import React from "react";
 import { Box } from "@mui/material";
 import GovernanceTooltip from "./GovernanceTooltip";
-import { accent, background, text, border as borderPalette } from "../../themes/palette";
+import StatusBadge from "../StatusBadge";
+import { ChipVariant } from "../../types/interfaces/i.chip";
 
 interface FrameworkChipProps {
   frameworkName: string;
@@ -16,22 +17,17 @@ const FRAMEWORK_SLUGS: Record<string, string> = {
   "nist ai rmf": "nist-ai-rmf",
 };
 
+const PRIORITY_VARIANT: Record<NonNullable<FrameworkChipProps["priority"]>, ChipVariant> = {
+  primary: "success",
+  secondary: "info",
+  supplementary: "default",
+};
+
 const FrameworkChip: React.FC<FrameworkChipProps> = ({
   frameworkName,
   priority = "supplementary",
   size = "small",
 }) => {
-  const colors =
-    priority === "primary"
-      ? accent.primary
-      : priority === "secondary"
-        ? accent.indigo
-        : { bg: background.hover, text: text.tertiary, border: borderPalette.light };
-
-  const height = size === "small" ? 20 : 24;
-  const fontSize = size === "small" ? 11 : 12;
-  const padding = size === "small" ? "0 8px" : "0 10px";
-
   const tooltip =
     priority === "supplementary"
       ? {
@@ -49,21 +45,9 @@ const FrameworkChip: React.FC<FrameworkChipProps> = ({
         component="span"
         data-framework={FRAMEWORK_SLUGS[frameworkName.toLowerCase()] || frameworkName.toLowerCase()}
         data-priority={priority}
-        sx={{
-          display: "inline-flex",
-          alignItems: "center",
-          height,
-          padding,
-          borderRadius: "4px",
-          backgroundColor: colors.bg,
-          color: colors.text,
-          border: `1px solid ${colors.border}`,
-          fontSize,
-          fontWeight: 500,
-          whiteSpace: "nowrap",
-        }}
+        sx={{ display: "inline-flex" }}
       >
-        {frameworkName}
+        <StatusBadge label={frameworkName} variant={PRIORITY_VARIANT[priority]} size={size} />
       </Box>
     </GovernanceTooltip>
   );
