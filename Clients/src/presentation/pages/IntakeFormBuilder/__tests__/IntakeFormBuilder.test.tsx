@@ -235,6 +235,54 @@ describe("IntakeFormBuilder Page", () => {
       expect(screen.queryByText("Failed to save form")).not.toBeInTheDocument();
     });
 
+    it("refetches the key list when a save with a key is rejected, so the key falls back to none", async () => {
+      mockGetLLMKeys.mockResolvedValue({ data: { data: [openAIKey] } });
+      vi.mocked(getIntakeForm).mockResolvedValue(savedForm(3) as never);
+      vi.mocked(updateIntakeForm).mockRejectedValue(
+        new CustomException("LLM key not found", 400, {
+          message: "Bad Request",
+          data: "LLM key not found",
+        }) as never,
+      );
+      renderEditRoute();
+      await formLoaded();
+      await waitFor(() => expect(mockGetLLMKeys).toHaveBeenCalledTimes(1));
+      await waitFor(() =>
+        expect(screen.getByTestId("suggested-questions")).toHaveAttribute("data-llm-key", "3"),
+      );
+
+      // The key was deleted elsewhere: the next key list no longer has it.
+      mockGetLLMKeys.mockResolvedValue({ data: { data: [] } });
+      await savedLlmKeyId();
+
+      await waitFor(() => expect(mockGetLLMKeys).toHaveBeenCalledTimes(2));
+      await waitFor(() => expect(llmKeyPicker()).not.toHaveTextContent("Saved key"));
+
+      // The next attempt no longer sends the deleted key.
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => expect(updateIntakeForm).toHaveBeenCalledTimes(2));
+      expect(
+        (vi.mocked(updateIntakeForm).mock.calls[1][1] as { llmKeyId: unknown }).llmKeyId,
+      ).toBeNull();
+    });
+
+    it("does not refetch the key list when a save without a key is rejected", async () => {
+      vi.mocked(getIntakeForm).mockResolvedValue(savedForm(null, true) as never);
+      vi.mocked(updateIntakeForm).mockRejectedValue(
+        new CustomException("Invalid entity type", 400, {
+          message: "Bad Request",
+          data: "Invalid entity type",
+        }) as never,
+      );
+      renderEditRoute();
+      await formLoaded();
+      await waitFor(() => expect(mockGetLLMKeys).toHaveBeenCalledTimes(1));
+      await savedLlmKeyId();
+
+      expect(await screen.findByText("Invalid entity type")).toBeInTheDocument();
+      expect(mockGetLLMKeys).toHaveBeenCalledTimes(1);
+    });
+
     it("keeps the generic message when the save fails with a 5xx", async () => {
       vi.mocked(getIntakeForm).mockResolvedValue(savedForm(null, true) as never);
       vi.mocked(updateIntakeForm).mockRejectedValue(
