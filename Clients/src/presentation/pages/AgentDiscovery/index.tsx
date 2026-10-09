@@ -20,6 +20,7 @@ import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/us
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { AgentPrimitiveRow } from "src/domain/interfaces/i.agentDiscovery";
 import AgentTable from "./AgentTable";
+import { getReviewStatusDisplay } from "./agentLabels";
 
 import Alert from "../../components/Alert";
 
@@ -168,9 +169,10 @@ const AgentDiscovery: React.FC = () => {
         label: "Status",
         type: "select" as const,
         options: [
-          { value: "unreviewed", label: "Unreviewed" },
-          { value: "confirmed", label: "Confirmed" },
-          { value: "rejected", label: "Rejected" },
+          ...["unreviewed", "confirmed", "rejected"].map((value) => ({
+            value,
+            label: getReviewStatusDisplay(value).label,
+          })),
         ],
       },
       {
@@ -255,7 +257,7 @@ const AgentDiscovery: React.FC = () => {
   const getGroupKey = (agent: AgentPrimitiveRow, field: string): string | string[] => {
     switch (field) {
       case "review_status":
-        return agent.review_status || "Unknown";
+        return getReviewStatusDisplay(agent.review_status).label;
       case "source_system":
         return agent.source_system || "Unknown";
       case "primitive_type":
@@ -360,9 +362,24 @@ const AgentDiscovery: React.FC = () => {
         <StatusTileCards
           items={[
             { key: "total", label: "Total", color: "#1976D2", count: stats.total },
-            { key: "unreviewed", label: "Unreviewed", color: "#F9A825", count: stats.unreviewed },
-            { key: "confirmed", label: "Confirmed", color: "#2E7D32", count: stats.confirmed },
-            { key: "rejected", label: "Rejected", color: "#D32F2F", count: stats.rejected },
+            {
+              key: "unreviewed",
+              label: getReviewStatusDisplay("unreviewed").label,
+              color: "#F9A825",
+              count: stats.unreviewed,
+            },
+            {
+              key: "confirmed",
+              label: getReviewStatusDisplay("confirmed").label,
+              color: "#2E7D32",
+              count: stats.confirmed,
+            },
+            {
+              key: "rejected",
+              label: getReviewStatusDisplay("rejected").label,
+              color: "#D32F2F",
+              count: stats.rejected,
+            },
             { key: "stale", label: "Stale", color: "#455A64", count: stats.stale },
           ]}
           entityName="agent"

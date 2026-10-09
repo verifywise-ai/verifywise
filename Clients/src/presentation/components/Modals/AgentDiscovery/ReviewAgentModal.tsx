@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { Drawer, Stack, Box, Typography, Divider, IconButton, useTheme } from "@mui/material";
 import { X, Link as LinkIcon, Unlink, Pencil } from "lucide-react";
 import VWChip from "../../Chip";
@@ -6,13 +6,15 @@ import { CustomizableButton } from "../../button/customizable-button";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { AgentPrimitiveRow } from "../../../../domain/interfaces/i.agentDiscovery";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
-import { getAllEntities } from "../../../../application/repository/entity.repository";
+import { getEntityById } from "../../../../application/repository/entity.repository";
 import LinkModelModal from "./LinkModelModal";
 import {
   formatModelLabel,
   formatSourceLabel,
-  ModelLabelSource,
+  getAgentOwnerIds,
+  getReviewStatusDisplay,
 } from "../../../pages/AgentDiscovery/agentLabels";
+import { useUserNames } from "../../../pages/AgentDiscovery/useUserNames";
 
 interface ReviewAgentModalProps {
   isOpen: boolean;
@@ -33,54 +35,37 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
   const theme = useTheme();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
-  const [usersMap, setUsersMap] = useState<Record<string, string>>({});
-  const [modelsMap, setModelsMap] = useState<Record<string, string>>({});
+  const { formatUser } = useUserNames();
+  const [linkedModelLabel, setLinkedModelLabel] = useState<string | null>(null);
+  const linkedModelId = agent?.linked_model_inventory_id ?? null;
 
-  const fetchUsers = useCallback(async () => {
-    try {
-      const response = await getAllEntities({ routeUrl: "/users" });
-      const usersData = Array.isArray(response?.data) ? response.data : [];
-      const map: Record<string, string> = {};
-      usersData.forEach((u: { id: number; name: string; surname: string }) => {
-        map[String(u.id)] = `${u.name} ${u.surname}`.trim();
-      });
-      setUsersMap(map);
-    } catch (error) {
-      console.error("Failed to fetch users:", error);
-    }
-  }, []);
-
-  const fetchModels = useCallback(async () => {
-    try {
-      const response = await getAllEntities({ routeUrl: "/modelInventory" });
-      const modelsData = Array.isArray(response?.data) ? response.data : [];
-      const map: Record<string, string> = {};
-      modelsData.forEach((m: ModelLabelSource) => {
-        map[String(m.id)] = formatModelLabel(m);
-      });
-      setModelsMap(map);
-    } catch (error) {
-      console.error("Failed to fetch models:", error);
-    }
-  }, []);
-
+  // Fetch only the linked model, not the whole inventory.
   useEffect(() => {
-    if (isOpen) {
-      fetchUsers();
-      fetchModels();
-    }
-  }, [isOpen, fetchUsers, fetchModels]);
+    setLinkedModelLabel(null);
+    if (!isOpen || !linkedModelId) return;
+    let cancelled = false;
+    getEntityById({ routeUrl: `/modelInventory/${linkedModelId}` })
+      .then((response) => {
+        if (!cancelled && response?.data) setLinkedModelLabel(formatModelLabel(response.data));
+      })
+      .catch(() => {
+        // Keep the "Model #id" fallback.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, linkedModelId]);
 
   if (!agent) return null;
 
-  const ownerName = agent.owner_id ? usersMap[agent.owner_id] || agent.owner_id : "—";
+  // All owners, primary first (falls back to the legacy single owner_id).
+  const ownerIds = getAgentOwnerIds(agent);
+  const ownerNames = ownerIds.length > 0 ? ownerIds.map((oid) => formatUser(oid)).join(", ") : "—";
   const linkedModelName = agent.linked_model_inventory_id
-    ? modelsMap[String(agent.linked_model_inventory_id)] ||
-      `Model #${agent.linked_model_inventory_id}`
+    ? linkedModelLabel || `Model #${agent.linked_model_inventory_id}`
     : null;
-  const reviewedByName = agent.reviewed_by
-    ? usersMap[String(agent.reviewed_by)] || `User #${agent.reviewed_by}`
-    : null;
+  const reviewedByName = agent.reviewed_by ? formatUser(agent.reviewed_by) : null;
+  const reviewStatus = getReviewStatusDisplay(agent.review_status);
 
   const handleReview = async (status: "confirmed" | "rejected") => {
     setIsSubmitting(true);
@@ -158,7 +143,7 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
 
           <DetailRow label="Display name" value={agent.display_name} />
           <DetailRow label="Type" value={agent.primitive_type} />
-          <DetailRow label="Owner" value={ownerName} />
+          <DetailRow label="Owners" value={ownerNames} />
           {/* Discovery-only fields — hidden for manually added agents, which have
               no source/external id/activity data to show. */}
           {!agent.is_manual && (
@@ -176,16 +161,7 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
               Review status
             </Typography>
             <Stack direction="row" alignItems="center" gap="8px">
-              <VWChip
-                label={agent.review_status}
-                variant={
-                  agent.review_status === "confirmed"
-                    ? "success"
-                    : agent.review_status === "rejected"
-                      ? "error"
-                      : "warning"
-                }
-              />
+              <VWChip label={reviewStatus.label} variant={reviewStatus.variant} />
               {reviewedByName && (
                 <Typography fontSize={12} color="text.secondary">
                   by {reviewedByName} on {formatDate(agent.reviewed_at)}

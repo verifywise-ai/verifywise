@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 
 // Mock shared dependencies
 vi.mock("../../../Inputs/Field", () => ({
@@ -12,7 +12,7 @@ vi.mock("../../../Inputs/Select", () => ({
 }));
 vi.mock("../../../button/customizable-button", () => ({
   CustomizableButton: ({ children, ...props }: any) => (
-    <button data-testid="customizable-button" disabled={props.isDisabled}>
+    <button data-testid="customizable-button" disabled={props.isDisabled} onClick={props.onClick}>
       {props.text || children}
     </button>
   ),
@@ -22,12 +22,25 @@ vi.mock("../../../Chip", () => ({
 }));
 vi.mock("../../../../../application/repository/entity.repository", () => ({
   getAllEntities: vi.fn().mockResolvedValue({ data: [] }),
+  getEntityById: vi.fn().mockResolvedValue({ data: null }),
 }));
 vi.mock("../../../../../infrastructure/api/networkServices", () => ({
   apiServices: {
     post: vi.fn().mockResolvedValue({}),
     patch: vi.fn().mockResolvedValue({}),
   },
+}));
+// Users come from the shared, cached users hook.
+vi.mock("../../../../../application/hooks/useUsers", () => ({
+  default: () => ({
+    users: [
+      { id: 1, name: "Ada", surname: "Lovelace", email: "ada@example.com" },
+      { id: 2, name: "Bea", surname: "Brown", email: "bea@example.com" },
+    ],
+    loading: false,
+    error: null,
+    refreshUsers: vi.fn(),
+  }),
 }));
 vi.mock("../../../../../application/hooks/useFormValidation", () => ({
   useFormValidation: () => ({
@@ -42,6 +55,12 @@ vi.mock("../../../../../application/validations/stringValidation", () => ({
 }));
 
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
+import CustomException from "../../../../../infrastructure/exceptions/customeException";
+import { apiServices } from "../../../../../infrastructure/api/networkServices";
+import {
+  getAllEntities,
+  getEntityById,
+} from "../../../../../application/repository/entity.repository";
 import LinkModelModal from "../LinkModelModal";
 import ManualAgentModal from "../ManualAgentModal";
 import ReviewAgentModal from "../ReviewAgentModal";
@@ -112,6 +131,35 @@ describe("ManualAgentModal", () => {
     );
     expect(screen.getByText("Edit agent")).toBeInTheDocument();
   });
+
+  it("shows the server's reason when the save is rejected", async () => {
+    vi.mocked(apiServices.post).mockRejectedValueOnce(
+      new CustomException("Owners must be users in your organization", 400, {}),
+    );
+    const onSuccess = vi.fn();
+    renderWithProviders(
+      <ManualAgentModal isOpen={true} setIsOpen={vi.fn()} onSuccess={onSuccess} />,
+    );
+    fireEvent.click(screen.getByText("Add agent"));
+
+    expect(
+      await screen.findByText("Owners must be users in your organization"),
+    ).toBeInTheDocument();
+    expect(onSuccess).not.toHaveBeenCalled();
+  });
+
+  it("shows a generic message instead of a bare HTTP phrase or a server failure", async () => {
+    vi.mocked(apiServices.patch).mockRejectedValueOnce(
+      new CustomException("Internal Server Error", 500, {}),
+    );
+    renderWithProviders(
+      <ManualAgentModal isOpen={true} setIsOpen={vi.fn()} onSuccess={vi.fn()} agent={mockAgent} />,
+    );
+    fireEvent.click(screen.getByText("Save changes"));
+
+    expect(await screen.findByText("Could not save the agent. Try again.")).toBeInTheDocument();
+    expect(screen.queryByText("Internal Server Error")).not.toBeInTheDocument();
+  });
 });
 
 describe("ReviewAgentModal", () => {
@@ -142,5 +190,63 @@ describe("ReviewAgentModal", () => {
       <ReviewAgentModal isOpen={true} setIsOpen={vi.fn()} agent={null} onSuccess={vi.fn()} />,
     );
     expect(container.querySelector('[class*="MuiDrawer"]')).toBeNull();
+  });
+
+  it("shows the review status with the same label as the table and filter", () => {
+    renderWithProviders(
+      <ReviewAgentModal
+        isOpen={true}
+        setIsOpen={vi.fn()}
+        agent={{ ...mockAgent, review_status: "unreviewed" }}
+        onSuccess={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Unreviewed")).toBeInTheDocument();
+    expect(screen.queryByText("unreviewed")).not.toBeInTheDocument();
+  });
+
+  it("lists every owner, primary first, under Owners", () => {
+    renderWithProviders(
+      <ReviewAgentModal
+        isOpen={true}
+        setIsOpen={vi.fn()}
+        agent={{ ...mockAgent, owner_id: "2", owner_ids: [2, 1, 9] }}
+        onSuccess={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Owners")).toBeInTheDocument();
+    expect(screen.queryByText("Owner")).not.toBeInTheDocument();
+    expect(screen.getByText("Bea Brown, Ada Lovelace, User #9")).toBeInTheDocument();
+  });
+
+  it("falls back to the legacy owner_id when the agent has no owner set", () => {
+    renderWithProviders(
+      <ReviewAgentModal
+        isOpen={true}
+        setIsOpen={vi.fn()}
+        agent={{ ...mockAgent, owner_id: "1" }}
+        onSuccess={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
+  });
+
+  it("fetches only the linked model, not the whole inventory", async () => {
+    vi.mocked(getAllEntities).mockClear();
+    vi.mocked(getEntityById).mockResolvedValueOnce({
+      data: { id: 9, provider: "OpenAI", model: "gpt-4o" },
+    });
+    renderWithProviders(
+      <ReviewAgentModal
+        isOpen={true}
+        setIsOpen={vi.fn()}
+        agent={{ ...mockAgent, linked_model_inventory_id: 9 }}
+        onSuccess={vi.fn()}
+      />,
+    );
+    expect(await screen.findByText("OpenAI · gpt-4o")).toBeInTheDocument();
+    expect(getEntityById).toHaveBeenCalledWith({ routeUrl: "/modelInventory/9" });
+    expect(getAllEntities).not.toHaveBeenCalledWith({ routeUrl: "/modelInventory" });
+    expect(getAllEntities).not.toHaveBeenCalledWith({ routeUrl: "/users" });
   });
 });

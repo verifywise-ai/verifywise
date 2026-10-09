@@ -1,12 +1,14 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Drawer, Stack, Typography, Divider, IconButton, useTheme } from "@mui/material";
 import { X } from "lucide-react";
 import Field from "../../Inputs/Field";
 import SelectComponent from "../../Inputs/Select";
 import MultiSelect from "../../Inputs/MultiSelect";
 import { CustomizableButton } from "../../button/customizable-button";
+import Alert from "../../Alert";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
-import { getAllEntities } from "../../../../application/repository/entity.repository";
+import { getClientErrorReason } from "../../../../application/utils/apiErrorReason";
+import { useUserNames } from "../../../pages/AgentDiscovery/useUserNames";
 import { AgentPrimitiveRow } from "../../../../domain/interfaces/i.agentDiscovery";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
@@ -37,8 +39,13 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
   const theme = useTheme();
   const isEditMode = Boolean(agent);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [users, setUsers] = useState<{ _id: number; name: string }[]>([]);
   const [ownerIds, setOwnerIds] = useState<number[]>([]);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const { users: orgUsers, formatUser } = useUserNames();
+  const users = useMemo(
+    () => orgUsers.map((u) => ({ _id: u.id, name: formatUser(u.id) })),
+    [orgUsers, formatUser],
+  );
   const [formData, setFormData] = useState({
     display_name: "",
     primitive_type: "",
@@ -58,24 +65,9 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
   const { errors, validateAll, clearFieldError, resetErrors } =
     useFormValidation<typeof formData>(validators);
 
-  const fetchUsers = useCallback(async () => {
-    try {
-      const response = await getAllEntities({ routeUrl: "/users" });
-      const usersData = Array.isArray(response?.data) ? response.data : [];
-      setUsers(
-        usersData.map((u: { id: number; name: string; surname: string }) => ({
-          _id: u.id,
-          name: `${u.name} ${u.surname}`.trim(),
-        })),
-      );
-    } catch (error) {
-      console.error("Failed to fetch users:", error);
-    }
-  }, []);
-
   useEffect(() => {
     if (isOpen) {
-      fetchUsers();
+      setSaveError(null);
       if (agent) {
         setFormData({
           display_name: agent.display_name || "",
@@ -92,12 +84,13 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
         setOwnerIds(initialOwners);
       }
     }
-  }, [isOpen, fetchUsers, agent]);
+  }, [isOpen, agent]);
 
   const handleClose = () => {
     setIsOpen(false);
     setFormData({ display_name: "", primitive_type: "", notes: "" });
     setOwnerIds([]);
+    setSaveError(null);
     resetErrors();
   };
 
@@ -105,6 +98,7 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
     if (!validateAll(formData)) return;
 
     setIsSubmitting(true);
+    setSaveError(null);
     try {
       const payload = {
         display_name: formData.display_name.trim(),
@@ -121,7 +115,9 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
       handleClose();
       onSuccess();
     } catch (error) {
-      console.error(`Failed to ${isEditMode ? "update" : "create"} agent:`, error);
+      // Show the server's reason for a rejected save (e.g. an owner who is not
+      // in the organization); anything else gets the generic retry message.
+      setSaveError(getClientErrorReason(error) ?? "Could not save the agent. Try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -155,6 +151,9 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
 
       {/* Form content */}
       <Stack sx={{ p: "24px", gap: "20px", flex: 1, overflow: "auto" }}>
+        {saveError && (
+          <Alert variant="error" body={saveError} hasIcon={false} sx={{ position: "static" }} />
+        )}
         <Field
           id="display_name"
           label="Display name"

@@ -722,11 +722,13 @@ async function seedAgentPrimitives(ctx: Ctx, usersByEmail: Record<string, number
     const metadata = a.manual
       ? { notes: "Added manually for governance tracking." }
       : { region: "eastus", project: "foundry-prod" };
-    // Resolve this agent's owner (first listed); default to the admin. The
-    // schema stores a single owner_id per agent.
+    // Resolve this agent's owners; default to the admin. The first is the
+    // primary (agent_primitives.owner_id); the full set goes to
+    // agent_primitive_owners below so the two stay in sync.
     const ownerEmails = AGENT_OWNERS[a.name] || [ADMIN_EMAIL];
-    const ownerIds = ownerEmails.map((e) => usersByEmail[e]).filter((v): v is number => !!v);
-    const primaryOwner = ownerIds.length > 0 ? ownerIds[0] : ctx.userId;
+    const resolvedOwners = ownerEmails.map((e) => usersByEmail[e]).filter((v): v is number => !!v);
+    const ownerIds = Array.from(new Set(resolvedOwners.length > 0 ? resolvedOwners : [ctx.userId]));
+    const primaryOwner = ownerIds[0];
     // reviewer for confirmed/rejected agents (drives the lifecycle attribution).
     const reviewed = a.status === "confirmed" || a.status === "rejected";
     await sequelize.query(
@@ -783,6 +785,20 @@ async function seedAgentPrimitives(ctx: Ctx, usersByEmail: Record<string, number
     const agentId = idRows[0]?.id;
 
     if (agentId) {
+      // Full owner set (replace-all), primary first, matching owner_id above.
+      await sequelize.query(
+        `DELETE FROM agent_primitive_owners WHERE organization_id = :orgId AND agent_primitive_id = :agentId`,
+        { replacements: { orgId: ctx.orgId, agentId } },
+      );
+      for (const userId of ownerIds) {
+        await sequelize.query(
+          `INSERT INTO agent_primitive_owners (organization_id, agent_primitive_id, user_id, created_at)
+           VALUES (:orgId, :agentId, :userId, NOW())
+           ON CONFLICT (organization_id, agent_primitive_id, user_id) DO NOTHING`,
+          { replacements: { orgId: ctx.orgId, agentId, userId } },
+        );
+      }
+
       // Audit trail (replace-all) so the detail page Activity timeline has content.
       await sequelize.query(
         `DELETE FROM agent_audit_log WHERE organization_id = :orgId AND agent_primitive_id = :agentId`,
@@ -809,7 +825,7 @@ async function seedAgentPrimitives(ctx: Ctx, usersByEmail: Record<string, number
     n++;
   }
   log(
-    `seeded ${n} agents (${DEMO_AGENTS.filter((a) => a.manual).length} manual + rest discovered; owner + audit trail attached)`,
+    `seeded ${n} agents (${DEMO_AGENTS.filter((a) => a.manual).length} manual + rest discovered; owners + audit trail attached)`,
   );
 }
 

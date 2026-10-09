@@ -36,8 +36,7 @@ import { CustomizableButton } from "../../components/button/customizable-button"
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { useExtensions } from "../../../application/contexts/Extensions.context";
 import Chip from "../../components/Chip";
-import { getAgentLifecycleStatus } from "./agentLifecycle";
-import { formatSourceLabel } from "./agentLabels";
+import { formatSourceLabel, getReviewStatusDisplay } from "./agentLabels";
 import TablePaginationActions from "../../components/TablePagination";
 import { singleTheme } from "../../themes";
 import {
@@ -367,7 +366,7 @@ const AgentTable: React.FC<AgentTableProps> = ({
           {isColVisible("review_status") && (
             <TableCell sx={cellStyle}>
               {(() => {
-                const s = getAgentLifecycleStatus(agent);
+                const s = getReviewStatusDisplay(agent.review_status);
                 return <Chip label={s.label} variant={s.variant} />;
               })()}
             </TableCell>

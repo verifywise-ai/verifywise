@@ -5,10 +5,12 @@ import { AgentAuditLogEntry } from "src/domain/interfaces/i.agentDiscovery";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
 import { fill } from "../../../../i18n/fill";
+import { palette } from "../../../themes/palette";
 
 interface ActivityTimelineProps {
   entries: AgentAuditLogEntry[];
-  usersMap: Record<string, string>;
+  /** Shows a user id as a name (shared formatter from useUserNames). */
+  formatUser: (userId: number | string) => string;
 }
 
 /**
@@ -16,7 +18,7 @@ interface ActivityTimelineProps {
  * Each entry is a governance action taken on the agent — review changes, model
  * link/unlink, and field edits.
  */
-const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ entries, usersMap }) => {
+const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ entries, formatUser }) => {
   const formatUserDate = useFormattedDate();
   const { t } = useTranslation();
   if (!entries.length) {
@@ -31,10 +33,7 @@ const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ entries, usersMap }
     <Stack spacing={0}>
       {entries.map((entry, idx) => {
         const isLast = idx === entries.length - 1;
-        const actor = entry.performed_by
-          ? usersMap[String(entry.performed_by)] ||
-            fill(t("User #{id}"), { id: entry.performed_by })
-          : "System";
+        const actor = entry.performed_by ? formatUser(entry.performed_by) : t("System");
         return (
           <Stack key={entry.id} direction="row" spacing={1.5}>
             {/* Icon + connector rail */}
@@ -42,15 +41,21 @@ const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ entries, usersMap }
               <Box sx={{ mt: "2px" }}>{actionIcon(entry.action)}</Box>
               {!isLast && (
                 <Box
-                  sx={{ width: 2, flex: 1, backgroundColor: "#EAECF0", my: "4px", minHeight: 20 }}
+                  sx={{
+                    width: 2,
+                    flex: 1,
+                    backgroundColor: palette.border.light,
+                    my: "4px",
+                    minHeight: 20,
+                  }}
                 />
               )}
             </Stack>
 
             {/* Content */}
             <Box sx={{ pb: isLast ? 0 : "16px" }}>
-              <Typography fontSize={13} sx={{ color: "#101828" }}>
-                {describeAction(entry, usersMap, t)}
+              <Typography fontSize={13} sx={{ color: palette.text.primary }}>
+                {describeAction(entry, formatUser, t)}
               </Typography>
               <Typography fontSize={12} color="text.secondary">
                 {actor} · {formatUserDate(entry.created_at, { includeTime: true })}
@@ -68,15 +73,15 @@ function actionIcon(action: string): React.ReactElement {
   const sw = 1.5;
   switch (action) {
     case "review_status_changed":
-      return <CheckCircle size={size} strokeWidth={sw} color="#13715B" />;
+      return <CheckCircle size={size} strokeWidth={sw} color={palette.brand.primary} />;
     case "model_linked":
-      return <Link2 size={size} strokeWidth={sw} color="#1976D2" />;
+      return <Link2 size={size} strokeWidth={sw} color={palette.status.info.text} />;
     case "model_unlinked":
-      return <Unlink size={size} strokeWidth={sw} color="#98A2B3" />;
+      return <Unlink size={size} strokeWidth={sw} color={palette.text.muted} />;
     case "field_updated":
-      return <Pencil size={size} strokeWidth={sw} color="#667085" />;
+      return <Pencil size={size} strokeWidth={sw} color={palette.text.icon} />;
     default:
-      return <Circle size={size} strokeWidth={sw} color="#98A2B3" />;
+      return <Circle size={size} strokeWidth={sw} color={palette.text.muted} />;
   }
 }
 
@@ -99,7 +104,7 @@ const OWNER_FIELDS = new Set(["owner_id", "owner_ids"]);
 /** Resolve a comma-separated list of user ids to names. */
 function formatOwners(
   value: string | null | undefined,
-  usersMap: Record<string, string>,
+  formatUser: (userId: number | string) => string,
   t: (key: string) => string,
 ): string {
   const ids = (value ?? "")
@@ -107,13 +112,13 @@ function formatOwners(
     .map((v) => v.trim())
     .filter((v) => v !== "");
   if (ids.length === 0) return t("None");
-  return ids.map((uid) => usersMap[uid] || fill(t("User #{id}"), { id: uid })).join(", ");
+  return ids.map((uid) => formatUser(uid)).join(", ");
 }
 
 /** Turn a raw audit row into a readable sentence. */
 function describeAction(
   entry: AgentAuditLogEntry,
-  usersMap: Record<string, string>,
+  formatUser: (userId: number | string) => string,
   t: (key: string) => string,
 ): string {
   switch (entry.action) {
@@ -135,8 +140,8 @@ function describeAction(
       if (OWNER_FIELDS.has(fieldKey)) {
         return fill(t(text.change), {
           field,
-          from: formatOwners(entry.old_value, usersMap, t),
-          to: formatOwners(entry.new_value, usersMap, t),
+          from: formatOwners(entry.old_value, formatUser, t),
+          to: formatOwners(entry.new_value, formatUser, t),
         });
       }
       if (entry.old_value != null && entry.new_value != null) {

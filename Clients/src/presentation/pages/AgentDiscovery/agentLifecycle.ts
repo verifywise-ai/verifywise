@@ -24,47 +24,24 @@ export interface LifecycleStep {
   timestamp?: string | null;
 }
 
-/**
- * Resolve a user id to a display name via the supplied map, falling back to a
- * readable placeholder.
- */
+/** Resolve a user id to a display name with the shared formatter; null when unset. */
 function resolveUser(
   userId: number | string | null | undefined,
-  usersMap: Record<string, string>,
+  formatUser: (userId: number | string) => string,
 ): string | null {
   if (userId == null || userId === "") return null;
-  return usersMap[String(userId)] || `User #${userId}`;
-}
-
-/**
- * The single lifecycle stage an agent is currently in, in the same vocabulary
- * as the stepper's end-state. Used by the list table's Status column so the
- * table and the detail page tell the same story (a confirmed, active agent
- * reads "Active", not the raw "confirmed").
- */
-export function getAgentLifecycleStatus(agent: AgentPrimitiveRow): {
-  label: string;
-  variant: "success" | "error" | "warning" | "info" | "default";
-} {
-  if (agent.review_status === "rejected") return { label: "Rejected", variant: "error" };
-  if (agent.review_status === "confirmed") {
-    return agent.is_stale
-      ? { label: "Stale", variant: "warning" }
-      : { label: "Active", variant: "success" };
-  }
-  // unreviewed (or anything else) — awaiting review
-  return { label: "Under review", variant: "info" };
+  return formatUser(userId);
 }
 
 export function getAgentLifecycle(
   agent: AgentPrimitiveRow,
   formatDateTime: (iso: string) => string,
-  usersMap: Record<string, string> = {},
+  formatUser: (userId: number | string) => string,
 ): LifecycleStep[] {
   const status = agent.review_status;
 
-  const addedOwner = agent.is_manual ? resolveUser(agent.owner_id, usersMap) : null;
-  const reviewer = resolveUser(agent.reviewed_by, usersMap);
+  const addedOwner = agent.is_manual ? resolveUser(agent.owner_id, formatUser) : null;
+  const reviewer = resolveUser(agent.reviewed_by, formatUser);
   const reviewedAt = agent.reviewed_at ? formatDateTime(agent.reviewed_at) : null;
   const addedAt = agent.created_at ? formatDateTime(agent.created_at) : null;
 

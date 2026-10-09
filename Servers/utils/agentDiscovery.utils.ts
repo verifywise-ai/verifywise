@@ -147,13 +147,65 @@ export const getAgentOwnersQuery = async (
 export const getUserIdsInOrganizationQuery = async (
   userIds: number[],
   organizationId: number,
+  transaction?: Transaction,
 ): Promise<number[]> => {
   if (userIds.length === 0) return [];
   const rows = (await sequelize.query(
     `SELECT id FROM users WHERE organization_id = :organizationId AND id IN (:ids)`,
-    { replacements: { organizationId, ids: userIds }, type: QueryTypes.SELECT },
+    { replacements: { organizationId, ids: userIds }, type: QueryTypes.SELECT, transaction },
   )) as { id: number }[];
   return rows.map((r) => Number(r.id));
+};
+
+/**
+ * Lock an agent primitive row for the rest of the transaction and return its
+ * current primary owner. Serializes concurrent edits of the owner set.
+ */
+export const lockAgentPrimitiveQuery = async (
+  id: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<{ owner_id: string | null } | null> => {
+  const rows = (await sequelize.query(
+    `SELECT owner_id FROM agent_primitives
+     WHERE organization_id = :organizationId AND id = :id
+     FOR UPDATE`,
+    { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
+  )) as { owner_id: string | null }[];
+  return rows[0] || null;
+};
+
+/**
+ * Keep agent_primitives.owner_id consistent when users are deleted: every agent
+ * in the organization whose primary owner is one of `userIds` gets the first
+ * remaining owner from agent_primitive_owners (by id order, excluding the
+ * deleted users), or NULL when none is left. Run inside the user-deletion
+ * transaction, before the users rows are deleted.
+ */
+export const reassignAgentOwnersOfDeletedUsersQuery = async (
+  userIds: number[],
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> => {
+  if (userIds.length === 0) return;
+  await sequelize.query(
+    `UPDATE agent_primitives ap
+     SET owner_id = (
+           SELECT apo.user_id::text FROM agent_primitive_owners apo
+           WHERE apo.organization_id = ap.organization_id
+             AND apo.agent_primitive_id = ap.id
+             AND apo.user_id NOT IN (:userIds)
+           ORDER BY apo.id ASC
+           LIMIT 1
+         ),
+         updated_at = NOW()
+     WHERE ap.organization_id = :organizationId
+       AND ap.owner_id IN (:userIdTexts)`,
+    {
+      replacements: { organizationId, userIds, userIdTexts: userIds.map(String) },
+      transaction,
+    },
+  );
 };
 
 /**
@@ -352,6 +404,9 @@ export const upsertAgentPrimitivesQuery = async (
     const batch = primitives.slice(i, i + BATCH_SIZE);
 
     for (const p of batch) {
+      // On re-sync, an agent whose owners were assigned in VerifyWise (rows in
+      // agent_primitive_owners) keeps its primary owner so the two stay in
+      // sync; otherwise the owner reported by the source system is taken.
       const [results] = await sequelize.query(
         `INSERT INTO agent_primitives (
           organization_id, source_system, primitive_type, external_id, display_name,
@@ -365,7 +420,14 @@ export const upsertAgentPrimitivesQuery = async (
         ON CONFLICT (organization_id, source_system, external_id) DO UPDATE SET
           display_name = EXCLUDED.display_name,
           primitive_type = EXCLUDED.primitive_type,
-          owner_id = EXCLUDED.owner_id,
+          owner_id = CASE
+            WHEN EXISTS (
+              SELECT 1 FROM agent_primitive_owners apo
+              WHERE apo.organization_id = agent_primitives.organization_id
+                AND apo.agent_primitive_id = agent_primitives.id
+            ) THEN agent_primitives.owner_id
+            ELSE EXCLUDED.owner_id
+          END,
           permissions = EXCLUDED.permissions,
           permission_categories = EXCLUDED.permission_categories,
           last_activity = EXCLUDED.last_activity,

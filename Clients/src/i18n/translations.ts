@@ -10023,6 +10023,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Der Fragebogen konnte nicht geladen werden. Versuchen Sie es später erneut.",
     "Could not save the classification. Try again.":
       "Die Klassifizierung konnte nicht gespeichert werden. Versuchen Sie es erneut.",
+    "Could not save the agent. Try again.":
+      "Der Agent konnte nicht gespeichert werden. Versuchen Sie es erneut.",
     "Could not score the answers. Try again.":
       "Die Antworten konnten nicht ausgewertet werden. Versuchen Sie es erneut.",
     "EU AI Act classification": "Klassifizierung nach EU-KI-Verordnung",
@@ -20043,6 +20045,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Impossible de charger le questionnaire. Réessayez plus tard.",
     "Could not save the classification. Try again.":
       "Impossible d'enregistrer la classification. Réessayez.",
+    "Could not save the agent. Try again.": "Impossible d'enregistrer l'agent. Réessayez.",
     "Could not score the answers. Try again.": "Impossible d'évaluer les réponses. Réessayez.",
     "EU AI Act classification": "Classification selon le règlement IA de l'UE",
     "EU AI Act risk classification step":
@@ -29979,6 +29982,7 @@ export const translations: Record<string, Record<string, string>> = {
       "No se pudo cargar el cuestionario. Inténtelo de nuevo más tarde.",
     "Could not save the classification. Try again.":
       "No se pudo guardar la clasificación. Inténtelo de nuevo.",
+    "Could not save the agent. Try again.": "No se pudo guardar el agente. Inténtelo de nuevo.",
     "Could not score the answers. Try again.":
       "No se pudieron evaluar las respuestas. Inténtelo de nuevo.",
     "EU AI Act classification": "Clasificación según el Reglamento de IA de la UE",

@@ -20,6 +20,12 @@ vi.mock("../../../../application/tools/log.engine", () => ({
   logEngine: vi.fn(),
 }));
 
+// Users come from the shared, cached users hook rather than a page fetch.
+let mockUsers: { id: number; name: string; surname: string; email: string }[] = [];
+vi.mock("../../../../application/hooks/useUsers", () => ({
+  default: () => ({ users: mockUsers, loading: false, error: null, refreshUsers: vi.fn() }),
+}));
+
 // Mock the UserGuideSidebarContext used by PageHeaderExtended > HelperIcon
 vi.mock("../../../components/UserGuide/UserGuideSidebarContext", () => ({
   useUserGuideSidebarContext: () => ({
@@ -79,6 +85,7 @@ const auditCalls = () =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockUsers = [];
   auditHandler = () => Promise.resolve({ data: { data: [] } });
   mockApiGet.mockImplementation((url: string) =>
     url.startsWith("/agent-primitives") ? auditHandler() : Promise.resolve({ data: { data: [] } }),
@@ -97,18 +104,16 @@ describe("AgentDetail", () => {
   );
 
   it("shows not found when the agent request fails", async () => {
-    mockGetAllEntities.mockImplementation(({ routeUrl }: { routeUrl: string }) =>
-      routeUrl === "/users" ? Promise.resolve({ data: [] }) : Promise.reject(new Error("404")),
-    );
+    mockGetAllEntities.mockRejectedValue(new Error("404"));
     renderAt("5");
     expect(await screen.findByText("Agent not found")).toBeInTheDocument();
   });
 
-  it("still renders the agent when users, audit logs and the model fail to load", async () => {
+  it("still renders the agent when audit logs and the model fail to load", async () => {
     mockGetAllEntities.mockImplementation(({ routeUrl }: { routeUrl: string }) =>
       routeUrl === "/agent-primitives/5"
         ? Promise.resolve({ data: agent })
-        : Promise.reject(new Error("users down")),
+        : Promise.reject(new Error("unexpected request")),
     );
     auditHandler = () => Promise.reject(new Error("audit down"));
     mockGetEntityById.mockRejectedValue(new Error("model down"));
@@ -121,11 +126,8 @@ describe("AgentDetail", () => {
   });
 
   it("fetches only the linked model and labels it provider · model", async () => {
-    mockGetAllEntities.mockImplementation(({ routeUrl }: { routeUrl: string }) =>
-      Promise.resolve({
-        data: routeUrl === "/agent-primitives/5" ? agent : [{ id: 1, name: "Ada", surname: "L" }],
-      }),
-    );
+    mockUsers = [{ id: 1, name: "Ada", surname: "L", email: "ada@example.com" }];
+    mockGetAllEntities.mockResolvedValue({ data: agent });
     mockGetEntityById.mockResolvedValue({ data: { id: 9, provider: "OpenAI", model: "gpt-4o" } });
     renderAt("5");
 
@@ -133,5 +135,18 @@ describe("AgentDetail", () => {
     expect(mockGetEntityById).toHaveBeenCalledWith({ routeUrl: "/modelInventory/9" });
     expect(mockGetAllEntities).not.toHaveBeenCalledWith({ routeUrl: "/modelInventory" });
     expect(screen.getAllByText("Ada L").length).toBeGreaterThan(0);
+  });
+
+  it("names every owner from the shared users list, without its own users request", async () => {
+    mockUsers = [{ id: 1, name: "Ada", surname: "L", email: "ada@example.com" }];
+    // User 7 is no longer in the organization: shown with the shared fallback.
+    mockGetAllEntities.mockResolvedValue({ data: { ...agent, owner_ids: [1, 7] } });
+    mockGetEntityById.mockResolvedValue({ data: { id: 9, provider: "OpenAI", model: "gpt-4o" } });
+    renderAt("5");
+
+    expect(await screen.findByText("Accountable owners")).toBeInTheDocument();
+    expect(screen.getAllByText("Ada L").length).toBeGreaterThan(0);
+    expect(screen.getByText("User #7")).toBeInTheDocument();
+    expect(mockGetAllEntities).not.toHaveBeenCalledWith({ routeUrl: "/users" });
   });
 });

@@ -21,7 +21,8 @@ import {
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
 import { getAgentLifecycle } from "../agentLifecycle";
-import { formatModelLabel, formatSourceLabel } from "../agentLabels";
+import { formatModelLabel, formatSourceLabel, getAgentOwnerIds } from "../agentLabels";
+import { useUserNames } from "../useUserNames";
 import { palette } from "../../../themes/palette";
 import LifecycleStepper from "./LifecycleStepper";
 import ActivityTimeline from "./ActivityTimeline";
@@ -69,10 +70,10 @@ export default function AgentDetail() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const agentId = parseAgentId(id);
+  const { usersMap, formatUser } = useUserNames();
 
   const [agent, setAgent] = useState<AgentPrimitiveRow | null>(null);
   const [auditLogs, setAuditLogs] = useState<AgentAuditLogEntry[]>([]);
-  const [usersMap, setUsersMap] = useState<Record<string, string>>({});
   const [linkedModelLabel, setLinkedModelLabel] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(agentId !== null);
   const [notFound, setNotFound] = useState(agentId === null);
@@ -88,12 +89,11 @@ export default function AgentDetail() {
     setIsLoading(true);
     setNotFound(false);
 
-    // Only the agent request decides "not found". Users and the audit trail are
-    // supporting data: when they fail the page still renders, just without names
-    // or activity.
-    const [agentResult, usersResult, auditResult] = await Promise.allSettled([
+    // Only the agent request decides "not found". The audit trail is supporting
+    // data: when it fails the page still renders, just without activity. User
+    // names come from the shared, cached users query (useUserNames).
+    const [agentResult, auditResult] = await Promise.allSettled([
       getAllEntities({ routeUrl: `/agent-primitives/${agentId}` }),
-      getAllEntities({ routeUrl: "/users" }),
       apiServices.get(`/agent-primitives/${agentId}/audit-logs`),
     ]);
 
@@ -110,15 +110,6 @@ export default function AgentDetail() {
       setIsLoading(false);
       return;
     }
-
-    const usersData =
-      usersResult.status === "fulfilled" && Array.isArray(usersResult.value?.data)
-        ? usersResult.value.data
-        : [];
-    const uMap: Record<string, string> = {};
-    usersData.forEach((u: { id: number; name: string; surname: string }) => {
-      uMap[String(u.id)] = `${u.name} ${u.surname}`.trim();
-    });
 
     const auditBody = auditResult.status === "fulfilled" ? (auditResult.value as any)?.data : null;
     const audit = auditBody?.data ?? auditBody ?? [];
@@ -137,7 +128,6 @@ export default function AgentDetail() {
     }
 
     setAgent(agentData);
-    setUsersMap(uMap);
     setAuditLogs(Array.isArray(audit) ? audit : []);
     setLinkedModelLabel(modelLabel);
     setIsLoading(false);
@@ -174,16 +164,11 @@ export default function AgentDetail() {
     );
   }
 
-  // Resolve all owners (fall back to the legacy single owner_id).
-  const ownerIdList =
-    agent.owner_ids && agent.owner_ids.length > 0
-      ? agent.owner_ids.map(String)
-      : agent.owner_id
-        ? [agent.owner_id]
-        : [];
-  const owners = ownerIdList.map((oid) => {
-    const name = usersMap[oid] || oid;
-    const [firstname, ...rest] = name.split(" ");
+  // Resolve all owners, primary first (falls back to the legacy single owner_id).
+  const owners = getAgentOwnerIds(agent).map((oid) => {
+    const name = formatUser(oid);
+    // Initials only from a real name; the "User #id" fallback has none.
+    const [firstname, ...rest] = (usersMap[oid] ?? "").split(" ");
     return { id: oid, name, firstname: firstname || "", lastname: rest.join(" ") };
   });
   const linkedModelName = agent.linked_model_inventory_id
@@ -192,7 +177,7 @@ export default function AgentDetail() {
   const lifecycle = getAgentLifecycle(
     agent,
     (iso) => formatUserDate(iso, { includeTime: true }),
-    usersMap,
+    formatUser,
   );
 
   return (
@@ -346,7 +331,7 @@ export default function AgentDetail() {
         {/* ── Activity / process ────────────────────────────────── */}
         <Box sx={sectionCardStyle}>
           <SectionTitle title="Activity" subtitle="Governance actions taken on this agent" />
-          <ActivityTimeline entries={auditLogs} usersMap={usersMap} />
+          <ActivityTimeline entries={auditLogs} formatUser={formatUser} />
         </Box>
       </Stack>
     </PageHeaderExtended>

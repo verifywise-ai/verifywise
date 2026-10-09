@@ -7,6 +7,9 @@
  * for backward compatibility. This junction table holds the full set of
  * accountable owners (including the primary), so an agent can have several
  * people responsible for it.
+ *
+ * Deleting a user removes their ownership rows (ON DELETE CASCADE); user
+ * deletion also moves agent_primitives.owner_id to the next remaining owner.
  */
 module.exports = {
   async up(queryInterface) {
@@ -16,7 +19,8 @@ module.exports = {
         organization_id INTEGER NOT NULL,
         agent_primitive_id INTEGER NOT NULL
           REFERENCES verifywise.agent_primitives(id) ON DELETE CASCADE,
-        user_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL
+          REFERENCES verifywise.users(id) ON DELETE CASCADE,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         UNIQUE (organization_id, agent_primitive_id, user_id)
       );
