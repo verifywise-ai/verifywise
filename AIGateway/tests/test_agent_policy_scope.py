@@ -115,3 +115,29 @@ async def test_scope_has_an_upper_bound(known_keys):
         await guardrails_router._validated_agent_keys(_request(), too_many)
     assert exc.value.status_code == 400
     known_keys.assert_not_awaited()
+
+
+def _policy_calls(path):
+    import ast
+
+    tree = ast.parse(open(path).read())
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and getattr(node.func, "id", None) in {
+            "scan_tool_input",
+            "check_require_approval",
+        }:
+            yield node
+
+
+@pytest.mark.parametrize("router", ["mcp_hook.py", "mcp_proxy.py"])
+def test_every_policy_check_passes_the_calling_agent_key(router):
+    """Both tool-call paths (native hook and MCP proxy) must pass the agent key,
+    or rules scoped to specific agents would silently not apply on that path."""
+    path = os.path.join(os.path.dirname(__file__), "..", "src", "routers", router)
+    calls = list(_policy_calls(path))
+    assert calls, f"{router} should run the policy checks"
+    for call in calls:
+        kwargs = {k.arg: k.value for k in call.keywords}
+        assert "agent_key_id" in kwargs, f"{router}:{call.lineno} omits agent_key_id"
+        value = kwargs["agent_key_id"]
+        assert not (isinstance(value, __import__("ast").Constant) and value.value is None)

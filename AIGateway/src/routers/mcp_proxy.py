@@ -19,6 +19,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 
 from config import settings
 from crud.mcp_approvals import create_approval_request, get_approval_status, get_approved_request, get_pending_request
+from crud.mcp_guardrails import get_mcp_guardrail_name
 from crud.mcp_tools import get_all_tools
 from services.mcp_audit_service import log_tool_call
 from services.mcp_guardrail_service import scan_tool_input, check_anomaly, CircuitBreaker
@@ -119,7 +120,13 @@ async def mcp_jsonrpc(request: Request):
         # the same agent run; may be None for clients that never sent the header.
         gateway_session_id = request.headers.get("mcp-session-id")
 
-        async def _audit(status: str, summary: str | None, is_error: bool):
+        async def _audit(
+            status: str,
+            summary: str | None,
+            is_error: bool,
+            matched_rule_id: int | None = None,
+            matched_rule_name: str | None = None,
+        ):
             await log_tool_call(
                 organization_id=org_id,
                 agent_key_id=agent_key["id"],
@@ -131,6 +138,8 @@ async def mcp_jsonrpc(request: Request):
                 is_error=is_error,
                 latency_ms=int((time.time() - start_time) * 1000),
                 session_id=gateway_session_id,
+                matched_rule_id=matched_rule_id,
+                matched_rule_name=matched_rule_name,
             )
 
         try:
@@ -173,10 +182,27 @@ async def mcp_jsonrpc(request: Request):
                         "expires_at": approval["expires_at"].isoformat() if hasattr(approval["expires_at"], "isoformat") else str(approval["expires_at"]),
                     }), status_code=200)
 
-            scan_result = await scan_tool_input(org_id, tool_name, arguments)
+            # Pass the calling agent key so rules scoped to specific agents apply
+            # here exactly as they do on the native hook path.
+            scan_result = await scan_tool_input(
+                org_id, tool_name, arguments, agent_key_id=agent_key["id"]
+            )
             if scan_result and scan_result.blocked:
                 reason = scan_result.block_reason or "policy violation"
-                await _audit("blocked", f"Guardrail: {reason}", False)
+                first = scan_result.detections[0] if scan_result.detections else None
+                matched_rule_id = getattr(first, "guardrail_id", None) if first else None
+                matched_rule_name = (
+                    await get_mcp_guardrail_name(org_id, matched_rule_id)
+                    if matched_rule_id
+                    else None
+                )
+                await _audit(
+                    "blocked",
+                    f"Guardrail: {reason}",
+                    False,
+                    matched_rule_id=matched_rule_id,
+                    matched_rule_name=matched_rule_name,
+                )
                 return JSONResponse(content=_jsonrpc_error(msg_id, -32003, f"Blocked by guardrail: {reason}"), status_code=200)
 
             server_id = tool["server_id"]

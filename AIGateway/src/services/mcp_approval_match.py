@@ -61,7 +61,12 @@ def _matches(config: dict, text_in: str) -> bool:
 
 
 async def check_require_approval(
-    org_id: int, tool_name: str, arguments: dict, agent_key_id: Optional[int] = None
+    org_id: int,
+    tool_name: str,
+    arguments: dict,
+    *,
+    # Required, so no caller can forget it (see scan_tool_input).
+    agent_key_id: Optional[int],
 ) -> Optional[dict]:
     """Return the first active require_approval rule matching the command, else None.
 

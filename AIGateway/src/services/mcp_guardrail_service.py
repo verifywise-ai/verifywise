@@ -58,7 +58,10 @@ async def scan_tool_input(
     tool_name: str,
     arguments: dict,
     field_aware: bool = False,
-    agent_key_id: Optional[int] = None,
+    *,
+    # Required, so no caller can forget it: a call without the agent key would
+    # silently skip every rule scoped to specific agents.
+    agent_key_id: Optional[int],
 ) -> ScanResult:
     """
     Scan MCP tool call arguments through org guardrail rules.
