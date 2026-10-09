@@ -24,10 +24,11 @@ vi.mock("../../../../../application/repository/entity.repository", () => ({
   getAllEntities: vi.fn().mockResolvedValue({ data: [] }),
   getEntityById: vi.fn().mockResolvedValue({ data: null }),
 }));
-// Review, link and edit actions are Admin only; tests default to an admin.
-const adminState = vi.hoisted(() => ({ isAdmin: true }));
-vi.mock("../../../../../application/hooks/useIsAdmin", () => ({
-  useIsAdmin: () => adminState.isAdmin,
+// Review, link and edit actions need the agentDiscovery.admin permission;
+// tests default to granting it.
+const permissionState = vi.hoisted(() => ({ canManage: true }));
+vi.mock("../../../../../application/hooks/useMyPermissions", () => ({
+  useHasPermission: (key: string) => key === "agentDiscovery.admin" && permissionState.canManage,
 }));
 vi.mock("../../../../../infrastructure/api/networkServices", () => ({
   apiServices: {
@@ -347,7 +348,7 @@ describe("ReviewAgentModal", () => {
   });
 
   it("shows a read-only view to a user who may not change agents", () => {
-    adminState.isAdmin = false;
+    permissionState.canManage = false;
     try {
       renderWithProviders(
         <ReviewAgentModal
@@ -364,7 +365,7 @@ describe("ReviewAgentModal", () => {
       expect(screen.queryByText("Edit")).not.toBeInTheDocument();
       expect(screen.getByText("Not linked")).toBeInTheDocument();
     } finally {
-      adminState.isAdmin = true;
+      permissionState.canManage = true;
     }
   });
 

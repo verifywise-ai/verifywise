@@ -205,6 +205,21 @@ describe("createAgentPrimitive owners", () => {
     expect(mockUsersInOrg).not.toHaveBeenCalled();
   });
 
+  it("trims a text owner_id before storing it", async () => {
+    const res = createRes();
+    await createAgentPrimitive(createReq({ body: { ...body, owner_id: "  Data team \n" } }), res);
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(mockCreate.mock.calls[0][0]).toEqual(expect.objectContaining({ owner_id: "Data team" }));
+  });
+
+  it("treats a whitespace-only owner_id as no owner", async () => {
+    const res = createRes();
+    await createAgentPrimitive(createReq({ body: { ...body, owner_id: "   " } }), res);
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(mockCreate.mock.calls[0][0].owner_id).toBeUndefined();
+    expect(mockSetOwners).not.toHaveBeenCalled();
+  });
+
   it("stores a numeric legacy owner_id as the single owner", async () => {
     const res = createRes();
     await createAgentPrimitive(createReq({ body: { ...body, owner_id: "2" } }), res);
@@ -281,7 +296,7 @@ describe("updateAgentPrimitive owners", () => {
     expect(mockUsersInOrg).toHaveBeenCalledWith([3], ORG_ID, expect.anything());
     expect(mockSetOwners).toHaveBeenCalledWith(10, [4, 2, 3], ORG_ID, expect.anything());
     expect(auditRows().owner_ids).toEqual(
-      expect.objectContaining({ old_value: "4,2", new_value: "4,2,3" }),
+      expect.objectContaining({ old_value: '["4","2"]', new_value: '["4","2","3"]' }),
     );
     expect(mockCommit).toHaveBeenCalled();
   });
@@ -318,7 +333,11 @@ describe("updateAgentPrimitive owners", () => {
     );
     expect(mockAudit).toHaveBeenCalledTimes(1);
     expect(auditRows().owner_ids).toEqual(
-      expect.objectContaining({ action: "field_updated", old_value: "1,2", new_value: "3,2" }),
+      expect.objectContaining({
+        action: "field_updated",
+        old_value: '["1","2"]',
+        new_value: '["3","2"]',
+      }),
     );
     mockAudit.mock.calls.forEach((c: any[]) => expect(c[2]).toBe(tx));
     expect(mockCommit).toHaveBeenCalled();
@@ -357,7 +376,7 @@ describe("updateAgentPrimitive owners", () => {
     expect(mockSetOwners).toHaveBeenCalledWith(10, [1, 2], ORG_ID, expect.anything());
     expect(mockUpdate.mock.calls[0][1]).toEqual(expect.objectContaining({ owner_id: "1" }));
     expect(auditRows().owner_ids).toEqual(
-      expect.objectContaining({ old_value: "1", new_value: "1,2" }),
+      expect.objectContaining({ old_value: '["1"]', new_value: '["1","2"]' }),
     );
     expect(auditRows().owner_id).toBeUndefined();
   });
@@ -399,7 +418,7 @@ describe("updateAgentPrimitive owners", () => {
     expect(mockSetOwners).toHaveBeenCalledWith(10, [3, 2], ORG_ID, expect.anything());
     expect(mockUpdate.mock.calls[0][1]).toEqual(expect.objectContaining({ owner_id: "3" }));
     expect(auditRows().owner_ids).toEqual(
-      expect.objectContaining({ old_value: "1,2,3", new_value: "3,2" }),
+      expect.objectContaining({ old_value: '["1","2","3"]', new_value: '["3","2"]' }),
     );
   });
 
@@ -412,7 +431,7 @@ describe("updateAgentPrimitive owners", () => {
     expect(mockSetOwners).toHaveBeenCalledWith(10, [2], ORG_ID, expect.anything());
     expect(mockUpdate.mock.calls[0][1]).toEqual(expect.objectContaining({ owner_id: "2" }));
     expect(auditRows().owner_ids).toEqual(
-      expect.objectContaining({ old_value: "Data platform team", new_value: "2" }),
+      expect.objectContaining({ old_value: '["Data platform team"]', new_value: '["2"]' }),
     );
   });
 
@@ -426,7 +445,7 @@ describe("updateAgentPrimitive owners", () => {
     expect(mockUpdate.mock.calls[0][1]).toEqual(expect.objectContaining({ owner_id: "2" }));
     expect(mockSetOwners).toHaveBeenCalledWith(10, [2, 3], ORG_ID, expect.anything());
     expect(auditRows().owner_ids).toEqual(
-      expect.objectContaining({ old_value: "1,2,3", new_value: "2,3" }),
+      expect.objectContaining({ old_value: '["1","2","3"]', new_value: '["2","3"]' }),
     );
   });
 
@@ -451,7 +470,40 @@ describe("updateAgentPrimitive owners", () => {
     expect(mockSetOwners).toHaveBeenCalledWith(10, [], ORG_ID, expect.anything());
     expect(mockUsersInOrg).not.toHaveBeenCalled();
     expect(auditRows().owner_ids).toEqual(
-      expect.objectContaining({ old_value: "1,2", new_value: "alice@example.com" }),
+      expect.objectContaining({ old_value: '["1","2"]', new_value: '["alice@example.com"]' }),
+    );
+  });
+
+  it("trims a text owner_id and keeps an owner with a comma as one owner in the audit", async () => {
+    givenAgent({ owner_id: "1" });
+    mockGetOwners.mockResolvedValue([1]);
+    const res = createRes();
+    await updateAgentPrimitive(req({ owner_id: "  Doe, Jane  " }), res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(mockUpdate.mock.calls[0][1]).toEqual(expect.objectContaining({ owner_id: "Doe, Jane" }));
+    expect(auditRows().owner_ids).toEqual(
+      expect.objectContaining({ old_value: '["1"]', new_value: '["Doe, Jane"]' }),
+    );
+    expect(JSON.parse(auditRows().owner_ids.new_value)).toEqual(["Doe, Jane"]);
+  });
+
+  it("treats a whitespace-only owner_id like an empty one and removes the primary", async () => {
+    givenAgent({ owner_id: "1" });
+    mockGetOwners.mockResolvedValue([1, 2]);
+    const res = createRes();
+    await updateAgentPrimitive(req({ owner_id: "   " }), res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(mockUpdate.mock.calls[0][1]).toEqual(expect.objectContaining({ owner_id: "2" }));
+    expect(mockSetOwners).toHaveBeenCalledWith(10, [2], ORG_ID, expect.anything());
+  });
+
+  it("records an owner set that becomes empty as null in the audit", async () => {
+    givenAgent({ owner_id: "1" });
+    mockGetOwners.mockResolvedValue([1]);
+    const res = createRes();
+    await updateAgentPrimitive(req({ owner_ids: [] }), res);
+    expect(auditRows().owner_ids).toEqual(
+      expect.objectContaining({ old_value: '["1"]', new_value: null }),
     );
   });
 

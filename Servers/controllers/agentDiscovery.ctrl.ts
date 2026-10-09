@@ -74,8 +74,10 @@ type OwnerChange =
  */
 function parseOwnerChange(
   ownerIds: unknown,
-  ownerId: unknown,
+  rawOwnerId: unknown,
 ): OwnerChange | undefined | { error: string } {
+  // Free text is stored trimmed; whitespace-only counts as blank, like "".
+  const ownerId = typeof rawOwnerId === "string" ? rawOwnerId.trim() : rawOwnerId;
   const ownerIdSent = ownerId !== undefined && ownerId !== null && ownerId !== "";
   if (ownerIds !== undefined) {
     if (ownerIds !== null && !Array.isArray(ownerIds)) {
@@ -138,6 +140,15 @@ function effectiveOwners(
   if (!agent.owner_id) return [];
   if (agent.is_manual && isUserIdLike(agent.owner_id)) return [];
   return [agent.owner_id];
+}
+
+/**
+ * An owner set as stored in the audit log: a JSON array of strings (user ids
+ * and source or free-text owners), or null when there are none. JSON rather
+ * than a comma-joined list, so an owner like "Doe, Jane" stays one owner.
+ */
+function ownerAuditValue(owners: string[]): string | null {
+  return owners.length > 0 ? JSON.stringify(owners) : null;
 }
 
 /** True when every id in `ownerIds` belongs to a user of the organization. */
@@ -446,8 +457,9 @@ export async function updateAgentPrimitive(req: Request, res: Response) {
         { field: "primitive_type", oldVal: existing.primitive_type, newVal: primitive_type },
         {
           field: "owner_ids",
-          oldVal: previousShown.join(",") || null,
-          newVal: ownerSetChanged ? newShown.join(",") || null : undefined,
+          // A JSON array, so a text owner containing a comma stays one owner.
+          oldVal: ownerAuditValue(previousShown),
+          newVal: ownerSetChanged ? ownerAuditValue(newShown) : undefined,
         },
         {
           field: "owner_id",

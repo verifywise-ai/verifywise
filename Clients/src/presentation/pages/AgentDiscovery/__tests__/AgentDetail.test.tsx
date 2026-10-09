@@ -22,10 +22,10 @@ vi.mock("../../../../application/tools/log.engine", () => ({
 
 // Users come from the shared, cached users hook rather than a page fetch.
 let mockUsers: { id: number; name: string; surname: string; email: string }[] = [];
-// Edit is Admin only; tests default to an admin.
-const adminState = vi.hoisted(() => ({ isAdmin: true }));
-vi.mock("../../../../application/hooks/useIsAdmin", () => ({
-  useIsAdmin: () => adminState.isAdmin,
+// Edit needs the agentDiscovery.admin permission; tests default to granting it.
+const permissionState = vi.hoisted(() => ({ canManage: true }));
+vi.mock("../../../../application/hooks/useMyPermissions", () => ({
+  useHasPermission: (key: string) => key === "agentDiscovery.admin" && permissionState.canManage,
 }));
 // refreshUsers is stable across renders, like the real hook's.
 const mockRefreshUsers = vi.hoisted(() => vi.fn(async () => {}));
@@ -116,7 +116,7 @@ const auditCalls = () =>
 
 beforeEach(() => {
   vi.clearAllMocks();
-  adminState.isAdmin = true;
+  permissionState.canManage = true;
   mockUsers = [];
   auditHandler = () => Promise.resolve({ data: { data: [] } });
   mockApiGet.mockImplementation((url: string) =>
@@ -188,7 +188,8 @@ describe("AgentDetail", () => {
     });
     renderAt("5");
 
-    expect(await screen.findByText("alice@contoso.com")).toBeInTheDocument();
+    // Shown under Owners and, by the same owner rule, on the lifecycle's Added step.
+    expect((await screen.findAllByText("alice@contoso.com")).length).toBe(2);
     expect(screen.queryByText(/User #/)).not.toBeInTheDocument();
     expect(screen.getByText("A")).toBeInTheDocument();
   });
@@ -218,6 +219,36 @@ describe("AgentDetail", () => {
     expect(screen.queryByText("Review status changed to confirmed")).not.toBeInTheDocument();
   });
 
+  it("keeps a text owner with a comma as one owner in the activity", async () => {
+    mockUsers = [{ id: 3, name: "Ada", surname: "L", email: "ada@example.com" }];
+    serve(agent);
+    const ownerChange = (id: number, oldValue: string, newValue: string) => ({
+      id,
+      agent_primitive_id: 5,
+      action: "field_updated",
+      field_changed: "owner_ids",
+      old_value: oldValue,
+      new_value: newValue,
+      performed_by: null,
+      created_at: "2026-10-02T00:00:00Z",
+    });
+    auditHandler = () =>
+      Promise.resolve({
+        data: {
+          data: [
+            // Current format: a JSON array.
+            ownerChange(1, '["3"]', '["Doe, Jane"]'),
+            // Legacy format: a comma-joined list.
+            ownerChange(2, "3", "3,4"),
+          ],
+        },
+      });
+    renderAt("5");
+
+    expect(await screen.findByText('Updated owners: "Ada L" → "Doe, Jane"')).toBeInTheDocument();
+    expect(screen.getByText('Updated owners: "Ada L" → "Ada L, User #4"')).toBeInTheDocument();
+  });
+
   it("offers Review and Edit for a manual agent, and opens each", async () => {
     serve(agent);
     renderAt("5");
@@ -230,7 +261,7 @@ describe("AgentDetail", () => {
   });
 
   it("offers only Review on a manual agent to a user who may not change agents", async () => {
-    adminState.isAdmin = false;
+    permissionState.canManage = false;
     serve(agent);
     renderAt("5");
 

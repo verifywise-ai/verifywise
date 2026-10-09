@@ -36,7 +36,7 @@ import { CustomizableButton } from "../../components/button/customizable-button"
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { useExtensions } from "../../../application/contexts/Extensions.context";
 import Chip from "../../components/Chip";
-import { formatSourceLabel, getReviewStatusDisplay } from "./agentLabels";
+import { getAgentSourceLabel, getReviewStatusDisplay } from "./agentLabels";
 import TablePaginationActions from "../../components/TablePagination";
 import { singleTheme } from "../../themes";
 import {
@@ -337,9 +337,7 @@ const AgentTable: React.FC<AgentTableProps> = ({
                 ) : (
                   <Plug size={14} strokeWidth={1.5} color={palette.text.icon} />
                 )}
-                <span>
-                  {agent.is_manual ? "Manually entered" : formatSourceLabel(agent.source_system)}
-                </span>
+                <span>{getAgentSourceLabel(agent)}</span>
               </Stack>
             </TableCell>
           )}
@@ -399,7 +397,8 @@ const AgentTable: React.FC<AgentTableProps> = ({
           {isColVisible("actions") && (
             <TableCell sx={{ ...cellStyle, width: 40 }} onClick={(e) => e.stopPropagation()}>
               {/* Review for every agent; Edit only for manual agents (synced
-                  agents are read-only); Edit and Delete only for admins. */}
+                  agents are read-only); Edit and Delete only with the
+                  agentDiscovery.admin permission (Admins by default). */}
               <IconButton
                 id={agent.id}
                 onView={() => onReview(agent)}

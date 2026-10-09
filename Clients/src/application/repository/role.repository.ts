@@ -45,3 +45,19 @@ export async function deleteRole({ id }: { id: number }): Promise<any> {
   const response = await apiServices.delete(`/roles/${id}`);
   return response;
 }
+
+/**
+ * The current user's effective permission keys (e.g. "agentDiscovery.admin"):
+ * their role's built-in grants, or a custom role's granted permissions.
+ */
+export async function getMyPermissions({
+  signal,
+}: {
+  signal?: AbortSignal;
+} = {}): Promise<string[]> {
+  const response = await apiServices.get<{ data: string[] }>("/roles/my-permissions", {
+    signal,
+  });
+  const permissions = response.data?.data;
+  return Array.isArray(permissions) ? permissions : [];
+}

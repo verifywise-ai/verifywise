@@ -9,7 +9,7 @@ import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import LinkModelModal from "./LinkModelModal";
 import Alert from "../../Alert";
 import { getClientErrorReason } from "../../../../application/utils/apiErrorReason";
-import { useIsAdmin } from "../../../../application/hooks/useIsAdmin";
+import { useHasPermission } from "../../../../application/hooks/useMyPermissions";
 import {
   formatSourceLabel,
   getAgentOwnerIds,
@@ -38,9 +38,9 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
-  // Review, link, unlink and edit are Admin only on the server; other roles
-  // get a read-only view.
-  const canManage = useIsAdmin();
+  // Review, link, unlink and edit need the agentDiscovery.admin permission
+  // (Admins by default) on the server; everyone else gets a read-only view.
+  const canManage = useHasPermission("agentDiscovery.admin");
 
   useEffect(() => {
     setActionError(null);

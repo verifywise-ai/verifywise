@@ -22,7 +22,7 @@ import { formatSourceLabel, getAgentOwnerIds } from "../agentLabels";
 import { useUserNames } from "../useUserNames";
 import { useLinkedModelLabel } from "../useLinkedModelLabel";
 import ReviewAgentModal from "../../../components/Modals/AgentDiscovery/ReviewAgentModal";
-import { useIsAdmin } from "../../../../application/hooks/useIsAdmin";
+import { useHasPermission } from "../../../../application/hooks/useMyPermissions";
 import ManualAgentModal from "../../../components/Modals/AgentDiscovery/ManualAgentModal";
 import { palette } from "../../../themes/palette";
 import LifecycleStepper from "./LifecycleStepper";
@@ -68,7 +68,7 @@ function parseAgentId(id: string | undefined): number | null {
 export default function AgentDetail() {
   const navigate = useNavigate();
   const formatUserDate = useFormattedDate();
-  const isAdmin = useIsAdmin();
+  const canManage = useHasPermission("agentDiscovery.admin");
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const agentId = parseAgentId(id);
@@ -212,8 +212,9 @@ export default function AgentDetail() {
       actionButton={
         <Stack direction="row" gap="8px">
           {/* Edit only for manually added agents (synced agents are read-only),
-              and only for admins, who alone may change agents. */}
-          {isAdmin && agent.is_manual && (
+              and only with the agentDiscovery.admin permission (Admins by
+              default), which changing an agent needs. */}
+          {canManage && agent.is_manual && (
             <CustomizableButton
               variant="outlined"
               text="Edit"

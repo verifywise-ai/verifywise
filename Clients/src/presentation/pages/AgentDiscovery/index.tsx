@@ -20,8 +20,8 @@ import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/us
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { AgentPrimitiveRow } from "src/domain/interfaces/i.agentDiscovery";
 import AgentTable from "./AgentTable";
-import { getReviewStatusDisplay } from "./agentLabels";
-import { useIsAdmin } from "../../../application/hooks/useIsAdmin";
+import { getAgentSourceLabel, getReviewStatusDisplay, getSourceFilterOptions } from "./agentLabels";
+import { useHasPermission } from "../../../application/hooks/useMyPermissions";
 import { palette } from "../../themes/palette";
 
 import Alert from "../../components/Alert";
@@ -36,8 +36,9 @@ interface AgentStats {
 
 const AgentDiscovery: React.FC = () => {
   const navigate = useNavigate();
-  // Deleting an agent is admin-only on the server (agentDiscovery.admin).
-  const isAdmin = useIsAdmin();
+  // Changing agents (sync, add, edit, review, delete) needs the
+  // agentDiscovery.admin permission (Admins by default).
+  const canManage = useHasPermission("agentDiscovery.admin");
   const [agents, setAgents] = useState<AgentPrimitiveRow[]>([]);
   const [stats, setStats] = useState<AgentStats>({
     total: 0,
@@ -138,15 +139,8 @@ const AgentDiscovery: React.FC = () => {
   }, [fetchAgents, fetchStats]);
 
   // FilterBy - Dynamic options from current data
-  const getUniqueSources = useCallback(() => {
-    const sources = new Set<string>();
-    agents.forEach((agent) => {
-      if (agent.source_system) sources.add(agent.source_system);
-    });
-    return Array.from(sources)
-      .sort()
-      .map((s) => ({ value: s, label: s }));
-  }, [agents]);
+  // Raw source keys as values, the Source column's labels as labels.
+  const getUniqueSources = useCallback(() => getSourceFilterOptions(agents), [agents]);
 
   const getUniqueTypes = useCallback(() => {
     const types = new Set<string>();
@@ -261,7 +255,8 @@ const AgentDiscovery: React.FC = () => {
       case "review_status":
         return getReviewStatusDisplay(agent.review_status).label;
       case "source_system":
-        return agent.source_system || "Unknown";
+        // The Source column's label, not the raw key.
+        return getAgentSourceLabel(agent);
       case "primitive_type":
         return agent.primitive_type || "Unknown";
       case "is_stale":
@@ -437,8 +432,9 @@ const AgentDiscovery: React.FC = () => {
               />
             </Stack>
             <Stack direction="row" gap="8px" alignItems="center">
-              {/* Sync and Add agent change data: Admin only on the server. */}
-              {isAdmin && (
+              {/* Sync and Add agent change data: they need the agentDiscovery.admin
+                  permission (Admins by default). */}
+              {canManage && (
                 <>
                   <CustomizableButton
                     sx={syncButton}
@@ -481,7 +477,7 @@ const AgentDiscovery: React.FC = () => {
             onReview={handleReviewAgent}
             onEdit={handleEditAgent}
             onDelete={handleDeleteAgent}
-            canManage={isAdmin}
+            canManage={canManage}
             onSync={handleSync}
             onAddAgent={() => setIsManualModalOpen(true)}
             isSyncing={isSyncing}

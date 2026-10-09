@@ -1,4 +1,11 @@
-import { formatUserName, getAgentOwnerIds, getAvatarName } from "../agentLabels";
+import {
+  formatUserName,
+  getAgentOwnerIds,
+  getAgentSourceLabel,
+  getAvatarName,
+  getSourceFilterOptions,
+  parseOwnerAuditValue,
+} from "../agentLabels";
 
 const usersMap = { "1": "Ada Lovelace" };
 const t = (key: string) => key;
@@ -62,5 +69,66 @@ describe("getAgentOwnerIds", () => {
 
   it("returns no owners when there are none", () => {
     expect(getAgentOwnerIds({ owner_id: null, is_manual: true })).toEqual([]);
+  });
+});
+
+describe("parseOwnerAuditValue", () => {
+  it("reads an owner_ids JSON array, keeping an owner with a comma whole", () => {
+    expect(parseOwnerAuditValue('["3","Doe, Jane"]', "owner_ids")).toEqual(["3", "Doe, Jane"]);
+  });
+
+  it("reads numbers in a JSON array as ids", () => {
+    expect(parseOwnerAuditValue("[3, 4]", "owner_ids")).toEqual(["3", "4"]);
+  });
+
+  it("splits a legacy comma-joined owner_ids value", () => {
+    expect(parseOwnerAuditValue("1, 2,3", "owner_ids")).toEqual(["1", "2", "3"]);
+  });
+
+  it("falls back to the comma split when a value starting with [ is not JSON", () => {
+    expect(parseOwnerAuditValue("[team], ops", "owner_ids")).toEqual(["[team]", "ops"]);
+  });
+
+  it("reads an owner_id value as one owner, never splitting it", () => {
+    expect(parseOwnerAuditValue("Doe, Jane", "owner_id")).toEqual(["Doe, Jane"]);
+  });
+
+  it("gives no owners for an empty value", () => {
+    expect(parseOwnerAuditValue(null, "owner_ids")).toEqual([]);
+    expect(parseOwnerAuditValue("  ", "owner_id")).toEqual([]);
+    expect(parseOwnerAuditValue("[]", "owner_ids")).toEqual([]);
+  });
+});
+
+describe("getAgentSourceLabel", () => {
+  it("labels a manual agent Manually entered, like the Source column", () => {
+    expect(getAgentSourceLabel({ is_manual: true, source_system: "manual" })).toBe(
+      "Manually entered",
+    );
+  });
+
+  it("uses the source's display name for a synced agent", () => {
+    expect(getAgentSourceLabel({ is_manual: false, source_system: "azure-ai-foundry" })).toBe(
+      "Azure AI Foundry",
+    );
+    expect(getAgentSourceLabel({ is_manual: false, source_system: "aws_bedrock" })).toBe(
+      "Aws Bedrock",
+    );
+  });
+});
+
+describe("getSourceFilterOptions", () => {
+  it("keeps raw keys as values and uses the column labels, once per source", () => {
+    expect(
+      getSourceFilterOptions([
+        { is_manual: true, source_system: "manual" },
+        { is_manual: false, source_system: "azure-ai-foundry" },
+        { is_manual: false, source_system: "azure-ai-foundry" },
+        { is_manual: false, source_system: "" },
+      ]),
+    ).toEqual([
+      { value: "azure-ai-foundry", label: "Azure AI Foundry" },
+      { value: "manual", label: "Manually entered" },
+    ]);
   });
 });

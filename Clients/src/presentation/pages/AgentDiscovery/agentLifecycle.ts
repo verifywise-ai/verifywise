@@ -1,4 +1,5 @@
 import { AgentPrimitiveRow } from "src/domain/interfaces/i.agentDiscovery";
+import { getAgentOwnerIds } from "./agentLabels";
 
 /**
  * The visual lifecycle of an agent, derived entirely from existing data
@@ -40,7 +41,8 @@ export function getAgentLifecycle(
 ): LifecycleStep[] {
   const status = agent.review_status;
 
-  const addedOwner = agent.is_manual ? resolveUser(agent.owner_id, formatUser) : null;
+  // Same owner rule as the Owners card: the primary of getAgentOwnerIds, or none.
+  const addedOwner = resolveUser(getAgentOwnerIds(agent)[0], formatUser);
   const reviewer = resolveUser(agent.reviewed_by, formatUser);
   const reviewedAt = agent.reviewed_at ? formatDateTime(agent.reviewed_at) : null;
   const addedAt = agent.created_at ? formatDateTime(agent.created_at) : null;

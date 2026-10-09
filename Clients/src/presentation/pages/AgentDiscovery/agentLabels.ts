@@ -18,6 +18,35 @@ export function formatSourceLabel(sourceSystem: string): string {
     .join(" ");
 }
 
+/**
+ * The Source column label of an agent: "Manually entered" for a manual agent,
+ * else its source's display name. Shared by the column, the group-by headers
+ * and the Source filter so all three read the same. Rendered as plain text, so
+ * the DOM translator translates "Manually entered" like the rest of the table.
+ */
+export function getAgentSourceLabel(agent: { is_manual: boolean; source_system: string }): string {
+  if (agent.is_manual) return "Manually entered";
+  return agent.source_system ? formatSourceLabel(agent.source_system) : "Unknown";
+}
+
+/**
+ * Source filter options for the agents shown: the value is the raw source key
+ * (what the filter matches), the label is the Source column's.
+ */
+export function getSourceFilterOptions(
+  agents: { is_manual: boolean; source_system: string }[],
+): { value: string; label: string }[] {
+  const sources = new Map<string, string>();
+  agents.forEach((agent) => {
+    if (agent.source_system && !sources.has(agent.source_system)) {
+      sources.set(agent.source_system, getAgentSourceLabel(agent));
+    }
+  });
+  return Array.from(sources, ([value, label]) => ({ value, label })).sort((a, b) =>
+    a.label.localeCompare(b.label),
+  );
+}
+
 /** The subset of a model inventory row needed to label it. */
 export interface ModelLabelSource {
   id: number | string;
@@ -65,6 +94,38 @@ export function getReviewStatusDisplay(status: string | null | undefined): {
 }
 
 // ── Owners and user names ────────────────────────────────────────────────────
+
+/**
+ * The owners recorded in an owner audit value, in order. `owner_ids` values
+ * are a JSON array (e.g. `["3","Doe, Jane"]`); rows written before that are a
+ * comma-joined list, split as before. An `owner_id` value is always one owner,
+ * so a text owner containing a comma is never split.
+ */
+export function parseOwnerAuditValue(
+  value: string | null | undefined,
+  field: "owner_id" | "owner_ids",
+): string[] {
+  const raw = (value ?? "").trim();
+  if (raw === "") return [];
+  if (field === "owner_id") return [raw];
+  if (raw.startsWith("[")) {
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .filter((v) => v !== null && v !== undefined)
+          .map((v) => String(v).trim())
+          .filter((v) => v !== "");
+      }
+    } catch {
+      // Not JSON after all: fall through to the legacy comma split.
+    }
+  }
+  return raw
+    .split(",")
+    .map((v) => v.trim())
+    .filter((v) => v !== "");
+}
 
 /**
  * An agent's owners, primary first. The owner set (`owner_ids`) is the source

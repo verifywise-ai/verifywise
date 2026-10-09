@@ -5,7 +5,7 @@ import { AgentAuditLogEntry } from "src/domain/interfaces/i.agentDiscovery";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
 import { fill } from "../../../../i18n/fill";
-import { getReviewStatusDisplay } from "../agentLabels";
+import { getReviewStatusDisplay, parseOwnerAuditValue } from "../agentLabels";
 import { palette } from "../../../themes/palette";
 
 interface ActivityTimelineProps {
@@ -99,19 +99,17 @@ const FIELD_UPDATE_TEXT: Record<string, { change: string; plain: string }> = {
   metadata: { change: 'Updated details: "{from}" → "{to}"', plain: "Updated details" },
 };
 
-// Fields whose values are user ids (one, or a comma-separated list).
+// Fields whose values are owners: one (owner_id) or a list (owner_ids).
 const OWNER_FIELDS = new Set(["owner_id", "owner_ids"]);
 
-/** Resolve a comma-separated list of user ids to names. */
+/** Resolve an owner audit value (see parseOwnerAuditValue) to names. */
 function formatOwners(
   value: string | null | undefined,
+  field: "owner_id" | "owner_ids",
   formatUser: (userId: number | string) => string,
   t: (key: string) => string,
 ): string {
-  const ids = (value ?? "")
-    .split(",")
-    .map((v) => v.trim())
-    .filter((v) => v !== "");
+  const ids = parseOwnerAuditValue(value, field);
   if (ids.length === 0) return t("None");
   return ids.map((uid) => formatUser(uid)).join(", ");
 }
@@ -142,10 +140,11 @@ function describeAction(
       };
       const field = fieldKey.replace(/_/g, " ") || "field";
       if (OWNER_FIELDS.has(fieldKey)) {
+        const ownerField = fieldKey as "owner_id" | "owner_ids";
         return fill(t(text.change), {
           field,
-          from: formatOwners(entry.old_value, formatUser, t),
-          to: formatOwners(entry.new_value, formatUser, t),
+          from: formatOwners(entry.old_value, ownerField, formatUser, t),
+          to: formatOwners(entry.new_value, ownerField, formatUser, t),
         });
       }
       if (entry.old_value != null && entry.new_value != null) {
