@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getApiErrorReason, getClientErrorReason } from "../apiErrorReason";
+import { getApiErrorReason, getClientErrorReason, isClientError } from "../apiErrorReason";
 import CustomException from "../../../infrastructure/exceptions/customeException";
 
 describe("getApiErrorReason", () => {
@@ -26,32 +26,74 @@ describe("getApiErrorReason", () => {
   });
 });
 
+/**
+ * Builds the exception the way networkServices.handleError does: the message
+ * is the reason it extracted from the envelope (or the HTTP status phrase, or
+ * axios' own message when there is no body).
+ */
+const apiError = (message: string, status: number | undefined, body?: unknown) =>
+  new CustomException(message, status, body);
+
 describe("getClientErrorReason", () => {
-  it("returns the server's reason for a 4xx", () => {
-    const error = new CustomException("LLM key not found", 400, {
-      message: "Bad Request",
-      data: "LLM key not found",
-    });
-    expect(getClientErrorReason(error)).toBe("LLM key not found");
+  it("returns the reason handleError extracted for a 4xx", () => {
+    // STATUS_CODE[400]("msg")
+    expect(
+      getClientErrorReason(
+        apiError("LLM key not found", 400, { message: "Bad Request", data: "LLM key not found" }),
+      ),
+    ).toBe("LLM key not found");
+    // STATUS_CODE[404]({ message })
+    expect(
+      getClientErrorReason(
+        apiError("Intake form not found", 404, {
+          message: "Not Found",
+          data: { message: "Intake form not found" },
+        }),
+      ),
+    ).toBe("Intake form not found");
+    // legacy { error }
+    expect(getClientErrorReason(apiError("Slug taken", 409, { error: "Slug taken" }))).toBe(
+      "Slug taken",
+    );
+  });
+
+  it.each([
+    ["Bad Request", 400],
+    ["Not Found", 404],
+    ["Payload Too Large", 413],
+    ["Too Many Requests", 429],
+    ["Request failed with status code 422", 422],
+    ["", 400],
+    ["   ", 400],
+  ])("is null when the message is only generic (%p)", (message, status) => {
+    expect(getClientErrorReason(apiError(message, status, { message }))).toBeNull();
   });
 
   it("never returns the text of a 5xx", () => {
-    const error = new CustomException("relation does not exist", 500, {
-      message: "Internal Server Error",
-      error: "relation does not exist",
-    });
-    expect(getClientErrorReason(error)).toBeNull();
-  });
-
-  it("is null without a status or a string reason", () => {
-    expect(
-      getClientErrorReason(new CustomException("Network Error", undefined, undefined)),
-    ).toBeNull();
     expect(
       getClientErrorReason(
-        new CustomException("Not Found", 404, { message: "Not Found", data: { message: "x" } }),
+        apiError("relation does not exist", 500, {
+          message: "Internal Server Error",
+          error: "relation does not exist",
+        }),
       ),
     ).toBeNull();
+  });
+
+  it("is null for a network error or anything that is not an API error", () => {
+    expect(getClientErrorReason(apiError("Network Error", undefined))).toBeNull();
     expect(getClientErrorReason(new Error("boom"))).toBeNull();
+    expect(getClientErrorReason({ status: 400, message: "not a CustomException" })).toBeNull();
+    expect(getClientErrorReason(null)).toBeNull();
+  });
+});
+
+describe("isClientError", () => {
+  it("is true only for an API error with a 4xx status", () => {
+    expect(isClientError(apiError("x", 400))).toBe(true);
+    expect(isClientError(apiError("x", 499))).toBe(true);
+    expect(isClientError(apiError("x", 500))).toBe(false);
+    expect(isClientError(apiError("x", undefined))).toBe(false);
+    expect(isClientError(new Error("x"))).toBe(false);
   });
 });
