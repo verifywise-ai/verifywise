@@ -1,12 +1,9 @@
 import { useState } from "react";
 import { Box, Typography, useTheme } from "@mui/material";
 import { PanelRightOpen, ShieldCheck } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 import { CustomizableButton } from "../../components/button/customizable-button";
-import { getEuAiActQuestionnaire } from "../../../application/repository/euAiActClassification.repository";
+import { useEuAiActQuestionnaire } from "../../../application/hooks/useEuAiActQuestionnaire";
 import { EuAiActQuestionnaireDrawer } from "./EuAiActQuestionnaireDrawer";
-
-const EU_AI_ACT_QUESTIONNAIRE_QUERY_KEY = ["eu-ai-act-questionnaire"] as const;
 
 /**
  * Read-only preview of the EU AI Act risk step in the builder canvas. The step
@@ -17,12 +14,12 @@ const EU_AI_ACT_QUESTIONNAIRE_QUERY_KEY = ["eu-ai-act-questionnaire"] as const;
 export function EuAiActStepCard() {
   const theme = useTheme();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: EU_AI_ACT_QUESTIONNAIRE_QUERY_KEY,
-    queryFn: getEuAiActQuestionnaire,
-    staleTime: 5 * 60 * 1000,
-  });
+  const { data, isFetching, isError, refetch } = useEuAiActQuestionnaire();
   const questions = data?.questions ?? [];
+  // React Query v5 keeps isError set while a retry runs and after a failed
+  // background refetch, so loading and error only show when there is no data.
+  const showLoading = isFetching && !data;
+  const showError = isError && !data && !isFetching;
 
   return (
     <Box
@@ -46,12 +43,12 @@ export function EuAiActStepCard() {
           <Typography sx={{ fontSize: "12px", color: theme.palette.text.secondary, mt: "2px" }}>
             Submitters answer these questions first. The result is shown only to reviewers.
           </Typography>
-          {isLoading && (
+          {showLoading && (
             <Typography sx={{ fontSize: "12px", color: theme.palette.text.accent, mt: "4px" }}>
               Loading questions...
             </Typography>
           )}
-          {isError && (
+          {showError && (
             <Typography sx={{ fontSize: "12px", color: theme.palette.text.accent, mt: "4px" }}>
               The questions could not be loaded.
             </Typography>
@@ -76,8 +73,9 @@ export function EuAiActStepCard() {
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         questionnaire={data}
-        isLoading={isLoading}
-        isError={isError}
+        isLoading={showLoading}
+        isError={showError}
+        isRetryDisabled={isFetching}
         onRetry={() => void refetch()}
       />
     </Box>

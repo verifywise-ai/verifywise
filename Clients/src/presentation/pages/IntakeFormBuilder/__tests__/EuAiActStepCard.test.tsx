@@ -1,7 +1,9 @@
-import { screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { act, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import { FormCanvas } from "../FormCanvas";
 import type { Questionnaire } from "../../../../domain/types/euAiActClassification";
+import { EU_AI_ACT_QUESTIONNAIRE_QUERY_KEY } from "../../../../application/hooks/useEuAiActQuestionnaire";
 
 const QUESTIONNAIRE: Questionnaire = {
   version: 1,
@@ -60,7 +62,7 @@ vi.mock("../../../../application/repository/euAiActClassification.repository", (
   getEuAiActQuestionnaire: () => mockGetQuestionnaire(),
 }));
 
-const renderCanvas = (euAiActRiskStepEnabled: boolean) =>
+const renderCanvas = (euAiActRiskStepEnabled: boolean, queryClient?: QueryClient) =>
   renderWithProviders(
     <FormCanvas
       fields={[]}
@@ -74,6 +76,7 @@ const renderCanvas = (euAiActRiskStepEnabled: boolean) =>
       formDescription=""
       euAiActRiskStepEnabled={euAiActRiskStepEnabled}
     />,
+    { queryClient },
   );
 
 describe("EU AI Act step card in the builder canvas", () => {
@@ -166,5 +169,54 @@ describe("EU AI Act step card in the builder canvas", () => {
     mockGetQuestionnaire.mockResolvedValue(QUESTIONNAIRE);
     fireEvent.click(within(drawer).getByRole("button", { name: "Try again" }));
     expect(await within(drawer).findByText("What is your role?")).toBeInTheDocument();
+  });
+
+  it("shows loading instead of the error while a retry runs", async () => {
+    mockGetQuestionnaire.mockRejectedValue(new Error("network"));
+    renderCanvas(true);
+    await screen.findByText("The questions could not be loaded.");
+    fireEvent.click(screen.getByRole("button", { name: "View questions" }));
+    const drawer = await screen.findByRole("dialog");
+
+    let resolveRetry: (q: Questionnaire) => void = () => {};
+    mockGetQuestionnaire.mockReturnValue(
+      new Promise<Questionnaire>((resolve) => {
+        resolveRetry = resolve;
+      }),
+    );
+    fireEvent.click(within(drawer).getByRole("button", { name: "Try again" }));
+
+    expect(await within(drawer).findByText("Loading questions...")).toBeInTheDocument();
+    expect(
+      within(drawer).queryByText("The questions could not be loaded."),
+    ).not.toBeInTheDocument();
+    expect(within(drawer).queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
+    expect(screen.queryByText("The questions could not be loaded.")).not.toBeInTheDocument();
+
+    await act(async () => resolveRetry(QUESTIONNAIRE));
+    expect(await within(drawer).findByText("What is your role?")).toBeInTheDocument();
+    expect(within(drawer).queryByText("Loading questions...")).not.toBeInTheDocument();
+  });
+
+  it("keeps showing cached questions when a refetch fails", async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData(EU_AI_ACT_QUESTIONNAIRE_QUERY_KEY, QUESTIONNAIRE);
+    mockGetQuestionnaire.mockRejectedValue(new Error("network"));
+    renderCanvas(true, queryClient);
+    expect(screen.getByText(/\(5\)/)).toBeInTheDocument();
+
+    await act(async () => {
+      await queryClient.refetchQueries({ queryKey: EU_AI_ACT_QUESTIONNAIRE_QUERY_KEY });
+    });
+    expect(queryClient.getQueryState(EU_AI_ACT_QUESTIONNAIRE_QUERY_KEY)?.status).toBe("error");
+    expect(screen.queryByText("The questions could not be loaded.")).not.toBeInTheDocument();
+    expect(screen.getByText(/\(5\)/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "View questions" }));
+    const drawer = await screen.findByRole("dialog");
+    expect(
+      within(drawer).queryByText("The questions could not be loaded."),
+    ).not.toBeInTheDocument();
+    expect(within(drawer).getAllByTestId("eu-ai-act-step-question")).toHaveLength(5);
   });
 });

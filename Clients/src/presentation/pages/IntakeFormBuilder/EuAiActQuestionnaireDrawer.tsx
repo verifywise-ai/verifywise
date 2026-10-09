@@ -147,6 +147,8 @@ interface EuAiActQuestionnaireDrawerProps {
   questionnaire: Questionnaire | undefined;
   isLoading: boolean;
   isError: boolean;
+  /** True while a fetch is in flight, so "Try again" cannot start another. */
+  isRetryDisabled?: boolean;
   onRetry: () => void;
 }
 
@@ -160,6 +162,7 @@ export function EuAiActQuestionnaireDrawer({
   questionnaire,
   isLoading,
   isError,
+  isRetryDisabled = false,
   onRetry,
 }: EuAiActQuestionnaireDrawerProps) {
   const theme = useTheme();
@@ -235,7 +238,13 @@ export function EuAiActQuestionnaireDrawer({
             <Typography sx={{ fontSize: "12px", color: theme.palette.text.accent }}>
               The questions could not be loaded.
             </Typography>
-            <CustomizableButton variant="text" size="small" text="Try again" onClick={onRetry} />
+            <CustomizableButton
+              variant="text"
+              size="small"
+              text="Try again"
+              onClick={onRetry}
+              isDisabled={isRetryDisabled}
+            />
           </Stack>
         )}
         {questionnaire && (

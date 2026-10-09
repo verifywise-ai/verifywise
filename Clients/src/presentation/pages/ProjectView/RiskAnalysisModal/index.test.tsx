@@ -176,6 +176,22 @@ describe("RiskAnalysisModal", () => {
     expect(screen.queryByText("Outside the EU AI Act")).not.toBeInTheDocument();
   });
 
+  it("loads the questionnaire once and reuses it when reopened", async () => {
+    const props = {
+      setIsOpen: noop,
+      projectId: "12",
+      setAlert: vi.fn(),
+      updateClassification: vi.fn(),
+    };
+    const { rerender } = renderWithProviders(<RiskAnalysisModal isOpen={true} {...props} />);
+    await screen.findByLabelText("Research");
+    rerender(<RiskAnalysisModal isOpen={false} {...props} />);
+    rerender(<RiskAnalysisModal isOpen={true} {...props} />);
+    await screen.findByLabelText("Research");
+    await waitFor(() => expect(repo.getLatestUseCaseClassification).toHaveBeenCalledTimes(2));
+    expect(repo.getEuAiActQuestionnaire).toHaveBeenCalledTimes(1);
+  });
+
   it("shows an error when the questionnaire fails to load", async () => {
     repo.getEuAiActQuestionnaire.mockRejectedValue(new Error("boom"));
     renderModal();

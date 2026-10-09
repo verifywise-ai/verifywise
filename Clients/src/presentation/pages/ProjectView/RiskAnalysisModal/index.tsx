@@ -5,11 +5,11 @@ import StandardModal from "../../../components/Modals/StandardModal";
 import EuAiActQuestionnaire from "../../../components/EuAiActQuestionnaire";
 import Result from "./Result";
 import {
-  getEuAiActQuestionnaire,
   getLatestUseCaseClassification,
   saveUseCaseClassification,
   scoreEuAiActAnswers,
 } from "../../../../application/repository/euAiActClassification.repository";
+import { useFetchEuAiActQuestionnaire } from "../../../../application/hooks/useEuAiActQuestionnaire";
 import { pruneHiddenAnswers } from "../../../../application/utils/euAiActQuestionnaire";
 import CustomException from "../../../../infrastructure/exceptions/customeException";
 import type {
@@ -81,6 +81,7 @@ const RiskAnalysisModal: React.FC<RiskAnalysisModalProps> = ({
   const [result, setResult] = useState<ClassificationResult | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const STORAGE_KEY = `riskAnalysis_v2_${projectId}`;
+  const fetchQuestionnaire = useFetchEuAiActQuestionnaire();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -91,7 +92,7 @@ const RiskAnalysisModal: React.FC<RiskAnalysisModalProps> = ({
     (async () => {
       try {
         const [definition, latest] = await Promise.all([
-          getEuAiActQuestionnaire(),
+          fetchQuestionnaire(),
           getLatestUseCaseClassification(numericProjectId),
         ]);
         if (cancelled) return;
@@ -112,7 +113,7 @@ const RiskAnalysisModal: React.FC<RiskAnalysisModalProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, numericProjectId, STORAGE_KEY]);
+  }, [isOpen, numericProjectId, STORAGE_KEY, fetchQuestionnaire]);
 
   const handleClose = useCallback(() => {
     setIsOpen(false);
