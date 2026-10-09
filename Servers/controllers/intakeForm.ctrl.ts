@@ -1404,8 +1404,6 @@ export async function approveSubmission(req: Request, res: Response) {
       entityId = createdProject.id!;
       if (classification) {
         await createEUFrameworkQuery(entityId, false, req.organizationId!, transaction);
-      }
-      if (classification) {
         await insertClassificationRunQuery(
           {
             useCaseId: entityId,
