@@ -22,7 +22,7 @@ import {
 } from "./style";
 import AutoCompleteField from "../../Inputs/Autocomplete";
 import { ApprovalWorkflowStepModel } from "../../../../domain/models/Common/approvalWorkflow/approvalWorkflowStepModel";
-import { entities, conditions } from "./arrays";
+import { entities, conditions, autoApproveRiskLevels } from "./arrays";
 import { ICreateApprovalWorkflowProps } from "src/domain/interfaces/i.approvalForkflow";
 import { getAllUsers } from "../../../../application/repository/user.repository";
 import { User } from "../../../../domain/types/User";
@@ -41,7 +41,7 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
 }) => {
   const theme = useTheme();
   const [stepErrors, setStepErrors] = useState<
-    Array<{ step_name?: string; approver?: string; conditions?: string }>
+    Array<{ step_name?: string; approver?: string; conditions?: string; sla_hours?: string }>
   >([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -59,6 +59,7 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
   const [stepsCount, setStepsCount] = useState(1);
   const [workflowTitle, setWorkflowTitle] = useState("");
   const [entity, setEntity] = useState(0);
+  const [autoApproveMaxRisk, setAutoApproveMaxRisk] = useState("");
   const [workflowSteps, setWorkflowSteps] = useState<ApprovalWorkflowStepModel[]>([]);
   const [users, setUsers] = useState<Array<{ _id: number; name: string; surname?: string }>>([]);
 
@@ -88,6 +89,9 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
     if (initialData && isEdit) {
       setWorkflowTitle(initialData.workflow_title || "");
       setEntity(initialData.entity);
+      setAutoApproveMaxRisk(
+        initialData.entity === 1 ? (initialData.auto_approve_max_risk ?? "") : "",
+      );
       if (initialData.steps && initialData.steps.length > 0) {
         // Steps are already ApprovalWorkflowStepModel instances, just use them directly
         setWorkflowSteps([...initialData.steps]);
@@ -104,6 +108,7 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
   const clearForm = () => {
     setWorkflowTitle("");
     setEntity(0);
+    setAutoApproveMaxRisk("");
     setWorkflowSteps([new ApprovalWorkflowStepModel()]);
     setStepsCount(1);
     resetErrors();
@@ -112,7 +117,7 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
 
   const clearStepFieldError = (
     stepIndex: number,
-    field: "step_name" | "approver" | "conditions",
+    field: "step_name" | "approver" | "conditions" | "sla_hours",
   ) => {
     setStepErrors((prev) => {
       const updated = [...prev];
@@ -131,9 +136,15 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
         step.requires_all_approvers === undefined || step.requires_all_approvers === null
           ? "Conditions are required."
           : undefined,
+      sla_hours:
+        step.sla_hours !== null &&
+        step.sla_hours !== undefined &&
+        (!Number.isInteger(step.sla_hours) || step.sla_hours <= 0)
+          ? "SLA must be a positive integer."
+          : undefined,
     }));
     setStepErrors(newStepErrors);
-    return !newStepErrors.some((e) => e.step_name || e.approver || e.conditions);
+    return !newStepErrors.some((e) => e.step_name || e.approver || e.conditions || e.sla_hours);
   };
 
   const handleSave = () => {
@@ -145,6 +156,7 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
       const formData = {
         workflow_title: workflowTitle.trim(),
         entity: entity,
+        auto_approve_max_risk: entity === 1 && autoApproveMaxRisk ? autoApproveMaxRisk : null,
         steps: workflowSteps.map(
           (step) =>
             new ApprovalWorkflowStepModel({
@@ -152,6 +164,8 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
               approver_ids: step.approver_ids || [],
               requires_all_approvers: step.requires_all_approvers ?? false,
               description: step.description?.trim() || "",
+              sla_hours: step.sla_hours ?? null,
+              escalation_user_id: step.escalation_user_id ?? null,
             }),
         ),
       };
@@ -213,10 +227,27 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
             onChange={(e: any) => {
               setEntity(e.target.value);
               clearFieldError("entity");
+              if (Number(e.target.value) !== 1) setAutoApproveMaxRisk("");
             }}
             placeholder="Select entity"
           />
         </Stack>
+        {entity === 1 && (
+          <Stack direction="row" spacing={6}>
+            <SelectComponent
+              items={autoApproveRiskLevels}
+              value={autoApproveMaxRisk}
+              sx={entitySelectStyle(theme)}
+              id="auto-approve-max-risk"
+              label="Auto-approve up to risk level"
+              isOptional
+              onChange={(e: any) => {
+                setAutoApproveMaxRisk(e.target.value);
+              }}
+              placeholder="Select risk level"
+            />
+          </Stack>
+        )}
         {workflowSteps.map((step, stepIndex) => (
           <Stack key={stepIndex} spacing={8}>
             {/* STEPS */}
@@ -313,6 +344,57 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
                           clearStepFieldError(stepIndex, "conditions");
                         }}
                         placeholder="Select conditions"
+                      />
+                    </Box>
+                  </Stack>
+                  <Stack direction="row" spacing={6}>
+                    <Field
+                      id={`sla_hours_${stepIndex}`}
+                      label="SLA (hours)"
+                      width="50%"
+                      type="number"
+                      isOptional
+                      error={stepErrors[stepIndex]?.sla_hours}
+                      sx={fieldStyle}
+                      placeholder="Enter hours"
+                      value={step.sla_hours ?? ""}
+                      onChange={(e) => {
+                        const newSteps = [...workflowSteps];
+                        newSteps[stepIndex].sla_hours =
+                          e.target.value === "" ? null : Number(e.target.value);
+                        setWorkflowSteps(newSteps);
+                        clearStepFieldError(stepIndex, "sla_hours");
+                      }}
+                    />
+                    <Box sx={{ width: "50%" }}>
+                      <AutoCompleteField
+                        id={`escalation-user-${stepIndex}`}
+                        label="Escalation user"
+                        isOptional
+                        placeholder="Select escalation user"
+                        value={users.find((u) => u._id === step.escalation_user_id) ?? null}
+                        options={users}
+                        onChange={(_event, newValue) => {
+                          const newSteps = [...workflowSteps];
+                          newSteps[stepIndex].escalation_user_id = newValue?._id ?? null;
+                          setWorkflowSteps(newSteps);
+                        }}
+                        getOptionLabel={(user) =>
+                          `${user.name}${user.surname ? ` ${user.surname}` : ""}`
+                        }
+                        renderOption={(props, option) => {
+                          const { key, ...otherProps } = props;
+                          return (
+                            <Box component="li" key={key} {...otherProps}>
+                              <Typography sx={{ fontSize: "13px", color: "#1c2130" }}>
+                                {option.name}
+                                {option.surname ? ` ${option.surname}` : ""}
+                              </Typography>
+                            </Box>
+                          );
+                        }}
+                        popupIcon={<ChevronDown size={20} />}
+                        sx={{ width: "100%" }}
                       />
                     </Box>
                   </Stack>

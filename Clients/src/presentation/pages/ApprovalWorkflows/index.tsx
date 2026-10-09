@@ -236,9 +236,12 @@ const ApprovalWorkflows: React.FC = () => {
     workflow_title: string;
     entity: number;
     steps: ApprovalWorkflowStepModel[];
+    auto_approve_max_risk: string | null;
   }) => {
     try {
       const entityType = getEntityType(formData.entity);
+      const autoApproveMaxRisk =
+        entityType === "use_case" ? (formData.auto_approve_max_risk ?? null) : null;
 
       if (selectWorkflow) {
         await updateApprovalWorkflow({
@@ -246,11 +249,14 @@ const ApprovalWorkflows: React.FC = () => {
           body: {
             workflow_title: formData.workflow_title,
             entity_type: entityType,
+            auto_approve_max_risk: autoApproveMaxRisk,
             steps: formData.steps.map((step) => ({
               step_name: step.step_name,
               description: step.description,
               approver_ids: step.approver_ids || [],
               requires_all_approvers: step.requires_all_approvers ?? false,
+              sla_hours: step.sla_hours ?? null,
+              escalation_user_id: step.escalation_user_id ?? null,
             })),
           },
         });
@@ -264,11 +270,14 @@ const ApprovalWorkflows: React.FC = () => {
           body: {
             workflow_title: formData.workflow_title,
             entity_type: entityType,
+            auto_approve_max_risk: autoApproveMaxRisk,
             steps: formData.steps.map((step) => ({
               step_name: step.step_name,
               description: step.description,
               approver_ids: step.approver_ids || [],
               requires_all_approvers: step.requires_all_approvers ?? false,
+              sla_hours: step.sla_hours ?? null,
+              escalation_user_id: step.escalation_user_id ?? null,
             })),
           },
         });
@@ -379,6 +388,7 @@ const ApprovalWorkflows: React.FC = () => {
                 workflow_title: selectWorkflow.workflow_title || "",
                 entity: selectWorkflow.entity ?? 0,
                 steps: selectWorkflow?.steps || [],
+                auto_approve_max_risk: selectWorkflow.auto_approve_max_risk ?? null,
               }
             : undefined
         }

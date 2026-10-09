@@ -9682,6 +9682,13 @@ export const translations: Record<string, Record<string, string>> = {
     "MCP server": "MCP-Server",
     "The MCP server source was not found next to the backend. It is included from MCPServer/ at build time.":
       "Die MCP-Server-Quelle wurde nicht neben dem Backend gefunden. Sie wird zur Build-Zeit aus MCPServer/ eingebunden.",
+    "SLA (hours)": "SLA (Stunden)",
+    "Enter hours": "Stunden eingeben",
+    "Escalation user": "Eskalationsbenutzer",
+    "Select escalation user": "Eskalationsbenutzer auswählen",
+    "Auto-approve up to risk level": "Automatisch genehmigen bis zur Risikostufe",
+    "Prohibited": "Verboten",
+    "Escalated": "Eskaliert",
   },
 
   fr: {
@@ -19288,6 +19295,13 @@ export const translations: Record<string, Record<string, string>> = {
     "MCP server": "Serveur MCP",
     "The MCP server source was not found next to the backend. It is included from MCPServer/ at build time.":
       "Les sources du serveur MCP n'ont pas été trouvées à côté du backend. Elles sont incluses depuis MCPServer/ au moment de la compilation.",
+    "SLA (hours)": "SLA (heures)",
+    "Enter hours": "Saisir les heures",
+    "Escalation user": "Utilisateur d'escalade",
+    "Select escalation user": "Sélectionner un utilisateur d'escalade",
+    "Auto-approve up to risk level": "Approuver automatiquement jusqu'au niveau de risque",
+    "Prohibited": "Interdit",
+    "Escalated": "Escaladé",
   },
   es: {
     "Deployment name": "Nombre del despliegue",
@@ -28815,5 +28829,12 @@ export const translations: Record<string, Record<string, string>> = {
     "MCP server": "Servidor MCP",
     "The MCP server source was not found next to the backend. It is included from MCPServer/ at build time.":
       "No se encontró el código fuente del servidor MCP junto al backend. Se incluye desde MCPServer/ en tiempo de compilación.",
+    "SLA (hours)": "SLA (horas)",
+    "Enter hours": "Introducir las horas",
+    "Escalation user": "Usuario de escalada",
+    "Select escalation user": "Seleccionar usuario de escalada",
+    "Auto-approve up to risk level": "Aprobación automática hasta el nivel de riesgo",
+    "Prohibited": "Prohibido",
+    "Escalated": "Escalada",
   },
 };

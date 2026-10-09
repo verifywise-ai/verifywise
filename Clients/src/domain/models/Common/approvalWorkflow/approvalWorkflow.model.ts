@@ -9,6 +9,7 @@ export class ApprovalWorkflowModel {
   entity_type?: string;
   steps?: ApprovalWorkflowStepModel[];
   approval_status!: ApprovalStatus;
+  auto_approve_max_risk?: string | null;
   date_updated?: Date;
   updated_at?: Date;
 
@@ -39,6 +40,7 @@ export class ApprovalWorkflowModel {
       this.steps = [];
     }
     this.approval_status = data.approval_status;
+    this.auto_approve_max_risk = data.auto_approve_max_risk ?? null;
     // Map updated_at/updatedAt to date_updated (backend uses camelCase from Sequelize)
     this.date_updated = data.date_updated || data.updated_at || data.updatedAt;
     this.updated_at = data.updated_at || data.updatedAt;
