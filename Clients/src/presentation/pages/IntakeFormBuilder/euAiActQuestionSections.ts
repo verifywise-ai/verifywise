@@ -37,12 +37,9 @@ export interface QuestionSection {
   questions: Question[];
 }
 
-const LISTED_IDS = new Set(EU_AI_ACT_QUESTION_SECTIONS.flatMap((s) => s.questionIds));
-
 function sectionIndexFor(questionId: string): number {
   const listed = EU_AI_ACT_QUESTION_SECTIONS.findIndex((s) => s.questionIds.includes(questionId));
   if (listed !== -1) return listed;
-  if (LISTED_IDS.has(questionId)) return -1;
   return EU_AI_ACT_QUESTION_SECTIONS.findIndex(
     (s) => s.idSuffix !== undefined && questionId.endsWith(s.idSuffix),
   );
