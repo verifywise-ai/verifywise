@@ -80,6 +80,10 @@ export const EU_AI_ACT_FRAMEWORK_ID = 1;
 const hasEuAiActFramework = (frameworkIds?: number[]): boolean =>
   frameworkIds === undefined || frameworkIds.includes(EU_AI_ACT_FRAMEWORK_ID);
 
+/** Why a project cannot carry an AI risk classification. */
+export type IneligibilityCode =
+  "ORGANIZATIONAL_PROJECT_AI_RISK_NOT_NULL" | "AI_RISK_WITHOUT_EU_AI_ACT";
+
 /**
  * Why a project cannot carry an AI risk classification, or null when it can:
  * organizational projects never carry one, and it only applies when the EU AI
@@ -88,7 +92,7 @@ const hasEuAiActFramework = (frameworkIds?: number[]): boolean =>
 export const aiRiskClassificationIneligibility = (
   isOrganizational?: boolean,
   frameworkIds?: number[],
-): "ORGANIZATIONAL_PROJECT_AI_RISK_NOT_NULL" | "AI_RISK_WITHOUT_EU_AI_ACT" | null => {
+): IneligibilityCode | null => {
   if (isOrganizational) return "ORGANIZATIONAL_PROJECT_AI_RISK_NOT_NULL";
   if (!hasEuAiActFramework(frameworkIds)) return "AI_RISK_WITHOUT_EU_AI_ACT";
   return null;
@@ -141,8 +145,9 @@ export const validateTypeOfHighRiskRole = (
   isOrganizational?: boolean,
   frameworkIds?: number[],
 ): ValidationResult => {
+  const ineligibility = aiRiskClassificationIneligibility(isOrganizational, frameworkIds);
   // For organizational projects, type_of_high_risk_role should be null
-  if (isOrganizational) {
+  if (ineligibility === "ORGANIZATIONAL_PROJECT_AI_RISK_NOT_NULL") {
     if (value !== null && value !== undefined) {
       return {
         isValid: false,
@@ -154,7 +159,7 @@ export const validateTypeOfHighRiskRole = (
   }
 
   // For non-organizational projects, high-risk role is only required when EU AI Act is selected
-  if (!hasEuAiActFramework(frameworkIds)) {
+  if (ineligibility === "AI_RISK_WITHOUT_EU_AI_ACT") {
     if (value !== null && value !== undefined && value !== "") {
       return {
         isValid: false,
