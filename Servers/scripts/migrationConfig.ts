@@ -311,6 +311,10 @@ export const FK_MAPPINGS: Record<string, Record<string, string>> = {
   ai_detection_findings: {
     scan_id: "ai_detection_scans",
   },
+  // llm_keys is migrated before intake_forms (both level 0, llm_keys listed first).
+  intake_forms: {
+    llm_key_id: "llm_keys",
+  },
   intake_submissions: {
     form_id: "intake_forms",
   },

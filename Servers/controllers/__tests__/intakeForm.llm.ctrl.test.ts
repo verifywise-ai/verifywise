@@ -47,6 +47,7 @@ import {
 } from "../../services/intakeLLM.service";
 import { NotFoundException } from "../../domain.layer/exceptions/custom.exception";
 import { sequelize } from "../../database/db";
+import { logFailure } from "../../utils/logger/logHelper";
 
 const mockExists = llmKeyExistsQuery as unknown as jest.Mock;
 const mockCreate = createIntakeFormQuery as unknown as jest.Mock;
@@ -124,6 +125,32 @@ describe("intake LLM endpoints", () => {
     expect(res.status).toHaveBeenCalledWith(500);
   });
 
+  it("suggested questions answers 400 when the key id is missing", async () => {
+    const res = createRes();
+    await getLLMSuggestedQuestions(req({}), res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json.mock.calls[0][0].data).toBe("LLM key ID is required");
+    expect(mockQuestions).not.toHaveBeenCalled();
+  });
+
+  it("field guidance answers 400 when the field label is missing", async () => {
+    const res = createRes();
+    await getFieldGuidance(req({ llmKeyId: 8 }), res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json.mock.calls[0][0].data).toBe("Field label and LLM key ID are required");
+    expect(mockGuidance).not.toHaveBeenCalled();
+  });
+
+  it("field guidance answers 500 when an unexpected error is thrown", async () => {
+    mockGuidance.mockRejectedValueOnce(new Error("boom") as never);
+    const res = createRes();
+    await getFieldGuidance(req({ fieldLabel: "Owner", llmKeyId: 8 }), res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+  });
+
   it("returns questions for a real key", async () => {
     mockQuestions.mockResolvedValueOnce([{ label: "Q" }] as never);
     const res = createRes();
@@ -165,7 +192,7 @@ describe("intake form writes validate llmKeyId", () => {
     const res = createRes();
     await createIntakeForm(req(body(8)), res);
 
-    expect(mockExists).toHaveBeenCalledWith(8, 1);
+    expect(mockExists).toHaveBeenCalledWith(8, 1, mockTx);
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json.mock.calls[0][0].data).toBe("LLM key not found");
     expect(mockCreate).not.toHaveBeenCalled();
@@ -221,5 +248,40 @@ describe("intake form writes validate llmKeyId", () => {
 
     expect(res.status).toHaveBeenCalledWith(200);
     expect((mockUpdate.mock.calls[0][1] as any).llmKeyId).toBe(3);
+  });
+
+  it("update checks the key inside the write transaction", async () => {
+    mockExists.mockResolvedValueOnce(true as never);
+    const res = createRes();
+    await updateIntakeForm(req(body(3), { id: "5" }), res);
+
+    expect(mockExists).toHaveBeenCalledWith(3, 1, mockTx);
+    expect(mockUpdate).toHaveBeenCalledWith(5, expect.anything(), 1, mockTx);
+  });
+
+  it("create logs and answers 500 when the write fails", async () => {
+    mockExists.mockResolvedValueOnce(true as never);
+    mockCreate.mockRejectedValueOnce(new Error("insert failed") as never);
+    const res = createRes();
+    await createIntakeForm(req(body(3)), res);
+
+    expect(mockTx.rollback).toHaveBeenCalled();
+    expect(logFailure).toHaveBeenCalledWith(
+      expect.objectContaining({ functionName: "createIntakeForm" }),
+    );
+    expect(res.status).toHaveBeenCalledWith(500);
+  });
+
+  it("update logs and answers 500 when the key check fails", async () => {
+    mockExists.mockRejectedValueOnce(new Error("lock timeout") as never);
+    const res = createRes();
+    await updateIntakeForm(req(body(3), { id: "5" }), res);
+
+    expect(mockTx.rollback).toHaveBeenCalled();
+    expect(logFailure).toHaveBeenCalledWith(
+      expect.objectContaining({ functionName: "updateIntakeForm" }),
+    );
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 });

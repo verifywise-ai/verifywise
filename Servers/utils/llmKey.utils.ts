@@ -33,6 +33,25 @@ export const getLLMKeysWithKeyQuery = async (organizationId: number) => {
   return result[0];
 };
 
+/**
+ * Gets one of the organization's LLM keys including the actual API key, or
+ * null when the organization has no key with this id.
+ * WARNING: This returns sensitive data - do not expose to API responses
+ */
+export const getLLMKeyWithKeyByIdQuery = async (
+  id: number,
+  organizationId: number,
+): Promise<LLMKeyModel | null> => {
+  const rows = (await sequelize.query(
+    `SELECT id, name, url, model, key, custom_headers, created_at FROM llm_keys WHERE organization_id = :organizationId AND id = :id LIMIT 1;`,
+    {
+      replacements: { organizationId, id },
+      type: QueryTypes.SELECT,
+    },
+  )) as LLMKeyModel[];
+  return rows[0] ?? null;
+};
+
 export const getLLMKeyQuery = async (organizationId: number, name: string) => {
   const result = (await sequelize.query(
     `SELECT id, name, url, model, custom_headers, created_at FROM llm_keys WHERE organization_id = :organizationId AND name = :name;`,
@@ -108,12 +127,23 @@ export const updateLLMKeyByIdQuery = async (
   return result[0];
 };
 
-export const llmKeyExistsQuery = async (id: number, organizationId: number): Promise<boolean> => {
+/**
+ * Whether the organization has an LLM key with this id. Inside a transaction
+ * the key row is locked (FOR KEY SHARE) until the transaction ends, so the
+ * key cannot be deleted between this check and a write that references it.
+ */
+export const llmKeyExistsQuery = async (
+  id: number,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<boolean> => {
+  const lock = transaction ? " FOR KEY SHARE" : "";
   const rows = await sequelize.query(
-    `SELECT id FROM llm_keys WHERE organization_id = :organizationId AND id = :id LIMIT 1;`,
+    `SELECT id FROM llm_keys WHERE organization_id = :organizationId AND id = :id LIMIT 1${lock};`,
     {
       replacements: { organizationId, id },
       type: QueryTypes.SELECT,
+      transaction,
     },
   );
   return rows.length > 0;

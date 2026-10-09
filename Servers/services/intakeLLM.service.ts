@@ -1,7 +1,7 @@
 import { generateText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
-import { getLLMKeysWithKeyQuery } from "../utils/llmKey.utils";
+import { getLLMKeyWithKeyByIdQuery } from "../utils/llmKey.utils";
 import { NotFoundException } from "../domain.layer/exceptions/custom.exception";
 import logger from "../utils/logger/fileLogger";
 
@@ -27,8 +27,7 @@ export interface SuggestedQuestion {
  * callers can tell a missing key apart from a failed generation.
  */
 async function getModelFromKey(llmKeyId: number, organizationId: number) {
-  const keys = await getLLMKeysWithKeyQuery(organizationId);
-  const llmKey = keys.find((k: any) => k.id === llmKeyId);
+  const llmKey = await getLLMKeyWithKeyByIdQuery(llmKeyId, organizationId);
 
   if (!llmKey) throw new NotFoundException("LLM key not found", "llm_key", llmKeyId);
 
