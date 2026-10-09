@@ -281,7 +281,7 @@ describe("approval with the EU AI Act step", () => {
     );
   });
 
-  it("attaches the EU AI Act framework when there is no run but the use case gets a level", async () => {
+  it("attaches no framework when there is no run, even if the use case gets a level", async () => {
     runs.getLatestRunForSubmissionQuery.mockResolvedValue(null);
     const r = await approve({
       confirmedEntityData: { project_title: "P", ai_risk_classification: "limited" },
@@ -290,13 +290,8 @@ describe("approval with the EU AI Act step", () => {
     expect(projects.createNewProjectQuery.mock.calls[0][0].ai_risk_classification).toBe(
       "Limited risk",
     );
-    expect(projects.createNewProjectQuery.mock.calls[0][2]).toEqual([1]);
-    expect(euFramework.createEUFrameworkQuery).toHaveBeenCalledWith(
-      50,
-      false,
-      5,
-      expect.anything(),
-    );
+    expect(projects.createNewProjectQuery.mock.calls[0][2]).toEqual([]);
+    expect(euFramework.createEUFrameworkQuery).not.toHaveBeenCalled();
     expect(runs.insertClassificationRunQuery).not.toHaveBeenCalled();
   });
 
@@ -363,6 +358,8 @@ describe("approval with the EU AI Act step", () => {
       ai_risk_classification: "High risk",
       type_of_high_risk_role: "Provider",
     });
+    expect(projects.createNewProjectQuery.mock.calls[0][2]).toEqual([]);
+    expect(euFramework.createEUFrameworkQuery).not.toHaveBeenCalled();
     expect(runs.insertClassificationRunQuery).not.toHaveBeenCalled();
     expect(history.recordMultipleFieldChanges).not.toHaveBeenCalled();
   });
@@ -475,9 +472,9 @@ describe("approval with the EU AI Act step", () => {
       },
     });
     expect(r.status).toHaveBeenCalledWith(200);
-    // The reviewer's level still carries the framework along.
-    expect(projects.createNewProjectQuery.mock.calls[0][2]).toEqual([1]);
-    expect(euFramework.createEUFrameworkQuery).toHaveBeenCalledTimes(1);
+    // No scorable run: the reviewer's level stays but no framework is attached.
+    expect(projects.createNewProjectQuery.mock.calls[0][2]).toEqual([]);
+    expect(euFramework.createEUFrameworkQuery).not.toHaveBeenCalled();
     expect(projects.createNewProjectQuery.mock.calls[0][0]).toMatchObject({
       ai_risk_classification: "High risk",
       type_of_high_risk_role: "Provider",
