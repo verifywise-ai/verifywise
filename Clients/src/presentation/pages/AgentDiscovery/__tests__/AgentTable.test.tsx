@@ -130,8 +130,8 @@ describe("AgentTable row actions", () => {
     expect(onReview).toHaveBeenCalledWith(agent);
   });
 
-  it("offers only Review to a user who may not change agents", () => {
+  it("offers only a read-only Details view to a user who may not change agents", () => {
     renderTable([row({ display_name: "Hand bot", is_manual: true })]);
-    expect(itemNames(openMenu("Hand bot"))).toEqual(["Review"]);
+    expect(itemNames(openMenu("Hand bot"))).toEqual(["Details"]);
   });
 });

@@ -506,7 +506,8 @@ describe("IconButton", () => {
 
     it("hides Edit when canEdit is false and Delete without canDelete", async () => {
       await renderWithMenuOpen({ type: "agent", onView: vi.fn(), canEdit: false });
-      expect(menuItemNames()).toEqual(["Review"]);
+      // Without permission to change agents the drawer is read-only.
+      expect(menuItemNames()).toEqual(["Details"]);
     });
 
     it("confirms a delete with Delete agent", async () => {

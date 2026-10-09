@@ -438,7 +438,9 @@ function IconButton({
         remove: "Delete",
       },
       agent: {
-        view: "Review",
+        // Only users who may change agents can act in the review drawer;
+        // for everyone else it is a read-only view.
+        view: canDelete ? "Review" : "Details",
         remove: "Delete",
       },
     };

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "@jest/globals";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const migration = require("../../database/migrations/20260723091704-create-agent-primitive-owners.js");
+const migration = require("../../database/migrations/20261009072856-create-agent-primitive-owners.js");
 
 /** Run the migration's up() against a fake queryInterface and return its SQL. */
 async function upSql(): Promise<string[]> {
