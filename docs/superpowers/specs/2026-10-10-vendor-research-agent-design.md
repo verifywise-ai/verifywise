@@ -84,10 +84,10 @@ Both tables are tenant-scoped (`organization_id NOT NULL … ON DELETE CASCADE`)
 | trigger_type | VARCHAR(10) | `auto` or `manual` |
 | status | VARCHAR(10) | `queued`, `running`, `completed`, `failed` |
 | categories | TEXT[] | categories executed |
-| category_summary | JSONB | per category: `{category, outcome, note}`; outcome is `findings`, `nothing_found` or `search_failed` |
+| category_summary | JSONB | per category: `{category, outcome, note}`; outcome is `findings`, `nothing_found`, `search_failed` or `skipped` |
 | evidence | JSONB | truncated evidence pack the model saw (audit trail), capped at 40 KB |
 | search_provider, model, prompt_version | VARCHAR | what produced the run |
-| searches_used, input_tokens, output_tokens, duplicates_dropped | INTEGER | cost and quality counters |
+| searches_used, duplicates_dropped | INTEGER | cost and quality counters (token counts are not stored: `generateObjectWithSelfCorrection` does not expose usage) |
 | error | TEXT | truncated to 500 characters when `failed` |
 | requested_by | INTEGER | FK users, `SET NULL`; null for auto runs |
 | created_at, started_at, finished_at | TIMESTAMPTZ | |
@@ -220,13 +220,13 @@ Accept opens a transaction, locks the finding `FOR UPDATE` (organisation and id)
 
 ## 12. Notification
 
-After an **auto** run completes with at least one finding, the vendor's assignee (when set) receives a `vendor_research_findings` in-app notification: "{N} potential risks found for {vendor}", linking to Vendors → Risks filtered to that vendor, with `metadata {run_id, vendor_id, count}`. Manual runs do not notify; the requester is looking at the result. A unique-violation on the partial index is treated as a suppressed duplicate, as the candidate notices do.
+After an **auto** run completes with at least one finding, the vendor's assignee (when set) receives a `vendor_research_findings` in-app notification: "{N} potential risks found for {vendor}", linking to `/vendors/risks?findingsVendorId={vendor id}` (the existing `vendorId` parameter on the Vendors page opens the vendor modal, so the findings section has its own parameter), with `metadata {run_id, vendor_id, count}`. Manual runs do not notify; the requester is looking at the result. A unique-violation on the partial index is treated as a suppressed duplicate, as the candidate notices do.
 
 ## 13. Frontend
 
-- **Findings section** (`pages/Vendors/VendorResearchFindings/`) above the insights on the Risks tab, open when there are pending findings. Header: vendor filter, pending count. Rows: vendor, category chip, risk text, severity and likelihood with the register's risk-level chip, confidence, and the sources (domain, date, quote; links are `http`/`https` only, opened with `rel="noopener noreferrer"`, quotes rendered as plain text). Actions **Accept** and **Dismiss**; dismiss opens a `StandardModal` with a reason select and optional note. Accept shows a toast with an "Open risk" link.
+- **Findings section** (`pages/Vendors/VendorResearchFindings/`) above the insights on the Risks tab, open when there are pending findings. Header: vendor filter (initialised from the `findingsVendorId` URL parameter when present), pending count. Rows: vendor, category chip, risk text, severity and likelihood with the register's risk-level chip, confidence, and the sources (domain, date, quote; links are `http`/`https` only, opened with `rel="noopener noreferrer"`, quotes rendered as plain text). Actions **Accept** and **Dismiss**; dismiss opens a `StandardModal` with a reason select and optional note. Accept shows a toast with an "Open risk" link.
 - **Run state:** when a vendor is selected the section shows the latest run's per-category outcomes ("Security incidents: nothing found") so users see the agent looked, and a **Research again** button. While a run is active the section polls for a bounded window, as the Linked risks tab does, and stops on completion.
-- **Vendors tab:** a "Research risks" item in the row actions menu starts a run.
+- **Vendors tab:** a "Research risks" icon button beside the existing row actions starts a run (the shared `IconButton` menu is left unchanged).
 - **States:** loading, empty, running, failed (with the stored error), and **not configured** (explains the environment variables; shown to everyone, with the setup hint only for Admins).
 - **Permissions:** Accept, Dismiss and Research are hidden for roles without the `risks.edit` permission (Reviewers and Auditors by default, custom roles as configured); those roles see the section read-only.
 - Hooks in `application/hooks/useVendorResearch.ts`, repository `application/repository/vendorResearch.repository.ts`, types in `domain/interfaces/i.vendorResearch.ts`. Accepting invalidates the vendor risks query and `VENDOR_INSIGHTS_KEY`.
@@ -244,7 +244,7 @@ After an **auto** run completes with at least one finding, the vendor's assignee
 
 ## 15. Cost
 
-Per run: at most four basic searches (4 credits; pay-as-you-go is $0.008 per credit, and the free tier is 1,000 credits a month, about 250 runs) plus one model call of roughly 7–10 thousand input tokens and under 2 thousand output tokens. These are estimates; `searches_used`, `input_tokens` and `output_tokens` on each run let us measure them.
+Per run: at most four basic searches (4 credits; pay-as-you-go is $0.008 per credit, and the free tier is 1,000 credits a month, about 250 runs) plus one model call of roughly 7–10 thousand input tokens and under 2 thousand output tokens. These are estimates; `searches_used` on each run measures the search side, and the model side is read from the provider's usage dashboard.
 
 ## 16. Testing
 
