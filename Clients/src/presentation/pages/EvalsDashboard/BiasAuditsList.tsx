@@ -33,7 +33,8 @@ import { PageHeader } from "../../components/Layout/PageHeader";
 import HelperIcon from "../../components/HelperIcon";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import NewBiasAuditModal from "./NewBiasAuditModal";
-import { getStatusChip, getModeChip, formatDate } from "./biasAuditHelpers";
+import { getStatusChip, getModeChip } from "./biasAuditHelpers";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import singleTheme from "../../themes/v1SingleTheme";
 import { palette } from "../../themes/palette";
 import {
@@ -98,6 +99,7 @@ function getSortValue(audit: BiasAuditSummary, key: string): string | number {
 
 export default function BiasAuditsList({ orgId, onViewAudit }: BiasAuditsListProps) {
   const theme = useTheme();
+  const formatDate = useFormattedDate();
   const [audits, setAudits] = useState<BiasAuditSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

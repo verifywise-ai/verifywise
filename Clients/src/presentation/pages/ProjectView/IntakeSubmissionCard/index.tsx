@@ -3,20 +3,23 @@ import { Box, Typography, Stack, Collapse, useTheme } from "@mui/material";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useEntityIntakeSubmission } from "../../../../application/hooks/useEntityIntakeSubmission";
 import type { IntakeSubmissionField } from "../../../../application/repository/intakeForm.repository";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 
 interface IntakeSubmissionCardProps {
   projectId: number;
 }
 
-function renderFieldValue(field: IntakeSubmissionField): string {
+function renderFieldValue(
+  field: IntakeSubmissionField,
+  formatDate: ReturnType<typeof useFormattedDate>,
+): string {
   const { value, type, options } = field;
   if (value === null || value === undefined || value === "") return "\u2014";
 
   if (type === "checkbox") return value ? "Yes" : "No";
 
   if (type === "date") {
-    return displayFormattedDate(value as string);
+    return formatDate(value as string);
   }
 
   if (type === "select" && options) {
@@ -33,6 +36,7 @@ function renderFieldValue(field: IntakeSubmissionField): string {
 
 function FieldRow({ field }: { field: IntakeSubmissionField }) {
   const theme = useTheme();
+  const formatDate = useFormattedDate();
 
   return (
     <Box
@@ -59,7 +63,7 @@ function FieldRow({ field }: { field: IntakeSubmissionField }) {
           wordBreak: "break-word",
         }}
       >
-        {renderFieldValue(field)}
+        {renderFieldValue(field, formatDate)}
       </Typography>
     </Box>
   );
@@ -67,6 +71,7 @@ function FieldRow({ field }: { field: IntakeSubmissionField }) {
 
 export default function IntakeSubmissionCard({ projectId }: IntakeSubmissionCardProps) {
   const theme = useTheme();
+  const formatDate = useFormattedDate();
   const { data: submission, isLoading } = useEntityIntakeSubmission("use_case", projectId);
   const [showAdditional, setShowAdditional] = useState(false);
 
@@ -111,7 +116,7 @@ export default function IntakeSubmissionCard({ projectId }: IntakeSubmissionCard
       {/* Meta line */}
       <Typography sx={{ fontSize: 12, color: theme.palette.text.accent, mb: 3 }}>
         {submission.formName}
-        {submission.submittedAt && <> &middot; {displayFormattedDate(submission.submittedAt)}</>}
+        {submission.submittedAt && <> &middot; {formatDate(submission.submittedAt)}</>}
         {(submission.submitterName || submission.submitterEmail) && (
           <> &middot; {submission.submitterName || submission.submitterEmail}</>
         )}

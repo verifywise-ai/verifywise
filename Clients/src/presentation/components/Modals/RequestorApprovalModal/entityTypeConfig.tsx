@@ -23,8 +23,6 @@ import {
   AlertTriangle,
   Wrench,
 } from "lucide-react";
-import { displayFormattedDate, displayFormattedDateTime } from "../../../tools/isoDateToString";
-
 // Supported entity types
 export type EntityTypeKey =
   | "use_case"
@@ -49,6 +47,7 @@ export interface DetailFieldConfig {
   label: string;
   icon: React.ReactNode;
   format?: (value: any) => string;
+  dateStyle?: "date" | "datetime";
 }
 
 // Entity type configuration
@@ -59,9 +58,6 @@ export interface EntityTypeConfig {
   fields: DetailFieldConfig[];
 }
 
-// Format helpers
-const formatDate = (value: any) => displayFormattedDateTime(value);
-const formatDateOnly = (value: any) => displayFormattedDate(value);
 const formatFileSize = (value: any) => {
   if (!value) return "";
   const kb = value / 1024;
@@ -92,7 +88,7 @@ export const ENTITY_TYPE_CONFIGS: Record<EntityTypeKey, EntityTypeConfig> = {
         key: "startDate",
         label: "Start Date",
         icon: <Calendar size={14} />,
-        format: formatDateOnly,
+        dateStyle: "date",
       },
       { key: "projectDescription", label: "Description", icon: <FileText size={14} /> },
     ],
@@ -115,7 +111,7 @@ export const ENTITY_TYPE_CONFIGS: Record<EntityTypeKey, EntityTypeConfig> = {
         key: "fileUploadedTime",
         label: "Upload date",
         icon: <Calendar size={14} />,
-        format: formatDate,
+        dateStyle: "datetime",
       },
     ],
   },

@@ -11,7 +11,8 @@ import { useProfilePhotoFetch } from "../../../application/hooks/useProfilePhoto
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { brand } from "../../themes/palette";
-import { displayFormattedDate, displayFormattedTime } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import { displayFormattedTime } from "../../tools/isoDateToString";
 
 dayjs.extend(relativeTime);
 
@@ -28,7 +29,10 @@ interface HistorySidebarProps {
  * - Today/Yesterday with time for recent days
  * - Full date and time for older entries
  */
-const formatRelativeTime = (date: string | Date): string => {
+const formatRelativeTime = (
+  date: string | Date,
+  formatDate: ReturnType<typeof useFormattedDate>,
+): string => {
   const now = dayjs();
   const targetDate = dayjs(date);
 
@@ -63,10 +67,11 @@ const formatRelativeTime = (date: string | Date): string => {
   }
 
   // Older than yesterday - show full date and time
-  return `${displayFormattedDate(date)} at ${displayFormattedTime(date)}`;
+  return `${formatDate(date)} at ${displayFormattedTime(date)}`;
 };
 
 const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryId }) => {
+  const formatDate = useFormattedDate();
   const theme = useTheme();
   const { userId: currentUserId } = useAuth();
   const { data, isLoading } = useModelInventoryChangeHistory(modelInventoryId);
@@ -152,11 +157,11 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
           ? `${creationEntry.user_name} ${creationEntry.user_surname}`
           : creationEntry.user_email || "Unknown User";
 
-    const creationDate = displayFormattedDate(creationEntry.changed_at);
+    const creationDate = formatDate(creationEntry.changed_at);
     const creationTime = displayFormattedTime(creationEntry.changed_at);
 
     return { creatorName, creationDate, creationTime };
-  }, [creationEntry, currentUserId]);
+  }, [creationEntry, currentUserId, formatDate]);
 
   // Find the most recent update for fallback header
   const lastUpdateInfo = React.useMemo(() => {
@@ -168,11 +173,11 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
     );
     const lastEntry = sortedHistory[0];
 
-    const updateDate = displayFormattedDate(lastEntry.changed_at);
+    const updateDate = formatDate(lastEntry.changed_at);
     const updateTime = displayFormattedTime(lastEntry.changed_at);
 
     return { updateDate, updateTime };
-  }, [history]);
+  }, [history, formatDate]);
 
   const renderHistoryEntry = (group: ModelInventoryChangeHistoryEntry[]) => {
     const firstEntry = group[0];
@@ -185,7 +190,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
           ? `${firstEntry.user_name} ${firstEntry.user_surname}`
           : firstEntry.user_email || "Unknown User";
 
-    const relativeTime = formatRelativeTime(firstEntry.changed_at);
+    const relativeTime = formatRelativeTime(firstEntry.changed_at, formatDate);
 
     return (
       <Box
