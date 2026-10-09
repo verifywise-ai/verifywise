@@ -21,10 +21,9 @@ from fastapi.responses import JSONResponse
 
 from config import settings
 from crud.mcp_approvals import create_approval_request, get_active_request
-from crud.mcp_guardrails import get_mcp_guardrail_name
 from services.mcp_audit_service import log_tool_call, update_tool_result
 from services.mcp_approval_match import check_require_approval
-from services.mcp_guardrail_service import scan_tool_input, scan_result_blob
+from services.mcp_guardrail_service import blocking_rule, scan_tool_input, scan_result_blob
 from services.mcp_proxy_service import extract_agent_key, enforce_mcp_rate_limits
 from utils.mcp_arguments import hash_arguments
 from utils.notifications import notify_approval_pending
@@ -110,14 +109,9 @@ async def mcp_hook(request: Request):
             {"rule": d.guardrail_type, "action": d.action, "snippet": d.entity_type}
             for d in scan_result.detections
         ]
-        # Record which rule produced the deny (first detection wins) so the
-        # Activity log can show why this call was blocked.
-        first = scan_result.detections[0] if scan_result.detections else None
-        matched_rule_id = getattr(first, "guardrail_id", None) if first else None
-        # The rule's own name (what an admin configured), not the detected entity.
-        matched_rule_name = (
-            await get_mcp_guardrail_name(org_id, matched_rule_id) if matched_rule_id else None
-        )
+        # Record the rule that caused the deny (a mask hit counts here, since the
+        # hook escalates it) so the Activity log can show why the call stopped.
+        matched_rule_id, matched_rule_name = blocking_rule(scan_result, include_mask=True)
         await _audit(
             "blocked",
             f"Hook deny: {reason}",

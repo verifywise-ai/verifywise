@@ -180,8 +180,27 @@ async def scan_tool_input(
                     f"prompt_injection: {matched_patterns[0]} detected"
                 )
 
+    result.rule_names = {r["id"]: r["name"] for r in mcp_rules}
     result.execution_time_ms = int((time.time() - start_time) * 1000)
     return result
+
+
+def blocking_rule(
+    result: ScanResult, *, include_mask: bool = False
+) -> tuple[Optional[int], Optional[str]]:
+    """The id and name of the rule that caused a block.
+
+    That is the first detection whose action is "block" (the one block_reason
+    describes), not simply the first detection, which can be a non-blocking mask
+    hit. With include_mask (the hook path escalates a mask hit to a deny), a mask
+    detection counts when nothing blocked outright.
+    """
+    detection = next((d for d in result.detections if d.action == "block"), None)
+    if detection is None and include_mask:
+        detection = next((d for d in result.detections if d.action == "mask"), None)
+    if detection is None or detection.guardrail_id is None:
+        return None, None
+    return detection.guardrail_id, result.rule_names.get(detection.guardrail_id)
 
 
 async def scan_result_blob(org_id: int, blob: str) -> str:

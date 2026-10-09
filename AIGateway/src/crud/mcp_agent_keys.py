@@ -256,7 +256,26 @@ async def delete_agent_key(org_id: int, key_id: int) -> bool:
             """),
             {"org_id": org_id, "key_id": key_id},
         )
-        await db.commit()
         row = result.first()
+        if row is not None:
+            # Drop the deleted key from every rule scoped to it, in the same
+            # transaction. A rule left with no agents is switched off rather
+            # than silently becoming org-wide (an empty scope means every agent).
+            await db.execute(
+                text("""
+                    UPDATE ai_gateway_mcp_guardrail_rules
+                    SET applies_to_agent_keys = array_remove(applies_to_agent_keys, :key_id),
+                        is_active = CASE
+                            WHEN cardinality(array_remove(applies_to_agent_keys, :key_id)) = 0
+                            THEN false
+                            ELSE is_active
+                        END,
+                        updated_at = NOW()
+                    WHERE organization_id = :org_id
+                      AND :key_id = ANY(applies_to_agent_keys)
+                """),
+                {"org_id": org_id, "key_id": key_id},
+            )
+        await db.commit()
         return row is not None
     return False

@@ -54,6 +54,7 @@ const labelSx = {
   fontSize: 11,
   fontWeight: 600,
   letterSpacing: "0.04em",
+  textTransform: "uppercase" as const,
   color: palette.text.tertiary,
   mb: "6px",
 };
@@ -112,14 +113,25 @@ export default function AgentActivityDrawer({
 
   useEffect(() => {
     if (!open || !agentKeyId) return;
+    // Ignore a response that arrives after the drawer closed or switched agent.
+    let current = true;
     setData(null);
     setError(false);
     setLoading(true);
     apiServices
       .get<Record<string, any>>(`/ai-gateway/mcp/audit/agent/${agentKeyId}`)
-      .then((res) => setData(res?.data?.data || null))
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
+      .then((res) => {
+        if (current) setData(res?.data?.data || null);
+      })
+      .catch(() => {
+        if (current) setError(true);
+      })
+      .finally(() => {
+        if (current) setLoading(false);
+      });
+    return () => {
+      current = false;
+    };
   }, [open, agentKeyId]);
 
   const s = data?.summary;
@@ -134,7 +146,7 @@ export default function AgentActivityDrawer({
           </IconButton>
         </Stack>
         <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mb: "20px" }}>
-          {(agentKeyName || "This agent") + " · last 30 days"}
+          {fill(tr("{name} · last 30 days"), { name: agentKeyName || tr("This agent") })}
         </Typography>
 
         {loading ? (
@@ -159,7 +171,7 @@ export default function AgentActivityDrawer({
 
             {/* Per-tool breakdown */}
             <Box>
-              <Typography sx={labelSx}>TOOLS USED</Typography>
+              <Typography sx={labelSx}>Tools used</Typography>
               <Stack gap="6px">
                 {data!.by_tool.map((t) => (
                   <Stack
@@ -205,7 +217,7 @@ export default function AgentActivityDrawer({
 
             {/* Recent calls with provenance */}
             <Box>
-              <Typography sx={labelSx}>RECENT ACTIVITY</Typography>
+              <Typography sx={labelSx}>Recent activity</Typography>
               <Stack gap="6px">
                 {data!.recent.map((r) => {
                   const colors = MCP_STATUS_COLORS[r.result_status] || MCP_STATUS_FALLBACK;
@@ -250,7 +262,7 @@ export default function AgentActivityDrawer({
                               fontWeight: 600,
                             }}
                           >
-                            rule: {r.matched_rule_name}
+                            {fill(tr("Rule: {name}"), { name: r.matched_rule_name })}
                           </Typography>
                         )}
                       </Stack>

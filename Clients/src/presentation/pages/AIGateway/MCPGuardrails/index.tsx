@@ -161,8 +161,9 @@ export default function MCPGuardrailsPage() {
       applies_to_tools: Array.isArray(rule.applies_to_tools)
         ? rule.applies_to_tools.join(", ")
         : "",
+      // Drop keys that no longer exist, so a stale id can't block saving.
       applies_to_agent_keys: Array.isArray(rule.applies_to_agent_keys)
-        ? rule.applies_to_agent_keys
+        ? rule.applies_to_agent_keys.filter((id) => agentKeys.some((k) => k._id === id))
         : [],
       config: rule.config ? JSON.stringify(rule.config, null, 2) : "",
       is_active: rule.is_active ?? true,

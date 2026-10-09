@@ -56,8 +56,25 @@ async def test_agent_activity_binds_every_value(monkeypatch):
             "org_id",
             "akid",
             "days",
+            "circuit_breaker",
         }
-        assert params == {"org_id": 7, "akid": 3, "days": 30}
+        assert params == {
+            "org_id": 7,
+            "akid": 3,
+            "days": 30,
+            "circuit_breaker": audit_crud.CIRCUIT_BREAKER_SUMMARY,
+        }
+
+
+async def test_denied_counts_skip_circuit_breaker_outages(monkeypatch):
+    get_db, executed = _fake_db()
+    monkeypatch.setattr(audit_crud, "get_db", get_db)
+
+    await audit_crud.get_agent_activity(org_id=1, agent_key_id=1)
+
+    summary_sql, by_tool_sql = (str(stmt) for stmt, _ in executed[:2])
+    for sql in (summary_sql, by_tool_sql):
+        assert "result_summary IS DISTINCT FROM :circuit_breaker" in sql
 
 
 async def test_agent_activity_summary_defaults(monkeypatch):
@@ -141,3 +158,90 @@ def test_every_policy_check_passes_the_calling_agent_key(router):
         assert "agent_key_id" in kwargs, f"{router}:{call.lineno} omits agent_key_id"
         value = kwargs["agent_key_id"]
         assert not (isinstance(value, __import__("ast").Constant) and value.value is None)
+
+
+# --- Which rule caused a block -------------------------------------------------
+
+from services.guardrail_service import Detection, ScanResult
+from services.mcp_guardrail_service import blocking_rule
+
+
+def _detection(rule_id, action):
+    return Detection(
+        guardrail_id=rule_id,
+        guardrail_type="pii" if action == "mask" else "content_filter",
+        entity_type="X",
+        action=action,
+        matched_text="x",
+        start=0,
+        end=1,
+    )
+
+
+def test_blocking_rule_is_the_rule_that_blocked_not_the_first_detection():
+    result = ScanResult(
+        blocked=True,
+        detections=[_detection(1, "mask"), _detection(2, "block")],
+        rule_names={1: "Mask emails", 2: "Block secrets"},
+    )
+    assert blocking_rule(result) == (2, "Block secrets")
+
+
+def test_blocking_rule_counts_a_mask_hit_only_when_asked():
+    result = ScanResult(detections=[_detection(1, "mask")], rule_names={1: "Mask emails"})
+    assert blocking_rule(result) == (None, None)
+    assert blocking_rule(result, include_mask=True) == (1, "Mask emails")
+
+
+def test_blocking_rule_without_a_rule_id():
+    result = ScanResult(blocked=True, detections=[_detection(None, "block")])
+    assert blocking_rule(result) == (None, None)
+
+
+# --- Deleting an agent key cleans up rule scopes ------------------------------
+
+import crud.mcp_agent_keys as agent_keys_crud
+
+
+def _fake_delete_db(deleted: bool):
+    executed = []
+    db = MagicMock()
+
+    async def execute(stmt, params=None):
+        executed.append((str(stmt), params))
+        result = MagicMock()
+        result.first.return_value = (5,) if deleted else None
+        return result
+
+    db.execute = execute
+    db.commit = AsyncMock()
+
+    @asynccontextmanager
+    async def get_db():
+        yield db
+
+    return get_db, executed, db
+
+
+async def test_deleting_a_key_removes_it_from_rule_scopes(monkeypatch):
+    get_db, executed, db = _fake_delete_db(deleted=True)
+    monkeypatch.setattr(agent_keys_crud, "get_db", get_db)
+
+    assert await agent_keys_crud.delete_agent_key(org_id=2, key_id=5) is True
+
+    assert len(executed) == 2
+    cleanup_sql, params = executed[1]
+    assert "array_remove(applies_to_agent_keys, :key_id)" in cleanup_sql
+    # A rule left with no agents is switched off, not made org-wide.
+    assert "THEN false" in cleanup_sql
+    assert "organization_id = :org_id" in cleanup_sql
+    assert params == {"org_id": 2, "key_id": 5}
+    db.commit.assert_awaited_once()
+
+
+async def test_no_cleanup_when_nothing_was_deleted(monkeypatch):
+    get_db, executed, _ = _fake_delete_db(deleted=False)
+    monkeypatch.setattr(agent_keys_crud, "get_db", get_db)
+
+    assert await agent_keys_crud.delete_agent_key(org_id=2, key_id=5) is False
+    assert len(executed) == 1

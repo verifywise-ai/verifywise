@@ -73,6 +73,7 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
     fontWeight: 600,
     color: palette.text.tertiary,
     letterSpacing: "0.5px",
+    textTransform: "uppercase" as const,
     mb: "6px",
   };
   const codeBlockSx = {
@@ -155,8 +156,8 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
             >
               <Typography sx={labelSx}>
                 {row.result_status === "approval_required"
-                  ? "APPROVAL REQUIRED BY RULE"
-                  : "BLOCKED BY RULE"}
+                  ? "Approval required by rule"
+                  : "Blocked by rule"}
               </Typography>
               <Typography
                 sx={{ fontSize: 13, fontWeight: 600, color: palette.status.warning.text }}

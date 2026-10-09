@@ -3,6 +3,10 @@ from typing import Optional
 from sqlalchemy import text
 from database.db import get_db
 
+# The proxy logs an open circuit breaker as "blocked" with this summary. It is
+# an upstream outage, not a policy denial, so per-agent "denied" counts skip it.
+CIRCUIT_BREAKER_SUMMARY = "Circuit breaker open: upstream MCP server unavailable"
+
 
 async def get_audit_logs(
     org_id: int,
@@ -183,14 +187,22 @@ async def get_agent_activity(org_id: int, agent_key_id: int, days: int = 30) -> 
     """Everything one agent has been doing over the last N days: a summary
     (total calls, denials, approvals, avg latency, distinct tools) plus the tools
     it used and its most recent tool calls. Powers the per-agent activity view."""
-    params = {"org_id": org_id, "akid": agent_key_id, "days": int(days)}
+    params = {
+        "org_id": org_id,
+        "akid": agent_key_id,
+        "days": int(days),
+        "circuit_breaker": CIRCUIT_BREAKER_SUMMARY,
+    }
 
     async with get_db() as db:
         summary = (await db.execute(
             text("""
                 SELECT
                     COUNT(*) AS total_calls,
-                    COUNT(*) FILTER (WHERE result_status = 'blocked') AS denied,
+                    COUNT(*) FILTER (
+                        WHERE result_status = 'blocked'
+                          AND result_summary IS DISTINCT FROM :circuit_breaker
+                    ) AS denied,
                     COUNT(*) FILTER (WHERE result_status = 'approval_required') AS approvals,
                     COUNT(*) FILTER (WHERE is_error) AS errors,
                     COUNT(DISTINCT tool_name) AS unique_tools,
@@ -207,7 +219,10 @@ async def get_agent_activity(org_id: int, agent_key_id: int, days: int = 30) -> 
         by_tool = (await db.execute(
             text("""
                 SELECT tool_name, COUNT(*) AS count,
-                       COUNT(*) FILTER (WHERE result_status = 'blocked') AS denied
+                       COUNT(*) FILTER (
+                        WHERE result_status = 'blocked'
+                          AND result_summary IS DISTINCT FROM :circuit_breaker
+                    ) AS denied
                 FROM ai_gateway_mcp_audit_logs
                 WHERE organization_id = :org_id AND agent_key_id = :akid
                   AND created_at >= NOW() - INTERVAL '1 day' * :days

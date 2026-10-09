@@ -19,10 +19,15 @@ from fastapi.responses import JSONResponse, StreamingResponse
 
 from config import settings
 from crud.mcp_approvals import create_approval_request, get_approval_status, get_approved_request, get_pending_request
-from crud.mcp_guardrails import get_mcp_guardrail_name
+from crud.mcp_audit import CIRCUIT_BREAKER_SUMMARY
 from crud.mcp_tools import get_all_tools
 from services.mcp_audit_service import log_tool_call
-from services.mcp_guardrail_service import scan_tool_input, check_anomaly, CircuitBreaker
+from services.mcp_guardrail_service import (
+    blocking_rule,
+    scan_tool_input,
+    check_anomaly,
+    CircuitBreaker,
+)
 from services.mcp_proxy_service import (
     authenticate_agent_key,
     extract_agent_key,
@@ -189,13 +194,7 @@ async def mcp_jsonrpc(request: Request):
             )
             if scan_result and scan_result.blocked:
                 reason = scan_result.block_reason or "policy violation"
-                first = scan_result.detections[0] if scan_result.detections else None
-                matched_rule_id = getattr(first, "guardrail_id", None) if first else None
-                matched_rule_name = (
-                    await get_mcp_guardrail_name(org_id, matched_rule_id)
-                    if matched_rule_id
-                    else None
-                )
+                matched_rule_id, matched_rule_name = blocking_rule(scan_result)
                 await _audit(
                     "blocked",
                     f"Guardrail: {reason}",
@@ -209,7 +208,7 @@ async def mcp_jsonrpc(request: Request):
 
             # Circuit breaker: skip calls to an upstream that is failing repeatedly.
             if await CircuitBreaker.is_open(server_id):
-                await _audit("blocked", "Circuit breaker open: upstream MCP server unavailable", False)
+                await _audit("blocked", CIRCUIT_BREAKER_SUMMARY, False)
                 return JSONResponse(content=_jsonrpc_error(
                     msg_id, -32004, "MCP server temporarily unavailable (circuit breaker open)"
                 ), status_code=200)

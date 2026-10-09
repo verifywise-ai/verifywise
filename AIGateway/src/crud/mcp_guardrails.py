@@ -13,20 +13,6 @@ def _to_text_array(lst) -> str:
     return "{}"
 
 
-async def get_mcp_guardrail_name(org_id: int, rule_id: int) -> Optional[str]:
-    """The name of one of the organization's MCP guardrail rules, or None."""
-    async with get_db() as db:
-        result = await db.execute(
-            text(
-                "SELECT name FROM ai_gateway_mcp_guardrail_rules "
-                "WHERE organization_id = :org_id AND id = :rule_id"
-            ),
-            {"org_id": org_id, "rule_id": rule_id},
-        )
-        row = result.fetchone()
-        return row[0] if row else None
-
-
 async def get_all_mcp_guardrails(org_id: int) -> list[dict]:
     """Fetch all MCP guardrail rules for an organization."""
     async with get_db() as db:
