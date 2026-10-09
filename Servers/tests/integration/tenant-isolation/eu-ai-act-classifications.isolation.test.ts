@@ -1,8 +1,9 @@
 jest.setTimeout(60000);
 
-import { cleanupDatabase } from "../helpers";
-import { createTestProject } from "../../factories";
+import { cleanupDatabase, seedFrameworks } from "../helpers";
+import { createTestProject, createTestProjectFramework } from "../../factories";
 import { seedTwoTenantContexts } from "./tenantIsolation.harness";
+import { EU_AI_ACT_FRAMEWORK_ID } from "../../../utils/validations/projectValidation.utils";
 import {
   getLatestRunForUseCaseQuery,
   insertClassificationRunQuery,
@@ -64,8 +65,10 @@ describe("eu_ai_act_classifications tenant isolation", () => {
   });
 
   it("route: an Editor can classify; Reviewer and Auditor cannot", async () => {
+    await seedFrameworks();
     const editor = (await seedTwoTenantContexts(3)).owner;
     const editorProject = await createTestProject(editor.orgId, editor.userId);
+    await createTestProjectFramework(editor.orgId, editorProject, EU_AI_ACT_FRAMEWORK_ID);
     const ok = await editor.request
       .post(`/api/projects/${editorProject}/eu-ai-act-classification`)
       .send({ answers: { scope: "research_only" } });
@@ -73,12 +76,24 @@ describe("eu_ai_act_classifications tenant isolation", () => {
 
     for (const roleId of [2, 4]) {
       await cleanupDatabase();
+      await seedFrameworks();
       const { owner } = await seedTwoTenantContexts(roleId);
       const projectId = await createTestProject(owner.orgId, owner.userId);
+      await createTestProjectFramework(owner.orgId, projectId, EU_AI_ACT_FRAMEWORK_ID);
       const denied = await owner.request
         .post(`/api/projects/${projectId}/eu-ai-act-classification`)
         .send({ answers: { scope: "research_only" } });
       expect(denied.status).toBe(403);
     }
+  });
+
+  it("route: a use case without the EU AI Act framework cannot be classified", async () => {
+    const { owner } = await seedTwoTenantContexts(3);
+    const projectId = await createTestProject(owner.orgId, owner.userId);
+    const res = await owner.request
+      .post(`/api/projects/${projectId}/eu-ai-act-classification`)
+      .send({ answers: { scope: "research_only" } });
+    expect(res.status).toBe(400);
+    expect(JSON.stringify(res.body)).toContain("AI_RISK_WITHOUT_EU_AI_ACT");
   });
 });
