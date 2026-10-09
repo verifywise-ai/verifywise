@@ -45,6 +45,7 @@ export const EMAIL_TEMPLATES = {
   APPROVAL_STEP_COMPLETED: "approval-step-completed.mjml",
   APPROVAL_COMPLETE: "approval-complete.mjml",
   APPROVAL_REJECTED: "approval-rejected.mjml",
+  APPROVAL_STEP_OVERDUE: "approval-step-overdue.mjml",
 
   // Training templates
   TRAINING_ASSIGNED: "training-assigned.mjml",

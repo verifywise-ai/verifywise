@@ -1165,3 +1165,90 @@ export const rejectApprovalRequestOnEntityDelete = async (
     throw error;
   }
 };
+
+/**
+ * Row returned by getOverdueApprovalStepsQuery
+ */
+export interface OverdueApprovalStepRow {
+  request_step_id: number;
+  request_id: number;
+  step_number: number;
+  step_name: string;
+  due_at: Date;
+  escalation_user_id: number;
+  request_name: string;
+  entity_type: string | null;
+  entity_id: number | null;
+}
+
+/**
+ * Active steps of pending requests whose SLA has elapsed and that have not
+ * been escalated yet. Only the request's current step can be overdue — later
+ * steps are still Pending but have no due_at, and withdrawn/rejected requests
+ * are excluded via the request status join. Range comparison (due_at < NOW())
+ * so a missed sweep run catches up on the next one.
+ */
+export const getOverdueApprovalStepsQuery = async (
+  organizationId: number,
+  transaction: Transaction | null = null,
+): Promise<OverdueApprovalStepRow[]> => {
+  const rows = await sequelize.query(
+    `SELECT ars.id AS request_step_id,
+            ars.request_id,
+            ars.step_number,
+            ars.step_name,
+            ars.due_at,
+            ars.escalation_user_id,
+            ar.request_name,
+            ar.entity_type,
+            ar.entity_id
+     FROM approval_request_steps ars
+     JOIN approval_requests ar
+       ON ar.id = ars.request_id AND ar.organization_id = ars.organization_id
+     WHERE ars.organization_id = :organizationId
+       AND ar.status = :requestPending
+       AND ars.step_number = ar.current_step
+       AND ars.status = :stepPending
+       AND ars.due_at IS NOT NULL
+       AND ars.due_at < NOW()
+       AND ars.escalated_at IS NULL
+       AND ars.escalation_user_id IS NOT NULL
+     ORDER BY ars.due_at ASC`,
+    {
+      replacements: {
+        organizationId,
+        requestPending: ApprovalRequestStatus.PENDING,
+        stepPending: ApprovalStepStatus.PENDING,
+      },
+      type: "SELECT",
+      ...(transaction && { transaction }),
+    },
+  );
+
+  return rows as OverdueApprovalStepRow[];
+};
+
+/**
+ * Claim escalation of an overdue step. The conditional UPDATE returns the row
+ * only when escalated_at was still NULL, so exactly one caller wins under
+ * retries or concurrent sweep workers. Returns true when this call claimed it.
+ */
+export const markApprovalStepEscalatedQuery = async (
+  organizationId: number,
+  requestStepId: number,
+): Promise<boolean> => {
+  const rows = await sequelize.query(
+    `UPDATE approval_request_steps
+     SET escalated_at = NOW()
+     WHERE organization_id = :organizationId
+       AND id = :requestStepId
+       AND escalated_at IS NULL
+     RETURNING id`,
+    {
+      replacements: { organizationId, requestStepId },
+      type: "SELECT",
+    },
+  );
+
+  return Array.isArray(rows) && rows.length > 0;
+};

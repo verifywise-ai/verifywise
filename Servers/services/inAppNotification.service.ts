@@ -907,6 +907,64 @@ export const notifyApprovalAutoApproved = async (
 };
 
 /**
+ * Notify the designated escalation user that an approval step is overdue
+ */
+export const notifyApprovalStepOverdueEscalation = async (
+  organizationId: number,
+  escalationUserId: number,
+  request: {
+    id: number;
+    name: string;
+    stepName: string;
+    stepNumber: number;
+    dueAt: Date;
+  },
+  baseUrl: string,
+): Promise<void> => {
+  const escalationUser = await getUserById(escalationUserId);
+  const dueText = request.dueAt.toLocaleString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC",
+    timeZoneName: "short",
+  });
+
+  await sendInAppNotification(
+    organizationId,
+    {
+      user_id: escalationUserId,
+      type: NotificationType.APPROVAL_STEP_OVERDUE_ESCALATION,
+      title: "Approval step overdue",
+      message: `Step "${request.stepName}" of "${request.name}" was due ${dueText} and has been escalated to you`,
+      entity_type: NotificationEntityType.USE_CASE,
+      entity_id: request.id,
+      entity_name: request.name,
+      action_url: "/approval-workflows",
+      metadata: {
+        step_number: request.stepNumber,
+        due_at: request.dueAt.toISOString(),
+      },
+    },
+    true,
+    {
+      template: EMAIL_TEMPLATES.APPROVAL_STEP_OVERDUE,
+      subject: `Overdue approval escalated: ${request.name}`,
+      variables: {
+        escalation_user_name: escalationUser ? `${escalationUser.name}` : "there",
+        request_name: request.name,
+        step_name: request.stepName,
+        step_number: String(request.stepNumber),
+        due_at: dueText,
+        approval_url: `${baseUrl}/approval-workflows`,
+      },
+    },
+  );
+};
+
+/**
  * Notify vendor review due
  */
 export const notifyVendorReviewDue = async (

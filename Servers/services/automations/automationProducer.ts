@@ -628,6 +628,26 @@ export async function scheduleStaleInheritanceNotifySweep() {
   );
 }
 
+export async function scheduleApprovalOverdueSweep() {
+  logger.info("Adding approval overdue sweep job to the queue...");
+  // Hourly at minute 17 -- off the congested slots (top of hour: PMM check;
+  // */5: AI detection scan; */15: report tick). Hourly matches the
+  // wall-clock-hour granularity of approval step SLAs. No obliterate here --
+  // the scheduler upsert is idempotent by scheduler id.
+  await automationQueue.upsertJobScheduler(
+    "approval_overdue_sweep",
+    { pattern: "17 * * * *" },
+    {
+      name: "approval_overdue_sweep",
+      data: {},
+      opts: {
+        removeOnComplete: true,
+        removeOnFail: false,
+      },
+    },
+  );
+}
+
 export async function scheduleAiTrustIndexSync() {
   logger.info("Adding AI Trust Index weekly sync job to the queue...");
   // Monday 06:00 UTC. jobId keyed weekly is set at runtime is not needed here;

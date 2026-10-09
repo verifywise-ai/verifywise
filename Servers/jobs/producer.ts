@@ -26,6 +26,7 @@ import {
   scheduleEvidenceFreshnessSweep,
   scheduleDeadlineEscalationSweep,
   scheduleStaleInheritanceNotifySweep,
+  scheduleApprovalOverdueSweep,
 } from "../services/automations/automationProducer";
 
 async function safeSchedule(name: string, fn: () => Promise<void>): Promise<void> {
@@ -65,6 +66,7 @@ export async function addAllJobs(): Promise<void> {
   await safeSchedule("evidence-freshness-sweep", scheduleEvidenceFreshnessSweep); // non-obliterating — safe to run after the obliterating schedulers
   await safeSchedule("deadline-escalation-sweep", scheduleDeadlineEscalationSweep); // non-obliterating — safe to run after the obliterating schedulers
   await safeSchedule("stale-inheritance-notify-sweep", scheduleStaleInheritanceNotifySweep); // non-obliterating — safe to run after the obliterating schedulers
+  await safeSchedule("approval-overdue-sweep", scheduleApprovalOverdueSweep); // non-obliterating — safe to run after the obliterating schedulers
   await safeSchedule("ai-trust-index-sync", scheduleAiTrustIndexSync);
   // Ordering constraint: obliterate-using schedulers (e.g. vendor-review,
   // report-notification) must run BEFORE all non-obliterating ones, or they wipe
