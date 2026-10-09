@@ -1393,18 +1393,17 @@ export async function approveSubmission(req: Request, res: Response) {
           status: ProjectStatus.UNDER_REVIEW,
         },
         [],
-        // A use case with an EU AI Act level (carried over from the run or set
-        // by the reviewer) brings the EU AI Act framework along.
-        aiRiskClassification ? [EU_AI_ACT_FRAMEWORK_ID] : [],
+        // Only a level that comes from the EU AI Act step (a scorable run)
+        // brings the EU AI Act framework along. Submissions without a run keep
+        // their mapped or reviewer level and get no framework.
+        classification ? [EU_AI_ACT_FRAMEWORK_ID] : [],
         req.organizationId!,
         req.userId!,
         transaction,
       );
       entityId = createdProject.id!;
-      if (aiRiskClassification) {
-        await createEUFrameworkQuery(entityId, false, req.organizationId!, transaction);
-      }
       if (classification) {
+        await createEUFrameworkQuery(entityId, false, req.organizationId!, transaction);
         await insertClassificationRunQuery(
           {
             useCaseId: entityId,

@@ -49,11 +49,13 @@ import {
   FormField,
   IntakeForm,
   createEmptyForm,
+  isRiskStepSetField,
   generateFieldId,
   generateSlug,
   DEFAULT_DESIGN_SETTINGS,
   analyzeMappingCoverage,
   createFieldFromMapping,
+  usedEntityMappingsFor,
 } from "./types";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import StandardModal from "../../components/Modals/StandardModal";
@@ -93,7 +95,11 @@ export function IntakeFormBuilder() {
   const suggestedPanelRef = useRef<SuggestedQuestionsPanelHandle>(null);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
-  const [isLoadingForm, setIsLoadingForm] = useState(false);
+  // Starts true when editing so the default form never renders in its place.
+  const [isLoadingForm, setIsLoadingForm] = useState(isEditing);
+  // Set when the stored form could not be loaded. The builder is not shown, so
+  // the default form cannot be saved over the stored one.
+  const [loadFailed, setLoadFailed] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   // Shared, per-organization cache: refreshed wherever a key changes. A failed
   // load leaves the picker with only "None", as before.
@@ -127,11 +133,14 @@ export function IntakeFormBuilder() {
   useEffect(() => {
     if (isEditing && formId) {
       setIsLoadingForm(true);
+      setLoadFailed(false);
       getIntakeForm(parseInt(formId))
         .then((response) => {
           if (response.data) setForm(response.data);
+          else setLoadFailed(true);
         })
         .catch(() => {
+          setLoadFailed(true);
           setSnackbar({
             open: true,
             message: "Failed to load form",
@@ -144,6 +153,7 @@ export function IntakeFormBuilder() {
         entityTypeParam === IntakeEntityType.MODEL
           ? IntakeEntityType.MODEL
           : IntakeEntityType.USE_CASE;
+      setLoadFailed(false);
       setForm(createEmptyForm(entityType));
       setSelectedFieldId(null);
       setIsDirty(false);
@@ -542,6 +552,19 @@ export function IntakeFormBuilder() {
             >
               <CircularProgress sx={{ color: theme.palette.primary.main }} />
             </Box>
+          ) : loadFailed ? (
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flex: 1,
+              }}
+            >
+              <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>
+                Failed to load form
+              </Typography>
+            </Box>
           ) : (
             <>
               {/* Builder header */}
@@ -799,6 +822,10 @@ export function IntakeFormBuilder() {
                     onNameChange={(name) => updateForm({ name })}
                     onDescriptionChange={(description) => updateForm({ description })}
                     collectContactInfo
+                    euAiActRiskStepEnabled={
+                      form.entityType === IntakeEntityType.USE_CASE &&
+                      (form.euAiActRiskStepEnabled ?? false)
+                    }
                   />
                   {form.suggestedQuestionsEnabled && (
                     <SuggestedQuestionsPanel
@@ -822,12 +849,11 @@ export function IntakeFormBuilder() {
                   <FieldEditor
                     field={selectedField}
                     entityType={form.entityType}
-                    usedEntityMappings={[
-                      ...form.schema.fields
-                        .filter((f) => f.id !== selectedField.id && f.entityFieldMapping)
-                        .map((f) => f.entityFieldMapping!),
-                      ...(form.euAiActRiskStepEnabled ? ["ai_risk_classification"] : []),
-                    ]}
+                    usedEntityMappings={usedEntityMappingsFor(
+                      form.schema.fields,
+                      selectedField.id,
+                      form.euAiActRiskStepEnabled,
+                    )}
                     llmKeyId={activeLlmKeyId}
                     onChange={updateField}
                     onClose={() => setSelectedFieldId(null)}
@@ -1178,8 +1204,8 @@ export function IntakeFormBuilder() {
                         <EuAiActStepToggle
                           entityType={form.entityType}
                           enabled={form.euAiActRiskStepEnabled ?? false}
-                          hasRiskMapping={form.schema.fields.some(
-                            (f) => f.entityFieldMapping === "ai_risk_classification",
+                          hasRiskMapping={form.schema.fields.some((f) =>
+                            isRiskStepSetField(f.entityFieldMapping),
                           )}
                           onToggle={(enabled) =>
                             updateForm({
@@ -1189,7 +1215,7 @@ export function IntakeFormBuilder() {
                                     schema: {
                                       ...form.schema,
                                       fields: form.schema.fields.map((f) =>
-                                        f.entityFieldMapping === "ai_risk_classification"
+                                        isRiskStepSetField(f.entityFieldMapping)
                                           ? { ...f, entityFieldMapping: undefined }
                                           : f,
                                       ),

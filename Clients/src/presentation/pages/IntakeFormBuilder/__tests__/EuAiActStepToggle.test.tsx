@@ -3,7 +3,7 @@ import { renderWithProviders } from "../../../../test/renderWithProviders";
 import EuAiActStepToggle from "../EuAiActStepToggle";
 
 const UNMAP_NOTE =
-  "Turning this on unmaps the question that sets the AI risk classification. The question stays on the form.";
+  "Turning this on unmaps the questions that set the AI risk classification and the high-risk role. They stay on the form; delete them so submitters are not asked twice.";
 
 describe("EuAiActStepToggle", () => {
   it("renders nothing for model forms", () => {

@@ -505,7 +505,7 @@ One row per completed questionnaire (a "run"). Rows are only inserted, never upd
 | `reviewer_level`, `reviewer_justification`, `reviewed_by` | Set when an intake reviewer changed the computed level |
 | `source` | `wizard` or `intake` |
 
-On intake approval the submission's run is copied to the new use case (a new row with `source = 'intake'`), not shared. The table is registered in `tests/integration/tenant-isolation/tenantIsolation.registry.ts`.
+On intake approval the submission's run is copied to the new use case (a new row with `source = 'intake'`), not shared. Only an approval that carries over a scorable run attaches the EU AI Act framework (`frameworks: [1]` plus `createEUFrameworkQuery`). A submission without a run, or whose run can no longer be scored, keeps the level from the mapped fields or the reviewer dialog and gets no framework, as before the step existed. The table is registered in `tests/integration/tenant-isolation/tenantIsolation.registry.ts`.
 
 `intake_forms.eu_ai_act_risk_step_enabled` (boolean, default false) turns the step on for a form. Only use case forms can enable it, and a form with the step cannot also map a field to `ai_risk_classification` (400 on create/update).
 

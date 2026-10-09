@@ -9963,6 +9963,26 @@ export const translations: Record<string, Record<string, string>> = {
       "Die Antworten konnten nicht ausgewertet werden. Versuchen Sie es erneut.",
     "EU AI Act classification": "Klassifizierung nach EU-KI-Verordnung",
     "EU AI Act risk classification step": "Schritt zur Risikoklassifizierung nach EU-KI-Verordnung",
+    "Submitters answer these questions first. The result is shown only to reviewers.":
+      "Einreichende beantworten diese Fragen zuerst. Das Ergebnis sehen nur Prüfende.",
+    "Loading questions...": "Fragen werden geladen...",
+    "The questions could not be loaded.": "Die Fragen konnten nicht geladen werden.",
+    "Questions": "Fragen",
+    "View questions": "Fragen ansehen",
+    "EU AI Act questionnaire": "Fragebogen zur EU-KI-Verordnung",
+    "questions": "Fragen",
+    "asked before the form": "vor dem Formular gestellt",
+    "Scope and role": "Anwendungsbereich und Rolle",
+    "Article 5 · Prohibited practices": "Artikel 5 · Verbotene Praktiken",
+    "Annex I · Product safety": "Anhang I · Produktsicherheit",
+    "Annex III · High-risk uses": "Anhang III · Hochrisiko-Verwendungen",
+    "Article 50 · Transparency": "Artikel 50 · Transparenz",
+    "Other questions": "Weitere Fragen",
+    "Select all that apply": "Alle zutreffenden auswählen",
+    "Cannot be combined with other answers": "Kann nicht mit anderen Antworten kombiniert werden",
+    "Shown when": "Angezeigt bei",
+    "or": "oder",
+    "Shown depending on earlier answers": "Abhängig von früheren Antworten angezeigt",
     "Explain why you are changing the computed classification (min. 10 characters)":
       "Erläutern Sie, warum Sie die berechnete Klassifizierung ändern (mind. 10 Zeichen)",
     "High-risk AI system": "Hochrisiko-KI-System",
@@ -10004,8 +10024,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Für dieses System gelten Transparenzpflichten nach Artikel 50.",
     "This system is high risk and must meet the EU AI Act requirements for high-risk systems.":
       "Dieses System ist ein Hochrisiko-System und muss die Anforderungen der EU-KI-Verordnung an Hochrisiko-Systeme erfüllen.",
-    "Turning this on unmaps the question that sets the AI risk classification. The question stays on the form.":
-      "Beim Aktivieren wird die Zuordnung der Frage aufgehoben, die die KI-Risikoklassifizierung festlegt. Die Frage bleibt im Formular.",
+    "Turning this on unmaps the questions that set the AI risk classification and the high-risk role. They stay on the form; delete them so submitters are not asked twice.":
+      "Beim Aktivieren wird die Zuordnung der Fragen aufgehoben, die die KI-Risikoklassifizierung und die Hochrisiko-Rolle festlegen. Sie bleiben im Formular; löschen Sie sie, damit Einreichende nicht doppelt gefragt werden.",
     "Updated since submission": "Seit der Einreichung aktualisiert",
     "Why": "Warum",
   },
@@ -19899,6 +19919,26 @@ export const translations: Record<string, Record<string, string>> = {
     "EU AI Act classification": "Classification selon le règlement IA de l'UE",
     "EU AI Act risk classification step":
       "Étape de classification des risques selon le règlement IA de l'UE",
+    "Submitters answer these questions first. The result is shown only to reviewers.":
+      "Les demandeurs répondent d'abord à ces questions. Seuls les réviseurs voient le résultat.",
+    "Loading questions...": "Chargement des questions...",
+    "The questions could not be loaded.": "Les questions n'ont pas pu être chargées.",
+    "Questions": "Questions",
+    "View questions": "Voir les questions",
+    "EU AI Act questionnaire": "Questionnaire sur le règlement européen sur l'IA",
+    "questions": "questions",
+    "asked before the form": "posées avant le formulaire",
+    "Scope and role": "Champ d'application et rôle",
+    "Article 5 · Prohibited practices": "Article 5 · Pratiques interdites",
+    "Annex I · Product safety": "Annexe I · Sécurité des produits",
+    "Annex III · High-risk uses": "Annexe III · Utilisations à haut risque",
+    "Article 50 · Transparency": "Article 50 · Transparence",
+    "Other questions": "Autres questions",
+    "Select all that apply": "Sélectionnez toutes les réponses applicables",
+    "Cannot be combined with other answers": "Ne peut pas être combinée avec d'autres réponses",
+    "Shown when": "Affichée si",
+    "or": "ou",
+    "Shown depending on earlier answers": "Affichée selon les réponses précédentes",
     "Explain why you are changing the computed classification (min. 10 characters)":
       "Expliquez pourquoi vous modifiez la classification calculée (10 caractères min.)",
     "High-risk AI system": "Système d'IA à haut risque",
@@ -19940,8 +19980,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Ce système est soumis aux obligations de transparence de l'article 50.",
     "This system is high risk and must meet the EU AI Act requirements for high-risk systems.":
       "Ce système est à haut risque et doit satisfaire aux exigences du règlement IA de l'UE applicables aux systèmes à haut risque.",
-    "Turning this on unmaps the question that sets the AI risk classification. The question stays on the form.":
-      "L'activation supprime l'association de la question qui définit la classification du risque IA. La question reste dans le formulaire.",
+    "Turning this on unmaps the questions that set the AI risk classification and the high-risk role. They stay on the form; delete them so submitters are not asked twice.":
+      "L'activation supprime l'association des questions qui définissent la classification du risque IA et le rôle à haut risque. Elles restent dans le formulaire ; supprimez-les pour que les demandeurs ne répondent pas deux fois.",
     "Updated since submission": "Mis à jour depuis la soumission",
     "Why": "Pourquoi",
   },
@@ -29752,6 +29792,26 @@ export const translations: Record<string, Record<string, string>> = {
     "EU AI Act classification": "Clasificación según el Reglamento de IA de la UE",
     "EU AI Act risk classification step":
       "Paso de clasificación de riesgos según el Reglamento de IA de la UE",
+    "Submitters answer these questions first. The result is shown only to reviewers.":
+      "Los solicitantes responden primero a estas preguntas. Solo los revisores ven el resultado.",
+    "Loading questions...": "Cargando preguntas...",
+    "The questions could not be loaded.": "No se pudieron cargar las preguntas.",
+    "Questions": "Preguntas",
+    "View questions": "Ver preguntas",
+    "EU AI Act questionnaire": "Cuestionario de la Ley de IA de la UE",
+    "questions": "preguntas",
+    "asked before the form": "se preguntan antes del formulario",
+    "Scope and role": "Ámbito y función",
+    "Article 5 · Prohibited practices": "Artículo 5 · Prácticas prohibidas",
+    "Annex I · Product safety": "Anexo I · Seguridad de los productos",
+    "Annex III · High-risk uses": "Anexo III · Usos de alto riesgo",
+    "Article 50 · Transparency": "Artículo 50 · Transparencia",
+    "Other questions": "Otras preguntas",
+    "Select all that apply": "Seleccione todas las que correspondan",
+    "Cannot be combined with other answers": "No se puede combinar con otras respuestas",
+    "Shown when": "Se muestra si",
+    "or": "o",
+    "Shown depending on earlier answers": "Se muestra según las respuestas anteriores",
     "Explain why you are changing the computed classification (min. 10 characters)":
       "Explique por qué cambia la clasificación calculada (mín. 10 caracteres)",
     "High-risk AI system": "Sistema de IA de alto riesgo",
@@ -29793,8 +29853,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Este sistema está sujeto a las obligaciones de transparencia del artículo 50.",
     "This system is high risk and must meet the EU AI Act requirements for high-risk systems.":
       "Este sistema es de alto riesgo y debe cumplir los requisitos del Reglamento de IA de la UE para los sistemas de alto riesgo.",
-    "Turning this on unmaps the question that sets the AI risk classification. The question stays on the form.":
-      "Al activarlo se elimina la asignación de la pregunta que establece la clasificación de riesgo de IA. La pregunta permanece en el formulario.",
+    "Turning this on unmaps the questions that set the AI risk classification and the high-risk role. They stay on the form; delete them so submitters are not asked twice.":
+      "Al activarlo se elimina la asignación de las preguntas que establecen la clasificación de riesgo de IA y el rol de alto riesgo. Permanecen en el formulario; elimínelas para que no se pregunte dos veces a los solicitantes.",
     "Updated since submission": "Actualizado desde el envío",
     "Why": "Por qué",
   },
