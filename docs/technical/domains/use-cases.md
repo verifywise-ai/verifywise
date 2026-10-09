@@ -58,8 +58,13 @@ enum AiRiskClassification {
   HIGH_RISK = "High risk"
   LIMITED_RISK = "Limited risk"
   MINIMAL_RISK = "Minimal risk"
+  GPAI = "GPAI"
+  GENERAL_RISK = "General Risk"
+  OUT_OF_SCOPE = "Out of scope"   // set by the EU AI Act questionnaire (Article 2(6)/(8))
 }
 ```
+
+The EU AI Act questionnaire produces only Prohibited, High risk, Limited risk, Minimal risk and Out of scope. See [EU AI Act classification](#eu-ai-act-classification).
 
 ### High Risk Role Types
 
@@ -456,6 +461,67 @@ getProjectProgressData({routeUrl, signal?})
 }
 ```
 
+## EU AI Act classification
+
+A server-scored questionnaire that sets a use case's `ai_risk_classification` (and `type_of_high_risk_role` when the answers name a role). It is used by the use case risk wizard (`ProjectView/RiskAnalysisModal`) and by the optional risk step on use case intake forms. The client only renders the definition and decides which questions are visible; scoring always happens on the server.
+
+### Module
+
+`Servers/services/euAiActClassification/`
+
+| File | Purpose |
+|------|---------|
+| `types.ts` | `Questionnaire`, `Question`, `Condition`, `Answers`, `ClassificationResult` |
+| `questionnaire.v2.ts` | Version 2 questions: Article 2 scope, role, Article 5 practices, Annex I, Annex III areas and follow-ups, Article 6(3) profiling and exemptions, Article 50 |
+| `score.v2.ts` | `scoreV2(answers, now)`: level, role, reasons and obligations, each with article and `appliesFrom` date |
+| `registry.ts` | `CURRENT_QUESTIONNAIRE_VERSION`, `getQuestionnaire(version)`, `scoreClassification(version, answers, now)` |
+| `visibility.ts` | `visibleQuestions()` from declarative `showWhen` groups (mirrored in `Clients/src/application/utils/euAiActQuestionnaire.ts`) |
+| `validate.ts` | `validateAnswers()`: rejects unknown questions and invalid options, drops answers to hidden questions |
+| `intakeStep.ts` | `prepareIntakeRiskStep()` for public intake submissions |
+
+Annex III follow-up questions (`*_use`) are multi-select. The system is high risk when any selected use is in `ANNEX_III_HIGH_RISK_USES`; "Another use in this area" alone does not make it high risk.
+
+High-risk obligations depend on the route that matched: Annex I Section B gets only the sectoral-legislation obligation (Article 2(2), Articles 102-109); Annex I Section A has no Article 49 registration and uses the sectoral conformity procedure (Article 43(3)); Annex III point 2 registers at national level (Article 49(5)) and has no Article 27 assessment; other Annex III routes, including real-time biometric identification for an authorised objective, register under Article 49(1). Deployer Articles 26(11) and 27 apply only on Annex III routes. Each obligation carries its own route's date, and obligations shared by several routes are listed once. The Article 6(3) exemption counts only when no other route makes the system high risk.
+
+### Versioning rule
+
+A stored run is always re-scored with the rules of the version it was answered under. To change questions or scoring, add `questionnaire.vN.ts` and `score.vN.ts`, register both in `registry.ts` and raise `CURRENT_QUESTIONNAIRE_VERSION`. Keep the old files: existing runs still reference them. A run whose version is no longer registered shows no panel in the intake review, and approving that submission behaves as if it had no run.
+
+When you add `questionnaire.vN.ts` and `score.vN.ts`, also add both files to the `SOURCE` list in `Clients/src/i18n/__tests__/euAiActQuestionnaire.translations.test.ts`. That test reads the files by name, so strings in a new version are otherwise never checked for translations.
+
+User-facing text in both files must be whole string literals on `text`, `label`, `description` or `help` (no template strings). The DOM translator matches them against `Clients/src/i18n/translations.ts`, and `Clients/src/i18n/__tests__/euAiActQuestionnaire.translations.test.ts` fails when one lacks a de, fr or es entry.
+
+### Table `eu_ai_act_classifications`
+
+One row per completed questionnaire (a "run"). Rows are only inserted, never updated, so every saved classification is kept; reads take the latest row.
+
+| Column | Notes |
+|--------|-------|
+| `organization_id` | Tenant scope; every query filters on it |
+| `use_case_id` / `intake_submission_id` | Owner. Check constraint `eu_ai_act_classifications_one_owner`: exactly one is set. `ON DELETE CASCADE` from either owner |
+| `questionnaire_version` | Version the answers were given under |
+| `role` | `Provider`, `Deployer` or null (an out-of-scope run never asks the role) |
+| `answers`, `result` | JSONB; answers contain visible questions only |
+| `reviewer_level`, `reviewer_justification`, `reviewed_by` | Set when an intake reviewer changed the computed level |
+| `source` | `wizard` or `intake` |
+
+On intake approval the submission's run is copied to the new use case (a new row with `source = 'intake'`), not shared. The table is registered in `tests/integration/tenant-isolation/tenantIsolation.registry.ts`.
+
+`intake_forms.eu_ai_act_risk_step_enabled` (boolean, default false) turns the step on for a form. Only use case forms can enable it, and a form with the step cannot also map a field to `ai_risk_classification` (400 on create/update).
+
+### Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/eu-ai-act-classification/questionnaire` | JWT | Current questionnaire definition |
+| POST | `/api/eu-ai-act-classification/score` | JWT | Score `{ answers }` without saving |
+| GET | `/api/projects/:id/eu-ai-act-classification` | JWT | Latest run for the use case, or null |
+| POST | `/api/projects/:id/eu-ai-act-classification` | JWT + `useCase.classify` | Validate and score `{ answers }`, insert a `wizard` run, set the use case's level and role, record change history |
+
+Permission key `useCase.classify` (module "Use cases") is granted to Admin and Editor; Reviewer and Auditor get 403.
+
+Public intake submissions send `euAiActRiskAnswers` with the form data. When the form has the step, the server validates and scores them; on failure it returns 400 with `step: "eu_ai_act_risk"`, and the public form returns to the risk step only for that response. The submission preview returns `euAiActClassification` (questionnaire, answers, role, current result, `changedSinceSubmission`). On approval the reviewer may send `euAiActOverride: { level, justification }`; the level must be one of the five questionnaire levels, and a level different from the computed one needs a justification of at least 10 characters. Submissions without a run approve as before.
+
 ## Key Files
 
 ### Backend
@@ -468,6 +534,9 @@ getProjectProgressData({routeUrl, signal?})
 | `controllers/project.ctrl.ts` | API controller |
 | `utils/project.utils.ts` | Database queries |
 | `routes/project.route.ts` | Route definitions |
+| `services/euAiActClassification/` | EU AI Act questionnaire, scoring and validation |
+| `controllers/euAiActClassification.ctrl.ts` | Questionnaire, score and use case classification endpoints |
+| `utils/euAiActClassification.utils.ts` | `eu_ai_act_classifications` queries and `setUseCaseClassificationQuery` |
 
 ### Frontend
 
@@ -475,6 +544,9 @@ getProjectProgressData({routeUrl, signal?})
 |------|---------|
 | `pages/ProjectView/index.tsx` | Main view |
 | `pages/ProjectView/ProjectSettings/` | Settings tab |
+| `pages/ProjectView/RiskAnalysisModal/` | EU AI Act risk classification wizard |
+| `components/EuAiActQuestionnaire/` | Questionnaire renderer shared by the wizard and the public intake form |
+| `pages/IntakeFormBuilder/EuAiActClassificationPanel.tsx` | Reviewer panel in the intake submission dialog |
 | `pages/ProjectView/RisksView/` | Risks tab |
 | `application/repository/project.repository.ts` | API calls |
 | `application/dtos/project.dto.ts` | DTOs |

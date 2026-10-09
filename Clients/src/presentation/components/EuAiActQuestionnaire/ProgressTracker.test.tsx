@@ -1,5 +1,5 @@
 import { screen } from "@testing-library/react";
-import { renderWithProviders } from "../../../../test/renderWithProviders";
+import { renderWithProviders } from "../../../test/renderWithProviders";
 import ProgressTracker from "./ProgressTracker";
 
 describe("ProgressTracker", () => {

@@ -49,6 +49,7 @@ import { useAuth } from "../../../../application/hooks/useAuth";
 import { AiRiskClassification } from "../../../../domain/enums/aiRiskClassification.enum";
 import { HighRiskRole } from "../../../../domain/enums/highRiskRole.enum";
 import RiskAnalysisModal from "../RiskAnalysisModal";
+import type { ClassificationResult } from "../../../../domain/types/euAiActClassification";
 import { getAutocompleteStyles } from "../../../utils/inputStyles";
 import { useStyles } from "./styles";
 
@@ -57,6 +58,7 @@ const riskClassificationItems = [
   { _id: 2, name: AiRiskClassification.HIGH_RISK },
   { _id: 3, name: AiRiskClassification.LIMITED_RISK },
   { _id: 4, name: AiRiskClassification.MINIMAL_RISK },
+  { _id: 5, name: AiRiskClassification.OUT_OF_SCOPE },
 ];
 
 const geographyItems = [
@@ -201,6 +203,7 @@ const ProjectSettings = React.memo(
     const [pendingOwnerId, setPendingOwnerId] = useState<User | null>(null);
     const [removedOwner, setRemovedOwner] = useState<User | null>(null);
     const [isRiskModalOpen, setIsRiskModalOpen] = useState(false);
+    const canClassify = allowedRoles.projects.classify.includes(userRoleName);
 
     const { project } = useProjectData({ projectId });
     const navigate = useNavigate();
@@ -1383,12 +1386,14 @@ const ProjectSettings = React.memo(
                         <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                           AI risk classification *
                         </Typography>
-                        <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
-                          Not sure about your risk level?&nbsp;
-                          <VWLink onClick={() => setIsRiskModalOpen(true)}>
-                            Calculate your AI risk classification
-                          </VWLink>
-                        </Typography>
+                        {canClassify && (
+                          <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                            Not sure about your risk level?&nbsp;
+                            <VWLink onClick={() => setIsRiskModalOpen(true)}>
+                              Calculate your AI risk classification
+                            </VWLink>
+                          </Typography>
+                        )}
                       </Box>
                       <Stack gap={1}>
                         <Select
@@ -1642,21 +1647,32 @@ const ProjectSettings = React.memo(
           setIsOpen={setIsRiskModalOpen}
           projectId={projectId}
           setAlert={setAlert}
-          updateClassification={(classification: string) => {
-            const match = riskClassificationItems.find((item) => item.name === classification);
-            if (!match) {
-              console.error(`Unknown classification: ${classification}`);
+          updateClassification={(result: ClassificationResult) => {
+            const level = riskClassificationItems.find((item) => item.name === result.level);
+            if (!level) {
+              console.error(`Unknown classification: ${result.level}`);
               return;
             }
-            // Same as picking it from the dropdown: set the value and clear any
-            // earlier "required" error on the field.
-            setValues((prevValues) => ({ ...prevValues, riskClassification: match._id }));
-            setErrors((prevErrors) => ({ ...prevErrors, riskClassification: "" }));
-            // The wizard has already saved this value, so it is not an unsaved change.
-            initialValuesRef.current = {
-              ...initialValuesRef.current,
-              riskClassification: match._id,
+            // The server stored the level, and the role unless the result has
+            // none, so both become the saved baseline and the form stays clean.
+            const role = highRiskRoleItems.find((item) => item.name === result.role);
+            const saved = {
+              riskClassification: level._id,
+              typeOfHighRiskRole: role?._id ?? initialValuesRef.current.typeOfHighRiskRole,
             };
+            initialValuesRef.current = { ...initialValuesRef.current, ...saved };
+            // Same as picking them from the dropdowns: set the values and clear any
+            // earlier "required" error on those fields.
+            setValues((prev) => ({
+              ...prev,
+              riskClassification: saved.riskClassification,
+              ...(role ? { typeOfHighRiskRole: role._id } : {}),
+            }));
+            setErrors((prevErrors) => ({
+              ...prevErrors,
+              riskClassification: "",
+              ...(role ? { typeOfHighRiskRole: "" } : {}),
+            }));
             // Refresh the rest of the use case view (header, overview), as a normal Save does.
             triggerRefresh(true);
           }}

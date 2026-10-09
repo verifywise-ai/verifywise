@@ -6,6 +6,7 @@ import { csrfProtection } from "./middleware/csrf.middleware";
 
 import assessmentRoutes from "./routes/assessment.route";
 import projectRoutes from "./routes/project.route";
+import euAiActClassificationRoutes from "./routes/euAiActClassification.route";
 import risksRoutes from "./routes/risks.route";
 import riskLinksRoutes from "./routes/riskLinks.route";
 import questionRoutes from "./routes/question.route";
@@ -292,6 +293,7 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   app.use("/api/vendors", vendorRoutes);
   app.use("/api/vendor-change-history", vendorChangeHistoryRoutes);
   app.use("/api/projects", projectRoutes);
+  app.use("/api/eu-ai-act-classification", euAiActClassificationRoutes);
   app.use("/api/questions", questionRoutes);
   app.use("/api/autoDrivers", autoDriverRoutes);
   app.use("/api/assessments", assessmentRoutes);

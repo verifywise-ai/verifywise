@@ -1,5 +1,5 @@
 import { Box, Stack, Typography, useTheme, LinearProgress } from "@mui/material";
-import { background } from "../../../themes/palette";
+import { background } from "../../themes/palette";
 
 interface ProgressTrackerProps {
   currentStep: number;

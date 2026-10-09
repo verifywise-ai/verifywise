@@ -181,6 +181,11 @@ export const ROLE_PERMISSIONS = {
     description: "Create and manage intake forms and submissions",
     legacyRoles: EDITOR,
   },
+  "useCase.classify": {
+    module: "Use cases",
+    description: "Classify a use case with the EU AI Act risk questionnaire",
+    legacyRoles: EDITOR,
+  },
   "fria.edit": {
     module: "FRIA",
     description: "Create and update FRIA assessments",

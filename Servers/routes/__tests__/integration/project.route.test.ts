@@ -35,6 +35,15 @@ jest.mock("../../../middleware/auth.middleware", () =>
   jest.fn((_req: any, _res: any, next: any) => next()),
 );
 
+jest.mock("../../../middleware/accessControl.middleware", () =>
+  jest.fn(() => (_req: any, _res: any, next: any) => next()),
+);
+
+jest.mock("../../../controllers/euAiActClassification.ctrl", () => ({
+  getUseCaseClassification: jest.fn((_req: any, res: any) => res.status(200).json({ run: null })),
+  classifyUseCase: jest.fn((_req: any, res: any) => res.status(201).json({ saved: true })),
+}));
+
 import projectRoutes from "../../project.route";
 
 function createProjectTestApp(): express.Application {
@@ -119,5 +128,28 @@ describe("DELETE /api/projects/:id", () => {
     const res = await request(app).delete("/api/projects/1");
 
     expect(res.status).toBe(204);
+  });
+});
+
+describe("/api/projects/:id/eu-ai-act-classification", () => {
+  it("GET returns 200 for a numeric id", async () => {
+    const res = await request(createProjectTestApp()).get(
+      "/api/projects/1/eu-ai-act-classification",
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it("GET rejects a non-numeric id", async () => {
+    const res = await request(createProjectTestApp()).get(
+      "/api/projects/abc/eu-ai-act-classification",
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("POST rejects a non-numeric id", async () => {
+    const res = await request(createProjectTestApp())
+      .post("/api/projects/abc/eu-ai-act-classification")
+      .send({ answers: {} });
+    expect(res.status).toBe(400);
   });
 });

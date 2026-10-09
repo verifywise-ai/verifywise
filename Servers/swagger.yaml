@@ -45,6 +45,7 @@ components:
         - 'Minimal risk'
         - GPAI
         - 'General Risk'
+        - 'Out of scope'
       description: 'EU AI Act risk classification level'
     HighRiskRole:
       type: string
@@ -7725,6 +7726,8 @@ tags:
   -
     name: 'Entity Graph'
   -
+    name: 'Eu Ai Act Classification'
+  -
     name: Evidence
   -
     name: 'Evidence AI'
@@ -9612,6 +9615,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ServerError'
+  '/projects/{id}/eu-ai-act-classification':
+    get:
+      summary: 'Get Use Case Classification'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Projects
+      operationId: getUseCaseClassification
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Classify Use Case'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Projects
+      operationId: classifyUseCase
+      security:
+        -
+          bearerAuth: []
   /projects/all/compliance/progress:
     get:
       summary: 'Get compliance progress across all projects'
@@ -9731,6 +9761,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ServerError'
+  /eu-ai-act-classification/questionnaire:
+    get:
+      summary: 'Get Questionnaire'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Eu Ai Act Classification'
+      operationId: getQuestionnaire
+      security:
+        -
+          bearerAuth: []
+  /eu-ai-act-classification/score:
+    post:
+      summary: 'Score Answers'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Eu Ai Act Classification'
+      operationId: scoreAnswers
+      security:
+        -
+          bearerAuth: []
   /questions:
     get:
       tags:

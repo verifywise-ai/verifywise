@@ -3134,6 +3134,32 @@ export const euAiActEndpoints: Endpoint[] = [
   },
 ];
 
+// Eu Ai Act Classification endpoints
+export const euAiActClassificationEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/eu-ai-act-classification/questionnaire',
+    summary: "Get Questionnaire",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Eu Ai Act Classification",
+  },
+  {
+    method: 'POST',
+    path: '/eu-ai-act-classification/score',
+    summary: "Score Answers",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Eu Ai Act Classification",
+  },
+];
+
 // Evidence AI endpoints
 export const evidenceAiEndpoints: Endpoint[] = [
   {
@@ -8644,6 +8670,28 @@ export const projectEndpoints: Endpoint[] = [
   },
   {
     method: 'GET',
+    path: '/projects/{id}/eu-ai-act-classification',
+    summary: "Get Use Case Classification",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Projects",
+  },
+  {
+    method: 'POST',
+    path: '/projects/{id}/eu-ai-act-classification',
+    summary: "Classify Use Case",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Projects",
+  },
+  {
+    method: 'GET',
     path: '/projects/all/compliance/progress',
     summary: "Get compliance progress across all projects",
     requiresAuth: true,
@@ -11640,6 +11688,7 @@ export const allEndpoints = {
   email: emailEndpoints,
   entityGraph: entityGraphEndpoints,
   euAiAct: euAiActEndpoints,
+  euAiActClassification: euAiActClassificationEndpoints,
   evidenceAi: evidenceAiEndpoints,
   evidenceHub: evidenceHubEndpoints,
   extension: extensionEndpoints,

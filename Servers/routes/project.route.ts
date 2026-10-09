@@ -20,6 +20,11 @@ import {
 } from "../controllers/project.ctrl";
 
 import authenticateJWT from "../middleware/auth.middleware";
+import authorize from "../middleware/accessControl.middleware";
+import {
+  classifyUseCase,
+  getUseCaseClassification,
+} from "../controllers/euAiActClassification.ctrl";
 import {
   validateCreateProject,
   validateProjectIdParam,
@@ -60,11 +65,24 @@ router.get(
   projectAssessmentProgress,
 );
 
+router.get(
+  "/:id/eu-ai-act-classification",
+  authenticateJWT,
+  validateProjectIdParam,
+  getUseCaseClassification,
+);
 router.get("/all/compliance/progress", authenticateJWT, allProjectsComplianceProgress);
 router.get("/all/assessment/progress", authenticateJWT, allProjectsAssessmentProgress);
 
 // POSTs
 router.post("/", authenticateJWT, validateCreateProject, createProject);
+router.post(
+  "/:id/eu-ai-act-classification",
+  authenticateJWT,
+  validateProjectIdParam,
+  authorize("useCase.classify"),
+  classifyUseCase,
+);
 // router.post("/saveControls", authenticateJWT, saveControls);
 
 // Patches

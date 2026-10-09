@@ -29,6 +29,7 @@ const FORM_SELECT_COLUMNS = `
   risk_assessment_config as "riskAssessmentConfig",
   llm_key_id as "llmKeyId",
   suggested_questions_enabled as "suggestedQuestionsEnabled",
+  eu_ai_act_risk_step_enabled as "euAiActRiskStepEnabled",
   design_settings as "designSettings",
   created_by as "createdBy",
   created_at as "createdAt", updated_at as "updatedAt"
@@ -117,6 +118,7 @@ export const getActivePublicFormQuery = async (
       id, name, description, slug, entity_type as "entityType",
       schema, submit_button_text as "submitButtonText",
       public_id as "publicId",
+      eu_ai_act_risk_step_enabled as "euAiActRiskStepEnabled",
       design_settings as "designSettings"
     FROM intake_forms
     WHERE organization_id = :organizationId
@@ -143,6 +145,7 @@ export const getFormByPublicIdQuery = async (
       id, name, description, slug, entity_type as "entityType",
       schema, submit_button_text as "submitButtonText",
       public_id as "publicId",
+      eu_ai_act_risk_step_enabled as "euAiActRiskStepEnabled",
       design_settings as "designSettings"
     FROM intake_forms
     WHERE organization_id = :organizationId
@@ -173,11 +176,11 @@ export const createIntakeFormQuery = async (
     `INSERT INTO intake_forms
       (organization_id, name, description, slug, entity_type, schema, submit_button_text, status,
        ttl_expires_at, public_id, recipients, risk_tier_system, risk_assessment_config,
-       llm_key_id, suggested_questions_enabled, design_settings, created_by, created_at, updated_at)
+       llm_key_id, suggested_questions_enabled, eu_ai_act_risk_step_enabled, design_settings, created_by, created_at, updated_at)
     VALUES
       (:organizationId, :name, :description, :slug, :entityType, :schema, :submitButtonText, :status,
        :ttlExpiresAt, :publicId, :recipients, :riskTierSystem, :riskAssessmentConfig,
-       :llmKeyId, :suggestedQuestionsEnabled, :designSettings, :createdBy, NOW(), NOW())
+       :llmKeyId, :suggestedQuestionsEnabled, :euAiActRiskStepEnabled, :designSettings, :createdBy, NOW(), NOW())
     RETURNING ${FORM_SELECT_COLUMNS}`,
     {
       replacements: {
@@ -198,6 +201,7 @@ export const createIntakeFormQuery = async (
           : null,
         llmKeyId: data.llmKeyId || null,
         suggestedQuestionsEnabled: data.suggestedQuestionsEnabled || false,
+        euAiActRiskStepEnabled: data.euAiActRiskStepEnabled || false,
         designSettings: data.designSettings ? JSON.stringify(data.designSettings) : null,
         createdBy: data.createdBy,
       },
@@ -273,6 +277,10 @@ export const updateIntakeFormQuery = async (
   if (data.suggestedQuestionsEnabled !== undefined) {
     updates.push("suggested_questions_enabled = :suggestedQuestionsEnabled");
     replacements.suggestedQuestionsEnabled = data.suggestedQuestionsEnabled;
+  }
+  if (data.euAiActRiskStepEnabled !== undefined) {
+    updates.push("eu_ai_act_risk_step_enabled = :euAiActRiskStepEnabled");
+    replacements.euAiActRiskStepEnabled = data.euAiActRiskStepEnabled;
   }
   if (data.designSettings !== undefined) {
     updates.push("design_settings = :designSettings");

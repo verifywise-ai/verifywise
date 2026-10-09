@@ -5,12 +5,28 @@ import {
   IntakeSubmissionStatus,
 } from "../../domain/intake/enums";
 import type {
+  Answers,
+  ClassificationResult,
+  ClassificationRole,
+  Questionnaire,
+} from "../../domain/types/euAiActClassification";
+import type {
   FieldType,
   FormDesignSettings,
 } from "../../presentation/pages/IntakeFormBuilder/types";
 
 // Re-export enums for convenience
 export { IntakeFormStatus, IntakeEntityType, IntakeSubmissionStatus };
+
+/** EU AI Act classification returned with a submission preview (null when the form had no risk step). */
+export interface EuAiActClassificationPreview {
+  questionnaire: Questionnaire;
+  answers: Answers;
+  role: ClassificationRole | null;
+  current: ClassificationResult;
+  changedSinceSubmission: boolean;
+  submittedAt: string;
+}
 
 /**
  * Base URL for intake form API
@@ -82,6 +98,7 @@ export interface IntakeForm {
   riskAssessmentConfig?: Record<string, unknown> | null;
   llmKeyId?: number | null;
   suggestedQuestionsEnabled?: boolean;
+  euAiActRiskStepEnabled?: boolean;
   designSettings?: FormDesignSettings | null;
   createdBy: number;
   createdAt: Date;
@@ -206,6 +223,7 @@ export async function createIntakeForm(
     riskTierSystem?: string;
     llmKeyId?: number | null;
     suggestedQuestionsEnabled?: boolean;
+    euAiActRiskStepEnabled?: boolean;
     designSettings?: FormDesignSettings | null;
   },
   signal?: AbortSignal,
@@ -231,6 +249,7 @@ export async function updateIntakeForm(
     riskTierSystem?: string;
     llmKeyId?: number | null;
     suggestedQuestionsEnabled?: boolean;
+    euAiActRiskStepEnabled?: boolean;
     designSettings?: FormDesignSettings | null;
   },
   signal?: AbortSignal,
@@ -316,6 +335,7 @@ export async function getSubmissionPreview(
     };
     riskTier?: string | null;
     riskOverride?: RiskOverride | null;
+    euAiActClassification?: EuAiActClassificationPreview | null;
   };
 }> {
   const response = await apiServices.get(`${BASE_URL}/submissions/${submissionId}/preview`, {
@@ -335,6 +355,7 @@ export async function getSubmissionPreview(
       };
       riskTier?: string | null;
       riskOverride?: RiskOverride | null;
+      euAiActClassification?: EuAiActClassificationPreview | null;
     };
   };
 }
@@ -351,6 +372,7 @@ export async function approveSubmission(
       dimensionOverrides?: Record<string, number>;
       justification: string;
     };
+    euAiActOverride?: { level: string; justification: string };
   },
   signal?: AbortSignal,
 ): Promise<{ data: { submission: IntakeSubmission; createdEntity: unknown } }> {
@@ -513,6 +535,8 @@ export async function getPublicForm(
     previousData?: Record<string, unknown>;
     previousSubmitterName?: string;
     previousSubmitterEmail?: string;
+    euAiActRiskStep?: { questionnaire: Questionnaire } | null;
+    previousRiskAnswers?: Answers;
   };
 }> {
   const queryParams = resubmissionToken ? `?token=${resubmissionToken}` : "";
@@ -535,6 +559,8 @@ export async function getPublicForm(
       previousData?: Record<string, unknown>;
       previousSubmitterName?: string;
       previousSubmitterEmail?: string;
+      euAiActRiskStep?: { questionnaire: Questionnaire } | null;
+      previousRiskAnswers?: Answers;
     };
   };
 }
@@ -552,6 +578,7 @@ export async function submitPublicForm(
     captchaToken: string;
     captchaAnswer: number;
     resubmissionToken?: string;
+    euAiActRiskAnswers?: Answers;
   },
 ): Promise<{
   data: {
@@ -588,6 +615,8 @@ export async function getPublicFormById(
     previousData?: Record<string, unknown>;
     previousSubmitterName?: string;
     previousSubmitterEmail?: string;
+    euAiActRiskStep?: { questionnaire: Questionnaire } | null;
+    previousRiskAnswers?: Answers;
   };
 }> {
   const queryParams = resubmissionToken ? `?token=${resubmissionToken}` : "";
@@ -608,6 +637,8 @@ export async function getPublicFormById(
       previousData?: Record<string, unknown>;
       previousSubmitterName?: string;
       previousSubmitterEmail?: string;
+      euAiActRiskStep?: { questionnaire: Questionnaire } | null;
+      previousRiskAnswers?: Answers;
     };
   };
 }
@@ -628,6 +659,7 @@ export async function submitPublicFormById(
     captchaToken: string;
     captchaAnswer: number;
     resubmissionToken?: string;
+    euAiActRiskAnswers?: Answers;
   },
 ): Promise<{
   data: {

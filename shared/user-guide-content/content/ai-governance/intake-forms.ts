@@ -501,6 +501,62 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'eu-ai-act-risk-step',
+      level: 2,
+      text: 'EU AI Act risk classification step',
+    },
+    {
+      type: 'paragraph',
+      text: 'Use case forms can ask the EU AI Act risk questionnaire before the form\'s own questions. Turn on **EU AI Act risk classification step** in the builder\'s settings panel and save the form. The toggle only appears on use case forms. Model inventory forms do not have it.',
+    },
+    {
+      type: 'paragraph',
+      text: 'The step sets the new use case\'s AI risk classification, so a form cannot have both the step and a question mapped to `ai_risk_classification`. Turning the step on removes that mapping. The question itself stays on the form and its answers are still saved with the submission.',
+    },
+    {
+      type: 'heading',
+      id: 'eu-ai-act-risk-step-submitters',
+      level: 3,
+      text: 'What submitters see',
+    },
+    {
+      type: 'paragraph',
+      text: 'The public form opens on the risk questionnaire. Each answer decides which question comes next, so a system built only for research and development finishes after one question. The follow-up questions for each Annex III area accept several answers, and any listed use makes the system high risk. After the last question the submitter moves on to the form, and can go back with **Back to risk classification**. Submitters do not see the resulting classification. The browser sends only the answers: VerifyWise checks and scores them on the server when the form is submitted. If the server rejects the answers, the form returns to the risk questionnaire.',
+    },
+    {
+      type: 'heading',
+      id: 'eu-ai-act-risk-step-reviewers',
+      level: 3,
+      text: 'What reviewers see',
+    },
+    {
+      type: 'paragraph',
+      text: 'The review dialog adds an **EU AI Act classification** panel with:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { text: 'The computed level: Prohibited, High risk, Limited risk, Minimal risk or Out of scope' },
+        { text: 'The reasons, each with its article and, where one applies, the date it applies from' },
+        { text: 'The role (provider or deployer) the submitter chose' },
+        { text: 'Every question and the answer given' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'The panel scores the stored answers again when you open it. If that gives a different level from the one at submission, the panel marks it **Updated since submission**.',
+    },
+    {
+      type: 'paragraph',
+      text: 'You can pick a different level under **Classification for the new use case**. Only the five levels above are offered, and a change needs a justification of at least 10 characters. On approval the use case gets the chosen level and the role, the answers are copied to the use case, and its change history records the level together with the computed level and your justification when you changed it. The new use case also gets the EU AI Act framework, with its assessment and controls. When the selected level is Prohibited, the panel warns that approving creates a use case classified as prohibited.',
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      text: 'Submissions from forms without the step, and submissions made before the step was turned on, have no classification panel and are approved as before.',
+    },
+    {
+      type: 'heading',
       id: 'approving-submissions',
       level: 2,
       text: 'Approving a submission',

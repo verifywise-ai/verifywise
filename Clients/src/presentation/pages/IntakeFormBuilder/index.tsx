@@ -59,6 +59,7 @@ import { CustomizableButton } from "../../components/button/customizable-button"
 import StandardModal from "../../components/Modals/StandardModal";
 import Select from "../../components/Inputs/Select";
 import Checkbox from "../../components/Inputs/Checkbox";
+import EuAiActStepToggle from "./EuAiActStepToggle";
 import Chip from "../../components/Chip";
 import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
 
@@ -292,6 +293,7 @@ export function IntakeFormBuilder() {
         riskTierSystem: form.riskTierSystem ?? "eu_ai_act",
         llmKeyId: activeLlmKeyId,
         suggestedQuestionsEnabled: form.suggestedQuestionsEnabled ?? false,
+        euAiActRiskStepEnabled: form.euAiActRiskStepEnabled ?? false,
       };
       if (isEditing && formId) {
         const response = await updateIntakeForm(parseInt(formId), formData);
@@ -339,6 +341,7 @@ export function IntakeFormBuilder() {
         riskTierSystem: form.riskTierSystem ?? "eu_ai_act",
         llmKeyId: activeLlmKeyId,
         suggestedQuestionsEnabled: form.suggestedQuestionsEnabled ?? false,
+        euAiActRiskStepEnabled: form.euAiActRiskStepEnabled ?? false,
         status: IntakeFormStatus.ACTIVE,
       };
       const formIdNum = isEditing && formId ? parseInt(formId) : undefined;
@@ -471,8 +474,11 @@ export function IntakeFormBuilder() {
   // ============================================================================
 
   const mappingCoverage = useMemo(
-    () => analyzeMappingCoverage(form.schema.fields, form.entityType),
-    [form.schema.fields, form.entityType],
+    () =>
+      analyzeMappingCoverage(form.schema.fields, form.entityType, {
+        riskStepEnabled: form.euAiActRiskStepEnabled ?? false,
+      }),
+    [form.schema.fields, form.entityType, form.euAiActRiskStepEnabled],
   );
 
   const selectedField = form.schema.fields.find((f) => f.id === selectedFieldId);
@@ -816,9 +822,12 @@ export function IntakeFormBuilder() {
                   <FieldEditor
                     field={selectedField}
                     entityType={form.entityType}
-                    usedEntityMappings={form.schema.fields
-                      .filter((f) => f.id !== selectedField.id && f.entityFieldMapping)
-                      .map((f) => f.entityFieldMapping!)}
+                    usedEntityMappings={[
+                      ...form.schema.fields
+                        .filter((f) => f.id !== selectedField.id && f.entityFieldMapping)
+                        .map((f) => f.entityFieldMapping!),
+                      ...(form.euAiActRiskStepEnabled ? ["ai_risk_classification"] : []),
+                    ]}
                     llmKeyId={activeLlmKeyId}
                     onChange={updateField}
                     onClose={() => setSelectedFieldId(null)}
@@ -1165,6 +1174,31 @@ export function IntakeFormBuilder() {
                             </Box>
                           </Box>
                         )}
+
+                        <EuAiActStepToggle
+                          entityType={form.entityType}
+                          enabled={form.euAiActRiskStepEnabled ?? false}
+                          hasRiskMapping={form.schema.fields.some(
+                            (f) => f.entityFieldMapping === "ai_risk_classification",
+                          )}
+                          onToggle={(enabled) =>
+                            updateForm({
+                              euAiActRiskStepEnabled: enabled,
+                              ...(enabled
+                                ? {
+                                    schema: {
+                                      ...form.schema,
+                                      fields: form.schema.fields.map((f) =>
+                                        f.entityFieldMapping === "ai_risk_classification"
+                                          ? { ...f, entityFieldMapping: undefined }
+                                          : f,
+                                      ),
+                                    },
+                                  }
+                                : {}),
+                            })
+                          }
+                        />
                       </Box>
                     </Collapse>
                   </Box>

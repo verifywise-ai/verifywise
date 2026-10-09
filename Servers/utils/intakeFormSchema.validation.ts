@@ -84,3 +84,28 @@ export function validateIntakeFormSchemaLabels(schema: unknown): string[] {
 
   return fields.flatMap((field, index) => validateField(field as IIntakeFormField, index));
 }
+
+/**
+ * The EU AI Act risk step sets the use case's AI risk classification. It only
+ * exists on use case forms (forced off elsewhere) and cannot coexist with a
+ * question mapped to that field.
+ */
+export function resolveEuAiActRiskStep(input: {
+  entityType: string;
+  enabled: boolean;
+  schema?: IIntakeFormSchema | null;
+}): { enabled: boolean; errors: string[] } {
+  const enabled = input.enabled && input.entityType === "use_case";
+  if (!enabled) return { enabled: false, errors: [] };
+  const mapped = (input.schema?.fields ?? []).some(
+    (f) => f?.entityFieldMapping === "ai_risk_classification",
+  );
+  return {
+    enabled,
+    errors: mapped
+      ? [
+          "Remove the AI risk classification mapping from the form's questions before turning on the EU AI Act risk classification step",
+        ]
+      : [],
+  };
+}
