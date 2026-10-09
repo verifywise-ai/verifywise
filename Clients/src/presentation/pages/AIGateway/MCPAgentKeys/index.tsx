@@ -507,7 +507,12 @@ curl -H "Authorization: Bearer ${newKey}" \\
         onSubmit={handleRevoke}
         submitButtonText="Revoke key"
         maxWidth="440px"
-      />
+      >
+        <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
+          Guardrail rules for selected agents stop listing this key. A rule that listed only this
+          agent then applies to no agent until you choose another one in Guardrails.
+        </Typography>
+      </StandardModal>
 
       {/* Per-agent activity view */}
       <AgentActivityDrawer

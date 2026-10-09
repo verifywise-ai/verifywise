@@ -2,7 +2,9 @@
 
 > **Status:** Shipped to `develop`. Core governance (PRs #4078, #4083, #4084); tool result
 > capture + events timeline + invocation drawer (PR #4103); run correlation, multi-agent
-> wiring (Claude Code + Cursor) and the developer guide (PR #4112). Last updated 2026-06-18.
+> wiring (Claude Code + Cursor) and the developer guide (PR #4112); per-agent rules, decision
+> provenance and the agent activity drawer (#4320, restored after the #4265 revert).
+> Last updated 2026-10-09.
 
 Agent Control gates a coding agent's tool calls through the AI Gateway's guardrails,
 human-approval and audit machinery. It covers two entry paths that share one governance
@@ -105,8 +107,10 @@ PostToolUse → POST /v1/mcp/hook/result  -- find row by (org, session_id, tool_
 
 ### Masking the result (`scan_result_blob`, `mcp_guardrail_service.py`)
 
-`scan_result_blob(org_id, blob)` runs the org's PII / content-filter guardrails over the flat
-serialized result and returns the masked string. Fail-open: any error stores the original blob
+`scan_result_blob(org_id, blob, *, agent_key_id)` runs the org's PII / content-filter
+guardrails that apply to the calling agent (see *Per-agent rules* below) over the flat
+serialized result and returns the masked string. Tool scope is not applied here: the result's
+tool name comes from the client, while the agent key is the caller's own credential. Fail-open: any error stores the original blob
 rather than dropping the result. A tool result has already executed, so **every** detected
 entity is forced to `mask` — a per-entity `block` action would otherwise short-circuit
 `scan_text` into a blocked result (`masked_text=None`) and leak the unmasked blob. (This was a
@@ -144,7 +148,12 @@ MCP-protocol concepts).
 **Invocation drawer** (PR #4103): Activity rows are clickable and open a right-side drawer
 (`MCPInvocationDrawer.tsx`) showing the call's status, `tool_use_id`, agent key + session,
 arguments, the captured result (or "no result captured"), the events timeline, and a raw-JSON
-toggle. It reads `GET /ai-gateway/mcp/audit/logs/{id}`.
+toggle. It reads `GET /ai-gateway/mcp/audit/logs/{id}`. A blocked or approval-gated call also
+shows the rule that decided it.
+
+**Agent activity drawer** (`AgentActivityDrawer.tsx`): the activity icon on an Agent keys row
+opens one agent's last 30 days: tool calls (with last active), runs, denied, approvals,
+errors, average latency, calls per tool, and recent calls with the rule that decided each.
 
 ## Run correlation
 
@@ -187,12 +196,42 @@ correlated run. Zero regression.
 **UI.** A **Runs** page in Agent Control lists runs; clicking one opens a detail drawer that
 shows the conversation and the tool calls interleaved.
 
+## Per-agent rules and decision provenance
+
+**Scope.** A guardrail or `require_approval` rule has `agent_scope` (`'all'` | `'selected'`,
+default `'all'`, migration `a0010`) and `applies_to_agent_keys INTEGER[]` (`a0009`). Every rule
+query (`scan_tool_input`, `check_require_approval`, `scan_result_blob`) matches
+`agent_scope = 'all' OR :agent_key_id = ANY(applies_to_agent_keys)`, and each takes
+`agent_key_id` as a required keyword argument so no path (hook or MCP proxy) can skip it.
+
+- A `'selected'` rule with no keys left applies to **no** agent. It never widens to every agent;
+  that is why the scope is an explicit column rather than "empty list means everyone".
+- Revoking a key removes it from every rule's list in the same transaction (revoked keys can't
+  be reactivated, and only revoked keys can be deleted). The revoke dialog says so.
+- Create/update (`routers/mcp_guardrails.py`, `_resolved_agent_scope`) take both fields
+  together: ids must be active keys of the org, `'selected'` needs at least one, `'all'` takes
+  none, and keys sent without a scope mean `'selected'`. A PATCH that only toggles `is_active`
+  leaves the scope alone.
+- The Guardrails page offers "All agents / Selected agents", lists only active keys, and treats
+  ids that are no longer active keys as gone (a rule with none left shows "No agents").
+- When several prompt-injection rules apply, a `block` rule wins over a `mask` one.
+
+**Provenance.** `ai_gateway_mcp_audit_logs.matched_rule_id` / `matched_rule_name` (`a0009`)
+record the rule behind a block or approval. `blocking_rule()` picks the first blocking detection
+(on the hook, a mask hit counts, since the hook escalates it to a deny), and `block_reason`
+describes that same detection.
+
+**Per-agent activity.** `GET /internal/mcp/audit/agent/{agent_key_id}?days=30` (1 to 365,
+reachable as `/ai-gateway/mcp/audit/agent/{id}`) returns `summary`, `by_tool` and the 50 most
+recent calls. "Denied" excludes circuit-breaker outages, which the proxy logs as `blocked` with
+a fixed summary (`CIRCUIT_BREAKER_SUMMARY`).
+
 ## Not yet built (Phase 4+)
 
 - **Path-based gating** — block/approve writes by *destination* (`~/.ssh`, `.env`, outside the
   repo). Genuinely new matching logic.
-- **Decision provenance** — record which rule matched each call (the "RULE" badge and "Create
-  rule from this" in comparable products); Server/Decision columns on Activity depend on it.
+- **"Create rule from this"** on an Activity row, and Server/Decision columns on Activity
+  (the recorded rule is there to build on; see *Per-agent rules and decision provenance*).
 - An Agent Control overview/landing page; a priority rule engine; tamper-evident audit;
   metering MCP calls into the existing budgets; an LLM "summarize" for captured results.
 - Adapters for agents without a pre-tool hook (Codex CLI, Aider, Gemini CLI). The integration

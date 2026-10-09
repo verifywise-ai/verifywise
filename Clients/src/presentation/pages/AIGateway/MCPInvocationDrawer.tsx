@@ -13,6 +13,7 @@ import {
   KEY_DISPLAY_BG,
   CODE_BLOCK_BG,
   CODE_BLOCK_TEXT,
+  drawerLabelSx as labelSx,
 } from "./shared";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
@@ -68,13 +69,6 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
   const colors = row
     ? MCP_STATUS_COLORS[row.result_status] || MCP_STATUS_FALLBACK
     : MCP_STATUS_FALLBACK;
-  const labelSx = {
-    fontSize: 11,
-    fontWeight: 600,
-    color: palette.text.tertiary,
-    letterSpacing: "0.5px",
-    mb: "6px",
-  };
   const codeBlockSx = {
     fontSize: 12,
     fontFamily: "monospace",

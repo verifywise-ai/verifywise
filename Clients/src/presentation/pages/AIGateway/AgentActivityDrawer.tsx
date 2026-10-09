@@ -7,7 +7,12 @@ import { EmptyState } from "../../components/EmptyState";
 import { apiServices } from "../../../infrastructure/api/networkServices";
 import palette from "../../themes/palette";
 import CustomizableSkeleton from "../../components/Skeletons";
-import { MCP_STATUS_COLORS, MCP_STATUS_FALLBACK, formatMcpStatus } from "./shared";
+import {
+  MCP_STATUS_COLORS,
+  MCP_STATUS_FALLBACK,
+  drawerLabelSx as labelSx,
+  formatMcpStatus,
+} from "./shared";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { useTranslation } from "../../../application/hooks/useTranslation";
 import { fill } from "../../../i18n/fill";
@@ -53,14 +58,6 @@ interface AgentActivity {
   recent: RecentRow[];
 }
 
-const labelSx = {
-  fontSize: 11,
-  fontWeight: 600,
-  letterSpacing: "0.04em",
-  color: palette.text.tertiary,
-  mb: "6px",
-};
-
 /**
  * Per-agent activity view: everything one agent has been doing (summary metrics,
  * per-tool breakdown, and its most recent tool calls with decision provenance).
@@ -73,35 +70,37 @@ export default function AgentActivityDrawer({
 }: AgentActivityDrawerProps) {
   const formatDate = useFormattedDate();
   const { t: tr } = useTranslation();
-  const [data, setData] = useState<AgentActivity | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(false);
+  // The last response, tagged with the agent it belongs to. Until one for the
+  // current agent arrives the drawer shows the skeleton, so it never paints
+  // another agent's numbers or a premature empty state.
+  const [result, setResult] = useState<{
+    forId: number;
+    data: AgentActivity | null;
+    error: boolean;
+  } | null>(null);
 
   useEffect(() => {
     if (!open || !agentKeyId) return;
     // Ignore a response that arrives after the drawer closed or switched agent.
     let current = true;
-    setData(null);
-    setError(false);
-    setLoading(true);
     apiServices
       .get<Record<string, any>>(`/ai-gateway/mcp/audit/agent/${agentKeyId}`, {
         days: ACTIVITY_DAYS,
       })
       .then((res) => {
-        if (current) setData(res?.data?.data || null);
+        if (current) setResult({ forId: agentKeyId, data: res?.data?.data || null, error: false });
       })
       .catch(() => {
-        if (current) setError(true);
-      })
-      .finally(() => {
-        if (current) setLoading(false);
+        if (current) setResult({ forId: agentKeyId, data: null, error: true });
       });
     return () => {
       current = false;
     };
   }, [open, agentKeyId]);
 
+  const loading = !result || result.forId !== agentKeyId;
+  const error = !loading && result.error;
+  const data = loading ? null : result.data;
   const s = data?.summary;
 
   return (

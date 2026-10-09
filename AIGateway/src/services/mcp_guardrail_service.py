@@ -156,14 +156,19 @@ async def scan_tool_input(
     if injection_rules:
         matched_patterns = _check_prompt_injection(input_text)
         if matched_patterns:
-            # Use action from the first prompt_injection rule
-            injection_action = injection_rules[0].get("action", "block")
+            # The strictest matching rule decides: a block rule (for example
+            # one scoped to this agent) wins over an earlier mask rule.
+            injection_rule = next(
+                (r for r in injection_rules if r.get("action", "block") == "block"),
+                injection_rules[0],
+            )
+            injection_action = injection_rule.get("action", "block")
             from services.guardrail_service import Detection
 
             for pattern_name in matched_patterns:
                 result.detections.append(
                     Detection(
-                        guardrail_id=injection_rules[0].get("id"),
+                        guardrail_id=injection_rule.get("id"),
                         guardrail_type="prompt_injection",
                         entity_type=pattern_name,
                         action=injection_action,

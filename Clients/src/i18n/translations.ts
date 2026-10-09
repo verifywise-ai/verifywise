@@ -2068,6 +2068,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Blocked by rule": "Blockiert durch Regel",
     "Agent #{id}": "Agent #{id}",
     "Selected agents": "Ausgewählte Agenten",
+    "Guardrail rules for selected agents stop listing this key. A rule that listed only this agent then applies to no agent until you choose another one in Guardrails.":
+      "Guardrail-Regeln für ausgewählte Agenten führen diesen Schlüssel nicht mehr auf. Eine Regel, die nur diesen Agenten aufführte, gilt dann für keinen Agenten, bis Sie unter Guardrails einen anderen auswählen.",
     "Select agents": "Agenten auswählen",
     "No agents": "Keine Agenten",
     "Select at least one agent, or apply the rule to all agents":
@@ -12298,6 +12300,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Blocked by rule": "Bloqué par la règle",
     "Agent #{id}": "Agent #{id}",
     "Selected agents": "Agents sélectionnés",
+    "Guardrail rules for selected agents stop listing this key. A rule that listed only this agent then applies to no agent until you choose another one in Guardrails.":
+      "Les règles de guardrail pour des agents sélectionnés ne listent plus cette clé. Une règle qui ne listait que cet agent ne s'applique alors à aucun agent tant que vous n'en choisissez pas un autre dans Guardrails.",
     "Select agents": "Sélectionner des agents",
     "No agents": "Aucun agent",
     "Select at least one agent, or apply the rule to all agents":
@@ -21766,6 +21770,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Blocked by rule": "Bloqueado por la regla",
     "Agent #{id}": "Agente #{id}",
     "Selected agents": "Agentes seleccionados",
+    "Guardrail rules for selected agents stop listing this key. A rule that listed only this agent then applies to no agent until you choose another one in Guardrails.":
+      "Las reglas de guardrail para agentes seleccionados dejan de incluir esta clave. Una regla que solo incluía a este agente no se aplicará a ningún agente hasta que elijas otro en Guardrails.",
     "Select agents": "Seleccionar agentes",
     "No agents": "Ningún agente",
     "Select at least one agent, or apply the rule to all agents":

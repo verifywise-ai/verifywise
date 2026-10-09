@@ -42,10 +42,11 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.execute("SET search_path TO verifywise")
-    # Back under a0009 an empty list means every agent, so a 'selected' rule
-    # with no keys left would widen. Switch those off first.
+    # Under a0009 an empty list means every agent, so a 'selected' rule with no
+    # keys left would widen. Give it the id 0, which no agent key has: it then
+    # matches no agent under a0009, and upgrading again makes it 'selected'.
     op.execute(
-        "UPDATE ai_gateway_mcp_guardrail_rules SET is_active = false "
+        "UPDATE ai_gateway_mcp_guardrail_rules SET applies_to_agent_keys = '{0}' "
         "WHERE agent_scope = 'selected' AND cardinality(applies_to_agent_keys) = 0"
     )
     op.execute("ALTER TABLE ai_gateway_mcp_guardrail_rules DROP COLUMN IF EXISTS agent_scope")
