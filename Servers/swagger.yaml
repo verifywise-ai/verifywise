@@ -10303,6 +10303,58 @@ paths:
         -
           bearerAuth: []
       description: 'Requires role: Admin or Editor'
+  /projectRisks/suggest-ai:
+    post:
+      summary: 'Suggest Risks With AI'
+      responses:
+        '200':
+          description: 'Suggestions generated'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {matched: {type: array, items: {type: object, properties: {source: {type: string, enum: [mit, ibm]}, id: {type: integer}, summary: {type: string}, description: {type: string}, risk_category: {type: array, items: {type: string}}, likelihood: {type: string}, severity: {type: string}, reason: {type: string}, ai_lifecycle_phase: {type: string}}}}, suggested: {type: array, items: {type: object, properties: {risk_name: {type: string}, risk_description: {type: string}, risk_category: {type: array, items: {type: string}}, ai_lifecycle_phase: {type: string}, likelihood: {type: integer, minimum: 1, maximum: 5}, severity: {type: integer, minimum: 1, maximum: 5}, impact: {type: string}, mitigation_plan: {type: string}}}}, suppressed_count: {type: integer}}}
+        '400':
+          description: 'Invalid request, or no LLM keys configured for the organization'
+        '401':
+          description: Unauthorized
+        '404':
+          description: 'Project not found'
+        '429':
+          description: 'Rate limit exceeded (10 requests per hour per user)'
+        '500':
+          description: 'Internal server error'
+        '502':
+          description: 'The configured AI provider rejected or failed the request'
+      tags:
+        - 'Project Risks'
+      operationId: suggestRisksWithAI
+      security:
+        -
+          bearerAuth: []
+      description: 'Read-only: the org-configured LLM returns matching entries from the built-in MIT and IBM risk catalogs plus free-form suggested risks for the use case of the project. Nothing is persisted. Rate limited to 10 requests per hour per user.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - projectId
+              properties:
+                projectId:
+                  type: integer
+                  minimum: 1
+                technologySummary:
+                  type: string
+                  maxLength: 2000
+                  description: 'Optional technology summary; overrides project fields in the prompt.'
+                llmKeyId:
+                  type: integer
+                  minimum: 1
+                  description: 'Optional LLM key id; defaults to the most recent key of the organization.'
   /riskLinks/recompute:
     post:
       summary: 'Recompute All Risk Links'

@@ -28,18 +28,22 @@ vi.mock("../../RiskDatabaseModal/types", () => ({
   SelectedRiskData: {},
 }));
 
-vi.mock("../../RiskLevel/constants", () => ({
-  Severity: {
-    Minor: "Minor",
-    Moderate: "Moderate",
-    Major: "Major",
-  },
-  Likelihood: {
-    Unlikely: "Unlikely",
-    Possible: "Possible",
-    Likely: "Likely",
-  },
-}));
+vi.mock("../../RiskLevel/constants", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../RiskLevel/constants")>();
+  return {
+    ...actual,
+    Severity: {
+      Minor: "Minor",
+      Moderate: "Moderate",
+      Major: "Major",
+    },
+    Likelihood: {
+      Unlikely: "Unlikely",
+      Possible: "Possible",
+      Likely: "Likely",
+    },
+  };
+});
 
 import { screen } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";

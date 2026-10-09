@@ -25,7 +25,8 @@ import {
   TITLE_OF_COLUMNS,
   RiskData,
 } from "./types";
-import { mapRiskCategories, filterRisks } from "./utils";
+import { mapRiskCategories } from "../AddNewRiskForm/riskSuggestionMappers";
+import { filterRisks } from "./utils";
 
 /**
  * Reusable modal component for selecting risks from a database.
