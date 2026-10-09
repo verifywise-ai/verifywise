@@ -90,7 +90,10 @@ describe("ISO42001Annex", () => {
 
   it("renders the title and filter bar", async () => {
     renderWithProviders(<ISO42001Annex {...defaultProps} />);
-    expect(screen.getByText("Information Security Controls")).toBeInTheDocument();
+    expect(screen.getByText("Reference controls (Annex A)")).toBeInTheDocument();
+    expect(
+      screen.getByText(/The clauses are mandatory, but Annex A is different/),
+    ).toBeInTheDocument();
     expect(screen.getByTestId("tab-filter-bar")).toBeInTheDocument();
   });
 
@@ -213,7 +216,10 @@ describe("ISO42001Annex", () => {
     mockGetAnnexes.mockRejectedValue(new Error("network error"));
     renderWithProviders(<ISO42001Annex {...defaultProps} />);
     await waitFor(() => {
-      expect(screen.getByText("Information Security Controls")).toBeInTheDocument();
+      expect(screen.getByText("Reference controls (Annex A)")).toBeInTheDocument();
+      expect(
+        screen.getByText(/The clauses are mandatory, but Annex A is different/),
+      ).toBeInTheDocument();
     });
     expect(screen.queryByText(/Organizational policies/)).not.toBeInTheDocument();
   });

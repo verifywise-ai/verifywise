@@ -95,6 +95,7 @@ describe("ISO42001Clause", () => {
   it("renders the title and filter bar", async () => {
     renderWithProviders(<ISO42001Clause {...defaultProps} />);
     expect(screen.getByText("Management System Clauses")).toBeInTheDocument();
+    expect(screen.getByText(/Clauses 4-10/)).toBeInTheDocument();
     expect(screen.getByTestId("tab-filter-bar")).toBeInTheDocument();
   });
 
