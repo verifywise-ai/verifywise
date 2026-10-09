@@ -155,7 +155,7 @@ Output schema (zod): `findings[]` of `{category, risk_description, impact_descri
 
 Each cited evidence item is checked on its own; an item is removed unless both hold:
 
-1. Its `source_id` exists in the evidence pack, and its `quote` is, after normalising case, whitespace and quote marks, a substring of that source's content.
+1. Its `source_id` exists in the evidence pack, and its `quote` is, after decoding the prompt escaping (`&amp;`, `&lt;`, `&gt;`; snippets are escaped before the model sees them) and normalising case, whitespace and quote marks, a substring of that source's content.
 2. That source mentions the vendor's domain or its name (word boundary) in its URL host or content, so a same-name company cannot leak in.
 
 A candidate is dropped when no evidence item remains, when its `category` was not one of the categories searched, when an enum value or length is invalid, or when `calculateRiskLevel(risk_severity, likelihood)` returns no level (the level is stored with the ` Risk` suffix).
@@ -173,7 +173,7 @@ Findings and the run update are written in one transaction. Run states: `queued 
 ## 8. Job, triggers and limits
 
 - Job `vendor_research` on `automationQueue`, `jobId = vendor-research:{org}:{vendor}`, `attempts: 2`, exponential backoff, removal on settle. The service catches model and search errors itself and marks the run `failed`, so BullMQ retries only cover Redis and database failures and never pay for the searches twice.
-- The run row (`queued`) is created by the trigger before enqueueing; the partial unique index makes a second trigger return the existing run. Before inserting, runs stuck in `queued` or `running` for more than 15 minutes are marked `failed` (`timed out`) in the same transaction, so a worker crash cannot block a vendor forever.
+- The run row (`queued`) is created by the trigger before enqueueing; the partial unique index makes a second trigger return the existing run. Runs stuck in `queued` or `running` for more than 15 minutes are marked `failed` (`timed out`), both before a new run is created and whenever the latest run is read, so a worker crash or restart can neither block a vendor nor leave the UI on "Researching" forever. Inside the job, any unexpected error after the run is marked `running` finishes the run as `failed` instead of propagating; only a failure to mark the run `running` is rethrown, because the run is then still `queued` and BullMQ's retry can help.
 - **Auto trigger:** `createVendor`, after commit, fire-and-forget. Skipped for demo vendors, when `VENDOR_RESEARCH_AUTO_RUN=false`, when search is not configured, when the organisation has no LLM key, or when the daily cap is reached (logged, nothing persisted).
 - **Manual trigger:** same path. 429 with `cooldown` when the vendor's last run is younger than the cooldown; 429 with `daily_cap` when the organisation has reached the cap; 409 with `search_not_configured` or `llm_key_missing`.
 - Cooldown and cap are plain count queries; there is no bulk action in v1.
