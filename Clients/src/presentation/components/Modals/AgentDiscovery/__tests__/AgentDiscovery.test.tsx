@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import { fireEvent, screen } from "@testing-library/react";
+import { act, fireEvent, screen } from "@testing-library/react";
 
 // Mock shared dependencies
 vi.mock("../../../Inputs/Field", () => ({
@@ -35,16 +35,34 @@ vi.mock("../../../../../infrastructure/api/networkServices", () => ({
     patch: vi.fn().mockResolvedValue({}),
   },
 }));
-// Users come from the shared, cached users hook.
+// The owner picker: shows its value and, when clicked, picks user 2 only.
+vi.mock("../../../Inputs/MultiSelect", () => ({
+  default: (props: any) => (
+    <button
+      data-testid={`multiselect-${props.id}`}
+      data-value={JSON.stringify(props.value)}
+      onClick={() => props.onChange({ target: { value: [2] } })}
+    >
+      {props.label}
+    </button>
+  ),
+}));
+// Users come from the shared, cached users hook. refreshUsers is stable across
+// renders, like the real hook's; a test can make it load a different list.
+const BASE_USERS = [
+  { id: 1, name: "Ada", surname: "Lovelace", email: "ada@example.com" },
+  { id: 2, name: "Bea", surname: "Brown", email: "bea@example.com" },
+];
+const usersState = vi.hoisted(() => ({
+  users: [] as { id: number; name: string; surname: string; email: string }[],
+  refreshUsers: vi.fn(async () => {}),
+}));
 vi.mock("../../../../../application/hooks/useUsers", () => ({
   default: () => ({
-    users: [
-      { id: 1, name: "Ada", surname: "Lovelace", email: "ada@example.com" },
-      { id: 2, name: "Bea", surname: "Brown", email: "bea@example.com" },
-    ],
+    users: usersState.users,
     loading: false,
     error: null,
-    refreshUsers: vi.fn(),
+    refreshUsers: usersState.refreshUsers,
   }),
 }));
 vi.mock("../../../../../application/hooks/useFormValidation", () => ({
@@ -90,6 +108,14 @@ const mockAgent = {
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
 };
+
+beforeEach(() => {
+  usersState.users = [...BASE_USERS];
+  usersState.refreshUsers.mockReset();
+  usersState.refreshUsers.mockImplementation(async () => {});
+  vi.mocked(apiServices.patch).mockClear();
+  vi.mocked(apiServices.post).mockClear();
+});
 
 describe("LinkModelModal", () => {
   it("renders without crashing when open", () => {
@@ -166,8 +192,7 @@ describe("ManualAgentModal", () => {
     expect(screen.queryByText("Internal Server Error")).not.toBeInTheDocument();
   });
 
-  it("drops owners who are no longer users, says so, and saves without them", async () => {
-    vi.mocked(apiServices.patch).mockClear();
+  it("sends no owner fields when only the name or notes are edited", async () => {
     renderWithProviders(
       <ManualAgentModal
         isOpen={true}
@@ -176,21 +201,87 @@ describe("ManualAgentModal", () => {
         agent={{ ...mockAgent, owner_id: "9", owner_ids: [9, 1] }}
       />,
     );
+    // Wait for the owner check, which leaves out unknown owner 9.
+    await screen.findByTestId("agent-dropped-owners-note");
+    fireEvent.click(screen.getByText("Save changes"));
+
+    await vi.waitFor(() => expect(apiServices.patch).toHaveBeenCalled());
+    const payload = vi.mocked(apiServices.patch).mock.calls[0][1] as Record<string, unknown>;
+    expect(payload).not.toHaveProperty("owner_ids");
+    expect(payload).not.toHaveProperty("owner_id");
+    expect(payload).toEqual(expect.objectContaining({ display_name: "Test Agent" }));
+  });
+
+  it("sends owner_ids when the owner selection was changed", async () => {
+    renderWithProviders(
+      <ManualAgentModal
+        isOpen={true}
+        setIsOpen={vi.fn()}
+        onSuccess={vi.fn()}
+        agent={{ ...mockAgent, owner_ids: [1] }}
+      />,
+    );
+    fireEvent.click(screen.getByTestId("multiselect-owner_ids"));
+    fireEvent.click(screen.getByText("Save changes"));
+
+    await vi.waitFor(() => expect(apiServices.patch).toHaveBeenCalled());
+    expect(vi.mocked(apiServices.patch).mock.calls[0][1]).toEqual(
+      expect.objectContaining({ owner_ids: [2] }),
+    );
+  });
+
+  it("always sends owner_ids for a new agent", async () => {
+    renderWithProviders(<ManualAgentModal isOpen={true} setIsOpen={vi.fn()} onSuccess={vi.fn()} />);
+    fireEvent.click(screen.getByText("Add agent"));
+    await vi.waitFor(() => expect(apiServices.post).toHaveBeenCalled());
+    expect(vi.mocked(apiServices.post).mock.calls[0][1]).toEqual(
+      expect.objectContaining({ owner_ids: [] }),
+    );
+  });
+
+  it("refreshes the users on open and flags only owners still unknown afterwards", async () => {
+    // The cached list lacks users 3 and 9; the refresh brings back user 3 only.
+    let finishRefresh: () => void = () => {};
+    usersState.refreshUsers.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          finishRefresh = () => {
+            usersState.users = [
+              ...BASE_USERS,
+              { id: 3, name: "Cy", surname: "Coe", email: "cy@example.com" },
+            ];
+            resolve();
+          };
+        }),
+    );
+    renderWithProviders(
+      <ManualAgentModal
+        isOpen={true}
+        setIsOpen={vi.fn()}
+        onSuccess={vi.fn()}
+        agent={{ ...mockAgent, owner_id: "3", owner_ids: [3, 9, 1] }}
+      />,
+    );
+
+    expect(usersState.refreshUsers).toHaveBeenCalledTimes(1);
+    // Not decided on the stale list.
+    expect(screen.queryByTestId("agent-dropped-owners-note")).not.toBeInTheDocument();
+    expect(screen.getByTestId("multiselect-owner_ids")).toHaveAttribute("data-value", "[3,9,1]");
+
+    await act(async () => {
+      finishRefresh();
+    });
 
     expect(
       await screen.findByText(
         "Owners who are no longer in your organization will be removed when you save.",
       ),
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByText("Save changes"));
-
-    await vi.waitFor(() => expect(apiServices.patch).toHaveBeenCalled());
-    expect(vi.mocked(apiServices.patch).mock.calls[0][1]).toEqual(
-      expect.objectContaining({ owner_ids: [1] }),
-    );
+    // Only 9 is still unknown, so only 9 leaves the picker.
+    expect(screen.getByTestId("multiselect-owner_ids")).toHaveAttribute("data-value", "[3,1]");
   });
 
-  it("shows no removal note when every owner is still a user", () => {
+  it("shows no removal note when every owner is still a user", async () => {
     renderWithProviders(
       <ManualAgentModal
         isOpen={true}
@@ -199,7 +290,36 @@ describe("ManualAgentModal", () => {
         agent={{ ...mockAgent, owner_ids: [2, 1] }}
       />,
     );
+    await vi.waitFor(() => expect(usersState.refreshUsers).toHaveBeenCalled());
+    await act(async () => {});
     expect(screen.queryByTestId("agent-dropped-owners-note")).not.toBeInTheDocument();
+    expect(screen.getByTestId("multiselect-owner_ids")).toHaveAttribute("data-value", "[2,1]");
+  });
+
+  it("shows a legacy text owner read-only, and picks no user for it", async () => {
+    renderWithProviders(
+      <ManualAgentModal
+        isOpen={true}
+        setIsOpen={vi.fn()}
+        onSuccess={vi.fn()}
+        agent={{ ...mockAgent, owner_id: "Data platform team", owner_ids: [] }}
+      />,
+    );
+    expect(
+      screen.getByText(
+        'Current owner "Data platform team" is not a VerifyWise user. Choosing owners replaces it.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("multiselect-owner_ids")).toHaveAttribute("data-value", "[]");
+    await act(async () => {});
+    expect(screen.queryByTestId("agent-dropped-owners-note")).not.toBeInTheDocument();
+  });
+
+  it("shows no legacy owner note for an agent whose owners are users", () => {
+    renderWithProviders(
+      <ManualAgentModal isOpen={true} setIsOpen={vi.fn()} onSuccess={vi.fn()} agent={mockAgent} />,
+    );
+    expect(screen.queryByTestId("agent-legacy-owner-note")).not.toBeInTheDocument();
   });
 });
 
@@ -302,16 +422,16 @@ describe("ReviewAgentModal", () => {
     expect(screen.getByText("Bea Brown, Ada Lovelace, User #9")).toBeInTheDocument();
   });
 
-  it("falls back to the legacy owner_id when the agent has no owner set", () => {
+  it("shows a manual agent's legacy text owner when it has no owner set", () => {
     renderWithProviders(
       <ReviewAgentModal
         isOpen={true}
         setIsOpen={vi.fn()}
-        agent={{ ...mockAgent, owner_id: "1" }}
+        agent={{ ...mockAgent, owner_id: "Data platform team" }}
         onSuccess={vi.fn()}
       />,
     );
-    expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
+    expect(screen.getByText("Data platform team")).toBeInTheDocument();
   });
 
   it("shows a synced agent's source-reported owner as is", () => {

@@ -67,15 +67,25 @@ export function getReviewStatusDisplay(status: string | null | undefined): {
 // ── Owners and user names ────────────────────────────────────────────────────
 
 /**
- * An agent's owners as user-id strings, primary first: the full owner set, or
- * the legacy single owner_id when the set is empty.
+ * An agent's owners, primary first. The owner set (`owner_ids`) is the source
+ * of truth. The legacy single owner_id stands in only when the set is empty and
+ * it is not a manual agent's user id: a synced agent's source-reported owner
+ * (e.g. an email), or free text a manual agent got from the old single-owner
+ * API. A manual agent's numeric owner_id with no owner set names someone who
+ * is no longer a user, so it is not shown as an owner.
+ *
+ * Values are user ids as strings, except that legacy text, which is returned as
+ * is (see isUserIdLike).
  */
 export function getAgentOwnerIds(agent: {
   owner_ids?: number[];
   owner_id: string | null;
+  is_manual: boolean;
 }): string[] {
   if (agent.owner_ids && agent.owner_ids.length > 0) return agent.owner_ids.map(String);
-  return agent.owner_id ? [agent.owner_id] : [];
+  if (!agent.owner_id) return [];
+  if (agent.is_manual && isUserIdLike(agent.owner_id)) return [];
+  return [agent.owner_id];
 }
 
 /** User id (as a string) → display name. */
@@ -94,7 +104,7 @@ export function buildUserNameMap(
 }
 
 /** True for a value that can be a user id (a positive decimal integer). */
-function isUserIdLike(value: number | string): boolean {
+export function isUserIdLike(value: number | string): boolean {
   return /^\d+$/.test(String(value).trim());
 }
 

@@ -847,6 +847,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Owners": "Verantwortliche",
     "Owners who are no longer in your organization will be removed when you save.":
       "Verantwortliche, die nicht mehr zu Ihrer Organisation gehören, werden beim Speichern entfernt.",
+    'Current owner "{owner}" is not a VerifyWise user. Choosing owners replaces it.':
+      "Der aktuelle Verantwortliche „{owner}“ ist kein VerifyWise-Benutzer. Wenn Sie Verantwortliche auswählen, wird er ersetzt.",
     "Delete agent": "Agent löschen",
     "OWNER": "VERANTWORTLICHER",
     "Owner name": "Name des Verantwortlichen",
@@ -10913,6 +10915,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Owners": "Responsables",
     "Owners who are no longer in your organization will be removed when you save.":
       "Les responsables qui ne font plus partie de votre organisation seront supprimés à l'enregistrement.",
+    'Current owner "{owner}" is not a VerifyWise user. Choosing owners replaces it.':
+      "Le responsable actuel « {owner} » n'est pas un utilisateur VerifyWise. Choisir des responsables le remplace.",
     "Delete agent": "Supprimer l'agent",
     "Owner name": "Nom du responsable",
     "Status": "Statut",
@@ -20719,6 +20723,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Owners": "Responsables",
     "Owners who are no longer in your organization will be removed when you save.":
       "Los responsables que ya no pertenecen a su organización se eliminarán al guardar.",
+    'Current owner "{owner}" is not a VerifyWise user. Choosing owners replaces it.':
+      "El responsable actual “{owner}” no es un usuario de VerifyWise. Elegir responsables lo reemplaza.",
     "Delete agent": "Eliminar agente",
     "Select owners": "Seleccionar responsables",
     "OWNER": "RESPONSABLE",

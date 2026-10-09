@@ -6,7 +6,10 @@ jest.mock("../../database/db", () => ({
 }));
 jest.mock("../fileUpload.utils", () => ({ deleteFileById: jest.fn() }));
 
-import { reassignAgentOwnersOfDeletedUsersQuery } from "../agentDiscovery.utils";
+import {
+  getAllAgentPrimitivesQuery,
+  reassignAgentOwnersOfDeletedUsersQuery,
+} from "../agentDiscovery.utils";
 import { deleteUserByIdQuery, deleteDemoUsersQuery } from "../user.utils";
 
 const ORG_ID = 7;
@@ -29,8 +32,9 @@ describe("reassignAgentOwnersOfDeletedUsersQuery", () => {
     const flat = sql.replace(/\s+/g, " ");
     expect(flat).toContain("UPDATE agent_primitives ap SET owner_id = ( SELECT apo.user_id::text");
     expect(flat).toContain("apo.user_id NOT IN (:userIds) ORDER BY apo.id ASC LIMIT 1");
+    // Only manual agents: a synced agent's owner_id is source-reported text.
     expect(flat).toContain(
-      "WHERE ap.organization_id = :organizationId AND ap.owner_id IN (:userIdTexts)",
+      "WHERE ap.organization_id = :organizationId AND ap.is_manual = true AND ap.owner_id IN (:userIdTexts)",
     );
     expect(options.replacements).toEqual({
       organizationId: ORG_ID,
@@ -72,5 +76,31 @@ describe("user deletion keeps agent primary owners consistent", () => {
     expect((mockQuery.mock.calls[reassign][1] as any).replacements).toEqual(
       expect.objectContaining({ organizationId: ORG_ID, userIds: [11, 12] }),
     );
+  });
+});
+
+describe("getAllAgentPrimitivesQuery owner sets", () => {
+  it("does not load owners unless asked (advisor callers)", async () => {
+    mockQuery.mockResolvedValueOnce([{ id: 1 }, { id: 2 }]);
+    const rows = await getAllAgentPrimitivesQuery(ORG_ID);
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    expect(sqlOf(mockQuery.mock.calls[0])).not.toContain("agent_primitive_owners");
+    expect((rows[0] as any).owner_ids).toBeUndefined();
+  });
+
+  it("attaches each agent's owners with one grouped query when asked", async () => {
+    mockQuery.mockResolvedValueOnce([{ id: 1 }, { id: 2 }]).mockResolvedValueOnce([
+      { agent_primitive_id: 1, user_id: 3 },
+      { agent_primitive_id: 1, user_id: 4 },
+    ]);
+    const rows = await getAllAgentPrimitivesQuery(ORG_ID, {}, { includeOwners: true });
+    expect(mockQuery).toHaveBeenCalledTimes(2);
+    expect(sqlOf(mockQuery.mock.calls[1])).toContain("FROM agent_primitive_owners");
+    expect((mockQuery.mock.calls[1][1] as any).replacements).toEqual({
+      organizationId: ORG_ID,
+      ids: [1, 2],
+    });
+    expect((rows[0] as any).owner_ids).toEqual([3, 4]);
+    expect((rows[1] as any).owner_ids).toEqual([]);
   });
 });

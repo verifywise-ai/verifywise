@@ -55,9 +55,11 @@ jest.mock("../../utils/i18n.utils", () => ({
 import {
   createAgentPrimitive,
   getAgentPrimitiveById,
+  getAllAgentPrimitives,
   updateAgentPrimitive,
 } from "../agentDiscovery.ctrl";
 import {
+  getAllAgentPrimitivesQuery,
   getAgentPrimitiveByIdQuery,
   createAgentPrimitiveQuery,
   updateAgentPrimitiveQuery,
@@ -68,6 +70,7 @@ import {
   lockAgentPrimitiveQuery,
 } from "../../utils/agentDiscovery.utils";
 
+const mockGetAll = getAllAgentPrimitivesQuery as jest.MockedFunction<any>;
 const mockGetById = getAgentPrimitiveByIdQuery as jest.MockedFunction<any>;
 const mockCreate = createAgentPrimitiveQuery as jest.MockedFunction<any>;
 const mockUpdate = updateAgentPrimitiveQuery as jest.MockedFunction<any>;
@@ -153,7 +156,7 @@ describe("createAgentPrimitive owners", () => {
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({ data: "Owners must be users in your organization" }),
     );
-    expect(mockUsersInOrg).toHaveBeenCalledWith([1, 500], ORG_ID);
+    expect(mockUsersInOrg).toHaveBeenCalledWith([1, 500], ORG_ID, undefined);
     expect(mockCreate).not.toHaveBeenCalled();
   });
 
@@ -187,6 +190,48 @@ describe("createAgentPrimitive owners", () => {
     expect(mockRollback).toHaveBeenCalled();
     expect(mockCommit).not.toHaveBeenCalled();
   });
+
+  it("stores a legacy text owner_id as is, with no owner rows", async () => {
+    const res = createRes();
+    await createAgentPrimitive(
+      createReq({ body: { ...body, owner_id: "Data platform team" } }),
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(mockCreate.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ owner_id: "Data platform team" }),
+    );
+    expect(mockSetOwners).not.toHaveBeenCalled();
+    expect(mockUsersInOrg).not.toHaveBeenCalled();
+  });
+
+  it("stores a numeric legacy owner_id as the single owner", async () => {
+    const res = createRes();
+    await createAgentPrimitive(createReq({ body: { ...body, owner_id: "2" } }), res);
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(mockCreate.mock.calls[0][0]).toEqual(expect.objectContaining({ owner_id: "2" }));
+    expect(mockSetOwners).toHaveBeenCalledWith(10, [2], ORG_ID, expect.anything());
+  });
+
+  it("rejects a text owner_id longer than the column with 400", async () => {
+    const res = createRes();
+    await createAgentPrimitive(createReq({ body: { ...body, owner_id: "x".repeat(256) } }), res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it("rejects a text owner_id sent with owner_ids with 400", async () => {
+    const res = createRes();
+    await createAgentPrimitive(
+      createReq({ body: { ...body, owner_ids: [2], owner_id: "alice@example.com" } }),
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: "owner_id must be a user ID when sent with owner_ids" }),
+    );
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
 });
 
 describe("updateAgentPrimitive owners", () => {
@@ -219,38 +264,38 @@ describe("updateAgentPrimitive owners", () => {
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({ data: "Owners must be users in your organization" }),
     );
-    expect(mockUsersInOrg).toHaveBeenCalledWith([1, 500], ORG_ID, expect.anything());
+    // Only the newly added owner is checked.
+    expect(mockUsersInOrg).toHaveBeenCalledWith([500], ORG_ID, expect.anything());
     expect(mockUpdate).not.toHaveBeenCalled();
     expect(mockSetOwners).not.toHaveBeenCalled();
     expect(mockCommit).not.toHaveBeenCalled();
   });
 
-  it("drops an existing owner who is no longer a user instead of rejecting the save", async () => {
-    // User 50 owned the agent but has since left the organization.
-    givenAgent({ owner_id: "50" });
-    mockGetOwners.mockResolvedValue([50, 2]);
+  it("keeps current owners without re-checking them and checks only added ones", async () => {
+    givenAgent({ owner_id: "4" });
+    mockGetOwners.mockResolvedValue([4, 2]);
     const res = createRes();
-    await updateAgentPrimitive(req({ owner_ids: [50, 2, 3] }), res);
+    await updateAgentPrimitive(req({ owner_ids: [4, 2, 3] }), res);
 
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(mockUpdate.mock.calls[0][1]).toEqual(expect.objectContaining({ owner_id: "2" }));
-    expect(mockSetOwners).toHaveBeenCalledWith(10, [2, 3], ORG_ID, expect.anything());
+    expect(mockUsersInOrg).toHaveBeenCalledWith([3], ORG_ID, expect.anything());
+    expect(mockSetOwners).toHaveBeenCalledWith(10, [4, 2, 3], ORG_ID, expect.anything());
     expect(auditRows().owner_ids).toEqual(
-      expect.objectContaining({ old_value: "50,2", new_value: "2,3" }),
+      expect.objectContaining({ old_value: "4,2", new_value: "4,2,3" }),
     );
     expect(mockCommit).toHaveBeenCalled();
   });
 
-  it("does not resurrect a deleted user through the legacy owner_id fallback", async () => {
-    // No junction rows; the legacy owner_id still names a deleted user.
+  it("does not treat a manual agent's numeric owner_id without owner rows as an owner", async () => {
+    // No owner rows; the legacy owner_id names someone who is not a user any more.
     givenAgent({ owner_id: "50" });
     mockGetOwners.mockResolvedValue([]);
     const res = createRes();
     await updateAgentPrimitive(req({ owner_ids: [50] }), res);
 
-    expect(res.status).toHaveBeenCalledWith(200);
-    expect(mockUpdate.mock.calls[0][1]).toEqual(expect.objectContaining({ owner_id: null }));
-    expect(mockSetOwners).toHaveBeenCalledWith(10, [], ORG_ID, expect.anything());
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockSetOwners).not.toHaveBeenCalled();
   });
 
   it("writes a single owner_ids audit row when the owner set changes", async () => {
@@ -358,35 +403,81 @@ describe("updateAgentPrimitive owners", () => {
     );
   });
 
-  it("falls back to the legacy owner_id column when the junction table is empty", async () => {
-    givenAgent({ owner_id: "1" });
+  it("replaces a legacy text owner when a numeric owner_id is sent", async () => {
+    givenAgent({ owner_id: "Data platform team" });
     mockGetOwners.mockResolvedValue([]);
     const res = createRes();
     await updateAgentPrimitive(req({ owner_id: 2 }), res);
+    expect(res.status).toHaveBeenCalledWith(200);
     expect(mockSetOwners).toHaveBeenCalledWith(10, [2], ORG_ID, expect.anything());
+    expect(mockUpdate.mock.calls[0][1]).toEqual(expect.objectContaining({ owner_id: "2" }));
     expect(auditRows().owner_ids).toEqual(
-      expect.objectContaining({ old_value: "1", new_value: "2" }),
+      expect.objectContaining({ old_value: "Data platform team", new_value: "2" }),
     );
   });
 
-  it("clears all owners when owner_id is null and owner_ids is absent", async () => {
+  it("removes only the primary owner when owner_id is null and owner_ids is absent", async () => {
+    givenAgent({ owner_id: "1" });
+    mockGetOwners.mockResolvedValue([1, 2, 3]);
+    const res = createRes();
+    await updateAgentPrimitive(req({ owner_id: null }), res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    // The next owner becomes primary; co-owners are kept.
+    expect(mockUpdate.mock.calls[0][1]).toEqual(expect.objectContaining({ owner_id: "2" }));
+    expect(mockSetOwners).toHaveBeenCalledWith(10, [2, 3], ORG_ID, expect.anything());
+    expect(auditRows().owner_ids).toEqual(
+      expect.objectContaining({ old_value: "1,2,3", new_value: "2,3" }),
+    );
+  });
+
+  it("leaves no owner when the only owner is removed with an empty owner_id", async () => {
+    givenAgent({ owner_id: "1" });
+    mockGetOwners.mockResolvedValue([1]);
+    const res = createRes();
+    await updateAgentPrimitive(req({ owner_id: "" }), res);
+    expect(mockUpdate.mock.calls[0][1]).toEqual(expect.objectContaining({ owner_id: null }));
+    expect(mockSetOwners).toHaveBeenCalledWith(10, [], ORG_ID, expect.anything());
+  });
+
+  it("stores a text owner_id as the only owner and clears the owner rows", async () => {
     givenAgent({ owner_id: "1" });
     mockGetOwners.mockResolvedValue([1, 2]);
     const res = createRes();
-    await updateAgentPrimitive(req({ owner_id: null }), res);
-    expect(mockUpdate.mock.calls[0][1]).toEqual(expect.objectContaining({ owner_id: null }));
+    await updateAgentPrimitive(req({ owner_id: "alice@example.com" }), res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(mockUpdate.mock.calls[0][1]).toEqual(
+      expect.objectContaining({ owner_id: "alice@example.com" }),
+    );
     expect(mockSetOwners).toHaveBeenCalledWith(10, [], ORG_ID, expect.anything());
-    const rows = auditRows();
-    expect(rows.owner_id).toBeUndefined();
-    expect(rows.owner_ids).toEqual(expect.objectContaining({ old_value: "1,2", new_value: null }));
+    expect(mockUsersInOrg).not.toHaveBeenCalled();
+    expect(auditRows().owner_ids).toEqual(
+      expect.objectContaining({ old_value: "1,2", new_value: "alice@example.com" }),
+    );
   });
 
-  it("writes no owner audit rows when owners are not in the request", async () => {
+  it("rejects a text owner_id sent with owner_ids with 400", async () => {
+    givenAgent({ owner_id: "1" });
+    mockGetOwners.mockResolvedValue([1]);
+    const res = createRes();
+    await updateAgentPrimitive(req({ owner_ids: [1, 2], owner_id: "alice" }), res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: "owner_id must be a user ID when sent with owner_ids" }),
+    );
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(mockSetOwners).not.toHaveBeenCalled();
+  });
+
+  it("leaves the owners untouched on a name-only update", async () => {
     givenAgent();
     mockGetOwners.mockResolvedValue([1, 2]);
     const res = createRes();
     await updateAgentPrimitive(req({ display_name: "Renamed" }), res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    // owner_id is not written and the owner rows are not replaced.
+    expect(mockUpdate.mock.calls[0][1].owner_id).toBeUndefined();
     expect(mockSetOwners).not.toHaveBeenCalled();
+    expect(mockUsersInOrg).not.toHaveBeenCalled();
     expect(Object.keys(auditRows())).toEqual(["display_name"]);
   });
 
@@ -399,6 +490,16 @@ describe("updateAgentPrimitive owners", () => {
     expect(res.status).toHaveBeenCalledWith(500);
     expect(mockRollback).toHaveBeenCalled();
     expect(mockCommit).not.toHaveBeenCalled();
+  });
+});
+
+describe("getAllAgentPrimitives", () => {
+  it("asks for the owner sets, which the list page shows", async () => {
+    mockGetAll.mockResolvedValue([]);
+    const res = createRes();
+    await getAllAgentPrimitives(createReq(), res);
+    expect(mockGetAll).toHaveBeenCalledWith(ORG_ID, expect.any(Object), { includeOwners: true });
+    expect(res.status).toHaveBeenCalledWith(200);
   });
 });
 

@@ -53,7 +53,7 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
 
   if (!agent) return null;
 
-  // All owners, primary first (falls back to the legacy single owner_id).
+  // All owners, primary first (see getAgentOwnerIds for the legacy owner_id).
   const ownerIds = getAgentOwnerIds(agent);
   const ownerNames = ownerIds.length > 0 ? ownerIds.map((oid) => formatUser(oid)).join(", ") : "—";
   const linkedModelName = agent.linked_model_inventory_id

@@ -9,6 +9,9 @@ import Alert from "../../Alert";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { getClientErrorReason } from "../../../../application/utils/apiErrorReason";
 import { useUserNames } from "../../../pages/AgentDiscovery/useUserNames";
+import { getAgentOwnerIds, isUserIdLike } from "../../../pages/AgentDiscovery/agentLabels";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
 import { AgentPrimitiveRow } from "../../../../domain/interfaces/i.agentDiscovery";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
@@ -31,11 +34,9 @@ const PRIMITIVE_TYPES = [
   { _id: "other", name: "Other" },
 ];
 
-/** The agent's owners as user ids: the full set, else the legacy single owner_id. */
-function getInitialOwnerIds(agent: AgentPrimitiveRow): number[] {
-  if (agent.owner_ids && agent.owner_ids.length > 0) return agent.owner_ids;
-  if (!agent.owner_id || !/^\d+$/.test(agent.owner_id)) return [];
-  return [Number(agent.owner_id)];
+/** The agent's owners that are user ids (everything but legacy text). */
+function getOwnerUserIds(agent: AgentPrimitiveRow): number[] {
+  return getAgentOwnerIds(agent).filter(isUserIdLike).map(Number);
 }
 
 const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
@@ -47,13 +48,26 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
   const isEditMode = Boolean(agent);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [ownerIds, setOwnerIds] = useState<number[]>([]);
+  // Owners are sent on an edit only when the owner selection was changed, so
+  // editing the name or notes never touches the owners.
+  const [ownersChanged, setOwnersChanged] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  // True when owners who are no longer users of the organization were dropped
-  // from the form on open; they would be removed on save, so say so.
-  const [droppedUnknownOwners, setDroppedUnknownOwners] = useState(false);
+  // True once the users list has been refetched for this opening of the form.
+  const [usersRefreshed, setUsersRefreshed] = useState(false);
+  // Owner ids still missing from the refreshed users list (e.g. deleted
+  // users). They cannot be shown in the picker, and are dropped only if the
+  // owner selection is changed and saved, so say so.
+  const [unknownOwnerIds, setUnknownOwnerIds] = useState<number[]>([]);
   // Whether this opening's owners have been checked against the user list yet.
   const ownersCheckedRef = useRef(false);
-  const { users: orgUsers, formatUser } = useUserNames();
+  const { users: orgUsers, formatUser, refreshUsers } = useUserNames();
+  const { t } = useTranslation();
+  // A free-text owner from the old single-owner API (not a VerifyWise user).
+  // It is shown read-only; choosing owners replaces it.
+  const legacyTextOwner = useMemo(
+    () => (agent ? (getAgentOwnerIds(agent).find((v) => !isUserIdLike(v)) ?? null) : null),
+    [agent],
+  );
   const users = useMemo(
     () => orgUsers.map((u) => ({ _id: u.id, name: formatUser(u.id) })),
     [orgUsers, formatUser],
@@ -78,41 +92,60 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
     useFormValidation<typeof formData>(validators);
 
   useEffect(() => {
-    if (isOpen) {
-      setSaveError(null);
-      setDroppedUnknownOwners(false);
-      ownersCheckedRef.current = false;
-      if (agent) {
-        setFormData({
-          display_name: agent.display_name || "",
-          primitive_type: agent.primitive_type || "",
-          notes: agent.metadata?.notes || "",
-        });
-        setOwnerIds(getInitialOwnerIds(agent));
-      }
+    if (!isOpen) return;
+    setSaveError(null);
+    setOwnersChanged(false);
+    setUnknownOwnerIds([]);
+    setUsersRefreshed(false);
+    ownersCheckedRef.current = false;
+    if (agent) {
+      setFormData({
+        display_name: agent.display_name || "",
+        primitive_type: agent.primitive_type || "",
+        notes: agent.metadata?.notes || "",
+      });
+      setOwnerIds(getOwnerUserIds(agent));
     }
-  }, [isOpen, agent]);
+    // Refetch the users, so the picker offers everyone and an owner who was
+    // added since the list was cached is not mistaken for an unknown one.
+    let cancelled = false;
+    (async () => {
+      try {
+        await refreshUsers();
+      } catch {
+        // Keep the cached list; the check below still runs on it.
+      } finally {
+        if (!cancelled) setUsersRefreshed(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, agent, refreshUsers]);
 
-  // Owner ids that are not in the user list (e.g. deleted users) cannot be
-  // shown in the owner picker, and the server drops them on save. Drop them
-  // from the form once the users have loaded, so what is shown is what is
-  // saved. An empty list means the users are not loaded (an organization
-  // always has at least the current user), so wait rather than drop everyone.
+  // Once the refreshed users have loaded, find owner ids that are still not
+  // users. They are left out of the picker (it cannot show them), and only
+  // reach the saved owners if the selection is not changed. An empty list
+  // means the users are not loaded (an organization always has at least the
+  // current user), so wait rather than call everyone unknown.
   useEffect(() => {
-    if (!isOpen || !agent || ownersCheckedRef.current || orgUsers.length === 0) return;
+    if (!isOpen || !agent || !usersRefreshed || ownersCheckedRef.current) return;
+    if (orgUsers.length === 0) return;
     ownersCheckedRef.current = true;
     const known = new Set(orgUsers.map((u) => Number(u.id)));
-    if (getInitialOwnerIds(agent).every((id) => known.has(id))) return;
+    const unknown = getOwnerUserIds(agent).filter((id) => !known.has(id));
+    if (unknown.length === 0) return;
+    setUnknownOwnerIds(unknown);
     setOwnerIds((current) => current.filter((id) => known.has(id)));
-    setDroppedUnknownOwners(true);
-  }, [isOpen, agent, orgUsers]);
+  }, [isOpen, agent, usersRefreshed, orgUsers]);
 
   const handleClose = () => {
     setIsOpen(false);
     setFormData({ display_name: "", primitive_type: "", notes: "" });
     setOwnerIds([]);
+    setOwnersChanged(false);
     setSaveError(null);
-    setDroppedUnknownOwners(false);
+    setUnknownOwnerIds([]);
     resetErrors();
   };
 
@@ -122,12 +155,14 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
     setIsSubmitting(true);
     setSaveError(null);
     try {
-      const payload = {
+      const payload: Record<string, unknown> = {
         display_name: formData.display_name.trim(),
         primitive_type: formData.primitive_type,
-        owner_ids: ownerIds,
         metadata: formData.notes.trim() ? { notes: formData.notes.trim() } : {},
       };
+      // A new agent always gets its owners; an edit sends them only when the
+      // owner selection was changed, so other edits leave the owners as they are.
+      if (!isEditMode || ownersChanged) payload.owner_ids = ownerIds;
 
       if (isEditMode && agent) {
         await apiServices.patch(`/agent-primitives/${agent.id}`, payload);
@@ -212,9 +247,25 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
           placeholder="Select owners"
           value={ownerIds}
           items={users}
-          onChange={(e) => setOwnerIds(e.target.value as number[])}
+          onChange={(e) => {
+            setOwnerIds(e.target.value as number[]);
+            setOwnersChanged(true);
+          }}
         />
-        {droppedUnknownOwners && (
+        {legacyTextOwner && (
+          <Typography
+            fontSize={12}
+            color={palette.text.secondary}
+            data-testid="agent-legacy-owner-note"
+            sx={{ mt: "-12px", overflowWrap: "anywhere" }}
+          >
+            {fill(
+              t('Current owner "{owner}" is not a VerifyWise user. Choosing owners replaces it.'),
+              { owner: legacyTextOwner },
+            )}
+          </Typography>
+        )}
+        {unknownOwnerIds.length > 0 && (
           <Typography
             fontSize={12}
             color={palette.text.secondary}

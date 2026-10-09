@@ -27,8 +27,15 @@ const adminState = vi.hoisted(() => ({ isAdmin: true }));
 vi.mock("../../../../application/hooks/useIsAdmin", () => ({
   useIsAdmin: () => adminState.isAdmin,
 }));
+// refreshUsers is stable across renders, like the real hook's.
+const mockRefreshUsers = vi.hoisted(() => vi.fn(async () => {}));
 vi.mock("../../../../application/hooks/useUsers", () => ({
-  default: () => ({ users: mockUsers, loading: false, error: null, refreshUsers: vi.fn() }),
+  default: () => ({
+    users: mockUsers,
+    loading: false,
+    error: null,
+    refreshUsers: mockRefreshUsers,
+  }),
 }));
 
 // Mock the UserGuideSidebarContext used by PageHeaderExtended > HelperIcon
@@ -184,6 +191,31 @@ describe("AgentDetail", () => {
     expect(await screen.findByText("alice@contoso.com")).toBeInTheDocument();
     expect(screen.queryByText(/User #/)).not.toBeInTheDocument();
     expect(screen.getByText("A")).toBeInTheDocument();
+  });
+
+  it("describes a review in the activity with the status label, not the stored value", async () => {
+    serve(agent);
+    auditHandler = () =>
+      Promise.resolve({
+        data: {
+          data: [
+            {
+              id: 1,
+              agent_primitive_id: 5,
+              action: "review_status_changed",
+              field_changed: "review_status",
+              old_value: "unreviewed",
+              new_value: "confirmed",
+              performed_by: null,
+              created_at: "2026-10-02T00:00:00Z",
+            },
+          ],
+        },
+      });
+    renderAt("5");
+
+    expect(await screen.findByText("Review status changed to Confirmed")).toBeInTheDocument();
+    expect(screen.queryByText("Review status changed to confirmed")).not.toBeInTheDocument();
   });
 
   it("offers Review and Edit for a manual agent, and opens each", async () => {

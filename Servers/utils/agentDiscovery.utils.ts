@@ -46,9 +46,15 @@ export interface SyncLogEntry {
 
 // ─── Agent Primitives ────────────────────────────────────────────
 
+/**
+ * List the organization's agent primitives. Pass `includeOwners` to also attach
+ * each agent's owner set as `owner_ids` (one extra grouped query); callers that
+ * only read the rows' own columns leave it off.
+ */
 export const getAllAgentPrimitivesQuery = async (
   organizationId: number,
   filters: AgentPrimitiveFilters = {},
+  options: { includeOwners?: boolean } = {},
 ): Promise<AgentPrimitive[]> => {
   const conditions: string[] = ["organization_id = :organizationId"];
   const replacements: Record<string, any> = { organizationId };
@@ -85,7 +91,7 @@ export const getAllAgentPrimitivesQuery = async (
 
   // Attach the full owner set to each row in a single grouped query, so a
   // multi-owner agent surfaces all its owners without N+1 lookups.
-  if (results.length > 0) {
+  if (options.includeOwners && results.length > 0) {
     const ids = results.map((r) => (r as any).id);
     const ownerRows = (await sequelize.query(
       `SELECT agent_primitive_id, user_id FROM agent_primitive_owners
@@ -165,7 +171,8 @@ export const getUserIdsInOrganizationQuery = async (
 
 /**
  * Lock an agent primitive row for the rest of the transaction and return its
- * current primary owner. Serializes concurrent edits of the owner set.
+ * current primary owner (agent_primitives.owner_id). Serializes concurrent
+ * edits of the owner set.
  */
 export const lockAgentPrimitiveQuery = async (
   id: number,
@@ -182,11 +189,13 @@ export const lockAgentPrimitiveQuery = async (
 };
 
 /**
- * Keep agent_primitives.owner_id consistent when users are deleted: every agent
- * in the organization whose primary owner is one of `userIds` gets the first
- * remaining owner from agent_primitive_owners (by id order, excluding the
- * deleted users), or NULL when none is left. Run inside the user-deletion
- * transaction, before the users rows are deleted.
+ * Keep agent_primitives.owner_id consistent when users are deleted: every
+ * manual agent in the organization whose primary owner is one of `userIds`
+ * gets the first remaining owner from agent_primitive_owners (by id order,
+ * excluding the deleted users), or NULL when none is left. Synced agents are
+ * never touched: their owner_id is text reported by the source system, not a
+ * VerifyWise user id. Run inside the user-deletion transaction, before the
+ * users rows are deleted.
  */
 export const reassignAgentOwnersOfDeletedUsersQuery = async (
   userIds: number[],
@@ -206,6 +215,7 @@ export const reassignAgentOwnersOfDeletedUsersQuery = async (
          ),
          updated_at = NOW()
      WHERE ap.organization_id = :organizationId
+       AND ap.is_manual = true
        AND ap.owner_id IN (:userIdTexts)`,
     {
       replacements: { organizationId, userIds, userIdTexts: userIds.map(String) },

@@ -11,11 +11,13 @@ import { buildUserNameMap, formatUserName, getAvatarName, UserNameMap } from "./
  */
 export function useUserNames(): {
   users: ReturnType<typeof useUsers>["users"];
+  /** Refetch the users list; resolves once the fresh list has loaded. */
+  refreshUsers: ReturnType<typeof useUsers>["refreshUsers"];
   usersMap: UserNameMap;
   formatUser: (userId: number | string) => string;
   avatarName: (userId: number | string) => { firstname: string; lastname: string };
 } {
-  const { users } = useUsers();
+  const { users, refreshUsers } = useUsers();
   const { t } = useTranslation();
   const usersMap = useMemo(() => buildUserNameMap(users), [users]);
   const formatUser = useCallback(
@@ -26,5 +28,5 @@ export function useUserNames(): {
     (userId: number | string) => getAvatarName(userId, usersMap),
     [usersMap],
   );
-  return { users, usersMap, formatUser, avatarName };
+  return { users, refreshUsers, usersMap, formatUser, avatarName };
 }

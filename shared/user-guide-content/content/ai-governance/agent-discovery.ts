@@ -10,7 +10,7 @@ export const agentDiscoveryContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Agent discovery helps you find and track service accounts, technical users and system identities across your connected source systems. These "agents" are non-human identities that interact with your AI systems. Knowing what they are and what they can access is a basic governance requirement.',
+      text: 'The **AI agents** page (under Inventory in the sidebar) helps you find and track service accounts, technical users and system identities across your connected source systems. These "agents" are non-human identities that interact with your AI systems. Knowing what they are, who is accountable for them and what they can access is a basic governance requirement.',
     },
     {
       type: 'heading',
@@ -65,9 +65,23 @@ export const agentDiscoveryContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { text: 'Click **Add agent**.' },
-        { text: 'Enter the agent\'s name, type, owner and notes.' },
+        { text: 'Enter the agent\'s name, type, owners and notes.' },
         { text: 'Manually added agents are marked as such so you can distinguish them from auto-discovered ones.' },
       ],
+    },
+    {
+      type: 'heading',
+      id: 'owners',
+      level: 2,
+      text: 'Owners',
+    },
+    {
+      type: 'paragraph',
+      text: 'A manually added agent can have several owners, so more than one person can be accountable for it. Pick them from your organization\'s users in the **Owners** field. The first owner is the primary owner. If an owner\'s user account is deleted, they are removed from the agent\'s owners and the next owner becomes the primary.',
+    },
+    {
+      type: 'paragraph',
+      text: 'An auto-discovered agent shows the owner reported by its source system, such as an email address. That owner is not a VerifyWise user and cannot be changed in VerifyWise.',
     },
     {
       type: 'heading',
@@ -93,7 +107,43 @@ export const agentDiscoveryContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Click any agent row to open its details, where you can see the full permission set, source system and last activity timestamp. From there you can update the review status.',
+      text: 'To review an agent, open the row\'s action menu and choose **Review**, or click **Review** on the agent\'s detail page. The review panel shows the agent\'s details, where you can confirm or reject it and link it to a model.',
+    },
+    {
+      type: 'heading',
+      id: 'detail-page',
+      level: 2,
+      text: 'Agent detail page',
+    },
+    {
+      type: 'paragraph',
+      text: 'Click any agent row to open its detail page. It has three sections:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { text: '**Lifecycle**: the stages the agent has been through (added, under review, then confirmed or rejected, then active), with who was in charge of each and when it happened. An agent with no activity for 30 days or more is flagged as stale.' },
+        { text: '**Ownership & capabilities**: the accountable owners, type, source, linked model, access categories and permissions.' },
+        { text: '**Activity**: the governance actions taken on the agent, such as review status changes, model links and edits, with who made each change and when.' },
+      ],
+    },
+    {
+      type: 'heading',
+      id: 'row-actions',
+      level: 2,
+      text: 'Row actions',
+    },
+    {
+      type: 'paragraph',
+      text: 'Each row\'s action menu offers:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { text: '**Review**: opens the review panel. Available to everyone; only Admins can change the review status or the linked model.' },
+        { text: '**Edit**: changes the name, type, owners and notes. Only for manually added agents, because auto-discovered agents come from their source system. Admin only.' },
+        { text: '**Delete**: removes the agent and its data. This cannot be undone. Admin only.' },
+      ],
     },
     {
       type: 'heading',
@@ -103,7 +153,7 @@ export const agentDiscoveryContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The table supports filtering by name, source system, agent type, review status and staleness. Stale agents are those that haven\'t been active recently, which may indicate they should be decommissioned.',
+      text: 'The table supports searching by name and filtering by review status, source system, agent type and staleness. Stale agents are those with no activity for 30 days or more, which may indicate they should be decommissioned.',
     },
     {
       type: 'heading',
@@ -113,7 +163,7 @@ export const agentDiscoveryContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You can link an agent to a model from the model inventory. This creates a traceable connection between the non-human identity and the AI system it interacts with, which is useful for risk assessments and access reviews.',
+      text: 'From the review panel, you can link an agent to a model from the model inventory. This creates a traceable connection between the non-human identity and the AI system it interacts with, which is useful for risk assessments and access reviews.',
     },
     {
       type: 'heading',
@@ -128,9 +178,10 @@ export const agentDiscoveryContent: ArticleContent = {
         { key: 'roles', label: 'Required role', width: '50%' },
       ],
       rows: [
-        { action: 'View agents', roles: 'Any authenticated user' },
-        { action: 'Add, edit, or review agents', roles: 'Admin or Editor' },
-        { action: 'Trigger sync/refresh', roles: 'Admin' },
+        { action: 'View agents, their detail pages and activity', roles: 'Any authenticated user' },
+        { action: 'Add or edit agents', roles: 'Admin' },
+        { action: 'Sync now', roles: 'Admin' },
+        { action: 'Review agents and link them to models', roles: 'Admin' },
         { action: 'Delete agents', roles: 'Admin' },
       ],
     },

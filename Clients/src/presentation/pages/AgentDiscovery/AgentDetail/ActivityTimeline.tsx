@@ -5,6 +5,7 @@ import { AgentAuditLogEntry } from "src/domain/interfaces/i.agentDiscovery";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
 import { fill } from "../../../../i18n/fill";
+import { getReviewStatusDisplay } from "../agentLabels";
 import { palette } from "../../../themes/palette";
 
 interface ActivityTimelineProps {
@@ -124,7 +125,10 @@ function describeAction(
   switch (entry.action) {
     case "review_status_changed":
       return entry.new_value
-        ? fill(t("Review status changed to {status}"), { status: entry.new_value })
+        ? fill(t("Review status changed to {status}"), {
+            // Same label as the status chips and filter, translated.
+            status: t(getReviewStatusDisplay(entry.new_value).label),
+          })
         : t("Review status changed");
     case "model_linked":
       return t("Linked to a model in the inventory");

@@ -203,7 +203,7 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Imports the model deployments in an Azure AI Foundry project. Agent discovery also uses this connection as one of its sources.',
+      text: 'Imports the model deployments in an Azure AI Foundry project. The AI agents page also uses this connection as one of its sources.',
     },
     {
       type: 'ordered-list',
