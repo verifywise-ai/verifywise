@@ -23,7 +23,7 @@ import {
   FileMetadata,
 } from "../../../application/repository/file.repository";
 import { FileData } from "../../../domain/types/File";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { FileExpiryChip } from "../FileExpiryChip";
 
 interface FilePickerModalProps {
@@ -52,9 +52,12 @@ const formatFileSize = (bytes?: number): string => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-const formatDate = (dateStr?: string): string => {
+const formatFileDate = (
+  dateStr: string | undefined,
+  formatDate: ReturnType<typeof useFormattedDate>,
+): string => {
   if (!dateStr) return "";
-  return displayFormattedDate(dateStr);
+  return formatDate(dateStr);
 };
 
 export const FilePickerModal: FC<FilePickerModalProps> = ({
@@ -65,6 +68,7 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
   multiSelect = true,
   title = "Attach Existing Files",
 }) => {
+  const formatDate = useFormattedDate();
   const theme = useTheme();
   const [files, setFiles] = useState<FileMetadata[]>([]);
   const [loading, setLoading] = useState(false);
@@ -370,7 +374,7 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
                       )}
                       {file.upload_date && (
                         <Typography sx={{ fontSize: 11, color: theme.palette.other.icon }}>
-                          {formatDate(file.upload_date)}
+                          {formatFileDate(file.upload_date, formatDate)}
                         </Typography>
                       )}
                     </Stack>

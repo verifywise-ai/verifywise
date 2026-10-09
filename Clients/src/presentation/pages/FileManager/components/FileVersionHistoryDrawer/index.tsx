@@ -31,7 +31,7 @@ import StatusBadge from "../StatusBadge";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { text } from "../../../../themes/palette";
-import { displayFormattedDate, displayFormattedDateTime } from "../../../../tools/isoDateToString";
+import useFormattedDate from "../../../../../application/hooks/useFormattedDate";
 
 dayjs.extend(relativeTime);
 
@@ -41,12 +41,18 @@ interface FileVersionHistoryDrawerProps {
   fileId: string | number | null;
 }
 
-const formatDate = (dateStr?: string): string => {
+const formatVersionDate = (
+  dateStr: string | undefined,
+  formatDate: ReturnType<typeof useFormattedDate>,
+): string => {
   if (!dateStr) return "Unknown date";
-  return displayFormattedDateTime(dateStr, { separator: " at " });
+  return formatDate(dateStr, { includeTime: true, separator: " at " });
 };
 
-const formatRelativeTime = (date: string): string => {
+const formatRelativeTime = (
+  date: string,
+  formatDate: ReturnType<typeof useFormattedDate>,
+): string => {
   const now = dayjs();
   const target = dayjs(date);
   const diffMinutes = Math.abs(now.diff(target, "minute"));
@@ -57,7 +63,7 @@ const formatRelativeTime = (date: string): string => {
   if (diffHours < 24) return `${diffHours}h ago`;
   const diffDays = Math.abs(now.diff(target, "day"));
   if (diffDays < 7) return `${diffDays}d ago`;
-  return displayFormattedDate(date);
+  return formatDate(date);
 };
 
 const VERSIONS_PAGE_SIZE = 20;
@@ -67,6 +73,7 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
   onClose,
   fileId,
 }) => {
+  const formatDate = useFormattedDate();
   const [versions, setVersions] = useState<FileMetadata[]>([]);
   const [loadingVersions, setLoadingVersions] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -378,7 +385,7 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
                       <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mt: 0.5 }}>
                         <Clock size={10} color={text.muted} />
                         <Typography sx={{ fontSize: 11, color: "text.muted" }}>
-                          {formatDate(version.upload_date)}
+                          {formatVersionDate(version.upload_date, formatDate)}
                         </Typography>
                       </Stack>
                       {version.uploader_name && (
@@ -471,7 +478,7 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
                       {userName}
                     </Typography>
                     <Typography sx={{ fontSize: 10, color: "text.muted" }}>
-                      {formatRelativeTime(entry.changed_at)}
+                      {formatRelativeTime(entry.changed_at, formatDate)}
                     </Typography>
                   </Stack>
                   <Typography sx={{ fontSize: 11, color: "text.icon", mb: 0.5 }}>

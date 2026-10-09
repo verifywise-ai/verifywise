@@ -47,16 +47,20 @@ import { sectionTitleSx, useCardSx, GUARDRAIL_ACTION_COLORS, formatEntityType } 
 import { useUserGuideSidebarContext } from "../../../components/UserGuide/UserGuideSidebarContext";
 import MockDashboard from "./MockDashboard";
 import OnboardingOverlay from "./OnboardingOverlay";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { storageService } from "../../../../infrastructure/storage";
 
 const numberFormatter = new Intl.NumberFormat("en-US");
 
 /** Shared date tick formatter for all time-series charts */
-const formatDayTick = (v: string, period: string) => {
+const formatDayTick = (
+  v: string,
+  period: string,
+  formatDate: ReturnType<typeof useFormattedDate>,
+) => {
   if (period === "1d") return v;
   const d = new Date(v + "T00:00:00");
-  return isNaN(d.getTime()) ? v : displayFormattedDate(d);
+  return isNaN(d.getTime()) ? v : formatDate(d);
 };
 
 const PERIOD_OPTIONS = [
@@ -90,6 +94,7 @@ async function fetchSetupStatus(hasRequests: boolean) {
 }
 
 export default function SpendDashboardPage() {
+  const formatDate = useFormattedDate();
   const cardSx = useCardSx();
   const userGuideSidebar = useUserGuideSidebarContext();
   const [period, setPeriod] = useState(() => storageService.get("aiGatewayAnalyticsPeriod", "1d"));
@@ -421,7 +426,7 @@ export default function SpendDashboardPage() {
                   tick={{ fontSize: 11, fill: palette.text.tertiary }}
                   tickLine={false}
                   axisLine={{ stroke: palette.border.light }}
-                  tickFormatter={(v) => formatDayTick(v, period)}
+                  tickFormatter={(v) => formatDayTick(v, period, formatDate)}
                 />
                 <YAxis
                   tick={{ fontSize: 11, fill: palette.text.tertiary }}
@@ -716,7 +721,7 @@ export default function SpendDashboardPage() {
                       tick={{ fontSize: 11, fill: palette.text.tertiary }}
                       tickLine={false}
                       axisLine={{ stroke: palette.border.light }}
-                      tickFormatter={(v) => formatDayTick(v, period)}
+                      tickFormatter={(v) => formatDayTick(v, period, formatDate)}
                     />
                     <YAxis
                       tick={{ fontSize: 11, fill: palette.text.tertiary }}
@@ -992,7 +997,7 @@ export default function SpendDashboardPage() {
                       tick={{ fontSize: 11, fill: palette.text.tertiary }}
                       tickLine={false}
                       axisLine={{ stroke: palette.border.light }}
-                      tickFormatter={(v) => formatDayTick(v, period)}
+                      tickFormatter={(v) => formatDayTick(v, period, formatDate)}
                     />
                     <YAxis
                       tick={{ fontSize: 11, fill: palette.text.tertiary }}

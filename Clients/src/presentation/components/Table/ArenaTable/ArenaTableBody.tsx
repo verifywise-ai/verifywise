@@ -30,7 +30,7 @@ import singleTheme from "../../../themes/v1SingleTheme";
 import { ArenaRow } from "./index";
 import ConfirmationModal from "../../Dialogs/ConfirmationModal";
 import { CustomizableButton } from "../../button/customizable-button";
-import { displayFormattedDateTime } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 
 interface ArenaTableBodyProps {
   rows: ArenaRow[];
@@ -44,9 +44,12 @@ interface ArenaTableBodyProps {
   deleting?: string | null;
 }
 
-const formatDate = (dateStr?: string | null): string => {
+const formatTimestamp = (
+  dateStr: string | null | undefined,
+  formatDate: ReturnType<typeof useFormattedDate>,
+): string => {
   if (!dateStr) return "-";
-  return displayFormattedDateTime(dateStr);
+  return formatDate(dateStr, { includeTime: true });
 };
 
 // Helper to get contestant name from string or object
@@ -66,6 +69,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
   onDelete,
   deleting,
 }) => {
+  const formatDate = useFormattedDate();
   const theme = useTheme();
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [menuRow, setMenuRow] = useState<ArenaRow | null>(null);
@@ -252,7 +256,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
             }}
           >
             <Typography sx={{ fontSize: "12px", color: "status.default.text" }}>
-              {formatDate(row.createdAt)}
+              {formatTimestamp(row.createdAt, formatDate)}
             </Typography>
           </TableCell>
 

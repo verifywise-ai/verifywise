@@ -28,7 +28,7 @@ import {
   listSuppressions,
   deleteSuppression,
 } from "../../../../application/repository/aiDetection.repository";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { SuppressionRule } from "../../../../domain/ai-detection/types";
 
 interface SuppressionRulesTabProps {
@@ -47,14 +47,18 @@ const MATCH_LABELS: Record<SuppressionRule["match_type"], string> = {
   pattern: "Pattern",
 };
 
-function formatExpiry(expires_at: string | null | undefined): string {
+function formatExpiry(
+  expires_at: string | null | undefined,
+  formatDate: ReturnType<typeof useFormattedDate>,
+): string {
   if (!expires_at) return "Never";
   const d = dayjs(expires_at);
   const isPast = d.isBefore(dayjs());
-  return `${displayFormattedDate(expires_at)}${isPast ? " (expired)" : ""}`;
+  return `${formatDate(expires_at)}${isPast ? " (expired)" : ""}`;
 }
 
 function SuppressionRulesTab({ onMessage }: SuppressionRulesTabProps) {
+  const formatDate = useFormattedDate();
   const [rules, setRules] = useState<SuppressionRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [pendingDelete, setPendingDelete] = useState<SuppressionRule | null>(null);
@@ -159,8 +163,10 @@ function SuppressionRulesTab({ onMessage }: SuppressionRulesTabProps) {
                 <TableCell sx={{ fontSize: 13, color: palette.text.tertiary }}>
                   {rule.reason || "—"}
                 </TableCell>
-                <TableCell sx={{ fontSize: 13 }}>{formatExpiry(rule.expires_at)}</TableCell>
-                <TableCell sx={{ fontSize: 13 }}>{displayFormattedDate(rule.created_at)}</TableCell>
+                <TableCell sx={{ fontSize: 13 }}>
+                  {formatExpiry(rule.expires_at, formatDate)}
+                </TableCell>
+                <TableCell sx={{ fontSize: 13 }}>{formatDate(rule.created_at)}</TableCell>
                 <TableCell align="right">
                   <Tooltip title="Delete rule" arrow placement="top">
                     <IconButton

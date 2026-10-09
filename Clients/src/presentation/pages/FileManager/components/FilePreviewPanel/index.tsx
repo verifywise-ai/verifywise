@@ -43,7 +43,7 @@ import {
 } from "../../../../../application/utils/officePreview.utils";
 import { useIsAdmin } from "../../../../../application/hooks/useIsAdmin";
 import { status } from "../../../../themes/palette";
-import { displayFormattedDate } from "../../../../tools/isoDateToString";
+import useFormattedDate from "../../../../../application/hooks/useFormattedDate";
 import { FileExpiryChip } from "../../../../components/FileExpiryChip";
 import {
   RETENTION_POLICY_LABELS,
@@ -105,9 +105,12 @@ const formatFileSize = (bytes?: number): string => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
-const formatDate = (dateStr?: string): string => {
+const formatFileDate = (
+  dateStr: string | undefined,
+  formatDate: ReturnType<typeof useFormattedDate>,
+): string => {
   if (!dateStr) return "Unknown date";
-  return displayFormattedDate(dateStr);
+  return formatDate(dateStr);
 };
 
 /**
@@ -123,6 +126,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
   currentIndex,
   onNavigate,
 }) => {
+  const formatDate = useFormattedDate();
   const fileCount = files?.length ?? 0;
   const canNavigate = !!onNavigate && fileCount > 1 && typeof currentIndex === "number";
   const canPrev = canNavigate && (currentIndex as number) > 0;
@@ -559,7 +563,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
               {/* Upload date */}
               <Typography sx={{ fontSize: 13, color: "text.icon" }}>Uploaded</Typography>
               <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-                {formatDate(file.upload_date)}
+                {formatFileDate(file.upload_date, formatDate)}
               </Typography>
 
               {/* Uploader */}
@@ -598,7 +602,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
                   <Typography sx={{ fontSize: 13, color: "text.icon" }}>Expiry date</Typography>
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-                      {formatDate(file.expiry_date)}
+                      {formatFileDate(file.expiry_date, formatDate)}
                     </Typography>
                     <FileExpiryChip expiryDate={file.expiry_date} />
                   </Box>
