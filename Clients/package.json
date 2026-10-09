@@ -153,6 +153,7 @@
   },
   "overrides": {
     "archiver": "^7.0.1",
+    "shell-quote": "^1.11.0",
     "readdir-glob": "^3.0.0",
     "undici@7": "^7.29.0",
     "minimatch@9": "9.0.8",
