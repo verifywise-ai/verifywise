@@ -134,6 +134,19 @@ describe("RiskAnalysisModal", () => {
     expect((await saveAndGetAlert()).body).toBe(message);
   });
 
+  // A 404 envelope with an empty `data` object leaves only the status phrase as
+  // the exception's message.
+  it.each([
+    ["Not Found", 404, { message: "Not Found", data: {} }],
+    ["Bad Request", 400, { message: "Bad Request", data: {} }],
+    ["Payload Too Large", 413, { message: "Payload Too Large" }],
+    ["Request failed with status code 404", 404, undefined],
+    ["", 400, { data: "" }],
+  ])("shows a generic message when a 4xx carries only %j", async (message, status, body) => {
+    repo.saveUseCaseClassification.mockRejectedValue(new CustomException(message, status, body));
+    expect((await saveAndGetAlert()).body).toBe("Could not save the classification. Try again.");
+  });
+
   it("shows a generic message when the save fails with a 5xx", async () => {
     repo.saveUseCaseClassification.mockRejectedValue(
       new CustomException("Internal Server Error", 500, { data: "boom" }),

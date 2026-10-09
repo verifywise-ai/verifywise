@@ -18,6 +18,35 @@ import type {
   Questionnaire,
 } from "../../../../domain/types/euAiActClassification";
 
+/** The 4xx status phrases the server's envelope uses when there is no specific reason. */
+const HTTP_STATUS_PHRASES = new Set([
+  "Bad Request",
+  "Unauthorized",
+  "Payment Required",
+  "Forbidden",
+  "Not Found",
+  "Method Not Allowed",
+  "Not Acceptable",
+  "Proxy Authentication Required",
+  "Request Timeout",
+  "Conflict",
+  "Gone",
+  "Payload Too Large",
+  "Content Too Large",
+  "Unsupported Media Type",
+  "Unprocessable Entity",
+  "Unprocessable Content",
+  "Too Many Requests",
+]);
+
+/** True when an error message is a reason the user can act on, not a status phrase. */
+const isActionableReason = (message: string | undefined): message is string => {
+  const text = message?.trim();
+  return (
+    !!text && !HTTP_STATUS_PHRASES.has(text) && !/^Request failed with status code \d+$/.test(text)
+  );
+};
+
 interface RiskAnalysisModalProps {
   isOpen: boolean;
   setIsOpen: (value: boolean) => void;
@@ -137,7 +166,7 @@ const RiskAnalysisModal: React.FC<RiskAnalysisModalProps> = ({
       setAlert({
         variant: "error",
         body:
-          isClientError && error.message
+          isClientError && isActionableReason(error.message)
             ? error.message
             : "Could not save the classification. Try again.",
         isToast: true,
