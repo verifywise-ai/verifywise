@@ -7,7 +7,7 @@ export const MITIGATION_STATUS_COLORS: Record<string, string> = {
   "On Hold": risk.high.text,
   "Deferred": status.warning.text,
   "Canceled": status.error.text,
-  "Requires review": "#805AD5",
+  "Requires review": status.info.text,
 };
 
 export const getMitigationStatusColor = (statusName: string): string =>
