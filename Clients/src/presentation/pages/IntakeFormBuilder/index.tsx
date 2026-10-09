@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Box,
   Typography,
@@ -33,7 +34,8 @@ import {
   IntakeEntityType,
 } from "../../../application/repository/intakeForm.repository";
 import CustomAxios from "../../../infrastructure/api/customAxios";
-import { useLLMKeys } from "../../../application/hooks/useLLMKeys";
+import { invalidateLLMKeyQueries, useLLMKeys } from "../../../application/hooks/useLLMKeys";
+import { getClientErrorReason, isClientError } from "../../../application/utils/apiErrorReason";
 import {
   FieldPalette,
   SuggestedQuestionsPanel,
@@ -96,6 +98,7 @@ export function IntakeFormBuilder() {
   // Shared, per-organization cache: refreshed wherever a key changes. A failed
   // load leaves the picker with only "None", as before.
   const { keys: llmKeys, loading: llmKeysLoading, isError: llmKeysError } = useLLMKeys();
+  const queryClient = useQueryClient();
   // A stored id can outlive its key (deleted elsewhere). Once the key list has
   // loaded, an id that is not in it counts as no key. While the list is
   // loading or failed to load, the stored id is trusted as is.
@@ -256,6 +259,22 @@ export function IntakeFormBuilder() {
     setIsDirty(true);
   }, []);
 
+  /**
+   * Shows why a form write failed. A rejected write that sent a key may mean
+   * the key was deleted elsewhere (the server's reason is translated, so it is
+   * not matched): refetch the key list so a missing key falls back to none.
+   */
+  const showWriteError = (error: unknown, sentLlmKeyId: number | null, fallback: string) => {
+    if (sentLlmKeyId && isClientError(error)) {
+      void invalidateLLMKeyQueries(queryClient);
+    }
+    setSnackbar({
+      open: true,
+      message: getClientErrorReason(error) ?? fallback,
+      severity: "error",
+    });
+  };
+
   const handleSave = async (): Promise<number | null> => {
     if (!form.name.trim()) {
       setSnackbar({
@@ -304,12 +323,8 @@ export function IntakeFormBuilder() {
         }
       }
       return null;
-    } catch {
-      setSnackbar({
-        open: true,
-        message: "Failed to save form",
-        severity: "error",
-      });
+    } catch (error) {
+      showWriteError(error, activeLlmKeyId, "Failed to save form");
       return null;
     } finally {
       setIsSaving(false);
@@ -350,12 +365,8 @@ export function IntakeFormBuilder() {
         message: "Form published successfully",
         severity: "success",
       });
-    } catch {
-      setSnackbar({
-        open: true,
-        message: "Failed to publish form",
-        severity: "error",
-      });
+    } catch (error) {
+      showWriteError(error, activeLlmKeyId, "Failed to publish form");
     } finally {
       setIsSaving(false);
     }

@@ -8,7 +8,7 @@
  */
 
 jest.mock("../../utils/llmKey.utils", () => ({
-  getLLMKeysWithKeyQuery: jest.fn(),
+  getLLMKeyWithKeyByIdQuery: jest.fn(),
 }));
 
 jest.mock("ai", () => ({
@@ -33,11 +33,13 @@ jest.mock("../../utils/logger/fileLogger", () => ({
 }));
 
 import { generateSuggestedQuestions, generateFieldGuidance } from "../intakeLLM.service";
-import { getLLMKeysWithKeyQuery } from "../../utils/llmKey.utils";
+import { getLLMKeyWithKeyByIdQuery } from "../../utils/llmKey.utils";
 import { generateText } from "ai";
 import { NotFoundException } from "../../domain.layer/exceptions/custom.exception";
 
-const mockGetLLMKeys = getLLMKeysWithKeyQuery as jest.MockedFunction<typeof getLLMKeysWithKeyQuery>;
+const mockGetLLMKey = getLLMKeyWithKeyByIdQuery as jest.MockedFunction<
+  typeof getLLMKeyWithKeyByIdQuery
+>;
 const mockGenerateText = generateText as jest.MockedFunction<typeof generateText>;
 
 describe("intakeLLM.service", () => {
@@ -47,20 +49,22 @@ describe("intakeLLM.service", () => {
 
   describe("generateSuggestedQuestions", () => {
     it("should throw NotFoundException when LLM key is not found", async () => {
-      mockGetLLMKeys.mockResolvedValue([
-        { id: 2, name: "OpenAI", key: "sk-test", model: "gpt-4o-mini" },
-      ] as any);
+      mockGetLLMKey.mockResolvedValue(null);
 
       await expect(generateSuggestedQuestions("MODEL", "context", 1, 10)).rejects.toBeInstanceOf(
         NotFoundException,
       );
+      expect(mockGetLLMKey).toHaveBeenCalledWith(1, 10);
       expect(mockGenerateText).not.toHaveBeenCalled();
     });
 
     it("should parse valid JSON array from LLM response", async () => {
-      mockGetLLMKeys.mockResolvedValue([
-        { id: 1, name: "OpenAI", key: "sk-test", model: "gpt-4o-mini" },
-      ] as any);
+      mockGetLLMKey.mockResolvedValue({
+        id: 1,
+        name: "OpenAI",
+        key: "sk-test",
+        model: "gpt-4o-mini",
+      } as any);
 
       const questions = [
         {
@@ -87,9 +91,12 @@ describe("intakeLLM.service", () => {
     });
 
     it("should return null when LLM response has no JSON array", async () => {
-      mockGetLLMKeys.mockResolvedValue([
-        { id: 1, name: "OpenAI", key: "sk-test", model: "gpt-4o-mini" },
-      ] as any);
+      mockGetLLMKey.mockResolvedValue({
+        id: 1,
+        name: "OpenAI",
+        key: "sk-test",
+        model: "gpt-4o-mini",
+      } as any);
 
       mockGenerateText.mockResolvedValue({
         text: "I cannot generate questions for this.",
@@ -101,9 +108,12 @@ describe("intakeLLM.service", () => {
     });
 
     it("should return null on LLM error", async () => {
-      mockGetLLMKeys.mockResolvedValue([
-        { id: 1, name: "OpenAI", key: "sk-test", model: "gpt-4o-mini" },
-      ] as any);
+      mockGetLLMKey.mockResolvedValue({
+        id: 1,
+        name: "OpenAI",
+        key: "sk-test",
+        model: "gpt-4o-mini",
+      } as any);
 
       mockGenerateText.mockRejectedValue(new Error("API timeout"));
 
@@ -115,7 +125,7 @@ describe("intakeLLM.service", () => {
 
   describe("generateFieldGuidance", () => {
     it("should throw NotFoundException when LLM key is not found", async () => {
-      mockGetLLMKeys.mockResolvedValue([]);
+      mockGetLLMKey.mockResolvedValue(null);
 
       await expect(generateFieldGuidance("Risk Level", "MODEL", 1, 10)).rejects.toBeInstanceOf(
         NotFoundException,
@@ -124,9 +134,12 @@ describe("intakeLLM.service", () => {
     });
 
     it("should return trimmed guidance text", async () => {
-      mockGetLLMKeys.mockResolvedValue([
-        { id: 1, name: "OpenAI", key: "sk-test", model: "gpt-4o-mini" },
-      ] as any);
+      mockGetLLMKey.mockResolvedValue({
+        id: 1,
+        name: "OpenAI",
+        key: "sk-test",
+        model: "gpt-4o-mini",
+      } as any);
 
       mockGenerateText.mockResolvedValue({
         text: "  Helps identify risk severity for compliance.  ",
@@ -138,9 +151,12 @@ describe("intakeLLM.service", () => {
     });
 
     it("should return null on error", async () => {
-      mockGetLLMKeys.mockResolvedValue([
-        { id: 1, name: "OpenAI", key: "sk-test", model: "gpt-4o-mini" },
-      ] as any);
+      mockGetLLMKey.mockResolvedValue({
+        id: 1,
+        name: "OpenAI",
+        key: "sk-test",
+        model: "gpt-4o-mini",
+      } as any);
 
       mockGenerateText.mockRejectedValue(new Error("timeout"));
 

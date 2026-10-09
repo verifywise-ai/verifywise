@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { createHmac, timingSafeEqual } from "crypto";
-import type { Transaction } from "sequelize";
+import { Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import {
   getAllIntakeFormsQuery,
@@ -142,18 +142,48 @@ function parseLlmKeyId(value: unknown): number {
  * Checks the llmKeyId of a form write. null/absent stays as is; anything else
  * must be one of the caller's organization's keys (intake_forms.llm_key_id has
  * a foreign key, but that alone would accept another organization's key).
+ * The check runs in the write's transaction and locks the key row, so the key
+ * cannot be deleted before the write commits.
  */
 async function resolveFormLlmKeyId(
   req: Request,
   llmKeyId: unknown,
+  transaction: Transaction,
 ): Promise<{ llmKeyId: number | null | undefined } | { error: string }> {
   if (llmKeyId === undefined || llmKeyId === null) return { llmKeyId };
   const id = parseLlmKeyId(llmKeyId);
   if (isNaN(id)) return { error: req.t!("LLM key ID must be a positive integer") };
-  if (!(await llmKeyExistsQuery(id, req.organizationId!))) {
+  if (!(await llmKeyExistsQuery(id, req.organizationId!, transaction))) {
     return { error: req.t!("LLM key not found") };
   }
   return { llmKeyId: id };
+}
+
+/**
+ * Shared shell of the LLM endpoints, run once the caller has checked its
+ * required input: answers 400 for an invalid key id, 404 when the key is not
+ * one of the organization's, and 500 for anything else.
+ */
+async function handleLlmKeyRequest(
+  req: Request,
+  res: Response,
+  functionName: string,
+  llmKeyId: unknown,
+  generate: (keyId: number) => Promise<Response>,
+): Promise<Response> {
+  const keyId = parseLlmKeyId(llmKeyId);
+  if (isNaN(keyId)) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("LLM key ID must be a positive integer")));
+  }
+  try {
+    return await generate(keyId);
+  } catch (error) {
+    if (error instanceof NotFoundException) {
+      return res.status(404).json(STATUS_CODE[404]({ message: req.t!("LLM key not found") }));
+    }
+    logger.error(`Error in ${functionName}:`, error);
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
 }
 
 // ============================================================================
@@ -540,7 +570,7 @@ export async function createIntakeForm(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](req.t!(riskStep.errors[0])));
     }
 
-    const llmKey = await resolveFormLlmKeyId(req, llmKeyId);
+    const llmKey = await resolveFormLlmKeyId(req, llmKeyId, transaction);
     if ("error" in llmKey) {
       await transaction.rollback();
       return res.status(400).json(STATUS_CODE[400](llmKey.error));
@@ -673,7 +703,7 @@ export async function updateIntakeForm(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](req.t!(riskStep.errors[0])));
     }
 
-    const llmKey = await resolveFormLlmKeyId(req, llmKeyId);
+    const llmKey = await resolveFormLlmKeyId(req, llmKeyId, transaction);
     if ("error" in llmKey) {
       await transaction.rollback();
       return res.status(400).json(STATUS_CODE[400](llmKey.error));
@@ -1585,80 +1615,46 @@ export async function rejectSubmission(req: Request, res: Response) {
  * Get LLM-suggested questions
  */
 export async function getLLMSuggestedQuestions(req: Request, res: Response) {
-  try {
-    const { entityType, context, llmKeyId } = req.body;
-
-    if (!llmKeyId) {
-      return res.status(400).json(STATUS_CODE[400](req.t!("LLM key ID is required")));
-    }
-
-    const keyId = parseLlmKeyId(llmKeyId);
-    if (isNaN(keyId)) {
-      return res
-        .status(400)
-        .json(STATUS_CODE[400](req.t!("LLM key ID must be a positive integer")));
-    }
-
+  const { entityType, context, llmKeyId } = req.body ?? {};
+  if (!llmKeyId) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("LLM key ID is required")));
+  }
+  return handleLlmKeyRequest(req, res, "getLLMSuggestedQuestions", llmKeyId, async (keyId) => {
     const questions = await generateSuggestedQuestions(
       entityType || "use_case",
       context || "",
       keyId,
       req.organizationId!,
     );
-
     if (!questions) {
       return res.status(500).json(STATUS_CODE[500](req.t!("Failed to generate questions")));
     }
-
     return res.status(200).json(STATUS_CODE[200](questions));
-  } catch (error) {
-    if (error instanceof NotFoundException) {
-      return res.status(404).json(STATUS_CODE[404]({ message: req.t!("LLM key not found") }));
-    }
-    logger.error("Error in getLLMSuggestedQuestions:", error);
-    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
-  }
+  });
 }
 
 /**
  * Generate field guidance text
  */
 export async function getFieldGuidance(req: Request, res: Response) {
-  try {
-    const { fieldLabel, entityType, llmKeyId } = req.body;
-
-    if (!fieldLabel || !llmKeyId) {
-      return res
-        .status(400)
-        .json(STATUS_CODE[400](req.t!("Field label and LLM key ID are required")));
-    }
-
-    const keyId = parseLlmKeyId(llmKeyId);
-    if (isNaN(keyId)) {
-      return res
-        .status(400)
-        .json(STATUS_CODE[400](req.t!("LLM key ID must be a positive integer")));
-    }
-
+  const { fieldLabel, entityType, llmKeyId } = req.body ?? {};
+  if (!fieldLabel || !llmKeyId) {
+    return res
+      .status(400)
+      .json(STATUS_CODE[400](req.t!("Field label and LLM key ID are required")));
+  }
+  return handleLlmKeyRequest(req, res, "getFieldGuidance", llmKeyId, async (keyId) => {
     const guidanceText = await generateFieldGuidance(
       fieldLabel,
       entityType || "use_case",
       keyId,
       req.organizationId!,
     );
-
     if (!guidanceText) {
       return res.status(500).json(STATUS_CODE[500](req.t!("Failed to generate guidance")));
     }
-
     return res.status(200).json(STATUS_CODE[200]({ guidanceText }));
-  } catch (error) {
-    if (error instanceof NotFoundException) {
-      return res.status(404).json(STATUS_CODE[404]({ message: req.t!("LLM key not found") }));
-    }
-    logger.error("Error in getFieldGuidance:", error);
-    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
-  }
+  });
 }
 
 // ============================================================================
