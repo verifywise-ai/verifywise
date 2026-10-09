@@ -7,10 +7,13 @@ import { EmptyState } from "../../components/EmptyState";
 import { apiServices } from "../../../infrastructure/api/networkServices";
 import palette from "../../themes/palette";
 import CustomizableSkeleton from "../../components/Skeletons";
-import { MCP_STATUS_COLORS, MCP_STATUS_FALLBACK } from "./shared";
+import { MCP_STATUS_COLORS, MCP_STATUS_FALLBACK, formatMcpStatus } from "./shared";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { useTranslation } from "../../../application/hooks/useTranslation";
 import { fill } from "../../../i18n/fill";
+
+// The activity window, sent with the request and shown in the subtitle.
+const ACTIVITY_DAYS = 30;
 
 interface AgentActivityDrawerProps {
   agentKeyId: number | null;
@@ -82,7 +85,9 @@ export default function AgentActivityDrawer({
     setError(false);
     setLoading(true);
     apiServices
-      .get<Record<string, any>>(`/ai-gateway/mcp/audit/agent/${agentKeyId}`)
+      .get<Record<string, any>>(`/ai-gateway/mcp/audit/agent/${agentKeyId}`, {
+        days: ACTIVITY_DAYS,
+      })
       .then((res) => {
         if (current) setData(res?.data?.data || null);
       })
@@ -109,7 +114,10 @@ export default function AgentActivityDrawer({
           </IconButton>
         </Stack>
         <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mb: "20px" }}>
-          {fill(tr("{name} · last 30 days"), { name: agentKeyName || tr("This agent") })}
+          {fill(tr("{name} · last {days} days"), {
+            name: agentKeyName || tr("This agent"),
+            days: ACTIVITY_DAYS,
+          })}
         </Typography>
 
         {loading ? (
@@ -223,7 +231,7 @@ export default function AgentActivityDrawer({
                           {r.tool_name}
                         </Typography>
                         <Chip
-                          label={r.result_status}
+                          label={formatMcpStatus(r.result_status)}
                           backgroundColor={colors.bg}
                           textColor={colors.text}
                         />

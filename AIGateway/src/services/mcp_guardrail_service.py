@@ -174,7 +174,9 @@ async def scan_tool_input(
                     )
                 )
 
-            if injection_action == "block":
+            # Keep an earlier block's reason: the reason describes the first
+            # blocking detection, which is the rule blocking_rule() records.
+            if injection_action == "block" and not result.blocked:
                 result.blocked = True
                 result.block_reason = (
                     f"prompt_injection: {matched_patterns[0]} detected"

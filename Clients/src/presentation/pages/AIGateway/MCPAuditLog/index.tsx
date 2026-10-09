@@ -23,7 +23,13 @@ import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
 import { Tooltip as MuiTooltip } from "@mui/material";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import palette from "../../../themes/palette";
-import { sectionTitleSx, useCardSx, MCP_STATUS_COLORS, MCP_STATUS_FALLBACK } from "../shared";
+import {
+  sectionTitleSx,
+  useCardSx,
+  MCP_STATUS_COLORS,
+  MCP_STATUS_FALLBACK,
+  formatMcpStatus,
+} from "../shared";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import MCPTable from "../MCPTable";
 import MCPInvocationDrawer from "../MCPInvocationDrawer";
@@ -356,7 +362,7 @@ export default function MCPAuditLogPage() {
                         {log.tool_name}
                       </Typography>,
                       <Chip
-                        label={log.result_status.replace("_", " ")}
+                        label={formatMcpStatus(log.result_status)}
                         backgroundColor={colors.bg}
                         textColor={colors.text}
                       />,

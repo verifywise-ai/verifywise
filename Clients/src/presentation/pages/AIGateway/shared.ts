@@ -25,6 +25,9 @@ export const MCP_STATUS_COLORS: Record<string, { bg: string; text: string }> = {
 
 export const MCP_STATUS_FALLBACK = { bg: "#F3F4F6", text: "#374151" } as const;
 
+/** A stored tool-call status ("approval_required") as screen text ("approval required"). */
+export const formatMcpStatus = (status: string) => status.replace(/_/g, " ");
+
 export function useCardSx() {
   const theme = useTheme();
   return {

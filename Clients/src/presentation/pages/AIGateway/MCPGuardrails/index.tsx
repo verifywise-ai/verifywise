@@ -121,10 +121,19 @@ export default function MCPGuardrailsPage() {
   const [deleteTarget, setDeleteTarget] = useState<MCPGuardrail | null>(null);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
-  // Active agent keys, for scoping a rule to specific agents. Revoking a key
-  // removes it from every rule, so a scope only ever lists active keys.
+  // Active agent keys, for scoping a rule to specific agents.
   const [agentKeys, setAgentKeys] = useState<{ _id: number; name: string }[]>([]);
+  const [agentKeysLoaded, setAgentKeysLoaded] = useState(false);
   const { t } = useTranslation();
+
+  // The ids of a rule's scope that are still active keys. A revoked or deleted
+  // key can never call again (ids are not reused), so once the keys have
+  // loaded its id is dropped. If they failed to load, every id is kept.
+  const liveAgentKeys = useCallback(
+    (ids: number[] | undefined) =>
+      (ids ?? []).filter((id) => !agentKeysLoaded || agentKeys.some((k) => k._id === id)),
+    [agentKeys, agentKeysLoaded],
+  );
 
   // Falls back to the id when the agent keys failed to load.
   const agentKeyLabel = useCallback(
@@ -149,6 +158,7 @@ export default function MCPGuardrailsPage() {
       setAgentKeys(
         keys.filter((k) => k.is_active && !k.revoked_at).map((k) => ({ _id: k.id, name: k.name })),
       );
+      setAgentKeysLoaded(keysRes.status === "fulfilled");
     } catch {
       setLoadError("Failed to load guardrails. Please try again.");
     } finally {
@@ -188,9 +198,7 @@ export default function MCPGuardrailsPage() {
         ? rule.applies_to_tools.join(", ")
         : "",
       agent_scope: rule.agent_scope === "selected" ? "selected" : "all",
-      applies_to_agent_keys: Array.isArray(rule.applies_to_agent_keys)
-        ? rule.applies_to_agent_keys
-        : [],
+      applies_to_agent_keys: liveAgentKeys(rule.applies_to_agent_keys),
       config: rule.config ? JSON.stringify(rule.config, null, 2) : "",
       is_active: rule.is_active ?? true,
     });
@@ -411,10 +419,10 @@ export default function MCPGuardrailsPage() {
                 <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
                   All agents
                 </Typography>
-              ) : rule.applies_to_agent_keys?.length ? (
-                renderBadges(rule.applies_to_agent_keys.map(agentKeyLabel))
+              ) : liveAgentKeys(rule.applies_to_agent_keys).length ? (
+                renderBadges(liveAgentKeys(rule.applies_to_agent_keys).map(agentKeyLabel))
               ) : (
-                // Every agent it listed was revoked: the rule applies to none.
+                // Every agent it listed is gone: the rule applies to none.
                 <Typography sx={{ fontSize: 12, color: palette.status.warning.text }}>
                   No agents
                 </Typography>

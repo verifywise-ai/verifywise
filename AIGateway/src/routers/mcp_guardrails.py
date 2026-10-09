@@ -329,9 +329,14 @@ async def update_guardrail(rule_id: int, request: Request):
         updates["applies_to_tools"] = applies_to_tools if applies_to_tools is not None else []
 
     # agent_scope / applies_to_agent_keys, resolved together against the
-    # rule's stored scope (a missing rule 404s below).
+    # rule's stored scope.
     if "agent_scope" in body or "applies_to_agent_keys" in body:
         current = await get_mcp_guardrail_agent_scope(get_org_id(request), rule_id)
+        if current is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="MCP guardrail rule not found",
+            )
         (
             updates["agent_scope"],
             updates["applies_to_agent_keys"],
