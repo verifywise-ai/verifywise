@@ -556,6 +556,9 @@ export interface MappingCoverage {
   }>;
 }
 
+/** Entity fields the EU AI Act risk step fills in, so the builder does not offer them. */
+const RISK_STEP_SET_FIELDS = new Set(["ai_risk_classification", "type_of_high_risk_role"]);
+
 /**
  * Analyze mapping coverage for a form's fields against the entity field definitions
  */
@@ -565,9 +568,10 @@ export function analyzeMappingCoverage(
   options: { riskStepEnabled?: boolean } = {},
 ): MappingCoverage {
   // With the EU AI Act risk step on, the server sets ai_risk_classification
-  // itself and rejects a form field mapped to it, so it is never offered.
+  // itself and rejects a form field mapped to it, and the step also sets the
+  // role, so neither is offered. A role field already on the form stays mapped.
   const entityMappings = (ENTITY_FIELD_MAPPINGS[entityType] || []).filter(
-    (m) => !(options.riskStepEnabled && m.field === "ai_risk_classification"),
+    (m) => !(options.riskStepEnabled && RISK_STEP_SET_FIELDS.has(m.field)),
   );
   const mappedKeys = new Set(
     fields.filter((f) => f.entityFieldMapping).map((f) => f.entityFieldMapping!),
