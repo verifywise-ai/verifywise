@@ -19,6 +19,7 @@ import {
   AgentAuditLogEntry,
 } from "../../../../domain/interfaces/i.agentDiscovery";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
 import { getAgentLifecycle } from "../agentLifecycle";
 import { formatModelLabel, formatSourceLabel } from "../agentLabels";
 import { palette } from "../../../themes/palette";
@@ -65,6 +66,7 @@ function parseAgentId(id: string | undefined): number | null {
 export default function AgentDetail() {
   const navigate = useNavigate();
   const formatUserDate = useFormattedDate();
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const agentId = parseAgentId(id);
 
@@ -196,8 +198,9 @@ export default function AgentDetail() {
   return (
     <PageHeaderExtended
       title={agent.display_name}
+      // One text node, so the source label is translated before it is joined.
       description={`${agent.primitive_type} · ${
-        agent.is_manual ? "Manually entered" : formatSourceLabel(agent.source_system)
+        agent.is_manual ? t("Manually entered") : formatSourceLabel(agent.source_system)
       }`}
       breadcrumbItems={breadcrumbItems}
     >
