@@ -9963,6 +9963,14 @@ export const translations: Record<string, Record<string, string>> = {
       "Die Antworten konnten nicht ausgewertet werden. Versuchen Sie es erneut.",
     "EU AI Act classification": "Klassifizierung nach EU-KI-Verordnung",
     "EU AI Act risk classification step": "Schritt zur Risikoklassifizierung nach EU-KI-Verordnung",
+    "Submitters answer these questions first. The result is shown only to reviewers.":
+      "Einreichende beantworten diese Fragen zuerst. Das Ergebnis sehen nur Prüfende.",
+    "Asked depending on earlier answers": "Wird abhängig von früheren Antworten gestellt",
+    "Loading questions...": "Fragen werden geladen...",
+    "The questions could not be loaded.": "Die Fragen konnten nicht geladen werden.",
+    "Questions": "Fragen",
+    "Show questions": "Fragen anzeigen",
+    "Hide questions": "Fragen ausblenden",
     "Explain why you are changing the computed classification (min. 10 characters)":
       "Erläutern Sie, warum Sie die berechnete Klassifizierung ändern (mind. 10 Zeichen)",
     "High-risk AI system": "Hochrisiko-KI-System",
@@ -19899,6 +19907,14 @@ export const translations: Record<string, Record<string, string>> = {
     "EU AI Act classification": "Classification selon le règlement IA de l'UE",
     "EU AI Act risk classification step":
       "Étape de classification des risques selon le règlement IA de l'UE",
+    "Submitters answer these questions first. The result is shown only to reviewers.":
+      "Les demandeurs répondent d'abord à ces questions. Seuls les réviseurs voient le résultat.",
+    "Asked depending on earlier answers": "Posée selon les réponses précédentes",
+    "Loading questions...": "Chargement des questions...",
+    "The questions could not be loaded.": "Les questions n'ont pas pu être chargées.",
+    "Questions": "Questions",
+    "Show questions": "Afficher les questions",
+    "Hide questions": "Masquer les questions",
     "Explain why you are changing the computed classification (min. 10 characters)":
       "Expliquez pourquoi vous modifiez la classification calculée (10 caractères min.)",
     "High-risk AI system": "Système d'IA à haut risque",
@@ -29752,6 +29768,14 @@ export const translations: Record<string, Record<string, string>> = {
     "EU AI Act classification": "Clasificación según el Reglamento de IA de la UE",
     "EU AI Act risk classification step":
       "Paso de clasificación de riesgos según el Reglamento de IA de la UE",
+    "Submitters answer these questions first. The result is shown only to reviewers.":
+      "Los solicitantes responden primero a estas preguntas. Solo los revisores ven el resultado.",
+    "Asked depending on earlier answers": "Se pregunta según las respuestas anteriores",
+    "Loading questions...": "Cargando preguntas...",
+    "The questions could not be loaded.": "No se pudieron cargar las preguntas.",
+    "Questions": "Preguntas",
+    "Show questions": "Mostrar preguntas",
+    "Hide questions": "Ocultar preguntas",
     "Explain why you are changing the computed classification (min. 10 characters)":
       "Explique por qué cambia la clasificación calculada (mín. 10 caracteres)",
     "High-risk AI system": "Sistema de IA de alto riesgo",

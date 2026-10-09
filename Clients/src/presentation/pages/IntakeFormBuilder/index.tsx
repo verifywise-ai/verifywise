@@ -799,6 +799,10 @@ export function IntakeFormBuilder() {
                     onNameChange={(name) => updateForm({ name })}
                     onDescriptionChange={(description) => updateForm({ description })}
                     collectContactInfo
+                    euAiActRiskStepEnabled={
+                      form.entityType === IntakeEntityType.USE_CASE &&
+                      (form.euAiActRiskStepEnabled ?? false)
+                    }
                   />
                   {form.suggestedQuestionsEnabled && (
                     <SuggestedQuestionsPanel

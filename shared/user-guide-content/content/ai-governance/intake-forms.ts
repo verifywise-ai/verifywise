@@ -507,7 +507,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Use case forms can ask the EU AI Act risk questionnaire before the form\'s own questions. Turn on **EU AI Act risk classification step** in the builder\'s settings panel and save the form. The toggle only appears on use case forms. Model inventory forms do not have it. New use case forms start with the step on, and their default questions no longer ask for a risk level or a high-risk role, because the step sets both. Forms you saved earlier keep their setting.',
+      text: 'Use case forms can ask the EU AI Act risk questionnaire before the form\'s own questions. Turn on **EU AI Act risk classification step** in the builder\'s settings panel and save the form. The toggle only appears on use case forms. Model inventory forms do not have it. New use case forms start with the step on, and their default questions no longer ask for a risk level or a high-risk role, because the step sets both. Forms you saved earlier keep their setting. While the step is on, the builder canvas shows it above the form\'s questions as a read-only card. Select **Show questions** to read the questionnaire there.',
     },
     {
       type: 'paragraph',

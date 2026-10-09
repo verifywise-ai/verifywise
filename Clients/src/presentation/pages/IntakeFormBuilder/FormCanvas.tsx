@@ -3,6 +3,7 @@ import { Box, Typography, IconButton, Tooltip, useTheme } from "@mui/material";
 import { Check, X, User, Mail, LayoutTemplate } from "lucide-react";
 import { FormField } from "./types";
 import { FieldCard } from "./FieldCard";
+import { EuAiActStepCard } from "./EuAiActStepCard";
 
 function EmptyState() {
   const theme = useTheme();
@@ -383,6 +384,8 @@ interface FormCanvasProps {
   onNameChange?: (name: string) => void;
   onDescriptionChange?: (description: string) => void;
   collectContactInfo?: boolean;
+  /** Shows the read-only EU AI Act risk step above the form's fields. */
+  euAiActRiskStepEnabled?: boolean;
 }
 
 export interface FormCanvasHandle {
@@ -403,6 +406,7 @@ export const FormCanvas = forwardRef<FormCanvasHandle, FormCanvasProps>(function
     onNameChange,
     onDescriptionChange,
     collectContactInfo,
+    euAiActRiskStepEnabled,
   },
   ref,
 ) {
@@ -482,6 +486,8 @@ export const FormCanvas = forwardRef<FormCanvasHandle, FormCanvasProps>(function
           </Box>
 
           {collectContactInfo && <ContactInfoPreview />}
+
+          {euAiActRiskStepEnabled && <EuAiActStepCard />}
 
           {fields.length === 0 ? (
             <EmptyState />
