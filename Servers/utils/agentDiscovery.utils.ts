@@ -1,5 +1,5 @@
 import { sequelize } from "../database/db";
-import { QueryTypes } from "sequelize";
+import { QueryTypes, Transaction } from "sequelize";
 
 export interface AgentPrimitive {
   id: number;
@@ -46,9 +46,15 @@ export interface SyncLogEntry {
 
 // ─── Agent Primitives ────────────────────────────────────────────
 
+/**
+ * List the organization's agent primitives. Pass `includeOwners` to also attach
+ * each agent's owner set as `owner_ids` (one extra grouped query); callers that
+ * only read the rows' own columns leave it off.
+ */
 export const getAllAgentPrimitivesQuery = async (
   organizationId: number,
   filters: AgentPrimitiveFilters = {},
+  options: { includeOwners?: boolean } = {},
 ): Promise<AgentPrimitive[]> => {
   const conditions: string[] = ["organization_id = :organizationId"];
   const replacements: Record<string, any> = { organizationId };
@@ -78,22 +84,185 @@ export const getAllAgentPrimitivesQuery = async (
 
   const whereClause = `WHERE ${conditions.join(" AND ")}`;
 
-  const results = await sequelize.query(
+  const results = (await sequelize.query(
     `SELECT * FROM agent_primitives ${whereClause} ORDER BY created_at DESC, id ASC`,
     { replacements, type: QueryTypes.SELECT },
-  );
-  return results as AgentPrimitive[];
+  )) as AgentPrimitive[];
+
+  // Attach the full owner set to each row in a single grouped query, so a
+  // multi-owner agent surfaces all its owners without N+1 lookups.
+  if (options.includeOwners && results.length > 0) {
+    const ids = results.map((r) => (r as any).id);
+    const ownerRows = (await sequelize.query(
+      `SELECT agent_primitive_id, user_id FROM agent_primitive_owners
+       WHERE organization_id = :organizationId AND agent_primitive_id IN (:ids)
+       ORDER BY id ASC`,
+      { replacements: { organizationId, ids }, type: QueryTypes.SELECT },
+    )) as { agent_primitive_id: number; user_id: number }[];
+    const byAgent = new Map<number, number[]>();
+    ownerRows.forEach((row) => {
+      const list = byAgent.get(row.agent_primitive_id) || [];
+      list.push(row.user_id);
+      byAgent.set(row.agent_primitive_id, list);
+    });
+    results.forEach((r) => {
+      (r as any).owner_ids = byAgent.get((r as any).id) || [];
+    });
+  }
+
+  return results;
 };
 
+/**
+ * Load one agent primitive. Pass `includeOwners` to also attach its owner set as
+ * `owner_ids` (one extra query); callers that only check existence or read the
+ * row's own columns leave it off.
+ */
 export const getAgentPrimitiveByIdQuery = async (
   id: number,
   organizationId: number,
+  options: { includeOwners?: boolean } = {},
 ): Promise<AgentPrimitive | null> => {
   const results = await sequelize.query(
     `SELECT * FROM agent_primitives WHERE organization_id = :organizationId AND id = :id`,
     { replacements: { organizationId, id }, type: QueryTypes.SELECT },
   );
-  return (results as AgentPrimitive[])[0] || null;
+  const agent = (results as AgentPrimitive[])[0] || null;
+  if (agent && options.includeOwners) {
+    (agent as any).owner_ids = await getAgentOwnersQuery(id, organizationId);
+  }
+  return agent;
+};
+
+/**
+ * Return the user ids that own an agent primitive (all owners, including the
+ * primary). Scoped to the tenant.
+ */
+export const getAgentOwnersQuery = async (
+  agentId: number,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<number[]> => {
+  const rows = (await sequelize.query(
+    `SELECT user_id FROM agent_primitive_owners
+     WHERE organization_id = :organizationId AND agent_primitive_id = :agentId
+     ORDER BY id ASC`,
+    { replacements: { organizationId, agentId }, type: QueryTypes.SELECT, transaction },
+  )) as { user_id: number }[];
+  return rows.map((r) => r.user_id);
+};
+
+/**
+ * Return the subset of `userIds` that are users of the given organization.
+ * Used to reject owner ids that point at another tenant's users.
+ */
+export const getUserIdsInOrganizationQuery = async (
+  userIds: number[],
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<number[]> => {
+  if (userIds.length === 0) return [];
+  const rows = (await sequelize.query(
+    `SELECT id FROM users WHERE organization_id = :organizationId AND id IN (:ids)`,
+    { replacements: { organizationId, ids: userIds }, type: QueryTypes.SELECT, transaction },
+  )) as { id: number }[];
+  return rows.map((r) => Number(r.id));
+};
+
+/** The fields of a locked agent row that an update audits against. */
+export interface LockedAgentPrimitive {
+  owner_id: string | null;
+  display_name: string;
+  primitive_type: string;
+  metadata: Record<string, any>;
+}
+
+/**
+ * Lock an agent primitive row for the rest of the transaction and return the
+ * values an update audits against (primary owner, name, type, metadata), as
+ * of the lock. Serializes concurrent edits.
+ */
+export const lockAgentPrimitiveQuery = async (
+  id: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<LockedAgentPrimitive | null> => {
+  const rows = (await sequelize.query(
+    `SELECT owner_id, display_name, primitive_type, metadata FROM agent_primitives
+     WHERE organization_id = :organizationId AND id = :id
+     FOR UPDATE`,
+    { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
+  )) as LockedAgentPrimitive[];
+  return rows[0] || null;
+};
+
+/**
+ * Keep agent_primitives.owner_id consistent when users are deleted: every
+ * manual agent in the organization whose primary owner is one of `userIds`
+ * gets the first remaining owner from agent_primitive_owners (by id order,
+ * excluding the deleted users), or NULL when none is left. Synced agents are
+ * never touched: their owner_id is text reported by the source system, not a
+ * VerifyWise user id. Run inside the user-deletion transaction, before the
+ * users rows are deleted.
+ */
+export const reassignAgentOwnersOfDeletedUsersQuery = async (
+  userIds: number[],
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> => {
+  if (userIds.length === 0) return;
+  await sequelize.query(
+    `UPDATE agent_primitives ap
+     SET owner_id = (
+           SELECT apo.user_id::text FROM agent_primitive_owners apo
+           WHERE apo.organization_id = ap.organization_id
+             AND apo.agent_primitive_id = ap.id
+             AND apo.user_id NOT IN (:userIds)
+           ORDER BY apo.id ASC
+           LIMIT 1
+         ),
+         updated_at = NOW()
+     WHERE ap.organization_id = :organizationId
+       AND ap.is_manual = true
+       AND ap.owner_id IN (:userIdTexts)`,
+    {
+      replacements: { organizationId, userIds, userIdTexts: userIds.map(String) },
+      transaction,
+    },
+  );
+};
+
+/**
+ * Replace the full owner set for an agent primitive in the junction table.
+ * Callers are responsible for writing the primary owner (the first id) to
+ * agent_primitives.owner_id, and should run this inside the same transaction
+ * as that write.
+ */
+export const setAgentOwnersQuery = async (
+  agentId: number,
+  userIds: number[],
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<void> => {
+  await sequelize.query(
+    `DELETE FROM agent_primitive_owners
+     WHERE organization_id = :organizationId AND agent_primitive_id = :agentId`,
+    { replacements: { organizationId, agentId }, transaction },
+  );
+
+  if (userIds.length === 0) return;
+
+  const replacements: Record<string, number> = { organizationId, agentId };
+  const values = userIds.map((userId, i) => {
+    replacements[`userId${i}`] = userId;
+    return `(:organizationId, :agentId, :userId${i}, NOW())`;
+  });
+  await sequelize.query(
+    `INSERT INTO agent_primitive_owners (organization_id, agent_primitive_id, user_id, created_at)
+     VALUES ${values.join(", ")}
+     ON CONFLICT (organization_id, agent_primitive_id, user_id) DO NOTHING`,
+    { replacements, transaction },
+  );
 };
 
 export const createAgentPrimitiveQuery = async (
@@ -109,6 +278,7 @@ export const createAgentPrimitiveQuery = async (
     is_manual?: boolean;
   },
   organizationId: number,
+  transaction?: Transaction,
 ): Promise<AgentPrimitive> => {
   const externalId = data.external_id || `manual_${Date.now()}`;
   const [results] = await sequelize.query(
@@ -134,6 +304,7 @@ export const createAgentPrimitiveQuery = async (
         metadata: JSON.stringify(data.metadata || {}),
         is_manual: data.is_manual ?? true,
       },
+      transaction,
     },
   );
   return (results as AgentPrimitive[])[0];
@@ -148,6 +319,7 @@ export const updateAgentPrimitiveQuery = async (
     metadata?: Record<string, any>;
   },
   organizationId: number,
+  transaction?: Transaction,
 ): Promise<AgentPrimitive | null> => {
   const sets: string[] = [];
   const replacements: Record<string, any> = { organizationId, id };
@@ -173,7 +345,7 @@ export const updateAgentPrimitiveQuery = async (
 
   const [results] = await sequelize.query(
     `UPDATE agent_primitives SET ${sets.join(", ")} WHERE organization_id = :organizationId AND id = :id RETURNING *`,
-    { replacements },
+    { replacements, transaction },
   );
   return (results as AgentPrimitive[])[0] || null;
 };
@@ -256,6 +428,8 @@ export const upsertAgentPrimitivesQuery = async (
     const batch = primitives.slice(i, i + BATCH_SIZE);
 
     for (const p of batch) {
+      // Synced agents cannot be edited, so they never have owners assigned in
+      // VerifyWise: the owner reported by the source system always wins.
       const [results] = await sequelize.query(
         `INSERT INTO agent_primitives (
           organization_id, source_system, primitive_type, external_id, display_name,
@@ -461,6 +635,7 @@ export const createAuditLogQuery = async (
     performed_by?: number;
   },
   organizationId: number,
+  transaction?: Transaction,
 ): Promise<AuditLogEntry> => {
   const [results] = await sequelize.query(
     `INSERT INTO agent_audit_log
@@ -477,6 +652,7 @@ export const createAuditLogQuery = async (
         new_value: data.new_value || null,
         performed_by: data.performed_by || null,
       },
+      transaction,
     },
   );
   return (results as AuditLogEntry[])[0];

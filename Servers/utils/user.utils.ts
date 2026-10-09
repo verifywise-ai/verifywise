@@ -32,6 +32,7 @@ import { TopicModel } from "../domain.layer/models/topic/topic.model";
 import { SubtopicModel } from "../domain.layer/models/subtopic/subtopic.model";
 import { QuestionModel } from "../domain.layer/models/question/question.model";
 import { deleteFileById } from "./fileUpload.utils";
+import { reassignAgentOwnersOfDeletedUsersQuery } from "./agentDiscovery.utils";
 import { AutomationModel } from "../domain.layer/models/automation/automation.model";
 
 /**
@@ -444,6 +445,10 @@ export const deleteUserByIdQuery = async (
     );
   }
 
+  // Agents whose primary owner is this user move to their next remaining owner
+  // (the user's agent_primitive_owners rows go with the user via ON DELETE CASCADE).
+  await reassignAgentOwnersOfDeletedUsersQuery([id], organizationId, transaction);
+
   await sequelize.query(
     `DELETE FROM projects_members WHERE organization_id = :organizationId AND user_id = :user_id`,
     {
@@ -660,6 +665,15 @@ export const deleteDemoUsersQuery = async (
   organizationId: number,
   transaction: Transaction,
 ): Promise<void> => {
+  const demoUsers = (await sequelize.query(
+    `SELECT id FROM users WHERE organization_id = :organizationId AND is_demo = true`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT, transaction },
+  )) as { id: number }[];
+  await reassignAgentOwnersOfDeletedUsersQuery(
+    demoUsers.map((u) => Number(u.id)),
+    organizationId,
+    transaction,
+  );
   await sequelize.query(
     `DELETE FROM users WHERE organization_id = :organizationId AND is_demo = true`,
     { replacements: { organizationId }, transaction },

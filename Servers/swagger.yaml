@@ -23261,18 +23261,46 @@ paths:
         -
           bearerAuth: []
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               type: object
+              required:
+                - display_name
+                - primitive_type
+              properties:
+                display_name:
+                  type: string
+                primitive_type:
+                  type: string
+                owner_ids:
+                  type: array
+                  items: {type: integer, minimum: 1}
+                  maxItems: 50
+                  description: 'User ids of the owners, all users of your organization, primary first. At most 50.'
+                owner_id:
+                  type: string
+                  nullable: true
+                  description: 'Legacy single owner. See the operation description.'
+                permissions:
+                  type: array
+                  items: {}
+                permission_categories:
+                  type: array
+                  items: {type: string}
+                metadata:
+                  type: object
       responses:
         '201':
-          description: 'Created successfully'
+          description: 'Created successfully. The agent includes owner_ids.'
+        '400':
+          description: 'Missing display_name or primitive_type, an invalid owner id, an owner who is not a user of your organization, owner_id that is not a user id when sent with owner_ids, a text owner_id longer than 255 characters, or more than 50 owners'
         '401':
           description: Unauthorized
         '500':
           description: 'Internal server error'
-      description: 'Requires role: Admin'
+      description: 'Adds a manual agent. Owners: send owner_ids, the user ids of the owners, primary first. The legacy owner_id is still accepted. Sent alone, a user id makes that user the only owner, and any other text is stored as is as a free-text owner (owner_ids stays empty). Sent with owner_ids, owner_id must be a user id; it becomes the primary owner and is moved to the front. An agent can have at most 50 owners. Requires role: Admin'
   /agent-primitives/stats:
     get:
       tags:
@@ -23360,18 +23388,41 @@ paths:
           schema:
             type: integer
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               type: object
+              properties:
+                display_name:
+                  type: string
+                primitive_type:
+                  type: string
+                owner_ids:
+                  type: array
+                  items: {type: integer, minimum: 1}
+                  maxItems: 50
+                  description: 'User ids of the owners, all users of your organization, primary first. At most 50.'
+                owner_id:
+                  type: string
+                  nullable: true
+                  description: 'Legacy single owner. See the operation description.'
+                metadata:
+                  type: object
       responses:
         '200':
-          description: Success
+          description: 'Success. The agent includes owner_ids.'
+        '400':
+          description: 'No fields to update, an invalid owner id, a newly added owner who is not a user of your organization, owner_id that is not a user id when sent with owner_ids, a text owner_id longer than 255 characters, or more than 50 owners'
         '401':
           description: Unauthorized
+        '403':
+          description: 'Only manually-added agents can be edited'
+        '404':
+          description: 'Agent primitive not found'
         '500':
           description: 'Internal server error'
-      description: 'Requires role: Admin'
+      description: 'Edits a manual agent. Owners change only when owner_ids or owner_id is sent, so an edit of other fields leaves them as they are. owner_ids replaces the full owner set, primary first. owner_id sent alone (legacy): a user id becomes the primary owner, replacing the previous primary and keeping the other owners; null or an empty string removes only the primary owner, and the next owner becomes primary (or none is left); any other text replaces all owners with that one free-text owner. Sent with owner_ids, owner_id must be a user id; it becomes the primary owner and is moved to the front. An agent can have at most 50 owners. Requires role: Admin'
     delete:
       tags:
         - 'Agent Discovery'

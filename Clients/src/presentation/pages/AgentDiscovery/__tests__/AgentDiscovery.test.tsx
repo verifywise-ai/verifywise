@@ -1,9 +1,20 @@
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import AgentDiscovery from "../index";
 
+const manualAgent = {
+  id: 42,
+  display_name: "Manual helper",
+  is_manual: true,
+  source_system: "manual",
+  review_status: "unreviewed",
+};
+
 // Mock entity repository
 vi.mock("../../../../application/repository/entity.repository", () => ({
-  getAllEntities: vi.fn().mockResolvedValue({ data: [] }),
+  getAllEntities: vi.fn(({ routeUrl }: { routeUrl: string }) =>
+    Promise.resolve({ data: routeUrl === "/agent-primitives" ? [manualAgent] : undefined }),
+  ),
 }));
 
 // Mock API services
@@ -15,19 +26,45 @@ vi.mock("../../../../infrastructure/api/networkServices", () => ({
 }));
 
 // Mock child components to isolate the page
+// The table stub exposes the row action menu's "Review" and "Edit" for each agent.
 vi.mock("../AgentTable", () => ({
   __esModule: true,
-  default: () => <div data-testid="agent-table" />,
+  default: ({
+    agents,
+    onReview,
+    onEdit,
+  }: {
+    agents: any[];
+    onReview: (agent: any) => void;
+    onEdit: (agent: any) => void;
+  }) => (
+    <div data-testid="agent-table">
+      {agents.map((agent) => (
+        <span key={agent.id}>
+          <button onClick={() => onReview(agent)}>review-{agent.id}</button>
+          <button onClick={() => onEdit(agent)}>edit-{agent.id}</button>
+        </span>
+      ))}
+    </div>
+  ),
 }));
 
 vi.mock("../../../components/Modals/AgentDiscovery/ReviewAgentModal", () => ({
   __esModule: true,
-  default: () => <div data-testid="review-agent-modal" />,
+  default: ({ isOpen, agent }: { isOpen: boolean; agent: any }) => (
+    <div data-testid="review-agent-modal" data-open={String(isOpen)}>
+      {agent?.display_name}
+    </div>
+  ),
 }));
 
 vi.mock("../../../components/Modals/AgentDiscovery/ManualAgentModal", () => ({
   __esModule: true,
-  default: () => <div data-testid="manual-agent-modal" />,
+  default: ({ isOpen, agent }: { isOpen: boolean; agent: any }) => (
+    <div data-testid="manual-agent-modal" data-open={String(isOpen)}>
+      {agent?.display_name}
+    </div>
+  ),
 }));
 
 // Mock the UserGuideSidebarContext used by PageHeaderExtended > HelperIcon
@@ -58,5 +95,29 @@ describe("AgentDiscovery Page", () => {
     });
 
     expect(container).toBeInTheDocument();
+  });
+
+  it("opens the review drawer from the row's Review action", async () => {
+    renderWithProviders(<AgentDiscovery />, { route: "/agent-discovery" });
+
+    fireEvent.click(await screen.findByText("review-42"));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("review-agent-modal")).toHaveAttribute("data-open", "true"),
+    );
+    expect(screen.getByTestId("review-agent-modal")).toHaveTextContent("Manual helper");
+    expect(screen.getByTestId("manual-agent-modal")).toHaveAttribute("data-open", "false");
+  });
+
+  it("opens the edit form directly from the row's Edit action", async () => {
+    renderWithProviders(<AgentDiscovery />, { route: "/agent-discovery" });
+
+    fireEvent.click(await screen.findByText("edit-42"));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("manual-agent-modal")).toHaveAttribute("data-open", "true"),
+    );
+    expect(screen.getByTestId("manual-agent-modal")).toHaveTextContent("Manual helper");
+    expect(screen.getByTestId("review-agent-modal")).toHaveAttribute("data-open", "false");
   });
 });

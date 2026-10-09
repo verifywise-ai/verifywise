@@ -31,6 +31,7 @@ const ROW_ACTIONS_LABEL_BY_TYPE: Record<string, string> = {
   project: "Project actions",
   reportrun: "Report actions",
   scheduledreport: "Scheduled report actions",
+  agent: "Agent actions",
 };
 
 // Types whose menu separates a reversible "archive" from a permanent "delete",
@@ -42,6 +43,7 @@ const ARCHIVE_DELETE_PAIR_TYPES = ["task", "reportrun"];
 const REMOVE_PROCEED_TEXT_BY_TYPE: Record<string, string> = {
   scheduledreport: "Delete report",
   reportrun: "Archive report",
+  agent: "Delete agent",
 };
 
 function getRowActionsAriaLabel(type?: string): string {
@@ -62,6 +64,7 @@ function IconButton({
   onDownload,
   isVisible,
   canDelete,
+  canEdit = true,
   checkForRisks,
   onDeleteWithRisks,
   onView,
@@ -363,6 +366,16 @@ function IconButton({
       return items;
     }
 
+    // An AI agent: review it (every agent), edit it (only where the caller
+    // allows, e.g. manually added agents) and delete it (when permitted).
+    if (normalizedType === "agent") {
+      const items: string[] = [];
+      if (onView) items.push("view");
+      if (canEdit) items.push("edit");
+      if (canDelete) items.push("remove");
+      return items;
+    }
+
     if (normalizedType === "vendor") {
       return canDelete ? ["edit", "remove"] : ["edit"];
     }
@@ -422,6 +435,12 @@ function IconButton({
         delete: "Delete permanently",
       },
       scheduledreport: {
+        remove: "Delete",
+      },
+      agent: {
+        // Only users who may change agents can act in the review drawer;
+        // for everyone else it is a read-only view.
+        view: canDelete ? "Review" : "Details",
         remove: "Delete",
       },
     };

@@ -1,4 +1,9 @@
 {
+  "An agent can have at most 50 owners": "Ein Agent kann höchstens 50 Verantwortliche haben",
+  "Owner IDs must be valid user IDs": "Eigentümer-IDs müssen gültige Benutzer-IDs sein",
+  "Owners must be users in your organization": "Eigentümer müssen Benutzer Ihrer Organisation sein",
+  "owner_id must be a user ID when sent with owner_ids": "owner_id muss eine Benutzer-ID sein, wenn owner_ids gesendet wird",
+  "owner_id must be at most 255 characters": "owner_id darf höchstens 255 Zeichen lang sein",
   "{days} days overdue": "vor {days} Tagen",
   "{projectName} is created in VerifyWise": "{projectName} wurde in VerifyWise erstellt",
   "{type} with id {id} not found": "{type} mit ID {id} nicht gefunden",

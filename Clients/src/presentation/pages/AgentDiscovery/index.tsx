@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router";
 import { Box, Stack, Fade } from "@mui/material";
 import { RefreshCw, CirclePlus } from "lucide-react";
 import { SearchBox } from "../../components/Search";
@@ -19,6 +20,9 @@ import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/us
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { AgentPrimitiveRow } from "src/domain/interfaces/i.agentDiscovery";
 import AgentTable from "./AgentTable";
+import { getAgentSourceLabel, getReviewStatusDisplay, getSourceFilterOptions } from "./agentLabels";
+import { useHasPermission } from "../../../application/hooks/useMyPermissions";
+import { palette } from "../../themes/palette";
 
 import Alert from "../../components/Alert";
 
@@ -31,6 +35,10 @@ interface AgentStats {
 }
 
 const AgentDiscovery: React.FC = () => {
+  const navigate = useNavigate();
+  // Changing agents (sync, add, edit, review, delete) needs the
+  // agentDiscovery.admin permission (Admins by default).
+  const canManage = useHasPermission("agentDiscovery.admin", { fallbackToAdmin: true });
   const [agents, setAgents] = useState<AgentPrimitiveRow[]>([]);
   const [stats, setStats] = useState<AgentStats>({
     total: 0,
@@ -57,7 +65,6 @@ const AgentDiscovery: React.FC = () => {
     | "permissions"
     | "last_activity"
     | "review_status"
-    | "stale"
     | "actions";
 
   const AGENT_COLUMNS: ColumnConfig<AgentColumn>[] = useMemo(
@@ -68,7 +75,6 @@ const AgentDiscovery: React.FC = () => {
       { key: "permissions", label: "Permissions", defaultVisible: true },
       { key: "last_activity", label: "Last activity", defaultVisible: true },
       { key: "review_status", label: "Status", defaultVisible: true },
-      { key: "stale", label: "Stale", defaultVisible: true },
       { key: "actions", label: "Actions", defaultVisible: true, alwaysVisible: true },
     ],
     [],
@@ -133,15 +139,8 @@ const AgentDiscovery: React.FC = () => {
   }, [fetchAgents, fetchStats]);
 
   // FilterBy - Dynamic options from current data
-  const getUniqueSources = useCallback(() => {
-    const sources = new Set<string>();
-    agents.forEach((agent) => {
-      if (agent.source_system) sources.add(agent.source_system);
-    });
-    return Array.from(sources)
-      .sort()
-      .map((s) => ({ value: s, label: s }));
-  }, [agents]);
+  // Raw source keys as values, the Source column's labels as labels.
+  const getUniqueSources = useCallback(() => getSourceFilterOptions(agents), [agents]);
 
   const getUniqueTypes = useCallback(() => {
     const types = new Set<string>();
@@ -166,9 +165,10 @@ const AgentDiscovery: React.FC = () => {
         label: "Status",
         type: "select" as const,
         options: [
-          { value: "unreviewed", label: "Unreviewed" },
-          { value: "confirmed", label: "Confirmed" },
-          { value: "rejected", label: "Rejected" },
+          ...["unreviewed", "confirmed", "rejected"].map((value) => ({
+            value,
+            label: getReviewStatusDisplay(value).label,
+          })),
         ],
       },
       {
@@ -253,9 +253,10 @@ const AgentDiscovery: React.FC = () => {
   const getGroupKey = (agent: AgentPrimitiveRow, field: string): string | string[] => {
     switch (field) {
       case "review_status":
-        return agent.review_status || "Unknown";
+        return getReviewStatusDisplay(agent.review_status).label;
       case "source_system":
-        return agent.source_system || "Unknown";
+        // The Source column's label, not the raw key.
+        return getAgentSourceLabel(agent);
       case "primitive_type":
         return agent.primitive_type || "Unknown";
       case "is_stale":
@@ -304,8 +305,9 @@ const AgentDiscovery: React.FC = () => {
   };
 
   const handleRowClick = (agent: AgentPrimitiveRow) => {
-    setSelectedAgent(agent);
-    setIsReviewModalOpen(true);
+    // Row click opens the full detail page (lifecycle, ownership, activity).
+    // The row action menu opens the review drawer or the edit form instead.
+    navigate(`/agent-discovery/${agent.id}`);
   };
 
   const handleReviewSuccess = () => {
@@ -327,15 +329,17 @@ const AgentDiscovery: React.FC = () => {
     );
   };
 
+  // "Review" opens the review drawer for every agent.
+  const handleReviewAgent = (agent: AgentPrimitiveRow) => {
+    setSelectedAgent(agent);
+    setIsReviewModalOpen(true);
+  };
+
+  // "Edit" opens the edit form directly. The table only offers it for manual
+  // agents; synced agents are read-only (the server rejects the update).
   const handleEditAgent = (agent: AgentPrimitiveRow) => {
-    if (agent.is_manual) {
-      setEditAgent(agent);
-      setIsManualModalOpen(true);
-    } else {
-      // Synced agents open the review modal instead of edit
-      setSelectedAgent(agent);
-      setIsReviewModalOpen(true);
-    }
+    setEditAgent(agent);
+    setIsManualModalOpen(true);
   };
 
   const handleDeleteAgent = async (agent: AgentPrimitiveRow) => {
@@ -352,17 +356,32 @@ const AgentDiscovery: React.FC = () => {
 
   return (
     <PageHeaderExtended
-      title="Agent discovery"
+      title="AI agents"
       description="Automatically discover and inventory AI agents across your organization. Review discovered agents, confirm or reject them, and link them to your model inventory for governance tracking."
       helpArticlePath="ai-governance/agent-discovery"
       summaryCards={
         <StatusTileCards
           items={[
-            { key: "total", label: "Total", color: "#1976D2", count: stats.total },
-            { key: "unreviewed", label: "Unreviewed", color: "#F9A825", count: stats.unreviewed },
-            { key: "confirmed", label: "Confirmed", color: "#2E7D32", count: stats.confirmed },
-            { key: "rejected", label: "Rejected", color: "#D32F2F", count: stats.rejected },
-            { key: "stale", label: "Stale", color: "#455A64", count: stats.stale },
+            { key: "total", label: "Total", color: palette.status.info.text, count: stats.total },
+            {
+              key: "unreviewed",
+              label: getReviewStatusDisplay("unreviewed").label,
+              color: palette.accent.amber.text,
+              count: stats.unreviewed,
+            },
+            {
+              key: "confirmed",
+              label: getReviewStatusDisplay("confirmed").label,
+              color: palette.status.success.text,
+              count: stats.confirmed,
+            },
+            {
+              key: "rejected",
+              label: getReviewStatusDisplay("rejected").label,
+              color: palette.status.error.text,
+              count: stats.rejected,
+            },
+            { key: "stale", label: "Stale", color: palette.text.tertiary, count: stats.stale },
           ]}
           entityName="agent"
           size="small"
@@ -413,28 +432,34 @@ const AgentDiscovery: React.FC = () => {
               />
             </Stack>
             <Stack direction="row" gap="8px" alignItems="center">
-              <CustomizableButton
-                sx={syncButton}
-                variant="outlined"
-                onClick={handleSync}
-                isDisabled={isSyncing}
-                icon={
-                  <RefreshCw
-                    size={14}
-                    strokeWidth={1.5}
-                    style={isSyncing ? { animation: "spin 1s linear infinite" } : undefined}
+              {/* Sync and Add agent change data: they need the agentDiscovery.admin
+                  permission (Admins by default). */}
+              {canManage && (
+                <>
+                  <CustomizableButton
+                    sx={syncButton}
+                    variant="outlined"
+                    onClick={handleSync}
+                    isDisabled={isSyncing}
+                    icon={
+                      <RefreshCw
+                        size={14}
+                        strokeWidth={1.5}
+                        style={isSyncing ? { animation: "spin 1s linear infinite" } : undefined}
+                      />
+                    }
+                  >
+                    {isSyncing ? "Syncing..." : "Sync now"}
+                  </CustomizableButton>
+                  <CustomizableButton
+                    variant="contained"
+                    text="Add agent"
+                    sx={addAgentButton}
+                    icon={<CirclePlus size={16} />}
+                    onClick={() => setIsManualModalOpen(true)}
                   />
-                }
-              >
-                {isSyncing ? "Syncing..." : "Sync now"}
-              </CustomizableButton>
-              <CustomizableButton
-                variant="contained"
-                text="Add agent"
-                sx={addAgentButton}
-                icon={<CirclePlus size={16} />}
-                onClick={() => setIsManualModalOpen(true)}
-              />
+                </>
+              )}
             </Stack>
           </Stack>
         </Stack>
@@ -449,9 +474,12 @@ const AgentDiscovery: React.FC = () => {
             agents={data}
             isLoading={isLoading}
             onRowClick={handleRowClick}
+            onReview={handleReviewAgent}
             onEdit={handleEditAgent}
             onDelete={handleDeleteAgent}
+            canManage={canManage}
             onSync={handleSync}
+            onAddAgent={() => setIsManualModalOpen(true)}
             isSyncing={isSyncing}
             visibleColumns={visibleColumns}
           />
@@ -464,6 +492,11 @@ const AgentDiscovery: React.FC = () => {
         setIsOpen={setIsReviewModalOpen}
         agent={selectedAgent}
         onSuccess={handleReviewSuccess}
+        onEdit={(agent) => {
+          setSelectedAgent(null);
+          setEditAgent(agent);
+          setIsManualModalOpen(true);
+        }}
       />
 
       {/* Manual entry modal */}

@@ -1,4 +1,9 @@
 {
+  "An agent can have at most 50 owners": "An agent can have at most 50 owners",
+  "Owner IDs must be valid user IDs": "Owner IDs must be valid user IDs",
+  "Owners must be users in your organization": "Owners must be users in your organization",
+  "owner_id must be a user ID when sent with owner_ids": "owner_id must be a user ID when sent with owner_ids",
+  "owner_id must be at most 255 characters": "owner_id must be at most 255 characters",
   "{days} days overdue": "{days} days overdue",
   "{projectName} is created in VerifyWise": "{projectName} is created in VerifyWise",
   "{type} with id {id} not found": "{type} with id {id} not found",

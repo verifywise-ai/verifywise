@@ -299,7 +299,7 @@ export const dashboardContent: ArticleContent = {
         {
           icon: 'FolderTree',
           title: 'Inventory',
-          description: 'Use cases, Model inventory, Datasets, and Agent discovery.',
+          description: 'Use cases, Model inventory, Datasets, and AI agents.',
         },
         {
           icon: 'Shield',

@@ -12,6 +12,7 @@ import {
   Stack,
   Chip as MuiChip,
   Box,
+  Tooltip,
   useTheme,
 } from "@mui/material";
 import {
@@ -24,6 +25,8 @@ import {
   Plug,
   ShieldCheck,
   Settings,
+  CirclePlus,
+  UserPen,
 } from "lucide-react";
 import IconButton from "../../components/IconButton";
 import { ReactComponent as SelectorVertical } from "../../assets/icons/selector-vertical.svg";
@@ -33,6 +36,7 @@ import { CustomizableButton } from "../../components/button/customizable-button"
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { useExtensions } from "../../../application/contexts/Extensions.context";
 import Chip from "../../components/Chip";
+import { getAgentSourceLabel, getReviewStatusDisplay } from "./agentLabels";
 import TablePaginationActions from "../../components/TablePagination";
 import { singleTheme } from "../../themes";
 import {
@@ -46,6 +50,7 @@ import {
 import { AgentTableProps } from "src/domain/interfaces/i.agentDiscovery";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { pageOfLabel } from "../../components/Table/pageOfLabel";
+import { palette } from "../../themes/palette";
 
 const cellStyle = singleTheme.tableStyles.primary.body.cell;
 
@@ -56,7 +61,6 @@ const TABLE_COLUMNS = [
   { id: "permissions", label: "PERMISSIONS", sortable: false },
   { id: "last_activity", label: "LAST ACTIVITY", sortable: true },
   { id: "review_status", label: "STATUS", sortable: true },
-  { id: "stale", label: "", sortable: false },
   { id: "actions", label: "", sortable: false },
 ];
 
@@ -67,9 +71,12 @@ const AgentTable: React.FC<AgentTableProps> = ({
   agents,
   isLoading,
   onRowClick,
+  onReview,
   onEdit,
   onDelete,
+  canManage = false,
   onSync,
+  onAddAgent,
   isSyncing,
   visibleColumns,
 }) => {
@@ -198,7 +205,7 @@ const AgentTable: React.FC<AgentTableProps> = ({
           description="Each discovered agent can be confirmed, rejected, or linked to a model in your inventory for compliance tracking."
         />
         <Box sx={{ display: "flex", gap: "8px", mt: "16px" }}>
-          {azureInstalled ? (
+          {!canManage ? null : azureInstalled ? (
             <>
               <CustomizableButton
                 text={isSyncing ? "Syncing..." : "Sync now"}
@@ -227,6 +234,15 @@ const AgentTable: React.FC<AgentTableProps> = ({
               variant="contained"
               onClick={() => navigate("/extensions/azure-ai-foundry/settings")}
               startIcon={<Plug size={14} />}
+              sx={{ height: 34 }}
+            />
+          )}
+          {canManage && onAddAgent && (
+            <CustomizableButton
+              text="Add agent"
+              variant="outlined"
+              onClick={onAddAgent}
+              startIcon={<CirclePlus size={14} />}
               sx={{ height: 34 }}
             />
           )}
@@ -314,7 +330,16 @@ const AgentTable: React.FC<AgentTableProps> = ({
             <TableCell sx={cellStyle}>{agent.display_name}</TableCell>
           )}
           {isColVisible("source_system") && (
-            <TableCell sx={cellStyle}>{agent.source_system}</TableCell>
+            <TableCell sx={cellStyle}>
+              <Stack direction="row" alignItems="center" spacing={0.75}>
+                {agent.is_manual ? (
+                  <UserPen size={14} strokeWidth={1.5} color={palette.text.icon} />
+                ) : (
+                  <Plug size={14} strokeWidth={1.5} color={palette.text.icon} />
+                )}
+                <span>{getAgentSourceLabel(agent)}</span>
+              </Stack>
+            </TableCell>
           )}
           {isColVisible("primitive_type") && (
             <TableCell sx={cellStyle}>{agent.primitive_type}</TableCell>
@@ -340,24 +365,51 @@ const AgentTable: React.FC<AgentTableProps> = ({
           )}
           {isColVisible("review_status") && (
             <TableCell sx={cellStyle}>
-              <Chip label={agent.review_status} />
-            </TableCell>
-          )}
-          {isColVisible("stale") && (
-            <TableCell sx={{ ...cellStyle, width: 40 }}>
-              {agent.is_stale && <AlertTriangle size={14} strokeWidth={1.5} color="#F9A825" />}
+              {/* Staleness sits next to the review status it qualifies, rather
+                  than in its own mostly empty column. */}
+              <Stack direction="row" alignItems="center" gap="8px">
+                {(() => {
+                  const s = getReviewStatusDisplay(agent.review_status);
+                  return <Chip label={s.label} variant={s.variant} />;
+                })()}
+                {agent.is_stale && (
+                  <Tooltip
+                    title="Stale: no activity from this agent for 30+ days. Re-sync or review whether it is still in use."
+                    arrow
+                    placement="top"
+                  >
+                    <Box
+                      component="span"
+                      data-testid="agent-stale-indicator"
+                      sx={{ display: "inline-flex", cursor: "help" }}
+                    >
+                      <AlertTriangle
+                        size={14}
+                        strokeWidth={1.5}
+                        color={palette.accent.amber.text}
+                      />
+                    </Box>
+                  </Tooltip>
+                )}
+              </Stack>
             </TableCell>
           )}
           {isColVisible("actions") && (
             <TableCell sx={{ ...cellStyle, width: 40 }} onClick={(e) => e.stopPropagation()}>
+              {/* Review for every agent; Edit only for manual agents (synced
+                  agents are read-only); Edit and Delete only with the
+                  agentDiscovery.admin permission (Admins by default). */}
               <IconButton
                 id={agent.id}
+                onView={() => onReview(agent)}
                 onEdit={() => onEdit(agent)}
+                canEdit={canManage && agent.is_manual}
                 onDelete={() => onDelete(agent)}
+                canDelete={canManage}
                 onMouseEvent={() => {}}
                 warningTitle="Delete this agent?"
                 warningMessage="When you delete this agent, all data related to this agent will be removed. This action is non-recoverable."
-                type="Vendor"
+                type="agent"
               />
             </TableCell>
           )}
