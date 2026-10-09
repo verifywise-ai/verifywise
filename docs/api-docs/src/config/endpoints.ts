@@ -4399,6 +4399,28 @@ export const fileEndpoints: Endpoint[] = [
   },
   {
     method: 'GET',
+    path: '/file-manager/org-settings',
+    summary: "Get File Org Settings Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'PUT',
+    path: '/file-manager/org-settings',
+    summary: "Update File Org Settings Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'GET',
     path: '/file-manager/{id}',
     summary: "Download File",
     description: "Requires role: Admin",

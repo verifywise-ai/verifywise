@@ -17462,6 +17462,33 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+  /file-manager/org-settings:
+    get:
+      summary: 'Get File Org Settings Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Files
+      operationId: getFileOrgSettingsHandler
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Update File Org Settings Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Files
+      operationId: updateFileOrgSettingsHandler
+      security:
+        -
+          bearerAuth: []
   '/file-manager/{id}':
     get:
       tags:
