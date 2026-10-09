@@ -13,6 +13,7 @@ import {
   getLatestSyncStatusQuery,
   createAuditLogQuery,
   getAuditLogsForAgentQuery,
+  setAgentOwnersQuery,
 } from "../utils/agentDiscovery.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { logStructured } from "../utils/logger/fileLogger";
@@ -20,6 +21,23 @@ import { runAgentDiscoverySyncForTenant } from "../services/agentDiscovery/agent
 
 import { translateError } from "../utils/i18n.utils";
 const fileName = "agentDiscovery.ctrl.ts";
+
+/**
+ * Normalize the owners of an agent into a deduplicated, ordered list of numeric
+ * user ids. Accepts an `owner_ids` array (multi-owner) and/or a legacy single
+ * `owner_id`; the legacy value is appended if not already present, so the first
+ * entry is always the primary owner. Non-numeric/blank values are dropped.
+ */
+function normalizeOwnerIds(ownerIds: unknown, ownerId: unknown): number[] {
+  const out: number[] = [];
+  const push = (v: unknown) => {
+    const n = typeof v === "number" ? v : parseInt(String(v ?? "").trim(), 10);
+    if (!Number.isNaN(n) && !out.includes(n)) out.push(n);
+  };
+  if (Array.isArray(ownerIds)) ownerIds.forEach(push);
+  if (ownerId !== undefined && ownerId !== null && ownerId !== "") push(ownerId);
+  return out;
+}
 
 /**
  * Get all agent primitives with optional filters
@@ -137,19 +155,30 @@ export async function createAgentPrimitive(req: Request, res: Response) {
   logStructured("processing", "creating agent primitive", functionName, fileName);
 
   try {
-    const { display_name, primitive_type, owner_id, permissions, permission_categories, metadata } =
-      req.body;
+    const {
+      display_name,
+      primitive_type,
+      owner_id,
+      owner_ids,
+      permissions,
+      permission_categories,
+      metadata,
+    } = req.body;
     if (!display_name || !primitive_type) {
       return res
         .status(400)
         .json(STATUS_CODE[400](req.t!("display_name and primitive_type are required")));
     }
 
+    // Normalize owners: accept an owner_ids array (multi-owner) and/or the legacy
+    // single owner_id. The first owner is the primary.
+    const owners = normalizeOwnerIds(owner_ids, owner_id);
+
     const primitive = await createAgentPrimitiveQuery(
       {
         display_name,
         primitive_type,
-        owner_id,
+        owner_id: owners.length > 0 ? String(owners[0]) : undefined,
         permissions,
         permission_categories,
         metadata,
@@ -159,6 +188,11 @@ export async function createAgentPrimitive(req: Request, res: Response) {
       },
       req.organizationId!,
     );
+
+    if (owners.length > 0) {
+      await setAgentOwnersQuery(primitive.id!, owners, req.organizationId!);
+      (primitive as any).owner_ids = owners;
+    }
 
     logStructured("successful", "agent primitive created", functionName, fileName);
     return res.status(201).json(STATUS_CODE[201](primitive));
@@ -191,22 +225,33 @@ export async function updateAgentPrimitive(req: Request, res: Response) {
         .json(STATUS_CODE[403](req.t!("Only manually-added agents can be edited")));
     }
 
-    const { display_name, primitive_type, owner_id, metadata } = req.body;
+    const { display_name, primitive_type, owner_id, owner_ids, metadata } = req.body;
 
     if (
       display_name === undefined &&
       primitive_type === undefined &&
       owner_id === undefined &&
+      owner_ids === undefined &&
       metadata === undefined
     ) {
       return res.status(400).json(STATUS_CODE[400](req.t!("No fields to update")));
     }
 
+    // When owners are supplied, they drive the primary owner_id too.
+    const owners = owner_ids !== undefined ? normalizeOwnerIds(owner_ids, owner_id) : undefined;
+    const primaryOwnerId =
+      owners !== undefined ? (owners.length > 0 ? String(owners[0]) : null) : owner_id;
+
     const updated = await updateAgentPrimitiveQuery(
       id,
-      { display_name, primitive_type, owner_id, metadata },
+      { display_name, primitive_type, owner_id: primaryOwnerId, metadata },
       req.organizationId!,
     );
+
+    if (owners !== undefined) {
+      await setAgentOwnersQuery(id, owners, req.organizationId!);
+      if (updated) (updated as any).owner_ids = owners;
+    }
 
     // Create audit log entries for each changed field
     const fieldsToCheck: Array<{ field: string; oldVal: any; newVal: any }> = [

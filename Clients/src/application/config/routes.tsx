@@ -74,6 +74,7 @@ const DatasetEditorPage = lazyRoute(
   () => import("../../presentation/pages/EvalsDashboard/DatasetEditorPage"),
 );
 const AgentDiscovery = lazyRoute(() => import("../../presentation/pages/AgentDiscovery"));
+const AgentDetail = lazyRoute(() => import("../../presentation/pages/AgentDiscovery/AgentDetail"));
 const ModelInventory = lazyRoute(() => import("../../presentation/pages/ModelInventory"));
 const AIApps = lazyRoute(() => import("../../presentation/pages/AIApps"));
 const ModelLifecycleDetail = lazyRoute(
@@ -742,6 +743,14 @@ export const createRoutes = (
       element={
         <Suspense fallback={<LazyFallback />}>
           <AIObservability />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/agent-discovery/:id"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <AgentDetail />
         </Suspense>
       }
     />

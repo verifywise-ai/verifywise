@@ -29,7 +29,7 @@ export const EXPLORE_VIDEO_DATA: Record<string, ExploreVideoData> = {
       {
         number: "04",
         category: "DISCOVERY",
-        title: "Agent discovery",
+        title: "AI Agents",
         description:
           "Inventory and govern AI agents deployed across your organization with capability tracking.",
       },
