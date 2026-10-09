@@ -6,6 +6,7 @@ import AgentDetail from "../AgentDetail";
 const mockGetAllEntities = vi.fn();
 const mockGetEntityById = vi.fn();
 const mockApiGet = vi.fn();
+const mockApiPatch = vi.fn();
 
 vi.mock("../../../../application/repository/entity.repository", () => ({
   getAllEntities: (...args: any[]) => mockGetAllEntities(...args),
@@ -13,7 +14,10 @@ vi.mock("../../../../application/repository/entity.repository", () => ({
 }));
 
 vi.mock("../../../../infrastructure/api/networkServices", () => ({
-  apiServices: { get: (...args: any[]) => mockApiGet(...args) },
+  apiServices: {
+    get: (...args: any[]) => mockApiGet(...args),
+    patch: (...args: any[]) => mockApiPatch(...args),
+  },
 }));
 
 vi.mock("../../../../application/tools/log.engine", () => ({
@@ -98,6 +102,9 @@ const renderAt = (id: string) =>
     { route: `/agent-discovery/${id}` },
   );
 
+/** An API failure as networkServices throws it: a CustomException-like error with a status. */
+const httpError = (status: number) => Object.assign(new Error(`HTTP ${status}`), { status });
+
 /** Serve the agent (and optionally the linked model) by route. */
 const serve = (
   agentData: Record<string, unknown> | Error,
@@ -135,10 +142,47 @@ describe("AgentDetail", () => {
     },
   );
 
-  it("shows not found when the agent request fails", async () => {
-    serve(new Error("404"));
+  it("shows not found when the agent request answers 404", async () => {
+    serve(httpError(404));
     renderAt("5");
     expect(await screen.findByText("Agent not found")).toBeInTheDocument();
+    expect(screen.queryByText("Could not load this agent.")).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["a server error", httpError(500)],
+    ["a network failure", new Error("Network Error")],
+  ])("shows a load error, not 'not found', for %s, and retries", async (_label, error) => {
+    serve(error);
+    renderAt("5");
+
+    expect(await screen.findByText("Could not load this agent.")).toBeInTheDocument();
+    expect(screen.queryByText("Agent not found")).not.toBeInTheDocument();
+
+    serve(agent);
+    fireEvent.click(screen.getByTestId("agent-detail-retry"));
+    expect((await screen.findAllByText("Invoice bot")).length).toBeGreaterThan(0);
+    expect(screen.queryByText("Could not load this agent.")).not.toBeInTheDocument();
+  });
+
+  it("keeps the agent on screen when the refresh after a review fails", async () => {
+    serve(agent);
+    mockApiPatch.mockResolvedValue({ data: {} });
+    renderAt("5");
+
+    fireEvent.click(await screen.findByTestId("agent-detail-review"));
+    serve(httpError(500));
+    fireEvent.click(await screen.findByText("Confirm"));
+
+    await vi.waitFor(() =>
+      expect(
+        mockGetEntityById.mock.calls.filter((c: any[]) => c[0].routeUrl === "/agent-primitives/5"),
+      ).toHaveLength(2),
+    );
+    await act(async () => {});
+    expect(screen.getAllByText("Invoice bot").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Agent not found")).not.toBeInTheDocument();
+    expect(screen.queryByText("Could not load this agent.")).not.toBeInTheDocument();
   });
 
   it("still renders the agent when audit logs and the model fail to load", async () => {
@@ -260,13 +304,28 @@ describe("AgentDetail", () => {
     expect(await screen.findByText("Edit agent")).toBeInTheDocument();
   });
 
-  it("offers only Review on a manual agent to a user who may not change agents", async () => {
+  it("offers Details instead of Review or Edit to a user who may not change agents", async () => {
     permissionState.canManage = false;
     serve(agent);
     renderAt("5");
 
-    expect(await screen.findByTestId("agent-detail-review")).toBeInTheDocument();
+    const details = await screen.findByTestId("agent-detail-details");
+    expect(details).toHaveTextContent("Details");
+    expect(screen.queryByTestId("agent-detail-review")).not.toBeInTheDocument();
     expect(screen.queryByTestId("agent-detail-edit")).not.toBeInTheDocument();
+
+    // The same drawer, read-only.
+    fireEvent.click(details);
+    expect(await screen.findByText("Agent details")).toBeInTheDocument();
+    expect(screen.queryByText("Confirm")).not.toBeInTheDocument();
+  });
+
+  it("offers Review, not Details, to a user who may change agents", async () => {
+    serve(agent);
+    renderAt("5");
+
+    expect(await screen.findByTestId("agent-detail-review")).toHaveTextContent("Review");
+    expect(screen.queryByTestId("agent-detail-details")).not.toBeInTheDocument();
   });
 
   it("offers only Review for a synced agent", async () => {

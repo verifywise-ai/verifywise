@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { getMyPermissions } from "../repository/role.repository";
 import { useAuth } from "./useAuth";
+import { useIsAdmin } from "./useIsAdmin";
 
 export const MY_PERMISSIONS_QUERY_KEY = ["my-permissions"] as const;
 
@@ -26,12 +27,26 @@ export function useMyPermissions() {
   return { permissions: query.data, isLoading: query.isLoading, error: query.error };
 }
 
+export interface HasPermissionOptions {
+  /**
+   * When the permissions request fails, fall back to the Admin role check
+   * instead of returning false. Use it for keys whose server default is Admin,
+   * so an Admin is not left without manage controls when the request errors.
+   */
+  fallbackToAdmin?: boolean;
+}
+
 /**
  * True when the current user holds the permission key (e.g.
- * "agentDiscovery.admin"). False while the permissions are loading or could
- * not be loaded, so a control never shows before it is known to be allowed.
+ * "agentDiscovery.admin"). False while the permissions are loading, so a
+ * control never shows before it is known to be allowed. False when they could
+ * not be loaded, unless `fallbackToAdmin` is set, in which case an Admin still
+ * gets the control (the backend enforces authorization either way).
  */
-export function useHasPermission(key: string): boolean {
-  const { permissions } = useMyPermissions();
-  return permissions?.includes(key) ?? false;
+export function useHasPermission(key: string, options: HasPermissionOptions = {}): boolean {
+  const { permissions, isLoading, error } = useMyPermissions();
+  const isAdmin = useIsAdmin();
+  if (permissions) return permissions.includes(key);
+  if (!isLoading && error && options.fallbackToAdmin) return isAdmin;
+  return false;
 }

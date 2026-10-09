@@ -275,11 +275,32 @@ describe("ManualAgentModal", () => {
 
     expect(
       await screen.findByText(
-        "Owners who are no longer in your organization will be removed when you save.",
+        "Some owners are no longer in your organization. They will be removed if you change the owners.",
       ),
     ).toBeInTheDocument();
     // Only 9 is still unknown, so only 9 leaves the picker.
     expect(screen.getByTestId("multiselect-owner_ids")).toHaveAttribute("data-value", "[3,1]");
+  });
+
+  it("uses the cached users and does not refresh them when adding an agent", async () => {
+    renderWithProviders(<ManualAgentModal isOpen={true} setIsOpen={vi.fn()} onSuccess={vi.fn()} />);
+    await act(async () => {});
+    expect(screen.getByText("Add agent manually")).toBeInTheDocument();
+    expect(usersState.refreshUsers).not.toHaveBeenCalled();
+  });
+
+  it("does not refresh the users when editing an agent without owners", async () => {
+    renderWithProviders(
+      <ManualAgentModal
+        isOpen={true}
+        setIsOpen={vi.fn()}
+        onSuccess={vi.fn()}
+        agent={{ ...mockAgent, owner_id: null, owner_ids: [] }}
+      />,
+    );
+    await act(async () => {});
+    expect(usersState.refreshUsers).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("agent-dropped-owners-note")).not.toBeInTheDocument();
   });
 
   it("shows no removal note when every owner is still a user", async () => {

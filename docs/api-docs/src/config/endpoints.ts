@@ -45,7 +45,7 @@ export const agentDiscoveryEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/agent-primitives',
     summary: "Create Agent Primitive",
-    description: "Adds a manual agent. Owners: send owner_ids, the user ids of the owners, primary first. The legacy owner_id is still accepted. Sent alone, a user id makes that user the only owner, and any other text is stored as is as a free-text owner (owner_ids stays empty). Sent with owner_ids, owner_id must be a user id; it becomes the primary owner and is moved to the front. Requires role: Admin",
+    description: "Adds a manual agent. Owners: send owner_ids, the user ids of the owners, primary first. The legacy owner_id is still accepted. Sent alone, a user id makes that user the only owner, and any other text is stored as is as a free-text owner (owner_ids stays empty). Sent with owner_ids, owner_id must be a user id; it becomes the primary owner and is moved to the front. An agent can have at most 50 owners. Requires role: Admin",
     requiresAuth: true,
     requestBody: {
       "display_name": "string (required)",
@@ -58,7 +58,7 @@ export const agentDiscoveryEndpoints: Endpoint[] = [
     },
     responses: [
       { status: 201, description: "Created successfully. The agent includes owner_ids." },
-      { status: 400, description: "Missing display_name or primitive_type, an invalid owner id, an owner who is not a user of your organization, owner_id that is not a user id when sent with owner_ids, or a text owner_id longer than 255 characters" },
+      { status: 400, description: "Missing display_name or primitive_type, an invalid owner id, an owner who is not a user of your organization, owner_id that is not a user id when sent with owner_ids, a text owner_id longer than 255 characters, or more than 50 owners" },
       { status: 401, description: "Unauthorized" },
       { status: 500, description: "Internal server error" },
     ],
@@ -119,7 +119,7 @@ export const agentDiscoveryEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/agent-primitives/{id}',
     summary: "Update Agent Primitive",
-    description: "Edits a manual agent. Owners change only when owner_ids or owner_id is sent, so an edit of other fields leaves them as they are. owner_ids replaces the full owner set, primary first. owner_id sent alone (legacy): a user id becomes the primary owner, replacing the previous primary and keeping the other owners; null or an empty string removes only the primary owner, and the next owner becomes primary (or none is left); any other text replaces all owners with that one free-text owner. Sent with owner_ids, owner_id must be a user id; it becomes the primary owner and is moved to the front. Requires role: Admin",
+    description: "Edits a manual agent. Owners change only when owner_ids or owner_id is sent, so an edit of other fields leaves them as they are. owner_ids replaces the full owner set, primary first. owner_id sent alone (legacy): a user id becomes the primary owner, replacing the previous primary and keeping the other owners; null or an empty string removes only the primary owner, and the next owner becomes primary (or none is left); any other text replaces all owners with that one free-text owner. Sent with owner_ids, owner_id must be a user id; it becomes the primary owner and is moved to the front. An agent can have at most 50 owners. Requires role: Admin",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -133,7 +133,7 @@ export const agentDiscoveryEndpoints: Endpoint[] = [
     },
     responses: [
       { status: 200, description: "Success. The agent includes owner_ids." },
-      { status: 400, description: "No fields to update, an invalid owner id, a newly added owner who is not a user of your organization, owner_id that is not a user id when sent with owner_ids, or a text owner_id longer than 255 characters" },
+      { status: 400, description: "No fields to update, an invalid owner id, a newly added owner who is not a user of your organization, owner_id that is not a user id when sent with owner_ids, a text owner_id longer than 255 characters, or more than 50 owners" },
       { status: 401, description: "Unauthorized" },
       { status: 403, description: "Only manually-added agents can be edited" },
       { status: 404, description: "Agent primitive not found" },

@@ -549,6 +549,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Governance actions taken on this agent": "Governance-Aktionen für diesen Agenten",
     "No activity recorded yet.": "Noch keine Aktivität erfasst.",
     "Agent not found": "Agent nicht gefunden",
+    "Could not load this agent.": "Dieser Agent konnte nicht geladen werden.",
     "Back to AI agents": "Zurück zu KI-Agenten",
     "Accountable owners": "Verantwortliche Eigentümer",
     "Manually entered": "Manuell erfasst",
@@ -845,8 +846,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Description": "Beschreibung",
     "Owner": "Verantwortlicher",
     "Owners": "Verantwortliche",
-    "Owners who are no longer in your organization will be removed when you save.":
-      "Verantwortliche, die nicht mehr zu Ihrer Organisation gehören, werden beim Speichern entfernt.",
+    "Some owners are no longer in your organization. They will be removed if you change the owners.":
+      "Einige Verantwortliche gehören nicht mehr zu Ihrer Organisation. Sie werden entfernt, wenn Sie die Verantwortlichen ändern.",
     'Current owner "{owner}" is not a VerifyWise user. Choosing owners replaces it.':
       "Der aktuelle Verantwortliche „{owner}“ ist kein VerifyWise-Benutzer. Wenn Sie Verantwortliche auswählen, wird er ersetzt.",
     "Delete agent": "Agent löschen",
@@ -10628,6 +10629,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Governance actions taken on this agent": "Actions de gouvernance effectuées sur cet agent",
     "No activity recorded yet.": "Aucune activité enregistrée pour le moment.",
     "Agent not found": "Agent introuvable",
+    "Could not load this agent.": "Impossible de charger cet agent.",
     "Back to AI agents": "Retour aux agents IA",
     "Accountable owners": "Propriétaires responsables",
     "Manually entered": "Saisi manuellement",
@@ -10913,8 +10915,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Description": "Description",
     "Owner": "Responsable",
     "Owners": "Responsables",
-    "Owners who are no longer in your organization will be removed when you save.":
-      "Les responsables qui ne font plus partie de votre organisation seront supprimés à l'enregistrement.",
+    "Some owners are no longer in your organization. They will be removed if you change the owners.":
+      "Certains responsables ne font plus partie de votre organisation. Ils seront supprimés si vous modifiez les responsables.",
     'Current owner "{owner}" is not a VerifyWise user. Choosing owners replaces it.':
       "Le responsable actuel « {owner} » n'est pas un utilisateur VerifyWise. Choisir des responsables le remplace.",
     "Delete agent": "Supprimer l'agent",
@@ -20443,6 +20445,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Governance actions taken on this agent": "Acciones de gobernanza realizadas sobre este agente",
     "No activity recorded yet.": "Aún no se ha registrado ninguna actividad.",
     "Agent not found": "Agente no encontrado",
+    "Could not load this agent.": "No se pudo cargar este agente.",
     "Back to AI agents": "Volver a agentes de IA",
     "Accountable owners": "Propietarios responsables",
     "Manually entered": "Introducido manualmente",
@@ -20721,8 +20724,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Description": "Descripción",
     "Owner": "Responsable",
     "Owners": "Responsables",
-    "Owners who are no longer in your organization will be removed when you save.":
-      "Los responsables que ya no pertenecen a su organización se eliminarán al guardar.",
+    "Some owners are no longer in your organization. They will be removed if you change the owners.":
+      "Algunos responsables ya no pertenecen a su organización. Se eliminarán si cambia los responsables.",
     'Current owner "{owner}" is not a VerifyWise user. Choosing owners replaces it.':
       "El responsable actual “{owner}” no es un usuario de VerifyWise. Elegir responsables lo reemplaza.",
     "Delete agent": "Eliminar agente",

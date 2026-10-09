@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { Box, Stack, Typography, Divider } from "@mui/material";
-import { Bot, ClipboardCheck, Pencil } from "lucide-react";
+import { Bot, ClipboardCheck, Eye, Pencil } from "lucide-react";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { EmptyState } from "../../../components/EmptyState";
 import CustomizableSkeleton from "../../../components/Skeletons";
@@ -58,6 +58,11 @@ const FieldBlock: React.FC<{ label: string; children: React.ReactNode }> = ({
   </Box>
 );
 
+/** True when a failed request was answered with 404 (the agent does not exist). */
+function isNotFoundError(error: unknown): boolean {
+  return (error as { status?: number } | null)?.status === 404;
+}
+
 /** Parse a route id; only a positive integer is a valid agent id. */
 function parseAgentId(id: string | undefined): number | null {
   if (!id || !/^\d+$/.test(id)) return null;
@@ -68,7 +73,7 @@ function parseAgentId(id: string | undefined): number | null {
 export default function AgentDetail() {
   const navigate = useNavigate();
   const formatUserDate = useFormattedDate();
-  const canManage = useHasPermission("agentDiscovery.admin");
+  const canManage = useHasPermission("agentDiscovery.admin", { fallbackToAdmin: true });
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const agentId = parseAgentId(id);
@@ -78,6 +83,9 @@ export default function AgentDetail() {
   const [auditLogs, setAuditLogs] = useState<AgentAuditLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(agentId !== null);
   const [notFound, setNotFound] = useState(agentId === null);
+  // The first load failed for a reason other than "not found" (network, 500,
+  // timeout): shown as an error with a retry, not as a missing agent.
+  const [loadError, setLoadError] = useState(false);
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const linkedModelLabel = useLinkedModelLabel(agent?.linked_model_inventory_id);
@@ -97,6 +105,7 @@ export default function AgentDetail() {
         loadControllerRef.current = null;
         setAgent(null);
         setNotFound(true);
+        setLoadError(false);
         setIsLoading(false);
         return;
       }
@@ -106,9 +115,10 @@ export default function AgentDetail() {
       if (!background) {
         setIsLoading(true);
         setNotFound(false);
+        setLoadError(false);
       }
 
-      // Only the agent request decides "not found". The audit trail is supporting
+      // Only the agent request decides "not found" (a 404). The audit trail is supporting
       // data: when it fails the page still renders, just without activity. User
       // names come from the shared, cached users query (useUserNames).
       const [agentResult, auditResult] = await Promise.allSettled([
@@ -122,11 +132,15 @@ export default function AgentDetail() {
           ? ((agentResult.value?.data as AgentPrimitiveRow) ?? null)
           : null;
       if (!agentData) {
-        if (agentResult.status === "rejected") {
+        const missing = agentResult.status === "fulfilled" || isNotFoundError(agentResult.reason);
+        if (!missing) {
           logEngine({ type: "error", message: `Failed to load agent ${agentId}` });
+          // A failed refresh after a review or edit keeps the agent on screen.
+          if (background) return;
         }
         setAgent(null);
-        setNotFound(true);
+        setNotFound(missing);
+        setLoadError(!missing);
         setIsLoading(false);
         return;
       }
@@ -137,6 +151,7 @@ export default function AgentDetail() {
 
       setAgent(agentData);
       setNotFound(false);
+      setLoadError(false);
       setAuditLogs(Array.isArray(audit) ? audit : []);
       setIsLoading(false);
     },
@@ -167,6 +182,21 @@ export default function AgentDetail() {
     return (
       <PageHeaderExtended title="AI agents" breadcrumbItems={breadcrumbItems}>
         <CustomizableSkeleton variant="rectangular" width="100%" height={480} />
+      </PageHeaderExtended>
+    );
+  }
+
+  if (loadError && !agent) {
+    return (
+      <PageHeaderExtended title="AI agents" breadcrumbItems={breadcrumbItems}>
+        <EmptyState icon={Bot} message="Could not load this agent.">
+          <CustomizableButton
+            text="Try again"
+            variant="contained"
+            onClick={() => fetchAll()}
+            testId="agent-detail-retry"
+          />
+        </EmptyState>
       </PageHeaderExtended>
     );
   }
@@ -223,13 +253,25 @@ export default function AgentDetail() {
               testId="agent-detail-edit"
             />
           )}
-          <CustomizableButton
-            variant="contained"
-            text="Review"
-            icon={<ClipboardCheck size={14} strokeWidth={1.5} />}
-            onClick={() => setIsReviewOpen(true)}
-            testId="agent-detail-review"
-          />
+          {/* Review needs the same permission; everyone else opens the same
+              drawer read-only, so it is offered as "Details". */}
+          {canManage ? (
+            <CustomizableButton
+              variant="contained"
+              text="Review"
+              icon={<ClipboardCheck size={14} strokeWidth={1.5} />}
+              onClick={() => setIsReviewOpen(true)}
+              testId="agent-detail-review"
+            />
+          ) : (
+            <CustomizableButton
+              variant="outlined"
+              text="Details"
+              icon={<Eye size={14} strokeWidth={1.5} />}
+              onClick={() => setIsReviewOpen(true)}
+              testId="agent-detail-details"
+            />
+          )}
         </Stack>
       }
     >

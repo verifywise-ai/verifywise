@@ -169,22 +169,30 @@ export const getUserIdsInOrganizationQuery = async (
   return rows.map((r) => Number(r.id));
 };
 
+/** The fields of a locked agent row that an update audits against. */
+export interface LockedAgentPrimitive {
+  owner_id: string | null;
+  display_name: string;
+  primitive_type: string;
+  metadata: Record<string, any>;
+}
+
 /**
- * Lock an agent primitive row for the rest of the transaction and return its
- * current primary owner (agent_primitives.owner_id). Serializes concurrent
- * edits of the owner set.
+ * Lock an agent primitive row for the rest of the transaction and return the
+ * values an update audits against (primary owner, name, type, metadata), as
+ * of the lock. Serializes concurrent edits.
  */
 export const lockAgentPrimitiveQuery = async (
   id: number,
   organizationId: number,
   transaction: Transaction,
-): Promise<{ owner_id: string | null } | null> => {
+): Promise<LockedAgentPrimitive | null> => {
   const rows = (await sequelize.query(
-    `SELECT owner_id FROM agent_primitives
+    `SELECT owner_id, display_name, primitive_type, metadata FROM agent_primitives
      WHERE organization_id = :organizationId AND id = :id
      FOR UPDATE`,
     { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
-  )) as { owner_id: string | null }[];
+  )) as LockedAgentPrimitive[];
   return rows[0] || null;
 };
 

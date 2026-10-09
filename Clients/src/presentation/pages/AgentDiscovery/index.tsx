@@ -38,7 +38,7 @@ const AgentDiscovery: React.FC = () => {
   const navigate = useNavigate();
   // Changing agents (sync, add, edit, review, delete) needs the
   // agentDiscovery.admin permission (Admins by default).
-  const canManage = useHasPermission("agentDiscovery.admin");
+  const canManage = useHasPermission("agentDiscovery.admin", { fallbackToAdmin: true });
   const [agents, setAgents] = useState<AgentPrimitiveRow[]>([]);
   const [stats, setStats] = useState<AgentStats>({
     total: 0,

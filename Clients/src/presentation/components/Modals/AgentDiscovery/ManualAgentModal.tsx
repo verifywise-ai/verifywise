@@ -106,8 +106,13 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
       });
       setOwnerIds(getOwnerUserIds(agent));
     }
-    // Refetch the users, so the picker offers everyone and an owner who was
-    // added since the list was cached is not mistaken for an unknown one.
+    // Only an edit with owners needs fresh users: refetch them, so an owner who
+    // was added since the list was cached is not mistaken for an unknown one.
+    // A new agent (or one without owners) uses the cached list.
+    if (!agent || getOwnerUserIds(agent).length === 0) {
+      setUsersRefreshed(true);
+      return;
+    }
     let cancelled = false;
     (async () => {
       try {
@@ -272,7 +277,8 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
             data-testid="agent-dropped-owners-note"
             sx={{ mt: "-12px" }}
           >
-            Owners who are no longer in your organization will be removed when you save.
+            Some owners are no longer in your organization. They will be removed if you change the
+            owners.
           </Typography>
         )}
 

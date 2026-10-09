@@ -18,7 +18,7 @@ import {
   getUserIdsInOrganizationQuery,
   lockAgentPrimitiveQuery,
 } from "../utils/agentDiscovery.utils";
-import { Transaction } from "sequelize";
+import { ForeignKeyConstraintError, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { logStructured } from "../utils/logger/fileLogger";
@@ -32,6 +32,10 @@ const MAX_USER_ID = 2147483647;
 
 /** Longest text agent_primitives.owner_id can hold (VARCHAR(255)). */
 const MAX_OWNER_TEXT_LENGTH = 255;
+
+/** Most owners one agent can have. */
+const MAX_OWNERS = 50;
+const TOO_MANY_OWNERS = "An agent can have at most 50 owners";
 
 /** True for a decimal string, i.e. something meant as a user id. */
 const isUserIdLike = (value: string) => /^\d+$/.test(value.trim());
@@ -86,12 +90,16 @@ function parseOwnerChange(
     if (ownerIdSent && parseOwnerId(ownerId) === null) {
       return { error: "owner_id must be a user ID when sent with owner_ids" };
     }
+    // Checked before the dedup loop, so an oversized array is never walked.
+    if ((ownerIds?.length ?? 0) > MAX_OWNERS) return { error: TOO_MANY_OWNERS };
     const owners: number[] = [];
     for (const value of [...(ownerIdSent ? [ownerId] : []), ...(ownerIds ?? [])]) {
       const n = parseOwnerId(value);
       if (n === null) return { error: "Owner IDs must be valid user IDs" };
       if (!owners.includes(n)) owners.push(n);
     }
+    // An owner_id sent alongside 50 other owners would make 51.
+    if (owners.length > MAX_OWNERS) return { error: TOO_MANY_OWNERS };
     return { kind: "set", owners };
   }
   if (ownerId === undefined) return undefined;
@@ -160,6 +168,23 @@ async function ownersBelongToOrganization(
   if (ownerIds.length === 0) return true;
   const found = await getUserIdsInOrganizationQuery(ownerIds, organizationId, transaction);
   return ownerIds.every((id) => found.includes(id));
+}
+
+/**
+ * True for a foreign-key violation on agent_primitive_owners.user_id: an owner
+ * whose user was deleted after the membership check, before the insert.
+ */
+function isOwnerUserForeignKeyViolation(error: unknown): boolean {
+  const err = error as {
+    index?: string;
+    table?: string;
+    parent?: { code?: string; constraint?: string; table?: string };
+  } | null;
+  const isFkViolation = error instanceof ForeignKeyConstraintError || err?.parent?.code === "23503";
+  if (!isFkViolation) return false;
+  const table = err?.table ?? err?.parent?.table;
+  const constraint = err?.index ?? err?.parent?.constraint ?? "";
+  return table === "agent_primitive_owners" && constraint.includes("user_id");
 }
 
 const sameOwnerSet = (a: string[], b: string[]) =>
@@ -309,15 +334,18 @@ export async function createAgentPrimitive(req: Request, res: Response) {
     }
     const textOwner = change?.kind === "text" ? change.text : null;
     const owners = change && change.kind !== "text" ? ownersAfterChange(change, []) : [];
-    if (!(await ownersBelongToOrganization(owners, req.organizationId!))) {
-      return res
-        .status(400)
-        .json(STATUS_CODE[400](req.t!("Owners must be users in your organization")));
-    }
+    const notInOrganization = () =>
+      res.status(400).json(STATUS_CODE[400](req.t!("Owners must be users in your organization")));
 
     const transaction = await sequelize.transaction();
     let primitive;
     try {
+      // Checked in the transaction, like an update. A user deleted between this
+      // check and the owner insert fails the foreign key, mapped to the same 400.
+      if (!(await ownersBelongToOrganization(owners, req.organizationId!, transaction))) {
+        await transaction.rollback();
+        return notInOrganization();
+      }
       primitive = await createAgentPrimitiveQuery(
         {
           display_name,
@@ -340,6 +368,7 @@ export async function createAgentPrimitive(req: Request, res: Response) {
       await transaction.commit();
     } catch (error) {
       await transaction.rollback();
+      if (isOwnerUserForeignKeyViolation(error)) return notInOrganization();
       throw error;
     }
     (primitive as any).owner_ids = owners;
@@ -405,6 +434,8 @@ export async function updateAgentPrimitive(req: Request, res: Response) {
         await transaction.rollback();
         return res.status(404).json(STATUS_CODE[404](req.t!("Agent primitive not found")));
       }
+      // Old values for the audit come from the locked row, not from `existing`
+      // (read before the lock, so a concurrent edit could have changed it).
       const previousPrimary = locked.owner_id;
       const currentOwners = await getAgentOwnersQuery(id, organizationId, transaction);
       const previousShown = effectiveOwners(currentOwners, {
@@ -453,8 +484,8 @@ export async function updateAgentPrimitive(req: Request, res: Response) {
       // but the primary owner changed (a reorder).
       const ownerSetChanged = change !== undefined && !sameOwnerSet(previousShown, newShown);
       const fieldsToCheck: Array<{ field: string; oldVal: any; newVal: any }> = [
-        { field: "display_name", oldVal: existing.display_name, newVal: display_name },
-        { field: "primitive_type", oldVal: existing.primitive_type, newVal: primitive_type },
+        { field: "display_name", oldVal: locked.display_name, newVal: display_name },
+        { field: "primitive_type", oldVal: locked.primitive_type, newVal: primitive_type },
         {
           field: "owner_ids",
           // A JSON array, so a text owner containing a comma stays one owner.
@@ -468,7 +499,7 @@ export async function updateAgentPrimitive(req: Request, res: Response) {
         },
         {
           field: "metadata",
-          oldVal: JSON.stringify(existing.metadata),
+          oldVal: JSON.stringify(locked.metadata),
           newVal: metadata !== undefined ? JSON.stringify(metadata) : undefined,
         },
       ];
@@ -493,6 +524,12 @@ export async function updateAgentPrimitive(req: Request, res: Response) {
       await transaction.commit();
     } catch (error) {
       await transaction.rollback();
+      // A newly added owner deleted between the membership check and the insert.
+      if (isOwnerUserForeignKeyViolation(error)) {
+        return res
+          .status(400)
+          .json(STATUS_CODE[400](req.t!("Owners must be users in your organization")));
+      }
       throw error;
     }
 

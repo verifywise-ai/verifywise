@@ -1,5 +1,6 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 import { Request, Response } from "express";
+import { ForeignKeyConstraintError } from "sequelize";
 
 jest.mock("../../utils/agentDiscovery.utils", () => ({
   getAllAgentPrimitivesQuery: jest.fn(),
@@ -128,7 +129,12 @@ beforeEach(() => {
 const givenAgent = (overrides: Record<string, unknown> = {}) => {
   const agent = manualAgent(overrides);
   mockGetById.mockResolvedValue(agent);
-  mockLock.mockResolvedValue({ owner_id: agent.owner_id });
+  mockLock.mockResolvedValue({
+    owner_id: agent.owner_id,
+    display_name: agent.display_name,
+    primitive_type: agent.primitive_type,
+    metadata: agent.metadata,
+  });
   return agent;
 };
 
@@ -156,8 +162,103 @@ describe("createAgentPrimitive owners", () => {
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({ data: "Owners must be users in your organization" }),
     );
-    expect(mockUsersInOrg).toHaveBeenCalledWith([1, 500], ORG_ID, undefined);
+    // Checked inside the transaction, which is rolled back.
+    expect(mockUsersInOrg).toHaveBeenCalledWith([1, 500], ORG_ID, expect.anything());
     expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockRollback).toHaveBeenCalled();
+    expect(mockCommit).not.toHaveBeenCalled();
+  });
+
+  it("checks owner membership in the same transaction as the insert", async () => {
+    const res = createRes();
+    await createAgentPrimitive(createReq({ body: { ...body, owner_ids: [2] } }), res);
+    expect(res.status).toHaveBeenCalledWith(201);
+    const tx = mockCreate.mock.calls[0][2];
+    expect(mockUsersInOrg).toHaveBeenCalledWith([2], ORG_ID, tx);
+  });
+
+  it("maps an owner deleted before the owner insert (FK violation) to 400 and rolls back", async () => {
+    mockSetOwners.mockRejectedValueOnce(
+      new ForeignKeyConstraintError({
+        table: "agent_primitive_owners",
+        fields: ["user_id"],
+        index: "agent_primitive_owners_user_id_fkey",
+        parent: Object.assign(new Error("insert violates foreign key"), {
+          code: "23503",
+        }) as any,
+      }),
+    );
+    const res = createRes();
+    await createAgentPrimitive(createReq({ body: { ...body, owner_ids: [2] } }), res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: "Owners must be users in your organization" }),
+    );
+    expect(mockRollback).toHaveBeenCalled();
+    expect(mockCommit).not.toHaveBeenCalled();
+  });
+
+  it("maps a raw pg FK violation on the owner user_id to 400", async () => {
+    mockSetOwners.mockRejectedValueOnce(
+      Object.assign(new Error("fk"), {
+        parent: {
+          code: "23503",
+          table: "agent_primitive_owners",
+          constraint: "agent_primitive_owners_user_id_fkey",
+        },
+      }),
+    );
+    const res = createRes();
+    await createAgentPrimitive(createReq({ body: { ...body, owner_ids: [2] } }), res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(mockRollback).toHaveBeenCalled();
+  });
+
+  it("keeps a 500 for a foreign-key violation on another column", async () => {
+    mockSetOwners.mockRejectedValueOnce(
+      Object.assign(new Error("fk"), {
+        parent: {
+          code: "23503",
+          table: "agent_primitive_owners",
+          constraint: "agent_primitive_owners_agent_primitive_id_fkey",
+        },
+      }),
+    );
+    const res = createRes();
+    await createAgentPrimitive(createReq({ body: { ...body, owner_ids: [2] } }), res);
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(mockRollback).toHaveBeenCalled();
+  });
+
+  it("rejects more than 50 owners with 400 before any database work", async () => {
+    const res = createRes();
+    const ownerIds = Array.from({ length: 51 }, (_, i) => i + 1);
+    await createAgentPrimitive(createReq({ body: { ...body, owner_ids: ownerIds } }), res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: "An agent can have at most 50 owners" }),
+    );
+    expect(mockUsersInOrg).not.toHaveBeenCalled();
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it("rejects 50 owners plus a different legacy owner_id (51 in all) with 400", async () => {
+    const res = createRes();
+    const ownerIds = Array.from({ length: 50 }, (_, i) => i + 1);
+    await createAgentPrimitive(
+      createReq({ body: { ...body, owner_ids: ownerIds, owner_id: "51" } }),
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it("accepts exactly 50 owners", async () => {
+    const ownerIds = Array.from({ length: 50 }, (_, i) => i + 1);
+    mockUsersInOrg.mockImplementation(async (ids: number[]) => ids);
+    const res = createRes();
+    await createAgentPrimitive(createReq({ body: { ...body, owner_ids: ownerIds } }), res);
+    expect(res.status).toHaveBeenCalledWith(201);
   });
 
   it("writes the agent and owners in one transaction with the first owner as primary", async () => {
@@ -283,6 +384,28 @@ describe("updateAgentPrimitive owners", () => {
     expect(mockUsersInOrg).toHaveBeenCalledWith([500], ORG_ID, expect.anything());
     expect(mockUpdate).not.toHaveBeenCalled();
     expect(mockSetOwners).not.toHaveBeenCalled();
+    expect(mockCommit).not.toHaveBeenCalled();
+  });
+
+  it("maps an added owner deleted before the owner insert (FK violation) to 400", async () => {
+    givenAgent({ owner_id: "4" });
+    mockGetOwners.mockResolvedValue([4]);
+    mockSetOwners.mockRejectedValueOnce(
+      Object.assign(new Error("fk"), {
+        parent: {
+          code: "23503",
+          table: "agent_primitive_owners",
+          constraint: "agent_primitive_owners_user_id_fkey",
+        },
+      }),
+    );
+    const res = createRes();
+    await updateAgentPrimitive(req({ owner_ids: [4, 3] }), res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: "Owners must be users in your organization" }),
+    );
+    expect(mockRollback).toHaveBeenCalled();
     expect(mockCommit).not.toHaveBeenCalled();
   });
 
@@ -531,6 +654,68 @@ describe("updateAgentPrimitive owners", () => {
     expect(mockSetOwners).not.toHaveBeenCalled();
     expect(mockUsersInOrg).not.toHaveBeenCalled();
     expect(Object.keys(auditRows())).toEqual(["display_name"]);
+  });
+
+  it("rejects more than 50 owners with 400 before writing", async () => {
+    givenAgent();
+    const res = createRes();
+    await updateAgentPrimitive(
+      req({ owner_ids: Array.from({ length: 51 }, (_, i) => i + 1) }),
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: "An agent can have at most 50 owners" }),
+    );
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("takes the audit's old values from the locked row, not the earlier read", async () => {
+    // The pre-lock read is stale: a concurrent edit committed before the lock.
+    mockGetById.mockResolvedValue(
+      manualAgent({ display_name: "Stale", primitive_type: "agent", metadata: { notes: "old" } }),
+    );
+    mockLock.mockResolvedValue({
+      owner_id: "1",
+      display_name: "Current",
+      primitive_type: "assistant",
+      metadata: { notes: "current" },
+    });
+    mockGetOwners.mockResolvedValue([1]);
+    const res = createRes();
+    await updateAgentPrimitive(
+      req({ display_name: "New", primitive_type: "workflow", metadata: { notes: "new" } }),
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(200);
+    const rows = auditRows();
+    expect(rows.display_name).toEqual(
+      expect.objectContaining({ old_value: "Current", new_value: "New" }),
+    );
+    expect(rows.primitive_type).toEqual(
+      expect.objectContaining({ old_value: "assistant", new_value: "workflow" }),
+    );
+    expect(rows.metadata).toEqual(
+      expect.objectContaining({
+        old_value: JSON.stringify({ notes: "current" }),
+        new_value: JSON.stringify({ notes: "new" }),
+      }),
+    );
+  });
+
+  it("writes no audit row when the value matches the locked row", async () => {
+    mockGetById.mockResolvedValue(manualAgent({ display_name: "Stale" }));
+    mockLock.mockResolvedValue({
+      owner_id: "1",
+      display_name: "Same",
+      primitive_type: "agent",
+      metadata: {},
+    });
+    mockGetOwners.mockResolvedValue([1]);
+    const res = createRes();
+    await updateAgentPrimitive(req({ display_name: "Same" }), res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(mockAudit).not.toHaveBeenCalled();
   });
 
   it("rolls back when an audit write fails", async () => {

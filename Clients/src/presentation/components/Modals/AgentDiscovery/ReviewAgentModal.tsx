@@ -40,7 +40,7 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
   const [actionError, setActionError] = useState<string | null>(null);
   // Review, link, unlink and edit need the agentDiscovery.admin permission
   // (Admins by default) on the server; everyone else gets a read-only view.
-  const canManage = useHasPermission("agentDiscovery.admin");
+  const canManage = useHasPermission("agentDiscovery.admin", { fallbackToAdmin: true });
 
   useEffect(() => {
     setActionError(null);
