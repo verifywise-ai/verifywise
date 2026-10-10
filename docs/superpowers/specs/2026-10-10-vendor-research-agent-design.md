@@ -218,7 +218,7 @@ The rules for creating a vendor risk must live in one place. The body of `create
 - `createVendorRiskInTransaction(input, userId, orgId, transaction)`: model factory, insert, framework associations, change history.
 - `runVendorRiskPostCommitEffects(createdRisk, userId, orgId)`: related-risk recompute enqueue, candidate notices, action-owner notification, each fire-and-forget as today.
 
-Accept opens a transaction, locks the finding `FOR UPDATE` (organisation and id), refuses with 409 unless `pending`, builds the payload from the finding with `action_owner` defaulting to the vendor's `assignee` (request body may override, including `null`), calls the first function, marks the finding `accepted` with the new risk id, `decided_by` and `decided_at`, commits, then calls the second. The existing vendor risk tests must pass unchanged.
+Accept opens a transaction, locks the finding `FOR UPDATE NOWAIT` (organisation and id; a lock that is not available means another decision is in progress and is answered 409 at once, because a request that waits holds a pooled connection while the lock holder needs more), refuses with 409 unless `pending`, builds the payload from the finding with `action_owner` defaulting to the vendor's `assignee` when that person is a user of the organisation and to nobody otherwise (the request body may override, including `null`, and a named user must belong to the organisation), calls the first function, marks the finding `accepted` with the new risk id, `decided_by` and `decided_at`, commits, then calls the second. The existing vendor risk tests must pass unchanged.
 
 ## 12. Notification
 
