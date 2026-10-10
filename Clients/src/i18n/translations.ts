@@ -10122,6 +10122,105 @@ export const translations: Record<string, Record<string, string>> = {
       "Beim Aktivieren wird die Zuordnung der Fragen aufgehoben, die die KI-Risikoklassifizierung und die Hochrisiko-Rolle festlegen. Sie bleiben im Formular; löschen Sie sie, damit Einreichende nicht doppelt gefragt werden.",
     "Updated since submission": "Seit der Einreichung aktualisiert",
     "Why": "Warum",
+    // Vendor research: findings section, run summary and start messages
+    "Research findings": "Rechercheergebnisse",
+    "AI-suggested from web sources. Verify before accepting.":
+      "KI-Vorschläge aus Webquellen. Vor dem Akzeptieren prüfen.",
+    "Pending: {count}": "Ausstehend: {count}",
+    "Loading research findings": "Rechercheergebnisse werden geladen",
+    "Pending research findings": "Ausstehende Rechercheergebnisse",
+    "Could not load research findings.": "Die Rechercheergebnisse konnten nicht geladen werden.",
+    "Vendor research is not set up.": "Die Anbieterrecherche ist nicht eingerichtet.",
+    "Set {provider} and {key} in the server environment, and add an LLM key for your organization.":
+      "Legen Sie {provider} und {key} in der Serverumgebung fest und fügen Sie einen LLM-Schlüssel für Ihre Organisation hinzu.",
+    "No pending research findings.": "Keine ausstehenden Rechercheergebnisse.",
+    "Showing {shown} of {total} pending findings. Choose a vendor to see the rest.":
+      "{shown} von {total} ausstehenden Ergebnissen werden angezeigt. Wählen Sie einen Anbieter, um den Rest zu sehen.",
+    "Risk added to the register": "Risiko zum Risikoregister hinzugefügt",
+    "Risk added to the register.": "Risiko zum Risikoregister hinzugefügt.",
+    "Open risk": "Risiko öffnen",
+    "Sources": "Quellen",
+    "Unknown source": "Unbekannte Quelle",
+    "Accept": "Akzeptieren",
+    "Rare": "Selten",
+    "Unlikely": "Unwahrscheinlich",
+    "Possible": "Möglich",
+    "Likely": "Wahrscheinlich",
+    "Almost certain": "Nahezu sicher",
+    "Very High Risk": "Sehr hohes Risiko",
+    "Medium Risk": "Mittleres Risiko",
+    "Low Risk": "Geringes Risiko",
+    "Very Low Risk": "Sehr geringes Risiko",
+    "Latest research": "Letzte Recherche",
+    "Researching…": "Recherche läuft…",
+    "Still running. Check back later.": "Läuft noch. Schauen Sie später noch einmal vorbei.",
+    "Research again": "Erneut recherchieren",
+    "No research has run for this vendor yet.":
+      "Für diesen Anbieter wurde noch keine Recherche durchgeführt.",
+    "Could not load the latest research run.": "Die letzte Recherche konnte nicht geladen werden.",
+    "Last run: {date}": "Letzte Ausführung: {date}",
+    "{category}: {outcome}": "{category}: {outcome}",
+    "AI note (unverified)": "KI-Hinweis (ungeprüft)",
+    "Security incidents": "Sicherheitsvorfälle",
+    "Certifications": "Zertifizierungen",
+    "Legal and regulatory": "Recht und Regulierung",
+    "AI-specific risks": "KI-spezifische Risiken",
+    "risks found": "Risiken gefunden",
+    "nothing found": "nichts gefunden",
+    "search failed": "Suche fehlgeschlagen",
+    "skipped": "übersprungen",
+    "unknown": "unbekannt",
+    "The vendor was not found.": "Der Anbieter wurde nicht gefunden.",
+    "No LLM key is configured for your organization.":
+      "Für Ihre Organisation ist kein LLM-Schlüssel konfiguriert.",
+    "The model call failed with HTTP status {status}.":
+      "Der Modellaufruf ist mit HTTP-Status {status} fehlgeschlagen.",
+    "The model call timed out.": "Beim Modellaufruf ist eine Zeitüberschreitung aufgetreten.",
+    "The model answer did not match the expected format.":
+      "Die Antwort des Modells entsprach nicht dem erwarteten Format.",
+    "The model call failed unexpectedly.": "Der Modellaufruf ist unerwartet fehlgeschlagen.",
+    "The research run failed unexpectedly.": "Die Recherche ist unerwartet fehlgeschlagen.",
+    "The findings could not be saved.": "Die Ergebnisse konnten nicht gespeichert werden.",
+    "The research run timed out.": "Bei der Recherche ist eine Zeitüberschreitung aufgetreten.",
+    "The research run could not be queued.":
+      "Die Recherche konnte nicht in die Warteschlange gestellt werden.",
+    "No web search provider is configured.": "Es ist kein Anbieter für die Websuche konfiguriert.",
+    "All web searches failed.": "Alle Websuchen sind fehlgeschlagen.",
+    "The research run failed.": "Die Recherche ist fehlgeschlagen.",
+    "The vendor website is missing or is not a valid domain.":
+      "Die Website des Anbieters fehlt oder ist keine gültige Domain.",
+    "No risks were found in the search results.":
+      "In den Suchergebnissen wurden keine Risiken gefunden.",
+    "Possible risks were found but could not be verified, or are already recorded.":
+      "Es wurden mögliche Risiken gefunden, die sich aber nicht bestätigen ließen oder bereits erfasst sind.",
+    "The search timed out.": "Bei der Suche ist eine Zeitüberschreitung aufgetreten.",
+    "The search request failed.": "Die Suchanfrage ist fehlgeschlagen.",
+    "The search response could not be read.": "Die Suchantwort konnte nicht gelesen werden.",
+    "The search failed with HTTP status {status}.":
+      "Die Suche ist mit HTTP-Status {status} fehlgeschlagen.",
+    "The search failed.": "Die Suche ist fehlgeschlagen.",
+    "1 potential risk found": "1 mögliches Risiko gefunden",
+    "{count} potential risks found": "{count} mögliche Risiken gefunden",
+    "Dismiss finding": "Ergebnis verwerfen",
+    "Choose why this finding does not belong in the register. Similar findings are not suggested again.":
+      "Wählen Sie, warum dieses Ergebnis nicht ins Risikoregister gehört. Ähnliche Ergebnisse werden nicht erneut vorgeschlagen.",
+    "Select a reason": "Grund auswählen",
+    "Not applicable to this vendor": "Für diesen Anbieter nicht relevant",
+    "Already covered by an existing risk": "Bereits durch ein vorhandenes Risiko abgedeckt",
+    "Inaccurate or not supported by the sources": "Ungenau oder durch die Quellen nicht belegt",
+    "Up to 500 characters.": "Bis zu 500 Zeichen.",
+    "Research started for {vendorName}. Findings appear on the Risks tab.":
+      "Recherche für {vendorName} gestartet. Die Ergebnisse erscheinen im Tab Risiken.",
+    "Research is already running for {vendorName}.":
+      "Für {vendorName} läuft bereits eine Recherche.",
+    "Research ran recently. Try again in {minutes} min.":
+      "Die Recherche lief erst kürzlich. Versuchen Sie es in {minutes} Min. erneut.",
+    "The daily research limit for your organization was reached. Try again tomorrow.":
+      "Das tägliche Recherchelimit Ihrer Organisation wurde erreicht. Versuchen Sie es morgen erneut.",
+    "The research could not be started because the job queue is unavailable. Try again later.":
+      "Die Recherche konnte nicht gestartet werden, weil die Aufgabenwarteschlange nicht verfügbar ist. Versuchen Sie es später erneut.",
+    "The research could not be started. Try again.":
+      "Die Recherche konnte nicht gestartet werden. Versuchen Sie es erneut.",
   },
 
   fr: {
@@ -20171,6 +20270,104 @@ export const translations: Record<string, Record<string, string>> = {
       "L'activation supprime l'association des questions qui définissent la classification du risque IA et le rôle à haut risque. Elles restent dans le formulaire ; supprimez-les pour que les demandeurs ne répondent pas deux fois.",
     "Updated since submission": "Mis à jour depuis la soumission",
     "Why": "Pourquoi",
+    // Vendor research: findings section, run summary and start messages
+    "Research findings": "Résultats de recherche",
+    "AI-suggested from web sources. Verify before accepting.":
+      "Suggestions de l'IA issues de sources web. À vérifier avant d'accepter.",
+    "Pending: {count}": "En attente : {count}",
+    "Loading research findings": "Chargement des résultats de recherche",
+    "Pending research findings": "Résultats de recherche en attente",
+    "Could not load research findings.": "Impossible de charger les résultats de recherche.",
+    "Vendor research is not set up.": "La recherche sur les fournisseurs n'est pas configurée.",
+    "Set {provider} and {key} in the server environment, and add an LLM key for your organization.":
+      "Définissez {provider} et {key} dans l'environnement du serveur, puis ajoutez une clé LLM pour votre organisation.",
+    "No pending research findings.": "Aucun résultat de recherche en attente.",
+    "Showing {shown} of {total} pending findings. Choose a vendor to see the rest.":
+      "{shown} résultats en attente sur {total} affichés. Choisissez un fournisseur pour voir le reste.",
+    "Risk added to the register": "Risque ajouté au registre des risques",
+    "Risk added to the register.": "Risque ajouté au registre des risques.",
+    "Open risk": "Ouvrir le risque",
+    "Sources": "Sources",
+    "Unknown source": "Source inconnue",
+    "Accept": "Accepter",
+    "Rare": "Rare",
+    "Unlikely": "Peu probable",
+    "Possible": "Possible",
+    "Likely": "Probable",
+    "Almost certain": "Presque certain",
+    "Very High Risk": "Risque très élevé",
+    "Medium Risk": "Risque moyen",
+    "Low Risk": "Risque faible",
+    "Very Low Risk": "Risque très faible",
+    "Latest research": "Dernière recherche",
+    "Researching…": "Recherche en cours…",
+    "Still running. Check back later.": "Toujours en cours. Revenez plus tard.",
+    "Research again": "Relancer la recherche",
+    "No research has run for this vendor yet.":
+      "Aucune recherche n'a encore été effectuée pour ce fournisseur.",
+    "Could not load the latest research run.": "Impossible de charger la dernière recherche.",
+    "Last run: {date}": "Dernière exécution : {date}",
+    "{category}: {outcome}": "{category} : {outcome}",
+    "AI note (unverified)": "Note de l'IA (non vérifiée)",
+    "Security incidents": "Incidents de sécurité",
+    "Certifications": "Certifications",
+    "Legal and regulatory": "Juridique et réglementaire",
+    "AI-specific risks": "Risques propres à l'IA",
+    "risks found": "risques trouvés",
+    "nothing found": "rien trouvé",
+    "search failed": "échec de la recherche",
+    "skipped": "recherche ignorée",
+    "unknown": "inconnu",
+    "The vendor was not found.": "Le fournisseur est introuvable.",
+    "No LLM key is configured for your organization.":
+      "Aucune clé LLM n'est configurée pour votre organisation.",
+    "The model call failed with HTTP status {status}.":
+      "L'appel au modèle a échoué avec le statut HTTP {status}.",
+    "The model call timed out.": "L'appel au modèle a expiré.",
+    "The model answer did not match the expected format.":
+      "La réponse du modèle ne correspondait pas au format attendu.",
+    "The model call failed unexpectedly.": "L'appel au modèle a échoué de manière inattendue.",
+    "The research run failed unexpectedly.": "La recherche a échoué de manière inattendue.",
+    "The findings could not be saved.": "Les résultats n'ont pas pu être enregistrés.",
+    "The research run timed out.": "La recherche a expiré.",
+    "The research run could not be queued.": "La recherche n'a pas pu être mise en file d'attente.",
+    "No web search provider is configured.": "Aucun fournisseur de recherche web n'est configuré.",
+    "All web searches failed.": "Toutes les recherches web ont échoué.",
+    "The research run failed.": "La recherche a échoué.",
+    "The vendor website is missing or is not a valid domain.":
+      "Le site web du fournisseur est absent ou n'est pas un domaine valide.",
+    "No risks were found in the search results.":
+      "Aucun risque n'a été trouvé dans les résultats de recherche.",
+    "Possible risks were found but could not be verified, or are already recorded.":
+      "Des risques possibles ont été trouvés, mais ils n'ont pas pu être vérifiés ou sont déjà enregistrés.",
+    "The search timed out.": "La recherche a expiré.",
+    "The search request failed.": "La requête de recherche a échoué.",
+    "The search response could not be read.": "La réponse de la recherche n'a pas pu être lue.",
+    "The search failed with HTTP status {status}.":
+      "La recherche a échoué avec le statut HTTP {status}.",
+    "The search failed.": "La recherche a échoué.",
+    "1 potential risk found": "1 risque potentiel trouvé",
+    "{count} potential risks found": "{count} risques potentiels trouvés",
+    "Dismiss finding": "Rejeter le résultat",
+    "Choose why this finding does not belong in the register. Similar findings are not suggested again.":
+      "Indiquez pourquoi ce résultat n'a pas sa place dans le registre des risques. Les résultats similaires ne seront plus suggérés.",
+    "Select a reason": "Sélectionnez une raison",
+    "Not applicable to this vendor": "Non applicable à ce fournisseur",
+    "Already covered by an existing risk": "Déjà couvert par un risque existant",
+    "Inaccurate or not supported by the sources": "Inexact ou non étayé par les sources",
+    "Up to 500 characters.": "500 caractères maximum.",
+    "Research started for {vendorName}. Findings appear on the Risks tab.":
+      "Recherche lancée pour {vendorName}. Les résultats apparaissent dans l'onglet Risques.",
+    "Research is already running for {vendorName}.":
+      "Une recherche est déjà en cours pour {vendorName}.",
+    "Research ran recently. Try again in {minutes} min.":
+      "Une recherche a été effectuée récemment. Réessayez dans {minutes} min.",
+    "The daily research limit for your organization was reached. Try again tomorrow.":
+      "La limite quotidienne de recherches de votre organisation a été atteinte. Réessayez demain.",
+    "The research could not be started because the job queue is unavailable. Try again later.":
+      "La recherche n'a pas pu être lancée car la file d'attente des tâches est indisponible. Réessayez plus tard.",
+    "The research could not be started. Try again.":
+      "La recherche n'a pas pu être lancée. Réessayez.",
   },
   es: {
     "Deployment name": "Nombre del despliegue",
@@ -30137,5 +30334,103 @@ export const translations: Record<string, Record<string, string>> = {
       "Al activarlo se elimina la asignación de las preguntas que establecen la clasificación de riesgo de IA y el rol de alto riesgo. Permanecen en el formulario; elimínelas para que no se pregunte dos veces a los solicitantes.",
     "Updated since submission": "Actualizado desde el envío",
     "Why": "Por qué",
+    // Vendor research: findings section, run summary and start messages
+    "Research findings": "Hallazgos de la investigación",
+    "AI-suggested from web sources. Verify before accepting.":
+      "Sugerencias de la IA a partir de fuentes web. Verifique antes de aceptar.",
+    "Pending: {count}": "Pendientes: {count}",
+    "Loading research findings": "Cargando los hallazgos de la investigación",
+    "Pending research findings": "Hallazgos de investigación pendientes",
+    "Could not load research findings.": "No se pudieron cargar los hallazgos de la investigación.",
+    "Vendor research is not set up.": "La investigación de proveedores no está configurada.",
+    "Set {provider} and {key} in the server environment, and add an LLM key for your organization.":
+      "Defina {provider} y {key} en el entorno del servidor y añada una clave de LLM para su organización.",
+    "No pending research findings.": "No hay hallazgos de investigación pendientes.",
+    "Showing {shown} of {total} pending findings. Choose a vendor to see the rest.":
+      "Se muestran {shown} de {total} hallazgos pendientes. Elija un proveedor para ver el resto.",
+    "Risk added to the register": "Riesgo añadido al registro de riesgos",
+    "Risk added to the register.": "Riesgo añadido al registro de riesgos.",
+    "Open risk": "Abrir riesgo",
+    "Sources": "Fuentes",
+    "Unknown source": "Fuente desconocida",
+    "Accept": "Aceptar",
+    "Rare": "Raro",
+    "Unlikely": "Improbable",
+    "Possible": "Posible",
+    "Likely": "Probable",
+    "Almost certain": "Casi seguro",
+    "Very High Risk": "Riesgo muy alto",
+    "Medium Risk": "Riesgo medio",
+    "Low Risk": "Riesgo bajo",
+    "Very Low Risk": "Riesgo muy bajo",
+    "Latest research": "Última investigación",
+    "Researching…": "Investigando…",
+    "Still running. Check back later.": "Sigue en curso. Vuelva a mirar más tarde.",
+    "Research again": "Investigar de nuevo",
+    "No research has run for this vendor yet.":
+      "Todavía no se ha realizado ninguna investigación para este proveedor.",
+    "Could not load the latest research run.": "No se pudo cargar la última investigación.",
+    "Last run: {date}": "Última ejecución: {date}",
+    "{category}: {outcome}": "{category}: {outcome}",
+    "AI note (unverified)": "Nota de la IA (sin verificar)",
+    "Security incidents": "Incidentes de seguridad",
+    "Certifications": "Certificaciones",
+    "Legal and regulatory": "Legal y regulatorio",
+    "AI-specific risks": "Riesgos específicos de la IA",
+    "risks found": "riesgos encontrados",
+    "nothing found": "no se encontró nada",
+    "search failed": "la búsqueda falló",
+    "skipped": "búsqueda omitida",
+    "unknown": "desconocido",
+    "The vendor was not found.": "No se encontró el proveedor.",
+    "No LLM key is configured for your organization.":
+      "No hay ninguna clave de LLM configurada para su organización.",
+    "The model call failed with HTTP status {status}.":
+      "La llamada al modelo falló con el estado HTTP {status}.",
+    "The model call timed out.": "Se agotó el tiempo de espera de la llamada al modelo.",
+    "The model answer did not match the expected format.":
+      "La respuesta del modelo no coincidía con el formato esperado.",
+    "The model call failed unexpectedly.": "La llamada al modelo falló de forma inesperada.",
+    "The research run failed unexpectedly.": "La investigación falló de forma inesperada.",
+    "The findings could not be saved.": "No se pudieron guardar los hallazgos.",
+    "The research run timed out.": "Se agotó el tiempo de espera de la investigación.",
+    "The research run could not be queued.": "No se pudo poner la investigación en cola.",
+    "No web search provider is configured.": "No hay ningún proveedor de búsqueda web configurado.",
+    "All web searches failed.": "Todas las búsquedas web fallaron.",
+    "The research run failed.": "La investigación falló.",
+    "The vendor website is missing or is not a valid domain.":
+      "Falta el sitio web del proveedor o no es un dominio válido.",
+    "No risks were found in the search results.":
+      "No se encontraron riesgos en los resultados de la búsqueda.",
+    "Possible risks were found but could not be verified, or are already recorded.":
+      "Se encontraron posibles riesgos, pero no se pudieron verificar o ya están registrados.",
+    "The search timed out.": "Se agotó el tiempo de espera de la búsqueda.",
+    "The search request failed.": "La solicitud de búsqueda falló.",
+    "The search response could not be read.": "No se pudo leer la respuesta de la búsqueda.",
+    "The search failed with HTTP status {status}.":
+      "La búsqueda falló con el estado HTTP {status}.",
+    "The search failed.": "La búsqueda falló.",
+    "1 potential risk found": "1 posible riesgo encontrado",
+    "{count} potential risks found": "{count} posibles riesgos encontrados",
+    "Dismiss finding": "Descartar el hallazgo",
+    "Choose why this finding does not belong in the register. Similar findings are not suggested again.":
+      "Indique por qué este hallazgo no pertenece al registro de riesgos. No se volverán a sugerir hallazgos similares.",
+    "Select a reason": "Seleccione un motivo",
+    "Not applicable to this vendor": "No aplicable a este proveedor",
+    "Already covered by an existing risk": "Ya cubierto por un riesgo existente",
+    "Inaccurate or not supported by the sources": "Inexacto o no respaldado por las fuentes",
+    "Up to 500 characters.": "Hasta 500 caracteres.",
+    "Research started for {vendorName}. Findings appear on the Risks tab.":
+      "Investigación iniciada para {vendorName}. Los hallazgos aparecen en la pestaña Riesgos.",
+    "Research is already running for {vendorName}.":
+      "Ya hay una investigación en curso para {vendorName}.",
+    "Research ran recently. Try again in {minutes} min.":
+      "La investigación se ejecutó hace poco. Inténtelo de nuevo en {minutes} min.",
+    "The daily research limit for your organization was reached. Try again tomorrow.":
+      "Se alcanzó el límite diario de investigaciones de su organización. Inténtelo de nuevo mañana.",
+    "The research could not be started because the job queue is unavailable. Try again later.":
+      "No se pudo iniciar la investigación porque la cola de tareas no está disponible. Inténtelo de nuevo más tarde.",
+    "The research could not be started. Try again.":
+      "No se pudo iniciar la investigación. Inténtelo de nuevo.",
   },
 };

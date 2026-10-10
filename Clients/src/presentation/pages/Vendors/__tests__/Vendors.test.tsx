@@ -1,13 +1,19 @@
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
+import { acceptedRisk, finding, refusal, run } from "../VendorResearchFindings/__tests__/fixtures";
 
 // Mock hooks used by Vendors page
 vi.mock("../../../../application/hooks/useUsers", () => ({
   default: () => ({ users: [] }),
 }));
 
+// The vendors the page lists; a test that needs some sets them.
+const vendorsState = vi.hoisted(() => ({ data: [] as Array<{ id: number; vendor_name: string }> }));
+
 vi.mock("../../../../application/hooks/useVendors", () => ({
   useVendors: () => ({
-    data: [],
+    data: vendorsState.data,
     isLoading: false,
     refetch: vi.fn(),
   }),
@@ -15,6 +21,8 @@ vi.mock("../../../../application/hooks/useVendors", () => ({
 }));
 
 vi.mock("../../../../application/hooks/useVendorRisks", () => ({
+  // Accepting a research finding refreshes the vendor risks by this key.
+  vendorRiskQueryKeys: { all: ["vendor-risks"] },
   default: () => ({
     vendorRisksSummary: {
       total: 0,
@@ -82,6 +90,32 @@ vi.mock("../../../../application/repository/vendorRisk.repository", () => ({
   getVendorRiskById: vi.fn(),
 }));
 
+// The research findings section reads its own data; the repository is the seam.
+vi.mock("../../../../application/repository/vendorResearch.repository", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("../../../../application/repository/vendorResearch.repository")
+  >()),
+  getVendorResearchConfig: vi.fn(),
+  listVendorRiskFindings: vi.fn(),
+  startVendorResearch: vi.fn(),
+  getLatestVendorResearch: vi.fn(),
+  acceptVendorRiskFinding: vi.fn(),
+  dismissVendorRiskFinding: vi.fn(),
+}));
+
+vi.mock("../../../../application/hooks/useMyPermissions", () => ({
+  useHasPermission: (key: string) => key === "risks.edit",
+}));
+
+vi.mock("../../../../application/hooks/useRiskLinks", () => ({
+  useVendorExposure: () => ({ data: undefined }),
+  VENDOR_INSIGHTS_KEY: ["vendor-insights"],
+}));
+
+vi.mock("../VendorRiskInsights", () => ({
+  default: () => <div data-testid="vendor-risk-insights" />,
+}));
+
 // Mock complex child components
 vi.mock("../../../components/Modals/NewVendor", () => ({
   default: () => <div data-testid="add-new-vendor-modal" />,
@@ -136,6 +170,8 @@ vi.mock("../../../components/HelperIcon", () => ({
   HelperIcon: () => null,
 }));
 
+import * as researchRepository from "../../../../application/repository/vendorResearch.repository";
+import { getVendorRiskById } from "../../../../application/repository/vendorRisk.repository";
 import Vendors from "../index";
 
 describe("Vendors", () => {
@@ -148,5 +184,132 @@ describe("Vendors", () => {
       route: "/vendors",
     });
     expect(container).toBeTruthy();
+  });
+});
+
+describe("Vendors, research findings on the Risks tab", () => {
+  const research = {
+    config: vi.mocked(researchRepository.getVendorResearchConfig),
+    list: vi.mocked(researchRepository.listVendorRiskFindings),
+    latest: vi.mocked(researchRepository.getLatestVendorResearch),
+    start: vi.mocked(researchRepository.startVendorResearch),
+    accept: vi.mocked(researchRepository.acceptVendorRiskFinding),
+  };
+  /** The link the server puts in the notification of the vendor's assignee. */
+  const NOTIFICATION_LINK = "/vendors/risks?findingsVendorId=7";
+  const FIRST = finding().risk_description;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vendorsState.data = [{ id: 7, vendor_name: "Acme Cloud" }];
+    research.config.mockResolvedValue({
+      searchConfigured: true,
+      hasLlmKey: true,
+      autoRunEnabled: true,
+    });
+    research.list.mockResolvedValue({ rows: [finding()], total: 1 });
+    research.latest.mockResolvedValue(run());
+  });
+
+  afterEach(() => {
+    vendorsState.data = [];
+  });
+
+  it("lands on the section, open on the vendor the notification link names, above the insights", async () => {
+    renderWithProviders(<Vendors />, { route: NOTIFICATION_LINK });
+
+    const header = await screen.findByRole("button", { name: /^Research findings/ });
+    expect(header).toHaveAttribute("aria-expanded", "true");
+    expect(await screen.findByText(FIRST)).toBeInTheDocument();
+    const section = header.closest(".MuiAccordion-root") as HTMLElement;
+    expect(within(section).getByRole("combobox")).toHaveTextContent("Acme Cloud");
+    expect(research.list).toHaveBeenCalledWith({ status: "pending", vendorId: 7, limit: 200 });
+    expect(research.latest).toHaveBeenCalledWith(7);
+    const insights = screen.getByTestId("vendor-risk-insights");
+    expect(
+      header.compareDocumentPosition(insights) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("is not part of the Vendors tab", async () => {
+    renderWithProviders(<Vendors />, { route: "/vendors" });
+
+    expect(await screen.findByTestId("vendor-table")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Research findings/ })).not.toBeInTheDocument();
+    expect(research.list).not.toHaveBeenCalled();
+  });
+
+  it("opens the risk that accepting a finding created in the page's own risk editor", async () => {
+    research.accept.mockResolvedValue({
+      finding: finding({ status: "accepted" }),
+      vendorRisk: acceptedRisk(),
+    });
+    vi.mocked(getVendorRiskById).mockResolvedValue({ data: { id: 77 } } as never);
+    renderWithProviders(<Vendors />, { route: NOTIFICATION_LINK });
+    const row = (await screen.findByText(FIRST)).closest("li") as HTMLElement;
+
+    await userEvent.click(within(row).getByRole("button", { name: "Accept" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Open risk" }));
+
+    await waitFor(() => expect(getVendorRiskById).toHaveBeenCalledWith({ id: 77 }));
+  });
+
+  describe("what the section tells the page", () => {
+    const startAndRefuse = async () => {
+      research.start.mockRejectedValue(refusal(429, { code: "cooldown", retryAfterSeconds: 540 }));
+      renderWithProviders(<Vendors />, { route: NOTIFICATION_LINK });
+      await userEvent.click(await screen.findByRole("button", { name: "Research again" }));
+    };
+
+    it("shows a warning as a toast that can be seen", async () => {
+      await startAndRefuse();
+
+      const toast = await screen.findByText("Research ran recently. Try again in 9 min.");
+      await waitFor(() => expect(toast).toBeVisible());
+    });
+
+    it("shows an info message the same way", async () => {
+      research.start.mockResolvedValue({ run: run({ status: "running" }), alreadyRunning: true });
+      renderWithProviders(<Vendors />, { route: NOTIFICATION_LINK });
+
+      await userEvent.click(await screen.findByRole("button", { name: "Research again" }));
+
+      const toast = await screen.findByText("Research is already running for Acme Cloud.");
+      await waitFor(() => expect(toast).toBeVisible());
+    });
+
+    it("shows the toast of an accepted finding too", async () => {
+      research.accept.mockResolvedValue({
+        finding: finding({ status: "accepted" }),
+        vendorRisk: acceptedRisk(),
+      });
+      renderWithProviders(<Vendors />, { route: NOTIFICATION_LINK });
+      const row = (await screen.findByText(FIRST)).closest("li") as HTMLElement;
+
+      await userEvent.click(within(row).getByRole("button", { name: "Accept" }));
+
+      const toast = await screen.findByText("Risk added to the register");
+      await waitFor(() => expect(toast).toBeVisible());
+    });
+
+    it("takes the toast down again after a few seconds", async () => {
+      vi.useFakeTimers();
+      research.start.mockRejectedValue(refusal(429, { code: "cooldown", retryAfterSeconds: 540 }));
+      renderWithProviders(<Vendors />, { route: NOTIFICATION_LINK });
+      const advance = (ms: number) =>
+        act(async () => {
+          await vi.advanceTimersByTimeAsync(ms);
+        });
+      await advance(10);
+      fireEvent.click(screen.getByRole("button", { name: "Research again" }));
+      await advance(10);
+      expect(screen.getByText("Research ran recently. Try again in 9 min.")).toBeVisible();
+
+      await advance(3500);
+
+      expect(
+        screen.queryByText("Research ran recently. Try again in 9 min."),
+      ).not.toBeInTheDocument();
+    });
   });
 });

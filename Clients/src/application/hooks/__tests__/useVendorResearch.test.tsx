@@ -109,6 +109,23 @@ describe("useVendorRiskFindings", () => {
     await waitFor(() => expect(mockList).toHaveBeenCalledTimes(2));
     expect(mockList).toHaveBeenLastCalledWith({ status: "dismissed" });
   });
+
+  it("passes the page size on to the repository, and asks again when it changes", async () => {
+    mockList.mockResolvedValue({ rows: [], total: 0 });
+    const { wrapper } = createHarness();
+    const { rerender, result } = renderHook(
+      ({ limit }: { limit: number }) =>
+        useVendorRiskFindings({ status: "pending", vendorId: 3, limit }),
+      { wrapper, initialProps: { limit: 200 } },
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockList).toHaveBeenLastCalledWith({ status: "pending", vendorId: 3, limit: 200 });
+
+    rerender({ limit: 50 });
+
+    await waitFor(() => expect(mockList).toHaveBeenCalledTimes(2));
+    expect(mockList).toHaveBeenLastCalledWith({ status: "pending", vendorId: 3, limit: 50 });
+  });
 });
 
 describe("useLatestVendorResearch", () => {

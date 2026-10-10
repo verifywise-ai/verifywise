@@ -51,6 +51,8 @@ import { Project } from "../../../domain/types/Project";
 import { useQueryClient } from "@tanstack/react-query";
 import { useVendorExposure, VENDOR_INSIGHTS_KEY } from "../../../application/hooks/useRiskLinks";
 import type { HeatMapCellRef } from "../../types/interfaces/i.risk";
+import type { ResearchAlert } from "../../../application/utils/vendorResearchAlerts";
+import VendorResearchFindings from "./VendorResearchFindings";
 import VendorRiskInsights from "./VendorRiskInsights";
 import { matchesHeatCell } from "./VendorRiskInsights/HeatMapSection";
 
@@ -499,6 +501,23 @@ const Vendors = () => {
     body: string;
   } | null>(null);
   const [showAlert, setShowAlert] = useState(false);
+
+  // The page shows its alert through a Fade that only opens while `showAlert` is true, and only
+  // an info alert turns that on (the effect below). So a message from the research section opens
+  // the Fade itself, whatever its variant, and takes itself down again after a few seconds.
+  const researchAlertTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(researchAlertTimer.current), []);
+  const handleResearchNotify = useCallback((next: ResearchAlert) => {
+    clearTimeout(researchAlertTimer.current);
+    setAlert(next);
+    setShowAlert(true);
+    if (next.variant !== "info") {
+      researchAlertTimer.current = setTimeout(() => {
+        setShowAlert(false);
+        researchAlertTimer.current = setTimeout(() => setAlert(null), 300);
+      }, 3000);
+    }
+  }, []);
 
   // Auto-dismiss info alert after 3 seconds with fade animation
   useEffect(() => {
@@ -1290,6 +1309,11 @@ const Vendors = () => {
             <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
           ) : (
             <Stack spacing={4}>
+              <VendorResearchFindings
+                vendors={vendors}
+                onOpenRisk={(id) => handleEditRisk(id)}
+                onNotify={handleResearchNotify}
+              />
               <VendorRiskInsights
                 risks={vendorRisks}
                 selectedCell={heatCell}

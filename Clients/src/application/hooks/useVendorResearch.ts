@@ -25,9 +25,15 @@ export const VENDOR_RESEARCH_KEY = ["vendorResearch"] as const;
 /** Prefix of every findings list, whatever its filter. */
 const FINDINGS_KEY = [...VENDOR_RESEARCH_KEY, "findings"] as const;
 
+/** What a findings list can be asked for: one status, one vendor, and how many rows (the server caps it at 200). */
+interface FindingsFilter {
+  status?: FindingStatus;
+  vendorId?: number;
+  limit?: number;
+}
+
 const configKey = () => [...VENDOR_RESEARCH_KEY, "config"] as const;
-const findingsKey = (filter: { status?: FindingStatus; vendorId?: number }) =>
-  [...FINDINGS_KEY, filter] as const;
+const findingsKey = (filter: FindingsFilter) => [...FINDINGS_KEY, filter] as const;
 const latestKey = (vendorId: number | null) =>
   [...VENDOR_RESEARCH_KEY, "latest", vendorId] as const;
 
@@ -39,7 +45,7 @@ export function useVendorResearchConfig() {
 }
 
 /** One status at a time, and one vendor or all of them, as the API takes them. */
-export function useVendorRiskFindings(filter: { status?: FindingStatus; vendorId?: number }) {
+export function useVendorRiskFindings(filter: FindingsFilter) {
   return useQuery<{ rows: VendorRiskFinding[]; total: number }>({
     queryKey: findingsKey(filter),
     queryFn: () => listVendorRiskFindings(filter),
