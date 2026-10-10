@@ -565,6 +565,23 @@ describe("buildEvidencePack", () => {
       expect(pack.map((source) => source.url)).toEqual(["https://a.test/good"]);
     });
 
+    it.each([
+      ["undefined", undefined],
+      ["null", null],
+      ["a number", 42],
+      ["an object", { href: "https://a.test/object" }],
+    ])("drops the hit instead of throwing when its URL is %s", (_label, url) => {
+      const malformed = { ...hit("https://a.test/ignored"), url } as unknown as SearchHit;
+
+      const pack = buildEvidencePack([
+        results("security_incidents", malformed, hit("https://a.test/good")),
+      ]);
+
+      expect(pack.map((source) => [source.id, source.url])).toEqual([
+        ["S1", "https://a.test/good"],
+      ]);
+    });
+
     it("keeps an http or https URL exactly as it was received", () => {
       const urls = ["http://a.test/x", "HTTPS://A.test/Path?q=1#top", "https://a.test/%20encoded"];
 

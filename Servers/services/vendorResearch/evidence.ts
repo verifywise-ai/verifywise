@@ -48,10 +48,11 @@ function cleanText(text: string): string {
 /**
  * True for an http or https URL of at most MAX_URL_CHARS characters that holds no whitespace, no
  * control character and no lone surrogate as it was received. Such a URL is not repaired: its hit
- * is dropped. The length is checked first, so that a huge string is never scanned.
+ * is dropped, and so is a hit whose URL is not a string at all. The length is checked first, so
+ * that a huge string is never scanned.
  */
 function isUsableUrl(url: string): boolean {
-  if (url.length > MAX_URL_CHARS) return false;
+  if (typeof url !== "string" || url.length > MAX_URL_CHARS) return false;
   if (WHITESPACE_OR_CONTROL.test(url) || HAS_LONE_SURROGATE.test(url)) return false;
   try {
     const { protocol } = new URL(url);
