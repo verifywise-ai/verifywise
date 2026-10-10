@@ -8,6 +8,7 @@ import { TenantAutomationActionModel } from "../../domain.layer/models/tenantAut
 import { buildVendorReplacements } from "../../utils/automation/vendor.automation.utils";
 import { replaceTemplateVariables } from "../../utils/automation/automation.utils";
 import {
+  VENDOR_RESEARCH_JOB,
   enqueueAutomationAction,
   enqueueRiskLinkRecompute,
   enqueueVendorRiskLinkRecompute,
@@ -38,6 +39,7 @@ import {
   recomputeVendorRiskLinksBatch,
 } from "../riskLinks/vendorRelated";
 import { suggestDirectionForComponent } from "../riskLinks/direction/direction.service";
+import { VendorResearchJobData, handleVendorResearchJob } from "../vendorResearch/job";
 import { runFileExpirySweepAllOrgs } from "./actions/fileExpirySweep";
 // AI Gateway budget/risk jobs — call AIGateway HTTP endpoints via internal API
 const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || "http://127.0.0.1:8100";
@@ -736,6 +738,8 @@ export const createAutomationWorker = () => {
             riskIds: number[];
           };
           await suggestDirectionForComponent(organizationId, riskIds);
+        } else if (name === VENDOR_RESEARCH_JOB) {
+          await handleVendorResearchJob(job.data as VendorResearchJobData);
         } else if (name === "file_expiry_sweep") {
           await runFileExpirySweepAllOrgs();
         } else if (name === "mcp_audit_cleanup") {

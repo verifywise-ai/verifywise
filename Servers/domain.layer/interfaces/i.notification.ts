@@ -37,6 +37,7 @@ export enum NotificationType {
 
   // Vendor notifications
   VENDOR_REVIEW_DUE = "vendor_review_due",
+  VENDOR_RESEARCH_FINDINGS = "vendor_research_findings",
 
   // File notifications
   FILE_UPLOADED = "file_uploaded",

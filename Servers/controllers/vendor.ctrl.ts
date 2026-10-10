@@ -26,6 +26,7 @@ import { notifyUserAssigned } from "../services/inAppNotification.service";
 import { getVendorRiskSuggestions as getVendorRiskSuggestionsService } from "../services/vendors/riskSuggestions";
 import { triggerVendorOnboarding } from "../services/workflows/triggers";
 import { notifyVendorRiskCandidates } from "../services/riskLinks/vendorCandidates";
+import { triggerAutoResearch } from "../services/vendorResearch/trigger";
 import { enqueueVendorRiskLinkRecomputeBatch } from "../services/automations/automationProducer";
 import { getActiveVendorRiskIdsQuery } from "../utils/vendorRiskLink.utils";
 import logger from "../utils/logger/fileLogger";
@@ -325,6 +326,14 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
         vendorName: createdVendor.vendor_name,
         projectIds: vendorData.projects || [],
       }).catch((err) => logger.error("Vendor risk candidate notice failed:", err));
+
+      // Research the new vendor's risks in the background. Not awaited: triggerAutoResearch never
+      // rejects, so it cannot fail the response.
+      void triggerAutoResearch({
+        organizationId: req.organizationId!,
+        vendorId: createdVendor.id!,
+        isDemo: !!createdVendor.is_demo,
+      });
 
       // Send assignment notifications (fire-and-forget)
       const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";

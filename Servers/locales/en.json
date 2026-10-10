@@ -826,5 +826,8 @@
   "Complete the EU AI Act risk classification step": "Complete the EU AI Act risk classification step",
   "Remove the AI risk classification mapping from the form's questions before turning on the EU AI Act risk classification step": "Remove the AI risk classification mapping from the form's questions before turning on the EU AI Act risk classification step",
   "A justification of at least 10 characters is required when changing the computed EU AI Act classification": "A justification of at least 10 characters is required when changing the computed EU AI Act classification",
-  "Invalid EU AI Act classification level": "Invalid EU AI Act classification level"
+  "Invalid EU AI Act classification level": "Invalid EU AI Act classification level",
+  "Vendor research findings": "Vendor research findings",
+  "{count} potential risk found for \"{vendorName}\". Review it in Vendors > Risks.": "{count} potential risk found for \"{vendorName}\". Review it in Vendors > Risks.",
+  "{count} potential risks found for \"{vendorName}\". Review them in Vendors > Risks.": "{count} potential risks found for \"{vendorName}\". Review them in Vendors > Risks."
 }
