@@ -167,6 +167,16 @@ const dismiss = (extra: { reason?: unknown; note?: string } = {}) =>
     ...extra,
   } as Parameters<typeof dismissFinding>[0]);
 
+/** The error a call rejects with. */
+const rejection = async (call: Promise<unknown>): Promise<Error> => {
+  try {
+    await call;
+  } catch (error) {
+    return error as Error;
+  }
+  throw new Error("the call did not reject");
+};
+
 /** Nothing was written, and the effects that follow a committed risk did not run. */
 const expectNothingCreated = () => {
   expect(createVendorRiskInTransaction).not.toHaveBeenCalled();
@@ -184,6 +194,7 @@ describe("acceptFinding", () => {
     expect(getFindingByIdQuery).toHaveBeenCalledWith(ORG, FINDING_ID, {
       transaction,
       forUpdate: true,
+      noWait: true,
     });
     expect(getVendorByIdQuery).toHaveBeenCalledWith(VENDOR, ORG);
     expect(createVendorRiskInTransaction).toHaveBeenCalledWith(
@@ -307,6 +318,57 @@ describe("acceptFinding", () => {
 
       expect(getVendorByIdQuery).toHaveBeenCalledWith(VENDOR, ORG);
       expectNothingCreated();
+    });
+  });
+
+  describe("a finding that another decision holds right now", () => {
+    // Postgres refuses a NOWAIT lock with 55P03 (lock_not_available). Sequelize wraps the driver's
+    // error and exposes it as both `parent` and `original`.
+    const lockNotAvailable = (shape: "parent" | "original") =>
+      Object.assign(new Error('could not obtain lock on row in relation "vendor_risk_findings"'), {
+        [shape]: { code: "55P03" },
+      });
+
+    it.each<["parent" | "original"]>([["parent"], ["original"]])(
+      "is refused at once, as a decided finding is, when the lock is not available (reported as `%s`)",
+      async (shape) => {
+        asMock(getFindingByIdQuery).mockImplementation(async () => {
+          events.push("find");
+          throw lockNotAvailable(shape);
+        });
+
+        const error = await rejection(accept());
+
+        expect(error).toBeInstanceOf(ConflictException);
+        expect(error.message).toBe("This finding has already been accepted or dismissed");
+        // It does not go on to the vendor, and the transaction ends without a commit.
+        expect(events).toEqual(["begin", "find", "rollback"]);
+        expect(getVendorByIdQuery).not.toHaveBeenCalled();
+        expectNothingCreated();
+      },
+    );
+
+    it.each<[string, unknown]>([
+      ["a plain error", new Error("connection lost")],
+      [
+        "a deadlock (40P01)",
+        Object.assign(new Error("deadlock detected"), {
+          parent: { code: "40P01" },
+          original: { code: "40P01" },
+        }),
+      ],
+      [
+        "a unique violation (23505)",
+        Object.assign(new Error("duplicate key"), { parent: { code: "23505" } }),
+      ],
+      ["a value that is not an error", "boom"],
+    ])("rethrows %s as it is", async (_label, failure) => {
+      asMock(getFindingByIdQuery).mockRejectedValue(failure);
+
+      await expect(accept()).rejects.toBe(failure);
+
+      expectNothingCreated();
+      expect(events).toContain("rollback");
     });
   });
 
@@ -485,16 +547,6 @@ describe("the refusal messages", () => {
       ) as Record<string, string>,
     ]),
   );
-
-  /** The error a call rejects with. */
-  const rejection = async (call: Promise<unknown>): Promise<Error> => {
-    try {
-      await call;
-    } catch (error) {
-      return error as Error;
-    }
-    throw new Error("the call did not reject");
-  };
 
   it("all have a translation in English, German and French, because the controller translates them", async () => {
     asMock(getFindingByIdQuery).mockResolvedValue(null);

@@ -19,6 +19,8 @@ import {
 
 const VENDOR_NAME = "Acme Corp";
 
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const FINDING: NewFinding = {
   category: "security_incidents",
   risk_description: "Customer records were exposed in a 2026 breach.",
@@ -128,6 +130,59 @@ describe("vendor_risk_findings tenant isolation", () => {
       expect(await getFindingByIdQuery(attacker.orgId, finding.id, locking)).toBeNull();
       expect((await getFindingByIdQuery(owner.orgId, finding.id, locking))?.id).toBe(finding.id);
     });
+  });
+
+  it("reads a finding for update without waiting for a lock that is held, when asked not to wait", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts();
+    const {
+      inserted: [finding],
+    } = await seedFindings(owner, [FINDING]);
+    const readNoWait = (organizationId: number) =>
+      sequelize.transaction((transaction) =>
+        getFindingByIdQuery(organizationId, finding.id, {
+          transaction,
+          forUpdate: true,
+          noWait: true,
+        }),
+      );
+
+    // Positive controls: nobody holds the finding, so the read returns it, to its owner only.
+    expect((await readNoWait(owner.orgId))?.id).toBe(finding.id);
+    expect(await readNoWait(attacker.orgId)).toBeNull();
+
+    // Another transaction holds the row lock.
+    const holder = await sequelize.transaction();
+    let attempt: Promise<unknown> | undefined;
+    try {
+      await sequelize.query("SELECT id FROM vendor_risk_findings WHERE id = :id FOR UPDATE", {
+        replacements: { id: finding.id },
+        type: QueryTypes.SELECT,
+        transaction: holder,
+      });
+
+      // The read is refused at once with lock_not_available (55P03). A read that waited for the
+      // lock would still be unanswered: the limit only keeps such a failure from hanging the test.
+      attempt = readNoWait(owner.orgId).then(
+        (row) => ({ read: row }),
+        (error: unknown) => ({ error }),
+      );
+      const outcome = await Promise.race([attempt, delay(5000).then(() => "waited")]);
+      expect(outcome).toMatchObject({
+        error: { parent: { code: "55P03" }, original: { code: "55P03" } },
+      });
+
+      // The option only means something with a locking read: a plain read is not held up.
+      const plain = await sequelize.transaction((transaction) =>
+        getFindingByIdQuery(owner.orgId, finding.id, { transaction, noWait: true }),
+      );
+      expect(plain?.id).toBe(finding.id);
+    } finally {
+      await holder.rollback();
+      await attempt;
+    }
+
+    // Once the holder has let go the same read succeeds again.
+    expect((await readNoWait(owner.orgId))?.id).toBe(finding.id);
   });
 
   it("does not let another organization decide a finding", async () => {

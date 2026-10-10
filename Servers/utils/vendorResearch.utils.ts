@@ -340,13 +340,20 @@ export const listFindingsQuery = async (
   };
 };
 
-/** `forUpdate` locks the row until the transaction ends; it only means something with a transaction. */
+/**
+ * `forUpdate` locks the row until the transaction ends; it only means something with a transaction.
+ *
+ * `noWait` only means something together with `forUpdate`: a row that another transaction holds is
+ * then not waited for, and Postgres refuses at once with error 55P03 (lock_not_available), which
+ * Sequelize raises as a database error. A transaction that waits keeps its pooled connection, so
+ * a caller that must not queue for a row asks for it.
+ */
 export const getFindingByIdQuery = async (
   organizationId: number,
   id: number,
-  options: { transaction?: Transaction; forUpdate?: boolean } = {},
+  options: { transaction?: Transaction; forUpdate?: boolean; noWait?: boolean } = {},
 ): Promise<IVendorRiskFinding | null> => {
-  const lock = options.forUpdate ? " FOR UPDATE" : "";
+  const lock = options.forUpdate ? ` FOR UPDATE${options.noWait ? " NOWAIT" : ""}` : "";
   const rows = (await sequelize.query(
     `SELECT ${FINDING_COLUMNS} FROM vendor_risk_findings
      WHERE organization_id = :organizationId AND id = :id${lock}`,

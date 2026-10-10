@@ -49,6 +49,18 @@ import { cleanText } from "./text";
  */
 const NOTE_MAX_CHARS = 500;
 
+/** Postgres error 55P03 (lock_not_available): what `FOR UPDATE NOWAIT` raises for a row that is held. */
+const LOCK_NOT_AVAILABLE = "55P03";
+
+/** Whether `error` is the refusal of a lock that is held, the way Sequelize reports a database error. */
+const isLockNotAvailable = (error: unknown): boolean => {
+  const { parent, original } = (error ?? {}) as {
+    parent?: { code?: string };
+    original?: { code?: string };
+  };
+  return parent?.code === LOCK_NOT_AVAILABLE || original?.code === LOCK_NOT_AVAILABLE;
+};
+
 /**
  * Who owns the action of the new risk: the vendor's assignee when the caller says nothing, nobody
  * when the caller says `null`, and the user the caller names, who must belong to the organization.
@@ -82,15 +94,19 @@ async function resolveActionOwner(
  * Accepts a pending finding: creates the vendor risk it describes, marks the finding accepted into
  * it and, once that has committed, runs the effects of a new vendor risk.
  *
- * The finding is locked FOR UPDATE and its status is checked after the lock, so of two accepts
- * that arrive together one creates the risk and the other finds the finding accepted and is
- * refused with a conflict. Anything that goes wrong rolls the whole accept back and leaves the
- * finding pending.
+ * The finding is locked FOR UPDATE NOWAIT and its status is checked after the lock, so of two
+ * accepts that arrive together one creates the risk and the other is refused with a conflict: it
+ * finds the finding accepted, or the first still holds the lock and the lock is refused at once.
+ * It does not queue for the lock. A transaction takes its pooled connection when it begins, and
+ * the one that holds the lock still needs more connections (the vendor lookup and the change
+ * history run outside its transaction), so accepts that waited could use up the pool between them.
+ * Anything that goes wrong rolls the whole accept back and leaves the finding pending.
  *
  * @param args.actionOwner Absent: the vendor's assignee. `null`: no owner. A number: that user,
  *   who must belong to the organization.
  * @throws NotFoundException when the organization has no such finding or its vendor is gone
- * @throws ConflictException when the finding is no longer pending
+ * @throws ConflictException when the finding is no longer pending, or another decision holds it
+ *   at this moment
  * @throws ValidationException when the action owner is not a user of the organization
  * @throws DatabaseException when the register or the finding could not be written
  */
@@ -103,10 +119,23 @@ export async function acceptFinding(args: {
   const { organizationId, findingId, userId, actionOwner } = args;
 
   const accepted = await sequelize.transaction(async (transaction) => {
-    const finding = await getFindingByIdQuery(organizationId, findingId, {
-      transaction,
-      forUpdate: true,
-    });
+    let finding: IVendorRiskFinding | null;
+    try {
+      finding = await getFindingByIdQuery(organizationId, findingId, {
+        transaction,
+        forUpdate: true,
+        noWait: true,
+      });
+    } catch (error) {
+      if (!isLockNotAvailable(error)) throw error;
+      // Another decision is being made on the finding at this moment: for this accept it is a
+      // finding that is decided, and the same answer.
+      throw new ConflictException(
+        "This finding has already been accepted or dismissed",
+        "VendorRiskFinding",
+        "status",
+      );
+    }
     if (!finding) {
       throw new NotFoundException("Finding not found", "VendorRiskFinding", findingId);
     }

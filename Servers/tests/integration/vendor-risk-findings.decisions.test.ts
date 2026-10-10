@@ -205,6 +205,36 @@ const isStillWaiting = async (pending: Promise<unknown>): Promise<boolean> =>
   Promise.race([pending.then(() => false), delay(500).then(() => true)]);
 
 /**
+ * The answer to `pending`, or null when it is still unanswered after five seconds. A request that
+ * should answer at once but queues on a lock fails its assertion that way, instead of hanging the
+ * test until jest gives up on it.
+ */
+const answerOf = <T>(pending: Promise<T>): Promise<T | null> =>
+  Promise.race([pending, delay(5000).then(() => null)]);
+
+/**
+ * Whether another connection holds the row lock of the finding right now: a lock that is not
+ * available is Postgres error 55P03, which `FOR UPDATE NOWAIT` raises instead of waiting.
+ */
+const isHeldByAnother = async (findingId: number): Promise<boolean> => {
+  try {
+    await sequelize.transaction((transaction) =>
+      sequelize.query("SELECT id FROM vendor_risk_findings WHERE id = :id FOR UPDATE NOWAIT", {
+        replacements: { id: findingId },
+        type: QueryTypes.SELECT,
+        transaction,
+      }),
+    );
+    return false;
+  } catch (error) {
+    if ((error as { parent?: { code?: string } }).parent?.code === "55P03") {
+      return true;
+    }
+    throw error;
+  }
+};
+
+/**
  * A decision that is being made: it holds the row lock of the finding, as an accept does between
  * its read and its commit, until `commitAccepted` or `release`.
  */
@@ -419,7 +449,8 @@ describe("POST /api/vendor-risk-findings/:id/accept", () => {
       owner.request.post(acceptUrl(finding.id)),
     ]);
 
-    // Without the lock the loser would not read "accepted" but fail at its own update with a 500.
+    // A smoke test: which request wins is a race, and the loser is refused either at the lock or at
+    // the status check, both as 409. That the lock holds is proved by the test below, which holds it.
     expect([first.status, second.status].sort()).toEqual([200, 409]);
     const winner = first.status === 200 ? first : second;
     const risks = await risksOf(owner.orgId);
@@ -431,27 +462,37 @@ describe("POST /api/vendor-risk-findings/:id/accept", () => {
     expect(recomputeJobs()).toHaveLength(1);
   });
 
-  it("waits for a decision that is being made and then answers 409, creating no second risk", async () => {
+  it("answers 409 at once while another decision holds the finding, creating no risk", async () => {
     const { owner } = await seedTwoTenantContexts(3);
     const {
       vendorId,
       inserted: [finding],
     } = await seedFindings(owner);
 
-    // Another decision holds the finding. The accept must wait for it, not read "pending" and go on.
+    // Another decision holds the row lock of the finding, as an accept does between its read and its
+    // commit. The accept does not queue behind it: a transaction that waits keeps its pooled
+    // connection while the one it waits for may still need more, and the pool could run dry. It is
+    // refused as a finding that is being decided, and the holder stays locked until the very end.
     const decision = await startDecision(finding.id);
+    let pending: Promise<{ status: number }> | undefined;
     try {
-      const pending = owner.request.post(acceptUrl(finding.id)).then((res) => res);
+      pending = owner.request.post(acceptUrl(finding.id)).then((res) => res);
 
-      expect(await isStillWaiting(pending)).toBe(true);
+      const res = await answerOf(pending);
+
+      expect(res?.status).toBe(409);
+      // The answer came while the other decision still held the lock: it did not wait for it.
+      expect(await isHeldByAnother(finding.id)).toBe(true);
       expect(await risksOf(owner.orgId)).toHaveLength(0);
+      expect(await findingOf(finding.id)).toEqual(PENDING);
+      expect(recomputeJobs()).toHaveLength(0);
+      expect(notifyUserAssigned).not.toHaveBeenCalled();
 
-      // The other decision accepts the finding into a risk of its own and lets go.
+      // The other decision accepts the finding into a risk of its own and lets go: that risk is the
+      // only one, and the finding is its.
       const heldRisk = await createTestVendorRisk(owner.orgId, { vendor_id: vendorId });
       await decision.commitAccepted(owner, heldRisk);
 
-      const res = await pending;
-      expect(res.status).toBe(409);
       expect((await risksOf(owner.orgId)).map((risk) => risk.id)).toEqual([heldRisk]);
       expect(await findingOf(finding.id)).toMatchObject({
         status: "accepted",
@@ -460,7 +501,40 @@ describe("POST /api/vendor-risk-findings/:id/accept", () => {
       expect(recomputeJobs()).toHaveLength(0);
     } finally {
       await decision.release();
+      // Never leave a request running into the next test.
+      await pending?.catch(() => undefined);
     }
+  });
+
+  it("accepts the finding after a refusal at the lock once the other decision let go without deciding", async () => {
+    const { owner } = await seedTwoTenantContexts(3);
+    const {
+      inserted: [finding],
+    } = await seedFindings(owner);
+
+    const decision = await startDecision(finding.id);
+    let pending: Promise<{ status: number }> | undefined;
+    try {
+      pending = owner.request.post(acceptUrl(finding.id)).then((res) => res);
+      expect((await answerOf(pending))?.status).toBe(409);
+      expect(await findingOf(finding.id)).toEqual(PENDING);
+    } finally {
+      await decision.release();
+      await pending?.catch(() => undefined);
+    }
+
+    // Positive control: the 409 came from the lock and left nothing behind, so the same request
+    // now goes through and creates the one risk.
+    const res = await owner.request.post(acceptUrl(finding.id));
+
+    expect(res.status).toBe(200);
+    const risks = await risksOf(owner.orgId);
+    expect(risks.map((risk) => risk.id)).toEqual([res.body.data.vendorRisk.id]);
+    expect(await findingOf(finding.id)).toMatchObject({
+      status: "accepted",
+      accepted_vendor_risk_id: risks[0].id,
+    });
+    expect(recomputeJobs()).toHaveLength(1);
   });
 
   it("answers 409 for a finding that was decided before, and creates nothing", async () => {
