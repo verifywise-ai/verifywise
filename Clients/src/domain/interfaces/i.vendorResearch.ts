@@ -95,9 +95,26 @@ export interface VendorResearchConfig {
 }
 
 /**
- * The register entry an accepted finding created (the JSON of the server's
- * `VendorRiskModel`). It names its id `id`. `VendorRisk`, the type of the register
- * list rows, names it `risk_id` and also declares `vendor_name` and `impact`,
- * which this response does not send.
+ * The register entry an accepted finding created: the JSON of the server's
+ * `VendorRiskModel`, exactly. It is not a `VendorRisk`, the type of the register
+ * list rows (which names the id `risk_id` and carries the vendor's name). The row
+ * comes straight from the insert, so every field is there; `impact` is not,
+ * because the register table has no such column.
  */
-export type AcceptedVendorRisk = VendorRisk & { id: number };
+export interface AcceptedVendorRisk {
+  id: number;
+  vendor_id: number;
+  /** Accepting a finding never sets an order number. */
+  order_no: number | null;
+  risk_description: string;
+  impact_description: string;
+  likelihood: VendorRisk["likelihood"];
+  risk_severity: VendorRisk["risk_severity"];
+  action_plan: string;
+  /** Null when the finding was accepted without an owner. */
+  action_owner: number | null;
+  risk_level: string;
+  is_demo: boolean;
+  created_at: string;
+  updated_at: string;
+}

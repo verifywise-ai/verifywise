@@ -12,6 +12,7 @@ import {
   startVendorResearch,
 } from "../vendorResearch.repository";
 import type {
+  AcceptedVendorRisk,
   VendorResearchRun,
   VendorRiskFinding,
 } from "../../../domain/interfaces/i.vendorResearch";
@@ -79,6 +80,24 @@ const finding = (overrides: Partial<VendorRiskFinding> = {}): VendorRiskFinding 
   decided_by: null,
   decided_at: null,
   created_at: "2026-10-10T09:01:00.000Z",
+  ...overrides,
+});
+
+/** The vendor risk an accept creates, with every field the response sends and no other. */
+const acceptedRisk = (overrides: Partial<AcceptedVendorRisk> = {}): AcceptedVendorRisk => ({
+  id: 77,
+  vendor_id: 3,
+  order_no: null,
+  risk_description: "Customer data was exposed in a breach",
+  impact_description: "Personal data of our customers could be exposed",
+  likelihood: "Possible",
+  risk_severity: "Major",
+  action_plan: "Ask the vendor for its incident report",
+  action_owner: 4,
+  risk_level: "High Risk",
+  is_demo: false,
+  created_at: "2026-10-10T09:02:00.000Z",
+  updated_at: "2026-10-10T09:02:00.000Z",
   ...overrides,
 });
 
@@ -167,7 +186,7 @@ describe("acceptVendorRiskFinding", () => {
   it("posts the body to /vendor-risk-findings/9/accept and unwraps the finding and the risk", async () => {
     const accepted = {
       finding: finding({ status: "accepted", accepted_vendor_risk_id: 77 }),
-      vendorRisk: { id: 77, vendor_id: 3, risk_level: "High Risk" },
+      vendorRisk: acceptedRisk(),
     };
     mockPost.mockResolvedValue(success(accepted));
 
@@ -186,6 +205,19 @@ describe("acceptVendorRiskFinding", () => {
     expect(mockPost).toHaveBeenNthCalledWith(2, "/vendor-risk-findings/9/accept", {
       action_owner: null,
     });
+  });
+
+  it("returns the risk of a finding accepted without an owner, with null kept as null", async () => {
+    const ownerless = {
+      finding: finding({ status: "accepted" }),
+      vendorRisk: acceptedRisk({ action_owner: null }),
+    };
+    mockPost.mockResolvedValue(success(ownerless));
+
+    const { vendorRisk } = await acceptVendorRiskFinding(9, { action_owner: null });
+
+    expect(vendorRisk.action_owner).toBeNull();
+    expect(vendorRisk.order_no).toBeNull();
   });
 });
 

@@ -281,6 +281,126 @@ describe("useLatestVendorResearch", () => {
       expect(mockLatest).toHaveBeenCalledWith(2);
     });
   });
+
+  describe("when a run finishes", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    /**
+     * A vendor's latest run next to the pending findings list its run feeds. The list
+     * loads once by itself, so `mockList` has been called once plus once for every
+     * refresh that follows.
+     */
+    function renderWithFindings(vendorId: number) {
+      mockList.mockResolvedValue({ rows: [], total: 0 });
+      const { wrapper } = createHarness();
+      return renderHook(
+        ({ vendorId: id }: { vendorId: number }) => ({
+          latest: useLatestVendorResearch(id),
+          findings: useVendorRiskFindings({ status: "pending" }),
+        }),
+        { wrapper, initialProps: { vendorId } },
+      );
+    }
+
+    it.each(["completed", "failed"] as const)(
+      "refreshes the findings list once when a running run turns %s",
+      async (finished) => {
+        mockLatest
+          .mockResolvedValueOnce(run({ status: "running" }))
+          .mockResolvedValue(run({ status: finished }));
+        const { result } = renderWithFindings(3);
+        await advance(0);
+        expect(mockList).toHaveBeenCalledTimes(1);
+
+        await advance(3000);
+        await settle();
+        expect(result.current.latest.data?.status).toBe(finished);
+        expect(mockList).toHaveBeenCalledTimes(2);
+
+        await advance(60_000);
+        expect(mockList).toHaveBeenCalledTimes(2);
+      },
+    );
+
+    it.each(["completed", "failed"] as const)(
+      "leaves the list alone for a run that is already %s when it is first seen",
+      async (finished) => {
+        mockLatest.mockResolvedValue(run({ status: finished }));
+        renderWithFindings(3);
+
+        await advance(0);
+        await advance(60_000);
+
+        expect(mockLatest).toHaveBeenCalledTimes(1);
+        expect(mockList).toHaveBeenCalledTimes(1);
+      },
+    );
+
+    it("leaves the list alone while the run only moves from queued to running", async () => {
+      mockLatest
+        .mockResolvedValueOnce(run({ status: "queued" }))
+        .mockResolvedValue(run({ status: "running" }));
+      const { result } = renderWithFindings(3);
+      await advance(0);
+
+      await advance(3000);
+      await settle();
+      expect(result.current.latest.data?.status).toBe("running");
+      await advance(9000);
+
+      expect(mockLatest.mock.calls.length).toBeGreaterThan(2);
+      expect(mockList).toHaveBeenCalledTimes(1);
+    });
+
+    it("refreshes the list again when the next run finishes, but not when it starts", async () => {
+      mockLatest
+        .mockResolvedValueOnce(run({ id: 5, status: "running" }))
+        .mockResolvedValue(run({ id: 5, status: "completed" }));
+      const { result } = renderWithFindings(3);
+      await advance(0);
+      await advance(3000);
+      await settle();
+      expect(mockList).toHaveBeenCalledTimes(2); // run 5 finished
+
+      // The user researches again: the next check finds a new run, queued.
+      mockLatest.mockResolvedValue(run({ id: 6, status: "queued" }));
+      await act(async () => {
+        void result.current.latest.refetch();
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(result.current.latest.data?.id).toBe(6);
+      expect(mockList).toHaveBeenCalledTimes(2); // starting is not finishing
+
+      mockLatest.mockResolvedValue(run({ id: 6, status: "completed" }));
+      await advance(3000);
+      await settle();
+      expect(result.current.latest.data?.status).toBe("completed");
+      expect(mockList).toHaveBeenCalledTimes(3); // run 6 finished
+    });
+
+    it("does not take a change of vendor for a run finishing", async () => {
+      mockLatest.mockImplementation(async (vendorId) =>
+        vendorId === 1
+          ? run({ id: 5, vendor_id: 1, status: "running" })
+          : run({ id: 8, vendor_id: 2, status: "completed" }),
+      );
+      const { rerender, result } = renderWithFindings(1);
+      await advance(0);
+      expect(result.current.latest.data?.status).toBe("running");
+
+      rerender({ vendorId: 2 });
+      await advance(0);
+      expect(result.current.latest.data?.status).toBe("completed");
+      await advance(60_000);
+
+      expect(mockList).toHaveBeenCalledTimes(1);
+    });
+  });
 });
 
 describe("useStartVendorResearch", () => {

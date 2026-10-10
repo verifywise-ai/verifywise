@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { skipToken, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { UseQueryResult } from "@tanstack/react-query";
 import {
@@ -22,9 +22,12 @@ import type {
 /** Prefix of every vendor research query, for one-call invalidation. */
 export const VENDOR_RESEARCH_KEY = ["vendorResearch"] as const;
 
+/** Prefix of every findings list, whatever its filter. */
+const FINDINGS_KEY = [...VENDOR_RESEARCH_KEY, "findings"] as const;
+
 const configKey = () => [...VENDOR_RESEARCH_KEY, "config"] as const;
 const findingsKey = (filter: { status?: FindingStatus; vendorId?: number }) =>
-  [...VENDOR_RESEARCH_KEY, "findings", filter] as const;
+  [...FINDINGS_KEY, filter] as const;
 const latestKey = (vendorId: number | null) =>
   [...VENDOR_RESEARCH_KEY, "latest", vendorId] as const;
 
@@ -63,13 +66,21 @@ const windowOf = (vendorId: number | null, runId: number) => `${vendorId}:${runI
  * true, and the screen should say the run is still going. It goes back to false
  * when the run is no longer active, when a different run shows up, and when the
  * vendor changes. Pass null to leave the query off.
+ *
+ * When a run this hook saw active turns completed or failed, the findings lists
+ * are invalidated once: a run that finishes changes them, and nothing else tells
+ * them, so no screen has to repeat this. A run that is already finished when it
+ * is first seen, or a different vendor's run, is not that transition.
  */
 export function useLatestVendorResearch(
   vendorId: number | null,
 ): UseQueryResult<VendorResearchRun | null> & { pollingStopped: boolean } {
+  const queryClient = useQueryClient();
   // The window whose time ran out, if any. A window that is not the current one
   // is a leftover, so `pollingStopped` compares instead of trusting the state.
   const [endedWindow, setEndedWindow] = useState<string | null>(null);
+  // The vendor whose active run this hook saw last, for the invalidation below.
+  const vendorWithActiveRun = useRef<number | null>(null);
 
   const query = useQuery<VendorResearchRun | null>({
     queryKey: latestKey(vendorId),
@@ -91,6 +102,23 @@ export function useLatestVendorResearch(
       setEndedWindow(null);
     };
   }, [currentWindow]);
+
+  const active = currentWindow !== null;
+  const finished = query.data?.status === "completed" || query.data?.status === "failed";
+  useEffect(() => {
+    if (vendorId === null) {
+      vendorWithActiveRun.current = null;
+      return;
+    }
+    if (active) {
+      vendorWithActiveRun.current = vendorId;
+      return;
+    }
+    if (finished && vendorWithActiveRun.current === vendorId) {
+      void queryClient.invalidateQueries({ queryKey: FINDINGS_KEY });
+    }
+    vendorWithActiveRun.current = null;
+  }, [active, finished, vendorId, queryClient]);
 
   return { ...query, pollingStopped: currentWindow !== null && currentWindow === endedWindow };
 }
