@@ -116,6 +116,24 @@ describe("the register's words", () => {
       .filter((word) => translations[lang][word] === undefined);
     expect(missing).toEqual([]);
   });
+
+  // Ruling R39: every Spanish risk level reads noun first, whichever way its key is written, so
+  // that the levels on one screen (the findings, the risks table) are worded the same way.
+  it.each([
+    ["Very High Risk", "Riesgo muy alto"],
+    ["High Risk", "Riesgo alto"],
+    ["Medium Risk", "Riesgo medio"],
+    ["Low Risk", "Riesgo bajo"],
+    ["Very Low Risk", "Riesgo muy bajo"],
+    ["Very high risk", "Riesgo muy alto"],
+    ["High risk", "Riesgo alto"],
+    ["Medium risk", "Riesgo medio"],
+    ["Low risk", "Riesgo bajo"],
+    ["Very low risk", "Riesgo muy bajo"],
+    ["Very Low risk", "Riesgo muy bajo"],
+  ])("reads the Spanish risk level %j noun first, as %j", (key, value) => {
+    expect(translations.es[key]).toBe(value);
+  });
 });
 
 /**
