@@ -7835,6 +7835,10 @@ tags:
   -
     name: Users
   -
+    name: 'Vendor Research'
+  -
+    name: 'Vendor Risk Findings'
+  -
     name: 'Vendor Risks'
   -
     name: Vendors
@@ -9180,6 +9184,62 @@ paths:
       tags:
         - Vendors
       operationId: getVendorRiskSuggestions
+      security:
+        -
+          bearerAuth: []
+  '/vendors/{id}/research/latest':
+    get:
+      summary: 'Get Latest Vendor Research'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Vendors
+      operationId: getLatestVendorResearch
+      security:
+        -
+          bearerAuth: []
+  '/vendors/{id}/research':
+    post:
+      summary: 'Start Vendor Research Run'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Vendors
+      operationId: startVendorResearchRun
+      security:
+        -
+          bearerAuth: []
+  /vendor-research/config:
+    get:
+      summary: 'Get Research Config'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Vendor Research'
+      operationId: getResearchConfig
+      security:
+        -
+          bearerAuth: []
+  /vendor-risk-findings:
+    get:
+      summary: 'List Vendor Risk Findings'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Vendor Risk Findings'
+      operationId: listVendorRiskFindings
       security:
         -
           bearerAuth: []

@@ -829,5 +829,8 @@
   "Invalid EU AI Act classification level": "Ungültige Klassifizierungsstufe nach dem EU AI Act",
   "Vendor research findings": "Ergebnisse der Anbieterrecherche",
   "{count} potential risk found for \"{vendorName}\". Review it in Vendors > Risks.": "{count} mögliches Risiko für „{vendorName}“ gefunden. Prüfen Sie es unter Anbieter > Risiken.",
-  "{count} potential risks found for \"{vendorName}\". Review them in Vendors > Risks.": "{count} mögliche Risiken für „{vendorName}“ gefunden. Prüfen Sie sie unter Anbieter > Risiken."
+  "{count} potential risks found for \"{vendorName}\". Review them in Vendors > Risks.": "{count} mögliche Risiken für „{vendorName}“ gefunden. Prüfen Sie sie unter Anbieter > Risiken.",
+  "The research could not be started because the job queue is unavailable. Nothing was lost, so it is safe to try again later.": "Die Recherche konnte nicht gestartet werden, weil die Aufgabenwarteschlange nicht verfügbar ist. Es ging nichts verloren, daher können Sie es später bedenkenlos erneut versuchen.",
+  "Invalid limit": "Ungültiges Limit",
+  "Invalid offset": "Ungültiger Offset"
 }

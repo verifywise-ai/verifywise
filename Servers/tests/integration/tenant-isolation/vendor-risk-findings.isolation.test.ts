@@ -236,7 +236,7 @@ describe("vendor_risk_findings tenant isolation", () => {
     });
   });
 
-  it("keeps findings in the order given and returns a vendor's findings newest first", async () => {
+  it("keeps findings in the order given and returns them in that order within a run", async () => {
     const { owner } = await seedTwoTenantContexts();
     const {
       vendorId,
@@ -248,24 +248,28 @@ describe("vendor_risk_findings tenant isolation", () => {
       FINDING.risk_description,
       SECOND_FINDING.risk_description,
     ]);
-    // Both were stored in one transaction, so they share a created_at and the id breaks the tie.
+    // Both were stored in one transaction, so they share a created_at and the lower id comes
+    // first: the pipeline stores a run's findings most severe first, and that is how they read.
     expect(second.created_at).toEqual(first.created_at);
+    expect(first.id).toBeLessThan(second.id);
     expect((await getFindingsForVendorQuery(owner.orgId, vendorId)).map((row) => row.id)).toEqual([
-      second.id,
       first.id,
+      second.id,
     ]);
+    const { rows } = await listFindingsQuery(owner.orgId, { limit: 50, offset: 0 });
+    expect(rows.map((row) => row.id)).toEqual([first.id, second.id]);
   });
 
-  it("lists the organization's findings newest first, filtered by status and vendor, one page at a time", async () => {
+  it("lists the organization's findings newest run first, filtered by status and vendor, one page at a time", async () => {
     const { owner } = await seedTwoTenantContexts();
     const acme = await seedFindings(owner, [FINDING, SECOND_FINDING]);
     // A second vendor with its own finding, stored after the first vendor's.
     const globex = await seedFindings(owner, [FINDING], "Globex");
-    const [older, middle] = acme.inserted;
+    const [first, second] = acme.inserted;
     const [newest] = globex.inserted;
     await markFindingDismissedQuery({
       organizationId: owner.orgId,
-      id: older.id,
+      id: first.id,
       reason: "not_applicable",
       note: null,
       userId: owner.userId,
@@ -280,8 +284,9 @@ describe("vendor_risk_findings tenant isolation", () => {
       return { ids: rows.map((row) => row.id), total };
     };
 
-    // Newest first across vendors; findings stored together are ordered by id.
-    expect(await list()).toEqual({ ids: [newest.id, middle.id, older.id], total: 3 });
+    // The newest run comes first, across vendors; the findings of one run keep the order in
+    // which they were stored.
+    expect(await list()).toEqual({ ids: [newest.id, first.id, second.id], total: 3 });
     const everything = await listFindingsQuery(owner.orgId, { limit: 50, offset: 0 });
     expect(everything.rows.map((row) => row.vendor_name)).toEqual([
       "Globex",
@@ -290,24 +295,24 @@ describe("vendor_risk_findings tenant isolation", () => {
     ]);
 
     // Status filter.
-    expect(await list({ status: "pending" })).toEqual({ ids: [newest.id, middle.id], total: 2 });
-    expect(await list({ status: "dismissed" })).toEqual({ ids: [older.id], total: 1 });
+    expect(await list({ status: "pending" })).toEqual({ ids: [newest.id, second.id], total: 2 });
+    expect(await list({ status: "dismissed" })).toEqual({ ids: [first.id], total: 1 });
     expect(await list({ status: "accepted" })).toEqual({ ids: [], total: 0 });
 
     // Vendor filter, alone and with a status.
     expect(await list({ vendorId: acme.vendorId })).toEqual({
-      ids: [middle.id, older.id],
+      ids: [first.id, second.id],
       total: 2,
     });
     expect(await list({ vendorId: globex.vendorId })).toEqual({ ids: [newest.id], total: 1 });
     expect(await list({ status: "pending", vendorId: acme.vendorId })).toEqual({
-      ids: [middle.id],
+      ids: [second.id],
       total: 1,
     });
 
     // Paging keeps the total of the whole list, also when the offset is past the end.
-    expect(await list({ limit: 2, offset: 0 })).toEqual({ ids: [newest.id, middle.id], total: 3 });
-    expect(await list({ limit: 2, offset: 2 })).toEqual({ ids: [older.id], total: 3 });
+    expect(await list({ limit: 2, offset: 0 })).toEqual({ ids: [newest.id, first.id], total: 3 });
+    expect(await list({ limit: 2, offset: 2 })).toEqual({ ids: [second.id], total: 3 });
     expect(await list({ limit: 2, offset: 10 })).toEqual({ ids: [], total: 3 });
   });
 

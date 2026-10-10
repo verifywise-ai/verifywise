@@ -11581,6 +11581,43 @@ export const vendorEndpoints: Endpoint[] = [
     ],
     tag: "Vendors",
   },
+  {
+    method: 'GET',
+    path: '/vendors/{id}/research/latest',
+    summary: "Get Latest Vendor Research",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Vendors",
+  },
+  {
+    method: 'POST',
+    path: '/vendors/{id}/research',
+    summary: "Start Vendor Research Run",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Vendors",
+  },
+];
+
+// Vendor Research endpoints
+export const vendorResearchEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/vendor-research/config',
+    summary: "Get Research Config",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Vendor Research",
+  },
 ];
 
 // Vendor Risks endpoints
@@ -11708,6 +11745,21 @@ export const vendorRiskEndpoints: Endpoint[] = [
   },
 ];
 
+// Vendor Risk Findings endpoints
+export const vendorRiskFindingsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/vendor-risk-findings',
+    summary: "List Vendor Risk Findings",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Vendor Risk Findings",
+  },
+];
+
 // Webhooks endpoints
 export const webhookEndpoints: Endpoint[] = [
   {
@@ -11804,6 +11856,8 @@ export const allEndpoints = {
   training: trainingEndpoints,
   user: userEndpoints,
   vendor: vendorEndpoints,
+  vendorResearch: vendorResearchEndpoints,
   vendorRisk: vendorRiskEndpoints,
+  vendorRiskFindings: vendorRiskFindingsEndpoints,
   webhook: webhookEndpoints,
 };

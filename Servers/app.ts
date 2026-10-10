@@ -12,6 +12,10 @@ import riskLinksRoutes from "./routes/riskLinks.route";
 import questionRoutes from "./routes/question.route";
 import userRoutes from "./routes/user.route";
 import vendorRoutes from "./routes/vendor.route";
+// Named ...Router, not ...Routes: scripts/generateSwagger.ts finds a router's file by looking for
+// the import name inside the import lines, and "vendorResearchRoutes" contains "searchRoutes".
+import vendorResearchRouter from "./routes/vendorResearch.route";
+import vendorRiskFindingsRouter from "./routes/vendorRiskFindings.route";
 import vendorRiskRoutes from "./routes/vendorRisk.route";
 import vendorChangeHistoryRoutes from "./routes/vendorChangeHistory.route";
 import roleRoutes from "./routes/role.route";
@@ -291,6 +295,8 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   app.use("/api/users", userRoutes);
   app.use("/api/vendorRisks", vendorRiskRoutes);
   app.use("/api/vendors", vendorRoutes);
+  app.use("/api/vendor-research", vendorResearchRouter);
+  app.use("/api/vendor-risk-findings", vendorRiskFindingsRouter);
   app.use("/api/vendor-change-history", vendorChangeHistoryRoutes);
   app.use("/api/projects", projectRoutes);
   app.use("/api/eu-ai-act-classification", euAiActClassificationRoutes);

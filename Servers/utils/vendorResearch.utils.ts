@@ -273,7 +273,12 @@ export const insertFindingsQuery = async (
   return inserted;
 };
 
-/** One page of the organization's findings, newest first, with the vendor's name. */
+/**
+ * One page of the organization's findings, with the vendor's name: the newest run first, and the
+ * findings of one run in the order they were stored, which is most severe first. The findings of
+ * a run share their `created_at` (one transaction stores them), so `id ASC` is what keeps that
+ * order, and the pair is a total order, so pages neither repeat nor skip a finding.
+ */
 export const listFindingsQuery = async (
   organizationId: number,
   filter: { status?: FindingStatus; vendorId?: number; limit: number; offset: number },
@@ -302,7 +307,7 @@ export const listFindingsQuery = async (
     sequelize.query(
       `SELECT ${FINDING_COLUMNS_QUALIFIED}, v.vendor_name
        ${fromWhere}
-       ORDER BY f.created_at DESC, f.id DESC
+       ORDER BY f.created_at DESC, f.id ASC
        LIMIT :limit OFFSET :offset`,
       { replacements, type: QueryTypes.SELECT },
     ),
@@ -336,7 +341,10 @@ export const getFindingByIdQuery = async (
   return rows[0] ?? null;
 };
 
-/** All the vendor's findings, whatever their status, newest first. */
+/**
+ * All the vendor's findings, whatever their status: the newest run first, and the findings of one
+ * run in the order they were stored (see `listFindingsQuery`).
+ */
 export const getFindingsForVendorQuery = async (
   organizationId: number,
   vendorId: number,
@@ -344,7 +352,7 @@ export const getFindingsForVendorQuery = async (
   (await sequelize.query(
     `SELECT ${FINDING_COLUMNS} FROM vendor_risk_findings
      WHERE organization_id = :organizationId AND vendor_id = :vendorId
-     ORDER BY created_at DESC, id DESC`,
+     ORDER BY created_at DESC, id ASC`,
     { replacements: { organizationId, vendorId }, type: QueryTypes.SELECT },
   )) as IVendorRiskFinding[];
 

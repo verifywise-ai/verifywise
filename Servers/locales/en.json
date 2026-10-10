@@ -829,5 +829,8 @@
   "Invalid EU AI Act classification level": "Invalid EU AI Act classification level",
   "Vendor research findings": "Vendor research findings",
   "{count} potential risk found for \"{vendorName}\". Review it in Vendors > Risks.": "{count} potential risk found for \"{vendorName}\". Review it in Vendors > Risks.",
-  "{count} potential risks found for \"{vendorName}\". Review them in Vendors > Risks.": "{count} potential risks found for \"{vendorName}\". Review them in Vendors > Risks."
+  "{count} potential risks found for \"{vendorName}\". Review them in Vendors > Risks.": "{count} potential risks found for \"{vendorName}\". Review them in Vendors > Risks.",
+  "The research could not be started because the job queue is unavailable. Nothing was lost, so it is safe to try again later.": "The research could not be started because the job queue is unavailable. Nothing was lost, so it is safe to try again later.",
+  "Invalid limit": "Invalid limit",
+  "Invalid offset": "Invalid offset"
 }
