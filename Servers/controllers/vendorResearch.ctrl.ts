@@ -414,17 +414,18 @@ function parseActionOwner(
 
 /**
  * The reason and the optional note of a dismissal, or the message for the first of them that is
- * not valid. How long the note may be is for the service to say.
+ * not valid. A note of `null` is no note, as an absent one is. How long the note may be is for the
+ * service to say.
  */
 function parseDismissal(
   req: Request,
 ): { reason: DismissReason; note: string | undefined } | { error: string } {
   const { reason, note } = requestBody(req);
   if (!isDismissReason(reason)) return { error: req.t!("Invalid dismissal reason") };
-  if (note !== undefined && typeof note !== "string") {
+  if (note !== undefined && note !== null && typeof note !== "string") {
     return { error: req.t!("Invalid dismissal note") };
   }
-  return { reason, note };
+  return { reason, note: note ?? undefined };
 }
 
 /** The status for a refusal by the findings service; any other error is not one. */

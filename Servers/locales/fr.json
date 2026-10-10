@@ -839,5 +839,5 @@
   "The action owner must be a user of your organization": "Le responsable d'action doit être un utilisateur de votre organisation",
   "Invalid dismissal note": "Note de rejet invalide",
   "The note can be at most 500 characters": "La note ne peut pas dépasser 500 caractères",
-  "The risk could not be added to the vendor risk register": "Le risque n'a pas pu être ajouté au registre des risques du fournisseur"
+  "The risk could not be added to the vendor risk register": "Le risque n'a pas pu être ajouté au registre des risques fournisseurs"
 }

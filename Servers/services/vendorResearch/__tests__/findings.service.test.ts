@@ -15,6 +15,10 @@ jest.mock("../../../utils/vendorResearch.utils", () => ({
 }));
 jest.mock("../../../utils/vendor.utils", () => ({ getVendorByIdQuery: jest.fn() }));
 jest.mock("../../../utils/user.utils", () => ({ findUsersNotInOrganization: jest.fn() }));
+jest.mock("../../../utils/logger/fileLogger", () => ({
+  __esModule: true,
+  default: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+}));
 jest.mock("../../vendors/vendorRiskCreate.service", () => ({
   createVendorRiskInTransaction: jest.fn(),
   runVendorRiskPostCommitEffects: jest.fn(),
@@ -31,6 +35,7 @@ import {
   DISMISS_REASONS,
   IVendorRiskFinding,
 } from "../../../domain.layer/interfaces/i.vendorResearch";
+import logger from "../../../utils/logger/fileLogger";
 import { findUsersNotInOrganization } from "../../../utils/user.utils";
 import { getVendorByIdQuery } from "../../../utils/vendor.utils";
 import {
@@ -190,7 +195,16 @@ describe("acceptFinding", () => {
 
     // One transaction holds the lock, the insert and the decision; the effects come after the commit.
     expect(sequelize.transaction).toHaveBeenCalledTimes(1);
-    expect(events).toEqual(["begin", "find", "vendor", "create", "mark", "commit", "post-commit"]);
+    expect(events).toEqual([
+      "begin",
+      "find",
+      "vendor",
+      "owner",
+      "create",
+      "mark",
+      "commit",
+      "post-commit",
+    ]);
     expect(getFindingByIdQuery).toHaveBeenCalledWith(ORG, FINDING_ID, {
       transaction,
       forUpdate: true,
@@ -232,24 +246,87 @@ describe("acceptFinding", () => {
     const createdOwner = () => asMock(createVendorRiskInTransaction).mock.calls[0][0].action_owner;
 
     type Assignee = number | null | undefined;
-    it.each<[string, Assignee, Assignee, number | null]>([
-      ["the vendor's assignee when none is given", ASSIGNEE, undefined, ASSIGNEE],
-      ["null when none is given and the vendor has no assignee", null, undefined, null],
-      [
-        "null when none is given and the vendor row has no assignee value",
-        undefined,
-        undefined,
-        null,
-      ],
-      ["null when null is given, although the vendor has an assignee", ASSIGNEE, null, null],
-    ])("is %s", async (_label, assignee, requested, expected) => {
+    it.each<[string, Assignee, Assignee]>([
+      ["null when none is given and the vendor has no assignee", null, undefined],
+      ["null when none is given and the vendor row has no assignee value", undefined, undefined],
+      ["null when null is given, although the vendor has an assignee", ASSIGNEE, null],
+    ])("is %s", async (_label, assignee, requested) => {
       asMock(getVendorByIdQuery).mockResolvedValue(vendorWith(assignee));
 
       await accept(requested === undefined ? {} : { actionOwner: requested });
 
-      expect(createdOwner()).toBe(expected);
-      // Neither the default nor an explicit null is a user id to look up.
+      expect(createdOwner()).toBeNull();
+      // There is no user id to look up.
       expect(findUsersNotInOrganization).not.toHaveBeenCalled();
+    });
+
+    it("is the vendor's assignee when none is given and the assignee belongs to the organization", async () => {
+      await accept();
+
+      expect(findUsersNotInOrganization).toHaveBeenCalledWith([ASSIGNEE], ORG, transaction);
+      expect(createdOwner()).toBe(ASSIGNEE);
+      expect(logger.warn).not.toHaveBeenCalled();
+    });
+
+    it("is null when none is given and the vendor's assignee is not a user of the organization, and the accept goes on", async () => {
+      // Nothing in the database ties the assignee of a vendor to the vendor's organization.
+      asMock(findUsersNotInOrganization).mockImplementation(async () => {
+        events.push("owner");
+        return [ASSIGNEE];
+      });
+
+      const result = await accept();
+
+      expect(findUsersNotInOrganization).toHaveBeenCalledWith([ASSIGNEE], ORG, transaction);
+      expect(createdOwner()).toBeNull();
+      expect(events).toEqual([
+        "begin",
+        "find",
+        "vendor",
+        "owner",
+        "create",
+        "mark",
+        "commit",
+        "post-commit",
+      ]);
+      expect(result).toEqual({ finding: ACCEPTED, vendorRisk: CREATED_RISK });
+
+      // The log line says what happened by ids alone: no name, no text of the finding.
+      expect(logger.warn).toHaveBeenCalledTimes(1);
+      const line = String(asMock(logger.warn).mock.calls[0][0]);
+      expect(line).toContain(`vendor ${VENDOR}`);
+      expect(line).toContain(`org ${ORG}`);
+      expect(line).toContain(`user ${ASSIGNEE}`);
+      expect(line).not.toContain("Acme Corp");
+      expect(line).not.toContain(PENDING.risk_description);
+    });
+
+    it.each<[string, number]>([
+      ["zero", 0],
+      ["negative", -3],
+      ["a fraction", 1.5],
+      ["not a number", NaN],
+      ["beyond the safe integers", Number.MAX_SAFE_INTEGER + 2],
+    ])(
+      "is null when the vendor's assignee is %s, which is no user id",
+      async (_label, assignee) => {
+        // The lookup ignores ids like these and so reports nothing missing: that is not a yes.
+        asMock(getVendorByIdQuery).mockResolvedValue(vendorWith(assignee));
+        asMock(findUsersNotInOrganization).mockResolvedValue([]);
+
+        await accept();
+
+        expect(createdOwner()).toBeNull();
+        expect(logger.warn).toHaveBeenCalledTimes(1);
+      },
+    );
+
+    it("does not look at the assignee when the caller names the owner", async () => {
+      await accept({ actionOwner: OTHER_USER });
+
+      expect(findUsersNotInOrganization).toHaveBeenCalledTimes(1);
+      expect(findUsersNotInOrganization).toHaveBeenCalledWith([OTHER_USER], ORG, transaction);
+      expect(createdOwner()).toBe(OTHER_USER);
     });
 
     it("is the user that is given, when that user belongs to the organization", async () => {
@@ -379,7 +456,7 @@ describe("acceptFinding", () => {
 
       await expect(accept()).rejects.toBe(failure);
 
-      expect(events).toEqual(["begin", "find", "vendor", "rollback"]);
+      expect(events).toEqual(["begin", "find", "vendor", "owner", "rollback"]);
       expect(markFindingAcceptedQuery).not.toHaveBeenCalled();
       expect(runVendorRiskPostCommitEffects).not.toHaveBeenCalled();
     });
@@ -389,7 +466,7 @@ describe("acceptFinding", () => {
 
       await expect(accept()).rejects.toBeInstanceOf(DatabaseException);
 
-      expect(events).toEqual(["begin", "find", "vendor", "rollback"]);
+      expect(events).toEqual(["begin", "find", "vendor", "owner", "rollback"]);
       expect(markFindingAcceptedQuery).not.toHaveBeenCalled();
       expect(runVendorRiskPostCommitEffects).not.toHaveBeenCalled();
     });
@@ -404,7 +481,7 @@ describe("acceptFinding", () => {
 
       await expect(accept()).rejects.toBeInstanceOf(DatabaseException);
 
-      expect(events).toEqual(["begin", "find", "vendor", "create", "mark", "rollback"]);
+      expect(events).toEqual(["begin", "find", "vendor", "owner", "create", "mark", "rollback"]);
       expect(runVendorRiskPostCommitEffects).not.toHaveBeenCalled();
     });
 
@@ -499,6 +576,34 @@ describe("dismissFinding", () => {
       expect(markFindingDismissedQuery).not.toHaveBeenCalled();
     });
 
+    it("is refused for its length alone when it has more than twice 500 UTF-16 units, without listing its characters", async () => {
+      // A character takes at most two units, so 1001 units are surely more than 500 characters.
+      // The characters of a text of megabytes are not listed to find that out.
+      const iterate = jest.spyOn(String.prototype, Symbol.iterator);
+      try {
+        await expect(dismiss({ note: "d".repeat(1001) })).rejects.toBeInstanceOf(
+          ValidationException,
+        );
+        await expect(dismiss({ note: "\u{1F600}".repeat(501) })).rejects.toBeInstanceOf(
+          ValidationException,
+        );
+        expect(iterate).not.toHaveBeenCalled();
+      } finally {
+        iterate.mockRestore();
+      }
+      expect(markFindingDismissedQuery).not.toHaveBeenCalled();
+    });
+
+    it("still counts the characters of a note of 1000 units or fewer, and refuses 501 of them", async () => {
+      // 1000 units are within the quick limit, so the characters decide: 1000 of them are too many,
+      // and 500 emoji (also 1000 units) are exactly enough.
+      await expect(dismiss({ note: "e".repeat(1000) })).rejects.toBeInstanceOf(ValidationException);
+      expect(markFindingDismissedQuery).not.toHaveBeenCalled();
+
+      await dismiss({ note: "\u{1F600}".repeat(500) });
+      expect(storedNote()).toBe("\u{1F600}".repeat(500));
+    });
+
     it("counts characters the way the column does, not UTF-16 units", async () => {
       // An astral character is one character to Postgres and two units to String.length.
       const astral500 = "\u{1F600}".repeat(500);
@@ -547,6 +652,16 @@ describe("the refusal messages", () => {
       ) as Record<string, string>,
     ]),
   );
+
+  it("name the vendor risk register as the rest of the French and German interface does", () => {
+    const message = "The risk could not be added to the vendor risk register";
+
+    // "risques fournisseurs" is the French for vendor risks elsewhere, and "Anbieterrisiko" the German.
+    expect(dictionaries.fr[message]).toBe(
+      "Le risque n'a pas pu être ajouté au registre des risques fournisseurs",
+    );
+    expect(dictionaries.de[message]).toContain("Anbieterrisiko");
+  });
 
   it("all have a translation in English, German and French, because the controller translates them", async () => {
     asMock(getFindingByIdQuery).mockResolvedValue(null);

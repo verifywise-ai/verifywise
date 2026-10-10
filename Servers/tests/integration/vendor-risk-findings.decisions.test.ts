@@ -414,6 +414,41 @@ describe("POST /api/vendor-risk-findings/:id/accept", () => {
     expect(notifyUserAssigned).not.toHaveBeenCalled();
   });
 
+  it("leaves the action owner empty, and still accepts, when the vendor's assignee is a user of another organization", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts(3);
+    const {
+      vendorId,
+      inserted: [strangerFinding, ownFinding],
+    } = await seedFindings(owner);
+    // Nothing in the database ties the assignee of a vendor to the organization of the vendor.
+    await setAssignee(vendorId, attacker.userId);
+
+    const res = await owner.request.post(acceptUrl(strangerFinding.id));
+
+    expect(res.status).toBe(200);
+    const [risk] = await risksOf(owner.orgId);
+    expect(risk.id).toBe(res.body.data.vendorRisk.id);
+    expect(risk.action_owner).toBeNull();
+    expect(await findingOf(strangerFinding.id)).toMatchObject({
+      status: "accepted",
+      accepted_vendor_risk_id: risk.id,
+    });
+    // The user of the other organization is not told about a risk that is not theirs.
+    expect(notifyUserAssigned).not.toHaveBeenCalled();
+    expect(recomputeJobs()).toHaveLength(1);
+
+    // Positive control: an assignee of the organization becomes the action owner and is told.
+    const assignee = await addUser(owner.orgId);
+    await setAssignee(vendorId, assignee);
+    const again = await owner.request.post(acceptUrl(ownFinding.id));
+    expect(again.status).toBe(200);
+    const created = (await risksOf(owner.orgId)).find(
+      (row) => row.id === again.body.data.vendorRisk.id,
+    );
+    expect(created?.action_owner).toBe(assignee);
+    expect(notifyUserAssigned).toHaveBeenCalledTimes(1);
+  });
+
   it("refuses an action owner who is not a user of the organization, and creates nothing", async () => {
     const { owner, attacker } = await seedTwoTenantContexts(3);
     const {
@@ -822,6 +857,31 @@ describe("POST /api/vendor-risk-findings/:id/dismiss", () => {
     }
   });
 
+  it("takes a note of null as no note: the finding is dismissed and no note is stored", async () => {
+    const { owner } = await seedTwoTenantContexts(3);
+    const {
+      inserted: [finding],
+    } = await seedFindings(owner);
+
+    const res = await owner.request
+      .post(dismissUrl(finding.id))
+      .send({ reason: "not_applicable", note: null });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({
+      id: finding.id,
+      status: "dismissed",
+      dismissed_reason: "not_applicable",
+      dismissed_note: null,
+    });
+    expect(await findingOf(finding.id)).toMatchObject({
+      status: "dismissed",
+      dismissed_reason: "not_applicable",
+      dismissed_note: null,
+      decided_by: owner.userId,
+    });
+  });
+
   it("stores the note trimmed and cleaned: without a NUL, which Postgres refuses, and null when nothing is left", async () => {
     const { owner } = await seedTwoTenantContexts(3);
     const { inserted } = await seedFindings(owner);
@@ -860,6 +920,13 @@ describe("POST /api/vendor-risk-findings/:id/dismiss", () => {
       { id: astral.id },
     );
     expect(stored.length).toBe(500);
+
+    // More than 1000 units cannot be 500 characters or fewer: refused, whatever the characters.
+    const [first, second] = (await seedFindings(owner, "Globex")).inserted;
+    expect((await dismiss(first, "n".repeat(1001))).status).toBe(400);
+    expect((await dismiss(second, "\u{1F600}".repeat(501))).status).toBe(400);
+    expect(await findingOf(first.id)).toEqual(PENDING);
+    expect(await findingOf(second.id)).toEqual(PENDING);
   });
 
   it("answers 400 for a reason or a note that is not valid, and for an id that is not a number", async () => {
@@ -874,7 +941,6 @@ describe("POST /api/vendor-risk-findings/:id/dismiss", () => {
       ["a reason in capitals", finding.id, { reason: "OTHER" }],
       ["a reason that is a number", finding.id, { reason: 5 }],
       ["a note that is a number", finding.id, { reason: "other", note: 5 }],
-      ["a note that is null", finding.id, { reason: "other", note: null }],
       ["an id that is not a number", "abc", { reason: "other" }],
       ["an id of 309 digits", "9".repeat(309), { reason: "other" }],
     ];

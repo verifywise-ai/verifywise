@@ -30,6 +30,7 @@ import {
   IVendorRiskFinding,
 } from "../../domain.layer/interfaces/i.vendorResearch";
 import { VendorRiskModel } from "../../domain.layer/models/vendorRisk/vendorRisk.model";
+import logger from "../../utils/logger/fileLogger";
 import { findUsersNotInOrganization } from "../../utils/user.utils";
 import { getVendorByIdQuery } from "../../utils/vendor.utils";
 import {
@@ -62,8 +63,31 @@ const isLockNotAvailable = (error: unknown): boolean => {
 };
 
 /**
- * Who owns the action of the new risk: the vendor's assignee when the caller says nothing, nobody
- * when the caller says `null`, and the user the caller names, who must belong to the organization.
+ * Whether the user belongs to the organization. The lookup ignores ids that are not positive whole
+ * numbers and so reports nothing missing for them: an empty answer is only a yes for an id that was
+ * valid to begin with.
+ */
+async function isUserOfOrganization(
+  userId: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<boolean> {
+  return (
+    Number.isSafeInteger(userId) &&
+    userId > 0 &&
+    (await findUsersNotInOrganization([userId], organizationId, transaction)).length === 0
+  );
+}
+
+/**
+ * Who owns the action of the new risk: the user the caller names, who must belong to the
+ * organization; nobody when the caller says `null`; and when the caller says nothing, the vendor's
+ * assignee, if that user belongs to the organization too.
+ *
+ * Nothing in the database ties a vendor's assignee to the vendor's organization, and an action
+ * owner of another organization would be sent a notice with the risk's text and the vendor's name.
+ * An assignee who is not a user of the organization is therefore not taken: the risk gets no owner
+ * and the accept goes on, because the caller did not choose that owner and has nothing to correct.
  */
 async function resolveActionOwner(
   requested: number | null | undefined,
@@ -71,16 +95,22 @@ async function resolveActionOwner(
   organizationId: number,
   transaction: Transaction,
 ): Promise<number | null> {
-  if (requested === undefined) return vendor.assignee ?? null;
   if (requested === null) return null;
 
-  // The lookup ignores ids that are not positive whole numbers and so reports nothing missing for
-  // them: an empty answer is only a yes for an id that was valid to begin with.
-  const isUserOfOrganization =
-    Number.isSafeInteger(requested) &&
-    requested > 0 &&
-    (await findUsersNotInOrganization([requested], organizationId, transaction)).length === 0;
-  if (!isUserOfOrganization) {
+  if (requested === undefined) {
+    const assignee = vendor.assignee ?? null;
+    if (assignee === null) return null;
+    if (await isUserOfOrganization(assignee, organizationId, transaction)) return assignee;
+
+    // Ids only: the log must not carry a name or the text of a finding.
+    logger.warn(
+      `accepting a finding of vendor ${vendor.id} (org ${organizationId}): the assignee, user ${assignee}, ` +
+        "is not a user of the organization, so the risk has no action owner",
+    );
+    return null;
+  }
+
+  if (!(await isUserOfOrganization(requested, organizationId, transaction))) {
     throw new ValidationException(
       "The action owner must be a user of your organization",
       "action_owner",
@@ -102,8 +132,9 @@ async function resolveActionOwner(
  * history run outside its transaction), so accepts that waited could use up the pool between them.
  * Anything that goes wrong rolls the whole accept back and leaves the finding pending.
  *
- * @param args.actionOwner Absent: the vendor's assignee. `null`: no owner. A number: that user,
- *   who must belong to the organization.
+ * @param args.actionOwner Absent: the vendor's assignee, when that user belongs to the
+ *   organization, else no owner. `null`: no owner. A number: that user, who must belong to the
+ *   organization.
  * @throws NotFoundException when the organization has no such finding or its vendor is gone
  * @throws ConflictException when the finding is no longer pending, or another decision holds it
  *   at this moment
@@ -212,7 +243,15 @@ function prepareNote(note: string | undefined): string | null {
 
   const cleaned = cleanText(note).trim();
   if (cleaned === "") return null;
-  if (Array.from(cleaned).length > NOTE_MAX_CHARS) {
+
+  // A character takes at most two UTF-16 units, so more than twice the limit in units is surely
+  // more than the limit in characters. That is settled by the length alone, before the characters
+  // are listed to count them: a note can be megabytes long.
+  // The 500 in the message repeats NOTE_MAX_CHARS: the message has to stay a literal for the
+  // extractor of the locale files.
+  const tooLong =
+    cleaned.length > 2 * NOTE_MAX_CHARS || Array.from(cleaned).length > NOTE_MAX_CHARS;
+  if (tooLong) {
     throw new ValidationException("The note can be at most 500 characters", "note");
   }
   return cleaned;

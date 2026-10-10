@@ -838,9 +838,20 @@ describe("dismissVendorRiskFinding", () => {
     expect(mockDismissFinding).not.toHaveBeenCalled();
   });
 
+  it("takes a note of null as no note, and hands the service none", async () => {
+    // A client that sends the whole form says `note: null` for a note it left empty.
+    const res = createMockRes();
+
+    await dismissVendorRiskFinding(dismissReq({ reason: "other", note: null }), res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(mockDismissFinding).toHaveBeenCalledTimes(1);
+    expect(mockDismissFinding.mock.calls[0][0].reason).toBe("other");
+    expect(mockDismissFinding.mock.calls[0][0].note).toBeUndefined();
+  });
+
   it.each<[string, unknown]>([
     ["a number", 5],
-    ["null", null],
     ["a boolean", true],
     ["a list", ["a note"]],
     ["an object", { text: "a note" }],
