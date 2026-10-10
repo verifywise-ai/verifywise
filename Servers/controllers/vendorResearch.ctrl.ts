@@ -13,6 +13,7 @@ import { toId } from "../utils/validations/validation.utils";
 import { getVendorByIdQuery } from "../utils/vendor.utils";
 import { getLLMKeysQuery } from "../utils/llmKey.utils";
 import {
+  STALE_RUN_MINUTES,
   failStaleRunsQuery,
   getLatestRunQuery,
   listFindingsQuery,
@@ -23,12 +24,6 @@ import { FindingStatus, IVendorResearchRun } from "../domain.layer/interfaces/i.
 
 const FILE_NAME = "vendorResearch.ctrl.ts";
 
-/**
- * A run that has been queued or running for this long is lost, for example because the worker
- * restarted: reading the latest run fails it, as starting a new run does.
- */
-const STALE_RUN_MINUTES = 15;
-
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
 
@@ -37,10 +32,13 @@ const FINDING_STATUSES: readonly FindingStatus[] = ["pending", "accepted", "dism
 const isFindingStatus = (value: unknown): value is FindingStatus =>
   FINDING_STATUSES.includes(value as FindingStatus);
 
-/** An id off the wire that is a positive whole number, or NaN. */
+/**
+ * An id off the wire that is a positive whole number a float holds exactly, or NaN. `toId` turns
+ * a string of 309 or more digits into Infinity, which is greater than zero but is not an id.
+ */
 const positiveId = (value: unknown): number => {
   const id = toId(value);
-  return id > 0 ? id : NaN;
+  return Number.isSafeInteger(id) && id > 0 ? id : NaN;
 };
 
 type RunResponse = Pick<

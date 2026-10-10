@@ -26,6 +26,7 @@ import { getLLMKeysQuery } from "../../utils/llmKey.utils";
 import logger from "../../utils/logger/fileLogger";
 import { getVendorByIdQuery } from "../../utils/vendor.utils";
 import {
+  STALE_RUN_MINUTES,
   countRunsSinceQuery,
   createRunQuery,
   failStaleRunsQuery,
@@ -36,8 +37,6 @@ import {
 import { enqueueVendorResearch } from "../automations/automationProducer";
 import { getVendorResearchConfig, isSearchConfigured } from "./config";
 
-/** A run that has been queued or running for this long is failed before a new run is started. */
-const STALE_RUN_MINUTES = 15;
 const MINUTE_MS = 60_000;
 /** The daily cap counts the runs of a rolling 24 hours. */
 const DAY_MS = 24 * 60 * MINUTE_MS;

@@ -76,6 +76,9 @@ export const createRunQuery = async (input: {
   return rows[0];
 };
 
+/** Minutes after which a queued or running run counts as lost; pass it to `failStaleRunsQuery`. */
+export const STALE_RUN_MINUTES = 15;
+
 /**
  * Fails the vendor's queued or running runs whose age, counted from the start
  * (or from creation when they never started), exceeds the limit.

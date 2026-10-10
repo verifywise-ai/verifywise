@@ -5,6 +5,7 @@ jest.mock("../../database/db", () => ({ sequelize: { query: jest.fn() } }));
 jest.mock("../../utils/vendor.utils", () => ({ getVendorByIdQuery: jest.fn() }));
 jest.mock("../../utils/llmKey.utils", () => ({ getLLMKeysQuery: jest.fn() }));
 jest.mock("../../utils/vendorResearch.utils", () => ({
+  STALE_RUN_MINUTES: 15,
   failStaleRunsQuery: jest.fn(),
   getLatestRunQuery: jest.fn(),
   listFindingsQuery: jest.fn(),
@@ -101,6 +102,22 @@ const RUN_RESPONSE_FIELDS = [
 ].sort();
 
 const SENTINELS = [EVIDENCE_SENTINEL, MODEL_SENTINEL, PROMPT_SENTINEL, SEARCH_PROVIDER_SENTINEL];
+
+/**
+ * Vendor ids that every route that takes one must refuse before it looks anything up. 309 nines
+ * are more than the largest float: Number() turns them into Infinity, which is greater than zero.
+ */
+const BAD_VENDOR_IDS: Array<[string, string | string[]]> = [
+  ["not a number", "abc"],
+  ["a fraction", "1.5"],
+  ["zero", "0"],
+  ["negative", "-3"],
+  ["a number followed by text", "7abc"],
+  ["empty", ""],
+  ["in exponent notation", "1e3"],
+  ["309 digits long", "9".repeat(309)],
+  ["given as a list", ["5"]],
+];
 
 function createMockReq(partial: Record<string, unknown> = {}): Request {
   return {
@@ -203,9 +220,9 @@ describe("startVendorResearchRun", () => {
     }
   });
 
-  it.each(["abc", "1.5", "0", "-3", "7abc", ""])(
-    "answers 400 for the vendor id %j and does nothing",
-    async (id) => {
+  it.each(BAD_VENDOR_IDS)(
+    "answers 400 for a vendor id that is %s, and looks up and starts nothing",
+    async (_name, id) => {
       const res = createMockRes();
 
       await startVendorResearchRun(createMockReq({ params: { id } }), res);
@@ -302,15 +319,19 @@ describe("startVendorResearchRun", () => {
 });
 
 describe("getLatestVendorResearch", () => {
-  it.each(["abc", "1.5", "0", "-3"])("answers 400 for the vendor id %j", async (id) => {
-    const res = createMockRes();
+  it.each(BAD_VENDOR_IDS)(
+    "answers 400 for a vendor id that is %s, and looks up and reads nothing",
+    async (_name, id) => {
+      const res = createMockRes();
 
-    await getLatestVendorResearch(createMockReq({ params: { id } }), res);
+      await getLatestVendorResearch(createMockReq({ params: { id } }), res);
 
-    expect(res.status).toHaveBeenCalledWith(400);
-    expect(mockGetVendorByIdQuery).not.toHaveBeenCalled();
-    expect(mockFailStaleRunsQuery).not.toHaveBeenCalled();
-  });
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockGetVendorByIdQuery).not.toHaveBeenCalled();
+      expect(mockFailStaleRunsQuery).not.toHaveBeenCalled();
+      expect(mockGetLatestRunQuery).not.toHaveBeenCalled();
+    },
+  );
 
   it("answers 404 for a vendor that is not in the organization, without touching its runs", async () => {
     mockGetVendorByIdQuery.mockResolvedValue(null);
@@ -475,9 +496,10 @@ describe("listVendorRiskFindings", () => {
     ["an unknown status", { status: "open" }],
     ["an empty status", { status: "" }],
     ["a status given twice", { status: ["pending", "accepted"] }],
-    ["a vendor id that is not a number", { vendorId: "abc" }],
-    ["a vendor id of zero", { vendorId: "0" }],
-    ["a vendor id with a fraction", { vendorId: "1.5" }],
+    ...BAD_VENDOR_IDS.map(([name, vendorId]): [string, { vendorId: string | string[] }] => [
+      `a vendor id that is ${name}`,
+      { vendorId },
+    ]),
     ["a vendor id given twice", { vendorId: ["1", "2"] }],
     ["a limit that is not a number", { limit: "many" }],
     ["a limit of zero", { limit: "0" }],
@@ -488,6 +510,7 @@ describe("listVendorRiskFindings", () => {
     ["a negative offset", { offset: "-1" }],
     ["an offset with a fraction", { offset: "0.5" }],
     ["an offset too large for the database", { offset: "99999999999999999999" }],
+    ["an offset given twice", { offset: ["10", "20"] }],
   ])("answers 400 for %s", async (_name, query) => {
     const res = createMockRes();
 

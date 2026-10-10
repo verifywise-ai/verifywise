@@ -7,6 +7,7 @@ jest.mock("../config", () => ({
 jest.mock("../../../utils/vendor.utils", () => ({ getVendorByIdQuery: jest.fn() }));
 jest.mock("../../../utils/llmKey.utils", () => ({ getLLMKeysQuery: jest.fn() }));
 jest.mock("../../../utils/vendorResearch.utils", () => ({
+  STALE_RUN_MINUTES: 15,
   countRunsSinceQuery: jest.fn(),
   createRunQuery: jest.fn(),
   failStaleRunsQuery: jest.fn(),
