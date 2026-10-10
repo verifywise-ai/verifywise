@@ -93,12 +93,11 @@ const requestBody = {
   risk_level: "High Risk",
 };
 
-// What the model factory returns and what the insert returns; the controller must pass them on as-is.
+// What the model factory and the insert return; the create flow must pass them on as-is.
 const builtModel = { builtBy: "VendorRiskModel.createNewVendorRisk" };
 const insertedRisk = { id: 42, ...requestBody };
 
 let transaction: { commit: AnyMock; rollback: AnyMock };
-let consoleWarn: ReturnType<typeof jest.spyOn>;
 let originalFrontendUrl: string | undefined;
 
 const makeReq = (overrides: Record<string, unknown> = {}): Request =>
@@ -117,17 +116,15 @@ const makeRes = () => {
   return res as Response & { status: AnyMock; json: AnyMock };
 };
 
-// The candidate notice runs in a .then chain after the handler has already answered.
+// The post-commit effects are fire-and-forget (async IIFEs in the service), so the candidate
+// notice can still be mid-flight when the handler resolves; let it settle before asserting.
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 
 const callOrder = (fn: unknown): number => asMock(fn).mock.invocationCallOrder[0];
 
-// Everything written to a warning channel: console.warn today, logger.warn once the logic is
-// extracted. Either channel satisfies "the failure is reported".
+// Everything the request reported through logger.warn, one string per call.
 const warnings = (): string[] =>
-  [...consoleWarn.mock.calls, ...asMock(logger.warn).mock.calls].map((args) =>
-    args.map(String).join(" "),
-  );
+  asMock(logger.warn).mock.calls.map((args) => args.map(String).join(" "));
 
 describe("createVendorRisk", () => {
   beforeEach(() => {
@@ -149,13 +146,11 @@ describe("createVendorRisk", () => {
     asMock(notifyUserAssigned).mockResolvedValue(undefined);
     asMock(logSuccess).mockResolvedValue(undefined);
     asMock(logFailure).mockResolvedValue(undefined);
-    consoleWarn = jest.spyOn(console, "warn").mockImplementation(() => undefined);
     originalFrontendUrl = process.env.FRONTEND_URL;
     process.env.FRONTEND_URL = FRONTEND_URL;
   });
 
   afterEach(() => {
-    consoleWarn.mockRestore();
     if (originalFrontendUrl === undefined) delete process.env.FRONTEND_URL;
     else process.env.FRONTEND_URL = originalFrontendUrl;
   });

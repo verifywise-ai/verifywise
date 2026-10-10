@@ -70,7 +70,11 @@ export async function createVendorRiskInTransaction(
   const created = await createNewVendorRiskQuery(vendorRiskModel, organizationId, transaction);
   if (!created) return null;
 
-  // Create framework associations if provided
+  // Create framework associations if provided.
+  // A failed INSERT aborts the whole Postgres transaction even though it is caught here. With a
+  // user id the history insert below then fails and the request answers 500; without one, the
+  // commit of the aborted transaction silently rolls back although the controller answers 201.
+  // Preserved from the old controller: callers that pass `frameworks` must know this.
   const { frameworks } = input;
   if (frameworks && frameworks.length > 0 && created.id) {
     try {
@@ -83,9 +87,7 @@ export async function createVendorRiskInTransaction(
     } catch (fwError) {
       // The logger has no format.splat(): a detail passed as a second argument never reaches
       // the log line, so it goes into the message.
-      logger.warn(
-        `Could not create framework associations (table may not exist yet): ${(fwError as Error).message}`,
-      );
+      logger.warn(`Could not create framework associations: ${(fwError as Error).message}`);
     }
   }
 

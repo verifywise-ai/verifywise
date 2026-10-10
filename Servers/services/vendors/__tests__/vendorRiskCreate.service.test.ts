@@ -76,7 +76,8 @@ const asRisk = (overrides: Record<string, unknown> = {}): VendorRiskModel =>
 let transaction: Transaction;
 const originalFrontendUrl = process.env.FRONTEND_URL;
 
-// The post-commit effects run in .then chains after the function has resolved.
+// The post-commit effects are fire-and-forget (async IIFEs, see launch() in the service), so they
+// can still be mid-flight when the function resolves; let them settle before asserting.
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 const neverSettles = () => new Promise<never>(() => undefined);
 

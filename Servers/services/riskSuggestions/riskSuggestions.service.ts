@@ -130,7 +130,7 @@ export function normalizeCatalogCategories(categories: string[]): string[] {
 
 /**
  * Lowercase, strip everything but [a-z0-9 ], split, drop tokens of length <= 2.
- * Identical to the tokenise in vendors/riskSuggestions.ts so the suppression
+ * Identical to the tokenise in vendors/textSimilarity.ts so the suppression
  * threshold below means the same thing in both features.
  */
 function tokenise(text: string): Set<string> {
