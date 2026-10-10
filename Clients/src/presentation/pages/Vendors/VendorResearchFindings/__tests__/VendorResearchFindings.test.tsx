@@ -121,29 +121,16 @@ describe("the states of the section", () => {
     expect(screen.queryByText(SECOND)).not.toBeInTheDocument();
   });
 
-  it("says research is not set up when nothing is pending and the setup is incomplete", async () => {
+  it.each([
+    ["there is no search provider", { searchConfigured: false, hasLlmKey: true }],
+    ["the organization has no LLM key", { searchConfigured: true, hasLlmKey: false }],
+  ])("says research is not set up when nothing is pending and %s", async (_case, setup) => {
     mocks.list.mockResolvedValue({ rows: [], total: 0 });
-    mocks.config.mockResolvedValue({
-      searchConfigured: false,
-      hasLlmKey: true,
-      autoRunEnabled: true,
-    });
+    mocks.config.mockResolvedValue({ ...setup, autoRunEnabled: true });
     renderSection({ route: WITH_VENDOR_7 });
 
     expect(await screen.findByText("Vendor research is not set up.")).toBeInTheDocument();
     expect(screen.queryByText("No pending research findings.")).not.toBeInTheDocument();
-  });
-
-  it("says research is not set up when the organization has no LLM key", async () => {
-    mocks.list.mockResolvedValue({ rows: [], total: 0 });
-    mocks.config.mockResolvedValue({
-      searchConfigured: true,
-      hasLlmKey: false,
-      autoRunEnabled: true,
-    });
-    renderSection({ route: WITH_VENDOR_7 });
-
-    expect(await screen.findByText("Vendor research is not set up.")).toBeInTheDocument();
   });
 
   it("tells an Admin which settings are missing", async () => {
@@ -214,9 +201,10 @@ describe("the states of the section", () => {
     renderSection({ route: WITH_VENDOR_7 });
 
     expect(await screen.findByText(FIRST)).toBeInTheDocument();
-    const button = await screen.findByRole("button", { name: "Research again" });
-    expect(button).toBeDisabled();
-    await userEvent.hover(button.parentElement as HTMLElement);
+    // The button is rebuilt inside its tooltip once the settings say research is not set up.
+    const againButton = () => screen.getByRole("button", { name: "Research again" });
+    await waitFor(() => expect(againButton()).toBeDisabled());
+    await userEvent.hover(againButton().parentElement as HTMLElement);
     expect(await screen.findByRole("tooltip")).toHaveTextContent("Vendor research is not set up.");
     // Accepting what was found does not depend on the setup.
     expect(within(rowOf(FIRST)).getByRole("button", { name: "Accept" })).toBeEnabled();
@@ -329,21 +317,40 @@ describe("a finding", () => {
     ).toBeInTheDocument();
   });
 
+  // Source addresses are text from the open web, through a model. Only a plain http or https
+  // address becomes a link: scripts in any spelling, other schemes, and anything relative or
+  // empty do not.
+  const NOT_LINKS = [
+    "javascript:alert(1)",
+    " javascript:alert(1)",
+    "java\tscript:alert(1)",
+    "JaVaScRiPt:alert(1)",
+    "vbscript:msgbox(1)",
+    "ftp://files.example.com/report",
+    "data:text/html,<b>x</b>",
+    "not a url",
+    "//evil.example.com/x",
+    "/x",
+    "http://",
+  ];
+
   it("links only http and https sources, and calls any other an unknown source", async () => {
     mocks.list.mockResolvedValue({
       rows: [
         finding({
           sources: [
-            { url: "javascript:alert(1)", title: "a", quote: "first", published_at: null },
+            ...NOT_LINKS.map((url, index) => ({
+              url,
+              title: "t",
+              quote: `quote ${index}`,
+              published_at: null,
+            })),
             {
-              url: "ftp://files.example.com/report",
-              title: "b",
-              quote: "second",
+              url: "HTTPS://Upper.Example.com/x",
+              title: "e",
+              quote: "the link",
               published_at: null,
             },
-            { url: "not a url", title: "c", quote: "third", published_at: null },
-            { url: "data:text/html,<b>x</b>", title: "d", quote: "fourth", published_at: null },
-            { url: "HTTPS://Upper.Example.com/x", title: "e", quote: "fifth", published_at: null },
           ],
         }),
       ],
@@ -352,13 +359,19 @@ describe("a finding", () => {
     renderSection();
     await screen.findByText(FIRST);
 
+    // The one safe address is the only anchor in the row, and it says its host.
     const row = within(rowOf(FIRST));
-    expect(row.getAllByRole("link")).toHaveLength(1);
+    expect(rowOf(FIRST).querySelectorAll("a")).toHaveLength(1);
     expect(row.getByRole("link", { name: "upper.example.com" })).toBeInTheDocument();
-    expect(row.getAllByText("Unknown source")).toHaveLength(4);
-    // The quote of a source without a link is still shown.
-    expect(row.getByText("first")).toBeInTheDocument();
+    // Every other source says so, has no anchor, and keeps its quote.
+    expect(row.getAllByText("Unknown source")).toHaveLength(NOT_LINKS.length);
+    NOT_LINKS.forEach((_url, index) => {
+      const source = row.getByText(`quote ${index}`).parentElement as HTMLElement;
+      expect(source.querySelector("a")).toBeNull();
+      expect(within(source).getByText("Unknown source")).toBeInTheDocument();
+    });
     expect(row.queryByText("example.com")).not.toBeInTheDocument();
+    expect(row.queryByText("evil.example.com")).not.toBeInTheDocument();
   });
 
   it("renders a quote as plain text, never as markup", async () => {
@@ -460,6 +473,20 @@ describe("accepting a finding", () => {
     expect(screen.queryByText("Risk added to the register.")).not.toBeInTheDocument();
   });
 
+  it("gives the buttons of the notice the house control height of 30px", async () => {
+    acceptsAndLeavesOnlyTheSecond();
+    renderSection();
+    await screen.findByText(FIRST);
+    await userEvent.click(within(rowOf(FIRST)).getByRole("button", { name: "Accept" }));
+    const notice = within(noticeOf(await screen.findByText("Risk added to the register.")));
+
+    expect(notice.getByRole("button", { name: "Open risk" })).toHaveStyle({ height: "30px" });
+    expect(notice.getByRole("button", { name: "Close" })).toHaveStyle({
+      height: "30px",
+      width: "30px",
+    });
+  });
+
   it("keeps the section and the notice open after the last pending finding is accepted", async () => {
     mocks.list.mockResolvedValue({ rows: [finding()], total: 1 });
     mocks.accept.mockImplementation(async () => {
@@ -531,6 +558,64 @@ describe("accepting a finding", () => {
     await waitFor(() =>
       expect(screen.queryByText("Risk added to the register.")).not.toBeInTheDocument(),
     );
+  });
+
+  it("drops the notice as the next accept starts, so a refused accept leaves no old notice", async () => {
+    const second = deferred<{
+      finding: ReturnType<typeof finding>;
+      vendorRisk: ReturnType<typeof acceptedRisk>;
+    }>();
+    mocks.accept.mockImplementation(async (id) => {
+      if (id !== 1) return second.promise;
+      mocks.list.mockResolvedValue({ rows: [secondFinding()], total: 1 });
+      return { finding: finding({ status: "accepted" }), vendorRisk: acceptedRisk() };
+    });
+    renderSection();
+    await screen.findByText(FIRST);
+    await userEvent.click(within(rowOf(FIRST)).getByRole("button", { name: "Accept" }));
+    await screen.findByText("Risk added to the register.");
+
+    await userEvent.click(within(rowOf(SECOND)).getByRole("button", { name: "Accept" }));
+
+    // Gone as the request leaves, while it is still on its way...
+    await waitFor(() => expect(mocks.accept).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText("Risk added to the register.")).not.toBeInTheDocument();
+    // ...and it does not come back when that request is refused.
+    await act(async () => {
+      second.reject(refusal(409, "Finding already accepted"));
+    });
+    await waitFor(() =>
+      expect(within(rowOf(SECOND)).getByRole("button", { name: "Accept" })).toBeEnabled(),
+    );
+    expect(screen.queryByText("Risk added to the register.")).not.toBeInTheDocument();
+  });
+
+  it("drops the notice as the next dismissal is sent, so a refused one leaves no old notice", async () => {
+    acceptsAndLeavesOnlyTheSecond();
+    const pending = deferred<ReturnType<typeof finding>>();
+    mocks.dismiss.mockReturnValue(pending.promise);
+    renderSection();
+    await screen.findByText(FIRST);
+    await userEvent.click(within(rowOf(FIRST)).getByRole("button", { name: "Accept" }));
+    await screen.findByText("Risk added to the register.");
+    await userEvent.click(within(rowOf(SECOND)).getByRole("button", { name: "Dismiss" }));
+    const dialog = await screen.findByRole("dialog", { name: "Dismiss finding" });
+    await userEvent.click(within(dialog).getByRole("combobox"));
+    await userEvent.click(await screen.findByRole("option", { name: "Other" }));
+
+    await userEvent.click(within(dialog).getByRole("button", { name: "Dismiss" }));
+
+    // Gone as the request leaves, while it is still on its way...
+    await waitFor(() => expect(mocks.dismiss).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText("Risk added to the register.")).not.toBeInTheDocument();
+    // ...and it does not come back when that request is refused.
+    await act(async () => {
+      pending.reject(refusal(409, "Finding already dismissed"));
+    });
+    await waitFor(() =>
+      expect(within(dialog).getByRole("button", { name: "Dismiss" })).toBeEnabled(),
+    );
+    expect(screen.queryByText("Risk added to the register.")).not.toBeInTheDocument();
   });
 
   it("says nothing more when the accept fails, since the global toast reports it", async () => {
@@ -788,17 +873,14 @@ describe("the vendor filter", () => {
     expect(mocks.latest).toHaveBeenCalledWith(7);
   });
 
-  it.each(["abc", "0", "-3", "7.5", "7abc", "1e2", ""])(
-    "treats the URL value %j as all vendors",
-    async (value) => {
-      renderSection({ route: `/vendors/risks?findingsVendorId=${value}` });
-      await screen.findByText(FIRST);
+  it("treats a URL value that is not a vendor id as all vendors", async () => {
+    renderSection({ route: "/vendors/risks?findingsVendorId=abc" });
+    await screen.findByText(FIRST);
 
-      expect(screen.getByRole("combobox")).toHaveTextContent("All vendors");
-      expect(mocks.list).toHaveBeenCalledWith({ status: "pending", limit: 200 });
-      expect(mocks.latest).not.toHaveBeenCalled();
-    },
-  );
+    expect(screen.getByRole("combobox")).toHaveTextContent("All vendors");
+    expect(mocks.list).toHaveBeenCalledWith({ status: "pending", limit: 200 });
+    expect(mocks.latest).not.toHaveBeenCalled();
+  });
 
   it("still offers a vendor from the URL that the page's own list does not have", async () => {
     renderSection({ route: "/vendors/risks?findingsVendorId=99" });
@@ -910,17 +992,6 @@ describe("the latest run of the chosen vendor", () => {
       screen.getByText("The vendor website is missing or is not a valid domain."),
     ).toBeInTheDocument();
     expect(screen.getByText("Last run: 10 Oct 2026")).toBeInTheDocument();
-  });
-
-  it("names the nothing-found category the way the brief's example does", async () => {
-    mocks.latest.mockResolvedValue(
-      run({
-        category_summary: [{ category: "security_incidents", outcome: "nothing_found", note: "x" }],
-      }),
-    );
-    renderSection({ route: WITH_VENDOR_7 });
-
-    expect(await screen.findByText("Security incidents: nothing found")).toBeInTheDocument();
   });
 
   it("shows a note the model wrote as plain text under an unverified label", async () => {

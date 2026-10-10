@@ -6,11 +6,13 @@
  * (see "Stored English strings" in the server contract). They are a closed set, so each one
  * maps to a sentence with a translation. Anything outside the set becomes a generic sentence,
  * or is hidden: it could be text from the open web that a model wrote, and a failure message
- * could name a host or a port.
+ * could name a host or a port. The note of a category is keyed by the category's outcome: a
+ * phrase counts as ours only on the outcome the server writes it for.
  *
  * The one exception is the note of a category where nothing was found. There the model may
- * have written its own note. That is untrusted free text; it comes back marked as such, with a
- * translated label, and the screen renders it as plain text.
+ * have written its own note, in any words, even ones that sound like ours. That is untrusted
+ * free text; it comes back marked as such, with a translated label, and the screen renders it
+ * as plain text.
  *
  * `t` defaults to the active language (read the way customAxios reads it). A component passes
  * the `t` of `useTranslation()` so that it renders again once a dictionary arrives; tests pass
@@ -177,56 +179,87 @@ export function describeRunError(error: string | null, t: Translate = translateK
 
 // ── The note of a category ───────────────────────────────────────────────────
 
-/** Notes that are one fixed phrase, and the sentence each becomes. */
-const CATEGORY_NOTE_SENTENCES = new Map<string, string>([
+/**
+ * The phrases the server writes as the note of a category, kept by the outcome they go with. A
+ * phrase is one of our sentences only on its own outcome: the same words on another outcome did
+ * not come from the server, so they are never taken as ours.
+ */
+const SKIPPED_NOTES = new Map<string, string>([
   [
     "Vendor website is missing or not a valid domain",
     "The vendor website is missing or is not a valid domain.",
   ],
+]);
+
+const NOTHING_FOUND_NOTES = new Map<string, string>([
   ["No risks found in the search results", "No risks were found in the search results."],
   [
     "Possible risks were found but could not be verified or are already recorded",
     "Possible risks were found but could not be verified, or are already recorded.",
   ],
+]);
+
+const SEARCH_FAILED_NOTES = new Map<string, string>([
   ["search timed out", "The search timed out."],
   ["search request failed", "The search request failed."],
   ["search response could not be read", "The search response could not be read."],
   ["The search failed", "The search failed."],
 ]);
 
+/** The failure note that carries a status: only on a category whose search failed. */
 const SEARCH_FAILED_STATUS = /^Tavily search failed with status (\d{3})$/;
+/** The count note: only on a category that has findings. */
 const POTENTIAL_RISKS = /^(\d{1,6}) potential risks? found$/;
 
 /** What to show under a category's line: a fixed sentence, or the model's own words, flagged. */
 export type CategoryNote =
   { kind: "fixed"; text: string } | { kind: "model"; text: string; label: string };
 
-function fixedCategoryNote(note: string, t: Translate): string | null {
-  const sentence = CATEGORY_NOTE_SENTENCES.get(note);
-  if (sentence !== undefined) return t(sentence);
+function fixedSentence(
+  sentences: ReadonlyMap<string, string>,
+  note: string,
+  t: Translate,
+): string | null {
+  const sentence = sentences.get(note);
+  return sentence === undefined ? null : t(sentence);
+}
 
-  const searchStatus = SEARCH_FAILED_STATUS.exec(note);
-  if (searchStatus) {
-    return fill(t("The search failed with HTTP status {status}."), { status: searchStatus[1] });
+/** The fixed sentence for a note, if the server writes this note on this outcome. */
+function fixedCategoryNote(outcome: unknown, note: string, t: Translate): string | null {
+  switch (outcome) {
+    case "findings": {
+      const risks = POTENTIAL_RISKS.exec(note);
+      if (!risks) return null;
+      const count = Number(risks[1]);
+      return count === 1
+        ? t("1 potential risk found")
+        : fill(t("{count} potential risks found"), { count });
+    }
+    case "skipped":
+      return fixedSentence(SKIPPED_NOTES, note, t);
+    case "nothing_found":
+      return fixedSentence(NOTHING_FOUND_NOTES, note, t);
+    case "search_failed": {
+      const sentence = fixedSentence(SEARCH_FAILED_NOTES, note, t);
+      if (sentence !== null) return sentence;
+      const status = SEARCH_FAILED_STATUS.exec(note);
+      return status
+        ? fill(t("The search failed with HTTP status {status}."), { status: status[1] })
+        : null;
+    }
+    default:
+      return null;
   }
-
-  const risks = POTENTIAL_RISKS.exec(note);
-  if (risks) {
-    const count = Number(risks[1]);
-    return count === 1
-      ? t("1 potential risk found")
-      : fill(t("{count} potential risks found"), { count });
-  }
-  return null;
 }
 
 /**
  * The note of a category summary entry, or null when there is nothing safe to show.
  *
- * A note outside the fixed set is shown only for a category where nothing was found: that is
- * where the model may have written one. It comes back as `model`, with the label that says it
- * is unverified, and the caller renders `text` as plain text. On any other outcome an unknown
- * note is dropped.
+ * What counts as a fixed note depends on the outcome of the category (see the phrase tables
+ * above). A note outside the set for its outcome is shown only for a category where nothing was
+ * found: that is where the model may have written one, whatever words it used. It comes back as
+ * `model`, with the label that says it is unverified, and the caller renders `text` as plain
+ * text. On any other outcome a note outside the set is dropped.
  */
 export function describeCategoryNote(
   entry: Pick<CategorySummaryEntry, "outcome" | "note">,
@@ -235,7 +268,7 @@ export function describeCategoryNote(
   const note = typeof entry?.note === "string" ? entry.note.trim() : "";
   if (note === "") return null;
 
-  const fixed = fixedCategoryNote(note, t);
+  const fixed = fixedCategoryNote(entry.outcome, note, t);
   if (fixed !== null) return { kind: "fixed", text: fixed };
 
   if (entry.outcome === "nothing_found") {

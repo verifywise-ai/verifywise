@@ -1,5 +1,7 @@
-import { Box, CircularProgress, Skeleton, Stack, Tooltip, Typography } from "@mui/material";
+import { Box, CircularProgress, Stack, Typography } from "@mui/material";
 import { AlertCircle } from "lucide-react";
+import CustomizableSkeleton from "../../../components/Skeletons";
+import VWTooltip from "../../../components/VWTooltip";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import { textStyles } from "../../../themes/typography";
 import { errorAlertSx, errorTextSx } from "../../RiskInheritanceGraph/DismissalAnalytics/styles";
@@ -20,6 +22,8 @@ import {
   formatResearchDate,
 } from "../../../../application/utils/vendorResearchText";
 import { fill } from "../../../../i18n/fill";
+import InlineError from "./InlineError";
+import { controlHeightSx } from "./styles";
 
 interface RunSummaryProps {
   vendorId: number;
@@ -30,8 +34,6 @@ interface RunSummaryProps {
   notConfigured: boolean;
   onNotify: (alert: ResearchAlert) => void;
 }
-
-const buttonSx = { height: "30px", minHeight: "30px" };
 
 /**
  * What the latest research run of one vendor found, category by category, and the button
@@ -70,18 +72,15 @@ export default function RunSummary({
   const renderBody = () => {
     if (latest.isError) {
       return (
-        <Box sx={errorAlertSx} role="alert">
-          <AlertCircle size={16} />
-          <Typography sx={errorTextSx}>Could not load the latest research run.</Typography>
-          <Box sx={{ ml: "auto" }}>
-            <CustomizableButton size="small" variant="text" onClick={() => void latest.refetch()}>
-              Retry
-            </CustomizableButton>
-          </Box>
-        </Box>
+        <InlineError
+          message="Could not load the latest research run."
+          onRetry={() => void latest.refetch()}
+        />
       );
     }
-    if (latest.isPending) return <Skeleton variant="rounded" height={40} />;
+    if (latest.isPending) {
+      return <CustomizableSkeleton variant="rounded" width="100%" height={40} />;
+    }
     if (!run) {
       return (
         <Typography sx={{ ...textStyles.body, color: "text.tertiary" }}>
@@ -158,6 +157,17 @@ export default function RunSummary({
     );
   };
 
+  const researchAgain = (
+    <CustomizableButton
+      variant="outlined"
+      isDisabled={startDisabled}
+      onClick={() => void handleStart()}
+      sx={controlHeightSx}
+    >
+      Research again
+    </CustomizableButton>
+  );
+
   return (
     <Box
       sx={{
@@ -181,22 +191,15 @@ export default function RunSummary({
         <Typography sx={{ ...textStyles.subsectionTitle, color: "text.primary" }}>
           Latest research
         </Typography>
-        {canStart && (
-          // A disabled button fires no pointer events, so the span carries the tooltip. The span
-          // is always there, so that the button is not rebuilt when the settings arrive.
-          <Tooltip title={notConfigured ? t("Vendor research is not set up.") : undefined}>
-            <span>
-              <CustomizableButton
-                variant="outlined"
-                isDisabled={startDisabled}
-                onClick={() => void handleStart()}
-                sx={buttonSx}
-              >
-                Research again
-              </CustomizableButton>
-            </span>
-          </Tooltip>
-        )}
+        {canStart &&
+          (notConfigured ? (
+            // A disabled button fires no pointer events, so the span carries the tooltip.
+            <VWTooltip content={t("Vendor research is not set up.")}>
+              <span>{researchAgain}</span>
+            </VWTooltip>
+          ) : (
+            researchAgain
+          ))}
       </Stack>
       {renderBody()}
     </Box>

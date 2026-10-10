@@ -75,6 +75,8 @@ const FIXED_NOTES: Array<[outcome: CategoryOutcome, stored: string, sentence: st
   ["search_failed", "The search failed", "The search failed."],
 ];
 
+const ALL_OUTCOMES: CategoryOutcome[] = ["findings", "nothing_found", "search_failed", "skipped"];
+
 const entry = (
   outcome: CategoryOutcome,
   note: string,
@@ -149,6 +151,41 @@ describe("describeCategoryNote", () => {
     });
   });
 
+  it("does not turn a model's note into a system sentence because it repeats one", () => {
+    // On a category where nothing was found, the note may be the model's own. A model can write
+    // "3 potential risks found" or "search timed out" there; only the server's own phrases for
+    // this outcome are fixed sentences, so these come back flagged as the model's.
+    for (const phrase of ["3 potential risks found", "search timed out"]) {
+      expect(describeCategoryNote(entry("nothing_found", phrase))).toEqual({
+        kind: "model",
+        text: phrase,
+        label: "AI note (unverified)",
+      });
+    }
+  });
+
+  it("hides the phrase of one outcome on a category with another outcome", () => {
+    expect(
+      describeCategoryNote(entry("findings", "No risks found in the search results")),
+    ).toBeNull();
+    expect(describeCategoryNote(entry("skipped", "2 potential risks found"))).toBeNull();
+    expect(describeCategoryNote(entry("search_failed", "1 potential risk found"))).toBeNull();
+  });
+
+  it.each(FIXED_NOTES)(
+    "takes the %s note %j as a fixed sentence for that outcome only",
+    (outcome, stored) => {
+      for (const other of ALL_OUTCOMES.filter((candidate) => candidate !== outcome)) {
+        // Never a sentence of ours; the model's own where nothing was found, hidden elsewhere.
+        expect(describeCategoryNote(entry(other, stored))).toEqual(
+          other === "nothing_found"
+            ? { kind: "model", text: stored, label: "AI note (unverified)" }
+            : null,
+        );
+      }
+    },
+  );
+
   it("keeps the text of a model-written note and marks it as unverified", () => {
     expect(
       describeCategoryNote(entry("nothing_found", "  Only marketing pages were indexed.  ")),
@@ -185,6 +222,9 @@ describe("describeCategoryNote", () => {
       expect(describeCategoryNote(odd as never)).toBeNull();
     }
     expect(describeCategoryNote({ outcome: "mystery", note: "text" } as never)).toBeNull();
+    for (const outcome of ["constructor", "__proto__", "toString"]) {
+      expect(describeCategoryNote({ outcome, note: "text" } as never)).toBeNull();
+    }
   });
 });
 

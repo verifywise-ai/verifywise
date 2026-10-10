@@ -70,6 +70,11 @@ export interface SelectCorProps {
     surname?: string;
     icon?: React.ComponentType<{ color?: string; size?: number }>;
     color?: string;
+    /**
+     * The name is the user's own text (a vendor's name, say), not a word of the app: the DOM
+     * translator leaves it alone, in the menu and as the selected value.
+     */
+    noTranslate?: boolean;
   }[];
   /**
    * Accessible name for selects with no visible label. Without it the

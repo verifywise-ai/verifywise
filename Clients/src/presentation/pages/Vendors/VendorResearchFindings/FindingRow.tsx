@@ -13,6 +13,7 @@ import type {
   FindingSource,
   VendorRiskFinding,
 } from "../../../../domain/interfaces/i.vendorResearch";
+import { controlHeightSx } from "./styles";
 
 /** The decision being sent for a row. */
 export type RowAction = "accept" | "dismiss";
@@ -29,7 +30,6 @@ interface FindingRowProps {
 
 const captionSx = { ...textStyles.caption, color: "text.accent" };
 const scaleSx = { gap: "4px", alignItems: "flex-start" };
-const buttonSx = { height: "30px", minHeight: "30px" };
 
 /**
  * Where a source points, when it points somewhere safe. A source URL is text from the open
@@ -192,7 +192,7 @@ export default function FindingRow({
               variant="outlined"
               isDisabled={disabled}
               onClick={() => onDismiss(finding)}
-              sx={buttonSx}
+              sx={controlHeightSx}
             >
               Dismiss
             </CustomizableButton>
@@ -201,7 +201,7 @@ export default function FindingRow({
               loading={busy === "accept"}
               isDisabled={disabled}
               onClick={() => onAccept(finding)}
-              sx={buttonSx}
+              sx={controlHeightSx}
             >
               Accept
             </CustomizableButton>

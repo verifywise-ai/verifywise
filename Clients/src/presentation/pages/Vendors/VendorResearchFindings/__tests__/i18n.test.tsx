@@ -6,6 +6,7 @@
  * the model's own notes are data and are never translated.
  */
 
+import { useState } from "react";
 import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -19,6 +20,8 @@ import {
   tr,
 } from "../../../../../test/i18nHelpers";
 import { translations } from "../../../../../i18n/translations";
+import type { ResearchAlert } from "../../../../../application/utils/vendorResearchAlerts";
+import Alert from "../../../../components/Alert";
 import {
   acceptedRisk,
   finding,
@@ -72,9 +75,9 @@ const VENDORS = [
   { id: 8, vendor_name: "Zeta Labs" },
 ];
 
-const renderSection = (route = "/vendors/risks?findingsVendorId=7") => {
+const renderSection = (route = "/vendors/risks?findingsVendorId=7", vendors = VENDORS) => {
   const handlers = { onOpenRisk: vi.fn(), onNotify: vi.fn() };
-  renderWithProviders(<VendorResearchFindings vendors={VENDORS} {...handlers} />, { route });
+  renderWithProviders(<VendorResearchFindings vendors={vendors} {...handlers} />, { route });
   return handlers;
 };
 
@@ -114,6 +117,92 @@ describe("the register's words", () => {
     expect(missing).toEqual([]);
   });
 });
+
+/**
+ * The section with the app's own Alert under it, which shows what the section hands to
+ * `onNotify` the way the Vendors page does, so that the audit sees the text where it is rendered.
+ */
+function SectionWithAlert({ onNotify }: { onNotify: (alert: ResearchAlert) => void }) {
+  const [alert, setAlert] = useState<ResearchAlert | null>(null);
+  return (
+    <>
+      <VendorResearchFindings
+        vendors={VENDORS}
+        onOpenRisk={vi.fn()}
+        onNotify={(next) => {
+          onNotify(next);
+          setAlert(next);
+        }}
+      />
+      {alert && <Alert variant={alert.variant} title={alert.title} body={alert.body} isToast />}
+    </>
+  );
+}
+
+/** Every way a start of Research again can end, and the message that answers it. */
+const START_OUTCOMES: Array<{
+  name: string;
+  arrange: () => void;
+  variant: ResearchAlert["variant"];
+  key: string;
+  values?: Record<string, string | number>;
+}> = [
+  {
+    name: "a new run",
+    arrange: () =>
+      mocks.start.mockResolvedValueOnce({ run: run({ status: "queued" }), alreadyRunning: false }),
+    variant: "success",
+    key: "Research started for {vendorName}. Findings appear on the Risks tab.",
+    values: { vendorName: "Acme Cloud" },
+  },
+  {
+    name: "a run the vendor already has",
+    arrange: () =>
+      mocks.start.mockResolvedValueOnce({ run: run({ status: "running" }), alreadyRunning: true }),
+    variant: "info",
+    key: "Research is already running for {vendorName}.",
+    values: { vendorName: "Acme Cloud" },
+  },
+  {
+    name: "a 409 for a missing search provider",
+    arrange: () =>
+      mocks.start.mockRejectedValueOnce(refusal(409, { code: "search_not_configured" })),
+    variant: "warning",
+    key: "Vendor research is not set up.",
+  },
+  {
+    name: "a 409 for a missing LLM key",
+    arrange: () => mocks.start.mockRejectedValueOnce(refusal(409, { code: "llm_key_missing" })),
+    variant: "warning",
+    key: "Vendor research is not set up.",
+  },
+  {
+    name: "a 429 for the cooldown",
+    arrange: () =>
+      mocks.start.mockRejectedValueOnce(refusal(429, { code: "cooldown", retryAfterSeconds: 540 })),
+    variant: "warning",
+    key: "Research ran recently. Try again in {minutes} min.",
+    values: { minutes: 9 },
+  },
+  {
+    name: "a 429 for the daily limit",
+    arrange: () => mocks.start.mockRejectedValueOnce(refusal(429, { code: "daily_cap" })),
+    variant: "warning",
+    key: "The daily research limit for your organization was reached. Try again tomorrow.",
+  },
+  {
+    name: "a 503 from the job queue",
+    arrange: () => mocks.start.mockRejectedValueOnce(refusal(503)),
+    variant: "error",
+    key: "The research could not be started because the job queue is unavailable. Try again later.",
+  },
+  {
+    name: "any other failure",
+    arrange: () => mocks.start.mockRejectedValueOnce(refusal(500)),
+    variant: "error",
+    key: "The research could not be started. Try again.",
+  },
+];
 
 const CATEGORIES = [
   "Security incidents",
@@ -187,6 +276,25 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     }
 
     expectNoUntranslatedText(lang, FIXTURES);
+  });
+
+  it("leaves a vendor named like a translated word as it is, in the filter and in its menu", async () => {
+    // "Other" and "High" are words of the dictionary; a vendor with that name is the user's data.
+    const vendors = [
+      { id: 7, vendor_name: "Other" },
+      { id: 8, vendor_name: "High" },
+    ];
+    renderSection("/vendors/risks?findingsVendorId=7", vendors);
+
+    const filter = await screen.findByRole("combobox");
+    expect(filter).toHaveTextContent(/^Other$/);
+    await userEvent.click(filter);
+    const options = (await screen.findAllByRole("option")).map((option) =>
+      option.textContent?.trim(),
+    );
+    expect(options).toEqual([tr(lang, "All vendors"), "High", "Other"]);
+
+    expectNoUntranslatedText(lang, new Set([...FIXTURES, "Other", "High"]));
   });
 
   it("translates the sources that have no link", async () => {
@@ -516,8 +624,10 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     });
     renderSection();
 
-    const button = await screen.findByRole("button", { name: tr(lang, "Research again") });
-    await userEvent.hover(button.parentElement as HTMLElement);
+    // The button is rebuilt inside its tooltip once the settings say research is not set up.
+    const againButton = () => screen.getByRole("button", { name: tr(lang, "Research again") });
+    await waitFor(() => expect(againButton()).toBeDisabled());
+    await userEvent.hover(againButton().parentElement as HTMLElement);
     expect(await screen.findByRole("tooltip")).toHaveTextContent(
       tr(lang, "Vendor research is not set up."),
     );
@@ -583,29 +693,24 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     expectNoUntranslatedText(lang, FIXTURES);
   });
 
-  it("translates what Research again says for each refusal", async () => {
-    const { onNotify } = renderSection();
-    const press = async () =>
-      userEvent.click(await screen.findByRole("button", { name: tr(lang, "Research again") }));
+  it.each(START_OUTCOMES)(
+    "answers $name in the language of the screen",
+    async ({ arrange, variant, key, values }) => {
+      arrange();
+      const onNotify = vi.fn();
+      renderWithProviders(<SectionWithAlert onNotify={onNotify} />, {
+        route: "/vendors/risks?findingsVendorId=7",
+      });
 
-    mocks.start.mockResolvedValueOnce({ run: run({ status: "queued" }), alreadyRunning: false });
-    await press();
-    await waitFor(() =>
-      expect(onNotify).toHaveBeenLastCalledWith({
-        variant: "success",
-        body: tr(lang, "Research started for {vendorName}. Findings appear on the Risks tab.", {
-          vendorName: "Acme Cloud",
-        }),
-      }),
-    );
+      await userEvent.click(
+        await screen.findByRole("button", { name: tr(lang, "Research again") }),
+      );
 
-    mocks.start.mockRejectedValueOnce(refusal(429, { code: "cooldown", retryAfterSeconds: 540 }));
-    await press();
-    await waitFor(() =>
-      expect(onNotify).toHaveBeenLastCalledWith({
-        variant: "warning",
-        body: tr(lang, "Research ran recently. Try again in {minutes} min.", { minutes: 9 }),
-      }),
-    );
-  });
+      const body = tr(lang, key, values);
+      expect(await screen.findByText(body)).toBeInTheDocument();
+      expect(onNotify).toHaveBeenCalledTimes(1);
+      expect(onNotify).toHaveBeenCalledWith({ variant, body });
+      expectNoUntranslatedText(lang, FIXTURES);
+    },
+  );
 });

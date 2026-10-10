@@ -10123,19 +10123,19 @@ export const translations: Record<string, Record<string, string>> = {
     "Updated since submission": "Seit der Einreichung aktualisiert",
     "Why": "Warum",
     // Vendor research: findings section, run summary and start messages
-    "Research findings": "Rechercheergebnisse",
+    "Research findings": "Recherchebefunde",
     "AI-suggested from web sources. Verify before accepting.":
       "KI-Vorschläge aus Webquellen. Vor dem Akzeptieren prüfen.",
     "Pending: {count}": "Ausstehend: {count}",
-    "Loading research findings": "Rechercheergebnisse werden geladen",
-    "Pending research findings": "Ausstehende Rechercheergebnisse",
-    "Could not load research findings.": "Die Rechercheergebnisse konnten nicht geladen werden.",
+    "Loading research findings": "Recherchebefunde werden geladen",
+    "Pending research findings": "Ausstehende Recherchebefunde",
+    "Could not load research findings.": "Die Recherchebefunde konnten nicht geladen werden.",
     "Vendor research is not set up.": "Die Anbieterrecherche ist nicht eingerichtet.",
     "Set {provider} and {key} in the server environment, and add an LLM key for your organization.":
       "Legen Sie {provider} und {key} in der Serverumgebung fest und fügen Sie einen LLM-Schlüssel für Ihre Organisation hinzu.",
-    "No pending research findings.": "Keine ausstehenden Rechercheergebnisse.",
+    "No pending research findings.": "Keine ausstehenden Recherchebefunde.",
     "Showing {shown} of {total} pending findings. Choose a vendor to see the rest.":
-      "{shown} von {total} ausstehenden Ergebnissen werden angezeigt. Wählen Sie einen Anbieter, um den Rest zu sehen.",
+      "{shown} von {total} ausstehenden Befunden werden angezeigt. Wählen Sie einen Anbieter, um den Rest zu sehen.",
     "Risk added to the register": "Risiko zum Risikoregister hinzugefügt",
     "Risk added to the register.": "Risiko zum Risikoregister hinzugefügt.",
     "Open risk": "Risiko öffnen",
@@ -10180,7 +10180,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Die Antwort des Modells entsprach nicht dem erwarteten Format.",
     "The model call failed unexpectedly.": "Der Modellaufruf ist unerwartet fehlgeschlagen.",
     "The research run failed unexpectedly.": "Die Recherche ist unerwartet fehlgeschlagen.",
-    "The findings could not be saved.": "Die Ergebnisse konnten nicht gespeichert werden.",
+    "The findings could not be saved.": "Die Befunde konnten nicht gespeichert werden.",
     "The research run timed out.": "Bei der Recherche ist eine Zeitüberschreitung aufgetreten.",
     "The research run could not be queued.":
       "Die Recherche konnte nicht in die Warteschlange gestellt werden.",
@@ -10201,16 +10201,16 @@ export const translations: Record<string, Record<string, string>> = {
     "The search failed.": "Die Suche ist fehlgeschlagen.",
     "1 potential risk found": "1 mögliches Risiko gefunden",
     "{count} potential risks found": "{count} mögliche Risiken gefunden",
-    "Dismiss finding": "Ergebnis verwerfen",
+    "Dismiss finding": "Befund verwerfen",
     "Choose why this finding does not belong in the register. Similar findings are not suggested again.":
-      "Wählen Sie, warum dieses Ergebnis nicht ins Risikoregister gehört. Ähnliche Ergebnisse werden nicht erneut vorgeschlagen.",
+      "Wählen Sie, warum dieser Befund nicht ins Risikoregister gehört. Ähnliche Befunde werden nicht erneut vorgeschlagen.",
     "Select a reason": "Grund auswählen",
     "Not applicable to this vendor": "Für diesen Anbieter nicht relevant",
     "Already covered by an existing risk": "Bereits durch ein vorhandenes Risiko abgedeckt",
     "Inaccurate or not supported by the sources": "Ungenau oder durch die Quellen nicht belegt",
     "Up to 500 characters.": "Bis zu 500 Zeichen.",
     "Research started for {vendorName}. Findings appear on the Risks tab.":
-      "Recherche für {vendorName} gestartet. Die Ergebnisse erscheinen im Tab Risiken.",
+      "Recherche für {vendorName} gestartet. Die Befunde erscheinen im Tab Risiken.",
     "Research is already running for {vendorName}.":
       "Für {vendorName} läuft bereits eine Recherche.",
     "Research ran recently. Try again in {minutes} min.":
@@ -20316,7 +20316,7 @@ export const translations: Record<string, Record<string, string>> = {
     "risks found": "risques trouvés",
     "nothing found": "rien trouvé",
     "search failed": "échec de la recherche",
-    "skipped": "recherche ignorée",
+    "skipped": "ignoré",
     "unknown": "inconnu",
     "The vendor was not found.": "Le fournisseur est introuvable.",
     "No LLM key is configured for your organization.":
@@ -30359,10 +30359,10 @@ export const translations: Record<string, Record<string, string>> = {
     "Possible": "Posible",
     "Likely": "Probable",
     "Almost certain": "Casi seguro",
-    "Very High Risk": "Riesgo muy alto",
-    "Medium Risk": "Riesgo medio",
-    "Low Risk": "Riesgo bajo",
-    "Very Low Risk": "Riesgo muy bajo",
+    "Very High Risk": "Muy alto riesgo",
+    "Medium Risk": "Medio riesgo",
+    "Low Risk": "Bajo riesgo",
+    "Very Low Risk": "Muy bajo riesgo",
     "Latest research": "Última investigación",
     "Researching…": "Investigando…",
     "Still running. Check back later.": "Sigue en curso. Vuelva a mirar más tarde.",
@@ -30380,7 +30380,7 @@ export const translations: Record<string, Record<string, string>> = {
     "risks found": "riesgos encontrados",
     "nothing found": "no se encontró nada",
     "search failed": "la búsqueda falló",
-    "skipped": "búsqueda omitida",
+    "skipped": "omitido",
     "unknown": "desconocido",
     "The vendor was not found.": "No se encontró el proveedor.",
     "No LLM key is configured for your organization.":

@@ -9,7 +9,7 @@ The Select component is a custom implementation of Material-UI's Select componen
 - `placeholder`: The placeholder text for the select input.
 - `isHidden`: Flag to determine if the placeholder should be hidden.
 - `value`: The current value of the select input.
-- `items`: The list of items to display in the select dropdown.
+- `items`: The list of items to display in the select dropdown. An item can set `noTranslate` when its name is the user's own text (a vendor's name, say): the DOM translator then leaves it alone, in the menu and as the selected value.
 - `isRequired`: Flag to indicate if the field is required.
 - `error`: The error message to display if there is an error.
 - `onChange`: The callback function to handle changes in the select input.

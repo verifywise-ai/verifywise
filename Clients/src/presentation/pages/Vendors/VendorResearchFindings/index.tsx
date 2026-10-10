@@ -4,19 +4,17 @@ import {
   AccordionDetails,
   AccordionSummary,
   Box,
-  Skeleton,
   Stack,
   Typography,
 } from "@mui/material";
 import { useSearchParams } from "react-router";
-import { AlertCircle, CheckCircle2, ChevronDown, Info, X } from "lucide-react";
+import { CheckCircle2, ChevronDown, Info, X } from "lucide-react";
 import Chip from "../../../components/Chip";
 import Select from "../../../components/Inputs/Select";
+import CustomizableSkeleton from "../../../components/Skeletons";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import { textStyles } from "../../../themes/typography";
 import {
-  errorAlertSx,
-  errorTextSx,
   sectionSx,
   summaryDescriptionSx,
   summaryHeaderSx,
@@ -37,7 +35,10 @@ import type { VendorRiskFinding } from "../../../../domain/interfaces/i.vendorRe
 import { fill } from "../../../../i18n/fill";
 import DismissFindingModal, { type DismissalBody } from "./DismissFindingModal";
 import FindingRow, { type RowAction } from "./FindingRow";
+import InlineError from "./InlineError";
+import { parseVendorId } from "./parseVendorId";
 import RunSummary from "./RunSummary";
+import { controlHeightSx, iconControlSx } from "./styles";
 
 /** The URL parameter a notification link uses to open the section on one vendor. */
 const VENDOR_PARAM = "findingsVendorId";
@@ -45,13 +46,6 @@ const VENDOR_PARAM = "findingsVendorId";
 const FINDINGS_LIMIT = 200;
 /** The value of the filter option that stands for every vendor. */
 const ALL_VENDORS = "all";
-
-/** A vendor id from the URL: digits only, above zero. Anything else means all vendors. */
-function parseVendorId(raw: string | null): number | null {
-  if (raw === null || !/^[1-9]\d*$/.test(raw)) return null;
-  const id = Number(raw);
-  return Number.isSafeInteger(id) ? id : null;
-}
 
 interface VendorResearchFindingsProps {
   vendors: Array<{ id?: number; vendor_name: string }>;
@@ -124,9 +118,10 @@ export default function VendorResearchFindings({
       .filter(
         (vendor): vendor is { id: number; vendor_name: string } => typeof vendor.id === "number",
       )
-      .map((vendor) => ({ _id: vendor.id, name: vendor.vendor_name }))
+      // A vendor's name is the user's own text: a vendor called "Other" must not be translated.
+      .map((vendor) => ({ _id: vendor.id, name: vendor.vendor_name, noTranslate: true }))
       .sort((a, b) => a.name.localeCompare(b.name));
-    const options: Array<{ _id: string | number; name: string }> = [
+    const options: Array<{ _id: string | number; name: string; noTranslate?: boolean }> = [
       { _id: ALL_VENDORS, name: t("All vendors") },
       ...named,
     ];
@@ -150,6 +145,9 @@ export default function VendorResearchFindings({
   // keeps the callbacks of the latest `mutate` call. A failure needs no message here: the
   // global error toast reports it, and the row is usable again.
   const handleAccept = async (finding: VendorRiskFinding) => {
+    // The notice is about an earlier accept: it goes when the next decision starts, not only
+    // when that one succeeds, so a refused request does not leave the old notice standing.
+    setLastAcceptedRiskId(null);
     setRowBusy(finding.id, "accept");
     try {
       const { vendorRisk } = await accept.mutateAsync({ id: finding.id, body: {} });
@@ -165,10 +163,10 @@ export default function VendorResearchFindings({
   const handleDismiss = async (body: DismissalBody) => {
     if (dismissing === null) return;
     const { id } = dismissing;
+    setLastAcceptedRiskId(null);
     setRowBusy(id, "dismiss");
     try {
       await dismiss.mutateAsync({ id, body });
-      setLastAcceptedRiskId(null);
       // The modal can be closed while the request is on its way, and another finding's opened:
       // only close the modal of the finding that was just dismissed.
       setDismissing((current) => (current?.id === id ? null : current));
@@ -182,23 +180,18 @@ export default function VendorResearchFindings({
   const renderFindings = () => {
     if (findings.isError) {
       return (
-        <Box sx={errorAlertSx} role="alert">
-          <AlertCircle size={16} />
-          <Typography sx={errorTextSx}>Could not load research findings.</Typography>
-          <Box sx={{ ml: "auto" }}>
-            <CustomizableButton size="small" variant="text" onClick={() => void findings.refetch()}>
-              Retry
-            </CustomizableButton>
-          </Box>
-        </Box>
+        <InlineError
+          message="Could not load research findings."
+          onRetry={() => void findings.refetch()}
+        />
       );
     }
     // An empty list is only called empty or not set up once the settings are known.
     if (findings.data === undefined || (rows.length === 0 && config.isPending)) {
       return (
-        <Stack role="status" aria-label="Loading research findings" sx={{ gap: "12px" }}>
-          <Skeleton variant="rounded" height={120} />
-          <Skeleton variant="rounded" height={120} />
+        <Stack role="status" aria-label="Loading research findings">
+          <CustomizableSkeleton variant="rounded" width="100%" height={120} />
+          <CustomizableSkeleton variant="rounded" width="100%" height={120} />
         </Stack>
       );
     }
@@ -283,6 +276,7 @@ export default function VendorResearchFindings({
                     <CustomizableButton
                       size="small"
                       variant="text"
+                      sx={controlHeightSx}
                       onClick={() => onOpenRisk(lastAcceptedRiskId)}
                     >
                       Open risk
@@ -291,6 +285,7 @@ export default function VendorResearchFindings({
                       iconOnly
                       size="small"
                       variant="text"
+                      sx={iconControlSx}
                       ariaLabel="Close"
                       icon={<X size={16} />}
                       onClick={() => setLastAcceptedRiskId(null)}
