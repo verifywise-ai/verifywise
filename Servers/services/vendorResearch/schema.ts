@@ -18,6 +18,26 @@ export const RESEARCH_CONFIDENCES = [
   "high",
 ] as const satisfies readonly FindingConfidence[];
 
+// The bounds of the answer. The system prompt states these same numbers, written from the
+// constants, so what the model is told and what the schema accepts cannot drift apart.
+
+/** The longest risk description, impact description and action plan, in characters. */
+export const MAX_FINDING_TEXT_CHARS = 300;
+/** The longest quote of a citation, in characters. */
+export const MAX_QUOTE_CHARS = 300;
+/** The longest category note, in characters. */
+export const MAX_NOTE_CHARS = 200;
+/** The most citations on one finding. A finding needs at least one. */
+export const MAX_EVIDENCE_PER_FINDING = 5;
+/** The most category notes: one for each category. */
+export const MAX_CATEGORY_NOTES = RESEARCH_CATEGORIES.length;
+/**
+ * The most findings kept for one category. The schema does not enforce this one: the model is
+ * told the number, and the pipeline applies it after validation, so an answer over it is cut
+ * instead of being sent back for another attempt.
+ */
+export const MAX_PER_CATEGORY = 3;
+
 /**
  * `.strict()` is deliberate, as in the risk direction schema. An extra key means the model made up
  * a field, and `generateObjectWithSelfCorrection` hands it back as a Zod issue so the next attempt
@@ -28,20 +48,20 @@ const evidenceItemSchema = z
     /** An id from the evidence pack. Whether it exists there is checked after parsing. */
     source_id: z.string(),
     /** Whether the quote is in that source is checked after parsing, too. */
-    quote: z.string().max(300),
+    quote: z.string().max(MAX_QUOTE_CHARS),
   })
   .strict();
 
 const findingSchema = z
   .object({
     category: z.enum(RESEARCH_CATEGORIES),
-    risk_description: z.string().max(300),
-    impact_description: z.string().max(300),
+    risk_description: z.string().max(MAX_FINDING_TEXT_CHARS),
+    impact_description: z.string().max(MAX_FINDING_TEXT_CHARS),
     likelihood: z.enum(RESEARCH_LIKELIHOODS),
     risk_severity: z.enum(RESEARCH_SEVERITIES),
-    action_plan: z.string().max(300),
+    action_plan: z.string().max(MAX_FINDING_TEXT_CHARS),
     confidence: z.enum(RESEARCH_CONFIDENCES),
-    evidence: z.array(evidenceItemSchema).min(1).max(5),
+    evidence: z.array(evidenceItemSchema).min(1).max(MAX_EVIDENCE_PER_FINDING),
   })
   .strict();
 
@@ -49,19 +69,19 @@ const categoryNoteSchema = z
   .object({
     category: z.enum(RESEARCH_CATEGORIES),
     /** Feeds the run summary. */
-    note: z.string().max(200),
+    note: z.string().max(MAX_NOTE_CHARS),
   })
   .strict();
 
 /**
  * The whole answer of the model. An empty `findings` array is valid and expected: it is what the
  * model returns when no evidence shows a risk. The bounds guard against runaway output; the real
- * limits (three per category, eight per run) are applied after validation.
+ * limits (MAX_PER_CATEGORY per category, eight per run) are applied after validation.
  */
 export const researchOutputSchema = z
   .object({
     findings: z.array(findingSchema).max(20),
-    category_notes: z.array(categoryNoteSchema).max(4),
+    category_notes: z.array(categoryNoteSchema).max(MAX_CATEGORY_NOTES),
   })
   .strict();
 

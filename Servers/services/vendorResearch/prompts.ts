@@ -6,14 +6,48 @@
  * by users. Everything of that kind goes through `escapeForPrompt`, so none of it can close a tag
  * or open a new one: the structure of the prompt is the one `buildUserPrompt` writes.
  */
-import { EvidenceSource } from "../../domain.layer/interfaces/i.vendorResearch";
-import { RESEARCH_CONFIDENCES, RESEARCH_LIKELIHOODS, RESEARCH_SEVERITIES } from "./schema";
+import {
+  EvidenceSource,
+  RESEARCH_CATEGORIES,
+} from "../../domain.layer/interfaces/i.vendorResearch";
+import {
+  MAX_CATEGORY_NOTES,
+  MAX_EVIDENCE_PER_FINDING,
+  MAX_FINDING_TEXT_CHARS,
+  MAX_NOTE_CHARS,
+  MAX_PER_CATEGORY,
+  MAX_QUOTE_CHARS,
+  RESEARCH_CONFIDENCES,
+  RESEARCH_LIKELIHOODS,
+  RESEARCH_SEVERITIES,
+} from "./schema";
 import { ResearchTarget } from "./target";
 
 /** Stored with every run. Change it whenever the wording of a prompt changes. */
 export const PROMPT_VERSION = "vr-1";
 
 const UNKNOWN_DOMAIN = "unknown";
+
+const NUMBER_WORDS = [
+  "zero",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+  "ten",
+];
+
+/** A count as the prose writes it: a word up to ten ("five"), digits above that. */
+function inWords(count: number): string {
+  return Number.isInteger(count) && count >= 0 && count < NUMBER_WORDS.length
+    ? NUMBER_WORDS[count]
+    : String(count);
+}
 
 /** Replaces `&`, `<` and `>` with `&amp;`, `&lt;` and `&gt;`. The ampersand goes first. */
 export function escapeForPrompt(text: string): string {
@@ -36,6 +70,16 @@ function escapeAttribute(value: string): string {
 }
 
 export function buildSystemPrompt(): string {
+  // The numbers of the prose come from the schema, so that the two cannot disagree. Counts are
+  // written as words ("at most five") and character limits as digits ("at most 300 characters").
+  const citations = inWords(MAX_EVIDENCE_PER_FINDING);
+  const categories = inWords(RESEARCH_CATEGORIES.length);
+  const perCategory = inWords(MAX_PER_CATEGORY);
+  const notes = inWords(MAX_CATEGORY_NOTES);
+  const textChars = MAX_FINDING_TEXT_CHARS;
+  const quoteChars = MAX_QUOTE_CHARS;
+  const noteChars = MAX_NOTE_CHARS;
+
   return [
     "You are a vendor risk analyst for an AI governance platform. A company is deciding whether",
     "to rely on a third-party vendor. You are given web search results about that vendor, and",
@@ -71,30 +115,31 @@ export function buildSystemPrompt(): string {
     "    model providers that are not disclosed, or other adverse AI terms.",
     "",
     "How to cite:",
-    "- Every risk cites at least one source and at most five. Each citation is a source id and a",
+    `- Every risk cites at least one source and at most ${citations}. ` +
+      "Each citation is a source id and a",
     "  verbatim quote from that source's snippet: copy the words exactly as they appear there,",
-    "  at most 300 characters. Do not quote the title, the URL or the vendor block.",
+    `  at most ${quoteChars} characters. Do not quote the title, the URL or the vendor block.`,
     "",
     "What to return:",
     "- findings: one entry per risk, with these fields:",
-    "  - category: one of the four above.",
-    "  - risk_description: what the risk is, at most 300 characters.",
+    `  - category: one of the ${categories} above.`,
+    `  - risk_description: what the risk is, at most ${textChars} characters.`,
     "  - impact_description: what it could mean for the company that relies on the vendor, at",
-    "    most 300 characters.",
+    `    most ${textChars} characters.`,
     "  - likelihood: how likely it is that the company is affected.",
     "  - risk_severity: how serious the effect would be.",
-    "  - action_plan: one concrete next step for the company, at most 300 characters.",
+    `  - action_plan: one concrete next step for the company, at most ${textChars} characters.`,
     "  - confidence: how strongly the evidence supports the risk.",
     "  - evidence: the citations.",
     "- Use the exact values listed here, spelled the same way.",
     `  likelihood is one of: ${RESEARCH_LIKELIHOODS.join(", ")}.`,
     `  risk_severity is one of: ${RESEARCH_SEVERITIES.join(", ")}.`,
     `  confidence is one of: ${RESEARCH_CONFIDENCES.join(", ")}.`,
-    "- Report at most three risks per category, the most serious first.",
+    `- Report at most ${perCategory} risks per category, the most serious first.`,
     "- Return an empty list of findings when nothing qualifies. That is a correct answer. Never",
     "  invent a risk to fill the list.",
-    "- category_notes: at most four entries, one for each category you received evidence for.",
-    "  Each says in at most 200 characters what you found or why nothing qualified.",
+    `- category_notes: at most ${notes} entries, one for each category you received evidence for.`,
+    `  Each says in at most ${noteChars} characters what you found or why nothing qualified.`,
     "- Write in plain English: short sentences, no jargon, no marketing language.",
   ].join("\n");
 }

@@ -1,5 +1,11 @@
 import { NewFinding } from "../../../domain.layer/interfaces/i.vendorResearch";
 import {
+  MAX_CATEGORY_NOTES,
+  MAX_EVIDENCE_PER_FINDING,
+  MAX_FINDING_TEXT_CHARS,
+  MAX_NOTE_CHARS,
+  MAX_PER_CATEGORY,
+  MAX_QUOTE_CHARS,
   RESEARCH_CONFIDENCES,
   RESEARCH_LIKELIHOODS,
   RESEARCH_SEVERITIES,
@@ -118,6 +124,26 @@ describe("researchOutputSchema", () => {
       ["confidence", "High"],
     ])("rejects %s %p", (field, value) => {
       expect(accepts(sample({ findings: [finding({ [field]: value })] }))).toBe(false);
+    });
+  });
+
+  describe("exported bounds", () => {
+    it("have the values of the design, which the system prompt states in words", () => {
+      expect({
+        findingText: MAX_FINDING_TEXT_CHARS,
+        quote: MAX_QUOTE_CHARS,
+        note: MAX_NOTE_CHARS,
+        evidencePerFinding: MAX_EVIDENCE_PER_FINDING,
+        categoryNotes: MAX_CATEGORY_NOTES,
+        perCategory: MAX_PER_CATEGORY,
+      }).toEqual({
+        findingText: 300,
+        quote: 300,
+        note: 200,
+        evidencePerFinding: 5,
+        categoryNotes: 4,
+        perCategory: 3,
+      });
     });
   });
 

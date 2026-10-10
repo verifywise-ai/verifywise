@@ -7,11 +7,24 @@
  * a \udXXX escape), and one such character would make the whole run fail to save. So the text is
  * cleaned first and a hit whose URL cannot be trusted is dropped.
  */
-import { EvidenceSource, ResearchCategory } from "../../domain.layer/interfaces/i.vendorResearch";
+import {
+  EvidenceSource,
+  RESEARCH_CATEGORIES,
+  ResearchCategory,
+} from "../../domain.layer/interfaces/i.vendorResearch";
 import { SearchHit } from "./searchProvider";
+import { MAX_SNIPPET_CHARS, cutAtCodePoint } from "./text";
 
-export const MAX_SNIPPET_CHARS = 1500;
+export { MAX_SNIPPET_CHARS };
 export const MAX_EVIDENCE_BYTES = 40_000;
+
+/**
+ * Limits on the other fields of a source, in characters. With them one source stays well under
+ * MAX_EVIDENCE_BYTES, so a single oversized result cannot take all the room and empty the pack.
+ */
+export const MAX_TITLE_CHARS = 300;
+export const MAX_URL_CHARS = 2048;
+export const MAX_PUBLISHED_AT_CHARS = 64;
 
 /** The C0 control characters other than tab, line feed and carriage return. */
 const UNWANTED_CONTROL_CHARACTERS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g;
@@ -33,10 +46,12 @@ function cleanText(text: string): string {
 }
 
 /**
- * True for an http or https URL that holds no whitespace, no control character and no lone
- * surrogate as it was received. Such a URL is not repaired: its hit is dropped.
+ * True for an http or https URL of at most MAX_URL_CHARS characters that holds no whitespace, no
+ * control character and no lone surrogate as it was received. Such a URL is not repaired: its hit
+ * is dropped. The length is checked first, so that a huge string is never scanned.
  */
 function isUsableUrl(url: string): boolean {
+  if (url.length > MAX_URL_CHARS) return false;
   if (WHITESPACE_OR_CONTROL.test(url) || HAS_LONE_SURROGATE.test(url)) return false;
   try {
     const { protocol } = new URL(url);
@@ -47,15 +62,13 @@ function isUsableUrl(url: string): boolean {
 }
 
 /**
- * Cuts to `max` UTF-16 units. When the cut would leave the first half of a surrogate pair at the
- * end, that half goes too. The text has no lone surrogate at this point, so a high surrogate at
- * the end can only be the first half of a pair.
+ * The cleaned publication date, or null when nothing is left of it or it is longer than
+ * MAX_PUBLISHED_AT_CHARS. A real date is much shorter than that.
  */
-function cut(text: string, max: number): string {
-  if (text.length <= max) return text;
-  const lastKept = text.charCodeAt(max - 1);
-  const endsInsidePair = lastKept >= 0xd800 && lastKept <= 0xdbff;
-  return text.slice(0, endsInsidePair ? max - 1 : max);
+function cleanPublishedAt(publishedAt: string | null): string | null {
+  if (publishedAt === null) return null;
+  const cleaned = cleanText(publishedAt);
+  return cleaned === "" || cleaned.length > MAX_PUBLISHED_AT_CHARS ? null : cleaned;
 }
 
 /** The longest start of `sources` that serializes to at most MAX_EVIDENCE_BYTES bytes. */
@@ -67,24 +80,31 @@ function fitToByteLimit(sources: EvidenceSource[]): EvidenceSource[] {
 }
 
 /**
- * Builds the pack from the hits of each category. Sources keep the order of `results` and, inside
- * each, of its hits. The pipeline passes the results in plan order, which is the order of the
- * categories, so the ids follow the categories. The steps, in this order:
+ * Builds the pack from the hits of each category. The results are taken in the order of
+ * RESEARCH_CATEGORIES, whatever order they are passed in, and the hits of one category keep their
+ * order. So the ids always follow the categories, and the sources that the byte limit removes from
+ * the end are those of the last categories. The steps, in this order:
  *
  * 1. A hit with an unusable URL is dropped. The title, the snippet and the publication date are
  *    cleaned.
  * 2. A URL seen before is dropped, so the first hit with it wins, across categories too.
- * 3. The snippet is cut to MAX_SNIPPET_CHARS.
+ * 3. The title is cut to MAX_TITLE_CHARS and the snippet to MAX_SNIPPET_CHARS. A publication date
+ *    that is empty or longer than MAX_PUBLISHED_AT_CHARS becomes null.
  * 4. The sources are numbered S1, S2, ... without gaps.
  * 5. Sources are removed from the end until the serialized pack is at most MAX_EVIDENCE_BYTES.
  */
 export function buildEvidencePack(
   results: Array<{ category: ResearchCategory; hits: SearchHit[] }>,
 ): EvidenceSource[] {
+  // sort() is stable, so two results of one category keep their order. It runs on a copy, so the
+  // array of the caller is left as it was.
+  const inCategoryOrder = [...results].sort(
+    (a, b) => RESEARCH_CATEGORIES.indexOf(a.category) - RESEARCH_CATEGORIES.indexOf(b.category),
+  );
   const seenUrls = new Set<string>();
   const sources: EvidenceSource[] = [];
 
-  for (const { category, hits } of results) {
+  for (const { category, hits } of inCategoryOrder) {
     for (const hit of hits) {
       if (!isUsableUrl(hit.url) || seenUrls.has(hit.url)) continue;
       seenUrls.add(hit.url);
@@ -92,9 +112,9 @@ export function buildEvidencePack(
         id: `S${sources.length + 1}`,
         category,
         url: hit.url,
-        title: cleanText(hit.title),
-        content: cut(cleanText(hit.content), MAX_SNIPPET_CHARS),
-        publishedAt: hit.publishedAt === null ? null : cleanText(hit.publishedAt) || null,
+        title: cutAtCodePoint(cleanText(hit.title), MAX_TITLE_CHARS),
+        content: cutAtCodePoint(cleanText(hit.content), MAX_SNIPPET_CHARS),
+        publishedAt: cleanPublishedAt(hit.publishedAt),
       });
     }
   }

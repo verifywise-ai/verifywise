@@ -139,13 +139,6 @@ describe("planCategories", () => {
   });
 
   describe("start dates", () => {
-    it("counts 24 and 36 calendar months back from today", () => {
-      const byCategory = plansByCategory(planCategories(target, NOW));
-
-      expect(byCategory.security_incidents.options.startDate).toBe("2024-10-10");
-      expect(byCategory.legal_regulatory.options.startDate).toBe("2023-10-10");
-    });
-
     // 24 and 36 months are whole years, so the only day that can be missing in the target month is
     // 29 February.
     it.each([

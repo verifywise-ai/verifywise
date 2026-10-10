@@ -7,10 +7,10 @@
  * because either can quote the request, and the request carries the API key.
  */
 import { SearchHit, SearchOptions, SearchProvider, SearchProviderError } from "./searchTypes";
+import { MAX_SNIPPET_CHARS, cutAtCodePoint } from "./text";
 
 const TAVILY_SEARCH_URL = "https://api.tavily.com/search";
 const DEFAULT_TIMEOUT_MS = 15_000;
-const MAX_SNIPPET_CHARS = 1_500;
 
 const TIMED_OUT = "search timed out";
 const REQUEST_FAILED = "search request failed";
@@ -67,17 +67,6 @@ function isWebUrl(value: string): boolean {
   }
 }
 
-/**
- * Cuts to `max` UTF-16 units. When the cut would leave the first half of a surrogate pair at the
- * end, that half goes too: Postgres refuses a lone surrogate in the stored evidence.
- */
-function truncate(text: string, max: number): string {
-  if (text.length <= max) return text;
-  const lastKept = text.charCodeAt(max - 1);
-  const endsInsidePair = lastKept >= 0xd800 && lastKept <= 0xdbff;
-  return text.slice(0, endsInsidePair ? max - 1 : max);
-}
-
 function toHit(result: unknown): SearchHit | null {
   if (!isObject(result)) return null;
   const { url, title, content, published_date: publishedDate } = result;
@@ -85,7 +74,7 @@ function toHit(result: unknown): SearchHit | null {
   return {
     url,
     title: typeof title === "string" ? title : "",
-    content: typeof content === "string" ? truncate(content, MAX_SNIPPET_CHARS) : "",
+    content: typeof content === "string" ? cutAtCodePoint(content, MAX_SNIPPET_CHARS) : "",
     publishedAt: typeof publishedDate === "string" && publishedDate !== "" ? publishedDate : null,
   };
 }
