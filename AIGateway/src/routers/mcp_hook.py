@@ -23,7 +23,7 @@ from config import settings
 from crud.mcp_approvals import create_approval_request, get_active_request
 from services.mcp_audit_service import log_tool_call, update_tool_result
 from services.mcp_approval_match import check_require_approval
-from services.mcp_guardrail_service import scan_tool_input, scan_result_blob
+from services.mcp_guardrail_service import blocking_rule, scan_tool_input, scan_result_blob
 from services.mcp_proxy_service import extract_agent_key, enforce_mcp_rate_limits
 from utils.mcp_arguments import hash_arguments
 from utils.notifications import notify_approval_pending
@@ -55,7 +55,14 @@ async def mcp_hook(request: Request):
     start_time = time.time()
     received_at = datetime.now(timezone.utc).isoformat()
 
-    async def _audit(status: str, summary: str, decided_detail: str, is_error: bool = False):
+    async def _audit(
+        status: str,
+        summary: str,
+        decided_detail: str,
+        is_error: bool = False,
+        matched_rule_id: int | None = None,
+        matched_rule_name: str | None = None,
+    ):
         events = [
             {"type": "received", "at": received_at},
             {"type": "decided", "at": datetime.now(timezone.utc).isoformat(), "detail": decided_detail},
@@ -73,6 +80,8 @@ async def mcp_hook(request: Request):
             session_id=session_id,
             tool_use_id=tool_use_id,
             events=events,
+            matched_rule_id=matched_rule_id,
+            matched_rule_name=matched_rule_name,
         )
 
     # ── Guardrail scan (UNCHANGED shared path): block / mask -> deny ─────────
@@ -83,7 +92,9 @@ async def mcp_hook(request: Request):
     # (Write.content, Edit.new_string, ...), not old_string/file_path. This applies
     # to PII, content-filter AND prompt-injection on the hook path — injection in a
     # removed line or a path is intentionally not scanned (we gate what is written).
-    scan_result = await scan_tool_input(org_id, tool_name, arguments, field_aware=True)
+    scan_result = await scan_tool_input(
+        org_id, tool_name, arguments, field_aware=True, agent_key_id=agent_key["id"]
+    )
     # A mask rule can't rewrite a command/file the agent itself executes, so on the
     # hook path a mask detection is escalated to a hard deny. An org that configured
     # a PII rule as action="mask" (fine on the LLM proxy) therefore BLOCKS matching
@@ -98,11 +109,22 @@ async def mcp_hook(request: Request):
             {"rule": d.guardrail_type, "action": d.action, "snippet": d.entity_type}
             for d in scan_result.detections
         ]
-        await _audit("blocked", f"Hook deny: {reason}", "deny")
+        # Record the rule that caused the deny (a mask hit counts here, since the
+        # hook escalates it) so the Activity log can show why the call stopped.
+        matched_rule_id, matched_rule_name = blocking_rule(scan_result, include_mask=True)
+        await _audit(
+            "blocked",
+            f"Hook deny: {reason}",
+            "deny",
+            matched_rule_id=matched_rule_id,
+            matched_rule_name=matched_rule_name,
+        )
         return JSONResponse(content={"decision": "deny", "reason": reason, "detections": detections})
 
     # ── require_approval (hook-only matcher): create/reuse approval request ──
-    approval_rule = await check_require_approval(org_id, tool_name, arguments)
+    approval_rule = await check_require_approval(
+        org_id, tool_name, arguments, agent_key_id=agent_key["id"]
+    )
     human_approved = False
     if approval_rule:
         args_hash = hash_arguments(arguments)
@@ -137,7 +159,13 @@ async def mcp_hook(request: Request):
                     "agent_key_id": agent_key["id"],
                     "agent_key_name": agent_key.get("name"),
                 })
-            await _audit("approval_required", f"Approval request {approval.get('id')} created", "approval_required")
+            await _audit(
+                "approval_required",
+                f"Approval request {approval.get('id')} created",
+                "approval_required",
+                matched_rule_id=approval_rule.get("id"),
+                matched_rule_name=approval_rule.get("name"),
+            )
             exp = approval.get("expires_at")
             return JSONResponse(content={
                 "decision": "approval_required",
@@ -193,7 +221,7 @@ async def mcp_hook_result(request: Request):
     truncated = len(serialized.encode("utf-8")) > MCP_RESULT_CAP_BYTES
     if truncated:
         serialized = serialized.encode("utf-8")[:MCP_RESULT_CAP_BYTES].decode("utf-8", "ignore")
-    masked = await scan_result_blob(org_id, serialized)
+    masked = await scan_result_blob(org_id, serialized, agent_key_id=agent_key["id"])
     try:
         stored = json.loads(masked)
     except Exception:

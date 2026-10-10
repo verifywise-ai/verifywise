@@ -5,6 +5,7 @@ import { ThemeProvider } from "@mui/material/styles";
 import { light } from "../../themes";
 import {
   formatEntityType,
+  formatMcpStatus,
   getProviderIcon,
   ProviderIcon,
   useCardSx,
@@ -490,6 +491,14 @@ describe("AIGateway shared utilities", () => {
         streamPromptTest({ endpointSlug: "e", messages: [], onDelta: vi.fn() }),
       ).rejects.toThrow("stream broke");
       expect(reader.releaseLock).toHaveBeenCalled();
+    });
+  });
+
+  describe("formatMcpStatus", () => {
+    it("turns every underscore into a space", () => {
+      expect(formatMcpStatus("approval_required")).toBe("approval required");
+      expect(formatMcpStatus("a_b_c")).toBe("a b c");
+      expect(formatMcpStatus("blocked")).toBe("blocked");
     });
   });
 });

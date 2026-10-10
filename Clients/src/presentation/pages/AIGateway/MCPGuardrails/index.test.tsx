@@ -286,4 +286,106 @@ describe("MCPGuardrailsPage", () => {
       expect(mockDelete).toHaveBeenCalledWith("/ai-gateway/mcp/guardrails/1");
     });
   });
+
+  describe("agent scope", () => {
+    const agentKeys = [
+      { id: 7, name: "Deploy bot", is_active: true, revoked_at: null },
+      { id: 8, name: "Old bot", is_active: false, revoked_at: "2026-10-01T00:00:00Z" },
+    ];
+
+    function serve(rules: Record<string, any>[]) {
+      mockGet.mockImplementation((url: string) =>
+        Promise.resolve({
+          data: { data: url.endsWith("/agent-keys") ? agentKeys : rules },
+        }),
+      );
+    }
+
+    it("shows all agents, the selected agents, or no agents", async () => {
+      serve([
+        makeRule({ id: 1, name: "Everyone", agent_scope: "all", applies_to_agent_keys: [] }),
+        makeRule({
+          id: 2,
+          name: "Just deploys",
+          agent_scope: "selected",
+          applies_to_agent_keys: [7],
+        }),
+        // A revoked key and a deleted one: neither can call, so the rule applies to none.
+        makeRule({
+          id: 3,
+          name: "Orphaned",
+          agent_scope: "selected",
+          applies_to_agent_keys: [8, 99],
+        }),
+      ]);
+      renderWithProviders(<MCPGuardrailsPage />);
+
+      await waitFor(() => expect(screen.getByText("Orphaned")).toBeInTheDocument());
+      expect(screen.getByText("All agents")).toBeInTheDocument();
+      expect(screen.getByText("Deploy bot")).toBeInTheDocument();
+      expect(screen.getByText("No agents")).toBeInTheDocument();
+      expect(screen.queryByText("Old bot")).not.toBeInTheDocument();
+      expect(screen.queryByText(/Agent #/)).not.toBeInTheDocument();
+    });
+
+    it("sends agent_scope all with no keys by default", async () => {
+      serve([]);
+      renderWithProviders(<MCPGuardrailsPage />);
+      await waitFor(() =>
+        expect(screen.getByText(/No guardrail rules configured yet/)).toBeInTheDocument(),
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: "Add guardrail" }));
+      fireEvent.change(screen.getByLabelText(/^Name/), { target: { value: "New rule" } });
+      fireEvent.click(screen.getByRole("button", { name: "Create guardrail" }));
+
+      await waitFor(() =>
+        expect(mockPost).toHaveBeenCalledWith(
+          "/ai-gateway/mcp/guardrails",
+          expect.objectContaining({ agent_scope: "all", applies_to_agent_keys: [] }),
+        ),
+      );
+    });
+
+    it("will not save selected agents with none chosen", async () => {
+      serve([]);
+      renderWithProviders(<MCPGuardrailsPage />);
+      await waitFor(() =>
+        expect(screen.getByText(/No guardrail rules configured yet/)).toBeInTheDocument(),
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: "Add guardrail" }));
+      fireEvent.change(screen.getByLabelText(/^Name/), { target: { value: "New rule" } });
+      selectComboboxOption(3, "Selected agents");
+      fireEvent.click(screen.getByRole("button", { name: "Create guardrail" }));
+
+      expect(
+        await screen.findByText("Select at least one agent, or apply the rule to all agents"),
+      ).toBeInTheDocument();
+      expect(mockPost).not.toHaveBeenCalled();
+    });
+
+    it("drops keys that can no longer call when an edit is saved", async () => {
+      serve([
+        makeRule({
+          id: 2,
+          name: "Mixed",
+          agent_scope: "selected",
+          applies_to_agent_keys: [7, 8, 99],
+        }),
+      ]);
+      renderWithProviders(<MCPGuardrailsPage />);
+      await waitFor(() => expect(screen.getByText("Mixed")).toBeInTheDocument());
+
+      fireEvent.click(screen.getByRole("button", { name: "Edit guardrail" }));
+      fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+      await waitFor(() =>
+        expect(mockPatch).toHaveBeenCalledWith(
+          "/ai-gateway/mcp/guardrails/2",
+          expect.objectContaining({ agent_scope: "selected", applies_to_agent_keys: [7] }),
+        ),
+      );
+    });
+  });
 });

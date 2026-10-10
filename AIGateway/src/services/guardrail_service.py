@@ -35,6 +35,9 @@ class ScanResult:
     detections: list[Detection] = field(default_factory=list)
     masked_text: str | None = None
     execution_time_ms: int = 0
+    # Names of the rules that were scanned, by id. Set by the MCP scanner so a
+    # caller can record which rule caused a block without another query.
+    rule_names: dict[int, str] = field(default_factory=dict)
 
 
 def _get_compiled_pattern(pattern_str: str, filter_type: str) -> re.Pattern | None:

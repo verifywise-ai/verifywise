@@ -18,10 +18,13 @@ import { CustomizableButton } from "../../../components/button/customizable-butt
 import Chip from "../../../components/Chip";
 import Field from "../../../components/Inputs/Field";
 import Select from "../../../components/Inputs/Select";
+import MultiSelect from "../../../components/Inputs/MultiSelect";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import palette from "../../../themes/palette";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
 import MCPTable from "../MCPTable";
 import CustomizableSkeleton from "../../../components/Skeletons";
 
@@ -34,10 +37,14 @@ interface MCPGuardrail {
   action: "block" | "mask" | "require_approval";
   scope: string;
   applies_to_tools: string[];
+  agent_scope: AgentScope;
+  applies_to_agent_keys: number[];
   config: Record<string, any> | null;
   is_active: boolean;
   created_at: string;
 }
+
+type AgentScope = "all" | "selected";
 
 interface GuardrailForm {
   name: string;
@@ -45,6 +52,8 @@ interface GuardrailForm {
   action: string;
   scope: string;
   applies_to_tools: string;
+  agent_scope: AgentScope;
+  applies_to_agent_keys: number[];
   config: string;
   is_active: boolean;
 }
@@ -55,6 +64,8 @@ const EMPTY_FORM: GuardrailForm = {
   action: "block",
   scope: "tool_input",
   applies_to_tools: "",
+  agent_scope: "all",
+  applies_to_agent_keys: [],
   config: "",
   is_active: true,
 };
@@ -72,6 +83,11 @@ const ACTION_ITEMS = [
 ];
 
 const SCOPE_ITEMS = [{ _id: "tool_input", name: "Tool input" }];
+
+const AGENT_SCOPE_ITEMS = [
+  { _id: "all", name: "All agents" },
+  { _id: "selected", name: "Selected agents" },
+];
 
 const RULE_TYPE_VARIANTS: Record<string, "info" | "warning" | "success" | "error"> = {
   pii: "info",
@@ -105,12 +121,44 @@ export default function MCPGuardrailsPage() {
   const [deleteTarget, setDeleteTarget] = useState<MCPGuardrail | null>(null);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
+  // Active agent keys, for scoping a rule to specific agents.
+  const [agentKeys, setAgentKeys] = useState<{ _id: number; name: string }[]>([]);
+  const [agentKeysLoaded, setAgentKeysLoaded] = useState(false);
+  const { t } = useTranslation();
+
+  // The ids of a rule's scope that are still active keys. A revoked or deleted
+  // key can never call again (ids are not reused), so once the keys have
+  // loaded its id is dropped. If they failed to load, every id is kept.
+  const liveAgentKeys = useCallback(
+    (ids: number[] | undefined) =>
+      (ids ?? []).filter((id) => !agentKeysLoaded || agentKeys.some((k) => k._id === id)),
+    [agentKeys, agentKeysLoaded],
+  );
+
+  // Falls back to the id when the agent keys failed to load.
+  const agentKeyLabel = useCallback(
+    (id: number) => agentKeys.find((k) => k._id === id)?.name ?? fill(t("Agent #{id}"), { id }),
+    [agentKeys, t],
+  );
+
   const loadData = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const res = await apiServices.get<Record<string, any>>("/ai-gateway/mcp/guardrails");
-      setRules(res?.data?.data || []);
+      // Agent keys only name and fill the scope picker; if they fail to load,
+      // the rules list still shows.
+      const [rulesRes, keysRes] = await Promise.allSettled([
+        apiServices.get<Record<string, any>>("/ai-gateway/mcp/guardrails"),
+        apiServices.get<Record<string, any>>("/ai-gateway/mcp/agent-keys"),
+      ]);
+      if (rulesRes.status === "rejected") throw rulesRes.reason;
+      setRules(rulesRes.value?.data?.data || []);
+      const keys: { id: number; name: string; is_active: boolean; revoked_at: string | null }[] =
+        keysRes.status === "fulfilled" ? keysRes.value?.data?.data || [] : [];
+      setAgentKeys(
+        keys.filter((k) => k.is_active && !k.revoked_at).map((k) => ({ _id: k.id, name: k.name })),
+      );
+      setAgentKeysLoaded(keysRes.status === "fulfilled");
     } catch {
       setLoadError("Failed to load guardrails. Please try again.");
     } finally {
@@ -149,6 +197,8 @@ export default function MCPGuardrailsPage() {
       applies_to_tools: Array.isArray(rule.applies_to_tools)
         ? rule.applies_to_tools.join(", ")
         : "",
+      agent_scope: rule.agent_scope === "selected" ? "selected" : "all",
+      applies_to_agent_keys: liveAgentKeys(rule.applies_to_agent_keys),
       config: rule.config ? JSON.stringify(rule.config, null, 2) : "",
       is_active: rule.is_active ?? true,
     });
@@ -167,6 +217,12 @@ export default function MCPGuardrailsPage() {
       .split(",")
       .map((t) => t.trim())
       .filter(Boolean);
+
+    const isSelectedAgents = form.agent_scope === "selected";
+    if (isSelectedAgents && form.applies_to_agent_keys.length === 0) {
+      setFormError("Select at least one agent, or apply the rule to all agents");
+      return;
+    }
 
     // Parse optional JSON config
     let parsedConfig: Record<string, any> | null = null;
@@ -191,6 +247,8 @@ export default function MCPGuardrailsPage() {
       action: isApprovalRule ? "require_approval" : form.action,
       scope: form.scope,
       applies_to_tools: toolsList,
+      agent_scope: form.agent_scope,
+      applies_to_agent_keys: isSelectedAgents ? form.applies_to_agent_keys : [],
       config: parsedConfig,
       is_active: form.is_active,
     };
@@ -240,11 +298,12 @@ export default function MCPGuardrailsPage() {
 
   // ─── Render helpers ────────────────────────────────────────────────────────
 
-  const renderToolBadges = (tools: string[]) => (
+  const renderBadges = (labels: string[]) => (
     <Stack direction="row" gap="4px" flexWrap="wrap">
-      {tools.map((tool) => (
+      {/* Labels can repeat (two agents with the same name), so key by position. */}
+      {labels.map((label, index) => (
         <Box
-          key={tool}
+          key={index}
           component="span"
           sx={{
             display: "inline-flex",
@@ -260,7 +319,7 @@ export default function MCPGuardrailsPage() {
             lineHeight: 1,
           }}
         >
-          {tool}
+          {label}
         </Box>
       ))}
     </Stack>
@@ -326,6 +385,7 @@ export default function MCPGuardrailsPage() {
               { label: "Action", width: 90 },
               { label: "Scope", width: 110 },
               { label: "Tools" },
+              { label: "Agents" },
               { label: "Active", width: 80, align: "center" },
               { label: "", width: 70, align: "right" },
             ]}
@@ -349,10 +409,22 @@ export default function MCPGuardrailsPage() {
                 {rule.scope || "tool_input"}
               </Typography>,
               rule.applies_to_tools && rule.applies_to_tools.length > 0 ? (
-                renderToolBadges(rule.applies_to_tools)
+                renderBadges(rule.applies_to_tools)
               ) : (
                 <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
                   All tools
+                </Typography>
+              ),
+              rule.agent_scope !== "selected" ? (
+                <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                  All agents
+                </Typography>
+              ) : liveAgentKeys(rule.applies_to_agent_keys).length ? (
+                renderBadges(liveAgentKeys(rule.applies_to_agent_keys).map(agentKeyLabel))
+              ) : (
+                // Every agent it listed is gone: the rule applies to none.
+                <Typography sx={{ fontSize: 12, color: palette.status.warning.text }}>
+                  No agents
                 </Typography>
               ),
               <Box
@@ -479,6 +551,42 @@ export default function MCPGuardrailsPage() {
           <Typography sx={{ fontSize: 11, color: palette.text.disabled, mt: "-12px" }}>
             Comma-separated tool names. Leave empty to apply to all MCP tools.
           </Typography>
+
+          <Select
+            id="agent_scope"
+            label="Applies to agents"
+            placeholder="Select agents"
+            value={form.agent_scope}
+            items={AGENT_SCOPE_ITEMS}
+            onChange={(e) => setForm((p) => ({ ...p, agent_scope: e.target.value as AgentScope }))}
+            getOptionValue={(item) => item._id}
+          />
+
+          {form.agent_scope === "selected" && (
+            <>
+              <MultiSelect
+                id="applies_to_agent_keys"
+                label="Agents"
+                placeholder="Select agents"
+                value={form.applies_to_agent_keys}
+                items={[
+                  ...agentKeys,
+                  // Scoped ids not in the list (the agent keys failed to load),
+                  // so they still show and can be removed.
+                  ...form.applies_to_agent_keys
+                    .filter((id) => !agentKeys.some((k) => k._id === id))
+                    .map((id) => ({ _id: id, name: agentKeyLabel(id) })),
+                ]}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, applies_to_agent_keys: e.target.value as number[] }))
+                }
+              />
+              <Typography sx={{ fontSize: 11, color: palette.text.disabled, mt: "-12px" }}>
+                The rule checks tool calls from these agents only. Revoked agent keys are not
+                listed.
+              </Typography>
+            </>
+          )}
 
           <Field
             label="Config (JSON)"

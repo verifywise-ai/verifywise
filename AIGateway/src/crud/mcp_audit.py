@@ -3,6 +3,10 @@ from typing import Optional
 from sqlalchemy import text
 from database.db import get_db
 
+# The proxy logs an open circuit breaker as "blocked" with this summary. It is
+# an upstream outage, not a policy denial, so per-agent "denied" counts skip it.
+CIRCUIT_BREAKER_SUMMARY = "Circuit breaker open: upstream MCP server unavailable"
+
 
 async def get_audit_logs(
     org_id: int,
@@ -179,6 +183,81 @@ async def get_audit_stats_by_agent(org_id: int, days: int = 7) -> list[dict]:
         ]
 
 
+async def get_agent_activity(org_id: int, agent_key_id: int, days: int = 30) -> dict:
+    """Everything one agent has been doing over the last N days: a summary
+    (calls, runs, denials, approvals, errors, avg latency, last active) plus the tools
+    it used and its most recent tool calls. Powers the per-agent activity view."""
+    params = {
+        "org_id": org_id,
+        "akid": agent_key_id,
+        "days": int(days),
+        "circuit_breaker": CIRCUIT_BREAKER_SUMMARY,
+    }
+
+    async with get_db() as db:
+        summary = (await db.execute(
+            text("""
+                SELECT
+                    COUNT(*) AS total_calls,
+                    COUNT(*) FILTER (
+                        WHERE result_status = 'blocked'
+                          AND result_summary IS DISTINCT FROM :circuit_breaker
+                    ) AS denied,
+                    COUNT(*) FILTER (WHERE result_status = 'approval_required') AS approvals,
+                    COUNT(*) FILTER (WHERE is_error) AS errors,
+                    COUNT(DISTINCT agent_run_id) AS runs,
+                    COALESCE(AVG(latency_ms), 0) AS avg_latency_ms,
+                    MAX(created_at) AS last_active
+                FROM ai_gateway_mcp_audit_logs
+                WHERE organization_id = :org_id AND agent_key_id = :akid
+                  AND created_at >= NOW() - INTERVAL '1 day' * :days
+            """),
+            params,
+        )).mappings().fetchone()
+
+        by_tool = (await db.execute(
+            text("""
+                SELECT tool_name, COUNT(*) AS count,
+                       COUNT(*) FILTER (
+                        WHERE result_status = 'blocked'
+                          AND result_summary IS DISTINCT FROM :circuit_breaker
+                    ) AS denied
+                FROM ai_gateway_mcp_audit_logs
+                WHERE organization_id = :org_id AND agent_key_id = :akid
+                  AND created_at >= NOW() - INTERVAL '1 day' * :days
+                GROUP BY tool_name ORDER BY count DESC
+            """),
+            params,
+        )).mappings().all()
+
+        recent = (await db.execute(
+            text("""
+                SELECT id, tool_name, result_status, matched_rule_name,
+                       latency_ms, created_at
+                FROM ai_gateway_mcp_audit_logs
+                WHERE organization_id = :org_id AND agent_key_id = :akid
+                  AND created_at >= NOW() - INTERVAL '1 day' * :days
+                ORDER BY created_at DESC LIMIT 50
+            """),
+            params,
+        )).mappings().all()
+
+    s = dict(summary) if summary else {}
+    return {
+        "summary": {
+            "total_calls": s.get("total_calls", 0),
+            "denied": s.get("denied", 0),
+            "approvals": s.get("approvals", 0),
+            "errors": s.get("errors", 0),
+            "runs": s.get("runs", 0),
+            "avg_latency_ms": round(float(s.get("avg_latency_ms", 0) or 0), 2),
+            "last_active": s.get("last_active"),
+        },
+        "by_tool": [dict(r) for r in by_tool],
+        "recent": [dict(r) for r in recent],
+    }
+
+
 async def get_audit_log_by_id(org_id: int, log_id: int) -> dict | None:
     async with get_db() as db:
         row = (await db.execute(
@@ -187,6 +266,7 @@ async def get_audit_log_by_id(org_id: int, log_id: int) -> dict | None:
                        al.result_status, al.result_summary, al.is_error, al.latency_ms,
                        al.session_id, al.tool_use_id, al.result_response, al.result_truncated,
                        al.events, al.created_at,
+                       al.matched_rule_id, al.matched_rule_name,
                        ak.name AS agent_key_name
                 FROM ai_gateway_mcp_audit_logs al
                 LEFT JOIN ai_gateway_mcp_agent_keys ak ON ak.id = al.agent_key_id

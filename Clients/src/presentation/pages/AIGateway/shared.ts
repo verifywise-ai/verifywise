@@ -2,8 +2,18 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useTheme } from "@mui/material";
 import { PROVIDER_ICONS } from "../../components/ProviderIcons";
 import { apiServices } from "../../../infrastructure/api/networkServices";
+import palette from "../../themes/palette";
 
 export const sectionTitleSx = { fontWeight: 600, fontSize: 16 };
+
+/** Section label inside the agent-control drawers. */
+export const drawerLabelSx = {
+  fontSize: 11,
+  fontWeight: 600,
+  color: palette.text.tertiary,
+  letterSpacing: "0.5px",
+  mb: "6px",
+};
 
 /** Guardrail action colors — blocked (red) and masked (amber) */
 export const GUARDRAIL_ACTION_COLORS = { blocked: "#DC2626", masked: "#D97706" } as const;
@@ -24,6 +34,9 @@ export const MCP_STATUS_COLORS: Record<string, { bg: string; text: string }> = {
 } as const;
 
 export const MCP_STATUS_FALLBACK = { bg: "#F3F4F6", text: "#374151" } as const;
+
+/** A stored tool-call status ("approval_required") as screen text ("approval required"). */
+export const formatMcpStatus = (status: string) => status.replace(/_/g, " ");
 
 export function useCardSx() {
   const theme = useTheme();
