@@ -65,6 +65,19 @@ const MODEL_ID = "fake-model-1";
 const ALL_CATEGORIES: ResearchCategory[] = [...RESEARCH_CATEGORIES];
 
 const NOTHING_FOUND = "No risks found in the search results";
+const UNCONFIRMED = "Possible risks were found but could not be verified or are already recorded";
+
+// Built from char codes, so that no control character or lone surrogate sits in this file.
+const NUL = String.fromCharCode(0);
+const REPLACEMENT = String.fromCharCode(0xfffd);
+const LONE_HIGH = String.fromCharCode(0xd83d);
+
+/** The message of a provider error can quote the request or hold a key: it must never be shown. */
+const SECRET_MESSAGE = "Incorrect API key provided: sk-...abcd";
+
+/** An error as the AI SDK throws it: a name of its own, and a message that quotes the request. */
+const providerError = (name: string, message: string, extra: Record<string, unknown> = {}) =>
+  Object.assign(new Error(message), { name, ...extra });
 
 const VENDOR_ROW: IVendor = {
   id: VENDOR,
@@ -375,11 +388,8 @@ describe("runVendorResearch", () => {
         status: "completed",
         categories: ALL_CATEGORIES,
         categorySummary: [
-          {
-            category: "security_incidents",
-            outcome: "findings",
-            note: "The press reported one incident.",
-          },
+          // The model wrote a note for this category too; a category with findings shows the count.
+          { category: "security_incidents", outcome: "findings", note: "1 potential risk found" },
           {
             category: "certifications",
             outcome: "nothing_found",
@@ -500,13 +510,13 @@ describe("runVendorResearch", () => {
 
     it("cuts the note of the model to 200 characters", async () => {
       generate.mockResolvedValue(
-        answer([breachFinding()], [{ category: "security_incidents", note: "n".repeat(250) }]),
+        answer([breachFinding()], [{ category: "certifications", note: "n".repeat(250) }]),
       );
 
       await run();
 
       const summary: CategorySummaryEntry[] = onlyFinish().input.categorySummary;
-      expect(summary[0].note).toBe("n".repeat(200));
+      expect(summary[1].note).toBe("n".repeat(200));
     });
 
     it("uses the default note when the note of the model is blank, and trims a note it uses", async () => {
@@ -514,8 +524,8 @@ describe("runVendorResearch", () => {
         answer(
           [breachFinding()],
           [
-            { category: "security_incidents", note: "   " },
-            { category: "certifications", note: "  Audit still running.  " },
+            { category: "certifications", note: "   " },
+            { category: "legal_regulatory", note: "  Audit still running.  " },
           ],
         ),
       );
@@ -523,8 +533,36 @@ describe("runVendorResearch", () => {
       await run();
 
       const summary: CategorySummaryEntry[] = onlyFinish().input.categorySummary;
-      expect(summary[0].note).toBe("1 potential risk found");
-      expect(summary[1].note).toBe("Audit still running.");
+      expect(summary[1].note).toBe(NOTHING_FOUND);
+      expect(summary[2].note).toBe("Audit still running.");
+    });
+
+    it("cuts the id of the model to 255 characters, the size of its column, and still finishes the run", async () => {
+      resolveModel.mockResolvedValue({ model: MODEL, modelId: "m".repeat(300) });
+
+      const result = await run();
+
+      expect(result).toEqual({ outcome: "completed", findingsCreated: 1 });
+      expect(onlyFinish().input.model).toBe("m".repeat(255));
+    });
+
+    it("does not cut a character of the model id in half, and cuts the id of a failed run too", async () => {
+      generate.mockRejectedValue(new Error("down"));
+
+      // One of the two prefixes puts the cut of 255 units between the halves of an emoji.
+      for (const prefix of ["a", "ab"]) {
+        resolveModel.mockResolvedValue({ model: MODEL, modelId: `${prefix}${"😀".repeat(200)}` });
+        asMock(finishRunQuery).mockClear();
+
+        const result = await run();
+
+        expect(result.outcome).toBe("failed");
+        const { model } = onlyFinish().input;
+        expect(model.length).toBeLessThanOrEqual(255);
+        expect(model.length).toBeGreaterThan(250);
+        // A lone surrogate does not survive a trip through UTF-8.
+        expect(Buffer.from(model).toString()).toBe(model);
+      }
     });
 
     it("keeps the summary in category order and ignores a note for a category it did not search", async () => {
@@ -832,7 +870,9 @@ describe("runVendorResearch", () => {
 
   describe("the model call", () => {
     it("fails the run when the model call rejects, and does not throw", async () => {
-      generate.mockRejectedValue(new Error("Provider returned HTTP 429"));
+      generate.mockRejectedValue(
+        providerError("AI_APICallError", SECRET_MESSAGE, { statusCode: 429 }),
+      );
 
       const result = await run();
 
@@ -853,55 +893,88 @@ describe("runVendorResearch", () => {
         promptVersion: PROMPT_VERSION,
         searchesUsed: 4,
         duplicatesDropped: 0,
-        error: "Model call failed: Provider returned HTTP 429",
+        error: "Model call failed: HTTP 429",
       });
     });
 
-    it("cuts the error of a failed run to 500 characters", async () => {
-      generate.mockRejectedValue(new Error("x".repeat(800)));
+    // The message of a provider error can quote the request or hold a key, so the run records a
+    // fixed phrase chosen from the name and the HTTP status of the error, and nothing else.
+    it.each([
+      [
+        "an HTTP status",
+        providerError("AI_APICallError", SECRET_MESSAGE, { statusCode: 401 }),
+        "HTTP 401",
+      ],
+      [
+        "an HTTP status inside the retry error of the SDK",
+        providerError("AI_RetryError", `Failed after 3 attempts. Last error: ${SECRET_MESSAGE}`, {
+          lastError: providerError("AI_APICallError", SECRET_MESSAGE, { statusCode: 429 }),
+        }),
+        "HTTP 429",
+      ],
+      ["a TimeoutError", providerError("TimeoutError", SECRET_MESSAGE), "timed out"],
+      ["an AbortError", providerError("AbortError", SECRET_MESSAGE), "timed out"],
+      [
+        "the TimeoutError that AbortSignal.timeout gives",
+        new DOMException(SECRET_MESSAGE, "TimeoutError"),
+        "timed out",
+      ],
+      [
+        "a NoObjectGeneratedError",
+        providerError("NoObjectGeneratedError", SECRET_MESSAGE),
+        "the answer did not match the expected format",
+      ],
+      [
+        "a NoObjectGeneratedError under the name the SDK gives it",
+        providerError("AI_NoObjectGeneratedError", SECRET_MESSAGE),
+        "the answer did not match the expected format",
+      ],
+      ["any other error", new Error(SECRET_MESSAGE), "unexpected error"],
+      [
+        "a status that is not a number",
+        providerError("AI_APICallError", SECRET_MESSAGE, { statusCode: "401" }),
+        "unexpected error",
+      ],
+      [
+        "a status that is not an HTTP status",
+        providerError("AI_APICallError", SECRET_MESSAGE, { statusCode: 99999 }),
+        "unexpected error",
+      ],
+      [
+        "a status with a fraction",
+        providerError("AI_APICallError", SECRET_MESSAGE, { statusCode: 429.5 }),
+        "unexpected error",
+      ],
+      ["a rejection that is not an Error", SECRET_MESSAGE, "unexpected error"],
+      ["a rejection with nothing in it", undefined, "unexpected error"],
+    ])("records a fixed phrase, never the message, for %s", async (_label, rejection, phrase) => {
+      generate.mockRejectedValue(rejection);
 
-      await run();
+      const result = await run();
 
-      const { error } = onlyFinish().input;
-      expect(error).toHaveLength(500);
-      expect(error.startsWith("Model call failed: xxx")).toBe(true);
-    });
-
-    it("does not cut a character in half when it cuts the error", async () => {
-      // One of the two messages puts the cut between the halves of an emoji, whatever the prefix.
-      for (const message of ["😀".repeat(400), `a${"😀".repeat(400)}`]) {
-        generate.mockRejectedValue(new Error(message));
-        asMock(finishRunQuery).mockClear();
-
-        await run();
-
-        const { error } = onlyFinish().input;
-        expect(error.length).toBeLessThanOrEqual(500);
-        expect(/[\uD800-\uDFFF]/u.test(error)).toBe(false);
+      expect(result).toEqual({ outcome: "failed", findingsCreated: 0 });
+      expect(onlyFinish().input.error).toBe(`Model call failed: ${phrase}`);
+      for (const written of [JSON.stringify(asMock(finishRunQuery).mock.calls), loggedText()]) {
+        expect(written).not.toContain("sk-");
+        expect(written).not.toContain("Incorrect API key");
       }
     });
 
-    it("records only the top-level message of the error, not what an inner cause carries", async () => {
+    it("does not record what an inner cause carries either", async () => {
       generate.mockRejectedValue(
-        Object.assign(new Error("No object generated"), {
+        providerError("AI_NoObjectGeneratedError", "No object generated", {
           cause: new Error("RAW MODEL OUTPUT with customer data"),
+          text: "RAW MODEL OUTPUT with customer data",
         }),
       );
 
       await run();
 
-      expect(onlyFinish().input.error).toBe("Model call failed: No object generated");
+      expect(onlyFinish().input.error).toBe(
+        "Model call failed: the answer did not match the expected format",
+      );
       expect(JSON.stringify(asMock(finishRunQuery).mock.calls)).not.toContain("RAW MODEL OUTPUT");
       expect(loggedText()).not.toContain("RAW MODEL OUTPUT");
-    });
-
-    it("copes with a rejection that is not an Error", async () => {
-      generate.mockRejectedValue("the model went away");
-
-      const result = await run();
-
-      expect(result.outcome).toBe("failed");
-      expect(onlyFinish().input.error).toBe("Model call failed: the model went away");
     });
 
     it("fails the run without a search when the organisation has no LLM key", async () => {
@@ -936,6 +1009,57 @@ describe("runVendorResearch", () => {
       expect(result.outcome).toBe("failed");
       expect(search).not.toHaveBeenCalled();
       expect(onlyFinish().input.error).toBe("Unexpected error: llm_keys is unavailable");
+    });
+  });
+
+  describe("the error of a failed run", () => {
+    // These are our own errors, such as a database error. Their top-level message is recorded.
+    it("cuts the error to 500 characters", async () => {
+      asMock(getVendorByIdQuery).mockRejectedValue(new Error("x".repeat(800)));
+
+      await run();
+
+      const { error } = onlyFinish().input;
+      expect(error).toHaveLength(500);
+      expect(error.startsWith("Unexpected error: xxx")).toBe(true);
+    });
+
+    it("does not cut a character in half when it cuts the error", async () => {
+      // One of the two messages puts the cut between the halves of an emoji, whatever the prefix.
+      for (const message of ["😀".repeat(400), `a${"😀".repeat(400)}`]) {
+        asMock(getVendorByIdQuery).mockRejectedValue(new Error(message));
+        asMock(finishRunQuery).mockClear();
+
+        await run();
+
+        const { error } = onlyFinish().input;
+        expect(error.length).toBeLessThanOrEqual(500);
+        // A lone surrogate does not survive a trip through UTF-8.
+        expect(Buffer.from(error).toString()).toBe(error);
+      }
+    });
+
+    it("records only the top-level message, not what an inner cause carries", async () => {
+      asMock(getVendorByIdQuery).mockRejectedValue(
+        Object.assign(new Error("connection lost"), {
+          cause: new Error("RAW DATABASE DETAIL with customer data"),
+        }),
+      );
+
+      await run();
+
+      expect(onlyFinish().input.error).toBe("Unexpected error: connection lost");
+      expect(JSON.stringify(asMock(finishRunQuery).mock.calls)).not.toContain("RAW DATABASE");
+      expect(loggedText()).not.toContain("RAW DATABASE");
+    });
+
+    it("copes with a rejection that is not an Error", async () => {
+      asMock(getVendorByIdQuery).mockRejectedValue("the database went away");
+
+      const result = await run();
+
+      expect(result.outcome).toBe("failed");
+      expect(onlyFinish().input.error).toBe("Unexpected error: the database went away");
     });
   });
 
@@ -1122,6 +1246,258 @@ describe("runVendorResearch", () => {
       expect(result.findingsCreated).toBe(1);
       expect(insertedFindings()[0].risk_severity).toBe("Major");
       expect(onlyFinish().input.duplicatesDropped).toBe(1);
+    });
+
+    it("keeps the more severe of two similar candidates, whichever the model wrote first", async () => {
+      generate.mockResolvedValue(
+        answer([
+          breachFinding({ risk_severity: "Minor", action_plan: "Another plan." }),
+          breachFinding({ risk_severity: "Major" }),
+        ]),
+      );
+
+      const result = await run();
+
+      expect(result.findingsCreated).toBe(1);
+      expect(insertedFindings()[0].risk_severity).toBe("Major");
+      expect(onlyFinish().input.duplicatesDropped).toBe(1);
+    });
+  });
+
+  describe("the caps", () => {
+    // They are applied after the de-duplication: a known risk must not take the place of a new one.
+
+    /** A candidate whose words no other candidate shares, so that it repeats nothing. */
+    const unique = (
+      label: string,
+      risk_severity: ModelFinding["risk_severity"],
+      category: ResearchCategory = "security_incidents",
+    ) =>
+      breachFinding({
+        category,
+        risk_severity,
+        risk_description: `${label}risk alpha${label} beta${label}`,
+        impact_description: `${label}impact gamma${label} delta${label}`,
+      });
+
+    const asRisk = (candidate: ModelFinding, id: number) =>
+      activeRisk({
+        id,
+        risk_description: candidate.risk_description,
+        impact_description: candidate.impact_description,
+      });
+
+    const asPrior = (candidate: ModelFinding) =>
+      priorFinding({
+        category: candidate.category,
+        risk_description: candidate.risk_description,
+        impact_description: candidate.impact_description,
+      });
+
+    const storedLabels = () => insertedFindings().map((stored) => stored.risk_description);
+
+    it("keeps the new risks of a second look: known risks that are more severe do not take their places", async () => {
+      const knownInRegister = [unique("k1", "Catastrophic"), unique("k2", "Major")];
+      const knownFinding = unique("k3", "Major");
+      const fresh = [unique("f1", "Moderate"), unique("f2", "Minor")];
+      asMock(getVendorRisksByVendorIdQuery).mockResolvedValue(
+        knownInRegister.map((known, index) => asRisk(known, 21 + index)),
+      );
+      asMock(getFindingsForVendorQuery).mockResolvedValue([asPrior(knownFinding)]);
+      // Five candidates in one category, which allows three. The three that are known are the
+      // most severe, so a cap that came first would fill the category with them.
+      generate.mockResolvedValue(
+        answer([fresh[1], knownInRegister[0], fresh[0], knownFinding, knownInRegister[1]]),
+      );
+
+      const result = await run();
+
+      expect(result).toEqual({ outcome: "completed", findingsCreated: 2 });
+      expect(storedLabels()).toEqual(fresh.map((candidate) => candidate.risk_description));
+      const { input } = onlyFinish();
+      expect(input.duplicatesDropped).toBe(3);
+      expect(input.categorySummary[0]).toEqual({
+        category: "security_incidents",
+        outcome: "findings",
+        note: "2 potential risks found",
+      });
+    });
+
+    it("stores at most eight findings, chosen after the de-duplication, the most severe first", async () => {
+      const known = [
+        unique("d1", "Catastrophic", "security_incidents"),
+        unique("d2", "Catastrophic", "ai_specific"),
+      ];
+      const fresh: Record<string, ModelFinding> = {
+        n1: unique("n1", "Minor", "security_incidents"),
+        n2: unique("n2", "Catastrophic", "security_incidents"),
+        n3: unique("n3", "Moderate", "security_incidents"),
+        n4: unique("n4", "Negligible", "certifications"),
+        n5: unique("n5", "Major", "certifications"),
+        n6: unique("n6", "Moderate", "legal_regulatory"),
+        n7: unique("n7", "Minor", "legal_regulatory"),
+        n8: unique("n8", "Major", "ai_specific"),
+        n9: unique("n9", "Catastrophic", "ai_specific"),
+      };
+      asMock(getVendorRisksByVendorIdQuery).mockResolvedValue(
+        known.map((candidate, index) => asRisk(candidate, 21 + index)),
+      );
+      // Eleven candidates. The two that are known are the most severe, so a cap that came first
+      // would give them two of the eight places and store six findings.
+      generate.mockResolvedValue(answer([...known, ...Object.values(fresh)]));
+
+      const result = await run();
+
+      expect(result).toEqual({ outcome: "completed", findingsCreated: 8 });
+      // The most severe first, and of one severity in the order the model gave them. The least
+      // severe of the nine new risks, n4, is the one that does not fit.
+      expect(storedLabels()).toEqual(
+        ["n2", "n9", "n5", "n8", "n3", "n6", "n1", "n7"].map((key) => fresh[key].risk_description),
+      );
+      expect(onlyFinish().input.duplicatesDropped).toBe(2);
+    });
+
+    it("does not show a category as empty when the cap cut its only candidate", async () => {
+      generate.mockResolvedValue(
+        answer([
+          ...["a1", "a2", "a3"].map((label) => unique(label, "Catastrophic", "security_incidents")),
+          ...["b1", "b2", "b3"].map((label) => unique(label, "Catastrophic", "certifications")),
+          ...["c1", "c2"].map((label) => unique(label, "Catastrophic", "legal_regulatory")),
+          unique("d1", "Negligible", "ai_specific"),
+        ]),
+      );
+
+      const result = await run();
+
+      expect(result.findingsCreated).toBe(8);
+      const summary: CategorySummaryEntry[] = onlyFinish().input.categorySummary;
+      expect(summary[3]).toEqual({
+        category: "ai_specific",
+        outcome: "nothing_found",
+        note: UNCONFIRMED,
+      });
+    });
+  });
+
+  describe("the notes of the category summary", () => {
+    it("says what the model wrote only for a category in which it proposed nothing", async () => {
+      generate.mockResolvedValue(
+        answer([breachFinding()], [{ category: "legal_regulatory", note: "Nothing in the news." }]),
+      );
+
+      await run();
+
+      const summary: CategorySummaryEntry[] = onlyFinish().input.categorySummary;
+      expect(summary[2]).toEqual({
+        category: "legal_regulatory",
+        outcome: "nothing_found",
+        note: "Nothing in the news.",
+      });
+    });
+
+    it("counts the findings of a category, whatever the model wrote about it", async () => {
+      generate.mockResolvedValue(
+        answer([breachFinding()], [{ category: "security_incidents", note: "NOTE-OF-THE-MODEL" }]),
+      );
+
+      await run();
+
+      const summary: CategorySummaryEntry[] = onlyFinish().input.categorySummary;
+      expect(summary[0]).toEqual({
+        category: "security_incidents",
+        outcome: "findings",
+        note: "1 potential risk found",
+      });
+      expect(JSON.stringify(summary)).not.toContain("NOTE-OF-THE-MODEL");
+    });
+
+    it("says so when the candidates of a category were all dropped, by validation or by de-duplication", async () => {
+      asMock(getVendorRisksByVendorIdQuery).mockResolvedValue([activeRisk()]);
+      generate.mockResolvedValue(
+        answer(
+          [
+            // Kept.
+            breachFinding({
+              risk_description: "Subcontractors may process our files in other countries.",
+              impact_description: "Our contract does not cover these locations.",
+            }),
+            // Dropped by validation: the quote is not on the page.
+            breachFinding({
+              category: "certifications",
+              evidence: [{ source_id: "S1", quote: "the vendor lost every customer record" }],
+            }),
+            // Dropped by de-duplication: it says what the active risk says.
+            breachFinding({ category: "ai_specific" }),
+          ],
+          [
+            { category: "security_incidents", note: "NOTE-SECURITY" },
+            { category: "certifications", note: "NOTE-CERTIFICATIONS" },
+            { category: "legal_regulatory", note: "Nothing came up in the news." },
+            { category: "ai_specific", note: "NOTE-AI" },
+          ],
+        ),
+      );
+
+      await run();
+
+      const { input } = onlyFinish();
+      expect(input.categorySummary).toEqual([
+        { category: "security_incidents", outcome: "findings", note: "1 potential risk found" },
+        { category: "certifications", outcome: "nothing_found", note: UNCONFIRMED },
+        {
+          category: "legal_regulatory",
+          outcome: "nothing_found",
+          note: "Nothing came up in the news.",
+        },
+        { category: "ai_specific", outcome: "nothing_found", note: UNCONFIRMED },
+      ]);
+      expect(input.duplicatesDropped).toBe(1);
+    });
+
+    it("cleans the note of the model: a NUL goes and a lone surrogate becomes U+FFFD", async () => {
+      generate.mockResolvedValue(
+        answer(
+          [breachFinding()],
+          [{ category: "legal_regulatory", note: `Quiet${NUL} year ${LONE_HIGH}` }],
+        ),
+      );
+
+      await run();
+
+      const summary: CategorySummaryEntry[] = onlyFinish().input.categorySummary;
+      expect(summary[2]).toEqual({
+        category: "legal_regulatory",
+        outcome: "nothing_found",
+        note: `Quiet year ${REPLACEMENT}`,
+      });
+    });
+
+    it("uses the plain sentence for a note that is only NULs and whitespace", async () => {
+      generate.mockResolvedValue(
+        answer([breachFinding()], [{ category: "legal_regulatory", note: ` ${NUL}${NUL}\n ` }]),
+      );
+
+      await run();
+
+      const summary: CategorySummaryEntry[] = onlyFinish().input.categorySummary;
+      expect(summary[2].note).toBe(NOTHING_FOUND);
+    });
+
+    it("stores the texts and the quote of a finding without the characters a database refuses", async () => {
+      generate.mockResolvedValue(
+        answer([
+          breachFinding({
+            risk_description: `Attackers${NUL} copied records${LONE_HIGH}.`,
+            evidence: [{ source_id: "S1", quote: `attackers${NUL} copied customer records` }],
+          }),
+        ]),
+      );
+
+      await run();
+
+      const [stored] = insertedFindings();
+      expect(stored.risk_description).toBe(`Attackers copied records${REPLACEMENT}.`);
+      expect(stored.sources[0].quote).toBe("attackers copied customer records");
     });
   });
 
@@ -1354,7 +1730,9 @@ describe("runVendorResearch", () => {
     });
 
     it("names the run, the vendor and the organisation when it logs a failure", async () => {
-      generate.mockRejectedValue(new Error("Provider returned HTTP 429"));
+      generate.mockRejectedValue(
+        providerError("AI_APICallError", SECRET_MESSAGE, { statusCode: 429 }),
+      );
 
       await run();
 
@@ -1362,7 +1740,33 @@ describe("runVendorResearch", () => {
       expect(logged).toContain(`run ${RUN}`);
       expect(logged).toContain(`vendor ${VENDOR}`);
       expect(logged).toContain(`org ${ORG}`);
-      expect(logged).toContain("Provider returned HTTP 429");
+      expect(logged).toContain("Model call failed: HTTP 429");
+    });
+
+    it("logs only the name and the status code of the error of a failed model call", async () => {
+      generate.mockRejectedValue(
+        providerError("AI_APICallError", SECRET_MESSAGE, { statusCode: 401 }),
+      );
+
+      await run();
+
+      const logged = loggedText();
+      expect(logged).toContain("AI_APICallError");
+      expect(logged).toContain("401");
+      expect(logged).not.toContain("Incorrect API key");
+      expect(logged).not.toContain("sk-");
+    });
+
+    it("logs no more than a cleaned name for an error whose name is odd", async () => {
+      generate.mockRejectedValue(
+        providerError(`Odd name: ${SECRET_MESSAGE}\n`.repeat(10), "A message"),
+      );
+
+      await run();
+
+      const logged = loggedText();
+      expect(logged).not.toContain("sk-");
+      expect(logged).not.toContain("Incorrect API key");
     });
   });
 });

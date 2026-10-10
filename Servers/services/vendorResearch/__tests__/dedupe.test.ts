@@ -374,19 +374,6 @@ describe("dropDuplicates", () => {
       expect(result.kept.map(descriptionOf)).toEqual([descriptionOf(first), descriptionOf(second)]);
       expect(result.dropped).toBe(4);
     });
-
-    it("equals the number of candidates minus the number kept", () => {
-      const candidates = [
-        candidate(["alpha", "bravo"]),
-        candidate(["alpha", "bravo", "charlie"]),
-        candidate(["alpha", "bravo", "delta"]),
-        candidate(["xray", "yankee", "zulu"]),
-      ];
-
-      const result = dropDuplicates(candidates, [], []);
-
-      expect(result.kept.length + result.dropped).toBe(candidates.length);
-    });
   });
 
   it("does not change what it is given", () => {

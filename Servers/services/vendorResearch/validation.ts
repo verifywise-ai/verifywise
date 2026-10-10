@@ -11,10 +11,16 @@
  *   removed, and a candidate left without a citation is dropped.
  * - The category must be one that was searched, the texts must be present and within their limits,
  *   and the enum values must be real, so that a risk level can be worked out.
+ * - The texts and the quotes of a candidate are cleaned like the evidence is (see cleanText) before
+ *   they are checked and stored: a NUL and a lone surrogate would make a run fail to save. So half
+ *   of a surrogate pair, which would match the first half of a pair in the page, no longer does: it
+ *   has become U+FFFD.
  * - The confidence is the lower of what the model says and what the evidence supports. It is never
  *   raised.
- * - At most MAX_PER_CATEGORY findings are kept for a category and MAX_PER_RUN for a run, the most
- *   severe first.
+ * - The findings come back with the most severe first, so that of two similar ones the more severe
+ *   is the one that the de-duplication keeps. `applyCaps` then keeps at most MAX_PER_CATEGORY for a
+ *   category and MAX_PER_RUN for a run. The caller applies it after the de-duplication: findings
+ *   that are already known must not take the places of new ones.
  *
  * What these checks cannot tell is a page that says something false about the vendor, or a quote
  * from a page that gives orders to the model: both are real text of a page that mentions the
@@ -39,6 +45,7 @@ import {
   ResearchOutput,
 } from "./schema";
 import { ResearchTarget } from "./target";
+import { cleanText } from "./text";
 
 /** The same constant as the prompt and the schema use, so that the three cannot disagree. */
 export { MAX_PER_CATEGORY };
@@ -175,10 +182,15 @@ function validCitations(
   for (const item of candidate.evidence) {
     if (citations.has(item.source_id)) continue;
     const source = sourcesById.get(item.source_id);
-    if (source === undefined || item.quote.length > MAX_QUOTE_CHARS) continue;
+    if (source === undefined) continue;
+
+    // Cleaned first, like the evidence the quote is looked for in: a NUL is dropped, and half of a
+    // surrogate pair becomes U+FFFD, which is not half of a pair in the page.
+    const written = cleanText(item.quote);
+    if (written.length > MAX_QUOTE_CHARS) continue;
 
     // The model saw the snippet with &, < and > escaped, so it quotes them escaped.
-    const quote = unescapeFromPrompt(item.quote);
+    const quote = unescapeFromPrompt(written);
     const wanted = normaliseForQuote(quote);
     // An empty string is part of every text, so it is refused on its own.
     if (wanted === "" || !normaliseForQuote(source.content).includes(wanted)) continue;
@@ -203,10 +215,16 @@ function toFinding(
   target: ResearchTarget,
 ): NewFinding | null {
   if (!searched.has(candidate.category)) return null;
+
+  // Cleaned before they are checked: a text of nothing but NULs and spaces is blank, and a text
+  // that is over the limit only because of its NULs is not too long.
+  const riskDescription = cleanText(candidate.risk_description);
+  const impactDescription = cleanText(candidate.impact_description);
+  const actionPlan = cleanText(candidate.action_plan);
   if (
-    !isUsableText(candidate.risk_description) ||
-    !isUsableText(candidate.impact_description) ||
-    !isUsableText(candidate.action_plan)
+    !isUsableText(riskDescription) ||
+    !isUsableText(impactDescription) ||
+    !isUsableText(actionPlan)
   ) {
     return null;
   }
@@ -225,9 +243,9 @@ function toFinding(
 
   return {
     category: candidate.category,
-    risk_description: candidate.risk_description.trim(),
-    impact_description: candidate.impact_description.trim(),
-    action_plan: candidate.action_plan.trim(),
+    risk_description: riskDescription.trim(),
+    impact_description: impactDescription.trim(),
+    action_plan: actionPlan.trim(),
     likelihood: candidate.likelihood,
     risk_severity: candidate.risk_severity,
     risk_level: `${level} Risk`,
@@ -237,16 +255,23 @@ function toFinding(
 }
 
 /**
- * The most severe findings first, at most MAX_PER_CATEGORY of a category and MAX_PER_RUN in all.
- * The sort is stable, so findings of one severity stay in the order the model gave them.
+ * A copy of the findings with the most severe first. The sort is stable, so findings of one
+ * severity stay in the order they were given in.
  */
-function applyCaps(findings: NewFinding[]): NewFinding[] {
+function mostSevereFirst(findings: NewFinding[]): NewFinding[] {
   const severityRank = (finding: NewFinding) => RESEARCH_SEVERITIES.indexOf(finding.risk_severity);
-  const mostSevereFirst = [...findings].sort((a, b) => severityRank(b) - severityRank(a));
+  return [...findings].sort((a, b) => severityRank(b) - severityRank(a));
+}
 
+/**
+ * The most severe findings first, at most MAX_PER_CATEGORY of a category and MAX_PER_RUN in all.
+ * Findings of one severity stay in the order they were given in. The caller applies it after the
+ * de-duplication, so that a finding that is already known cannot take the place of a new one.
+ */
+export function applyCaps(findings: NewFinding[]): NewFinding[] {
   const keptPerCategory = new Map<ResearchCategory, number>();
   const kept: NewFinding[] = [];
-  for (const finding of mostSevereFirst) {
+  for (const finding of mostSevereFirst(findings)) {
     if (kept.length >= MAX_PER_RUN) break;
     const inCategory = keptPerCategory.get(finding.category) ?? 0;
     if (inCategory >= MAX_PER_CATEGORY) continue;
@@ -257,8 +282,9 @@ function applyCaps(findings: NewFinding[]): NewFinding[] {
 }
 
 /**
- * The candidates of the model that hold up, as findings ready to be stored. `pack` is the evidence
- * the model was shown and `searchedCategories` the categories whose search succeeded.
+ * The candidates of the model that hold up, as findings ready to be stored, the most severe first
+ * and not capped (see applyCaps). `pack` is the evidence the model was shown and
+ * `searchedCategories` the categories whose search succeeded.
  */
 export function validateFindings(
   output: ResearchOutput,
@@ -274,5 +300,5 @@ export function validateFindings(
     const finding = toFinding(candidate, sourcesById, searched, target);
     if (finding !== null) findings.push(finding);
   }
-  return applyCaps(findings);
+  return mostSevereFirst(findings);
 }

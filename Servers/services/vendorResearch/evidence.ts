@@ -13,7 +13,7 @@ import {
   ResearchCategory,
 } from "../../domain.layer/interfaces/i.vendorResearch";
 import { SearchHit } from "./searchProvider";
-import { MAX_SNIPPET_CHARS, cutAtCodePoint } from "./text";
+import { MAX_SNIPPET_CHARS, cleanText, cutAtCodePoint } from "./text";
 
 export { MAX_SNIPPET_CHARS };
 export const MAX_EVIDENCE_BYTES = 40_000;
@@ -26,24 +26,14 @@ export const MAX_TITLE_CHARS = 300;
 export const MAX_URL_CHARS = 2048;
 export const MAX_PUBLISHED_AT_CHARS = 64;
 
-/** The C0 control characters other than tab, line feed and carriage return. */
-const UNWANTED_CONTROL_CHARACTERS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g;
-
 /**
- * With the u flag a surrogate pair is read as one code point, so these match an unpaired
- * surrogate and nothing else. The global one is for replace(); the other has no g flag, so it
- * keeps no state between test() calls.
+ * With the u flag a surrogate pair is read as one code point, so this matches an unpaired
+ * surrogate and nothing else. It has no g flag, so it keeps no state between test() calls.
  */
-const LONE_SURROGATES = /[\uD800-\uDFFF]/gu;
 const HAS_LONE_SURROGATE = /[\uD800-\uDFFF]/u;
 
 /** Whitespace, and control characters of every kind: C0, DEL and C1. */
 const WHITESPACE_OR_CONTROL = /[\s\u0000-\u001F\u007F-\u009F]/;
-
-/** Removes the control characters and replaces each lone surrogate with U+FFFD. */
-function cleanText(text: string): string {
-  return text.replace(UNWANTED_CONTROL_CHARACTERS, "").replace(LONE_SURROGATES, "\uFFFD");
-}
 
 /**
  * True for an http or https URL of at most MAX_URL_CHARS characters that holds no whitespace, no

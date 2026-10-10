@@ -2,8 +2,8 @@
  * The vendor research pipeline: what one run does between "queued" and "completed" or "failed".
  *
  * Mark the run running, load the vendor, search the web once for each category, pack the results
- * into an evidence pack, make one structured model call, validate and de-duplicate the answer, and
- * store the findings together with the end of the run.
+ * into an evidence pack, make one structured model call, validate the answer, drop what is already
+ * known, cap what is left (in that order), and store the findings together with the end of the run.
  *
  * The queries that end a run (finishRunQuery) have no status guard, so a run is ended exactly once.
  * The code is built so that this can be seen:
@@ -19,7 +19,13 @@
  * Only a failure to mark the run running is rethrown. The run is still queued then, so a retry of
  * the job can start it.
  *
- * Nothing that a third party or the model wrote is logged: no snippets, quotes, prompts or answers.
+ * This module logs nothing that a third party or the model wrote: no snippets, quotes, prompts or
+ * answers. The message of an error of the model call is neither stored nor logged either, because
+ * it can quote the request or hold a key. The run records a fixed phrase and the log line the name
+ * and the HTTP status of the error. The self-correcting call (advisor/llmSelfCorrect.ts) logs on
+ * its own account when it gives up on an answer: the path and message of the first three schema
+ * issues, which are generic except that the name of an unexpected property is quoted. It does not
+ * log the message of a provider error.
  */
 import { createModelFromKey, resolveModelId } from "../../advisor/llmModelFactory";
 import type { generateObjectWithSelfCorrection } from "../../advisor/llmSelfCorrect";
@@ -49,8 +55,8 @@ import { PROMPT_VERSION, buildSystemPrompt, buildUserPrompt } from "./prompts";
 import { MAX_NOTE_CHARS, ResearchOutput, researchOutputSchema } from "./schema";
 import { SearchHit, SearchProvider, SearchProviderError } from "./searchProvider";
 import { buildTarget } from "./target";
-import { cutAtCodePoint } from "./text";
-import { validateFindings } from "./validation";
+import { cleanText, cutAtCodePoint } from "./text";
+import { applyCaps, validateFindings } from "./validation";
 
 export interface PipelineDeps {
   searchProvider: SearchProvider;
@@ -69,9 +75,17 @@ export interface PipelineResult {
 const MODEL_TIMEOUT_MS = 120_000;
 /** The error of a failed run is stored cut to this many characters. */
 const ERROR_MAX_CHARS = 500;
+/** The id of the model is stored cut to this many characters, the size of its column. */
+const MODEL_MAX_CHARS = 255;
 
 const NOTHING_FOUND_NOTE = "No risks found in the search results";
 const SEARCH_FAILED_NOTE = "The search failed";
+/**
+ * For a category in which the model proposed a risk and none stayed: validation, the
+ * de-duplication or the cap took them all.
+ */
+const UNCONFIRMED_NOTE =
+  "Possible risks were found but could not be verified or are already recorded";
 
 /**
  * The model of the organisation's first LLM key, and the id of the model that key calls; null when
@@ -119,6 +133,51 @@ function describeError(error: unknown): string {
   return message.trim() === "" ? "unknown error" : message;
 }
 
+const asRecord = (value: unknown): Record<string, unknown> | null =>
+  typeof value === "object" && value !== null ? (value as Record<string, unknown>) : null;
+
+/**
+ * The HTTP status of a provider error, as a number, or null. The retry error of the SDK holds the
+ * error that it gave up on as `lastError`, so that is looked at too.
+ */
+function httpStatusOf(error: unknown): number | null {
+  const given = asRecord(error);
+  for (const status of [given?.statusCode, asRecord(given?.lastError)?.statusCode]) {
+    if (typeof status === "number" && Number.isInteger(status) && status >= 100 && status <= 599) {
+      return status;
+    }
+  }
+  return null;
+}
+
+/** What a class name looks like, for example AI_APICallError. A name that does not is not trusted. */
+const IDENTIFIER = /^[A-Za-z_$][\w$.]{0,59}$/;
+
+/**
+ * What went wrong with a model call, in a few fixed words, and the name and HTTP status of the
+ * error for the log. The message of a provider error can quote the request or hold a key, and an
+ * inner cause can hold the raw answer, so neither is stored or logged. The kind of an error is
+ * told from its name and its status, not from its class, so that the SDK is not imported for it. The
+ * SDK names its errors with an AI_ prefix, for example AI_NoObjectGeneratedError.
+ */
+function describeModelFailure(error: unknown): {
+  phrase: string;
+  name: string;
+  status: number | null;
+} {
+  const rawName = asRecord(error)?.name;
+  const name = typeof rawName === "string" && IDENTIFIER.test(rawName) ? rawName : "unknown";
+  const status = httpStatusOf(error);
+  if (status !== null) return { phrase: `HTTP ${status}`, name, status };
+  if (name === "TimeoutError" || name === "AbortError") {
+    return { phrase: "timed out", name, status };
+  }
+  if (name === "NoObjectGeneratedError" || name === "AI_NoObjectGeneratedError") {
+    return { phrase: "the answer did not match the expected format", name, status };
+  }
+  return { phrase: "unexpected error", name, status };
+}
+
 /**
  * Why a search failed, for the run summary. A SearchProviderError has a message that is safe to
  * show, by contract; the message of any other error is not trusted and is replaced.
@@ -134,15 +193,36 @@ const findingsNote = (count: number) =>
   count === 1 ? "1 potential risk found" : `${count} potential risks found`;
 
 /**
- * One entry for each category, in category order. A category that was not searched keeps the note
- * of the plan, a failed search shows its failure, and a searched category is `findings` when a
- * finding of it was kept and `nothing_found` otherwise. Its note is the model's, cut to
- * MAX_NOTE_CHARS, or a plain sentence when the model wrote none.
+ * The first note that the model wrote for the category and that has any text left once it is
+ * cleaned (like the rest of what the model wrote), trimmed and cut to MAX_NOTE_CHARS.
+ */
+function modelNoteFor(
+  notes: ResearchOutput["category_notes"],
+  category: ResearchCategory,
+): string | undefined {
+  return notes
+    .filter((entry) => entry.category === category)
+    .map((entry) => cutAtCodePoint(cleanText(entry.note).trim(), MAX_NOTE_CHARS))
+    .find((note) => note !== "");
+}
+
+/**
+ * One entry for each category, in category order.
+ *
+ * - A category that was not searched keeps the note of the plan, and a failed search shows its
+ *   failure.
+ * - A searched category with a kept finding is `findings`, with a plain count as its note.
+ * - Any other is `nothing_found`. If the model proposed a risk in it and none stayed, the note says
+ *   that risks were possible but are not confirmed. Only if the model proposed none is its own note
+ *   shown, or a plain sentence when it wrote none: a note that sits next to a risk that was dropped
+ *   would describe that risk.
  */
 function summarise(input: {
   skipped: CategorySummaryEntry[];
   failed: Array<{ category: ResearchCategory; note: string }>;
   kept: NewFinding[];
+  /** The categories in which the model proposed a risk, whatever became of it. */
+  proposed: ReadonlySet<ResearchCategory>;
   modelNotes: ResearchOutput["category_notes"];
 }): CategorySummaryEntry[] {
   return RESEARCH_CATEGORIES.map((category): CategorySummaryEntry => {
@@ -152,13 +232,15 @@ function summarise(input: {
     if (failure) return { category, outcome: "search_failed", note: failure.note };
 
     const keptCount = input.kept.filter((finding) => finding.category === category).length;
-    const modelNote = input.modelNotes
-      .filter((entry) => entry.category === category)
-      .map((entry) => cutAtCodePoint(entry.note.trim(), MAX_NOTE_CHARS))
-      .find((note) => note !== "");
-    return keptCount > 0
-      ? { category, outcome: "findings", note: modelNote ?? findingsNote(keptCount) }
-      : { category, outcome: "nothing_found", note: modelNote ?? NOTHING_FOUND_NOTE };
+    if (keptCount > 0) return { category, outcome: "findings", note: findingsNote(keptCount) };
+    if (input.proposed.has(category)) {
+      return { category, outcome: "nothing_found", note: UNCONFIRMED_NOTE };
+    }
+    return {
+      category,
+      outcome: "nothing_found",
+      note: modelNoteFor(input.modelNotes, category) ?? NOTHING_FOUND_NOTE,
+    };
   });
 }
 
@@ -176,7 +258,7 @@ function finishInput(
     categorySummary: end.categorySummary,
     evidence: progress.evidence,
     searchProvider: deps.searchProvider.name,
-    model: progress.model,
+    model: progress.model === null ? null : cutAtCodePoint(progress.model, MODEL_MAX_CHARS),
     promptVersion: PROMPT_VERSION,
     searchesUsed: progress.searchesUsed,
     duplicatesDropped: end.duplicatesDropped,
@@ -253,7 +335,7 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
     const reasons = Array.from(new Set(failed.map((entry) => entry.note))).join("; ");
     return stop(
       `The run stopped because all searches failed: ${reasons}`,
-      summarise({ skipped, failed, kept: [], modelNotes: [] }),
+      summarise({ skipped, failed, kept: [], proposed: new Set(), modelNotes: [] }),
     );
   }
 
@@ -261,7 +343,11 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
   progress.evidence = pack.length > 0 ? pack : null;
   if (pack.length === 0) {
     // Nothing to read, so nothing to ask the model about.
-    return complete([], 0, summarise({ skipped, failed, kept: [], modelNotes: [] }));
+    return complete(
+      [],
+      0,
+      summarise({ skipped, failed, kept: [], proposed: new Set(), modelNotes: [] }),
+    );
   }
 
   progress.model = resolved.modelId;
@@ -279,7 +365,11 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
     });
     output = result.object;
   } catch (error) {
-    return stop(`Model call failed: ${describeError(error)}`);
+    const failure = describeModelFailure(error);
+    // The name and the status only: the message of the error is neither stored nor logged.
+    const status = failure.status === null ? "" : `, HTTP status ${failure.status}`;
+    logger.warn(`${tag(args)}: the model call failed (error ${failure.name}${status})`);
+    return stop(`Model call failed: ${failure.phrase}`);
   }
 
   const candidates = validateFindings(
@@ -293,12 +383,22 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
     getVendorRisksByVendorIdQuery(vendorId, organizationId, "active"),
     getFindingsForVendorQuery(organizationId, vendorId),
   ]);
-  const { kept, dropped } = dropDuplicates(candidates, existingRisks, priorFindings);
+  const { kept: notRepeated, dropped } = dropDuplicates(candidates, existingRisks, priorFindings);
+  // The caps come last. Before the de-duplication, the risks that are already known, and so the
+  // most severe on a second look, would take the places and then be dropped, and the new ones
+  // would be gone.
+  const kept = applyCaps(notRepeated);
 
   return complete(
     kept,
     dropped,
-    summarise({ skipped, failed, kept, modelNotes: output.category_notes }),
+    summarise({
+      skipped,
+      failed,
+      kept,
+      proposed: new Set(output.findings.map((candidate) => candidate.category)),
+      modelNotes: output.category_notes,
+    }),
   );
 }
 

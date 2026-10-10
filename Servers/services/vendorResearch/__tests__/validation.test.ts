@@ -1,6 +1,7 @@
 import {
   EvidenceSource,
   FindingSource,
+  NewFinding,
   RESEARCH_CATEGORIES,
   ResearchCategory,
 } from "../../../domain.layer/interfaces/i.vendorResearch";
@@ -17,6 +18,7 @@ import { ResearchTarget } from "../target";
 import {
   MAX_PER_CATEGORY,
   MAX_PER_RUN,
+  applyCaps,
   confidenceCeiling,
   normaliseForQuote,
   sourceMentionsVendor,
@@ -65,6 +67,32 @@ function validate(
 /** A finding source, for the tests of the confidence ceiling. */
 function cited(url: string): FindingSource {
   return { url, title: "Title", quote: "quote", published_at: null };
+}
+
+// Built from char codes, so that no control character or lone surrogate sits in this file.
+const NUL = String.fromCharCode(0);
+const REPLACEMENT = String.fromCharCode(0xfffd);
+/** The first half of the emoji used below, which is the surrogate pair U+D83D U+DE00. */
+const LONE_HIGH = String.fromCharCode(0xd83d);
+
+/** A finding as validateFindings makes it, for the tests of applyCaps. */
+function finding(
+  risk_severity: NewFinding["risk_severity"],
+  label: string,
+  overrides: Partial<NewFinding> = {},
+): NewFinding {
+  return {
+    category: "security_incidents",
+    risk_description: label,
+    impact_description: "An effect on us.",
+    action_plan: "Ask the vendor.",
+    likelihood: "Possible",
+    risk_severity,
+    risk_level: "High Risk",
+    confidence: "low",
+    sources: [cited("https://news.example.com/a")],
+    ...overrides,
+  };
 }
 
 describe("constants", () => {
@@ -662,9 +690,44 @@ describe("validateFindings", () => {
         ]);
       });
     });
+
+    describe("a quote with characters that a database refuses", () => {
+      it("drops a NUL from the quote before it looks for it, and stores the quote without it", () => {
+        const quote = `attackers${NUL} copied customer records`;
+
+        const [found] = validate([candidate({ evidence: [{ source_id: "S1", quote }] })]);
+
+        expect(found.sources[0].quote).toBe("attackers copied customer records");
+      });
+
+      it("rejects a quote that ends in half of a surrogate pair, though the page has the whole pair", () => {
+        const page = source({
+          content: "Acme said the \u{1F600} icon was shown to every customer.",
+        });
+        const quote = `Acme said the ${LONE_HIGH}`;
+        // As UTF-16 units the quote is the start of the page: only the cleaning tells them apart.
+        expect(page.content.startsWith(quote)).toBe(true);
+
+        expect(validate([candidate({ evidence: [{ source_id: "S1", quote }] })], [page])).toEqual(
+          [],
+        );
+      });
+
+      it("does not count a NUL against the length limit of a quote", () => {
+        const content = "Acme ".repeat(MAX_QUOTE_CHARS / 5);
+        expect(content).toHaveLength(MAX_QUOTE_CHARS);
+        const quote = `${content}${NUL.repeat(5)}`;
+
+        expect(
+          validate([candidate({ evidence: [{ source_id: "S1", quote }] })], [source({ content })]),
+        ).toHaveLength(1);
+      });
+    });
   });
 
   describe("the same-name guard", () => {
+    // sourceMentionsVendor has its own tests above. These two show that validateFindings applies
+    // it to each citation.
     it("removes a source that never mentions the vendor, and drops the candidate", () => {
       const other = source({
         url: "https://news.example.com/globex",
@@ -673,71 +736,6 @@ describe("validateFindings", () => {
       });
 
       expect(validate([candidate()], [other])).toEqual([]);
-    });
-
-    it("accepts a source whose host is a subdomain of the vendor's domain", () => {
-      const own = source({
-        url: "https://news.acme.com/incident",
-        title: "Incident report",
-        content: "We confirmed that attackers copied customer records.",
-      });
-
-      expect(validate([candidate()], [own])).toHaveLength(1);
-    });
-
-    it("accepts a source that mentions the vendor's domain", () => {
-      const mentioning = source({
-        title: "Incident report",
-        content: "The team at acme.com confirmed that attackers copied customer records.",
-      });
-
-      expect(validate([candidate()], [mentioning])).toHaveLength(1);
-    });
-
-    it("does not take a word that merely starts with the vendor's name for a mention", () => {
-      const other = source({
-        title: "News",
-        content: "Acmeville officials confirmed that attackers copied customer records.",
-      });
-
-      expect(validate([candidate()], [other])).toEqual([]);
-    });
-
-    it("matches without regard to case", () => {
-      const loud = source({
-        title: "NEWS",
-        content: "ACME CONFIRMED THAT ATTACKERS COPIED CUSTOMER RECORDS.",
-      });
-
-      expect(validate([candidate()], [loud])).toHaveLength(1);
-    });
-
-    it("works for a vendor whose name has characters of a regular expression", () => {
-      const target: ResearchTarget = { name: "AT&T", domain: null, provides: "" };
-      const page = source({
-        title: "News",
-        content: "AT&T confirmed that attackers copied customer records.",
-      });
-
-      expect(validate([candidate()], [page], target)).toHaveLength(1);
-      expect(
-        validate(
-          [candidate()],
-          [
-            source({
-              title: "News",
-              content: "ATT confirmed that attackers copied customer records.",
-            }),
-          ],
-          target,
-        ),
-      ).toEqual([]);
-    });
-
-    it("lets nothing through for a vendor whose name is empty and which has no domain", () => {
-      const target: ResearchTarget = { name: "", domain: null, provides: "" };
-
-      expect(validate([candidate()], [source()], target)).toEqual([]);
     });
 
     it("checks each cited source on its own: a source about another company is removed, the rest stays", () => {
@@ -751,7 +749,7 @@ describe("validateFindings", () => {
         }),
       ];
 
-      const [finding] = validate(
+      const [found] = validate(
         [
           candidate({
             evidence: [
@@ -763,7 +761,7 @@ describe("validateFindings", () => {
         pack,
       );
 
-      expect(finding.sources.map((entry) => entry.url)).toEqual([
+      expect(found.sources.map((entry) => entry.url)).toEqual([
         "https://news.example.com/acme-breach",
       ]);
     });
@@ -862,6 +860,39 @@ describe("validateFindings", () => {
         expect(validate([candidate({ [field]: "x".repeat(limit) })])).toHaveLength(1);
       }
     });
+
+    describe("characters that a database refuses", () => {
+      const FIELDS = ["risk_description", "impact_description", "action_plan"] as const;
+
+      it.each(FIELDS)("removes a NUL from the %s", (field) => {
+        const [found] = validate([candidate({ [field]: `Some${NUL} text${NUL}.` })]);
+
+        expect(found[field]).toBe("Some text.");
+      });
+
+      it.each(FIELDS)("drops a candidate whose %s is only NULs and whitespace", (field) => {
+        expect(validate([candidate({ [field]: `${NUL} ${NUL}\n${NUL}` })])).toEqual([]);
+      });
+
+      it("replaces a lone surrogate with U+FFFD", () => {
+        const [found] = validate([candidate({ risk_description: `Half an emoji: ${LONE_HIGH}` })]);
+
+        expect(found.risk_description).toBe(`Half an emoji: ${REPLACEMENT}`);
+      });
+
+      it("cleans a text before it counts its length", () => {
+        const limit = MAX_FINDING_TEXT_CHARS;
+
+        const [found] = validate([
+          candidate({ risk_description: `${"x".repeat(limit)}${NUL.repeat(10)}` }),
+        ]);
+
+        expect(found.risk_description).toBe("x".repeat(limit));
+        expect(
+          validate([candidate({ risk_description: `${"x".repeat(limit + 1)}${NUL}` })]),
+        ).toEqual([]);
+      });
+    });
   });
 
   describe("the confidence", () => {
@@ -950,11 +981,11 @@ describe("validateFindings", () => {
     });
   });
 
-  describe("the caps", () => {
+  describe("the order of the findings", () => {
     const withSeverity = (risk_severity: Candidate["risk_severity"], label: string, extra = {}) =>
       candidate({ risk_severity, risk_description: label, ...extra });
 
-    it("keeps three of five candidates in one category, the most severe first", () => {
+    it("puts the most severe first", () => {
       const findings = validate([
         withSeverity("Minor", "minor"),
         withSeverity("Catastrophic", "catastrophic"),
@@ -963,78 +994,31 @@ describe("validateFindings", () => {
         withSeverity("Moderate", "moderate"),
       ]);
 
-      expect(findings.map((finding) => finding.risk_description)).toEqual([
+      expect(findings.map((found) => found.risk_description)).toEqual([
         "catastrophic",
         "major",
         "moderate",
+        "minor",
+        "negligible",
       ]);
     });
 
-    it("keeps eight of twelve candidates over four categories, the most severe first", () => {
-      const severities: Record<ResearchCategory, Array<Candidate["risk_severity"]>> = {
-        security_incidents: ["Catastrophic", "Major", "Negligible"],
-        certifications: ["Catastrophic", "Moderate", "Negligible"],
-        legal_regulatory: ["Major", "Moderate", "Minor"],
-        ai_specific: ["Major", "Moderate", "Minor"],
-      };
+    it("does not cap them: applyCaps does that, after the de-duplication", () => {
       const candidates = RESEARCH_CATEGORIES.flatMap((category) =>
-        severities[category].map((risk_severity, index) =>
-          withSeverity(risk_severity, `${category}-${index}`, { category }),
+        (["Major", "Moderate", "Minor", "Negligible"] as const).map((risk_severity) =>
+          withSeverity(risk_severity, `${category}-${risk_severity}`, { category }),
         ),
       );
-      expect(candidates).toHaveLength(12);
+      expect(candidates).toHaveLength(16);
 
       const findings = validate(candidates);
 
-      expect(findings).toHaveLength(MAX_PER_RUN);
-      expect(findings.map((finding) => finding.risk_severity)).toEqual([
-        "Catastrophic",
-        "Catastrophic",
-        "Major",
-        "Major",
-        "Major",
-        "Moderate",
-        "Moderate",
-        "Moderate",
-      ]);
-      // The four least severe candidates are the ones that were cut, and candidates of one
-      // severity keep the order they were given in.
-      expect(findings.map((finding) => finding.risk_description)).toEqual([
-        "security_incidents-0",
-        "certifications-0",
-        "security_incidents-1",
-        "legal_regulatory-0",
-        "ai_specific-0",
-        "certifications-1",
-        "legal_regulatory-1",
-        "ai_specific-1",
-      ]);
-    });
-
-    it("applies the cap of a category before the cap of the run", () => {
-      const candidates = [
-        ...Array.from({ length: 5 }, (_, index) =>
-          withSeverity("Catastrophic", `security-${index}`, { category: "security_incidents" }),
-        ),
-        ...Array.from({ length: 3 }, (_, index) =>
-          withSeverity("Minor", `certifications-${index}`, { category: "certifications" }),
-        ),
-        ...Array.from({ length: 3 }, (_, index) =>
-          withSeverity("Minor", `legal-${index}`, { category: "legal_regulatory" }),
-        ),
-      ];
-
-      const findings = validate(candidates);
-
-      expect(findings.map((finding) => finding.risk_description)).toEqual([
-        "security-0",
-        "security-1",
-        "security-2",
-        "certifications-0",
-        "certifications-1",
-        "certifications-2",
-        "legal-0",
-        "legal-1",
+      expect(findings).toHaveLength(16);
+      expect(findings.map((found) => found.risk_severity)).toEqual([
+        ...Array(4).fill("Major"),
+        ...Array(4).fill("Moderate"),
+        ...Array(4).fill("Minor"),
+        ...Array(4).fill("Negligible"),
       ]);
     });
 
@@ -1046,27 +1030,28 @@ describe("validateFindings", () => {
         withSeverity("Major", "fourth"),
       ]);
 
-      expect(findings.map((finding) => finding.risk_description)).toEqual([
+      expect(findings.map((found) => found.risk_description)).toEqual([
         "first",
         "second",
         "third",
+        "fourth",
       ]);
     });
 
-    it("lets a candidate that failed a check take no place from one that passed", () => {
+    it("leaves a candidate that failed a check out, whatever its severity", () => {
       const findings = validate([
         withSeverity("Catastrophic", "bad quote", {
           evidence: [{ source_id: "S1", quote: "this sentence is not on the page" }],
         }),
+        withSeverity("Minor", "three"),
         withSeverity("Major", "one"),
         withSeverity("Moderate", "two"),
-        withSeverity("Minor", "three"),
       ]);
 
-      expect(findings.map((finding) => finding.risk_description)).toEqual(["one", "two", "three"]);
+      expect(findings.map((found) => found.risk_description)).toEqual(["one", "two", "three"]);
     });
 
-    it("lets candidates of a category that was not searched take no place from the others", () => {
+    it("leaves out the candidates of a category that was not searched, whatever their severity", () => {
       const findings = validate(
         [
           ...Array.from({ length: 4 }, (_, index) =>
@@ -1079,7 +1064,122 @@ describe("validateFindings", () => {
         ["security_incidents"],
       );
 
-      expect(findings.map((finding) => finding.risk_description)).toEqual(["kept"]);
+      expect(findings.map((found) => found.risk_description)).toEqual(["kept"]);
     });
+  });
+});
+
+describe("applyCaps", () => {
+  const labels = (findings: NewFinding[]) => findings.map((found) => found.risk_description);
+
+  it("keeps three of five findings in one category, the most severe first", () => {
+    const capped = applyCaps([
+      finding("Minor", "minor"),
+      finding("Catastrophic", "catastrophic"),
+      finding("Negligible", "negligible"),
+      finding("Major", "major"),
+      finding("Moderate", "moderate"),
+    ]);
+
+    expect(labels(capped)).toEqual(["catastrophic", "major", "moderate"]);
+  });
+
+  it("keeps eight of twelve findings over four categories, the most severe first", () => {
+    const severities: Record<ResearchCategory, Array<NewFinding["risk_severity"]>> = {
+      security_incidents: ["Catastrophic", "Major", "Negligible"],
+      certifications: ["Catastrophic", "Moderate", "Negligible"],
+      legal_regulatory: ["Major", "Moderate", "Minor"],
+      ai_specific: ["Major", "Moderate", "Minor"],
+    };
+    const findings = RESEARCH_CATEGORIES.flatMap((category) =>
+      severities[category].map((risk_severity, index) =>
+        finding(risk_severity, `${category}-${index}`, { category }),
+      ),
+    );
+    expect(findings).toHaveLength(12);
+
+    const capped = applyCaps(findings);
+
+    expect(capped).toHaveLength(MAX_PER_RUN);
+    expect(capped.map((found) => found.risk_severity)).toEqual([
+      "Catastrophic",
+      "Catastrophic",
+      "Major",
+      "Major",
+      "Major",
+      "Moderate",
+      "Moderate",
+      "Moderate",
+    ]);
+    // The four least severe findings are the ones that were cut, and findings of one severity
+    // keep the order they were given in.
+    expect(labels(capped)).toEqual([
+      "security_incidents-0",
+      "certifications-0",
+      "security_incidents-1",
+      "legal_regulatory-0",
+      "ai_specific-0",
+      "certifications-1",
+      "legal_regulatory-1",
+      "ai_specific-1",
+    ]);
+  });
+
+  it("applies the cap of a category before the cap of the run", () => {
+    const findings = [
+      ...Array.from({ length: 5 }, (_, index) =>
+        finding("Catastrophic", `security-${index}`, { category: "security_incidents" }),
+      ),
+      ...Array.from({ length: 3 }, (_, index) =>
+        finding("Minor", `certifications-${index}`, { category: "certifications" }),
+      ),
+      ...Array.from({ length: 3 }, (_, index) =>
+        finding("Minor", `legal-${index}`, { category: "legal_regulatory" }),
+      ),
+    ];
+
+    expect(labels(applyCaps(findings))).toEqual([
+      "security-0",
+      "security-1",
+      "security-2",
+      "certifications-0",
+      "certifications-1",
+      "certifications-2",
+      "legal-0",
+      "legal-1",
+    ]);
+  });
+
+  it("keeps findings of equal severity in the order they were given", () => {
+    const capped = applyCaps([
+      finding("Major", "first"),
+      finding("Major", "second"),
+      finding("Major", "third"),
+      finding("Major", "fourth"),
+    ]);
+
+    expect(labels(capped)).toEqual(["first", "second", "third"]);
+  });
+
+  it("returns everything, the most severe first, when nothing is over a cap", () => {
+    const capped = applyCaps([
+      finding("Minor", "minor", { category: "ai_specific" }),
+      finding("Major", "major", { category: "certifications" }),
+    ]);
+
+    expect(labels(capped)).toEqual(["major", "minor"]);
+  });
+
+  it("returns nothing for no findings", () => {
+    expect(applyCaps([])).toEqual([]);
+  });
+
+  it("does not change the list it is given", () => {
+    const findings = [finding("Minor", "minor"), finding("Major", "major")];
+
+    const capped = applyCaps(findings);
+
+    expect(labels(findings)).toEqual(["minor", "major"]);
+    expect(capped).not.toBe(findings);
   });
 });
