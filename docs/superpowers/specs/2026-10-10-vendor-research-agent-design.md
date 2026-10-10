@@ -160,7 +160,9 @@ Each cited evidence item is checked on its own; an item is removed unless both h
 
 A candidate is dropped when no evidence item remains, when its `category` was not one of the categories searched, when an enum value or length is invalid, or when `calculateRiskLevel(risk_severity, likelihood)` returns no level (the level is stored with the ` Risk` suffix).
 
-Confidence is computed from the evidence that remains and only ever lowers the model's label: `high` needs at least two distinct hostnames; `medium` needs two or more sources, or one source on the vendor's own domain; otherwise `low`. The stored value is the lower of the model's label and that cap. Caps: three candidates per category, eight per run, highest severity first.
+Confidence is computed from the evidence that remains and only ever lowers the model's label: `high` needs at least two distinct hostnames; `medium` needs two or more sources, or one source on the vendor's own domain; otherwise `low`. The stored value is the lower of the model's label and that cap. Candidates are ordered highest severity first. The caps (three candidates per category, eight per run) are applied after de-duplication (§7.5), on that order, so that risks that are already known cannot take the places of new ones on a re-run.
+
+Text the model wrote (the three finding texts, quotes and category notes) is cleaned like the evidence is (NUL and control characters removed, lone surrogates replaced) before it is checked or stored, because PostgreSQL refuses those characters and one of them would fail the save of the whole run.
 
 ### 7.5 De-duplication
 
