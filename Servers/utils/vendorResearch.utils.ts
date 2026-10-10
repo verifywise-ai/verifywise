@@ -209,24 +209,39 @@ export const finishRunQuery = async (
   );
 };
 
-/** When the vendor's newest run was created, whatever its status and trigger type; null when it never had one. */
+/**
+ * Which runs count toward the cooldown and the daily cap: all of them but a run that failed before
+ * it started. Such a run (its job could not be queued, it was swept as stuck while still queued,
+ * or its job found search not configured) searched nothing and called no model, so it must not
+ * hold the vendor back or use up a slot, and a start refused with 503 can be tried again at once.
+ * Only `markRunRunningQuery` sets `started_at`, so a null one means the run never started.
+ */
+const COUNTS_AS_A_RUN = "NOT (status = 'failed' AND started_at IS NULL)";
+
+/**
+ * When the vendor's newest run was created, whatever its status and trigger type, except a run
+ * that failed before it started (see `COUNTS_AS_A_RUN`); null when it has no such run.
+ */
 export const getLastRunCreatedAtQuery = async (
   organizationId: number,
   vendorId: number,
 ): Promise<Date | null> => {
   const rows = (await sequelize.query(
     `SELECT MAX(created_at) AS created_at FROM vendor_research_runs
-     WHERE organization_id = :organizationId AND vendor_id = :vendorId`,
+     WHERE organization_id = :organizationId AND vendor_id = :vendorId AND ${COUNTS_AS_A_RUN}`,
     { replacements: { organizationId, vendorId }, type: QueryTypes.SELECT },
   )) as Array<{ created_at: Date | null }>;
   return rows[0]?.created_at ?? null;
 };
 
-/** The organization's runs created at or after `since`, whatever their status and trigger type. */
+/**
+ * The organization's runs created at or after `since`, whatever their status and trigger type,
+ * except runs that failed before they started (see `COUNTS_AS_A_RUN`).
+ */
 export const countRunsSinceQuery = async (organizationId: number, since: Date): Promise<number> => {
   const rows = (await sequelize.query(
     `SELECT COUNT(*)::int AS count FROM vendor_research_runs
-     WHERE organization_id = :organizationId AND created_at >= :since`,
+     WHERE organization_id = :organizationId AND created_at >= :since AND ${COUNTS_AS_A_RUN}`,
     { replacements: { organizationId, since }, type: QueryTypes.SELECT },
   )) as Array<{ count: number }>;
   return rows[0].count;

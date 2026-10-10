@@ -38,7 +38,7 @@ import { enqueueVendorResearch } from "../automations/automationProducer";
 import { getVendorResearchConfig, isSearchConfigured } from "./config";
 
 const MINUTE_MS = 60_000;
-/** The daily cap counts the runs of a rolling 24 hours. */
+/** The daily cap counts the runs of a rolling 24 hours, but not those that failed before they started. */
 const DAY_MS = 24 * 60 * MINUTE_MS;
 /** What a run records when its job could not be queued. */
 const ENQUEUE_FAILED_NOTE = "could not enqueue";

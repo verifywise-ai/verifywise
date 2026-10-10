@@ -19,7 +19,8 @@ import {
 } from "../../../utils/vendorResearch.utils";
 import type { FinishRunInput } from "../../../utils/vendorResearch.utils";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
 
 /** A new run of `vendorId`: requested by `ctx` when manual, by the system when automatic. */
 const newRun = (ctx: TenantContext, vendorId: number, triggerType: ResearchTrigger = "manual") => ({
@@ -268,13 +269,67 @@ describe("vendor_research_runs tenant isolation", () => {
     expect((await getRunByIdQuery(owner.orgId, first.id))?.status).toBe("completed");
     expect(await getLastRunCreatedAtQuery(owner.orgId, vendorId)).toEqual(second.created_at);
 
-    // Counts cover runs of any status and trigger type, and only the organization's own.
+    // Counts cover runs of any trigger type, and only the organization's own. The next test
+    // pins which statuses count.
     const attackersRun = await createRunQuery(newRun(attacker, attackerVendorId, "auto"));
     expect(await countRunsSinceQuery(owner.orgId, first.created_at)).toBe(2);
     expect(await countRunsSinceQuery(attacker.orgId, first.created_at)).toBe(1);
     expect(await getLastRunCreatedAtQuery(attacker.orgId, attackerVendorId)).toEqual(
       attackersRun.created_at,
     );
+  });
+
+  it("leaves a run that failed before it started out of the cooldown and the daily count", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const vendorId = await createTestVendor(owner.orgId);
+    const createdHoursAgo = (runId: number, hours: number) =>
+      sequelize.query(
+        `UPDATE vendor_research_runs SET created_at = NOW() - (:hours * INTERVAL '1 hour') WHERE id = :runId`,
+        { replacements: { runId, hours } },
+      );
+
+    // A vendor has at most one queued or running run, so the runs that ended come first and the
+    // queued run comes last.
+    const completed = await createRunQuery(newRun(owner, vendorId));
+    await markRunRunningQuery(owner.orgId, completed.id);
+    await finishRunQuery(finishOf(owner.orgId, completed.id));
+
+    const failedAfterStart = await createRunQuery(newRun(owner, vendorId));
+    await markRunRunningQuery(owner.orgId, failedAfterStart.id);
+    await finishRunQuery(
+      finishOf(owner.orgId, failedAfterStart.id, {
+        status: "failed",
+        error: "Model call failed: HTTP 500",
+      }),
+    );
+
+    // Failed while still queued, as when its job could not be queued: it searched nothing.
+    const neverStarted = await createRunQuery(newRun(owner, vendorId));
+    await finishRunQuery(
+      finishOf(owner.orgId, neverStarted.id, { status: "failed", error: "could not enqueue" }),
+    );
+
+    const queued = await createRunQuery(newRun(owner, vendorId));
+
+    // The run that never started is the newest of all, so the cooldown would show it if it counted.
+    await createdHoursAgo(completed.id, 4);
+    await createdHoursAgo(queued.id, 3);
+    await createdHoursAgo(failedAfterStart.id, 2);
+    await createdHoursAgo(neverStarted.id, 1);
+
+    expect(await getRunByIdQuery(owner.orgId, neverStarted.id)).toMatchObject({
+      status: "failed",
+      started_at: null,
+    });
+    const afterStart = await getRunByIdQuery(owner.orgId, failedAfterStart.id);
+    expect(afterStart).toMatchObject({ status: "failed" });
+    expect(afterStart?.started_at).toBeInstanceOf(Date);
+
+    // Four runs exist and three of them count: all but the one that failed before it started.
+    expect(await countRunsSinceQuery(owner.orgId, new Date(Date.now() - 5 * HOUR_MS))).toBe(3);
+    // The last run for the cooldown is the newest of those three, not the newer run that never
+    // started.
+    expect(await getLastRunCreatedAtQuery(owner.orgId, vendorId)).toEqual(afterStart?.created_at);
   });
 
   it("starts only the named run, and only while it is queued", async () => {
