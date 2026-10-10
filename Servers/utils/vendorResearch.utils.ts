@@ -131,6 +131,7 @@ export const getLatestRunQuery = (
 ): Promise<IVendorResearchRun | null> =>
   findRun("vendor_id = :vendorId", { organizationId, vendorId });
 
+/** A run by id, whatever its status; null when it does not exist or belongs to another organization. */
 export const getRunByIdQuery = (
   organizationId: number,
   runId: number,
@@ -165,7 +166,16 @@ export interface FinishRunInput {
   error: string | null;
 }
 
-/** Records how a run ended. `error` is cut to 500 characters. */
+/**
+ * Records how a run ended. `error` is cut to 500 characters.
+ *
+ * There is no status guard: a late finish can overwrite a run that the stale sweep
+ * (`failStaleRunsQuery`) already failed, and a `failed` finish can overwrite a
+ * `completed` one, so callers must finish a run exactly once.
+ *
+ * It matches on organization and run id only. When either does not match, it
+ * updates nothing and reports nothing: a silent no-op.
+ */
 export const finishRunQuery = async (
   input: FinishRunInput,
   transaction?: Transaction,
@@ -196,7 +206,7 @@ export const finishRunQuery = async (
   );
 };
 
-/** When the vendor's newest run was created, whatever its status; null when it never had one. */
+/** When the vendor's newest run was created, whatever its status and trigger type; null when it never had one. */
 export const getLastRunCreatedAtQuery = async (
   organizationId: number,
   vendorId: number,
@@ -209,7 +219,7 @@ export const getLastRunCreatedAtQuery = async (
   return rows[0]?.created_at ?? null;
 };
 
-/** The organization's runs created at or after `since`, whatever their status. */
+/** The organization's runs created at or after `since`, whatever their status and trigger type. */
 export const countRunsSinceQuery = async (organizationId: number, since: Date): Promise<number> => {
   const rows = (await sequelize.query(
     `SELECT COUNT(*)::int AS count FROM vendor_research_runs

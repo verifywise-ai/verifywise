@@ -1,5 +1,6 @@
 jest.setTimeout(60000);
 
+import { QueryTypes } from "sequelize";
 import { cleanupDatabase } from "../helpers";
 import { sequelize } from "../../../database/db";
 import { seedTwoTenantContexts } from "./tenantIsolation.harness";
@@ -45,8 +46,12 @@ const SECOND_FINDING: NewFinding = {
 };
 
 /** A vendor in `ctx`'s organization with a run that produced these findings, all pending. */
-const seedFindings = async (ctx: TenantContext, findings: NewFinding[]) => {
-  const vendorId = await createTestVendor(ctx.orgId, { vendor_name: VENDOR_NAME });
+const seedFindings = async (
+  ctx: TenantContext,
+  findings: NewFinding[],
+  vendorName: string = VENDOR_NAME,
+) => {
+  const vendorId = await createTestVendor(ctx.orgId, { vendor_name: vendorName });
   const run = await createRunQuery({
     organizationId: ctx.orgId,
     vendorId,
@@ -65,7 +70,8 @@ const seedFindings = async (ctx: TenantContext, findings: NewFinding[]) => {
 
 /**
  * vendor_risk_findings — a finding written for org A is never listed, read or
- * decided from org B, even when B names A's finding, vendor and run ids.
+ * decided from org B, even when B names A's finding, vendor and run ids. The
+ * remaining tests pin how the finding queries order, filter and page.
  */
 describe("vendor_risk_findings tenant isolation", () => {
   afterEach(async () => {
@@ -196,16 +202,6 @@ describe("vendor_risk_findings tenant isolation", () => {
       userId: owner.userId,
     };
 
-    // Findings come back in the order they were given, and listings put the newest first.
-    expect([finding.risk_description, bystander.risk_description]).toEqual([
-      FINDING.risk_description,
-      SECOND_FINDING.risk_description,
-    ]);
-    expect((await getFindingsForVendorQuery(owner.orgId, vendorId)).map((row) => row.id)).toEqual([
-      bystander.id,
-      finding.id,
-    ]);
-
     const first = await markFindingDismissedQuery(dismissal);
     expect(first).toMatchObject({
       id: finding.id,
@@ -238,5 +234,120 @@ describe("vendor_risk_findings tenant isolation", () => {
       status: "pending",
       dismissed_reason: null,
     });
+  });
+
+  it("keeps findings in the order given and returns a vendor's findings newest first", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const {
+      vendorId,
+      inserted: [first, second],
+    } = await seedFindings(owner, [FINDING, SECOND_FINDING]);
+
+    // insertFindingsQuery returns the findings in the order it was given them.
+    expect([first.risk_description, second.risk_description]).toEqual([
+      FINDING.risk_description,
+      SECOND_FINDING.risk_description,
+    ]);
+    // Both were stored in one transaction, so they share a created_at and the id breaks the tie.
+    expect(second.created_at).toEqual(first.created_at);
+    expect((await getFindingsForVendorQuery(owner.orgId, vendorId)).map((row) => row.id)).toEqual([
+      second.id,
+      first.id,
+    ]);
+  });
+
+  it("lists the organization's findings newest first, filtered by status and vendor, one page at a time", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const acme = await seedFindings(owner, [FINDING, SECOND_FINDING]);
+    // A second vendor with its own finding, stored after the first vendor's.
+    const globex = await seedFindings(owner, [FINDING], "Globex");
+    const [older, middle] = acme.inserted;
+    const [newest] = globex.inserted;
+    await markFindingDismissedQuery({
+      organizationId: owner.orgId,
+      id: older.id,
+      reason: "not_applicable",
+      note: null,
+      userId: owner.userId,
+    });
+
+    const list = async (filter: Partial<Parameters<typeof listFindingsQuery>[1]> = {}) => {
+      const { rows, total } = await listFindingsQuery(owner.orgId, {
+        limit: 50,
+        offset: 0,
+        ...filter,
+      });
+      return { ids: rows.map((row) => row.id), total };
+    };
+
+    // Newest first across vendors; findings stored together are ordered by id.
+    expect(await list()).toEqual({ ids: [newest.id, middle.id, older.id], total: 3 });
+    const everything = await listFindingsQuery(owner.orgId, { limit: 50, offset: 0 });
+    expect(everything.rows.map((row) => row.vendor_name)).toEqual([
+      "Globex",
+      VENDOR_NAME,
+      VENDOR_NAME,
+    ]);
+
+    // Status filter.
+    expect(await list({ status: "pending" })).toEqual({ ids: [newest.id, middle.id], total: 2 });
+    expect(await list({ status: "dismissed" })).toEqual({ ids: [older.id], total: 1 });
+    expect(await list({ status: "accepted" })).toEqual({ ids: [], total: 0 });
+
+    // Vendor filter, alone and with a status.
+    expect(await list({ vendorId: acme.vendorId })).toEqual({
+      ids: [middle.id, older.id],
+      total: 2,
+    });
+    expect(await list({ vendorId: globex.vendorId })).toEqual({ ids: [newest.id], total: 1 });
+    expect(await list({ status: "pending", vendorId: acme.vendorId })).toEqual({
+      ids: [middle.id],
+      total: 1,
+    });
+
+    // Paging keeps the total of the whole list, also when the offset is past the end.
+    expect(await list({ limit: 2, offset: 0 })).toEqual({ ids: [newest.id, middle.id], total: 3 });
+    expect(await list({ limit: 2, offset: 2 })).toEqual({ ids: [older.id], total: 3 });
+    expect(await list({ limit: 2, offset: 10 })).toEqual({ ids: [], total: 3 });
+  });
+
+  it("does not list a finding whose vendor belongs to another organization", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts();
+    const {
+      vendorId,
+      inserted: [finding],
+    } = await seedFindings(owner, [FINDING]);
+
+    // No foreign key ties a finding's organization to its vendor's or run's, so the
+    // database accepts a copy of the owner's finding stamped with the attacker's organization.
+    const [stray] = (await sequelize.query(
+      `INSERT INTO vendor_risk_findings
+         (organization_id, vendor_id, run_id, category, risk_description, impact_description,
+          action_plan, likelihood, risk_severity, risk_level, confidence, sources)
+       SELECT :organizationId, vendor_id, run_id, category, risk_description, impact_description,
+              action_plan, likelihood, risk_severity, risk_level, confidence, sources
+       FROM vendor_risk_findings WHERE id = :findingId
+       RETURNING id`,
+      {
+        replacements: { organizationId: attacker.orgId, findingId: finding.id },
+        type: QueryTypes.SELECT,
+      },
+    )) as Array<{ id: number }>;
+
+    // Positive control: the row is there for the attacker's organization...
+    expect(await getFindingByIdQuery(attacker.orgId, stray.id)).toMatchObject({
+      organization_id: attacker.orgId,
+      vendor_id: vendorId,
+    });
+    // ...but its vendor is the owner's, so the list shows neither the row nor the vendor's name.
+    expect(await listFindingsQuery(attacker.orgId, { limit: 50, offset: 0 })).toEqual({
+      rows: [],
+      total: 0,
+    });
+
+    // The owner's list holds only the owner's own finding: the stray row carries another organization.
+    const ownerList = await listFindingsQuery(owner.orgId, { limit: 50, offset: 0 });
+    expect(ownerList.rows.map((row) => row.id)).toEqual([finding.id]);
+    expect(ownerList.total).toBe(1);
   });
 });
