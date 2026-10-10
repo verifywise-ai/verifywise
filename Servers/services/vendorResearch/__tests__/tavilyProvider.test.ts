@@ -495,4 +495,27 @@ describe("createSearchProvider", () => {
       expect(createSearchProvider(config) !== null).toBe(isSearchConfigured(config));
     }
   });
+
+  describe("with no config argument", () => {
+    const realEnv = process.env;
+
+    // The tests replace process.env and must never write to the real one.
+    afterEach(() => {
+      jest.restoreAllMocks();
+      // A boolean, so that a failure cannot print the real environment.
+      expect(process.env === realEnv).toBe(true);
+    });
+
+    it("returns null when process.env sets nothing", () => {
+      jest.replaceProperty(process, "env", {});
+
+      expect(createSearchProvider()).toBeNull();
+    });
+
+    it("returns a provider named tavily when process.env configures Tavily", () => {
+      jest.replaceProperty(process, "env", tavilyEnv);
+
+      expect(createSearchProvider()?.name).toBe("tavily");
+    });
+  });
 });

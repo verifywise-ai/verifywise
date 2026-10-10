@@ -6,7 +6,7 @@
  * fixed phrase. The error fetch throws and the body Tavily answers with are never passed on,
  * because either can quote the request, and the request carries the API key.
  */
-import { SearchHit, SearchOptions, SearchProvider, SearchProviderError } from "./searchProvider";
+import { SearchHit, SearchOptions, SearchProvider, SearchProviderError } from "./searchTypes";
 
 const TAVILY_SEARCH_URL = "https://api.tavily.com/search";
 const DEFAULT_TIMEOUT_MS = 15_000;

@@ -139,3 +139,49 @@ describe("isSearchConfigured", () => {
     expect(isSearchConfigured({ ...base, searchProvider: "tavily", tavilyApiKey: "" })).toBe(false);
   });
 });
+
+describe("reading process.env when called with no arguments", () => {
+  const realEnv = process.env;
+
+  // The tests replace process.env and must never write to the real one.
+  afterEach(() => {
+    jest.restoreAllMocks();
+    // A boolean, so that a failure cannot print the real environment.
+    expect(process.env === realEnv).toBe(true);
+  });
+
+  it("falls back to the defaults and reports search as not configured when nothing is set", () => {
+    jest.replaceProperty(process, "env", {});
+
+    expect(getVendorResearchConfig()).toEqual({
+      searchProvider: null,
+      tavilyApiKey: null,
+      autoRun: true,
+      manualCooldownMinutes: 10,
+      dailyRunCap: 50,
+    });
+    expect(isSearchConfigured()).toBe(false);
+  });
+
+  it("reads the variables that are set", () => {
+    jest.replaceProperty(process, "env", {
+      VENDOR_RESEARCH_SEARCH_PROVIDER: "tavily",
+      TAVILY_API_KEY: "k",
+    });
+
+    expect(getVendorResearchConfig()).toEqual({
+      searchProvider: "tavily",
+      tavilyApiKey: "k",
+      autoRun: true,
+      manualCooldownMinutes: 10,
+      dailyRunCap: 50,
+    });
+    expect(isSearchConfigured()).toBe(true);
+  });
+
+  it("reads a blank cooldown as the default, not as 0", () => {
+    jest.replaceProperty(process, "env", { VENDOR_RESEARCH_MANUAL_COOLDOWN_MINUTES: "" });
+
+    expect(getVendorResearchConfig().manualCooldownMinutes).toBe(10);
+  });
+});
