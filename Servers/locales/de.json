@@ -832,5 +832,12 @@
   "{count} potential risks found for \"{vendorName}\". Review them in Vendors > Risks.": "{count} mögliche Risiken für „{vendorName}“ gefunden. Prüfen Sie sie unter Anbieter > Risiken.",
   "The research could not be started because the job queue is unavailable. Nothing was lost, so it is safe to try again later.": "Die Recherche konnte nicht gestartet werden, weil die Aufgabenwarteschlange nicht verfügbar ist. Es ging nichts verloren, daher können Sie es später bedenkenlos erneut versuchen.",
   "Invalid limit": "Ungültiges Limit",
-  "Invalid offset": "Ungültiger Offset"
+  "Invalid offset": "Ungültiger Offset",
+  "Finding not found": "Befund nicht gefunden",
+  "This finding has already been accepted or dismissed": "Dieser Befund wurde bereits akzeptiert oder verworfen",
+  "Invalid action owner": "Ungültiger Aktionsverantwortlicher",
+  "The action owner must be a user of your organization": "Der Aktionsverantwortliche muss ein Benutzer Ihrer Organisation sein",
+  "Invalid dismissal note": "Ungültige Verwerfungsnotiz",
+  "The note can be at most 500 characters": "Die Notiz darf höchstens 500 Zeichen lang sein",
+  "The risk could not be added to the vendor risk register": "Das Risiko konnte nicht in das Anbieterrisikoregister aufgenommen werden"
 }

@@ -832,5 +832,12 @@
   "{count} potential risks found for \"{vendorName}\". Review them in Vendors > Risks.": "{count} risques potentiels trouvés pour « {vendorName} ». Examinez-les dans Fournisseurs > Risques.",
   "The research could not be started because the job queue is unavailable. Nothing was lost, so it is safe to try again later.": "La recherche n'a pas pu être lancée, car la file d'attente des tâches est indisponible. Rien n'a été perdu : vous pouvez réessayer plus tard sans risque.",
   "Invalid limit": "Limite invalide",
-  "Invalid offset": "Décalage invalide"
+  "Invalid offset": "Décalage invalide",
+  "Finding not found": "Constatation introuvable",
+  "This finding has already been accepted or dismissed": "Cette constatation a déjà été acceptée ou rejetée",
+  "Invalid action owner": "Responsable d'action invalide",
+  "The action owner must be a user of your organization": "Le responsable d'action doit être un utilisateur de votre organisation",
+  "Invalid dismissal note": "Note de rejet invalide",
+  "The note can be at most 500 characters": "La note ne peut pas dépasser 500 caractères",
+  "The risk could not be added to the vendor risk register": "Le risque n'a pas pu être ajouté au registre des risques du fournisseur"
 }

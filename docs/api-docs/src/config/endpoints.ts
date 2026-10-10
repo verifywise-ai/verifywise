@@ -11758,6 +11758,28 @@ export const vendorRiskFindingsEndpoints: Endpoint[] = [
     ],
     tag: "Vendor Risk Findings",
   },
+  {
+    method: 'POST',
+    path: '/vendor-risk-findings/{id}/accept',
+    summary: "Accept Vendor Risk Finding",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Vendor Risk Findings",
+  },
+  {
+    method: 'POST',
+    path: '/vendor-risk-findings/{id}/dismiss',
+    summary: "Dismiss Vendor Risk Finding",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Vendor Risk Findings",
+  },
 ];
 
 // Webhooks endpoints

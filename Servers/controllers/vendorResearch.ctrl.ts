@@ -1,9 +1,11 @@
 /**
  * The vendor research endpoints: starting a run, reading the latest run of a vendor, the research
- * settings of the organization and the list of findings that runs produced.
+ * settings of the organization, the list of findings that runs produced, and the two decisions on
+ * a finding: accept it into the vendor risk register or dismiss it.
  *
  * Every id in a path is looked up in the caller's organization before anything else uses it, and
- * a vendor of another organization is a 404, the same as a vendor that does not exist.
+ * a vendor or a finding of another organization is a 404, the same as one that does not exist.
+ * The organization and the user always come from the request, never from the body or the path.
  */
 import { Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
@@ -19,8 +21,19 @@ import {
   listFindingsQuery,
 } from "../utils/vendorResearch.utils";
 import { getVendorResearchConfig, isSearchConfigured } from "../services/vendorResearch/config";
+import { acceptFinding, dismissFinding } from "../services/vendorResearch/findings.service";
 import { StartResearchError, startVendorResearch } from "../services/vendorResearch/trigger";
-import { FindingStatus, IVendorResearchRun } from "../domain.layer/interfaces/i.vendorResearch";
+import {
+  ConflictException,
+  NotFoundException,
+  ValidationException,
+} from "../domain.layer/exceptions/custom.exception";
+import {
+  DISMISS_REASONS,
+  DismissReason,
+  FindingStatus,
+  IVendorResearchRun,
+} from "../domain.layer/interfaces/i.vendorResearch";
 
 const FILE_NAME = "vendorResearch.ctrl.ts";
 
@@ -31,6 +44,9 @@ const FINDING_STATUSES: readonly FindingStatus[] = ["pending", "accepted", "dism
 
 const isFindingStatus = (value: unknown): value is FindingStatus =>
   FINDING_STATUSES.includes(value as FindingStatus);
+
+const isDismissReason = (value: unknown): value is DismissReason =>
+  DISMISS_REASONS.includes(value as DismissReason);
 
 /**
  * An id off the wire that is a positive whole number a float holds exactly, or NaN. `toId` turns
@@ -373,5 +389,176 @@ export async function listVendorRiskFindings(req: Request, res: Response): Promi
       organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/** The body of a request as an object: a request without one, or with a list, names nothing. */
+const requestBody = (req: Request): Record<string, unknown> =>
+  req.body !== null && typeof req.body === "object" ? (req.body as Record<string, unknown>) : {};
+
+/**
+ * The action owner of an accept: `undefined` when the body does not name one (the service takes
+ * the vendor's assignee), `null` for no owner, else the id of a user. Anything else is not an id.
+ * Whether the user belongs to the organization is for the service to say.
+ */
+function parseActionOwner(
+  req: Request,
+): { actionOwner: number | null | undefined } | { error: string } {
+  const actionOwner = requestBody(req).action_owner;
+  if (actionOwner === undefined || actionOwner === null) return { actionOwner };
+  if (typeof actionOwner === "number" && Number.isSafeInteger(actionOwner) && actionOwner > 0) {
+    return { actionOwner };
+  }
+  return { error: req.t!("Invalid action owner") };
+}
+
+/**
+ * The reason and the optional note of a dismissal, or the message for the first of them that is
+ * not valid. How long the note may be is for the service to say.
+ */
+function parseDismissal(
+  req: Request,
+): { reason: DismissReason; note: string | undefined } | { error: string } {
+  const { reason, note } = requestBody(req);
+  if (!isDismissReason(reason)) return { error: req.t!("Invalid dismissal reason") };
+  if (note !== undefined && typeof note !== "string") {
+    return { error: req.t!("Invalid dismissal note") };
+  }
+  return { reason, note };
+}
+
+/** The status for a refusal by the findings service; any other error is not one. */
+function refusalStatus(error: unknown): 400 | 404 | 409 | undefined {
+  if (error instanceof NotFoundException) return 404;
+  if (error instanceof ConflictException) return 409;
+  if (error instanceof ValidationException) return 400;
+  return undefined;
+}
+
+export async function acceptVendorRiskFinding(req: Request, res: Response): Promise<any> {
+  const functionName = "acceptVendorRiskFinding";
+  const findingId = positiveId(req.params.id);
+  if (isNaN(findingId)) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid finding ID")));
+  }
+  const parsed = parseActionOwner(req);
+  if ("error" in parsed) {
+    return res.status(400).json(STATUS_CODE[400](parsed.error));
+  }
+
+  logProcessing({
+    description: `starting acceptVendorRiskFinding for finding ID ${findingId}`,
+    functionName,
+    fileName: FILE_NAME,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+
+  try {
+    const result = await acceptFinding({
+      organizationId: req.organizationId!,
+      findingId,
+      userId: req.userId!,
+      actionOwner: parsed.actionOwner,
+    });
+
+    await logSuccess({
+      eventType: "Create",
+      description: `accepted finding ID ${findingId} as vendor risk ID ${result.vendorRisk.id}`,
+      functionName,
+      fileName: FILE_NAME,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(200).json(STATUS_CODE[200](result));
+  } catch (error) {
+    const status = refusalStatus(error);
+    if (status === undefined) {
+      await logFailure({
+        eventType: "Create",
+        description: `failed to accept finding ID ${findingId}`,
+        functionName,
+        fileName: FILE_NAME,
+        error: error as Error,
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
+      return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+    }
+
+    // Nothing was created: a refusal is logged as a read, like a refused start.
+    await logSuccess({
+      eventType: "Read",
+      description: `finding ID ${findingId} was not accepted: ${(error as Error).message}`,
+      functionName,
+      fileName: FILE_NAME,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(status).json(STATUS_CODE[status](translateError(req, error)));
+  }
+}
+
+export async function dismissVendorRiskFinding(req: Request, res: Response): Promise<any> {
+  const functionName = "dismissVendorRiskFinding";
+  const findingId = positiveId(req.params.id);
+  if (isNaN(findingId)) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid finding ID")));
+  }
+  const parsed = parseDismissal(req);
+  if ("error" in parsed) {
+    return res.status(400).json(STATUS_CODE[400](parsed.error));
+  }
+
+  logProcessing({
+    description: `starting dismissVendorRiskFinding for finding ID ${findingId}`,
+    functionName,
+    fileName: FILE_NAME,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+
+  try {
+    const finding = await dismissFinding({
+      organizationId: req.organizationId!,
+      findingId,
+      userId: req.userId!,
+      reason: parsed.reason,
+      note: parsed.note,
+    });
+
+    await logSuccess({
+      eventType: "Update",
+      description: `dismissed finding ID ${findingId}: ${parsed.reason}`,
+      functionName,
+      fileName: FILE_NAME,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(200).json(STATUS_CODE[200](finding));
+  } catch (error) {
+    const status = refusalStatus(error);
+    if (status === undefined) {
+      await logFailure({
+        eventType: "Update",
+        description: `failed to dismiss finding ID ${findingId}`,
+        functionName,
+        fileName: FILE_NAME,
+        error: error as Error,
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
+      return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+    }
+
+    await logSuccess({
+      eventType: "Read",
+      description: `finding ID ${findingId} was not dismissed: ${(error as Error).message}`,
+      functionName,
+      fileName: FILE_NAME,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(status).json(STATUS_CODE[status](translateError(req, error)));
   }
 }

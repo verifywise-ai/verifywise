@@ -9243,6 +9243,34 @@ paths:
       security:
         -
           bearerAuth: []
+  '/vendor-risk-findings/{id}/accept':
+    post:
+      summary: 'Accept Vendor Risk Finding'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Vendor Risk Findings'
+      operationId: acceptVendorRiskFinding
+      security:
+        -
+          bearerAuth: []
+  '/vendor-risk-findings/{id}/dismiss':
+    post:
+      summary: 'Dismiss Vendor Risk Finding'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Vendor Risk Findings'
+      operationId: dismissVendorRiskFinding
+      security:
+        -
+          bearerAuth: []
   '/vendor-change-history/{id}':
     get:
       tags:

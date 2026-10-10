@@ -832,5 +832,12 @@
   "{count} potential risks found for \"{vendorName}\". Review them in Vendors > Risks.": "{count} potential risks found for \"{vendorName}\". Review them in Vendors > Risks.",
   "The research could not be started because the job queue is unavailable. Nothing was lost, so it is safe to try again later.": "The research could not be started because the job queue is unavailable. Nothing was lost, so it is safe to try again later.",
   "Invalid limit": "Invalid limit",
-  "Invalid offset": "Invalid offset"
+  "Invalid offset": "Invalid offset",
+  "Finding not found": "Finding not found",
+  "This finding has already been accepted or dismissed": "This finding has already been accepted or dismissed",
+  "Invalid action owner": "Invalid action owner",
+  "The action owner must be a user of your organization": "The action owner must be a user of your organization",
+  "Invalid dismissal note": "Invalid dismissal note",
+  "The note can be at most 500 characters": "The note can be at most 500 characters",
+  "The risk could not be added to the vendor risk register": "The risk could not be added to the vendor risk register"
 }
