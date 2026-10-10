@@ -141,6 +141,16 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     testFile: "eu-ai-act-classifications.isolation.test.ts",
   },
   {
+    name: "vendor_research_runs",
+    tables: ["vendor_research_runs"],
+    baseRoute: "/api/vendors/:id/research",
+  },
+  {
+    name: "vendor_risk_findings",
+    tables: ["vendor_risk_findings"],
+    baseRoute: "/api/vendor-risk-findings",
+  },
+  {
     name: "file_change_history",
     tables: ["file_change_history"],
     baseRoute: "/api/file-change-history",
