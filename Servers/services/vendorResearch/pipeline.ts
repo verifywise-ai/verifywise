@@ -126,11 +126,18 @@ const tag = ({ organizationId, vendorId, runId }: RunArgs) =>
 
 /**
  * The top-level message of an error. A cause nested inside it can carry raw model output or
- * request details, so it is left out.
+ * request details, so it is left out. It never throws: it is called inside catch blocks, where a
+ * throw would break the promise that the run is ended. A value that has no text form, such as an
+ * object without a prototype or with a toString that throws, and an Error whose message is not
+ * text all give "unknown error".
  */
 function describeError(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
-  return message.trim() === "" ? "unknown error" : message;
+  try {
+    const message = error instanceof Error ? error.message : String(error);
+    return message.trim() === "" ? "unknown error" : message;
+  } catch {
+    return "unknown error";
+  }
 }
 
 const asRecord = (value: unknown): Record<string, unknown> | null =>

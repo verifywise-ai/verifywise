@@ -1061,6 +1061,32 @@ describe("runVendorResearch", () => {
       expect(result.outcome).toBe("failed");
       expect(onlyFinish().input.error).toBe("Unexpected error: the database went away");
     });
+
+    // The message of the error is read inside the catch of `decide`. If that threw, `decide` would
+    // reject, the run would never be finished and it would stay running until the sweep fails it.
+    it.each([
+      ["an object that has no text form", () => Object.create(null)],
+      [
+        "an object whose toString throws",
+        () => ({
+          toString() {
+            throw new Error("no text form");
+          },
+        }),
+      ],
+      [
+        "an Error whose message is not text",
+        () => Object.defineProperty(new Error("lost"), "message", { value: 42 }),
+      ],
+    ])("fails the run once, and does not throw, for a rejection with %s", async (_label, make) => {
+      resolveModel.mockRejectedValue(make());
+
+      await expect(run()).resolves.toEqual({ outcome: "failed", findingsCreated: 0 });
+
+      expect(finishCalls()).toHaveLength(1);
+      expect(finishCalls("failed")).toHaveLength(1);
+      expect(onlyFinish().input.error).toBe("Unexpected error: unknown error");
+    });
   });
 
   describe("what validation lets through", () => {
