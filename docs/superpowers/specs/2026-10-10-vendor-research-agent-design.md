@@ -178,7 +178,7 @@ Findings and the run update are written in one transaction. Run states: `queued 
 - The run row (`queued`) is created by the trigger before enqueueing; the partial unique index makes a second trigger return the existing run. Runs stuck in `queued` or `running` for more than 15 minutes are marked `failed` (`timed out`), both before a new run is created and whenever the latest run is read, so a worker crash or restart can neither block a vendor nor leave the UI on "Researching" forever. Inside the job, any unexpected error after the run is marked `running` finishes the run as `failed` instead of propagating; only a failure to mark the run `running` is rethrown, because the run is then still `queued` and BullMQ's retry can help.
 - **Auto trigger:** `createVendor`, after commit, fire-and-forget. Skipped for demo vendors, when `VENDOR_RESEARCH_AUTO_RUN=false`, when search is not configured, when the organisation has no LLM key, or when the daily cap is reached (logged, nothing persisted).
 - **Manual trigger:** same path. 429 with `cooldown` when the vendor's last run is younger than the cooldown; 429 with `daily_cap` when the organisation has reached the cap; 409 with `search_not_configured` or `llm_key_missing`.
-- Cooldown and cap are plain count queries; there is no bulk action in v1.
+- Cooldown and cap are plain count queries; there is no bulk action in v1. They count only runs that started: a run that failed before it started (it could not be queued, was swept as stuck while still `queued`, or found search not configured inside the job) searched nothing and called no model, so it counts for neither, and a start that was refused with 503 can be tried again at once.
 
 **Environment** (added to `Servers/.env.example`):
 
