@@ -1008,26 +1008,56 @@ describe("runVendorResearch", () => {
 
       expect(result.outcome).toBe("failed");
       expect(search).not.toHaveBeenCalled();
-      expect(onlyFinish().input.error).toBe("Unexpected error: llm_keys is unavailable");
+      expect(onlyFinish().input.error).toBe("Unexpected error");
     });
   });
 
   describe("the error of a failed run", () => {
-    // These are our own errors, such as a database error. Their top-level message is recorded.
+    // These are our own errors, such as a database error. The run records a fixed phrase for them,
+    // and their top-level message goes to the log.
+    it("records a fixed phrase for an unexpected error and logs its message instead", async () => {
+      asMock(getVendorByIdQuery).mockRejectedValue(new Error("connect ECONNREFUSED 10.1.2.3:5432"));
+
+      const result = await run();
+
+      expect(result).toEqual({ outcome: "failed", findingsCreated: 0 });
+      // The run row is served to every role, so nothing of the message may reach it.
+      expect(onlyFinish().input).toMatchObject({ status: "failed", error: "Unexpected error" });
+      expect(JSON.stringify(asMock(finishRunQuery).mock.calls)).not.toContain("ECONNREFUSED");
+      // The message is for whoever runs the server: it goes to the log, with the ids of the run.
+      expect(logger.error).toHaveBeenCalledTimes(1);
+      const [line] = asMock(logger.error).mock.calls[0];
+      expect(line).toContain(`run ${RUN} (vendor ${VENDOR}, org ${ORG})`);
+      expect(line).toContain("connect ECONNREFUSED 10.1.2.3:5432");
+    });
+
+    // The reasons of the failed searches are what a stored error can still be long with: the
+    // phrases of the other errors are short.
     it("cuts the error to 500 characters", async () => {
-      asMock(getVendorByIdQuery).mockRejectedValue(new Error("x".repeat(800)));
+      stubSearch({
+        security_incidents: new SearchProviderError("a".repeat(300)),
+        certifications: new SearchProviderError("b".repeat(300)),
+        legal_regulatory: new SearchProviderError("c".repeat(300)),
+        ai_specific: new SearchProviderError("d".repeat(300)),
+      });
 
       await run();
 
       const { error } = onlyFinish().input;
       expect(error).toHaveLength(500);
-      expect(error.startsWith("Unexpected error: xxx")).toBe(true);
+      expect(error.startsWith("The run stopped because all searches failed: aaa")).toBe(true);
     });
 
     it("does not cut a character in half when it cuts the error", async () => {
-      // One of the two messages puts the cut between the halves of an emoji, whatever the prefix.
-      for (const message of ["😀".repeat(400), `a${"😀".repeat(400)}`]) {
-        asMock(getVendorByIdQuery).mockRejectedValue(new Error(message));
+      // One of the two sets of reasons puts the cut between the halves of an emoji, whatever the
+      // text in front of them. The digits keep the four reasons apart.
+      for (const lead of ["", "a"]) {
+        stubSearch({
+          security_incidents: new SearchProviderError(`1${lead}${"😀".repeat(150)}`),
+          certifications: new SearchProviderError(`2${lead}${"😀".repeat(150)}`),
+          legal_regulatory: new SearchProviderError(`3${lead}${"😀".repeat(150)}`),
+          ai_specific: new SearchProviderError(`4${lead}${"😀".repeat(150)}`),
+        });
         asMock(finishRunQuery).mockClear();
 
         await run();
@@ -1039,7 +1069,7 @@ describe("runVendorResearch", () => {
       }
     });
 
-    it("records only the top-level message, not what an inner cause carries", async () => {
+    it("logs only the top-level message, and stores neither it nor what an inner cause carries", async () => {
       asMock(getVendorByIdQuery).mockRejectedValue(
         Object.assign(new Error("connection lost"), {
           cause: new Error("RAW DATABASE DETAIL with customer data"),
@@ -1048,8 +1078,10 @@ describe("runVendorResearch", () => {
 
       await run();
 
-      expect(onlyFinish().input.error).toBe("Unexpected error: connection lost");
+      expect(onlyFinish().input.error).toBe("Unexpected error");
+      expect(JSON.stringify(asMock(finishRunQuery).mock.calls)).not.toContain("connection lost");
       expect(JSON.stringify(asMock(finishRunQuery).mock.calls)).not.toContain("RAW DATABASE");
+      expect(loggedText()).toContain("connection lost");
       expect(loggedText()).not.toContain("RAW DATABASE");
     });
 
@@ -1059,11 +1091,13 @@ describe("runVendorResearch", () => {
       const result = await run();
 
       expect(result.outcome).toBe("failed");
-      expect(onlyFinish().input.error).toBe("Unexpected error: the database went away");
+      expect(onlyFinish().input.error).toBe("Unexpected error");
+      expect(loggedText()).toContain("the database went away");
     });
 
-    // The message of the error is read inside the catch of `decide`. If that threw, `decide` would
-    // reject, the run would never be finished and it would stay running until the sweep fails it.
+    // The message of the error is read inside the catch of `decide`, for the log line. If that
+    // threw, `decide` would reject, the run would never be finished and it would stay running until
+    // the sweep fails it.
     it.each([
       ["an object that has no text form", () => Object.create(null)],
       [
@@ -1085,7 +1119,8 @@ describe("runVendorResearch", () => {
 
       expect(finishCalls()).toHaveLength(1);
       expect(finishCalls("failed")).toHaveLength(1);
-      expect(onlyFinish().input.error).toBe("Unexpected error: unknown error");
+      expect(onlyFinish().input.error).toBe("Unexpected error");
+      expect(loggedText()).toContain("unexpected error: unknown error");
     });
   });
 
@@ -1597,7 +1632,7 @@ describe("runVendorResearch", () => {
       expect(result).toEqual({ outcome: "failed", findingsCreated: 0 });
       expect(onlyFinish().input).toMatchObject({
         status: "failed",
-        error: "Unexpected error: connection lost",
+        error: "Unexpected error",
       });
     });
   });
@@ -1644,9 +1679,14 @@ describe("runVendorResearch", () => {
         promptVersion: PROMPT_VERSION,
         searchesUsed: 4,
         duplicatesDropped: 0,
-        error: "Saving the findings failed: insert failed: disk full",
+        error: "Saving the findings failed",
       });
       expect(JSON.stringify(input)).not.toContain("A note by the model.");
+      // The message of the database error is in the log, not in the run.
+      expect(JSON.stringify(input)).not.toContain("disk full");
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.stringContaining("insert failed: disk full"),
+      );
     });
 
     it("rolls back and fails the run once when the completed finish rejects inside the transaction", async () => {
@@ -1718,7 +1758,7 @@ describe("runVendorResearch", () => {
         evidence: STANDARD_PACK,
         model: MODEL_ID,
         searchesUsed: 4,
-        error: "Unexpected error: register unavailable",
+        error: "Unexpected error",
       });
     });
 
@@ -1729,7 +1769,7 @@ describe("runVendorResearch", () => {
 
       expect(result.outcome).toBe("failed");
       expect(finishCalls()).toHaveLength(1);
-      expect(onlyFinish().input.error).toBe("Unexpected error: findings unavailable");
+      expect(onlyFinish().input.error).toBe("Unexpected error");
     });
   });
 

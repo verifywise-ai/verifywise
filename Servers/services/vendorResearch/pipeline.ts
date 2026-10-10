@@ -26,6 +26,9 @@
  * its own account when it gives up on an answer: the path and message of the first three schema
  * issues, which are generic except that the name of an unexpected property is quoted. It does not
  * log the message of a provider error.
+ *
+ * The message of any other error, such as a database error that names a host, a port or a query, is
+ * logged but not stored: the run is served to every role, so it records a fixed phrase.
  */
 import { createModelFromKey, resolveModelId } from "../../advisor/llmModelFactory";
 import type { generateObjectWithSelfCorrection } from "../../advisor/llmSelfCorrect";
@@ -81,6 +84,13 @@ const MODEL_MAX_CHARS = 255;
 const NOTHING_FOUND_NOTE = "No risks found in the search results";
 const SEARCH_FAILED_NOTE = "The search failed";
 /**
+ * What a run records for an error that nothing planned for, and for findings that could not be
+ * saved. The message of such an error goes to the log: it can name a host, a port or a query, and
+ * the run is served to every role.
+ */
+const UNEXPECTED_ERROR_NOTE = "Unexpected error";
+const SAVING_FAILED_NOTE = "Saving the findings failed";
+/**
  * For a category in which the model proposed a risk and none stayed: validation, the
  * de-duplication or the cap took them all.
  */
@@ -125,11 +135,11 @@ const tag = ({ organizationId, vendorId, runId }: RunArgs) =>
   `vendor research run ${runId} (vendor ${vendorId}, org ${organizationId})`;
 
 /**
- * The top-level message of an error. A cause nested inside it can carry raw model output or
- * request details, so it is left out. It never throws: it is called inside catch blocks, where a
- * throw would break the promise that the run is ended. A value that has no text form, such as an
- * object without a prototype or with a toString that throws, and an Error whose message is not
- * text all give "unknown error".
+ * The top-level message of an error, for a log line. A cause nested inside it can carry raw model
+ * output or request details, so it is left out. It never throws: it is called inside catch blocks,
+ * where a throw would break the promise that the run is ended. A value that has no text form, such
+ * as an object without a prototype or with a toString that throws, and an Error whose message is
+ * not text all give "unknown error".
  */
 function describeError(error: unknown): string {
   try {
@@ -415,6 +425,8 @@ async function decide(args: RunArgs, deps: PipelineDeps): Promise<Decision> {
   try {
     return await research(args, deps, progress);
   } catch (error) {
+    // The run records a fixed phrase, so this line is the only place that has the message.
+    logger.error(`${tag(args)}: unexpected error: ${describeError(error)}`);
     return {
       kind: "fail",
       outcome: "failed",
@@ -422,7 +434,7 @@ async function decide(args: RunArgs, deps: PipelineDeps): Promise<Decision> {
         status: "failed",
         categorySummary: [],
         duplicatesDropped: 0,
-        error: `Unexpected error: ${describeError(error)}`,
+        error: UNEXPECTED_ERROR_NOTE,
       }),
     };
   }
@@ -459,12 +471,13 @@ async function completeRun(
   } catch (error) {
     // The transaction was rolled back, so the run is still running. The failed payload holds
     // nothing the model wrote: if its text was the reason for the failure, it would fail again.
+    // The run records a fixed phrase, so this line is the only place that has the message.
     logger.error(`${tag(args)}: saving the findings failed: ${describeError(error)}`);
     await recordFailure({
       ...payload,
       status: "failed",
       categorySummary: [],
-      error: cutAtCodePoint(`Saving the findings failed: ${describeError(error)}`, ERROR_MAX_CHARS),
+      error: SAVING_FAILED_NOTE,
     });
     return { outcome: "failed", findingsCreated: 0 };
   }
