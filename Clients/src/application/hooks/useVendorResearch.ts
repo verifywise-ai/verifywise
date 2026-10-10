@@ -1,0 +1,146 @@
+import { useEffect, useState } from "react";
+import { skipToken, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { UseQueryResult } from "@tanstack/react-query";
+import {
+  acceptVendorRiskFinding,
+  dismissVendorRiskFinding,
+  getLatestVendorResearch,
+  getVendorResearchConfig,
+  listVendorRiskFindings,
+  startVendorResearch,
+} from "../repository/vendorResearch.repository";
+import { vendorRiskQueryKeys } from "./useVendorRisks";
+import { VENDOR_INSIGHTS_KEY } from "./useRiskLinks";
+import type {
+  DismissReason,
+  FindingStatus,
+  VendorResearchConfig,
+  VendorResearchRun,
+  VendorRiskFinding,
+} from "../../domain/interfaces/i.vendorResearch";
+
+/** Prefix of every vendor research query, for one-call invalidation. */
+export const VENDOR_RESEARCH_KEY = ["vendorResearch"] as const;
+
+const configKey = () => [...VENDOR_RESEARCH_KEY, "config"] as const;
+const findingsKey = (filter: { status?: FindingStatus; vendorId?: number }) =>
+  [...VENDOR_RESEARCH_KEY, "findings", filter] as const;
+const latestKey = (vendorId: number | null) =>
+  [...VENDOR_RESEARCH_KEY, "latest", vendorId] as const;
+
+export function useVendorResearchConfig() {
+  return useQuery<VendorResearchConfig>({
+    queryKey: configKey(),
+    queryFn: getVendorResearchConfig,
+  });
+}
+
+/** One status at a time, and one vendor or all of them, as the API takes them. */
+export function useVendorRiskFindings(filter: { status?: FindingStatus; vendorId?: number }) {
+  return useQuery<{ rows: VendorRiskFinding[]; total: number }>({
+    queryKey: findingsKey(filter),
+    queryFn: () => listVendorRiskFindings(filter),
+  });
+}
+
+const POLL_INTERVAL_MS = 3000;
+/** How long one run is polled, counted from the moment this hook first sees it active. */
+const POLL_WINDOW_MS = 2 * 60 * 1000;
+
+/** The id of a run that is still working, or null. `completed` and `failed` are final. */
+const activeRunId = (run: VendorResearchRun | null | undefined): number | null =>
+  run && (run.status === "queued" || run.status === "running") ? run.id : null;
+
+/** One polling window: one run of one vendor. */
+const windowOf = (vendorId: number | null, runId: number) => `${vendorId}:${runId}`;
+
+/**
+ * The vendor's latest run, polled while it is queued or running. The run is a
+ * background job, so the answer to "did it finish" is only ever a later fetch.
+ *
+ * Polling stops after POLL_WINDOW_MS, so a run that never finishes (a stuck
+ * worker) does not keep the tab fetching for ever; `pollingStopped` is then
+ * true, and the screen should say the run is still going. It goes back to false
+ * when the run is no longer active, when a different run shows up, and when the
+ * vendor changes. Pass null to leave the query off.
+ */
+export function useLatestVendorResearch(
+  vendorId: number | null,
+): UseQueryResult<VendorResearchRun | null> & { pollingStopped: boolean } {
+  // The window whose time ran out, if any. A window that is not the current one
+  // is a leftover, so `pollingStopped` compares instead of trusting the state.
+  const [endedWindow, setEndedWindow] = useState<string | null>(null);
+
+  const query = useQuery<VendorResearchRun | null>({
+    queryKey: latestKey(vendorId),
+    queryFn: vendorId === null ? skipToken : () => getLatestVendorResearch(vendorId),
+    refetchInterval: (current) => {
+      const runId = activeRunId(current.state.data);
+      return runId !== null && windowOf(vendorId, runId) !== endedWindow ? POLL_INTERVAL_MS : false;
+    },
+  });
+
+  const runId = activeRunId(query.data);
+  const currentWindow = runId === null ? null : windowOf(vendorId, runId);
+
+  useEffect(() => {
+    if (currentWindow === null) return;
+    const timer = setTimeout(() => setEndedWindow(currentWindow), POLL_WINDOW_MS);
+    return () => {
+      clearTimeout(timer);
+      setEndedWindow(null);
+    };
+  }, [currentWindow]);
+
+  return { ...query, pollingStopped: currentWindow !== null && currentWindow === endedWindow };
+}
+
+/**
+ * A refusal (409 setting missing, 429 cooldown or daily cap, 503 queue down) is
+ * a normal answer: the mutation rejects with the repository's error and the
+ * screen reads it with `readVendorResearchError`. The latest run is refreshed on
+ * settle either way, because a refusal can mean the screen's copy is out of date.
+ */
+export function useStartVendorResearch() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (vendorId: number) => startVendorResearch(vendorId),
+    onSettled: (_result, _error, vendorId) =>
+      queryClient.invalidateQueries({ queryKey: latestKey(vendorId) }),
+  });
+}
+
+/**
+ * onSettled, not onSuccess: a 409 or 404 says the finding was decided already,
+ * or is gone, so the list on screen is stale whether or not this call worked.
+ * An accepted finding also adds a vendor risk to the register, and that changes
+ * what the vendor risk insights report.
+ */
+export function useAcceptFinding() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: number; body: { action_owner?: number | null } }) =>
+      acceptVendorRiskFinding(id, body),
+    onSettled: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: vendorRiskQueryKeys.all }),
+        queryClient.invalidateQueries({ queryKey: VENDOR_RESEARCH_KEY }),
+        queryClient.invalidateQueries({ queryKey: VENDOR_INSIGHTS_KEY }),
+      ]),
+  });
+}
+
+/** A dismissal changes nothing in the register, only the research data. */
+export function useDismissFinding() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      body,
+    }: {
+      id: number;
+      body: { reason: DismissReason; note?: string | null };
+    }) => dismissVendorRiskFinding(id, body),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: VENDOR_RESEARCH_KEY }),
+  });
+}
