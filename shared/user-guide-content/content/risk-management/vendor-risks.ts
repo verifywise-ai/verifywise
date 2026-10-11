@@ -276,7 +276,7 @@ export const vendorRisksContent: ArticleContent = {
       items: [
         { bold: 'Accept', text: 'Adds the finding to the vendor risk register as a normal vendor risk. The vendor\'s assignee becomes its action owner, if the assignee is a user of your organization. You can edit it afterwards like any other risk' },
         { bold: 'Dismiss', text: 'Removes the finding from the list. Choose a reason and, if you like, add a note. Similar findings are not suggested again' },
-        { bold: 'Research again', text: 'Choose a vendor in the section\'s vendor filter to see what its latest run found in each category, including where it found nothing, and to start a new run. The microscope icon ("Research risks") in a vendor\'s row on the Vendors tab starts a run too, and the Risks tab then opens on that vendor so that you can follow it. While a run is working the section updates by itself for about two minutes. If it is still working after that, the section says "Still running. Check back later." and **Check again** reads it once more' },
+        { bold: 'Research again', text: 'Choose a vendor in the section\'s vendor filter to see what its latest run found in each category, including where it found nothing, and to start a new run. The microscope icon ("Research risks") in a vendor\'s row on the Vendors tab starts a run too, and the Risks tab then opens on that vendor so that you can follow it. While a run is working the section updates by itself for about two minutes. If it is still working after that, the section says "Still running. Check back later." and **Check again** looks again and, if the run is still working, keeps updating for another two minutes' },
       ],
     },
     {
