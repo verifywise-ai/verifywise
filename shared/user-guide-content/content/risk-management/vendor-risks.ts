@@ -265,7 +265,7 @@ export const vendorRisksContent: ArticleContent = {
       type: 'callout',
       variant: 'warning',
       title: 'Check before you accept',
-      text: 'Findings are AI-suggested from web sources, so they can be wrong. Each one lists its sources with a quote from each, and a confidence level. Open the sources and check that they are about your vendor and say what the finding claims.',
+      text: 'Findings are AI-suggested from web sources, so they can be wrong. Each one shows the risk, its impact and an action plan, which Accept copies into your register as written, and lists its sources with a quote from each, and a confidence level. Read all three texts, open the sources and check that they are about your vendor and say what the finding claims.',
     },
     {
       type: 'paragraph',
@@ -276,7 +276,7 @@ export const vendorRisksContent: ArticleContent = {
       items: [
         { bold: 'Accept', text: 'Adds the finding to the vendor risk register as a normal vendor risk. The vendor\'s assignee becomes its action owner, if the assignee is a user of your organization. You can edit it afterwards like any other risk' },
         { bold: 'Dismiss', text: 'Removes the finding from the list. Choose a reason and, if you like, add a note. Similar findings are not suggested again' },
-        { bold: 'Research again', text: 'Choose a vendor in the section\'s vendor filter to see what its latest run found in each category, including where it found nothing, and to start a new run. The microscope icon ("Research risks") in a vendor\'s row on the Vendors tab starts a run too' },
+        { bold: 'Research again', text: 'Choose a vendor in the section\'s vendor filter to see what its latest run found in each category, including where it found nothing, and to start a new run. The microscope icon ("Research risks") in a vendor\'s row on the Vendors tab starts a run too, and the Risks tab then opens on that vendor so that you can follow it. While a run is working the section updates by itself for about two minutes. If it is still working after that, the section says "Still running. Check back later." and **Check again** reads it once more' },
       ],
     },
     {

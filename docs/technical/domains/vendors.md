@@ -144,11 +144,16 @@ All columns are NOT NULL except `dismissed_reason`, `dismissed_note`, `accepted_
 |-------|---------|---------|
 | `idx_vendor_risk_findings_org_status_created` | `(organization_id, status, created_at DESC)` | The findings list |
 | `idx_vendor_risk_findings_org_vendor` | `(organization_id, vendor_id)` | Findings of one vendor, de-duplication |
+| `idx_vendor_risk_findings_run` | `(run_id)` | The cascade when a run is deleted |
+| `idx_vendor_risk_findings_vendor` | `(vendor_id)` | The cascade when a vendor is deleted. The indexes above all start with `organization_id`, so they cannot serve a lookup on `vendor_id` alone |
+| `idx_vendor_risk_findings_accepted_risk` (partial) | `(accepted_vendor_risk_id) WHERE accepted_vendor_risk_id IS NOT NULL` | The `SET NULL` when a register risk is deleted. Most findings are never accepted, so only the rows that point at a risk are indexed |
+
+The last three indexes come from their own migration, `20261011025519-vendor-research-fk-indexes.js` (`CREATE INDEX IF NOT EXISTS`, reversible). Without an index on the child column, each foreign-key action scans the whole table, and this table holds the findings of every tenant. `decided_by` and `requested_by` get none: deleting a user is rare.
 
 Column notes:
 
 - `sources` is an array of `{ url, title, quote, published_at }` with at least one entry. The quote is a verbatim part of the page snippet, at most 300 characters.
-- The three text columns are at most 300 characters each. That limit, and the rule that a finding has at least one source, are enforced in code (the output schema and the validation), not by the DDL.
+- The three text columns are at most 300 characters each. That limit, and the rule that a finding has at least one source, are enforced in code (the output schema and the validation), not by the DDL. The vendor risk form takes up to 500 characters for the risk and the impact and 1,000 for the action plan (the limits of the server, `VENDOR_RISK_VALIDATION_LIMITS`), so every accepted finding can be edited in the register.
 - `risk_level` is `calculateRiskLevel(risk_severity, likelihood)` followed by ` Risk`, as in the register.
 - There is no unique constraint on the wording: the model words a risk differently on every run, so de-duplication is done in code (see [De-duplication](#de-duplication)).
 - Accepting a finding keeps its row and sets `accepted_vendor_risk_id` to the new register row, `decided_by` and `decided_at`. Dismissing sets `dismissed_reason`, `dismissed_note`, `decided_by` and `decided_at`.
@@ -293,7 +298,7 @@ Paths are under `/api`. A success body is `{ message, data }`. Every route needs
 
 **Findings list.** `status` is `pending` (the default), `accepted` or `dismissed`. `vendorId` narrows to one vendor; a vendor that does not exist in the organization gives an empty list, not a 404. `limit` defaults to 50 and a larger value is cut to 200; `offset` defaults to 0. A bad `status`, `vendorId`, `limit` (below 1 or not a whole number) or `offset`, or a parameter given twice, is a 400. Each row is the full finding row plus `vendor_name`. The newest run comes first, and inside a run the most severe finding comes first.
 
-**Start.** The checks run in this order and the first that fails answers: the vendor exists in the organization (404), search is configured (409 `search_not_configured`), the organization has an LLM key (409 `llm_key_missing`). Then the vendor's stuck runs are failed and, if the vendor has an active run, that run is returned instead of a new one (still 202, with `alreadyRunning: true`, so a click during a run is never a 429). Then, for a manual start only, the cooldown (429 `cooldown`), and for every start the daily cap (429 `daily_cap`). Only then is the queued run created and its job queued. If the job cannot be queued, the run is failed at once (`could not enqueue`) and the answer is 503.
+**Start.** The checks run in this order and the first that fails answers: the vendor exists in the organization (404), search is configured (409 `search_not_configured`), the organization has an LLM key (409 `llm_key_missing`). Then the vendor's stuck runs are failed and, if the vendor has an active run, that run is returned instead of a new one (still 202, with `alreadyRunning: true`, so a click during a run is never a 429). Then, for a manual start only, the cooldown (429 `cooldown`), and for every start the daily cap (429 `daily_cap`). Only then is the queued run created and its job queued. The start waits at most 5 seconds (`ENQUEUE_TIMEOUT_MS`) for that: with Redis down the queue does not refuse the job, it keeps waiting. If the job cannot be queued in that time, the run is failed at once (`could not enqueue`, which counts toward neither limit) and the answer is 503 `enqueue_failed`. A job that is queued after that is skipped by the worker, without a search or a model call. (A job that lands in the few milliseconds before the run is marked failed could still start it, and the vendor is then researched twice at worst.)
 
 **Latest.** The run of the vendor with the newest `created_at`, whatever its status, or `null` for a vendor that was never researched. This read also writes: before it reads, it fails the vendor's runs that have been queued or running for more than 15 minutes, so a lost job never shows as "researching" for ever.
 
@@ -652,7 +657,7 @@ One call to `generateObjectWithSelfCorrection` (`advisor/llmSelfCorrect.ts`), wi
 - `findings`, at most 20, each with `category`, `risk_description`, `impact_description` and `action_plan` (at most 300 characters each), `likelihood` and `risk_severity` (the register's own values, so an accepted finding is always valid there), `confidence`, and 1 to 5 `evidence` items of `source_id` and `quote` (at most 300 characters);
 - `category_notes`, at most four short notes (200 characters each), one per category.
 
-If the answer does not fit, the wrapper sends the schema issues back and asks again, at most twice; the SDK also retries transport errors twice. `PROMPT_VERSION` (now `vr-1`) is stored on every run and changes whenever the wording of a prompt changes.
+If the answer does not fit, the wrapper sends the schema issues back and asks again, at most twice; the SDK also retries transport errors twice. The schema is not strict: a property that is not in it (at the top, on a finding, on an evidence item or on a note) is dropped when the answer is parsed, not reported. So no property name that the model chose, and so that a web page could have steered it to choose, reaches the system prompt of a retry, which quotes the schema issues. The JSON schema sent to the provider still has `additionalProperties: false` on every object, because the AI SDK adds it. `PROMPT_VERSION` (now `vr-1`) is stored on every run and changes whenever the wording of a prompt changes.
 
 The user prompt carries the vendor (name, domain, what it provides) as context, and the evidence in an `<evidence>` block with `&`, `<` and `>` escaped. The system prompt says that everything inside `<evidence>` is untrusted data, not instructions; to raise a risk only when the evidence itself shows an incident, gap, limitation, expiry, contradiction or adverse term; that a missing mention is not a finding; to ignore sources about other companies; to cite each risk with verbatim quotes; and to return an empty list when nothing qualifies.
 
@@ -662,8 +667,9 @@ The user prompt carries the vendor (name, domain, what it provides) as context, 
 
 - **Verbatim quote.** Every citation is checked on its own and removed unless its source id is in the evidence pack and its quote is a substring of that source's snippet, after the prompt escaping is decoded and case, whitespace and quotation marks are ignored. A source cited twice counts once.
 - **The source is about the vendor.** A citation is also removed unless its source mentions the vendor: its URL is on the vendor's domain or a subdomain, or its title or snippet names the vendor as a whole word or mentions the domain. A page about a company with a similar name cannot get in.
+- **The quote says more than the name.** A citation is also removed unless its quote has at least one word that is no part of the vendor's own name or domain. A word is a run of letters and digits in any script, compared after the quote is normalised as for the verbatim check. For the vendor Acme Analytics (`acme-analytics.com`), the quotes "Acme", "Acme Analytics" and "acme-analytics.com" do not count, while "Acme confirmed the incident", "SOC 2 Type II" and "ISO 27001" do. This is not a minimum length. A refused quote does not use up its source: a later quote of the same source can still count. So a second hostname whose only quote is the vendor's name no longer lifts a finding to `high`. Two edges remain: a lone possessive such as "Acme's" counts as a word, and so does "acme-analytics.com" for a vendor with no known domain.
 - **Candidates.** A candidate is dropped when no citation is left, when its category was not searched successfully, when a text is empty or longer than 300 characters, when an enum value is not valid, or when `calculateRiskLevel(risk_severity, likelihood)` gives no level. The stored `risk_level` is that level followed by ` Risk`.
-- **Confidence never goes up.** The sources set a ceiling: `high` needs at least two different hostnames (`www.` is ignored), `medium` needs two different pages or one page on the vendor's own domain, otherwise `low`. The stored value is the lower of the model's label and the ceiling.
+- **Confidence never goes up.** The citations that passed the checks above set a ceiling: `high` needs at least two different hostnames (`www.` is ignored), `medium` needs two different pages or one page on the vendor's own domain, otherwise `low`. The stored value is the lower of the model's label and the ceiling.
 - **Clean text.** The texts the model wrote (the three finding texts, the quotes and the category notes) are cleaned like the evidence is: control characters other than tab, line feed and carriage return are removed and lone surrogates are replaced. PostgreSQL refuses them, and one would fail the save of the whole run.
 
 Candidates are ordered most severe first. What the checks cannot tell is a page that says something false about the vendor, or a quote from a page that gives orders to a model: both are real text of a page that names the vendor. The person who accepts a finding is the check for that.
@@ -694,7 +700,11 @@ The register and the list should not collect the same risk again, and a dismisse
 | A stuck run | 15 minutes |
 
 - The cooldown applies to manual starts only, but it looks at the vendor's newest run of any trigger type, so an automatic run holds off a manual one. An automatic start does not wait for the cooldown; it is held to the daily cap.
-- Both limits are plain count queries over `vendor_research_runs`. They count every run except one that **failed before it started** (its job could not be queued, it was swept as stuck while still `queued`, or its job found search not configured). Such a run searched nothing and called no model, so it counts for neither. A start refused with 503 can therefore be tried again at once.
+- Both limits are plain count queries over `vendor_research_runs`. They count every run except two kinds that searched nothing and called no model, so they count for neither:
+  - a run that **failed before it started** (its job could not be queued, it was swept as stuck while still `queued`, or its job found search not configured). A start refused with 503 can therefore be tried again at once;
+  - a run that is **still `queued` more than 15 minutes after it was created** (`STALE_RUN_MINUTES`, the limit of the stuck-run sweep below). Its job was lost, for example because the backend empties the queue of waiting jobs each time it starts (`obliterate` in `scheduleVendorReviewDateNotification`, older than this feature). The sweep only looks at the vendor that is started or whose latest run is read, so without this rule such a run could use up a slot of the daily cap for the whole 24 hours.
+
+  A `running` run counts however long it has run, and so do a completed run and a run that failed after it started.
 - A run that has been `queued` or `running` for more than 15 minutes (counted from `started_at`, or from `created_at` if it never started) is failed with the error `timed out`. There is no background sweep: it runs before a new run is created and whenever the latest run is read. So a worker that is down leaves a run `queued` until the next start or read, and neither a crash nor a restart blocks a vendor or leaves the UI on "Researching" for ever.
 - Each run costs at most four searches and one model call (more only when the answer has to be asked for again).
 
@@ -718,11 +728,12 @@ Anything that goes wrong rolls the whole accept back and leaves the finding `pen
 
 ### Notice to the assignee
 
-After an **automatic** run that stored at least one finding, the vendor's assignee (when the vendor has one) gets a `vendor_research_findings` in-app notification that links to `/vendors/risks?findingsVendorId=<vendor id>`. A manual run does not notify: the person who started it is looking at the result. The notification type, link, metadata and dedup index are described in [Notifications](./notifications.md#vendor-research-notice).
+After an **automatic** run that stored at least one finding, the vendor's assignee (when the vendor has one, and that person is a user of the vendor's organization) gets a `vendor_research_findings` in-app notification that links to `/vendors/risks?findingsVendorId=<vendor id>`. The organization check is the one the accept uses for the default action owner (`findUsersNotInOrganization`): vendor writes do not check the assignee, so it can be a user of another organization, and for such a person no notification is written, nothing is raised, the run is unaffected, and one debug line with ids only is logged. A manual run does not notify: the person who started it is looking at the result. The notification type, link, metadata and dedup index are described in [Notifications](./notifications.md#vendor-research-notice).
 
 ### Safety
 
 - **Web text is untrusted.** It enters the prompt inside a delimited block with its markup characters escaped, the model has no tools, its answer is bound to a schema and then checked by code against the retrieved text, and nothing is written to the register unless a person accepts. The findings section says they are AI-suggested and must be verified, and the UI shows finding text, quotes and model notes as plain text, never as markup.
+- **Email.** The text of an accepted finding reaches the action owner's assignment email like any risk text. That email HTML-escapes the names and the context it shows (`utils/escapeHtml.ts`, see [Notifications](./notifications.md#assignment-emails)), so text that a model wrote after reading a web page shows as typed and cannot add a tag, a link or an image.
 - **Links.** A source is a link only when its URL is `http` or `https`; it opens in a new tab with `rel="noopener noreferrer"`. The server drops any other URL from the evidence before the model sees it.
 - **No server-side fetching.** The server reads only the snippets that the search returns. It never requests a URL a search result points to, so there is no request to an address that a third party chose.
 - **The search key** lives in the environment only. It is never logged and never returned: the config endpoint returns booleans, and the search provider turns every failure into an HTTP status or a fixed phrase, because an error that quoted the request would quote the key.
@@ -752,7 +763,7 @@ The variables are optional and are listed in `Servers/.env.example`. They are re
 | Deployment | What to do |
 |------------|------------|
 | `docker-compose.prod.yml` | Nothing beyond setting the variables in `.env.prod`: the file hands the whole `.env.prod` to the backend and the worker |
-| `docker-compose.override.yml` (development stack) | It gives `.env.dev` to the backend but not to the worker, which gets only the list in `docker-compose.yml`. To run research in that stack, add the variables to the worker's `environment` |
+| `docker-compose.override.yml` (development stack) | It gives `.env.dev` to the backend but not to the worker, which gets only the list in `docker-compose.yml`. The backend container also runs a worker of its own (`npm run watch` starts the server and the worker together), so two workers take research jobs, one with the variables and one without: a run succeeds or ends `failed` with `Search provider not configured` depending on which of them takes its job. To run research reliably in that stack, add the variables to the separate worker's `environment` |
 | `kubernetes/backend-deployment.yaml`, `kubernetes/worker-deployment.yaml` | These list variables by name and are **not** updated by this change. The deployer adds the five variables to both; the key belongs in the Secret |
 | Helm chart: `kubernetes/helm/verifywise/templates/backend-deployment.yaml`, `worker-deployment.yaml`, `secret.yaml` | Same: **not** updated. Add the variables to both deployments, the key to `secret.yaml`, the other four to `configmap.yaml`, and their values to `values.yaml` |
 | Ansible: `ansible/templates/.env.j2` | Renders `.env.prod`, which compose hands to both processes. **Not** updated: the deployer adds the five lines to the template |
@@ -814,11 +825,12 @@ All vendor changes are tracked:
 | `useVendorExposure()`, `useVendorDuplicateCandidates()`, `useVendorFrameworkCoverage()` | Vendor risk insight reports (`hooks/useRiskLinks.ts`) |
 | `useSuggestVendorRiskHierarchy(id)` | Suggest children on one vendor risk |
 | `useRecomputeVendorRiskLinks()` | Scan every vendor risk for related vendor risks (Admin) |
-| `useVendorResearchConfig()` | Whether research is set up (`hooks/useVendorResearch.ts`, as are the next five) |
+| `useVendorResearchConfig()` | Whether research is set up (`hooks/useVendorResearch.ts`, as are the rows below) |
 | `useVendorRiskFindings(filter)` | The findings list (one status, one vendor or all) |
-| `useLatestVendorResearch(vendorId)` | The latest run of a vendor, polled while it is queued or running |
+| `useLatestVendorResearch(vendorId)` | The latest run of a vendor, polled while it is queued or running, and read again on window focus while it is active. `restartPolling()` starts a new two-minute window and reads the run at once |
 | `useStartVendorResearch()` | Start a run |
 | `useAcceptFinding()`, `useDismissFinding()` | Decide a finding |
+| `followResearch(queryClient, vendorId)`, `useFollowedResearchVendor()` | Leave, and read once, the hint that makes the Risks tab follow a run started on the vendors table |
 
 ### Vendor research
 
@@ -826,9 +838,13 @@ All vendor changes are tracked:
 
 - Collapsible like the Insights panel. It is open by default when something is pending or a vendor comes from the URL, and the viewer's own toggle wins. The header says "Research findings", shows a "Pending: N" chip, and says "AI-suggested from web sources. Verify before accepting."
 - A **Vendor** filter ("All vendors" or one vendor). It starts from the **`findingsVendorId`** URL parameter (digits only, above zero; anything else means all vendors), which is the parameter that the assignee notification links to: `/vendors/risks?findingsVendorId=<vendor id>`. A new value in the URL while the page is mounted is followed. The existing `vendorId` parameter opens the vendor modal, so the section has a parameter of its own.
-- Each row (`FindingRow`) shows the category, the vendor, the risk and impact text, chips for risk level, severity, likelihood and confidence, and the sources: the host as a link (`http` and `https` only), the publication date and the quote as plain text.
-- **Accept** and **Dismiss** are hidden for users without `risks.edit`, who see the section read-only. Accept sends an empty body, so the default action owner rule applies, then shows a toast and a notice with an **Open risk** button for the new risk. Dismiss opens `DismissFindingModal` (a `StandardModal`) with a required reason and an optional note of up to 500 characters.
-- With a vendor chosen, `RunSummary` shows the latest run: one line per category ("Security incidents: nothing found") with its note, the error of a failed run, the date of the last run, and **Research again** (`risks.edit` only). While the run is queued or running it shows "Researching…" and the latest run is polled every 3 seconds for up to 2 minutes; after that it says "Still running. Check back later." and the button is enabled again, so that the server decides. When a run that was seen active ends, the findings lists are refetched once.
+- Each row (`FindingRow`) shows the category, the vendor, the risk and impact text, the action plan under an "Action plan" caption (accepting copies it into the register, so the person who decides sees all three texts that will be written), chips for risk level, severity, likelihood and confidence, and the sources: the host as a link (`http` and `https` only), the publication date and the quote as plain text. The action plan is plain text like the other texts, and nothing is shown for a finding without one. The **Accept** and **Dismiss** buttons of a row are described by that row's risk text (`aria-describedby`), so a screen reader says which risk a button decides.
+- **Accept** and **Dismiss** are hidden for users without `risks.edit`, who see the section read-only. Accept sends an empty body, so the default action owner rule applies, then shows a toast and a notice with an **Open risk** button for the new risk. Dismiss opens `DismissFindingModal` (a `StandardModal`) with a required reason and an optional note of up to 500 characters, counted in characters (an emoji is one), as the server counts them, and announces "Finding dismissed." when it is done.
+- After a decision, focus moves to the first button of the row that takes the decided row's place: the next row, else the previous one, else the "Research findings" heading. Focus moves only if it has fallen to the page, so it never pulls a user back who has moved on.
+- A decision that the server refuses is settled once the list has been read again. If the finding has left the pending list (404 for a finding or vendor that is gone, or 409 for a finding decided elsewhere), the dismiss modal closes by itself and focus moves as after a decision. If the finding is still pending (the 409 of another decision in progress, `FOR UPDATE NOWAIT`), the modal stays open with the reason and the note, and a retry can succeed. The global error toast skips 404 on purpose, so a 404 on accept or dismiss shows the warning "This finding no longer exists." through `onNotify`.
+- With a vendor chosen, `RunSummary` shows the latest run: one line per category ("Security incidents: nothing found") with its note, the error of a failed run, the date of the last run, and **Research again** (`risks.edit` only). While the run is queued or running it shows "Researching…" and the latest run is polled every 3 seconds for up to 2 minutes. After that it says "Still running. Check back later." followed by **Check again** (a text button, shown to every role), which reads the run at once and polls for another 2 minutes; and a run that is still queued or running is also read again when the browser tab regains focus (the app turns window-focus refetching off everywhere else). **Research again** is enabled again, so that the server decides. When a run that was seen active ends, the findings lists are refetched once.
+- **Following a run.** A run started with the **Research risks** button on the vendors table is followed on the Risks tab. The button leaves a one-shot hint in the query cache under its own key (`["vendorResearchFollow"]`, so invalidating the research queries does not clear it), for a started run and for an "already running" answer, not for a refusal. The findings section reads the hint when it mounts and opens on that vendor, even with nothing pending, as if `findingsVendorId` were in the URL, so `RunSummary` polls and the findings appear when the run ends. The URL parameter wins when both are present, and the hint is cleared by the first mount either way. It is not time-bound: it stays until the section mounts or the query cache collects it (10 minutes).
+- The section stays mounted, with its state, while the register of vendor risks reloads after the **Risk status** or the project filter changes. Only the insights and the table give way to the skeleton.
 - States: loading, empty, a failed load with **Retry** (`InlineError`), and not set up ("Vendor research is not set up.", shown to everyone; the line that names the environment variables only to Admins).
 
 **Row button.** `components/VendorResearchButton/` is a microscope icon button (tooltip "Research risks") that `components/Table/WithPlaceholder` renders in the actions of each vendor row. It is hidden without `risks.edit`, and disabled while the settings load and when research is not set up. If the request for the settings fails, the button and the findings section treat research as set up and the server decides: a start without a setting is refused with a 409. The global error toast is off for the start call, so every click is answered with a message through `onNotify` (started, already running, cooldown, daily cap, not set up, queue unavailable, or a generic failure).
@@ -838,7 +854,7 @@ All vendor changes are tracked:
 | File (under `Clients/src/`) | Purpose |
 |-----------------------------|---------|
 | `application/repository/vendorResearch.repository.ts` | The six calls. A failure is an `APIError` that keeps the HTTP status; `readVendorResearchError` reads `code` and `retryAfterSeconds` from the response body |
-| `application/hooks/useVendorResearch.ts` | React Query hooks under the query key `["vendorResearch"]`. Accepting invalidates the vendor risks query, the research queries and `VENDOR_INSIGHTS_KEY`; dismissing invalidates the research queries |
+| `application/hooks/useVendorResearch.ts` | React Query hooks under the query key `["vendorResearch"]`. Accepting invalidates the vendor risks query, the research queries and `VENDOR_INSIGHTS_KEY`; dismissing invalidates the research queries. The follow hint has its own key, `["vendorResearchFollow"]` |
 | `domain/interfaces/i.vendorResearch.ts` | Types that mirror `Servers/domain.layer/interfaces/i.vendorResearch.ts` (snake_case, dates as ISO strings) |
 | `application/utils/vendorResearchText.ts` | Labels, and translated sentences for the closed set of phrases the server stores. A stored string it does not know is never shown; the model's own category note is shown as plain text under "AI note (unverified)" |
 | `application/utils/vendorResearchAlerts.ts` | The messages for a start, shared by the findings section and the row button |
@@ -902,12 +918,14 @@ Vendors with `is_demo=true`:
 | `services/vendorResearch/searchProvider.ts`, `searchTypes.ts`, `tavilyProvider.ts` | The search provider interface and the Tavily implementation |
 | `services/vendors/vendorRiskCreate.service.ts` | Vendor risk creation shared by the vendor risk form and accept |
 | `services/vendors/textSimilarity.ts` | Tokeniser and Jaccard score (risk suggestions and research de-duplication) |
-| `services/inAppNotification.service.ts` | `notifyAssigneeOfVendorResearch` |
+| `services/inAppNotification.service.ts` | `notifyAssigneeOfVendorResearch`; the assignment email, which escapes the text it shows |
+| `utils/escapeHtml.ts` | `escapeHtml`, for text that goes into an HTML email |
 | `services/automations/automationProducer.ts` | `enqueueVendorResearch`, the `vendor_research` job id and options |
-| `utils/vendorResearch.utils.ts` | Queries for runs and findings |
+| `utils/vendorResearch.utils.ts` | Queries for runs and findings, and the rule of which runs count toward the limits |
 | `domain.layer/interfaces/i.vendorResearch.ts` | Types and the category and dismissal-reason lists |
 | `database/migrations/20261010012217-create-vendor-research-tables.js` | The two tables |
 | `database/migrations/20261010161236-vendor-research-notification-type.js`, `20261010161240-vendor-research-notification-unique.js` | The notification type and its dedup index |
+| `database/migrations/20261011025519-vendor-research-fk-indexes.js` | Three indexes behind the foreign keys of the findings |
 
 ### Frontend
 
@@ -916,7 +934,8 @@ Vendors with `is_demo=true`:
 | `pages/Vendors/index.tsx` | Main page |
 | `pages/Vendors/VendorRiskInsights/` | Heat map, blast radius, duplicates, coverage |
 | `pages/Vendors/VendorResearchFindings/` | Research findings section: `index.tsx`, `FindingRow.tsx`, `RunSummary.tsx`, `DismissFindingModal.tsx`, `InlineError.tsx`, `parseVendorId.ts`, `styles.ts` |
-| `components/VendorResearchButton/` | Row button that starts research |
+| `components/VendorResearchButton/` | Row button that starts research and leaves the follow hint |
+| `components/Modals/NewRisk/` | Vendor risk form; its text limits (500, 500, 1,000 characters) are the server's |
 | `components/AddNewVendor/` | Vendor form |
 | `hooks/useVendors.ts` | Data hook |
 | `repository/vendor.repository.ts` | API calls |

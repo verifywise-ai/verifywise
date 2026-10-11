@@ -146,7 +146,9 @@ Before delivering notifications:
 
 #### Vendor research notice
 
-The vendor research agent (see [Vendors](./vendors.md#vendor-research-agent)) tells a vendor's assignee, when the vendor has one, that an **automatic** run stored findings. A manual run sends nothing: the person who started it is looking at the result. `handleVendorResearchJob` sends the notice after the run has ended, so a failure to send is logged and cannot change the run.
+The vendor research agent (see [Vendors](./vendors.md#vendor-research-agent)) tells a vendor's assignee, when the vendor has one and that person is a user of the vendor's organization, that an **automatic** run stored findings. A manual run sends nothing: the person who started it is looking at the result. `handleVendorResearchJob` sends the notice after the run has ended, so a failure to send is logged and cannot change the run.
+
+The organization check is `findUsersNotInOrganization`, the one the accept uses for the default action owner: vendor writes do not check the assignee, and the foreign key behind it accepts any user, so the assignee can belong to another organization. For such a person (or an id that cannot be a user id) no notification is written, nothing is raised, the run is unaffected, and one debug line with ids only is logged. A failing lookup is a real failure: it is logged as an error and does not change the run.
 
 - Title `Vendor research findings`; message `1 potential risk found for "Acme". Review it in Vendors > Risks.` (or `3 potential risks found for "Acme". Review them in Vendors > Risks.`), in the recipient's language. In-app only, no email.
 - Entity: `vendor` (the vendor's id and name). Link: `/vendors/risks?findingsVendorId=<vendor id>`, which opens the Risks tab with the findings section on that vendor. The existing `/vendors?vendorId=` link would open the vendor modal instead.
@@ -219,6 +221,15 @@ const rateLimitConfig = {
 | `USER_ADDED_PROJECT_*` | Member addition (by role) |
 | `MEMBER_ROLE_CHANGED_*` | Role changes |
 | `POLICY_DUE_SOON` | Policy review reminders |
+| `ASSIGNMENT_NOTIFICATION` | "You have been assigned" for a vendor, risk, project, model and so on (`notifyUserAssigned`) |
+
+### Assignment emails
+
+`notifyUserAssigned` (`services/inAppNotification.service.ts`) writes the in-app notification and sends the `ASSIGNMENT_NOTIFICATION` email. The template is HTML and `compileMjmlToHtml` substitutes the variables as they are, so the service escapes the text that someone else wrote before it gets there, with `escapeHtml` (`utils/escapeHtml.ts`: `&`, `<`, `>`, `"` and `'`):
+
+- Escaped: the recipient's name, the assigner's name, the entity name (`recipient_name`, `assigner_name`, `entity_name`) and every value of the entity context box (framework, project, parent type, parent name, description). A name such as `Smith & Co` shows as typed, and text that a person or a model wrote cannot add a tag, a link or an image. An accepted vendor research finding is the case that matters most: its risk and impact text come from a model that read a web page.
+- Not escaped: the subject line and the in-app notification, which are plain text; `entity_url`, which is built from the front-end address and ids and sits in an `href`; and the values that come from constants (role, entity type, role description, date).
+- `compileMjmlToHtml` itself escapes nothing and uses `String.replace`, so `$&` and `$$` inside a value are read as replacement patterns. That garbles text and is not markup injection.
 
 ### Queue Processing
 
