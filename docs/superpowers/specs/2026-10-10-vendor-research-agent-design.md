@@ -1,6 +1,8 @@
 # Vendor research agent — design
 
-**Status:** awaiting review · **Date:** 2026-10-10 · **Branch:** `feature/vendor-agents-and-risk-page`
+**Status:** partly superseded by [the 2026-10-11 web research agent design](2026-10-11-vendor-research-web-agent-design.md) · **Date:** 2026-10-10 · **Branch:** `feature/vendor-agents-and-risk-page`
+
+> The search provider (Tavily) is gone: the research stage is now an AI SDK agent that uses the organisation's own LLM key and browses the web with its own tools. Sections 2 (search provider row), 5, 7.1 to 7.3, 8 (environment table and the search-related trigger rules), 9, 10 (config endpoint), 13 (not-configured state), 14 and 15 are replaced by the newer document. Everything else here still holds.
 
 A background agent that, when a vendor is entered, looks the vendor up on the open web, finds potential risks and puts them in front of the user as **candidates** for the vendor risk register. Nothing is written to the register until a person accepts a candidate.
 
