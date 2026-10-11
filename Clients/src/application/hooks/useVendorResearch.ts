@@ -41,6 +41,8 @@ export function useVendorResearchConfig() {
   return useQuery<VendorResearchConfig>({
     queryKey: configKey(),
     queryFn: getVendorResearchConfig,
+    // A failure is not retried by each new observer: the server decides. A reconnect refetches.
+    retryOnMount: false,
   });
 }
 

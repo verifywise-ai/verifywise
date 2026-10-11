@@ -91,6 +91,24 @@ describe("useVendorResearchConfig", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual(config);
   });
+
+  // Every row of the vendors table has its own observer on this one query. A request that failed
+  // for good is not asked again by each of them as it mounts (after a sort, a page change or a
+  // return to the tab): the server decides, and each ask would end the same way and raise the
+  // global error toast again.
+  it("does not ask again when another observer mounts after the request failed for good", async () => {
+    mockConfig.mockRejectedValue(new APIError("Internal Server Error", 500));
+    const { wrapper } = createHarness();
+    const first = renderHook(() => useVendorResearchConfig(), { wrapper });
+    await waitFor(() => expect(first.result.current.isError).toBe(true));
+    expect(mockConfig).toHaveBeenCalledTimes(1);
+
+    const second = renderHook(() => useVendorResearchConfig(), { wrapper });
+
+    expect(mockConfig).toHaveBeenCalledTimes(1);
+    expect(second.result.current.isError).toBe(true);
+    expect(second.result.current.fetchStatus).toBe("idle");
+  });
 });
 
 describe("useVendorRiskFindings", () => {

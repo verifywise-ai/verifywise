@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import type { VendorResearchConfig } from "../../../../domain/interfaces/i.vendorResearch";
@@ -114,14 +114,26 @@ describe("when research is not set up", () => {
     // test, which expects no request for a user who may not start research.
     expect(mocks.config).toHaveBeenCalled();
     expect(researchButton()).toBeDisabled();
-    await userEvent.hover(researchButton().parentElement as HTMLElement);
-    // Longer than the tooltip's opening delay: "not set up" would be a guess before the answer.
-    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    // From here the clock is the test's own, so that the time a tooltip needs to open is spent,
+    // not waited for. Before the answer, a tooltip saying "not set up" would only be a guess.
+    vi.useFakeTimers();
+    const pass = (ms: number) =>
+      act(async () => {
+        await vi.advanceTimersByTimeAsync(ms);
+      });
+    fireEvent.mouseOver(researchButton().parentElement as HTMLElement);
+    await pass(500);
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
     expect(mocks.start).not.toHaveBeenCalled();
 
+    // The same hover opens the tooltip once the settings are in (the control for the line above).
     settings.resolve(SET_UP);
-    await waitFor(() => expect(researchButton()).toBeEnabled());
+    await pass(10);
+    expect(researchButton()).toBeEnabled();
+    fireEvent.mouseOver(researchButton().parentElement as HTMLElement);
+    await pass(500);
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Research risks");
   });
 });
 
@@ -133,8 +145,8 @@ describe("when the settings cannot be loaded", () => {
    * The button of vendor 7 where the request for the settings fails for good (the test client
    * never retries). It starts out like any button whose settings are on their way, disabled, and
    * is enabled once the request has failed. It is rendered on its own, not behind
-   * `AfterSettings`: that renders its children when the request has failed, and the button's own
-   * request on an errored query would then start again and take them away.
+   * `AfterSettings`, which renders its children only once the settings have data, and a failed
+   * request never gives any.
    */
   const renderWithFailedSettings = async () => {
     mocks.config.mockRejectedValue(refusal(500));
@@ -165,6 +177,35 @@ describe("when the settings cannot be loaded", () => {
     settings.reject(refusal(500));
 
     await waitFor(() => expect(researchButton()).toBeEnabled());
+  });
+
+  // Every row has its own button, and each of them reads the one settings query. When the table is
+  // sorted or paged, or the user comes back to the tab, new buttons mount on the failed query: it
+  // must not be asked again, or every button would turn disabled for as long as that takes.
+  it("stays enabled when another row's button mounts, and the request is not asked again", async () => {
+    mocks.config.mockRejectedValue(refusal(500));
+    const rows = (vendorIds: number[]) => (
+      <div>
+        {vendorIds.map((vendorId) => (
+          <VendorResearchButton
+            key={vendorId}
+            vendorId={vendorId}
+            vendorName={`Vendor ${vendorId}`}
+            onNotify={vi.fn()}
+          />
+        ))}
+      </div>
+    );
+    const { rerender } = renderWithProviders(rows([7]));
+    await waitFor(() => expect(researchButton()).toBeEnabled());
+    expect(mocks.config).toHaveBeenCalledTimes(1);
+
+    rerender(rows([7, 8]));
+
+    expect(mocks.config).toHaveBeenCalledTimes(1);
+    const buttons = screen.getAllByRole("button", { name: "Research risks" });
+    expect(buttons).toHaveLength(2);
+    for (const button of buttons) expect(button).toBeEnabled();
   });
 
   it("starts the research when the server accepts it", async () => {

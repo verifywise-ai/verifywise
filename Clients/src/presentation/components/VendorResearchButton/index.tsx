@@ -21,7 +21,7 @@
  */
 
 import React from "react";
-import { Box, IconButton } from "@mui/material";
+import { Box, IconButton, alpha } from "@mui/material";
 import { Microscope } from "lucide-react";
 import VWTooltip from "../VWTooltip";
 import { brand, text } from "../../themes/palette";
@@ -86,7 +86,7 @@ const StartResearchButton: React.FC<VendorResearchButtonProps> = ({
           "color": `${text.icon}`,
           "&:hover": {
             color: `${brand.primary}`,
-            backgroundColor: "rgba(19, 113, 91, 0.08)",
+            backgroundColor: alpha(brand.primary, 0.08),
           },
         }}
       >

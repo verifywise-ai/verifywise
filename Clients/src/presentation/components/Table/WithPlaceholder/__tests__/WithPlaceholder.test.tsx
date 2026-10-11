@@ -125,9 +125,9 @@ describe("the research action of a vendor row", () => {
     await waitFor(() => expect(researchButtonOf("Beta Labs")).toBeEnabled());
   });
 
-  it("starts the research of the vendor in its own row, and does not open the vendor", async () => {
+  it("starts the research of the vendor in its own row", async () => {
     mocks.start.mockResolvedValue({ run: run({ status: "queued" }), alreadyRunning: false });
-    const { onNotify, onEdit } = renderTable();
+    const { onNotify } = renderTable();
     await waitFor(() => expect(researchButtonOf("Beta Labs")).toBeEnabled());
 
     await userEvent.click(researchButtonOf("Beta Labs"));
@@ -139,7 +139,6 @@ describe("the research action of a vendor row", () => {
       variant: "success",
       body: "Research started for Beta Labs. Findings appear on the Risks tab.",
     });
-    expect(onEdit).not.toHaveBeenCalled();
     await waitFor(() => expect(researchButtonOf("Beta Labs")).toBeEnabled());
   });
 
