@@ -7,7 +7,9 @@
  * - Every citation is checked on its own. Its source id must be in the evidence pack, its quote
  *   must be a verbatim part of that source's snippet (after the prompt escaping is undone and case,
  *   whitespace and quote marks are ignored), and that source must mention the vendor, so a page
- *   about a company with a similar name cannot leak in. A citation that fails any of this is
+ *   about a company with a similar name cannot leak in. The quote must also hold at least one word
+ *   that is no part of the vendor's own name or domain: a quote of the name alone is in every page
+ *   that mentions the vendor and says nothing about a risk. A citation that fails any of this is
  *   removed, and a candidate left without a citation is dropped.
  * - The category must be one that was searched, the texts must be present and within their limits,
  *   and the enum values must be real, so that a risk level can be worked out.
@@ -71,6 +73,29 @@ const QUOTE_MARKS = /["'\u2018\u2019\u201A\u201B\u201C\u201D\u201E\u201F\u00AB\u
  */
 export function normaliseForQuote(text: string): string {
   return text.toLowerCase().replace(QUOTE_MARKS, "").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * A word is a run of letters and digits in any script, the same boundary `wholeWord` draws for the
+ * vendor-mention check below. (The tokeniser of the risk suggestions is not used: it keeps ASCII
+ * only and drops words of two letters or fewer, so a quote of "EU AI" or in another script would
+ * have no words, which would be a minimum length by the back door.)
+ */
+const WORD = /[\p{L}\p{N}]+/gu;
+
+/** The words of a text that `normaliseForQuote` has normalised already. */
+const wordsOfNormalised = (normalised: string): string[] => normalised.match(WORD) ?? [];
+
+/**
+ * The words of the vendor's own name and of its domain, normalised like a quote. They are what a
+ * quote has to go beyond: "Acme", "Acme Analytics" and "acme-analytics.com" say nothing that the
+ * name does not.
+ */
+function vendorOwnWords(target: ResearchTarget): Set<string> {
+  return new Set([
+    ...wordsOfNormalised(normaliseForQuote(target.name)),
+    ...wordsOfNormalised(normaliseForQuote(target.domain ?? "")),
+  ]);
 }
 
 // ---------------------------------------------------------------------------
@@ -171,6 +196,11 @@ const isUsableText = (text: string) => text.trim() !== "" && text.length <= MAX_
  * The citations of a candidate that hold up, one for each source, in the order the model gave
  * them. A source cited twice counts once, with the first quote that holds up, so that citing one
  * page twice cannot pass for two sources.
+ *
+ * A quote holds up when it is in the source, the source mentions the vendor, and the quote has a
+ * word that is no part of the vendor's name or domain. The last rule is what keeps a second
+ * hostname with the quote "Acme" from lifting a claim to `high` (see `confidenceCeiling`). It is
+ * not a minimum length: "ISO 27001" is short and real.
  */
 function validCitations(
   candidate: Candidate,
@@ -178,6 +208,7 @@ function validCitations(
   target: ResearchTarget,
 ): FindingSource[] {
   const citations = new Map<string, FindingSource>();
+  const ownWords = vendorOwnWords(target);
 
   for (const item of candidate.evidence) {
     if (citations.has(item.source_id)) continue;
@@ -195,6 +226,9 @@ function validCitations(
     // An empty string is part of every text, so it is refused on its own.
     if (wanted === "" || !normaliseForQuote(source.content).includes(wanted)) continue;
     if (!sourceMentionsVendor(source, target)) continue;
+    // A quote of nothing but the vendor's own name or domain, or of no word at all. A refused quote
+    // does not use up its source: a later quote of the same source can still count.
+    if (!wordsOfNormalised(wanted).some((word) => !ownWords.has(word))) continue;
 
     citations.set(item.source_id, {
       url: source.url,

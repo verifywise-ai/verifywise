@@ -375,6 +375,51 @@ describe("POST /api/vendors/:id/research", () => {
     expect(researchJobs()).toHaveLength(1);
   });
 
+  // Every API start empties the queue of waiting jobs, which leaves their runs `queued` for good:
+  // the stale sweep only runs for the vendor that is started or read. Such runs must not use up
+  // the daily cap of the organization for a day.
+  it("does not count runs whose jobs were lost against the daily cap once they are stale", async () => {
+    process.env.VENDOR_RESEARCH_DAILY_RUN_CAP = "2";
+    const { owner } = await seedTwoTenantContexts(3);
+    await seedLlmKey(owner.orgId);
+    const lostVendors = [
+      await createTestVendor(owner.orgId, { vendor_name: "Lost one" }),
+      await createTestVendor(owner.orgId, { vendor_name: "Lost two" }),
+    ];
+    const vendorId = await createTestVendor(owner.orgId, { vendor_name: "Acme Corp" });
+    for (const lostVendorId of lostVendors) {
+      await createRunQuery({
+        organizationId: owner.orgId,
+        vendorId: lostVendorId,
+        triggerType: "auto",
+        requestedBy: null,
+      });
+    }
+
+    // Positive control: two runs that are waiting for their jobs use up the cap of two.
+    const capped = await owner.request.post(`/api/vendors/${vendorId}/research`);
+    expect(capped.status).toBe(429);
+    expect(capped.body.data).toEqual({ code: "daily_cap" });
+    expect(await runsOf(vendorId)).toEqual([]);
+
+    // The same runs 20 minutes later, still queued: nobody started or opened their vendors, so
+    // nothing swept them.
+    await sequelize.query(
+      `UPDATE vendor_research_runs SET created_at = NOW() - INTERVAL '20 minutes'
+       WHERE vendor_id IN (:lostVendors)`,
+      { replacements: { lostVendors } },
+    );
+    const started = await owner.request.post(`/api/vendors/${vendorId}/research`);
+
+    expect(started.status).toBe(202);
+    expect(started.body.data.alreadyRunning).toBe(false);
+    expect(await runsOf(vendorId)).toMatchObject([{ id: started.body.data.run.id }]);
+    expect(researchJobs()).toHaveLength(1);
+    for (const lostVendorId of lostVendors) {
+      expect(await runsOf(lostVendorId)).toMatchObject([{ status: "queued", error: null }]);
+    }
+  });
+
   it("answers 400 for a vendor id that is not a number", async () => {
     const { owner } = await seedTwoTenantContexts(3);
     const vendorId = await createTestVendor(owner.orgId);

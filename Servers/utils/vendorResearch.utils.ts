@@ -76,7 +76,11 @@ export const createRunQuery = async (input: {
   return rows[0];
 };
 
-/** Minutes after which a queued or running run counts as lost; pass it to `failStaleRunsQuery`. */
+/**
+ * Minutes after which a queued or running run counts as lost; pass it to `failStaleRunsQuery`. A
+ * queued run older than this also stops counting toward the cooldown and the daily cap (see
+ * `COUNTS_AS_A_RUN`), which is why there is one number and not two.
+ */
 export const STALE_RUN_MINUTES = 15;
 
 /**
@@ -210,17 +214,31 @@ export const finishRunQuery = async (
 };
 
 /**
- * Which runs count toward the cooldown and the daily cap: all of them but a run that failed before
- * it started. Such a run (its job could not be queued, it was swept as stuck while still queued,
- * or its job found search not configured) searched nothing and called no model, so it must not
- * hold the vendor back or use up a slot, and a start refused with 503 can be tried again at once.
- * Only `markRunRunningQuery` sets `started_at`, so a null one means the run never started.
+ * Which runs count toward the cooldown and the daily cap: all of them but two kinds, which
+ * searched nothing and called no model, so they must not hold the vendor back or use up a slot.
+ *
+ * - A run that failed before it started: its job could not be queued, it was swept as stuck while
+ *   still queued, or its job found search not configured. A start refused with 503 can therefore
+ *   be tried again at once. Only `markRunRunningQuery` sets `started_at`, so a null one means the
+ *   run never started.
+ * - A run that is still queued after STALE_RUN_MINUTES, the limit of the sweep
+ *   (`failStaleRunsQuery`): its job was lost, for example because every API start empties the
+ *   queue of waiting jobs. The sweep only looks at the vendor that is started or whose latest run
+ *   is read, so such a run can stay queued for as long as nobody opens its vendor, and would use
+ *   up a slot of the daily cap for the whole 24 hours. When the sweep does reach it, it fails
+ *   without having started, which is the first kind.
+ *
+ * A running run counts however long it has run, and so do a completed run and a run that failed
+ * after it started: they searched, or may still be searching.
  */
-const COUNTS_AS_A_RUN = "NOT (status = 'failed' AND started_at IS NULL)";
+const COUNTS_AS_A_RUN = `NOT (
+  (status = 'failed' AND started_at IS NULL)
+  OR (status = 'queued' AND created_at < NOW() - (${STALE_RUN_MINUTES} * INTERVAL '1 minute'))
+)`;
 
 /**
- * When the vendor's newest run was created, whatever its status and trigger type, except a run
- * that failed before it started (see `COUNTS_AS_A_RUN`); null when it has no such run.
+ * When the vendor's newest run was created, whatever its status and trigger type, except the runs
+ * that do not count (see `COUNTS_AS_A_RUN`); null when it has no such run.
  */
 export const getLastRunCreatedAtQuery = async (
   organizationId: number,
@@ -236,7 +254,7 @@ export const getLastRunCreatedAtQuery = async (
 
 /**
  * The organization's runs created at or after `since`, whatever their status and trigger type,
- * except runs that failed before they started (see `COUNTS_AS_A_RUN`).
+ * except the runs that do not count (see `COUNTS_AS_A_RUN`).
  */
 export const countRunsSinceQuery = async (organizationId: number, since: Date): Promise<number> => {
   const rows = (await sequelize.query(

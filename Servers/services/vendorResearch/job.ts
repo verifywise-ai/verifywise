@@ -1,6 +1,7 @@
 /**
  * The queue job of one vendor research run: it runs the pipeline for the run, and after an
- * automatic run that stored findings it tells the vendor's assignee.
+ * automatic run that stored findings it tells the vendor's assignee, if that is a user of the
+ * vendor's organization.
  *
  * Exactly-once: the pipeline ends the run itself, once, and does not throw for a failed search or
  * model call. The only rejection that reaches this file is a failure to mark the run running,
@@ -10,6 +11,7 @@
  */
 import { generateObjectWithSelfCorrection } from "../../advisor/llmSelfCorrect";
 import logger from "../../utils/logger/fileLogger";
+import { findUsersNotInOrganization } from "../../utils/user.utils";
 import { getVendorByIdQuery } from "../../utils/vendor.utils";
 import { finishRunQuery, getRunByIdQuery } from "../../utils/vendorResearch.utils";
 import { notifyAssigneeOfVendorResearch } from "../inAppNotification.service";
@@ -27,8 +29,22 @@ export interface VendorResearchJobData {
 const NO_SEARCH_PROVIDER_NOTE = "Search provider not configured";
 
 /**
- * Tells the vendor's assignee, when there is one, that a run stored `count` findings. It never
- * rejects: a failure is logged and nothing else.
+ * Whether the user belongs to the organization. An id that cannot be a user id is no member:
+ * `findUsersNotInOrganization` skips such ids and so reports nothing missing for them, which would
+ * read as a yes.
+ */
+async function isUserOfOrganization(userId: number, organizationId: number): Promise<boolean> {
+  return (
+    Number.isSafeInteger(userId) &&
+    userId > 0 &&
+    (await findUsersNotInOrganization([userId], organizationId)).length === 0
+  );
+}
+
+/**
+ * Tells the vendor's assignee, when there is one and the assignee is a user of the vendor's
+ * organization, that a run stored `count` findings. It never rejects: a failure is logged and
+ * nothing else.
  */
 async function notifyAssignee(
   organizationId: number,
@@ -40,6 +56,18 @@ async function notifyAssignee(
     const vendor = await getVendorByIdQuery(vendorId, organizationId);
     const assignee = vendor?.assignee ?? null;
     if (!vendor || assignee === null) return;
+
+    // Vendor writes do not check the assignee, and the foreign key behind it accepts any user, so
+    // it can be someone of another organization. The notice would be stored under the vendor's
+    // organization, for a user who never reads it: nothing is written, as for the action owner of
+    // an accepted finding. Nothing that someone must read is logged either, and no name.
+    if (!(await isUserOfOrganization(assignee, organizationId))) {
+      logger.debug(
+        `vendor research run ${runId} (vendor ${vendorId}, org ${organizationId}): no notice, the assignee, user ${assignee}, is not a user of the organization`,
+      );
+      return;
+    }
+
     await notifyAssigneeOfVendorResearch(
       organizationId,
       { id: vendorId, name: vendor.vendor_name, assignee },

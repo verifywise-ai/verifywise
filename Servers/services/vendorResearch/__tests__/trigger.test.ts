@@ -40,7 +40,12 @@ import {
 } from "../../../utils/vendorResearch.utils";
 import { enqueueVendorResearch } from "../../automations/automationProducer";
 import { VendorResearchConfig, getVendorResearchConfig } from "../config";
-import { startVendorResearch, triggerAutoResearch } from "../trigger";
+import {
+  ENQUEUE_TIMEOUT_MS,
+  StartResearchResult,
+  startVendorResearch,
+  triggerAutoResearch,
+} from "../trigger";
 
 type AnyMock = jest.Mock<any, any[]>;
 const asMock = (fn: unknown): AnyMock => fn as AnyMock;
@@ -356,6 +361,162 @@ describe("startVendorResearch", () => {
       const lines = loggedLines().join("\n");
       expect(lines).toContain("Redis is down");
       expect(lines).toContain("database is down");
+    });
+  });
+
+  // With Redis down, `queue.add` does not fail: it waits for the connection, for 20 seconds to
+  // several minutes or for ever. The start must answer 503 (enqueue_failed) promptly instead.
+  describe("a job queue that does not answer", () => {
+    /** What the run records, and what the other enqueue test expects for a refused job. */
+    const COULD_NOT_ENQUEUE = {
+      organizationId: ORG,
+      runId: RUN_ID,
+      status: "failed",
+      categories: [],
+      categorySummary: [],
+      evidence: null,
+      searchProvider: null,
+      model: null,
+      promptVersion: null,
+      searchesUsed: 0,
+      duplicatesDropped: 0,
+      error: "could not enqueue",
+    };
+
+    /**
+     * Runs `startVendorResearch` on, through its mocked queries, until it has asked for the job.
+     * Its timer is only set from there on, a good dozen awaits after the start.
+     */
+    const untilTheJobIsRequested = async () => {
+      for (
+        let turn = 0;
+        turn < 50 && asMock(enqueueVendorResearch).mock.calls.length === 0;
+        turn += 1
+      ) {
+        await jest.advanceTimersByTimeAsync(0);
+      }
+      expect(enqueueVendorResearch).toHaveBeenCalledTimes(1);
+    };
+
+    /** An `add` that never settles on its own, and the way to settle it later. */
+    const hangingAdd = () => {
+      const add: { fail: (error: Error) => void; land: () => void } = {
+        fail: () => undefined,
+        land: () => undefined,
+      };
+      asMock(enqueueVendorResearch).mockReturnValue(
+        new Promise<unknown>((resolve, reject) => {
+          add.fail = reject;
+          add.land = () => resolve({ id: "late-job" });
+        }),
+      );
+      return add;
+    };
+
+    /** Starts a run and keeps its answer, so that a test can look at it while it is still pending. */
+    const startAndWatch = () => {
+      const watched: { answer?: StartResearchResult } = {};
+      const done = start().then((answer) => {
+        watched.answer = answer;
+      });
+      return { watched, done };
+    };
+
+    it("waits five seconds, as the spec says", () => {
+      expect(ENQUEUE_TIMEOUT_MS).toBe(5000);
+    });
+
+    it("gives up after five seconds: the run ends as 'could not enqueue' and the caller gets enqueue_failed", async () => {
+      hangingAdd();
+      const { watched, done } = startAndWatch();
+      await untilTheJobIsRequested();
+
+      // One millisecond short of the wait, nothing has happened.
+      await jest.advanceTimersByTimeAsync(4999);
+      expect(watched.answer).toBeUndefined();
+      expect(finishRunQuery).not.toHaveBeenCalled();
+
+      await jest.advanceTimersByTimeAsync(1);
+      expect(watched.answer).toEqual({ ok: false, error: { code: "enqueue_failed" } });
+      await done;
+      expect(finishRunQuery).toHaveBeenCalledTimes(1);
+      expect(finishRunQuery).toHaveBeenCalledWith(COULD_NOT_ENQUEUE);
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.stringContaining(`run ${RUN_ID} could not be queued`),
+      );
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it("does not throw, and does not end the run a second time, when the add fails after the wait", async () => {
+      const add = hangingAdd();
+      const { watched, done } = startAndWatch();
+      await untilTheJobIsRequested();
+      await jest.advanceTimersByTimeAsync(5000);
+      expect(watched.answer).toEqual({ ok: false, error: { code: "enqueue_failed" } });
+      await done;
+
+      // The abandoned add fails now. A rejection that nobody handles would fail this test.
+      add.fail(new Error("connection closed"));
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(finishRunQuery).toHaveBeenCalledTimes(1);
+      expect(logger.error).toHaveBeenCalledTimes(1);
+    });
+
+    it("leaves the answer as it is when the job lands after the wait", async () => {
+      const add = hangingAdd();
+      const { watched, done } = startAndWatch();
+      await untilTheJobIsRequested();
+      await jest.advanceTimersByTimeAsync(5000);
+      expect(watched.answer).toEqual({ ok: false, error: { code: "enqueue_failed" } });
+      await done;
+
+      // The worker finds the run failed and skips it (markRunRunningQuery refuses a failed run).
+      add.land();
+      await jest.advanceTimersByTimeAsync(0);
+
+      expect(watched.answer).toEqual({ ok: false, error: { code: "enqueue_failed" } });
+      expect(finishRunQuery).toHaveBeenCalledTimes(1);
+    });
+
+    it("answers as it always did, and leaves no timer behind, when the job is queued at once", async () => {
+      const created = makeRun({ id: 42 });
+      asMock(createRunQuery).mockResolvedValue(created);
+
+      await expect(start()).resolves.toEqual({ ok: true, run: created, alreadyRunning: false });
+
+      expect(jest.getTimerCount()).toBe(0);
+      // Nothing fires later either.
+      await jest.advanceTimersByTimeAsync(2 * 5000);
+      expect(finishRunQuery).not.toHaveBeenCalled();
+      expect(logger.error).not.toHaveBeenCalled();
+    });
+
+    it("leaves no timer behind when the queue refuses the job at once", async () => {
+      asMock(enqueueVendorResearch).mockRejectedValue(new Error("Redis is down"));
+
+      await expect(start()).resolves.toEqual({ ok: false, error: { code: "enqueue_failed" } });
+
+      expect(finishRunQuery).toHaveBeenCalledTimes(1);
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it("lets an automatic start end the same way, instead of waiting in the background for ever", async () => {
+      hangingAdd();
+      let finished = false;
+      const done = triggerAutoResearch(autoArgs).then(() => {
+        finished = true;
+      });
+      await untilTheJobIsRequested();
+
+      await jest.advanceTimersByTimeAsync(5000);
+
+      expect(finished).toBe(true);
+      await done;
+      expect(finishRunQuery).toHaveBeenCalledWith(COULD_NOT_ENQUEUE);
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.stringContaining("the job could not be queued"),
+      );
     });
   });
 });

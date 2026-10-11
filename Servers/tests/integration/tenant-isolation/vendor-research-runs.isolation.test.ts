@@ -7,6 +7,7 @@ import type { TenantContext } from "./tenantIsolation.harness";
 import { createTestVendor } from "../../factories";
 import type { ResearchTrigger } from "../../../domain.layer/interfaces/i.vendorResearch";
 import {
+  STALE_RUN_MINUTES,
   countRunsSinceQuery,
   createRunQuery,
   failStaleRunsQuery,
@@ -282,14 +283,14 @@ describe("vendor_research_runs tenant isolation", () => {
   it("leaves a run that failed before it started out of the cooldown and the daily count", async () => {
     const { owner } = await seedTwoTenantContexts();
     const vendorId = await createTestVendor(owner.orgId);
+    const otherVendorId = await createTestVendor(owner.orgId);
     const createdHoursAgo = (runId: number, hours: number) =>
       sequelize.query(
         `UPDATE vendor_research_runs SET created_at = NOW() - (:hours * INTERVAL '1 hour') WHERE id = :runId`,
         { replacements: { runId, hours } },
       );
 
-    // A vendor has at most one queued or running run, so the runs that ended come first and the
-    // queued run comes last.
+    // A vendor has at most one queued or running run, so the runs that ended come first.
     const completed = await createRunQuery(newRun(owner, vendorId));
     await markRunRunningQuery(owner.orgId, completed.id);
     await finishRunQuery(finishOf(owner.orgId, completed.id));
@@ -309,11 +310,13 @@ describe("vendor_research_runs tenant isolation", () => {
       finishOf(owner.orgId, neverStarted.id, { status: "failed", error: "could not enqueue" }),
     );
 
-    const queued = await createRunQuery(newRun(owner, vendorId));
+    // A queued run of another vendor, as young as a run waiting for its job: it counts. (An old
+    // one would not: see the test below.)
+    const queued = await createRunQuery(newRun(owner, otherVendorId));
 
-    // The run that never started is the newest of all, so the cooldown would show it if it counted.
+    // The run that never started is the newest of the vendor's runs, so the cooldown would show it
+    // if it counted.
     await createdHoursAgo(completed.id, 4);
-    await createdHoursAgo(queued.id, 3);
     await createdHoursAgo(failedAfterStart.id, 2);
     await createdHoursAgo(neverStarted.id, 1);
 
@@ -324,12 +327,95 @@ describe("vendor_research_runs tenant isolation", () => {
     const afterStart = await getRunByIdQuery(owner.orgId, failedAfterStart.id);
     expect(afterStart).toMatchObject({ status: "failed" });
     expect(afterStart?.started_at).toBeInstanceOf(Date);
+    expect((await getRunByIdQuery(owner.orgId, queued.id))?.status).toBe("queued");
 
     // Four runs exist and three of them count: all but the one that failed before it started.
     expect(await countRunsSinceQuery(owner.orgId, new Date(Date.now() - 5 * HOUR_MS))).toBe(3);
-    // The last run for the cooldown is the newest of those three, not the newer run that never
-    // started.
+    // The last run for the cooldown is the newest of the vendor's counted runs, not the newer run
+    // that never started.
     expect(await getLastRunCreatedAtQuery(owner.orgId, vendorId)).toEqual(afterStart?.created_at);
+  });
+
+  // The job of a queued run can be lost: every API start empties the queue of waiting jobs. Such a
+  // run stays `queued`, and the sweep only looks at the vendor that is started or read, so without
+  // this rule it would use up a slot of the daily cap for 24 hours although it searched nothing.
+  describe("a queued run whose job was lost", () => {
+    const ageCreatedBy = (runId: number, minutes: number) =>
+      sequelize.query(
+        `UPDATE vendor_research_runs SET created_at = NOW() - (:minutes * INTERVAL '1 minute') WHERE id = :runId`,
+        { replacements: { runId, minutes } },
+      );
+
+    it("stops counting toward the cooldown and the daily count once it is older than the stale limit", async () => {
+      const { owner } = await seedTwoTenantContexts();
+      const vendorId = await createTestVendor(owner.orgId);
+      const since = new Date(Date.now() - DAY_MS);
+      const queued = await createRunQuery(newRun(owner, vendorId, "auto"));
+
+      // Positive control: the run as it is when it has just been queued counts for both.
+      expect(await countRunsSinceQuery(owner.orgId, since)).toBe(1);
+      expect(await getLastRunCreatedAtQuery(owner.orgId, vendorId)).toEqual(queued.created_at);
+
+      // Just inside the limit it still counts: its job may be waiting behind others.
+      await ageCreatedBy(queued.id, STALE_RUN_MINUTES - 1);
+      expect(await countRunsSinceQuery(owner.orgId, since)).toBe(1);
+      expect(await getLastRunCreatedAtQuery(owner.orgId, vendorId)).toBeInstanceOf(Date);
+
+      // Just outside the limit, and hours old but still inside the 24-hour window, it does not.
+      for (const minutes of [STALE_RUN_MINUTES + 1, 20 * 60]) {
+        await ageCreatedBy(queued.id, minutes);
+        expect(await countRunsSinceQuery(owner.orgId, since)).toBe(0);
+        expect(await getLastRunCreatedAtQuery(owner.orgId, vendorId)).toBeNull();
+      }
+
+      // It is still queued: nothing swept it, the query only stopped counting it.
+      expect(await getRunByIdQuery(owner.orgId, queued.id)).toMatchObject({
+        status: "queued",
+        started_at: null,
+        finished_at: null,
+      });
+    });
+
+    it("counts the organization's other runs as before: a running run counts however long it has run", async () => {
+      const { owner, attacker } = await seedTwoTenantContexts();
+      const lostVendorId = await createTestVendor(owner.orgId);
+      const runningVendorId = await createTestVendor(owner.orgId);
+      const failedVendorId = await createTestVendor(owner.orgId);
+      const attackerVendorId = await createTestVendor(attacker.orgId);
+      const since = new Date(Date.now() - DAY_MS);
+
+      const lost = await createRunQuery(newRun(owner, lostVendorId, "auto"));
+      await ageCreatedBy(lost.id, STALE_RUN_MINUTES + 5);
+
+      // Started long ago and still running: it did start, and may be using a search and a model.
+      const running = await createRunQuery(newRun(owner, runningVendorId, "auto"));
+      await markRunRunningQuery(owner.orgId, running.id);
+      await sequelize.query(
+        `UPDATE vendor_research_runs
+         SET created_at = NOW() - INTERVAL '3 hours', started_at = NOW() - INTERVAL '3 hours'
+         WHERE id = :runId`,
+        { replacements: { runId: running.id } },
+      );
+
+      // Started, then failed (as the sweep leaves a run that timed out while running).
+      const failed = await createRunQuery(newRun(owner, failedVendorId, "auto"));
+      await markRunRunningQuery(owner.orgId, failed.id);
+      await finishRunQuery(
+        finishOf(owner.orgId, failed.id, { status: "failed", error: "timed out" }),
+      );
+      await ageCreatedBy(failed.id, 2 * 60);
+
+      // The other organization's lost run is as old: it does not count there either.
+      const foreign = await createRunQuery(newRun(attacker, attackerVendorId, "auto"));
+      await ageCreatedBy(foreign.id, STALE_RUN_MINUTES + 5);
+
+      // The lost run is the only one of the owner's three that does not count.
+      expect(await countRunsSinceQuery(owner.orgId, since)).toBe(2);
+      expect(await getLastRunCreatedAtQuery(owner.orgId, lostVendorId)).toBeNull();
+      expect(await getLastRunCreatedAtQuery(owner.orgId, runningVendorId)).toBeInstanceOf(Date);
+      expect(await getLastRunCreatedAtQuery(owner.orgId, failedVendorId)).toBeInstanceOf(Date);
+      expect(await countRunsSinceQuery(attacker.orgId, since)).toBe(0);
+    });
   });
 
   it("starts only the named run, and only while it is queued", async () => {

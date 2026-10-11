@@ -594,7 +594,9 @@ describe("validateFindings", () => {
     });
 
     it("removes an item whose quote is longer than the schema allows", () => {
-      const long = "Acme ".repeat(80);
+      // Words that are no part of the vendor's name, which a quote has to hold. The title of the
+      // default source names the vendor, so the source still mentions it.
+      const long = "word ".repeat(80);
       expect(long.length).toBeGreaterThan(MAX_QUOTE_CHARS);
       const page = source({ content: long });
 
@@ -714,7 +716,9 @@ describe("validateFindings", () => {
       });
 
       it("does not count a NUL against the length limit of a quote", () => {
-        const content = "Acme ".repeat(MAX_QUOTE_CHARS / 5);
+        // Words that are no part of the vendor's name: a quote of the name alone does not count.
+        // The title of the default source names the vendor, so the source still mentions it.
+        const content = "word ".repeat(MAX_QUOTE_CHARS / 5);
         expect(content).toHaveLength(MAX_QUOTE_CHARS);
         const quote = `${content}${NUL.repeat(5)}`;
 
@@ -764,6 +768,180 @@ describe("validateFindings", () => {
       expect(found.sources.map((entry) => entry.url)).toEqual([
         "https://news.example.com/acme-breach",
       ]);
+    });
+  });
+
+  // The vendor's own name is in every source that mentions the vendor, so a quote of nothing but
+  // that name always passes the substring test and the same-name guard. It says nothing about a
+  // risk, and with two hostnames it would lift a claim to `high`. This is not a minimum length
+  // (R16): "ISO 27001" is short and real. A quote counts when it holds a word that is no part of
+  // the vendor's name or domain.
+  describe("a quote that only repeats the vendor's name", () => {
+    const ANALYTICS: ResearchTarget = {
+      name: "Acme Analytics",
+      domain: "acme-analytics.com",
+      provides: "Dashboards",
+    };
+    const PAGE = source({
+      url: "https://news.example.com/acme-analytics",
+      title: "Acme Analytics in the news",
+      content:
+        "Acme Analytics (acme-analytics.com). Acme confirmed the incident on Monday. " +
+        "Its SOC 2 Type II report and ISO 27001 certificate are current. " +
+        "The logo reads Analytics Acme.",
+    });
+    const quoting = (quote: string, target: ResearchTarget = ANALYTICS) =>
+      validate([candidate({ evidence: [{ source_id: "S1", quote }] })], [PAGE], target);
+
+    it.each([
+      ["the first word of the name", "Acme"],
+      ["the whole name", "Acme Analytics"],
+      ["the name in other case and spacing", "  ACME   analytics "],
+      ["the name between quotation marks", "“Acme Analytics”"],
+      ["the domain", "acme-analytics.com"],
+      ["the name and the domain", "Acme Analytics (acme-analytics.com)"],
+      ["words of the name, in another order", "Analytics Acme"],
+    ])("removes the citation of %s, and drops a candidate left with none", (_label, quote) => {
+      // Positive control: the quote is in the page and the page mentions the vendor, so nothing
+      // but the rule about the vendor's own name can refuse it.
+      expect(normaliseForQuote(PAGE.content)).toContain(normaliseForQuote(quote));
+      expect(sourceMentionsVendor(PAGE, ANALYTICS)).toBe(true);
+
+      expect(quoting(quote)).toEqual([]);
+    });
+
+    it.each([
+      ["the name and what happened", "Acme confirmed the incident"],
+      ["no name at all", "SOC 2 Type II"],
+      ["a short quote of one word and one number, which is real", "ISO 27001"],
+      ["a single word that is no part of the name", "certificate"],
+      ["a number", "27001"],
+    ])("keeps the citation of %s", (_label, quote) => {
+      const [found] = quoting(quote);
+
+      expect(found.sources.map((entry) => entry.quote)).toEqual([quote]);
+    });
+
+    it("refuses a quote with no word in it, such as punctuation", () => {
+      expect(quoting(").")).toEqual([]);
+    });
+
+    it("keeps the other citations of a finding, and a later quote of a source whose first quote was refused", () => {
+      const other = source({
+        id: "S2",
+        url: "https://other.example.org/b",
+        content: "Acme Analytics renewed its SOC 2 Type II report.",
+      });
+
+      const [found] = validate(
+        [
+          candidate({
+            evidence: [
+              { source_id: "S1", quote: "Acme" },
+              { source_id: "S2", quote: "Acme Analytics" },
+              { source_id: "S1", quote: "SOC 2 Type II" },
+              { source_id: "S2", quote: "SOC 2 Type II" },
+            ],
+          }),
+        ],
+        [PAGE, other],
+        ANALYTICS,
+      );
+
+      expect(found.sources).toEqual([
+        {
+          url: PAGE.url,
+          title: PAGE.title,
+          quote: "SOC 2 Type II",
+          published_at: "2026-03-01",
+        },
+        {
+          url: other.url,
+          title: other.title,
+          quote: "SOC 2 Type II",
+          published_at: "2026-03-01",
+        },
+      ]);
+    });
+
+    it("compares words of every script, not only ASCII ones", () => {
+      const target: ResearchTarget = { name: "Müller Söhne", domain: null, provides: "" };
+      const page = source({
+        title: "Müller Söhne",
+        content: "Müller Söhne bestätigte den Vorfall am Montag.",
+      });
+      const quote = (text: string) =>
+        validate([candidate({ evidence: [{ source_id: "S1", quote: text }] })], [page], target);
+
+      expect(quote("MÜLLER")).toEqual([]);
+      expect(quote("Müller Söhne")).toEqual([]);
+      expect(quote("Müller Söhne bestätigte den Vorfall")).toHaveLength(1);
+    });
+
+    it("works with a vendor that has no domain, and with one whose name is empty", () => {
+      const noDomain: ResearchTarget = { name: "Acme Analytics", domain: null, provides: "" };
+      expect(quoting("Acme Analytics", noDomain)).toEqual([]);
+      expect(quoting("Acme confirmed the incident", noDomain)).toHaveLength(1);
+
+      const noName: ResearchTarget = { name: "", domain: "acme-analytics.com", provides: "" };
+      expect(quoting("acme-analytics.com", noName)).toEqual([]);
+      expect(quoting("Acme confirmed the incident", noName)).toHaveLength(1);
+    });
+
+    describe("the confidence", () => {
+      const NEWS = source({ id: "S1", url: "https://news.example.com/a" });
+      // The same second source for both halves: it names Acme, and it has the real sentence too.
+      const ROUNDUP = source({
+        id: "S2",
+        url: "https://other.example.org/b",
+        title: "Industry roundup",
+        content:
+          "A roundup of the week mentions Acme. Acme told customers that attackers copied customer records.",
+      });
+      const OWN_SITE = source({
+        id: "S1",
+        url: "https://trust.acme.com/incident",
+        content: "We found that attackers copied customer records.",
+      });
+      const claimed = (secondQuote: string) =>
+        candidate({
+          confidence: "high",
+          evidence: [
+            { source_id: "S1", quote: "attackers copied customer records" },
+            { source_id: "S2", quote: secondQuote },
+          ],
+        });
+
+      it("is not lifted to high by a second hostname whose only quote is the vendor's name", () => {
+        const [found] = validate([claimed("Acme")], [NEWS, ROUNDUP]);
+
+        expect(found.sources.map((entry) => entry.url)).toEqual(["https://news.example.com/a"]);
+        // One page of a third party is `low`.
+        expect(found.confidence).toBe("low");
+      });
+
+      it("stays high when the second quote is real (the same sources)", () => {
+        const [found] = validate([claimed("attackers copied customer records")], [NEWS, ROUNDUP]);
+
+        expect(found.sources.map((entry) => entry.url)).toEqual([
+          "https://news.example.com/a",
+          "https://other.example.org/b",
+        ]);
+        expect(found.confidence).toBe("high");
+      });
+
+      it("is at most medium when the one real source is the vendor's own site and the other quote is only its name", () => {
+        const [refused] = validate([claimed("Acme")], [OWN_SITE, ROUNDUP]);
+        const [real] = validate(
+          [claimed("attackers copied customer records")],
+          [OWN_SITE, ROUNDUP],
+        );
+
+        expect(refused.sources).toHaveLength(1);
+        expect(refused.confidence).toBe("medium");
+        expect(real.sources).toHaveLength(2);
+        expect(real.confidence).toBe("high");
+      });
     });
   });
 

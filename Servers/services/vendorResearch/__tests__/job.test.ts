@@ -6,6 +6,7 @@ jest.mock("../../../advisor/llmSelfCorrect", () => ({
   generateObjectWithSelfCorrection: jest.fn(),
 }));
 jest.mock("../../../utils/vendor.utils", () => ({ getVendorByIdQuery: jest.fn() }));
+jest.mock("../../../utils/user.utils", () => ({ findUsersNotInOrganization: jest.fn() }));
 jest.mock("../../../utils/vendorResearch.utils", () => ({
   finishRunQuery: jest.fn(),
   getRunByIdQuery: jest.fn(),
@@ -20,6 +21,7 @@ import { generateObjectWithSelfCorrection } from "../../../advisor/llmSelfCorrec
 import { IVendor } from "../../../domain.layer/interfaces/i.vendor";
 import { IVendorResearchRun } from "../../../domain.layer/interfaces/i.vendorResearch";
 import logger from "../../../utils/logger/fileLogger";
+import { findUsersNotInOrganization } from "../../../utils/user.utils";
 import { getVendorByIdQuery } from "../../../utils/vendor.utils";
 import { finishRunQuery, getRunByIdQuery } from "../../../utils/vendorResearch.utils";
 import { notifyAssigneeOfVendorResearch } from "../../inAppNotification.service";
@@ -82,6 +84,8 @@ beforeEach(() => {
   asMock(getVendorResearchConfig).mockReturnValue(CONFIGURED);
   asMock(getRunByIdQuery).mockResolvedValue(makeRun());
   asMock(getVendorByIdQuery).mockResolvedValue(makeVendor());
+  // The assignee is a user of the organization: the lookup reports nobody missing.
+  asMock(findUsersNotInOrganization).mockResolvedValue([]);
   asMock(runVendorResearch).mockResolvedValue({ outcome: "completed", findingsCreated: 2 });
   asMock(notifyAssigneeOfVendorResearch).mockResolvedValue(true);
   asMock(finishRunQuery).mockResolvedValue(undefined);
@@ -237,6 +241,74 @@ describe("handleVendorResearchJob", () => {
 
       expect(logger.error).toHaveBeenCalledWith(expect.stringContaining("database is down"));
       expect(notifyAssigneeOfVendorResearch).not.toHaveBeenCalled();
+    });
+
+    // Vendor writes do not check the assignee, so it can be a user of another organization (the
+    // rule of the accept path, R30, applies here too). The notice would be stored under the
+    // vendor's organization for a user who never reads it.
+    describe("an assignee who is not a user of the vendor's organization", () => {
+      it("is checked against the organization of the vendor before the notice is written", async () => {
+        await handleVendorResearchJob(DATA);
+
+        expect(findUsersNotInOrganization).toHaveBeenCalledTimes(1);
+        expect(findUsersNotInOrganization).toHaveBeenCalledWith([ASSIGNEE], ORG);
+        expect(notifyAssigneeOfVendorResearch).toHaveBeenCalledTimes(1);
+        expect(asMock(findUsersNotInOrganization).mock.invocationCallOrder[0]).toBeLessThan(
+          asMock(notifyAssigneeOfVendorResearch).mock.invocationCallOrder[0],
+        );
+      });
+
+      it("gets no notice, and the job and the run go on as if nothing had happened", async () => {
+        asMock(findUsersNotInOrganization).mockResolvedValue([ASSIGNEE]);
+
+        await expect(handleVendorResearchJob(DATA)).resolves.toBeUndefined();
+
+        expect(findUsersNotInOrganization).toHaveBeenCalledWith([ASSIGNEE], ORG);
+        expect(notifyAssigneeOfVendorResearch).not.toHaveBeenCalled();
+        // The run is over by then and the notice never touches it.
+        expect(runVendorResearch).toHaveBeenCalledTimes(1);
+        expect(finishRunQuery).not.toHaveBeenCalled();
+        // Nothing above debug level: no error, no warning, no line at all that someone must read.
+        expect(logger.error).not.toHaveBeenCalled();
+        expect(logger.warn).not.toHaveBeenCalled();
+        expect(logger.info).not.toHaveBeenCalled();
+      });
+
+      it("is only mentioned in the debug log, with ids and no names", async () => {
+        asMock(findUsersNotInOrganization).mockResolvedValue([ASSIGNEE]);
+
+        await handleVendorResearchJob(DATA);
+
+        expect(logger.debug).toHaveBeenCalledTimes(1);
+        const [line] = asMock(logger.debug).mock.calls[0];
+        expect(line).toContain(`user ${ASSIGNEE}`);
+        expect(line).toContain(`vendor ${VENDOR}`);
+        expect(line).not.toContain("Acme");
+      });
+
+      it.each([0, -3, 1.5, Number.NaN])(
+        "is not asked about at all when the assignee id %p is not a user id",
+        async (assignee) => {
+          // findUsersNotInOrganization ignores ids like these and reports nobody missing, which
+          // would read as "is a member".
+          asMock(getVendorByIdQuery).mockResolvedValue(makeVendor({ assignee }));
+
+          await handleVendorResearchJob(DATA);
+
+          expect(findUsersNotInOrganization).not.toHaveBeenCalled();
+          expect(notifyAssigneeOfVendorResearch).not.toHaveBeenCalled();
+        },
+      );
+
+      it("does not make the job throw when the membership lookup fails, and no notice goes out", async () => {
+        asMock(findUsersNotInOrganization).mockRejectedValue(new Error("database is down"));
+
+        await expect(handleVendorResearchJob(DATA)).resolves.toBeUndefined();
+
+        expect(logger.error).toHaveBeenCalledWith(expect.stringContaining("database is down"));
+        expect(notifyAssigneeOfVendorResearch).not.toHaveBeenCalled();
+        expect(finishRunQuery).not.toHaveBeenCalled();
+      });
     });
   });
 });

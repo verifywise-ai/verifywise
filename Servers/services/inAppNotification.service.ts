@@ -16,6 +16,7 @@ import { EMAIL_TEMPLATES } from "../constants/emailTemplates";
 import { translate, type SupportedLang } from "../utils/i18n.utils";
 import { getUserLanguage } from "../utils/userPreference.utils";
 import { deadlineNoticeKey } from "../utils/deadline.utils";
+import { escapeHtml } from "../utils/escapeHtml";
 
 /**
  * Build a frontend-compatible URL for a given entity type and id.
@@ -1597,6 +1598,10 @@ export interface AssignmentEntityContext {
 
 /**
  * Build HTML for entity context to include in email
+ *
+ * The values are text that someone else wrote (a framework or project name, the description of a
+ * risk that a model wrote after reading a web page), so each one is escaped: it shows as typed and
+ * cannot add a tag, a link or an image to the email. The markup around the values is ours.
  */
 function buildEntityContextHtml(context?: AssignmentEntityContext): string {
   if (!context) return "";
@@ -1605,25 +1610,25 @@ function buildEntityContextHtml(context?: AssignmentEntityContext): string {
 
   if (context.frameworkName) {
     rows.push(
-      `<tr><td style="padding: 4px 0; color: #667085; font-size: 13px; width: 110px;">Framework:</td><td style="padding: 4px 0; color: #344054; font-size: 13px;">${context.frameworkName}</td></tr>`,
+      `<tr><td style="padding: 4px 0; color: #667085; font-size: 13px; width: 110px;">Framework:</td><td style="padding: 4px 0; color: #344054; font-size: 13px;">${escapeHtml(context.frameworkName)}</td></tr>`,
     );
   }
 
   if (context.projectName) {
     rows.push(
-      `<tr><td style="padding: 4px 0; color: #667085; font-size: 13px; width: 110px;">Project:</td><td style="padding: 4px 0; color: #344054; font-size: 13px;">${context.projectName}</td></tr>`,
+      `<tr><td style="padding: 4px 0; color: #667085; font-size: 13px; width: 110px;">Project:</td><td style="padding: 4px 0; color: #344054; font-size: 13px;">${escapeHtml(context.projectName)}</td></tr>`,
     );
   }
 
   if (context.parentType && context.parentName) {
     rows.push(
-      `<tr><td style="padding: 4px 0; color: #667085; font-size: 13px; width: 110px;">${context.parentType}:</td><td style="padding: 4px 0; color: #344054; font-size: 13px;">${context.parentName}</td></tr>`,
+      `<tr><td style="padding: 4px 0; color: #667085; font-size: 13px; width: 110px;">${escapeHtml(context.parentType)}:</td><td style="padding: 4px 0; color: #344054; font-size: 13px;">${escapeHtml(context.parentName)}</td></tr>`,
     );
   }
 
   if (context.description) {
     rows.push(
-      `<tr><td style="padding: 8px 0 4px 0; color: #667085; font-size: 13px; width: 110px; vertical-align: top;">About:</td><td style="padding: 8px 0 4px 0; color: #344054; font-size: 13px;">${context.description}</td></tr>`,
+      `<tr><td style="padding: 8px 0 4px 0; color: #667085; font-size: 13px; width: 110px; vertical-align: top;">About:</td><td style="padding: 8px 0 4px 0; color: #344054; font-size: 13px;">${escapeHtml(context.description)}</td></tr>`,
     );
   }
 
@@ -1692,12 +1697,17 @@ export const notifyUserAssigned = async (
       {
         template: EMAIL_TEMPLATES.ASSIGNMENT_NOTIFICATION,
         subject: `You've been assigned as ${assignment.roleType}: ${assignment.entityName}`,
+        // The template is HTML and substitutes these as they are. The three names are text that a
+        // person, or a model that read a web page, wrote, so they are escaped; the subject and the
+        // in-app message above are plain text and keep what was written. The rest comes from
+        // constants (role, entity type, role description, date) or is a link built from ids that
+        // sits in an href (entity_url); entity_context_html is markup built above from escaped values.
         variables: {
-          recipient_name: assignee.name || "User",
-          assigner_name: assignerName,
+          recipient_name: escapeHtml(assignee.name || "User"),
+          assigner_name: escapeHtml(assignerName),
           role_type: assignment.roleType,
           entity_type: displayEntityType,
-          entity_name: assignment.entityName,
+          entity_name: escapeHtml(assignment.entityName),
           entity_url: fullUrl,
           assignment_date: formatAssignmentDate(),
           role_description: getRoleDescription(assignment.roleType),

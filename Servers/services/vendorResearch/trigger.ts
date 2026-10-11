@@ -14,7 +14,9 @@
  *
  * Then the queued run is created and its job queued. The partial unique index on the runs lets one
  * active run through for each vendor, so a second start that gets past step 4 at the same moment
- * meets the index and returns the run that won.
+ * meets the index and returns the run that won. A queue that does not take the job within
+ * ENQUEUE_TIMEOUT_MS is a queue that refused it: the run ends as failed ("could not enqueue", which
+ * counts toward neither limit) and the start answers `enqueue_failed`.
  *
  * Nothing in this file logs a key: the Tavily key stays in the configuration.
  */
@@ -38,10 +40,22 @@ import { enqueueVendorResearch } from "../automations/automationProducer";
 import { getVendorResearchConfig, isSearchConfigured } from "./config";
 
 const MINUTE_MS = 60_000;
-/** The daily cap counts the runs of a rolling 24 hours, but not those that failed before they started. */
+/**
+ * The daily cap counts the runs of a rolling 24 hours, but not those that failed before they
+ * started or that have waited in the queue for longer than the stale limit (see `COUNTS_AS_A_RUN`).
+ */
 const DAY_MS = 24 * 60 * MINUTE_MS;
 /** What a run records when its job could not be queued. */
 const ENQUEUE_FAILED_NOTE = "could not enqueue";
+/**
+ * How long a start waits for its job to be queued, in milliseconds. With Redis down, `Queue.add`
+ * does not fail: BullMQ keeps the command in the offline queue of its Redis client, which rejects it
+ * only after a number of reconnect attempts (20 seconds to several minutes) or, when Redis was
+ * already down as the process started, not at all. A manual start would hang until a proxy answered
+ * 504, with a run sitting in `queued`. After this long the start gives up and answers the 503 of
+ * `enqueue_failed` instead.
+ */
+export const ENQUEUE_TIMEOUT_MS = 5000;
 
 export interface StartResearchError {
   code:
@@ -83,6 +97,43 @@ function describeError(error: unknown): string {
 /** Whether `error` is a Postgres unique violation, the way Sequelize reports it. */
 const isUniqueViolation = (error: unknown): boolean =>
   (error as { parent?: { code?: string } } | null | undefined)?.parent?.code === "23505";
+
+/**
+ * Queues the job of a run, and gives up after ENQUEUE_TIMEOUT_MS. The timeout rejects like a
+ * refused `add`, so the caller handles both the same way.
+ *
+ * The `add` is not cancelled. If it lands after the timeout, the job reaches the worker for a run
+ * that is failed by then ("could not enqueue"), and the worker skips it: `markRunRunningQuery`
+ * only moves a queued run to running and answers false for a failed one, so the pipeline returns
+ * "skipped" before it searches or calls a model. This holds once the failed state is written. A job
+ * that lands in the few milliseconds before that write could still start the run, because
+ * `finishRunQuery` has no status guard; the caller was told "could not enqueue", tries again, and
+ * the vendor is researched twice at worst.
+ */
+async function enqueueWithTimeout(
+  organizationId: number,
+  vendorId: number,
+  runId: number,
+): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const adding = enqueueVendorResearch(organizationId, vendorId, runId);
+    // When the timer wins, nobody waits for `adding` any more. Handled here, a failure of it that
+    // comes later cannot become an unhandled rejection, which ends the process on Node 22.
+    adding.catch(() => undefined);
+    await Promise.race([
+      adding,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`the job was not queued within ${ENQUEUE_TIMEOUT_MS} ms`)),
+          ENQUEUE_TIMEOUT_MS,
+        );
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 /**
  * Starts a research run for a vendor: returns the run that is already active, or creates a queued
@@ -135,7 +186,7 @@ export async function startVendorResearch(args: {
   }
 
   try {
-    await enqueueVendorResearch(organizationId, vendorId, run.id);
+    await enqueueWithTimeout(organizationId, vendorId, run.id);
   } catch (error) {
     logger.error(
       `${tag(organizationId, vendorId)}: run ${run.id} could not be queued: ${describeError(error)}`,

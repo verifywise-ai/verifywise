@@ -24,8 +24,9 @@
  * it can quote the request or hold a key. The run records a fixed phrase and the log line the name
  * and the HTTP status of the error. The self-correcting call (advisor/llmSelfCorrect.ts) logs on
  * its own account when it gives up on an answer: the path and message of the first three schema
- * issues, which are generic except that the name of an unexpected property is quoted. It does not
- * log the message of a provider error.
+ * issues, which are generic: the schema drops an unexpected property instead of reporting it, so
+ * no property name that the model chose is in them (nor in the system prompt of a retry, which
+ * quotes the same messages). It does not log the message of a provider error.
  *
  * The message of any other error, such as a database error that names a host, a port or a query, is
  * logged but not stored: the run is served to every role, so it records a fixed phrase.

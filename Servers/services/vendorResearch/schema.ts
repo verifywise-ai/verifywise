@@ -39,50 +39,47 @@ export const MAX_CATEGORY_NOTES = RESEARCH_CATEGORIES.length;
 export const MAX_PER_CATEGORY = 3;
 
 /**
- * `.strict()` is deliberate, as in the risk direction schema. An extra key means the model made up
- * a field, and `generateObjectWithSelfCorrection` hands it back as a Zod issue so the next attempt
- * drops it. Letting it through silently would hide the drift.
+ * The objects below are deliberately not `.strict()`: a property that is not in the schema is
+ * dropped by the parse. A strict object reports it as the issue `Unrecognized key: "<the key>"`,
+ * and `generateObjectWithSelfCorrection` writes the text of every issue, as it is, into the
+ * system prompt of the next attempt. The model reads web pages, and a page can steer it into
+ * emitting a property named as the page likes, so a strict schema would let a page write into the
+ * system prompt, outside the `<evidence>` block. Dropping the property costs nothing: nothing
+ * reads it. The provider is still told that no other property is allowed: the SDK adds
+ * `additionalProperties: false` to every object of the JSON schema it sends, strict or not.
  */
-const evidenceItemSchema = z
-  .object({
-    /** An id from the evidence pack. Whether it exists there is checked after parsing. */
-    source_id: z.string(),
-    /** Whether the quote is in that source is checked after parsing, too. */
-    quote: z.string().max(MAX_QUOTE_CHARS),
-  })
-  .strict();
+const evidenceItemSchema = z.object({
+  /** An id from the evidence pack. Whether it exists there is checked after parsing. */
+  source_id: z.string(),
+  /** Whether the quote is in that source is checked after parsing, too. */
+  quote: z.string().max(MAX_QUOTE_CHARS),
+});
 
-const findingSchema = z
-  .object({
-    category: z.enum(RESEARCH_CATEGORIES),
-    risk_description: z.string().max(MAX_FINDING_TEXT_CHARS),
-    impact_description: z.string().max(MAX_FINDING_TEXT_CHARS),
-    likelihood: z.enum(RESEARCH_LIKELIHOODS),
-    risk_severity: z.enum(RESEARCH_SEVERITIES),
-    action_plan: z.string().max(MAX_FINDING_TEXT_CHARS),
-    confidence: z.enum(RESEARCH_CONFIDENCES),
-    evidence: z.array(evidenceItemSchema).min(1).max(MAX_EVIDENCE_PER_FINDING),
-  })
-  .strict();
+const findingSchema = z.object({
+  category: z.enum(RESEARCH_CATEGORIES),
+  risk_description: z.string().max(MAX_FINDING_TEXT_CHARS),
+  impact_description: z.string().max(MAX_FINDING_TEXT_CHARS),
+  likelihood: z.enum(RESEARCH_LIKELIHOODS),
+  risk_severity: z.enum(RESEARCH_SEVERITIES),
+  action_plan: z.string().max(MAX_FINDING_TEXT_CHARS),
+  confidence: z.enum(RESEARCH_CONFIDENCES),
+  evidence: z.array(evidenceItemSchema).min(1).max(MAX_EVIDENCE_PER_FINDING),
+});
 
-const categoryNoteSchema = z
-  .object({
-    category: z.enum(RESEARCH_CATEGORIES),
-    /** Feeds the run summary. */
-    note: z.string().max(MAX_NOTE_CHARS),
-  })
-  .strict();
+const categoryNoteSchema = z.object({
+  category: z.enum(RESEARCH_CATEGORIES),
+  /** Feeds the run summary. */
+  note: z.string().max(MAX_NOTE_CHARS),
+});
 
 /**
  * The whole answer of the model. An empty `findings` array is valid and expected: it is what the
  * model returns when no evidence shows a risk. The bounds guard against runaway output; the real
  * limits (MAX_PER_CATEGORY per category, eight per run) are applied after validation.
  */
-export const researchOutputSchema = z
-  .object({
-    findings: z.array(findingSchema).max(20),
-    category_notes: z.array(categoryNoteSchema).max(MAX_CATEGORY_NOTES),
-  })
-  .strict();
+export const researchOutputSchema = z.object({
+  findings: z.array(findingSchema).max(20),
+  category_notes: z.array(categoryNoteSchema).max(MAX_CATEGORY_NOTES),
+});
 
 export type ResearchOutput = z.infer<typeof researchOutputSchema>;

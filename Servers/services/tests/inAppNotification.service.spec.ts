@@ -37,10 +37,16 @@ jest.mock("../../constants/emailTemplates", () => ({
   EMAIL_TEMPLATES: {
     TASK_ASSIGNED: "task-assigned.mjml",
     SHADOW_AI_ALERT: "shadow-ai-alert.mjml",
+    ASSIGNMENT_NOTIFICATION: "assignment-notification.mjml",
   },
 }));
 
-import { sendInAppNotification, sendBulkInAppNotifications } from "../inAppNotification.service";
+import {
+  sendInAppNotification,
+  sendBulkInAppNotifications,
+  notifyUserAssigned,
+  type AssignmentEntityContext,
+} from "../inAppNotification.service";
 import redisClient from "../../database/redis";
 import { sequelize } from "../../database/db";
 import {
@@ -348,6 +354,148 @@ describe("inAppNotification.service", () => {
       );
 
       expect(mockSendEmailWithTemplate).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  // The assignment email puts these values into an HTML template. The risk description of an
+  // accepted vendor research finding (the entity name) and its impact description (the context
+  // description) are written by a model that read a web page, so they are text, never markup.
+  describe("notifyUserAssigned", () => {
+    const HOSTILE_ENTITY_NAME = '<a href="https://attacker.example">Open the incident report</a>';
+
+    /**
+     * Sends the assignment notice to user 42 and returns what went to the email (the subject, the
+     * template and its variables) and what was stored as the in-app notification.
+     */
+    const assign = async (input: {
+      entityName: string;
+      assignerName: string;
+      recipientName?: string;
+      context?: AssignmentEntityContext;
+    }) => {
+      // The two lookups of the notice: the user, then the user's email address.
+      mockQuery
+        .mockResolvedValueOnce([
+          { name: input.recipientName ?? "Ada", surname: "Lovelace", email: "ada@test.com" },
+        ] as any)
+        .mockResolvedValueOnce([{ email: "ada@test.com" }] as any);
+      mockSendEmailWithTemplate.mockResolvedValue(undefined);
+
+      await notifyUserAssigned(
+        1,
+        42,
+        {
+          entityType: "vendor_risk",
+          entityId: 9,
+          entityName: input.entityName,
+          roleType: "Action Owner",
+          entityUrl: "/vendors?vendorRiskId=9",
+        },
+        input.assignerName,
+        "https://app.example",
+        input.context,
+      );
+
+      expect(mockSendEmailWithTemplate).toHaveBeenCalledTimes(1);
+      const [to, subject, template, variables] = mockSendEmailWithTemplate.mock.calls[0];
+      return {
+        to,
+        subject,
+        template,
+        variables,
+        notification: mockCreateNotification.mock.calls[0][0],
+      };
+    };
+
+    it("passes plain names and a plain context through as they are", async () => {
+      const { to, template, variables } = await assign({
+        entityName: "Quarterly vendor review",
+        assignerName: "Grace Hopper",
+        recipientName: "Ada",
+        context: {
+          frameworkName: "ISO 27001",
+          projectName: "Support bot",
+          parentType: "Annex",
+          parentName: "A.5 Organizational controls",
+          description: "Review the vendor's controls.",
+        },
+      });
+
+      expect(to).toBe("ada@test.com");
+      expect(template).toBe("assignment-notification.mjml");
+      expect(variables.entity_name).toBe("Quarterly vendor review");
+      expect(variables.assigner_name).toBe("Grace Hopper");
+      expect(variables.recipient_name).toBe("Ada");
+      for (const value of [
+        "ISO 27001",
+        "Support bot",
+        "Annex:",
+        "A.5 Organizational controls",
+        "Review the vendor",
+      ]) {
+        expect(variables.entity_context_html).toContain(value);
+      }
+      expect(variables.entity_context_html).not.toContain("&lt;");
+      expect(variables.entity_context_html).not.toContain("&amp;");
+    });
+
+    it("sends no context rows when there is no context", async () => {
+      const { variables } = await assign({ entityName: "Vendor", assignerName: "Grace" });
+
+      expect(variables.entity_context_html).toBe("");
+    });
+
+    it("writes the names and the context into the email as text, not as markup", async () => {
+      const { variables } = await assign({
+        entityName: HOSTILE_ENTITY_NAME,
+        assignerName: "<b>x</b>",
+        recipientName: "<s>Ada</s>",
+        context: {
+          description: "<img src=x onerror=alert(1)>",
+          frameworkName: "<i>f</i>",
+          projectName: "A & B",
+          parentType: "Annex",
+          parentName: "<u>p</u>",
+        },
+      });
+
+      expect(variables.entity_name).toBe(
+        "&lt;a href=&quot;https://attacker.example&quot;&gt;Open the incident report&lt;/a&gt;",
+      );
+      expect(variables.assigner_name).toBe("&lt;b&gt;x&lt;/b&gt;");
+      expect(variables.recipient_name).toBe("&lt;s&gt;Ada&lt;/s&gt;");
+      const html = variables.entity_context_html;
+      expect(html).toContain("&lt;i&gt;f&lt;/i&gt;");
+      expect(html).toContain("A &amp; B");
+      expect(html).toContain("Annex:");
+      expect(html).toContain("&lt;u&gt;p&lt;/u&gt;");
+      expect(html).toContain("&lt;img src=x onerror=alert(1)&gt;");
+      // The rows are still a table: only the values were turned into text.
+      expect(html).toMatch(/^<table [^>]*>(<tr>.*<\/tr>)+<\/table>$/);
+
+      // None of their tags is left in anything the template receives.
+      const everything = Object.values(variables).join("\n");
+      for (const raw of ["<a", "<img", "<i>", "<b>", "<u>", "<s>"]) {
+        expect(everything).not.toContain(raw);
+      }
+    });
+
+    it("leaves the subject and the in-app notification as the plain text that was written", async () => {
+      const { subject, notification, variables } = await assign({
+        entityName: HOSTILE_ENTITY_NAME,
+        assignerName: "<b>x</b>",
+      });
+
+      // Plain text: a subject line and a notification that the app shows as text.
+      expect(subject).toBe(`You've been assigned as Action Owner: ${HOSTILE_ENTITY_NAME}`);
+      expect(notification.message).toBe(
+        `<b>x</b> assigned you as Action Owner for Vendor Risk: ${HOSTILE_ENTITY_NAME}`,
+      );
+      expect(notification.entity_name).toBe(HOSTILE_ENTITY_NAME);
+      // The link, and what comes from constants, are not touched either.
+      expect(variables.entity_url).toBe("https://app.example/vendors?vendorRiskId=9");
+      expect(variables.role_type).toBe("Action Owner");
+      expect(variables.entity_type).toBe("Vendor Risk");
     });
   });
 });

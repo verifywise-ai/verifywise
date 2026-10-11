@@ -9,11 +9,33 @@ jest.mock("../../database/redis", () => ({
   REDIS_URL: "redis://localhost:6379/0",
 }));
 
+// The tests of the job at the end of this file load it with its real queries and its real notifier.
+// Three of its collaborators are stood in for: the vendor lookup of the job loads the automation
+// producer, which opens a BullMQ queue as soon as it is imported; the pipeline is replaced by a
+// stand-in that completes the run in the table (see `completingPipeline`), because what is under
+// test there is the notice that follows a run; and the model call is out of reach in any case.
+jest.mock("../../services/automations/automationProducer", () => ({
+  enqueueAutomationAction: jest.fn(),
+}));
+jest.mock("../../services/vendorResearch/pipeline", () => ({
+  resolveOrgModel: jest.fn(),
+  runVendorResearch: jest.fn(),
+}));
+jest.mock("../../advisor/llmSelfCorrect", () => ({ generateObjectWithSelfCorrection: jest.fn() }));
+
 import { QueryTypes } from "sequelize";
 import { cleanupDatabase, seedTwoOrgsAndUsers } from "./helpers";
 import { sequelize } from "../../database/db";
 import { createTestVendor } from "../factories";
 import { notifyAssigneeOfVendorResearch } from "../../services/inAppNotification.service";
+import { handleVendorResearchJob } from "../../services/vendorResearch/job";
+import { runVendorResearch } from "../../services/vendorResearch/pipeline";
+import {
+  createRunQuery,
+  finishRunQuery,
+  getRunByIdQuery,
+  markRunRunningQuery,
+} from "../../utils/vendorResearch.utils";
 
 afterEach(async () => {
   await cleanupDatabase();
@@ -148,5 +170,119 @@ describe("notifyAssigneeOfVendorResearch", () => {
     expect(row.message).toContain("3");
     expect(row.message).not.toContain("{");
     expect(row.message).not.toContain("potential risks found");
+  });
+});
+
+// The job tells the assignee of the vendor that an automatic run stored findings. Vendor writes do
+// not check the assignee, so it can be a user of another organization, and the notice would then be
+// stored under the vendor's organization for a user who never sees it (R30 stops the same thing for
+// the action owner of an accepted finding).
+describe("the notice of the research job", () => {
+  const SEARCH_ENV: Record<string, string> = {
+    VENDOR_RESEARCH_SEARCH_PROVIDER: "tavily",
+    TAVILY_API_KEY: "tvly-notification-test",
+  };
+  const originalEnv = Object.fromEntries(
+    Object.keys(SEARCH_ENV).map((name) => [name, process.env[name]]),
+  );
+
+  /**
+   * What the pipeline does to the table for a run that found something: it starts the run and
+   * completes it. The findings themselves are not stored, since the notice only needs the count.
+   */
+  const completingPipeline = async (args: {
+    organizationId: number;
+    vendorId: number;
+    runId: number;
+  }) => {
+    await markRunRunningQuery(args.organizationId, args.runId);
+    await finishRunQuery({
+      organizationId: args.organizationId,
+      runId: args.runId,
+      status: "completed",
+      categories: [],
+      categorySummary: [],
+      evidence: null,
+      searchProvider: "test",
+      model: "test-model",
+      promptVersion: "test",
+      searchesUsed: 0,
+      duplicatesDropped: 0,
+      error: null,
+    });
+    return { outcome: "completed" as const, findingsCreated: 2 };
+  };
+
+  beforeEach(() => {
+    Object.assign(process.env, SEARCH_ENV);
+    (runVendorResearch as jest.Mock).mockReset().mockImplementation(completingPipeline);
+  });
+
+  afterEach(() => {
+    for (const [name, value] of Object.entries(originalEnv)) {
+      // Assigning undefined would store the string "undefined", a truthy key.
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  });
+
+  /** A vendor of `orgId` assigned to `assignee`, and an automatic run of it that is queued. */
+  const seedQueuedRun = async (orgId: number, assignee: number) => {
+    const vendorId = await createTestVendor(orgId, { vendor_name: "Acme Cloud" });
+    await sequelize.query("UPDATE vendors SET assignee = :assignee WHERE id = :vendorId", {
+      replacements: { assignee, vendorId },
+    });
+    const run = await createRunQuery({
+      organizationId: orgId,
+      vendorId,
+      triggerType: "auto",
+      requestedBy: null,
+    });
+    return { vendorId, runId: run.id };
+  };
+
+  const notificationCount = async (): Promise<number> => {
+    const [row] = (await sequelize.query("SELECT COUNT(*)::int AS count FROM notifications", {
+      type: QueryTypes.SELECT,
+    })) as Array<{ count: number }>;
+    return row.count;
+  };
+
+  it("writes the notice for an assignee who is a user of the vendor's organization", async () => {
+    const seed = await seedTwoOrgsAndUsers();
+    const { vendorId, runId } = await seedQueuedRun(seed.orgA, seed.userA);
+
+    await handleVendorResearchJob({ organizationId: seed.orgA, vendorId, runId });
+
+    expect((await getRunByIdQuery(seed.orgA, runId))?.status).toBe("completed");
+    const rows = await notificationRows(seed.orgA);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      user_id: seed.userA,
+      type: "vendor_research_findings",
+      entity_id: vendorId,
+      entity_name: "Acme Cloud",
+      metadata: { run_id: runId, vendor_id: vendorId, count: 2 },
+    });
+  });
+
+  it("writes no notice for an assignee who is a user of another organization, and the run stays completed", async () => {
+    const seed = await seedTwoOrgsAndUsers();
+    // The same vendor, run and pipeline as above; only the assignee belongs to the other organization.
+    const { vendorId, runId } = await seedQueuedRun(seed.orgA, seed.userB);
+
+    await expect(
+      handleVendorResearchJob({ organizationId: seed.orgA, vendorId, runId }),
+    ).resolves.toBeUndefined();
+
+    expect(runVendorResearch).toHaveBeenCalledTimes(1);
+    expect(await getRunByIdQuery(seed.orgA, runId)).toMatchObject({
+      status: "completed",
+      error: null,
+    });
+    // No row for the vendor's organization, none for the foreign user's, none anywhere.
+    expect(await notificationRows(seed.orgA)).toEqual([]);
+    expect(await notificationRows(seed.orgB)).toEqual([]);
+    expect(await notificationCount()).toBe(0);
   });
 });
