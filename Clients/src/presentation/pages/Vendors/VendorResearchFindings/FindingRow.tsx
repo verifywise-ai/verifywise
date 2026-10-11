@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { Box, Stack, Typography } from "@mui/material";
 import Chip from "../../../components/Chip";
 import { VWLink } from "../../../components/Link";
@@ -26,6 +27,11 @@ interface FindingRowProps {
   busy: RowAction | null;
   onAccept: (finding: VendorRiskFinding) => void;
   onDismiss: (finding: VendorRiskFinding) => void;
+  /**
+   * Hands the row's element to the list, and takes it back (null) when the row goes. The list
+   * uses it to move keyboard focus to a row when the one before it has been decided.
+   */
+  rowRef?: (element: HTMLLIElement | null) => void;
 }
 
 const captionSx = { ...textStyles.caption, color: "text.accent" };
@@ -100,13 +106,17 @@ export default function FindingRow({
   busy,
   onAccept,
   onDismiss,
+  rowRef,
 }: FindingRowProps) {
   const { t, lang } = useTranslation();
   const disabled = busy !== null;
+  // The buttons are all named "Accept" and "Dismiss": they are described by the risk they decide on.
+  const riskId = useId();
 
   return (
     <Box
       component="li"
+      ref={rowRef}
       aria-busy={disabled}
       sx={{
         listStyle: "none",
@@ -135,9 +145,14 @@ export default function FindingRow({
           )}
         </Stack>
 
-        {/* The finding's own words: the model wrote them from web sources, so they are data. */}
+        {/* The finding's own words: the model wrote them from web sources, so they are data. The
+            action plan is one of them, and the one that accepting copies into the register with
+            the other two: it is shown here so that the person who accepts has read it. The page
+            translator leaves everything in this box alone, caption included, so the caption is
+            translated by hand. */}
         <Box data-vw-no-translate="true">
           <Typography
+            id={riskId}
             sx={{ ...textStyles.subsectionTitle, color: "text.primary", overflowWrap: "anywhere" }}
           >
             {finding.risk_description}
@@ -152,6 +167,16 @@ export default function FindingRow({
           >
             {finding.impact_description}
           </Typography>
+          {finding.action_plan && (
+            <Box sx={{ mt: "8px" }}>
+              <Typography sx={captionSx}>{t("Action plan")}</Typography>
+              <Typography
+                sx={{ ...textStyles.body, color: "text.secondary", overflowWrap: "anywhere" }}
+              >
+                {finding.action_plan}
+              </Typography>
+            </Box>
+          )}
         </Box>
 
         <Stack direction="row" sx={{ gap: "24px", flexWrap: "wrap" }}>
@@ -191,6 +216,7 @@ export default function FindingRow({
             <CustomizableButton
               variant="outlined"
               isDisabled={disabled}
+              ariaDescribedBy={riskId}
               onClick={() => onDismiss(finding)}
               sx={controlHeightSx}
             >
@@ -200,6 +226,7 @@ export default function FindingRow({
               variant="contained"
               loading={busy === "accept"}
               isDisabled={disabled}
+              ariaDescribedBy={riskId}
               onClick={() => onAccept(finding)}
               sx={controlHeightSx}
             >

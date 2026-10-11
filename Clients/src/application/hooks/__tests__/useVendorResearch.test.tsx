@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, focusManager } from "@tanstack/react-query";
 import React from "react";
 
 vi.mock("../../repository/vendorResearch.repository", () => ({
@@ -13,9 +13,12 @@ vi.mock("../../repository/vendorResearch.repository", () => ({
 }));
 
 import {
+  VENDOR_RESEARCH_FOLLOW_KEY,
   VENDOR_RESEARCH_KEY,
+  followResearch,
   useAcceptFinding,
   useDismissFinding,
+  useFollowedResearchVendor,
   useLatestVendorResearch,
   useStartVendorResearch,
   useVendorResearchConfig,
@@ -42,8 +45,13 @@ const mockAccept = vi.mocked(acceptVendorRiskFinding);
 const mockDismiss = vi.mocked(dismissVendorRiskFinding);
 
 function createHarness() {
+  // Like the app's client (application/config/queryClient.ts): a query is not read again just
+  // because the tab regained focus, unless the query itself asks for it.
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    defaultOptions: {
+      queries: { retry: false, refetchOnWindowFocus: false },
+      mutations: { retry: false },
+    },
   });
   const wrapper = ({ children }: { children: React.ReactNode }) =>
     React.createElement(QueryClientProvider, { client: queryClient }, children);
@@ -435,6 +443,161 @@ describe("useLatestVendorResearch", () => {
 
       expect(mockList).toHaveBeenCalledTimes(1);
     });
+
+    // The window is a wall-clock timer, and TanStack does not poll in a hidden tab, so a run can
+    // finish while nothing is reading it and the window ends. Nothing may then keep saying "still
+    // running": coming back to the tab reads the run again, and so can the user.
+    describe("after the polling window ended before the run finished", () => {
+      afterEach(() => {
+        // The focus manager is one object for the whole file: hand it back to the document.
+        focusManager.setFocused(undefined);
+      });
+
+      /** The tab is left and comes back, the event TanStack Query re-reads active queries on. */
+      const returnToTab = async () => {
+        await act(async () => {
+          focusManager.setFocused(false);
+          focusManager.setFocused(true);
+          await vi.advanceTimersByTimeAsync(0);
+        });
+        await settle();
+      };
+
+      /** A run that is still going when its window ends, as a long run in a hidden tab is. */
+      const renderWithEndedWindow = async () => {
+        mockLatest.mockResolvedValue(run({ id: 5, status: "running" }));
+        const view = renderWithFindings(3);
+        await advance(0);
+        await advance(121_000);
+        expect(view.result.current.latest.pollingStopped).toBe(true);
+        return view;
+      };
+
+      /** Asks the hook to check the run again, as the "Check again" button does. */
+      const restart = async (result: { current: { latest: { restartPolling: () => void } } }) => {
+        await act(async () => {
+          result.current.latest.restartPolling();
+          await vi.advanceTimersByTimeAsync(0);
+        });
+        await settle();
+      };
+
+      it.each(["completed", "failed"] as const)(
+        "reads the run again when the tab regains focus, and refreshes the findings once it is %s",
+        async (finished) => {
+          const { result } = await renderWithEndedWindow();
+          const readsWhenStopped = mockLatest.mock.calls.length;
+          expect(mockList).toHaveBeenCalledTimes(1);
+
+          mockLatest.mockResolvedValue(run({ id: 5, status: finished }));
+          await returnToTab();
+
+          expect(mockLatest).toHaveBeenCalledTimes(readsWhenStopped + 1);
+          expect(result.current.latest.data?.status).toBe(finished);
+          expect(result.current.latest.pollingStopped).toBe(false);
+          expect(mockList).toHaveBeenCalledTimes(2);
+
+          await advance(60_000);
+          expect(mockList).toHaveBeenCalledTimes(2);
+        },
+      );
+
+      it("reads a run that is still going again on focus, and keeps saying so", async () => {
+        const { result } = await renderWithEndedWindow();
+        const readsWhenStopped = mockLatest.mock.calls.length;
+
+        await returnToTab();
+
+        expect(mockLatest).toHaveBeenCalledTimes(readsWhenStopped + 1);
+        expect(result.current.latest.data?.status).toBe("running");
+        expect(result.current.latest.pollingStopped).toBe(true);
+        expect(mockList).toHaveBeenCalledTimes(1);
+      });
+
+      it("does not read a run that is finished when the tab regains focus", async () => {
+        mockLatest.mockResolvedValue(run({ id: 5, status: "completed" }));
+        renderWithFindings(3);
+        await advance(0);
+        expect(mockLatest).toHaveBeenCalledTimes(1);
+
+        await returnToTab();
+
+        expect(mockLatest).toHaveBeenCalledTimes(1);
+        expect(mockList).toHaveBeenCalledTimes(1);
+      });
+
+      it("does not read anything on focus for a vendor that was never researched", async () => {
+        mockLatest.mockResolvedValue(null);
+        renderWithFindings(3);
+        await advance(0);
+        expect(mockLatest).toHaveBeenCalledTimes(1);
+
+        await returnToTab();
+
+        expect(mockLatest).toHaveBeenCalledTimes(1);
+      });
+
+      it("restartPolling reads the run at once and polls it for a fresh window", async () => {
+        const { result } = await renderWithEndedWindow();
+        const readsWhenStopped = mockLatest.mock.calls.length;
+
+        await restart(result);
+
+        // At once, and polling is on again.
+        expect(mockLatest).toHaveBeenCalledTimes(readsWhenStopped + 1);
+        expect(result.current.latest.pollingStopped).toBe(false);
+        await advance(3_000);
+        expect(mockLatest.mock.calls.length).toBeGreaterThan(readsWhenStopped + 1);
+
+        // The window is counted from the restart, not from when the run was first seen.
+        await advance(115_000);
+        expect(result.current.latest.pollingStopped).toBe(false);
+        await advance(5_000);
+        expect(result.current.latest.pollingStopped).toBe(true);
+        const readsWhenStoppedAgain = mockLatest.mock.calls.length;
+        await advance(60_000);
+        expect(mockLatest).toHaveBeenCalledTimes(readsWhenStoppedAgain);
+      });
+
+      it("restartPolling shows a run that finished in the meantime, and refreshes the findings once", async () => {
+        const { result } = await renderWithEndedWindow();
+        expect(mockList).toHaveBeenCalledTimes(1);
+        mockLatest.mockResolvedValue(run({ id: 5, status: "completed" }));
+
+        await restart(result);
+
+        expect(result.current.latest.data?.status).toBe("completed");
+        expect(result.current.latest.pollingStopped).toBe(false);
+        expect(mockList).toHaveBeenCalledTimes(2);
+        await advance(60_000);
+        expect(mockList).toHaveBeenCalledTimes(2);
+      });
+
+      it("restartPolling does nothing when no run is active", async () => {
+        mockLatest.mockResolvedValue(run({ id: 5, status: "completed" }));
+        const { result } = renderWithFindings(3);
+        await advance(0);
+        expect(mockLatest).toHaveBeenCalledTimes(1);
+
+        await restart(result);
+        await advance(60_000);
+
+        expect(mockLatest).toHaveBeenCalledTimes(1);
+        expect(result.current.latest.pollingStopped).toBe(false);
+      });
+
+      it("restartPolling does nothing without a vendor", async () => {
+        const { wrapper } = createHarness();
+        const { result } = renderHook(() => useLatestVendorResearch(null), { wrapper });
+
+        await act(async () => {
+          result.current.restartPolling();
+          await vi.advanceTimersByTimeAsync(0);
+        });
+
+        expect(mockLatest).not.toHaveBeenCalled();
+      });
+    });
   });
 });
 
@@ -488,6 +651,69 @@ describe("useStartVendorResearch", () => {
     await waitFor(() => expect(result.current.start.isError).toBe(true));
     expect(result.current.start.error).toBe(refusal);
     expect(mockLatest).toHaveBeenCalledWith(3);
+  });
+});
+
+// A run started on the vendors table is followed on the Risks tab, which is another screen: the
+// start leaves a one-shot hint in the query cache for the findings section to pick up.
+describe("following a run started on another screen", () => {
+  it("remembers the vendor under a key of its own, which refreshing the research data leaves alone", async () => {
+    const { queryClient } = createHarness();
+    queryClient.setQueryData([...VENDOR_RESEARCH_KEY, "config"], {});
+
+    followResearch(queryClient, 3);
+    await queryClient.invalidateQueries({ queryKey: VENDOR_RESEARCH_KEY });
+
+    expect(queryClient.getQueryData(VENDOR_RESEARCH_FOLLOW_KEY)).toBe(3);
+    // The control: the same refresh did reach the research data.
+    expect(queryClient.getQueryState([...VENDOR_RESEARCH_KEY, "config"])?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(VENDOR_RESEARCH_FOLLOW_KEY)?.isInvalidated).toBe(false);
+  });
+
+  it("gives the vendor to the first screen that asks, and clears it for every later one", () => {
+    const { queryClient, wrapper } = createHarness();
+    followResearch(queryClient, 3);
+
+    const first = renderHook(() => useFollowedResearchVendor(), { wrapper });
+
+    expect(first.result.current).toBe(3);
+    expect(queryClient.getQueryData(VENDOR_RESEARCH_FOLLOW_KEY)).toBeUndefined();
+    // The screen keeps the vendor it was given while it stays mounted...
+    first.rerender();
+    expect(first.result.current).toBe(3);
+    // ...but a screen that mounts afterwards is given nothing.
+    const second = renderHook(() => useFollowedResearchVendor(), { wrapper });
+    expect(second.result.current).toBeNull();
+  });
+
+  it("gives nothing when no run was started", () => {
+    const { wrapper } = createHarness();
+
+    const { result } = renderHook(() => useFollowedResearchVendor(), { wrapper });
+
+    expect(result.current).toBeNull();
+  });
+
+  it("is replaced by the vendor of the latest start", () => {
+    const { queryClient, wrapper } = createHarness();
+    followResearch(queryClient, 3);
+    followResearch(queryClient, 4);
+
+    const { result } = renderHook(() => useFollowedResearchVendor(), { wrapper });
+
+    expect(result.current).toBe(4);
+  });
+
+  it("starting a run does not leave a hint by itself", async () => {
+    mockStart.mockResolvedValue({ run: run({ status: "queued" }), alreadyRunning: false });
+    const { queryClient, wrapper } = createHarness();
+    const { result } = renderHook(() => useStartVendorResearch(), { wrapper });
+
+    await act(async () => {
+      await result.current.mutateAsync(3);
+    });
+
+    expect(queryClient.getQueryData(VENDOR_RESEARCH_FOLLOW_KEY)).toBeUndefined();
   });
 });
 

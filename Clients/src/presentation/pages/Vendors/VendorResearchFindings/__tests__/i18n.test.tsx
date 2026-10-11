@@ -117,8 +117,9 @@ describe("the register's words", () => {
     expect(missing).toEqual([]);
   });
 
-  // Ruling R39: every Spanish risk level reads noun first, whichever way its key is written, so
-  // that the levels on one screen (the findings, the risks table) are worded the same way.
+  // Ruling R39, narrowed after the final review: the risk levels of the vendor register read noun
+  // first in Spanish, whichever way their keys are written, so that the levels on one screen (the
+  // findings, the risks table) are worded the same way.
   it.each([
     ["Very High Risk", "Riesgo muy alto"],
     ["High Risk", "Riesgo alto"],
@@ -126,13 +127,20 @@ describe("the register's words", () => {
     ["Low Risk", "Riesgo bajo"],
     ["Very Low Risk", "Riesgo muy bajo"],
     ["Very high risk", "Riesgo muy alto"],
-    ["High risk", "Riesgo alto"],
     ["Medium risk", "Riesgo medio"],
     ["Low risk", "Riesgo bajo"],
     ["Very low risk", "Riesgo muy bajo"],
     ["Very Low risk", "Riesgo muy bajo"],
   ])("reads the Spanish risk level %j noun first, as %j", (key, value) => {
     expect(translations.es[key]).toBe(value);
+  });
+
+  // The lowercase "High risk" is not only a level of the vendor register: it is the EU AI Act
+  // classification and the project risk level on many screens, where "High-risk AI system" is
+  // "Sistema de IA de alto riesgo". The research feature does not own it, so it keeps the wording
+  // it always had.
+  it('leaves the Spanish "High risk" as it was before the research agent', () => {
+    expect(translations.es["High risk"]).toBe("Alto riesgo");
   });
 });
 
@@ -276,6 +284,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       "Severity",
       "Likelihood",
       "Confidence",
+      "Action plan",
       "Sources",
       "High Risk",
       "Major",
@@ -313,6 +322,20 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     expect(options).toEqual([tr(lang, "All vendors"), "High", "Other"]);
 
     expectNoUntranslatedText(lang, new Set([...FIXTURES, "Other", "High"]));
+  });
+
+  it("translates the caption of the action plan, and leaves the plan itself as it is", async () => {
+    // "Other" is a word of the dictionary. The plan is the model's text, not ours: it is shown as
+    // written, as the vendor named "Other" is.
+    mocks.list.mockResolvedValue({ rows: [finding({ action_plan: "Other" })], total: 1 });
+    renderSection();
+    const row = within((await screen.findByText(finding().risk_description)).closest("li")!);
+
+    expect(row.getByText(tr(lang, "Action plan"))).toBeInTheDocument();
+    expect(row.getByText("Other")).toBeInTheDocument();
+    expect(row.queryByText(tr(lang, "Other"))).not.toBeInTheDocument();
+
+    expectNoUntranslatedText(lang, FIXTURES);
   });
 
   it("translates the sources that have no link", async () => {
@@ -536,6 +559,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     });
 
     expect(screen.getByText(tr(lang, "Still running. Check back later."))).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: tr(lang, "Check again") })).toBeInTheDocument();
     expectNoUntranslatedText(lang, FIXTURES);
   });
 
@@ -671,6 +695,49 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       body: tr(lang, "Risk added to the register"),
     });
 
+    expectNoUntranslatedText(lang, FIXTURES);
+  });
+
+  it("translates the message after a dismissal", async () => {
+    mocks.dismiss.mockImplementation(async () => {
+      mocks.list.mockResolvedValue({ rows: [secondFinding()], total: 1 });
+      return finding({ status: "dismissed" });
+    });
+    const onNotify = vi.fn();
+    renderWithProviders(<SectionWithAlert onNotify={onNotify} />, {
+      route: "/vendors/risks?findingsVendorId=7",
+    });
+    const row = (await screen.findByText(finding().risk_description)).closest("li") as HTMLElement;
+    await userEvent.click(within(row).getByRole("button", { name: tr(lang, "Dismiss") }));
+    const dialog = await screen.findByRole("dialog", { name: tr(lang, "Dismiss finding") });
+    await userEvent.click(within(dialog).getByRole("combobox"));
+    await userEvent.click(await screen.findByRole("option", { name: tr(lang, "Other") }));
+
+    await userEvent.click(within(dialog).getByRole("button", { name: tr(lang, "Dismiss") }));
+
+    expect(await screen.findByText(tr(lang, "Finding dismissed."))).toBeInTheDocument();
+    expect(onNotify).toHaveBeenCalledWith({
+      variant: "success",
+      body: tr(lang, "Finding dismissed."),
+    });
+    expectNoUntranslatedText(lang, FIXTURES);
+  });
+
+  it("translates the message for a finding that no longer exists", async () => {
+    mocks.accept.mockRejectedValueOnce(refusal(404, "Finding not found"));
+    const onNotify = vi.fn();
+    renderWithProviders(<SectionWithAlert onNotify={onNotify} />, {
+      route: "/vendors/risks?findingsVendorId=7",
+    });
+    const row = (await screen.findByText(finding().risk_description)).closest("li") as HTMLElement;
+
+    await userEvent.click(within(row).getByRole("button", { name: tr(lang, "Accept") }));
+
+    expect(await screen.findByText(tr(lang, "This finding no longer exists."))).toBeInTheDocument();
+    expect(onNotify).toHaveBeenCalledWith({
+      variant: "warning",
+      body: tr(lang, "This finding no longer exists."),
+    });
     expectNoUntranslatedText(lang, FIXTURES);
   });
 

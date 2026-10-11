@@ -21,6 +21,9 @@ vi.mock("../../../../application/hooks/useVendors", () => ({
   useDeleteVendor: () => ({ mutateAsync: vi.fn() }),
 }));
 
+// Whether the register of vendor risks is still loading; a test that needs it to load sets it.
+const registerState = vi.hoisted(() => ({ loading: false }));
+
 vi.mock("../../../../application/hooks/useVendorRisks", () => ({
   // Accepting a research finding refreshes the vendor risks by this key.
   vendorRiskQueryKeys: { all: ["vendor-risks"] },
@@ -35,7 +38,7 @@ vi.mock("../../../../application/hooks/useVendorRisks", () => ({
     },
     refetchVendorRisks: vi.fn(),
     vendorRisks: [],
-    loadingVendorRisks: false,
+    loadingVendorRisks: registerState.loading,
   }),
 }));
 
@@ -251,6 +254,7 @@ describe("Vendors, research findings on the Risks tab", () => {
 
   afterEach(() => {
     vendorsState.data = [];
+    registerState.loading = false;
   });
 
   it("lands on the section, open on the vendor the notification link names, above the insights", async () => {
@@ -267,6 +271,49 @@ describe("Vendors, research findings on the Risks tab", () => {
     expect(
       header.compareDocumentPosition(insights) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  // Switching "Risk status" or the project filter loads the register again. The section has its
+  // own data and its own state (the vendor, an open or closed choice, the notice of an accept),
+  // so only what is made of the register may give way to the skeleton.
+  describe("while the register of vendor risks is loading", () => {
+    it("still shows the section, with its findings, and the skeleton in place of the register", async () => {
+      registerState.loading = true;
+      renderWithProviders(<Vendors />, { route: NOTIFICATION_LINK });
+
+      const header = await screen.findByRole("button", { name: /^Research findings/ });
+      expect(header).toHaveAttribute("aria-expanded", "true");
+      expect(await screen.findByText(FIRST)).toBeInTheDocument();
+      // What is made of the register waits for it.
+      expect(screen.queryByTestId("vendor-risk-insights")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("risk-table")).not.toBeInTheDocument();
+    });
+
+    it("keeps the section mounted, and what the user did in it, when the register loads again", async () => {
+      const { rerender } = renderWithProviders(<Vendors />, { route: NOTIFICATION_LINK });
+      const header = await screen.findByRole("button", { name: /^Research findings/ });
+      await screen.findByText(FIRST);
+      // The user closes the section.
+      await userEvent.click(header);
+      expect(header).toHaveAttribute("aria-expanded", "false");
+      expect(screen.getByTestId("vendor-risk-insights")).toBeInTheDocument();
+
+      registerState.loading = true;
+      rerender(<Vendors />);
+
+      expect(screen.queryByTestId("vendor-risk-insights")).not.toBeInTheDocument();
+      // The very same section is still on screen, still closed.
+      expect(screen.getByRole("button", { name: /^Research findings/ })).toBe(header);
+      expect(header).toHaveAttribute("aria-expanded", "false");
+
+      registerState.loading = false;
+      rerender(<Vendors />);
+
+      expect(screen.getByTestId("vendor-risk-insights")).toBeInTheDocument();
+      expect(screen.getByTestId("risk-table")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /^Research findings/ })).toBe(header);
+      expect(header).toHaveAttribute("aria-expanded", "false");
+    });
   });
 
   it("is not part of the Vendors tab", async () => {

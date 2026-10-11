@@ -20,7 +20,11 @@ const DISMISS_REASONS: DismissReason[] = [
   "other",
 ];
 
-/** The server accepts a note of up to this many characters; the helper text below names the number. */
+/**
+ * The server accepts a note of up to this many characters; the helper text below names the number.
+ * It counts code points, as `Array.from` does, not the UTF-16 units that `length` and `slice`
+ * count, so that an emoji is one character here as there and is never cut in half.
+ */
 const NOTE_MAX_LENGTH = 500;
 
 export interface DismissalBody {
@@ -106,7 +110,9 @@ export default function DismissFindingModal({
           multiline
           minRows={3}
           value={note}
-          onChange={(event) => setNote(event.target.value.slice(0, NOTE_MAX_LENGTH))}
+          onChange={(event) =>
+            setNote(Array.from(event.target.value).slice(0, NOTE_MAX_LENGTH).join(""))
+          }
           helperText="Up to 500 characters."
         />
       </Stack>

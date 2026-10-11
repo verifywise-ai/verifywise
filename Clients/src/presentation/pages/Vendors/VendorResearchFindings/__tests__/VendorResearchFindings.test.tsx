@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import {
@@ -39,6 +40,10 @@ vi.mock("../../../../../application/hooks/useIsAdmin", () => ({
 }));
 
 import * as repository from "../../../../../application/repository/vendorResearch.repository";
+import {
+  VENDOR_RESEARCH_FOLLOW_KEY,
+  followResearch,
+} from "../../../../../application/hooks/useVendorResearch";
 import VendorResearchFindings from "..";
 
 const mocks = {
@@ -56,14 +61,20 @@ const VENDORS = [
 ];
 const WITH_VENDOR_7 = "/vendors/risks?findingsVendorId=7";
 
-const renderSection = (options: { route?: string; vendors?: typeof VENDORS } = {}) => {
+const renderSection = (
+  options: { route?: string; vendors?: typeof VENDORS; queryClient?: QueryClient } = {},
+) => {
   const handlers = { onOpenRisk: vi.fn(), onNotify: vi.fn() };
   const view = renderWithProviders(
     <VendorResearchFindings vendors={options.vendors ?? VENDORS} {...handlers} />,
-    { route: options.route ?? "/vendors/risks" },
+    { route: options.route ?? "/vendors/risks", queryClient: options.queryClient },
   );
   return { ...view, ...handlers };
 };
+
+/** A client like the test default, made here so that a test can leave something in its cache first. */
+const newQueryClient = () =>
+  new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
 
 const header = () => screen.getByRole("button", { name: /^Research findings/ });
 const rowOf = (text: string) => screen.getByText(text).closest("li") as HTMLElement;
@@ -73,6 +84,18 @@ const optionNames = async () =>
   (await screen.findAllByRole("option")).map((option) => option.textContent?.trim());
 const FIRST = "Customer data was exposed in a breach";
 const SECOND = "The ISO 27001 certificate has lapsed";
+
+/** Opens the dismiss modal of the row with this text. */
+const openDismissal = async (text = FIRST) => {
+  await userEvent.click(within(rowOf(text)).getByRole("button", { name: "Dismiss" }));
+  return screen.findByRole("dialog", { name: "Dismiss finding" });
+};
+const choose = async (dialog: HTMLElement, reason: string) => {
+  await userEvent.click(within(dialog).getByRole("combobox"));
+  await userEvent.click(await screen.findByRole("option", { name: reason }));
+};
+/** The first button of the row with this text, which is where focus goes when it takes a place. */
+const firstButtonOf = (text: string) => within(rowOf(text)).getAllByRole("button")[0];
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -374,12 +397,16 @@ describe("a finding", () => {
     expect(row.queryByText("evil.example.com")).not.toBeInTheDocument();
   });
 
-  it("renders a quote as plain text, never as markup", async () => {
+  it("renders a quote and the model's texts as plain text, never as markup", async () => {
     const quote = "<img src=x onerror=alert(1)>";
+    // The action plan is copied into the register on accept: it is shown, and shown as text.
+    const plan =
+      '<img src=x onerror=alert(2)> javascript:alert(3) <a href="javascript:alert(4)">x</a>';
     mocks.list.mockResolvedValue({
       rows: [
         finding({
           risk_description: "<b>Bold claim</b>",
+          action_plan: plan,
           sources: [{ url: "https://news.example.com/a", title: "t", quote, published_at: null }],
         }),
       ],
@@ -389,9 +416,47 @@ describe("a finding", () => {
 
     expect(await screen.findByText(quote)).toBeInTheDocument();
     expect(screen.getByText("<b>Bold claim</b>")).toBeInTheDocument();
+    expect(screen.getByText(plan)).toBeInTheDocument();
     expect(container.querySelector("img")).toBeNull();
     expect(document.body.querySelector("img")).toBeNull();
     expect(container.querySelector("b")).toBeNull();
+    expect(container.querySelector("script")).toBeNull();
+    // The only link in the row is the source's own.
+    const row = rowOf("<b>Bold claim</b>");
+    expect(row.querySelectorAll("a")).toHaveLength(1);
+    expect(row.querySelector("a")).toHaveAttribute("href", "https://news.example.com/a");
+  });
+
+  it("shows the action plan that accepting writes into the register, under its caption", async () => {
+    mocks.list.mockResolvedValue({
+      rows: [finding(), secondFinding({ action_plan: "Ask for the renewed certificate" })],
+      total: 2,
+    });
+    renderSection();
+    await screen.findByText(FIRST);
+
+    const first = within(rowOf(FIRST));
+    const caption = first.getByText("Action plan");
+    const plan = first.getByText("Ask the vendor for its incident report");
+    const follows = (a: HTMLElement, b: HTMLElement) =>
+      Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    // The caption heads the plan, and both follow the texts that describe the risk.
+    expect(follows(caption, plan)).toBe(true);
+    expect(
+      follows(first.getByText("Personal data of our customers could be exposed"), caption),
+    ).toBe(true);
+    // Each row has its own.
+    const second = within(rowOf(SECOND));
+    expect(second.getByText("Action plan")).toBeInTheDocument();
+    expect(second.getByText("Ask for the renewed certificate")).toBeInTheDocument();
+  });
+
+  it("shows no caption for a finding that has no action plan", async () => {
+    mocks.list.mockResolvedValue({ rows: [finding({ action_plan: "" })], total: 1 });
+    renderSection();
+    await screen.findByText(FIRST);
+
+    expect(screen.queryByText("Action plan")).not.toBeInTheDocument();
   });
 
   it("says how many of the pending findings are shown when the server returned fewer", async () => {
@@ -682,16 +747,159 @@ describe("accepting a finding", () => {
   });
 });
 
-describe("dismissing a finding", () => {
-  const openDismissal = async (text = FIRST) => {
-    await userEvent.click(within(rowOf(text)).getByRole("button", { name: "Dismiss" }));
-    return screen.findByRole("dialog", { name: "Dismiss finding" });
+describe("keyboard and screen reader use of the rows", () => {
+  /** The server's answer to a decision: the list from now on is these rows. */
+  const listFromNowOn = (rows: Array<ReturnType<typeof finding>>) =>
+    mocks.list.mockResolvedValue({ rows, total: rows.length });
+  const accepts = (remaining: Array<ReturnType<typeof finding>>) =>
+    mocks.accept.mockImplementation(async () => {
+      listFromNowOn(remaining);
+      return { finding: finding({ status: "accepted" }), vendorRisk: acceptedRisk() };
+    });
+  const dismisses = (remaining: Array<ReturnType<typeof finding>>) =>
+    mocks.dismiss.mockImplementation(async () => {
+      listFromNowOn(remaining);
+      return finding({ status: "dismissed" });
+    });
+  const accept = (text: string) =>
+    userEvent.click(within(rowOf(text)).getByRole("button", { name: "Accept" }));
+  const dismissWithReason = async (text: string) => {
+    const dialog = await openDismissal(text);
+    await choose(dialog, "Other");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Dismiss" }));
   };
-  const choose = async (dialog: HTMLElement, reason: string) => {
-    await userEvent.click(within(dialog).getByRole("combobox"));
-    await userEvent.click(await screen.findByRole("option", { name: reason }));
-  };
+  const heading = () => screen.getByText("Research findings");
 
+  it("describes the Accept and Dismiss buttons of a row by the risk they decide on", async () => {
+    renderSection();
+    await screen.findByText(FIRST);
+
+    const ids: string[] = [];
+    for (const text of [FIRST, SECOND]) {
+      for (const name of ["Dismiss", "Accept"]) {
+        const button = within(rowOf(text)).getByRole("button", { name });
+        // A screen reader reads the risk after the name of the button.
+        expect(button).toHaveAccessibleDescription(text);
+        ids.push(button.getAttribute("aria-describedby") as string);
+      }
+    }
+    // Both buttons of a row point at one element, and no two rows share it.
+    expect(ids[0]).toBe(ids[1]);
+    expect(ids[2]).toBe(ids[3]);
+    expect(ids[0]).not.toBe(ids[2]);
+    expect(document.getElementById(ids[0])).toHaveTextContent(FIRST);
+    expect(document.getElementById(ids[2])).toHaveTextContent(SECOND);
+  });
+
+  it("moves focus to the next row after an accept", async () => {
+    accepts([secondFinding()]);
+    renderSection();
+    await screen.findByText(FIRST);
+
+    await accept(FIRST);
+
+    await waitFor(() => expect(screen.queryByText(FIRST)).not.toBeInTheDocument());
+    await waitFor(() => expect(document.activeElement).toBe(firstButtonOf(SECOND)));
+  });
+
+  it("moves focus to the previous row when the last row is accepted", async () => {
+    accepts([finding()]);
+    renderSection();
+    await screen.findByText(SECOND);
+
+    await accept(SECOND);
+
+    await waitFor(() => expect(screen.queryByText(SECOND)).not.toBeInTheDocument());
+    await waitFor(() => expect(document.activeElement).toBe(firstButtonOf(FIRST)));
+  });
+
+  it("moves focus to the heading of the section when the last pending finding is accepted", async () => {
+    mocks.list.mockResolvedValue({ rows: [finding()], total: 1 });
+    accepts([]);
+    renderSection();
+    await screen.findByText(FIRST);
+
+    await accept(FIRST);
+
+    await waitFor(() => expect(screen.queryByText(FIRST)).not.toBeInTheDocument());
+    await waitFor(() => expect(document.activeElement).toBe(heading()));
+    // Not a stop of the tab order, only a place focus can be sent to.
+    expect(heading()).toHaveAttribute("tabindex", "-1");
+  });
+
+  it("moves focus to the next row after a dismissal, once the modal has given focus back", async () => {
+    dismisses([secondFinding()]);
+    renderSection();
+    await screen.findByText(FIRST);
+
+    await dismissWithReason(FIRST);
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText(FIRST)).not.toBeInTheDocument());
+    await waitFor(() => expect(document.activeElement).toBe(firstButtonOf(SECOND)));
+  });
+
+  it("moves focus to the previous row after the last row is dismissed", async () => {
+    dismisses([finding()]);
+    renderSection();
+    await screen.findByText(SECOND);
+
+    await dismissWithReason(SECOND);
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(document.activeElement).toBe(firstButtonOf(FIRST)));
+  });
+
+  it("moves focus to the heading when the last pending finding is dismissed", async () => {
+    mocks.list.mockResolvedValue({ rows: [finding()], total: 1 });
+    dismisses([]);
+    renderSection();
+    await screen.findByText(FIRST);
+
+    await dismissWithReason(FIRST);
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(document.activeElement).toBe(heading()));
+  });
+
+  it("leaves focus where the user has put it meanwhile", async () => {
+    const pending = deferred<{
+      finding: ReturnType<typeof finding>;
+      vendorRisk: ReturnType<typeof acceptedRisk>;
+    }>();
+    mocks.accept.mockReturnValue(pending.promise);
+    renderSection();
+    await screen.findByText(FIRST);
+    await accept(FIRST);
+    // While the request is on its way the user goes to the vendor filter.
+    const filter = screen.getByRole("combobox");
+    act(() => filter.focus());
+
+    listFromNowOn([secondFinding()]);
+    await act(async () => {
+      pending.resolve({ finding: finding({ status: "accepted" }), vendorRisk: acceptedRisk() });
+    });
+
+    await waitFor(() => expect(screen.queryByText(FIRST)).not.toBeInTheDocument());
+    expect(document.activeElement).toBe(filter);
+  });
+
+  it("does not move focus when the accept fails and the row stays", async () => {
+    mocks.accept.mockRejectedValue(refusal(500));
+    renderSection();
+    await screen.findByText(FIRST);
+    await accept(FIRST);
+
+    await waitFor(() =>
+      expect(within(rowOf(FIRST)).getByRole("button", { name: "Accept" })).toBeEnabled(),
+    );
+
+    expect(screen.getByText(FIRST)).toBeInTheDocument();
+    expect(document.activeElement).not.toBe(firstButtonOf(SECOND));
+  });
+});
+
+describe("dismissing a finding", () => {
   it("opens a modal that cannot be submitted until a reason is chosen", async () => {
     renderSection();
     await screen.findByText(FIRST);
@@ -844,6 +1052,190 @@ describe("dismissing a finding", () => {
     expect(mocks.dismiss).not.toHaveBeenCalled();
     expect(within(dialog).getByRole("button", { name: "Dismiss" })).toBeDisabled();
   });
+
+  // The server counts characters (code points), not UTF-16 units, and a cut through the middle of
+  // an emoji would leave half of it, which the server stores as a replacement character.
+  it.each([
+    ["emoji only", "😀".repeat(520)],
+    ["an emoji that starts at the 500th UTF-16 unit", `a${"😀".repeat(519)}`],
+  ])("limits the note to 500 characters, not 500 UTF-16 units (%s)", async (_case, pasted) => {
+    renderSection();
+    await screen.findByText(FIRST);
+    const dialog = await openDismissal();
+    const note = within(dialog).getByRole("textbox") as HTMLTextAreaElement;
+
+    fireEvent.change(note, { target: { value: pasted } });
+
+    expect(Array.from(note.value)).toHaveLength(500);
+    expect(note.value).toBe(Array.from(pasted).slice(0, 500).join(""));
+    // No half of an emoji at the end, or anywhere.
+    expect(note.value).not.toMatch(
+      /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/,
+    );
+  });
+
+  it("says so, on the channel of the accept, once a finding is dismissed", async () => {
+    mocks.dismiss.mockImplementation(async () => {
+      mocks.list.mockResolvedValue({ rows: [secondFinding()], total: 1 });
+      return finding({ status: "dismissed" });
+    });
+    const { onNotify } = renderSection();
+    await screen.findByText(FIRST);
+    const dialog = await openDismissal();
+    await choose(dialog, "Other");
+
+    await userEvent.click(within(dialog).getByRole("button", { name: "Dismiss" }));
+
+    await waitFor(() =>
+      expect(onNotify).toHaveBeenCalledWith({ variant: "success", body: "Finding dismissed." }),
+    );
+    expect(onNotify).toHaveBeenCalledTimes(1);
+  });
+
+  it("says nothing of its own when a dismissal fails and the finding stays", async () => {
+    mocks.dismiss.mockRejectedValue(refusal(500));
+    const { onNotify } = renderSection();
+    await screen.findByText(FIRST);
+    const dialog = await openDismissal();
+    await choose(dialog, "Other");
+
+    await userEvent.click(within(dialog).getByRole("button", { name: "Dismiss" }));
+
+    await waitFor(() => expect(mocks.dismiss).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(within(dialog).getByRole("button", { name: "Dismiss" })).toBeEnabled(),
+    );
+    expect(onNotify).not.toHaveBeenCalled();
+  });
+});
+
+// A finding can be gone or decided elsewhere by the time this user acts on it. The contract
+// answers 404 for a finding that no longer exists (the global error toast skips a 404 on purpose)
+// and 409 for one that was decided, or while another decision on it is in progress.
+describe("a finding that is gone or was decided elsewhere", () => {
+  const firstIsGone = () => mocks.list.mockResolvedValue({ rows: [secondFinding()], total: 1 });
+
+  /** Lets the modal's request fail, and the list from then on be the given rows. */
+  const dismissFails = (status: number, remaining: Array<ReturnType<typeof finding>>) =>
+    mocks.dismiss.mockImplementation(async () => {
+      mocks.list.mockResolvedValue({ rows: remaining, total: remaining.length });
+      throw refusal(status, "refused");
+    });
+  const submitReason = async (reason: string) => {
+    const dialog = await openDismissal();
+    await choose(dialog, reason);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Dismiss" }));
+    return dialog;
+  };
+  /** Time for the list to be read again and the section to act on it. */
+  const letTheListSettle = () =>
+    act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+  it("warns that the finding no longer exists when accepting it answers 404", async () => {
+    mocks.accept.mockImplementation(async () => {
+      firstIsGone();
+      throw refusal(404, "Finding not found");
+    });
+    const { onNotify } = renderSection();
+    await screen.findByText(FIRST);
+
+    await userEvent.click(within(rowOf(FIRST)).getByRole("button", { name: "Accept" }));
+
+    await waitFor(() =>
+      expect(onNotify).toHaveBeenCalledWith({
+        variant: "warning",
+        body: "This finding no longer exists.",
+      }),
+    );
+    expect(onNotify).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText("Risk added to the register.")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText(FIRST)).not.toBeInTheDocument());
+  });
+
+  it("warns, and closes the modal, when dismissing a finding that no longer exists (404)", async () => {
+    dismissFails(404, [secondFinding()]);
+    const { onNotify } = renderSection();
+    await screen.findByText(FIRST);
+
+    await submitReason("Other");
+
+    await waitFor(() =>
+      expect(onNotify).toHaveBeenCalledWith({
+        variant: "warning",
+        body: "This finding no longer exists.",
+      }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText(FIRST)).not.toBeInTheDocument());
+    // Keyboard focus is not left on the page behind: it goes to the row that took its place.
+    await waitFor(() => expect(document.activeElement).toBe(firstButtonOf(SECOND)));
+  });
+
+  it("closes the modal when a 409 says the finding was decided elsewhere and it has left the list", async () => {
+    dismissFails(409, [secondFinding()]);
+    const { onNotify } = renderSection();
+    await screen.findByText(FIRST);
+
+    await submitReason("Other");
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    // The global toast explains a 409; the section adds no message of its own.
+    expect(onNotify).not.toHaveBeenCalled();
+  });
+
+  it("keeps the modal open, with what was entered, when a 409 leaves the finding pending", async () => {
+    // The 409 of the lock "another decision is in progress": a retry can succeed.
+    dismissFails(409, [finding(), secondFinding()]);
+    const { onNotify } = renderSection();
+    await screen.findByText(FIRST);
+    const dialog = await openDismissal();
+    await choose(dialog, "Accepted risk");
+    await userEvent.type(within(dialog).getByRole("textbox"), "Accepted by the board");
+
+    await userEvent.click(within(dialog).getByRole("button", { name: "Dismiss" }));
+
+    // The list was read again after the failure, and the finding is still on it.
+    await waitFor(() => expect(mocks.list).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(within(dialog).getByRole("button", { name: "Dismiss" })).toBeEnabled(),
+    );
+    await letTheListSettle();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(within(dialog).getByRole("combobox")).toHaveTextContent("Accepted risk");
+    expect(within(dialog).getByRole("textbox")).toHaveValue("Accepted by the board");
+    expect(onNotify).not.toHaveBeenCalled();
+
+    // And the retry goes through.
+    mocks.dismiss.mockResolvedValue(finding({ status: "dismissed" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Dismiss" }));
+    await waitFor(() => expect(mocks.dismiss).toHaveBeenCalledTimes(2));
+  });
+
+  it("does not close a modal that belongs to another finding", async () => {
+    // The first dismissal fails and its finding is gone, but the user has opened the second one.
+    const answer = deferred<ReturnType<typeof finding>>();
+    mocks.dismiss.mockReturnValueOnce(answer.promise);
+    renderSection();
+    await screen.findByText(FIRST);
+    const first = await openDismissal(FIRST);
+    await choose(first, "Other");
+    await userEvent.click(within(first).getByRole("button", { name: "Dismiss" }));
+    await waitFor(() => expect(mocks.dismiss).toHaveBeenCalledTimes(1));
+    await userEvent.click(within(first).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await openDismissal(SECOND);
+
+    firstIsGone();
+    await act(async () => {
+      answer.reject(refusal(404, "Finding not found"));
+    });
+    await letTheListSettle();
+
+    const open = screen.getByRole("dialog", { name: "Dismiss finding" });
+    expect(within(open).getByText(SECOND)).toBeInTheDocument();
+  });
 });
 
 describe("the vendor filter", () => {
@@ -970,6 +1362,108 @@ describe("a link that arrives while the section is on screen", () => {
 
     expect(screen.getByRole("combobox")).toHaveTextContent("Acme Cloud");
     expect(header()).toHaveAttribute("aria-expanded", "true");
+  });
+});
+
+// A run started with "Research risks" on the vendors table cannot be followed there. The button
+// leaves the vendor for the Risks tab, whose section opens on it the next time it is mounted.
+describe("a run started on the vendors table", () => {
+  const advance = (ms: number) =>
+    act(async () => {
+      await vi.advanceTimersByTimeAsync(ms);
+    });
+
+  /** A client in which the button has just started a run for this vendor. */
+  const afterStartFor = (vendorId: number) => {
+    const queryClient = newQueryClient();
+    followResearch(queryClient, vendorId);
+    return queryClient;
+  };
+
+  it("opens the section on that vendor, even with nothing pending, and reads its run", async () => {
+    mocks.list.mockResolvedValue({ rows: [], total: 0 });
+    mocks.latest.mockResolvedValue(run({ status: "queued" }));
+    renderSection({ queryClient: afterStartFor(7) });
+
+    expect(await screen.findByText("Researching…")).toBeInTheDocument();
+    expect(screen.getByRole("combobox")).toHaveTextContent("Acme Cloud");
+    expect(header()).toHaveAttribute("aria-expanded", "true");
+    expect(mocks.list).toHaveBeenCalledWith({ status: "pending", vendorId: 7, limit: 200 });
+    expect(mocks.latest).toHaveBeenCalledWith(7);
+  });
+
+  it("follows the run to its end: the findings appear without leaving the tab", async () => {
+    vi.useFakeTimers();
+    mocks.list.mockResolvedValue({ rows: [], total: 0 });
+    mocks.latest.mockResolvedValue(run({ status: "running" }));
+    renderSection({ queryClient: afterStartFor(7) });
+    await advance(10);
+    expect(screen.getByText("Researching…")).toBeInTheDocument();
+    expect(screen.getByText("Pending: 0")).toBeInTheDocument();
+
+    // The run finishes with a finding; the next read of the run sees it.
+    mocks.latest.mockResolvedValue(run({ status: "completed", category_summary: FOUR_OUTCOMES }));
+    mocks.list.mockResolvedValue({ rows: [finding()], total: 1 });
+    await advance(3_000);
+    await advance(10);
+
+    expect(screen.getByText("Security incidents: risks found")).toBeInTheDocument();
+    expect(screen.getByText(FIRST)).toBeInTheDocument();
+    expect(screen.getByText("Pending: 1")).toBeInTheDocument();
+  });
+
+  it("clears the hint once the section has read it", async () => {
+    const queryClient = afterStartFor(7);
+    renderSection({ queryClient });
+    await screen.findByText(FIRST);
+
+    expect(queryClient.getQueryData(VENDOR_RESEARCH_FOLLOW_KEY)).toBeUndefined();
+  });
+
+  it("does not follow it a second time: the next mount opens on all vendors", async () => {
+    const queryClient = afterStartFor(7);
+    const first = renderSection({ queryClient });
+    await screen.findByText(FIRST);
+    expect(screen.getByRole("combobox")).toHaveTextContent("Acme Cloud");
+    first.unmount();
+    vi.clearAllMocks();
+    mocks.list.mockResolvedValue({ rows: [finding(), secondFinding()], total: 2 });
+    mocks.latest.mockResolvedValue(run());
+
+    renderSection({ queryClient });
+
+    expect(await screen.findByText(FIRST)).toBeInTheDocument();
+    expect(screen.getByRole("combobox")).toHaveTextContent("All vendors");
+    expect(mocks.list).toHaveBeenCalledWith({ status: "pending", limit: 200 });
+    expect(mocks.latest).not.toHaveBeenCalled();
+  });
+
+  it("lets the URL win when it names a vendor, and clears the hint all the same", async () => {
+    const queryClient = afterStartFor(8);
+    renderSection({ queryClient, route: WITH_VENDOR_7 });
+
+    expect(await screen.findByText(FIRST)).toBeInTheDocument();
+    expect(screen.getByRole("combobox")).toHaveTextContent("Acme Cloud");
+    expect(mocks.list).toHaveBeenCalledWith({ status: "pending", vendorId: 7, limit: 200 });
+    expect(mocks.list).not.toHaveBeenCalledWith(expect.objectContaining({ vendorId: 8 }));
+    expect(mocks.latest).not.toHaveBeenCalledWith(8);
+    expect(queryClient.getQueryData(VENDOR_RESEARCH_FOLLOW_KEY)).toBeUndefined();
+  });
+
+  it("still offers a followed vendor that the page's own list does not have", async () => {
+    renderSection({ queryClient: afterStartFor(99) });
+    await screen.findByText(FIRST);
+
+    expect(screen.getByRole("combobox")).toHaveTextContent("Vendor 99");
+    expect(mocks.list).toHaveBeenCalledWith({ status: "pending", vendorId: 99, limit: 200 });
+  });
+
+  it("opens on all vendors when no run was started", async () => {
+    renderSection({ queryClient: newQueryClient() });
+    await screen.findByText(FIRST);
+
+    expect(screen.getByRole("combobox")).toHaveTextContent("All vendors");
+    expect(mocks.latest).not.toHaveBeenCalled();
   });
 });
 
@@ -1108,14 +1602,28 @@ describe("the latest run of the chosen vendor", () => {
 });
 
 describe("a run that is still active after the polling window", () => {
+  const advance = (ms: number) =>
+    act(async () => {
+      await vi.advanceTimersByTimeAsync(ms);
+    });
+  const checkAgainButton = () => screen.getByRole("button", { name: "Check again" });
+  const queryCheckAgain = () => screen.queryByRole("button", { name: "Check again" });
+  /** The section on a vendor whose run is still going when the polling window ends. */
+  const renderUntilWindowEnds = async () => {
+    vi.useFakeTimers();
+    mocks.latest.mockResolvedValue(run({ status: "running" }));
+    const view = renderSection({ route: WITH_VENDOR_7 });
+    await advance(10);
+    expect(screen.getByText("Researching…")).toBeInTheDocument();
+    await advance(120_000);
+    expect(screen.getByText("Still running. Check back later.")).toBeInTheDocument();
+    return view;
+  };
+
   it("says it is still running and allows another start, once polling has stopped", async () => {
     vi.useFakeTimers();
     mocks.latest.mockResolvedValue(run({ status: "running" }));
     renderSection({ route: WITH_VENDOR_7 });
-    const advance = (ms: number) =>
-      act(async () => {
-        await vi.advanceTimersByTimeAsync(ms);
-      });
 
     await advance(10);
     expect(screen.getByText("Researching…")).toBeInTheDocument();
@@ -1126,6 +1634,92 @@ describe("a run that is still active after the polling window", () => {
     expect(screen.getByText("Still running. Check back later.")).toBeInTheDocument();
     expect(screen.queryByText("Researching…")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Research again" })).toBeEnabled();
+  });
+
+  it("offers to check again, next to the sentence that says it is still running", async () => {
+    await renderUntilWindowEnds();
+
+    expect(checkAgainButton().parentElement).toContainElement(
+      screen.getByText("Still running. Check back later."),
+    );
+    expect(checkAgainButton()).toBeEnabled();
+  });
+
+  it("does not offer it while the run is being polled", async () => {
+    vi.useFakeTimers();
+    mocks.latest.mockResolvedValue(run({ status: "running" }));
+    renderSection({ route: WITH_VENDOR_7 });
+    await advance(10);
+    expect(screen.getByText("Researching…")).toBeInTheDocument();
+    expect(queryCheckAgain()).not.toBeInTheDocument();
+
+    await advance(100_000);
+
+    expect(screen.getByText("Researching…")).toBeInTheDocument();
+    expect(queryCheckAgain()).not.toBeInTheDocument();
+  });
+
+  it.each(["completed", "failed"] as const)(
+    "does not offer it for a run that is %s",
+    async (status) => {
+      vi.useFakeTimers();
+      mocks.latest.mockResolvedValue(
+        run({ status, error: status === "failed" ? "The research run timed out" : null }),
+      );
+      renderSection({ route: WITH_VENDOR_7 });
+      await advance(10);
+      await advance(130_000);
+
+      expect(queryCheckAgain()).not.toBeInTheDocument();
+      expect(screen.queryByText("Still running. Check back later.")).not.toBeInTheDocument();
+    },
+  );
+
+  it("offers it to a role that cannot start research too: it only reads", async () => {
+    role.canEdit = false;
+    await renderUntilWindowEnds();
+
+    expect(checkAgainButton()).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "Research again" })).not.toBeInTheDocument();
+  });
+
+  it("reads the run again, and shows the findings of a run that finished in the meantime", async () => {
+    mocks.list.mockResolvedValue({ rows: [], total: 0 });
+    await renderUntilWindowEnds();
+    expect(screen.getByText("No pending research findings.")).toBeInTheDocument();
+    // The run finished while nothing was reading it.
+    mocks.latest.mockResolvedValue(run({ status: "completed", category_summary: FOUR_OUTCOMES }));
+    mocks.list.mockResolvedValue({ rows: [finding()], total: 1 });
+
+    fireEvent.click(checkAgainButton());
+    await advance(10);
+    await advance(10);
+
+    expect(screen.getByText("Security incidents: risks found")).toBeInTheDocument();
+    expect(screen.getByText(FIRST)).toBeInTheDocument();
+    expect(screen.getByText("Pending: 1")).toBeInTheDocument();
+    expect(screen.queryByText("Still running. Check back later.")).not.toBeInTheDocument();
+    expect(queryCheckAgain()).not.toBeInTheDocument();
+  });
+
+  it("polls for another window when the run is still going, then offers it again", async () => {
+    await renderUntilWindowEnds();
+    const readsWhenStopped = mocks.latest.mock.calls.length;
+
+    fireEvent.click(checkAgainButton());
+    await advance(10);
+
+    // The run was read at once, and the screen is back to following it.
+    expect(mocks.latest).toHaveBeenCalledTimes(readsWhenStopped + 1);
+    expect(screen.getByText("Researching…")).toBeInTheDocument();
+    expect(queryCheckAgain()).not.toBeInTheDocument();
+    await advance(3_000);
+    expect(mocks.latest.mock.calls.length).toBeGreaterThan(readsWhenStopped + 1);
+
+    await advance(120_000);
+
+    expect(screen.getByText("Still running. Check back later.")).toBeInTheDocument();
+    expect(checkAgainButton()).toBeInTheDocument();
   });
 });
 

@@ -26,6 +26,7 @@ vi.mock("../../../../application/hooks/useMyPermissions", () => ({
 }));
 
 import * as repository from "../../../../application/repository/vendorResearch.repository";
+import { VENDOR_RESEARCH_FOLLOW_KEY } from "../../../../application/hooks/useVendorResearch";
 import VendorResearchButton from "..";
 
 const mocks = {
@@ -333,6 +334,82 @@ describe("starting the research", () => {
     await waitFor(() => expect(acme).toBeEnabled());
     expect(onNotify).toHaveBeenCalledTimes(1);
     expect(mocks.start).toHaveBeenCalledTimes(1);
+  });
+
+  // The Risks tab cannot see a run that was started here, so a started run is left for it to
+  // follow. The hint is one entry of the query cache (VENDOR_RESEARCH_FOLLOW_KEY).
+  describe("leaving the run for the Risks tab to follow", () => {
+    const hint = (queryClient: { getQueryData: (key: readonly string[]) => unknown }) =>
+      queryClient.getQueryData(VENDOR_RESEARCH_FOLLOW_KEY);
+
+    it("leaves the vendor after a run was started", async () => {
+      mocks.start.mockResolvedValue({ run: run({ status: "queued" }), alreadyRunning: false });
+      const { onNotify, queryClient } = await renderWithSettings(SET_UP);
+      expect(hint(queryClient)).toBeUndefined();
+
+      await userEvent.click(researchButton());
+
+      await waitFor(() => expect(onNotify).toHaveBeenCalledTimes(1));
+      expect(hint(queryClient)).toBe(7);
+    });
+
+    it("leaves the vendor when the answer is that a run is already going", async () => {
+      mocks.start.mockResolvedValue({ run: run({ status: "running" }), alreadyRunning: true });
+      const { onNotify, queryClient } = await renderWithSettings(SET_UP);
+
+      await userEvent.click(researchButton());
+
+      await waitFor(() => expect(onNotify).toHaveBeenCalledTimes(1));
+      expect(hint(queryClient)).toBe(7);
+    });
+
+    it("keeps the vendor of the latest start when several are started", async () => {
+      mocks.start.mockResolvedValue({ run: run({ status: "queued" }), alreadyRunning: false });
+      const { onNotify, queryClient } = await renderWithSettings(SET_UP, (notify) => (
+        <>
+          <VendorResearchButton vendorId={7} vendorName="Acme Cloud" onNotify={notify} />
+          <VendorResearchButton vendorId={8} vendorName="Zeta Labs" onNotify={notify} />
+        </>
+      ));
+      const [acme, zeta] = screen.getAllByRole("button", { name: "Research risks" });
+
+      await userEvent.click(acme);
+      await waitFor(() => expect(onNotify).toHaveBeenCalledTimes(1));
+      await userEvent.click(zeta);
+      await waitFor(() => expect(onNotify).toHaveBeenCalledTimes(2));
+
+      expect(hint(queryClient)).toBe(8);
+    });
+
+    it.each([
+      ["a 429 for the cooldown", refusal(429, { code: "cooldown", retryAfterSeconds: 540 })],
+      ["a 409 for a missing setting", refusal(409, { code: "llm_key_missing" })],
+      ["a 503 from the job queue", refusal(503)],
+      ["a 500", refusal(500)],
+      ["a 403", refusal(403)],
+      ["a network failure", new Error("Network Error")],
+    ])("leaves nothing after %s", async (_case, failure) => {
+      mocks.start.mockRejectedValue(failure);
+      const { onNotify, queryClient } = await renderWithSettings(SET_UP);
+
+      await userEvent.click(researchButton());
+
+      await waitFor(() => expect(onNotify).toHaveBeenCalledTimes(1));
+      expect(hint(queryClient)).toBeUndefined();
+    });
+
+    it("leaves nothing while the request is still on its way", async () => {
+      const request = deferred<StartResult>();
+      mocks.start.mockReturnValue(request.promise);
+      const { queryClient } = await renderWithSettings(SET_UP);
+
+      await userEvent.click(researchButton());
+      await waitFor(() => expect(researchButton()).toBeDisabled());
+
+      expect(hint(queryClient)).toBeUndefined();
+      request.resolve({ run: run(), alreadyRunning: false });
+      await waitFor(() => expect(hint(queryClient)).toBe(7));
+    });
   });
 
   it("keeps its click to itself, so the row it sits in is not opened", async () => {

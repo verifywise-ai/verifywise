@@ -90,9 +90,22 @@ export default function RunSummary({
     }
     if (active) {
       return latest.pollingStopped ? (
-        <Typography sx={{ ...textStyles.body, color: "text.secondary" }}>
-          Still running. Check back later.
-        </Typography>
+        // The run may have finished while nothing was reading it (a tab in the background): the
+        // button reads it again, and follows it for another window if it is still going. It only
+        // reads, so everyone who sees the run gets it, not only those who may start one.
+        <Stack direction="row" sx={{ alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <Typography sx={{ ...textStyles.body, color: "text.secondary" }}>
+            Still running. Check back later.
+          </Typography>
+          <CustomizableButton
+            size="small"
+            variant="text"
+            sx={controlHeightSx}
+            onClick={() => latest.restartPolling()}
+          >
+            Check again
+          </CustomizableButton>
+        </Stack>
       ) : (
         <Stack direction="row" sx={{ alignItems: "center", gap: "8px" }}>
           <CircularProgress size={16} />

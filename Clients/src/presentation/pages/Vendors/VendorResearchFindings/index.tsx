@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Accordion,
   AccordionDetails,
@@ -27,9 +27,11 @@ import { useIsAdmin } from "../../../../application/hooks/useIsAdmin";
 import {
   useAcceptFinding,
   useDismissFinding,
+  useFollowedResearchVendor,
   useVendorResearchConfig,
   useVendorRiskFindings,
 } from "../../../../application/hooks/useVendorResearch";
+import { readVendorResearchError } from "../../../../application/repository/vendorResearch.repository";
 import type { ResearchAlert } from "../../../../application/utils/vendorResearchAlerts";
 import type { VendorRiskFinding } from "../../../../domain/interfaces/i.vendorResearch";
 import { fill } from "../../../../i18n/fill";
@@ -73,16 +75,26 @@ export default function VendorResearchFindings({
   const isAdmin = useIsAdmin();
 
   // The vendor starts as the URL says. The link in a notification can also arrive while this
-  // page is mounted (only the URL changes), so a new vendor in the URL is followed too.
+  // page is mounted (only the URL changes), so a new vendor in the URL is followed too. With no
+  // vendor in the URL, the vendor of a run just started on the vendors table is the one: that
+  // table cannot show the run finish, so the button left the vendor here. The URL wins.
   const [searchParams] = useSearchParams();
   const urlVendorId = parseVendorId(searchParams.get(VENDOR_PARAM));
+  const followedVendorId = useFollowedResearchVendor();
+  const initialVendorId = urlVendorId ?? followedVendorId;
   const [seenUrlVendorId, setSeenUrlVendorId] = useState(urlVendorId);
-  const [vendorId, setVendorId] = useState(urlVendorId);
+  const [vendorId, setVendorId] = useState(initialVendorId);
   const [openChoice, setOpenChoice] = useState<boolean | null>(null);
-  const [openByDefault, setOpenByDefault] = useState(urlVendorId !== null);
+  const [openByDefault, setOpenByDefault] = useState(initialVendorId !== null);
   const [lastAcceptedRiskId, setLastAcceptedRiskId] = useState<number | null>(null);
   const [dismissing, setDismissing] = useState<VendorRiskFinding | null>(null);
   const [busy, setBusy] = useState<Record<number, RowAction>>({});
+  // A decision has been answered (it worked, or it was refused) and the section waits for the
+  // list to show what became of the finding. `around` are the rows next to it, nearest first.
+  const [answered, setAnswered] = useState<{ id: number; around: number[] } | null>(null);
+  // The rows on screen, by finding, and the heading of the section: the places focus is sent to.
+  const rowElements = useRef(new Map<number, HTMLLIElement>());
+  const headingElement = useRef<HTMLElement | null>(null);
 
   if (urlVendorId !== seenUrlVendorId) {
     setSeenUrlVendorId(urlVendorId);
@@ -141,28 +153,48 @@ export default function VendorResearchFindings({
       return next;
     });
 
+  /** The rows next to a finding, nearest first: the ones after it, then the ones before it. */
+  const rowsAround = (id: number): number[] => {
+    const index = rows.findIndex((row) => row.id === id);
+    if (index === -1) return [];
+    return [...rows.slice(index + 1), ...rows.slice(0, index).reverse()].map((row) => row.id);
+  };
+
+  /**
+   * A 404 says the finding is gone (another user deleted its vendor, say). The global error
+   * toast skips a 404 on purpose, so nothing else tells the user why their click did nothing.
+   */
+  const noteIfGone = (error: unknown) => {
+    if (readVendorResearchError(error).status === 404) {
+      onNotify({ variant: "warning", body: t("This finding no longer exists.") });
+    }
+  };
+
   // `mutateAsync`, not `mutate`: several rows can be in flight, and the hook's observer only
-  // keeps the callbacks of the latest `mutate` call. A failure needs no message here: the
-  // global error toast reports it, and the row is usable again.
+  // keeps the callbacks of the latest `mutate` call. Any other failure needs no message here:
+  // the global error toast reports it, and the row is usable again.
   const handleAccept = async (finding: VendorRiskFinding) => {
     // The notice is about an earlier accept: it goes when the next decision starts, not only
     // when that one succeeds, so a refused request does not leave the old notice standing.
     setLastAcceptedRiskId(null);
     setRowBusy(finding.id, "accept");
+    const around = rowsAround(finding.id);
     try {
       const { vendorRisk } = await accept.mutateAsync({ id: finding.id, body: {} });
       setLastAcceptedRiskId(vendorRisk.id);
       onNotify({ variant: "success", body: t("Risk added to the register") });
-    } catch {
-      // See above.
+    } catch (error) {
+      noteIfGone(error);
     } finally {
       setRowBusy(finding.id, null);
+      setAnswered({ id: finding.id, around });
     }
   };
 
   const handleDismiss = async (body: DismissalBody) => {
     if (dismissing === null) return;
     const { id } = dismissing;
+    const around = rowsAround(id);
     setLastAcceptedRiskId(null);
     setRowBusy(id, "dismiss");
     try {
@@ -170,12 +202,49 @@ export default function VendorResearchFindings({
       // The modal can be closed while the request is on its way, and another finding's opened:
       // only close the modal of the finding that was just dismissed.
       setDismissing((current) => (current?.id === id ? null : current));
-    } catch {
-      // The modal stays open with what was entered; the global error toast reports the failure.
+      // Nothing on screen says it worked but the row going: this is for those who do not see it.
+      onNotify({ variant: "success", body: t("Finding dismissed.") });
+    } catch (error) {
+      // The modal stays open with what was entered, unless the finding has left the list
+      // (see below). The global error toast reports the failure, except a 404.
+      noteIfGone(error);
     } finally {
       setRowBusy(id, null);
+      setAnswered({ id, around });
     }
   };
+
+  // Once the list has been read again after a decision, the section settles. The answer arrives
+  // after the refresh the decision started (the mutation waits for it), so the list rendered
+  // here is the one that shows what became of the finding.
+  useEffect(() => {
+    if (answered === null || findings.isFetching) return;
+    const { id, around } = answered;
+    // Still pending: nothing is settled. A 409 for "another decision is in progress" leaves the
+    // finding where it was, a retry can succeed, and the modal keeps what the user entered.
+    if (rows.some((row) => row.id === id)) {
+      setAnswered(null);
+      return;
+    }
+    // Gone from the pending list (decided here or elsewhere, or deleted): a modal about it has
+    // nothing left to decide, so it closes. This runs again once it has, because the modal gives
+    // focus back to the button it was opened from as it goes, and that is the row that is gone.
+    if (dismissing?.id === id) {
+      setDismissing(null);
+      return;
+    }
+    setAnswered(null);
+    // Keyboard focus was on the decided row, or on the modal that was about it, and has fallen to
+    // the page: send it to the first button of the row that took the place, so that the next Tab
+    // does not start from the top of the page. If the user has moved on, it stays where they put it.
+    if (document.activeElement !== null && document.activeElement !== document.body) return;
+    const target = around
+      .map((rowId) =>
+        rowElements.current.get(rowId)?.querySelector<HTMLElement>("button:not(:disabled)"),
+      )
+      .find((button): button is HTMLElement => button != null);
+    (target ?? headingElement.current)?.focus();
+  }, [answered, findings.isFetching, rows, dismissing]);
 
   const renderFindings = () => {
     if (findings.isError) {
@@ -210,6 +279,10 @@ export default function VendorResearchFindings({
               busy={busy[finding.id] ?? null}
               onAccept={(row) => void handleAccept(row)}
               onDismiss={setDismissing}
+              rowRef={(element) => {
+                if (element) rowElements.current.set(finding.id, element);
+                else rowElements.current.delete(finding.id);
+              }}
             />
           ))}
         </Stack>
@@ -251,7 +324,10 @@ export default function VendorResearchFindings({
       >
         <AccordionSummary expandIcon={<ChevronDown size={18} />}>
           <Box sx={{ ...summaryHeaderSx, alignItems: "center" }}>
-            <Typography sx={summaryTitleSx}>Research findings</Typography>
+            {/* Focus goes here when the last pending finding has been decided. */}
+            <Typography ref={headingElement} tabIndex={-1} sx={summaryTitleSx}>
+              Research findings
+            </Typography>
             {findings.data !== undefined && (
               <Chip
                 label={fill(t("Pending: {count}"), { count: total })}

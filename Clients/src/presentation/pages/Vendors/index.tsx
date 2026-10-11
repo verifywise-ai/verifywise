@@ -1306,41 +1306,45 @@ const Vendors = () => {
           )}
         </TabPanel>
         <TabPanel value="2" sx={tabPanelStyle}>
-          {loadingVendorRisks ? (
-            <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
-          ) : (
-            <Stack spacing={4}>
-              <VendorResearchFindings
-                vendors={vendors}
-                onOpenRisk={(id) => handleEditRisk(id)}
-                onNotify={handleResearchNotify}
-              />
-              <VendorRiskInsights
-                risks={vendorRisks}
-                selectedCell={heatCell}
-                onSelectCell={handleHeatCell}
-                onOpenRisk={(id) => handleEditRisk(id)}
-              />
-              <GroupedTableView
-                groupedData={groupedVendorRisks}
-                ungroupedData={filteredVendorRisks}
-                renderTable={(data, options) => (
-                  <RiskTable
-                    users={users}
-                    vendors={vendors}
-                    vendorRisks={data}
-                    onDelete={handleDeleteRisk}
-                    onEdit={handleEditRisk}
-                    isDeletingAllowed={isDeletingAllowed}
-                    hidePagination={options?.hidePagination}
-                    visibleColumns={vendorRiskVisibleColumns}
-                    exposure={exposureById}
-                    onOpenLinks={(id) => handleEditRisk(id, "linked-risks")}
-                  />
-                )}
-              />
-            </Stack>
-          )}
+          <Stack spacing={4}>
+            {/* Not part of the register, so it stays mounted while the register loads again (a new
+                "Risk status" or project filter): it has its own data, states and skeleton. */}
+            <VendorResearchFindings
+              vendors={vendors}
+              onOpenRisk={(id) => handleEditRisk(id)}
+              onNotify={handleResearchNotify}
+            />
+            {loadingVendorRisks ? (
+              <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+            ) : (
+              <>
+                <VendorRiskInsights
+                  risks={vendorRisks}
+                  selectedCell={heatCell}
+                  onSelectCell={handleHeatCell}
+                  onOpenRisk={(id) => handleEditRisk(id)}
+                />
+                <GroupedTableView
+                  groupedData={groupedVendorRisks}
+                  ungroupedData={filteredVendorRisks}
+                  renderTable={(data, options) => (
+                    <RiskTable
+                      users={users}
+                      vendors={vendors}
+                      vendorRisks={data}
+                      onDelete={handleDeleteRisk}
+                      onEdit={handleEditRisk}
+                      isDeletingAllowed={isDeletingAllowed}
+                      hidePagination={options?.hidePagination}
+                      visibleColumns={vendorRiskVisibleColumns}
+                      exposure={exposureById}
+                      onOpenLinks={(id) => handleEditRisk(id, "linked-risks")}
+                    />
+                  )}
+                />
+              </>
+            )}
+          </Stack>
         </TabPanel>
       </TabContext>
 

@@ -10222,6 +10222,9 @@ export const translations: Record<string, Record<string, string>> = {
     "The research could not be started. Try again.":
       "Die Recherche konnte nicht gestartet werden. Versuchen Sie es erneut.",
     "Research risks": "Risiken recherchieren",
+    "Check again": "Erneut prüfen",
+    "Finding dismissed.": "Befund verworfen.",
+    "This finding no longer exists.": "Dieser Befund existiert nicht mehr.",
   },
 
   fr: {
@@ -20370,6 +20373,9 @@ export const translations: Record<string, Record<string, string>> = {
     "The research could not be started. Try again.":
       "La recherche n'a pas pu être lancée. Réessayez.",
     "Research risks": "Rechercher les risques",
+    "Check again": "Vérifier à nouveau",
+    "Finding dismissed.": "Résultat rejeté.",
+    "This finding no longer exists.": "Ce résultat n'existe plus.",
   },
   es: {
     "Deployment name": "Nombre del despliegue",
@@ -24595,7 +24601,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Helpfulness": "Utilidad",
     "High (51-75)": "Alto (51-75)",
     "High Risk Role": "Función de alto riesgo",
-    "High risk": "Riesgo alto",
+    "High risk": "Alto riesgo",
     "High risk role type": "Tipo de función de alto riesgo",
     "High-Risk AI system": "Sistema de IA de alto riesgo",
     "High-priority open tasks": "Tareas abiertas de alta prioridad",
@@ -30435,5 +30441,8 @@ export const translations: Record<string, Record<string, string>> = {
     "The research could not be started. Try again.":
       "No se pudo iniciar la investigación. Inténtelo de nuevo.",
     "Research risks": "Investigar riesgos",
+    "Check again": "Comprobar de nuevo",
+    "Finding dismissed.": "Hallazgo descartado.",
+    "This finding no longer exists.": "Este hallazgo ya no existe.",
   },
 };

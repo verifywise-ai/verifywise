@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("../../../AddNewRiskForm", () => ({
@@ -13,10 +13,21 @@ vi.mock("../../../LinkedRisksPanel/VendorRiskLinksPanel", () => ({
     <div data-testid="vendor-risk-links">{vendorRiskId}</div>
   ),
 }));
+// Only an Admin or an Editor may edit a vendor risk; the test store has no signed-in user.
+vi.mock("../../../../../application/hooks/useAuth", () => ({
+  useAuth: () => ({ userRoleName: "Admin" }),
+}));
+// The save handler of the form is the mutation it calls; these stand in for the requests.
+const saves = vi.hoisted(() => ({ create: vi.fn(), update: vi.fn() }));
+vi.mock("../../../../../application/hooks/useVendorRiskMutations", () => ({
+  useCreateVendorRisk: () => ({ mutateAsync: saves.create }),
+  useUpdateVendorRisk: () => ({ mutateAsync: saves.update }),
+}));
 
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import AddNewRisk from "../index";
 import { ExistingRisk } from "../../../../../domain/interfaces/i.vendor";
+import type { VendorModel } from "../../../../../domain/models/Common/vendor/vendor.model";
 
 const existingRisk: ExistingRisk = {
   id: 7,
@@ -109,5 +120,75 @@ describe("NewRisk (AddNewRisk)", () => {
 
     expect(screen.queryByTestId("vendor-risk-links")).toBeNull();
     expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
+  });
+});
+
+// Accepting a research finding writes the model's texts into the register, up to 300 characters
+// each. The form checks all three on every save, so it must take what the server takes
+// (VENDOR_RISK_VALIDATION_LIMITS: 500, 500 and 1000), or no later edit of that risk could be saved.
+describe("NewRisk (AddNewRisk), the length of the three texts", () => {
+  const vendors = [{ id: 3, vendor_name: "Acme Cloud" } as unknown as VendorModel];
+  const text = (length: number) => "x".repeat(length);
+
+  /** An existing risk with texts of the given lengths, opened for editing, and Save clicked. */
+  const saveRiskWith = async (lengths: { risk: number; impact: number; plan: number }) => {
+    saves.update.mockResolvedValue({ status: 202, data: {} });
+    renderWithProviders(
+      <AddNewRisk
+        isOpen={true}
+        setIsOpen={vi.fn()}
+        vendors={vendors}
+        existingRisk={{
+          ...existingRisk,
+          risk_description: text(lengths.risk),
+          impact_description: text(lengths.impact),
+          action_plan: text(lengths.plan),
+        }}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+  };
+
+  beforeEach(() => {
+    saves.create.mockReset();
+    saves.update.mockReset();
+    // jsdom does not implement scrollIntoView, which a failed save calls on its way to the first
+    // invalid field.
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  });
+
+  it("saves a risk whose three texts are 300 characters long, as the research accept writes them", async () => {
+    await saveRiskWith({ risk: 300, impact: 300, plan: 300 });
+
+    await waitFor(() => expect(saves.update).toHaveBeenCalledTimes(1));
+    expect(saves.update).toHaveBeenCalledWith({
+      id: 7,
+      data: expect.objectContaining({
+        risk_description: text(300),
+        impact_description: text(300),
+        action_plan: text(300),
+      }),
+    });
+    expect(screen.queryByText(/can't be longer than/)).not.toBeInTheDocument();
+  });
+
+  it("saves texts that are exactly as long as the server takes", async () => {
+    await saveRiskWith({ risk: 500, impact: 500, plan: 1000 });
+
+    await waitFor(() => expect(saves.update).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText(/can't be longer than/)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["risk description", { risk: 501, impact: 10, plan: 10 }, "Risk description", 500],
+    ["impact description", { risk: 10, impact: 501, plan: 10 }, "Impact description", 500],
+    ["action plan", { risk: 10, impact: 10, plan: 1001 }, "Action plan", 1000],
+  ])("refuses a %s that is one character over the limit", async (_name, lengths, title, max) => {
+    await saveRiskWith(lengths);
+
+    expect(
+      await screen.findByText(`${title} can't be longer than ${max} characters.`),
+    ).toBeVisible();
+    expect(saves.update).not.toHaveBeenCalled();
   });
 });

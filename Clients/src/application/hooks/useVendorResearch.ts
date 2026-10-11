@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { skipToken, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { UseQueryResult } from "@tanstack/react-query";
+import type { QueryClient, UseQueryResult } from "@tanstack/react-query";
 import {
   acceptVendorRiskFinding,
   dismissVendorRiskFinding,
@@ -24,6 +24,41 @@ export const VENDOR_RESEARCH_KEY = ["vendorResearch"] as const;
 
 /** Prefix of every findings list, whatever its filter. */
 const FINDINGS_KEY = [...VENDOR_RESEARCH_KEY, "findings"] as const;
+
+/**
+ * Where a research run started on the vendors table leaves the vendor for the Risks tab to
+ * follow. A top-level key of its own, not under VENDOR_RESEARCH_KEY: refreshing the research data
+ * (a decision, a finished run) invalidates that prefix and must not touch the hint.
+ */
+export const VENDOR_RESEARCH_FOLLOW_KEY = ["vendorResearchFollow"] as const;
+
+/**
+ * A run was started for this vendor on a screen that cannot show it finish (the vendors table).
+ * The findings section picks the vendor up the next time it is mounted, so that it opens on it
+ * and keeps reading the run. Call it after a start the server accepted, and not from the start
+ * hook itself, which the findings section uses too.
+ */
+export function followResearch(queryClient: QueryClient, vendorId: number): void {
+  queryClient.setQueryData(VENDOR_RESEARCH_FOLLOW_KEY, vendorId);
+}
+
+/**
+ * The vendor whose run another screen asked to follow, or null. Read once, when the screen
+ * mounts, and cleared right after: a hint is for one visit, so the next mount sees none. Reading
+ * is pure (it happens in the initial state); the clearing is an effect, so that a render that
+ * React throws away does not use the hint up.
+ */
+export function useFollowedResearchVendor(): number | null {
+  const queryClient = useQueryClient();
+  const [vendorId] = useState<number | null>(() => {
+    const followed = queryClient.getQueryData<number>(VENDOR_RESEARCH_FOLLOW_KEY);
+    return typeof followed === "number" ? followed : null;
+  });
+  useEffect(() => {
+    queryClient.removeQueries({ queryKey: VENDOR_RESEARCH_FOLLOW_KEY });
+  }, [queryClient]);
+  return vendorId;
+}
 
 /** What a findings list can be asked for: one status, one vendor, and how many rows (the server caps it at 200). */
 interface FindingsFilter {
@@ -75,6 +110,12 @@ const windowOf = (vendorId: number | null, runId: number) => `${vendorId}:${runI
  * when the run is no longer active, when a different run shows up, and when the
  * vendor changes. Pass null to leave the query off.
  *
+ * Two things read the run again after the window: coming back to the tab (the
+ * window is a wall-clock timer and TanStack does not poll in a hidden tab, so a
+ * run can finish with nobody reading it), and `restartPolling()`, which the
+ * screen offers as "Check again": it starts a fresh window for the run on screen
+ * and reads it at once. It does nothing while no run is active.
+ *
  * When a run this hook saw active turns completed or failed, the findings lists
  * are invalidated once: a run that finishes changes them, and nothing else tells
  * them, so no screen has to repeat this. A run that is already finished when it
@@ -82,11 +123,16 @@ const windowOf = (vendorId: number | null, runId: number) => `${vendorId}:${runI
  */
 export function useLatestVendorResearch(
   vendorId: number | null,
-): UseQueryResult<VendorResearchRun | null> & { pollingStopped: boolean } {
+): UseQueryResult<VendorResearchRun | null> & {
+  pollingStopped: boolean;
+  restartPolling: () => void;
+} {
   const queryClient = useQueryClient();
   // The window whose time ran out, if any. A window that is not the current one
   // is a leftover, so `pollingStopped` compares instead of trusting the state.
   const [endedWindow, setEndedWindow] = useState<string | null>(null);
+  // Counts the restarts, so that the timer below is armed again for the same run.
+  const [restarts, setRestarts] = useState(0);
   // The vendor whose active run this hook saw last, for the invalidation below.
   const vendorWithActiveRun = useRef<number | null>(null);
 
@@ -97,6 +143,10 @@ export function useLatestVendorResearch(
       const runId = activeRunId(current.state.data);
       return runId !== null && windowOf(vendorId, runId) !== endedWindow ? POLL_INTERVAL_MS : false;
     },
+    // The app reads nothing again on focus. A run that is still going is the exception: its
+    // polling may have run out, or been paused in a hidden tab, and the tab coming back is the
+    // moment to look. A finished run is final and is left alone.
+    refetchOnWindowFocus: (current) => activeRunId(current.state.data) !== null,
   });
 
   const runId = activeRunId(query.data);
@@ -109,7 +159,14 @@ export function useLatestVendorResearch(
       clearTimeout(timer);
       setEndedWindow(null);
     };
-  }, [currentWindow]);
+  }, [currentWindow, restarts]);
+
+  const { refetch } = query;
+  const restartPolling = useCallback(() => {
+    if (currentWindow === null) return;
+    setRestarts((count) => count + 1);
+    void refetch();
+  }, [currentWindow, refetch]);
 
   const active = currentWindow !== null;
   const finished = query.data?.status === "completed" || query.data?.status === "failed";
@@ -128,7 +185,11 @@ export function useLatestVendorResearch(
     vendorWithActiveRun.current = null;
   }, [active, finished, vendorId, queryClient]);
 
-  return { ...query, pollingStopped: currentWindow !== null && currentWindow === endedWindow };
+  return {
+    ...query,
+    pollingStopped: currentWindow !== null && currentWindow === endedWindow,
+    restartPolling,
+  };
 }
 
 /**

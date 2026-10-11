@@ -122,16 +122,19 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
 
   const validators = useMemo(
     () => ({
+      // The maxima are the server's (VENDOR_RISK_VALIDATION_LIMITS in
+      // Servers/utils/validations/vendorRiskValidation.utils.ts): a risk the research agent
+      // wrote carries texts longer than the form used to take, and every save checks them.
       risk_description: (v: unknown) => {
-        const r = checkStringValidation("Risk description", v as string, 1, 256);
+        const r = checkStringValidation("Risk description", v as string, 1, 500);
         return r.accepted ? "" : r.message;
       },
       impact_description: (v: unknown) => {
-        const r = checkStringValidation("Impact description", v as string, 1, 256);
+        const r = checkStringValidation("Impact description", v as string, 1, 500);
         return r.accepted ? "" : r.message;
       },
       action_plan: (v: unknown) => {
-        const r = checkStringValidation("Action plan", v as string, 1, 256);
+        const r = checkStringValidation("Action plan", v as string, 1, 1000);
         return r.accepted ? "" : r.message;
       },
       vendor_id: (v: unknown) => {

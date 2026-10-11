@@ -7,7 +7,9 @@
  * the button is enabled and the server decides: a start without them is refused with a 409.
  * Every click is answered with a message handed to `onNotify`, whatever the outcome: the global
  * error toast is off for this call, so nothing else tells the user. The run itself is followed on
- * the Risks tab, not here.
+ * the Risks tab, not here: a run that was started, or that the vendor already had, leaves its
+ * vendor for the findings section there, which opens on it and reads the run to its end. A
+ * refused start leaves nothing.
  *
  * Mount it with `key={vendorId}` where rows can change order, so that a start still in flight
  * for one vendor does not disable the button of the vendor that takes its place.
@@ -21,12 +23,14 @@
  */
 
 import React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Box, IconButton, alpha } from "@mui/material";
 import { Microscope } from "lucide-react";
 import VWTooltip from "../VWTooltip";
 import { brand, text } from "../../themes/palette";
 import { useHasPermission } from "../../../application/hooks/useMyPermissions";
 import {
+  followResearch,
   useStartVendorResearch,
   useVendorResearchConfig,
 } from "../../../application/hooks/useVendorResearch";
@@ -51,6 +55,7 @@ const StartResearchButton: React.FC<VendorResearchButtonProps> = ({
 }) => {
   const config = useVendorResearchConfig();
   const start = useStartVendorResearch();
+  const queryClient = useQueryClient();
 
   // While the settings are on their way the button is disabled and has no tooltip: "not set up"
   // would only be a guess. Once they are in, they decide. If the request for them has failed for
@@ -64,7 +69,10 @@ const StartResearchButton: React.FC<VendorResearchButtonProps> = ({
     // The row this button sits in opens its vendor when it is clicked.
     event.stopPropagation();
     try {
-      onNotify(alertForStarted(await start.mutateAsync(vendorId), vendorName));
+      const started = await start.mutateAsync(vendorId);
+      // Not in the start hook: the findings section starts runs through it too, and is on screen.
+      followResearch(queryClient, vendorId);
+      onNotify(alertForStarted(started, vendorName));
     } catch (error) {
       // The global error toast is off for this call: every failure is answered here.
       onNotify(alertForStartFailure(error));
