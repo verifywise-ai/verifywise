@@ -22,8 +22,9 @@ const DISMISS_REASONS: DismissReason[] = [
 
 /**
  * The server accepts a note of up to this many characters; the helper text below names the number.
- * It counts code points, as `Array.from` does, not the UTF-16 units that `length` and `slice`
- * count, so that an emoji is one character here as there and is never cut in half.
+ * It counts code points, as the server does and as `Array.from` does, not the UTF-16 units that
+ * `length` and `slice` count. So a UTF-16 pair is never cut in half, but an emoji made of several
+ * code points (a flag, a skin tone, a ZWJ family) counts as several.
  */
 const NOTE_MAX_LENGTH = 500;
 

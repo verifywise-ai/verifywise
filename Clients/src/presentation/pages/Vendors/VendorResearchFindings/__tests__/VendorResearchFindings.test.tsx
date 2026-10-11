@@ -1236,6 +1236,142 @@ describe("a finding that is gone or was decided elsewhere", () => {
     const open = screen.getByRole("dialog", { name: "Dismiss finding" });
     expect(within(open).getByText(SECOND)).toBeInTheDocument();
   });
+
+  // Two decisions can be answered while the list is being read again. The read that the second
+  // answer starts cancels the first's, and both calls settle on the last read, in one flush: the
+  // section sees both answers at once, and keeps a single marker of an answered decision.
+  describe("two decisions answered while the list is being read again", () => {
+    const THIRD = "The vendor does not publish a list of its sub-processors";
+    const thirdFinding = () =>
+      finding({ id: 3, category: "legal_regulatory", risk_description: THIRD });
+
+    /**
+     * Decides the first finding, its request held, and hands back what answers it. A dismissal
+     * leaves no modal behind: the user cancels it while the request is on its way, as they may.
+     */
+    const decideFirst = async (kind: "dismissal" | "accept") => {
+      if (kind === "accept") {
+        const answer = deferred<{
+          finding: ReturnType<typeof finding>;
+          vendorRisk: ReturnType<typeof acceptedRisk>;
+        }>();
+        mocks.accept.mockReturnValueOnce(answer.promise);
+        await userEvent.click(within(rowOf(FIRST)).getByRole("button", { name: "Accept" }));
+        await waitFor(() => expect(mocks.accept).toHaveBeenCalledTimes(1));
+        return () =>
+          answer.resolve({ finding: finding({ status: "accepted" }), vendorRisk: acceptedRisk() });
+      }
+      const answer = deferred<ReturnType<typeof finding>>();
+      mocks.dismiss.mockReturnValueOnce(answer.promise);
+      const dialog = await openDismissal(FIRST);
+      await choose(dialog, "Other");
+      await userEvent.click(within(dialog).getByRole("button", { name: "Dismiss" }));
+      await waitFor(() => expect(mocks.dismiss).toHaveBeenCalledTimes(1));
+      await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+      return () => answer.resolve(finding({ status: "dismissed" }));
+    };
+
+    it.each([
+      {
+        name: "a dismissal answered before the modal's refusal",
+        kind: "dismissal",
+        firstFirst: true,
+      },
+      {
+        name: "a dismissal answered after the modal's refusal",
+        kind: "dismissal",
+        firstFirst: false,
+      },
+      { name: "an accept answered before the modal's refusal", kind: "accept", firstFirst: true },
+      { name: "an accept answered after the modal's refusal", kind: "accept", firstFirst: false },
+    ] as const)(
+      "closes the modal of a finding that is gone, whichever answer lands last: $name",
+      async ({ kind, firstFirst }) => {
+        mocks.list.mockResolvedValue({
+          rows: [finding(), secondFinding(), thirdFinding()],
+          total: 3,
+        });
+        const { onNotify } = renderSection();
+        await screen.findByText(FIRST);
+        const answerFirst = await decideFirst(kind);
+        // The second finding's modal is submitted, and its request is held too.
+        const refusalOfSecond = deferred<ReturnType<typeof finding>>();
+        mocks.dismiss.mockReturnValueOnce(refusalOfSecond.promise);
+        const dialog = await openDismissal(SECOND);
+        await choose(dialog, "Other");
+        await userEvent.click(within(dialog).getByRole("button", { name: "Dismiss" }));
+        await waitFor(() =>
+          expect(mocks.dismiss).toHaveBeenCalledTimes(kind === "dismissal" ? 2 : 1),
+        );
+        // From here on every read of the list waits for one answer, which has neither finding.
+        const list = deferred<{ rows: Array<ReturnType<typeof finding>>; total: number }>();
+        mocks.list.mockImplementation(() => list.promise);
+
+        const answerSecond = () =>
+          act(async () => {
+            refusalOfSecond.reject(refusal(404, "Finding not found"));
+          });
+        if (firstFirst) {
+          await act(async () => answerFirst());
+          await answerSecond();
+        } else {
+          await answerSecond();
+          await act(async () => answerFirst());
+        }
+        // Both answers wait for the list: the first read was cancelled by the second.
+        await waitFor(() => expect(mocks.list).toHaveBeenCalledTimes(3));
+        await act(async () => {
+          list.resolve({ rows: [thirdFinding()], total: 1 });
+        });
+        await letTheListSettle();
+
+        // The scene is as meant: the list was read again, and the refusal was announced.
+        const rows = screen.getByRole("list", { name: "Pending research findings", hidden: true });
+        expect(within(rows).getByText(THIRD)).toBeInTheDocument();
+        expect(within(rows).queryByText(FIRST)).not.toBeInTheDocument();
+        expect(within(rows).queryByText(SECOND)).not.toBeInTheDocument();
+        expect(onNotify).toHaveBeenCalledWith({
+          variant: "warning",
+          body: "This finding no longer exists.",
+        });
+        // The second finding is gone, so the modal about it has nothing left to decide.
+        await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+        // And keyboard focus still goes to the row that is left.
+        await waitFor(() => expect(document.activeElement).toBe(firstButtonOf(THIRD)));
+      },
+    );
+
+    it("leaves the modal of a finding that is gone alone while its own request is on its way, then closes it", async () => {
+      renderSection();
+      await screen.findByText(FIRST);
+      const answerFirst = await decideFirst("dismissal");
+      const answerOfSecond = deferred<ReturnType<typeof finding>>();
+      mocks.dismiss.mockReturnValueOnce(answerOfSecond.promise);
+      const dialog = await openDismissal(SECOND);
+      await choose(dialog, "Other");
+      await userEvent.click(within(dialog).getByRole("button", { name: "Dismiss" }));
+      await waitFor(() => expect(mocks.dismiss).toHaveBeenCalledTimes(2));
+      // The first finding is dismissed, and the second was decided elsewhere meanwhile: the list
+      // read after the first answer has neither.
+      mocks.list.mockResolvedValue({ rows: [], total: 0 });
+
+      await act(async () => answerFirst());
+      await waitFor(() => expect(mocks.list).toHaveBeenCalledTimes(2));
+      await letTheListSettle();
+
+      // The list says the second finding is gone, but the request about it has no answer yet:
+      // the modal waits for that answer, which is the only one that can say what became of it.
+      expect(screen.getByText("No pending research findings.")).toBeInTheDocument();
+      expect(screen.getByRole("dialog", { name: "Dismiss finding" })).toBeInTheDocument();
+      expect(within(dialog).getByRole("button", { name: "Dismiss" })).toBeDisabled();
+
+      await act(async () => {
+        answerOfSecond.reject(refusal(409, "Finding already dismissed"));
+      });
+      await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    });
+  });
 });
 
 describe("the vendor filter", () => {

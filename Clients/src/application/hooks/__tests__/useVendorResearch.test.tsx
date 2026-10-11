@@ -27,6 +27,7 @@ import {
 import { VENDOR_INSIGHTS_KEY } from "../useRiskLinks";
 import { vendorRiskQueryKeys } from "../useVendorRisks";
 import { APIError } from "../../tools/error";
+import { queryClient as appQueryClient } from "../../config/queryClient";
 import {
   acceptVendorRiskFinding,
   dismissVendorRiskFinding,
@@ -44,12 +45,16 @@ const mockLatest = vi.mocked(getLatestVendorResearch);
 const mockAccept = vi.mocked(acceptVendorRiskFinding);
 const mockDismiss = vi.mocked(dismissVendorRiskFinding);
 
-function createHarness() {
+function createHarness(options: { gcTime?: number } = {}) {
   // Like the app's client (application/config/queryClient.ts): a query is not read again just
   // because the tab regained focus, unless the query itself asks for it.
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: { retry: false, refetchOnWindowFocus: false },
+      queries: {
+        retry: false,
+        refetchOnWindowFocus: false,
+        ...(options.gcTime !== undefined ? { gcTime: options.gcTime } : {}),
+      },
       mutations: { retry: false },
     },
   });
@@ -714,6 +719,48 @@ describe("following a run started on another screen", () => {
     });
 
     expect(queryClient.getQueryData(VENDOR_RESEARCH_FOLLOW_KEY)).toBeUndefined();
+  });
+
+  // Nothing observes the hint until the findings section mounts, so the query cache collects it
+  // once the app's gcTime has run out. That is how long a start stays followed.
+  describe("how long the hint lasts", () => {
+    const LIFETIME = appQueryClient.getDefaultOptions().queries?.gcTime as number;
+    const hint = (queryClient: QueryClient) => queryClient.getQueryData(VENDOR_RESEARCH_FOLLOW_KEY);
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("is collected when its lifetime has run out without another start", () => {
+      const { queryClient } = createHarness({ gcTime: LIFETIME });
+      followResearch(queryClient, 3);
+
+      vi.advanceTimersByTime(LIFETIME - 1);
+      expect(hint(queryClient)).toBe(3);
+      vi.advanceTimersByTime(2);
+      expect(hint(queryClient)).toBeUndefined();
+    });
+
+    it("counts the lifetime from the latest start, not from the first one", () => {
+      const { queryClient } = createHarness({ gcTime: LIFETIME });
+      followResearch(queryClient, 3);
+      // A second start, a second before the first one's time runs out.
+      vi.advanceTimersByTime(LIFETIME - 1_000);
+      followResearch(queryClient, 4);
+
+      // The first start's time has run out now, and the hint of the second has not.
+      vi.advanceTimersByTime(2_000);
+      expect(hint(queryClient)).toBe(4);
+
+      // It lasts as long as a first start's would have, counted from the second.
+      vi.advanceTimersByTime(LIFETIME - 3_000);
+      expect(hint(queryClient)).toBe(4);
+      vi.advanceTimersByTime(1_001);
+      expect(hint(queryClient)).toBeUndefined();
+    });
   });
 });
 

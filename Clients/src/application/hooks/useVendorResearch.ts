@@ -37,8 +37,14 @@ export const VENDOR_RESEARCH_FOLLOW_KEY = ["vendorResearchFollow"] as const;
  * The findings section picks the vendor up the next time it is mounted, so that it opens on it
  * and keeps reading the run. Call it after a start the server accepted, and not from the start
  * hook itself, which the findings section uses too.
+ *
+ * Nothing observes the hint, so the query cache collects it once the app's gcTime has run out.
+ * That time is counted from when the cache entry was made, and writing to an entry that exists
+ * does not restart it: a second start would inherit what is left of the first one's time. The
+ * entry is removed first, so that every start gets a whole lifetime.
  */
 export function followResearch(queryClient: QueryClient, vendorId: number): void {
+  queryClient.removeQueries({ queryKey: VENDOR_RESEARCH_FOLLOW_KEY });
   queryClient.setQueryData(VENDOR_RESEARCH_FOLLOW_KEY, vendorId);
 }
 
@@ -90,7 +96,10 @@ export function useVendorRiskFindings(filter: FindingsFilter) {
 }
 
 const POLL_INTERVAL_MS = 3000;
-/** How long one run is polled, counted from the moment this hook first sees it active. */
+/**
+ * How long one run is polled, counted from the moment this hook first sees it active, or from
+ * `restartPolling()`.
+ */
 const POLL_WINDOW_MS = 2 * 60 * 1000;
 
 /** The id of a run that is still working, or null. `completed` and `failed` are final. */
@@ -107,8 +116,9 @@ const windowOf = (vendorId: number | null, runId: number) => `${vendorId}:${runI
  * Polling stops after POLL_WINDOW_MS, so a run that never finishes (a stuck
  * worker) does not keep the tab fetching for ever; `pollingStopped` is then
  * true, and the screen should say the run is still going. It goes back to false
- * when the run is no longer active, when a different run shows up, and when the
- * vendor changes. Pass null to leave the query off.
+ * when the run is no longer active, when a different run shows up, when the
+ * vendor changes, and when `restartPolling()` starts a fresh window. Pass null
+ * to leave the query off.
  *
  * Two things read the run again after the window: coming back to the tab (the
  * window is a wall-clock timer and TanStack does not poll in a hidden tab, so a

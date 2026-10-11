@@ -61,9 +61,10 @@ interface VendorResearchFindingsProps {
  * The risks the research agent suggested for the vendors, waiting to be accepted into the
  * register or dismissed, and (for one vendor) what its latest research run did.
  *
- * Collapsible like the insights beside it: open by default when something is pending or a
- * vendor came from the URL, closed to its header otherwise; the user's own toggle wins. The
- * findings are AI-written from web sources, so the header always says to verify them.
+ * Collapsible like the insights beside it: open by default when something is pending, a vendor
+ * came from the URL, or a run was followed from the vendors table, closed to its header
+ * otherwise; the user's own toggle wins. The findings are AI-written from web sources, so the
+ * header always says to verify them.
  */
 export default function VendorResearchFindings({
   vendors,
@@ -219,18 +220,26 @@ export default function VendorResearchFindings({
   // here is the one that shows what became of the finding.
   useEffect(() => {
     if (answered === null || findings.isFetching) return;
-    const { id, around } = answered;
-    // Still pending: nothing is settled. A 409 for "another decision is in progress" leaves the
-    // finding where it was, a retry can succeed, and the modal keeps what the user entered.
-    if (rows.some((row) => row.id === id)) {
-      setAnswered(null);
+    // A modal about a finding that has left the pending list (decided here or elsewhere, or
+    // deleted) has nothing left to decide, so it closes. This is about the modal, not about the
+    // decision that was answered: two answers can land in one flush, and then only the last one
+    // is kept in `answered`, which may be about another finding. A modal whose finding is still
+    // listed keeps what the user entered (a 409 for "another decision is in progress" leaves the
+    // finding where it was, and a retry can succeed), and one whose own request is on its way is
+    // left to that answer. This runs again once the modal has closed, because it gives focus
+    // back to the button it was opened from as it goes, and that is the row that is gone.
+    if (
+      dismissing !== null &&
+      busy[dismissing.id] === undefined &&
+      !rows.some((row) => row.id === dismissing.id)
+    ) {
+      setDismissing(null);
       return;
     }
-    // Gone from the pending list (decided here or elsewhere, or deleted): a modal about it has
-    // nothing left to decide, so it closes. This runs again once it has, because the modal gives
-    // focus back to the button it was opened from as it goes, and that is the row that is gone.
-    if (dismissing?.id === id) {
-      setDismissing(null);
+    const { id, around } = answered;
+    // Still pending: nothing more to settle.
+    if (rows.some((row) => row.id === id)) {
+      setAnswered(null);
       return;
     }
     setAnswered(null);
@@ -244,7 +253,7 @@ export default function VendorResearchFindings({
       )
       .find((button): button is HTMLElement => button != null);
     (target ?? headingElement.current)?.focus();
-  }, [answered, findings.isFetching, rows, dismissing]);
+  }, [answered, findings.isFetching, rows, dismissing, busy]);
 
   const renderFindings = () => {
     if (findings.isError) {
