@@ -202,7 +202,7 @@ All routes use `authenticateJWT`; routes that change data also use `authorize("r
 
 | Method and path | Purpose |
 |---|---|
-| `POST /api/vendors/:id/research` | Start a run. 202 with `{run}` (existing active run returned with `alreadyRunning: true`) |
+| `POST /api/vendors/:id/research` | Start a run. 202 with `{run, alreadyRunning}` (`alreadyRunning: true` when an active run already exists and is returned instead of a new one) |
 | `GET /api/vendors/:id/research/latest` | Latest run with `category_summary`, or `null` |
 | `GET /api/vendor-risk-findings?status=&vendorId=&limit=&offset=` | Findings with vendor name; default `status=pending` |
 | `POST /api/vendor-risk-findings/:id/accept` | Body `{action_owner?}`. Creates the vendor risk; returns `{finding, vendorRisk}`; 409 if already decided |
