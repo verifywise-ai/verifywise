@@ -252,6 +252,44 @@ export const vendorRisksContent: ArticleContent = {
       text: 'Schedule vendor risk reviews based on risk score. High-risk vendors should be reviewed more frequently than low-risk vendors.',
     },
     {
+      type: 'heading',
+      id: 'research-findings',
+      level: 2,
+      text: 'Research findings',
+    },
+    {
+      type: 'paragraph',
+      text: 'VerifyWise can research a vendor on the web for you. An agent searches public sources for four kinds of risk: security incidents, certification gaps, legal and regulatory actions, and AI-specific risks such as customer data being used to train models. It starts by itself when you add a vendor (whoever runs your VerifyWise server can turn this off), and you can start it again whenever you like. When a run that started by itself finds something, the vendor\'s assignee gets a notification. The results appear as findings in the **Research findings** section on the **Risks** tab of the Vendors page, and nothing is added to your vendor risk register until you accept it.',
+    },
+    {
+      type: 'callout',
+      variant: 'warning',
+      title: 'Check before you accept',
+      text: 'Findings are AI-suggested from web sources, so they can be wrong. Each one lists its sources with a quote from each, and a confidence level. Open the sources and check that they are about your vendor and say what the finding claims.',
+    },
+    {
+      type: 'paragraph',
+      text: 'For each finding, and for the research itself, you can:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Accept', text: 'Adds the finding to the vendor risk register as a normal vendor risk. The vendor\'s assignee becomes its action owner, if the assignee is a user of your organization. You can edit it afterwards like any other risk' },
+        { bold: 'Dismiss', text: 'Removes the finding from the list. Choose a reason and, if you like, add a note. Similar findings are not suggested again' },
+        { bold: 'Research again', text: 'Choose a vendor in the section\'s vendor filter to see what its latest run found in each category, including where it found nothing, and to start a new run. The microscope icon ("Research risks") in a vendor\'s row on the Vendors tab starts a run too' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Admins and Editors can accept, dismiss and start research. Reviewers and Auditors can see the findings but not change them. By default a vendor can be researched again 10 minutes after its last run, and an organization can start 50 runs in 24 hours.',
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      title: 'Setup',
+      text: 'Research needs a web search provider and an LLM key. Whoever runs your VerifyWise server sets the search provider and its key in the server environment (`VENDOR_RESEARCH_SEARCH_PROVIDER` and `TAVILY_API_KEY`), and an Admin adds an LLM key under **Settings → API Keys**, in the LLM Keys section. Until both are in place, the section says vendor research is not set up and the research buttons are disabled.',
+    },
+    {
       type: 'article-links',
       title: 'Related articles',
       items: [

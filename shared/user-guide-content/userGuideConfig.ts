@@ -357,7 +357,7 @@ export const collections: Collection[] = [
         id: 'vendor-risks',
         title: 'Vendor risk assessment',
         description: 'Assess and track risks associated with your AI vendors.',
-        keywords: ['vendor', 'risk', 'supplier', 'assessment', 'third-party'],
+        keywords: ['vendor', 'risk', 'supplier', 'assessment', 'third-party', 'research', 'findings'],
       },
     ],
   },

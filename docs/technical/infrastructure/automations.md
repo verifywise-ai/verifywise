@@ -210,6 +210,7 @@ Not every job on the `automation-actions` queue is scheduled. Some are enqueued 
 | Job Name | Queue | Enqueued By | Handler |
 |----------|-------|-------------|---------|
 | `generate_report_manual` | `automation-actions` | `generateReportsV2` / `generateReports` controller, when a user requests a manual report (see [Reporting Domain](../domains/reporting.md)) | `handleManualReportGeneration` → `executeManualRun` |
+| `vendor_research` | `automation-actions` | `enqueueVendorResearch` (`automationProducer.ts`), called by `startVendorResearch` in `services/vendorResearch/trigger.ts` when a vendor is created or a user starts research (see [Vendors](../domains/vendors.md#vendor-research-agent)) | `handleVendorResearchJob` → `runVendorResearch` |
 
 **Processing Logic:**
 1. Controller creates a `report_runs` row (`status: "running"`) and enqueues `generate_report_manual` with `{ runId, request, userId, organizationId }`
@@ -217,6 +218,13 @@ Not every job on the `automation-actions` queue is scheduled. Some are enqueued 
 3. `report_runs` is updated to a terminal status (`success` or `failed`) on completion — `executeManualRun` never produces `partial_success` (that state applies only to scheduled runs with multiple delivery targets)
 
 This job only runs while a worker process (`npm run worker`) is up — with no worker running, the run stays `status: "running"` indefinitely and the frontend poll never resolves.
+
+**`vendor_research`:** researches one vendor for one run row that already exists as `queued` in `vendor_research_runs`. Payload: `{ organizationId, vendorId, runId }`.
+
+- **Job id:** `vendor-research-{org}-{vendor}-{run}`, one per run and without a colon (BullMQ rejects a custom id with a colon unless it has exactly three parts). An id per vendor would make BullMQ silently ignore the `add` of a vendor's next run while the job of an earlier, swept run still sat in Redis; the partial unique index `vendor_research_runs_active_uniq` already allows one active run per vendor.
+- **Options:** `attempts: 2`, exponential backoff with a 5000 ms delay, `removeOnComplete` and `removeOnFail` both `true`, so no retained job holds on to an id.
+- **Retries:** the pipeline catches model and search errors itself and ends the run as `failed`, so a retry only covers Redis and database failures that happen before the run is marked `running`, while it is still `queued`. A retry never pays for the searches twice.
+- **No worker:** the run stays `queued` until the 15-minute sweep fails it with `timed out`. The sweep runs when a new run is requested for the vendor and when its latest run is read, not in the background.
 
 ## Workers
 

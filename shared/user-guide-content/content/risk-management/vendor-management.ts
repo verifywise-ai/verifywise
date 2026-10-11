@@ -93,6 +93,10 @@ export const vendorManagementContent: ArticleContent = {
       caption: 'Register new vendors with complete contact and review information.',
     },
     {
+      type: 'paragraph',
+      text: 'VerifyWise can also research a new vendor on the web for risks. To start research yourself, use the **Research risks** icon in the vendor\'s row. See [[Vendor risk assessment]](risk-management/vendor-risks) for how findings work.',
+    },
+    {
       type: 'heading',
       id: 'review-workflow',
       level: 2,

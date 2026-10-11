@@ -258,6 +258,25 @@ SLACK_BOT_TOKEN=xoxb-...
 VITE_BRANDFETCH_API_KEY=bf_xxxxxxxxxx
 ```
 
+### Vendor research agent
+
+An agent researches a vendor on the open web and proposes risks for the vendor risk register. A person accepts or dismisses each one; nothing is added to the register on its own. All five variables are optional. With no search provider set, vendor research reports "not set up" and nothing runs. It also needs an LLM key saved for the organization, which an Admin adds in the LLM Keys section of **Settings → API Keys**.
+
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `VENDOR_RESEARCH_SEARCH_PROVIDER` | Search provider. Only `tavily` is supported | empty (off) | For vendor research |
+| `TAVILY_API_KEY` | Your own Tavily API key. No key ships with the product. It is never logged and never returned by an API | empty | For vendor research |
+| `VENDOR_RESEARCH_AUTO_RUN` | Research a vendor automatically after it is created. Only `false` turns it off | `true` | No |
+| `VENDOR_RESEARCH_MANUAL_COOLDOWN_MINUTES` | Minutes before the same vendor can be researched again by hand. `0` means no wait | `10` | No |
+| `VENDOR_RESEARCH_DAILY_RUN_CAP` | Research runs one organization may start in a rolling 24 hours, automatic and manual together | `50` | No |
+
+```bash
+VENDOR_RESEARCH_SEARCH_PROVIDER=tavily
+TAVILY_API_KEY=<your Tavily API key>
+```
+
+The backend and the worker both read these variables. With Docker Compose, `docker-compose.prod.yml` hands `.env.prod` to both. The Kubernetes manifests, the Helm chart and the Ansible template list variables by name and need the five variables added. See [Vendors](../technical/domains/vendors.md#configuration) for details.
+
 ---
 
 ## Evaluation server

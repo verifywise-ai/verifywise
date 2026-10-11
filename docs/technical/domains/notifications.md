@@ -140,8 +140,19 @@ Before delivering notifications:
 |------|---------|----------|
 | `model_risk_candidates` | Model gained a project, or a new model risk, leaving unseen shared-project candidates for a project risk | In-app |
 | `vendor_risk_candidates` | Vendor gained a use case, or a new vendor risk, leaving unseen candidate parents for a project risk in that use case | In-app |
+| `vendor_research_findings` | An automatic vendor research run completed with at least one finding; sent to the vendor's assignee | In-app |
 | `risk_deadline_due_soon` | Project risk deadline within 7 days (in-app + email) or 1 day (Slack) | In-app + Email / Slack |
 | `model_risk_due_soon` | Model risk target date within 7 days (in-app + email) or 1 day (Slack) | In-app + Email / Slack |
+
+#### Vendor research notice
+
+The vendor research agent (see [Vendors](./vendors.md#vendor-research-agent)) tells a vendor's assignee, when the vendor has one, that an **automatic** run stored findings. A manual run sends nothing: the person who started it is looking at the result. `handleVendorResearchJob` sends the notice after the run has ended, so a failure to send is logged and cannot change the run.
+
+- Title `Vendor research findings`; message `1 potential risk found for "Acme". Review it in Vendors > Risks.` (or `3 potential risks found for "Acme". Review them in Vendors > Risks.`), in the recipient's language. In-app only, no email.
+- Entity: `vendor` (the vendor's id and name). Link: `/vendors/risks?findingsVendorId=<vendor id>`, which opens the Risks tab with the findings section on that vendor. The existing `/vendors?vendorId=` link would open the vendor modal instead.
+- `metadata`: `{ run_id, vendor_id, count }`.
+- **Dedup: one notification per run.** The partial unique index `notifications_vendor_research_findings_uniq` is on `(organization_id, user_id, (metadata->>'run_id')) WHERE type = 'vendor_research_findings'`. A run belongs to one vendor, so the run id is enough to tell one notice from the next. Two attempts to announce the same run collide, and `notifyAssigneeOfVendorResearch` treats that unique violation (23505 on this index only) as a suppressed duplicate. Any other 23505 still throws.
+- The enum value and the index are two migrations, in this order: `20261010161236-vendor-research-notification-type.js`, then `20261010161240-vendor-research-notification-unique.js`. A new Postgres enum value cannot be used until the statement that added it has committed, and the index predicate names it. The first migration's `down` is a no-op, as for `vendor_risk_candidates`.
 
 #### Deadline escalation dedup
 
