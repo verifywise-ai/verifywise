@@ -10221,6 +10221,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Die Recherche konnte nicht gestartet werden, weil die Aufgabenwarteschlange nicht verfügbar ist. Versuchen Sie es später erneut.",
     "The research could not be started. Try again.":
       "Die Recherche konnte nicht gestartet werden. Versuchen Sie es erneut.",
+    "Research risks": "Risiken recherchieren",
   },
 
   fr: {
@@ -20368,6 +20369,7 @@ export const translations: Record<string, Record<string, string>> = {
       "La recherche n'a pas pu être lancée car la file d'attente des tâches est indisponible. Réessayez plus tard.",
     "The research could not be started. Try again.":
       "La recherche n'a pas pu être lancée. Réessayez.",
+    "Research risks": "Rechercher les risques",
   },
   es: {
     "Deployment name": "Nombre del despliegue",
@@ -30432,5 +30434,6 @@ export const translations: Record<string, Record<string, string>> = {
       "No se pudo iniciar la investigación porque la cola de tareas no está disponible. Inténtelo de nuevo más tarde.",
     "The research could not be started. Try again.":
       "No se pudo iniciar la investigación. Inténtelo de nuevo.",
+    "Research risks": "Investigar riesgos",
   },
 };

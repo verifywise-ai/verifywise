@@ -15,6 +15,7 @@ import {
 import { useCallback, useMemo, useState, useEffect } from "react";
 import IconButton from "../../IconButton";
 import ViewRelationshipsButton from "../../ViewRelationshipsButton";
+import VendorResearchButton from "../../VendorResearchButton";
 import { EmptyState } from "../../EmptyState";
 import EmptyStateTip from "../../EmptyState/EmptyStateTip";
 import { TableEmptyStateLayout } from "../TableEmptyStateLayout";
@@ -150,6 +151,7 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
   hidePagination = false,
   vendorRisks = [],
   visibleColumns,
+  onNotify,
 }) => {
   const formatDate = useFormattedDate();
   const theme = useTheme();
@@ -524,6 +526,15 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Stack direction="row" alignItems="center" gap={0.5}>
+                    {onNotify && typeof row.id === "number" && (
+                      <VendorResearchButton
+                        // The rows are keyed by position: a request in flight must stay with its vendor.
+                        key={row.id}
+                        vendorId={row.id}
+                        vendorName={row.vendor_name}
+                        onNotify={onNotify}
+                      />
+                    )}
                     <ViewRelationshipsButton
                       entityId={row.id || 0}
                       entityType="vendor"
@@ -562,6 +573,7 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
       customFieldDefs,
       formatCfValue,
       formatDate,
+      onNotify,
     ],
   );
 

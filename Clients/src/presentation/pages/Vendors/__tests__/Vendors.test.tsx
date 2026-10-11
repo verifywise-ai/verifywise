@@ -1,6 +1,7 @@
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
+import type { ResearchAlert } from "../../../../application/utils/vendorResearchAlerts";
 import { acceptedRisk, finding, refusal, run } from "../VendorResearchFindings/__tests__/fixtures";
 
 // Mock hooks used by Vendors page
@@ -129,8 +130,16 @@ vi.mock("../../../components/PageTour", () => ({
   default: () => null,
 }));
 
+// What the page hands its vendors table, so that a test can use the table's side of the contract.
+const vendorTable = vi.hoisted(() => ({
+  props: undefined as undefined | { onNotify?: (alert: ResearchAlert) => void },
+}));
+
 vi.mock("../../../components/Table/WithPlaceholder/index", () => ({
-  default: () => <div data-testid="vendor-table" />,
+  default: (props: { onNotify?: (alert: ResearchAlert) => void }) => {
+    vendorTable.props = props;
+    return <div data-testid="vendor-table" />;
+  },
 }));
 
 vi.mock("../../../components/Table/RisksTable", () => ({
@@ -184,6 +193,35 @@ describe("Vendors", () => {
       route: "/vendors",
     });
     expect(container).toBeTruthy();
+  });
+});
+
+describe("Vendors, messages from the vendors table", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vendorTable.props = undefined;
+  });
+
+  // The research button on a row hands its message to the page through the table. The page's
+  // own alert only opens for an info message, so the other kinds must go the same way the
+  // research section's messages do.
+  it("shows a message from a row as a toast that can be seen, whatever its kind", async () => {
+    renderWithProviders(<Vendors />, { route: "/vendors" });
+    await screen.findByTestId("vendor-table");
+    const notify = vendorTable.props?.onNotify;
+    expect(notify).toBeTypeOf("function");
+
+    for (const [variant, body] of [
+      ["success", "Research started for Acme Cloud. Findings appear on the Risks tab."],
+      ["warning", "Research ran recently. Try again in 9 min."],
+      ["error", "The research could not be started. Try again."],
+      ["info", "Research is already running for Acme Cloud."],
+    ] as const) {
+      act(() => notify?.({ variant, body }));
+
+      const toast = await screen.findByText(body);
+      await waitFor(() => expect(toast).toBeVisible());
+    }
   });
 });
 

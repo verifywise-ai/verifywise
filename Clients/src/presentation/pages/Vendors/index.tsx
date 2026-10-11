@@ -1299,6 +1299,7 @@ const Vendors = () => {
                   hidePagination={options?.hidePagination}
                   vendorRisks={vendorRisks}
                   visibleColumns={vendorVisibleColumns}
+                  onNotify={handleResearchNotify}
                 />
               )}
             />

@@ -1,0 +1,243 @@
+import type { ReactNode } from "react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { renderWithProviders } from "../../../../test/renderWithProviders";
+import type { VendorResearchConfig } from "../../../../domain/interfaces/i.vendorResearch";
+import {
+  deferred,
+  refusal,
+  run,
+} from "../../../pages/Vendors/VendorResearchFindings/__tests__/fixtures";
+import { AfterSettings, SET_UP } from "./fixtures";
+
+// The Task 9 repository, with `readVendorResearchError` kept real: the alerts read refusals with it.
+vi.mock("../../../../application/repository/vendorResearch.repository", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("../../../../application/repository/vendorResearch.repository")
+  >()),
+  getVendorResearchConfig: vi.fn(),
+  startVendorResearch: vi.fn(),
+}));
+
+const role = vi.hoisted(() => ({ canEdit: true }));
+vi.mock("../../../../application/hooks/useMyPermissions", () => ({
+  useHasPermission: (key: string) => key === "risks.edit" && role.canEdit,
+}));
+
+import * as repository from "../../../../application/repository/vendorResearch.repository";
+import VendorResearchButton from "..";
+
+const mocks = {
+  config: vi.mocked(repository.getVendorResearchConfig),
+  start: vi.mocked(repository.startVendorResearch),
+};
+
+type StartResult = Awaited<ReturnType<typeof repository.startVendorResearch>>;
+
+const researchButton = () => screen.getByRole("button", { name: "Research risks" });
+
+/** The button of vendor 7, on a page that knows the settings. */
+const renderWithSettings = async (
+  settings: VendorResearchConfig,
+  children?: (onNotify: () => void) => ReactNode,
+) => {
+  mocks.config.mockResolvedValue(settings);
+  const onNotify = vi.fn();
+  const view = renderWithProviders(
+    <AfterSettings>
+      {children ? (
+        children(onNotify)
+      ) : (
+        <VendorResearchButton vendorId={7} vendorName="Acme Cloud" onNotify={onNotify} />
+      )}
+    </AfterSettings>,
+  );
+  await screen.findAllByRole("button", { name: "Research risks" });
+  return { ...view, onNotify };
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  role.canEdit = true;
+  mocks.config.mockResolvedValue(SET_UP);
+});
+
+describe("who sees the button", () => {
+  it("is not shown without risks.edit, and the server is asked for nothing", () => {
+    role.canEdit = false;
+    renderWithProviders(
+      <VendorResearchButton vendorId={7} vendorName="Acme Cloud" onNotify={vi.fn()} />,
+    );
+
+    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(mocks.config).not.toHaveBeenCalled();
+  });
+
+  it("is an icon button named Research risks, 30px high, with that tooltip", async () => {
+    await renderWithSettings(SET_UP);
+
+    const button = researchButton();
+    expect(button).toBeEnabled();
+    expect(button.querySelector("svg")).toBeInTheDocument();
+    expect(button).toHaveStyle({ height: "30px", width: "30px" });
+
+    await userEvent.hover(button);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Research risks");
+  });
+});
+
+describe("when research is not set up", () => {
+  it.each([
+    ["the search provider is missing", { searchConfigured: false, hasLlmKey: true }],
+    ["the organization has no LLM key", { searchConfigured: true, hasLlmKey: false }],
+    ["both are missing", { searchConfigured: false, hasLlmKey: false }],
+  ])("is disabled, and says research is not set up, when %s", async (_case, setup) => {
+    await renderWithSettings({ ...setup, autoRunEnabled: true });
+
+    const button = researchButton();
+    expect(button).toBeDisabled();
+    // A disabled button gets no pointer events, so the tooltip hangs on the span around it.
+    await userEvent.hover(button.parentElement as HTMLElement);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Vendor research is not set up.");
+    expect(mocks.start).not.toHaveBeenCalled();
+  });
+
+  it("stays disabled and silent while the settings load, and starts nothing until they say it can", async () => {
+    const settings = deferred<VendorResearchConfig>();
+    mocks.config.mockReturnValue(settings.promise);
+    renderWithProviders(
+      <VendorResearchButton vendorId={7} vendorName="Acme Cloud" onNotify={vi.fn()} />,
+    );
+
+    // The settings are asked for as soon as an allowed button renders: the control for the first
+    // test, which expects no request for a user who may not start research.
+    expect(mocks.config).toHaveBeenCalled();
+    expect(researchButton()).toBeDisabled();
+    await userEvent.hover(researchButton().parentElement as HTMLElement);
+    // Longer than the tooltip's opening delay: "not set up" would be a guess before the answer.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    expect(mocks.start).not.toHaveBeenCalled();
+
+    settings.resolve(SET_UP);
+    await waitFor(() => expect(researchButton()).toBeEnabled());
+  });
+});
+
+describe("starting the research", () => {
+  it("starts it for its vendor and says where the findings will appear", async () => {
+    mocks.start.mockResolvedValue({ run: run({ status: "queued" }), alreadyRunning: false });
+    const { onNotify } = await renderWithSettings(SET_UP);
+
+    await userEvent.click(researchButton());
+
+    await waitFor(() => expect(onNotify).toHaveBeenCalledTimes(1));
+    expect(mocks.start).toHaveBeenCalledTimes(1);
+    expect(mocks.start).toHaveBeenCalledWith(7);
+    expect(onNotify).toHaveBeenCalledWith({
+      variant: "success",
+      body: "Research started for Acme Cloud. Findings appear on the Risks tab.",
+    });
+    await waitFor(() => expect(researchButton()).toBeEnabled());
+  });
+
+  it("says so when the vendor is being researched already", async () => {
+    mocks.start.mockResolvedValue({ run: run({ status: "running" }), alreadyRunning: true });
+    const { onNotify } = await renderWithSettings(SET_UP);
+
+    await userEvent.click(researchButton());
+
+    await waitFor(() => expect(onNotify).toHaveBeenCalledTimes(1));
+    expect(onNotify).toHaveBeenCalledWith({
+      variant: "info",
+      body: "Research is already running for Acme Cloud.",
+    });
+    await waitFor(() => expect(researchButton()).toBeEnabled());
+  });
+
+  // The global error toast is off for this call, so nothing but the message tells the user.
+  const GENERIC = "The research could not be started. Try again.";
+  it.each([
+    [
+      "a 429 for the cooldown",
+      refusal(429, { code: "cooldown", retryAfterSeconds: 540 }),
+      "warning",
+      "Research ran recently. Try again in 9 min.",
+    ],
+    [
+      "a 429 for the daily limit",
+      refusal(429, { code: "daily_cap" }),
+      "warning",
+      "The daily research limit for your organization was reached. Try again tomorrow.",
+    ],
+    [
+      "a 409 for a missing setting",
+      refusal(409, { code: "llm_key_missing" }),
+      "warning",
+      "Vendor research is not set up.",
+    ],
+    [
+      "a 503 from the job queue",
+      refusal(503),
+      "error",
+      "The research could not be started because the job queue is unavailable. Try again later.",
+    ],
+    ["a 500", refusal(500), "error", GENERIC],
+    ["a 403", refusal(403), "error", GENERIC],
+    ["a network failure", new Error("Network Error"), "error", GENERIC],
+  ])("answers %s with a message", async (_case, failure, variant, body) => {
+    mocks.start.mockRejectedValue(failure);
+    const { onNotify } = await renderWithSettings(SET_UP);
+
+    await userEvent.click(researchButton());
+
+    await waitFor(() => expect(onNotify).toHaveBeenCalledTimes(1));
+    expect(onNotify).toHaveBeenCalledWith({ variant, body });
+    await waitFor(() => expect(researchButton()).toBeEnabled());
+  });
+
+  it("is disabled while its own request is on its way, and another vendor's button is not", async () => {
+    const request = deferred<StartResult>();
+    mocks.start.mockReturnValue(request.promise);
+    const { onNotify } = await renderWithSettings(SET_UP, (notify) => (
+      <>
+        <VendorResearchButton vendorId={7} vendorName="Acme Cloud" onNotify={notify} />
+        <VendorResearchButton vendorId={8} vendorName="Zeta Labs" onNotify={notify} />
+      </>
+    ));
+    const [acme, zeta] = screen.getAllByRole("button", { name: "Research risks" });
+
+    await userEvent.click(acme);
+
+    await waitFor(() => expect(acme).toBeDisabled());
+    expect(zeta).toBeEnabled();
+    expect(onNotify).not.toHaveBeenCalled();
+
+    request.resolve({ run: run(), alreadyRunning: false });
+    await waitFor(() => expect(acme).toBeEnabled());
+    expect(onNotify).toHaveBeenCalledTimes(1);
+    expect(mocks.start).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps its click to itself, so the row it sits in is not opened", async () => {
+    mocks.start.mockResolvedValue({ run: run(), alreadyRunning: false });
+    const openRow = vi.fn();
+    const { onNotify } = await renderWithSettings(SET_UP, (notify) => (
+      <div data-testid="row" onClick={openRow}>
+        <VendorResearchButton vendorId={7} vendorName="Acme Cloud" onNotify={notify} />
+      </div>
+    ));
+
+    // The row opens when it is clicked...
+    await userEvent.click(screen.getByTestId("row"));
+    expect(openRow).toHaveBeenCalledTimes(1);
+
+    // ...but not when its research button is.
+    await userEvent.click(researchButton());
+    await waitFor(() => expect(onNotify).toHaveBeenCalledTimes(1));
+    expect(mocks.start).toHaveBeenCalledWith(7);
+    expect(openRow).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(researchButton()).toBeEnabled());
+  });
+});
