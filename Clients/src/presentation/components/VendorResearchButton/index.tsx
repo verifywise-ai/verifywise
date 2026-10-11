@@ -1,11 +1,13 @@
 /**
  * VendorResearchButton - Row action of the vendors table that starts a research run for a vendor
  *
- * Shown only to users who may edit risks (`risks.edit`). It works once the server says research
- * is set up (a search provider and an LLM key); until then it is disabled, and it says why once
- * the settings are known. Every click is answered with a message handed to `onNotify`, whatever
- * the outcome: the global error toast is off for this call, so nothing else tells the user. The
- * run itself is followed on the Risks tab, not here.
+ * Shown only to users who may edit risks (`risks.edit`). It is disabled while the research
+ * settings are on their way, and when they say research is not set up (a search provider or an
+ * LLM key is missing), in which case its tooltip says so. If the request for the settings fails,
+ * the button is enabled and the server decides: a start without them is refused with a 409.
+ * Every click is answered with a message handed to `onNotify`, whatever the outcome: the global
+ * error toast is off for this call, so nothing else tells the user. The run itself is followed on
+ * the Risks tab, not here.
  *
  * Mount it with `key={vendorId}` where rows can change order, so that a start still in flight
  * for one vendor does not disable the button of the vendor that takes its place.
@@ -50,10 +52,13 @@ const StartResearchButton: React.FC<VendorResearchButtonProps> = ({
   const config = useVendorResearchConfig();
   const start = useStartVendorResearch();
 
-  // Nothing starts before the server has said that it can: while the settings are loading, the
-  // button is disabled and has no tooltip, because "not set up" would only be a guess.
-  const settingsKnown = config.data !== undefined;
-  const setUp = config.data !== undefined && config.data.searchConfigured && config.data.hasLlmKey;
+  // While the settings are on their way the button is disabled and has no tooltip: "not set up"
+  // would only be a guess. Once they are in, they decide. If the request for them has failed for
+  // good, the server decides, as in the findings section, which takes that as "set up": a start
+  // without the settings is refused with a 409, and the message says "not set up".
+  const settingsPending = config.isPending;
+  const notSetUp =
+    config.data !== undefined && !(config.data.searchConfigured && config.data.hasLlmKey);
 
   const handleClick = async (event: React.MouseEvent) => {
     // The row this button sits in opens its vendor when it is clicked.
@@ -73,7 +78,7 @@ const StartResearchButton: React.FC<VendorResearchButtonProps> = ({
       <IconButton
         aria-label="Research risks"
         size="small"
-        disabled={!setUp || start.isPending}
+        disabled={settingsPending || notSetUp || start.isPending}
         onClick={(event) => void handleClick(event)}
         sx={{
           "width": "30px",
@@ -90,9 +95,12 @@ const StartResearchButton: React.FC<VendorResearchButtonProps> = ({
     </Box>
   );
 
-  if (!settingsKnown) return button;
+  if (settingsPending) return button;
   return (
-    <VWTooltip content={setUp ? "Research risks" : "Vendor research is not set up."} maxWidth={200}>
+    <VWTooltip
+      content={notSetUp ? "Vendor research is not set up." : "Research risks"}
+      maxWidth={200}
+    >
       {button}
     </VWTooltip>
   );

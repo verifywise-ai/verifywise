@@ -125,6 +125,80 @@ describe("when research is not set up", () => {
   });
 });
 
+// The findings section on the Risks tab takes a failed request as "set up" as well. A button that
+// stayed disabled, with nothing to say why, until the page is opened again would be worse than a
+// start that the server can still refuse: it answers 409, and the message says "not set up".
+describe("when the settings cannot be loaded", () => {
+  /**
+   * The button of vendor 7 where the request for the settings fails for good (the test client
+   * never retries). It starts out like any button whose settings are on their way, disabled, and
+   * is enabled once the request has failed. It is rendered on its own, not behind
+   * `AfterSettings`: that renders its children when the request has failed, and the button's own
+   * request on an errored query would then start again and take them away.
+   */
+  const renderWithFailedSettings = async () => {
+    mocks.config.mockRejectedValue(refusal(500));
+    const onNotify = vi.fn();
+    const view = renderWithProviders(
+      <VendorResearchButton vendorId={7} vendorName="Acme Cloud" onNotify={onNotify} />,
+    );
+    expect(researchButton()).toBeDisabled();
+    await waitFor(() => expect(researchButton()).toBeEnabled());
+    return { ...view, onNotify };
+  };
+
+  it("lets the server decide: the button is enabled, with the Research risks tooltip", async () => {
+    await renderWithFailedSettings();
+
+    await userEvent.hover(researchButton());
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Research risks");
+  });
+
+  it("is disabled until the request has failed, not only until it has succeeded", async () => {
+    const settings = deferred<VendorResearchConfig>();
+    mocks.config.mockReturnValue(settings.promise);
+    renderWithProviders(
+      <VendorResearchButton vendorId={7} vendorName="Acme Cloud" onNotify={vi.fn()} />,
+    );
+    expect(researchButton()).toBeDisabled();
+
+    settings.reject(refusal(500));
+
+    await waitFor(() => expect(researchButton()).toBeEnabled());
+  });
+
+  it("starts the research when the server accepts it", async () => {
+    mocks.start.mockResolvedValue({ run: run({ status: "queued" }), alreadyRunning: false });
+    const { onNotify } = await renderWithFailedSettings();
+
+    await userEvent.click(researchButton());
+
+    await waitFor(() => expect(onNotify).toHaveBeenCalledTimes(1));
+    expect(mocks.start).toHaveBeenCalledTimes(1);
+    expect(mocks.start).toHaveBeenCalledWith(7);
+    expect(onNotify).toHaveBeenCalledWith({
+      variant: "success",
+      body: "Research started for Acme Cloud. Findings appear on the Risks tab.",
+    });
+    await waitFor(() => expect(researchButton()).toBeEnabled());
+  });
+
+  it("says research is not set up when the server refuses the start with a 409", async () => {
+    mocks.start.mockRejectedValue(refusal(409, { code: "search_not_configured" }));
+    const { onNotify } = await renderWithFailedSettings();
+
+    await userEvent.click(researchButton());
+
+    await waitFor(() => expect(onNotify).toHaveBeenCalledTimes(1));
+    expect(mocks.start).toHaveBeenCalledWith(7);
+    expect(onNotify).toHaveBeenCalledWith({
+      variant: "warning",
+      body: "Vendor research is not set up.",
+    });
+    await waitFor(() => expect(researchButton()).toBeEnabled());
+  });
+});
+
 describe("starting the research", () => {
   it("starts it for its vendor and says where the findings will appear", async () => {
     mocks.start.mockResolvedValue({ run: run({ status: "queued" }), alreadyRunning: false });
