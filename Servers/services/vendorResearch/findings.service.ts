@@ -31,7 +31,6 @@ import {
 } from "../../domain.layer/interfaces/i.vendorResearch";
 import { VendorRiskModel } from "../../domain.layer/models/vendorRisk/vendorRisk.model";
 import logger from "../../utils/logger/fileLogger";
-import { findUsersNotInOrganization } from "../../utils/user.utils";
 import { getVendorByIdQuery } from "../../utils/vendor.utils";
 import {
   getFindingByIdQuery,
@@ -42,6 +41,7 @@ import {
   createVendorRiskInTransaction,
   runVendorRiskPostCommitEffects,
 } from "../vendors/vendorRiskCreate.service";
+import { isUserOfOrganization } from "./assignee";
 import { cleanText } from "./text";
 
 /**
@@ -61,23 +61,6 @@ const isLockNotAvailable = (error: unknown): boolean => {
   };
   return parent?.code === LOCK_NOT_AVAILABLE || original?.code === LOCK_NOT_AVAILABLE;
 };
-
-/**
- * Whether the user belongs to the organization. The lookup ignores ids that are not positive whole
- * numbers and so reports nothing missing for them: an empty answer is only a yes for an id that was
- * valid to begin with.
- */
-async function isUserOfOrganization(
-  userId: number,
-  organizationId: number,
-  transaction: Transaction,
-): Promise<boolean> {
-  return (
-    Number.isSafeInteger(userId) &&
-    userId > 0 &&
-    (await findUsersNotInOrganization([userId], organizationId, transaction)).length === 0
-  );
-}
 
 /**
  * Who owns the action of the new risk: the user the caller names, who must belong to the

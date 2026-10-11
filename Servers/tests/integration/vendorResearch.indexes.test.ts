@@ -1,12 +1,12 @@
 jest.setTimeout(60000);
 
 /**
- * The indexes behind the foreign keys of vendor_risk_findings.
+ * The indexes behind the foreign keys of the research tables.
  *
  * Postgres runs the action of a foreign key (CASCADE, SET NULL) once for each deleted parent row,
- * and without an index on the child column each of those runs scans the whole table. The table
- * holds the findings of every tenant, so deleting a vendor, a vendor risk or an organization would
- * cost time in proportion to everybody's findings, not only the deleting tenant's.
+ * and without an index on the child column each of those runs scans the whole table. The tables
+ * hold the runs and findings of every tenant, so deleting a vendor, a vendor risk or an
+ * organization would cost time in proportion to everybody's rows, not only the deleting tenant's.
  *
  * The test database is migrated by the global setup before any file runs, so this reads the
  * indexes the migrations left.
@@ -20,19 +20,19 @@ afterAll(async () => {
   await sequelize.close();
 });
 
-/** The index definitions of the findings table, by index name. */
-const findingIndexes = async (): Promise<Record<string, string>> => {
+/** The index definitions of a table of the verifywise schema, by index name. */
+const indexesOf = async (table: string): Promise<Record<string, string>> => {
   const rows = (await sequelize.query(
     `SELECT indexname, indexdef FROM pg_indexes
-     WHERE schemaname = 'verifywise' AND tablename = 'vendor_risk_findings'`,
-    { type: QueryTypes.SELECT },
+     WHERE schemaname = 'verifywise' AND tablename = :table`,
+    { replacements: { table }, type: QueryTypes.SELECT },
   )) as Array<{ indexname: string; indexdef: string }>;
   return Object.fromEntries(rows.map((row) => [row.indexname, row.indexdef]));
 };
 
 describe("indexes of vendor_risk_findings", () => {
   it("has one behind the run, the vendor and the accepted vendor risk", async () => {
-    const indexes = await findingIndexes();
+    const indexes = await indexesOf("vendor_risk_findings");
 
     expect(indexes.idx_vendor_risk_findings_run).toContain("USING btree (run_id)");
     expect(indexes.idx_vendor_risk_findings_vendor).toContain("USING btree (vendor_id)");
@@ -44,7 +44,7 @@ describe("indexes of vendor_risk_findings", () => {
   });
 
   it("keeps the indexes of the first migration", async () => {
-    const indexes = await findingIndexes();
+    const indexes = await indexesOf("vendor_risk_findings");
 
     expect(Object.keys(indexes)).toEqual(
       expect.arrayContaining([
@@ -52,5 +52,32 @@ describe("indexes of vendor_risk_findings", () => {
         "idx_vendor_risk_findings_org_vendor",
       ]),
     );
+  });
+});
+
+describe("indexes of vendor_research_runs", () => {
+  // The indexes of the first migration all lead with organization_id, so the delete of the runs of
+  // a vendor (the cascade from a deleted vendor) cannot use any of them.
+  it("has one that leads with vendor_id, behind the cascade from a deleted vendor", async () => {
+    const indexes = await indexesOf("vendor_research_runs");
+
+    expect(indexes.idx_vendor_research_runs_vendor).toContain("USING btree (vendor_id)");
+    // A plain index: the cascade deletes the runs of every status.
+    expect(indexes.idx_vendor_research_runs_vendor).not.toContain("WHERE");
+    expect(indexes.idx_vendor_research_runs_vendor).not.toContain("UNIQUE");
+  });
+
+  it("keeps the three indexes of the first migration", async () => {
+    const indexes = await indexesOf("vendor_research_runs");
+
+    expect(Object.keys(indexes)).toEqual(
+      expect.arrayContaining([
+        "vendor_research_runs_active_uniq",
+        "idx_vendor_research_runs_vendor_created",
+        "idx_vendor_research_runs_org_created",
+      ]),
+    );
+    // The one that keeps the rule of one active run for each vendor.
+    expect(indexes.vendor_research_runs_active_uniq).toContain("UNIQUE");
   });
 });

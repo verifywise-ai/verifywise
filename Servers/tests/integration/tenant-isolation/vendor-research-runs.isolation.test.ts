@@ -52,6 +52,13 @@ const finishOf = (
   ...overrides,
 });
 
+/** Makes `runId` look as if it was created `minutes` ago. */
+const ageCreatedBy = (runId: number, minutes: number) =>
+  sequelize.query(
+    `UPDATE vendor_research_runs SET created_at = NOW() - (:minutes * INTERVAL '1 minute') WHERE id = :runId`,
+    { replacements: { runId, minutes } },
+  );
+
 /**
  * vendor_research_runs — a run belongs to one organization: no other
  * organization can read, start, finish or fail it, even when it names the
@@ -141,10 +148,12 @@ describe("vendor_research_runs tenant isolation", () => {
     // A run that has already ended is not failed again.
     expect(await failStaleRunsQuery(owner.orgId, vendorId, 15)).toBe(0);
 
-    // A started run is as old as its start, not as old as when it was queued.
+    // A started run is as old as its start, not as old as when it was queued. (A queued run that
+    // has waited longer than the stale limit is not started any more, so this one is started
+    // first and its creation is moved back afterwards.)
     const started = await createRunQuery(newRun(owner, vendorId, "auto"));
-    await ageBy20Minutes(started.id, "created_at");
     expect(await markRunRunningQuery(owner.orgId, started.id)).toBe(true);
+    await ageBy20Minutes(started.id, "created_at");
     expect(await failStaleRunsQuery(owner.orgId, vendorId, 15)).toBe(0);
     await ageBy20Minutes(started.id, "started_at");
     expect(await failStaleRunsQuery(owner.orgId, vendorId, 15)).toBe(1);
@@ -340,12 +349,6 @@ describe("vendor_research_runs tenant isolation", () => {
   // run stays `queued`, and the sweep only looks at the vendor that is started or read, so without
   // this rule it would use up a slot of the daily cap for 24 hours although it searched nothing.
   describe("a queued run whose job was lost", () => {
-    const ageCreatedBy = (runId: number, minutes: number) =>
-      sequelize.query(
-        `UPDATE vendor_research_runs SET created_at = NOW() - (:minutes * INTERVAL '1 minute') WHERE id = :runId`,
-        { replacements: { runId, minutes } },
-      );
-
     it("stops counting toward the cooldown and the daily count once it is older than the stale limit", async () => {
       const { owner } = await seedTwoTenantContexts();
       const vendorId = await createTestVendor(owner.orgId);
@@ -415,6 +418,88 @@ describe("vendor_research_runs tenant isolation", () => {
       expect(await getLastRunCreatedAtQuery(owner.orgId, runningVendorId)).toBeInstanceOf(Date);
       expect(await getLastRunCreatedAtQuery(owner.orgId, failedVendorId)).toBeInstanceOf(Date);
       expect(await countRunsSinceQuery(attacker.orgId, since)).toBe(0);
+    });
+  });
+
+  // The 15-minute rule is one rule. A queued run that has waited longer than the stale limit does
+  // not count toward the limits (see above), and a worker that picks its job up late does not start
+  // it either: otherwise a worker that was down for a while would run all of them as soon as it came
+  // back, with their searches and model calls, beyond a cap that no longer saw them.
+  describe("a queued run that has waited longer than the stale limit", () => {
+    it("is started just inside the limit and not just outside it, and a refused run is left as it was", async () => {
+      const { owner } = await seedTwoTenantContexts();
+      const insideVendorId = await createTestVendor(owner.orgId);
+      const outsideVendorId = await createTestVendor(owner.orgId);
+      const inside = await createRunQuery(newRun(owner, insideVendorId, "auto"));
+      const outside = await createRunQuery(newRun(owner, outsideVendorId, "auto"));
+      await ageCreatedBy(inside.id, STALE_RUN_MINUTES - 1);
+
+      // Positive control: just inside the limit its job is still welcome.
+      expect(await markRunRunningQuery(owner.orgId, inside.id)).toBe(true);
+      const started = await getRunByIdQuery(owner.orgId, inside.id);
+      expect(started?.status).toBe("running");
+      expect(started?.started_at).toBeInstanceOf(Date);
+
+      // Just outside the limit, and hours old: the call answers false and changes nothing.
+      for (const minutes of [STALE_RUN_MINUTES + 1, 20 * 60]) {
+        await ageCreatedBy(outside.id, minutes);
+        const before = await getRunByIdQuery(owner.orgId, outside.id);
+        expect(before).toMatchObject({ status: "queued", started_at: null });
+
+        expect(await markRunRunningQuery(owner.orgId, outside.id)).toBe(false);
+
+        expect(await getRunByIdQuery(owner.orgId, outside.id)).toEqual(before);
+      }
+    });
+
+    it("is then failed by the sweep as timed out, never started, and counts for nothing", async () => {
+      const { owner } = await seedTwoTenantContexts();
+      const vendorId = await createTestVendor(owner.orgId);
+      const run = await createRunQuery(newRun(owner, vendorId, "auto"));
+      await ageCreatedBy(run.id, STALE_RUN_MINUTES + 1);
+      expect(await markRunRunningQuery(owner.orgId, run.id)).toBe(false);
+
+      expect(await failStaleRunsQuery(owner.orgId, vendorId, STALE_RUN_MINUTES)).toBe(1);
+
+      const failed = await getRunByIdQuery(owner.orgId, run.id);
+      expect(failed).toMatchObject({ status: "failed", error: "timed out", started_at: null });
+      expect(await countRunsSinceQuery(owner.orgId, new Date(Date.now() - DAY_MS))).toBe(0);
+      expect(await getLastRunCreatedAtQuery(owner.orgId, vendorId)).toBeNull();
+    });
+
+    it("leaves a running run and a finished run as they were, whatever their age", async () => {
+      const { owner } = await seedTwoTenantContexts();
+      const runningVendorId = await createTestVendor(owner.orgId);
+      const failedVendorId = await createTestVendor(owner.orgId);
+      const neverStartedVendorId = await createTestVendor(owner.orgId);
+
+      const running = await createRunQuery(newRun(owner, runningVendorId, "auto"));
+      expect(await markRunRunningQuery(owner.orgId, running.id)).toBe(true);
+
+      const failed = await createRunQuery(newRun(owner, failedVendorId, "auto"));
+      expect(await markRunRunningQuery(owner.orgId, failed.id)).toBe(true);
+      await finishRunQuery(
+        finishOf(owner.orgId, failed.id, {
+          status: "failed",
+          error: "Model call failed: HTTP 500",
+        }),
+      );
+
+      // Failed while still queued, as when its job could not be queued.
+      const neverStarted = await createRunQuery(newRun(owner, neverStartedVendorId, "auto"));
+      await finishRunQuery(
+        finishOf(owner.orgId, neverStarted.id, { status: "failed", error: "could not enqueue" }),
+      );
+
+      for (const run of [running, failed, neverStarted]) {
+        await ageCreatedBy(run.id, 3 * 60);
+        const before = await getRunByIdQuery(owner.orgId, run.id);
+
+        // Not queued, so not started again: the answer is the same at any age.
+        expect(await markRunRunningQuery(owner.orgId, run.id)).toBe(false);
+
+        expect(await getRunByIdQuery(owner.orgId, run.id)).toEqual(before);
+      }
     });
   });
 

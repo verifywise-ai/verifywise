@@ -104,11 +104,11 @@ const isUniqueViolation = (error: unknown): boolean =>
  *
  * The `add` is not cancelled. If it lands after the timeout, the job reaches the worker for a run
  * that is failed by then ("could not enqueue"), and the worker skips it: `markRunRunningQuery`
- * only moves a queued run to running and answers false for a failed one, so the pipeline returns
- * "skipped" before it searches or calls a model. This holds once the failed state is written. A job
- * that lands in the few milliseconds before that write could still start the run, because
- * `finishRunQuery` has no status guard; the caller was told "could not enqueue", tries again, and
- * the vendor is researched twice at worst.
+ * only moves a queued run (one that has not waited past the stale limit) to running and answers
+ * false for a failed one, so the pipeline returns "skipped" before it searches or calls a model.
+ * This holds once the failed state is written. A job that lands in the few milliseconds before
+ * that write could still start the run, because `finishRunQuery` has no status guard; the caller
+ * was told "could not enqueue", tries again, and the vendor is researched twice at worst.
  */
 async function enqueueWithTimeout(
   organizationId: number,
@@ -118,8 +118,9 @@ async function enqueueWithTimeout(
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     const adding = enqueueVendorResearch(organizationId, vendorId, runId);
-    // When the timer wins, nobody waits for `adding` any more. Handled here, a failure of it that
-    // comes later cannot become an unhandled rejection, which ends the process on Node 22.
+    // Belt and braces: `Promise.race` already attaches a handler to `adding`, so a rejection that
+    // comes after the timer has won is handled either way. This keeps that true whatever happens to
+    // the race, because an unhandled rejection ends the process on Node 22.
     adding.catch(() => undefined);
     await Promise.race([
       adding,

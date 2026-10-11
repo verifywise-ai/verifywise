@@ -8,9 +8,10 @@
  *   must be a verbatim part of that source's snippet (after the prompt escaping is undone and case,
  *   whitespace and quote marks are ignored), and that source must mention the vendor, so a page
  *   about a company with a similar name cannot leak in. The quote must also hold at least one word
- *   that is no part of the vendor's own name or domain: a quote of the name alone is in every page
- *   that mentions the vendor and says nothing about a risk. A citation that fails any of this is
- *   removed, and a candidate left without a citation is dropped.
+ *   that is no part of the vendor's own name or domain (as the page may write them: with `www.` or
+ *   a scheme, or as a possessive): a quote of the name alone is in every page that mentions the
+ *   vendor and says nothing about a risk. A citation that fails any of this is removed, and a
+ *   candidate left without a citation is dropped.
  * - The category must be one that was searched, the texts must be present and within their limits,
  *   and the enum values must be real, so that a risk level can be worked out.
  * - The texts and the quotes of a candidate are cleaned like the evidence is (see cleanText) before
@@ -87,15 +88,32 @@ const WORD = /[\p{L}\p{N}]+/gu;
 const wordsOfNormalised = (normalised: string): string[] => normalised.match(WORD) ?? [];
 
 /**
- * The words of the vendor's own name and of its domain, normalised like a quote. They are what a
- * quote has to go beyond: "Acme", "Acme Analytics" and "acme-analytics.com" say nothing that the
- * name does not.
+ * The words around a domain that a page writes and the vendor record does not keep: `www.` and the
+ * scheme of a link (`normaliseDomain` strips both). "www.acme-analytics.com" and
+ * "https://acme-analytics.com" are the domain and nothing else.
+ */
+const DOMAIN_FRAME_WORDS = ["www", "http", "https"];
+
+/**
+ * The words of the vendor's own name and of its domain, normalised like a quote, and what a page
+ * makes of them. They are what a quote has to go beyond: "Acme", "Acme Analytics",
+ * "acme-analytics.com", "www.acme-analytics.com" and "Acme's" say nothing that the name does not.
+ *
+ * - `www`, `http` and `https` count as the vendor's own (see DOMAIN_FRAME_WORDS).
+ * - So does the possessive of each word of the name and of the domain: the apostrophe is stripped
+ *   by `normaliseForQuote`, so "Acme's" is the word "acmes". This is done here, in the comparison
+ *   only; the normalisation is shared with the check that the quote is in the page.
+ *
+ * What is not added is a list of company suffixes (Inc, LLC, GmbH) or of top-level domains: they
+ * are words of their own, so "Acme Analytics Inc" counts, and so does a bare "acme-analytics.com"
+ * for a vendor with no domain on record. That is a known limit of a rule with no word lists.
  */
 function vendorOwnWords(target: ResearchTarget): Set<string> {
-  return new Set([
+  const named = [
     ...wordsOfNormalised(normaliseForQuote(target.name)),
     ...wordsOfNormalised(normaliseForQuote(target.domain ?? "")),
-  ]);
+  ];
+  return new Set([...named, ...named.map((word) => `${word}s`), ...DOMAIN_FRAME_WORDS]);
 }
 
 // ---------------------------------------------------------------------------
@@ -198,9 +216,10 @@ const isUsableText = (text: string) => text.trim() !== "" && text.length <= MAX_
  * page twice cannot pass for two sources.
  *
  * A quote holds up when it is in the source, the source mentions the vendor, and the quote has a
- * word that is no part of the vendor's name or domain. The last rule is what keeps a second
- * hostname with the quote "Acme" from lifting a claim to `high` (see `confidenceCeiling`). It is
- * not a minimum length: "ISO 27001" is short and real.
+ * word that is no part of the vendor's name or domain (see `vendorOwnWords` for what counts as
+ * that). The last rule is what keeps a second hostname with the quote "Acme" or "www.acme.com"
+ * from lifting a claim to `high` (see `confidenceCeiling`). It is not a minimum length: "ISO
+ * 27001" is short and real.
  */
 function validCitations(
   candidate: Candidate,
@@ -226,8 +245,9 @@ function validCitations(
     // An empty string is part of every text, so it is refused on its own.
     if (wanted === "" || !normaliseForQuote(source.content).includes(wanted)) continue;
     if (!sourceMentionsVendor(source, target)) continue;
-    // A quote of nothing but the vendor's own name or domain, or of no word at all. A refused quote
-    // does not use up its source: a later quote of the same source can still count.
+    // A quote of nothing but the vendor's own name or domain (as a page writes them), or of no word
+    // at all. A refused quote does not use up its source: a later quote of the same source can
+    // still count.
     if (!wordsOfNormalised(wanted).some((word) => !ownWords.has(word))) continue;
 
     citations.set(item.source_id, {

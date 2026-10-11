@@ -490,7 +490,8 @@ async function completeRun(
 /**
  * Researches one vendor for one queued run. The run ends once: completed, with its findings, or
  * failed. Failures of the search, of the model and of the database are not thrown; they end the run
- * as failed. A run that is not queued, or whose vendor is missing, is skipped.
+ * as failed. A run that is not queued, that has waited in the queue for longer than the stale limit
+ * (`markRunRunningQuery` does not start such a run), or whose vendor is missing, is skipped.
  */
 export async function runVendorResearch(
   args: RunArgs,
@@ -499,7 +500,7 @@ export async function runVendorResearch(
   // A rejection is not caught: the run is still queued, so a retry of the job can start it.
   const started = await markRunRunningQuery(args.organizationId, args.runId);
   if (!started) {
-    logger.info(`${tag(args)}: the run is not queued, so it is skipped`);
+    logger.info(`${tag(args)}: the run is not queued, or has waited too long, so it is skipped`);
     return { outcome: "skipped", findingsCreated: 0 };
   }
 

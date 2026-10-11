@@ -788,7 +788,12 @@ describe("validateFindings", () => {
       content:
         "Acme Analytics (acme-analytics.com). Acme confirmed the incident on Monday. " +
         "Its SOC 2 Type II report and ISO 27001 certificate are current. " +
-        "The logo reads Analytics Acme.",
+        "The logo reads Analytics Acme. " +
+        // How a page writes the domain and the name: with www. and a scheme, as a possessive, and
+        // with a company suffix.
+        "Visit www.acme-analytics.com, https://acme-analytics.com or http://www.acme-analytics.com. " +
+        "Acme's customers were told, and Acme Analytics's status page was updated. " +
+        "Acme Analytics Inc filed the report. The https certificate expired last week.",
     });
     const quoting = (quote: string, target: ResearchTarget = ANALYTICS) =>
       validate([candidate({ evidence: [{ source_id: "S1", quote }] })], [PAGE], target);
@@ -801,6 +806,16 @@ describe("validateFindings", () => {
       ["the domain", "acme-analytics.com"],
       ["the name and the domain", "Acme Analytics (acme-analytics.com)"],
       ["words of the name, in another order", "Analytics Acme"],
+      // The ways a page writes the domain: the vendor record keeps it without www. and a scheme.
+      ["the domain written with www.", "www.acme-analytics.com"],
+      ["the domain written as a link", "https://acme-analytics.com"],
+      ["the domain written as a link with www.", "http://www.acme-analytics.com"],
+      ["a scheme and nothing else", "https"],
+      ["www and nothing else", "www"],
+      // The apostrophe is stripped before the words are compared, so "Acme's" is "acmes".
+      ["the possessive of the first word of the name", "Acme's"],
+      ["the possessive of the whole name", "Acme Analytics's"],
+      ["the possessive of the name, with a typographic apostrophe", "Acme Analytics’s"],
     ])("removes the citation of %s, and drops a candidate left with none", (_label, quote) => {
       // Positive control: the quote is in the page and the page mentions the vendor, so nothing
       // but the rule about the vendor's own name can refuse it.
@@ -816,6 +831,12 @@ describe("validateFindings", () => {
       ["a short quote of one word and one number, which is real", "ISO 27001"],
       ["a single word that is no part of the name", "certificate"],
       ["a number", "27001"],
+      // Positive controls for the scheme and www: a real word next to them is enough.
+      ["a scheme and a real word", "https certificate"],
+      ["a scheme and more real words", "https certificate expired"],
+      // A known limit, not a wish: a company suffix is a word of its own, and there is no list of
+      // suffixes. The rule stops the name and the domain as the vendor record has them.
+      ["the name and a company suffix (a known limit)", "Acme Analytics Inc"],
     ])("keeps the citation of %s", (_label, quote) => {
       const [found] = quoting(quote);
 
@@ -882,6 +903,10 @@ describe("validateFindings", () => {
       const noDomain: ResearchTarget = { name: "Acme Analytics", domain: null, provides: "" };
       expect(quoting("Acme Analytics", noDomain)).toEqual([]);
       expect(quoting("Acme confirmed the incident", noDomain)).toHaveLength(1);
+      // A known limit: without a domain on record, the word "com" is a word of its own, and there
+      // is no list of top-level domains. With the domain on record the same quote is refused.
+      expect(quoting("acme-analytics.com", noDomain)).toHaveLength(1);
+      expect(quoting("acme-analytics.com")).toEqual([]);
 
       const noName: ResearchTarget = { name: "", domain: "acme-analytics.com", provides: "" };
       expect(quoting("acme-analytics.com", noName)).toEqual([]);
@@ -939,6 +964,53 @@ describe("validateFindings", () => {
 
         expect(refused.sources).toHaveLength(1);
         expect(refused.confidence).toBe("medium");
+        expect(real.sources).toHaveLength(2);
+        expect(real.confidence).toBe("high");
+      });
+
+      it("is not lifted to high by a second hostname whose only quote is the domain written with www.", () => {
+        const news = source({
+          id: "S1",
+          url: "https://news.example.com/a",
+          title: "Acme Analytics breach",
+          content: "Acme Analytics said that attackers copied customer records.",
+        });
+        const roundup = source({
+          id: "S2",
+          url: "https://other.example.org/b",
+          title: "Industry roundup",
+          content:
+            "A roundup of the week: Acme Analytics (www.acme-analytics.com) told customers that " +
+            "attackers copied customer records.",
+        });
+        const claimedOf = (secondQuote: string) =>
+          candidate({
+            confidence: "high",
+            evidence: [
+              { source_id: "S1", quote: "attackers copied customer records" },
+              { source_id: "S2", quote: secondQuote },
+            ],
+          });
+        // Positive control: the quote is in the page and the page mentions the vendor, so only the
+        // rule about the vendor's own words can refuse it.
+        expect(normaliseForQuote(roundup.content)).toContain("www.acme-analytics.com");
+        expect(sourceMentionsVendor(roundup, ANALYTICS)).toBe(true);
+
+        const [refused] = validate(
+          [claimedOf("www.acme-analytics.com")],
+          [news, roundup],
+          ANALYTICS,
+        );
+        const [real] = validate(
+          [claimedOf("attackers copied customer records")],
+          [news, roundup],
+          ANALYTICS,
+        );
+
+        expect(refused.sources.map((entry) => entry.url)).toEqual(["https://news.example.com/a"]);
+        // One page of a third party is `low`.
+        expect(refused.confidence).toBe("low");
+        // The same sources with a real second quote stay `high`.
         expect(real.sources).toHaveLength(2);
         expect(real.confidence).toBe("high");
       });

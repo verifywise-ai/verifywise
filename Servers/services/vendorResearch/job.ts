@@ -11,10 +11,10 @@
  */
 import { generateObjectWithSelfCorrection } from "../../advisor/llmSelfCorrect";
 import logger from "../../utils/logger/fileLogger";
-import { findUsersNotInOrganization } from "../../utils/user.utils";
 import { getVendorByIdQuery } from "../../utils/vendor.utils";
 import { finishRunQuery, getRunByIdQuery } from "../../utils/vendorResearch.utils";
 import { notifyAssigneeOfVendorResearch } from "../inAppNotification.service";
+import { isUserOfOrganization } from "./assignee";
 import { getVendorResearchConfig } from "./config";
 import { PipelineDeps, resolveOrgModel, runVendorResearch } from "./pipeline";
 import { createSearchProvider } from "./searchProvider";
@@ -27,19 +27,6 @@ export interface VendorResearchJobData {
 
 /** What a run records when the job finds no search provider to work with. */
 const NO_SEARCH_PROVIDER_NOTE = "Search provider not configured";
-
-/**
- * Whether the user belongs to the organization. An id that cannot be a user id is no member:
- * `findUsersNotInOrganization` skips such ids and so reports nothing missing for them, which would
- * read as a yes.
- */
-async function isUserOfOrganization(userId: number, organizationId: number): Promise<boolean> {
-  return (
-    Number.isSafeInteger(userId) &&
-    userId > 0 &&
-    (await findUsersNotInOrganization([userId], organizationId)).length === 0
-  );
-}
 
 /**
  * Tells the vendor's assignee, when there is one and the assignee is a user of the vendor's

@@ -34,6 +34,7 @@ import { SearchHit, SearchProvider } from "../../services/vendorResearch/searchP
 import { buildTarget } from "../../services/vendorResearch/target";
 import { calculateRiskLevel } from "../../utils/validations/vendorRiskValidation.utils";
 import {
+  STALE_RUN_MINUTES,
   createRunQuery,
   getActiveRunQuery,
   getFindingsForVendorQuery,
@@ -359,5 +360,59 @@ describe("runVendorResearch against the real tables", () => {
     // Not left running: it has ended, and the vendor has no active run that would block a new one.
     expect(run.finished_at).toBeInstanceOf(Date);
     expect(await getActiveRunQuery(seed.orgId, seed.vendorId)).toBeNull();
+  });
+
+  // A queued run that has waited longer than the stale limit no longer counts toward the cooldown
+  // and the daily cap, so a worker that picks its job up late must not research it either: the cap
+  // would be exceeded by runs it cannot see.
+  it("skips a queued run that has waited longer than the stale limit, with no search and no model call", async () => {
+    const seed = await seedAcme();
+    const queuedMinutesAgo = async (minutes: number) => {
+      const queued = await createRunQuery({
+        organizationId: seed.orgId,
+        vendorId: seed.vendorId,
+        triggerType: "auto",
+        requestedBy: null,
+      });
+      await sequelize.query(
+        `UPDATE vendor_research_runs SET created_at = NOW() - (:minutes * INTERVAL '1 minute')
+         WHERE id = :runId`,
+        { replacements: { runId: queued.id, minutes } },
+      );
+      return queued;
+    };
+    const research = (runId: number, deps: PipelineDeps) =>
+      runVendorResearch({ organizationId: seed.orgId, vendorId: seed.vendorId, runId }, deps);
+    const deps = () =>
+      makeDeps({ security_incidents: [BREACH_HIT] }, fakeModelAnswering([BREACH_FINDING]));
+
+    // Positive control: a run that waited a minute less than the limit is researched as usual.
+    const inside = await queuedMinutesAgo(STALE_RUN_MINUTES - 1);
+    const insideDeps = deps();
+    expect(await research(inside.id, insideDeps)).toEqual({
+      outcome: "completed",
+      findingsCreated: 1,
+    });
+    expect(insideDeps.searchProvider.search).toHaveBeenCalledTimes(4);
+    expect(await countFindings(seed.orgId)).toBe(1);
+
+    // The vendor is free again. Its next run waited a minute too long: the job finds nothing to do.
+    const outside = await queuedMinutesAgo(STALE_RUN_MINUTES + 1);
+    const outsideDeps = deps();
+    expect(await research(outside.id, outsideDeps)).toEqual({
+      outcome: "skipped",
+      findingsCreated: 0,
+    });
+
+    expect(outsideDeps.searchProvider.search).not.toHaveBeenCalled();
+    expect(outsideDeps.generate).not.toHaveBeenCalled();
+    // Left queued: the sweep ends it, as "timed out", without it ever having started.
+    expect(await getRunByIdQuery(seed.orgId, outside.id)).toMatchObject({
+      status: "queued",
+      started_at: null,
+      finished_at: null,
+      error: null,
+    });
+    expect(await countFindings(seed.orgId)).toBe(1);
   });
 });

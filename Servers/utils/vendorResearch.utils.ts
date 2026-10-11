@@ -79,7 +79,8 @@ export const createRunQuery = async (input: {
 /**
  * Minutes after which a queued or running run counts as lost; pass it to `failStaleRunsQuery`. A
  * queued run older than this also stops counting toward the cooldown and the daily cap (see
- * `COUNTS_AS_A_RUN`), which is why there is one number and not two.
+ * `COUNTS_AS_A_RUN`) and is no longer started by a worker (see `markRunRunningQuery`), which is why
+ * there is one number and not two.
  */
 export const STALE_RUN_MINUTES = 15;
 
@@ -144,7 +145,17 @@ export const getRunByIdQuery = (
   runId: number,
 ): Promise<IVendorResearchRun | null> => findRun("id = :runId", { organizationId, runId });
 
-/** Moves a queued run to running. Returns false when the run is not queued (or not found). */
+/**
+ * Moves a queued run to running. Returns false when the run is not queued (or not found), and when
+ * it has been queued for longer than STALE_RUN_MINUTES.
+ *
+ * The age limit is the one of the cooldown and the daily cap: a queued run that old no longer
+ * counts toward them (see `COUNTS_AS_A_RUN`), so a worker that picks its job up this late, after
+ * an outage in which the jobs survived, must not start it either. Otherwise every such run would
+ * search and call a model as soon as the worker came back, beyond a cap that no longer sees them.
+ * It is left queued, and the sweep (`failStaleRunsQuery`) ends it as "timed out" without it ever
+ * having started, which counts for nothing. The pipeline treats the `false` as a skipped run.
+ */
 export const markRunRunningQuery = async (
   organizationId: number,
   runId: number,
@@ -152,6 +163,7 @@ export const markRunRunningQuery = async (
   const started = (await sequelize.query(
     `UPDATE vendor_research_runs SET status = 'running', started_at = NOW()
      WHERE organization_id = :organizationId AND id = :runId AND status = 'queued'
+       AND created_at >= NOW() - (${STALE_RUN_MINUTES} * INTERVAL '1 minute')
      RETURNING id`,
     { replacements: { organizationId, runId }, type: QueryTypes.SELECT },
   )) as Array<{ id: number }>;
@@ -226,7 +238,9 @@ export const finishRunQuery = async (
  *   queue of waiting jobs. The sweep only looks at the vendor that is started or whose latest run
  *   is read, so such a run can stay queued for as long as nobody opens its vendor, and would use
  *   up a slot of the daily cap for the whole 24 hours. When the sweep does reach it, it fails
- *   without having started, which is the first kind.
+ *   without having started, which is the first kind. A worker whose job for the run turns up late
+ *   does not start it either (`markRunRunningQuery` has the same age limit), so a run that has
+ *   stopped counting can only end that way and never searches.
  *
  * A running run counts however long it has run, and so do a completed run and a run that failed
  * after it started: they searched, or may still be searching.

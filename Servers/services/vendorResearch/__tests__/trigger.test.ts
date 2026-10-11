@@ -455,7 +455,8 @@ describe("startVendorResearch", () => {
       expect(watched.answer).toEqual({ ok: false, error: { code: "enqueue_failed" } });
       await done;
 
-      // The abandoned add fails now. A rejection that nobody handles would fail this test.
+      // The abandoned add fails now, after the caller has its answer: the run must not be finished
+      // a second time, and nothing more is logged for it.
       add.fail(new Error("connection closed"));
       await jest.advanceTimersByTimeAsync(0);
 
