@@ -50,7 +50,10 @@ const isDismissReason = (value: unknown): value is DismissReason =>
 
 /**
  * An id off the wire that is a positive whole number a float holds exactly, or NaN. `toId` turns
- * a string of 309 or more digits into Infinity, which is greater than zero but is not an id.
+ * any string of digits into a number, so a long one gets through it: a number above 2^53 - 1 is a
+ * float that is not a safe integer (a 308-digit one is still finite), and only a number above
+ * about 1.797e308 becomes Infinity. Both are greater than zero but are not ids, and
+ * `Number.isSafeInteger` rejects both.
  */
 const positiveId = (value: unknown): number => {
   const id = toId(value);

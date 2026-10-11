@@ -389,13 +389,6 @@ describe("triggerAutoResearch", () => {
       "the vendor was not found",
     ],
     [
-      "search that is not configured",
-      () =>
-        asMock(getVendorResearchConfig).mockReturnValue({ ...CONFIGURED, searchProvider: null }),
-      {},
-      "search is not configured",
-    ],
-    [
       "an organization without an LLM key",
       () => asMock(getLLMKeysQuery).mockResolvedValue([]),
       {},
@@ -417,6 +410,70 @@ describe("triggerAutoResearch", () => {
       expect.stringContaining(`vendor ${VENDOR} (org ${ORG})`),
     );
     expect(logger.info).toHaveBeenCalledWith(expect.stringContaining(reason));
+  });
+
+  // Most installs have no search provider. For them an automatic start would load the vendor only to
+  // be told so, and log a line for every vendor created about a setting that is not the vendor's.
+  describe("when search is not configured", () => {
+    // isSearchConfigured is the real one here, so these are the shapes it refuses.
+    const unconfigured: Array<[string, Partial<VendorResearchConfig>]> = [
+      ["no provider and no key, the default install", { searchProvider: null, tavilyApiKey: null }],
+      ["a key but no provider", { searchProvider: null }],
+      ["a provider but no key", { tavilyApiKey: null }],
+    ];
+
+    it.each(unconfigured)(
+      "returns without a lookup, a run or a log line for %s",
+      async (_label, settings) => {
+        asMock(getVendorResearchConfig).mockReturnValue({ ...CONFIGURED, ...settings });
+
+        await expect(triggerAutoResearch(autoArgs)).resolves.toBeUndefined();
+
+        expect(loggedLines()).toEqual([]);
+        expect(getVendorByIdQuery).not.toHaveBeenCalled();
+        expect(getLLMKeysQuery).not.toHaveBeenCalled();
+        expect(failStaleRunsQuery).not.toHaveBeenCalled();
+        expectNothingStarted();
+      },
+    );
+
+    it("reads the configuration once, not once to check and again to start", async () => {
+      asMock(getVendorResearchConfig).mockReturnValue({
+        ...CONFIGURED,
+        searchProvider: null,
+        tavilyApiKey: null,
+      });
+
+      await triggerAutoResearch(autoArgs);
+
+      expect(getVendorResearchConfig).toHaveBeenCalledTimes(1);
+    });
+
+    // The two earlier checks keep their log lines: this one comes after them.
+    it("still logs a demo vendor, whatever the search settings are", async () => {
+      asMock(getVendorResearchConfig).mockReturnValue({
+        ...CONFIGURED,
+        searchProvider: null,
+        tavilyApiKey: null,
+      });
+
+      await triggerAutoResearch({ ...autoArgs, isDemo: true });
+
+      expect(loggedLines()).toEqual([expect.stringContaining("demo vendors are not researched")]);
+    });
+
+    it("still logs that automatic research is turned off, whatever the search settings are", async () => {
+      asMock(getVendorResearchConfig).mockReturnValue({
+        ...CONFIGURED,
+        autoRun: false,
+        searchProvider: null,
+        tavilyApiKey: null,
+      });
+
+      await triggerAutoResearch(autoArgs);
+
+      expect(loggedLines()).toEqual([expect.stringContaining("automatic research is turned off")]);
+    });
   });
 
   it("does not even look the vendor up for a demo vendor or when automatic research is off", async () => {

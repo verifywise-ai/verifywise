@@ -178,8 +178,10 @@ const NOT_STARTED_REASONS: Record<StartResearchError["code"], string> = {
 
 /**
  * The automatic start after a vendor is created. Nothing is persisted when it does not start, and
- * the reason is logged. It never rejects, so a caller that does not wait for it cannot be hurt by
- * it.
+ * the reason is logged, except for an install without search, which is most of them: that says
+ * nothing about this vendor, so it returns before it looks anything up or writes a line. (A
+ * manual start of such an install is answered with `search_not_configured`.) It never rejects, so
+ * a caller that does not wait for it cannot be hurt by it.
  */
 export async function triggerAutoResearch(args: {
   organizationId: number;
@@ -193,10 +195,12 @@ export async function triggerAutoResearch(args: {
       logger.info(`${label}: not started, demo vendors are not researched`);
       return;
     }
-    if (!getVendorResearchConfig().autoRun) {
+    const config = getVendorResearchConfig();
+    if (!config.autoRun) {
       logger.info(`${label}: not started, automatic research is turned off`);
       return;
     }
+    if (!isSearchConfigured(config)) return;
     const result = await startVendorResearch({
       organizationId,
       vendorId,

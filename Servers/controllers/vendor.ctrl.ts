@@ -327,13 +327,14 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
         projectIds: vendorData.projects || [],
       }).catch((err) => logger.error("Vendor risk candidate notice failed:", err));
 
-      // Research the new vendor's risks in the background. Not awaited: triggerAutoResearch never
-      // rejects, so it cannot fail the response.
-      void triggerAutoResearch({
+      // Research the new vendor's risks in the background. Not awaited, so it cannot fail the
+      // response. triggerAutoResearch is written never to reject; the catch is for the day it does,
+      // because a rejection that nothing handles ends the process.
+      triggerAutoResearch({
         organizationId: req.organizationId!,
         vendorId: createdVendor.id!,
         isDemo: !!createdVendor.is_demo,
-      });
+      }).catch((err) => logger.error("Vendor research auto-start failed:", err));
 
       // Send assignment notifications (fire-and-forget)
       const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";

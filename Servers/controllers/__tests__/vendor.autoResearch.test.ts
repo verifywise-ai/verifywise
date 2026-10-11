@@ -65,6 +65,7 @@ import { notifyUserAssigned } from "../../services/inAppNotification.service";
 import { notifyVendorRiskCandidates } from "../../services/riskLinks/vendorCandidates";
 import { triggerVendorOnboarding } from "../../services/workflows/triggers";
 import { triggerAutoResearch } from "../../services/vendorResearch/trigger";
+import logger from "../../utils/logger/fileLogger";
 import { recordVendorCreation } from "../../utils/vendorChangeHistory.utils";
 import { createNewVendorQuery } from "../../utils/vendor.utils";
 import { createVendor } from "../vendor.ctrl";
@@ -142,6 +143,19 @@ describe("createVendor: automatic research", () => {
       isDemo: false,
     });
     expect(callOrder(triggerAutoResearch)).toBeGreaterThan(callOrder(transaction.commit));
+  });
+
+  it("answers 201 and logs the error when the research start rejects, which it is written never to do", async () => {
+    const failure = new Error("queue is down");
+    asMock(triggerAutoResearch).mockRejectedValue(failure);
+    const res = makeRes();
+
+    await createVendor(makeReq(), res);
+    // The catch runs as a promise job: let every job that is already queued run before looking.
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(logger.error).toHaveBeenCalledWith("Vendor research auto-start failed:", failure);
   });
 
   it.each<[boolean | undefined, boolean]>([
