@@ -1,6 +1,6 @@
 import { MAX_EXCERPT_CHARS, PageLink, relevantLinks, selectExcerpt } from "../pageText";
 import { FetchedPage, PageReadError } from "../readPage";
-import { SearchKind, SearchResult } from "../webSearch";
+import { SearchEngineError, SearchKind, SearchResult } from "../webSearch";
 import {
   LedgerEntry,
   SESSION_LIMITS,
@@ -103,7 +103,7 @@ describe("createWebSession", () => {
 
     it("uses one search whether the engine answers or fails", async () => {
       const { session, search } = setup({
-        answers: [[result("https://news.example/a")], new Error("feed down")],
+        answers: [[result("https://news.example/a")], new SearchEngineError()],
       });
 
       await session.search("Acme breach", "news", "security_incidents");
@@ -203,7 +203,7 @@ describe("createWebSession", () => {
     });
 
     it("answers search_unavailable when the engine fails and records the call as not answered", async () => {
-      const { session } = setup({ answers: [new Error("feed down")] });
+      const { session } = setup({ answers: [new SearchEngineError()] });
 
       expect(await session.search("Acme breach", "news", "security_incidents")).toEqual({
         ok: false,
@@ -218,6 +218,14 @@ describe("createWebSession", () => {
         },
       ]);
       expect(session.snapshot().ledger).toEqual([]);
+    });
+
+    it("lets an error of the engine that is not a SearchEngineError through and records no call", async () => {
+      const bug = new TypeError("Cannot read properties of undefined");
+      const { session } = setup({ answers: [bug] });
+
+      await expect(session.search("Acme breach", "news", "security_incidents")).rejects.toBe(bug);
+      expect(session.snapshot().calls).toEqual([]);
     });
 
     it("takes an empty answer as an answer", async () => {
@@ -601,17 +609,14 @@ describe("createWebSession", () => {
       expect(readPage).toHaveBeenCalledTimes(2);
     });
 
-    it("takes an error of the reader that is not a PageReadError as unreachable", async () => {
+    it("lets an error of the reader that is not a PageReadError through and records no call", async () => {
+      const bug = new TypeError("Cannot read properties of undefined");
       const { session, readPage } = setup();
-      readPage.mockRejectedValueOnce(new Error("socket hang up"));
+      readPage.mockRejectedValueOnce(bug);
 
-      expect(await session.read("https://acme.com/trust", "certifications")).toEqual({
-        ok: false,
-        reason: "unreachable",
-      });
-      expect(session.snapshot().calls).toEqual([
-        { category: "certifications", tool: "read", answered: false, failure: "unreachable" },
-      ]);
+      await expect(session.read("https://acme.com/trust", "certifications")).rejects.toBe(bug);
+      expect(session.snapshot().calls).toEqual([]);
+      expect(session.snapshot().ledger).toEqual([]);
     });
 
     it("returns a redirect to an address that is not public as not_allowed and does not record it", async () => {
@@ -704,6 +709,75 @@ describe("createWebSession", () => {
     });
   });
 
+  describe("read: a source searched under one category and read under another", () => {
+    // For a run on 2031-04-20: 24 months for security_incidents, 36 for legal_regulatory.
+    const cutoffs = { security_incidents: CUTOFF, legal_regulatory: "2028-04-20" };
+
+    it("holds the date of the search result to the cutoff of the read's category when the page has none", async () => {
+      const x = result("https://news.example/x", "2028-06-01T00:00:00.000Z");
+      const { session, readPage } = setup({ answers: [[x]], cutoffs });
+      await session.search("Acme lawsuit", "news", "legal_regulatory");
+
+      expect(await session.read(x.url, "security_incidents")).toEqual({
+        ok: false,
+        reason: "too_old",
+        publishedAt: "2028-06-01T00:00:00.000Z",
+      });
+      const snapshot = session.snapshot();
+      expect(snapshot.calls[1]).toEqual({
+        category: "security_incidents",
+        tool: "read",
+        answered: true,
+        failure: null,
+      });
+      // Within the window of legal_regulatory, the result stays there as it was.
+      expect(snapshot.ledger).toEqual([resultEntry("legal_regulatory", x)]);
+      expect(await session.read(x.url, "legal_regulatory")).toEqual({
+        ok: false,
+        reason: "already_read",
+      });
+      expect(readPage).toHaveBeenCalledTimes(1);
+    });
+
+    it("holds the date of the search result to the cutoff of the read's category when the page is recent", async () => {
+      const x = result("https://news.example/x", "2028-06-01T00:00:00.000Z");
+      const { session, readPage } = setup({ answers: [[x]], cutoffs });
+      readPage.mockResolvedValueOnce(page(x.url, { publishedAt: "2030-01-01T00:00:00.000Z" }));
+      await session.search("Acme lawsuit", "news", "legal_regulatory");
+
+      expect(await session.read(x.url, "security_incidents")).toEqual({
+        ok: false,
+        reason: "too_old",
+        publishedAt: "2028-06-01T00:00:00.000Z",
+      });
+      expect(session.snapshot().ledger).toEqual([resultEntry("legal_regulatory", x)]);
+    });
+
+    it("removes the snippet only when the page is outside the window of the category it was kept under", async () => {
+      const recent = result("https://news.example/recent");
+      const ancient = result("https://news.example/ancient");
+      const { session, readPage } = setup({ answers: [[recent, ancient]], cutoffs });
+      // 30 months old: too old for security_incidents, within legal_regulatory. Then too old for both.
+      readPage.mockResolvedValueOnce(page(recent.url, { publishedAt: "2028-10-20T00:00:00.000Z" }));
+      readPage.mockResolvedValueOnce(
+        page(ancient.url, { publishedAt: "2027-01-02T00:00:00.000Z" }),
+      );
+      await session.search("Acme lawsuit", "news", "legal_regulatory");
+
+      expect(await session.read(recent.url, "security_incidents")).toEqual({
+        ok: false,
+        reason: "too_old",
+        publishedAt: "2028-10-20T00:00:00.000Z",
+      });
+      expect(await session.read(ancient.url, "security_incidents")).toEqual({
+        ok: false,
+        reason: "too_old",
+        publishedAt: "2027-01-02T00:00:00.000Z",
+      });
+      expect(session.snapshot().ledger).toEqual([resultEntry("legal_regulatory", recent)]);
+    });
+  });
+
   describe("read: budget", () => {
     it("refuses the thirteenth read", async () => {
       const { session, readPage } = setup();
@@ -752,7 +826,7 @@ describe("createWebSession", () => {
 
     it("counts the searches that were allowed and the reads that were answered", async () => {
       const { session, readPage } = setup({
-        answers: [[], new Error("feed down")],
+        answers: [[], new SearchEngineError()],
         cutoffs: { security_incidents: CUTOFF },
         limits: { maxSearches: 2 },
       });

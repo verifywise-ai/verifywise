@@ -16,7 +16,7 @@
 import { PageLink, relevantLinks, selectExcerpt } from "./pageText";
 import { UnsafeUrlError, isOnDomain, parsePublicUrl } from "./publicUrl";
 import { FetchedPage, PageReadError, PageReader, ReadFailureReason } from "./readPage";
-import { SearchEngine, SearchKind, SearchResult } from "./webSearch";
+import { SearchEngine, SearchEngineError, SearchKind, SearchResult } from "./webSearch";
 
 export interface SessionLimits {
   maxSearches: number;
@@ -140,6 +140,14 @@ function isOlderThan(publishedAt: string | null, cutoff: string | undefined): bo
   return Date.parse(publishedAt) < Date.parse(`${cutoff}T00:00:00.000Z`);
 }
 
+/** The first of the dates that is older than the cutoff, or null when none is. */
+function firstOlderThan(dates: Array<string | null>, cutoff: string | undefined): string | null {
+  for (const date of dates) {
+    if (date !== null && isOlderThan(date, cutoff)) return date;
+  }
+  return null;
+}
+
 export function createWebSession<C extends string>(options: WebSessionOptions<C>): WebSession<C> {
   const { engine, readPage, domain, cutoffs } = options;
   const limits: SessionLimits = { ...SESSION_LIMITS, ...options.limits };
@@ -151,8 +159,9 @@ export function createWebSession<C extends string>(options: WebSessionOptions<C>
   /** The URLs whose read was answered, a page that was too old included: none is read again. */
   const answeredReads = new Set<string>();
   /**
-   * The date of each page that a read found too old. A later search result for its URL is held to
-   * this date, not to the result's own, so the page cannot come back into the ledger as a snippet.
+   * The date that made a read too old, for each URL whose read was. A later search result for the
+   * URL is held to this date, not to the result's own, so the page cannot come back into the ledger
+   * as a snippet.
    */
   const tooOldPages = new Map<string, string>();
   const calls: CallRecord<C>[] = [];
@@ -169,7 +178,9 @@ export function createWebSession<C extends string>(options: WebSessionOptions<C>
       let answer: SearchResult[];
       try {
         answer = await engine.search(query, kind, signal);
-      } catch {
+      } catch (error) {
+        // A failed search is an answer of the web. Anything else is a bug, and is passed on.
+        if (!(error instanceof SearchEngineError)) throw error;
         calls.push({ category, tool: "search", answered: false, failure: "search_unavailable" });
         return { ok: false, reason: "search_unavailable" };
       }
@@ -222,7 +233,9 @@ export function createWebSession<C extends string>(options: WebSessionOptions<C>
       try {
         page = await readPage(key, signal);
       } catch (error) {
-        const reason = error instanceof PageReadError ? error.reason : "unreachable";
+        // A failed read is an answer of the web. Anything else is a bug, and is passed on.
+        if (!(error instanceof PageReadError)) throw error;
+        const { reason } = error;
         // A redirect to an address that is not public: refused like the URL itself would be.
         if (reason === "not_allowed") return { ok: false, reason };
         calls.push({ category, tool: "read", answered: false, failure: reason });
@@ -234,20 +247,22 @@ export function createWebSession<C extends string>(options: WebSessionOptions<C>
       // Decided on the URL that answered: a page that redirected off the vendor's site is not one
       // of its own.
       const ownPage = isOwnHost(hostOf(page.url));
-      if (
-        !ownPage &&
-        page.publishedAt !== null &&
-        isOlderThan(page.publishedAt, cutoffs[category])
-      ) {
-        // The page proves the source to be outside the window, so a snippet of it must not reach
-        // the analysis.
-        ledger.delete(key);
-        tooOldPages.set(key, page.publishedAt);
-        return { ok: false, reason: "too_old", publishedAt: page.publishedAt };
+      const earlier = ledger.get(key);
+      // The page's date, and the date that the entry keeps from its search result: that one was
+      // held only to the window of the category it was searched under.
+      const dates = [page.publishedAt, earlier?.publishedAt ?? null];
+      const tooOld = ownPage ? null : firstOlderThan(dates, cutoffs[category]);
+      if (tooOld !== null) {
+        // The source is outside the window, so it must not reach the analysis under this category.
+        // A snippet kept under another category stays there while it is within that one's window.
+        if (earlier && firstOlderThan(dates, cutoffs[earlier.category]) !== null) {
+          ledger.delete(key);
+        }
+        tooOldPages.set(key, tooOld);
+        return { ok: false, reason: "too_old", publishedAt: tooOld };
       }
 
       const { excerpt, truncated } = selectExcerpt(page.text, { focus });
-      const earlier = ledger.get(key);
       ledger.set(
         key,
         earlier
