@@ -29,7 +29,7 @@ interface Rule {
 }
 
 interface Group {
-  /** Lower-cased agent names, `*` for every agent. */
+  /** Lower-cased `User-agent` values as written (a `/version` suffix too), `*` for every agent. */
   agents: string[];
   rules: Rule[];
 }
@@ -117,23 +117,27 @@ function parseGroups(text: string): Group[] {
 }
 
 /**
- * The rules of the groups that name the longest agent that `agentToken` contains, else the rules
- * of the `*` groups, else nothing. A file may name one agent in several groups, and their rules
- * are combined (RFC 9309, 2.2.1).
+ * The product token that a `User-agent` value names: a `/version` suffix and the whitespace around
+ * the token are dropped (RFC 9309, 2.2.1). The value is already lower-cased.
+ */
+function productTokenOf(agent: string): string {
+  return agent.split("/")[0].trim();
+}
+
+/**
+ * The rules of the groups that name `agentToken` as their product token, else the rules of the
+ * `*` groups, else nothing. A name is ours when it is equal to the token, not when it is a part of
+ * it: `bot` and `wise` are other agents. A file may name one agent in several groups, and their
+ * rules are combined (RFC 9309, 2.2.1). A group of ours with no rules allows everything; the `*`
+ * groups are only for when the file has no group of ours.
  */
 function rulesFor(groups: Group[], agentToken: string): Rule[] {
   const token = agentToken.toLowerCase();
-  let name = "*";
-  let longest = 0;
-  for (const group of groups) {
-    for (const agent of group.agents) {
-      if (agent !== "*" && agent.length > longest && token.includes(agent)) {
-        name = agent;
-        longest = agent.length;
-      }
-    }
-  }
-  return groups.filter((group) => group.agents.includes(name)).flatMap((group) => group.rules);
+  const ours = groups.filter((group) =>
+    group.agents.some((agent) => productTokenOf(agent) === token),
+  );
+  const chosen = ours.length > 0 ? ours : groups.filter((group) => group.agents.includes("*"));
+  return chosen.flatMap((group) => group.rules);
 }
 
 /**

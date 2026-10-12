@@ -1,8 +1,12 @@
+import http from "http";
+import { Readable } from "stream";
 import {
+  ANY_CONTENT_TYPE,
   FetchError,
   FetchFailureReason,
   GuardedFetchOptions,
   GuardedResponse,
+  Transport,
   guardedFetch,
 } from "../guardedFetch";
 import { PageReadError, createPageReader, decodeBody } from "../readPage";
@@ -228,6 +232,15 @@ describe("createPageReader", () => {
       expect((await failureOf(createPageReader({ fetch })(PAGE_URL))).reason).toBe("unreachable");
     });
 
+    it("keeps the error that was not a FetchError as the cause, out of the message", async () => {
+      const boom = new TypeError("boom");
+      const { fetch } = fakeFetch({ [PAGE_URL]: boom });
+      const error = await failureOf(createPageReader({ fetch })(PAGE_URL));
+      expect(error.reason).toBe("unreachable");
+      expect(error.cause).toBe(boom);
+      expect(error.message).toBe(new FetchError("unreachable").message);
+    });
+
     it("hands the abort signal on to the fetch", async () => {
       const { fetch, calls } = fakeFetch({ [PAGE_URL]: { body: "<p>Hi there</p>" } });
       const controller = new AbortController();
@@ -324,6 +337,7 @@ describe("createPageReader", () => {
       await createPageReader({ fetch })(PAGE_URL, new AbortController().signal);
       const robots = calls.find((call) => call.url === ROBOTS);
       expect(robots?.options).toEqual({
+        allowedContentTypes: ["text/plain", ANY_CONTENT_TYPE],
         maxBytes: 65_536,
         headerTimeoutMs: 5_000,
         totalTimeoutMs: 5_000,
@@ -347,6 +361,68 @@ describe("createPageReader", () => {
       );
       expect(error.reason).toBe("blocked_by_robots");
       expect(requested).toEqual([ROBOTS]);
+    });
+
+    describe("under the real fetch guard", () => {
+      type Reply = { status?: number; headers?: http.IncomingHttpHeaders; body?: string };
+      const HTML_REPLY: Reply = {
+        headers: { "content-type": "text/html; charset=utf-8" },
+        body: HTML,
+      };
+      const PRIVATE_URL = "https://acme.com/private/page";
+      const PUBLIC_URL = "https://acme.com/public";
+
+      /** guardedFetch itself, so its content type check runs, over a scripted site. */
+      function readerOver(site: Record<string, Reply>) {
+        const requested: string[] = [];
+        const transport: Transport = async ({ url }) => {
+          requested.push(url.href);
+          const reply = site[url.href] ?? { status: 404 };
+          return {
+            status: reply.status ?? 200,
+            headers: reply.headers ?? {},
+            body: Readable.from([Buffer.from(reply.body ?? "")]),
+          };
+        };
+        const read = createPageReader({
+          fetch: (url, options) => guardedFetch(url, options, { transport }),
+        });
+        return { read, requested };
+      }
+
+      it.each([
+        ["application/octet-stream", { "content-type": "application/octet-stream" }],
+        ["no Content-Type", {}],
+      ])("parses a robots.txt that is served with %s", async (_label, headers) => {
+        const { read, requested } = readerOver({
+          [ROBOTS]: { headers, body: "User-agent: *\nDisallow: /private" },
+          [PRIVATE_URL]: HTML_REPLY,
+          [PUBLIC_URL]: HTML_REPLY,
+        });
+        const error = await failureOf(read(PRIVATE_URL));
+        expect(error.reason).toBe("blocked_by_robots");
+        expect((await read(PUBLIC_URL)).title).toBe("Trust center | Acme");
+        expect(requested).toEqual([ROBOTS, PUBLIC_URL]);
+      });
+
+      it.each([404, 403])("allows the page when robots.txt answers %i", async (status) => {
+        const { read, requested } = readerOver({
+          [ROBOTS]: { status },
+          [PUBLIC_URL]: HTML_REPLY,
+        });
+        expect((await read(PUBLIC_URL)).title).toBe("Trust center | Acme");
+        expect(requested).toEqual([ROBOTS, PUBLIC_URL]);
+      });
+
+      it.each([500, 503])("disallows the page when robots.txt answers %i", async (status) => {
+        const { read, requested } = readerOver({
+          [ROBOTS]: { status },
+          [PUBLIC_URL]: HTML_REPLY,
+        });
+        const error = await failureOf(read(PUBLIC_URL));
+        expect(error.reason).toBe("blocked_by_robots");
+        expect(requested).toEqual([ROBOTS]);
+      });
     });
 
     it("decodes robots.txt with its charset", async () => {

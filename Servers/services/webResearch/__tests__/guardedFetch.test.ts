@@ -5,6 +5,7 @@ import { AddressInfo, LookupFunction } from "net";
 import { Readable } from "stream";
 import zlib from "zlib";
 import {
+  ANY_CONTENT_TYPE,
   BOT_USER_AGENT,
   DnsLookup,
   FetchError,
@@ -238,6 +239,26 @@ describe("guardedFetch", () => {
       ]);
     });
 
+    it("hands beforeRequest a copy of the URL, so a hook cannot change where a hop goes", async () => {
+      const { transport, requests } = scriptedTransport([redirect(301, "/b"), page()]);
+
+      await guardedFetch(
+        "https://example.com/a",
+        {
+          beforeRequest: async (url) => {
+            url.hostname = "127.0.0.1";
+            url.pathname = "/hijacked";
+          },
+        },
+        { transport },
+      );
+
+      expect(requests.map((request) => request.url.href)).toEqual([
+        "https://example.com/a",
+        "https://example.com/b",
+      ]);
+    });
+
     it("propagates the FetchError that beforeRequest throws (blocked_by_robots) without requesting the URL", async () => {
       const blocked = new FetchError("blocked_by_robots");
       const { transport, requests } = scriptedTransport([page()]);
@@ -315,6 +336,25 @@ describe("guardedFetch", () => {
       expect(result.body.toString("utf8")).toBe("<rss></rss>");
       expect(failure.reason).toBe("unsupported_type");
       expect(requests[0].headers.Accept.split(", ")[0]).toBe("application/rss+xml");
+    });
+
+    it("reads any media type, and a missing one, when the caller allows */*", async () => {
+      const { transport, requests } = scriptedTransport([
+        answer(200, { "content-type": "application/octet-stream" }, "binary-ish"),
+        answer(200, {}, "no type"),
+        answer(200, { "content-type": "text/plain" }, "plain"),
+      ]);
+      const options = { allowedContentTypes: ["text/plain", ANY_CONTENT_TYPE] };
+
+      const octetStream = await guardedFetch("https://example.com/a", options, { transport });
+      const untyped = await guardedFetch("https://example.com/b", options, { transport });
+      const plain = await guardedFetch("https://example.com/c", options, { transport });
+
+      expect(octetStream.body.toString("utf8")).toBe("binary-ish");
+      expect(untyped.body.toString("utf8")).toBe("no type");
+      expect(untyped.contentType).toBe("");
+      expect(plain.body.toString("utf8")).toBe("plain");
+      expect(requests[0].headers.Accept).toBe("text/plain, */*");
     });
   });
 

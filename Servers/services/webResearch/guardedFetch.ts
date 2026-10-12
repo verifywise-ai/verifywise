@@ -22,6 +22,8 @@ import { UnsafeUrlError, isPublicAddress, parsePublicUrl } from "./publicUrl";
 export const BOT_TOKEN = "VerifyWiseResearchBot";
 export const BOT_USER_AGENT = "VerifyWiseResearchBot/1.0 (+https://verifywise.ai)";
 export const MAX_BODY_BYTES = 2_097_152;
+/** In `allowedContentTypes`: any media type, and an answer with no Content-Type at all. */
+export const ANY_CONTENT_TYPE = "*/*";
 export const DEFAULT_CONTENT_TYPES: readonly string[] = [
   "text/html",
   "application/xhtml+xml",
@@ -69,7 +71,10 @@ export class FetchError extends Error {
 
 export interface GuardedFetchOptions {
   signal?: AbortSignal;
-  /** Media types, without parameters, that the answer may have. Default DEFAULT_CONTENT_TYPES. */
+  /**
+   * Media types, without parameters, that the answer may have; ANY_CONTENT_TYPE lets any answer
+   * through, one with no Content-Type included. Default DEFAULT_CONTENT_TYPES.
+   */
   allowedContentTypes?: readonly string[];
   /** The most bytes of the body, after decompression, that are read. Default MAX_BODY_BYTES. */
   maxBytes?: number;
@@ -79,7 +84,10 @@ export interface GuardedFetchOptions {
   totalTimeoutMs?: number;
   /** Default 4. */
   maxRedirects?: number;
-  /** Called with every URL before it is requested; may throw a FetchError (robots.txt). */
+  /**
+   * Called with every URL before it is requested; may throw a FetchError (robots.txt). It is given
+   * a copy: whatever it does to that URL, the hop goes where the URL policy sent it.
+   */
   beforeRequest?: (url: URL) => Promise<void>;
 }
 
@@ -244,7 +252,7 @@ function failureForStatus(status: number): FetchFailureReason {
 }
 
 /** "text/html; charset=utf-8" gives "text/html". */
-function mediaTypeOf(contentType: string): string {
+export function mediaTypeOf(contentType: string): string {
   return contentType.split(";")[0].trim().toLowerCase();
 }
 
@@ -317,7 +325,12 @@ async function readAnswer(
 ): Promise<GuardedResponse> {
   if (response.status !== 200) throw new FetchError(failureForStatus(response.status));
   const contentType = response.headers["content-type"] ?? "";
-  if (!allowedTypes.includes(mediaTypeOf(contentType))) throw new FetchError("unsupported_type");
+  if (
+    !allowedTypes.includes(ANY_CONTENT_TYPE) &&
+    !allowedTypes.includes(mediaTypeOf(contentType))
+  ) {
+    throw new FetchError("unsupported_type");
+  }
   const { body, truncated } = await readBody(response, maxBytes, signal);
   return { url: url.href, status: 200, contentType, body, truncated };
 }
@@ -346,11 +359,15 @@ export async function guardedFetch(
   const maxBytes = options.maxBytes ?? MAX_BODY_BYTES;
   const headerTimeoutMs = options.headerTimeoutMs ?? HEADER_TIMEOUT_MS;
   const maxRedirects = options.maxRedirects ?? MAX_REDIRECTS;
+  // The low-priority wildcard keeps a strict server from answering 406 to a PDF link: the answer
+  // comes back and is refused as unsupported_type, which tells the model why. A caller that
+  // allows any type has the wildcard already.
+  const accepted = allowedTypes.includes(ANY_CONTENT_TYPE)
+    ? allowedTypes
+    : [...allowedTypes, "*/*;q=0.1"];
   const headers = {
     "User-Agent": BOT_USER_AGENT,
-    // The low-priority wildcard keeps a strict server from answering 406 to a PDF link: the
-    // answer comes back and is refused as unsupported_type, which tells the model why.
-    Accept: [...allowedTypes, "*/*;q=0.1"].join(", "),
+    Accept: accepted.join(", "),
     "Accept-Encoding": "gzip, deflate, br",
     "Accept-Language": "en",
   };
@@ -366,7 +383,9 @@ export async function guardedFetch(
     let url = toPublicUrl(rawUrl);
     for (let redirects = 0; ; redirects += 1) {
       throwIfAborted(signal);
-      if (options.beforeRequest) await untilAborted(options.beforeRequest(url), signal);
+      if (options.beforeRequest) {
+        await untilAborted(options.beforeRequest(new URL(url.href)), signal);
+      }
 
       const response = await send(
         transport,

@@ -72,16 +72,53 @@ describe("parseRobots", () => {
       );
     });
 
-    it("matches a group whose name is contained in the agent token, the longest name first", () => {
-      const text = [
-        "User-agent: VerifyWise",
-        "Disallow: /short",
-        "User-agent: VerifyWiseResearch",
-        "Disallow: /long",
-      ].join("\n");
+    // RFC 9309, 2.2.1: a group is ours when it names our product token, not a part of it.
+    it.each([
+      "VerifyWiseResearchBot",
+      "verifywiseresearchbot/1.0",
+      "VerifyWiseResearchBot /2",
+      "  VERIFYWISERESEARCHBOT/1.0  ",
+    ])("takes the group named %p as ours, not the * group", (name) => {
+      const rules = parseRobots(
+        `User-agent: *\nDisallow: /star\n\nUser-agent: ${name}\nDisallow: /ours`,
+      );
+      expect(rules.isAllowed("/ours")).toBe(false);
+      expect(rules.isAllowed("/star")).toBe(true);
+    });
+
+    it.each([
+      "bot",
+      "wise",
+      "search",
+      "VerifyWise",
+      "VerifyWiseResearch",
+      "VerifyWiseResearchBot2",
+    ])("leaves the group named %p to another agent, and keeps the * group for us", (name) => {
+      const rules = parseRobots(
+        `User-agent: ${name}\nAllow: /\nDisallow: /theirs\n\nUser-agent: *\nDisallow: /private`,
+      );
+      expect(rules.isAllowed("/private")).toBe(false);
+      expect(rules.isAllowed("/theirs")).toBe(true);
+    });
+
+    it("does not read a version suffix on the * group as the * group", () => {
+      const rules = parseRobots("User-agent: */1.0\nDisallow: /star");
+      expect(rules.isAllowed("/star")).toBe(true);
+    });
+
+    it("allows everything when our own group is empty, whatever the * group says", () => {
+      const rules = parseRobots(
+        "User-agent: VerifyWiseResearchBot\nDisallow:\n\nUser-agent: *\nDisallow: /",
+      );
+      expect(rules.isAllowed("/anything")).toBe(true);
+    });
+
+    it("combines the rules of groups that name our token with and without a version", () => {
+      const text =
+        "User-agent: VerifyWiseResearchBot\nDisallow: /a\n\nUser-agent: verifywiseresearchbot/1.0\nDisallow: /b";
       const rules = parseRobots(text);
-      expect(rules.isAllowed("/long")).toBe(false);
-      expect(rules.isAllowed("/short")).toBe(true);
+      expect(rules.isAllowed("/a")).toBe(false);
+      expect(rules.isAllowed("/b")).toBe(false);
     });
 
     it("takes the agent token from the second argument", () => {

@@ -5,7 +5,14 @@
  * Every failure comes out as a PageReadError with a fixed message. It repeats nothing of the URL
  * or of the page, because both are written by third parties.
  */
-import { BOT_TOKEN, FetchError, FetchFailureReason, guardedFetch } from "./guardedFetch";
+import {
+  ANY_CONTENT_TYPE,
+  BOT_TOKEN,
+  FetchError,
+  FetchFailureReason,
+  guardedFetch,
+  mediaTypeOf,
+} from "./guardedFetch";
 import { PageLink, extractPageText, looksLikeJavaScriptShell, tidyText } from "./pageText";
 import { createRobotsChecker } from "./robots";
 
@@ -16,11 +23,21 @@ const NEEDS_JAVASCRIPT_MESSAGE =
   "The page is built by a script and holds almost no text without running it.";
 
 export class PageReadError extends Error {
-  constructor(readonly reason: ReadFailureReason) {
+  /**
+   * The error that was not a FetchError and became `unreachable`, kept to find out what went wrong.
+   * It can repeat the URL or the page, so it is never shown to a model or put in a log.
+   */
+  readonly cause?: unknown;
+
+  constructor(
+    readonly reason: ReadFailureReason,
+    cause?: unknown,
+  ) {
     super(
       reason === "needs_javascript" ? NEEDS_JAVASCRIPT_MESSAGE : new FetchError(reason).message,
     );
     this.name = "PageReadError";
+    this.cause = cause;
   }
 }
 
@@ -64,12 +81,10 @@ export function decodeBody(body: Buffer, contentType: string): string {
   return decoder.decode(body);
 }
 
-/** "text/html; charset=utf-8" gives "text/html". */
-const mediaTypeOf = (contentType: string): string => contentType.split(";")[0].trim().toLowerCase();
-
 function toReadError(error: unknown): PageReadError {
   if (error instanceof PageReadError) return error;
-  return new PageReadError(error instanceof FetchError ? error.reason : "unreachable");
+  if (error instanceof FetchError) return new PageReadError(error.reason);
+  return new PageReadError("unreachable", error);
 }
 
 /**
@@ -89,10 +104,13 @@ export function createPageReader(deps: { fetch?: typeof guardedFetch } = {}): Pa
 
   // robots.txt is fetched with no `beforeRequest`, which would ask the checker about robots.txt
   // while the checker waits for it, and with no caller signal: the checker keeps the answer for
-  // every later read, and one read that was cancelled must not leave "disallowed" behind.
+  // every later read, and one read that was cancelled must not leave "disallowed" behind. Any
+  // Content-Type is parsed: RFC 9309 makes no condition on it, and a refused file would count as
+  // unreachable and block the whole origin (static hosting serves it as application/octet-stream).
   const robots = createRobotsChecker(async (robotsUrl) => {
     try {
       const answer = await fetch(robotsUrl, {
+        allowedContentTypes: ["text/plain", ANY_CONTENT_TYPE],
         maxBytes: 65_536,
         headerTimeoutMs: 5_000,
         totalTimeoutMs: 5_000,
