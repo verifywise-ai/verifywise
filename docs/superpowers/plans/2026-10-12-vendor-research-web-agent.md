@@ -39,7 +39,26 @@
 - `PROMPT_VERSION` is `"vr-2"`. A search timeout, a blocked page and an empty answer are results, never exceptions that fail a run.
 - Logging goes through `utils/logger/fileLogger` with ids only (organization, vendor, run). Never log page text, URLs, queries, model output or keys.
 - `Servers/dist` is written by `npm run watch` (tsc-watch) and by the Jest integration global setup: never run them together. Unit tests and `npx tsc --noEmit` are safe while watch runs.
-- Gate for every backend task: `cd Servers && npx tsc --noEmit`, `npx prettier --check <touched files>`, and the touched Jest suites. Gate for every frontend task: `cd Clients && npm run typecheck`, `npx prettier --check <touched files>`, and the touched Vitest files (`npx vitest run <paths>`, never `npm run test`).
+- **Type check.** `tsc` compiles only what `tsconfig.json` includes (`services/**` is not in `include`) and what those files import. So a new module under `services/` is not checked until a file in scope imports it (from Task 10 on), and no `__tests__` folder under `services/` is ever checked (`ts-jest` runs with `diagnostics: false`). Every backend gate therefore also runs `npx tsc -p "$TSCHECK"`, where `$TSCHECK` is a scratch config that the controller writes once to the scratchpad, gives in every dispatch and never commits. It passes on the current tree, and because `noUnusedLocals` is on, an unused import in a test fails it:
+
+```json
+{
+  "extends": "/Users/halit/Desktop/verifywise/Servers/tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "incremental": false,
+    "typeRoots": ["/Users/halit/Desktop/verifywise/Servers/node_modules/@types"]
+  },
+  "include": [
+    "/Users/halit/Desktop/verifywise/Servers/services/webResearch/**/*.ts",
+    "/Users/halit/Desktop/verifywise/Servers/services/vendorResearch/**/*.ts",
+    "/Users/halit/Desktop/verifywise/Servers/types/**/*.d.ts"
+  ],
+  "exclude": ["/Users/halit/Desktop/verifywise/Servers/node_modules"]
+}
+```
+
+- Gate for every backend task: `cd Servers && npx tsc --noEmit`, `npx tsc -p "$TSCHECK"`, `npx prettier --check <touched files>`, and the touched Jest suites. Gate for every frontend task: `cd Clients && npm run typecheck`, `npx prettier --check <touched files>`, and the touched Vitest files (`npx vitest run <paths>`, never `npm run test`).
 - ES2020 library features (`matchAll`, `Promise.allSettled`) are available. New migrations: timestamp from `date +%Y%m%d%H%M%S` (it must sort after `20261011025519`), DDL with the `verifywise.` prefix, reversible.
 - UI: sentence case, house components, and every new string has `de`, `fr` and `es` entries in `Clients/src/i18n/translations.ts`. No server `req.t` string is added, so `Servers/locales` stays unchanged.
 - The organisation's LLM key is never read, printed or logged by this work. The end-to-end test uses the running local app only.
@@ -158,7 +177,7 @@ Expected: PASS.
 - [ ] **Step 5: Gate and commit**
 
 ```bash
-cd Servers && npx tsc --noEmit && npx prettier --write services/webResearch/publicUrl.ts services/webResearch/__tests__/publicUrl.test.ts
+cd Servers && npx tsc --noEmit && npx tsc -p "$TSCHECK" && npx prettier --write services/webResearch/publicUrl.ts services/webResearch/__tests__/publicUrl.test.ts
 cd .. && git add -- Servers/services/webResearch/publicUrl.ts Servers/services/webResearch/__tests__/publicUrl.test.ts
 git commit -m "feat(vendors): add the public URL and address policy for the web research toolkit" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" -- Servers/services/webResearch/publicUrl.ts Servers/services/webResearch/__tests__/publicUrl.test.ts
 ```
@@ -394,8 +413,8 @@ export function createBingEngine(deps?: { fetch?: typeof guardedFetch; queue?: S
 - Produces:
 
 ```ts
-export const SESSION_LIMITS = { maxSearches: 8, maxReads: 12, maxResultsPerSearch: 10 } as const;
-export type SessionLimits = { maxSearches: number; maxReads: number; maxResultsPerSearch: number };
+export interface SessionLimits { maxSearches: number; maxReads: number; maxResultsPerSearch: number }
+export const SESSION_LIMITS: SessionLimits = { maxSearches: 8, maxReads: 12, maxResultsPerSearch: 10 };
 export interface LedgerEntry<C extends string = string> {
   category: C; kind: "result" | "page"; url: string; title: string; content: string; publishedAt: string | null;
 }
@@ -446,14 +465,14 @@ export function researchableCategories(target: ResearchTarget): ResearchCategory
   - `read` policy: `http://127.0.0.1/`, `http://169.254.169.254/latest/meta-data/`, `file:///etc/passwd`, `https://acme.com:8080/` give `not_allowed`, even when a (fake) engine returned them; the reader is not called, no read budget is used and no call is recorded.
   - `read` success: the ledger entry of that URL keeps its place, its title and its date, takes `kind: "page"`, the excerpt as `content` (at most `MAX_EXCERPT_CHARS`, cut with `focus`) and the category of the read call; a URL that no search returned (own domain) is appended; links come back only when the final URL is on the vendor's domain and are filtered by `relevantLinks` (at most 25); a final URL on another host than the requested one is not treated as own-domain (no links, and the lookback applies).
   - A second read of the same URL gives `already_read`, uses no budget and changes nothing.
-  - Reader failures: each of `blocked_by_robots`, `blocked_by_site`, `not_found`, `unsupported_type`, `needs_javascript`, `unreachable` comes back as `reason` and is recorded with `answered: false` and that `failure`; a reader failure of `not_allowed` (a redirect to a private address) is returned as `not_allowed` and not recorded. A page whose date is older than the cutoff comes back as `too_old` with its `publishedAt`, is recorded as answered, and adds no entry.
+  - Reader failures: each of `blocked_by_robots`, `blocked_by_site`, `not_found`, `unsupported_type`, `needs_javascript`, `unreachable` comes back as `reason` and is recorded with `answered: false` and that `failure`; a reader failure of `not_allowed` (a redirect to a private address) is returned as `not_allowed` and not recorded. A page whose date is older than the cutoff comes back as `too_old` with its `publishedAt`, is recorded as answered, adds no entry, and removes the entry that an undated search snippet for the same URL had put in the ledger (a source that the page proves to be outside the window must not reach the analysis); a repeat read of that URL gives `already_read`.
   - Reads: the 13th read is refused with `budget_exhausted`; with one read left, `Promise.all` of two reads lets exactly one run (the budget is taken before the first `await`).
   - `snapshot()` returns copies (changing the returned arrays changes nothing in the session); `searchesUsed` counts allowed searches, `pagesRead` counts answered reads.
   - `categories.test.ts`: `monthsBefore(new Date("2031-04-20T12:00:00Z"), 24)` is `2029-04-20`; `monthsBefore(new Date("2028-02-29T00:00:00Z"), 24)` is `2026-02-28`; `LOOKBACK_MONTHS` has the four values above; `researchableCategories` gives all four, in category order, for a target with a domain and `["security_incidents","legal_regulatory"]` for one with `domain: null`.
 
 - [ ] **Step 2: Run to verify they fail.** Run: `cd Servers && npx jest services/webResearch/__tests__/webSession.test.ts services/vendorResearch/__tests__/categories.test.ts`. Expected: FAIL, missing exports.
 
-- [ ] **Step 3: Implement `webSession.ts` and the `categories.ts` additions.** The ledger is a `Map` keyed by the URL as `parsePublicUrl` returns it (fragment removed), kept in arrival order; a page read replaces the value, not the position. The set of returned URLs holds the URLs of results that were kept or already in the ledger, not those dropped for their date. A call is checked in this order: URL policy (`not_allowed`), provenance (`not_from_search`), already read (`already_read`), budget (`budget_exhausted`); the budget is decremented synchronously before the reader is awaited. Own-domain decisions (lookback exemption, links) use `isOnDomain` on the host of the final URL.
+- [ ] **Step 3: Implement `webSession.ts` and the `categories.ts` additions.** The ledger is a `Map` keyed by the URL as `parsePublicUrl` returns it (fragment removed), kept in arrival order; a page read replaces the value, not the position. The set of returned URLs holds the URLs of results that were kept or already in the ledger, not those dropped for their date. A call is checked in this order: URL policy (`not_allowed`), provenance (`not_from_search`), already read (`already_read`, decided by a set of URLs whose read was answered, `too_old` ones included), budget (`budget_exhausted`); the budget is decremented synchronously before the reader is awaited. On `too_old` the ledger entry of that URL, if a search put one there, is deleted. Own-domain decisions (lookback exemption, links) use `isOnDomain` on the host of the final URL.
 
 - [ ] **Step 4: Run to verify they pass.** Expected: PASS.
 
@@ -483,14 +502,15 @@ export interface LoopStep<C extends string = string> {
   category?: C; query?: string; kind?: "web" | "news"; url?: string; focus?: string;
 }
 export function createLoopStepSchema<C extends string>(categories: readonly [C, ...C[]]): z.ZodType<LoopStep<C>>;
-export const LOOP_LIMITS = { maxSteps: 24, stepTimeoutMs: 60_000, totalTimeoutMs: 300_000 } as const;
+export interface LoopLimits { maxSteps: number; stepTimeoutMs: number; totalTimeoutMs: number }
+export const LOOP_LIMITS: LoopLimits = { maxSteps: 24, stepTimeoutMs: 60_000, totalTimeoutMs: 300_000 };
 export type StopReason = "finished" | "budget" | "steps" | "time" | "model_error";
 export interface LoopInput<C extends string> {
   system: string;                 // the loop's system prompt, built by the vendor layer
   task: string;                   // the vendor, the date, the categories, built by the vendor layer
   categories: readonly [C, ...C[]]; // every category, for the schema
   researchable: readonly C[];     // the categories this run may use
-  limits?: Partial<typeof LOOP_LIMITS>;
+  limits?: Partial<LoopLimits>;
 }
 export interface LoopDeps<C extends string> {
   generate: typeof generateObjectWithSelfCorrection;
@@ -566,7 +586,7 @@ export function createVendorResearcher(deps?: {
 
 - [ ] **Step 2: Run to verify they fail.** Run: `cd Servers && npx jest services/vendorResearch/__tests__/prompts.test.ts services/vendorResearch/__tests__/researchAgent.test.ts`. Expected: FAIL.
 
-- [ ] **Step 3: Implement.** Add `kind` to `EvidenceSource` and fix every literal that `npx tsc --noEmit` and the Jest suites flag. In `prompts.ts` rewrite `buildSystemPrompt(now)` from the existing text (spec section 9 lists what changes: today's date and lookback windows from `LOOKBACK_MONTHS`, two kinds of source, `site="vendor"`, a vendor's own statement of a limitation, expiry or adverse term counts as evidence, quote from one passage and never across `[…]`), add the `kind` and `site` attributes to `renderSource` (it now needs the target), and write the two loop prompts (the method of spec section 6: check the vendor's own site with `read`, search news for incidents and legal actions, read the best sources instead of trusting a snippet). `createVendorResearcher` takes `generate` from `deps.generate ?? generateObjectWithSelfCorrection` and builds, per call, `researchableCategories(target)`, the cutoffs `monthsBefore(now, LOOKBACK_MONTHS[c])`, one `createWebSession` (engine from `deps.engine ?? createBingEngine()`, reader from `deps.readPage ?? createPageReader()`, so each run gets its own robots cache) and one `runResearchLoop`, and returns the snapshot with the loop's result.
+- [ ] **Step 3: Implement.** Add `kind` to `EvidenceSource` and fix every literal that `npx tsc --noEmit`, `npx tsc -p "$TSCHECK"` and the Jest suites flag. In `prompts.ts` rewrite `buildSystemPrompt(now)` from the existing text (spec section 9 lists what changes: today's date and lookback windows from `LOOKBACK_MONTHS`, two kinds of source, `site="vendor"`, a vendor's own statement of a limitation, expiry or adverse term counts as evidence, quote from one passage and never across `[…]`), add the `kind` and `site` attributes to `renderSource` (it now needs the target), and write the two loop prompts (the method of spec section 6: check the vendor's own site with `read`, search news for incidents and legal actions, read the best sources instead of trusting a snippet). `createVendorResearcher` takes `generate` from `deps.generate ?? generateObjectWithSelfCorrection` and builds, per call, `researchableCategories(target)`, the cutoffs `monthsBefore(now, LOOKBACK_MONTHS[c])`, one `createWebSession` (engine from `deps.engine ?? createBingEngine()`, reader from `deps.readPage ?? createPageReader()`, so each run gets its own robots cache) and one `runResearchLoop`, and returns the snapshot with the loop's result.
 
 - [ ] **Step 4: Run to verify they pass**, then the whole vendor research unit suites: `cd Servers && npx jest services/vendorResearch services/webResearch controllers/__tests__/vendorResearch.ctrl.test.ts`. Expected: PASS.
 
@@ -800,7 +820,7 @@ Removed in all three languages (nothing writes or shows them any more): `Set {pr
 
 Run by the controller, not by an implementer subagent: it needs the user's browser, the local services and judgment about what the run shows.
 
-- [ ] **Step 1: Gates.** `cd Servers && npx tsc --noEmit && npm run build && npm run format-check && npm run i18n:audit:strict && npm run check:api-drift && npm run test`; `cd Clients && npm run typecheck && npm run build && npm run format-check && npm run i18n:audit:strict && npx vitest run`. Expected: all green. Any failure is fixed on this branch before the next step; a failure that also happens on the base branch is named in the report.
+- [ ] **Step 1: Gates.** `cd Servers && npx tsc --noEmit && npx tsc -p "$TSCHECK" && npm run build && npm run format-check && npm run i18n:audit:strict && npm run check:api-drift && npm run test`; `cd Clients && npm run typecheck && npm run build && npm run format-check && npm run i18n:audit:strict && npx vitest run`. Expected: all green. Any failure is fixed on this branch before the next step; a failure that also happens on the base branch is named in the report.
 
 - [ ] **Step 2: Integration suites.** With the throwaway services of Task 9 up and the backend preview stopped, run the whole integration suite in four shards (`--runInBand --shard=i/4`, recipe in memory). Expected: green except the three known environment-only failures of that recipe (`reporting-rls-policies`, and the two `riskLinks` tests). Run `scripts/auditTenantIsolationCoverage.ts` with `DB_NAME=verifywise_integration_test`. Then stop the throwaway Postgres and Redis.
 
