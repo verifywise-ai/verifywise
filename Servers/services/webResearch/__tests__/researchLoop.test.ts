@@ -315,6 +315,81 @@ describe("runResearchLoop", () => {
     );
   });
 
+  describe("text the model copies from the history, where &, < and > are escaped", () => {
+    const tracked = "https://news.example/a?id=1&ref=rss";
+
+    it.each([
+      ["as the history shows it", "https://news.example/a?id=1&amp;ref=rss"],
+      ["with a plain ampersand", tracked],
+    ])(
+      "reads a search result whose URL has an & when the model copies it %s",
+      async (_label, copied) => {
+        const { calls, readPage } = await run({
+          script: [searchStep("Acme data breach"), readStep(copied), finishStep],
+          web: { searches: [[result(tracked)]] },
+          researchable: ["security_incidents"],
+        });
+
+        expect(calls[1].prompt).toContain("https://news.example/a?id=1&amp;ref=rss");
+        expect(readPage).toHaveBeenCalledTimes(1);
+        expect(readPage).toHaveBeenCalledWith(tracked, expect.any(AbortSignal));
+      },
+    );
+
+    it("reads a link of the vendor's page whose URL has an & as the page meant it", async () => {
+      const link = "https://acme.com/legal?doc=dpa&lang=en";
+      const { calls, readPage } = await run({
+        script: [
+          readStep(OWN_PAGE),
+          readStep("https://acme.com/legal?doc=dpa&amp;lang=en"),
+          finishStep,
+        ],
+        web: { pages: { [OWN_PAGE]: { links: [{ text: "DPA & terms", url: link }] } } },
+        researchable: ["security_incidents"],
+      });
+
+      expect(lastResult(calls[1].prompt)).toContain(
+        "- DPA &amp; terms - https://acme.com/legal?doc=dpa&amp;lang=en",
+      );
+      expect(readPage).toHaveBeenNthCalledWith(2, link, expect.any(AbortSignal));
+    });
+
+    it("decodes the query and the focus the same way", async () => {
+      const { session } = webSession({ searches: [[result("https://news.example/a")]] });
+      const searchSpy = jest.spyOn(session, "search");
+      const readSpy = jest.spyOn(session, "read");
+      const model = scriptedModel([
+        { thought: "t", action: "search", category: "legal_regulatory", query: "AT&amp;T fine" },
+        {
+          thought: "t",
+          action: "read",
+          category: "legal_regulatory",
+          url: OWN_PAGE,
+          focus: "fines &amp; settlements",
+        },
+        finishStep,
+      ]);
+
+      await runResearchLoop<Category>(
+        { system: SYSTEM, task: TASK, categories: CATEGORIES, researchable: ["legal_regulatory"] },
+        { generate: model.generate, model: MODEL, session },
+      );
+
+      expect(searchSpy).toHaveBeenCalledWith(
+        "AT&T fine",
+        "web",
+        "legal_regulatory",
+        expect.any(AbortSignal),
+      );
+      expect(readSpy).toHaveBeenCalledWith(
+        OWN_PAGE,
+        "legal_regulatory",
+        "fines & settlements",
+        expect.any(AbortSignal),
+      );
+    });
+  });
+
   describe("the prompt", () => {
     it("shows the budget", async () => {
       const { calls } = await run({

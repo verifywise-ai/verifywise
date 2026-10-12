@@ -14,12 +14,14 @@
  *
  * Everything the history shows (the model's own thoughts and actions, and the results, which third
  * parties wrote) goes through `escapeForPrompt`, so none of it can close a tag of the prompt or open
- * a new one. The task and the system prompt are written by the caller and are used as they are.
+ * a new one, and the query, URL and focus of a step go through `unescapeFromPrompt`, so that what
+ * the model copies from the history means what it meant there. The task and the system prompt are
+ * written by the caller and are used as they are.
  */
 import { z } from "zod";
 import type { generateObjectWithSelfCorrection } from "../../advisor/llmSelfCorrect";
 import { cutAtCodePoint } from "../vendorResearch/text";
-import { escapeForPrompt } from "./promptText";
+import { escapeForPrompt, unescapeFromPrompt } from "./promptText";
 import { PageView, ReadOutcome, SearchOutcome, WebSession } from "./webSession";
 
 export interface LoopStep<C extends string = string> {
@@ -288,6 +290,13 @@ function reminderBeforeFinish<C extends string>(
   return `You have not covered: ${uncovered.join(", ")}. Continue researching, or finish again to stop.`;
 }
 
+/**
+ * A text field of a step as the model meant it. The history shows &, < and > escaped, so a URL or
+ * words copied from it come back as `&amp;`; decoded, a URL with `&` in its query matches the
+ * search result it was copied from. A plain `&` is left as it is.
+ */
+const fromModel = (text: string | undefined) => unescapeFromPrompt(text ?? "").trim();
+
 /** Runs a search or a read step and says what came of it. A step that breaks its rule is refused. */
 async function runStep<C extends string>(
   step: LoopStep<C>,
@@ -296,15 +305,15 @@ async function runStep<C extends string>(
   signal: AbortSignal,
 ): Promise<string> {
   if (step.action === "search") {
-    const query = step.query?.trim() ?? "";
+    const query = fromModel(step.query);
     if (query.length < MIN_QUERY_CHARS || step.category === undefined) return INVALID_SEARCH;
     if (!researchable.includes(step.category)) return NOT_RESEARCHABLE;
     return describeSearch(await session.search(query, step.kind ?? "web", step.category, signal));
   }
-  const url = step.url?.trim() ?? "";
+  const url = fromModel(step.url);
   if (url === "" || step.category === undefined) return INVALID_READ;
   if (!researchable.includes(step.category)) return NOT_RESEARCHABLE;
-  const focus = step.focus?.trim() || undefined;
+  const focus = fromModel(step.focus) || undefined;
   return describeRead(await session.read(url, step.category, focus, signal));
 }
 
