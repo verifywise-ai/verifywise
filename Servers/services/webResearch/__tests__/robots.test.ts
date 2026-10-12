@@ -291,6 +291,95 @@ describe("parseRobots", () => {
     });
   });
 
+  describe("percent-encoding", () => {
+    it("lets a non-ASCII pattern block the percent-encoded path that a URL carries", () => {
+      const rules = parseRobots("User-agent: *\nDisallow: /café");
+      expect(rules.isAllowed("/caf%C3%A9")).toBe(false);
+      expect(rules.isAllowed("/caf%C3%A9/p")).toBe(false);
+      expect(rules.isAllowed("/caf%c3%a9/p")).toBe(false);
+      expect(rules.isAllowed("/café/p")).toBe(false);
+      expect(rules.isAllowed("/cafe/p")).toBe(true);
+    });
+
+    it("lets a percent-encoded pattern block the non-ASCII path", () => {
+      const rules = parseRobots("User-agent: *\nDisallow: /caf%c3%a9");
+      expect(rules.isAllowed("/caf%C3%A9")).toBe(false);
+      expect(rules.isAllowed("/café")).toBe(false);
+    });
+
+    it("reads the percent-encoded form of an unreserved character as that character", () => {
+      const encoded = parseRobots("User-agent: *\nDisallow: /%7Euser");
+      expect(encoded.isAllowed("/~user")).toBe(false);
+      expect(encoded.isAllowed("/%7euser")).toBe(false);
+      expect(encoded.isAllowed("/%7Euser")).toBe(false);
+      expect(encoded.isAllowed("/user")).toBe(true);
+      const plain = parseRobots("User-agent: *\nDisallow: /~user");
+      expect(plain.isAllowed("/%7Euser")).toBe(false);
+      expect(plain.isAllowed("/%7euser")).toBe(false);
+      const letter = parseRobots("User-agent: *\nDisallow: /%63afe");
+      expect(letter.isAllowed("/cafe")).toBe(false);
+      expect(parseRobots("User-agent: *\nDisallow: /cafe").isAllowed("/%63afe")).toBe(false);
+    });
+
+    it("ignores the case of the hex digits of a reserved character", () => {
+      const lower = parseRobots("User-agent: *\nDisallow: /a%2fb");
+      expect(lower.isAllowed("/a%2Fb")).toBe(false);
+      expect(lower.isAllowed("/a%2fb")).toBe(false);
+      const upper = parseRobots("User-agent: *\nDisallow: /a%2Fb");
+      expect(upper.isAllowed("/a%2fb")).toBe(false);
+      expect(upper.isAllowed("/a%2Fb")).toBe(false);
+    });
+
+    it("keeps a reserved character apart from its percent-encoded form", () => {
+      const encoded = parseRobots("User-agent: *\nDisallow: /a%2Fb");
+      expect(encoded.isAllowed("/a/b")).toBe(true);
+      const plain = parseRobots("User-agent: *\nDisallow: /a/b");
+      expect(plain.isAllowed("/a%2Fb")).toBe(true);
+    });
+
+    it("keeps a % that does not start an octet", () => {
+      const rules = parseRobots("User-agent: *\nDisallow: /100%\nDisallow: /x%zz");
+      expect(rules.isAllowed("/100%")).toBe(false);
+      expect(rules.isAllowed("/x%zz")).toBe(false);
+      expect(rules.isAllowed("/100")).toBe(true);
+    });
+
+    it("encodes a space and the other characters that a URL cannot carry", () => {
+      const rules = parseRobots('User-agent: *\nDisallow: /a b\nDisallow: /q|"');
+      expect(rules.isAllowed("/a%20b")).toBe(false);
+      expect(rules.isAllowed("/a b")).toBe(false);
+      expect(rules.isAllowed("/q%7C%22")).toBe(false);
+      expect(rules.isAllowed("/q|")).toBe(true);
+    });
+
+    it("keeps * and a trailing $ working in a non-ASCII pattern", () => {
+      const rules = parseRobots("User-agent: *\nDisallow: /café*.pdf$");
+      expect(rules.isAllowed("/caf%C3%A9/x.pdf")).toBe(false);
+      expect(rules.isAllowed("/caf%C3%A9/x.pdf?y=1")).toBe(true);
+      expect(rules.isAllowed("/caf%C3%A9/x.html")).toBe(true);
+    });
+
+    it("weighs two spellings of one pattern alike, so that Allow wins their tie", () => {
+      const tilde = parseRobots("User-agent: *\nDisallow: /%7Euser\nAllow: /~user");
+      expect(tilde.isAllowed("/~user")).toBe(true);
+      const accent = parseRobots("User-agent: *\nDisallow: /café\nAllow: /caf%C3%A9");
+      expect(accent.isAllowed("/caf%C3%A9")).toBe(true);
+    });
+
+    it("weighs a rule by its octets, whichever way a non-ASCII rule is written", () => {
+      // "/café/x" is 7 characters as written and 12 once encoded, "/caf%C3%A9" is 10 either way.
+      const rules = parseRobots("User-agent: *\nDisallow: /café/x\nAllow: /caf%C3%A9");
+      expect(rules.isAllowed("/caf%C3%A9/x")).toBe(false);
+      expect(rules.isAllowed("/caf%C3%A9/y")).toBe(true);
+    });
+
+    it("does not throw on a lone surrogate in a pattern or in a path", () => {
+      const rules = parseRobots("User-agent: *\nDisallow: /a\uD800b");
+      expect(() => rules.isAllowed("/a\uDC00b")).not.toThrow();
+      expect(rules.isAllowed("/a\uD800b")).toBe(false);
+    });
+  });
+
   describe("ALLOW_ALL and DISALLOW_ALL", () => {
     it("allows every path", () => {
       expect(ALLOW_ALL.isAllowed("/")).toBe(true);
@@ -434,6 +523,17 @@ describe("createRobotsChecker", () => {
     it("leaves out the fragment", async () => {
       const checker = createRobotsChecker(fetchAnswering(200, "User-agent: *\nDisallow: /p$"));
       expect(await checker.isAllowed(new URL("https://a.example/p#section"))).toBe(false);
+    });
+
+    it("compares the percent-encoded path of the URL with the pattern", async () => {
+      const checker = createRobotsChecker(
+        fetchAnswering(200, "User-agent: *\nDisallow: /café\nDisallow: /%7Euser\nDisallow: /a%2fb"),
+      );
+      expect(await checker.isAllowed(new URL("https://a.example/café/p"))).toBe(false);
+      expect(await checker.isAllowed(new URL("https://a.example/~user"))).toBe(false);
+      expect(await checker.isAllowed(new URL("https://a.example/%7euser"))).toBe(false);
+      expect(await checker.isAllowed(new URL("https://a.example/a%2Fb"))).toBe(false);
+      expect(await checker.isAllowed(new URL("https://a.example/cafe"))).toBe(true);
     });
 
     it("checks / for a bare origin", async () => {

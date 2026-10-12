@@ -20,11 +20,11 @@ export const DISALLOW_ALL: RobotsRules = { isAllowed: () => false };
 
 interface Rule {
   allow: boolean;
-  /** The pattern split at each `*`, without its trailing `$`. */
+  /** The normalised pattern split at each `*`, without its trailing `$`. */
   pieces: string[];
   /** The pattern ends in `$`: the match has to reach the end of the path and query. */
   anchored: boolean;
-  /** The length of the pattern as written, `*` and `$` included. The longer rule is more specific. */
+  /** The length of the normalised pattern, `*` and `$` included. The longer rule is more specific. */
   weight: number;
 }
 
@@ -34,10 +34,35 @@ interface Group {
   rules: Rule[];
 }
 
+const UNRESERVED = /^[\w\-.~]$/;
+
+/**
+ * The form in which a rule pattern and a request path are compared (RFC 9309, 2.2.2). Characters
+ * that a URL cannot carry (non-ASCII ones, spaces, quotes) become their UTF-8 octets as `%XX`, the
+ * hex digits of every `%XX` are upper-cased, and an octet that stands for an unreserved character
+ * (letters, digits, `-._~`) is written as that character. A reserved character keeps its form, so
+ * `/a/b` and `/a%2Fb` stay apart. `*` and `$` pass through. Buffer replaces a lone surrogate with
+ * U+FFFD where `encodeURI` would throw.
+ */
+function normalise(text: string): string {
+  return text
+    .replace(/[^\w\-.~:/?#[\]@!$&'()*+,;=%]/gu, (char) =>
+      Array.from(
+        Buffer.from(char, "utf8"),
+        (byte) => `%${byte.toString(16).toUpperCase().padStart(2, "0")}`,
+      ).join(""),
+    )
+    .replace(/%([0-9A-Fa-f]{2})/g, (_octet, hex: string) => {
+      const char = String.fromCharCode(parseInt(hex, 16));
+      return UNRESERVED.test(char) ? char : `%${hex.toUpperCase()}`;
+    });
+}
+
 function compileRule(allow: boolean, pattern: string): Rule {
-  const anchored = pattern.endsWith("$");
-  const body = anchored ? pattern.slice(0, -1) : pattern;
-  return { allow, pieces: body.split("*"), anchored, weight: pattern.length };
+  const normalised = normalise(pattern);
+  const anchored = normalised.endsWith("$");
+  const body = anchored ? normalised.slice(0, -1) : normalised;
+  return { allow, pieces: body.split("*"), anchored, weight: normalised.length };
 }
 
 /** Whether the path starts with the pattern, where `*` stands for any run of characters. */
@@ -120,9 +145,10 @@ export function parseRobots(text: string, agentToken: string = BOT_TOKEN): Robot
   if (rules.length === 0) return ALLOW_ALL;
   return {
     isAllowed(pathWithQuery) {
+      const path = normalise(pathWithQuery);
       let decisive: Rule | undefined;
       for (const rule of rules) {
-        if (!matches(rule, pathWithQuery)) continue;
+        if (!matches(rule, path)) continue;
         if (
           !decisive ||
           rule.weight > decisive.weight ||
