@@ -89,7 +89,9 @@ export function parsePublicUrl(raw: string): URL {
 
 /**
  * The ranges that are not public, as listed in section 7.2 of the design. `::ffff:0:0/96` is
- * blocked as a whole, so an IPv4 address written in IPv6 form is refused whatever it holds.
+ * blocked as a whole, so an IPv4 address written in IPv6 form is refused whatever it holds. Three
+ * more IPv6 prefixes carry an IPv4 address and are blocked for the same reason: an AAAA record
+ * under one of them could reach an internal IPv4 address through a translator or a tunnel.
  *
  * There is one list per family, and an address is only checked against the list of its own
  * family. Node matches an IPv4 address against an IPv6 range as if it were IPv4-mapped, so in one
@@ -119,10 +121,16 @@ const BLOCKED_IPV6 = new net.BlockList();
 for (const [network, prefix] of [
   ["::", 128],
   ["::1", 128],
+  // The deprecated IPv4-compatible form: ::7f00:1 is 127.0.0.1. It holds the two entries above.
+  ["::", 96],
   ["::ffff:0:0", 96],
   ["64:ff9b::", 96],
+  // RFC 8215 local-use NAT64; the /96 above does not cover it.
+  ["64:ff9b:1::", 48],
   ["100::", 64],
   ["2001:db8::", 32],
+  // 6to4: the IPv4 address sits in bits 16 to 47.
+  ["2002::", 16],
   ["fc00::", 7],
   ["fe80::", 10],
   ["ff00::", 8],
