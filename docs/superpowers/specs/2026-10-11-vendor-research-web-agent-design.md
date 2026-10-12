@@ -48,7 +48,7 @@ There is no web search without a search engine, so the question is which engine 
 | Vendor pages, `security.txt`, Wikipedia, publisher articles | Read fine. | Yes, `read` |
 | Some publishers (BleepingComputer: Cloudflare 403) | Blocked. | "Blocked" is a normal outcome (§10) |
 
-Two facts to be honest about: Bing's `robots.txt` disallows `/search` (it does not mention `/news/search`), and Bing's terms do not give automated access to result pages. See §14 and §20.
+Facts to be honest about: Bing's `robots.txt` disallows `/search` (it does not mention `/news/search`), and Bing's terms do not give automated access to result pages. Worse, every feed carries a copyright notice that limits its results to personal, non-commercial display in an RSS reader and asks for Microsoft's written permission for any other use. Using the feed inside a commercial product and passing the results to an LLM provider is outside that notice. That is why the engine sits behind `SearchEngine`, and why §14 has a release gate. See §14 and §20.
 
 ## 5. Architecture
 
@@ -76,7 +76,7 @@ The loop only collects. It never writes findings. The analysis step sees a fixed
 
 Code layout:
 
-- `Servers/services/webResearch/` is a small reusable toolkit, so that later vendor agents can browse too: `publicUrl.ts` (URL and address policy), `guardedFetch.ts`, `robots.ts`, `pageText.ts`, `webSearch.ts` (the `SearchEngine` interface and the Bing implementation), `webSession.ts` (budgets, provenance, lookback and the ledger), `researchLoop.ts` (the generic loop).
+- `Servers/services/webResearch/` is a small reusable toolkit, so that later vendor agents can browse too: `publicUrl.ts` (URL and address policy), `guardedFetch.ts`, `robots.ts`, `pageText.ts`, `readPage.ts` (robots check, guarded fetch and page text in one reader), `webSearch.ts` (the `SearchEngine` interface and the Bing implementation), `webSession.ts` (budgets, provenance, lookback and the ledger), `promptText.ts` (escaping for prompts), `researchLoop.ts` (the generic loop).
 - `Servers/services/vendorResearch/prompts.ts` holds the vendor-specific loop and analysis prompts; `pipeline.ts` replaces the search step with the loop.
 - `PipelineDeps` loses `searchProvider` and gains `research` (injectable, so pipeline tests need no model and no network). The loop takes the model call (`generate`) and the web session as parameters, so its tests need neither.
 
@@ -98,7 +98,7 @@ Code layout:
 **`search({ query, category, kind })`**
 
 - `kind: "web"` (default) calls `https://www.bing.com/search?q=<query>&format=rss&setlang=en-US`; `kind: "news"` calls `https://www.bing.com/news/search?q=<query>&format=rss&setlang=en-US`. Identified User-Agent, 12 seconds, at most 1 MB.
-- Parsed with jsdom in XML mode: `title`, `description` (the snippet), `link`, and for news `pubDate` (stored as an ISO date) with the publisher URL taken from the `url` parameter of the `apiclick.aspx` link. At most 10 results. A result with an unusable URL, a `bing.com` URL or a URL already in the ledger is dropped.
+- Parsed by a small scanner for the RSS `item` elements (CDATA and character references handled; no XML library is needed): `title`, `description` (the snippet), `link`, and for news `pubDate` (stored as an ISO date) with the publisher URL taken from the `url` parameter of the `apiclick.aspx` link. At most 10 results. A result with an unusable URL, a `bing.com` URL or a URL already in the ledger is dropped.
 - **Lookback in code.** A result with a known date older than the window of its category is dropped and counted: 24 months for `security_incidents`, `certifications` and `ai_specific`, 36 for `legal_regulatory`. The model is told how many were omitted. Pages carry a date only when their metadata has one (§6, `read`); undated results are kept, and the prompts ask for recent sources.
 - A body that is not RSS, an HTTP status other than 200, a time-out or a network error is a failed search, reported to the model as "The search is not available right now".
 - Behind a `SearchEngine` interface (`search(query, kind, signal)`), so that a self-hosted SearXNG or an API provider can replace Bing later without touching the loop.
@@ -107,7 +107,7 @@ Code layout:
 **`read({ url, category, focus? })`**
 
 - Checks in this order: provenance (§7.6), URL and address policy (§7.1 to §7.2), `robots.txt` (§7.5), fetch (§7.3 to §7.4).
-- Content is turned into text by jsdom (scripts are not run and nothing is loaded): `script`, `style`, `noscript`, `svg`, `iframe`, `template`, `nav`, `footer`, `header` and `aside` are removed, whitespace is collapsed. The page title and a publication date (`article:published_time`, `time[datetime]`, JSON-LD `datePublished`) are taken when present.
+- Content is turned into text with `sanitize-html`, which is already a dependency and reads malformed pages safely. jsdom is not used: Jest replaces it with a stub, and it is heavy. `script`, `style`, `noscript`, `svg`, `iframe`, `template`, `head`, `nav`, `footer`, `header` and `aside` are dropped with their content, block elements become line breaks and whitespace is collapsed. The page title and a publication date (`article:published_time` and similar meta tags, JSON-LD `datePublished`, `time[datetime]`) are read from the raw HTML when present.
 - **Excerpt.** At most 8,000 characters. Without `focus`, the start of the text. With `focus` (a few keywords), the start (first 1,000 characters) plus the paragraphs with the most keyword hits, in page order, joined by a visible gap marker. Quotes must not span a gap. There is no paging.
 - **Links.** For a page on the vendor's own domain, up to 25 links on that domain whose text or path contains a security, trust, privacy, legal, terms, DPA, subprocessor, compliance, certification, AI, status or incident word, so the model can move from the home page to the right pages.
 - Failure reasons the model sees: `not_allowed`, `blocked_by_robots`, `blocked_by_site` (401, 403, 429 or a challenge page), `not_found`, `needs_javascript` (almost no text in a large HTML page), `unsupported_type` (for example PDF), `unreachable`. The ledger records the reason for the summary of §10.
@@ -159,7 +159,18 @@ The enum stays (`findings`, `nothing_found`, `search_failed`, `skipped`); the ru
 | `search_failed` | The category was worked on, but nothing usable came back: every search failed, or every page was blocked, unreadable or refused. Note: the fixed reason ("The search was not available", "The site blocked the request"). |
 | `skipped` | No call was tagged with the category: no valid domain for `certifications` and `ai_specific` (as before), or the step, call or time budget ran out first ("Not researched: the time limit was reached"). |
 
-A run is `failed` when there is no key, when the model fails, or when the loop produced no usable entry at all: either the web could not be reached ("The run stopped because the web could not be reached") or the model never searched or read ("The model did not use the research actions"). Otherwise it is `completed`, even when every category says `nothing_found`.
+"Worked on" means at least one call tagged with the category reached the web; "answered" means the web answered it (a search that returned RSS, even with no result, or a page that was fetched). A category is `search_failed` when it was worked on and no call was answered. A call that the rules refuse before it reaches the web (a budget, a URL that is not allowed, an invalid step) is not work on a category.
+
+The notes are a closed set of English phrases, because the UI maps each one to a translated sentence (and shows nothing it does not know):
+
+| Outcome | Stored note |
+|---|---|
+| `findings` | `1 potential risk found`, `N potential risks found` (as before) |
+| `nothing_found` | `No risks found in the sources reviewed`; `No risks found; N of M pages could not be read` (when any page call of the category failed); `Possible risks were found but could not be verified or are already recorded` (as before); the model's own note, shown as unverified, only when no page failed and the model proposed nothing |
+| `search_failed` | `The search was not available` (every call of the category was a failed search); `The pages could not be read` (otherwise) |
+| `skipped` | `Vendor website is missing or not a valid domain` (as before); `Not researched: the time limit was reached`; `Not researched: the research ended before this category was covered` |
+
+A run is `failed` when there is no key, when the model fails, or when the web never answered the loop: either every call failed (`The run stopped because the web could not be reached`) or the model never searched or read (`The model did not use the research actions`). A run whose calls were answered but returned nothing is `completed` with no findings, and the analysis call is skipped because there is nothing to read. Otherwise a run is `completed`, even when every category says `nothing_found`.
 
 ## 11. Data model
 
@@ -173,7 +184,7 @@ One new migration (the applied create-tables migration is not edited), timestamp
 ## 12. API, triggers and environment
 
 - `GET /api/vendor-research/config` returns `{ hasLlmKey, autoRunEnabled }`.
-- Start order (manual and auto): vendor in the organisation → the organisation has an LLM key → stale-run sweep and active run → manual cooldown → daily cap → create the queued run → enqueue. The 409 `search_not_configured` is gone; 409 `llm_key_missing` stays. Without an LLM key an auto run is skipped silently, as before.
+- Start order (manual and auto): vendor in the organisation → the organisation has an LLM key → stale-run sweep and active run → manual cooldown → daily cap → create the queued run → enqueue. The 409 `search_not_configured` is gone; 409 `llm_key_missing` stays. Without an LLM key an auto run is skipped with a log line and nothing is stored, as before.
 - The job no longer builds a search provider.
 - Environment after the change (`Servers/.env.example`, Kubernetes, Helm, Ansible, `CONFIGURATION_REFERENCE.md`):
 
@@ -188,14 +199,14 @@ The deployment branch `chore/deploy-vendor-research-settings` is trimmed to thes
 ## 13. Frontend
 
 - Config type loses `searchConfigured`. The button and the findings section are "not set up" only when `hasLlmKey` is false. The copy says that vendor research needs an LLM key and that an admin adds one in the LLM key settings. The setup hint that named environment variables is removed.
-- Run summary: "N searches, M pages read" (from `searches_used` and `pages_read`). Category rows keep their four outcomes; the copy for `search_failed` becomes "Could not research this category", `skipped` shows its note, and `nothing_found` shows the note about unreadable pages when there is one.
+- Run summary: "N searches, M pages read" (from `searches_used` and `pages_read`). Category rows keep their four outcomes; the label for `search_failed` becomes "could not be researched", and every note is one of the phrases of §10, mapped to a translated sentence.
 - New and changed strings get `de`, `fr`, `es` entries and keep the i18n tests; server messages get `locales/{en,de,fr}.json` entries.
 - Findings rows are unchanged: sources show domain, date and quote.
 
 ## 14. Security and privacy
 
 - **Egress.** The customer's server now talks to the public internet during a run: `www.bing.com` (queries with the vendor name and topic words), the vendor's site, and the sites of articles. Every request names the bot. The LLM provider receives the vendor name, domain, the "what it provides" text and the page text. An air-gapped installation cannot use the feature: runs fail with "the web could not be reached".
-- **The search feed and `robots.txt`.** Bing's `robots.txt` disallows `/search`, and its terms do not allow automated queries. The feature queries the public feed anyway, the way a feed reader or a person would: one identified request at a time, at least a second apart, at most 8 a run. This is common practice for keyless agent search, but it is a business risk, not a guarantee: Bing can change the feed or throttle a server's address. If that happens, searches fail honestly (§10) and the engine is swapped behind `SearchEngine`, for example for a self-hosted SearXNG or an API provider. Pages are different: `robots.txt` is obeyed (§7.5).
+- **The search feed: `robots.txt`, the feed's own notice, and a release gate.** Bing's `robots.txt` disallows `/search`, and each feed's copyright notice limits its results to personal, non-commercial display in an RSS reader and asks for Microsoft's written permission for any other use. Querying it from a commercial product and passing the results to an LLM provider is outside that notice. The feature queries the public feed the way a feed reader would (one identified request at a time, at least a second apart, at most 8 a run). That is enough for development and evaluation, but it is a legal and business risk, not a guarantee: Microsoft can change the feed, throttle a server's address or object. **Release gate:** before this ships to customers, the product owner decides whether to ask Microsoft for permission or to put another engine behind `SearchEngine` (a self-hosted SearXNG, an API provider, or the model provider's own search for the keys that have one). If a search fails, the run says so (§10) and invents nothing. Pages are different: `robots.txt` is obeyed (§7.5).
 - **Prompt injection.** The loop has no tools of its own: the model can only name a search or a URL, and code decides. GET only; public addresses only (§7.2); provenance (§7.6); no secrets or organisation data in its context; hard budgets; the analysis has no actions and its output is schema-bound and checked against the text; nothing reaches the register without a person accepting.
 - **Stored third-party text.** Page excerpts and snippets are kept in `vendor_research_runs.evidence` as an audit trail (up to 100 KB per run). The UI shows only the quotes (300 characters) and links. Pruning old evidence stays out of scope.
 - **Tenant isolation.** Unchanged: every query and job payload carries `organization_id`.
@@ -250,7 +261,7 @@ Update `docs/technical/domains/vendors.md`, `docs/deployment/CONFIGURATION_REFER
 
 ## 20. Things to know
 
-1. **How search works.** The agent uses Bing's public RSS results feed from the customer's server: no account, no key, nothing to configure, and it works with any LLM key. It is not an official API (§14): if Bing throttles or changes it, searches fail and runs say so; they never invent findings.
+1. **How search works, and a release gate.** The agent uses Bing's public RSS results feed from the customer's server: no account, no key, nothing to configure, and it works with any LLM key. It is not an official API, and the feed's own notice limits it to personal, non-commercial use (§14). That is fine for development and evaluation. Before the feature ships to customers the product owner has to decide how to license it; the engine is one replaceable module for that reason. If Bing throttles or changes the feed, searches fail and runs say so; they never invent findings.
 2. **Auto-run stays on by default,** so each new vendor costs a run on the organisation's own key (§15).
 3. **Pages obey `robots.txt`** and the bot says who it is. Some sites will refuse it; those pages are reported as blocked, not as clean.
 4. **The model-knowledge lane is dropped** (§2). It can come back later as a clearly labelled lane if wanted.
