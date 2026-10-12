@@ -572,6 +572,10 @@ describe("extractPageText on hostile input", () => {
     ["stray closing tags", repeated("</b>")],
     ["tags that name another tag in an attribute", repeated('<span a="<">')],
     ["tags with an odd name", repeated('<a"x">')],
+    ["end tags inside a quoted attribute", repeated('<b title="</b>">')],
+    ["end tags inside comments", repeated("<b><!--</b>-->")],
+    ["end tags inside a script", repeated("<b><script></b></script>")],
+    ["end tags inside a declaration", repeated("<b><!x</b>")],
     ["unclosed block tags with a quote", repeated('<div title="')],
     ["unclosed block tags with a single quote", repeated("<p x='")],
     ["quoted values with a >", repeated('<a title="x>')],
@@ -601,6 +605,19 @@ describe("extractPageText on hostile input", () => {
   it("still reads a deeply nested page that is not hostile", () => {
     const html = "<span>".repeat(2000) + "deep text" + "</span>".repeat(2000);
     expect(extractPageText(html, BASE).text).toBe("deep text");
+  });
+
+  it("gives no text for a page that keeps more than 10,000 tags open, but still its title and links", () => {
+    const head = '<head><title>Deep</title></head><nav><a href="/x">x</a></nav>';
+    const reads = extractPageText(head + "<span>".repeat(9_000) + "deep text", BASE);
+    expect(reads.text).toBe("deep text");
+    const gives = extractPageText(head + "<span>".repeat(10_500) + "deep text", BASE);
+    expect(gives).toEqual({
+      title: "Deep",
+      text: "",
+      publishedAt: null,
+      links: [{ text: "x", url: "https://acme.com/x" }],
+    });
   });
 
   it("reads only the first 2 MB of a larger page", () => {

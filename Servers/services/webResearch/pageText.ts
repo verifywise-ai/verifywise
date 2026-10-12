@@ -8,8 +8,9 @@
  * - Text comes from `sanitize-html`, which reads malformed pages safely. Its parser (htmlparser2)
  *   takes time proportional to the square of how deeply tags stay open: 2 MB of `<span>` that
  *   never close keeps the event loop busy for about a minute. Block tags are therefore replaced by
- *   line breaks before the parser sees them, and `limitNesting` cuts a page that still nests tags
- *   absurdly deep.
+ *   line breaks before the parser sees them, and the parser's own open and close events count how
+ *   deep the page really goes: a page that goes deeper than MAX_NESTING is given up on while the
+ *   parser is still cheap.
  * - The title, date and links are read from the raw HTML with patterns in which a tag cannot reach
  *   past the next `<`. A pattern that scans on to a `>` from every unclosed start would be
  *   quadratic: an unclosed `<a href="` repeated for 2 MB would cost every start the rest of the
@@ -39,7 +40,7 @@ export interface PageText {
 
 /** The same size as the fetch limit; a page that is longer is read as far as this. */
 const MAX_HTML_CHARS = 2_097_152;
-/** Tags nested deeper than this are not read. No real page comes near it. */
+/** A page that keeps more tags open than this gives no text. No real page comes near it. */
 const MAX_NESTING = 10_000;
 const MAX_ANCHORS = 500;
 const MAX_LINK_TEXT_CHARS = 80;
@@ -153,69 +154,37 @@ const BLOCK_TAG = new RegExp(
   "gi",
 );
 
-/** The start of any tag: what the HTML tokenizer takes for a tag name, up to white space, `/` or `>`. */
-const TAG_START = /<(\/?)([a-z][^\s/>]*)/gi;
-
-/** Elements that have no end tag, and so never stay open (as in htmlparser2). */
-const VOID_ELEMENTS = new Set([
-  "area",
-  "base",
-  "basefont",
-  "br",
-  "col",
-  "command",
-  "embed",
-  "frame",
-  "hr",
-  "img",
-  "input",
-  "isindex",
-  "keygen",
-  "link",
-  "meta",
-  "param",
-  "source",
-  "track",
-  "wbr",
-]);
+/** Thrown from a parser callback to stop the parser of a page that nests too deep. */
+class NestingTooDeep extends Error {}
 
 /**
- * The HTML up to the point where more than MAX_NESTING tags would be open, or all of it.
+ * The text of the page, or "" for a page that keeps more than MAX_NESTING tags open at once.
  *
- * It follows the way an HTML parser keeps track of open tags (an end tag closes the nearest open
- * tag of its name and all that are inside it, an end tag with no open tag is ignored) and
- * counts a tag at every `<` and letter, also where a parser may read an attribute value or a
- * script instead. It can count too many tags, never too few, so a page that passes cannot make
- * the parser go deep. Counting by name keeps an end tag with no start tag at constant cost.
+ * Open tags are counted from the events of the parser itself (`onOpenTag` and `onCloseTag`, which
+ * include the tags that the parser closes by itself), so the count is the depth the parser
+ * really has, whatever the markup is: an end tag in a comment, in an attribute value or in a
+ * script is not one to the parser, and not to this count either.
  */
-function limitNesting(html: string): string {
-  const open: string[] = [];
-  const openByName = new Map<string, number>();
-  for (const match of html.matchAll(TAG_START)) {
-    const name = match[2].toLowerCase();
-    if (match[1] === "/") {
-      if (!openByName.get(name)) continue;
-      let closed: string | undefined;
-      do {
-        closed = open.pop();
-        if (closed !== undefined) openByName.set(closed, (openByName.get(closed) ?? 1) - 1);
-      } while (closed !== undefined && closed !== name);
-    } else if (!VOID_ELEMENTS.has(name)) {
-      if (open.length >= MAX_NESTING) return html.slice(0, match.index);
-      open.push(name);
-      openByName.set(name, (openByName.get(name) ?? 0) + 1);
-    }
-  }
-  return html;
-}
-
 function htmlToText(html: string): string {
-  const withBreaks = html.replace(BLOCK_TAG, "\n");
-  const stripped = sanitizeHtml(limitNesting(withBreaks), {
-    allowedTags: [],
-    allowedAttributes: {},
-    nonTextTags: NON_TEXT_TAGS,
-  });
+  let open = 0;
+  let stripped: string;
+  try {
+    stripped = sanitizeHtml(html.replace(BLOCK_TAG, "\n"), {
+      allowedTags: [],
+      allowedAttributes: {},
+      nonTextTags: NON_TEXT_TAGS,
+      onOpenTag: () => {
+        open += 1;
+        if (open > MAX_NESTING) throw new NestingTooDeep();
+      },
+      onCloseTag: () => {
+        open -= 1;
+      },
+    });
+  } catch (error) {
+    if (error instanceof NestingTooDeep) return "";
+    throw error;
+  }
   // sanitize-html has decoded the references of the page and written text back with & < > escaped,
   // which is the one decoding that is left to do.
   return tidyText(decodeEntities(stripped));
