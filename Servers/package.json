@@ -80,7 +80,7 @@
     "crypto": "^1.0.1",
     "docx": "^9.8.1",
     "dotenv": "^18.0.5",
-    "ejs": "^6.0.1",
+    "ejs": "^7.0.1",
     "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "express-rate-limit": "^8.7.0",
