@@ -558,10 +558,18 @@ describe("looksLikeJavaScriptShell", () => {
 describe("extractPageText on hostile input", () => {
   const MEGABYTE_2 = 2 * 1024 * 1024;
   const repeated = (unit: string) => unit.repeat(Math.ceil(MEGABYTE_2 / unit.length));
+  const spans = (count: number) => "<span>".repeat(count);
+  // `start`, then `unit` as often as fits in 2 MB, so that the page is not cut in the middle of one.
+  const filled = (start: string, unit: string) =>
+    start + unit.repeat(Math.floor((MEGABYTE_2 - start.length) / unit.length));
 
   // The HTML parser underneath is quadratic in how deeply tags stay open, and a regular expression
   // that scans on from every unclosed start is quadratic in the input. Each of these would take
   // seconds to minutes without the guards.
+  //
+  // The parser also searches its whole stack of open tags for every end tag and every `<form`, and
+  // fires no event when it finds nothing. The four cases with a deep stack below are about that:
+  // each took seconds before the depth a page may have was tied to its number of `<`.
   const CASES: Array<[string, string]> = [
     ["unclosed anchors", repeated('<a href="')],
     ["divs", repeated("<div>")],
@@ -576,6 +584,19 @@ describe("extractPageText on hostile input", () => {
     ["end tags inside comments", repeated("<b><!--</b>-->")],
     ["end tags inside a script", repeated("<b><script></b></script>")],
     ["end tags inside a declaration", repeated("<b><!x</b>")],
+    ["end tags that close nothing, on a stack 9,990 deep", spans(9_990) + repeated("</b>")],
+    [
+      "end tags and text that close nothing, on a stack 9,990 deep",
+      spans(9_990) + repeated("</i>x"),
+    ],
+    [
+      "forms that are ignored, on a stack 9,990 deep",
+      '<form a="<">' + spans(9_990) + repeated('<form a="<">'),
+    ],
+    [
+      "end tags of svg names in a foreignObject, on a stack 9,900 deep",
+      "<svg><foreignObject>" + spans(9_900) + repeated("</clippath>"),
+    ],
     ["unclosed block tags with a quote", repeated('<div title="')],
     ["unclosed block tags with a single quote", repeated("<p x='")],
     ["quoted values with a >", repeated('<a title="x>')],
@@ -602,16 +623,50 @@ describe("extractPageText on hostile input", () => {
     expect(performance.now() - start).toBeLessThan(1000);
   });
 
+  // Pages with a stack nearly as deep as the limit allows for their number of `<`. A page that
+  // nests deeper gives no text (see below), so these are about the most work that a page can cause.
+  const NEAR_THE_LIMIT: Array<[string, string]> = [
+    ["end tags that close nothing, 80 deep", filled("head text " + spans(80), "</b>")],
+    [
+      "forms that are ignored, 120 deep",
+      filled('head text <form a="<">' + spans(120), '<form a="<">'),
+    ],
+    [
+      "end tags of svg names in a foreignObject, 180 deep",
+      filled("head text <svg><foreignObject>" + spans(180), "</fetile>"),
+    ],
+  ];
+
+  it.each(NEAR_THE_LIMIT)("reads 2 MB of %s, in under a second", (_name, html) => {
+    const start = performance.now();
+    const { text } = extractPageText(html, BASE);
+    expect(performance.now() - start).toBeLessThan(1000);
+    expect(text).toBe("head text");
+  });
+
+  it("lets a page nest less deep the more `<` it holds", () => {
+    const deep = (ending: string) => spans(150) + "deep text" + ending;
+    expect(extractPageText(deep("</span>".repeat(150)), BASE).text).toBe("deep text");
+    expect(extractPageText(filled(deep(""), "</b>"), BASE).text).toBe("");
+  });
+
+  it("still reads a large ordinary page", () => {
+    const paragraph = "<p>Some <b>bold</b> and <i>italic</i> text, <a href='/x'>a link</a>.</p>";
+    const { text } = extractPageText(filled("", paragraph), BASE);
+    expect(text.startsWith("Some bold and italic text, a link.\n\nSome bold")).toBe(true);
+    expect(text.length).toBeGreaterThan(1_000_000);
+  });
+
   it("still reads a deeply nested page that is not hostile", () => {
     const html = "<span>".repeat(2000) + "deep text" + "</span>".repeat(2000);
     expect(extractPageText(html, BASE).text).toBe("deep text");
   });
 
-  it("gives no text for a page that keeps more than 10,000 tags open, but still its title and links", () => {
+  it("gives no text for a page that nests too deep, but still its title and links", () => {
     const head = '<head><title>Deep</title></head><nav><a href="/x">x</a></nav>';
-    const reads = extractPageText(head + "<span>".repeat(9_000) + "deep text", BASE);
+    const reads = extractPageText(head + spans(5_000) + "deep text", BASE);
     expect(reads.text).toBe("deep text");
-    const gives = extractPageText(head + "<span>".repeat(10_500) + "deep text", BASE);
+    const gives = extractPageText(head + spans(8_000) + "deep text", BASE);
     expect(gives).toEqual({
       title: "Deep",
       text: "",

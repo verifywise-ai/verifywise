@@ -9,8 +9,11 @@
  *   takes time proportional to the square of how deeply tags stay open: 2 MB of `<span>` that
  *   never close keeps the event loop busy for about a minute. Block tags are therefore replaced by
  *   line breaks before the parser sees them, and the parser's own open and close events count how
- *   deep the page really goes: a page that goes deeper than MAX_NESTING is given up on while the
- *   parser is still cheap.
+ *   deep the page really goes. The parser also searches its whole stack of open tags for every end
+ *   tag and every `<form`, and fires no event when it finds nothing, so its work is the depth of
+ *   the page times the number of its `<`. A page may nest only as deep as MAX_STACK_STEPS divided
+ *   by that number (see nestingLimit); one that goes deeper is given up on while the parser is
+ *   still cheap.
  * - The title, date and links are read from the raw HTML with patterns in which a tag cannot reach
  *   past the next `<`. A pattern that scans on to a `>` from every unclosed start would be
  *   quadratic: an unclosed `<a href="` repeated for 2 MB would cost every start the rest of the
@@ -40,8 +43,13 @@ export interface PageText {
 
 /** The same size as the fetch limit; a page that is longer is read as far as this. */
 const MAX_HTML_CHARS = 2_097_152;
-/** A page that keeps more tags open than this gives no text. No real page comes near it. */
-const MAX_NESTING = 10_000;
+/**
+ * How many entries of its stack of open tags the parser may search, counted once for every `<` of
+ * the page. A `<` can make it search the whole stack twice (an end tag with an svg name inside a
+ * foreignObject), so all the searches of a page add up to at most twice this: about 0.2 s. A page
+ * that nests deeper than this divided by its number of `<` gives no text; no real page comes near.
+ */
+const MAX_STACK_STEPS = 50_000_000;
 const MAX_ANCHORS = 500;
 const MAX_LINK_TEXT_CHARS = 80;
 const MAX_TITLE_CHARS = 300;
@@ -158,7 +166,21 @@ const BLOCK_TAG = new RegExp(
 class NestingTooDeep extends Error {}
 
 /**
- * The text of the page, or "" for a page that keeps more than MAX_NESTING tags open at once.
+ * How many tags the parser may keep open at once for this markup. Every search of its stack starts
+ * at a `<` (an end tag, or a `<form` that it checks against the forms that are open), and a search
+ * that finds nothing fires no event that could be counted: the number of `<` bounds the work, not
+ * the number of events. Keeping the depth within MAX_STACK_STEPS divided by that number bounds the
+ * searches, and the cost of pushing to and popping from a deep stack as well.
+ */
+function nestingLimit(markup: string): number {
+  let angles = 1;
+  for (let at = markup.indexOf("<"); at !== -1; at = markup.indexOf("<", at + 1)) angles += 1;
+  return Math.floor(MAX_STACK_STEPS / angles);
+}
+
+/**
+ * The text of the page, or "" for a page that keeps more tags open at once than nestingLimit
+ * allows it.
  *
  * Open tags are counted from the events of the parser itself (`onOpenTag` and `onCloseTag`, which
  * include the tags that the parser closes by itself), so the count is the depth the parser
@@ -166,16 +188,18 @@ class NestingTooDeep extends Error {}
  * script is not one to the parser, and not to this count either.
  */
 function htmlToText(html: string): string {
+  const markup = html.replace(BLOCK_TAG, "\n");
+  const limit = nestingLimit(markup);
   let open = 0;
   let stripped: string;
   try {
-    stripped = sanitizeHtml(html.replace(BLOCK_TAG, "\n"), {
+    stripped = sanitizeHtml(markup, {
       allowedTags: [],
       allowedAttributes: {},
       nonTextTags: NON_TEXT_TAGS,
       onOpenTag: () => {
         open += 1;
-        if (open > MAX_NESTING) throw new NestingTooDeep();
+        if (open > limit) throw new NestingTooDeep();
       },
       onCloseTag: () => {
         open -= 1;
