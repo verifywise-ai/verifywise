@@ -1,4 +1,10 @@
-import { planCategories } from "../categories";
+import {
+  LOOKBACK_MONTHS,
+  NO_DOMAIN_NOTE,
+  monthsBefore,
+  planCategories,
+  researchableCategories,
+} from "../categories";
 import { ResearchTarget } from "../target";
 
 // A fixed instant, written in UTC so that the tests do not depend on the machine's time zone.
@@ -6,7 +12,50 @@ const NOW = new Date("2026-10-10T12:00:00Z");
 
 const target: ResearchTarget = { name: "Acme", domain: "acme.com", provides: "Cloud hosting" };
 
-const NO_DOMAIN_NOTE = "Vendor website is missing or not a valid domain";
+describe("NO_DOMAIN_NOTE", () => {
+  it("is the stored phrase for a category skipped for want of a domain", () => {
+    expect(NO_DOMAIN_NOTE).toBe("Vendor website is missing or not a valid domain");
+  });
+});
+
+describe("monthsBefore", () => {
+  it("gives the same day of the month, the given number of months earlier", () => {
+    expect(monthsBefore(new Date("2031-04-20T12:00:00Z"), 24)).toBe("2029-04-20");
+  });
+
+  it("gives the last day of a shorter month for a day it does not have", () => {
+    expect(monthsBefore(new Date("2028-02-29T00:00:00Z"), 24)).toBe("2026-02-28");
+  });
+});
+
+describe("LOOKBACK_MONTHS", () => {
+  it("gives each category its window in months", () => {
+    expect(LOOKBACK_MONTHS).toEqual({
+      security_incidents: 24,
+      certifications: 24,
+      legal_regulatory: 36,
+      ai_specific: 24,
+    });
+  });
+});
+
+describe("researchableCategories", () => {
+  it("gives all four categories, in category order, for a target with a domain", () => {
+    expect(researchableCategories(target)).toEqual([
+      "security_incidents",
+      "certifications",
+      "legal_regulatory",
+      "ai_specific",
+    ]);
+  });
+
+  it.each([[null], [""]])("gives only the two news categories when the domain is %p", (domain) => {
+    expect(researchableCategories({ ...target, domain })).toEqual([
+      "security_incidents",
+      "legal_regulatory",
+    ]);
+  });
+});
 
 function plansByCategory(result: ReturnType<typeof planCategories>) {
   return Object.fromEntries(result.plans.map((plan) => [plan.category, plan]));
