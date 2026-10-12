@@ -151,12 +151,13 @@ const REFUSED: Array<[string, string]> = [
 const PUBLIC = ["93.184.216.34", "8.8.8.8", "1.1.1.1", "11.0.0.1", "126.255.255.255", "128.0.0.1",
   "169.253.255.255", "172.15.255.255", "172.32.0.1", "100.63.255.255", "100.128.0.1", "198.17.255.255",
   "198.20.0.1", "192.0.1.1", "223.255.255.255", "2606:4700:4700::1111", "2001:4860:4860::8888",
-  "2a00:1450:4001:81b::200e"];
+  "2a00:1450:4001:81b::200e", "2003::1", "2001:4860::1", "64:ff9c::1"];
 const NOT_PUBLIC = ["0.0.0.0", "0.255.255.255", "10.0.0.5", "10.255.255.255", "100.64.0.0", "100.127.255.255",
   "127.0.0.1", "127.255.255.254", "169.254.0.1", "169.254.169.254", "172.16.0.0", "172.31.255.255",
   "192.0.0.1", "192.0.2.5", "192.168.1.1", "198.18.0.1", "198.19.255.255", "198.51.100.7", "203.0.113.9",
   "224.0.0.1", "239.255.255.255", "240.0.0.1", "255.255.255.255", "::", "::1", "::ffff:127.0.0.1",
-  "::ffff:8.8.8.8", "64:ff9b::808:808", "100::1", "2001:db8::1", "fc00::1", "fdff::1", "fe80::1",
+  "::ffff:8.8.8.8", "64:ff9b::808:808", "64:ff9b:1::a9fe:a9fe", "64:ff9b:1::1", "::7f00:1", "::808:808",
+  "2002:a9fe:a9fe::1", "2002:808:808::1", "100::1", "2001:db8::1", "fc00::1", "fdff::1", "fe80::1",
   "febf::1", "ff02::1", "", "abc", "1.2.3", "999.1.1.1"];
 ```
 
@@ -167,7 +168,7 @@ const NOT_PUBLIC = ["0.0.0.0", "0.255.255.255", "10.0.0.5", "10.255.255.255", "1
 Run: `cd Servers && npx jest services/webResearch/__tests__/publicUrl.test.ts`
 Expected: FAIL, `Cannot find module '../publicUrl'`.
 
-- [ ] **Step 3: Implement `parsePublicUrl` and `isPublicAddress` in `publicUrl.ts`.** `parsePublicUrl` checks in this order: longer than `MAX_URL_CHARS` or not parseable → `invalid_url`; protocol other than `http:`/`https:` → `scheme`; a user name or password → `credentials`; port not one of `""`, `"80"`, `"443"` → `port`; a host that starts with `[` or for which `net.isIP` is non-zero → `ip_literal`; a host with fewer than two labels, a label not matching `/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/`, or ending in `.localhost`, `.local`, `.internal` or `.home.arpa` → `reserved_host`. A trailing dot of the host is removed (write it back to the URL) and the returned URL has an empty `hash`. `isPublicAddress` uses one module-level `net.BlockList` holding exactly the ranges of spec §7.2, with `::ffff:0:0/96` blocked as a whole, and `net.isIP` to pick the family. `isOnDomain` compares whole labels: equal, or `host` ends with `"." + domain`.
+- [ ] **Step 3: Implement `parsePublicUrl` and `isPublicAddress` in `publicUrl.ts`.** `parsePublicUrl` checks in this order: longer than `MAX_URL_CHARS` or not parseable → `invalid_url`; protocol other than `http:`/`https:` → `scheme`; a user name or password → `credentials`; port not one of `""`, `"80"`, `"443"` → `port`; a host that starts with `[` or for which `net.isIP` is non-zero → `ip_literal`; a host with fewer than two labels, a label not matching `/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/`, or ending in `.localhost`, `.local`, `.internal` or `.home.arpa` → `reserved_host`. A trailing dot of the host is removed (write it back to the URL) and the returned URL has an empty `hash`. `isPublicAddress` uses one `net.BlockList` per address family (Node checks an IPv4 address against `::ffff:0:0/96` as if it were IPv4-mapped, so a single list holding that range would mark every IPv4 address non-public) holding exactly the ranges of spec §7.2, with `::ffff:0:0/96` blocked as a whole, and `net.isIP` to pick the family. `isOnDomain` compares whole labels: equal, or `host` ends with `"." + domain`.
 
 - [ ] **Step 4: Run to verify it passes**
 
