@@ -4,12 +4,15 @@
  *
  * The evidence is text that third parties wrote, and the vendor's name and description are typed
  * by users. Everything of that kind goes through `escapeForPrompt`, so none of it can close a tag
- * or open a new one: the structure of the prompt is the one `buildUserPrompt` writes.
+ * or open a new one: the structure of the prompt is the one `buildUserPrompt` writes. The escape
+ * functions live in the web research toolkit (`webResearch/promptText.ts`) and are exported here
+ * as well.
  */
 import {
   EvidenceSource,
   RESEARCH_CATEGORIES,
 } from "../../domain.layer/interfaces/i.vendorResearch";
+import { escapeAttribute, escapeForPrompt, unescapeFromPrompt } from "../webResearch/promptText";
 import {
   MAX_CATEGORY_NOTES,
   MAX_EVIDENCE_PER_FINDING,
@@ -22,6 +25,8 @@ import {
   RESEARCH_SEVERITIES,
 } from "./schema";
 import { ResearchTarget } from "./target";
+
+export { escapeForPrompt, unescapeFromPrompt };
 
 /** Stored with every run. Change it whenever the wording of a prompt changes. */
 export const PROMPT_VERSION = "vr-1";
@@ -47,26 +52,6 @@ function inWords(count: number): string {
   return Number.isInteger(count) && count >= 0 && count < NUMBER_WORDS.length
     ? NUMBER_WORDS[count]
     : String(count);
-}
-
-/** Replaces `&`, `<` and `>` with `&amp;`, `&lt;` and `&gt;`. The ampersand goes first. */
-export function escapeForPrompt(text: string): string {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-/**
- * Reverses `escapeForPrompt`, and only that: it decodes the three entities and no others. The
- * ampersand goes last, so that "&amp;lt;" gives "&lt;" and not "<". The model sees escaped
- * snippets, so the quotes it returns have to be decoded before they are compared with the
- * original text.
- */
-export function unescapeFromPrompt(text: string): string {
-  return text.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
-}
-
-/** For a value inside double quotes, where a double quote has to be escaped as well. */
-function escapeAttribute(value: string): string {
-  return escapeForPrompt(value).replace(/"/g, "&quot;");
 }
 
 export function buildSystemPrompt(): string {
