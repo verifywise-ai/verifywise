@@ -24,7 +24,7 @@ import { cleanText, cutAtCodePoint } from "./text";
 export const NOTES = {
   /** Answered, and the model proposed nothing and wrote no note. */
   nothingFound: "No risks found in the sources reviewed",
-  /** The model proposed a risk and none stayed: validation, the de-duplication or the cap took it. */
+  /** The model proposed a risk and none stayed: validation, de-duplication or the cap took it. */
   unconfirmed: "Possible risks were found but could not be verified or are already recorded",
   /** Worked on, and every call was a search that failed. */
   searchUnavailable: "The search was not available",
@@ -69,11 +69,11 @@ function modelNoteFor(
  * 3. No call: `skipped`, because the time ran out or the loop ended before it got there.
  * 4. No call answered: `search_failed`. The search was not available when every call was a failed
  *    search; once a page could not be read, the pages could not be read.
- * 5. Any other is `nothing_found`. If the model proposed a risk in it and none stayed, the note says
- *    that risks were possible but are not confirmed. Otherwise, when pages of it could not be read,
- *    the note counts them. Only then is the model's own note shown, or a plain sentence when it
- *    wrote none: a note that sits next to a risk that was dropped, or next to a page that could not
- *    be read, would describe what nobody could check.
+ * 5. Any other is `nothing_found`. If the model proposed a risk in it and none stayed, the note
+ *    says that risks were possible but are not confirmed. Otherwise, when pages of it could not be
+ *    read, the note counts them. Only then is the model's own note shown, or a plain sentence when
+ *    it wrote none: a note that sits next to a risk that was dropped, or next to a page that could
+ *    not be read, would describe what nobody could check.
  */
 export function summariseCategories(input: {
   /** The categories that cannot be researched, for want of the vendor's domain. */

@@ -1,9 +1,17 @@
 /**
  * The vendor research pipeline: what one run does between "queued" and "completed" or "failed".
  *
- * Mark the run running, load the vendor, search the web once for each category, pack the results
- * into an evidence pack, make one structured model call, validate the answer, drop what is already
- * known, cap what is left (in that order), and store the findings together with the end of the run.
+ * Mark the run running, load the vendor and the model of its organisation, let the research loop
+ * collect sources on the web (see researchAgent.ts), pack its ledger into an evidence pack, make
+ * one structured model call, validate the answer, drop what is already known, cap what is left (in
+ * that order), and store the findings together with the end of the run and the summary of each
+ * category (see summary.ts).
+ *
+ * What the loop leaves decides how the run goes on. A model error of the loop fails the run when
+ * nothing was found, and so does a loop that never got an answer from the web: the model never
+ * searched or read, or no call was answered. A loop whose calls were answered and found nothing
+ * completes the run without an analysis call. A loop that stopped early, for its time, its steps or
+ * a model error, still hands what it found to the analysis.
  *
  * The queries that end a run (finishRunQuery) have no status guard, so a run is ended exactly once.
  * The code is built so that this can be seen:
@@ -19,10 +27,12 @@
  * Only a failure to mark the run running is rethrown. The run is still queued then, so a retry of
  * the job can start it.
  *
- * This module logs nothing that a third party or the model wrote: no snippets, quotes, prompts or
- * answers. The message of an error of the model call is neither stored nor logged either, because
- * it can quote the request or hold a key. The run records a fixed phrase and the log line the name
- * and the HTTP status of the error. The self-correcting call (advisor/llmSelfCorrect.ts) logs on
+ * This module logs nothing that a third party or the model wrote: no snippets, excerpts, URLs,
+ * quotes, prompts or answers. The message of an error of a model call, in the loop or in the
+ * analysis, is neither stored nor logged either, because it can quote the request or hold a key.
+ * The run records a fixed phrase and the log line the name and the HTTP status of the error. A
+ * rejection of the researcher is a bug of the web session, whose message can hold what a page or a
+ * URL holds: only its name is logged. The self-correcting call (advisor/llmSelfCorrect.ts) logs on
  * its own account when it gives up on an answer: the path and message of the first three schema
  * issues, which are generic: the schema drops an unexpected property instead of reporting it, so
  * no property name that the model chose is in them (nor in the system prompt of a retry, which
@@ -52,18 +62,21 @@ import {
   markRunRunningQuery,
 } from "../../utils/vendorResearch.utils";
 import { getVendorRisksByVendorIdQuery } from "../../utils/vendorRisk.utils";
-import { planCategories } from "./categories";
+import { researchableCategories } from "./categories";
 import { dropDuplicates } from "./dedupe";
 import { buildEvidencePack } from "./evidence";
 import { PROMPT_VERSION, buildSystemPrompt, buildUserPrompt } from "./prompts";
-import { MAX_NOTE_CHARS, ResearchOutput, researchOutputSchema } from "./schema";
-import { SearchHit, SearchProvider, SearchProviderError } from "./searchProvider";
+// Types only: the researcher is injected, so loading the pipeline loads no web module.
+import type { ResearchResult, VendorResearcher } from "./researchAgent";
+import { ResearchOutput, researchOutputSchema } from "./schema";
+import { summariseCategories, workedCategories } from "./summary";
 import { buildTarget } from "./target";
-import { cleanText, cutAtCodePoint } from "./text";
+import { cutAtCodePoint } from "./text";
 import { applyCaps, validateFindings } from "./validation";
 
 export interface PipelineDeps {
-  searchProvider: SearchProvider;
+  /** Runs the research loop for a vendor: the web search and page reads. */
+  research: VendorResearcher;
   /** The model of the organisation, or null when it has no LLM key. */
   resolveModel: (organizationId: number) => Promise<{ model: unknown; modelId: string } | null>;
   generate: typeof generateObjectWithSelfCorrection;
@@ -82,8 +95,10 @@ const ERROR_MAX_CHARS = 500;
 /** The id of the model is stored cut to this many characters, the size of its column. */
 const MODEL_MAX_CHARS = 255;
 
-const NOTHING_FOUND_NOTE = "No risks found in the search results";
-const SEARCH_FAILED_NOTE = "The search failed";
+/** What a run records when no call of the research loop was answered by the web. */
+const WEB_UNREACHABLE_NOTE = "The run stopped because the web could not be reached";
+/** What a run records when the model never asked for a search or a read that reached the web. */
+const NO_RESEARCH_ACTIONS_NOTE = "The model did not use the research actions";
 /**
  * What a run records for an error that nothing planned for, and for findings that could not be
  * saved. The message of such an error goes to the log: it can name a host, a port or a query, and
@@ -91,12 +106,6 @@ const SEARCH_FAILED_NOTE = "The search failed";
  */
 const UNEXPECTED_ERROR_NOTE = "Unexpected error";
 const SAVING_FAILED_NOTE = "Saving the findings failed";
-/**
- * For a category in which the model proposed a risk and none stayed: validation, the
- * de-duplication or the cap took them all.
- */
-const UNCONFIRMED_NOTE =
-  "Possible risks were found but could not be verified or are already recorded";
 
 /**
  * The model of the organisation's first LLM key, and the id of the model that key calls; null when
@@ -119,12 +128,13 @@ interface RunArgs {
 
 /** What a run has learned so far. It is the audit trail that a failed run records. */
 interface Progress {
-  /** The categories that were searched. */
+  /** The categories that the research loop worked on. */
   categories: ResearchCategory[];
   evidence: EvidenceSource[] | null;
-  /** The model, once a call to it was about to be made. */
+  /** The model, once the research was about to start with it. */
   model: string | null;
   searchesUsed: number;
+  pagesRead: number;
 }
 
 type Decision =
@@ -171,6 +181,12 @@ function httpStatusOf(error: unknown): number | null {
 /** What a class name looks like, for example AI_APICallError. A name that does not is not trusted. */
 const IDENTIFIER = /^[A-Za-z_$][\w$.]{0,59}$/;
 
+/** The name of an error, for a log line, or "unknown" when it does not look like a class name. */
+function errorName(error: unknown): string {
+  const name = asRecord(error)?.name;
+  return typeof name === "string" && IDENTIFIER.test(name) ? name : "unknown";
+}
+
 /**
  * What went wrong with a model call, in a few fixed words, and the name and HTTP status of the
  * error for the log. The message of a provider error can quote the request or hold a key, and an
@@ -183,8 +199,7 @@ function describeModelFailure(error: unknown): {
   name: string;
   status: number | null;
 } {
-  const rawName = asRecord(error)?.name;
-  const name = typeof rawName === "string" && IDENTIFIER.test(rawName) ? rawName : "unknown";
+  const name = errorName(error);
   const status = httpStatusOf(error);
   if (status !== null) return { phrase: `HTTP ${status}`, name, status };
   if (name === "TimeoutError" || name === "AbortError") {
@@ -197,69 +212,14 @@ function describeModelFailure(error: unknown): {
 }
 
 /**
- * Why a search failed, for the run summary. A SearchProviderError has a message that is safe to
- * show, by contract; the message of any other error is not trusted and is replaced.
+ * The phrase a run records for a failed model call, of the research loop or of the analysis. The
+ * name and the HTTP status of the error are logged; its message is neither stored nor logged.
  */
-function searchFailureNote(reason: unknown): string {
-  if (reason instanceof SearchProviderError && reason.message.trim() !== "") {
-    return cutAtCodePoint(reason.message.trim(), MAX_NOTE_CHARS);
-  }
-  return SEARCH_FAILED_NOTE;
-}
-
-const findingsNote = (count: number) =>
-  count === 1 ? "1 potential risk found" : `${count} potential risks found`;
-
-/**
- * The first note that the model wrote for the category and that has any text left once it is
- * cleaned (like the rest of what the model wrote), trimmed and cut to MAX_NOTE_CHARS.
- */
-function modelNoteFor(
-  notes: ResearchOutput["category_notes"],
-  category: ResearchCategory,
-): string | undefined {
-  return notes
-    .filter((entry) => entry.category === category)
-    .map((entry) => cutAtCodePoint(cleanText(entry.note).trim(), MAX_NOTE_CHARS))
-    .find((note) => note !== "");
-}
-
-/**
- * One entry for each category, in category order.
- *
- * - A category that was not searched keeps the note of the plan, and a failed search shows its
- *   failure.
- * - A searched category with a kept finding is `findings`, with a plain count as its note.
- * - Any other is `nothing_found`. If the model proposed a risk in it and none stayed, the note says
- *   that risks were possible but are not confirmed. Only if the model proposed none is its own note
- *   shown, or a plain sentence when it wrote none: a note that sits next to a risk that was dropped
- *   would describe that risk.
- */
-function summarise(input: {
-  skipped: CategorySummaryEntry[];
-  failed: Array<{ category: ResearchCategory; note: string }>;
-  kept: NewFinding[];
-  /** The categories in which the model proposed a risk, whatever became of it. */
-  proposed: ReadonlySet<ResearchCategory>;
-  modelNotes: ResearchOutput["category_notes"];
-}): CategorySummaryEntry[] {
-  return RESEARCH_CATEGORIES.map((category): CategorySummaryEntry => {
-    const skipped = input.skipped.find((entry) => entry.category === category);
-    if (skipped) return skipped;
-    const failure = input.failed.find((entry) => entry.category === category);
-    if (failure) return { category, outcome: "search_failed", note: failure.note };
-
-    const keptCount = input.kept.filter((finding) => finding.category === category).length;
-    if (keptCount > 0) return { category, outcome: "findings", note: findingsNote(keptCount) };
-    if (input.proposed.has(category)) {
-      return { category, outcome: "nothing_found", note: UNCONFIRMED_NOTE };
-    }
-    return {
-      category,
-      outcome: "nothing_found",
-      note: modelNoteFor(input.modelNotes, category) ?? NOTHING_FOUND_NOTE,
-    };
-  });
+function modelFailurePhrase(args: RunArgs, call: string, error: unknown): string {
+  const failure = describeModelFailure(error);
+  const status = failure.status === null ? "" : `, HTTP status ${failure.status}`;
+  logger.warn(`${tag(args)}: the model call of ${call} failed (error ${failure.name}${status})`);
+  return failure.phrase;
 }
 
 function finishInput(
@@ -277,16 +237,15 @@ function finishInput(
     model: progress.model === null ? null : cutAtCodePoint(progress.model, MODEL_MAX_CHARS),
     promptVersion: PROMPT_VERSION,
     searchesUsed: progress.searchesUsed,
-    // This pipeline reads search results only, never a page.
-    pagesRead: 0,
+    pagesRead: progress.pagesRead,
     duplicatesDropped: end.duplicatesDropped,
     error: end.error === null ? null : cutAtCodePoint(end.error, ERROR_MAX_CHARS),
   };
 }
 
 /**
- * The work of a run up to the point of writing. It reads, searches and calls the model, and writes
- * nothing. It may throw; `decide` turns that into a "fail".
+ * The work of a run up to the point of writing. It reads, researches and calls the model, and
+ * writes nothing. It may throw; `decide` turns that into a "fail".
  */
 async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): Promise<Decision> {
   const { organizationId, vendorId } = args;
@@ -323,58 +282,76 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
   const vendor = await getVendorByIdQuery(vendorId, organizationId);
   if (!vendor) return stop("Vendor not found", [], "skipped");
 
-  // Before the searches, so that an organisation without a key does not spend any of them.
+  // Before the research, so that an organisation without a key does not spend a search.
   const resolved = await deps.resolveModel(organizationId);
   if (!resolved) return stop("No LLM key configured");
 
   const target = buildTarget(vendor);
-  const { plans, skipped } = planCategories(target, deps.now());
+  // One clock for the loop and the analysis, so that both hold a source to the same window.
+  const now = deps.now();
+  progress.model = resolved.modelId;
 
-  progress.categories = plans.map((plan) => plan.category);
-  progress.searchesUsed = plans.length;
-  // An async callback, so that a provider that throws instead of rejecting is also a failed search.
-  const settled = await Promise.allSettled(
-    plans.map(async (plan) => deps.searchProvider.search(plan.query, plan.options)),
+  let found: ResearchResult;
+  try {
+    found = await deps.research({ target, model: resolved.model, now });
+  } catch (error) {
+    // A bug of the web session. Its message can hold what a page or a URL holds, so only the name
+    // of the error is logged.
+    logger.error(`${tag(args)}: the research failed (error ${errorName(error)})`);
+    return stop(UNEXPECTED_ERROR_NOTE);
+  }
+  progress.categories = workedCategories(found.calls);
+  progress.searchesUsed = found.searchesUsed;
+  progress.pagesRead = found.pagesRead;
+  logger.info(
+    `${tag(args)}: the research loop stopped (${found.stoppedBecause}): ${found.searchesUsed} searches, ${found.pagesRead} pages read, ${found.entries.length} sources`,
   );
 
-  // Both lists are in plan order, which is category order.
-  const searched: Array<{ category: ResearchCategory; hits: SearchHit[] }> = [];
-  const failed: Array<{ category: ResearchCategory; note: string }> = [];
-  settled.forEach((result, index) => {
-    const { category } = plans[index];
-    if (result.status === "fulfilled") {
-      searched.push({ category, hits: result.value });
-    } else {
-      failed.push({ category, note: searchFailureNote(result.reason) });
-    }
-  });
+  const researchable = researchableCategories(target);
+  const skippedNoDomain = RESEARCH_CATEGORIES.filter(
+    (category) => !researchable.includes(category),
+  );
+  const summaryOf = (
+    kept: NewFinding[],
+    proposed: ReadonlySet<ResearchCategory>,
+    modelNotes: ResearchOutput["category_notes"],
+  ) =>
+    summariseCategories({
+      skippedNoDomain,
+      calls: found.calls,
+      kept,
+      proposed,
+      modelNotes,
+      stoppedBecause: found.stoppedBecause,
+    });
 
-  if (searched.length === 0 && failed.length > 0) {
-    const reasons = Array.from(new Set(failed.map((entry) => entry.note))).join("; ");
-    return stop(
-      `The run stopped because all searches failed: ${reasons}`,
-      summarise({ skipped, failed, kept: [], proposed: new Set(), modelNotes: [] }),
-    );
+  // The failed-run rule, in this order. A model call that rejected with nothing in it leaves the
+  // loop's error null, so the reason it stopped for decides, not the error.
+  if (found.stoppedBecause === "model_error") {
+    const phrase = modelFailurePhrase(args, "the research loop", found.modelError);
+    // With entries, what was found before the model failed is still analysed.
+    if (found.entries.length === 0) return stop(`Model call failed: ${phrase}`);
+  }
+  // The model answered with prose or invalid steps until the loop ended.
+  if (found.calls.length === 0) return stop(NO_RESEARCH_ACTIONS_NOTE);
+  // A blocked search is not "nothing found": the summary says which categories could not look.
+  if (found.calls.every((call) => !call.answered)) {
+    return stop(WEB_UNREACHABLE_NOTE, summaryOf([], new Set(), []));
   }
 
-  const pack = buildEvidencePack(searched);
+  const pack = buildEvidencePack(found.entries);
   progress.evidence = pack.length > 0 ? pack : null;
   if (pack.length === 0) {
-    // Nothing to read, so nothing to ask the model about.
-    return complete(
-      [],
-      0,
-      summarise({ skipped, failed, kept: [], proposed: new Set(), modelNotes: [] }),
-    );
+    // The web answered and nothing usable came back, so there is nothing to ask the model about.
+    return complete([], 0, summaryOf([], new Set(), []));
   }
 
-  progress.model = resolved.modelId;
   let output: ResearchOutput;
   try {
     const result = await deps.generate({
       model: resolved.model,
       schema: researchOutputSchema,
-      system: buildSystemPrompt(deps.now()),
+      system: buildSystemPrompt(now),
       prompt: buildUserPrompt(target, pack),
       temperature: 0,
       innerMaxRetries: 2,
@@ -383,19 +360,14 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
     });
     output = result.object;
   } catch (error) {
-    const failure = describeModelFailure(error);
-    // The name and the status only: the message of the error is neither stored nor logged.
-    const status = failure.status === null ? "" : `, HTTP status ${failure.status}`;
-    logger.warn(`${tag(args)}: the model call failed (error ${failure.name}${status})`);
-    return stop(`Model call failed: ${failure.phrase}`);
+    return stop(`Model call failed: ${modelFailurePhrase(args, "the analysis", error)}`);
   }
 
-  const candidates = validateFindings(
-    output,
-    pack,
-    target,
-    searched.map((entry) => entry.category),
+  // The categories with a source in the pack: a finding of any other has no evidence of its own.
+  const inPack = RESEARCH_CATEGORIES.filter((category) =>
+    pack.some((source) => source.category === category),
   );
+  const candidates = validateFindings(output, pack, target, inPack);
   const [existingRisks, priorFindings] = await Promise.all([
     // Only the active risks. The default of the query is the same, but the rule is said here.
     getVendorRisksByVendorIdQuery(vendorId, organizationId, "active"),
@@ -410,19 +382,23 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
   return complete(
     kept,
     dropped,
-    summarise({
-      skipped,
-      failed,
+    summaryOf(
       kept,
-      proposed: new Set(output.findings.map((candidate) => candidate.category)),
-      modelNotes: output.category_notes,
-    }),
+      new Set(output.findings.map((candidate) => candidate.category)),
+      output.category_notes,
+    ),
   );
 }
 
 /** `research`, with every error turned into a decision to fail the run. It never rejects. */
 async function decide(args: RunArgs, deps: PipelineDeps): Promise<Decision> {
-  const progress: Progress = { categories: [], evidence: null, model: null, searchesUsed: 0 };
+  const progress: Progress = {
+    categories: [],
+    evidence: null,
+    model: null,
+    searchesUsed: 0,
+    pagesRead: 0,
+  };
   try {
     return await research(args, deps, progress);
   } catch (error) {
@@ -489,8 +465,8 @@ async function completeRun(
 
 /**
  * Researches one vendor for one queued run. The run ends once: completed, with its findings, or
- * failed. Failures of the search, of the model and of the database are not thrown; they end the run
- * as failed. A run that is not queued, that has waited in the queue for longer than the stale limit
+ * failed. Failures of the web, of the model and of the database are not thrown; they end the run as
+ * failed. A run that is not queued, that has waited in the queue for longer than the stale limit
  * (`markRunRunningQuery` does not start such a run), or whose vendor is missing, is skipped.
  */
 export async function runVendorResearch(

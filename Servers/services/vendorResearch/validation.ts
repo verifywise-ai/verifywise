@@ -13,8 +13,8 @@
  *   a scheme, or as a possessive): a quote of the name alone is in every page that mentions the
  *   vendor and says nothing about a risk. A citation that fails any of this is removed, and a
  *   candidate left without a citation is dropped.
- * - The category must be one that was searched, the texts must be present and within their limits,
- *   and the enum values must be real, so that a risk level can be worked out.
+ * - The category must be one with evidence in the pack, the texts must be present and within their
+ *   limits, and the enum values must be real, so that a risk level can be worked out.
  * - The texts and the quotes of a candidate are cleaned like the evidence is (see cleanText) before
  *   they are checked and stored: a NUL and a lone surrogate would make a run fail to save. So half
  *   of a surrogate pair, which would match the first half of a pair in the page, no longer does: it
@@ -347,7 +347,7 @@ export function applyCaps(findings: NewFinding[]): NewFinding[] {
 /**
  * The candidates of the model that hold up, as findings ready to be stored, the most severe first
  * and not capped (see applyCaps). `pack` is the evidence the model was shown and
- * `searchedCategories` the categories whose search succeeded.
+ * `searchedCategories` the categories that have a source in it.
  */
 export function validateFindings(
   output: ResearchOutput,

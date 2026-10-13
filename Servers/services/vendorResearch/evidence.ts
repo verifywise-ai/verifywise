@@ -1,26 +1,28 @@
 /**
- * The evidence pack: the search results of a run, cleaned, numbered and sized to be shown to the
- * model and stored in the run's `evidence` column.
+ * The evidence pack: the ledger of a run (the snippets of search results and the excerpts of the
+ * pages that were read), cleaned, numbered and sized to be shown to the model and stored in the
+ * run's `evidence` column.
  *
- * Every string in a search result is written by a third party and ends up in a JSONB column.
- * Postgres refuses a NUL character and a lone surrogate there (JSON.stringify writes the latter as
- * a \udXXX escape), and one such character would make the whole run fail to save. So the text is
- * cleaned first and a hit whose URL cannot be trusted is dropped.
+ * Every string in the ledger is written by a third party and ends up in a JSONB column. Postgres
+ * refuses a NUL character and a lone surrogate there (JSON.stringify writes the latter as a \udXXX
+ * escape), and one such character would make the whole run fail to save. So the text is cleaned
+ * first and an entry whose URL cannot be trusted is dropped.
  */
 import {
   EvidenceSource,
   RESEARCH_CATEGORIES,
   ResearchCategory,
 } from "../../domain.layer/interfaces/i.vendorResearch";
-import { SearchHit } from "./searchProvider";
+import { MAX_EXCERPT_CHARS } from "../webResearch/pageText";
+import { LedgerEntry } from "../webResearch/webSession";
 import { MAX_SNIPPET_CHARS, cleanText, cutAtCodePoint } from "./text";
 
 export { MAX_SNIPPET_CHARS };
-export const MAX_EVIDENCE_BYTES = 40_000;
+export const MAX_EVIDENCE_BYTES = 100_000;
 
 /**
  * Limits on the other fields of a source, in characters. With them one source stays well under
- * MAX_EVIDENCE_BYTES, so a single oversized result cannot take all the room and empty the pack.
+ * MAX_EVIDENCE_BYTES, so a single oversized entry cannot take all the room and empty the pack.
  */
 export const MAX_TITLE_CHARS = 300;
 export const MAX_URL_CHARS = 2048;
@@ -37,8 +39,8 @@ const WHITESPACE_OR_CONTROL = /[\s\u0000-\u001F\u007F-\u009F]/;
 
 /**
  * True for an http or https URL of at most MAX_URL_CHARS characters that holds no whitespace, no
- * control character and no lone surrogate as it was received. Such a URL is not repaired: its hit
- * is dropped, and so is a hit whose URL is not a string at all. The length is checked first, so
+ * control character and no lone surrogate as it was received. Such a URL is not repaired: its entry
+ * is dropped, and so is an entry whose URL is not a string at all. The length is checked first, so
  * that a huge string is never scanned.
  */
 function isUsableUrl(url: string): boolean {
@@ -71,46 +73,46 @@ function fitToByteLimit(sources: EvidenceSource[]): EvidenceSource[] {
 }
 
 /**
- * Builds the pack from the hits of each category. The results are taken in the order of
- * RESEARCH_CATEGORIES, whatever order they are passed in, and the hits of one category keep their
- * order. So the ids always follow the categories, and the sources that the byte limit removes from
- * the end are those of the last categories. The steps, in this order:
+ * Builds the pack from the entries of the ledger. They are taken in the order of
+ * RESEARCH_CATEGORIES, and the entries of one category in the order the loop got them. So the ids
+ * always follow the categories, and the sources that the byte limit removes from the end are those
+ * of the last categories. The steps, in this order:
  *
- * 1. A hit with an unusable URL is dropped. The title, the snippet and the publication date are
+ * 1. An entry with an unusable URL is dropped. The title, the content and the publication date are
  *    cleaned.
- * 2. A URL seen before is dropped, so the first hit with it wins, across categories too.
- * 3. The title is cut to MAX_TITLE_CHARS and the snippet to MAX_SNIPPET_CHARS. A publication date
- *    that is empty or longer than MAX_PUBLISHED_AT_CHARS becomes null.
+ * 2. A URL seen before is dropped, so the first entry with it wins, across categories too.
+ * 3. The title is cut to MAX_TITLE_CHARS, and the content of a page to MAX_EXCERPT_CHARS and of a
+ *    result to MAX_SNIPPET_CHARS. A publication date that is empty or longer than
+ *    MAX_PUBLISHED_AT_CHARS becomes null.
  * 4. The sources are numbered S1, S2, ... without gaps.
  * 5. Sources are removed from the end until the serialized pack is at most MAX_EVIDENCE_BYTES.
+ *
+ * The kind and the vendor's mark (`onVendorSite`) are the session's, as they are: whether a page is
+ * the vendor's own was decided on the URL that answered, which the entry does not keep.
  */
-export function buildEvidencePack(
-  results: Array<{ category: ResearchCategory; hits: SearchHit[] }>,
-): EvidenceSource[] {
-  // sort() is stable, so two results of one category keep their order. It runs on a copy, so the
+export function buildEvidencePack(entries: LedgerEntry<ResearchCategory>[]): EvidenceSource[] {
+  // sort() is stable, so two entries of one category keep their order. It runs on a copy, so the
   // array of the caller is left as it was.
-  const inCategoryOrder = [...results].sort(
+  const inCategoryOrder = [...entries].sort(
     (a, b) => RESEARCH_CATEGORIES.indexOf(a.category) - RESEARCH_CATEGORIES.indexOf(b.category),
   );
   const seenUrls = new Set<string>();
   const sources: EvidenceSource[] = [];
 
-  for (const { category, hits } of inCategoryOrder) {
-    for (const hit of hits) {
-      if (!isUsableUrl(hit.url) || seenUrls.has(hit.url)) continue;
-      seenUrls.add(hit.url);
-      sources.push({
-        id: `S${sources.length + 1}`,
-        category,
-        kind: "result",
-        // Only the web session decides what is the vendor's own; nothing is marked without it.
-        onVendorSite: false,
-        url: hit.url,
-        title: cutAtCodePoint(cleanText(hit.title), MAX_TITLE_CHARS),
-        content: cutAtCodePoint(cleanText(hit.content), MAX_SNIPPET_CHARS),
-        publishedAt: cleanPublishedAt(hit.publishedAt),
-      });
-    }
+  for (const entry of inCategoryOrder) {
+    if (!isUsableUrl(entry.url) || seenUrls.has(entry.url)) continue;
+    seenUrls.add(entry.url);
+    const maxContentChars = entry.kind === "page" ? MAX_EXCERPT_CHARS : MAX_SNIPPET_CHARS;
+    sources.push({
+      id: `S${sources.length + 1}`,
+      category: entry.category,
+      kind: entry.kind,
+      onVendorSite: entry.onVendorSite,
+      url: entry.url,
+      title: cutAtCodePoint(cleanText(entry.title), MAX_TITLE_CHARS),
+      content: cutAtCodePoint(cleanText(entry.content), maxContentChars),
+      publishedAt: cleanPublishedAt(entry.publishedAt),
+    });
   }
 
   return fitToByteLimit(sources);

@@ -1,6 +1,6 @@
 jest.mock("../pipeline", () => ({ runVendorResearch: jest.fn(), resolveOrgModel: jest.fn() }));
-// Only the reader of the configuration is replaced: the real factory builds the search provider
-// from what it returns, as it does in production.
+jest.mock("../researchAgent", () => ({ createVendorResearcher: jest.fn() }));
+// Replaced only to show that the job no longer reads it.
 jest.mock("../config", () => ({ getVendorResearchConfig: jest.fn() }));
 jest.mock("../../../advisor/llmSelfCorrect", () => ({
   generateObjectWithSelfCorrection: jest.fn(),
@@ -25,9 +25,10 @@ import { findUsersNotInOrganization } from "../../../utils/user.utils";
 import { getVendorByIdQuery } from "../../../utils/vendor.utils";
 import { finishRunQuery, getRunByIdQuery } from "../../../utils/vendorResearch.utils";
 import { notifyAssigneeOfVendorResearch } from "../../inAppNotification.service";
-import { VendorResearchConfig, getVendorResearchConfig } from "../config";
+import { getVendorResearchConfig } from "../config";
 import { handleVendorResearchJob } from "../job";
 import { PipelineDeps, resolveOrgModel, runVendorResearch } from "../pipeline";
+import { VendorResearcher, createVendorResearcher } from "../researchAgent";
 
 type AnyMock = jest.Mock<any, any[]>;
 const asMock = (fn: unknown): AnyMock => fn as AnyMock;
@@ -39,15 +40,8 @@ const RUN_ID = 11;
 const ASSIGNEE = 5;
 const DATA = { organizationId: ORG, vendorId: VENDOR, runId: RUN_ID };
 
-const TAVILY_KEY = "tvly-secret-key-1234";
-const CONFIGURED: VendorResearchConfig = {
-  searchProvider: "tavily",
-  tavilyApiKey: TAVILY_KEY,
-  autoRun: true,
-  manualCooldownMinutes: 10,
-  dailyRunCap: 50,
-};
-const NOT_CONFIGURED: VendorResearchConfig = { ...CONFIGURED, searchProvider: null };
+/** The researcher the job is given: a stand-in, since the pipeline that would call it is too. */
+const RESEARCHER: VendorResearcher = jest.fn();
 
 const makeRun = (overrides: Partial<IVendorResearchRun> = {}): IVendorResearchRun => ({
   id: RUN_ID,
@@ -74,14 +68,9 @@ const makeRun = (overrides: Partial<IVendorResearchRun> = {}): IVendorResearchRu
 const makeVendor = (overrides: Partial<IVendor> = {}): IVendor =>
   ({ id: VENDOR, vendor_name: "Acme", assignee: ASSIGNEE, ...overrides }) as IVendor;
 
-const loggedLines = (): string[] =>
-  (["debug", "info", "warn", "error"] as const).flatMap((level) =>
-    asMock(logger[level]).mock.calls.map((args) => args.map(String).join(" ")),
-  );
-
 beforeEach(() => {
   jest.resetAllMocks();
-  asMock(getVendorResearchConfig).mockReturnValue(CONFIGURED);
+  asMock(createVendorResearcher).mockReturnValue(RESEARCHER);
   asMock(getRunByIdQuery).mockResolvedValue(makeRun());
   asMock(getVendorByIdQuery).mockResolvedValue(makeVendor());
   // The assignee is a user of the organization: the lookup reports nobody missing.
@@ -91,50 +80,7 @@ beforeEach(() => {
   asMock(finishRunQuery).mockResolvedValue(undefined);
 });
 
-afterEach(() => {
-  for (const line of loggedLines()) expect(line).not.toContain(TAVILY_KEY);
-});
-
 describe("handleVendorResearchJob", () => {
-  describe("when the search provider is not configured", () => {
-    beforeEach(() => asMock(getVendorResearchConfig).mockReturnValue(NOT_CONFIGURED));
-
-    it("finishes the queued run as failed, and does not run the pipeline", async () => {
-      await handleVendorResearchJob(DATA);
-
-      expect(getRunByIdQuery).toHaveBeenCalledWith(ORG, RUN_ID);
-      expect(finishRunQuery).toHaveBeenCalledTimes(1);
-      expect(finishRunQuery).toHaveBeenCalledWith({
-        organizationId: ORG,
-        runId: RUN_ID,
-        status: "failed",
-        categories: [],
-        categorySummary: [],
-        evidence: null,
-        model: null,
-        promptVersion: null,
-        searchesUsed: 0,
-        pagesRead: 0,
-        duplicatesDropped: 0,
-        error: "Search provider not configured",
-      });
-      expect(runVendorResearch).not.toHaveBeenCalled();
-      expect(notifyAssigneeOfVendorResearch).not.toHaveBeenCalled();
-    });
-
-    it.each(["running", "completed", "failed"] as const)(
-      "leaves a %s run as it is: only a queued run is failed",
-      async (status) => {
-        asMock(getRunByIdQuery).mockResolvedValue(makeRun({ status }));
-
-        await handleVendorResearchJob(DATA);
-
-        expect(finishRunQuery).not.toHaveBeenCalled();
-        expect(runVendorResearch).not.toHaveBeenCalled();
-      },
-    );
-  });
-
   it("drops a job whose run is not there (it was deleted with its vendor), without an error", async () => {
     asMock(getRunByIdQuery).mockResolvedValue(null);
 
@@ -145,13 +91,16 @@ describe("handleVendorResearchJob", () => {
     expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining(`run ${RUN_ID}`));
   });
 
-  it("runs the pipeline for the run, with the search provider of the configuration and the real model, generator and clock", async () => {
+  it("runs the pipeline for the run, with the vendor researcher and the real model, generator and clock", async () => {
     await handleVendorResearchJob(DATA);
 
     expect(runVendorResearch).toHaveBeenCalledTimes(1);
     const [args, deps] = asMock(runVendorResearch).mock.calls[0] as [typeof DATA, PipelineDeps];
     expect(args).toEqual(DATA);
-    expect(deps.searchProvider.name).toBe("tavily");
+    // The real researcher, with its real engine, page reader and generator.
+    expect(createVendorResearcher).toHaveBeenCalledTimes(1);
+    expect(createVendorResearcher).toHaveBeenCalledWith();
+    expect(deps.research).toBe(RESEARCHER);
     expect(deps.resolveModel).toBe(resolveOrgModel);
     expect(deps.generate).toBe(generateObjectWithSelfCorrection);
     const before = Date.now();
@@ -159,6 +108,14 @@ describe("handleVendorResearchJob", () => {
     expect(now).toBeInstanceOf(Date);
     expect(now.getTime()).toBeGreaterThanOrEqual(before);
     expect(now.getTime()).toBeLessThanOrEqual(Date.now());
+  });
+
+  it("does not read the configuration and never ends the run itself: nothing has to be set up to search the web", async () => {
+    await handleVendorResearchJob(DATA);
+
+    expect(getVendorResearchConfig).not.toHaveBeenCalled();
+    expect(runVendorResearch).toHaveBeenCalledTimes(1);
+    expect(finishRunQuery).not.toHaveBeenCalled();
   });
 
   it("does not catch a rejection of the pipeline, so that BullMQ retries the job", async () => {

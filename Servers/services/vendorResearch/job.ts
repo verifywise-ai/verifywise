@@ -3,30 +3,26 @@
  * automatic run that stored findings it tells the vendor's assignee, if that is a user of the
  * vendor's organization.
  *
- * Exactly-once: the pipeline ends the run itself, once, and does not throw for a failed search or
- * model call. The only rejection that reaches this file is a failure to mark the run running,
- * which leaves the run queued, so it is not caught here and BullMQ retries the job. The notice
- * comes after the pipeline has returned, in a try/catch of its own: the run is over by then, and
- * nothing the notice does can change it or make the job fail.
+ * Exactly-once: the pipeline ends the run itself, once, and does not throw for a failed search,
+ * page read or model call. The only rejection that reaches this file is a failure to mark the run
+ * running, which leaves the run queued, so it is not caught here and BullMQ retries the job. The
+ * notice comes after the pipeline has returned, in a try/catch of its own: the run is over by then,
+ * and nothing the notice does can change it or make the job fail.
  */
 import { generateObjectWithSelfCorrection } from "../../advisor/llmSelfCorrect";
 import logger from "../../utils/logger/fileLogger";
 import { getVendorByIdQuery } from "../../utils/vendor.utils";
-import { finishRunQuery, getRunByIdQuery } from "../../utils/vendorResearch.utils";
+import { getRunByIdQuery } from "../../utils/vendorResearch.utils";
 import { notifyAssigneeOfVendorResearch } from "../inAppNotification.service";
 import { isUserOfOrganization } from "./assignee";
-import { getVendorResearchConfig } from "./config";
 import { PipelineDeps, resolveOrgModel, runVendorResearch } from "./pipeline";
-import { createSearchProvider } from "./searchProvider";
+import { createVendorResearcher } from "./researchAgent";
 
 export interface VendorResearchJobData {
   organizationId: number;
   vendorId: number;
   runId: number;
 }
-
-/** What a run records when the job finds no search provider to work with. */
-const NO_SEARCH_PROVIDER_NOTE = "Search provider not configured";
 
 /**
  * Tells the vendor's assignee, when there is one and the assignee is a user of the vendor's
@@ -82,33 +78,9 @@ export async function handleVendorResearchJob(data: VendorResearchJobData): Prom
     return;
   }
 
-  // Read now, not at import: the settings are the environment of the running process.
-  const searchProvider = createSearchProvider(getVendorResearchConfig());
-  if (!searchProvider) {
-    logger.warn(`${label}: search is not configured`);
-    // finishRunQuery has no status guard, so only a queued run is ended here, the way the pipeline
-    // only starts a queued one. A run that is anything else belongs to another actor.
-    if (run.status === "queued") {
-      await finishRunQuery({
-        organizationId,
-        runId,
-        status: "failed",
-        categories: [],
-        categorySummary: [],
-        evidence: null,
-        model: null,
-        promptVersion: null,
-        searchesUsed: 0,
-        pagesRead: 0,
-        duplicatesDropped: 0,
-        error: NO_SEARCH_PROVIDER_NOTE,
-      });
-    }
-    return;
-  }
-
   const deps: PipelineDeps = {
-    searchProvider,
+    // A researcher of its own for each job, with the real web search, page reader and model call.
+    research: createVendorResearcher(),
     resolveModel: resolveOrgModel,
     generate: generateObjectWithSelfCorrection,
     now: () => new Date(),

@@ -9,9 +9,9 @@ jest.setTimeout(60000);
  * come back from JSONB, and the text of the register risks comes from vendorrisks. If either had
  * the wrong shape, the run that reads it would fail as "Unexpected error".
  *
- * The search provider and the model are fakes that are handed to the pipeline. Everything else is
- * real: the queries, the validation, the de-duplication and the transaction. There is no network,
- * no model and no Redis use.
+ * The researcher (the web research loop) and the model are fakes that are handed to the pipeline.
+ * Everything else is real: the evidence pack, the queries, the validation, the de-duplication and
+ * the transaction. There is no network, no model and no Redis use.
  */
 
 // First, and not to be reordered: ./setup registers the mocks of BullMQ and Redis, and they only
@@ -26,12 +26,12 @@ import {
   RESEARCH_CATEGORIES,
   ResearchCategory,
 } from "../../domain.layer/interfaces/i.vendorResearch";
-import { planCategories } from "../../services/vendorResearch/categories";
+import type { LedgerEntry } from "../../services/webResearch/webSession";
+import { MAX_EVIDENCE_BYTES } from "../../services/vendorResearch/evidence";
 import { PipelineDeps, runVendorResearch } from "../../services/vendorResearch/pipeline";
 import { PROMPT_VERSION } from "../../services/vendorResearch/prompts";
+import type { ResearchResult } from "../../services/vendorResearch/researchAgent";
 import { ResearchOutput, researchOutputSchema } from "../../services/vendorResearch/schema";
-import { SearchHit, SearchProvider } from "../../services/vendorResearch/searchProvider";
-import { buildTarget } from "../../services/vendorResearch/target";
 import { calculateRiskLevel } from "../../utils/validations/vendorRiskValidation.utils";
 import {
   STALE_RUN_MINUTES,
@@ -45,12 +45,15 @@ import {
 // The vendor, the search results and the answers of the model
 // ---------------------------------------------------------------------------
 
-/** Acme as the vendor row stores it. Its domain makes all four categories searchable. */
+/** Acme as the vendor row stores it. Its domain makes all four categories researchable. */
 const ACME = { vendor_name: "Acme", website: "acme.com", vendor_provides: "Payroll software" };
 const NOW = new Date("2026-10-10T12:00:00Z");
 
+/** A search result as the ledger keeps it, without its category and the marks the loop adds. */
+type Hit = Pick<LedgerEntry, "url" | "title" | "content" | "publishedAt">;
+
 /** The result that the security search finds. Its host is not Acme's, so it is one third-party source. */
-const BREACH_HIT: SearchHit = {
+const BREACH_HIT: Hit = {
   url: "https://news.example.com/acme-breach",
   title: "Acme confirms breach",
   content: "Acme confirmed on Monday that attackers copied customer records from a test system.",
@@ -59,7 +62,7 @@ const BREACH_HIT: SearchHit = {
 const BREACH_QUOTE = "attackers copied customer records from a test system";
 
 /** The result that the legal search finds, for the run in which the register already has the risk. */
-const LAWSUIT_HIT: SearchHit = {
+const LAWSUIT_HIT: Hit = {
   url: "https://legal.example.org/acme-overtime-case",
   title: "Acme sued over unpaid overtime",
   content:
@@ -109,25 +112,34 @@ const REGISTER_RISK = {
 // The fakes
 // ---------------------------------------------------------------------------
 
-/** The category of each query that the pipeline plans for Acme, so that the fake can answer by category. */
-const CATEGORY_OF_QUERY = new Map(
-  planCategories(buildTarget(ACME), NOW).plans.map((plan) => [plan.query, plan.category] as const),
-);
+type HitsByCategory = Partial<Record<ResearchCategory, Hit[]>>;
 
-type HitsByCategory = Partial<Record<ResearchCategory, SearchHit[]>>;
-
-/** Answers a search with the hits of its category, and with nothing for a category that has none. */
-function fakeSearchProvider(hits: HitsByCategory): SearchProvider {
-  return {
-    name: "fake",
-    search: jest.fn(async (query: string): Promise<SearchHit[]> => {
-      const category = CATEGORY_OF_QUERY.get(query);
-      if (category === undefined) {
-        throw new Error("the pipeline searched for a query that is not in its plan");
-      }
-      return hits[category] ?? [];
-    }),
-  };
+/**
+ * A research loop that searched each of the four categories once, was answered every time, and
+ * kept the hits of each category in its ledger as search results; a category without hits found
+ * nothing.
+ */
+function fakeResearch(hits: HitsByCategory): PipelineDeps["research"] {
+  return jest.fn(async (): Promise<ResearchResult> => ({
+    entries: RESEARCH_CATEGORIES.flatMap((category) =>
+      (hits[category] ?? []).map((hit) => ({
+        category,
+        kind: "result" as const,
+        onVendorSite: false,
+        ...hit,
+      })),
+    ),
+    calls: RESEARCH_CATEGORIES.map((category) => ({
+      category,
+      tool: "search" as const,
+      answered: true,
+      failure: null,
+    })),
+    searchesUsed: RESEARCH_CATEGORIES.length,
+    pagesRead: 0,
+    stoppedBecause: "finished",
+    modelError: null,
+  }));
 }
 
 /**
@@ -146,7 +158,7 @@ function fakeModelAnswering(findings: ModelFinding[]): PipelineDeps["generate"] 
 
 function makeDeps(hits: HitsByCategory, generate: PipelineDeps["generate"]): PipelineDeps {
   return {
-    searchProvider: fakeSearchProvider(hits),
+    research: fakeResearch(hits),
     resolveModel: async () => ({ model: {}, modelId: "test-model" }),
     generate,
     now: () => NOW,
@@ -236,7 +248,7 @@ describe("runVendorResearch against the real tables", () => {
     // would not.
     expect(run).toMatchObject({ status: "completed", error: null });
     expect(result).toEqual({ outcome: "completed", findingsCreated: 1 });
-    expect(deps.searchProvider.search).toHaveBeenCalledTimes(4);
+    expect(deps.research).toHaveBeenCalledTimes(1);
 
     expect(run).toMatchObject({
       searches_used: 4,
@@ -266,7 +278,7 @@ describe("runVendorResearch against the real tables", () => {
         ...BREACH_HIT,
       },
     ]);
-    expect(Buffer.byteLength(JSON.stringify(run.evidence))).toBeLessThanOrEqual(40_000);
+    expect(Buffer.byteLength(JSON.stringify(run.evidence))).toBeLessThanOrEqual(MAX_EVIDENCE_BYTES);
 
     const level = calculateRiskLevel("Catastrophic", "Almost certain");
     expect(level).toEqual(expect.any(String));
@@ -373,7 +385,7 @@ describe("runVendorResearch against the real tables", () => {
   // A queued run that has waited longer than the stale limit no longer counts toward the cooldown
   // and the daily cap, so a worker that picks its job up late must not research it either: the cap
   // would be exceeded by runs it cannot see.
-  it("skips a queued run that has waited longer than the stale limit, with no search and no model call", async () => {
+  it("skips a queued run that has waited longer than the stale limit, with no research and no model call", async () => {
     const seed = await seedAcme();
     const queuedMinutesAgo = async (minutes: number) => {
       const queued = await createRunQuery({
@@ -401,7 +413,7 @@ describe("runVendorResearch against the real tables", () => {
       outcome: "completed",
       findingsCreated: 1,
     });
-    expect(insideDeps.searchProvider.search).toHaveBeenCalledTimes(4);
+    expect(insideDeps.research).toHaveBeenCalledTimes(1);
     expect(await countFindings(seed.orgId)).toBe(1);
 
     // The vendor is free again. Its next run waited a minute too long: the job finds nothing to do.
@@ -412,7 +424,7 @@ describe("runVendorResearch against the real tables", () => {
       findingsCreated: 0,
     });
 
-    expect(outsideDeps.searchProvider.search).not.toHaveBeenCalled();
+    expect(outsideDeps.research).not.toHaveBeenCalled();
     expect(outsideDeps.generate).not.toHaveBeenCalled();
     // Left queued: the sweep ends it, as "timed out", without it ever having started.
     expect(await getRunByIdQuery(seed.orgId, outside.id)).toMatchObject({

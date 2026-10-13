@@ -90,6 +90,8 @@ const RUN: IVendorResearchRun = {
     {
       id: "S1",
       category: "security_incidents",
+      kind: "result",
+      onVendorSite: false,
       url: "https://example.com/breach",
       title: "Breach",
       content: EVIDENCE_SENTINEL,

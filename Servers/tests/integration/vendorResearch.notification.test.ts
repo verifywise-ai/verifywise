@@ -178,14 +178,6 @@ describe("notifyAssigneeOfVendorResearch", () => {
 // stored under the vendor's organization for a user who never sees it (R30 stops the same thing for
 // the action owner of an accepted finding).
 describe("the notice of the research job", () => {
-  const SEARCH_ENV: Record<string, string> = {
-    VENDOR_RESEARCH_SEARCH_PROVIDER: "tavily",
-    TAVILY_API_KEY: "tvly-notification-test",
-  };
-  const originalEnv = Object.fromEntries(
-    Object.keys(SEARCH_ENV).map((name) => [name, process.env[name]]),
-  );
-
   /**
    * What the pipeline does to the table for a run that found something: it starts the run and
    * completes it. The findings themselves are not stored, since the notice only needs the count.
@@ -213,17 +205,9 @@ describe("the notice of the research job", () => {
     return { outcome: "completed" as const, findingsCreated: 2 };
   };
 
+  // The job needs no search settings: the researcher it builds searches the web without a key.
   beforeEach(() => {
-    Object.assign(process.env, SEARCH_ENV);
     (runVendorResearch as jest.Mock).mockReset().mockImplementation(completingPipeline);
-  });
-
-  afterEach(() => {
-    for (const [name, value] of Object.entries(originalEnv)) {
-      // Assigning undefined would store the string "undefined", a truthy key.
-      if (value === undefined) delete process.env[name];
-      else process.env[name] = value;
-    }
   });
 
   /** A vendor of `orgId` assigned to `assignee`, and an automatic run of it that is queued. */

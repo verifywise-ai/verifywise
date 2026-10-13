@@ -2,6 +2,8 @@ import {
   EvidenceSource,
   ResearchCategory,
 } from "../../../domain.layer/interfaces/i.vendorResearch";
+import { MAX_EXCERPT_CHARS } from "../../webResearch/pageText";
+import { LedgerEntry } from "../../webResearch/webSession";
 import {
   MAX_EVIDENCE_BYTES,
   MAX_PUBLISHED_AT_CHARS,
@@ -10,10 +12,15 @@ import {
   MAX_URL_CHARS,
   buildEvidencePack,
 } from "../evidence";
-import { SearchHit } from "../searchProvider";
 
-function hit(url: string, overrides: Partial<SearchHit> = {}): SearchHit {
+type Entry = LedgerEntry<ResearchCategory>;
+
+/** The snippet of a search result, as the ledger keeps it: of security_incidents, off the vendor's site. */
+function entry(url: string, overrides: Partial<Entry> = {}): Entry {
   return {
+    category: "security_incidents",
+    kind: "result",
+    onVendorSite: false,
     url,
     title: `Title of ${url}`,
     content: `Snippet of ${url}`,
@@ -22,9 +29,13 @@ function hit(url: string, overrides: Partial<SearchHit> = {}): SearchHit {
   };
 }
 
-function results(category: ResearchCategory, ...hits: SearchHit[]) {
-  return { category, hits };
-}
+/** The excerpt of a page that was read. */
+const pageEntry = (url: string, overrides: Partial<Entry> = {}): Entry =>
+  entry(url, { kind: "page", content: `Excerpt of ${url}`, ...overrides });
+
+/** The entries, tagged with `category`. */
+const under = (category: ResearchCategory, ...entries: Entry[]): Entry[] =>
+  entries.map((item) => ({ ...item, category }));
 
 const bytes = (value: unknown) => Buffer.byteLength(JSON.stringify(value));
 
@@ -35,9 +46,10 @@ const POSTGRES_HOSTILE_JSON = /\\u(?:0000|d[89a-f][0-9a-f]{2})/i;
 const hasLoneSurrogate = (text: string) => /[\uD800-\uDFFF]/u.test(text);
 
 describe("constants", () => {
-  it("limits a snippet to 1,500 characters and the pack to 40,000 bytes", () => {
+  it("limits a snippet to 1,500 characters, an excerpt to 8,000 and the pack to 100,000 bytes", () => {
     expect(MAX_SNIPPET_CHARS).toBe(1500);
-    expect(MAX_EVIDENCE_BYTES).toBe(40_000);
+    expect(MAX_EXCERPT_CHARS).toBe(8000);
+    expect(MAX_EVIDENCE_BYTES).toBe(100_000);
   });
 
   it("limits a title to 300 characters, a URL to 2,048 and a publication date to 64", () => {
@@ -48,20 +60,16 @@ describe("constants", () => {
 });
 
 describe("buildEvidencePack", () => {
-  it("returns an empty pack for no results, for categories without hits and for nothing usable", () => {
+  it("returns an empty pack for an empty ledger and for a ledger with nothing usable", () => {
     expect(buildEvidencePack([])).toEqual([]);
-    expect(buildEvidencePack([results("security_incidents"), results("certifications")])).toEqual(
-      [],
-    );
-    expect(buildEvidencePack([results("security_incidents", hit("not a url"))])).toEqual([]);
+    expect(buildEvidencePack([entry("not a url")])).toEqual([]);
   });
 
   it("numbers the sources S1..Sn through the categories in category order", () => {
     const pack = buildEvidencePack([
-      results("security_incidents", hit("https://a.test/1"), hit("https://a.test/2")),
-      results("certifications"),
-      results("legal_regulatory", hit("https://b.test/1")),
-      results("ai_specific", hit("https://c.test/1"), hit("https://c.test/2")),
+      ...under("security_incidents", entry("https://a.test/1"), entry("https://a.test/2")),
+      ...under("legal_regulatory", entry("https://b.test/1")),
+      ...under("ai_specific", entry("https://c.test/1"), pageEntry("https://c.test/2")),
     ]);
 
     expect(pack.map((source) => [source.id, source.category, source.url])).toEqual([
@@ -73,174 +81,216 @@ describe("buildEvidencePack", () => {
     ]);
   });
 
-  it("numbers the sources in category order, whatever order the results come in", () => {
+  it("orders by category, then by the order the loop got the entries, whatever order they come in", () => {
     const input = [
-      results(
-        "ai_specific",
-        hit("https://c.test/1"),
-        hit("https://shared.test/x", { title: "ai" }),
-      ),
-      results("legal_regulatory", hit("https://b.test/1")),
-      results(
-        "security_incidents",
-        hit("https://a.test/1"),
-        hit("https://shared.test/x", { title: "security" }),
-      ),
-      results("ai_specific", hit("https://c.test/2")),
+      ...under("ai_specific", entry("https://c.test/1"), pageEntry("https://c.test/page")),
+      ...under("security_incidents", pageEntry("https://a.test/page")),
+      ...under("legal_regulatory", entry("https://b.test/1")),
+      ...under("security_incidents", entry("https://a.test/1")),
+      ...under("ai_specific", entry("https://c.test/2")),
     ];
-    const categoriesGiven = input.map((entry) => entry.category);
+    const urlsGiven = input.map((item) => item.url);
 
     const pack = buildEvidencePack(input);
 
-    // Entries of one category keep their order, and the earlier category keeps a shared URL.
-    expect(pack.map((source) => [source.id, source.category, source.url, source.title])).toEqual([
-      ["S1", "security_incidents", "https://a.test/1", "Title of https://a.test/1"],
-      ["S2", "security_incidents", "https://shared.test/x", "security"],
-      ["S3", "legal_regulatory", "https://b.test/1", "Title of https://b.test/1"],
-      ["S4", "ai_specific", "https://c.test/1", "Title of https://c.test/1"],
-      ["S5", "ai_specific", "https://c.test/2", "Title of https://c.test/2"],
+    expect(pack.map((source) => [source.id, source.category, source.url])).toEqual([
+      ["S1", "security_incidents", "https://a.test/page"],
+      ["S2", "security_incidents", "https://a.test/1"],
+      ["S3", "legal_regulatory", "https://b.test/1"],
+      ["S4", "ai_specific", "https://c.test/1"],
+      ["S5", "ai_specific", "https://c.test/page"],
+      ["S6", "ai_specific", "https://c.test/2"],
     ]);
     // The caller's array is not reordered.
-    expect(input.map((entry) => entry.category)).toEqual(categoriesGiven);
+    expect(input.map((item) => item.url)).toEqual(urlsGiven);
   });
 
-  it("carries the title, the snippet and the publication date of each hit", () => {
+  it("carries the kind, the vendor's mark, the title, the content and the date of each entry", () => {
     const pack = buildEvidencePack([
-      results(
-        "security_incidents",
-        hit("https://a.test/1", {
-          title: "Acme breach",
-          content: "Acme confirmed an incident.",
-          publishedAt: "2026-01-02",
-        }),
-        hit("https://a.test/2", { publishedAt: null }),
-      ),
+      entry("https://news.example.com/acme-breach", {
+        title: "Acme breach",
+        content: "Acme confirmed an incident.",
+        publishedAt: "2026-01-02",
+      }),
+      pageEntry("https://trust.acme.com/", {
+        category: "certifications",
+        onVendorSite: true,
+        title: "Acme trust centre",
+        content: "Our SOC 2 Type II audit is in progress.\n[…]\nContact us.",
+      }),
     ]);
 
-    expect(pack[0]).toEqual<EvidenceSource>({
-      id: "S1",
-      category: "security_incidents",
-      kind: "result",
-      onVendorSite: false,
-      url: "https://a.test/1",
-      title: "Acme breach",
-      content: "Acme confirmed an incident.",
-      publishedAt: "2026-01-02",
-    });
-    expect(pack[1].publishedAt).toBeNull();
+    expect(pack).toEqual<EvidenceSource[]>([
+      {
+        id: "S1",
+        category: "security_incidents",
+        kind: "result",
+        onVendorSite: false,
+        url: "https://news.example.com/acme-breach",
+        title: "Acme breach",
+        content: "Acme confirmed an incident.",
+        publishedAt: "2026-01-02",
+      },
+      {
+        id: "S2",
+        category: "certifications",
+        kind: "page",
+        onVendorSite: true,
+        url: "https://trust.acme.com/",
+        title: "Acme trust centre",
+        content: "Our SOC 2 Type II audit is in progress.\n[…]\nContact us.",
+        publishedAt: null,
+      },
+    ]);
   });
 
-  it("keeps the first occurrence of a URL seen twice, in a category and across categories", () => {
+  it("takes the vendor's mark from the entry alone, never from the host of its URL", () => {
     const pack = buildEvidencePack([
-      results(
+      // A result on the vendor's own site, as the session marks it.
+      entry("https://acme.com/privacy", { onVendorSite: true }),
+      // A page asked for on the vendor's site that answered from another one after a redirect.
+      pageEntry("https://acme.com/blog", { onVendorSite: false }),
+      // The session's word holds for any host.
+      pageEntry("https://status.example.net/acme", { onVendorSite: true }),
+    ]);
+
+    expect(pack.map((source) => [source.url, source.onVendorSite])).toEqual([
+      ["https://acme.com/privacy", true],
+      ["https://acme.com/blog", false],
+      ["https://status.example.net/acme", true],
+    ]);
+  });
+
+  it("keeps the first entry of a URL seen twice, in a category and across categories", () => {
+    const pack = buildEvidencePack([
+      ...under(
         "security_incidents",
-        hit("https://a.test/1", { title: "first" }),
-        hit("https://a.test/1", { title: "second, same category" }),
-        hit("https://a.test/2"),
+        entry("https://a.test/1", { title: "first" }),
+        pageEntry("https://a.test/1", { title: "second, same category" }),
+        entry("https://a.test/2"),
       ),
-      results(
+      ...under(
         "legal_regulatory",
-        hit("https://a.test/2", { title: "third, other category" }),
-        hit("https://a.test/3"),
+        entry("https://a.test/2", { title: "third, other category" }),
+        entry("https://a.test/3"),
       ),
     ]);
 
-    expect(pack.map((source) => [source.id, source.category, source.url, source.title])).toEqual([
-      ["S1", "security_incidents", "https://a.test/1", "first"],
-      ["S2", "security_incidents", "https://a.test/2", "Title of https://a.test/2"],
-      ["S3", "legal_regulatory", "https://a.test/3", "Title of https://a.test/3"],
+    expect(
+      pack.map((source) => [source.id, source.category, source.kind, source.url, source.title]),
+    ).toEqual([
+      ["S1", "security_incidents", "result", "https://a.test/1", "first"],
+      ["S2", "security_incidents", "result", "https://a.test/2", "Title of https://a.test/2"],
+      ["S3", "legal_regulatory", "result", "https://a.test/3", "Title of https://a.test/3"],
     ]);
   });
 
   it("treats URLs that differ in any character as different pages", () => {
     const pack = buildEvidencePack([
-      results("security_incidents", hit("https://a.test/x"), hit("https://a.test/x/")),
-      results("legal_regulatory", hit("https://A.test/x"), hit("https://a.test/x?utm=1")),
+      ...under("security_incidents", entry("https://a.test/x"), entry("https://a.test/x/")),
+      ...under("legal_regulatory", entry("https://A.test/x"), entry("https://a.test/x?utm=1")),
     ]);
 
     expect(pack).toHaveLength(4);
   });
 
-  it("does not change the hits it is given", () => {
-    const original = hit("https://a.test/1", { content: "a\u0000b".repeat(1000) });
+  it("does not change the entries it is given", () => {
+    const original = pageEntry("https://a.test/1", { content: "a\u0000b".repeat(5000) });
     const snapshot = JSON.parse(JSON.stringify(original));
-    const input = [results("security_incidents", original)];
+    const input = [original];
 
     buildEvidencePack(input);
 
     expect(original).toEqual(snapshot);
-    expect(input[0].hits).toHaveLength(1);
+    expect(input).toHaveLength(1);
   });
 
-  describe("the snippet limit", () => {
-    it("cuts a snippet to 1,500 characters and leaves a shorter one alone", () => {
+  describe("the length of the content", () => {
+    it("cuts the snippet of a result to 1,500 characters and leaves a shorter one alone", () => {
       const pack = buildEvidencePack([
-        results(
-          "security_incidents",
-          hit("https://a.test/long", { content: "a".repeat(2000) }),
-          hit("https://a.test/exact", { content: "b".repeat(1500) }),
-          hit("https://a.test/short", { content: "c".repeat(1499) }),
-        ),
+        entry("https://a.test/long", { content: "a".repeat(2000) }),
+        entry("https://a.test/exact", { content: "b".repeat(1500) }),
+        entry("https://a.test/short", { content: "c".repeat(1499) }),
       ]);
 
       expect(pack.map((source) => source.content.length)).toEqual([1500, 1500, 1499]);
       expect(pack[0].content).toBe("a".repeat(1500));
     });
 
+    it("keeps the excerpt of a page up to 8,000 characters and cuts a longer one there", () => {
+      const pack = buildEvidencePack([
+        pageEntry("https://a.test/medium", { content: "m".repeat(5000) }),
+        pageEntry("https://a.test/exact", { content: "e".repeat(MAX_EXCERPT_CHARS) }),
+        pageEntry("https://a.test/long", { content: "l".repeat(9000) }),
+        // The same text as a result is cut at the length of a snippet.
+        entry("https://a.test/as-result", { content: "r".repeat(5000) }),
+      ]);
+
+      expect(pack.map((source) => source.content.length)).toEqual([
+        5000,
+        MAX_EXCERPT_CHARS,
+        MAX_EXCERPT_CHARS,
+        MAX_SNIPPET_CHARS,
+      ]);
+      expect(pack[2].content).toBe("l".repeat(MAX_EXCERPT_CHARS));
+    });
+
     it("never splits a surrogate pair at the cut", () => {
       const pack = buildEvidencePack([
-        results(
-          "security_incidents",
-          // The emoji would start at index 1499 and end at 1500: the cut falls between its halves.
-          hit("https://a.test/split", { content: `${"a".repeat(1499)}😀tail` }),
-          // The emoji ends exactly at 1500, so it fits.
-          hit("https://a.test/fits", { content: `${"a".repeat(1498)}😀tail` }),
-        ),
+        // The emoji would start at index 1499 and end at 1500: the cut falls between its halves.
+        entry("https://a.test/split", { content: `${"a".repeat(1499)}😀tail` }),
+        // The emoji ends exactly at 1500, so it fits.
+        entry("https://a.test/fits", { content: `${"a".repeat(1498)}😀tail` }),
+        // The same at the end of an excerpt.
+        pageEntry("https://a.test/page", { content: `${"p".repeat(MAX_EXCERPT_CHARS - 1)}😀tail` }),
       ]);
 
       expect(pack[0].content).toBe("a".repeat(1499));
       expect(pack[1].content).toBe(`${"a".repeat(1498)}😀`);
       expect(pack[1].content.length).toBe(1500);
+      expect(pack[2].content).toBe("p".repeat(MAX_EXCERPT_CHARS - 1));
       for (const source of pack) expect(hasLoneSurrogate(source.content)).toBe(false);
     });
 
     it("cuts after the control characters are gone, so that they do not use up the limit", () => {
       const pack = buildEvidencePack([
-        results(
-          "security_incidents",
-          hit("https://a.test/1", { content: `${"\u0000".repeat(200)}${"a".repeat(1500)}` }),
-        ),
+        entry("https://a.test/1", { content: `${"\u0000".repeat(200)}${"a".repeat(1500)}` }),
+        pageEntry("https://a.test/2", {
+          content: `${"\u0000".repeat(200)}${"b".repeat(MAX_EXCERPT_CHARS)}`,
+        }),
       ]);
 
       expect(pack[0].content).toBe("a".repeat(1500));
+      expect(pack[1].content).toBe("b".repeat(MAX_EXCERPT_CHARS));
     });
   });
 
+  // Review Focus 5: however much the loop collected, the pack stays within its size.
   describe("the size limit", () => {
-    it("keeps all twenty sources of a full search, whose snippets use up most of the room", () => {
-      const hits = Array.from({ length: 20 }, (_, index) =>
-        hit(`https://a.test/${index}`, { content: "a".repeat(1500) }),
+    it("keeps all twelve pages that a run can read, each with a full excerpt", () => {
+      const pages = Array.from({ length: 12 }, (_, index) =>
+        pageEntry(`https://a.test/${index}`, { content: "a".repeat(MAX_EXCERPT_CHARS) }),
       );
 
-      const pack = buildEvidencePack([results("security_incidents", ...hits)]);
+      const pack = buildEvidencePack(pages);
 
-      expect(pack).toHaveLength(20);
+      expect(pack).toHaveLength(12);
       expect(bytes(pack)).toBeLessThanOrEqual(MAX_EVIDENCE_BYTES);
     });
 
     it("drops sources from the end until the serialized pack fits, and keeps as many as fit", () => {
       // Three bytes per character: counting characters instead of bytes would keep too many.
-      const hits = Array.from({ length: 12 }, (_, index) =>
-        hit(`https://a.test/${index}`, { content: "€".repeat(1500) }),
+      const pages = Array.from({ length: 6 }, (_, index) =>
+        pageEntry(`https://a.test/${index}`, { content: "€".repeat(MAX_EXCERPT_CHARS) }),
       );
-      const everything: EvidenceSource[] = hits.map((entry, index) => ({
+      const everything: EvidenceSource[] = pages.map((item, index) => ({
         id: `S${index + 1}`,
         category: "security_incidents",
-        kind: "result",
+        kind: "page",
         onVendorSite: false,
-        url: entry.url,
-        title: entry.title,
-        content: entry.content,
+        url: item.url,
+        title: item.title,
+        content: item.content,
         publishedAt: null,
       }));
       let fitting = everything.length;
@@ -249,7 +299,7 @@ describe("buildEvidencePack", () => {
       expect(fitting).toBeGreaterThan(0);
       expect(fitting).toBeLessThan(everything.length);
 
-      const pack = buildEvidencePack([results("security_incidents", ...hits)]);
+      const pack = buildEvidencePack(pages);
 
       expect(pack).toEqual(everything.slice(0, fitting));
       expect(bytes(pack)).toBeLessThanOrEqual(MAX_EVIDENCE_BYTES);
@@ -259,73 +309,74 @@ describe("buildEvidencePack", () => {
       );
     });
 
+    it("removes the sources of the last categories first", () => {
+      const full = (url: string) => pageEntry(url, { content: "€".repeat(MAX_EXCERPT_CHARS) });
+      const pack = buildEvidencePack([
+        ...under("ai_specific", full("https://d.test/1")),
+        ...under("legal_regulatory", full("https://c.test/1")),
+        ...under("certifications", full("https://b.test/1"), full("https://b.test/2")),
+        ...under("security_incidents", full("https://a.test/1"), full("https://a.test/2")),
+      ]);
+
+      expect(pack.map((source) => source.category)).toEqual([
+        "security_incidents",
+        "security_incidents",
+        "certifications",
+        "certifications",
+      ]);
+    });
+
     it("measures the serialized form, in which an escaped character takes more than one byte", () => {
-      // Each newline is two bytes in JSON ("\n"), and a quote is two ("\"").
-      const content = '"\n'.repeat(750);
-      const hits = Array.from({ length: 14 }, (_, index) =>
-        hit(`https://a.test/${index}`, { content }),
+      // Each newline is two bytes in JSON ("\n"), and a quote is two ("\""): 64,000 characters in
+      // all, but 128,000 bytes.
+      const content = '"\n'.repeat(MAX_EXCERPT_CHARS / 2);
+      const pages = Array.from({ length: 8 }, (_, index) =>
+        pageEntry(`https://a.test/${index}`, { content }),
       );
 
-      const pack = buildEvidencePack([results("security_incidents", ...hits)]);
+      const pack = buildEvidencePack(pages);
 
-      expect(pack.length).toBeLessThan(14);
+      expect(pack.length).toBeLessThan(8);
       expect(bytes(pack)).toBeLessThanOrEqual(MAX_EVIDENCE_BYTES);
     });
 
-    it("keeps a pack of exactly 40,000 bytes and drops the last source when it is a single byte over", () => {
-      // Seven sources in three-byte characters, then one whose size is tuned byte by byte through
-      // its ASCII snippet.
-      const fillers = Array.from({ length: 7 }, (_, index) =>
-        hit(`https://a.test/${index}`, {
-          title: "€".repeat(MAX_TITLE_CHARS),
-          content: "€".repeat(MAX_SNIPPET_CHARS),
-        }),
+    it("keeps a pack of exactly 100,000 bytes and drops the last source when it is a single byte over", () => {
+      // Four excerpts in three-byte characters, then one whose size is tuned byte by byte through
+      // its ASCII excerpt.
+      const fillers = Array.from({ length: 4 }, (_, index) =>
+        pageEntry(`https://a.test/${index}`, { content: "€".repeat(MAX_EXCERPT_CHARS) }),
       );
-      const packWithLastSnippet = (length: number) =>
+      const packWithLastExcerpt = (length: number) =>
         buildEvidencePack([
-          results(
-            "security_incidents",
-            ...fillers,
-            hit("https://a.test/last", { content: "x".repeat(length) }),
-          ),
+          ...fillers,
+          pageEntry("https://a.test/last", { content: "x".repeat(length) }),
         ]);
-      const exactLength = MAX_EVIDENCE_BYTES - bytes(packWithLastSnippet(0));
+      const exactLength = MAX_EVIDENCE_BYTES - bytes(packWithLastExcerpt(0));
       // The tuning has to be possible, or this test would check nothing.
-      expect(packWithLastSnippet(0)).toHaveLength(8);
+      expect(packWithLastExcerpt(0)).toHaveLength(5);
       expect(exactLength).toBeGreaterThan(0);
-      expect(exactLength).toBeLessThan(MAX_SNIPPET_CHARS);
+      expect(exactLength).toBeLessThan(MAX_EXCERPT_CHARS);
 
-      expect(packWithLastSnippet(exactLength)).toHaveLength(8);
-      expect(bytes(packWithLastSnippet(exactLength))).toBe(MAX_EVIDENCE_BYTES);
-      const oneByteOver = packWithLastSnippet(exactLength + 1);
-      expect(oneByteOver.map((source) => source.id)).toEqual([
-        "S1",
-        "S2",
-        "S3",
-        "S4",
-        "S5",
-        "S6",
-        "S7",
-      ]);
+      expect(packWithLastExcerpt(exactLength)).toHaveLength(5);
+      expect(bytes(packWithLastExcerpt(exactLength))).toBe(MAX_EVIDENCE_BYTES);
+      const oneByteOver = packWithLastExcerpt(exactLength + 1);
+      expect(oneByteOver.map((source) => source.id)).toEqual(["S1", "S2", "S3", "S4"]);
       expect(bytes(oneByteOver)).toBeLessThanOrEqual(MAX_EVIDENCE_BYTES);
     });
 
-    it("does not let one oversized hit empty the pack", () => {
+    it("does not let one oversized entry empty the pack", () => {
       const pack = buildEvidencePack([
-        results(
-          "security_incidents",
-          hit("https://a.test/1", {
-            title: "t".repeat(50_000),
-            content: "c".repeat(50_000),
-            publishedAt: "d".repeat(50_000),
-          }),
-          hit(`https://a.test/${"u".repeat(50_000)}`),
-          hit("https://a.test/3"),
-          hit("https://a.test/4"),
-        ),
+        pageEntry("https://a.test/1", {
+          title: "t".repeat(50_000),
+          content: "c".repeat(150_000),
+          publishedAt: "d".repeat(50_000),
+        }),
+        entry(`https://a.test/${"u".repeat(150_000)}`),
+        entry("https://a.test/3"),
+        entry("https://a.test/4"),
       ]);
 
-      // The first hit stays with every field cut, the hit with the huge URL is dropped, and the
+      // The first entry stays with every field cut, the entry with the huge URL is dropped, and the
       // ids of the others follow without a gap.
       expect(pack.map((source) => [source.id, source.url])).toEqual([
         ["S1", "https://a.test/1"],
@@ -333,22 +384,19 @@ describe("buildEvidencePack", () => {
         ["S3", "https://a.test/4"],
       ]);
       expect(pack[0].title).toBe("t".repeat(MAX_TITLE_CHARS));
-      expect(pack[0].content).toBe("c".repeat(MAX_SNIPPET_CHARS));
+      expect(pack[0].content).toBe("c".repeat(MAX_EXCERPT_CHARS));
       expect(pack[0].publishedAt).toBeNull();
     });
 
-    it("keeps even the largest source that one hit can make, which takes a fraction of the room", () => {
+    it("keeps even the largest source that one entry can make, which takes a fraction of the room", () => {
       // Every field at its limit, in three-byte characters: the most that one source can take.
       const url = `https://a.test/${"€".repeat(MAX_URL_CHARS - "https://a.test/".length)}`;
       const pack = buildEvidencePack([
-        results(
-          "security_incidents",
-          hit(url, {
-            title: "€".repeat(MAX_TITLE_CHARS),
-            content: "€".repeat(MAX_SNIPPET_CHARS),
-            publishedAt: "€".repeat(MAX_PUBLISHED_AT_CHARS),
-          }),
-        ),
+        pageEntry(url, {
+          title: "€".repeat(MAX_TITLE_CHARS),
+          content: "€".repeat(MAX_EXCERPT_CHARS),
+          publishedAt: "€".repeat(MAX_PUBLISHED_AT_CHARS),
+        }),
       ]);
 
       expect(pack).toHaveLength(1);
@@ -360,15 +408,12 @@ describe("buildEvidencePack", () => {
   describe("limits on the title, the URL and the publication date", () => {
     it("cuts a title to 300 characters without splitting a surrogate pair", () => {
       const pack = buildEvidencePack([
-        results(
-          "security_incidents",
-          hit("https://a.test/long", { title: "t".repeat(1000) }),
-          // The emoji would take indexes 299 and 300: the cut falls between its halves.
-          hit("https://a.test/split", { title: `${"a".repeat(299)}😀tail` }),
-          // The emoji ends exactly at 300, so it fits.
-          hit("https://a.test/fits", { title: `${"a".repeat(298)}😀tail` }),
-          hit("https://a.test/short", { title: "s".repeat(299) }),
-        ),
+        entry("https://a.test/long", { title: "t".repeat(1000) }),
+        // The emoji would take indexes 299 and 300: the cut falls between its halves.
+        entry("https://a.test/split", { title: `${"a".repeat(299)}😀tail` }),
+        // The emoji ends exactly at 300, so it fits.
+        entry("https://a.test/fits", { title: `${"a".repeat(298)}😀tail` }),
+        entry("https://a.test/short", { title: "s".repeat(299) }),
       ]);
 
       expect(pack.map((source) => source.title)).toEqual([
@@ -382,28 +427,20 @@ describe("buildEvidencePack", () => {
 
     it("cuts a title after the control characters are gone, so that they do not use up the limit", () => {
       const pack = buildEvidencePack([
-        results(
-          "security_incidents",
-          hit("https://a.test/1", {
-            title: `${"\u0000".repeat(500)}${"t".repeat(300)}`,
-          }),
-        ),
+        entry("https://a.test/1", { title: `${"\u0000".repeat(500)}${"t".repeat(300)}` }),
       ]);
 
       expect(pack[0].title).toBe("t".repeat(300));
     });
 
-    it("drops a hit whose URL is longer than 2,048 characters and keeps one of exactly 2,048", () => {
+    it("drops an entry whose URL is longer than 2,048 characters and keeps one of exactly 2,048", () => {
       const urlOfLength = (length: number) =>
         `https://a.test/${"p".repeat(length - "https://a.test/".length)}`;
 
       const pack = buildEvidencePack([
-        results(
-          "security_incidents",
-          hit(urlOfLength(MAX_URL_CHARS + 1)),
-          hit(urlOfLength(MAX_URL_CHARS)),
-          hit("https://a.test/short"),
-        ),
+        entry(urlOfLength(MAX_URL_CHARS + 1)),
+        entry(urlOfLength(MAX_URL_CHARS)),
+        entry("https://a.test/short"),
       ]);
 
       expect(pack.map((source) => [source.id, source.url.length])).toEqual([
@@ -414,14 +451,11 @@ describe("buildEvidencePack", () => {
 
     it("turns a publication date of more than 64 characters into none and keeps one of exactly 64", () => {
       const pack = buildEvidencePack([
-        results(
-          "security_incidents",
-          hit("https://a.test/1", { publishedAt: "d".repeat(65) }),
-          hit("https://a.test/2", { publishedAt: "d".repeat(64) }),
-          // The limit is on the cleaned date: control characters do not count.
-          hit("https://a.test/3", { publishedAt: `${"d".repeat(64)}\u0000\u0001` }),
-          hit("https://a.test/4", { publishedAt: `${"d".repeat(65)}\u0000` }),
-        ),
+        entry("https://a.test/1", { publishedAt: "d".repeat(65) }),
+        entry("https://a.test/2", { publishedAt: "d".repeat(64) }),
+        // The limit is on the cleaned date: control characters do not count.
+        entry("https://a.test/3", { publishedAt: `${"d".repeat(64)}\u0000\u0001` }),
+        entry("https://a.test/4", { publishedAt: `${"d".repeat(65)}\u0000` }),
       ]);
 
       expect(pack.map((source) => source.publishedAt)).toEqual([
@@ -434,25 +468,21 @@ describe("buildEvidencePack", () => {
   });
 
   describe("third-party text that Postgres would refuse in the stored pack", () => {
-    it("removes a NUL from a snippet and from a title", () => {
+    it("removes a NUL from a snippet, an excerpt and a title", () => {
       const pack = buildEvidencePack([
-        results(
-          "security_incidents",
-          hit("https://a.test/1", { title: "Ac\u0000me", content: "before\u0000after\u0000" }),
-        ),
+        entry("https://a.test/1", { title: "Ac\u0000me", content: "before\u0000after\u0000" }),
+        pageEntry("https://a.test/2", { content: "page\u0000text" }),
       ]);
 
       expect(pack[0].content).toBe("beforeafter");
       expect(pack[0].title).toBe("Acme");
+      expect(pack[1].content).toBe("pagetext");
     });
 
     it("removes every other C0 control character but keeps tab, line feed and carriage return", () => {
       const controls = Array.from({ length: 32 }, (_, code) => String.fromCharCode(code)).join("");
       const pack = buildEvidencePack([
-        results(
-          "security_incidents",
-          hit("https://a.test/1", { title: controls, content: controls }),
-        ),
+        entry("https://a.test/1", { title: controls, content: controls }),
       ]);
 
       expect(pack[0].content).toBe("\t\n\r");
@@ -461,37 +491,32 @@ describe("buildEvidencePack", () => {
 
     it("keeps ordinary text, tabs, line breaks and the characters outside the C0 range", () => {
       const content = "Line one\r\n\tLine two\nLine three \u007F\u0085 ünïcödé 日本語";
-      const pack = buildEvidencePack([
-        results("security_incidents", hit("https://a.test/1", { content })),
-      ]);
+      const pack = buildEvidencePack([entry("https://a.test/1", { content })]);
 
       expect(pack[0].content).toBe(content);
     });
 
-    it("replaces a lone surrogate with U+FFFD, in a title and in a snippet", () => {
+    it("replaces a lone surrogate with U+FFFD, in a title, a snippet and an excerpt", () => {
       const pack = buildEvidencePack([
-        results(
-          "security_incidents",
-          hit("https://a.test/1", {
-            title: "high\uD800alone and low\uDC00alone",
-            content: "end\uD83D",
-          }),
-          hit("https://a.test/2", { title: "reversed \uDE00\uD83D pair", content: "\uDC00start" }),
-        ),
+        entry("https://a.test/1", {
+          title: "high\uD800alone and low\uDC00alone",
+          content: "end\uD83D",
+        }),
+        entry("https://a.test/2", { title: "reversed \uDE00\uD83D pair", content: "\uDC00start" }),
+        pageEntry("https://a.test/3", { content: "page \uD800 text" }),
       ]);
 
-      expect(pack[0].title).toBe("high\uFFFDalone and low\uFFFDalone");
-      expect(pack[0].content).toBe("end\uFFFD");
-      expect(pack[1].title).toBe("reversed \uFFFD\uFFFD pair");
-      expect(pack[1].content).toBe("\uFFFDstart");
+      expect(pack[0].title).toBe("high�alone and low�alone");
+      expect(pack[0].content).toBe("end�");
+      expect(pack[1].title).toBe("reversed �� pair");
+      expect(pack[1].content).toBe("�start");
+      expect(pack[2].content).toBe("page � text");
     });
 
     it("keeps a valid surrogate pair untouched", () => {
-      const title = "Acme 😀 breach \u{1D49C} \uD83D\uDE00";
+      const title = "Acme 😀 breach \u{1D49C} 😀";
       const content = "Emoji 😀 and a math letter \u{1D49C} at the end 🔒";
-      const pack = buildEvidencePack([
-        results("security_incidents", hit("https://a.test/1", { title, content })),
-      ]);
+      const pack = buildEvidencePack([entry("https://a.test/1", { title, content })]);
 
       expect(pack[0].title).toBe(title);
       expect(pack[0].content).toBe(content);
@@ -499,28 +524,23 @@ describe("buildEvidencePack", () => {
 
     it("cleans the publication date the same way and treats a date with nothing left as none", () => {
       const pack = buildEvidencePack([
-        results(
-          "security_incidents",
-          hit("https://a.test/1", { publishedAt: "2026-01-02\u0000" }),
-          hit("https://a.test/2", { publishedAt: "\u0000" }),
-          hit("https://a.test/3", { publishedAt: "2026\uD800" }),
-        ),
+        entry("https://a.test/1", { publishedAt: "2026-01-02\u0000" }),
+        entry("https://a.test/2", { publishedAt: "\u0000" }),
+        entry("https://a.test/3", { publishedAt: "2026\uD800" }),
       ]);
 
-      expect(pack.map((source) => source.publishedAt)).toEqual(["2026-01-02", null, "2026\uFFFD"]);
+      expect(pack.map((source) => source.publishedAt)).toEqual(["2026-01-02", null, "2026�"]);
     });
 
     it("produces a pack whose JSON holds no NUL and no surrogate escape", () => {
       const hostile = "x\u0000y\uD800z\uDC00w\u0001";
       const pack = buildEvidencePack([
-        results(
-          "security_incidents",
-          hit("https://a.test/1", { title: hostile, content: hostile, publishedAt: hostile }),
-        ),
+        entry("https://a.test/1", { title: hostile, content: hostile, publishedAt: hostile }),
+        pageEntry("https://a.test/2", { title: hostile, content: hostile, publishedAt: hostile }),
       ]);
 
       expect(JSON.stringify(pack)).not.toMatch(POSTGRES_HOSTILE_JSON);
-      // The check itself works: the raw hit is exactly what it exists to catch.
+      // The check itself works: the raw entry is exactly what it exists to catch.
       expect(JSON.stringify({ content: hostile })).toMatch(POSTGRES_HOSTILE_JSON);
     });
   });
@@ -535,16 +555,14 @@ describe("buildEvidencePack", () => {
       ["another control character", "https://a.test/pa\u001Fth"],
       ["a DEL", "https://a.test/pa\u007Fth"],
       ["a C1 control character", "https://a.test/pa\u0085th"],
-      ["a no-break space", "https://a.test/pa\u00A0th"],
-      ["a line separator", "https://a.test/pa\u2028th"],
+      ["a no-break space", "https://a.test/pa th"],
+      ["a line separator", "https://a.test/pa th"],
       ["a lone high surrogate", "https://a.test/pa\uD800th"],
       ["a lone low surrogate", "https://a.test/pa\uDC00th"],
       ["a space at the start", " https://a.test/path"],
       ["a newline at the end", "https://a.test/path\n"],
-    ])("drops the whole hit when its URL contains %s", (_label, url) => {
-      const pack = buildEvidencePack([
-        results("security_incidents", hit(url), hit("https://a.test/good")),
-      ]);
+    ])("drops the whole entry when its URL contains %s", (_label, url) => {
+      const pack = buildEvidencePack([pageEntry(url), entry("https://a.test/good")]);
 
       expect(pack.map((source) => [source.id, source.url])).toEqual([
         ["S1", "https://a.test/good"],
@@ -561,10 +579,8 @@ describe("buildEvidencePack", () => {
       ["data", "data:text/plain,hello"],
       ["file", "file:///etc/passwd"],
       ["a scheme with no host", "https://"],
-    ])("drops the whole hit when its URL is %s", (_label, url) => {
-      const pack = buildEvidencePack([
-        results("security_incidents", hit(url), hit("https://a.test/good")),
-      ]);
+    ])("drops the whole entry when its URL is %s", (_label, url) => {
+      const pack = buildEvidencePack([entry(url), entry("https://a.test/good")]);
 
       expect(pack.map((source) => source.url)).toEqual(["https://a.test/good"]);
     });
@@ -574,12 +590,10 @@ describe("buildEvidencePack", () => {
       ["null", null],
       ["a number", 42],
       ["an object", { href: "https://a.test/object" }],
-    ])("drops the hit instead of throwing when its URL is %s", (_label, url) => {
-      const malformed = { ...hit("https://a.test/ignored"), url } as unknown as SearchHit;
+    ])("drops the entry instead of throwing when its URL is %s", (_label, url) => {
+      const malformed = { ...entry("https://a.test/ignored"), url } as unknown as Entry;
 
-      const pack = buildEvidencePack([
-        results("security_incidents", malformed, hit("https://a.test/good")),
-      ]);
+      const pack = buildEvidencePack([malformed, entry("https://a.test/good")]);
 
       expect(pack.map((source) => [source.id, source.url])).toEqual([
         ["S1", "https://a.test/good"],
@@ -589,23 +603,18 @@ describe("buildEvidencePack", () => {
     it("keeps an http or https URL exactly as it was received", () => {
       const urls = ["http://a.test/x", "HTTPS://A.test/Path?q=1#top", "https://a.test/%20encoded"];
 
-      const pack = buildEvidencePack([
-        results("security_incidents", ...urls.map((url) => hit(url))),
-      ]);
+      const pack = buildEvidencePack(urls.map((url) => entry(url)));
 
       expect(pack.map((source) => source.url)).toEqual(urls);
     });
 
-    it("gives no id to a dropped hit and does not let it block the real page", () => {
+    it("gives no id to a dropped entry and does not let it block the real page", () => {
       const pack = buildEvidencePack([
-        results(
-          "security_incidents",
-          hit("https://a.test/1"),
-          hit("https://a.test/2\n"),
-          hit("https://a.test/2"),
-          hit("javascript:alert(1)"),
-          hit("https://a.test/3"),
-        ),
+        entry("https://a.test/1"),
+        entry("https://a.test/2\n"),
+        entry("https://a.test/2"),
+        entry("javascript:alert(1)"),
+        entry("https://a.test/3"),
       ]);
 
       expect(pack.map((source) => [source.id, source.url])).toEqual([
