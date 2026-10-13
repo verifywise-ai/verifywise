@@ -14,8 +14,8 @@
  *
  * Design decisions:
  *   - Pure additive wrapper. The return type carries telemetry
- *     (`attempts`, `selfCorrected`) but the success-case payload is
- *     identical to `generateObject`'s `{ object }`.
+ *     (`attempts`, `selfCorrected`, `fellBackToJsonObject`) but the
+ *     success-case payload is identical to `generateObject`'s `{ object }`.
  *   - Dependency-injectable `generateImpl` for unit tests — avoids
  *     module mocking which is brittle.
  *   - Transport-level retries delegated to the SDK via the inner call's
@@ -124,6 +124,13 @@ export interface SelfCorrectingResult<T> {
   attempts: number;
   /** True iff at least one retry was a self-correction (not the first call). */
   selfCorrected: boolean;
+  /**
+   * True when this call had to downgrade from json_schema to JSON-object mode.
+   * A caller that makes many calls with the same model can then start the next
+   * ones in JSON-object mode (`jsonObjectFallbackMiddleware`) instead of paying
+   * a rejected request and a warning on each of them.
+   */
+  fellBackToJsonObject: boolean;
   /** Validation issues from the prior failed attempt, if any. */
   lastValidationIssues?: ValidationIssue[];
 }
@@ -471,6 +478,7 @@ export async function generateObjectWithSelfCorrection<T>(
         object: object as unknown as T,
         attempts: attempt,
         selfCorrected: attempt > 1,
+        fellBackToJsonObject,
         lastValidationIssues: lastIssues,
       };
     } catch (err) {
@@ -511,6 +519,7 @@ export async function generateObjectWithSelfCorrection<T>(
               object: salvaged,
               attempts: attempt,
               selfCorrected: attempt > 1,
+              fellBackToJsonObject,
               lastValidationIssues: lastIssues,
             };
           }

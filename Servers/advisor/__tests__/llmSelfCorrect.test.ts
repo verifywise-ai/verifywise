@@ -746,6 +746,77 @@ describe("llmSelfCorrect / json-object fallback", () => {
     expect(invocation).toBe(2);
   });
 
+  it("reports that the call fell back to JSON-object mode, so a caller can keep it for later calls", async () => {
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      if (invocation === 1) throw new Error("This response_format type is unavailable now");
+      return { object: { name: "Zoe", count: 5 } };
+    }) as unknown as GenerateObjectImpl;
+
+    const result = await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+      mock,
+    );
+
+    expect(result.fellBackToJsonObject).toBe(true);
+  });
+
+  it("reports no fallback for a call that succeeds at once", async () => {
+    const mock: GenerateObjectImpl = jest.fn(async () => ({
+      object: { name: "Zoe", count: 5 },
+    })) as unknown as GenerateObjectImpl;
+
+    const result = await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+      mock,
+    );
+
+    expect(result.fellBackToJsonObject).toBe(false);
+  });
+
+  it("reports the fallback also when the downgraded call is answered in prose and salvaged", async () => {
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      if (invocation === 1) throw new Error("This response_format type is unavailable now");
+      throw new NoObjectGeneratedError({
+        message: "No object generated: could not parse the response.",
+        text: 'We{"name": "Zoe", "count": 5}',
+        response: { id: "r", timestamp: new Date(0), modelId: "m" },
+        usage: { inputTokens: 1, outputTokens: 9, totalTokens: 10 },
+        finishReason: "stop",
+      });
+    }) as unknown as GenerateObjectImpl;
+
+    const result = await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+      mock,
+    );
+
+    expect(result.object).toEqual({ name: "Zoe", count: 5 });
+    expect(result.fellBackToJsonObject).toBe(true);
+  });
+
+  it("reports no fallback for a salvage that needed none", async () => {
+    const mock: GenerateObjectImpl = (async () => {
+      throw new NoObjectGeneratedError({
+        message: "No object generated: could not parse the response.",
+        text: 'We{"name": "Zoe", "count": 5}',
+        response: { id: "r", timestamp: new Date(0), modelId: "m" },
+        usage: { inputTokens: 1, outputTokens: 9, totalTokens: 10 },
+        finishReason: "stop",
+      });
+    }) as unknown as GenerateObjectImpl;
+
+    const result = await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+      mock,
+    );
+
+    expect(result.fellBackToJsonObject).toBe(false);
+  });
+
   it("does not fall back more than once (rethrows if json-object mode also fails)", async () => {
     let invocation = 0;
     const mock: GenerateObjectImpl = (async () => {
