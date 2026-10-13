@@ -20,10 +20,14 @@ export interface CategorySummaryEntry {
   note: string;
 }
 
-/** One search result shown to the model; stored in the run's `evidence` column. */
+/**
+ * One source shown to the model, a search result's snippet or a page's excerpt; stored in the
+ * run's `evidence` column.
+ */
 export interface EvidenceSource {
   id: string;
   category: ResearchCategory;
+  kind: "result" | "page";
   url: string;
   title: string;
   content: string;

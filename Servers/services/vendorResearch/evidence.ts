@@ -102,6 +102,7 @@ export function buildEvidencePack(
       sources.push({
         id: `S${sources.length + 1}`,
         category,
+        kind: "result",
         url: hit.url,
         title: cutAtCodePoint(cleanText(hit.title), MAX_TITLE_CHARS),
         content: cutAtCodePoint(cleanText(hit.content), MAX_SNIPPET_CHARS),

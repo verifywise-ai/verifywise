@@ -120,6 +120,7 @@ describe("buildEvidencePack", () => {
     expect(pack[0]).toEqual<EvidenceSource>({
       id: "S1",
       category: "security_incidents",
+      kind: "result",
       url: "https://a.test/1",
       title: "Acme breach",
       content: "Acme confirmed an incident.",
@@ -234,6 +235,7 @@ describe("buildEvidencePack", () => {
       const everything: EvidenceSource[] = hits.map((entry, index) => ({
         id: `S${index + 1}`,
         category: "security_incidents",
+        kind: "result",
         url: entry.url,
         title: entry.title,
         content: entry.content,

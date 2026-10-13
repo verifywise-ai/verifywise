@@ -33,6 +33,7 @@ function source(overrides: Partial<EvidenceSource> = {}): EvidenceSource {
   return {
     id: "S1",
     category: "security_incidents",
+    kind: "result",
     url: "https://news.example.com/acme-breach",
     title: "Acme breach",
     content: "Acme confirmed on Monday that attackers copied customer records.",

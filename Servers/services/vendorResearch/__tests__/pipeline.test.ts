@@ -136,6 +136,7 @@ const STANDARD_HITS: Partial<Record<ResearchCategory, SearchHit[]>> = {
 const asSource = (id: string, category: ResearchCategory, found: SearchHit): EvidenceSource => ({
   id,
   category,
+  kind: "result",
   url: found.url,
   title: found.title,
   content: found.content,
@@ -452,7 +453,7 @@ describe("runVendorResearch", () => {
         expect(generate).toHaveBeenCalledWith({
           model: MODEL,
           schema: researchOutputSchema,
-          system: buildSystemPrompt(),
+          system: buildSystemPrompt(NOW),
           prompt: buildUserPrompt(buildTarget(VENDOR_ROW), STANDARD_PACK),
           temperature: 0,
           innerMaxRetries: 2,
@@ -1787,7 +1788,7 @@ describe("runVendorResearch", () => {
         BREACH_HIT.content,
         BREACH_QUOTE,
         PRIVACY_HIT.content,
-        buildSystemPrompt().slice(0, 40),
+        buildSystemPrompt(NOW).slice(0, 40),
         "NOTE-BY-THE-MODEL",
         EXPECTED_BREACH.risk_description,
       ]) {

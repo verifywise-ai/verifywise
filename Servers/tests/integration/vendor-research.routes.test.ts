@@ -122,6 +122,7 @@ const EVIDENCE: EvidenceSource[] = [
   {
     id: "S1",
     category: "security_incidents",
+    kind: "result",
     url: "https://example.com/breach-notice",
     title: "Breach notice",
     content: EVIDENCE_SENTINEL,

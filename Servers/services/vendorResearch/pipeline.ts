@@ -374,7 +374,7 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
     const result = await deps.generate({
       model: resolved.model,
       schema: researchOutputSchema,
-      system: buildSystemPrompt(),
+      system: buildSystemPrompt(deps.now()),
       prompt: buildUserPrompt(target, pack),
       temperature: 0,
       innerMaxRetries: 2,
