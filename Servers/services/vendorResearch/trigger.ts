@@ -6,19 +6,16 @@
  *
  * 1. the vendor is in the organization (the vendor_id foreign key of a run is not scoped to an
  *    organization, so this service cannot rely on its callers for it),
- * 2. search is configured,
- * 3. the organization has an LLM key,
- * 4. the vendor's stale runs are failed, and an active run is returned instead of a new one,
- * 5. the cooldown of a manual start has passed (an automatic start does not wait),
- * 6. the organization is under its daily cap.
+ * 2. the organization has an LLM key (the agent runs on it and needs no other account),
+ * 3. the vendor's stale runs are failed, and an active run is returned instead of a new one,
+ * 4. the cooldown of a manual start has passed (an automatic start does not wait),
+ * 5. the organization is under its daily cap.
  *
  * Then the queued run is created and its job queued. The partial unique index on the runs lets one
- * active run through for each vendor, so a second start that gets past step 4 at the same moment
+ * active run through for each vendor, so a second start that gets past step 3 at the same moment
  * meets the index and returns the run that won. A queue that does not take the job within
  * ENQUEUE_TIMEOUT_MS is a queue that refused it: the run ends as failed ("could not enqueue", which
  * counts toward neither limit) and the start answers `enqueue_failed`.
- *
- * Nothing in this file logs a key: the Tavily key stays in the configuration.
  */
 import {
   IVendorResearchRun,
@@ -37,7 +34,7 @@ import {
   getLastRunCreatedAtQuery,
 } from "../../utils/vendorResearch.utils";
 import { enqueueVendorResearch } from "../automations/automationProducer";
-import { getVendorResearchConfig, isSearchConfigured } from "./config";
+import { getVendorResearchConfig } from "./config";
 
 const MINUTE_MS = 60_000;
 /**
@@ -58,13 +55,7 @@ const ENQUEUE_FAILED_NOTE = "could not enqueue";
 export const ENQUEUE_TIMEOUT_MS = 5000;
 
 export interface StartResearchError {
-  code:
-    | "vendor_not_found"
-    | "search_not_configured"
-    | "llm_key_missing"
-    | "cooldown"
-    | "daily_cap"
-    | "enqueue_failed";
+  code: "vendor_not_found" | "llm_key_missing" | "cooldown" | "daily_cap" | "enqueue_failed";
   /** For `cooldown`: the whole seconds left until the vendor can be researched again. */
   retryAfterSeconds?: number;
 }
@@ -153,7 +144,6 @@ export async function startVendorResearch(args: {
 
   // Read now, not at import: the settings are the environment of the running process.
   const config = getVendorResearchConfig();
-  if (!isSearchConfigured(config)) return fail("search_not_configured");
 
   const keys = await getLLMKeysQuery(organizationId);
   if (keys.length === 0) return fail("llm_key_missing");
@@ -221,7 +211,6 @@ export async function startVendorResearch(args: {
 
 const NOT_STARTED_REASONS: Record<StartResearchError["code"], string> = {
   vendor_not_found: "the vendor was not found",
-  search_not_configured: "search is not configured",
   llm_key_missing: "the organization has no LLM key",
   cooldown: "the vendor was researched a moment ago",
   daily_cap: "the daily run cap is reached",
@@ -230,10 +219,8 @@ const NOT_STARTED_REASONS: Record<StartResearchError["code"], string> = {
 
 /**
  * The automatic start after a vendor is created. Nothing is persisted when it does not start, and
- * the reason is logged, except for an install without search, which is most of them: that says
- * nothing about this vendor, so it returns before it looks anything up or writes a line. (A
- * manual start of such an install is answered with `search_not_configured`.) It never rejects, so
- * a caller that does not wait for it cannot be hurt by it.
+ * the reason is logged. It never rejects, so a caller that does not wait for it cannot be hurt by
+ * it.
  */
 export async function triggerAutoResearch(args: {
   organizationId: number;
@@ -252,7 +239,6 @@ export async function triggerAutoResearch(args: {
       logger.info(`${label}: not started, automatic research is turned off`);
       return;
     }
-    if (!isSearchConfigured(config)) return;
     const result = await startVendorResearch({
       organizationId,
       vendorId,

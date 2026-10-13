@@ -1,9 +1,4 @@
-// The configuration is mocked, but only its reader: isSearchConfigured stays real, so that "search
-// is configured" means what it means in production.
-jest.mock("../config", () => ({
-  ...jest.requireActual("../config"),
-  getVendorResearchConfig: jest.fn(),
-}));
+jest.mock("../config", () => ({ getVendorResearchConfig: jest.fn() }));
 jest.mock("../../../utils/vendor.utils", () => ({ getVendorByIdQuery: jest.fn() }));
 jest.mock("../../../utils/llmKey.utils", () => ({ getLLMKeysQuery: jest.fn() }));
 jest.mock("../../../utils/vendorResearch.utils", () => ({
@@ -62,11 +57,7 @@ const NOW = new Date("2031-04-20T12:00:00Z");
 const MINUTE_MS = 60_000;
 const DAY_MS = 24 * 60 * MINUTE_MS;
 
-/** The key must never reach a log line; every test is checked for it in afterEach. */
-const TAVILY_KEY = "tvly-secret-key-1234";
 const CONFIGURED: VendorResearchConfig = {
-  searchProvider: "tavily",
-  tavilyApiKey: TAVILY_KEY,
   autoRun: true,
   manualCooldownMinutes: 10,
   dailyRunCap: 50,
@@ -124,7 +115,7 @@ const expectNothingStarted = () => {
 beforeEach(() => {
   jest.resetAllMocks();
   jest.useFakeTimers().setSystemTime(NOW);
-  // The happy path: a vendor that exists, a configured search, a key, no earlier run, room under the cap.
+  // The happy path: a vendor that exists, a key, no earlier run, room under the cap.
   asMock(getVendorByIdQuery).mockResolvedValue(VENDOR_ROW);
   asMock(getVendorResearchConfig).mockReturnValue(CONFIGURED);
   asMock(getLLMKeysQuery).mockResolvedValue([{ id: 1 }]);
@@ -139,48 +130,56 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.useRealTimers();
-  for (const line of loggedLines()) expect(line).not.toContain(TAVILY_KEY);
+  // Search is no setting of the install any more, so no line may say it is not configured.
+  for (const line of loggedLines()) expect(line).not.toMatch(/search(_| is )not[_ ]configured/i);
 });
 
 describe("startVendorResearch", () => {
   describe("what has to be true before anything is created", () => {
     it("looks the vendor up in the organization first, and stops when it is not there", async () => {
       asMock(getVendorByIdQuery).mockResolvedValue(null);
-      asMock(getVendorResearchConfig).mockReturnValue({ ...CONFIGURED, searchProvider: null });
+      asMock(getLLMKeysQuery).mockResolvedValue([]);
 
       await expect(start()).resolves.toEqual({ ok: false, error: { code: "vendor_not_found" } });
 
       expect(getVendorByIdQuery).toHaveBeenCalledWith(VENDOR, ORG);
-      // Even a missing configuration does not come first: the vendor is checked before it.
+      // Even a missing LLM key does not come first: the vendor is checked before it.
       expect(getLLMKeysQuery).not.toHaveBeenCalled();
       expect(failStaleRunsQuery).not.toHaveBeenCalled();
       expectNothingStarted();
     });
 
-    it("stops when search is not configured, and asks nothing else", async () => {
-      asMock(getVendorResearchConfig).mockReturnValue({ ...CONFIGURED, tavilyApiKey: null });
+    it("stops a manual start when the organization has no LLM key, and asks nothing else", async () => {
+      asMock(getLLMKeysQuery).mockResolvedValue([]);
 
-      await expect(start()).resolves.toEqual({
+      await expect(start({ triggerType: "manual" })).resolves.toEqual({
         ok: false,
-        error: { code: "search_not_configured" },
+        error: { code: "llm_key_missing" },
       });
 
-      expect(getVendorByIdQuery).toHaveBeenCalledWith(VENDOR, ORG);
-      expect(getLLMKeysQuery).not.toHaveBeenCalled();
+      expect(getLLMKeysQuery).toHaveBeenCalledWith(ORG);
       expect(failStaleRunsQuery).not.toHaveBeenCalled();
       expect(getActiveRunQuery).not.toHaveBeenCalled();
+      expect(getLastRunCreatedAtQuery).not.toHaveBeenCalled();
       expect(countRunsSinceQuery).not.toHaveBeenCalled();
       expectNothingStarted();
     });
 
-    it("stops when the organization has no LLM key", async () => {
-      asMock(getLLMKeysQuery).mockResolvedValue([]);
+    it("checks the vendor, the key, the stale runs and the active run, the cooldown, the cap, then creates and queues", async () => {
+      await expect(start({ triggerType: "manual" })).resolves.toMatchObject({ ok: true });
 
-      await expect(start()).resolves.toEqual({ ok: false, error: { code: "llm_key_missing" } });
-
-      expect(getLLMKeysQuery).toHaveBeenCalledWith(ORG);
-      expect(failStaleRunsQuery).not.toHaveBeenCalled();
-      expectNothingStarted();
+      const inOrder = [
+        getVendorByIdQuery,
+        getLLMKeysQuery,
+        failStaleRunsQuery,
+        getActiveRunQuery,
+        getLastRunCreatedAtQuery,
+        countRunsSinceQuery,
+        createRunQuery,
+        enqueueVendorResearch,
+      ].map(callOrder);
+      expect(inOrder.every((order) => order !== undefined)).toBe(true);
+      expect(inOrder).toEqual([...inOrder].sort((a, b) => a - b));
     });
   });
 
@@ -574,68 +573,18 @@ describe("triggerAutoResearch", () => {
     expect(logger.info).toHaveBeenCalledWith(expect.stringContaining(reason));
   });
 
-  // Most installs have no search provider. For them an automatic start would load the vendor only to
-  // be told so, and log a line for every vendor created about a setting that is not the vendor's.
-  describe("when search is not configured", () => {
-    // isSearchConfigured is the real one here, so these are the shapes it refuses.
-    const unconfigured: Array<[string, Partial<VendorResearchConfig>]> = [
-      ["no provider and no key, the default install", { searchProvider: null, tavilyApiKey: null }],
-      ["a key but no provider", { searchProvider: null }],
-      ["a provider but no key", { tavilyApiKey: null }],
-    ];
+  // An install without an LLM key is the usual way for an automatic start not to happen. It is
+  // logged, with the ids only, and nothing is stored.
+  it("creates no run, and logs once that it was not started, for an organization without an LLM key", async () => {
+    asMock(getLLMKeysQuery).mockResolvedValue([]);
 
-    it.each(unconfigured)(
-      "returns without a lookup, a run or a log line for %s",
-      async (_label, settings) => {
-        asMock(getVendorResearchConfig).mockReturnValue({ ...CONFIGURED, ...settings });
+    await expect(triggerAutoResearch(autoArgs)).resolves.toBeUndefined();
 
-        await expect(triggerAutoResearch(autoArgs)).resolves.toBeUndefined();
-
-        expect(loggedLines()).toEqual([]);
-        expect(getVendorByIdQuery).not.toHaveBeenCalled();
-        expect(getLLMKeysQuery).not.toHaveBeenCalled();
-        expect(failStaleRunsQuery).not.toHaveBeenCalled();
-        expectNothingStarted();
-      },
-    );
-
-    it("reads the configuration once, not once to check and again to start", async () => {
-      asMock(getVendorResearchConfig).mockReturnValue({
-        ...CONFIGURED,
-        searchProvider: null,
-        tavilyApiKey: null,
-      });
-
-      await triggerAutoResearch(autoArgs);
-
-      expect(getVendorResearchConfig).toHaveBeenCalledTimes(1);
-    });
-
-    // The two earlier checks keep their log lines: this one comes after them.
-    it("still logs a demo vendor, whatever the search settings are", async () => {
-      asMock(getVendorResearchConfig).mockReturnValue({
-        ...CONFIGURED,
-        searchProvider: null,
-        tavilyApiKey: null,
-      });
-
-      await triggerAutoResearch({ ...autoArgs, isDemo: true });
-
-      expect(loggedLines()).toEqual([expect.stringContaining("demo vendors are not researched")]);
-    });
-
-    it("still logs that automatic research is turned off, whatever the search settings are", async () => {
-      asMock(getVendorResearchConfig).mockReturnValue({
-        ...CONFIGURED,
-        autoRun: false,
-        searchProvider: null,
-        tavilyApiKey: null,
-      });
-
-      await triggerAutoResearch(autoArgs);
-
-      expect(loggedLines()).toEqual([expect.stringContaining("automatic research is turned off")]);
-    });
+    expectNothingStarted();
+    expect(failStaleRunsQuery).not.toHaveBeenCalled();
+    expect(loggedLines()).toEqual([
+      `vendor research for vendor ${VENDOR} (org ${ORG}): not started, the organization has no LLM key`,
+    ]);
   });
 
   it("does not even look the vendor up for a demo vendor or when automatic research is off", async () => {

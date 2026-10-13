@@ -5,9 +5,9 @@ jest.setTimeout(60000);
  * latest run of a vendor, the research settings and the list of findings.
  *
  * BullMQ is mocked by ./setup, so no Redis is used: what the start endpoint queues is read back
- * from the mocked queue (the job name, its data and its id), never run. The search provider and the
- * model are not involved. The search settings come from the environment, which this file sets for
- * each test and puts back when it is done.
+ * from the mocked queue (the job name, its data and its id), never run. The web and the model are
+ * not involved. The limits and the automatic start come from the environment, which this file sets
+ * for each test and puts back when it is done.
  */
 
 import http from "http";
@@ -34,13 +34,10 @@ import {
 // Environment
 // ---------------------------------------------------------------------------
 
-const FAKE_TAVILY_KEY = "tvly-SENTINEL-integration-8d2c";
 const FAKE_LLM_KEY = "sk-SENTINEL-integration-51fa";
 
-/** Search is set up, research starts by itself, and the limits are the defaults. */
+/** Research starts by itself, and the limits are the defaults. */
 const RESEARCH_ENV: Record<string, string> = {
-  VENDOR_RESEARCH_SEARCH_PROVIDER: "tavily",
-  TAVILY_API_KEY: FAKE_TAVILY_KEY,
   VENDOR_RESEARCH_AUTO_RUN: "true",
   VENDOR_RESEARCH_MANUAL_COOLDOWN_MINUTES: "10",
   VENDOR_RESEARCH_DAILY_RUN_CAP: "50",
@@ -304,11 +301,7 @@ describe("POST /api/vendors/:id/research", () => {
     expect(latest.body.data).toMatchObject({ id: started.body.data.run.id, status: "queued" });
     const config = await owner.request.get("/api/vendor-research/config");
     expect(config.status).toBe(200);
-    expect(config.body.data).toEqual({
-      searchConfigured: true,
-      hasLlmKey: true,
-      autoRunEnabled: true,
-    });
+    expect(config.body.data).toEqual({ hasLlmKey: true, autoRunEnabled: true });
     const findings = await owner.request.get("/api/vendor-risk-findings");
     expect(findings.status).toBe(200);
     expect(findings.body.data).toEqual({ rows: [], total: 0 });
@@ -339,27 +332,20 @@ describe("POST /api/vendors/:id/research", () => {
     expect(attackerLatest.text).not.toContain("Acme Corp");
   });
 
-  it("refuses with 409 when the LLM key or the search settings are missing, and with 429 and Retry-After during the cooldown", async () => {
+  it("refuses with 409 when the LLM key is missing, and with 429 and Retry-After during the cooldown", async () => {
     const { owner } = await seedTwoTenantContexts(3);
     const vendorId = await createTestVendor(owner.orgId);
     const url = `/api/vendors/${vendorId}/research`;
 
-    // Search is set up, the organization has no LLM key.
+    // The organization has no LLM key.
     const noKey = await owner.request.post(url);
     expect(noKey.status).toBe(409);
     expect(noKey.body.data).toEqual({ code: "llm_key_missing" });
-
-    // The organization has a key, search has none.
-    await seedLlmKey(owner.orgId);
-    delete process.env.TAVILY_API_KEY;
-    const noSearch = await owner.request.post(url);
-    expect(noSearch.status).toBe(409);
-    expect(noSearch.body.data).toEqual({ code: "search_not_configured" });
     expect(await runsOf(vendorId)).toEqual([]);
     expect(researchJobs()).toEqual([]);
 
-    // Everything is set up: the run starts, and once it is finished the vendor must cool down.
-    process.env.TAVILY_API_KEY = FAKE_TAVILY_KEY;
+    // The organization has a key: the run starts, and once it is finished the vendor must cool down.
+    await seedLlmKey(owner.orgId);
     const started = await owner.request.post(url);
     expect(started.status).toBe(202);
     await sequelize.query(
@@ -534,20 +520,11 @@ describe("GET /api/vendor-research/config", () => {
     const attackerConfig = await attacker.request.get("/api/vendor-research/config");
 
     expect(ownerConfig.status).toBe(200);
-    expect(ownerConfig.body.data).toEqual({
-      searchConfigured: true,
-      hasLlmKey: true,
-      autoRunEnabled: true,
-    });
+    expect(ownerConfig.body.data).toEqual({ hasLlmKey: true, autoRunEnabled: true });
     // Only the owner's organization has a key.
     expect(attackerConfig.status).toBe(200);
-    expect(attackerConfig.body.data).toEqual({
-      searchConfigured: true,
-      hasLlmKey: false,
-      autoRunEnabled: true,
-    });
+    expect(attackerConfig.body.data).toEqual({ hasLlmKey: false, autoRunEnabled: true });
     for (const res of [ownerConfig, attackerConfig]) {
-      expect(res.text).not.toContain(FAKE_TAVILY_KEY);
       expect(res.text).not.toContain(FAKE_LLM_KEY);
     }
   });

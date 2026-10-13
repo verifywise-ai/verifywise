@@ -1,63 +1,21 @@
-import { getVendorResearchConfig, isSearchConfigured } from "../config";
+import { getVendorResearchConfig } from "../config";
+
+const DEFAULTS = { autoRun: true, manualCooldownMinutes: 10, dailyRunCap: 50 };
 
 describe("getVendorResearchConfig", () => {
   it("returns the documented defaults when nothing is set", () => {
-    expect(getVendorResearchConfig({})).toEqual({
-      searchProvider: null,
-      tavilyApiKey: null,
-      autoRun: true,
-      manualCooldownMinutes: 10,
-      dailyRunCap: 50,
-    });
+    expect(getVendorResearchConfig({})).toEqual(DEFAULTS);
   });
 
-  describe("search provider and key", () => {
-    it("reads the provider name and the key, ignoring case and surrounding spaces", () => {
-      const config = getVendorResearchConfig({
-        VENDOR_RESEARCH_SEARCH_PROVIDER: " Tavily ",
-        TAVILY_API_KEY: "k",
-      });
-
-      expect(config.searchProvider).toBe("tavily");
-      expect(config.tavilyApiKey).toBe("k");
-      expect(isSearchConfigured(config)).toBe(true);
-    });
-
-    it("trims spaces around the key", () => {
-      const config = getVendorResearchConfig({
+  // The agent searches the web by itself now: a search provider and its key are no setting any
+  // more, and an install that still has them in its environment must see no change.
+  it("ignores the search provider variables of earlier versions", () => {
+    expect(
+      getVendorResearchConfig({
         VENDOR_RESEARCH_SEARCH_PROVIDER: "tavily",
-        TAVILY_API_KEY: "  k \n",
-      });
-
-      expect(config.tavilyApiKey).toBe("k");
-    });
-
-    it.each([[undefined], [""], ["   "]])("is not configured when the key is %p", (key) => {
-      const config = getVendorResearchConfig({
-        VENDOR_RESEARCH_SEARCH_PROVIDER: "tavily",
-        TAVILY_API_KEY: key,
-      });
-
-      expect(config.tavilyApiKey).toBeNull();
-      expect(isSearchConfigured(config)).toBe(false);
-    });
-
-    it("is not configured when there is a key but no provider", () => {
-      const config = getVendorResearchConfig({ TAVILY_API_KEY: "k" });
-
-      expect(config.searchProvider).toBeNull();
-      expect(isSearchConfigured(config)).toBe(false);
-    });
-
-    it("treats a provider other than tavily as none, whatever the key", () => {
-      const config = getVendorResearchConfig({
-        VENDOR_RESEARCH_SEARCH_PROVIDER: "bing",
         TAVILY_API_KEY: "k",
-      });
-
-      expect(config.searchProvider).toBeNull();
-      expect(isSearchConfigured(config)).toBe(false);
-    });
+      }),
+    ).toEqual(DEFAULTS);
   });
 
   describe("automatic runs", () => {
@@ -124,22 +82,6 @@ describe("getVendorResearchConfig", () => {
   });
 });
 
-describe("isSearchConfigured", () => {
-  const base = getVendorResearchConfig({});
-
-  it("needs both the tavily provider and a key", () => {
-    expect(isSearchConfigured({ ...base, searchProvider: "tavily", tavilyApiKey: "k" })).toBe(true);
-    expect(isSearchConfigured({ ...base, searchProvider: "tavily", tavilyApiKey: null })).toBe(
-      false,
-    );
-    expect(isSearchConfigured({ ...base, searchProvider: null, tavilyApiKey: "k" })).toBe(false);
-  });
-
-  it("does not accept an empty key in a hand-built config", () => {
-    expect(isSearchConfigured({ ...base, searchProvider: "tavily", tavilyApiKey: "" })).toBe(false);
-  });
-});
-
 describe("reading process.env when called with no arguments", () => {
   const realEnv = process.env;
 
@@ -150,33 +92,33 @@ describe("reading process.env when called with no arguments", () => {
     expect(process.env === realEnv).toBe(true);
   });
 
-  it("falls back to the defaults and reports search as not configured when nothing is set", () => {
+  it("falls back to the defaults when nothing is set", () => {
     jest.replaceProperty(process, "env", {});
 
-    expect(getVendorResearchConfig()).toEqual({
-      searchProvider: null,
-      tavilyApiKey: null,
-      autoRun: true,
-      manualCooldownMinutes: 10,
-      dailyRunCap: 50,
-    });
-    expect(isSearchConfigured()).toBe(false);
+    expect(getVendorResearchConfig()).toEqual(DEFAULTS);
   });
 
   it("reads the variables that are set", () => {
+    jest.replaceProperty(process, "env", {
+      VENDOR_RESEARCH_AUTO_RUN: "false",
+      VENDOR_RESEARCH_MANUAL_COOLDOWN_MINUTES: "3",
+      VENDOR_RESEARCH_DAILY_RUN_CAP: "9",
+    });
+
+    expect(getVendorResearchConfig()).toEqual({
+      autoRun: false,
+      manualCooldownMinutes: 3,
+      dailyRunCap: 9,
+    });
+  });
+
+  it("ignores the search provider variables of earlier versions", () => {
     jest.replaceProperty(process, "env", {
       VENDOR_RESEARCH_SEARCH_PROVIDER: "tavily",
       TAVILY_API_KEY: "k",
     });
 
-    expect(getVendorResearchConfig()).toEqual({
-      searchProvider: "tavily",
-      tavilyApiKey: "k",
-      autoRun: true,
-      manualCooldownMinutes: 10,
-      dailyRunCap: 50,
-    });
-    expect(isSearchConfigured()).toBe(true);
+    expect(getVendorResearchConfig()).toEqual(DEFAULTS);
   });
 
   it("reads a blank cooldown as the default, not as 0", () => {

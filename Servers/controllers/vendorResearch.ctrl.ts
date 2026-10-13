@@ -20,7 +20,7 @@ import {
   getLatestRunQuery,
   listFindingsQuery,
 } from "../utils/vendorResearch.utils";
-import { getVendorResearchConfig, isSearchConfigured } from "../services/vendorResearch/config";
+import { getVendorResearchConfig } from "../services/vendorResearch/config";
 import { acceptFinding, dismissFinding } from "../services/vendorResearch/findings.service";
 import { StartResearchError, startVendorResearch } from "../services/vendorResearch/trigger";
 import {
@@ -107,7 +107,6 @@ function replyToRefusal(req: Request, res: Response, error: StartResearchError):
   switch (error.code) {
     case "vendor_not_found":
       return res.status(404).json(STATUS_CODE[404](req.t!("Vendor not found")));
-    case "search_not_configured":
     case "llm_key_missing":
       return res.status(409).json(STATUS_CODE[409]({ code: error.code }));
     case "cooldown":
@@ -297,7 +296,6 @@ export async function getResearchConfig(req: Request, res: Response): Promise<an
     });
     return res.status(200).json(
       STATUS_CODE[200]({
-        searchConfigured: isSearchConfigured(config),
         hasLlmKey: llmKeys.length > 0,
         autoRunEnabled: config.autoRun,
       }),

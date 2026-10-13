@@ -228,11 +228,7 @@ const expectNoRunInternals = (res: MockRes) => {
   expect(sent).not.toContain("evidence");
 };
 
-const ENV_KEYS = [
-  "VENDOR_RESEARCH_SEARCH_PROVIDER",
-  "TAVILY_API_KEY",
-  "VENDOR_RESEARCH_AUTO_RUN",
-] as const;
+const ENV_KEYS = ["VENDOR_RESEARCH_AUTO_RUN"] as const;
 let savedEnv: Record<string, string | undefined>;
 
 beforeEach(() => {
@@ -327,18 +323,15 @@ describe("startVendorResearchRun", () => {
     expect(res.status).toHaveBeenCalledWith(404);
   });
 
-  it.each(["search_not_configured", "llm_key_missing"] as const)(
-    "answers 409 with the code %s in data",
-    async (code) => {
-      mockStartVendorResearch.mockResolvedValue({ ok: false, error: { code } });
-      const res = createMockRes();
+  it("answers 409 with the code llm_key_missing in data", async () => {
+    mockStartVendorResearch.mockResolvedValue({ ok: false, error: { code: "llm_key_missing" } });
+    const res = createMockRes();
 
-      await startVendorResearchRun(createMockReq(), res);
+    await startVendorResearchRun(createMockReq(), res);
 
-      expect(res.status).toHaveBeenCalledWith(409);
-      expect(bodyOf(res)).toEqual({ message: "Conflict", data: { code } });
-    },
-  );
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(bodyOf(res)).toEqual({ message: "Conflict", data: { code: "llm_key_missing" } });
+  });
 
   it("answers 429 for a cooldown, with Retry-After and retryAfterSeconds equal to the seconds left", async () => {
     mockStartVendorResearch.mockResolvedValue({
@@ -468,9 +461,7 @@ describe("getLatestVendorResearch", () => {
 });
 
 describe("getResearchConfig", () => {
-  it("answers whether search and an LLM key are set up and whether research starts by itself", async () => {
-    process.env.VENDOR_RESEARCH_SEARCH_PROVIDER = "tavily";
-    process.env.TAVILY_API_KEY = "tvly-SENTINEL-7c1e";
+  it("answers whether an LLM key is set up and whether research starts by itself", async () => {
     mockGetLLMKeysQuery.mockResolvedValue([
       { id: 3, name: "OpenAI", key: "sk-SENTINEL-2d9b" },
     ] as any);
@@ -482,10 +473,9 @@ describe("getResearchConfig", () => {
     expect(res.status).toHaveBeenCalledWith(200);
     expect(bodyOf(res)).toEqual({
       message: "OK",
-      data: { searchConfigured: true, hasLlmKey: true, autoRunEnabled: true },
+      data: { hasLlmKey: true, autoRunEnabled: true },
     });
-    // Neither the search key nor the key of the organization is in anything that was sent.
-    expect(sentOf(res)).not.toContain("tvly-SENTINEL-7c1e");
+    // The key of the organization is not in anything that was sent.
     expect(sentOf(res)).not.toContain("sk-SENTINEL-2d9b");
   });
 
@@ -495,20 +485,7 @@ describe("getResearchConfig", () => {
 
     await getResearchConfig(createMockReq(), res);
 
-    expect(bodyOf(res).data).toEqual({
-      searchConfigured: false,
-      hasLlmKey: false,
-      autoRunEnabled: false,
-    });
-  });
-
-  it("does not call search configured while the provider has no key", async () => {
-    process.env.VENDOR_RESEARCH_SEARCH_PROVIDER = "tavily";
-    const res = createMockRes();
-
-    await getResearchConfig(createMockReq(), res);
-
-    expect(bodyOf(res).data.searchConfigured).toBe(false);
+    expect(bodyOf(res).data).toEqual({ hasLlmKey: false, autoRunEnabled: false });
   });
 
   it("answers 500 when the query throws", async () => {

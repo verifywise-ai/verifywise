@@ -229,10 +229,9 @@ export const finishRunQuery = async (
  * Which runs count toward the cooldown and the daily cap: all of them but two kinds, which
  * searched nothing and called no model, so they must not hold the vendor back or use up a slot.
  *
- * - A run that failed before it started: its job could not be queued, it was swept as stuck while
- *   still queued, or its job found search not configured. A start refused with 503 can therefore
- *   be tried again at once. Only `markRunRunningQuery` sets `started_at`, so a null one means the
- *   run never started.
+ * - A run that failed before it started: its job could not be queued, or it was swept as stuck
+ *   while still queued. A start refused with 503 can therefore be tried again at once. Only
+ *   `markRunRunningQuery` sets `started_at`, so a null one means the run never started.
  * - A run that is still queued after STALE_RUN_MINUTES, the limit of the sweep
  *   (`failStaleRunsQuery`): its job was lost, for example because every API start empties the
  *   queue of waiting jobs. The sweep only looks at the vendor that is started or whose latest run
