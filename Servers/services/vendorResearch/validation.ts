@@ -245,12 +245,14 @@ function validCitations(
     if (written.length > MAX_QUOTE_CHARS) continue;
     // The gap mark of a page excerpt stands for text that was left out, so a quote that holds it
     // joins passages that are not next to each other on the page, even when the excerpt holds the
-    // same text. Checked on the quote as written, before the comparison ignores whitespace.
+    // same text. Checked on the quote as written, before the comparison ignores whitespace, and
+    // again once it is normalised: the comparison drops quote marks, so `["…"]` is the mark too.
     if (written.includes(GAP_MARK)) continue;
 
     // The model saw the snippet with &, < and > escaped, so it quotes them escaped.
     const quote = unescapeFromPrompt(written);
     const wanted = normaliseForQuote(quote);
+    if (wanted.includes(GAP_MARK)) continue;
     // An empty string is part of every text, so it is refused on its own.
     if (wanted === "" || !normaliseForQuote(source.content).includes(wanted)) continue;
     if (!sourceMentionsVendor(source, target)) continue;

@@ -684,6 +684,11 @@ describe("validateFindings", () => {
         ["across the gap, on one line", "data at rest. […] Attackers copied customer records"],
         ["up to the mark", "encrypts customer data at rest.\n[…]"],
         ["from the mark", "[…]\nAttackers copied customer records"],
+        // Quote marks are ignored by the comparison, so a mark written with them inside is the
+        // mark of the excerpt all the same.
+        ["with straight quote marks in the mark", 'data at rest. ["…"] Attackers copied'],
+        ["with curly quote marks in the mark", "data at rest. [“…”] Attackers copied"],
+        ["with guillemets in the mark", "data at rest. [«…»] Attackers copied"],
       ])(
         "drops a quote %s, though the excerpt holds the same text with the mark",
         (_label, quote) => {
