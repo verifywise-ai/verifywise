@@ -406,7 +406,7 @@ describe("createWebSession", () => {
       filler(31),
     ].join("\n\n");
 
-    it("replaces the snippet with the excerpt in place, keeping the result's title and date", async () => {
+    it("replaces the snippet with the excerpt in place, keeping the result's title and taking the page's date", async () => {
       const a = result("https://news.example/a", "2031-01-02T00:00:00.000Z");
       const b = result("https://news.example/b");
       const { session, readPage } = setup({ answers: [[a, b]] });
@@ -446,7 +446,7 @@ describe("createWebSession", () => {
           url: a.url,
           title: a.title,
           content: expected.excerpt,
-          publishedAt: a.publishedAt,
+          publishedAt: "2031-03-04T00:00:00.000Z",
         },
         resultEntry("security_incidents", b),
       ]);
@@ -755,13 +755,35 @@ describe("createWebSession", () => {
       const outcome = await session.read(x.url, "security_incidents");
 
       expect(outcome.ok).toBe(true);
-      // The entry keeps the result's date, as the page replaces the snippet in place.
+      // The entry takes the page's date: the analysis holds the source to the window of its
+      // category by this date, and the result's older date would put a source that the read
+      // admitted outside that window.
       expect(session.snapshot().ledger).toEqual([
         {
           ...resultEntry("legal_regulatory", x),
           category: "security_incidents",
           kind: "page",
           content: `Text of ${x.url}`,
+          publishedAt: "2030-01-01T00:00:00.000Z",
+        },
+      ]);
+    });
+
+    it("gives the entry the page's date when the search result had none", async () => {
+      const x = result("https://news.example/x");
+      const { session, readPage } = setup({ answers: [[x]], cutoffs });
+      readPage.mockResolvedValueOnce(page(x.url, { publishedAt: "2030-01-01T00:00:00.000Z" }));
+      await session.search("Acme lawsuit", "news", "legal_regulatory");
+
+      expect((await session.read(x.url, "security_incidents")).ok).toBe(true);
+
+      expect(session.snapshot().ledger).toEqual([
+        {
+          ...resultEntry("legal_regulatory", x),
+          category: "security_incidents",
+          kind: "page",
+          content: `Text of ${x.url}`,
+          publishedAt: "2030-01-01T00:00:00.000Z",
         },
       ]);
     });

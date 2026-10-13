@@ -283,7 +283,16 @@ export function createWebSession<C extends string>(options: WebSessionOptions<C>
       ledger.set(
         key,
         earlier
-          ? { ...earlier, category, kind: "page", onVendorSite: ownPage, content: excerpt }
+          ? {
+              ...earlier,
+              category,
+              kind: "page",
+              onVendorSite: ownPage,
+              content: excerpt,
+              // The date that admitted the read, so that the analysis holds the source to the
+              // window of its new category by the same date.
+              publishedAt: page.publishedAt ?? earlier.publishedAt,
+            }
           : {
               category,
               kind: "page",
