@@ -506,15 +506,15 @@ describe("buildEvidencePack", () => {
         pageEntry("https://a.test/3", { content: "page \uD800 text" }),
       ]);
 
-      expect(pack[0].title).toBe("high�alone and low�alone");
-      expect(pack[0].content).toBe("end�");
-      expect(pack[1].title).toBe("reversed �� pair");
-      expect(pack[1].content).toBe("�start");
-      expect(pack[2].content).toBe("page � text");
+      expect(pack[0].title).toBe("high\uFFFDalone and low\uFFFDalone");
+      expect(pack[0].content).toBe("end\uFFFD");
+      expect(pack[1].title).toBe("reversed \uFFFD\uFFFD pair");
+      expect(pack[1].content).toBe("\uFFFDstart");
+      expect(pack[2].content).toBe("page \uFFFD text");
     });
 
     it("keeps a valid surrogate pair untouched", () => {
-      const title = "Acme 😀 breach \u{1D49C} 😀";
+      const title = "Acme 😀 breach \u{1D49C} \uD83D\uDE00";
       const content = "Emoji 😀 and a math letter \u{1D49C} at the end 🔒";
       const pack = buildEvidencePack([entry("https://a.test/1", { title, content })]);
 
@@ -529,7 +529,7 @@ describe("buildEvidencePack", () => {
         entry("https://a.test/3", { publishedAt: "2026\uD800" }),
       ]);
 
-      expect(pack.map((source) => source.publishedAt)).toEqual(["2026-01-02", null, "2026�"]);
+      expect(pack.map((source) => source.publishedAt)).toEqual(["2026-01-02", null, "2026\uFFFD"]);
     });
 
     it("produces a pack whose JSON holds no NUL and no surrogate escape", () => {
@@ -555,8 +555,8 @@ describe("buildEvidencePack", () => {
       ["another control character", "https://a.test/pa\u001Fth"],
       ["a DEL", "https://a.test/pa\u007Fth"],
       ["a C1 control character", "https://a.test/pa\u0085th"],
-      ["a no-break space", "https://a.test/pa th"],
-      ["a line separator", "https://a.test/pa th"],
+      ["a no-break space", "https://a.test/pa\u00A0th"],
+      ["a line separator", "https://a.test/pa\u2028th"],
       ["a lone high surrogate", "https://a.test/pa\uD800th"],
       ["a lone low surrogate", "https://a.test/pa\uDC00th"],
       ["a space at the start", " https://a.test/path"],
