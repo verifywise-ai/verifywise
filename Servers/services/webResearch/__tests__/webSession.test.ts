@@ -19,11 +19,16 @@ function result(url: string, publishedAt: string | null = null): SearchResult {
   return { title: `Title of ${url}`, url, snippet: `Snippet of ${url}`, publishedAt, source: null };
 }
 
-/** The ledger entry that a kept result becomes. */
-function resultEntry(category: Category, kept: SearchResult): LedgerEntry<Category> {
+/** The ledger entry that a kept result becomes; off the vendor's site unless `onVendorSite`. */
+function resultEntry(
+  category: Category,
+  kept: SearchResult,
+  onVendorSite = false,
+): LedgerEntry<Category> {
   return {
     category,
     kind: "result",
+    onVendorSite,
     url: kept.url,
     title: kept.title,
     content: kept.snippet,
@@ -437,6 +442,7 @@ describe("createWebSession", () => {
         {
           category: "ai_specific",
           kind: "page",
+          onVendorSite: false,
           url: a.url,
           title: a.title,
           content: expected.excerpt,
@@ -477,6 +483,7 @@ describe("createWebSession", () => {
         {
           category: "certifications",
           kind: "page",
+          onVendorSite: true,
           url: "https://acme.com/trust",
           title: "Trust center",
           content: "We hold SOC 2 Type II.",
@@ -775,6 +782,113 @@ describe("createWebSession", () => {
         publishedAt: "2027-01-02T00:00:00.000Z",
       });
       expect(session.snapshot().ledger).toEqual([resultEntry("legal_regulatory", recent)]);
+    });
+  });
+
+  describe("onVendorSite: whether a source is the vendor's own", () => {
+    it.each([
+      ["the domain itself", "https://acme.com/trust", true],
+      ["a subdomain", "https://docs.acme.com/", true],
+      ["a host in capitals", "https://TRUST.ACME.COM/", true],
+      ["a host that only starts with the domain", "https://acme.com.evil.example/", false],
+      ["a host that only ends with its letters", "https://notacme.com/", false],
+      ["another site", "https://news.example/acme", false],
+    ])("marks a search result on %s by its URL: %p", async (_label, url, own) => {
+      const { session } = setup({ answers: [[result(url)]] });
+
+      await session.search("Acme", "web", "certifications");
+
+      expect(session.snapshot().ledger.map((entry) => entry.onVendorSite)).toEqual([own]);
+    });
+
+    it.each([
+      ["answered on the vendor's domain", "https://acme.com/trust", "https://acme.com/trust", true],
+      ["redirected within the vendor's domain", "https://acme.com/", "https://www.acme.com/", true],
+      [
+        "redirected off the vendor's domain",
+        "https://acme.com/blog",
+        "https://blog-host.example/post",
+        false,
+      ],
+      [
+        "sent off the vendor's domain by an open redirect",
+        "https://acme.com/go?to=https://other.example/post",
+        "https://other.example/post",
+        false,
+      ],
+    ])("marks a page %s by the URL that answered: %p", async (_label, asked, answered, own) => {
+      const { session, readPage } = setup();
+      readPage.mockResolvedValueOnce(page(answered));
+
+      expect((await session.read(asked, "certifications")).ok).toBe(true);
+
+      expect(session.snapshot().ledger.map((entry) => entry.onVendorSite)).toEqual([own]);
+    });
+
+    it("takes the mark off a result on the vendor's domain when its page redirected off it", async () => {
+      const blog = result("https://acme.com/blog");
+      const { session, readPage } = setup({ answers: [[blog]] });
+      readPage.mockResolvedValueOnce(page("https://blog-host.example/post"));
+      await session.search("Acme blog", "web", "certifications");
+      expect(session.snapshot().ledger).toEqual([resultEntry("certifications", blog, true)]);
+
+      expect((await session.read(blog.url, "certifications")).ok).toBe(true);
+
+      expect(session.snapshot().ledger).toEqual([
+        {
+          category: "certifications",
+          kind: "page",
+          onVendorSite: false,
+          url: blog.url,
+          title: blog.title,
+          content: "Text of https://blog-host.example/post",
+          publishedAt: null,
+        },
+      ]);
+    });
+
+    describe("a URL on the vendor's domain whose page redirected off it and was too old", () => {
+      // For a run on 2031-04-20: 24 months for security_incidents, 36 for legal_regulatory.
+      const cutoffs = { security_incidents: CUTOFF, legal_regulatory: "2028-04-20" };
+      /** Too old for security_incidents, within legal_regulatory. */
+      const redirected = page("https://blog-host.example/post", {
+        publishedAt: "2029-01-02T00:00:00.000Z",
+      });
+
+      it("takes the mark off the result that stays under another category", async () => {
+        const blog = result("https://acme.com/blog");
+        const { session, readPage } = setup({ answers: [[blog]], cutoffs });
+        readPage.mockResolvedValueOnce(redirected);
+        await session.search("Acme lawsuit", "web", "legal_regulatory");
+
+        expect((await session.read(blog.url, "security_incidents")).ok).toBe(false);
+
+        expect(session.snapshot().ledger).toEqual([resultEntry("legal_regulatory", blog, false)]);
+      });
+
+      it("does not mark a later search result of that URL", async () => {
+        const blog = result("https://acme.com/blog");
+        const { session, readPage } = setup({ answers: [[blog]], cutoffs });
+        readPage.mockResolvedValueOnce(redirected);
+        expect((await session.read(blog.url, "security_incidents")).ok).toBe(false);
+
+        await session.search("Acme lawsuit", "web", "legal_regulatory");
+
+        expect(session.snapshot().ledger).toEqual([resultEntry("legal_regulatory", blog, false)]);
+      });
+    });
+
+    it("marks nothing as the vendor's own when the vendor has no domain", async () => {
+      const trust = result("https://acme.com/trust");
+      const { session } = setup({
+        domain: null,
+        answers: [[trust, result("https://docs.acme.com/")]],
+      });
+      await session.search("Acme", "web", "security_incidents");
+
+      expect((await session.read(trust.url, "security_incidents")).ok).toBe(true);
+
+      expect(session.snapshot().ledger.map((entry) => entry.onVendorSite)).toEqual([false, false]);
     });
   });
 

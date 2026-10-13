@@ -103,6 +103,8 @@ export function buildEvidencePack(
         id: `S${sources.length + 1}`,
         category,
         kind: "result",
+        // Only the web session decides what is the vendor's own; nothing is marked without it.
+        onVendorSite: false,
         url: hit.url,
         title: cutAtCodePoint(cleanText(hit.title), MAX_TITLE_CHARS),
         content: cutAtCodePoint(cleanText(hit.content), MAX_SNIPPET_CHARS),

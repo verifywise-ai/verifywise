@@ -222,6 +222,7 @@ describe("runResearchLoop", () => {
       {
         category: "security_incidents",
         kind: "page",
+        onVendorSite: false,
         url: news.url,
         title: news.title,
         content: text,

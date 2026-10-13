@@ -34,6 +34,12 @@ export const SESSION_LIMITS: SessionLimits = {
 export interface LedgerEntry<C extends string = string> {
   category: C;
   kind: "result" | "page";
+  /**
+   * True when the source is on the vendor's domain or a subdomain of it, as the session decided it
+   * for the lookback: a page by the URL that answered after redirects, a result by its own URL. A
+   * URL whose page answered off the vendor's site is never the vendor's, as a result either.
+   */
+  onVendorSite: boolean;
   url: string;
   title: string;
   content: string;
@@ -199,6 +205,7 @@ export function createWebSession<C extends string>(options: WebSessionOptions<C>
           continue;
         }
         const pageDate = tooOldPages.get(key);
+        // A page that was too old answered off the vendor's site, since its own pages are exempt.
         const exempt = pageDate === undefined && isOwnHost(url.hostname);
         if (!exempt && isOlderThan(pageDate ?? result.publishedAt, cutoff)) {
           omittedOld += 1;
@@ -208,6 +215,7 @@ export function createWebSession<C extends string>(options: WebSessionOptions<C>
         ledger.set(key, {
           category,
           kind: "result",
+          onVendorSite: exempt,
           url: key,
           title: result.title,
           content: result.snippet,
@@ -254,9 +262,12 @@ export function createWebSession<C extends string>(options: WebSessionOptions<C>
       const tooOld = ownPage ? null : firstOlderThan(dates, cutoffs[category]);
       if (tooOld !== null) {
         // The source is outside the window, so it must not reach the analysis under this category.
-        // A snippet kept under another category stays there while it is within that one's window.
+        // A snippet kept under another category stays there while it is within that one's window,
+        // no longer marked as the vendor's: its page answered off the vendor's site.
         if (earlier && firstOlderThan(dates, cutoffs[earlier.category]) !== null) {
           ledger.delete(key);
+        } else if (earlier) {
+          ledger.set(key, { ...earlier, onVendorSite: false });
         }
         tooOldPages.set(key, tooOld);
         return { ok: false, reason: "too_old", publishedAt: tooOld };
@@ -266,10 +277,11 @@ export function createWebSession<C extends string>(options: WebSessionOptions<C>
       ledger.set(
         key,
         earlier
-          ? { ...earlier, category, kind: "page", content: excerpt }
+          ? { ...earlier, category, kind: "page", onVendorSite: ownPage, content: excerpt }
           : {
               category,
               kind: "page",
+              onVendorSite: ownPage,
               url: key,
               title: page.title,
               content: excerpt,

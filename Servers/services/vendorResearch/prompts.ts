@@ -17,7 +17,6 @@ import {
 } from "../../domain.layer/interfaces/i.vendorResearch";
 import { EXCERPT_GAP } from "../webResearch/pageText";
 import { escapeAttribute, escapeForPrompt, unescapeFromPrompt } from "../webResearch/promptText";
-import { isOnDomain } from "../webResearch/publicUrl";
 import { LOOKBACK_MONTHS, monthsBefore } from "./categories";
 import {
   MAX_CATEGORY_NOTES,
@@ -44,6 +43,15 @@ const GAP_MARK = EXCERPT_GAP.trim();
 
 /** The UTC day of `now`, as YYYY-MM-DD. */
 const dayOf = (now: Date) => now.toISOString().slice(0, 10);
+
+/**
+ * The lookback window of a category as both the loop task and the analysis state it, with its
+ * first day: "legal_regulatory: the last 36 months, since 2028-04-20".
+ */
+function lookbackWindow(category: ResearchCategory, now: Date): string {
+  const months = LOOKBACK_MONTHS[category];
+  return `${category}: the last ${months} months, since ${monthsBefore(now, months)}`;
+}
 
 const NUMBER_WORDS = [
   "zero",
@@ -80,9 +88,6 @@ export function buildSystemPrompt(now: Date): string {
   const textChars = MAX_FINDING_TEXT_CHARS;
   const quoteChars = MAX_QUOTE_CHARS;
   const noteChars = MAX_NOTE_CHARS;
-  const lookback = RESEARCH_CATEGORIES.map(
-    (category) => `${category} ${LOOKBACK_MONTHS[category]} months`,
-  ).join(", ");
 
   return [
     "You are a vendor risk analyst for an AI governance platform. A company is deciding whether",
@@ -120,11 +125,15 @@ export function buildSystemPrompt(now: Date): string {
     "  that is not a risk.",
     "- Ignore sources that are not about this vendor, for example pages about another company",
     "  with a similar name. Use the domain and the details in the text to decide.",
-    "- Each category looks back a fixed time from today:",
-    `  ${lookback}.`,
-    "  Raise no risk for an incident or an action that the source dates before the window of its",
-    "  category. The vendor's own terms, policies and certification statements count whatever the",
-    "  date of their page. Use today's date to tell whether a certificate has expired.",
+    "- Each category has a lookback window, counted back from today:",
+    ...RESEARCH_CATEGORIES.map((category) => `  - ${lookbackWindow(category, now)}`),
+    "  The window is about the date of the source, its <published> date, not the date of the events",
+    "  it describes. Raise no risk from a source that was published before the window of its",
+    "  category. A source in the window counts even when it reports an older matter, above all when",
+    "  it shows that the matter is still open, such as a pending lawsuit, a fine under appeal or an",
+    "  incident that is not resolved. The vendor's own terms, policies and certification statements",
+    "  count whatever the date of their page. Use today's date to tell whether a certificate has",
+    "  expired.",
     "- Every risk belongs to one of these categories:",
     "  - security_incidents: a breach, an incident or an exploited vulnerability involving the",
     "    vendor.",
@@ -166,22 +175,14 @@ export function buildSystemPrompt(now: Date): string {
   ].join("\n");
 }
 
-/** True when the URL is on the vendor's domain or a subdomain of it; false without a domain. */
-function isOnVendorSite(url: string, domain: string | null): boolean {
-  if (!domain) return false;
-  try {
-    return isOnDomain(new URL(url).hostname, domain);
-  } catch {
-    return false;
-  }
-}
-
 /**
  * One source. `site="vendor"` marks a source on the vendor's own website, which the system prompt
- * explains: what the vendor says of itself there is its own statement.
+ * explains: what the vendor says of itself there is its own statement. The mark is the session's
+ * decision (`onVendorSite`), never the URL's host: the URL of a page is the one that was asked for,
+ * and the page may have answered from another site after a redirect.
  */
 function renderSource(source: EvidenceSource, target: ResearchTarget): string {
-  const site = isOnVendorSite(source.url, target.domain) ? ' site="vendor"' : "";
+  const site = source.onVendorSite && target.domain ? ' site="vendor"' : "";
   const lines = [
     `<source id="${escapeAttribute(source.id)}" category="${escapeAttribute(source.category)}" ` +
       `kind="${escapeAttribute(source.kind)}"${site} url="${escapeAttribute(source.url)}">`,
@@ -313,9 +314,6 @@ export function buildLoopTaskPrompt(input: {
     website,
     "",
     "Research these categories, each with sources from its lookback window:",
-    ...researchable.map((category) => {
-      const months = LOOKBACK_MONTHS[category];
-      return `- ${category}: the last ${months} months, since ${monthsBefore(now, months)}`;
-    }),
+    ...researchable.map((category) => `- ${lookbackWindow(category, now)}`),
   ].join("\n");
 }

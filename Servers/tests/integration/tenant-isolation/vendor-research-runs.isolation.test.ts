@@ -201,6 +201,7 @@ describe("vendor_research_runs tenant isolation", () => {
           id: "S1",
           category: "security_incidents",
           kind: "result",
+          onVendorSite: false,
           url: "https://example.com/incident",
           title: "Incident report",
           content: "Customer records were exposed.",

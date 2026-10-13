@@ -4,6 +4,7 @@ import {
   ResearchCategory,
 } from "../../../domain.layer/interfaces/i.vendorResearch";
 import { createLoopStepSchema } from "../../webResearch/researchLoop";
+import { LOOKBACK_MONTHS, monthsBefore } from "../categories";
 import {
   PROMPT_VERSION,
   buildLoopSystemPrompt,
@@ -24,6 +25,7 @@ const source = (overrides: Partial<EvidenceSource> = {}): EvidenceSource => ({
   id: "S1",
   category: "security_incidents",
   kind: "result",
+  onVendorSite: false,
   url: "https://acme.com/a",
   title: "Acme breach",
   content: "Acme confirmed a breach of its hosting systems.",
@@ -135,11 +137,38 @@ describe("buildSystemPrompt", () => {
     expect(prompt).toContain("2031-04-20");
     expect(prompt).toContain("24 months");
     expect(prompt).toContain("36 months");
-    expect(prompt).toMatch(/security_incidents 24 months/);
-    expect(prompt).toMatch(/certifications 24 months/);
-    expect(prompt).toMatch(/legal_regulatory 36 months/);
-    expect(prompt).toMatch(/ai_specific 24 months/);
+    expect(prompt).toContain("security_incidents: the last 24 months, since 2029-04-20");
+    expect(prompt).toContain("certifications: the last 24 months, since 2029-04-20");
+    expect(prompt).toContain("legal_regulatory: the last 36 months, since 2028-04-20");
+    expect(prompt).toContain("ai_specific: the last 24 months, since 2029-04-20");
     expect(buildSystemPrompt(new Date("2032-01-05T23:59:59Z"))).toContain("2032-01-05");
+  });
+
+  it("states the window of each category with its first day, as the loop task does", () => {
+    const task = buildLoopTaskPrompt({ target, now: NOW, researchable: RESEARCH_CATEGORIES });
+
+    for (const category of RESEARCH_CATEGORIES) {
+      const months = LOOKBACK_MONTHS[category];
+      const line = `${category}: the last ${months} months, since ${monthsBefore(NOW, months)}`;
+      expect(prompt).toContain(line);
+      expect(task).toContain(line);
+    }
+  });
+
+  it("holds the window to the date of the source, and counts a matter that is still open", () => {
+    expect(prompt).toContain(
+      "The window is about the date of the source, its <published> date, not the date of the events it describes.",
+    );
+    expect(prompt).toContain(
+      "Raise no risk from a source that was published before the window of its category.",
+    );
+    expect(prompt).toContain(
+      "A source in the window counts even when it reports an older matter, above all when it " +
+        "shows that the matter is still open, such as a pending lawsuit, a fine under appeal or " +
+        "an incident that is not resolved.",
+    );
+    // The rule of the first vr-2 text dropped a source for the date of the matter it reported.
+    expect(prompt).not.toMatch(/incident or an action that the source dates before the window/);
   });
 
   it("describes the two kinds of source and the mark of the vendor's own website", () => {
@@ -370,7 +399,7 @@ describe("buildUserPrompt", () => {
 
   it("puts each source in a source element with its id, category, kind and URL, inside the evidence block", () => {
     const pack = [
-      source(),
+      source({ onVendorSite: true }),
       source({
         id: "S2",
         category: "legal_regulatory",
@@ -435,24 +464,26 @@ describe("buildUserPrompt", () => {
     expect(count(prompt, " kind=")).toBe(count(prompt, "<source "));
   });
 
-  it.each([
-    ["the domain itself", "https://acme.com/trust", true],
-    ["a subdomain", "https://docs.acme.com/", true],
-    ["a host in capitals", "https://TRUST.ACME.COM/", true],
-    ["a host that only starts with the domain", "https://acme.com.evil.example/", false],
-    ["a host that only ends with its letters", "https://notacme.com/", false],
-    ["another site", "https://news.test/acme", false],
-    ["text that is not a URL", "not a url", false],
-  ])("marks a source on %s as the vendor's own: %p", (_label, url, own) => {
-    const prompt = buildUserPrompt(target, [source({ url, kind: "page" })]);
+  it("marks a source as the vendor's own by the session's decision, not by its URL", () => {
+    const prompt = buildUserPrompt(target, [
+      // On the vendor's domain, but the page answered from another site after a redirect.
+      source({ url: "https://acme.com/blog", kind: "page", onVendorSite: false }),
+      source({ id: "S2", url: "https://trust.acme.com/", kind: "page", onVendorSite: true }),
+    ]);
 
-    expect(prompt.includes('site="vendor"')).toBe(own);
+    expect(prompt).toContain(
+      '<source id="S1" category="security_incidents" kind="page" url="https://acme.com/blog">',
+    );
+    expect(prompt).toContain(
+      '<source id="S2" category="security_incidents" kind="page" site="vendor" url="https://trust.acme.com/">',
+    );
+    expect(count(prompt, "site=")).toBe(1);
   });
 
   it("marks no source as the vendor's own when the vendor has no domain", () => {
     const prompt = buildUserPrompt({ ...target, domain: null }, [
-      source({ url: "https://acme.com/trust" }),
-      source({ id: "S2", url: "https://docs.acme.com/" }),
+      source({ url: "https://acme.com/trust", onVendorSite: true }),
+      source({ id: "S2", url: "https://docs.acme.com/", onVendorSite: true }),
     ]);
 
     expect(prompt).not.toContain("site=");

@@ -137,6 +137,7 @@ const asSource = (id: string, category: ResearchCategory, found: SearchHit): Evi
   id,
   category,
   kind: "result",
+  onVendorSite: false,
   url: found.url,
   title: found.title,
   content: found.content,

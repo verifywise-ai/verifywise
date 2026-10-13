@@ -229,6 +229,7 @@ describe("createVendorResearcher", () => {
         {
           category: "security_incidents",
           kind: "page",
+          onVendorSite: false,
           url: news.url,
           title: "Acme data breach",
           content: `Text of ${news.url}`,

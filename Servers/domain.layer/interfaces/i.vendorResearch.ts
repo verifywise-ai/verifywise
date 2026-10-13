@@ -28,6 +28,11 @@ export interface EvidenceSource {
   id: string;
   category: ResearchCategory;
   kind: "result" | "page";
+  /**
+   * True when the source is on the vendor's own website, as the research decided it: a page by the
+   * address that answered after redirects, not by the one that was asked for.
+   */
+  onVendorSite: boolean;
   url: string;
   title: string;
   content: string;
