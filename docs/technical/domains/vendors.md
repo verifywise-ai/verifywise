@@ -104,7 +104,7 @@ All columns are NOT NULL except the ones marked nullable and `requested_by`. `tr
 Column notes:
 
 - `category_summary` is an array of `{ category, outcome, note }`; `outcome` is `findings`, `nothing_found`, `search_failed` or `skipped`, and `note` is one of a closed set of phrases (see [Category outcomes](#category-outcomes)). It is empty until the run ends, and for most failed runs.
-- `categories` lists the categories that the research worked on: those with at least one call that reached the web.
+- `categories` lists the categories that the research worked on: those with at least one call that reached the web (a call that the loop's own time limit cut off is not recorded and does not count).
 - `evidence` is the evidence pack the analysis was shown (sources with `id`, `category`, `kind` (`result` or `page`), `onVendorSite`, `url`, `title`, `content`, `publishedAt`). It is an **audit trail** of third-party text: no endpoint returns it. The 100,000-byte cap is applied in code, not by the DDL.
 - `model` (the id of the model that was called) and `prompt_version` (now `vr-2`) record what produced the run. `searches_used` counts the `search` actions that reached the search engine, a failed one included; `pages_read` counts the pages that were read. Both are returned by the API.
 - `error` is set when the run failed and is always one of a closed set of fixed English phrases, cut to 500 characters in code. Raw exception messages go to the server log only.
@@ -675,13 +675,13 @@ The limits: 24 steps (invalid ones included), 8 `search` actions, 12 `read` acti
 
 ### Category outcomes
 
-Each category ends a run with one of four outcomes and a note. "Worked on" means that at least one call tagged with the category reached the web; "answered" means that the web answered it: a search that returned a feed (an empty one too) or a page that was read. A call that the rules refuse before it reaches the web (a spent budget, an address that is not allowed, an invalid step) is not work on a category. "Looked and found nothing" is thereby never confused with "could not look" or "did not look". The first rule that applies decides:
+Each category ends a run with one of four outcomes and a note. "Worked on" means that at least one call tagged with the category reached the web; "answered" means that the web answered it: a search that returned a feed (an empty one too) or a page that was read. A call that the rules refuse before it reaches the web (a spent budget, an address that is not allowed, an invalid step) is not work on a category, and neither is a call that the loop's time limit cut off: it keeps its unit of budget but is not recorded. "Looked and found nothing" is thereby never confused with "could not look" or "did not look". The first rule that applies decides:
 
 | Outcome | When | Stored note |
 |---------|------|-------------|
 | `skipped` | The category needs the vendor's domain and the vendor has none | `Vendor website is missing or not a valid domain` |
 | `findings` | At least one finding was kept for the category, also when some of its calls failed | `1 potential risk found` or `N potential risks found` |
-| `skipped` | No call was tagged with the category: the time or the steps ran out, or the research ended, before it was covered | `Not researched: the time limit was reached` (the loop ran out of time); `Not researched: the research ended before this category was covered` (any other end) |
+| `skipped` | No call was recorded for the category: the time or the steps ran out, or the research ended, before it was covered (a call cut off by the time limit is not recorded, so its category reads `Not researched: the time limit was reached`) | `Not researched: the time limit was reached` (the loop ran out of time); `Not researched: the research ended before this category was covered` (any other end) |
 | `search_failed` | The category was worked on and no call was answered | `The search was not available` (every call was a failed search); `The pages could not be read` (otherwise) |
 | `nothing_found` | At least one call was answered and no finding survived | `Possible risks were found but could not be verified or are already recorded` (the model proposed a risk and none stayed); `No risks found; N of M pages could not be read` (a page call of the category failed); otherwise the model's own note, which the UI shows as unverified, or `No risks found in the sources reviewed` when it wrote none |
 
