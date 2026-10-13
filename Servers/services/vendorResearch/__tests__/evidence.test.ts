@@ -309,21 +309,146 @@ describe("buildEvidencePack", () => {
       );
     });
 
-    it("removes the sources of the last categories first", () => {
-      const full = (url: string) => pageEntry(url, { content: "€".repeat(MAX_EXCERPT_CHARS) });
-      const pack = buildEvidencePack([
-        ...under("ai_specific", full("https://d.test/1")),
-        ...under("legal_regulatory", full("https://c.test/1")),
-        ...under("certifications", full("https://b.test/1"), full("https://b.test/2")),
-        ...under("security_incidents", full("https://a.test/1"), full("https://a.test/2")),
-      ]);
+    describe("a pack over the limit is trimmed from the category that holds the most bytes", () => {
+      const fullPage = (url: string) => pageEntry(url, { content: "a".repeat(MAX_EXCERPT_CHARS) });
+      const pagesOn = (host: string, count: number) =>
+        Array.from({ length: count }, (_, index) => fullPage(`https://${host}.test/${index}`));
+      /** What the pack must be when nothing is cut: entries already in category order, S1..Sn. */
+      const asSources = (entries: Entry[]): EvidenceSource[] =>
+        entries.map((item, index) => ({ id: `S${index + 1}`, ...item }));
+      const summary = (pack: EvidenceSource[]) =>
+        pack.map((source) => [source.id, source.category, source.url]);
+      // The name of the category is part of the serialized source. A page of security_incidents with
+      // an excerpt shorter by the difference of the two names weighs the same as a page of
+      // certifications with a full one.
+      const NAME_DIFFERENCE = "security_incidents".length - "certifications".length;
+      const equalWeightPages = (count: number) =>
+        under(
+          "security_incidents",
+          ...Array.from({ length: count }, (_, index) =>
+            pageEntry(`https://a.test/${index}`, {
+              content: "a".repeat(MAX_EXCERPT_CHARS - NAME_DIFFERENCE),
+            }),
+          ),
+        );
 
-      expect(pack.map((source) => source.category)).toEqual([
-        "security_incidents",
-        "security_incidents",
-        "certifications",
-        "certifications",
-      ]);
+      it("keeps a source of every category when the first one alone is over the limit", () => {
+        const first = under("security_incidents", ...pagesOn("a", 14));
+        const rest = [
+          ...under("certifications", ...pagesOn("b", 2)),
+          ...under("legal_regulatory", ...pagesOn("c", 1)),
+          // The last category, with a single page: the old rule removed it first.
+          ...under("ai_specific", ...pagesOn("d", 1)),
+        ];
+        expect(bytes(asSources(first))).toBeGreaterThan(MAX_EVIDENCE_BYTES);
+        // How many pages of the first category fit next to the others.
+        let room = first.length;
+        while (bytes(asSources([...first.slice(0, room), ...rest])) > MAX_EVIDENCE_BYTES) room -= 1;
+        expect(room).toBeGreaterThan(1);
+        expect(room).toBeLessThan(first.length);
+
+        const pack = buildEvidencePack([...first, ...rest]);
+
+        expect(bytes(pack)).toBeLessThanOrEqual(MAX_EVIDENCE_BYTES);
+        expect(new Set(pack.map((source) => source.category))).toEqual(
+          new Set(["security_incidents", "certifications", "legal_regulatory", "ai_specific"]),
+        );
+        // Only the last pages of the largest category are gone: the earlier ones and the other
+        // categories are as they were, and the ids follow without a gap.
+        for (const removed of first.slice(room)) {
+          expect(pack.map((source) => source.url)).not.toContain(removed.url);
+        }
+        expect(summary(pack)).toEqual(summary(asSources([...first.slice(0, room), ...rest])));
+      });
+
+      it("never empties a category with one source while a larger category is there", () => {
+        // The largest category is in the middle, with one page of another category on each side of
+        // it in the category order, and the first category has nothing.
+        const big = under("legal_regulatory", ...pagesOn("c", 14));
+        const before = under("certifications", ...pagesOn("b", 1));
+        const after = under("ai_specific", ...pagesOn("d", 1));
+
+        const pack = buildEvidencePack([...after, ...big, ...before]);
+
+        expect(bytes(pack)).toBeLessThanOrEqual(MAX_EVIDENCE_BYTES);
+        const perCategory = new Map<string, number>();
+        for (const source of pack) {
+          perCategory.set(source.category, (perCategory.get(source.category) ?? 0) + 1);
+        }
+        expect(perCategory.get("certifications")).toBe(1);
+        expect(perCategory.get("ai_specific")).toBe(1);
+        expect(perCategory.has("security_incidents")).toBe(false);
+        expect(perCategory.get("legal_regulatory")).toBeGreaterThan(1);
+        expect(perCategory.get("legal_regulatory")).toBeLessThan(big.length);
+        // The entries came in any order. The pack is by category and numbered without a gap, and the
+        // pages that stay are the first ones of the largest category, in the order they came.
+        expect(pack.map((source) => source.id)).toEqual(pack.map((_, index) => `S${index + 1}`));
+        const legalKept = perCategory.get("legal_regulatory") ?? 0;
+        expect(pack.map((source) => source.category)).toEqual([
+          "certifications",
+          ...Array(legalKept).fill("legal_regulatory"),
+          "ai_specific",
+        ]);
+        expect(
+          pack
+            .filter((source) => source.category === "legal_regulatory")
+            .map((source) => source.url),
+        ).toEqual(big.slice(0, legalKept).map((item) => item.url));
+      });
+
+      it("removes from the later of two categories that hold the same number of bytes", () => {
+        const earlier = equalWeightPages(6);
+        const later = under("certifications", ...pagesOn("b", 6));
+        // A small third category tips the pack just over the limit, so one removal is enough.
+        const small = under(
+          "ai_specific",
+          pageEntry("https://c.test/0", { content: "c".repeat(3000) }),
+        );
+        const sizeOf = (item: Entry) => bytes(buildEvidencePack([item]));
+        expect(sizeOf(earlier[0])).toBe(sizeOf(later[0]));
+        expect(bytes(asSources([...earlier, ...later, ...small]))).toBeGreaterThan(
+          MAX_EVIDENCE_BYTES,
+        );
+        expect(bytes(asSources([...earlier, ...later.slice(0, 5), ...small]))).toBeLessThanOrEqual(
+          MAX_EVIDENCE_BYTES,
+        );
+
+        const pack = buildEvidencePack([...earlier, ...later, ...small]);
+
+        expect(summary(pack)).toEqual(
+          summary(asSources([...earlier, ...later.slice(0, 5), ...small])),
+        );
+      });
+
+      it("takes the next removal from the category that is then the largest", () => {
+        // Two categories of 8 pages each: the removals alternate, later category first, so the
+        // pack ends with 6 and 6 pages and not with 8 and 4.
+        const earlier = equalWeightPages(8);
+        const later = under("certifications", ...pagesOn("b", 8));
+
+        const pack = buildEvidencePack([...earlier, ...later]);
+
+        expect(bytes(pack)).toBeLessThanOrEqual(MAX_EVIDENCE_BYTES);
+        expect(summary(pack)).toEqual(
+          summary(asSources([...earlier.slice(0, 6), ...later.slice(0, 6)])),
+        );
+      });
+
+      it("returns a pack that is within the limit as it is, with the same ids in the same order", () => {
+        const entries = [
+          ...under("security_incidents", ...pagesOn("a", 4)),
+          ...under("certifications", ...pagesOn("b", 3)),
+          ...under("legal_regulatory", ...pagesOn("c", 3)),
+          ...under("ai_specific", ...pagesOn("d", 2)),
+        ];
+        expect(bytes(asSources(entries))).toBeLessThanOrEqual(MAX_EVIDENCE_BYTES);
+        // Close to the limit, so that a trimming that started too early would show.
+        expect(bytes(asSources(entries))).toBeGreaterThan(MAX_EVIDENCE_BYTES - 2 * 8200);
+
+        const pack = buildEvidencePack(entries);
+
+        expect(pack).toEqual(asSources(entries));
+      });
     });
 
     it("measures the serialized form, in which an escaped character takes more than one byte", () => {
@@ -361,6 +486,32 @@ describe("buildEvidencePack", () => {
       expect(bytes(packWithLastExcerpt(exactLength))).toBe(MAX_EVIDENCE_BYTES);
       const oneByteOver = packWithLastExcerpt(exactLength + 1);
       expect(oneByteOver.map((source) => source.id)).toEqual(["S1", "S2", "S3", "S4"]);
+      expect(bytes(oneByteOver)).toBeLessThanOrEqual(MAX_EVIDENCE_BYTES);
+    });
+
+    it("counts the ids of ten and more sources, which are longer than those of the first nine", () => {
+      // Twelve full pages and a last one that is tuned byte by byte: its id is S13, three characters
+      // against the two of S1..S9, and the sources are the ones the pack is built from.
+      const fillers = Array.from({ length: 12 }, (_, index) =>
+        pageEntry(`https://a.test/${index}`, { content: "a".repeat(MAX_EXCERPT_CHARS) }),
+      );
+      const withLast = (length: number): Entry[] => [
+        ...fillers,
+        pageEntry("https://a.test/last", { content: "x".repeat(length) }),
+      ];
+      const sourcesOf = (entries: Entry[]): EvidenceSource[] =>
+        entries.map((item, index) => ({ id: `S${index + 1}`, ...item }));
+      const exactLength = MAX_EVIDENCE_BYTES - bytes(sourcesOf(withLast(0)));
+      expect(exactLength).toBeGreaterThan(0);
+      expect(exactLength).toBeLessThan(MAX_EXCERPT_CHARS);
+      expect(bytes(sourcesOf(withLast(exactLength)))).toBe(MAX_EVIDENCE_BYTES);
+
+      expect(buildEvidencePack(withLast(exactLength))).toEqual(sourcesOf(withLast(exactLength)));
+      // One byte more is over the limit however short the ids are counted.
+      const oneByteOver = buildEvidencePack(withLast(exactLength + 1));
+      expect(oneByteOver.map((source) => source.id)).toEqual(
+        Array.from({ length: 12 }, (_, index) => `S${index + 1}`),
+      );
       expect(bytes(oneByteOver)).toBeLessThanOrEqual(MAX_EVIDENCE_BYTES);
     });
 

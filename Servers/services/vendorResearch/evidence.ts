@@ -64,19 +64,54 @@ function cleanPublishedAt(publishedAt: string | null): string | null {
   return cleaned === "" || cleaned.length > MAX_PUBLISHED_AT_CHARS ? null : cleaned;
 }
 
-/** The longest start of `sources` that serializes to at most MAX_EVIDENCE_BYTES bytes. */
-function fitToByteLimit(sources: EvidenceSource[]): EvidenceSource[] {
-  const kept = [...sources];
-  // An empty pack is "[]", two bytes, so the loop always ends.
-  while (Buffer.byteLength(JSON.stringify(kept)) > MAX_EVIDENCE_BYTES) kept.pop();
-  return kept;
+/** A source that has no id yet, and the bytes it takes in the pack, its comma included. */
+interface SizedSource {
+  source: Omit<EvidenceSource, "id">;
+  bytes: number;
 }
+
+/**
+ * The id a source is measured with before the pack is numbered: that of S1 to S9, the shortest.
+ * The ids from S10 on are one character longer, which the check of the numbered pack makes good.
+ */
+const MEASURED_ID = "S0";
+
+const bytesOf = (sources: SizedSource[]): number =>
+  sources.reduce((sum, { bytes }) => sum + bytes, 0);
+
+/** The serialized size of the pack that the groups make: "[]", the sources, a comma between two. */
+function packBytes(groups: SizedSource[][]): number {
+  const sources = groups.flat();
+  return sources.length === 0 ? 2 : 1 + bytesOf(sources);
+}
+
+/**
+ * Removes the last source of the category that holds the most bytes. The groups are in the order of
+ * RESEARCH_CATEGORIES and an empty one is not a candidate. A tie goes to the later category: the
+ * `>=` lets a later group replace an equal one.
+ */
+function removeFromLargestCategory(groups: SizedSource[][]): void {
+  let largest: SizedSource[] | undefined;
+  let largestBytes = -1;
+  for (const group of groups) {
+    if (group.length === 0) continue;
+    const total = bytesOf(group);
+    if (total >= largestBytes) {
+      largest = group;
+      largestBytes = total;
+    }
+  }
+  largest?.pop();
+}
+
+/** The sources of the groups in category order, numbered S1, S2, ... without gaps. */
+const numbered = (groups: SizedSource[][]): EvidenceSource[] =>
+  groups.flat().map(({ source }, index) => ({ id: `S${index + 1}`, ...source }));
 
 /**
  * Builds the pack from the entries of the ledger. They are taken in the order of
  * RESEARCH_CATEGORIES, and the entries of one category in the order the loop got them. So the ids
- * always follow the categories, and the sources that the byte limit removes from the end are those
- * of the last categories. The steps, in this order:
+ * always follow the categories. The steps, in this order:
  *
  * 1. An entry with an unusable URL is dropped. The title, the content and the publication date are
  *    cleaned.
@@ -84,36 +119,49 @@ function fitToByteLimit(sources: EvidenceSource[]): EvidenceSource[] {
  * 3. The title is cut to MAX_TITLE_CHARS, and the content of a page to MAX_EXCERPT_CHARS and of a
  *    result to MAX_SNIPPET_CHARS. A publication date that is empty or longer than
  *    MAX_PUBLISHED_AT_CHARS becomes null.
- * 4. The sources are numbered S1, S2, ... without gaps.
- * 5. Sources are removed from the end until the serialized pack is at most MAX_EVIDENCE_BYTES.
+ * 4. Until the serialized pack is at most MAX_EVIDENCE_BYTES, the last source of the category that
+ *    holds the most bytes is removed; a tie goes to the later category. A category that has sources
+ *    is therefore never emptied while another one is larger, and a full run cannot leave the last
+ *    categories without a source, which the summary would read as "nothing found".
+ * 5. The sources are numbered S1, S2, ... without gaps, after the trimming. Step 4 measured them
+ *    with the id of S1 to S9, so the numbered pack is measured once more, and if the longer ids
+ *    of S10 and up made it too big, step 4 goes on.
  *
  * The kind and the vendor's mark (`onVendorSite`) are the session's, as they are: whether a page is
  * the vendor's own was decided on the URL that answered, which the entry does not keep.
  */
 export function buildEvidencePack(entries: LedgerEntry<ResearchCategory>[]): EvidenceSource[] {
-  // sort() is stable, so two entries of one category keep their order. It runs on a copy, so the
-  // array of the caller is left as it was.
-  const inCategoryOrder = [...entries].sort(
-    (a, b) => RESEARCH_CATEGORIES.indexOf(a.category) - RESEARCH_CATEGORIES.indexOf(b.category),
-  );
   const seenUrls = new Set<string>();
-  const sources: EvidenceSource[] = [];
+  // Category by category, so that the first entry of a URL wins in the order of the categories.
+  const groups = RESEARCH_CATEGORIES.map((category) => {
+    const sized: SizedSource[] = [];
+    for (const entry of entries) {
+      if (entry.category !== category) continue;
+      if (!isUsableUrl(entry.url) || seenUrls.has(entry.url)) continue;
+      seenUrls.add(entry.url);
+      const maxContentChars = entry.kind === "page" ? MAX_EXCERPT_CHARS : MAX_SNIPPET_CHARS;
+      const source = {
+        category: entry.category,
+        kind: entry.kind,
+        onVendorSite: entry.onVendorSite,
+        url: entry.url,
+        title: cutAtCodePoint(cleanText(entry.title), MAX_TITLE_CHARS),
+        content: cutAtCodePoint(cleanText(entry.content), maxContentChars),
+        publishedAt: cleanPublishedAt(entry.publishedAt),
+      };
+      const json = JSON.stringify({ id: MEASURED_ID, ...source });
+      sized.push({ source, bytes: Buffer.byteLength(json) + 1 });
+    }
+    return sized;
+  });
 
-  for (const entry of inCategoryOrder) {
-    if (!isUsableUrl(entry.url) || seenUrls.has(entry.url)) continue;
-    seenUrls.add(entry.url);
-    const maxContentChars = entry.kind === "page" ? MAX_EXCERPT_CHARS : MAX_SNIPPET_CHARS;
-    sources.push({
-      id: `S${sources.length + 1}`,
-      category: entry.category,
-      kind: entry.kind,
-      onVendorSite: entry.onVendorSite,
-      url: entry.url,
-      title: cutAtCodePoint(cleanText(entry.title), MAX_TITLE_CHARS),
-      content: cutAtCodePoint(cleanText(entry.content), maxContentChars),
-      publishedAt: cleanPublishedAt(entry.publishedAt),
-    });
+  // An empty pack is "[]", two bytes, so both loops end.
+  while (packBytes(groups) > MAX_EVIDENCE_BYTES) removeFromLargestCategory(groups);
+
+  let pack = numbered(groups);
+  while (Buffer.byteLength(JSON.stringify(pack)) > MAX_EVIDENCE_BYTES) {
+    removeFromLargestCategory(groups);
+    pack = numbered(groups);
   }
-
-  return fitToByteLimit(sources);
+  return pack;
 }
