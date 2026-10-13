@@ -170,7 +170,7 @@ The loop ends when the model finishes, when both budgets are spent, when the ste
 | Evidence pack | 100,000 bytes |
 | Analysis call | 120,000 ms |
 
-**The ledger.** Every snippet and every excerpt goes to a ledger with one entry per URL: `{ category, kind: "result" | "page", onVendorSite, url, title, content, publishedAt }`. Reading a page replaces the snippet of the same URL with the excerpt, keeping the title; the date is the page's own when it has one, and the snippet's otherwise. `onVendorSite` is decided on the URL that answered, so a page that redirected off the vendor's domain is not the vendor's own, and the analysis prompt marks `site="vendor"` from that flag alone. A page that proves older than the lookback window of its category is refused and kept out of the ledger under that category. Pages on the vendor's own domain are exempt from the lookback. A second read of a URL changes nothing.
+**The ledger.** Every snippet and every excerpt goes to a ledger with one entry per URL: `{ category, kind: "result" | "page", onVendorSite, url, title, content, publishedAt }`. Reading a page replaces the snippet of the same URL with the excerpt, keeping the title; the date is the page's own when it has one, and the snippet's otherwise. `onVendorSite` is decided on the URL that answered, so a page that redirected off the vendor's domain is not the vendor's own, and one asked for elsewhere that answered from the vendor's site is. The analysis prompt marks `site="vendor"` from that flag alone, and so does the validation of the findings (the vendor's own page counts as mentioning the vendor and lifts the confidence ceiling to `medium`); neither reads the host of the URL that was asked for. A page that proves older than the lookback window of its category is refused and kept out of the ledger under that category. Pages on the vendor's own domain are exempt from the lookback. A second read of a URL changes nothing.
 
 **The JSON-object fallback.** If a provider rejects `json_schema` (DeepSeek does), the call falls back to JSON-object mode. The loop then keeps that mode for the rest of the run, so that each step does not cost a rejected request. The analysis call is made on its own and does not inherit it.
 
@@ -184,7 +184,7 @@ During a run the customer's server talks to the public internet. Every request n
 |----|------------------|
 | `www.bing.com` | The queries the model writes: by the prompt, the vendor's name and topic words |
 | The vendor's website | GET requests for its pages and `robots.txt`; the bot's User-Agent and nothing else |
-| The sites of articles that a search returned | The same: GET requests for the page and for `robots.txt` |
+| Any other site that a search returned (articles, for example), and a host that a redirect leads to | The same: GET requests for the page and for `robots.txt` |
 | The organization's LLM provider | The vendor's name and domain, the text of "what it provides", the queries, the snippets and the page text the loop read, and the evidence of the analysis |
 
 No other organization data leaves. The server needs outbound HTTPS to `www.bing.com` and to public websites (and HTTP on port 80 for the sites that only offer that). An air-gapped installation cannot use the feature: its runs fail with "The run stopped because the web could not be reached".

@@ -262,7 +262,7 @@ VITE_BRANDFETCH_API_KEY=bf_xxxxxxxxxx
 
 An agent researches a vendor on the open web and proposes risks for the vendor risk register. A person accepts or dismisses each one; nothing is added to the register on its own. The agent runs on the organization's own LLM key, which an Admin adds in the LLM Keys section of **Settings → API Keys**, and needs no other account or key. Without an LLM key, vendor research reports "not set up" and nothing runs. All three variables are optional.
 
-The server needs outbound HTTPS to `www.bing.com` (the search) and to public websites (the pages the agent reads). Requests are made directly from the worker: the page guard reads no proxy setting and resolves public host names itself, so a network whose only way out is a proxy is not supported. Without internet access, runs fail with "The run stopped because the web could not be reached". Every request names the bot (`VerifyWiseResearchBot`), and pages are read only as far as each site's `robots.txt` allows.
+The server needs outbound HTTPS to `www.bing.com` (the search) and to public websites (the pages the agent reads: those on any host a search returns, and the vendor's own site). Requests are made directly from the worker: the page guard reads no proxy setting and resolves public host names itself, so a network whose only way out is a proxy is not supported. Without internet access, runs fail with "The run stopped because the web could not be reached". Every request names the bot (`VerifyWiseResearchBot`), and pages are read only as far as each site's `robots.txt` allows.
 
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
@@ -276,7 +276,7 @@ VENDOR_RESEARCH_MANUAL_COOLDOWN_MINUTES=10
 VENDOR_RESEARCH_DAILY_RUN_CAP=50
 ```
 
-The values above are the defaults; set them only to change a default. Only the backend reads these variables, so the worker needs none of them. The worker is the process that runs the research, so it is the one that needs the outbound internet access above. The Kubernetes manifests, the Helm chart and the Ansible template list variables by name, so a value other than the default has to be added there. See [Vendors](../technical/domains/vendors.md#configuration) for details and [Web research toolkit](../technical/infrastructure/web-research.md) for the page guard, the search and its release gate.
+The values above are the defaults; set them only to change a default. Only the backend reads these variables, so the worker needs none of them. The worker is the process that runs the research, so it is the one that needs the outbound internet access above. The Kubernetes manifests, the Helm chart and the Ansible template do not set the vendor research variables, so the three take their defaults unless you add them to the backend's environment there. See [Vendors](../technical/domains/vendors.md#configuration) for details and [Web research toolkit](../technical/infrastructure/web-research.md) for the page guard, the search and its release gate.
 
 ---
 

@@ -37,8 +37,9 @@ interface RunSummaryProps {
 
 /**
  * What the latest research run of one vendor found, category by category, how many searches
- * and pages it took, and the button that starts another. The run is a background job, so the state here is whatever the last
- * fetch said; `useLatestVendorResearch` keeps fetching while it is active.
+ * and pages it took, and the button that starts another. The run is a background job, so the
+ * state here is whatever the last fetch said; `useLatestVendorResearch` keeps fetching while it
+ * is active.
  *
  * Mount it with `key={vendorId}`, so that a start still in flight for one vendor does not
  * disable the button of the next.
