@@ -2,8 +2,8 @@
  * VendorResearchButton - Row action of the vendors table that starts a research run for a vendor
  *
  * Shown only to users who may edit risks (`risks.edit`). It is disabled while the research
- * settings are on their way, and when they say research is not set up (a search provider or an
- * LLM key is missing), in which case its tooltip says so. If the request for the settings fails,
+ * settings are on their way, and when they say research is not set up (the organization has no
+ * LLM key), in which case its tooltip says so. If the request for the settings fails,
  * the button is enabled and the server decides: a start without them is refused with a 409.
  * Every click is answered with a message handed to `onNotify`, whatever the outcome: the global
  * error toast is off for this call, so nothing else tells the user. The run itself is followed on
@@ -62,8 +62,7 @@ const StartResearchButton: React.FC<VendorResearchButtonProps> = ({
   // good, the server decides, as in the findings section, which takes that as "set up": a start
   // without the settings is refused with a 409, and the message says "not set up".
   const settingsPending = config.isPending;
-  const notSetUp =
-    config.data !== undefined && !(config.data.searchConfigured && config.data.hasLlmKey);
+  const notSetUp = config.data !== undefined && !config.data.hasLlmKey;
 
   const handleClick = async (event: React.MouseEvent) => {
     // The row this button sits in opens its vendor when it is clicked.

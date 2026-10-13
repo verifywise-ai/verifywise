@@ -243,11 +243,7 @@ describe("Vendors, research findings on the Risks tab", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vendorsState.data = [{ id: 7, vendor_name: "Acme Cloud" }];
-    research.config.mockResolvedValue({
-      searchConfigured: true,
-      hasLlmKey: true,
-      autoRunEnabled: true,
-    });
+    research.config.mockResolvedValue({ hasLlmKey: true, autoRunEnabled: true });
     research.list.mockResolvedValue({ rows: [finding()], total: 1 });
     research.latest.mockResolvedValue(run());
   });

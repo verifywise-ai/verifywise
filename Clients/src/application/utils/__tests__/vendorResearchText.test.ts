@@ -32,18 +32,20 @@ const RUN_ERRORS: Array<[stored: string, sentence: string]> = [
   ["Saving the findings failed", "The findings could not be saved."],
   ["timed out", "The research run timed out."],
   ["could not enqueue", "The research run could not be queued."],
-  ["Search provider not configured", "No web search provider is configured."],
+  [
+    "The run stopped because the web could not be reached",
+    "The web could not be reached from the server.",
+  ],
+  ["The model did not use the research actions", "The model did not carry out the research steps."],
 ];
 
-const SEARCH_REASONS = [
-  "search timed out",
-  "search request failed",
-  "search response could not be read",
-  "Tavily search failed with status 429",
-  "The search failed",
+/** Stored by the earlier search provider; no longer ours, so the screen no longer shows it. */
+const RETIRED_RUN_ERRORS = [
+  "Search provider not configured",
+  "The run stopped because all searches failed: ",
+  "The run stopped because all searches failed: search timed out",
+  "The run stopped because all searches failed: search timed out; The search failed",
 ];
-
-const ALL_SEARCHES_FAILED = "The run stopped because all searches failed: ";
 
 /** The closed set of category notes by outcome, and the sentence each one becomes. */
 const FIXED_NOTES: Array<[outcome: CategoryOutcome, stored: string, sentence: string]> = [
@@ -53,9 +55,24 @@ const FIXED_NOTES: Array<[outcome: CategoryOutcome, stored: string, sentence: st
     "The vendor website is missing or is not a valid domain.",
   ],
   [
+    "skipped",
+    "Not researched: the time limit was reached",
+    "Not researched: the time limit was reached.",
+  ],
+  [
+    "skipped",
+    "Not researched: the research ended before this category was covered",
+    "Not researched: the research ended before this category was covered.",
+  ],
+  [
     "nothing_found",
-    "No risks found in the search results",
-    "No risks were found in the search results.",
+    "No risks found in the sources reviewed",
+    "No risks were found in the sources reviewed.",
+  ],
+  [
+    "nothing_found",
+    "No risks found; 2 of 5 pages could not be read",
+    "No risks were found. 2 of 5 pages could not be read.",
   ],
   [
     "nothing_found",
@@ -64,15 +81,18 @@ const FIXED_NOTES: Array<[outcome: CategoryOutcome, stored: string, sentence: st
   ],
   ["findings", "1 potential risk found", "1 potential risk found"],
   ["findings", "3 potential risks found", "3 potential risks found"],
-  ["search_failed", "search timed out", "The search timed out."],
-  ["search_failed", "search request failed", "The search request failed."],
-  ["search_failed", "search response could not be read", "The search response could not be read."],
-  [
-    "search_failed",
-    "Tavily search failed with status 429",
-    "The search failed with HTTP status 429.",
-  ],
-  ["search_failed", "The search failed", "The search failed."],
+  ["search_failed", "The search was not available", "The search was not available."],
+  ["search_failed", "The pages could not be read", "The pages could not be read."],
+];
+
+/** Notes the earlier search provider stored: no longer ours, on any outcome. */
+const RETIRED_NOTES: Array<[outcome: CategoryOutcome, stored: string]> = [
+  ["nothing_found", "No risks found in the search results"],
+  ["search_failed", "search timed out"],
+  ["search_failed", "search request failed"],
+  ["search_failed", "search response could not be read"],
+  ["search_failed", "Tavily search failed with status 503"],
+  ["search_failed", "The search failed"],
 ];
 
 const ALL_OUTCOMES: CategoryOutcome[] = ["findings", "nothing_found", "search_failed", "skipped"];
@@ -88,24 +108,12 @@ describe("describeRunError", () => {
     expect(describeRunError(stored)).toBe(sentence);
   });
 
-  it("keeps the English reasons of a failed search as technical detail after the sentence", () => {
-    expect(describeRunError(`${ALL_SEARCHES_FAILED}search timed out`)).toBe(
-      "All web searches failed. (search timed out)",
-    );
-    expect(describeRunError(`${ALL_SEARCHES_FAILED}${SEARCH_REASONS.join("; ")}`)).toBe(
-      `All web searches failed. (${SEARCH_REASONS.join("; ")})`,
-    );
-  });
-
-  it("drops a reason that is not one of the known ones, and shows the sentence alone without any", () => {
-    expect(
-      describeRunError(`${ALL_SEARCHES_FAILED}search timed out; <img src=x onerror=alert(1)>`),
-    ).toBe("All web searches failed. (search timed out)");
-    expect(describeRunError(`${ALL_SEARCHES_FAILED}something nobody planned for`)).toBe(
-      "All web searches failed.",
-    );
-    expect(describeRunError(ALL_SEARCHES_FAILED)).toBe("All web searches failed.");
-  });
+  it.each(RETIRED_RUN_ERRORS)(
+    "gives the generic sentence for %j, which is no longer ours",
+    (stored) => {
+      expect(describeRunError(stored)).toBe("The research run failed.");
+    },
+  );
 
   it("never shows an unknown stored string, whatever it says", () => {
     for (const odd of [
@@ -166,11 +174,65 @@ describe("describeCategoryNote", () => {
 
   it("hides the phrase of one outcome on a category with another outcome", () => {
     expect(
-      describeCategoryNote(entry("findings", "No risks found in the search results")),
+      describeCategoryNote(entry("findings", "No risks found in the sources reviewed")),
     ).toBeNull();
     expect(describeCategoryNote(entry("skipped", "2 potential risks found"))).toBeNull();
     expect(describeCategoryNote(entry("search_failed", "1 potential risk found"))).toBeNull();
+    expect(describeCategoryNote(entry("skipped", "The search was not available"))).toBeNull();
+    expect(
+      describeCategoryNote(entry("search_failed", "Not researched: the time limit was reached")),
+    ).toBeNull();
   });
+
+  it("fills the counts of the page note into the sentence", () => {
+    expect(
+      describeCategoryNote(
+        entry("nothing_found", "No risks found; 1 of 1 pages could not be read"),
+      ),
+    ).toEqual({ kind: "fixed", text: "No risks were found. 1 of 1 pages could not be read." });
+    expect(
+      describeCategoryNote(
+        entry("nothing_found", "No risks found; 12 of 120 pages could not be read"),
+      ),
+    ).toEqual({ kind: "fixed", text: "No risks were found. 12 of 120 pages could not be read." });
+  });
+
+  it("does not take a page note that the server cannot have written as its own", () => {
+    // More than three digits, more pages failed than were read, a sign, a gap, other words.
+    for (const odd of [
+      "No risks found; 1000 of 1200 pages could not be read",
+      "No risks found; 5 of 1000 pages could not be read",
+      "No risks found; 6 of 5 pages could not be read",
+      "No risks found; -1 of 5 pages could not be read",
+      "No risks found; 2 of 5 pages could not be read.",
+      "No risks found;  2 of 5 pages could not be read",
+      "No risks found; 2 of 5 pages could be read",
+      "Prefix. No risks found; 2 of 5 pages could not be read",
+    ]) {
+      // Where nothing was found it is the model's own text; on any other outcome it is hidden.
+      const trimmed = odd.trim();
+      expect(describeCategoryNote(entry("nothing_found", odd))).toEqual({
+        kind: "model",
+        text: trimmed,
+        label: "AI note (unverified)",
+      });
+      for (const other of ["findings", "search_failed", "skipped"] as const) {
+        expect(describeCategoryNote(entry(other, odd))).toBeNull();
+      }
+    }
+  });
+
+  it.each(RETIRED_NOTES)(
+    "no longer takes the %s note %j of the earlier search provider as ours",
+    (outcome, stored) => {
+      // The model's own text where nothing was found, hidden everywhere else.
+      expect(describeCategoryNote(entry(outcome, stored))).toEqual(
+        outcome === "nothing_found"
+          ? { kind: "model", text: stored, label: "AI note (unverified)" }
+          : null,
+      );
+    },
+  );
 
   it.each(FIXED_NOTES)(
     "takes the %s note %j as a fixed sentence for that outcome only",
@@ -237,7 +299,7 @@ describe("labels and the per-category line", () => {
       describeCategoryLine(entry("findings", "2 potential risks found", "certifications")),
     ).toBe("Certifications: risks found");
     expect(describeCategoryLine(entry("search_failed", "x", "legal_regulatory"))).toBe(
-      "Legal and regulatory: search failed",
+      "Legal and regulatory: could not be researched",
     );
     expect(describeCategoryLine(entry("skipped", "x", "ai_specific"))).toBe(
       "AI-specific risks: skipped",
@@ -251,7 +313,7 @@ describe("labels and the per-category line", () => {
     expect(categoryLabel("ai_specific")).toBe("AI-specific risks");
     expect(outcomeLabel("findings")).toBe("risks found");
     expect(outcomeLabel("nothing_found")).toBe("nothing found");
-    expect(outcomeLabel("search_failed")).toBe("search failed");
+    expect(outcomeLabel("search_failed")).toBe("could not be researched");
     expect(outcomeLabel("skipped")).toBe("skipped");
     expect(dismissReasonLabel("not_applicable")).toBe("Not applicable to this vendor");
     expect(dismissReasonLabel("already_covered")).toBe("Already covered by an existing risk");
@@ -302,7 +364,7 @@ describe("translation", () => {
       return key;
     };
     for (const [stored] of RUN_ERRORS) describeRunError(stored, t);
-    describeRunError(`${ALL_SEARCHES_FAILED}${SEARCH_REASONS.join("; ")}`, t);
+    for (const stored of RETIRED_RUN_ERRORS) describeRunError(stored, t);
     describeRunError("unknown", t);
     describeRunError(null, t);
     for (const [outcome, stored] of FIXED_NOTES) describeCategoryNote(entry(outcome, stored), t);
@@ -339,7 +401,7 @@ describe("translation", () => {
     expect(keysRequested()).toEqual(
       expect.arrayContaining([
         "The model call timed out.",
-        "All web searches failed.",
+        "The web could not be reached from the server.",
         "{category}: {outcome}",
         "AI note (unverified)",
         "Not applicable to this vendor",
@@ -367,6 +429,20 @@ describe("translation", () => {
       text: "A note",
       label: translations[lang]["AI note (unverified)"],
     });
+  });
+
+  it.each(LANGS)("fills the counts of the page note into the %s sentence", (lang) => {
+    const t = (key: string) => translations[lang][key] ?? key;
+    const note = describeCategoryNote(
+      entry("nothing_found", "No risks found; 2 of 5 pages could not be read"),
+      t,
+    );
+    expect(note).toMatchObject({ kind: "fixed" });
+    const text = note?.text ?? "";
+    expect(text).toContain("2");
+    expect(text).toContain("5");
+    expect(text).not.toContain("{");
+    expect(text).not.toBe("No risks were found. 2 of 5 pages could not be read.");
   });
 
   it("reads the language that is active when no translator is passed", async () => {

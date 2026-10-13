@@ -123,8 +123,7 @@ export default function VendorResearchFindings({
   if (!openByDefault && total > 0) setOpenByDefault(true);
   const expanded = openChoice ?? openByDefault;
 
-  const notConfigured =
-    config.data !== undefined && (!config.data.searchConfigured || !config.data.hasLlmKey);
+  const notConfigured = config.data !== undefined && !config.data.hasLlmKey;
 
   const vendorOptions = useMemo(() => {
     const named = vendors
@@ -306,12 +305,7 @@ export default function VendorResearchFindings({
             </Typography>
             {isAdmin && (
               <Typography sx={{ ...textStyles.bodySmall, color: "text.tertiary" }}>
-                {fill(
-                  t(
-                    "Set {provider} and {key} in the server environment, and add an LLM key for your organization.",
-                  ),
-                  { provider: "VENDOR_RESEARCH_SEARCH_PROVIDER", key: "TAVILY_API_KEY" },
-                )}
+                {t("Add an LLM key under Settings → API Keys, in the LLM Keys section.")}
               </Typography>
             )}
           </>

@@ -26,8 +26,8 @@ export interface CategorySummaryEntry {
 }
 
 /**
- * One research run, as the API sends it: an allowlist. The evidence pack, the
- * search provider, the model and the prompt version stay on the server.
+ * One research run, as the API sends it: an allowlist. The counters are in it;
+ * the evidence pack, the model and the prompt version stay on the server.
  */
 export interface VendorResearchRun {
   id: number;
@@ -39,6 +39,10 @@ export interface VendorResearchRun {
   /** One entry per category; empty until the run finishes, and for most failed runs. */
   category_summary: CategorySummaryEntry[];
   duplicates_dropped: number;
+  /** How many searches the run made. */
+  searches_used: number;
+  /** How many pages the run read. */
+  pages_read: number;
   /** Set when the run failed. One of a closed set of English phrases. */
   error: string | null;
   started_at: string | null;
@@ -87,9 +91,8 @@ export interface VendorRiskFinding {
   vendor_name?: string;
 }
 
-/** What the server has set up. Whether research can run depends on the first two. */
+/** What the server has set up. Research can run when the organization has an LLM key. */
 export interface VendorResearchConfig {
-  searchConfigured: boolean;
   hasLlmKey: boolean;
   autoRunEnabled: boolean;
 }

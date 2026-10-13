@@ -102,7 +102,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   role.canEdit = true;
   role.isAdmin = true;
-  mocks.config.mockResolvedValue({ searchConfigured: true, hasLlmKey: true, autoRunEnabled: true });
+  mocks.config.mockResolvedValue({ hasLlmKey: true, autoRunEnabled: true });
   mocks.list.mockResolvedValue({ rows: [finding(), secondFinding()], total: 2 });
   mocks.latest.mockResolvedValue(run({ category_summary: FOUR_OUTCOMES }));
 });
@@ -190,13 +190,6 @@ const START_OUTCOMES: Array<{
     values: { vendorName: "Acme Cloud" },
   },
   {
-    name: "a 409 for a missing search provider",
-    arrange: () =>
-      mocks.start.mockRejectedValueOnce(refusal(409, { code: "search_not_configured" })),
-    variant: "warning",
-    key: "Vendor research is not set up.",
-  },
-  {
     name: "a 409 for a missing LLM key",
     arrange: () => mocks.start.mockRejectedValueOnce(refusal(409, { code: "llm_key_missing" })),
     variant: "warning",
@@ -236,7 +229,7 @@ const CATEGORIES = [
   "Legal and regulatory",
   "AI-specific risks",
 ];
-const OUTCOMES = ["risks found", "nothing found", "search failed", "skipped"];
+const OUTCOMES = ["risks found", "nothing found", "could not be researched", "skipped"];
 
 /**
  * The text the section builds out of translated parts: the pending count, the line of every
@@ -413,7 +406,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
           {
             category: "legal_regulatory",
             outcome: "search_failed",
-            note: "Tavily search failed with status 429",
+            note: "The search was not available",
           },
           {
             category: "ai_specific",
@@ -436,14 +429,14 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       await screen.findByText(line("Security incidents", "nothing found")),
     ).toBeInTheDocument();
     expect(screen.getByText(line("Certifications", "risks found"))).toBeInTheDocument();
-    expect(screen.getByText(line("Legal and regulatory", "search failed"))).toBeInTheDocument();
+    expect(
+      screen.getByText(line("Legal and regulatory", "could not be researched")),
+    ).toBeInTheDocument();
     expect(screen.getByText(line("AI-specific risks", "skipped"))).toBeInTheDocument();
     expect(screen.getByText(tr(lang, "AI note (unverified)"))).toBeInTheDocument();
     expect(screen.getByText(MODEL_NOTE)).toBeInTheDocument();
     expect(screen.getByText(tr(lang, "1 potential risk found"))).toBeInTheDocument();
-    expect(
-      screen.getByText(tr(lang, "The search failed with HTTP status {status}.", { status: 429 })),
-    ).toBeInTheDocument();
+    expect(screen.getByText(tr(lang, "The search was not available."))).toBeInTheDocument();
     expect(
       screen.getByText(tr(lang, "The vendor website is missing or is not a valid domain.")),
     ).toBeInTheDocument();
@@ -463,26 +456,34 @@ describe.each(LANGS)("research findings in %s", (lang) => {
           {
             category: "security_incidents",
             outcome: "nothing_found",
-            note: "No risks found in the search results",
+            note: "No risks found in the sources reviewed",
           },
           {
             category: "certifications",
             outcome: "nothing_found",
+            note: "No risks found; 2 of 5 pages could not be read",
+          },
+          {
+            category: "legal_regulatory",
+            outcome: "nothing_found",
             note: "Possible risks were found but could not be verified or are already recorded",
           },
-          { category: "legal_regulatory", outcome: "findings", note: "12 potential risks found" },
-          {
-            category: "ai_specific",
-            outcome: "search_failed",
-            note: "search response could not be read",
-          },
+          { category: "ai_specific", outcome: "findings", note: "12 potential risks found" },
         ],
       }),
     );
     renderSection();
 
     expect(
-      await screen.findByText(tr(lang, "No risks were found in the search results.")),
+      await screen.findByText(tr(lang, "No risks were found in the sources reviewed.")),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        tr(lang, "No risks were found. {failed} of {total} pages could not be read.", {
+          failed: 2,
+          total: 5,
+        }),
+      ),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
@@ -492,8 +493,63 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     expect(
       screen.getByText(tr(lang, "{count} potential risks found", { count: 12 })),
     ).toBeInTheDocument();
+
+    expectNoUntranslatedText(lang, FIXTURES);
+  });
+
+  it("translates the notes of a run summary whose categories were not researched", async () => {
+    mocks.latest.mockResolvedValue(
+      run({
+        category_summary: [
+          {
+            category: "security_incidents",
+            outcome: "skipped",
+            note: "Not researched: the time limit was reached",
+          },
+          {
+            category: "certifications",
+            outcome: "skipped",
+            note: "Not researched: the research ended before this category was covered",
+          },
+          {
+            category: "legal_regulatory",
+            outcome: "search_failed",
+            note: "The pages could not be read",
+          },
+          {
+            category: "ai_specific",
+            outcome: "search_failed",
+            note: "The search was not available",
+          },
+        ],
+      }),
+    );
+    renderSection();
+
     expect(
-      screen.getByText(tr(lang, "The search response could not be read.")),
+      await screen.findByText(tr(lang, "Not researched: the time limit was reached.")),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        tr(lang, "Not researched: the research ended before this category was covered."),
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText(tr(lang, "The pages could not be read."))).toBeInTheDocument();
+    expect(screen.getByText(tr(lang, "The search was not available."))).toBeInTheDocument();
+
+    expectNoUntranslatedText(lang, FIXTURES);
+  });
+
+  it("translates what a run did", async () => {
+    mocks.latest.mockResolvedValue(
+      run({ category_summary: FOUR_OUTCOMES, searches_used: 6, pages_read: 4 }),
+    );
+    renderSection();
+
+    expect(
+      await screen.findByText(
+        tr(lang, "Searches: {searches}, pages read: {pages}", { searches: 6, pages: 4 }),
+      ),
     ).toBeInTheDocument();
 
     expectNoUntranslatedText(lang, FIXTURES);
@@ -503,21 +559,39 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     mocks.latest.mockResolvedValue(
       run({
         status: "failed",
-        error:
-          "The run stopped because all searches failed: search timed out; search request failed",
+        error: "The run stopped because the web could not be reached",
         category_summary: [
-          { category: "security_incidents", outcome: "search_failed", note: "search timed out" },
+          {
+            category: "security_incidents",
+            outcome: "search_failed",
+            note: "The search was not available",
+          },
         ],
       }),
     );
     renderSection();
 
     expect(
-      await screen.findByText(
-        plain(`${tr(lang, "All web searches failed.")} (search timed out; search request failed)`),
-      ),
+      await screen.findByText(tr(lang, "The web could not be reached from the server.")),
     ).toBeInTheDocument();
-    expect(screen.getByText(tr(lang, "The search timed out."))).toBeInTheDocument();
+    expect(screen.getByText(tr(lang, "The search was not available."))).toBeInTheDocument();
+
+    expectNoUntranslatedText(lang, FIXTURES);
+  });
+
+  it("translates the run in which the model did not use the research actions", async () => {
+    mocks.latest.mockResolvedValue(
+      run({
+        status: "failed",
+        error: "The model did not use the research actions",
+        category_summary: [],
+      }),
+    );
+    renderSection();
+
+    expect(
+      await screen.findByText(tr(lang, "The model did not carry out the research steps.")),
+    ).toBeInTheDocument();
 
     expectNoUntranslatedText(lang, FIXTURES);
   });
@@ -618,24 +692,13 @@ describe.each(LANGS)("research findings in %s", (lang) => {
 
   it("translates the not-set-up state, with the hint for an Admin", async () => {
     mocks.list.mockResolvedValue({ rows: [], total: 0 });
-    mocks.config.mockResolvedValue({
-      searchConfigured: false,
-      hasLlmKey: false,
-      autoRunEnabled: true,
-    });
+    mocks.config.mockResolvedValue({ hasLlmKey: false, autoRunEnabled: true });
     renderSection();
 
     expect(await screen.findByText(tr(lang, "Vendor research is not set up."))).toBeInTheDocument();
     expect(
       screen.getByText(
-        tr(
-          lang,
-          "Set {provider} and {key} in the server environment, and add an LLM key for your organization.",
-          {
-            provider: "VENDOR_RESEARCH_SEARCH_PROVIDER",
-            key: "TAVILY_API_KEY",
-          },
-        ),
+        tr(lang, "Add an LLM key under Settings → API Keys, in the LLM Keys section."),
       ),
     ).toBeInTheDocument();
 
@@ -659,11 +722,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
   });
 
   it("translates the tooltip of Research again when research is not set up", async () => {
-    mocks.config.mockResolvedValue({
-      searchConfigured: false,
-      hasLlmKey: true,
-      autoRunEnabled: true,
-    });
+    mocks.config.mockResolvedValue({ hasLlmKey: false, autoRunEnabled: true });
     renderSection();
 
     // The button is rebuilt inside its tooltip once the settings say research is not set up.

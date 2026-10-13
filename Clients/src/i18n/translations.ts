@@ -10131,8 +10131,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Pending research findings": "Ausstehende Recherchebefunde",
     "Could not load research findings.": "Die Recherchebefunde konnten nicht geladen werden.",
     "Vendor research is not set up.": "Die Anbieterrecherche ist nicht eingerichtet.",
-    "Set {provider} and {key} in the server environment, and add an LLM key for your organization.":
-      "Legen Sie {provider} und {key} in der Serverumgebung fest und fügen Sie einen LLM-Schlüssel für Ihre Organisation hinzu.",
+    "Add an LLM key under Settings → API Keys, in the LLM Keys section.":
+      "Fügen Sie unter Einstellungen → API-Schlüssel im Bereich LLM-Schlüssel einen LLM-Schlüssel hinzu.",
     "No pending research findings.": "Keine ausstehenden Recherchebefunde.",
     "Showing {shown} of {total} pending findings. Choose a vendor to see the rest.":
       "{shown} von {total} ausstehenden Befunden werden angezeigt. Wählen Sie einen Anbieter, um den Rest zu sehen.",
@@ -10159,6 +10159,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Für diesen Anbieter wurde noch keine Recherche durchgeführt.",
     "Could not load the latest research run.": "Die letzte Recherche konnte nicht geladen werden.",
     "Last run: {date}": "Letzte Ausführung: {date}",
+    "Searches: {searches}, pages read: {pages}": "Suchen: {searches}, gelesene Seiten: {pages}",
     "{category}: {outcome}": "{category}: {outcome}",
     "AI note (unverified)": "KI-Hinweis (ungeprüft)",
     "Security incidents": "Sicherheitsvorfälle",
@@ -10167,7 +10168,7 @@ export const translations: Record<string, Record<string, string>> = {
     "AI-specific risks": "KI-spezifische Risiken",
     "risks found": "Risiken gefunden",
     "nothing found": "nichts gefunden",
-    "search failed": "Suche fehlgeschlagen",
+    "could not be researched": "Recherche nicht möglich",
     "skipped": "übersprungen",
     "unknown": "unbekannt",
     "The vendor was not found.": "Der Anbieter wurde nicht gefunden.",
@@ -10184,21 +10185,24 @@ export const translations: Record<string, Record<string, string>> = {
     "The research run timed out.": "Bei der Recherche ist eine Zeitüberschreitung aufgetreten.",
     "The research run could not be queued.":
       "Die Recherche konnte nicht in die Warteschlange gestellt werden.",
-    "No web search provider is configured.": "Es ist kein Anbieter für die Websuche konfiguriert.",
-    "All web searches failed.": "Alle Websuchen sind fehlgeschlagen.",
+    "The web could not be reached from the server.": "Der Server konnte das Web nicht erreichen.",
+    "The model did not carry out the research steps.":
+      "Das Modell hat die Recherchenschritte nicht ausgeführt.",
     "The research run failed.": "Die Recherche ist fehlgeschlagen.",
     "The vendor website is missing or is not a valid domain.":
       "Die Website des Anbieters fehlt oder ist keine gültige Domain.",
-    "No risks were found in the search results.":
-      "In den Suchergebnissen wurden keine Risiken gefunden.",
+    "Not researched: the time limit was reached.":
+      "Nicht recherchiert: Das Zeitlimit wurde erreicht.",
+    "Not researched: the research ended before this category was covered.":
+      "Nicht recherchiert: Die Recherche endete, bevor diese Kategorie behandelt wurde.",
+    "No risks were found in the sources reviewed.":
+      "In den geprüften Quellen wurden keine Risiken gefunden.",
+    "No risks were found. {failed} of {total} pages could not be read.":
+      "Es wurden keine Risiken gefunden. {failed} von {total} Seiten konnten nicht gelesen werden.",
     "Possible risks were found but could not be verified, or are already recorded.":
       "Es wurden mögliche Risiken gefunden, die sich aber nicht bestätigen ließen oder bereits erfasst sind.",
-    "The search timed out.": "Bei der Suche ist eine Zeitüberschreitung aufgetreten.",
-    "The search request failed.": "Die Suchanfrage ist fehlgeschlagen.",
-    "The search response could not be read.": "Die Suchantwort konnte nicht gelesen werden.",
-    "The search failed with HTTP status {status}.":
-      "Die Suche ist mit HTTP-Status {status} fehlgeschlagen.",
-    "The search failed.": "Die Suche ist fehlgeschlagen.",
+    "The search was not available.": "Die Suche war nicht verfügbar.",
+    "The pages could not be read.": "Die Seiten konnten nicht gelesen werden.",
     "1 potential risk found": "1 mögliches Risiko gefunden",
     "{count} potential risks found": "{count} mögliche Risiken gefunden",
     "Dismiss finding": "Befund verwerfen",
@@ -20283,8 +20287,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Pending research findings": "Résultats de recherche en attente",
     "Could not load research findings.": "Impossible de charger les résultats de recherche.",
     "Vendor research is not set up.": "La recherche sur les fournisseurs n'est pas configurée.",
-    "Set {provider} and {key} in the server environment, and add an LLM key for your organization.":
-      "Définissez {provider} et {key} dans l'environnement du serveur, puis ajoutez une clé LLM pour votre organisation.",
+    "Add an LLM key under Settings → API Keys, in the LLM Keys section.":
+      "Ajoutez une clé LLM sous Paramètres → Clés API, dans la section Clés LLM.",
     "No pending research findings.": "Aucun résultat de recherche en attente.",
     "Showing {shown} of {total} pending findings. Choose a vendor to see the rest.":
       "{shown} résultats en attente sur {total} affichés. Choisissez un fournisseur pour voir le reste.",
@@ -20311,6 +20315,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Aucune recherche n'a encore été effectuée pour ce fournisseur.",
     "Could not load the latest research run.": "Impossible de charger la dernière recherche.",
     "Last run: {date}": "Dernière exécution : {date}",
+    "Searches: {searches}, pages read: {pages}": "Recherches : {searches}, pages lues : {pages}",
     "{category}: {outcome}": "{category} : {outcome}",
     "AI note (unverified)": "Note de l'IA (non vérifiée)",
     "Security incidents": "Incidents de sécurité",
@@ -20319,7 +20324,7 @@ export const translations: Record<string, Record<string, string>> = {
     "AI-specific risks": "Risques propres à l'IA",
     "risks found": "risques trouvés",
     "nothing found": "rien trouvé",
-    "search failed": "échec de la recherche",
+    "could not be researched": "recherche impossible",
     "skipped": "ignoré",
     "unknown": "inconnu",
     "The vendor was not found.": "Le fournisseur est introuvable.",
@@ -20335,21 +20340,24 @@ export const translations: Record<string, Record<string, string>> = {
     "The findings could not be saved.": "Les résultats n'ont pas pu être enregistrés.",
     "The research run timed out.": "La recherche a expiré.",
     "The research run could not be queued.": "La recherche n'a pas pu être mise en file d'attente.",
-    "No web search provider is configured.": "Aucun fournisseur de recherche web n'est configuré.",
-    "All web searches failed.": "Toutes les recherches web ont échoué.",
+    "The web could not be reached from the server.": "Le serveur n'a pas pu accéder au web.",
+    "The model did not carry out the research steps.":
+      "Le modèle n'a pas exécuté les étapes de la recherche.",
     "The research run failed.": "La recherche a échoué.",
     "The vendor website is missing or is not a valid domain.":
       "Le site web du fournisseur est absent ou n'est pas un domaine valide.",
-    "No risks were found in the search results.":
-      "Aucun risque n'a été trouvé dans les résultats de recherche.",
+    "Not researched: the time limit was reached.":
+      "Non recherché : la limite de temps a été atteinte.",
+    "Not researched: the research ended before this category was covered.":
+      "Non recherché : la recherche s'est terminée avant que cette catégorie ne soit couverte.",
+    "No risks were found in the sources reviewed.":
+      "Aucun risque n'a été trouvé dans les sources examinées.",
+    "No risks were found. {failed} of {total} pages could not be read.":
+      "Aucun risque n'a été trouvé. {failed} pages sur {total} n'ont pas pu être lues.",
     "Possible risks were found but could not be verified, or are already recorded.":
       "Des risques possibles ont été trouvés, mais ils n'ont pas pu être vérifiés ou sont déjà enregistrés.",
-    "The search timed out.": "La recherche a expiré.",
-    "The search request failed.": "La requête de recherche a échoué.",
-    "The search response could not be read.": "La réponse de la recherche n'a pas pu être lue.",
-    "The search failed with HTTP status {status}.":
-      "La recherche a échoué avec le statut HTTP {status}.",
-    "The search failed.": "La recherche a échoué.",
+    "The search was not available.": "La recherche n'était pas disponible.",
+    "The pages could not be read.": "Les pages n'ont pas pu être lues.",
     "1 potential risk found": "1 risque potentiel trouvé",
     "{count} potential risks found": "{count} risques potentiels trouvés",
     "Dismiss finding": "Rejeter le résultat",
@@ -30351,8 +30359,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Pending research findings": "Hallazgos de investigación pendientes",
     "Could not load research findings.": "No se pudieron cargar los hallazgos de la investigación.",
     "Vendor research is not set up.": "La investigación de proveedores no está configurada.",
-    "Set {provider} and {key} in the server environment, and add an LLM key for your organization.":
-      "Defina {provider} y {key} en el entorno del servidor y añada una clave de LLM para su organización.",
+    "Add an LLM key under Settings → API Keys, in the LLM Keys section.":
+      "Añada una clave de LLM en Configuración → Claves de API, en la sección Claves de LLM.",
     "No pending research findings.": "No hay hallazgos de investigación pendientes.",
     "Showing {shown} of {total} pending findings. Choose a vendor to see the rest.":
       "Se muestran {shown} de {total} hallazgos pendientes. Elija un proveedor para ver el resto.",
@@ -30379,6 +30387,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Todavía no se ha realizado ninguna investigación para este proveedor.",
     "Could not load the latest research run.": "No se pudo cargar la última investigación.",
     "Last run: {date}": "Última ejecución: {date}",
+    "Searches: {searches}, pages read: {pages}": "Búsquedas: {searches}, páginas leídas: {pages}",
     "{category}: {outcome}": "{category}: {outcome}",
     "AI note (unverified)": "Nota de la IA (sin verificar)",
     "Security incidents": "Incidentes de seguridad",
@@ -30387,7 +30396,7 @@ export const translations: Record<string, Record<string, string>> = {
     "AI-specific risks": "Riesgos específicos de la IA",
     "risks found": "riesgos encontrados",
     "nothing found": "no se encontró nada",
-    "search failed": "la búsqueda falló",
+    "could not be researched": "no se pudo investigar",
     "skipped": "omitido",
     "unknown": "desconocido",
     "The vendor was not found.": "No se encontró el proveedor.",
@@ -30403,21 +30412,24 @@ export const translations: Record<string, Record<string, string>> = {
     "The findings could not be saved.": "No se pudieron guardar los hallazgos.",
     "The research run timed out.": "Se agotó el tiempo de espera de la investigación.",
     "The research run could not be queued.": "No se pudo poner la investigación en cola.",
-    "No web search provider is configured.": "No hay ningún proveedor de búsqueda web configurado.",
-    "All web searches failed.": "Todas las búsquedas web fallaron.",
+    "The web could not be reached from the server.": "El servidor no pudo acceder a la web.",
+    "The model did not carry out the research steps.":
+      "El modelo no ejecutó los pasos de la investigación.",
     "The research run failed.": "La investigación falló.",
     "The vendor website is missing or is not a valid domain.":
       "Falta el sitio web del proveedor o no es un dominio válido.",
-    "No risks were found in the search results.":
-      "No se encontraron riesgos en los resultados de la búsqueda.",
+    "Not researched: the time limit was reached.":
+      "No investigado: se alcanzó el límite de tiempo.",
+    "Not researched: the research ended before this category was covered.":
+      "No investigado: la investigación terminó antes de cubrir esta categoría.",
+    "No risks were found in the sources reviewed.":
+      "No se encontraron riesgos en las fuentes revisadas.",
+    "No risks were found. {failed} of {total} pages could not be read.":
+      "No se encontraron riesgos. No se pudieron leer {failed} de {total} páginas.",
     "Possible risks were found but could not be verified, or are already recorded.":
       "Se encontraron posibles riesgos, pero no se pudieron verificar o ya están registrados.",
-    "The search timed out.": "Se agotó el tiempo de espera de la búsqueda.",
-    "The search request failed.": "La solicitud de búsqueda falló.",
-    "The search response could not be read.": "No se pudo leer la respuesta de la búsqueda.",
-    "The search failed with HTTP status {status}.":
-      "La búsqueda falló con el estado HTTP {status}.",
-    "The search failed.": "La búsqueda falló.",
+    "The search was not available.": "La búsqueda no estaba disponible.",
+    "The pages could not be read.": "No se pudieron leer las páginas.",
     "1 potential risk found": "1 posible riesgo encontrado",
     "{count} potential risks found": "{count} posibles riesgos encontrados",
     "Dismiss finding": "Descartar el hallazgo",

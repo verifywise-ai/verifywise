@@ -89,12 +89,8 @@ describe("who sees the button", () => {
 });
 
 describe("when research is not set up", () => {
-  it.each([
-    ["the search provider is missing", { searchConfigured: false, hasLlmKey: true }],
-    ["the organization has no LLM key", { searchConfigured: true, hasLlmKey: false }],
-    ["both are missing", { searchConfigured: false, hasLlmKey: false }],
-  ])("is disabled, and says research is not set up, when %s", async (_case, setup) => {
-    await renderWithSettings({ ...setup, autoRunEnabled: true });
+  it("is disabled, and says research is not set up, when the organization has no LLM key", async () => {
+    await renderWithSettings({ hasLlmKey: false, autoRunEnabled: true });
 
     const button = researchButton();
     expect(button).toBeDisabled();
@@ -103,6 +99,17 @@ describe("when research is not set up", () => {
     expect(await screen.findByRole("tooltip")).toHaveTextContent("Vendor research is not set up.");
     expect(mocks.start).not.toHaveBeenCalled();
   });
+
+  it.each([true, false])(
+    "is enabled with an LLM key alone, with the automatic runs on or off (%s)",
+    async (autoRunEnabled) => {
+      await renderWithSettings({ hasLlmKey: true, autoRunEnabled });
+
+      expect(researchButton()).toBeEnabled();
+      await userEvent.hover(researchButton());
+      expect(await screen.findByRole("tooltip")).toHaveTextContent("Research risks");
+    },
+  );
 
   it("stays disabled and silent while the settings load, and starts nothing until they say it can", async () => {
     const settings = deferred<VendorResearchConfig>();
@@ -226,7 +233,7 @@ describe("when the settings cannot be loaded", () => {
   });
 
   it("says research is not set up when the server refuses the start with a 409", async () => {
-    mocks.start.mockRejectedValue(refusal(409, { code: "search_not_configured" }));
+    mocks.start.mockRejectedValue(refusal(409, { code: "llm_key_missing" }));
     const { onNotify } = await renderWithFailedSettings();
 
     await userEvent.click(researchButton());

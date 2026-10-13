@@ -30,14 +30,14 @@ interface RunSummaryProps {
   vendorName: string;
   /** Whether the user may start a run (`risks.edit`). */
   canStart: boolean;
-  /** The organization has no search provider or no LLM key yet. */
+  /** The organization has no LLM key yet. */
   notConfigured: boolean;
   onNotify: (alert: ResearchAlert) => void;
 }
 
 /**
- * What the latest research run of one vendor found, category by category, and the button
- * that starts another. The run is a background job, so the state here is whatever the last
+ * What the latest research run of one vendor found, category by category, how many searches
+ * and pages it took, and the button that starts another. The run is a background job, so the state here is whatever the last
  * fetch said; `useLatestVendorResearch` keeps fetching while it is active.
  *
  * Mount it with `key={vendorId}`, so that a start still in flight for one vendor does not
@@ -160,6 +160,15 @@ export default function RunSummary({
               );
             })}
           </Stack>
+        )}
+        {/* What the run did, also when it failed. A run that did nothing has no line. */}
+        {run.searches_used + run.pages_read > 0 && (
+          <Typography sx={{ ...textStyles.caption, color: "text.accent" }}>
+            {fill(t("Searches: {searches}, pages read: {pages}"), {
+              searches: run.searches_used,
+              pages: run.pages_read,
+            })}
+          </Typography>
         )}
         {lastRun !== null && (
           <Typography sx={{ ...textStyles.caption, color: "text.accent" }}>

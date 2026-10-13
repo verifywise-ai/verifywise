@@ -101,7 +101,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   role.canEdit = true;
   role.isAdmin = false;
-  mocks.config.mockResolvedValue({ searchConfigured: true, hasLlmKey: true, autoRunEnabled: true });
+  mocks.config.mockResolvedValue({ hasLlmKey: true, autoRunEnabled: true });
   mocks.list.mockResolvedValue({ rows: [finding(), secondFinding()], total: 2 });
   mocks.latest.mockResolvedValue(run({ category_summary: FOUR_OUTCOMES }));
 });
@@ -144,49 +144,35 @@ describe("the states of the section", () => {
     expect(screen.queryByText(SECOND)).not.toBeInTheDocument();
   });
 
-  it.each([
-    ["there is no search provider", { searchConfigured: false, hasLlmKey: true }],
-    ["the organization has no LLM key", { searchConfigured: true, hasLlmKey: false }],
-  ])("says research is not set up when nothing is pending and %s", async (_case, setup) => {
+  it("says research is not set up when nothing is pending and the organization has no LLM key", async () => {
     mocks.list.mockResolvedValue({ rows: [], total: 0 });
-    mocks.config.mockResolvedValue({ ...setup, autoRunEnabled: true });
+    mocks.config.mockResolvedValue({ hasLlmKey: false, autoRunEnabled: true });
     renderSection({ route: WITH_VENDOR_7 });
 
     expect(await screen.findByText("Vendor research is not set up.")).toBeInTheDocument();
     expect(screen.queryByText("No pending research findings.")).not.toBeInTheDocument();
   });
 
-  it("tells an Admin which settings are missing", async () => {
+  it("tells an Admin to add an LLM key", async () => {
     role.isAdmin = true;
     mocks.list.mockResolvedValue({ rows: [], total: 0 });
-    mocks.config.mockResolvedValue({
-      searchConfigured: false,
-      hasLlmKey: false,
-      autoRunEnabled: true,
-    });
+    mocks.config.mockResolvedValue({ hasLlmKey: false, autoRunEnabled: true });
     renderSection({ route: WITH_VENDOR_7 });
 
     expect(await screen.findByText("Vendor research is not set up.")).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "Set VENDOR_RESEARCH_SEARCH_PROVIDER and TAVILY_API_KEY in the server environment, and add an LLM key for your organization.",
-      ),
+      screen.getByText("Add an LLM key under Settings → API Keys, in the LLM Keys section."),
     ).toBeInTheDocument();
   });
 
   it("keeps the setup hint from everyone who is not an Admin", async () => {
     role.isAdmin = false;
     mocks.list.mockResolvedValue({ rows: [], total: 0 });
-    mocks.config.mockResolvedValue({
-      searchConfigured: false,
-      hasLlmKey: false,
-      autoRunEnabled: true,
-    });
+    mocks.config.mockResolvedValue({ hasLlmKey: false, autoRunEnabled: true });
     renderSection({ route: WITH_VENDOR_7 });
 
     expect(await screen.findByText("Vendor research is not set up.")).toBeInTheDocument();
-    expect(screen.queryByText(/VENDOR_RESEARCH_SEARCH_PROVIDER/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/TAVILY_API_KEY/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Add an LLM key/)).not.toBeInTheDocument();
   });
 
   it("says nothing is pending when the setup is complete and the list is empty", async () => {
@@ -195,6 +181,17 @@ describe("the states of the section", () => {
 
     expect(await screen.findByText("No pending research findings.")).toBeInTheDocument();
     expect(screen.queryByText("Vendor research is not set up.")).not.toBeInTheDocument();
+  });
+
+  it("says no findings are pending, with no setup hint, once the organization has an LLM key", async () => {
+    role.isAdmin = true;
+    mocks.list.mockResolvedValue({ rows: [], total: 0 });
+    mocks.config.mockResolvedValue({ hasLlmKey: true, autoRunEnabled: false });
+    renderSection({ route: WITH_VENDOR_7 });
+
+    expect(await screen.findByText("No pending research findings.")).toBeInTheDocument();
+    expect(screen.queryByText("Vendor research is not set up.")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Add an LLM key/)).not.toBeInTheDocument();
   });
 
   it("waits for the settings before it calls an empty list empty or not set up", async () => {
@@ -210,17 +207,13 @@ describe("the states of the section", () => {
     expect(screen.queryByText("Vendor research is not set up.")).not.toBeInTheDocument();
 
     await act(async () => {
-      config.resolve({ searchConfigured: true, hasLlmKey: true, autoRunEnabled: true });
+      config.resolve({ hasLlmKey: true, autoRunEnabled: true });
     });
     expect(await screen.findByText("No pending research findings.")).toBeInTheDocument();
   });
 
   it("shows the rows even when the organization is not set up, and only disables Research again", async () => {
-    mocks.config.mockResolvedValue({
-      searchConfigured: false,
-      hasLlmKey: true,
-      autoRunEnabled: true,
-    });
+    mocks.config.mockResolvedValue({ hasLlmKey: false, autoRunEnabled: true });
     renderSection({ route: WITH_VENDOR_7 });
 
     expect(await screen.findByText(FIRST)).toBeInTheDocument();
@@ -1610,14 +1603,14 @@ describe("the latest run of the chosen vendor", () => {
     for (const line of [
       "Security incidents: risks found",
       "Certifications: nothing found",
-      "Legal and regulatory: search failed",
+      "Legal and regulatory: could not be researched",
       "AI-specific risks: skipped",
     ]) {
       expect(await screen.findByText(line)).toBeInTheDocument();
     }
     expect(screen.getByText("2 potential risks found")).toBeInTheDocument();
-    expect(screen.getByText("No risks were found in the search results.")).toBeInTheDocument();
-    expect(screen.getByText("The search timed out.")).toBeInTheDocument();
+    expect(screen.getByText("No risks were found in the sources reviewed.")).toBeInTheDocument();
+    expect(screen.getByText("The search was not available.")).toBeInTheDocument();
     expect(
       screen.getByText("The vendor website is missing or is not a valid domain."),
     ).toBeInTheDocument();
@@ -1680,7 +1673,7 @@ describe("the latest run of the chosen vendor", () => {
 
     expect(await screen.findByText("The model call timed out.")).toBeInTheDocument();
     expect(
-      screen.queryByText(/risks found|nothing found|search failed|skipped/),
+      screen.queryByText(/risks found|nothing found|could not be researched|skipped/),
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/Model call failed/)).not.toBeInTheDocument();
   });
@@ -1699,18 +1692,92 @@ describe("the latest run of the chosen vendor", () => {
     mocks.latest.mockResolvedValue(
       run({
         status: "failed",
-        error: "The run stopped because all searches failed: search timed out",
+        error: "The run stopped because the web could not be reached",
         category_summary: [
-          { category: "security_incidents", outcome: "search_failed", note: "search timed out" },
+          {
+            category: "security_incidents",
+            outcome: "search_failed",
+            note: "The search was not available",
+          },
         ],
       }),
     );
     renderSection({ route: WITH_VENDOR_7 });
 
     expect(
-      await screen.findByText("All web searches failed. (search timed out)"),
+      await screen.findByText("The web could not be reached from the server."),
     ).toBeInTheDocument();
-    expect(screen.getByText("Security incidents: search failed")).toBeInTheDocument();
+    expect(screen.getByText("Security incidents: could not be researched")).toBeInTheDocument();
+    expect(screen.getByText("The search was not available.")).toBeInTheDocument();
+  });
+
+  it("shows the error of a run in which the model did not use the research actions", async () => {
+    mocks.latest.mockResolvedValue(
+      run({
+        status: "failed",
+        error: "The model did not use the research actions",
+        category_summary: [],
+      }),
+    );
+    renderSection({ route: WITH_VENDOR_7 });
+
+    expect(
+      await screen.findByText("The model did not carry out the research steps."),
+    ).toBeInTheDocument();
+  });
+
+  it("no longer shows an error of the earlier search provider", async () => {
+    mocks.latest.mockResolvedValue(
+      run({
+        status: "failed",
+        error: "The run stopped because all searches failed: search timed out",
+        category_summary: [],
+      }),
+    );
+    renderSection({ route: WITH_VENDOR_7 });
+
+    expect(await screen.findByText("The research run failed.")).toBeInTheDocument();
+    expect(screen.queryByText(/search timed out/)).not.toBeInTheDocument();
+  });
+
+  it("says what the run did when it searched and read pages", async () => {
+    mocks.latest.mockResolvedValue(
+      run({ category_summary: FOUR_OUTCOMES, searches_used: 6, pages_read: 4 }),
+    );
+    renderSection({ route: WITH_VENDOR_7 });
+
+    expect(await screen.findByText("Searches: 6, pages read: 4")).toBeInTheDocument();
+  });
+
+  it("says what a failed run did before it stopped", async () => {
+    mocks.latest.mockResolvedValue(
+      run({
+        status: "failed",
+        error: "The run stopped because the web could not be reached",
+        searches_used: 3,
+        pages_read: 0,
+      }),
+    );
+    renderSection({ route: WITH_VENDOR_7 });
+
+    expect(await screen.findByText("Searches: 3, pages read: 0")).toBeInTheDocument();
+  });
+
+  it("shows no such line for a run that did nothing, and none while it is active", async () => {
+    mocks.latest.mockResolvedValue(
+      run({ category_summary: FOUR_OUTCOMES, searches_used: 0, pages_read: 0 }),
+    );
+    const { unmount } = renderSection({ route: WITH_VENDOR_7 });
+
+    expect(await screen.findByText("Security incidents: risks found")).toBeInTheDocument();
+    expect(screen.queryByText(/Searches:/)).not.toBeInTheDocument();
+    unmount();
+
+    mocks.latest.mockResolvedValue(run({ status: "running", searches_used: 2, pages_read: 1 }));
+    renderSection({ route: WITH_VENDOR_7 });
+
+    expect(await screen.findByText("Researching…")).toBeInTheDocument();
+    expect(screen.queryByText(/Searches:/)).not.toBeInTheDocument();
   });
 
   it("says when the vendor has never been researched, and still offers the button", async () => {

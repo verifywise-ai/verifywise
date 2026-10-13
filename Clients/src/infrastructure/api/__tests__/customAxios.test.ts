@@ -305,11 +305,7 @@ describe("customAxios", () => {
         429,
         { message: "Too Many Requests", data: { code: "cooldown", retryAfterSeconds: 540 } },
       ],
-      [
-        "a missing setting (409)",
-        409,
-        { message: "Conflict", data: { code: "search_not_configured" } },
-      ],
+      ["a missing setting (409)", 409, { message: "Conflict", data: { code: "llm_key_missing" } }],
       [
         "an unavailable queue (503)",
         503,

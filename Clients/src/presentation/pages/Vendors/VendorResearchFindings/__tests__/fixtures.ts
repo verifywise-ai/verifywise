@@ -70,6 +70,8 @@ export const run = (overrides: Partial<VendorResearchRun> = {}): VendorResearchR
   categories: ["security_incidents", "certifications", "legal_regulatory", "ai_specific"],
   category_summary: [],
   duplicates_dropped: 0,
+  searches_used: 0,
+  pages_read: 0,
   error: null,
   started_at: "2026-10-10T09:00:00.000Z",
   finished_at: "2026-10-10T09:01:00.000Z",
@@ -83,9 +85,9 @@ export const FOUR_OUTCOMES: CategorySummaryEntry[] = [
   {
     category: "certifications",
     outcome: "nothing_found",
-    note: "No risks found in the search results",
+    note: "No risks found in the sources reviewed",
   },
-  { category: "legal_regulatory", outcome: "search_failed", note: "search timed out" },
+  { category: "legal_regulatory", outcome: "search_failed", note: "The search was not available" },
   {
     category: "ai_specific",
     outcome: "skipped",

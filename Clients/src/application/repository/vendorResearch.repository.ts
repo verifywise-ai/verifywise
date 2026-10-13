@@ -17,7 +17,7 @@ function extractData<T>(response: { data: { data: T } }): T {
  * `apiServices` rejects with a `CustomException`: `.message` is the backend's
  * message, `.status` the HTTP status, and `.response` the response *body*, not
  * the response object. The screen needs more than the message (a 409 on start
- * means a setting is missing, a 429 means wait), so the status goes on the
+ * means the LLM key is missing, a 429 means wait), so the status goes on the
  * APIError and the exception stays reachable as `originalError`, where
  * `readVendorResearchError` reads the body.
  */
@@ -127,9 +127,8 @@ export async function dismissVendorRiskFinding(
 export interface VendorResearchErrorDetail {
   status?: number;
   /**
-   * `search_not_configured` or `llm_key_missing` (409 on start), `cooldown` or
-   * `daily_cap` (429 on start). A 503 has no code: tell it by the status. A 409
-   * on accept or dismiss carries a sentence, not a code.
+   * `llm_key_missing` (409 on start), `cooldown` or `daily_cap` (429 on start). A 503 has no
+   * code: tell it by the status. A 409 on accept or dismiss carries a sentence, not a code.
    */
   code?: string;
   /** The wait of a `cooldown`. */

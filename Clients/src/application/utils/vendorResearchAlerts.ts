@@ -2,7 +2,7 @@
  * The messages for starting a vendor research run, in one place so that every screen that
  * can start one (the findings section, the button on the vendors table) says the same thing.
  *
- * The start call is refused as a matter of course (a setting is missing, the cooldown has not
+ * The start call is refused as a matter of course (the LLM key is missing, the cooldown has not
  * run out, the queue is down), and the global error toast is off for it, so a screen must say
  * something for every outcome. These functions turn the outcome into an alert with translated
  * text. They run in event handlers, outside any component, so they read the active language
@@ -64,7 +64,7 @@ export function alertForStartFailure(error: unknown, t: Translate = translateKey
       body: t("The daily research limit for your organization was reached. Try again tomorrow."),
     };
   }
-  // On a start, a 409 means a setting is missing: the search provider or the LLM key.
+  // On a start, a 409 means the organization has no LLM key.
   if (status === 409) {
     return { variant: "warning", body: t("Vendor research is not set up.") };
   }

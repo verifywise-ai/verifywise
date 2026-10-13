@@ -41,10 +41,12 @@ const run = (overrides: Partial<VendorResearchRun> = {}): VendorResearchRun => (
     {
       category: "security_incidents",
       outcome: "nothing_found",
-      note: "No risks found in the search results",
+      note: "No risks found in the sources reviewed",
     },
   ],
   duplicates_dropped: 0,
+  searches_used: 6,
+  pages_read: 4,
   error: null,
   started_at: "2026-10-10T09:00:00.000Z",
   finished_at: "2026-10-10T09:01:00.000Z",
@@ -113,7 +115,7 @@ beforeEach(() => vi.clearAllMocks());
 
 describe("getVendorResearchConfig", () => {
   it("reads /vendor-research/config and unwraps the data", async () => {
-    const config = { searchConfigured: true, hasLlmKey: false, autoRunEnabled: true };
+    const config = { hasLlmKey: false, autoRunEnabled: true };
     mockGet.mockResolvedValue(success(config));
 
     await expect(getVendorResearchConfig()).resolves.toEqual(config);
@@ -315,17 +317,14 @@ describe("readVendorResearchError", () => {
     expect(readVendorResearchError(error)).toEqual({ status: 429, code: "daily_cap" });
   });
 
-  it.each(["search_not_configured", "llm_key_missing"])(
-    "gives the code of a 409 that says a setting is missing: %s",
-    async (code) => {
-      const error = await startRefusedWith(409, "Conflict", {
-        message: "Conflict",
-        data: { code },
-      });
+  it("gives the code of a 409 that says the LLM key is missing", async () => {
+    const error = await startRefusedWith(409, "Conflict", {
+      message: "Conflict",
+      data: { code: "llm_key_missing" },
+    });
 
-      expect(readVendorResearchError(error)).toEqual({ status: 409, code });
-    },
-  );
+    expect(readVendorResearchError(error)).toEqual({ status: 409, code: "llm_key_missing" });
+  });
 
   it("tells a 503 by its status alone, because it has no code", async () => {
     const error = await startRefusedWith(503, "Service Unavailable", {

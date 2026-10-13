@@ -6,7 +6,6 @@ import type { VendorResearchConfig } from "../../../../domain/interfaces/i.vendo
 
 /** Settings that let research run. */
 export const SET_UP: VendorResearchConfig = {
-  searchConfigured: true,
   hasLlmKey: true,
   autoRunEnabled: true,
 };

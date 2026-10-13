@@ -77,15 +77,12 @@ describe("alertForStartFailure", () => {
     expect(alertForStartFailure(refusal(429, { code: "something_new" }))).toEqual(GENERIC);
   });
 
-  it.each(["search_not_configured", "llm_key_missing"])(
-    "says research is not set up for a 409 with the code %s",
-    (code) => {
-      expect(alertForStartFailure(refusal(409, { code }))).toEqual({
-        variant: "warning",
-        body: "Vendor research is not set up.",
-      });
-    },
-  );
+  it("says research is not set up for a 409, which means the organization has no LLM key", () => {
+    expect(alertForStartFailure(refusal(409, { code: "llm_key_missing" }))).toEqual({
+      variant: "warning",
+      body: "Vendor research is not set up.",
+    });
+  });
 
   it("says the queue is down for a 503, which carries no code", () => {
     expect(alertForStartFailure(refusal(503))).toEqual({

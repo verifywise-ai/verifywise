@@ -49,7 +49,7 @@ const CATEGORY_LABELS: Record<ResearchCategory, string> = {
 const OUTCOME_LABELS: Record<CategorySummaryEntry["outcome"], string> = {
   findings: "risks found",
   nothing_found: "nothing found",
-  search_failed: "search failed",
+  search_failed: "could not be researched",
   skipped: "skipped",
 };
 
@@ -138,20 +138,18 @@ const RUN_ERROR_SENTENCES = new Map<string, string>([
   ["Saving the findings failed", "The findings could not be saved."],
   ["timed out", "The research run timed out."],
   ["could not enqueue", "The research run could not be queued."],
-  ["Search provider not configured", "No web search provider is configured."],
+  [
+    "The run stopped because the web could not be reached",
+    "The web could not be reached from the server.",
+  ],
+  ["The model did not use the research actions", "The model did not carry out the research steps."],
 ]);
 
 const MODEL_CALL_HTTP = /^Model call failed: HTTP (\d{3})$/;
-const ALL_SEARCHES_FAILED = /^The run stopped because all searches failed:(.*)$/s;
-/** Why one search failed, as the search provider words it: a closed set. */
-const SEARCH_FAILURE_REASON =
-  /^(?:search timed out|search request failed|search response could not be read|Tavily search failed with status \d{3}|The search failed)$/;
 
 /**
- * A sentence for the error a failed run stored. For a run in which every search failed, the
- * sentence is followed by the reasons, in English and in parentheses, as technical detail; a
- * reason that is not one of the known ones is left out. Anything unknown becomes a generic
- * sentence and is never shown.
+ * A sentence for the error a failed run stored. Anything unknown becomes a generic sentence and
+ * is never shown.
  */
 export function describeRunError(error: string | null, t: Translate = translateKey): string {
   const stored = typeof error === "string" ? error.trim() : "";
@@ -162,16 +160,6 @@ export function describeRunError(error: string | null, t: Translate = translateK
   const modelStatus = MODEL_CALL_HTTP.exec(stored);
   if (modelStatus) {
     return fill(t("The model call failed with HTTP status {status}."), { status: modelStatus[1] });
-  }
-
-  const searches = ALL_SEARCHES_FAILED.exec(stored);
-  if (searches) {
-    const reasons = searches[1]
-      .split(";")
-      .map((reason) => reason.trim())
-      .filter((reason) => SEARCH_FAILURE_REASON.test(reason));
-    const lead = t("All web searches failed.");
-    return reasons.length > 0 ? `${lead} (${reasons.join("; ")})` : lead;
   }
 
   return t(GENERIC_RUN_ERROR);
@@ -189,10 +177,15 @@ const SKIPPED_NOTES = new Map<string, string>([
     "Vendor website is missing or not a valid domain",
     "The vendor website is missing or is not a valid domain.",
   ],
+  ["Not researched: the time limit was reached", "Not researched: the time limit was reached."],
+  [
+    "Not researched: the research ended before this category was covered",
+    "Not researched: the research ended before this category was covered.",
+  ],
 ]);
 
 const NOTHING_FOUND_NOTES = new Map<string, string>([
-  ["No risks found in the search results", "No risks were found in the search results."],
+  ["No risks found in the sources reviewed", "No risks were found in the sources reviewed."],
   [
     "Possible risks were found but could not be verified or are already recorded",
     "Possible risks were found but could not be verified, or are already recorded.",
@@ -200,14 +193,12 @@ const NOTHING_FOUND_NOTES = new Map<string, string>([
 ]);
 
 const SEARCH_FAILED_NOTES = new Map<string, string>([
-  ["search timed out", "The search timed out."],
-  ["search request failed", "The search request failed."],
-  ["search response could not be read", "The search response could not be read."],
-  ["The search failed", "The search failed."],
+  ["The search was not available", "The search was not available."],
+  ["The pages could not be read", "The pages could not be read."],
 ]);
 
-/** The failure note that carries a status: only on a category whose search failed. */
-const SEARCH_FAILED_STATUS = /^Tavily search failed with status (\d{3})$/;
+/** The page note: only on a category where nothing was found. The counts are at most three digits. */
+const PAGES_NOT_READ = /^No risks found; (\d{1,3}) of (\d{1,3}) pages could not be read$/;
 /** The count note: only on a category that has findings. */
 const POTENTIAL_RISKS = /^(\d{1,6}) potential risks? found$/;
 
@@ -237,16 +228,22 @@ function fixedCategoryNote(outcome: unknown, note: string, t: Translate): string
     }
     case "skipped":
       return fixedSentence(SKIPPED_NOTES, note, t);
-    case "nothing_found":
-      return fixedSentence(NOTHING_FOUND_NOTES, note, t);
-    case "search_failed": {
-      const sentence = fixedSentence(SEARCH_FAILED_NOTES, note, t);
+    case "nothing_found": {
+      const sentence = fixedSentence(NOTHING_FOUND_NOTES, note, t);
       if (sentence !== null) return sentence;
-      const status = SEARCH_FAILED_STATUS.exec(note);
-      return status
-        ? fill(t("The search failed with HTTP status {status}."), { status: status[1] })
+      const pages = PAGES_NOT_READ.exec(note);
+      if (!pages) return null;
+      // More pages failed than were read: the server cannot have written this.
+      const [failed, total] = [Number(pages[1]), Number(pages[2])];
+      return failed <= total
+        ? fill(t("No risks were found. {failed} of {total} pages could not be read."), {
+            failed,
+            total,
+          })
         : null;
     }
+    case "search_failed":
+      return fixedSentence(SEARCH_FAILED_NOTES, note, t);
     default:
       return null;
   }

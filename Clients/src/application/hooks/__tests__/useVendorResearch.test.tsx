@@ -71,6 +71,8 @@ const run = (overrides: Partial<VendorResearchRun> = {}): VendorResearchRun => (
   categories: [],
   category_summary: [],
   duplicates_dropped: 0,
+  searches_used: 0,
+  pages_read: 0,
   error: null,
   started_at: null,
   finished_at: null,
@@ -95,7 +97,7 @@ beforeEach(() => vi.clearAllMocks());
 
 describe("useVendorResearchConfig", () => {
   it("exposes the server's configuration", async () => {
-    const config = { searchConfigured: true, hasLlmKey: true, autoRunEnabled: false };
+    const config = { hasLlmKey: true, autoRunEnabled: false };
     mockConfig.mockResolvedValue(config);
     const { wrapper } = createHarness();
 
