@@ -203,10 +203,10 @@ describe("the notice of the research job", () => {
       categories: [],
       categorySummary: [],
       evidence: null,
-      searchProvider: "test",
       model: "test-model",
       promptVersion: "test",
       searchesUsed: 0,
+      pagesRead: 0,
       duplicatesDropped: 0,
       error: null,
     });

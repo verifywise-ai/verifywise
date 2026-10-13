@@ -68,6 +68,8 @@ type RunResponse = Pick<
   | "trigger_type"
   | "categories"
   | "category_summary"
+  | "searches_used"
+  | "pages_read"
   | "duplicates_dropped"
   | "error"
   | "started_at"
@@ -77,8 +79,8 @@ type RunResponse = Pick<
 
 /**
  * The fields of a run that leave the server. The row also holds the evidence pack (up to 40 KB of
- * text from third-party pages) and the provider, model and prompt version of the run. They are an
- * audit trail, not part of the API, so a field is added here on purpose or not at all.
+ * text from third-party pages) and the model and prompt version of the run. They are an audit
+ * trail, not part of the API, so a field is added here on purpose or not at all.
  */
 const toRunResponse = (run: IVendorResearchRun): RunResponse => ({
   id: run.id,
@@ -87,6 +89,8 @@ const toRunResponse = (run: IVendorResearchRun): RunResponse => ({
   trigger_type: run.trigger_type,
   categories: run.categories,
   category_summary: run.category_summary,
+  searches_used: run.searches_used,
+  pages_read: run.pages_read,
   duplicates_dropped: run.duplicates_dropped,
   error: run.error,
   started_at: run.started_at,

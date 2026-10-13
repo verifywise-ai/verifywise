@@ -264,7 +264,6 @@ function summarise(input: {
 
 function finishInput(
   args: RunArgs,
-  deps: PipelineDeps,
   progress: Progress,
   end: Pick<FinishRunInput, "status" | "categorySummary" | "duplicatesDropped" | "error">,
 ): FinishRunInput {
@@ -275,10 +274,11 @@ function finishInput(
     categories: progress.categories,
     categorySummary: end.categorySummary,
     evidence: progress.evidence,
-    searchProvider: deps.searchProvider.name,
     model: progress.model === null ? null : cutAtCodePoint(progress.model, MODEL_MAX_CHARS),
     promptVersion: PROMPT_VERSION,
     searchesUsed: progress.searchesUsed,
+    // This pipeline reads search results only, never a page.
+    pagesRead: 0,
     duplicatesDropped: end.duplicatesDropped,
     error: end.error === null ? null : cutAtCodePoint(end.error, ERROR_MAX_CHARS),
   };
@@ -298,7 +298,7 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
   ): Decision => ({
     kind: "fail",
     outcome,
-    payload: finishInput(args, deps, progress, {
+    payload: finishInput(args, progress, {
       status: "failed",
       categorySummary,
       duplicatesDropped: 0,
@@ -312,7 +312,7 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
   ): Decision => ({
     kind: "complete",
     findings,
-    payload: finishInput(args, deps, progress, {
+    payload: finishInput(args, progress, {
       status: "completed",
       categorySummary,
       duplicatesDropped,
@@ -431,7 +431,7 @@ async function decide(args: RunArgs, deps: PipelineDeps): Promise<Decision> {
     return {
       kind: "fail",
       outcome: "failed",
-      payload: finishInput(args, deps, progress, {
+      payload: finishInput(args, progress, {
         status: "failed",
         categorySummary: [],
         duplicatesDropped: 0,

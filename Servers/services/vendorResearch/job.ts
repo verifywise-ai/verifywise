@@ -96,10 +96,10 @@ export async function handleVendorResearchJob(data: VendorResearchJobData): Prom
         categories: [],
         categorySummary: [],
         evidence: null,
-        searchProvider: null,
         model: null,
         promptVersion: null,
         searchesUsed: 0,
+        pagesRead: 0,
         duplicatesDropped: 0,
         error: NO_SEARCH_PROVIDER_NOTE,
       });

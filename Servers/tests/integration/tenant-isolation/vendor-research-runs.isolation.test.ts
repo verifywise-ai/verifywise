@@ -1,5 +1,6 @@
 jest.setTimeout(60000);
 
+import { QueryTypes } from "sequelize";
 import { cleanupDatabase } from "../helpers";
 import { sequelize } from "../../../database/db";
 import { seedTwoTenantContexts } from "./tenantIsolation.harness";
@@ -43,10 +44,10 @@ const finishOf = (
   categories: [],
   categorySummary: [],
   evidence: null,
-  searchProvider: null,
   model: null,
   promptVersion: null,
   searchesUsed: 0,
+  pagesRead: 0,
   duplicatesDropped: 0,
   error: null,
   ...overrides,
@@ -208,10 +209,10 @@ describe("vendor_research_runs tenant isolation", () => {
           publishedAt: null,
         },
       ],
-      searchProvider: "tavily",
       model: "test-model",
       promptVersion: "v1",
       searchesUsed: 2,
+      pagesRead: 4,
       duplicatesDropped: 1,
     });
     await finishRunQuery(finish);
@@ -222,10 +223,10 @@ describe("vendor_research_runs tenant isolation", () => {
       categories: finish.categories,
       category_summary: finish.categorySummary,
       evidence: finish.evidence,
-      search_provider: "tavily",
       model: "test-model",
       prompt_version: "v1",
       searches_used: 2,
+      pages_read: 4,
       duplicates_dropped: 1,
       error: null,
     });
@@ -239,6 +240,18 @@ describe("vendor_research_runs tenant isolation", () => {
       evidence: null,
       finished_at: null,
     });
+  });
+
+  it("keeps the run counters and no search provider column", async () => {
+    const columns = (await sequelize.query(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_schema = 'verifywise' AND table_name = 'vendor_research_runs'`,
+      { type: QueryTypes.SELECT },
+    )) as Array<{ column_name: string }>;
+    const names = columns.map((column) => column.column_name);
+
+    expect(names).toEqual(expect.arrayContaining(["searches_used", "pages_read"]));
+    expect(names).not.toContain("search_provider");
   });
 
   it("stores a failed run without categories and cuts its error to 500 characters", async () => {

@@ -77,7 +77,6 @@ const RISK_ID = 42;
 const EVIDENCE_SENTINEL = "EVIDENCE-SENTINEL-4f2a";
 const MODEL_SENTINEL = "model-sentinel-91b0";
 const PROMPT_SENTINEL = "prompt-version-sentinel-c37d";
-const SEARCH_PROVIDER_SENTINEL = "search-provider-sentinel-5e18";
 
 const RUN: IVendorResearchRun = {
   id: 11,
@@ -97,10 +96,10 @@ const RUN: IVendorResearchRun = {
       publishedAt: null,
     },
   ],
-  search_provider: SEARCH_PROVIDER_SENTINEL,
   model: MODEL_SENTINEL,
   prompt_version: PROMPT_SENTINEL,
-  searches_used: 4,
+  searches_used: 5,
+  pages_read: 3,
   duplicates_dropped: 2,
   error: null,
   requested_by: USER,
@@ -117,6 +116,8 @@ const RUN_RESPONSE_FIELDS = [
   "trigger_type",
   "categories",
   "category_summary",
+  "searches_used",
+  "pages_read",
   "duplicates_dropped",
   "error",
   "started_at",
@@ -124,7 +125,7 @@ const RUN_RESPONSE_FIELDS = [
   "created_at",
 ].sort();
 
-const SENTINELS = [EVIDENCE_SENTINEL, MODEL_SENTINEL, PROMPT_SENTINEL, SEARCH_PROVIDER_SENTINEL];
+const SENTINELS = [EVIDENCE_SENTINEL, MODEL_SENTINEL, PROMPT_SENTINEL];
 
 /**
  * Ids in a path (of a vendor or of a finding) that every route that takes one must refuse before
@@ -286,6 +287,7 @@ describe("startVendorResearchRun", () => {
       expect(res.status).toHaveBeenCalledWith(202);
       expect(bodyOf(res).data.alreadyRunning).toBe(alreadyRunning);
       expect(Object.keys(bodyOf(res).data.run).sort()).toEqual(RUN_RESPONSE_FIELDS);
+      expect(bodyOf(res).data.run).toMatchObject({ searches_used: 5, pages_read: 3 });
       expectNoRunInternals(res);
     }
   });
@@ -436,6 +438,8 @@ describe("getLatestVendorResearch", () => {
       trigger_type: "manual",
       categories: RUN.categories,
       category_summary: RUN.category_summary,
+      searches_used: 5,
+      pages_read: 3,
       duplicates_dropped: 2,
       error: null,
     });

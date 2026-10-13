@@ -75,7 +75,6 @@ afterAll(() => {
 const EVIDENCE_SENTINEL = "EVIDENCE-SENTINEL-4f2a";
 const MODEL_SENTINEL = "model-sentinel-91b0";
 const PROMPT_SENTINEL = "prompt-version-sentinel-c37d";
-const SEARCH_PROVIDER_SENTINEL = "search-provider-sentinel-5e18";
 
 /** The only fields a run response may carry. */
 const RUN_RESPONSE_FIELDS = [
@@ -85,6 +84,8 @@ const RUN_RESPONSE_FIELDS = [
   "trigger_type",
   "categories",
   "category_summary",
+  "searches_used",
+  "pages_read",
   "duplicates_dropped",
   "error",
   "started_at",
@@ -204,10 +205,10 @@ const seedFindings = async (
         categories: ["security_incidents"],
         categorySummary: [...CATEGORY_SUMMARY],
         evidence: EVIDENCE,
-        searchProvider: SEARCH_PROVIDER_SENTINEL,
         model: MODEL_SENTINEL,
         promptVersion: PROMPT_SENTINEL,
         searchesUsed: 4,
+        pagesRead: 3,
         duplicatesDropped: 1,
         error: null,
       },
@@ -241,6 +242,8 @@ describe("POST /api/vendors/:id/research", () => {
       trigger_type: "manual",
       categories: [],
       category_summary: [],
+      searches_used: 0,
+      pages_read: 0,
       duplicates_dropped: 0,
       error: null,
       started_at: null,
@@ -500,15 +503,12 @@ describe("GET /api/vendors/:id/research/latest", () => {
       trigger_type: "auto",
       categories: ["security_incidents"],
       category_summary: CATEGORY_SUMMARY,
+      searches_used: 4,
+      pages_read: 3,
       duplicates_dropped: 1,
       error: null,
     });
-    for (const sentinel of [
-      EVIDENCE_SENTINEL,
-      MODEL_SENTINEL,
-      PROMPT_SENTINEL,
-      SEARCH_PROVIDER_SENTINEL,
-    ]) {
+    for (const sentinel of [EVIDENCE_SENTINEL, MODEL_SENTINEL, PROMPT_SENTINEL]) {
       expect(res.text).not.toContain(sentinel);
     }
     // The run does hold them: it is the response that leaves them out.

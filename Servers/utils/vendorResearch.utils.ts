@@ -20,7 +20,7 @@ import {
  */
 
 const RUN_COLUMNS = `id, organization_id, vendor_id, trigger_type, status, categories,
-  category_summary, evidence, search_provider, model, prompt_version, searches_used,
+  category_summary, evidence, model, prompt_version, searches_used, pages_read,
   duplicates_dropped, error, requested_by, created_at, started_at, finished_at`;
 
 const FINDING_COLUMN_NAMES: Array<keyof IVendorRiskFinding> = [
@@ -177,10 +177,10 @@ export interface FinishRunInput {
   categories: ResearchCategory[];
   categorySummary: CategorySummaryEntry[];
   evidence: EvidenceSource[] | null;
-  searchProvider: string | null;
   model: string | null;
   promptVersion: string | null;
   searchesUsed: number;
+  pagesRead: number;
   duplicatesDropped: number;
   error: string | null;
 }
@@ -205,10 +205,10 @@ export const finishRunQuery = async (
          categories = ARRAY[:categories]::text[],
          category_summary = CAST(:categorySummary AS JSONB),
          evidence = CAST(:evidence AS JSONB),
-         search_provider = :searchProvider,
          model = :model,
          prompt_version = :promptVersion,
          searches_used = :searchesUsed,
+         pages_read = :pagesRead,
          duplicates_dropped = :duplicatesDropped,
          error = LEFT(:error, ${ERROR_MAX_LENGTH}),
          finished_at = NOW()

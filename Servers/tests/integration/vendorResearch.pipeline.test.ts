@@ -240,10 +240,10 @@ describe("runVendorResearch against the real tables", () => {
 
     expect(run).toMatchObject({
       searches_used: 4,
+      pages_read: 0,
       duplicates_dropped: 0,
       model: "test-model",
       prompt_version: PROMPT_VERSION,
-      search_provider: "fake",
     });
     expect(run.started_at).toBeInstanceOf(Date);
     expect(run.finished_at).toBeInstanceOf(Date);
@@ -359,7 +359,7 @@ describe("runVendorResearch against the real tables", () => {
     expect(run).toMatchObject({ status: "failed", error: "Model call failed: HTTP 401" });
     expect(result).toEqual({ outcome: "failed", findingsCreated: 0 });
     // The audit trail of the run: what it searched and which model it was about to ask.
-    expect(run).toMatchObject({ searches_used: 4, model: "test-model", search_provider: "fake" });
+    expect(run).toMatchObject({ searches_used: 4, pages_read: 0, model: "test-model" });
     expect(run.categories).toEqual([...RESEARCH_CATEGORIES]);
     expect(run.category_summary).toEqual([]);
     expect(JSON.stringify(run)).not.toContain("sk-secret-key");

@@ -72,10 +72,10 @@ export interface IVendorResearchRun {
   category_summary: CategorySummaryEntry[];
   /** The evidence pack the model saw (audit trail), capped at 40 KB; null when the run has none. */
   evidence: EvidenceSource[] | null;
-  search_provider: string | null;
   model: string | null;
   prompt_version: string | null;
   searches_used: number;
+  pages_read: number;
   duplicates_dropped: number;
   /** Truncated to 500 characters; set when the run failed. */
   error: string | null;
