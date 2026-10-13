@@ -76,6 +76,11 @@ interface SizedSource {
  */
 const MEASURED_ID = "S0";
 
+const sizeOf = (source: SizedSource["source"]): SizedSource => ({
+  source,
+  bytes: Buffer.byteLength(JSON.stringify({ id: MEASURED_ID, ...source })) + 1,
+});
+
 const bytesOf = (sources: SizedSource[]): number =>
   sources.reduce((sum, { bytes }) => sum + bytes, 0);
 
@@ -85,12 +90,28 @@ function packBytes(groups: SizedSource[][]): number {
   return sources.length === 0 ? 2 : 1 + bytesOf(sources);
 }
 
+const serializedBytes = (pack: EvidenceSource[]): number => Buffer.byteLength(JSON.stringify(pack));
+
+/** The bytes a string takes in the stored JSON: UTF-8, escapes and the two quotes included. */
+const jsonBytes = (text: string): number => Buffer.byteLength(JSON.stringify(text));
+
 /**
- * Removes the last source of the category that holds the most bytes. The groups are in the order of
- * RESEARCH_CATEGORIES and an empty one is not a candidate. A tie goes to the later category: the
- * `>=` lets a later group replace an equal one.
+ * The longest start of `text` that takes at most `maxBytes` in the stored JSON, and does not end
+ * inside a surrogate pair. The size grows with the length, so it is found by halving.
  */
-function removeFromLargestCategory(groups: SizedSource[][]): void {
+function cutToJsonBytes(text: string, maxBytes: number): string {
+  let fits = 0;
+  let tooLong = text.length + 1;
+  while (tooLong - fits > 1) {
+    const middle = Math.floor((fits + tooLong) / 2);
+    if (jsonBytes(cutAtCodePoint(text, middle)) <= maxBytes) fits = middle;
+    else tooLong = middle;
+  }
+  return cutAtCodePoint(text, fits);
+}
+
+/** The non-empty group that holds the most bytes. A tie goes to the later one: `>=` lets it replace. */
+function largestOf(groups: SizedSource[][]): SizedSource[] | undefined {
   let largest: SizedSource[] | undefined;
   let largestBytes = -1;
   for (const group of groups) {
@@ -101,7 +122,37 @@ function removeFromLargestCategory(groups: SizedSource[][]): void {
       largestBytes = total;
     }
   }
-  largest?.pop();
+  return largest;
+}
+
+/**
+ * Takes one step toward the limit, when the pack is `excess` bytes over it. The groups are in the
+ * order of RESEARCH_CATEGORIES. A category with two or more sources gives up its last one, that of
+ * the category that holds the most bytes among them. A category with one source keeps it: a page in
+ * a script of three bytes a character takes about a quarter of the pack, so the largest category
+ * can be that single source, and removing it would leave a category nobody analysed. When every
+ * category is down to one source, the content of the largest source is cut instead (the start of
+ * the excerpt stays, whole characters) by the excess, or to nothing if that is not enough, and the
+ * next step takes the next largest.
+ */
+function trimLargest(groups: SizedSource[][], excess: number): void {
+  const several = largestOf(groups.filter((group) => group.length > 1));
+  if (several) {
+    several.pop();
+    return;
+  }
+  const cuttable = largestOf(
+    groups.filter((group) => group.length === 1 && group[0].source.content !== ""),
+  );
+  if (!cuttable) {
+    // Nothing left to cut. Four categories never come here: a source without its content takes
+    // about 7 KB. The pop keeps the loops that call this one from running forever.
+    largestOf(groups)?.pop();
+    return;
+  }
+  const { source } = cuttable[0];
+  const budget = Math.max(jsonBytes(source.content) - excess, jsonBytes(""));
+  cuttable[0] = sizeOf({ ...source, content: cutToJsonBytes(source.content, budget) });
 }
 
 /** The sources of the groups in category order, numbered S1, S2, ... without gaps. */
@@ -120,9 +171,11 @@ const numbered = (groups: SizedSource[][]): EvidenceSource[] =>
  *    result to MAX_SNIPPET_CHARS. A publication date that is empty or longer than
  *    MAX_PUBLISHED_AT_CHARS becomes null.
  * 4. Until the serialized pack is at most MAX_EVIDENCE_BYTES, the last source of the category that
- *    holds the most bytes is removed; a tie goes to the later category. A category that has sources
- *    is therefore never emptied while another one is larger, and a full run cannot leave the last
- *    categories without a source, which the summary would read as "nothing found".
+ *    holds the most bytes among those with two or more sources is removed; a tie goes to the later
+ *    category. A category with one source keeps it. When every category is down to one source, the
+ *    content of the largest source is cut instead, to the bytes the pack is over (the next largest
+ *    if that is not enough). So a category that has sources always keeps one, and the summary cannot
+ *    read a category the model never saw as "nothing found".
  * 5. The sources are numbered S1, S2, ... without gaps, after the trimming. Step 4 measured them
  *    with the id of S1 to S9, so the numbered pack is measured once more, and if the longer ids
  *    of S10 and up made it too big, step 4 goes on.
@@ -149,19 +202,24 @@ export function buildEvidencePack(entries: LedgerEntry<ResearchCategory>[]): Evi
         content: cutAtCodePoint(cleanText(entry.content), maxContentChars),
         publishedAt: cleanPublishedAt(entry.publishedAt),
       };
-      const json = JSON.stringify({ id: MEASURED_ID, ...source });
-      sized.push({ source, bytes: Buffer.byteLength(json) + 1 });
+      sized.push(sizeOf(source));
     }
     return sized;
   });
 
-  // An empty pack is "[]", two bytes, so both loops end.
-  while (packBytes(groups) > MAX_EVIDENCE_BYTES) removeFromLargestCategory(groups);
+  // Each step removes a source or shortens one, and an empty pack is "[]", two bytes: both loops end.
+  let excess = packBytes(groups) - MAX_EVIDENCE_BYTES;
+  while (excess > 0) {
+    trimLargest(groups, excess);
+    excess = packBytes(groups) - MAX_EVIDENCE_BYTES;
+  }
 
   let pack = numbered(groups);
-  while (Buffer.byteLength(JSON.stringify(pack)) > MAX_EVIDENCE_BYTES) {
-    removeFromLargestCategory(groups);
+  excess = serializedBytes(pack) - MAX_EVIDENCE_BYTES;
+  while (excess > 0) {
+    trimLargest(groups, excess);
     pack = numbered(groups);
+    excess = serializedBytes(pack) - MAX_EVIDENCE_BYTES;
   }
   return pack;
 }

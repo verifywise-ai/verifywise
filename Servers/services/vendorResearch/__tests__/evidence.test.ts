@@ -449,6 +449,129 @@ describe("buildEvidencePack", () => {
 
         expect(pack).toEqual(asSources(entries));
       });
+
+      // A page in a script of three bytes a character (CJK, Hangul, Devanagari, Thai) with a full
+      // title and a full excerpt takes about 25 KB, a quarter of the pack. One page can be the
+      // largest category, so "the category that holds the most bytes" may hold a single source.
+      describe("a category with a single source, in a script of three bytes a character", () => {
+        const euro = (count: number) => "€".repeat(count);
+        const euroPage = (url: string, overrides: Partial<Entry> = {}) =>
+          pageEntry(url, {
+            title: euro(MAX_TITLE_CHARS),
+            content: euro(MAX_EXCERPT_CHARS),
+            ...overrides,
+          });
+        const onePerCategory = (
+          overrides: Partial<Entry> = {},
+          urlOf = (index: number) => `https://x${index}.test/0`,
+        ) => [
+          ...under("security_incidents", euroPage(urlOf(0), overrides)),
+          ...under("certifications", euroPage(urlOf(1), overrides)),
+          ...under("legal_regulatory", euroPage(urlOf(2), overrides)),
+          ...under("ai_specific", euroPage(urlOf(3), overrides)),
+        ];
+        const CATEGORIES = [
+          "security_incidents",
+          "certifications",
+          "legal_regulatory",
+          "ai_specific",
+        ];
+
+        it("keeps all four categories when each holds one page and the pack is just over the limit", () => {
+          const entries = onePerCategory();
+          expect(bytes(asSources(entries))).toBeGreaterThan(MAX_EVIDENCE_BYTES);
+
+          const pack = buildEvidencePack(entries);
+
+          expect(pack.map((source) => source.category)).toEqual(CATEGORIES);
+          expect(bytes(pack)).toBeLessThanOrEqual(MAX_EVIDENCE_BYTES);
+          // The excerpt of the largest source (the longest category name) is cut, as a prefix and no
+          // deeper than one character of three bytes needs. Nothing else changes.
+          expect(bytes(pack)).toBeGreaterThan(MAX_EVIDENCE_BYTES - 3);
+          const [cut, ...rest] = pack;
+          expect(cut.content.length).toBeLessThan(MAX_EXCERPT_CHARS);
+          expect(entries[0].content.startsWith(cut.content)).toBe(true);
+          expect({ ...cut, content: "" }).toEqual({ ...asSources(entries)[0], content: "" });
+          expect(rest).toEqual(asSources(entries).slice(1));
+        });
+
+        it("takes a source from a category that has two, not the only one of the largest category", () => {
+          // certifications holds one page with a long URL, the largest category; the other three
+          // hold two pages each, a little less. The old rule emptied certifications.
+          const single = under("certifications", euroPage(`https://b.test/${euro(2000)}`));
+          const twoPages = (category: ResearchCategory, host: string) =>
+            under(
+              category,
+              euroPage(`https://${host}.test/0`, { content: euro(4800) }),
+              euroPage(`https://${host}.test/1`, { content: euro(4800) }),
+            );
+          const security = twoPages("security_incidents", "a");
+          const legal = twoPages("legal_regulatory", "c");
+          const ai = twoPages("ai_specific", "d");
+          const entries = [...security, ...single, ...legal, ...ai];
+          expect(bytes(asSources(single))).toBeGreaterThan(bytes(asSources(security)));
+          expect(bytes(asSources(entries))).toBeGreaterThan(MAX_EVIDENCE_BYTES + 15_000);
+
+          const pack = buildEvidencePack(entries);
+
+          // Two removals are needed: the last page of the largest category with two pages, then of
+          // the largest one after that. certifications keeps its page, whole.
+          expect(summary(pack)).toEqual(
+            summary(asSources([security[0], single[0], legal[0], ...ai])),
+          );
+          expect(pack[1].content).toBe(euro(MAX_EXCERPT_CHARS));
+          expect(bytes(pack)).toBeLessThanOrEqual(MAX_EVIDENCE_BYTES);
+        });
+
+        it("cuts the next largest source when the excerpt of the largest is not enough", () => {
+          // Every field at its limit: four sources of 31 KB, 24 KB of them the excerpt. The pack is
+          // over by more than one excerpt.
+          const prefix = "https://a.test/";
+          const entries = onePerCategory(
+            {},
+            (index) => `${prefix}${euro(MAX_URL_CHARS - prefix.length - 1)}${index}`,
+          ).map((item) => ({ ...item, publishedAt: euro(MAX_PUBLISHED_AT_CHARS) }));
+          expect(bytes(asSources(entries)) - MAX_EVIDENCE_BYTES).toBeGreaterThan(
+            bytes(euro(MAX_EXCERPT_CHARS)),
+          );
+
+          const pack = buildEvidencePack(entries);
+
+          expect(pack.map((source) => source.category)).toEqual(CATEGORIES);
+          expect(bytes(pack)).toBeLessThanOrEqual(MAX_EVIDENCE_BYTES);
+          expect(pack.filter((source) => source.content.length < MAX_EXCERPT_CHARS)).toHaveLength(
+            2,
+          );
+          pack.forEach((source, index) => {
+            expect(entries[index].content.startsWith(source.content)).toBe(true);
+            expect(source.url).toBe(entries[index].url);
+            expect(source.title).toBe(entries[index].title);
+          });
+        });
+
+        it("does not leave half of a surrogate pair where the excerpt is cut", () => {
+          // The excerpt ends in 100 emoji of four bytes (two UTF-16 units each): the cut, of a few
+          // hundred bytes, falls among them.
+          const content = `${euro(7800)}${"\u{1F600}".repeat(100)}`;
+          const entries = onePerCategory(
+            { content },
+            (index) => `https://x${index}.test/${euro(80)}`,
+          );
+          const over = bytes(asSources(entries)) - MAX_EVIDENCE_BYTES;
+          expect(over).toBeGreaterThan(0);
+          expect(over).toBeLessThan(400);
+
+          const pack = buildEvidencePack(entries);
+
+          expect(pack).toHaveLength(4);
+          expect(bytes(pack)).toBeLessThanOrEqual(MAX_EVIDENCE_BYTES);
+          expect(pack[0].content.length).toBeGreaterThan(7800);
+          expect(pack[0].content.length).toBeLessThan(content.length);
+          expect(content.startsWith(pack[0].content)).toBe(true);
+          expect(hasLoneSurrogate(pack[0].content)).toBe(false);
+          expect(JSON.stringify(pack)).not.toMatch(POSTGRES_HOSTILE_JSON);
+        });
+      });
     });
 
     it("measures the serialized form, in which an escaped character takes more than one byte", () => {
