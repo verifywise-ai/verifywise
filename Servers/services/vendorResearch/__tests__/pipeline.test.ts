@@ -19,6 +19,7 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
   default: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 
+import { MockLanguageModelV4 } from "ai/test";
 import { createModelFromKey, resolveModelId } from "../../../advisor/llmModelFactory";
 import { sequelize } from "../../../database/db";
 import { IVendor } from "../../../domain.layer/interfaces/i.vendor";
@@ -204,6 +205,7 @@ function researched(overrides: Partial<ResearchResult> = {}): ResearchResult {
     pagesRead: calls.filter((call) => call.tool === "read" && call.answered).length,
     stoppedBecause: "finished",
     modelError: null,
+    jsonObjectFallback: false,
     ...overrides,
   };
 }
@@ -1154,6 +1156,56 @@ describe("runVendorResearch", () => {
   });
 
   describe("the model call", () => {
+    /** A model that answers {} and records what it was asked, for a wrapped model to reach. */
+    function innerModel() {
+      return new MockLanguageModelV4({
+        doGenerate: async () => ({
+          content: [{ type: "text", text: "{}" }],
+          finishReason: { unified: "stop", raw: undefined },
+          usage: {
+            inputTokens: { total: 1, noCache: 1, cacheRead: undefined, cacheWrite: undefined },
+            outputTokens: { total: 1, text: 1, reasoning: undefined },
+          },
+          warnings: [],
+        }),
+      });
+    }
+
+    it("makes the analysis call in JSON-object mode when the loop learned that the provider rejects json_schema", async () => {
+      const inner = innerModel();
+      resolveModel.mockResolvedValue({ model: inner, modelId: MODEL_ID });
+      research.mockResolvedValue(researched({ jsonObjectFallback: true }));
+
+      await run();
+
+      expect(generate).toHaveBeenCalledTimes(1);
+      const wrapped = generate.mock.calls[0][0].model as MockLanguageModelV4;
+      expect(wrapped).not.toBe(inner);
+      // The research itself still gets the model as it is: the loop wraps it on its own.
+      expect(research.mock.calls[0][0].model).toBe(inner);
+      const schema = { type: "object", properties: { findings: { type: "array" } } } as const;
+      await wrapped.doGenerate({
+        prompt: [{ role: "user", content: [{ type: "text", text: "The sources." }] }],
+        responseFormat: { type: "json", schema },
+      });
+      const [reached] = inner.doGenerateCalls;
+      expect(reached.responseFormat).toEqual({ type: "json" });
+      expect(reached.prompt[0]).toEqual({
+        role: "system",
+        content: expect.stringContaining(JSON.stringify(schema)),
+      });
+    });
+
+    it("makes the analysis call with the model as it is when the loop learned no fall back", async () => {
+      const inner = innerModel();
+      resolveModel.mockResolvedValue({ model: inner, modelId: MODEL_ID });
+      research.mockResolvedValue(researched({ jsonObjectFallback: false }));
+
+      await run();
+
+      expect(generate.mock.calls[0][0].model).toBe(inner);
+    });
+
     it("fails the run when the model call rejects, and does not throw", async () => {
       generate.mockRejectedValue(
         providerError("AI_APICallError", SECRET_MESSAGE, { statusCode: 429 }),

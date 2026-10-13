@@ -139,6 +139,7 @@ function fakeResearch(hits: HitsByCategory): PipelineDeps["research"] {
     pagesRead: 0,
     stoppedBecause: "finished",
     modelError: null,
+    jsonObjectFallback: false,
   }));
 }
 

@@ -61,7 +61,15 @@ const readStep = (url: string, category: ResearchCategory): LoopStep<ResearchCat
 
 const finishStep: LoopStep<ResearchCategory> = { thought: "That is enough.", action: "finish" };
 
-type Answer = LoopStep<ResearchCategory> | { throws: unknown };
+/** An error like the one the SDK throws for an answer that holds no object of the schema. */
+const unparseable = () =>
+  Object.assign(new Error("No object generated."), { name: "AI_NoObjectGeneratedError" });
+
+/**
+ * A step to answer, an error to throw, or a call that falls back to JSON-object mode (it calls the
+ * hook of the call, as the self-correcting call does) and then throws.
+ */
+type Answer = LoopStep<ResearchCategory> | { throws: unknown } | { fallsBackThenThrows: unknown };
 
 interface ModelCall {
   model: unknown;
@@ -83,6 +91,10 @@ function scriptedModel(answers: Answer[], fellBack: boolean[] = []) {
       const answer = queue.shift();
       if (answer === undefined) throw new Error("The script has no answer left.");
       if ("throws" in answer) throw answer.throws;
+      if ("fallsBackThenThrows" in answer) {
+        params.onJsonObjectFallback?.();
+        throw answer.fallsBackThenThrows;
+      }
       return {
         object: answer,
         attempts: 1,
@@ -253,6 +265,7 @@ describe("createVendorResearcher", () => {
       pagesRead: 1,
       stoppedBecause: "model_error",
       modelError: failure,
+      jsonObjectFallback: false,
     });
     expect(outcome.modelError).toBe(failure);
   });
@@ -287,6 +300,7 @@ describe("createVendorResearcher", () => {
       pagesRead: 0,
       stoppedBecause: "finished",
       modelError: null,
+      jsonObjectFallback: false,
     });
     expect(web.readPage).not.toHaveBeenCalled();
   });
@@ -375,6 +389,63 @@ describe("createVendorResearcher", () => {
       expect(model.calls.map((call) => call.model)).toEqual([inner, inner]);
     });
 
+    it("uses the wrapped model after a call that fell back and then threw", async () => {
+      const inner = innerModel();
+      // The first call falls back and then gives up on the answer, which the loop takes for an
+      // answer that holds no step: no result reports the fall back.
+      const model = scriptedModel([{ fallsBackThenThrows: unparseable() }, finishStep, finishStep]);
+      const research = createVendorResearcher({ ...fakeWeb(), generate: model.generate });
+
+      const outcome = await research({ target: WITH_DOMAIN, model: inner, now: NOW });
+
+      const [first, second, third] = model.calls;
+      expect(first.model).toBe(inner);
+      expect(second.model).not.toBe(inner);
+      expect(third.model).toBe(second.model);
+      expect(outcome.jsonObjectFallback).toBe(true);
+    });
+
+    it("says on the result whether the run learned the fall back", async () => {
+      const inner = innerModel();
+      const fellBack = scriptedModel([finishStep, finishStep], [true, false]);
+      const notFellBack = scriptedModel([finishStep, finishStep], [false, false]);
+
+      const learned = await createVendorResearcher({
+        ...fakeWeb(),
+        generate: fellBack.generate,
+      })({ target: WITH_DOMAIN, model: inner, now: NOW });
+      const notLearned = await createVendorResearcher({
+        ...fakeWeb(),
+        generate: notFellBack.generate,
+      })({ target: WITH_DOMAIN, model: inner, now: NOW });
+
+      expect(learned.jsonObjectFallback).toBe(true);
+      expect(notLearned.jsonObjectFallback).toBe(false);
+    });
+
+    it("does not carry a fall back learned from the hook into the next run", async () => {
+      const inner = innerModel();
+      const model = scriptedModel([
+        // The first run.
+        { fallsBackThenThrows: unparseable() },
+        finishStep,
+        finishStep,
+        // The second run.
+        finishStep,
+        finishStep,
+      ]);
+      const research = createVendorResearcher({ ...fakeWeb(), generate: model.generate });
+
+      const first = await research({ target: WITH_DOMAIN, model: inner, now: NOW });
+      const second = await research({ target: WITH_DOMAIN, model: inner, now: NOW });
+
+      expect(model.calls[1].model).not.toBe(inner);
+      expect(model.calls[3].model).toBe(inner);
+      expect(model.calls[4].model).toBe(inner);
+      expect(first.jsonObjectFallback).toBe(true);
+      expect(second.jsonObjectFallback).toBe(false);
+    });
+
     it("gives every run a flag of its own", async () => {
       const inner = innerModel();
       const model = scriptedModel(
@@ -453,6 +524,7 @@ describe("createVendorResearcher", () => {
         pagesRead: 0,
         stoppedBecause: "finished",
         modelError: null,
+        jsonObjectFallback: false,
       });
       // The first finish is answered with a reminder, the second one ends the loop.
       expect(model.doGenerateCalls).toHaveLength(2);

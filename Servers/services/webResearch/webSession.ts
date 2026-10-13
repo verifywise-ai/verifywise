@@ -8,7 +8,9 @@
  * a search result, replaced in its place by the excerpt when the page is read. Every call that
  * reached the web is recorded with its category, so that the summary can tell "looked and found
  * nothing" from "could not look". A call that the rules refuse before it reaches the web uses no
- * budget and is not recorded.
+ * budget and is not recorded. A call that fails once its signal has aborted (the loop's time
+ * limit) keeps its budget unit but is not recorded either: our own clock cut it off, not the web,
+ * so the summary says that the category was not reached.
  *
  * The checks of a call all run before its first `await`, so two calls made at once cannot both
  * take the last unit of a budget.
@@ -192,7 +194,9 @@ export function createWebSession<C extends string>(options: WebSessionOptions<C>
       } catch (error) {
         // A failed search is an answer of the web. Anything else is a bug, and is passed on.
         if (!(error instanceof SearchEngineError)) throw error;
-        calls.push({ category, tool: "search", answered: false, failure: "search_unavailable" });
+        if (!signal?.aborted) {
+          calls.push({ category, tool: "search", answered: false, failure: "search_unavailable" });
+        }
         return { ok: false, reason: "search_unavailable" };
       }
       calls.push({ category, tool: "search", answered: true, failure: null });
@@ -249,9 +253,12 @@ export function createWebSession<C extends string>(options: WebSessionOptions<C>
         // A failed read is an answer of the web. Anything else is a bug, and is passed on.
         if (!(error instanceof PageReadError)) throw error;
         const { reason } = error;
-        // A redirect to an address that is not public: refused like the URL itself would be.
+        // A redirect, or a host, that the address policy refused on the way: refused like the URL
+        // itself would be.
         if (reason === "not_allowed") return { ok: false, reason };
-        calls.push({ category, tool: "read", answered: false, failure: reason });
+        if (!signal?.aborted) {
+          calls.push({ category, tool: "read", answered: false, failure: reason });
+        }
         return { ok: false, reason };
       }
       answeredReads.add(key);

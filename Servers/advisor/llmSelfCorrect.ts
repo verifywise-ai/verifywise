@@ -106,6 +106,12 @@ export interface SelfCorrectingParams<T> {
    */
   extendedRecovery?: boolean;
   /**
+   * Called once, when this call downgrades from json_schema to JSON-object mode, and so also for a
+   * call that goes on to throw, which reports no `fellBackToJsonObject`. A caller that makes many
+   * calls with the same model can then start the next ones in JSON-object mode.
+   */
+  onJsonObjectFallback?: () => void;
+  /**
    * Pass-through for any other generateObject params we don't surface
    * directly (e.g., `maxOutputTokens`, `seed`, `mode`). Merged into the
    * inner call without further validation — caller is responsible for
@@ -576,6 +582,7 @@ export async function generateObjectWithSelfCorrection<T>(
           logger.warn(
             "[llmSelfCorrect] provider rejected json_schema response_format; retrying in JSON-object mode",
           );
+          params.onJsonObjectFallback?.();
           attempt--; // the transport switch must not consume the self-correction budget
           continue;
         }

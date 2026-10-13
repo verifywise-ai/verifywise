@@ -41,8 +41,12 @@
  * The message of any other error, such as a database error that names a host, a port or a query, is
  * logged but not stored: the run is served to every role, so it records a fixed phrase.
  */
+import { wrapLanguageModel } from "ai";
 import { createModelFromKey, resolveModelId } from "../../advisor/llmModelFactory";
-import type { generateObjectWithSelfCorrection } from "../../advisor/llmSelfCorrect";
+import {
+  type generateObjectWithSelfCorrection,
+  jsonObjectFallbackMiddleware,
+} from "../../advisor/llmSelfCorrect";
 import { sequelize } from "../../database/db";
 import {
   CategorySummaryEntry,
@@ -347,10 +351,18 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
     return complete([], 0, summaryOf([], new Set(), []));
   }
 
+  // The loop learned that the provider rejects json_schema: the analysis starts in JSON-object mode
+  // too, rather than pay one more rejected request and warning to learn it again.
+  const analysisModel = found.jsonObjectFallback
+    ? wrapLanguageModel({
+        model: resolved.model as Parameters<typeof wrapLanguageModel>[0]["model"],
+        middleware: jsonObjectFallbackMiddleware,
+      })
+    : resolved.model;
   let output: ResearchOutput;
   try {
     const result = await deps.generate({
-      model: resolved.model,
+      model: analysisModel,
       schema: researchOutputSchema,
       system: buildSystemPrompt(now),
       prompt: buildUserPrompt(target, pack),

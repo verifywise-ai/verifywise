@@ -35,6 +35,11 @@ export interface ResearchResult {
   stoppedBecause: StopReason;
   /** The error that ended the loop as `model_error`; null otherwise. */
   modelError: unknown | null;
+  /**
+   * True when a call of the loop had to fall back to JSON-object mode: the provider rejects
+   * json_schema, and the analysis can start in JSON-object mode too.
+   */
+  jsonObjectFallback: boolean;
 }
 
 export type VendorResearcher = (input: {
@@ -75,20 +80,26 @@ export function createVendorResearcher(
 
     // A provider that rejects json_schema (DeepSeek, or OpenAI's strict mode for the step schema)
     // would cost a rejected request and a warning on every step. So once a call of this run had to
-    // fall back to JSON-object mode, the rest of the run starts there. The wrapped model is built
-    // once, and a result that does not report the fall back again does not undo it.
+    // fall back to JSON-object mode, the rest of the run starts there. The call says so as it falls
+    // back, so a call that then throws counts too; a result that reports the fall back counts as
+    // well. The wrapped model is built once, and nothing undoes it.
     let jsonObjectModel: unknown = null;
+    const learnFallback = () => {
+      jsonObjectModel ??= wrapLanguageModel({
+        model: model as Parameters<typeof wrapLanguageModel>[0]["model"],
+        middleware: jsonObjectFallbackMiddleware,
+      });
+    };
     const generateForRun: typeof generate = async (params, generateImpl) => {
       const result = await generate(
-        jsonObjectModel === null ? params : { ...params, model: jsonObjectModel },
+        {
+          ...params,
+          ...(jsonObjectModel === null ? {} : { model: jsonObjectModel }),
+          onJsonObjectFallback: learnFallback,
+        },
         generateImpl,
       );
-      if (result.fellBackToJsonObject && jsonObjectModel === null) {
-        jsonObjectModel = wrapLanguageModel({
-          model: model as Parameters<typeof wrapLanguageModel>[0]["model"],
-          middleware: jsonObjectFallbackMiddleware,
-        });
-      }
+      if (result.fellBackToJsonObject) learnFallback();
       return result;
     };
 
@@ -103,6 +114,14 @@ export function createVendorResearcher(
     );
 
     const { ledger, calls, searchesUsed, pagesRead } = session.snapshot();
-    return { entries: ledger, calls, searchesUsed, pagesRead, stoppedBecause, modelError };
+    return {
+      entries: ledger,
+      calls,
+      searchesUsed,
+      pagesRead,
+      stoppedBecause,
+      modelError,
+      jsonObjectFallback: jsonObjectModel !== null,
+    };
   };
 }

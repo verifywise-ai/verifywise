@@ -817,6 +817,82 @@ describe("llmSelfCorrect / json-object fallback", () => {
     expect(result.fellBackToJsonObject).toBe(false);
   });
 
+  it("calls onJsonObjectFallback once when the call downgrades to JSON-object mode", async () => {
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      if (invocation === 1) throw new Error("This response_format type is unavailable now");
+      return { object: { name: "Zoe", count: 5 } };
+    }) as unknown as GenerateObjectImpl;
+    const onJsonObjectFallback = jest.fn();
+
+    await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p", onJsonObjectFallback },
+      mock,
+    );
+
+    expect(onJsonObjectFallback).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls onJsonObjectFallback also for a call that downgrades and then throws", async () => {
+    // The downgraded call fails validation until the budget is spent: the result that would
+    // report the fall back never comes, so only the hook can tell the caller.
+    let invocation = 0;
+    const zodErr = makeZodError("name", "String must contain at least 3 character(s)");
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      if (invocation === 1) throw new Error("This response_format type is unavailable now");
+      throw zodErr;
+    }) as unknown as GenerateObjectImpl;
+    const onJsonObjectFallback = jest.fn();
+
+    await expect(
+      generateObjectWithSelfCorrection<Sample>(
+        {
+          model: fakeModel,
+          schema: sampleSchema,
+          system: "s",
+          prompt: "p",
+          maxSelfCorrectionAttempts: 1,
+          onJsonObjectFallback,
+        },
+        mock,
+      ),
+    ).rejects.toBe(zodErr);
+    expect(invocation).toBe(3);
+    expect(onJsonObjectFallback).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls onJsonObjectFallback once when JSON-object mode is rejected as well", async () => {
+    const mock: GenerateObjectImpl = (async () => {
+      throw new Error("This response_format type is unavailable now");
+    }) as unknown as GenerateObjectImpl;
+    const onJsonObjectFallback = jest.fn();
+
+    await expect(
+      generateObjectWithSelfCorrection<Sample>(
+        { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p", onJsonObjectFallback },
+        mock,
+      ),
+    ).rejects.toThrow(/response_format/i);
+    expect(onJsonObjectFallback).toHaveBeenCalledTimes(1);
+  });
+
+  it("never calls onJsonObjectFallback when the first attempt works, and passes it on to no call", async () => {
+    const mock = jest.fn(async (_params: unknown) => ({
+      object: { name: "Zoe", count: 5 },
+    }));
+    const onJsonObjectFallback = jest.fn();
+
+    await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p", onJsonObjectFallback },
+      mock as unknown as GenerateObjectImpl,
+    );
+
+    expect(onJsonObjectFallback).not.toHaveBeenCalled();
+    expect(mock.mock.calls[0][0]).not.toHaveProperty("onJsonObjectFallback");
+  });
+
   it("does not fall back more than once (rethrows if json-object mode also fails)", async () => {
     let invocation = 0;
     const mock: GenerateObjectImpl = (async () => {

@@ -4,6 +4,7 @@ import {
   SelfCorrectingResult,
   generateObjectWithSelfCorrection,
 } from "../../../advisor/llmSelfCorrect";
+import { summariseCategories } from "../../vendorResearch/summary";
 import { cutAtCodePoint } from "../../vendorResearch/text";
 import { FetchedPage, PageReadError, ReadFailureReason } from "../readPage";
 import {
@@ -132,8 +133,8 @@ function scriptedModel(answers: Answer[], then?: Answer) {
 interface WebSetup {
   /** What the engine answers, one item per search in turn; "hang" waits for the signal. */
   searches?: Array<SearchResult[] | Error | "hang">;
-  /** What the reader gives for a URL: fields of the page, or an error to throw. */
-  pages?: Record<string, Partial<FetchedPage> | Error>;
+  /** What the reader gives for a URL: fields of the page, an error to throw, or "hang". */
+  pages?: Record<string, Partial<FetchedPage> | Error | "hang">;
   cutoffs?: Partial<Record<Category, string>>;
   limits?: Partial<SessionLimits>;
 }
@@ -153,8 +154,16 @@ function webSession(setup: WebSetup = {}) {
       return answer;
     },
   );
-  const readPage = jest.fn<Promise<FetchedPage>, [string, AbortSignal?]>(async (url) => {
+  const readPage = jest.fn<Promise<FetchedPage>, [string, AbortSignal?]>(async (url, signal) => {
     const fields = setup.pages?.[url];
+    if (fields === "hang") {
+      // As the reader does, a read cut off by its signal fails as unreachable.
+      return new Promise<never>((_resolve, reject) => {
+        signal?.addEventListener("abort", () => reject(new PageReadError("unreachable")), {
+          once: true,
+        });
+      });
+    }
     if (fields instanceof Error) throw fields;
     return page(url, fields);
   });
@@ -938,6 +947,36 @@ describe("runResearchLoop", () => {
       expect(session.snapshot().ledger.map((entry) => entry.url)).toEqual([
         "https://news.example/a",
       ]);
+      expect(Date.now() - started).toBeLessThan(1000);
+    });
+
+    it("time (Review Focus 5): a read cut off by the loop's time leaves its category not researched, not failed", async () => {
+      const started = Date.now();
+      const { outcome, session } = await run({
+        script: [searchStep("Acme data breach"), readStep(OWN_PAGE, "certifications")],
+        then: finishStep,
+        web: { searches: [[result("https://news.example/a")]], pages: { [OWN_PAGE]: "hang" } },
+        limits: { totalTimeoutMs: 50 },
+      });
+
+      expect(outcome).toEqual({ stoppedBecause: "time", steps: 2, modelError: null });
+      const { calls } = session.snapshot();
+      expect(calls).toEqual([
+        { category: "security_incidents", tool: "search", answered: true, failure: null },
+      ]);
+      const summary = summariseCategories({
+        skippedNoDomain: [],
+        calls,
+        kept: [],
+        proposed: new Set(),
+        modelNotes: [],
+        stoppedBecause: outcome.stoppedBecause,
+      });
+      expect(summary.find((entry) => entry.category === "certifications")).toEqual({
+        category: "certifications",
+        outcome: "skipped",
+        note: "Not researched: the time limit was reached",
+      });
       expect(Date.now() - started).toBeLessThan(1000);
     });
 

@@ -225,6 +225,50 @@ describe("createWebSession", () => {
       expect(session.snapshot().ledger).toEqual([]);
     });
 
+    it("records a search that fails while its signal is live as not answered", async () => {
+      const { session } = setup({ answers: [new SearchEngineError()] });
+      const controller = new AbortController();
+
+      expect(
+        await session.search("Acme breach", "news", "security_incidents", controller.signal),
+      ).toEqual({ ok: false, reason: "search_unavailable" });
+      expect(session.snapshot().calls).toEqual([
+        {
+          category: "security_incidents",
+          tool: "search",
+          answered: false,
+          failure: "search_unavailable",
+        },
+      ]);
+    });
+
+    it("does not record a search that failed because its signal aborted: the time ran out, not the web", async () => {
+      const { session, search } = setup();
+      // Like the engine, which fails a search whose signal aborts.
+      search.mockImplementationOnce(
+        (_query, _kind, signal) =>
+          new Promise((_resolve, reject) => {
+            signal?.addEventListener("abort", () => reject(new SearchEngineError()), {
+              once: true,
+            });
+          }),
+      );
+      const controller = new AbortController();
+
+      const pending = session.search(
+        "Acme breach",
+        "news",
+        "security_incidents",
+        controller.signal,
+      );
+      controller.abort();
+
+      expect(await pending).toEqual({ ok: false, reason: "search_unavailable" });
+      expect(session.snapshot().calls).toEqual([]);
+      expect(session.snapshot().searchesUsed).toBe(1);
+      expect(session.budget().searchesLeft).toBe(SESSION_LIMITS.maxSearches - 1);
+    });
+
     it("lets an error of the engine that is not a SearchEngineError through and records no call", async () => {
       const bug = new TypeError("Cannot read properties of undefined");
       const { session } = setup({ answers: [bug] });
@@ -616,6 +660,52 @@ describe("createWebSession", () => {
       ]);
       expect(session.snapshot().ledger).toEqual([]);
       expect(session.snapshot().pagesRead).toBe(0);
+      expect(session.budget().readsLeft).toBe(SESSION_LIMITS.maxReads - 1);
+    });
+
+    it("records a read that fails while its signal is live as not answered", async () => {
+      const { session, readPage } = setup();
+      readPage.mockRejectedValueOnce(new PageReadError("unreachable"));
+      const controller = new AbortController();
+
+      expect(
+        await session.read(
+          "https://acme.com/trust",
+          "certifications",
+          undefined,
+          controller.signal,
+        ),
+      ).toEqual({ ok: false, reason: "unreachable" });
+      expect(session.snapshot().calls).toEqual([
+        { category: "certifications", tool: "read", answered: false, failure: "unreachable" },
+      ]);
+    });
+
+    it("does not record a read that failed because its signal aborted: the time ran out, not the web", async () => {
+      const { session, readPage } = setup();
+      // Like the reader, which fails a read whose signal aborts as unreachable.
+      readPage.mockImplementationOnce(
+        (_url, signal) =>
+          new Promise((_resolve, reject) => {
+            signal?.addEventListener("abort", () => reject(new PageReadError("unreachable")), {
+              once: true,
+            });
+          }),
+      );
+      const controller = new AbortController();
+
+      const pending = session.read(
+        "https://acme.com/trust",
+        "certifications",
+        undefined,
+        controller.signal,
+      );
+      controller.abort();
+
+      expect(await pending).toEqual({ ok: false, reason: "unreachable" });
+      expect(session.snapshot().calls).toEqual([]);
+      expect(session.snapshot().pagesRead).toBe(0);
+      expect(session.snapshot().ledger).toEqual([]);
       expect(session.budget().readsLeft).toBe(SESSION_LIMITS.maxReads - 1);
     });
 
