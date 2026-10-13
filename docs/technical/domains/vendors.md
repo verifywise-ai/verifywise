@@ -68,7 +68,7 @@ vendor_risks
 
 ### Vendor Research Runs Table
 
-One row per research run of a vendor. Migration `20261010012217-create-vendor-research-tables.js`.
+One row per research run of a vendor. Migration `20261010012217-create-vendor-research-tables.js`; `20261013021400-vendor-research-web-agent.js` dropped `search_provider` and added `pages_read` when the search provider was replaced by the web research agent.
 
 ```
 vendor_research_runs
@@ -80,10 +80,10 @@ vendor_research_runs
 ├── categories (TEXT[], default empty)
 ├── category_summary (JSONB, default [])
 ├── evidence (JSONB, nullable)
-├── search_provider (VARCHAR(255), nullable)
 ├── model (VARCHAR(255), nullable)
 ├── prompt_version (VARCHAR(255), nullable)
 ├── searches_used (INTEGER, default 0)
+├── pages_read (INTEGER, default 0)
 ├── duplicates_dropped (INTEGER, default 0)
 ├── error (TEXT, nullable)
 ├── requested_by (FK → users, ON DELETE SET NULL)
@@ -103,10 +103,10 @@ All columns are NOT NULL except the ones marked nullable and `requested_by`. `tr
 
 Column notes:
 
-- `category_summary` is an array of `{ category, outcome, note }`; `outcome` is `findings`, `nothing_found`, `search_failed` or `skipped`. It is empty until the run ends, and for most failed runs.
-- `categories` lists the categories that were searched.
-- `evidence` is the evidence pack the model was shown (sources with `id`, `category`, `url`, `title`, `content`, `publishedAt`). It is an **audit trail**: no endpoint returns it. The 40,000-byte cap is applied in code, not by the DDL.
-- `search_provider`, `model` (the id of the model that was called) and `prompt_version` record what produced the run. `searches_used` counts the searches issued.
+- `category_summary` is an array of `{ category, outcome, note }`; `outcome` is `findings`, `nothing_found`, `search_failed` or `skipped`, and `note` is one of a closed set of phrases (see [Category outcomes](#category-outcomes)). It is empty until the run ends, and for most failed runs.
+- `categories` lists the categories that the research worked on: those with at least one call that reached the web.
+- `evidence` is the evidence pack the analysis was shown (sources with `id`, `category`, `kind` (`result` or `page`), `onVendorSite`, `url`, `title`, `content`, `publishedAt`). It is an **audit trail** of third-party text: no endpoint returns it. The 100,000-byte cap is applied in code, not by the DDL.
+- `model` (the id of the model that was called) and `prompt_version` (now `vr-2`) record what produced the run. `searches_used` counts the `search` actions that reached the search engine, a failed one included; `pages_read` counts the pages that were read. Both are returned by the API.
 - `error` is set when the run failed and is always one of a closed set of fixed English phrases, cut to 500 characters in code. Raw exception messages go to the server log only.
 - `started_at` is set only when the job moves the run to `running`. A `failed` run with a null `started_at` never started, which matters for the limits below.
 - `requested_by` is the user of a manual run, and null for an automatic run or when that user was deleted.
@@ -153,7 +153,7 @@ The last three indexes of this table, and `idx_vendor_research_runs_vendor` of t
 
 Column notes:
 
-- `sources` is an array of `{ url, title, quote, published_at }` with at least one entry. The quote is a verbatim part of the page snippet, at most 300 characters.
+- `sources` is an array of `{ url, title, quote, published_at }` with at least one entry. The quote is a verbatim part of the text of that source (a snippet or a page excerpt), at most 300 characters.
 - The three text columns are at most 300 characters each. That limit, and the rule that a finding has at least one source, are enforced in code (the output schema and the validation), not by the DDL. The vendor risk form takes up to 500 characters for the risk and the impact and 1,000 for the action plan (the limits of the server, `VENDOR_RISK_VALIDATION_LIMITS`), so every accepted finding can be edited in the register.
 - `risk_level` is `calculateRiskLevel(risk_severity, likelihood)` followed by ` Risk`, as in the register.
 - There is no unique constraint on the wording: the model words a risk differently on every run, so de-duplication is done in code (see [De-duplication](#de-duplication)).
@@ -288,18 +288,18 @@ Paths are under `/api`. A success body is `{ message, data }`. Every route needs
 
 | Method | Endpoint | Access | Request | Success |
 |--------|----------|--------|---------|---------|
-| GET | `/vendor-research/config` | Any signed-in user | none | 200, `{ searchConfigured, hasLlmKey, autoRunEnabled }` |
+| GET | `/vendor-research/config` | Any signed-in user | none | 200, `{ hasLlmKey, autoRunEnabled }` |
 | GET | `/vendor-risk-findings` | Any signed-in user | query: `status`, `vendorId`, `limit`, `offset` | 200, `{ rows, total }` |
 | POST | `/vendors/:id/research` | `risks.edit` | none | 202, `{ run, alreadyRunning }` |
 | GET | `/vendors/:id/research/latest` | Any signed-in user | none | 200, the run, or `null` |
 | POST | `/vendor-risk-findings/:id/accept` | `risks.edit` | body: `action_owner` (optional) | 200, `{ finding, vendorRisk }` |
 | POST | `/vendor-risk-findings/:id/dismiss` | `risks.edit` | body: `reason`, `note` (optional) | 200, the finding |
 
-**Config.** Booleans only, never a key. `searchConfigured` is true when a supported search provider is set with its key, `hasLlmKey` when the organization has at least one LLM key, `autoRunEnabled` reflects `VENDOR_RESEARCH_AUTO_RUN`.
+**Config.** Booleans only, never a key. `hasLlmKey` is true when the organization has at least one LLM key, which is all that research needs to be set up; `autoRunEnabled` reflects `VENDOR_RESEARCH_AUTO_RUN`.
 
 **Findings list.** `status` is `pending` (the default), `accepted` or `dismissed`. `vendorId` narrows to one vendor; a vendor that does not exist in the organization gives an empty list, not a 404. `limit` defaults to 50 and a larger value is cut to 200; `offset` defaults to 0. A bad `status`, `vendorId`, `limit` (below 1 or not a whole number) or `offset`, or a parameter given twice, is a 400. Each row is the full finding row plus `vendor_name`. The newest run comes first, and inside a run the most severe finding comes first.
 
-**Start.** The checks run in this order and the first that fails answers: the vendor exists in the organization (404), search is configured (409 `search_not_configured`), the organization has an LLM key (409 `llm_key_missing`). Then the vendor's stuck runs are failed and, if the vendor has an active run, that run is returned instead of a new one (still 202, with `alreadyRunning: true`, so a click during a run is never a 429). Then, for a manual start only, the cooldown (429 `cooldown`), and for every start the daily cap (429 `daily_cap`). Only then is the queued run created and its job queued. The start waits at most 5 seconds (`ENQUEUE_TIMEOUT_MS`) for that: with Redis down the queue does not refuse the job, it keeps waiting. If the job cannot be queued in that time, the run is failed at once (`could not enqueue`, which counts toward neither limit) and the answer is 503 `enqueue_failed`. A job that is queued after that is skipped by the worker, without a search or a model call. (A job that lands in the few milliseconds before the run is marked failed could still start it, and the vendor is then researched twice at worst.)
+**Start.** The checks run in this order and the first that fails answers: the vendor exists in the organization (404), the organization has an LLM key (409 `llm_key_missing`). There is no check for a search setting: the search needs no account. Then the vendor's stuck runs are failed and, if the vendor has an active run, that run is returned instead of a new one (still 202, with `alreadyRunning: true`, so a click during a run is never a 429). Then, for a manual start only, the cooldown (429 `cooldown`), and for every start the daily cap (429 `daily_cap`). Only then is the queued run created and its job queued. The start waits at most 5 seconds (`ENQUEUE_TIMEOUT_MS`) for that: with Redis down the queue does not refuse the job, it keeps waiting. If the job cannot be queued in that time, the run is failed at once (`could not enqueue`, which counts toward neither limit) and the answer is 503 `enqueue_failed`. A job that is queued after that is skipped by the worker, without a web request or a model call. (A job that lands in the few milliseconds before the run is marked failed could still start it, and the vendor is then researched twice at worst.)
 
 **Latest.** The run of the vendor with the newest `created_at`, whatever its status, or `null` for a vendor that was never researched. This read also writes: before it reads, it fails the vendor's runs that have been queued or running for more than 15 minutes, so a lost job never shows as "researching" for ever.
 
@@ -316,6 +316,8 @@ The **run** in a response is an allowlist, not the row:
   trigger_type: "auto" | "manual",
   categories: string[],
   category_summary: { category, outcome, note }[],
+  searches_used: number,
+  pages_read: number,
   duplicates_dropped: number,
   error: string | null,
   started_at: string | null,
@@ -324,7 +326,7 @@ The **run** in a response is an allowlist, not the row:
 }
 ```
 
-The evidence pack, provider, model, prompt version, search count, requester and organization never leave the server. A **finding** is returned as its full row. `vendorRisk` is the JSON of the new register row, as the vendor risk form returns it.
+The evidence pack, model, prompt version, requester and organization never leave the server; the two counters `searches_used` and `pages_read` do. A **finding** is returned as its full row. `vendorRisk` is the JSON of the new register row, as the vendor risk form returns it.
 
 Errors:
 
@@ -333,7 +335,7 @@ Errors:
 | 400 | `{ message: "Bad Request", data: "<sentence>" }` | A bad id, query parameter or body |
 | 403 | `{ message: "Forbidden", data: "Access denied" }` | The role lacks `risks.edit` |
 | 404 | `{ message: "Not Found", data: "<sentence>" }` | No such vendor or finding in the caller's organization. One that belongs to another organization is answered the same way |
-| 409 on start | `{ message: "Conflict", data: { code } }` | `code` is `search_not_configured` or `llm_key_missing` |
+| 409 on start | `{ message: "Conflict", data: { code } }` | `code` is `llm_key_missing`: the organization has no LLM key |
 | 409 on accept | `{ message: "Conflict", data: "<sentence>" }` | The finding is no longer pending, or another decision on it is being made at this moment. Accept does not wait for that decision, so a retry can succeed if it let go without deciding |
 | 409 on dismiss | `{ message: "Conflict", data: "<sentence>" }` | The finding is no longer pending. A dismissal that meets a decision in progress waits for it: it answers 409 if that decision went through, and dismisses the finding if it did not |
 | 429 on start | `{ message: "Too Many Requests", data: { code: "cooldown", retryAfterSeconds } }` and a `Retry-After` header, or `data: { code: "daily_cap" }` | A rate limit (see [Limits](#limits)) |
@@ -594,7 +596,9 @@ it rather than watching it vanish.
 
 ## Vendor Research Agent
 
-A background agent looks a vendor up on the open web and proposes risks for the vendor risk register. Its output is a list of **findings**: candidates, each with the quotes and links it rests on. **Nothing reaches the register until a person accepts a finding.** The model has no tools, it only reads the search results it is given, and what it says is checked by code against those results before it is stored.
+A background agent looks a vendor up on the open web and proposes risks for the vendor risk register. Its output is a list of **findings**: candidates, each with the quotes and links it rests on. **Nothing reaches the register until a person accepts a finding.**
+
+The agent runs on the organization's own LLM key and needs nothing else: no search account, no search key. Its research is a loop in which the organization's model decides what to search for and which pages to read, using two actions that the server implements, `search` and `read`. The analysis that follows reads only the text those actions returned, and what it says is checked by code against that text before it is stored. The web access (the page guard, `robots.txt`, the search engine, the loop and its limits) is the [web research toolkit](../infrastructure/web-research.md). Read its release gate before the feature is shipped to customers: the search uses a public feed whose terms the product owner still has to settle.
 
 Not covered: periodic re-research, researching all vendors at once, and findings in the user's language (the agent writes English).
 
@@ -617,59 +621,91 @@ POST /vendors  (VENDOR_RESEARCH_AUTO_RUN on)      POST /vendors/:id/research  (r
 
 **Triggers**
 
-- **Automatic.** `createVendor` calls `triggerAutoResearch` after the vendor is committed and does not wait for it, so it cannot fail the response. It starts nothing for a demo vendor or when `VENDOR_RESEARCH_AUTO_RUN` is `false`, and logs why. On an install where search is not configured, which is most of them, it then returns at once, before any query and without a log line, so a default install pays nothing per vendor created. Otherwise it goes through `startVendorResearch`; when that refuses for a missing LLM key or a reached daily cap, the reason is logged and no run is created.
+- **Automatic.** `createVendor` calls `triggerAutoResearch` after the vendor is committed and does not wait for it, so it cannot fail the response. It starts nothing for a demo vendor or when `VENDOR_RESEARCH_AUTO_RUN` is `false`, and logs why. Otherwise it goes through `startVendorResearch`. Nothing returns early for a missing search setting, because there is none; when the start refuses for a missing LLM key or a reached daily cap, the reason is logged and no run is created. So in an organization with an LLM key every new vendor costs one run on that key, bounded by the daily cap (see [Limits](#limits)), and `VENDOR_RESEARCH_AUTO_RUN=false` turns the automatic part off.
 - **Manual.** `POST /vendors/:id/research`, from the **Research risks** button on the vendors table or **Research again** in the findings section.
 
 Both go through `startVendorResearch` (`services/vendorResearch/trigger.ts`). Its checks, and so the 404, 409, 429 and 503 answers, are described under [Vendor Research Endpoints](#vendor-research-endpoints).
 
 **The run** (`runVendorResearch` in `pipeline.ts`, called by the job in `job.ts`)
 
-1. **Start.** The run moves from `queued` to `running`. Only a queued run starts, and only while it was created less than 15 minutes ago (`STALE_RUN_MINUTES`, the one limit of the stuck-run sweep, the cooldown and the daily cap, see [Limits](#limits)). The job skips a run in any other state, and one that has waited longer, without a search or a model call; such a queued run stays `queued` until the sweep fails it as `timed out`.
-2. **Load.** The vendor is loaded and the model of the organization's most recently added LLM key is resolved before any search, so an organization without a key spends no searches. A missing vendor or key fails the run.
-3. **Search.** Up to four searches, one per [category](#categories), run in parallel. A search that fails fails only its category, which shows `search_failed` in the summary. If every search fails, the run fails.
-4. **Evidence pack.** The hits are cleaned, de-duplicated by URL (the first hit wins, across categories), numbered `S1`, `S2`, ... and cut to the size limit. The pack is stored on the run. With nothing in it, the run completes with no findings and no model call.
-5. **Model call.** One structured call, see [Model call](#model-call).
+1. **Start.** The run moves from `queued` to `running`. Only a queued run starts, and only while it was created less than 15 minutes ago (`STALE_RUN_MINUTES`, the one limit of the stuck-run sweep, the cooldown and the daily cap, see [Limits](#limits)). The job skips a run in any other state, and one that has waited longer, without a web request or a model call; such a queued run stays `queued` until the sweep fails it as `timed out`.
+2. **Load.** The vendor is loaded and the model of the organization's most recently added LLM key is resolved before the research, so an organization without a key makes no web request. A missing vendor or key fails the run.
+3. **Research.** The research loop (`researchAgent.ts`), see [Research](#research): at most 24 steps and 5 minutes. Every snippet and page excerpt it gets goes to a ledger, tagged with a category.
+4. **Evidence pack.** The ledger is cleaned, numbered `S1`, `S2`, ... and trimmed to the size limit. The pack is stored on the run. If the web answered but nothing usable came back, the run completes with no findings and no model call.
+5. **Model call.** One structured call over the pack only, see [Model call](#model-call).
 6. **Validation.** Deterministic checks of everything the model said, see [Validation](#validation).
 7. **De-duplication and caps.** Candidates that repeat something known are dropped, then at most 3 per category and 8 per run are kept. See [De-duplication](#de-duplication).
 8. **Store.** One transaction inserts the findings and completes the run. If it fails, nothing is saved and the run ends `failed`.
 9. **Notice.** After an automatic run that stored at least one finding, the vendor's assignee is told (see [Notice to the assignee](#notice-to-the-assignee)). This comes after the run has ended and cannot change it.
 
-A run ends once. It is `failed` when the vendor or the LLM key is missing, every search fails, the model call fails, the findings cannot be saved, or something unexpected happens; otherwise it is `completed`, also with no findings. The pipeline catches model and search errors itself and ends the run as `failed`, so the retries of the job (see [Automations](../infrastructure/automations.md#on-demand-jobs)) only cover Redis and database failures that happen before the run is marked `running`, while it is still `queued`.
+A run ends once. It is `failed` when the vendor or the LLM key is missing, when the model call fails (in the loop when it found no usable source, or in the analysis), when the web never answered the loop, when the findings cannot be saved, or when something unexpected happens. The web never answered when every call of the loop failed (`The run stopped because the web could not be reached`), or when the model never searched or read (`The model did not use the research actions`). Otherwise the run is `completed`, also with no findings: a run whose calls were answered but returned nothing is a result, and so is partial research. A loop that stopped early, for its time, its steps or a model error with sources in hand, still hands what it found to the analysis. The pipeline catches model and web errors itself and ends the run as `failed`, so the retries of the job (see [Automations](../infrastructure/automations.md#on-demand-jobs)) only cover Redis and database failures that happen before the run is marked `running`, while it is still `queued`.
 
 ### Categories
 
-| Category | A finding is raised when the sources show | Search |
-|----------|-------------------------------------------|--------|
-| `security_incidents` | A breach, security incident or exploited vulnerability involving the vendor | News search, last 24 months |
-| `certifications` | A certification claim that is limited, in progress, expired, out of scope or contradicted | The vendor's own domain preferred |
-| `legal_regulatory` | A fine, enforcement action, lawsuit or settlement | News search, last 36 months |
-| `ai_specific` | Customer data used for training, AI subprocessors or model providers that are not disclosed, or other adverse AI terms | The vendor's own domain preferred |
+| Category | A finding is raised when the sources show | Where the agent looks | Lookback |
+|----------|-------------------------------------------|-----------------------|----------|
+| `security_incidents` | A breach, security incident or exploited vulnerability involving the vendor | The news first, then the whole web | 24 months |
+| `certifications` | A certification claim that is limited, in progress, expired, out of scope or contradicted | The vendor's own trust and security pages, and the web | 24 months |
+| `legal_regulatory` | A fine, enforcement action, lawsuit or settlement | The news first, then the whole web | 36 months |
+| `ai_specific` | Customer data used for training, AI subprocessors or model providers that are not disclosed, or other adverse AI terms | The vendor's own privacy policy, terms, data processing agreement and subprocessor list, and the web | 24 months |
+
+The lookback is counted back from the day of the run and is about the date of a source, not the date of the events it describes. The search leaves out a result with a known date before the window, and the analysis is told the windows too (a source inside the window still counts when it reports an older matter that is still open). A source without a date is kept, and a page on the vendor's own domain is exempt. The windows are in `LOOKBACK_MONTHS` (`categories.ts`).
 
 A missing mention is never a finding: "no SOC 2 page found" is recorded as `nothing_found` in the run summary, not as a risk.
 
-The vendor's **domain** is the identity anchor. It comes from the `website` field (scheme, `www.`, path and port are removed; an IP address or `localhost` is not a domain). Without one, `certifications` and `ai_specific` are `skipped` (note "Vendor website is missing or not a valid domain") and the two news categories still run. "Preferred" means the search asks Tavily to favour the vendor's domain; other sites can still appear.
+The vendor's **domain** is the identity anchor. It comes from the `website` field (scheme, `www.`, path and port are removed; an IP address or `localhost` is not a domain). With one, the agent may read the vendor's own pages, and those of its subdomains, without a search result for them first. Without one, the loop offers only `security_incidents` and `legal_regulatory`, `read` follows only URLs that a search returned, and `certifications` and `ai_specific` are `skipped` with the note "Vendor website is missing or not a valid domain". Nothing prefers a domain in a search engine: the search is general, and the vendor's site is reached with `read`.
 
-Every search is `basic` depth with 5 results, snippets only (no raw page content), and a 15 second timeout. Results are `http` or `https` URLs only; a hit with another scheme, a URL with whitespace or control characters, or one longer than 2,048 characters is dropped.
+### Research
+
+The loop (`services/webResearch/researchLoop.ts`, set up for a vendor by `researchAgent.ts` with the prompts of `prompts.ts`) asks the model for one step per turn, as a flat JSON object, and runs it in code. It uses the same self-correcting structured call as the analysis and not native tool calling, so it works with every model that can answer the app's other structured calls (OpenAI, Anthropic, DeepSeek, custom endpoints, local models). A model that cannot answer in JSON fails the run with a clear message. Each turn the model sees the vendor (name, domain, what it provides), today's date, the categories it may research with their windows, the history of its steps and the budget that is left. Everything that came from the web or from the model goes into a prompt escaped.
+
+| Action | Needs | What the code does |
+|--------|-------|--------------------|
+| `search` | `query`, `category`, and optionally `kind` (`web` by default, or `news`) | Asks the search engine (the public RSS results feed of Bing, behind the `SearchEngine` interface). Up to 10 results, each with title, address, date when there is one, and snippet. A result older than the window of its category is left out and counted, and the model is told how many |
+| `read` | `url`, `category`, and optionally `focus` (a few keywords) | Allowed only for an address that a search of this run returned or that is on the vendor's domain. Then the URL and address policy, `robots.txt`, a guarded fetch and the text of the page. The model gets an excerpt of at most 8,000 characters, and for a page of the vendor up to 25 links to its relevant pages |
+| `finish` | nothing | Ends the research. If the ledger is empty, or a category that can be researched has no call, the first `finish` is answered once with a reminder of what is missing, and the second is final |
+
+The limits: 24 steps (invalid ones included), 8 `search` actions, 12 `read` actions, 60 seconds for one model turn and 5 minutes for the loop. The full table, and the page guard behind `read`, are in the [web research toolkit](../infrastructure/web-research.md#the-research-loop). A model that answers badly cannot crash the loop or keep it going: a step that breaks its rule costs one step and the model is told why, and a step that the rules refuse never reaches the web. A blocked page, a failed search and an empty answer are results, never exceptions that fail a run. When a budget is spent the model is told and must finish; when the steps or the time run out, the loop ends and the analysis runs on the ledger as it is.
+
+**The ledger.** One entry per URL: `{ category, kind, onVendorSite, url, title, content, publishedAt }`. A search result is an entry of kind `result` with its snippet. Reading a page replaces the snippet of the same URL with the excerpt (kind `page`, same title), and the date is the page's own when it has one, else the snippet's. `onVendorSite` records whether the content came from the vendor's own domain, decided on the URL that answered: a page that redirected off the domain is not the vendor's own. A second read of a URL changes nothing. Every call is also recorded with its category and whether the web answered it, which feeds the [category outcomes](#category-outcomes).
+
+**Evidence of two kinds.** `buildEvidencePack` (`evidence.ts`) turns the ledger into the pack the analysis reads. Control characters and lone surrogates are cleaned, an unusable URL is dropped, and the first entry of a URL wins across categories. The sources are `kind="result"` (a snippet, at most 1,500 characters) or `kind="page"` (an excerpt, at most 8,000), in the order of the categories and then of the loop. Until the pack is at most 100,000 bytes, the last source of the category that holds the most bytes among those with two or more sources is removed (a tie goes to the later category). A category with one source keeps it, and when every category is down to one the content of the largest source is cut instead, so a category that was researched always has a source in the pack and cannot read as "nothing found" for want of room. The ids `S1`, `S2`, ... are numbered after the trimming, without gaps. The pack is stored on the run.
+
+**Prompt version.** `PROMPT_VERSION` is `vr-2`. It is stored on every run and changes whenever the wording of a prompt changes.
+
+### Category outcomes
+
+Each category ends a run with one of four outcomes and a note. "Worked on" means that at least one call tagged with the category reached the web; "answered" means that the web answered it: a search that returned a feed (an empty one too) or a page that was read. A call that the rules refuse before it reaches the web (a spent budget, an address that is not allowed, an invalid step) is not work on a category. "Looked and found nothing" is thereby never confused with "could not look" or "did not look". The first rule that applies decides:
+
+| Outcome | When | Stored note |
+|---------|------|-------------|
+| `skipped` | The category needs the vendor's domain and the vendor has none | `Vendor website is missing or not a valid domain` |
+| `findings` | At least one finding was kept for the category, also when some of its calls failed | `1 potential risk found` or `N potential risks found` |
+| `skipped` | No call was tagged with the category: the time or the steps ran out, or the research ended, before it was covered | `Not researched: the time limit was reached` (the loop ran out of time); `Not researched: the research ended before this category was covered` (any other end) |
+| `search_failed` | The category was worked on and no call was answered | `The search was not available` (every call was a failed search); `The pages could not be read` (otherwise) |
+| `nothing_found` | At least one call was answered and no finding survived | `Possible risks were found but could not be verified or are already recorded` (the model proposed a risk and none stayed); `No risks found; N of M pages could not be read` (a page call of the category failed); otherwise the model's own note, which the UI shows as unverified, or `No risks found in the sources reviewed` when it wrote none |
+
+The UI maps each phrase to a translated sentence and shows nothing it does not know. The enum `search_failed` is labelled "could not be researched" in the UI.
 
 ### Model call
 
-One call to `generateObjectWithSelfCorrection` (`advisor/llmSelfCorrect.ts`), with the model of the organization's most recently added LLM key (the first of its key list, which is ordered newest first), temperature 0, under one 120 second deadline. The answer must fit the schema in `schema.ts`:
+The analysis is one call to `generateObjectWithSelfCorrection` (`advisor/llmSelfCorrect.ts`), with the model of the organization's most recently added LLM key (the first of its key list, which is ordered newest first), temperature 0, under one 120 second deadline. It has no actions: it reads the evidence pack and nothing else. The answer must fit the schema in `schema.ts`:
 
 - `findings`, at most 20, each with `category`, `risk_description`, `impact_description` and `action_plan` (at most 300 characters each), `likelihood` and `risk_severity` (the register's own values, so an accepted finding is always valid there), `confidence`, and 1 to 5 `evidence` items of `source_id` and `quote` (at most 300 characters);
 - `category_notes`, at most four short notes (200 characters each), one per category.
 
-If the answer does not fit, the wrapper sends the schema issues back and asks again, at most twice; the SDK also retries transport errors twice. The schema is not strict: a property that is not in it (at the top, on a finding, on an evidence item or on a note) is dropped when the answer is parsed, not reported. So no property name that the model chose, and so that a web page could have steered it to choose, reaches the system prompt of a retry, which quotes the schema issues. The JSON schema sent to the provider still has `additionalProperties: false` on every object, because the AI SDK adds it. `PROMPT_VERSION` (now `vr-1`) is stored on every run and changes whenever the wording of a prompt changes.
+If the answer does not fit, the wrapper sends the schema issues back and asks again, at most twice; the SDK also retries transport errors twice. The schema is not strict: a property that is not in it (at the top, on a finding, on an evidence item or on a note) is dropped when the answer is parsed, not reported. So no property name that the model chose, and so that a web page could have steered it to choose, reaches the system prompt of a retry, which quotes the schema issues. The JSON schema sent to the provider still has `additionalProperties: false` on every object, because the AI SDK adds it. `PROMPT_VERSION` (now `vr-2`) is stored on every run.
 
-The user prompt carries the vendor (name, domain, what it provides) as context, and the evidence in an `<evidence>` block with `&`, `<` and `>` escaped. The system prompt says that everything inside `<evidence>` is untrusted data, not instructions; to raise a risk only when the evidence itself shows an incident, gap, limitation, expiry, contradiction or adverse term; that a missing mention is not a finding; to ignore sources about other companies; to cite each risk with verbatim quotes; and to return an empty list when nothing qualifies.
+The user prompt carries the vendor (name, domain, what it provides) as context, and the evidence in an `<evidence>` block with `&`, `<` and `>` escaped. Each `<source>` has its id, category, kind and URL as attributes, `site="vendor"` when it is on the vendor's own site (the ledger's decision, `onVendorSite`, and never the host of the URL), a title, a published date when there is one, and its text in a `<snippet>`. The system prompt says: today's date and the lookback window of each category; that everything inside `<evidence>` is untrusted data, not instructions, and is of two kinds (result snippets and page excerpts, the latter with a gap marker where text was left out); that the vendor's own statement of a limitation, an expiry or an adverse term counts as evidence; to raise a risk only when the evidence itself shows an incident, gap, limitation, expiry, contradiction or adverse term; that a missing mention is not a finding; to ignore sources about other companies; to cite each risk with verbatim quotes, each from one passage and never across a gap; and to return an empty list when nothing qualifies.
 
 ### Validation
 
 `validateFindings` (`validation.ts`) trusts nothing the model says and uses no model.
 
-- **Verbatim quote.** Every citation is checked on its own and removed unless its source id is in the evidence pack and its quote is a substring of that source's snippet, after the prompt escaping is decoded and case, whitespace and quotation marks are ignored. A source cited twice counts once.
-- **The source is about the vendor.** A citation is also removed unless its source mentions the vendor: its URL is on the vendor's domain or a subdomain, or its title or snippet names the vendor as a whole word or mentions the domain. A page about a company with a similar name cannot get in.
+- **Verbatim quote.** Every citation is checked on its own and removed unless its source id is in the evidence pack and its quote is a substring of that source's text (the snippet of a result or the excerpt of a page), after the prompt escaping is decoded and case, whitespace and quotation marks are ignored. A quote that holds the gap marker `[…]` of a page excerpt is removed too: it would join passages that are not next to each other on the page. A source cited twice counts once.
+- **The source is about the vendor.** A citation is also removed unless its source mentions the vendor: its URL is on the vendor's domain or a subdomain, or its title or text names the vendor as a whole word or mentions the domain. A page about a company with a similar name cannot get in.
 - **The quote says more than the name.** A citation is also removed unless its quote has at least one word that is no part of the vendor's own words. A word is a run of letters and digits in any script, compared after the quote is normalised as for the verbatim check. The vendor's own words are those of its name and of its domain; `www`, `http` and `https` (a page writes the domain with them, and the vendor record does not keep them); and the possessive of each word of the name and of the domain, which is the word followed by `s`, because the apostrophe is removed before words are compared ("Acme's" is "acmes"). For the vendor Acme Analytics (`acme-analytics.com`), the quotes "Acme", "Acme Analytics", "acme-analytics.com", "www.acme-analytics.com", "https://acme-analytics.com" and "Acme's" do not count, while "Acme confirmed the incident", "SOC 2 Type II" and "ISO 27001" do. This is not a minimum length. A refused quote does not use up its source: a later quote of the same source can still count. So a second hostname whose only quote is the vendor's name or domain no longer lifts a finding to `high`. There is no list of words, so any quote with one word beyond these still counts, and this is not a closed list of exceptions: a company suffix ("Acme Analytics Inc"), a path after the domain ("https://acme-analytics.com/trust") and, for a vendor with no domain on record, the top-level domain ("acme-analytics.com") all still count.
-- **Candidates.** A candidate is dropped when no citation is left, when its category was not searched successfully, when a text is empty or longer than 300 characters, when an enum value is not valid, or when `calculateRiskLevel(risk_severity, likelihood)` gives no level. The stored `risk_level` is that level followed by ` Risk`.
+- **Candidates.** A candidate is dropped when no citation is left, when its category has no source in the evidence pack, when a text is empty or longer than 300 characters, when an enum value is not valid, or when `calculateRiskLevel(risk_severity, likelihood)` gives no level. The stored `risk_level` is that level followed by ` Risk`.
 - **Confidence never goes up.** The citations that passed the checks above set a ceiling: `high` needs at least two different hostnames (`www.` is ignored), `medium` needs two different pages or one page on the vendor's own domain, otherwise `low`. The stored value is the lower of the model's label and the ceiling.
 - **Clean text.** The texts the model wrote (the three finding texts, the quotes and the category notes) are cleaned like the evidence is: control characters other than tab, line feed and carriage return are removed and lone surrogates are replaced. PostgreSQL refuses them, and one would fail the save of the whole run.
 
@@ -691,24 +727,27 @@ The register and the list should not collect the same risk again, and a dismisse
 
 | Limit | Value |
 |-------|-------|
-| Searches per run | 4, each with a 15 second timeout |
-| Snippet | 1,500 characters |
-| Evidence pack | 40,000 bytes serialized; sources are removed from the end, so the last categories lose first |
-| Model call | 120 seconds, retries included |
+| Steps of the research loop | 24, invalid ones included |
+| `search` actions per run | 8, each with a 12 second and 1 MB limit; one at a time per process, at least a second apart |
+| `read` actions per run | 12, successful or not; a page takes at most 20 seconds, 2 MB after decompression and 4 redirects |
+| One model turn of the loop, the whole loop | 60 seconds, 5 minutes |
+| Snippet, page excerpt | 1,500 characters, 8,000 characters |
+| Evidence pack | 100,000 bytes serialized; trimmed from the largest category, see [Research](#research) |
+| Model call of the analysis | 120 seconds, retries included |
 | Findings kept | 3 per category, 8 per run |
 | Manual cooldown | `VENDOR_RESEARCH_MANUAL_COOLDOWN_MINUTES` (10), per vendor |
 | Daily cap | `VENDOR_RESEARCH_DAILY_RUN_CAP` (50), per organization, rolling 24 hours, automatic and manual runs together |
 | A stuck run | 15 minutes |
 
 - The cooldown applies to manual starts only, but it looks at the vendor's newest run of any trigger type, so an automatic run holds off a manual one. An automatic start does not wait for the cooldown; it is held to the daily cap.
-- Both limits are plain count queries over `vendor_research_runs`. They count every run except two kinds that searched nothing and called no model, so they count for neither:
-  - a run that **failed before it started** (its job could not be queued, it was swept as stuck while still `queued`, or its job found search not configured). A start refused with 503 can therefore be tried again at once;
-  - a run that is **still `queued` more than 15 minutes after it was created** (`STALE_RUN_MINUTES`, the limit of the stuck-run sweep below). Its job was lost, for example because the backend empties the queue of waiting jobs each time it starts (`obliterate` in `scheduleVendorReviewDateNotification`, older than this feature). The sweep only looks at the vendor that is started or whose latest run is read, so without this rule such a run could use up a slot of the daily cap for the whole 24 hours. A worker that picks up the job of such a run later does not start it either (the start has the same 15-minute limit), so the run can only end as `timed out`, without a search or a model call.
+- Both limits are plain count queries over `vendor_research_runs`. They count every run except two kinds that did no research and called no model, so they count for neither:
+  - a run that **failed before it started** (its job could not be queued, or it was swept as stuck while still `queued`). A start refused with 503 can therefore be tried again at once;
+  - a run that is **still `queued` more than 15 minutes after it was created** (`STALE_RUN_MINUTES`, the limit of the stuck-run sweep below). Its job was lost, for example because the backend empties the queue of waiting jobs each time it starts (`obliterate` in `scheduleVendorReviewDateNotification`, older than this feature). The sweep only looks at the vendor that is started or whose latest run is read, so without this rule such a run could use up a slot of the daily cap for the whole 24 hours. A worker that picks up the job of such a run later does not start it either (the start has the same 15-minute limit), so the run can only end as `timed out`, without a web request or a model call.
 
   A `running` run counts however long it has run, and so do a completed run and a run that failed after it started.
 - A run that has been `queued` or `running` for more than 15 minutes (counted from `started_at`, or from `created_at` if it never started) is failed with the error `timed out`. There is no background sweep: it runs before a new run is created and whenever the latest run is read. So a worker that is down leaves a run `queued` until the next start or read, and neither a crash nor a restart blocks a vendor or leaves the UI on "Researching" for ever.
-- A queued run also waits for a free worker slot. The automation worker runs 10 jobs at a time (`concurrency: 10` in `services/automations/automationWorker.ts`), for every kind of job in the shared `automation-actions` queue, and a research run holds a slot for at most about two and a half minutes (the searches run in parallel with 15 seconds each, then one model call of at most 120 seconds). So a run is skipped for having waited more than 15 minutes only when about 60 or more jobs are ahead of it. One organization at the default daily cap (50 runs) cannot cause that alone; it takes several organizations starting many runs at once, a worker that is down, or a long run of other jobs. The vendor then shows the run as `timed out`, which counts toward neither limit, and **Research again** starts a new one at once.
-- Each run costs at most four searches and one model call (more only when the answer has to be asked for again).
+- A queued run also waits for a free worker slot. The automation worker runs 10 jobs at a time (`concurrency: 10` in `services/automations/automationWorker.ts`), for every kind of job in the shared `automation-actions` queue, and a research run can hold a slot for up to about 7 minutes (5 for the research loop, 2 for the analysis). A burst of runs can therefore leave the last one queued past the 15-minute limit, which the sweep ends as `timed out`; this takes many runs started at once (for example automatic runs after a bulk import of vendors), a worker that is down, or a long run of other jobs. The vendor then shows the run as `timed out`, which counts toward neither limit, and **Research again** starts a new one at once. A dedicated queue for research is the clean fix if this shows up.
+- Each run costs at most 24 steps of the loop (each a model call), the analysis call (more only when an answer has to be asked for again), 8 searches and 12 page reads. A typical run is 8 to 16 steps, roughly 60,000 to 130,000 input tokens for the loop and 20,000 to 30,000 for the analysis: cents on a DeepSeek-class price, a dollar or more on a frontier model. These are estimates. The organization pays on its own key, and the daily cap bounds it. `searches_used` and `pages_read` measure the tool side; the provider's usage page measures the model side.
 
 ### Accept and dismiss
 
@@ -734,14 +773,15 @@ After an **automatic** run that stored at least one finding, the vendor's assign
 
 ### Safety
 
-- **Web text is untrusted.** It enters the prompt inside a delimited block with its markup characters escaped, the model has no tools, its answer is bound to a schema and then checked by code against the retrieved text, and nothing is written to the register unless a person accepts. The findings section says they are AI-suggested and must be verified, and the UI shows finding text, quotes and model notes as plain text, never as markup.
+- **Web text is untrusted.** It enters the prompts inside a delimited block with its markup characters escaped. The model of the loop can only name a search or an address, and code decides what happens (next bullet); the analysis has no actions, its answer is bound to a schema and then checked by code against the retrieved text, and nothing is written to the register unless a person accepts. The findings section says they are AI-suggested and must be verified, and the UI shows finding text, quotes and model notes as plain text, never as markup.
 - **Email.** The text of an accepted finding reaches the action owner's assignment email like any risk text. That email HTML-escapes the names and the context it shows (`utils/escapeHtml.ts`, see [Notifications](./notifications.md#assignment-emails)), so text that a model wrote after reading a web page shows as typed and cannot add a tag, a link or an image.
 - **Links.** A source is a link only when its URL is `http` or `https`; it opens in a new tab with `rel="noopener noreferrer"`. The server drops any other URL from the evidence before the model sees it.
-- **No server-side fetching.** The server reads only the snippets that the search returns. It never requests a URL a search result points to, so there is no request to an address that a third party chose.
-- **The search key** lives in the environment only. It is never logged and never returned: the config endpoint returns booleans, and the search provider turns every failure into an HTTP status or a fixed phrase, because an error that quoted the request would quote the key.
-- **Stored errors are fixed phrases.** A run is served to every role, so its `error` is always one of: `Vendor not found`; `No LLM key configured`; `Model call failed: HTTP <status>`, `... timed out`, `... the answer did not match the expected format` or `... unexpected error`; `The run stopped because all searches failed: <reasons>` (each reason is `search timed out`, `search request failed`, `search response could not be read`, `Tavily search failed with status <status>` or `The search failed`); `Unexpected error`; `Saving the findings failed`; `timed out`; `could not enqueue`; `Search provider not configured`. The message of a model or provider error is neither stored nor logged by the pipeline (the log line has the error's name and HTTP status), and the message of any other error, which can name a host, a port or a query, goes to the server log only. The client maps this closed set to translated sentences and shows a generic one for anything else.
-- **Category notes.** The note of a category is a fixed phrase, except for a `nothing_found` category in which the model proposed nothing: there it may be the model's own text (200 characters at most). The UI shows that one as plain text under "AI note (unverified)".
-- **Data sent out.** The search provider receives the vendor name, its domain and fixed query words. The LLM provider, which the organization chose, also receives what the vendor provides and the snippets. No other organization data leaves.
+- **The server fetches pages the model chose, behind a guard.** That is a server-side request forgery surface, so every request goes through `guardedFetch` of the [web research toolkit](../infrastructure/web-research.md#the-page-guard). Only `http` and `https` on ports 80 and 443 are used, and never an IP address, a URL with credentials, `localhost` or a name that is reserved for private networks. Every address the host resolves to must be public, checked on the connection itself, so DNS cannot answer differently afterwards. Redirects are followed by hand (4 at most) and each hop is checked again, and a redirect from https to http is refused. A page may be read only if a search of the run returned its address or it is on the vendor's domain, so a page cannot send the agent to an arbitrary address. The body is cut at 2 MB after decompression, and the whole fetch at 20 seconds. The bot says who it is (`VerifyWiseResearchBot`), sends no cookie, credential or `Referer`, and obeys each site's `robots.txt` for pages.
+- **No search key.** The search needs no account and no key. The LLM key is the organization's own: it is never returned (the config endpoint returns booleans) and never logged. The pipeline logs ids only (organization, vendor and run), never page text, URLs, queries, model output or keys, and the errors of the page guard and of the search are fixed phrases that repeat nothing of the URL or the query.
+- **Stored errors are fixed phrases.** A run is served to every role, so its `error` is always one of: `Vendor not found`; `No LLM key configured`; `Model call failed: HTTP <status>`, `... timed out`, `... the answer did not match the expected format` or `... unexpected error` (from the loop or from the analysis); `The run stopped because the web could not be reached`; `The model did not use the research actions`; `Unexpected error`; `Saving the findings failed`; `timed out`; `could not enqueue`. The message of a model or provider error is neither stored nor logged by the pipeline (the log line has the error's name and HTTP status), and the message of any other error, which can name a host, a port or a query, goes to the server log only. The client maps this closed set to translated sentences and shows a generic one for anything else.
+- **Category notes.** The note of a category is a fixed phrase from the set under [Category outcomes](#category-outcomes), except for a `nothing_found` category in which no page failed and the model proposed nothing: there it may be the model's own text (200 characters at most). The UI shows that one as plain text under "AI note (unverified)".
+- **Data sent out.** During a run the server requests `www.bing.com` (the queries the model writes: by its prompt the vendor's name and topic words, which the code does not enforce), the vendor's website and the sites of the articles that a search returned. Every request names the bot. The LLM provider, which the organization chose, receives the vendor's name, its domain and what the vendor provides, the queries, and the snippets and page text that the research read. No other organization data leaves. An air-gapped installation cannot use the feature: its runs fail with "The run stopped because the web could not be reached". The search itself reads a public feed whose own notice limits it to personal, non-commercial use, which is a release gate before the feature ships to customers (see the [web research toolkit](../infrastructure/web-research.md)).
+- **Stored third-party text.** Page excerpts and snippets are kept in `vendor_research_runs.evidence` as an audit trail (up to 100 KB per run). The UI shows only the quotes (300 characters) and links. Pruning old evidence is out of scope.
 
 ### Permissions and multi-tenancy
 
@@ -752,23 +792,23 @@ After an **automatic** run that stored at least one finding, the vendor's assign
 
 | Variable | Default | Meaning |
 |----------|---------|---------|
-| `VENDOR_RESEARCH_SEARCH_PROVIDER` | empty (feature off) | The search provider. Only `tavily` is supported; any other value counts as not configured |
-| `TAVILY_API_KEY` | empty | Your own Tavily key. No key ships with the product. Never logged, never returned by an API |
 | `VENDOR_RESEARCH_AUTO_RUN` | `true` | Research a vendor automatically after it is created. Only `false` (any case) turns it off; people can still start a run by hand |
 | `VENDOR_RESEARCH_MANUAL_COOLDOWN_MINUTES` | `10` | Minutes before the same vendor can be researched again by hand. `0` means no wait. Anything but a whole number of 0 or more falls back to 10 |
 | `VENDOR_RESEARCH_DAILY_RUN_CAP` | `50` | Runs one organization may start in a rolling 24 hours, automatic and manual together. Anything but a whole number of 1 or more falls back to 50 |
 
-The variables are optional and are listed in `Servers/.env.example`. They are read from the process environment each time they are used, not at import. Research also needs an LLM key saved for the organization, which an Admin adds in the LLM Keys section of Settings → API Keys. With no search provider set, the feature reports "not set up" and nothing runs.
+The three variables are optional and are listed in `Servers/.env.example`. They are read from the process environment each time they are used, not at import. There is no search setting: research needs an LLM key saved for the organization, which an Admin adds in the LLM Keys section of Settings → API Keys, and nothing else. Without a key the feature reports "not set up" and nothing runs. The server also needs outbound internet access: HTTPS to `www.bing.com` and to public websites (and HTTP on port 80 for the sites that only offer that).
 
-**Both processes need the variables.** The backend uses them for the config endpoint and the start checks; the worker builds the search provider itself and runs the pipeline. A worker without them ends every run as `failed` with `Search provider not configured`. That run never started, so it counts for neither limit.
+**The worker needs no search settings.** The backend reads the three variables, for the config endpoint, the automatic start, the cooldown and the daily cap. The worker reads none of them: it takes the organization's LLM key from the database and runs the pipeline. It needs outbound internet access, though. A worker that cannot reach the web ends every run as `failed` with `The run stopped because the web could not be reached`.
 
 | Deployment | What to do |
 |------------|------------|
 | `docker-compose.prod.yml` | Nothing beyond setting the variables in `.env.prod`: the file hands the whole `.env.prod` to the backend and the worker |
-| `docker-compose.override.yml` (development stack) | It gives `.env.dev` to the backend but not to the worker, which gets only the list in `docker-compose.yml`. The backend container also runs a worker of its own (`npm run watch` starts the server and the worker together), so two workers take research jobs, one with the variables and one without: a run succeeds or ends `failed` with `Search provider not configured` depending on which of them takes its job. To run research reliably in that stack, add the variables to the separate worker's `environment` |
-| `kubernetes/backend-deployment.yaml`, `kubernetes/worker-deployment.yaml` | These list variables by name and are **not** updated by this change. The deployer adds the five variables to both; the key belongs in the Secret |
-| Helm chart: `kubernetes/helm/verifywise/templates/backend-deployment.yaml`, `worker-deployment.yaml`, `secret.yaml` | Same: **not** updated. Add the variables to both deployments, the key to `secret.yaml`, the other four to `configmap.yaml`, and their values to `values.yaml` |
-| Ansible: `ansible/templates/.env.j2` | Renders `.env.prod`, which compose hands to both processes. **Not** updated: the deployer adds the five lines to the template |
+| `docker-compose.override.yml` (development stack) | It gives `.env.dev` to the backend but not to the worker. That is fine: only the backend reads the three variables, so every worker can run a job, whichever container it is in |
+| `kubernetes/backend-deployment.yaml`, `kubernetes/worker-deployment.yaml` | These list variables by name and are **not** updated by this branch. Only the backend needs the three variables. The branch `chore/deploy-vendor-research-settings` adds them to the backend deployment and the config map |
+| Helm chart: `kubernetes/helm/verifywise/templates/backend-deployment.yaml`, `configmap.yaml`, `values.yaml` | Same: **not** updated by this branch. The same deployment branch adds the three variables to the backend and to the values |
+| Ansible: `ansible/templates/.env.j2` | Renders `.env.prod`, which compose hands to both processes. **Not** updated by this branch; the deployment branch adds the three lines to the template |
+
+Network egress is part of the deployment: a firewall, proxy or network policy that blocks outbound HTTPS from the backend and worker pods makes every run fail with "The run stopped because the web could not be reached".
 
 ## Change History
 
@@ -847,9 +887,10 @@ All vendor changes are tracked:
 - With a vendor chosen, `RunSummary` shows the latest run: one line per category ("Security incidents: nothing found") with its note, the error of a failed run, the date of the last run, and **Research again** (`risks.edit` only). While the run is queued or running it shows "Researching…" and the latest run is polled every 3 seconds for up to 2 minutes. After that it says "Still running. Check back later." followed by **Check again** (a text button, shown to every role), which reads the run at once and polls for another 2 minutes; and a run that is still queued or running is also read again when the browser tab regains focus (the app turns window-focus refetching off everywhere else). **Research again** is enabled again, so that the server decides. When a run that was seen active ends, the findings lists are refetched once.
 - **Following a run.** A run started with the **Research risks** button on the vendors table is followed on the Risks tab. The button leaves a one-shot hint in the query cache under its own key (`["vendorResearchFollow"]`, so invalidating the research queries does not clear it), for a started run and for an "already running" answer, not for a refusal. The findings section reads the hint when it mounts and opens on that vendor, even with nothing pending, as if `findingsVendorId` were in the URL, so `RunSummary` polls and the findings appear when the run ends. The URL parameter wins when both are present, and the hint is cleared by the first mount either way. It is not time-bound: it stays until the section mounts or the query cache collects it (10 minutes after the latest start).
 - The section stays mounted, with its state, while the register of vendor risks reloads after the **Risk status** or the project filter changes. Only the insights and the table give way to the skeleton.
-- States: loading, empty, a failed load with **Retry** (`InlineError`), and not set up ("Vendor research is not set up.", shown to everyone; the line that names the environment variables only to Admins).
+- A run that is not active also shows one caption with its counters, "Searches: N, pages read: M" (from `searches_used` and `pages_read`), when they are not both zero.
+- States: loading, empty, a failed load with **Retry** (`InlineError`), and not set up. Research is not set up only when the organization has no LLM key (`hasLlmKey` is false): the section says "Vendor research is not set up." to everyone, and only Admins also see the hint "Add an LLM key under Settings → API Keys, in the LLM Keys section.". The outcome `search_failed` is labelled "could not be researched".
 
-**Row button.** `components/VendorResearchButton/` is a microscope icon button (tooltip "Research risks") that `components/Table/WithPlaceholder` renders in the actions of each vendor row. It is hidden without `risks.edit`, and disabled while the settings load and when research is not set up. If the request for the settings fails, the button and the findings section treat research as set up and the server decides: a start without a setting is refused with a 409. The global error toast is off for the start call, so every click is answered with a message through `onNotify` (started, already running, cooldown, daily cap, not set up, queue unavailable, or a generic failure).
+**Row button.** `components/VendorResearchButton/` is a microscope icon button (tooltip "Research risks") that `components/Table/WithPlaceholder` renders in the actions of each vendor row. It is hidden without `risks.edit`, and disabled while the settings load and when research is not set up (no LLM key). If the request for the settings fails, the button and the findings section treat research as set up and the server decides: a start without an LLM key is refused with a 409. The global error toast is off for the start call, so every click is answered with a message through `onNotify` (started, already running, cooldown, daily cap, not set up, queue unavailable, or a generic failure).
 
 **Data layer.**
 
@@ -861,7 +902,7 @@ All vendor changes are tracked:
 | `application/utils/vendorResearchText.ts` | Labels, and translated sentences for the closed set of phrases the server stores. A stored string it does not know is never shown; the model's own category note is shown as plain text under "AI note (unverified)" |
 | `application/utils/vendorResearchAlerts.ts` | The messages for a start, shared by the findings section and the row button |
 
-Strings are translated by the DOM translator from `i18n/translations.ts` (de, fr and es); server messages are in `Servers/locales/{en,de,fr}.json`.
+Strings are translated by the DOM translator from `i18n/translations.ts` (de, fr and es). The research feature adds no server message, so `Servers/locales` does not change: the stored phrases are English and the client maps them.
 
 ## Automation Triggers
 
@@ -912,13 +953,15 @@ Vendors with `is_demo=true`:
 | `services/vendorResearch/trigger.ts` | `startVendorResearch` (checks, queued run, job) and `triggerAutoResearch` |
 | `services/vendorResearch/job.ts` | `handleVendorResearchJob`: runs the pipeline, then the assignee notice |
 | `services/vendorResearch/pipeline.ts` | `runVendorResearch`: one run from `queued` to `completed` or `failed` |
-| `services/vendorResearch/categories.ts`, `target.ts`, `evidence.ts` | The searches of a run, the vendor's name and domain, the evidence pack |
-| `services/vendorResearch/prompts.ts`, `schema.ts` | The prompts (`PROMPT_VERSION`) and the output schema of the model call |
+| `services/vendorResearch/categories.ts`, `target.ts`, `evidence.ts` | The lookback windows and the categories a vendor allows, the vendor's name and domain, the evidence pack built from the ledger |
+| `services/vendorResearch/researchAgent.ts` | `createVendorResearcher`: one web session, page reader and research loop per run, with the vendor's prompts |
+| `services/vendorResearch/summary.ts` | The outcome and the fixed note of each category, made from the calls of the loop |
+| `services/vendorResearch/prompts.ts`, `schema.ts` | The prompts of the loop and of the analysis (`PROMPT_VERSION`) and the output schema of the analysis |
 | `services/vendorResearch/validation.ts`, `dedupe.ts`, `text.ts` | Validation of the answer, de-duplication, text cleaning |
 | `services/vendorResearch/findings.service.ts` | `acceptFinding` and `dismissFinding` |
 | `services/vendorResearch/assignee.ts` | `isUserOfOrganization`: whether a user that someone else named (the vendor's assignee, the action owner of an accepted finding) belongs to the organization; an id that cannot be a user id (zero, negative, a fraction, `NaN`, above `Number.MAX_SAFE_INTEGER`) is answered `false` without a lookup, and a failing lookup rejects |
-| `services/vendorResearch/config.ts` | The five environment variables |
-| `services/vendorResearch/searchProvider.ts`, `searchTypes.ts`, `tavilyProvider.ts` | The search provider interface and the Tavily implementation |
+| `services/vendorResearch/config.ts` | The three environment variables |
+| `services/webResearch/` | The web research toolkit, see [Web research toolkit](../infrastructure/web-research.md): `publicUrl.ts` (URL and address policy), `guardedFetch.ts`, `robots.ts`, `pageText.ts`, `readPage.ts`, `webSearch.ts` (`SearchEngine` and Bing), `webSession.ts` (budgets, provenance, ledger), `promptText.ts`, `researchLoop.ts` |
 | `services/vendors/vendorRiskCreate.service.ts` | Vendor risk creation shared by the vendor risk form and accept |
 | `services/vendors/textSimilarity.ts` | Tokeniser and Jaccard score (risk suggestions and research de-duplication) |
 | `services/inAppNotification.service.ts` | `notifyAssigneeOfVendorResearch`; the assignment email, which escapes the text it shows |
@@ -929,6 +972,7 @@ Vendors with `is_demo=true`:
 | `database/migrations/20261010012217-create-vendor-research-tables.js` | The two tables |
 | `database/migrations/20261010161236-vendor-research-notification-type.js`, `20261010161240-vendor-research-notification-unique.js` | The notification type and its dedup index |
 | `database/migrations/20261011025519-vendor-research-fk-indexes.js` | Four indexes behind the foreign keys of the research tables: three on the findings, one on the runs |
+| `database/migrations/20261013021400-vendor-research-web-agent.js` | Drops `search_provider` from the runs and adds `pages_read` |
 
 ### Frontend
 
@@ -953,4 +997,5 @@ Vendors with `is_demo=true`:
 - [Use Cases](./use-cases.md)
 - [Models](./models.md)
 - [Notifications](./notifications.md) (the vendor research notice)
+- [Web research toolkit](../infrastructure/web-research.md) (the page guard, the search engine and the research loop)
 - [Automations](../infrastructure/automations.md) (the `vendor_research` job)

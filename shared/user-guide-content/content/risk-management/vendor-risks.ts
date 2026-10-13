@@ -259,7 +259,7 @@ export const vendorRisksContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise can research a vendor on the web for you. An agent searches public sources for four kinds of risk: security incidents, certification gaps, legal and regulatory actions, and AI-specific risks such as customer data being used to train models. It starts by itself when you add a vendor (whoever runs your VerifyWise server can turn this off), and you can start it again whenever you like. When a run that started by itself finds something, the vendor\'s assignee gets a notification. The results appear as findings in the **Research findings** section on the **Risks** tab of the Vendors page, and nothing is added to your vendor risk register until you accept it.',
+      text: 'VerifyWise can research a vendor on the web for you. An agent searches public sources for four kinds of risk: security incidents, certification gaps, legal and regulatory actions, and AI-specific risks such as customer data being used to train models. It reads public pages, such as a vendor\'s trust and security pages, and obeys each site\'s `robots.txt`. The vendor\'s name and website, what it provides and the text of the pages it reads go to your organization\'s LLM provider. It starts by itself when you add a vendor (whoever runs your VerifyWise server can turn this off), and you can start it again whenever you like. When a run that started by itself finds something, the vendor\'s assignee gets a notification. The results appear as findings in the **Research findings** section on the **Risks** tab of the Vendors page, and nothing is added to your vendor risk register until you accept it.',
     },
     {
       type: 'callout',
@@ -287,7 +287,7 @@ export const vendorRisksContent: ArticleContent = {
       type: 'callout',
       variant: 'info',
       title: 'Setup',
-      text: 'Research needs a web search provider and an LLM key. Whoever runs your VerifyWise server sets the search provider and its key in the server environment (`VENDOR_RESEARCH_SEARCH_PROVIDER` and `TAVILY_API_KEY`), and an Admin adds an LLM key under **Settings → API Keys**, in the LLM Keys section. Until both are in place, the section says vendor research is not set up and the research buttons are disabled.',
+      text: 'Research needs an LLM key and nothing else to set up. An Admin adds the key under **Settings → API Keys**, in the LLM Keys section, and the research runs on it. The VerifyWise server needs internet access to read public web pages. Without an LLM key, the section says vendor research is not set up and the research buttons are disabled.',
     },
     {
       type: 'article-links',

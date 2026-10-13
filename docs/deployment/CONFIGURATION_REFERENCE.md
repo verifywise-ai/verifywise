@@ -260,22 +260,23 @@ VITE_BRANDFETCH_API_KEY=bf_xxxxxxxxxx
 
 ### Vendor research agent
 
-An agent researches a vendor on the open web and proposes risks for the vendor risk register. A person accepts or dismisses each one; nothing is added to the register on its own. All five variables are optional. With no search provider set, vendor research reports "not set up" and nothing runs. It also needs an LLM key saved for the organization, which an Admin adds in the LLM Keys section of **Settings → API Keys**.
+An agent researches a vendor on the open web and proposes risks for the vendor risk register. A person accepts or dismisses each one; nothing is added to the register on its own. The agent runs on the organization's own LLM key, which an Admin adds in the LLM Keys section of **Settings → API Keys**, and needs no other account or key. Without an LLM key, vendor research reports "not set up" and nothing runs. All three variables are optional.
+
+The server needs outbound HTTPS to `www.bing.com` (the search) and to public websites (the pages the agent reads). Without internet access, runs fail with "The run stopped because the web could not be reached". Every request names the bot (`VerifyWiseResearchBot`), and pages are read only as far as each site's `robots.txt` allows.
 
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
-| `VENDOR_RESEARCH_SEARCH_PROVIDER` | Search provider. Only `tavily` is supported | empty (off) | For vendor research |
-| `TAVILY_API_KEY` | Your own Tavily API key. No key ships with the product. It is never logged and never returned by an API | empty | For vendor research |
 | `VENDOR_RESEARCH_AUTO_RUN` | Research a vendor automatically after it is created. Only `false` turns it off | `true` | No |
 | `VENDOR_RESEARCH_MANUAL_COOLDOWN_MINUTES` | Minutes before the same vendor can be researched again by hand. `0` means no wait | `10` | No |
 | `VENDOR_RESEARCH_DAILY_RUN_CAP` | Research runs one organization may start in a rolling 24 hours, automatic and manual together | `50` | No |
 
 ```bash
-VENDOR_RESEARCH_SEARCH_PROVIDER=tavily
-TAVILY_API_KEY=<your Tavily API key>
+VENDOR_RESEARCH_AUTO_RUN=true
+VENDOR_RESEARCH_MANUAL_COOLDOWN_MINUTES=10
+VENDOR_RESEARCH_DAILY_RUN_CAP=50
 ```
 
-The backend and the worker both read these variables. With Docker Compose, `docker-compose.prod.yml` hands `.env.prod` to both. The Kubernetes manifests, the Helm chart and the Ansible template list variables by name and need the five variables added. See [Vendors](../technical/domains/vendors.md#configuration) for details.
+The values above are the defaults; set them only to change a default. Only the backend reads these variables, so the worker needs none of them. The worker is the process that runs the research, so it is the one that needs the outbound internet access above. The Kubernetes manifests, the Helm chart and the Ansible template list variables by name, so a value other than the default has to be added there. See [Vendors](../technical/domains/vendors.md#configuration) for details and [Web research toolkit](../technical/infrastructure/web-research.md) for the page guard, the search and its release gate.
 
 ---
 

@@ -176,7 +176,7 @@ A run is `failed` when there is no key, when the model fails, or when the web ne
 
 One new migration (the applied create-tables migration is not edited), timestamp from `date +%Y%m%d%H%M%S`, DDL with the `verifywise.` prefix:
 
-- `vendor_research_runs`: drop `search_provider`; add `pages_read INTEGER NOT NULL DEFAULT 0`. `searches_used` stays and now counts `search` actions. `evidence` holds the ledger pack (up to 100 KB). `prompt_version` is `vr-2`. `down` restores `search_provider VARCHAR(30)` and drops `pages_read`.
+- `vendor_research_runs`: drop `search_provider`; add `pages_read INTEGER NOT NULL DEFAULT 0`. `searches_used` stays and now counts `search` actions. `evidence` holds the ledger pack (up to 100 KB). `prompt_version` is `vr-2`. `down` restores `search_provider VARCHAR(255)` and drops `pages_read`.
 - `vendor_risk_findings` is unchanged (`sources` already holds `{url, title, quote, published_at}`).
 
 `i.vendorResearch.ts` (server and client), `vendorResearch.utils.ts` (`FinishRunInput`, run select lists) and the tenant-isolation test move with the columns.
@@ -200,7 +200,7 @@ The deployment branch `chore/deploy-vendor-research-settings` is trimmed to thes
 
 - Config type loses `searchConfigured`. The button and the findings section are "not set up" only when `hasLlmKey` is false. The copy says that vendor research needs an LLM key and that an admin adds one in the LLM key settings. The setup hint that named environment variables is removed.
 - Run summary: "N searches, M pages read" (from `searches_used` and `pages_read`). Category rows keep their four outcomes; the label for `search_failed` becomes "could not be researched", and every note is one of the phrases of §10, mapped to a translated sentence.
-- New and changed strings get `de`, `fr`, `es` entries and keep the i18n tests; server messages get `locales/{en,de,fr}.json` entries.
+- New and changed strings get `de`, `fr`, `es` entries and keep the i18n tests. No server message is added, so `Servers/locales` stays unchanged: the stored phrases are English and the client maps them.
 - Findings rows are unchanged: sources show domain, date and quote.
 
 ## 14. Security and privacy

@@ -1,5 +1,9 @@
 # Vendor research agent implementation plan
 
+**Status:** partly superseded by [the 2026-10-12 web research agent plan](2026-10-12-vendor-research-web-agent.md), which implements [the 2026-10-11 design](../specs/2026-10-11-vendor-research-web-agent-design.md) · **Date:** 2026-10-10
+
+> The search provider (Tavily) is gone: the research stage is now a loop in which the organisation's own model, on its own LLM key, searches the web and reads pages with two actions written in our code. Task 3 (the search provider and its settings), the search parts of Tasks 4 to 7, the "not set up" copy of Tasks 9 to 11 and the docs of Task 12 are replaced by the newer plan. Everything else here still holds.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** When a vendor is created, or on demand, a background agent researches it on the open web in four risk categories and puts evidence-backed candidates in front of the user, who accepts them into the vendor risk register or dismisses them.
