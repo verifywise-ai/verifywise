@@ -666,6 +666,66 @@ describe("validateFindings", () => {
       });
     });
 
+    describe("the gap mark of a page excerpt", () => {
+      // Where an excerpt leaves text of the page out it has a line with only the mark on it, so a
+      // quote that holds the mark joins passages that are not next to each other on the page.
+      const PAGE = source({
+        kind: "page",
+        onVendorSite: true,
+        url: "https://acme.com/security",
+        title: "Acme security",
+        content:
+          "Acme encrypts customer data at rest.\n[…]\nAttackers copied customer records last year.",
+        publishedAt: null,
+      });
+
+      it.each([
+        ["across the gap", "Acme encrypts customer data at rest.\n[…]\nAttackers copied"],
+        ["across the gap, on one line", "data at rest. […] Attackers copied customer records"],
+        ["up to the mark", "encrypts customer data at rest.\n[…]"],
+        ["from the mark", "[…]\nAttackers copied customer records"],
+      ])(
+        "drops a quote %s, though the excerpt holds the same text with the mark",
+        (_label, quote) => {
+          // The quote is in the excerpt once case and whitespace are ignored, so only the mark
+          // can be the reason it is dropped.
+          expect(normaliseForQuote(PAGE.content)).toContain(normaliseForQuote(quote));
+
+          expect(validate([candidate({ evidence: [{ source_id: "S1", quote }] })], [PAGE])).toEqual(
+            [],
+          );
+        },
+      );
+
+      it("keeps the same passage quoted without the mark", () => {
+        const quote = "Attackers copied customer records last year.";
+
+        const [found] = validate([candidate({ evidence: [{ source_id: "S1", quote }] })], [PAGE]);
+
+        expect(found.sources).toEqual([
+          { url: "https://acme.com/security", title: "Acme security", quote, published_at: null },
+        ]);
+      });
+
+      it("does not use up the source: a later quote of it without the mark still counts", () => {
+        const [found] = validate(
+          [
+            candidate({
+              evidence: [
+                { source_id: "S1", quote: "data at rest.\n[…]\nAttackers copied" },
+                { source_id: "S1", quote: "encrypts customer data at rest" },
+              ],
+            }),
+          ],
+          [PAGE],
+        );
+
+        expect(found.sources.map((cited) => cited.quote)).toEqual([
+          "encrypts customer data at rest",
+        ]);
+      });
+    });
+
     describe("an empty quote", () => {
       // An empty string is a substring of every text, so it has to be refused on its own.
       it.each([

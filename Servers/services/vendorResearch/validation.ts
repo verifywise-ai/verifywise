@@ -6,7 +6,8 @@
  *
  * - Every citation is checked on its own. Its source id must be in the evidence pack, its quote
  *   must be a verbatim part of that source's snippet (after the prompt escaping is undone and case,
- *   whitespace and quote marks are ignored), and that source must mention the vendor, so a page
+ *   whitespace and quote marks are ignored) without the gap mark of a page excerpt in it, which
+ *   stands for text that was left out, and that source must mention the vendor, so a page
  *   about a company with a similar name cannot leak in. The quote must also hold at least one word
  *   that is no part of the vendor's own name or domain (as the page may write them: with `www.` or
  *   a scheme, or as a possessive): a quote of the name alone is in every page that mentions the
@@ -37,6 +38,7 @@ import {
   ResearchCategory,
 } from "../../domain.layer/interfaces/i.vendorResearch";
 import { calculateRiskLevel } from "../../utils/validations/vendorRiskValidation.utils";
+import { EXCERPT_GAP } from "../webResearch/pageText";
 import { unescapeFromPrompt } from "./prompts";
 import {
   MAX_FINDING_TEXT_CHARS,
@@ -59,6 +61,9 @@ type Candidate = ResearchOutput["findings"][number];
 // ---------------------------------------------------------------------------
 // Quotes
 // ---------------------------------------------------------------------------
+
+/** The mark that stands where a page excerpt leaves text out: "[…]". */
+const GAP_MARK = EXCERPT_GAP.trim();
 
 /**
  * Quotation marks of every kind: straight, curly, low and guillemets. They are removed rather than
@@ -238,6 +243,10 @@ function validCitations(
     // surrogate pair becomes U+FFFD, which is not half of a pair in the page.
     const written = cleanText(item.quote);
     if (written.length > MAX_QUOTE_CHARS) continue;
+    // The gap mark of a page excerpt stands for text that was left out, so a quote that holds it
+    // joins passages that are not next to each other on the page, even when the excerpt holds the
+    // same text. Checked on the quote as written, before the comparison ignores whitespace.
+    if (written.includes(GAP_MARK)) continue;
 
     // The model saw the snippet with &, < and > escaped, so it quotes them escaped.
     const quote = unescapeFromPrompt(written);
