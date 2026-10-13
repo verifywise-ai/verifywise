@@ -17,6 +17,7 @@ import {
 } from "../../domain.layer/interfaces/i.vendorResearch";
 import { EXCERPT_GAP } from "../webResearch/pageText";
 import { escapeAttribute, escapeForPrompt, unescapeFromPrompt } from "../webResearch/promptText";
+import { MAX_RESULTS } from "../webResearch/webSearch";
 import { LOOKBACK_MONTHS, monthsBefore } from "./categories";
 import {
   MAX_CATEGORY_NOTES,
@@ -270,7 +271,8 @@ export function buildLoopSystemPrompt(): string {
     "&amp;, &lt; and &gt;. You may copy an address from there as it is written.",
     "",
     "The actions:",
-    '- "search" searches the web or the news. You get up to ten results, each with a title, an',
+    `- "search" searches the web or the news. You get up to ${inWords(MAX_RESULTS)} results, each ` +
+      "with a title, an",
     "  address, a date when there is one, and a snippet.",
     '- "read" reads one page and shows its text. You can read a page that a search of this run',
     "  returned, or any page on the vendor's own website. A page of the vendor also lists links to",
@@ -281,9 +283,10 @@ export function buildLoopSystemPrompt(): string {
     "- thought: why you take this step, in at most 300 characters. Always given.",
     '- action: "search", "read" or "finish". Always given.',
     "- category: the category the step is for. Needed for search and read.",
-    "- query: for search, the words to search for, in at most 200 characters.",
+    "- query: for search, the words to search for, in at least 3 characters and at most 200",
+    "  characters.",
     '- kind: for search, "news" or "web". Without it the search is "web".',
-    "- url: for read, the full address of the page.",
+    "- url: for read, the full address of the page, in at most 2048 characters.",
     "- focus: for read, if you like, a few keywords, in at most 120 characters. The page is then",
     "  shown around them.",
     "Leave out the fields that the action does not use.",

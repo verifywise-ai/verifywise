@@ -35,9 +35,9 @@ export interface LoopStep<C extends string = string> {
 }
 
 const MAX_THOUGHT_CHARS = 300;
-const MIN_QUERY_CHARS = 3;
+export const MIN_QUERY_CHARS = 3;
 const MAX_QUERY_CHARS = 200;
-const MAX_URL_CHARS = 2048;
+export const MAX_URL_CHARS = 2048;
 const MAX_FOCUS_CHARS = 120;
 
 /**
@@ -214,10 +214,31 @@ function describeRead(outcome: ReadOutcome): string {
   return `The page is older than the lookback window for this category${published}, so it was left out.`;
 }
 
-/** The step as the history shows its action: its fields without the thought, as JSON. */
+/**
+ * A text field of a step as the model meant it. The history shows &, < and > escaped, so a URL or
+ * words copied from it come back as `&amp;`; decoded, a URL with `&` in its query matches the
+ * search result it was copied from. A plain `&` is left as it is.
+ */
+const fromModel = (text: string | undefined) => unescapeFromPrompt(text ?? "").trim();
+
+/** `fromModel`, except that a field the step does not have stays out. */
+const fromModelIfGiven = (text: string | undefined) =>
+  text === undefined ? undefined : fromModel(text);
+
+/**
+ * The step as the history shows its action: its fields without the thought, as JSON. The text
+ * fields are the values that `runStep` uses (decoded), so the line is not escaped twice once
+ * `renderHistory` escapes it like every other field of the history.
+ */
 function describeAction(step: LoopStep): string {
   // JSON.stringify leaves out a property whose value is undefined.
-  return JSON.stringify({ ...step, thought: undefined });
+  return JSON.stringify({
+    ...step,
+    thought: undefined,
+    query: fromModelIfGiven(step.query),
+    url: fromModelIfGiven(step.url),
+    focus: fromModelIfGiven(step.focus),
+  });
 }
 
 /** A step of the history. An answer that held no step has no thought and no action. */
@@ -289,13 +310,6 @@ function reminderBeforeFinish<C extends string>(
   if (uncovered.length === 0) return null;
   return `You have not covered: ${uncovered.join(", ")}. Continue researching, or finish again to stop.`;
 }
-
-/**
- * A text field of a step as the model meant it. The history shows &, < and > escaped, so a URL or
- * words copied from it come back as `&amp;`; decoded, a URL with `&` in its query matches the
- * search result it was copied from. A plain `&` is left as it is.
- */
-const fromModel = (text: string | undefined) => unescapeFromPrompt(text ?? "").trim();
 
 /** Runs a search or a read step and says what came of it. A step that breaks its rule is refused. */
 async function runStep<C extends string>(

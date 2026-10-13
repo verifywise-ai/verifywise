@@ -257,7 +257,15 @@ describe("runVendorResearch against the real tables", () => {
       { category: "legal_regulatory", outcome: "nothing_found" },
       { category: "ai_specific", outcome: "nothing_found" },
     ]);
-    expect(run.evidence).toEqual([{ id: "S1", category: "security_incidents", ...BREACH_HIT }]);
+    expect(run.evidence).toEqual([
+      {
+        id: "S1",
+        category: "security_incidents",
+        kind: "result",
+        onVendorSite: false,
+        ...BREACH_HIT,
+      },
+    ]);
     expect(Buffer.byteLength(JSON.stringify(run.evidence))).toBeLessThanOrEqual(40_000);
 
     const level = calculateRiskLevel("Catastrophic", "Almost certain");

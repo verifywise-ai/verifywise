@@ -156,7 +156,12 @@ function firstOlderThan(dates: Array<string | null>, cutoff: string | undefined)
 
 export function createWebSession<C extends string>(options: WebSessionOptions<C>): WebSession<C> {
   const { engine, readPage, domain, cutoffs } = options;
-  const limits: SessionLimits = { ...SESSION_LIMITS, ...options.limits };
+  // Field by field, so that a limit given as undefined keeps its default.
+  const limits: SessionLimits = {
+    maxSearches: options.limits?.maxSearches ?? SESSION_LIMITS.maxSearches,
+    maxReads: options.limits?.maxReads ?? SESSION_LIMITS.maxReads,
+    maxResultsPerSearch: options.limits?.maxResultsPerSearch ?? SESSION_LIMITS.maxResultsPerSearch,
+  };
 
   /** One entry per URL as parsePublicUrl gives it, in the order the URLs came in. */
   const ledger = new Map<string, LedgerEntry<C>>();
@@ -256,9 +261,10 @@ export function createWebSession<C extends string>(options: WebSessionOptions<C>
       // of its own.
       const ownPage = isOwnHost(hostOf(page.url));
       const earlier = ledger.get(key);
-      // The page's date, and the date that the entry keeps from its search result: that one was
-      // held only to the window of the category it was searched under.
-      const dates = [page.publishedAt, earlier?.publishedAt ?? null];
+      // The page's own date when it has one. Only a page without a date is held to the date that
+      // its entry keeps from the search result, which was checked against the window of the
+      // category it was searched under and may be older than the page.
+      const dates = [page.publishedAt ?? earlier?.publishedAt ?? null];
       const tooOld = ownPage ? null : firstOlderThan(dates, cutoffs[category]);
       if (tooOld !== null) {
         // The source is outside the window, so it must not reach the analysis under this category.

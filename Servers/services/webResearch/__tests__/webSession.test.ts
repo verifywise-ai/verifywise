@@ -746,18 +746,55 @@ describe("createWebSession", () => {
       expect(readPage).toHaveBeenCalledTimes(1);
     });
 
-    it("holds the date of the search result to the cutoff of the read's category when the page is recent", async () => {
+    it("reads a page whose own date is inside the window of the read's category, whatever the older date of the search result", async () => {
       const x = result("https://news.example/x", "2028-06-01T00:00:00.000Z");
       const { session, readPage } = setup({ answers: [[x]], cutoffs });
       readPage.mockResolvedValueOnce(page(x.url, { publishedAt: "2030-01-01T00:00:00.000Z" }));
       await session.search("Acme lawsuit", "news", "legal_regulatory");
 
+      const outcome = await session.read(x.url, "security_incidents");
+
+      expect(outcome.ok).toBe(true);
+      // The entry keeps the result's date, as the page replaces the snippet in place.
+      expect(session.snapshot().ledger).toEqual([
+        {
+          ...resultEntry("legal_regulatory", x),
+          category: "security_incidents",
+          kind: "page",
+          content: `Text of ${x.url}`,
+        },
+      ]);
+    });
+
+    it("leaves out a page by its own old date, not the newer date of the search result, and removes the snippet", async () => {
+      const x = result("https://news.example/x", "2030-06-01T00:00:00.000Z");
+      const { session, readPage } = setup({ answers: [[x]], cutoffs });
+      readPage.mockResolvedValueOnce(page(x.url, { publishedAt: "2027-01-02T00:00:00.000Z" }));
+      await session.search("Acme breach", "news", "security_incidents");
+
       expect(await session.read(x.url, "security_incidents")).toEqual({
         ok: false,
         reason: "too_old",
-        publishedAt: "2028-06-01T00:00:00.000Z",
+        publishedAt: "2027-01-02T00:00:00.000Z",
       });
-      expect(session.snapshot().ledger).toEqual([resultEntry("legal_regulatory", x)]);
+      expect(session.snapshot().ledger).toEqual([]);
+    });
+
+    it("reads a page without a date when the date of the search result is inside the window of the read's category", async () => {
+      const x = result("https://news.example/x", "2030-06-01T00:00:00.000Z");
+      const { session } = setup({ answers: [[x]], cutoffs });
+      await session.search("Acme lawsuit", "news", "legal_regulatory");
+
+      expect((await session.read(x.url, "security_incidents")).ok).toBe(true);
+
+      expect(session.snapshot().ledger).toEqual([
+        {
+          ...resultEntry("legal_regulatory", x),
+          category: "security_incidents",
+          kind: "page",
+          content: `Text of ${x.url}`,
+        },
+      ]);
     });
 
     it("removes the snippet only when the page is outside the window of the category it was kept under", async () => {
@@ -889,6 +926,39 @@ describe("createWebSession", () => {
       expect((await session.read(trust.url, "security_incidents")).ok).toBe(true);
 
       expect(session.snapshot().ledger.map((entry) => entry.onVendorSite)).toEqual([false, false]);
+    });
+  });
+
+  describe("limits given as undefined", () => {
+    it("keep their defaults field by field: 8 searches, 12 reads, 10 results", async () => {
+      const { session } = setup({
+        limits: { maxSearches: undefined, maxReads: undefined, maxResultsPerSearch: undefined },
+        answers: [Array.from({ length: 12 }, (_, n) => result(`https://news.example/many-${n}`))],
+      });
+
+      expect(session.budget()).toEqual({ searchesLeft: 8, readsLeft: 12 });
+      const first = await session.search("Acme breach", "news", "security_incidents");
+      expect(first.ok && first.results).toHaveLength(10);
+      for (let n = 1; n < 8; n += 1)
+        await session.search("Acme breach", "news", "security_incidents");
+      expect(await session.search("Acme breach", "news", "security_incidents")).toEqual({
+        ok: false,
+        reason: "budget_exhausted",
+      });
+      for (let n = 0; n < 12; n += 1) {
+        expect((await session.read(`https://acme.com/page-${n}`, "certifications")).ok).toBe(true);
+      }
+      expect(await session.read("https://acme.com/page-12", "certifications")).toEqual({
+        ok: false,
+        reason: "budget_exhausted",
+      });
+      expect(session.budget()).toEqual({ searchesLeft: 0, readsLeft: 0 });
+    });
+
+    it("leave the other limits as they were given", () => {
+      const { session } = setup({ limits: { maxSearches: 3, maxReads: undefined } });
+
+      expect(session.budget()).toEqual({ searchesLeft: 3, readsLeft: 12 });
     });
   });
 

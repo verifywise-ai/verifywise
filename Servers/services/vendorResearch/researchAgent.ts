@@ -8,7 +8,11 @@
  * collects: it leaves the ledger, the calls that reached the web and how the loop ended, and the
  * analysis is made from them afterwards.
  */
-import { generateObjectWithSelfCorrection } from "../../advisor/llmSelfCorrect";
+import { wrapLanguageModel } from "ai";
+import {
+  generateObjectWithSelfCorrection,
+  jsonObjectFallbackMiddleware,
+} from "../../advisor/llmSelfCorrect";
 import {
   RESEARCH_CATEGORIES,
   ResearchCategory,
@@ -69,6 +73,25 @@ export function createVendorResearcher(
       cutoffs,
     });
 
+    // A provider that rejects json_schema (DeepSeek, or OpenAI's strict mode for the step schema)
+    // would cost a rejected request and a warning on every step. So once a call of this run had to
+    // fall back to JSON-object mode, the rest of the run starts there. The wrapped model is built
+    // once, and a result that does not report the fall back again does not undo it.
+    let jsonObjectModel: unknown = null;
+    const generateForRun: typeof generate = async (params, generateImpl) => {
+      const result = await generate(
+        jsonObjectModel === null ? params : { ...params, model: jsonObjectModel },
+        generateImpl,
+      );
+      if (result.fellBackToJsonObject && jsonObjectModel === null) {
+        jsonObjectModel = wrapLanguageModel({
+          model: model as Parameters<typeof wrapLanguageModel>[0]["model"],
+          middleware: jsonObjectFallbackMiddleware,
+        });
+      }
+      return result;
+    };
+
     const { stoppedBecause, modelError } = await runResearchLoop<ResearchCategory>(
       {
         system: buildLoopSystemPrompt(),
@@ -76,7 +99,7 @@ export function createVendorResearcher(
         categories: RESEARCH_CATEGORIES,
         researchable,
       },
-      { generate, model, session },
+      { generate: generateForRun, model, session },
     );
 
     const { ledger, calls, searchesUsed, pagesRead } = session.snapshot();

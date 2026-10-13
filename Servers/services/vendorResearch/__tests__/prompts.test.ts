@@ -3,7 +3,12 @@ import {
   RESEARCH_CATEGORIES,
   ResearchCategory,
 } from "../../../domain.layer/interfaces/i.vendorResearch";
-import { createLoopStepSchema } from "../../webResearch/researchLoop";
+import {
+  MAX_URL_CHARS,
+  MIN_QUERY_CHARS,
+  createLoopStepSchema,
+} from "../../webResearch/researchLoop";
+import { MAX_RESULTS } from "../../webResearch/webSearch";
 import { LOOKBACK_MONTHS, monthsBefore } from "../categories";
 import {
   PROMPT_VERSION,
@@ -34,6 +39,20 @@ const source = (overrides: Partial<EvidenceSource> = {}): EvidenceSource => ({
 });
 
 const count = (text: string, part: string) => text.split(part).length - 1;
+
+// The prompts write small numbers as words ("five") and the others as digits.
+const WORD_VALUES: Record<string, number> = {
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9,
+  ten: 10,
+};
 
 /**
  * Whatever the data in it, a prompt has one vendor block, one evidence block and one source
@@ -250,19 +269,6 @@ describe("buildSystemPrompt", () => {
 });
 
 describe("the bounds that the system prompt states", () => {
-  // The prompt writes small numbers as words ("five") and the others as digits.
-  const WORD_VALUES: Record<string, number> = {
-    one: 1,
-    two: 2,
-    three: 3,
-    four: 4,
-    five: 5,
-    six: 6,
-    seven: 7,
-    eight: 8,
-    nine: 9,
-    ten: 10,
-  };
   const prompt = buildSystemPrompt(NOW).replace(/\s+/g, " ");
 
   /** The number that the first group of `pattern` captures in the prompt. */
@@ -628,7 +634,7 @@ describe("buildLoopSystemPrompt", () => {
     function stated(pattern: RegExp): number {
       const match = words.match(pattern);
       if (!match) throw new Error(`the loop system prompt does not contain ${pattern}`);
-      return Number(match[1]);
+      return /^\d+$/.test(match[1]) ? Number(match[1]) : WORD_VALUES[match[1]];
     }
 
     const bounds: Array<[string, RegExp, (size: number) => Record<string, unknown>]> = [
@@ -645,6 +651,16 @@ describe("buildLoopSystemPrompt", () => {
           action: "search",
           category: "security_incidents",
           query: "x".repeat(size),
+        }),
+      ],
+      [
+        "url",
+        /- url: [^-]*at most (\d+) characters/,
+        (size) => ({
+          thought: "t",
+          action: "read",
+          category: "certifications",
+          url: "x".repeat(size),
         }),
       ],
       [
@@ -669,6 +685,20 @@ describe("buildLoopSystemPrompt", () => {
         expect(accepts(build(limit + 1))).toBe(false);
       },
     );
+
+    // The schema sets no minimum, so that a short query costs a step and not a round of
+    // self-correction: it is the loop that refuses a query under MIN_QUERY_CHARS.
+    it("query: states the minimum that the loop enforces", () => {
+      expect(stated(/- query: [^-]*at least (\d+) characters/)).toBe(MIN_QUERY_CHARS);
+    });
+
+    it("url: states the maximum that the loop's constant names", () => {
+      expect(stated(/- url: [^-]*at most (\d+) characters/)).toBe(MAX_URL_CHARS);
+    });
+
+    it("states the number of results from the cap of the search engine", () => {
+      expect(stated(/You get up to (\w+) results/)).toBe(MAX_RESULTS);
+    });
   });
 });
 

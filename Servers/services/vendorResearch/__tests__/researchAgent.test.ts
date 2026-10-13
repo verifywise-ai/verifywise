@@ -69,9 +69,13 @@ interface ModelCall {
   prompt: string;
 }
 
-/** The model answers in the order of `answers`; with no answer left it throws. */
-function scriptedModel(answers: Answer[]) {
+/**
+ * The model answers in the order of `answers`; with no answer left it throws. `fellBack` says, call
+ * by call, whether the result reports a fall back to JSON-object mode; with none left it says no.
+ */
+function scriptedModel(answers: Answer[], fellBack: boolean[] = []) {
   const queue = [...answers];
+  const reports = [...fellBack];
   const calls: ModelCall[] = [];
   const mock = jest.fn(
     async (params: SelfCorrectingParams<unknown>): Promise<SelfCorrectingResult<unknown>> => {
@@ -79,10 +83,15 @@ function scriptedModel(answers: Answer[]) {
       const answer = queue.shift();
       if (answer === undefined) throw new Error("The script has no answer left.");
       if ("throws" in answer) throw answer.throws;
-      return { object: answer, attempts: 1, selfCorrected: false };
+      return {
+        object: answer,
+        attempts: 1,
+        selfCorrected: false,
+        fellBackToJsonObject: reports.shift() ?? false,
+      };
     },
   );
-  return { generate: mock as unknown as typeof generateObjectWithSelfCorrection, calls };
+  return { generate: mock as unknown as typeof generateObjectWithSelfCorrection, calls, mock };
 }
 
 /** A fake engine that answers the searches in turn, and a fake reader that reads any page. */
@@ -282,6 +291,110 @@ describe("createVendorResearcher", () => {
     expect(web.readPage).not.toHaveBeenCalled();
   });
 
+  describe("a model whose provider rejects json_schema", () => {
+    /** A model that answers {} and records what it was asked, for the wrapped model to reach. */
+    function innerModel() {
+      return new MockLanguageModelV4({
+        doGenerate: async () => ({
+          content: [{ type: "text", text: "{}" }],
+          finishReason: { unified: "stop", raw: undefined },
+          usage: {
+            inputTokens: { total: 1, noCache: 1, cacheRead: undefined, cacheWrite: undefined },
+            outputTokens: { total: 1, text: 1, reasoning: undefined },
+          },
+          warnings: [],
+        }),
+      });
+    }
+
+    it("passes the model as it is until a result reports the fall back, then the same wrapped model for the rest of the run", async () => {
+      const inner = innerModel();
+      // The first result reports the fall back; the later ones succeed in JSON-object mode.
+      const model = scriptedModel(
+        [searchStep("Acme data breach", "security_incidents"), finishStep, finishStep],
+        [true, false, false],
+      );
+      const research = createVendorResearcher({
+        ...fakeWeb([[result("https://news.example/a")]]),
+        generate: model.generate,
+      });
+
+      const outcome = await research({ target: WITH_DOMAIN, model: inner, now: NOW });
+
+      expect(outcome.stoppedBecause).toBe("finished");
+      const [first, second, third] = model.calls;
+      expect(first.model).toBe(inner);
+      expect(second.model).not.toBe(inner);
+      // Built once, and still in use after a result that did not report the fall back again.
+      expect(third.model).toBe(second.model);
+    });
+
+    it("wraps the model with the JSON-object middleware: the schema moves into a system message", async () => {
+      const inner = innerModel();
+      const model = scriptedModel([finishStep, finishStep], [true, false]);
+      const research = createVendorResearcher({ ...fakeWeb(), generate: model.generate });
+
+      await research({ target: WITH_DOMAIN, model: inner, now: NOW });
+
+      const wrapped = model.calls[1].model as MockLanguageModelV4;
+      const schema = { type: "object", properties: { thought: { type: "string" } } } as const;
+      await wrapped.doGenerate({
+        prompt: [{ role: "user", content: [{ type: "text", text: "Your next step?" }] }],
+        responseFormat: { type: "json", schema },
+      });
+
+      const [reached] = inner.doGenerateCalls;
+      expect(reached.responseFormat).toEqual({ type: "json" });
+      expect(reached.prompt[0]).toEqual({
+        role: "system",
+        content: expect.stringContaining(JSON.stringify(schema)),
+      });
+    });
+
+    it("changes nothing else about the calls that follow", async () => {
+      const inner = innerModel();
+      const model = scriptedModel([finishStep, finishStep], [true, false]);
+      const research = createVendorResearcher({ ...fakeWeb(), generate: model.generate });
+
+      await research({ target: WITH_DOMAIN, model: inner, now: NOW });
+
+      const [first, second] = model.mock.mock.calls.map(([params]) => params);
+      expect(second).toEqual({ ...first, model: model.calls[1].model, prompt: second.prompt });
+      expect(second.prompt).toContain("Budget left: 8 searches, 12 page reads, 23 steps.");
+      expect(second.extra?.abortSignal).toBeInstanceOf(AbortSignal);
+      expect(second.extra?.abortSignal).not.toBe(first.extra?.abortSignal);
+    });
+
+    it("keeps passing the model as it is when the first result reports no fall back", async () => {
+      const inner = innerModel();
+      const model = scriptedModel([finishStep, finishStep], [false, false]);
+      const research = createVendorResearcher({ ...fakeWeb(), generate: model.generate });
+
+      await research({ target: WITH_DOMAIN, model: inner, now: NOW });
+
+      expect(model.calls.map((call) => call.model)).toEqual([inner, inner]);
+    });
+
+    it("gives every run a flag of its own", async () => {
+      const inner = innerModel();
+      const model = scriptedModel(
+        // The first run falls back on its first call; the second run is a new run.
+        [finishStep, finishStep, finishStep, finishStep],
+        [true, false, false, false],
+      );
+      const research = createVendorResearcher({ ...fakeWeb(), generate: model.generate });
+
+      await research({ target: WITH_DOMAIN, model: inner, now: NOW });
+      await research({ target: WITH_DOMAIN, model: inner, now: NOW });
+
+      const [firstRunFirst, firstRunSecond, secondRunFirst, secondRunSecond] = model.calls;
+      expect(firstRunFirst.model).toBe(inner);
+      expect(firstRunSecond.model).not.toBe(inner);
+      expect(secondRunFirst.model).toBe(inner);
+      expect(secondRunSecond.model).toBe(inner);
+    });
+  });
+
   describe("with no engine and no page reader given", () => {
     afterEach(() => {
       jest.restoreAllMocks();
@@ -308,8 +421,10 @@ describe("createVendorResearcher", () => {
 
       expect(first.stoppedBecause).toBe("finished");
       expect(second.stoppedBecause).toBe("finished");
+      // An engine and a reader per run: every run has a robots.txt cache of its own, and the engines
+      // share the search queue of the process.
+      expect(spies.createBingEngine).toHaveBeenCalledTimes(2);
       expect(spies.createBingEngine).toHaveBeenCalledWith();
-      // A reader per run, so that every run has a robots.txt cache of its own.
       expect(spies.createPageReader).toHaveBeenCalledTimes(2);
       expect(spies.fetch).not.toHaveBeenCalled();
     });
