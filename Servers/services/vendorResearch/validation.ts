@@ -189,7 +189,7 @@ function lowerOf(a: FindingConfidence, b: FindingConfidence): FindingConfidence 
 }
 
 /** What the confidence ceiling reads of a cited source: its URL and whether it is the vendor's own. */
-type CitedPage = Pick<EvidenceSource, "url" | "onVendorSite">;
+export type CitedPage = Pick<EvidenceSource, "url" | "onVendorSite">;
 
 /**
  * The most confidence the cited sources support. `high` needs two different hostnames, `medium`

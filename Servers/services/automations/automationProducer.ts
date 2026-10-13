@@ -162,10 +162,12 @@ export const vendorResearchJobId = (
 ): string => `vendor-research-${organizationId}-${vendorId}-${runId}`;
 
 /**
- * Two attempts, for the failures that make the job throw: those of the database before the run is
- * marked running, when the run is still queued and a retry can start it. The pipeline catches
- * model and search errors itself and ends the run as failed, so a retry never pays for the
- * searches twice. Settled jobs are removed, so no retained job holds on to an id.
+ * Two attempts, for the failures that make the job throw: those of Redis and the database before
+ * the run is marked running, when the run is still queued and a retry can start it. The pipeline
+ * catches a failing model call, and a web that cannot be reached at all, itself and ends the run as
+ * failed; a search that fails or a page that cannot be read is a result inside the run. So a retry
+ * never pays for the model calls or the searches twice. Settled jobs are removed, so no retained
+ * job holds on to an id.
  */
 export const VENDOR_RESEARCH_JOB_OPTIONS: JobsOptions = {
   attempts: 2,

@@ -16,6 +16,7 @@ import {
 } from "../schema";
 import { ResearchTarget } from "../target";
 import {
+  CitedPage,
   MAX_PER_CATEGORY,
   MAX_PER_RUN,
   applyCaps,
@@ -81,7 +82,7 @@ function findingSource(url: string): FindingSource {
  * whether the research took the page that answered for the vendor's own. Off the vendor's site
  * unless `onVendorSite`.
  */
-function cited(url: string, onVendorSite = false): Pick<EvidenceSource, "url" | "onVendorSite"> {
+function cited(url: string, onVendorSite = false): CitedPage {
   return { url, onVendorSite };
 }
 
@@ -406,6 +407,7 @@ describe("confidenceCeiling", () => {
     ).toBe("high");
     for (const [own, other] of [
       [true, false],
+      [false, true],
       [false, false],
       [true, true],
     ]) {
