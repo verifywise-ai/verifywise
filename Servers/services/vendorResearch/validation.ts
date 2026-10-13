@@ -7,12 +7,12 @@
  * - Every citation is checked on its own. Its source id must be in the evidence pack, its quote
  *   must be a verbatim part of that source's snippet (after the prompt escaping is undone and case,
  *   whitespace and quote marks are ignored) without the gap mark of a page excerpt in it, which
- *   stands for text that was left out, and that source must mention the vendor, so a page
- *   about a company with a similar name cannot leak in. The quote must also hold at least one word
- *   that is no part of the vendor's own name or domain (as the page may write them: with `www.` or
- *   a scheme, or as a possessive): a quote of the name alone is in every page that mentions the
- *   vendor and says nothing about a risk. A citation that fails any of this is removed, and a
- *   candidate left without a citation is dropped.
+ *   stands for text that was left out, and that source must mention the vendor (the vendor's own
+ *   page always does: see `isVendorsOwnPage`), so a page about a company with a similar name cannot
+ *   leak in. The quote must also hold at least one word that is no part of the vendor's own name or
+ *   domain (as the page may write them: with `www.` or a scheme, or as a possessive): a quote of
+ *   the name alone is in every page that mentions the vendor and says nothing about a risk. A
+ *   citation that fails any of this is removed, and a candidate left without a citation is dropped.
  * - The category must be one with evidence in the pack, the texts must be present and within their
  *   limits, and the enum values must be real, so that a risk level can be worked out.
  * - The texts and the quotes of a candidate are cleaned like the evidence is (see cleanText) before
@@ -134,11 +134,6 @@ function hostOf(url: string): string | null {
   }
 }
 
-/** True for the domain itself and for every subdomain of it. */
-function isOnDomain(host: string, domain: string): boolean {
-  return host === domain || host.endsWith(`.${domain}`);
-}
-
 const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /**
@@ -156,12 +151,25 @@ function wholeWord(term: string): RegExp | null {
 }
 
 /**
- * True when the source is about the vendor: its URL is on the vendor's domain or a subdomain of it,
+ * True when the source is the vendor's own page: the research marked it as on the vendor's website
+ * (`onVendorSite`) and the vendor has a domain. The mark is the research's decision, taken on the
+ * page that answered; the host of the URL, which is the one that was asked for, plays no part in
+ * it. A page asked for on the vendor's domain that redirected off it is not the vendor's own, and
+ * one asked for elsewhere that answered from the vendor's site is. Without a domain nothing is.
+ */
+function isVendorsOwnPage(
+  source: Pick<EvidenceSource, "onVendorSite">,
+  target: ResearchTarget,
+): boolean {
+  return target.domain !== null && source.onVendorSite;
+}
+
+/**
+ * True when the source is about the vendor: it is the vendor's own page (see `isVendorsOwnPage`),
  * or its title or snippet names the vendor as a whole word or mentions its domain.
  */
 export function sourceMentionsVendor(source: EvidenceSource, target: ResearchTarget): boolean {
-  const host = hostOf(source.url);
-  if (host !== null && target.domain !== null && isOnDomain(host, target.domain)) return true;
+  if (isVendorsOwnPage(source, target)) return true;
 
   const texts = [source.title, source.content];
   return [target.name, target.domain ?? ""].some((term) => {
@@ -180,29 +188,30 @@ function lowerOf(a: FindingConfidence, b: FindingConfidence): FindingConfidence 
   return CONFIDENCE_RANK[a] <= CONFIDENCE_RANK[b] ? a : b;
 }
 
+/** What the confidence ceiling reads of a cited source: its URL and whether it is the vendor's own. */
+type CitedPage = Pick<EvidenceSource, "url" | "onVendorSite">;
+
 /**
  * The most confidence the cited sources support. `high` needs two different hostnames, `medium`
- * two different pages or one page on the vendor's own domain, and anything less is `low`.
+ * two different pages or one page that is the vendor's own (see `isVendorsOwnPage`: the research's
+ * mark, not the host of the URL), and anything less is `low`. The hostnames are those of the URLs.
  * "www.x.test" and "x.test" are one hostname, and a URL that cannot be read is not a source.
  */
-export function confidenceCeiling(
-  sources: FindingSource[],
-  target: ResearchTarget,
-): FindingConfidence {
+export function confidenceCeiling(sources: CitedPage[], target: ResearchTarget): FindingConfidence {
   const hostnames = new Set<string>();
   const pages = new Set<string>();
-  let onOwnDomain = false;
+  let ownPage = false;
 
   for (const source of sources) {
     const host = hostOf(source.url);
     if (host === null) continue;
     pages.add(source.url);
     hostnames.add(host.replace(/^www\./, ""));
-    if (target.domain !== null && isOnDomain(host, target.domain)) onOwnDomain = true;
+    if (isVendorsOwnPage(source, target)) ownPage = true;
   }
 
   if (hostnames.size >= 2) return "high";
-  if (pages.size >= 2 || onOwnDomain) return "medium";
+  if (pages.size >= 2 || ownPage) return "medium";
   return "low";
 }
 
@@ -214,6 +223,12 @@ const isOneOf = (values: readonly string[], value: string) => values.includes(va
 
 /** A text of the register: present, and not longer than the schema allows. */
 const isUsableText = (text: string) => text.trim() !== "" && text.length <= MAX_FINDING_TEXT_CHARS;
+
+/** A citation that holds up: what is stored with the finding, and the source it quotes. */
+interface HeldCitation {
+  stored: FindingSource;
+  from: EvidenceSource;
+}
 
 /**
  * The citations of a candidate that hold up, one for each source, in the order the model gave
@@ -230,8 +245,8 @@ function validCitations(
   candidate: Candidate,
   sourcesById: Map<string, EvidenceSource>,
   target: ResearchTarget,
-): FindingSource[] {
-  const citations = new Map<string, FindingSource>();
+): HeldCitation[] {
+  const citations = new Map<string, HeldCitation>();
   const ownWords = vendorOwnWords(target);
 
   for (const item of candidate.evidence) {
@@ -262,10 +277,13 @@ function validCitations(
     if (!wordsOfNormalised(wanted).some((word) => !ownWords.has(word))) continue;
 
     citations.set(item.source_id, {
-      url: source.url,
-      title: source.title,
-      quote: quote.trim(),
-      published_at: source.publishedAt,
+      stored: {
+        url: source.url,
+        title: source.title,
+        quote: quote.trim(),
+        published_at: source.publishedAt,
+      },
+      from: source,
     });
   }
 
@@ -303,8 +321,8 @@ function toFinding(
   const level = calculateRiskLevel(candidate.risk_severity, candidate.likelihood);
   if (level === null) return null;
 
-  const sources = validCitations(candidate, sourcesById, target);
-  if (sources.length === 0) return null;
+  const citations = validCitations(candidate, sourcesById, target);
+  if (citations.length === 0) return null;
 
   return {
     category: candidate.category,
@@ -314,8 +332,14 @@ function toFinding(
     likelihood: candidate.likelihood,
     risk_severity: candidate.risk_severity,
     risk_level: `${level} Risk`,
-    confidence: lowerOf(candidate.confidence, confidenceCeiling(sources, target)),
-    sources,
+    confidence: lowerOf(
+      candidate.confidence,
+      confidenceCeiling(
+        citations.map((citation) => citation.from),
+        target,
+      ),
+    ),
+    sources: citations.map((citation) => citation.stored),
   };
 }
 

@@ -71,9 +71,18 @@ function validate(
   );
 }
 
-/** A finding source, for the tests of the confidence ceiling. */
-function cited(url: string): FindingSource {
+/** A finding source, as it is stored. */
+function findingSource(url: string): FindingSource {
   return { url, title: "Title", quote: "quote", published_at: null };
+}
+
+/**
+ * A cited source, for the tests of the confidence ceiling: the URL it was requested at, and
+ * whether the research took the page that answered for the vendor's own. Off the vendor's site
+ * unless `onVendorSite`.
+ */
+function cited(url: string, onVendorSite = false): Pick<EvidenceSource, "url" | "onVendorSite"> {
+  return { url, onVendorSite };
 }
 
 // Built from char codes, so that no control character or lone surrogate sits in this file.
@@ -97,7 +106,7 @@ function finding(
     risk_severity,
     risk_level: "High Risk",
     confidence: "low",
-    sources: [cited("https://news.example.com/a")],
+    sources: [findingSource("https://news.example.com/a")],
     ...overrides,
   };
 }
@@ -158,7 +167,23 @@ describe("sourceMentionsVendor", () => {
       ...overrides,
     });
 
-  describe("by the host of the URL", () => {
+  // The research decides whether a page is the vendor's own, on the page that answered (see
+  // `onVendorSite`), and validation takes that decision. It does not read the host of the URL again:
+  // a URL is the one that was asked for, and a page can answer from somewhere else.
+  describe("by the vendor's mark (onVendorSite)", () => {
+    it.each([
+      ["the domain itself", "https://acme.com/security"],
+      ["a subdomain", "https://trust.acme.com/story"],
+      ["the www host", "https://www.acme.com/"],
+      // The page was asked for off the vendor's domain and answered from its site.
+      ["a host off the vendor's domain", "https://news.example.com/redirected"],
+    ])(
+      "accepts a source marked as the vendor's own whose URL is %s, with no mention",
+      (_label, url) => {
+        expect(sourceMentionsVendor(page({ url, onVendorSite: true }), TARGET)).toBe(true);
+      },
+    );
+
     it.each([
       ["the domain itself", "https://acme.com/security"],
       ["a subdomain", "https://news.acme.com/story"],
@@ -166,18 +191,31 @@ describe("sourceMentionsVendor", () => {
       ["the www host", "https://www.acme.com/"],
       ["a host in capitals", "https://NEWS.ACME.COM/Story"],
       ["a host with a port", "https://trust.acme.com:8443/"],
-    ])("accepts %s", (_label, url) => {
-      expect(sourceMentionsVendor(page({ url }), TARGET)).toBe(true);
+    ])(
+      "does not accept a source not marked as the vendor's own, though its URL is %s: the page redirected off the domain",
+      (_label, url) => {
+        expect(sourceMentionsVendor(page({ url, onVendorSite: false }), TARGET)).toBe(false);
+      },
+    );
+
+    it("accepts the source not marked as the vendor's own once its text names the vendor", () => {
+      const redirected = page({
+        url: "https://acme.com/moved",
+        onVendorSite: false,
+        content: "Acme has moved this page.",
+      });
+      expect(sourceMentionsVendor(redirected, TARGET)).toBe(true);
     });
 
-    it.each([
-      ["a host that ends in the domain without a dot", "https://notacme.com/story"],
-      ["the domain as the start of another host", "https://acme.com.evil.test/story"],
-      ["the domain in the path", "https://evil.test/acme.com"],
-      ["the domain in the query", "https://evil.test/?site=acme.com"],
-      ["a URL that cannot be parsed", "not a url"],
-    ])("does not accept %s", (_label, url) => {
-      expect(sourceMentionsVendor(page({ url }), TARGET)).toBe(false);
+    it("never takes a source for the vendor's own when the vendor has no domain, whatever the mark", () => {
+      const noDomain: ResearchTarget = { name: "Acme", domain: null, provides: "" };
+      for (const url of ["https://news.acme.com/x", "https://news.example.com/x", "not a url"]) {
+        expect(sourceMentionsVendor(page({ url, onVendorSite: true }), noDomain)).toBe(false);
+      }
+    });
+
+    it("does not accept a source whose URL cannot be parsed and is not marked as the vendor's own", () => {
+      expect(sourceMentionsVendor(page({ url: "not a url" }), TARGET)).toBe(false);
     });
   });
 
@@ -266,7 +304,9 @@ describe("sourceMentionsVendor", () => {
 
     it("still matches the domain when the name is empty", () => {
       const target: ResearchTarget = { name: "", domain: "acme.com", provides: "" };
-      expect(sourceMentionsVendor(page({ url: "https://news.acme.com/x" }), target)).toBe(true);
+      expect(
+        sourceMentionsVendor(page({ url: "https://news.acme.com/x", onVendorSite: true }), target),
+      ).toBe(true);
       expect(sourceMentionsVendor(page({ content: "See acme.com for details." }), target)).toBe(
         true,
       );
@@ -314,44 +354,68 @@ describe("confidenceCeiling", () => {
     expect(confidenceCeiling([cited("https://news.example.com/a")], TARGET)).toBe("low");
   });
 
-  it("is medium for one source on the vendor's own domain, subdomains included", () => {
-    expect(confidenceCeiling([cited("https://acme.com/trust")], TARGET)).toBe("medium");
-    expect(confidenceCeiling([cited("https://trust.acme.com/soc2")], TARGET)).toBe("medium");
-    expect(confidenceCeiling([cited("https://WWW.ACME.COM/")], TARGET)).toBe("medium");
+  it("is medium for one source that the research took for the vendor's own page", () => {
+    expect(confidenceCeiling([cited("https://acme.com/trust", true)], TARGET)).toBe("medium");
+    expect(confidenceCeiling([cited("https://trust.acme.com/soc2", true)], TARGET)).toBe("medium");
+    expect(confidenceCeiling([cited("https://WWW.ACME.COM/", true)], TARGET)).toBe("medium");
   });
 
-  it("does not count a lookalike host as the vendor's own domain", () => {
-    expect(confidenceCeiling([cited("https://notacme.com/trust")], TARGET)).toBe("low");
-    expect(confidenceCeiling([cited("https://acme.com.evil.test/")], TARGET)).toBe("low");
+  it("goes by the page that answered, not by the host that was asked for", () => {
+    // A page asked for on the vendor's domain that redirected off it is not the vendor's own...
+    expect(confidenceCeiling([cited("https://acme.com/trust", false)], TARGET)).toBe("low");
+    expect(confidenceCeiling([cited("https://trust.acme.com/soc2", false)], TARGET)).toBe("low");
+    // ...and one asked for elsewhere that answered from the vendor's site is.
+    expect(confidenceCeiling([cited("https://news.example.com/moved", true)], TARGET)).toBe(
+      "medium",
+    );
   });
 
-  it("does not count any host as the vendor's own when the vendor has no domain", () => {
+  it("does not count any host as the vendor's own when the vendor has no domain, whatever the mark", () => {
     const noDomain: ResearchTarget = { name: "Acme", domain: null, provides: "" };
-    expect(confidenceCeiling([cited("https://acme.com/trust")], noDomain)).toBe("low");
+    expect(confidenceCeiling([cited("https://acme.com/trust", false)], noDomain)).toBe("low");
+    expect(confidenceCeiling([cited("https://acme.com/trust", true)], noDomain)).toBe("low");
+    expect(confidenceCeiling([cited("https://news.example.com/a", true)], noDomain)).toBe("low");
   });
 
-  it("is medium for two sources on one hostname", () => {
+  it("is medium for two sources on one hostname, whatever the mark", () => {
+    for (const marked of [false, true]) {
+      expect(
+        confidenceCeiling(
+          [
+            cited("https://news.example.com/a", marked),
+            cited("https://news.example.com/b", marked),
+          ],
+          TARGET,
+        ),
+      ).toBe("medium");
+    }
     expect(
       confidenceCeiling(
-        [cited("https://news.example.com/a"), cited("https://news.example.com/b")],
+        [cited("https://acme.com/a", false), cited("https://acme.com/b", false)],
         TARGET,
       ),
     ).toBe("medium");
   });
 
-  it("is high for two distinct hostnames", () => {
+  it("is high for two distinct hostnames, whatever the marks", () => {
     expect(
       confidenceCeiling(
         [cited("https://news.example.com/a"), cited("https://other.example.org/b")],
         TARGET,
       ),
     ).toBe("high");
-    expect(
-      confidenceCeiling(
-        [cited("https://acme.com/trust"), cited("https://news.example.com/a")],
-        TARGET,
-      ),
-    ).toBe("high");
+    for (const [own, other] of [
+      [true, false],
+      [false, false],
+      [true, true],
+    ]) {
+      expect(
+        confidenceCeiling(
+          [cited("https://acme.com/trust", own), cited("https://news.example.com/a", other)],
+          TARGET,
+        ),
+      ).toBe("high");
+    }
   });
 
   it("does not take www.x.test and x.test for two hostnames, nor two cases of one host", () => {
@@ -377,6 +441,8 @@ describe("confidenceCeiling", () => {
       confidenceCeiling([cited("not a url"), cited("https://news.example.com/a")], TARGET),
     ).toBe("low");
     expect(confidenceCeiling([cited("not a url")], TARGET)).toBe("low");
+    // Marked as the vendor's own, it is still not a source: there is no page to count.
+    expect(confidenceCeiling([cited("not a url", true)], TARGET)).toBe("low");
   });
 });
 
@@ -620,6 +686,7 @@ describe("validateFindings", () => {
 
     describe("the prompt escaping", () => {
       const CODE = source({
+        onVendorSite: true,
         url: "https://acme.com/changelog",
         title: "Changelog",
         content: "if x < 3 & y",
@@ -802,8 +869,8 @@ describe("validateFindings", () => {
   });
 
   describe("the same-name guard", () => {
-    // sourceMentionsVendor has its own tests above. These two show that validateFindings applies
-    // it to each citation.
+    // sourceMentionsVendor has its own tests above. These show that validateFindings applies it
+    // to each citation, and takes the vendor's own page from the research's mark.
     it("removes a source that never mentions the vendor, and drops the candidate", () => {
       const other = source({
         url: "https://news.example.com/globex",
@@ -812,6 +879,56 @@ describe("validateFindings", () => {
       });
 
       expect(validate([candidate()], [other])).toEqual([]);
+    });
+
+    describe("the vendor's own page is the page that answered", () => {
+      // No word of these pages names the vendor, so only the mark of the research can let them in.
+      const quoting = (page: EvidenceSource) =>
+        validate(
+          [
+            candidate({
+              evidence: [{ source_id: "S1", quote: "attackers copied customer records" }],
+            }),
+          ],
+          [page],
+        );
+      const unnamed = (overrides: Partial<EvidenceSource>) =>
+        source({
+          url: "https://acme.com/security",
+          title: "Security notice",
+          content: "We found that attackers copied customer records.",
+          ...overrides,
+        });
+
+      it("drops a page asked for on the vendor's domain that answered from somewhere else", () => {
+        expect(quoting(unnamed({ onVendorSite: false }))).toEqual([]);
+      });
+
+      it("keeps a page the research took for the vendor's own, with no mention in its text", () => {
+        expect(quoting(unnamed({ onVendorSite: true }))).toHaveLength(1);
+      });
+
+      it("keeps it whatever host the URL has: the mark is the decision, not the host", () => {
+        const moved = unnamed({ onVendorSite: true, url: "https://news.example.com/moved" });
+
+        expect(quoting(moved)).toHaveLength(1);
+      });
+
+      it("never takes a page for the vendor's own when the vendor has no domain", () => {
+        const noDomain: ResearchTarget = { name: "Acme", domain: null, provides: "" };
+
+        expect(
+          validate(
+            [
+              candidate({
+                evidence: [{ source_id: "S1", quote: "attackers copied customer records" }],
+              }),
+            ],
+            [unnamed({ onVendorSite: true })],
+            noDomain,
+          ),
+        ).toEqual([]);
+      });
     });
 
     it("checks each cited source on its own: a source about another company is removed, the rest stays", () => {
@@ -997,6 +1114,7 @@ describe("validateFindings", () => {
       });
       const OWN_SITE = source({
         id: "S1",
+        onVendorSite: true,
         url: "https://trust.acme.com/incident",
         content: "We found that attackers copied customer records.",
       });
@@ -1231,6 +1349,7 @@ describe("validateFindings", () => {
     });
     const OWN_SITE = source({
       id: "S1",
+      onVendorSite: true,
       url: "https://trust.acme.com/incident",
       content: "We found that attackers copied customer records.",
     });
@@ -1254,6 +1373,19 @@ describe("validateFindings", () => {
 
     it("is lowered to medium when a single source on the vendor's own domain backs a high claim", () => {
       const [finding] = validate([candidate({ confidence: "high" })], [OWN_SITE]);
+      expect(finding.confidence).toBe("medium");
+    });
+
+    it("is lowered to low when the page on the vendor's domain answered from somewhere else", () => {
+      // The page names the vendor, so it passes the mention check; it is not the vendor's own page.
+      const redirected = source({ ...OWN_SITE, onVendorSite: false, title: "Acme incident" });
+      const [finding] = validate([candidate({ confidence: "high" })], [redirected]);
+      expect(finding.confidence).toBe("low");
+    });
+
+    it("is lowered to medium when the page the research took for the vendor's own was asked for elsewhere", () => {
+      const moved = source({ ...OWN_SITE, url: "https://news.example.com/moved" });
+      const [finding] = validate([candidate({ confidence: "high" })], [moved]);
       expect(finding.confidence).toBe("medium");
     });
 
