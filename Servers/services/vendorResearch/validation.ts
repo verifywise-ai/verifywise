@@ -276,10 +276,10 @@ function validCitations(
 function toFinding(
   candidate: Candidate,
   sourcesById: Map<string, EvidenceSource>,
-  searched: Set<ResearchCategory>,
+  categoriesInPack: Set<ResearchCategory>,
   target: ResearchTarget,
 ): NewFinding | null {
-  if (!searched.has(candidate.category)) return null;
+  if (!categoriesInPack.has(candidate.category)) return null;
 
   // Cleaned before they are checked: a text of nothing but NULs and spaces is blank, and a text
   // that is over the limit only because of its NULs is not too long.
@@ -349,20 +349,20 @@ export function applyCaps(findings: NewFinding[]): NewFinding[] {
 /**
  * The candidates of the model that hold up, as findings ready to be stored, the most severe first
  * and not capped (see applyCaps). `pack` is the evidence the model was shown and
- * `searchedCategories` the categories that have a source in it.
+ * `categoriesInPack` the categories that have a source in it.
  */
 export function validateFindings(
   output: ResearchOutput,
   pack: EvidenceSource[],
   target: ResearchTarget,
-  searchedCategories: ResearchCategory[],
+  categoriesInPack: ResearchCategory[],
 ): NewFinding[] {
   const sourcesById = new Map(pack.map((source): [string, EvidenceSource] => [source.id, source]));
-  const searched = new Set(searchedCategories);
+  const inPack = new Set(categoriesInPack);
 
   const findings: NewFinding[] = [];
   for (const candidate of output.findings) {
-    const finding = toFinding(candidate, sourcesById, searched, target);
+    const finding = toFinding(candidate, sourcesById, inPack, target);
     if (finding !== null) findings.push(finding);
   }
   return mostSevereFirst(findings);

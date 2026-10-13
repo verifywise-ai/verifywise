@@ -752,6 +752,45 @@ describe("runVendorResearch", () => {
       expect(generate).not.toHaveBeenCalled();
     });
 
+    it("fails the run as a model failure when the loop's model error left only entries that cannot be used", async () => {
+      // Both URLs are refused by the evidence pack, so nothing is left to analyse: the run must not
+      // complete with a summary that says "nothing found".
+      research.mockResolvedValue(
+        researched({
+          entries: [
+            ledgerEntry({
+              category: "security_incidents",
+              url: "not a url",
+              title: "Acme confirms breach",
+              content: "Acme confirmed that attackers copied customer records.",
+            }),
+            ledgerEntry({
+              category: "security_incidents",
+              url: "javascript:alert(1)",
+              title: "Acme",
+              content: "Acme",
+            }),
+          ],
+          calls: [searched("security_incidents")],
+          stoppedBecause: "model_error",
+          modelError: providerError("AI_APICallError", SECRET_MESSAGE, { statusCode: 500 }),
+        }),
+      );
+
+      const result = await run();
+
+      expect(result).toEqual({ outcome: "failed", findingsCreated: 0 });
+      expect(generate).not.toHaveBeenCalled();
+      expect(sequelize.transaction).not.toHaveBeenCalled();
+      expect(onlyFinish().input).toMatchObject({
+        status: "failed",
+        categories: ["security_incidents"],
+        categorySummary: [],
+        evidence: null,
+        error: "Model call failed: HTTP 500",
+      });
+    });
+
     it("still analyses what the loop found when the model failed in the loop afterwards", async () => {
       research.mockResolvedValue(
         researched({

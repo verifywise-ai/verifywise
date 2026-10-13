@@ -78,9 +78,9 @@ type RunResponse = Pick<
 >;
 
 /**
- * The fields of a run that leave the server. The row also holds the evidence pack (up to 40 KB of
- * text from third-party pages) and the model and prompt version of the run. They are an audit
- * trail, not part of the API, so a field is added here on purpose or not at all.
+ * The fields of a run that leave the server. The row also holds the evidence pack (up to 100,000
+ * bytes of text from third-party pages) and the model and prompt version of the run. They are an
+ * audit trail, not part of the API, so a field is added here on purpose or not at all.
  */
 const toRunResponse = (run: IVendorResearchRun): RunResponse => ({
   id: run.id,

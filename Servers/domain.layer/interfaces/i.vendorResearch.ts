@@ -70,7 +70,10 @@ export interface IVendorResearchRun {
   categories: ResearchCategory[];
   /** One entry per category; empty until the run finishes. */
   category_summary: CategorySummaryEntry[];
-  /** The evidence pack the model saw (audit trail), capped at 40 KB; null when the run has none. */
+  /**
+   * The evidence pack the model saw (audit trail), capped at 100,000 bytes; null when the run has
+   * none.
+   */
   evidence: EvidenceSource[] | null;
   model: string | null;
   prompt_version: string | null;

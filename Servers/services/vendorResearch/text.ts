@@ -1,6 +1,7 @@
 /**
- * Limits, cuts and cleaning for text that someone else wrote: a search provider, a web page or the
- * model. Shared by the search provider, the evidence pack and the validation of the model's answer.
+ * Limits, cuts and cleaning for text that someone else wrote: a web page, the search feed or the
+ * model. Shared by the web research modules (the search feed, the page text and the loop), the
+ * evidence pack and the validation of the model's answer.
  */
 
 /** The longest snippet of a search result, in UTF-16 units, as String.length counts them. */

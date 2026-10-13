@@ -61,9 +61,14 @@ function validate(
   candidates: Candidate[],
   pack: EvidenceSource[] = [source()],
   target: ResearchTarget = TARGET,
-  searched: ResearchCategory[] = [...RESEARCH_CATEGORIES],
+  categoriesInPack: ResearchCategory[] = [...RESEARCH_CATEGORIES],
 ) {
-  return validateFindings({ findings: candidates, category_notes: [] }, pack, target, searched);
+  return validateFindings(
+    { findings: candidates, category_notes: [] },
+    pack,
+    target,
+    categoriesInPack,
+  );
 }
 
 /** A finding source, for the tests of the confidence ceiling. */
@@ -1085,7 +1090,7 @@ describe("validateFindings", () => {
   });
 
   describe("the categories", () => {
-    it("drops a candidate whose category was not searched", () => {
+    it("drops a candidate whose category has no source in the pack", () => {
       expect(
         validate([candidate({ category: "legal_regulatory" })], [source()], TARGET, [
           "security_incidents",
@@ -1094,7 +1099,7 @@ describe("validateFindings", () => {
       ).toEqual([]);
     });
 
-    it("keeps a candidate whose category was searched", () => {
+    it("keeps a candidate whose category has a source in the pack", () => {
       expect(
         validate([candidate({ category: "certifications" })], [source()], TARGET, [
           "certifications",
@@ -1102,7 +1107,7 @@ describe("validateFindings", () => {
       ).toHaveLength(1);
     });
 
-    it("drops every candidate when no category was searched", () => {
+    it("drops every candidate when no category has a source in the pack", () => {
       expect(validate([candidate()], [source()], TARGET, [])).toEqual([]);
     });
 
@@ -1368,7 +1373,7 @@ describe("validateFindings", () => {
       expect(findings.map((found) => found.risk_description)).toEqual(["one", "two", "three"]);
     });
 
-    it("leaves out the candidates of a category that was not searched, whatever their severity", () => {
+    it("leaves out the candidates of a category with no source in the pack, whatever their severity", () => {
       const findings = validate(
         [
           ...Array.from({ length: 4 }, (_, index) =>

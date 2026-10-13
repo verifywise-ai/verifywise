@@ -8,10 +8,10 @@
  * category (see summary.ts).
  *
  * What the loop leaves decides how the run goes on. A model error of the loop fails the run when
- * nothing was found, and so does a loop that never got an answer from the web: the model never
- * searched or read, or no call was answered. A loop whose calls were answered and found nothing
- * completes the run without an analysis call. A loop that stopped early, for its time, its steps or
- * a model error, still hands what it found to the analysis.
+ * no usable source was found, and so does a loop that never got an answer from the web: the model
+ * never searched or read, or no call was answered. A loop whose calls were answered and found
+ * nothing completes the run without an analysis call. A loop that stopped early, for its time, its
+ * steps or a model error, still hands what it found to the analysis.
  *
  * The queries that end a run (finishRunQuery) have no status guard, so a run is ended exactly once.
  * The code is built so that this can be seen:
@@ -90,8 +90,6 @@ export interface PipelineResult {
 
 /** One deadline for the model call, retries and self-correction included. */
 const MODEL_TIMEOUT_MS = 120_000;
-/** The error of a failed run is stored cut to this many characters. */
-const ERROR_MAX_CHARS = 500;
 /** The id of the model is stored cut to this many characters, the size of its column. */
 const MODEL_MAX_CHARS = 255;
 
@@ -239,7 +237,7 @@ function finishInput(
     searchesUsed: progress.searchesUsed,
     pagesRead: progress.pagesRead,
     duplicatesDropped: end.duplicatesDropped,
-    error: end.error === null ? null : cutAtCodePoint(end.error, ERROR_MAX_CHARS),
+    error: end.error,
   };
 }
 
@@ -325,12 +323,16 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
       stoppedBecause: found.stoppedBecause,
     });
 
+  // Built first: the failed-run rule asks whether anything usable is left, and an entry with an
+  // unusable URL is not a source.
+  const pack = buildEvidencePack(found.entries);
+
   // The failed-run rule, in this order. A model call that rejected with nothing in it leaves the
   // loop's error null, so the reason it stopped for decides, not the error.
   if (found.stoppedBecause === "model_error") {
     const phrase = modelFailurePhrase(args, "the research loop", found.modelError);
-    // With entries, what was found before the model failed is still analysed.
-    if (found.entries.length === 0) return stop(`Model call failed: ${phrase}`);
+    // With a source, what was found before the model failed is still analysed.
+    if (pack.length === 0) return stop(`Model call failed: ${phrase}`);
   }
   // The model answered with prose or invalid steps until the loop ended.
   if (found.calls.length === 0) return stop(NO_RESEARCH_ACTIONS_NOTE);
@@ -339,7 +341,6 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
     return stop(WEB_UNREACHABLE_NOTE, summaryOf([], new Set(), []));
   }
 
-  const pack = buildEvidencePack(found.entries);
   progress.evidence = pack.length > 0 ? pack : null;
   if (pack.length === 0) {
     // The web answered and nothing usable came back, so there is nothing to ask the model about.
