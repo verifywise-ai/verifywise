@@ -275,10 +275,11 @@ describe("parseBingRss", () => {
   });
 
   it("unwraps a wrapper link whose address is longer than a plain link may be", () => {
-    // Each é is two bytes: six characters in the wrapper, and three bytes escaped in the address.
-    const target = `https://example.com/${"\u00e9".repeat(400)}`;
+    // Each é is two bytes, six characters once escaped: the address fits in 2,048 characters as the
+    // parser writes it, and the wrapper, which escapes its scheme and slashes as well, does not.
+    const target = `https://example.com/${"\u00e9".repeat(330)}`;
     const wrapper = `http://www.bing.com/news/apiclick.aspx?ref=FexRss&amp;url=${encodeURIComponent(target)}`;
-    expect(target.length).toBeLessThan(2048);
+    expect(new URL(target).href.length).toBeLessThanOrEqual(2048);
     expect(wrapper.length).toBeGreaterThan(2048);
     expect(parseBingRss(rss(item({ link: wrapper }))).map((r) => r.url)).toEqual([
       new URL(target).href,

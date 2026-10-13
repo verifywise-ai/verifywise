@@ -22,7 +22,7 @@
  */
 import sanitizeHtml from "sanitize-html";
 import { cleanText, cutAtCodePoint } from "../vendorResearch/text";
-import { isOnDomain } from "./publicUrl";
+import { MAX_URL_CHARS, isOnDomain } from "./publicUrl";
 
 export const MAX_EXCERPT_CHARS = 8000;
 /** Stands for the text an excerpt leaves out. The model is told that a quote cannot span it. */
@@ -158,7 +158,7 @@ const TAG_REST = `(?:(?:[^<>"']|"[^"<]*"|'[^'<]*')*|[^<>]*)`;
 
 /** A block tag, opening or closing, as a whole. `(?=[\s/>])` keeps `pre` from matching `preview`. */
 const BLOCK_TAG = new RegExp(
-  `<\\/?(?:p|div|br|li|tr|td|th|h[1-6]|section|article|main|ul|ol|table|blockquote|pre|form)(?=[\\s/>])${TAG_REST}>`,
+  `<\\/?(?:p|div|br|li|tr|td|th|h[1-6]|section|article|main|ul|ol|table|blockquote|pre|form|dl|dt|dd|details|summary|figure|figcaption|address|fieldset|legend|caption|dialog|hr|hgroup|menu)(?=[\\s/>])${TAG_REST}>`,
   "gi",
 );
 
@@ -412,6 +412,9 @@ function withoutFragment(raw: string): string | null {
  * of its subdomains, not the page itself, and with security, trust, privacy, legal, compliance or
  * a similar word in the text or the path. "AI", "SOC", "ISO" and "DPA" count as words only, not
  * as parts of "email", "social" or "advisory". In the order of the page, at most `max`.
+ *
+ * A link whose URL is longer than MAX_URL_CHARS is left out and not counted: the model could not
+ * read it, and percent-encoding can make the URLs of one page hundreds of kilobytes of prompt.
  */
 export function relevantLinks(
   links: PageLink[],
@@ -432,7 +435,7 @@ export function relevantLinks(
     if (url.protocol !== "http:" && url.protocol !== "https:") continue;
     if (!isOnDomain(url.hostname, domain)) continue;
     url.hash = "";
-    if (url.href === self) continue;
+    if (url.href.length > MAX_URL_CHARS || url.href === self) continue;
     if (TOPIC.test(`${link.text} ${url.pathname}`)) kept.push(link);
   }
   return kept;

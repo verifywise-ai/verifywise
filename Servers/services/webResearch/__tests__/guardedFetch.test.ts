@@ -101,7 +101,8 @@ describe("guardedFetch", () => {
       "User-Agent",
     ]);
     expect(headers["User-Agent"]).toBe(BOT_USER_AGENT);
-    expect(headers["Accept-Encoding"]).toBe("gzip, deflate, br");
+    // Not deflate: servers disagree on its form, and a raw stream would not be read.
+    expect(headers["Accept-Encoding"]).toBe("gzip, br");
     expect(headers["Accept-Language"]).toBe("en");
     expect(headers).not.toHaveProperty("Cookie");
     expect(headers).not.toHaveProperty("Referer");

@@ -8,6 +8,7 @@ import {
   relevantLinks,
   selectExcerpt,
 } from "../pageText";
+import { MAX_URL_CHARS } from "../publicUrl";
 
 const BASE = "https://acme.com/trust/";
 
@@ -135,6 +136,50 @@ describe("extractPageText", () => {
     const page = extractPageText(html, BASE);
     expect(page.text).toBe("Odd\n\nNext\nLink");
     expect(page.links).toEqual([{ text: "Link", url: "https://acme.com/x" }]);
+  });
+
+  it("puts the terms and descriptions of a list, and the summary of a details element, on lines of their own", () => {
+    const list = extractPageText(
+      "<dl><dt>Encryption at rest</dt><dd>AES-256</dd><dt>Last audit</dt><dd>2026-01-01</dd></dl>",
+      BASE,
+    );
+    expect(list.text.split(/\n+/)).toEqual([
+      "Encryption at rest",
+      "AES-256",
+      "Last audit",
+      "2026-01-01",
+    ]);
+    const details = extractPageText(
+      "<details><summary>Subprocessors</summary>Amazon Web Services</details>",
+      BASE,
+    );
+    expect(details.text.split(/\n+/)).toEqual(["Subprocessors", "Amazon Web Services"]);
+  });
+
+  it.each([
+    "figure",
+    "figcaption",
+    "address",
+    "fieldset",
+    "legend",
+    "caption",
+    "dialog",
+    "hgroup",
+    "menu",
+  ])("makes a line break at <%s>", (tag) => {
+    expect(extractPageText(`a<${tag}>b</${tag}>c`, BASE).text.split(/\n+/)).toEqual([
+      "a",
+      "b",
+      "c",
+    ]);
+  });
+
+  it("makes a line break at <hr>", () => {
+    expect(extractPageText("a<hr>b<hr/>c", BASE).text.split(/\n+/)).toEqual(["a", "b", "c"]);
+  });
+
+  it("does not take a tag whose name only starts like a block tag for one", () => {
+    expect(extractPageText("<p>a<dlg>x</dlg>b</p>", BASE).text).toBe("axb");
   });
 
   it("takes the first h1 as the title when there is no title, else an empty title", () => {
@@ -408,6 +453,27 @@ describe("relevantLinks", () => {
   it("copes with a link whose URL cannot be parsed and with a self URL that is not a URL", () => {
     const links = [link("Privacy", "not a url"), link("Privacy", "https://acme.com/privacy")];
     expect(relevantLinks(links, "acme.com", "nope")).toEqual([links[1]]);
+  });
+
+  it("drops a link whose URL is longer than 2,048 characters, and does not count it", () => {
+    // 4,000 characters that a URL cannot carry become 36,000 once they are percent-encoded.
+    const long = Array.from({ length: 25 }, (_, i) =>
+      link(`Security ${i}`, new URL(`https://acme.com/security/${i}/${"中".repeat(4000)}`).href),
+    );
+    expect(long[0].url.length).toBeGreaterThan(36_000);
+    const normal = [
+      link("Security", "https://acme.com/security"),
+      link("Privacy", "https://acme.com/privacy"),
+      link("Trust", "https://acme.com/trust"),
+    ];
+    expect(relevantLinks(long, "acme.com", SELF)).toEqual([]);
+    expect(relevantLinks([...long, ...normal], "acme.com", SELF)).toEqual(normal);
+  });
+
+  it("keeps a link whose URL is exactly 2,048 characters", () => {
+    const prefix = "https://acme.com/security/";
+    const atTheLimit = link("Security", prefix + "a".repeat(MAX_URL_CHARS - prefix.length));
+    expect(relevantLinks([atTheLimit], "acme.com", SELF)).toEqual([atTheLimit]);
   });
 });
 

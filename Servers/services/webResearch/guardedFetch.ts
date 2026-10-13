@@ -256,7 +256,11 @@ export function mediaTypeOf(contentType: string): string {
   return contentType.split(";")[0].trim().toLowerCase();
 }
 
-/** The decoder for a Content-Encoding, null for none; an encoding we did not ask for fails. */
+/**
+ * The decoder for a Content-Encoding, null for none; an encoding that is not known fails.
+ * `deflate` is not asked for, because servers disagree on its form and a raw stream fails here, but
+ * a zlib stream that a server sends unasked is read.
+ */
 function decoderFor(contentEncoding: string | undefined): Transform | null {
   switch ((contentEncoding ?? "").trim().toLowerCase()) {
     case "":
@@ -368,7 +372,7 @@ export async function guardedFetch(
   const headers = {
     "User-Agent": BOT_USER_AGENT,
     Accept: accepted.join(", "),
-    "Accept-Encoding": "gzip, deflate, br",
+    "Accept-Encoding": "gzip, br",
     "Accept-Language": "en",
   };
 

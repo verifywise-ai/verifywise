@@ -92,15 +92,20 @@ function toReadError(error: unknown): PageReadError {
  *
  * It asks the site's robots.txt first (once per origin for the life of the reader) and fetches
  * the page only if robots.txt allows the URL: the check runs for the first URL and for every
- * redirect hop, as `beforeRequest` of the fetch. HTML, and any type other than plain text, goes
- * through `extractPageText`; plain text is cleaned and has no title, date or links. A large page
- * with almost no text fails with `needs_javascript`. A `FetchError` becomes a `PageReadError` with
- * the same reason, and so does anything else that goes wrong (as `unreachable`).
+ * redirect hop, as `beforeRequest` of the fetch. An origin whose robots.txt the URL or address
+ * policy refused (most often a host that resolves to an address that is not public) is refused as
+ * `not_allowed`, as the fetch would refuse its pages, and not as `blocked_by_robots`. HTML, and
+ * any type other than plain text, goes through `extractPageText`; plain text is cleaned and has no
+ * title, date or links. A large page with almost no text fails with `needs_javascript`. A
+ * `FetchError` becomes a `PageReadError` with the same reason, and so does anything else that goes
+ * wrong (as `unreachable`).
  *
  * @param deps.fetch Replaces `guardedFetch`, for tests.
  */
 export function createPageReader(deps: { fetch?: typeof guardedFetch } = {}): PageReader {
   const fetch = deps.fetch ?? guardedFetch;
+  /** The origins whose robots.txt the URL or address policy refused. */
+  const refusedOrigins = new Set<string>();
 
   // robots.txt is fetched with no `beforeRequest`, which would ask the checker about robots.txt
   // while the checker waits for it, and with no caller signal: the checker keeps the answer for
@@ -125,12 +130,19 @@ export function createPageReader(deps: { fetch?: typeof guardedFetch } = {}): Pa
       ) {
         return { status: 404, text: "" };
       }
+      // A refusal of the policy also marks the origin, so that its pages are refused as such.
+      if (error instanceof FetchError && error.reason === "not_allowed") {
+        refusedOrigins.add(new URL(robotsUrl).origin);
+      }
       throw error;
     }
   }, BOT_TOKEN);
 
+  // A refused origin is not asked about again. The set is looked at once more after the robots
+  // check, because the first check of an origin is the request that finds out.
   const beforeRequest = async (url: URL): Promise<void> => {
-    if (!(await robots.isAllowed(url))) throw new FetchError("blocked_by_robots");
+    if (!refusedOrigins.has(url.origin) && (await robots.isAllowed(url))) return;
+    throw new FetchError(refusedOrigins.has(url.origin) ? "not_allowed" : "blocked_by_robots");
   };
 
   return async (url, signal) => {

@@ -55,6 +55,10 @@ const RESERVED_DOMAINS = ["localhost", "local", "internal", "home.arpa"];
  * trailing dot on the host is removed. The URL parser has already lower-cased the host, turned an
  * internationalised name into punycode and turned every spelling of an IPv4 address (2130706433,
  * 0x7f.1) into dotted decimal, which is why `net.isIP` sees them.
+ *
+ * The length limit holds for the URL as it is written and as the parser writes it: a character
+ * that a URL cannot carry is percent-encoded, which can make the address up to nine times as long.
+ * So a URL this function returns passes it again.
  */
 export function parsePublicUrl(raw: string): URL {
   if (typeof raw !== "string" || raw.length > MAX_URL_CHARS) throw refuse("invalid_url");
@@ -65,6 +69,7 @@ export function parsePublicUrl(raw: string): URL {
   } catch {
     throw refuse("invalid_url");
   }
+  if (url.href.length > MAX_URL_CHARS) throw refuse("invalid_url");
 
   if (url.protocol !== "http:" && url.protocol !== "https:") throw refuse("scheme");
   if (url.username !== "" || url.password !== "") throw refuse("credentials");
@@ -133,6 +138,8 @@ for (const [network, prefix] of [
   ["2002::", 16],
   ["fc00::", 7],
   ["fe80::", 10],
+  // Site-local, deprecated by RFC 3879 but still routed inside some networks.
+  ["fec0::", 10],
   ["ff00::", 8],
 ] as const) {
   BLOCKED_IPV6.addSubnet(network, prefix, "ipv6");

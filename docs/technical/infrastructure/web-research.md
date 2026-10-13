@@ -50,7 +50,7 @@ The agent has no tools of its own. The model can only name a search or a URL, an
 
 Checked first, on every URL, whether the model named it or a redirect did (`publicUrl.ts`).
 
-- `http` or `https` only. No user name or password in the URL. Port empty, 80 or 443. At most 2,048 characters.
+- `http` or `https` only. No user name or password in the URL. Port empty, 80 or 443. At most 2,048 characters, as written and once the parser has percent-encoded the characters a URL cannot carry.
 - The host is a DNS name with at least two labels, each made of letters, digits and inner hyphens (63 characters at most). A trailing dot is removed.
 - An IP address in any notation is refused. The URL parser turns `2130706433` and `0x7f.1` into dotted decimal, and `net.isIP` then sees them.
 - `localhost`, `*.localhost`, `*.local`, `*.internal` and `*.home.arpa` are refused.
@@ -65,9 +65,9 @@ Not public means any of these ranges. There is one list per IP family, and an ad
 | Family | Ranges |
 |--------|--------|
 | IPv4 | `0.0.0.0/8`, `10.0.0.0/8`, `100.64.0.0/10`, `127.0.0.0/8`, `169.254.0.0/16`, `172.16.0.0/12`, `192.0.0.0/24`, `192.0.2.0/24`, `192.168.0.0/16`, `198.18.0.0/15`, `198.51.100.0/24`, `203.0.113.0/24`, `224.0.0.0/4`, `240.0.0.0/4` |
-| IPv6 | `::/128`, `::1/128`, `::/96`, `::ffff:0:0/96` (blocked as a whole), `64:ff9b::/96`, `64:ff9b:1::/48`, `100::/64`, `2001:db8::/32`, `2002::/16`, `fc00::/7`, `fe80::/10`, `ff00::/8` |
+| IPv6 | `::/128`, `::1/128`, `::/96`, `::ffff:0:0/96` (blocked as a whole), `64:ff9b::/96`, `64:ff9b:1::/48`, `100::/64`, `2001:db8::/32`, `2002::/16`, `fc00::/7`, `fe80::/10`, `fec0::/10`, `ff00::/8` |
 
-`::/96` (the deprecated IPv4-compatible form), `64:ff9b:1::/48` (local-use NAT64, RFC 8215) and `2002::/16` (6to4) carry an IPv4 address inside them, so an AAAA record under one of them could reach an internal IPv4 address through a translator or a tunnel. An address with a zone id (`fe80::1%eth0`) is not public either.
+`::/96` (the deprecated IPv4-compatible form), `64:ff9b:1::/48` (local-use NAT64, RFC 8215) and `2002::/16` (6to4) carry an IPv4 address inside them, so an AAAA record under one of them could reach an internal IPv4 address through a translator or a tunnel. `fec0::/10` is the site-local range that RFC 3879 deprecated, still routed inside some networks. An address with a zone id (`fe80::1%eth0`) is not public either.
 
 ### Redirects
 
@@ -79,12 +79,12 @@ Followed by hand, at most 4. Every hop goes through the URL policy, the address 
 |-------|-------|
 | Status | 200 only |
 | Content types | `text/html`, `application/xhtml+xml`, `text/plain`, `text/xml`, `application/xml`, `application/rss+xml` |
-| Body, after decompression (`gzip`, `deflate`, `br`) | 2,097,152 bytes; a longer body is cut there and the stream is closed, so a compressed bomb is not read to its end |
+| Body, after decompression (`gzip`, `br`, and `deflate` in its zlib form when a server sends it unasked) | 2,097,152 bytes; a longer body is cut there and the stream is closed, so a compressed bomb is not read to its end |
 | Time to the response headers of one hop | 12,000 ms |
 | The whole fetch, redirects and body included | 20,000 ms |
 | Redirects | 4 |
 
-A request carries the bot's User-Agent, `Accept`, `Accept-Encoding` and `Accept-Language: en`, and nothing else: no cookies, no credentials, no `Referer`. Each request has a fresh socket, and TLS certificates are verified. The character set comes from the `Content-Type` header, then from a `<meta charset>` in the first 2 KB of the body, then it is UTF-8.
+A request carries the bot's User-Agent, `Accept`, `Accept-Encoding: gzip, br` and `Accept-Language: en`, and nothing else: no cookies, no credentials, no `Referer`. Each request has a fresh socket, and TLS certificates are verified. The character set comes from the `Content-Type` header, then from a `<meta charset>` in the first 2 KB of the body, then it is UTF-8.
 
 Why a fetch fails, as the model is told:
 
@@ -96,7 +96,7 @@ Why a fetch fails, as the model is told:
 | `not_found` | 404 or 410 |
 | `unsupported_type` | A content type that is not in the list above, for example a PDF |
 | `needs_javascript` | An HTML page of at least 20,000 characters with fewer than 500 characters of text: the text is built by a script |
-| `unreachable` | Any other status, a network error, a time limit, too many redirects, an encoding that was not asked for |
+| `unreachable` | Any other status, a network error, a time limit, too many redirects, an encoding that cannot be decoded |
 
 The page reader does not look for challenge pages. A site that shows one with a 200 answer is read as a page with little text.
 
@@ -109,7 +109,7 @@ Before a page is fetched, and before every redirect hop, the reader asks the `ro
 - **Which group.** A group applies when one of its `User-agent` values names exactly `VerifyWiseResearchBot`. The comparison ignores case and a `/version` suffix, so `VerifyWiseResearchBot/1.0` matches and `bot` or `wise` do not. A file may name the bot in several groups, and their rules are combined. Without a group of ours, the `*` groups apply.
 - **Which rule.** `Allow` and `Disallow` by the longest match, `Allow` wins a tie, `*` and a trailing `$` work, and a path that no rule matches is allowed. A pattern is never compiled into a regular expression, because the file is written by the site's owner and a pattern with many wildcards would make a backtracking engine run for as long as the site likes.
 - **The file.** Fetched through the same guard, with 5,000 ms and 65,536 bytes, under any content type (static hosting often serves it as `application/octet-stream`). The answer is cached per origin for one run.
-- **When the file cannot be had.** A missing file (404, 410) and a site that refuses to show it (401, 403, 429) mean the site has no rules, and everything is allowed. Any other outcome disallows everything on that origin for the run: a 5xx answer, another 4xx status, a time-out, a network error, too many redirects or an address that is refused.
+- **When the file cannot be had.** A missing file (404, 410) and a site that refuses to show it (401, 403, 429) mean the site has no rules, and everything is allowed. When the URL or the address policy refuses the request for the file (most often because the host resolves to an address that is not public), every page of that origin is refused as `not_allowed` for the run, as the page itself would be. Any other outcome disallows everything on that origin for the run: a 5xx answer, another 4xx status, a time-out, a network error or too many redirects.
 
 ### Provenance
 
@@ -121,7 +121,7 @@ A URL may be read only if, in this run, a search returned it, or it is on the ve
 
 - **Title and date** come from the raw HTML: `article:published_time` and similar meta tags, JSON-LD `datePublished` and `time[datetime]`.
 - **Excerpt.** At most 8,000 characters. Without `focus`, the start of the text. With `focus` (a few keywords), the first 1,000 characters plus the paragraphs with the most keyword hits, in page order, with a visible gap marker (`[…]` on a line of its own) where text is left out. A quote must not span a gap. There is no paging.
-- **Links.** For a page on the vendor's own domain, at most 25 links to that domain whose text or path contains a security, trust, privacy, legal, terms, subprocessor, compliance, certification, GDPR, cookie, status, incident, vulnerability or disclosure word, or the word AI, DPA, SOC or ISO, so that the model can move from the home page to the right pages.
+- **Links.** For a page on the vendor's own domain, at most 25 links to that domain whose text or path contains a security, trust, privacy, legal, terms, subprocessor, compliance, certification, GDPR, cookie, status, incident, vulnerability or disclosure word, or the word AI, DPA, SOC or ISO, so that the model can move from the home page to the right pages. A link whose URL is longer than 2,048 characters is left out: the model could not read it.
 
 ## The search engine
 

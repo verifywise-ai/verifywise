@@ -395,6 +395,18 @@ describe("createWebSession", () => {
       ]);
       expect(session.snapshot().ledger).toEqual([]);
     });
+
+    it("refuses a URL on the vendor's domain that percent-encoding takes past 2,048 characters, using no read", async () => {
+      const { session, readPage } = setup();
+
+      expect(await session.read("https://acme.com/" + "中".repeat(240), "certifications")).toEqual({
+        ok: false,
+        reason: "not_allowed",
+      });
+      expect(readPage).not.toHaveBeenCalled();
+      expect(session.budget().readsLeft).toBe(SESSION_LIMITS.maxReads);
+      expect(session.snapshot().calls).toEqual([]);
+    });
   });
 
   describe("read: a page that was read", () => {

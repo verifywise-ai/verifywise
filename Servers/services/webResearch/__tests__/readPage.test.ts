@@ -2,6 +2,7 @@ import http from "http";
 import { Readable } from "stream";
 import {
   ANY_CONTENT_TYPE,
+  DnsLookup,
   FetchError,
   FetchFailureReason,
   GuardedFetchOptions,
@@ -290,7 +291,7 @@ describe("createPageReader", () => {
     });
 
     it("disallows the page when robots.txt cannot be fetched for any other reason", async () => {
-      for (const reason of ["unreachable", "not_allowed", "unsupported_type"] as const) {
+      for (const reason of ["unreachable", "unsupported_type"] as const) {
         const { fetch, requested } = fakeFetch({
           [ROBOTS]: new FetchError(reason),
           [PAGE_URL]: { body: HTML },
@@ -299,6 +300,45 @@ describe("createPageReader", () => {
         expect(error.reason).toBe("blocked_by_robots");
         expect(requested).toEqual([ROBOTS]);
       }
+    });
+
+    it("refuses every page of an origin whose robots.txt the address policy refused as not_allowed", async () => {
+      const { fetch, requested } = fakeFetch({
+        [ROBOTS]: new FetchError("not_allowed"),
+        [PAGE_URL]: { body: HTML },
+        "https://acme.com/other": { body: HTML },
+        "https://www.acme.com/robots.txt": robotsAnswer("User-agent: *\nAllow: /"),
+        "https://www.acme.com/page": { body: HTML },
+      });
+      const read = createPageReader({ fetch });
+
+      expect((await failureOf(read(PAGE_URL))).reason).toBe("not_allowed");
+      expect((await failureOf(read("https://acme.com/other"))).reason).toBe("not_allowed");
+      // Another origin is not affected.
+      expect((await read("https://www.acme.com/page")).title).toBe("Trust center | Acme");
+      expect(requested).toEqual([
+        ROBOTS,
+        "https://www.acme.com/robots.txt",
+        "https://www.acme.com/page",
+      ]);
+    });
+
+    it("refuses a redirect hop into such an origin as not_allowed", async () => {
+      const { fetch, requested } = fakeFetch({
+        [ROBOTS]: robotsAnswer("User-agent: *\nAllow: /"),
+        "https://intranet.acme.com/robots.txt": new FetchError("not_allowed"),
+      });
+      // The real fetch calls beforeRequest for each redirect hop; this one calls it twice.
+      const hops = jest.fn(async (url: string, options?: GuardedFetchOptions) => {
+        await options?.beforeRequest?.(new URL(url));
+        await options?.beforeRequest?.(new URL("https://intranet.acme.com/next"));
+        return fetch(url, options);
+      });
+      const error = await failureOf(
+        createPageReader({ fetch: hops as unknown as typeof guardedFetch })(PAGE_URL),
+      );
+      expect(error.reason).toBe("not_allowed");
+      expect(requested).toEqual([ROBOTS, "https://intranet.acme.com/robots.txt"]);
     });
 
     it("fetches robots.txt once per origin for one reader, also for concurrent reads", async () => {
@@ -421,6 +461,38 @@ describe("createPageReader", () => {
         });
         const error = await failureOf(read(PUBLIC_URL));
         expect(error.reason).toBe("blocked_by_robots");
+        expect(requested).toEqual([ROBOTS]);
+      });
+
+      it("refuses the pages of a host that resolves to an address that is not public as not_allowed, as the guard refuses the page itself", async () => {
+        const requested: string[] = [];
+        // Like a socket, the transport resolves the host through the lookup of the guard first.
+        const transport: Transport = ({ url, lookup }) =>
+          new Promise((resolve, reject) => {
+            requested.push(url.href);
+            lookup(url.hostname, { all: true }, (error) => {
+              if (error) reject(error);
+              else resolve({ status: 200, headers: {}, body: Readable.from([]) });
+            });
+          });
+        // One public address and one that is not: the guard refuses the host.
+        const dnsLookup = ((
+          _hostname: string,
+          _options: unknown,
+          callback: (error: null, addresses: Array<{ address: string; family: number }>) => void,
+        ) =>
+          callback(null, [
+            { address: "93.184.216.34", family: 4 },
+            { address: "10.0.0.5", family: 4 },
+          ])) as unknown as DnsLookup;
+        const fetch: typeof guardedFetch = (url, options) =>
+          guardedFetch(url, options, { transport, dnsLookup });
+
+        await expect(fetch(PUBLIC_URL)).rejects.toMatchObject({ reason: "not_allowed" });
+        requested.length = 0;
+        const read = createPageReader({ fetch });
+        expect((await failureOf(read(PUBLIC_URL))).reason).toBe("not_allowed");
+        expect((await failureOf(read(PRIVATE_URL))).reason).toBe("not_allowed");
         expect(requested).toEqual([ROBOTS]);
       });
     });

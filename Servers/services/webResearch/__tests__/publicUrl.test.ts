@@ -65,6 +65,8 @@ const PUBLIC = [
   "2003::1",
   "2001:4860::1",
   "64:ff9c::1",
+  // Between fc00::/7 and fe80::/10: in none of the ranges of the design.
+  "fe00::1",
 ];
 
 const NOT_PUBLIC = [
@@ -108,6 +110,9 @@ const NOT_PUBLIC = [
   "fdff::1",
   "fe80::1",
   "febf::1",
+  "fec0::1",
+  "fec0:0:0:ffff::1",
+  "feff::1",
   "ff02::1",
   "",
   "abc",
@@ -138,6 +143,13 @@ describe("parsePublicUrl", () => {
     expect(refusalOf(prefix + "a".repeat(MAX_URL_CHARS - prefix.length + 1)).reason).toBe(
       "invalid_url",
     );
+  });
+
+  it("holds the address it returns to the limit too, which percent-encoding can take past it", () => {
+    const raw = "https://acme.com/" + "中".repeat(240);
+    expect(raw.length).toBe(257);
+    expect(new URL(raw).href.length).toBe(2177);
+    expect(refusalOf(raw).reason).toBe("invalid_url");
   });
 
   it.each(ACCEPTED)("accepts %s as %s", (raw, href) => {
