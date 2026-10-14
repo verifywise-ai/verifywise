@@ -3771,6 +3771,329 @@ failing on submit."
 
 ---
 
+### Task 13b: The trend view
+
+Ratios across runs, segmented so a comparison nobody established is never drawn.
+
+**Files:**
+- Create: `Servers/services/biasAudit/trendSeries.ts`
+- Create: `Clients/src/presentation/pages/BiasAudit/RatioTrend.tsx`
+- Test: `Servers/services/biasAudit/trendSeries.test.ts`
+- Test: `Clients/src/presentation/pages/BiasAudit/__tests__/RatioTrend.test.tsx`
+
+**Interfaces:**
+- Consumes: `bias_audit_runs` rows (Task 3), `BiasAuditResult` (plan 1 Task 5).
+- Produces:
+  - `interface TrendPoint { runId: number; date: string; category: string; lowestRatio: number | null; flagged: boolean }`
+  - `interface TrendSegment { profileVersion: number; questionSetVersion: number; jobDescriptionKey: string | null; points: TrendPoint[] }`
+  - `interface TrendBreak { afterRunId: number; reasons: string[] }`
+  - `interface TrendSeries { segments: TrendSegment[]; breaks: TrendBreak[] }`
+  - `buildTrendSeries(runs: TrendRunRow[]): TrendSeries`
+
+- [ ] **Step 1: Write the failing series test**
+
+```ts
+import { buildTrendSeries } from "./trendSeries";
+
+const run = (
+  id: number, date: string, profileVersion: number,
+  lowest: number, opts: Partial<{ questionSetVersion: number; jobDescriptionKey: string | null; metric: string }> = {},
+) => ({
+  id,
+  created_at: date,
+  profile_version: profileVersion,
+  question_set_version: opts.questionSetVersion ?? 1,
+  job_description_key: opts.jobDescriptionKey ?? "commercial-ae",
+  metric: opts.metric ?? "selection_rate",
+  result_json: {
+    tables: [{
+      categoryKey: "sex",
+      rows: [
+        { categoryName: "Male", impactRatio: 1, flagged: false },
+        { categoryName: "Female", impactRatio: lowest, flagged: lowest < 0.8 },
+      ],
+    }],
+  },
+});
+
+describe("one unbroken series", () => {
+  const series = buildTrendSeries([
+    run(1, "2026-01-10", 1, 0.95),
+    run(2, "2026-04-10", 1, 0.91),
+    run(3, "2026-07-10", 1, 0.88),
+  ]);
+
+  it("returns a single segment when nothing changed", () => {
+    expect(series.segments).toHaveLength(1);
+    expect(series.segments[0].points.map((p) => p.runId)).toEqual([1, 2, 3]);
+    expect(series.breaks).toEqual([]);
+  });
+
+  it("carries the lowest ratio per category per run", () => {
+    expect(series.segments[0].points.map((p) => p.lowestRatio)).toEqual([0.95, 0.91, 0.88]);
+  });
+
+  it("orders points oldest first", () => {
+    const dates = series.segments[0].points.map((p) => p.date);
+    expect([...dates].sort()).toEqual(dates);
+  });
+});
+
+describe("a break is drawn rather than a line", () => {
+  it("segments on a profile version change and names it", () => {
+    const series = buildTrendSeries([
+      run(1, "2026-01-10", 1, 0.95),
+      run(2, "2026-04-10", 2, 0.72),
+    ]);
+    expect(series.segments).toHaveLength(2);
+    expect(series.breaks).toHaveLength(1);
+    expect(series.breaks[0].afterRunId).toBe(1);
+    expect(series.breaks[0].reasons).toContain("the AEDT profile was changed");
+  });
+
+  it("segments on a job description change and names it", () => {
+    const series = buildTrendSeries([
+      run(1, "2026-01-10", 1, 0.95),
+      run(2, "2026-04-10", 1, 0.93, { jobDescriptionKey: "operational-hourly" }),
+    ]);
+    expect(series.segments).toHaveLength(2);
+    expect(series.breaks[0].reasons).toContain("a different job description was tested");
+  });
+
+  it("segments on a question set change", () => {
+    const series = buildTrendSeries([
+      run(1, "2026-01-10", 1, 0.95),
+      run(2, "2026-04-10", 1, 0.93, { questionSetVersion: 2 }),
+    ]);
+    expect(series.breaks[0].reasons).toContain("the question set was revised");
+  });
+
+  it("segments on a metric change", () => {
+    const series = buildTrendSeries([
+      run(1, "2026-01-10", 1, 0.95),
+      run(2, "2026-04-10", 1, 0.93, { metric: "scoring_rate" }),
+    ]);
+    expect(series.breaks[0].reasons).toContain(
+      "the measure changed between a selection rate and a scoring rate",
+    );
+  });
+
+  it("names every simultaneous reason on one break", () => {
+    const series = buildTrendSeries([
+      run(1, "2026-01-10", 1, 0.95),
+      run(2, "2026-04-10", 2, 0.93, { jobDescriptionKey: "operational-hourly", metric: "scoring_rate" }),
+    ]);
+    expect(series.breaks[0].reasons).toHaveLength(3);
+  });
+});
+
+describe("runs that cannot contribute a point", () => {
+  it("skips a run with no result, without breaking the series", () => {
+    const blocked = { ...run(2, "2026-04-10", 1, 0.9), result_json: null };
+    const series = buildTrendSeries([run(1, "2026-01-10", 1, 0.95), blocked, run(3, "2026-07-10", 1, 0.9)]);
+    expect(series.segments).toHaveLength(1);
+    expect(series.segments[0].points.map((p) => p.runId)).toEqual([1, 3]);
+  });
+
+  it("carries a null ratio where every ratio in a table was null", () => {
+    const degenerate = {
+      ...run(2, "2026-04-10", 1, 0.9),
+      result_json: { tables: [{ categoryKey: "sex", rows: [
+        { categoryName: "Male", impactRatio: null, flagged: false },
+        { categoryName: "Female", impactRatio: null, flagged: false },
+      ] }] },
+    };
+    const series = buildTrendSeries([run(1, "2026-01-10", 1, 0.95), degenerate]);
+    const pts = series.segments[0].points;
+    expect(pts[1].lowestRatio).toBeNull();
+  });
+
+  it("returns an empty series for no runs", () => {
+    expect(buildTrendSeries([])).toEqual({ segments: [], breaks: [] });
+  });
+
+  it("returns one segment and no break for a single run", () => {
+    const series = buildTrendSeries([run(1, "2026-01-10", 1, 0.95)]);
+    expect(series.segments).toHaveLength(1);
+    expect(series.breaks).toEqual([]);
+  });
+});
+
+describe("excluded groups never become the lowest point", () => {
+  it("ignores a row excluded under 5-301(d)", () => {
+    const withExcluded = {
+      ...run(1, "2026-01-10", 1, 0.95),
+      result_json: { tables: [{ categoryKey: "sex", rows: [
+        { categoryName: "Male", impactRatio: 1, flagged: false },
+        { categoryName: "Female", impactRatio: 0.95, flagged: false },
+        { categoryName: "Unknown", impactRatio: null, flagged: false, excluded: true },
+      ] }] },
+    };
+    const series = buildTrendSeries([withExcluded]);
+    expect(series.segments[0].points[0].lowestRatio).toBe(0.95);
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `cd ~/verifywise/Servers && npm run test:unit -- services/biasAudit/trendSeries.test.ts`
+Expected: FAIL, cannot find module `./trendSeries`.
+
+- [ ] **Step 3: Write the implementation**
+
+```ts
+/**
+ * Ratios across runs, segmented wherever a comparison is not supported.
+ *
+ * A smooth line across a changed profile, job description, question set or
+ * metric asserts comparability that nobody established. Comparability was the
+ * whole argument that made a prior finding attributable: a corpus measured each
+ * race twice, roughly 2,500 ID positions apart, and the two halves agreeing at
+ * r = +0.9324 is what showed the ordering was not an artifact of position. A
+ * trend line that quietly spans a configuration change claims the same kind of
+ * thing without the evidence.
+ *
+ * So the series breaks and the break is labelled with what changed. A gap the
+ * customer has to explain is preferable to a line they will misread.
+ */
+const BREAK_REASONS = {
+  profileVersion: "the AEDT profile was changed",
+  questionSetVersion: "the question set was revised",
+  jobDescriptionKey: "a different job description was tested",
+  metric: "the measure changed between a selection rate and a scoring rate",
+} as const;
+```
+
+Walk the runs oldest first. Start a segment; for each subsequent run compare the four keys
+against the current segment's, and where any differ close the segment, record a break naming
+every differing key, and start a new one. A run whose `result_json` is null contributes no
+point and does **not** break the series: a blocked run is an absence of measurement, not a
+change of configuration.
+
+`lowestRatio` is the minimum non-null `impactRatio` across all tables, skipping rows marked
+`excluded`, since an excluded group has no ratio to be lowest.
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `cd ~/verifywise/Servers && npm run test:unit -- services/biasAudit/trendSeries.test.ts`
+Expected: PASS, 13 tests.
+
+- [ ] **Step 5: Write the failing component test**
+
+```tsx
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import RatioTrend from "../RatioTrend";
+
+const oneSegment = {
+  segments: [{
+    profileVersion: 1, questionSetVersion: 1, jobDescriptionKey: "commercial-ae",
+    points: [
+      { runId: 1, date: "2026-01-10", category: "sex", lowestRatio: 0.95, flagged: false },
+      { runId: 2, date: "2026-04-10", category: "sex", lowestRatio: 0.88, flagged: false },
+    ],
+  }],
+  breaks: [],
+};
+
+const twoSegments = {
+  segments: [
+    { ...oneSegment.segments[0] },
+    { profileVersion: 2, questionSetVersion: 1, jobDescriptionKey: "commercial-ae",
+      points: [{ runId: 3, date: "2026-07-10", category: "sex", lowestRatio: 0.72, flagged: true }] },
+  ],
+  breaks: [{ afterRunId: 2, reasons: ["the AEDT profile was changed"] }],
+};
+
+describe("RatioTrend", () => {
+  it("renders a point per run", () => {
+    render(<RatioTrend series={oneSegment} />);
+    expect(screen.getByText(/0\.95/)).toBeInTheDocument();
+    expect(screen.getByText(/0\.88/)).toBeInTheDocument();
+  });
+
+  it("shows the break and what changed", () => {
+    render(<RatioTrend series={twoSegments} />);
+    expect(screen.getByText(/the AEDT profile was changed/i)).toBeInTheDocument();
+  });
+
+  it("says why the series is not joined across the break", () => {
+    render(<RatioTrend series={twoSegments} />);
+    expect(screen.getByText(/not comparable|cannot be compared/i)).toBeInTheDocument();
+  });
+
+  it("states that 0.80 is a convention wherever it marks the axis", () => {
+    render(<RatioTrend series={oneSegment} />);
+    if (screen.queryByText(/0\.80/)) {
+      expect(screen.getByText(/convention|four-fifths/i)).toBeInTheDocument();
+    }
+  });
+
+  it("renders an empty state for a single run rather than a one-point chart", () => {
+    render(<RatioTrend series={{ segments: [oneSegment.segments[0]], breaks: [] }} />);
+    expect(screen.queryByText(/not enough runs|one run/i) ?? screen.getByText(/0\.95/))
+      .toBeInTheDocument();
+  });
+
+  it("uses no forbidden vocabulary", () => {
+    render(<RatioTrend series={twoSegments} />);
+    const text = document.body.textContent!.toLowerCase();
+    for (const w of ["compliant", "certified", "bias-free", "passed"]) {
+      expect(text).not.toContain(w);
+    }
+  });
+});
+```
+
+- [ ] **Step 6: Implement the component**
+
+`recharts`, which is the house choice at 11 usages across `Clients/src`. One `<Line>` per
+segment on a shared axis, with a `<ReferenceLine>` at each break carrying its reasons as the
+label. Segments must not be joined: render them as separate `Line` series rather than one
+series with a gap, so no interpolation is drawn across a break.
+
+A 0.80 reference line is optional; if drawn, its label states that it is the EEOC four-fifths
+convention and that the statute does not adopt it. Reuse `PageHeader` and `EmptyState` as the
+other pages do.
+
+Render it on the project's bias module page beneath the stance panel, with
+`EducationPanel pageKey="results.figures"` already present there covering the ratio reading.
+
+- [ ] **Step 7: Run both test files**
+
+```bash
+cd ~/verifywise/Servers && npm run test:unit -- services/biasAudit/trendSeries.test.ts
+cd ~/verifywise/Clients && npx vitest run src/presentation/pages/BiasAudit/__tests__/RatioTrend.test.tsx
+```
+
+- [ ] **Step 8: Commit**
+
+```bash
+cd ~/verifywise
+git add Servers/services/biasAudit/trendSeries.ts Servers/services/biasAudit/trendSeries.test.ts Clients/src/presentation/pages/BiasAudit/RatioTrend.tsx Clients/src/presentation/pages/BiasAudit/__tests__/
+git commit -m "Add the ratio trend view, segmented at configuration changes
+
+Shows the lowest impact ratio per run over time, broken wherever the
+profile version, question set, job description or metric changed, with
+each break labelled with what changed.
+
+A smooth line across a configuration change asserts comparability nobody
+established. Comparability was the whole argument that made a prior
+finding attributable: a corpus measured each race twice around 2,500 ID
+positions apart, and the halves agreeing at r=+0.9324 is what showed the
+ordering was not an artifact of position. A trend line spanning a changed
+profile claims the same kind of thing with none of the evidence.
+
+Segments render as separate series rather than one series with a gap, so
+no interpolation is drawn across a break. A blocked run contributes no
+point and does not break the series: an absence of measurement is not a
+change of configuration. Excluded groups never become the lowest point,
+since a group excluded under 5-301(d) has no ratio."
+```
+
+---
+
 ### Task 14: Verification
 
 **Files:**
@@ -3813,7 +4136,7 @@ Verified with EvalServer moved out of the tree: the suite passes."
 
 ## Self-review
 
-**Spec coverage.** Intake question set → Task 1. Four tables and migrations → Task 2. Models and tenant queries → Task 3. Append-only profiles and attestation → Task 4. `appliesWhen` → Task 5. Readiness scoring → Task 6. Answer gates and consequences → Task 7. Education on every page → Tasks 8 and 13. Upload, parse and run → Task 9. Stance composition with the fixed section list → Task 10. PDF, section checker and immutability → Task 11. Routes, roles and module rules → Task 12. Pages → Task 13. Verification → Task 14.
+**Spec coverage.** Trend view → Task 13b. Intake question set → Task 1. Four tables and migrations → Task 2. Models and tenant queries → Task 3. Append-only profiles and attestation → Task 4. `appliesWhen` → Task 5. Readiness scoring → Task 6. Answer gates and consequences → Task 7. Education on every page → Tasks 8 and 13. Upload, parse and run → Task 9. Stance composition with the fixed section list → Task 10. PDF, section checker and immutability → Task 11. Routes, roles and module rules → Task 12. Pages → Task 13. Verification → Task 14.
 
 Deferred to plan 3 by design: the two fixed job descriptions, generation, the criteria-comparison check. Task 1 defines the `generationField` markers plan 3 reads, and Task 7 defines the `generation` gate, so plan 3 adds no new intake structure.
 
