@@ -18,6 +18,7 @@
 - **All files in this plan are pure functions.** No database access, no network, no filesystem reads outside test fixtures.
 - **Rounding:** impact ratios and rates are rounded to 6 decimal places, matching `round(x, 6)` in the Python. JavaScript `Math.round(x * 1e6) / 1e6` is not equivalent to Python's banker-adjacent rounding on exact halves; Task 2 pins this with a fixture case.
 - **Expected-runs formula:** `n + 1 - sum(ni^2) / n`. Never `n * (1 - 1/k)`, which assumes equal group sizes and rejects a correct interleave.
+- **Two thresholds, by provenance.** Uploaded data uses `0.5` of expected: real applicant order may legitimately cluster, so the check is there to catch block structure rather than to police ordinary clustering. Generated corpora use `0.9` and treat a failure as a hard gate, because a generator has no excuse. Measured on a seeded permutation: 7 categories over 5,000 records give 4,305 observed against 4,286.7 expected (1.0043), and an unequal 700/300 split gives 411 against 421.0 (0.9762). Both clear 0.9. Plan 3 owns the generated-corpus gate.
 - **0.80 is the EEOC four-fifths convention, not adopted by the statute.** It is a parameter with provenance, never a pass mark. § 5-301(d)'s 2% exclusion is the statutory rule.
 - **Vocabulary:** no function in this plan returns, logs or embeds the words `compliant`, `certified`, `passed`, `bias-free`, or `audited` as a claim. Task 10 asserts this.
 - **Test commands:** `cd Servers && npm run test:unit -- <path>` to run; `npm run build` for typecheck; `npm run lint` for lint.
