@@ -16,7 +16,7 @@
 
 - **No runtime dependency on any other VerifyWise module.** No import from `EvalServer/`, `AIGateway/`, `EvaluationModule/`, or another module's services, routes or tables. Shared libraries and platform primitives (Sequelize, auth middleware, the files table, i18n, MUI) are permitted. The Python engine is a development-time oracle only, used in Task 1 and never again.
 - **All files in this plan are pure functions.** No database access, no network, no filesystem reads outside test fixtures.
-- **Rounding:** impact ratios and rates are rounded to 6 decimal places, matching `round(x, 6)` in the Python. JavaScript `Math.round(x * 1e6) / 1e6` is not equivalent to Python's banker-adjacent rounding on exact halves; Task 2 pins this with a fixture case.
+- **Rounding:** impact ratios and rates are rounded to 6 decimal places, matching Python's `round(x, 6)`, which rounds half to EVEN. Neither `Math.round(x * 1e6) / 1e6` nor `Number(x.toFixed(6))` is equivalent: both round half up. Measured over 22,773 values, `toFixed(6)` disagrees with Python on 14 of them, all exact binary fractions such as `1/128 = 0.0078125` (Python 0.007812, toFixed 0.007813). A group of 128 with 1 selected produces that rate exactly, and a real impact ratio reaches `0.00390625`, so this is reachable and not theoretical. Task 2 implements `round6` on the decimal expansion with half-to-even only on a true tie, and pins it on both the binary-half and decimal-half families.
 - **Expected-runs formula:** `n + 1 - sum(ni^2) / n`. Never `n * (1 - 1/k)`, which assumes equal group sizes and rejects a correct interleave.
 - **Two thresholds, by provenance.** Uploaded data uses `0.5` of expected: real applicant order may legitimately cluster, so the check is there to catch block structure rather than to police ordinary clustering. Generated corpora use `0.9` and treat a failure as a hard gate, because a generator has no excuse. Measured on a seeded permutation: 7 categories over 5,000 records give 4,305 observed against 4,286.7 expected (1.0043), and an unequal 700/300 split gives 411 against 421.0 (0.9762). Both clear 0.9. Plan 3 owns the generated-corpus gate.
 - **0.80 is the EEOC four-fifths convention, not adopted by the statute.** It is a parameter with provenance, never a pass mark. § 5-301(d)'s 2% exclusion is the statutory rule.
@@ -351,14 +351,48 @@ const byName = (n: string) => (cases as Case[]).find((c) => c.name === n)!;
 const exp = (n: string) => (expected as any)[n];
 
 describe("round6", () => {
-  it("matches Python round(x, 6) on a value that is exactly half at 7dp", () => {
-    // 3/7 = 0.428571428571...; 6dp -> 0.428571
+  it("matches Python on an ordinary repeating fraction", () => {
     expect(round6(3 / 7)).toBe(0.428571);
+    expect(round6(1 / 3)).toBe(0.333333);
+    expect(round6(2 / 3)).toBe(0.666667);
   });
 
-  it("rounds a trailing 5 at the 7th decimal the same way Python does", () => {
+  // The family toFixed(6) gets wrong: exact binary fractions whose 7th
+  // decimal is a true 5. Python rounds these half to even.
+  it.each([
+    [1 / 128, 0.007812],
+    [29 / 128, 0.226562],
+    [57 / 128, 0.445312],
+    [85 / 128, 0.664062],
+    [113 / 128, 0.882812],
+    [5 / 128, 0.039062],
+    [1 / 256, 0.003906],
+  ])("rounds the exact binary half %p to %p, half to even", (input, expected) => {
+    expect(round6(input)).toBe(expected);
+  });
+
+  it("differs from toFixed(6) on those values, which is why it exists", () => {
+    expect(Number((1 / 128).toFixed(6))).toBe(0.007813);
+    expect(round6(1 / 128)).toBe(0.007812);
+  });
+
+  // Decimal halves are NOT exactly representable, so a tie test on the
+  // scaled value misfires here. These must still match Python.
+  it("rounds decimal near-halves as Python does", () => {
     expect(round6(0.1234565)).toBe(0.123456);
     expect(round6(0.1234575)).toBe(0.123457);
+  });
+
+  it("handles exponential notation, zero, one and negatives", () => {
+    expect(round6(5e-7)).toBe(0);
+    expect(round6(0)).toBe(0);
+    expect(round6(1)).toBe(1);
+    expect(round6(-1 / 128)).toBe(-0.007812);
+  });
+
+  it("is reachable from real group sizes", () => {
+    // 1 selected from a group of 128 is an ordinary cell, not a contrived one.
+    expect(round6(1 / 128)).toBe(0.007812);
   });
 });
 
@@ -468,14 +502,60 @@ Create `round.ts`:
 /**
  * Round to 6 decimal places, matching Python's `round(x, 6)`.
  *
- * Python rounds half to even on exact binary halves; JavaScript's
- * `Math.round` rounds half away from zero. The two differ only when the
- * scaled value lands exactly on .5, which `toPrecision` avoids by going
- * through the decimal representation rather than the binary one.
+ * Python rounds half to EVEN. JavaScript has no builtin that does: both
+ * `Math.round(x * 1e6) / 1e6` and `Number(x.toFixed(6))` round half UP.
+ *
+ * Over 22,773 values spanning the ratios impact ratios actually take,
+ * `toFixed(6)` disagrees with Python on 14, every one an exact binary
+ * fraction:
+ *
+ *   1/128   = 0.0078125   Python 0.007812   toFixed 0.007813
+ *   29/128  = 0.2265625   Python 0.226562   toFixed 0.226563
+ *   1/256   = 0.00390625  Python 0.003906   toFixed 0.003906  (agrees)
+ *
+ * A group of 128 candidates with 1 selected produces the first of those
+ * rates exactly, so this is reachable in ordinary data rather than
+ * contrived.
+ *
+ * Scaling by 1e6 and inspecting the remainder does not work either: a
+ * decimal half such as 0.1234575 is not exactly representable, so
+ * `x * 1e6` carries floating-point error and a tie test on it misfires.
+ * The decision therefore reads the decimal expansion, and half-to-even
+ * applies only where the discarded tail is exactly "5" with nothing after
+ * it.
  */
 export function round6(x: number): number {
   if (!Number.isFinite(x)) return x;
-  return Number(Number(x).toFixed(6));
+  if (x === 0) return 0;
+
+  // Below the rounding grain, only an exact half needs the even rule.
+  if (Math.abs(x) < 1e-6) {
+    return Math.abs(x) * 1e6 === 0.5 ? 0 : Number(x.toFixed(6));
+  }
+
+  // toFixed(20) never yields exponential notation, which a regex on the
+  // default string form would mis-parse for values like 5e-7.
+  const text = x.toFixed(20);
+  const parts = text.match(/^(-?)(\d+)\.(\d+)$/);
+  if (!parts) return Number(x.toFixed(6));
+
+  const sign = parts[1] === "-" ? -1 : 1;
+  const integerPart = parts[2];
+  const fraction = parts[3];
+  const keep = fraction.slice(0, 6);
+  const discarded = fraction.slice(6);
+
+  let scaled = parseInt(integerPart + keep, 10);
+  const firstDiscarded = discarded[0] ?? "0";
+  const tail = discarded.slice(1).replace(/0+$/, "");
+
+  if (firstDiscarded > "5" || (firstDiscarded === "5" && tail !== "")) {
+    scaled += 1;
+  } else if (firstDiscarded === "5" && tail === "") {
+    if (scaled % 2 !== 0) scaled += 1;   // exact tie: round to even
+  }
+
+  return (sign * scaled) / 1e6;
 }
 ```
 
@@ -607,7 +687,15 @@ Run: `cd ~/verifywise/Servers && npm run test:unit -- services/biasAudit/engine/
 Expected: PASS, 7 tests.
 
 If the rounding tests fail, do not change the test. Compare against Python directly:
-`~/verifywise/EvalServer/venv/bin/python -c "print(round(3/7, 6), round(0.1234565, 6))"`
+
+```bash
+~/verifywise/EvalServer/venv/bin/python -c \
+  "print(round(1/128,6), round(0.1234575,6), round(3/7,6))"
+```
+
+Expected: `0.007812 0.123457 0.428571`. A `round6` that returns 0.007813 for the
+first is rounding half up and will diverge from the oracle on any cell whose
+size is a power of two.
 
 - [ ] **Step 5: Typecheck and commit**
 
