@@ -407,6 +407,22 @@ interface IntakeQuestion {
 `appliesWhen` should reuse the visibility-rule evaluator from the intake-form-logic work
 (`Servers/services/intakeFormLogic/`) rather than introducing a second predicate system.
 
+### Attestation and roles
+
+Answers may be drafted by Admin (1) or Editor (3). **Attestation is restricted to Admin**, moves
+the profile from `draft` to `attested`, and records `attested_by_user_id` and `attested_at`. The
+four veto answers also carry their own `answered_by_user_id`, and the stance prints the attesting
+user and date beside each one.
+
+Reviewer (2) and Auditor (4) are read-only here. Note that the platform's Auditor role is
+read-only and unrelated to the § 5-300 sense of auditor: holding that role confers nothing about
+independence, and the module never treats it as doing so.
+
+Rationale: the vetoes are legal determinations about the customer's own position. On one
+engagement the compliance owner who later sent 51 deletions across three signed documents had
+never been in a conversation with us. The person who can overturn a determination should be the
+person who made it.
+
 ### Four tiers
 
 **Tier 1 — veto (4).** Preconditions, not scored. All four answered → a score exists. Any
@@ -635,6 +651,20 @@ independence declaration; expiry; data relied on, with hashes.
 that this is a self-administered test, that § 5-300 requires an independent auditor, and that this
 result is not an LL 144 bias audit.
 
+### The out-of-scope variant
+
+When `scope_at_generation = out_of_scope`, the PDF is a different document: headed **"Scope
+determination"**, not "Result". It carries no ratios and no readiness score, because neither was
+computed.
+
+It states: the customer's determination in their own words, quoted, with the attesting user and
+date; the § 5-300 limb relied on; that VerifyWise did not verify the determination and does not
+determine AEDT status; and that a change in how the output is used may bring the tool into scope,
+at which point the determination should be revisited.
+
+This is a favourable outcome and the document should not read as a failed run. Nor may it read as
+a clearance: it records what the customer established, not what VerifyWise found.
+
 ### Vocabulary
 
 A lint test asserts that generated output never contains: compliant, certified, passed,
@@ -744,11 +774,23 @@ Following `Servers/database/migrations/` conventions and the timestamp-prefix na
 
 ## Open questions
 
-1. **Does `out_of_scope` produce a PDF?** Proposed: yes, because "this tool is not an AEDT under
-   our use" is a useful document for a customer to hold. It must not read as a clearance.
-2. **Who may attest?** Proposed: Admin or above, since the vetoes are legal determinations. The
-   record's argument: a compliance owner who had never been in a conversation with us later sent
-   51 deletions.
+1. **Does `out_of_scope` produce a PDF? Resolved: yes.** A customer who establishes that their
+   tool is one input among several has a useful document to hold, and withholding it would make
+   the favourable outcome feel like a failed run. Constraints: the document states the
+   determination is the customer's own, quoted, with the date and the person who attested it;
+   it names the § 5-300 limb relied on; it states that the determination was not verified by
+   VerifyWise and that a change in how the output is used may bring the tool into scope. It
+   carries no ratios and no readiness score, because neither was computed. It must not read as
+   a clearance: the heading is "Scope determination", not "Result".
+
+2. **Who may attest? Resolved: Admin or above, and the attesting user is named in the stance.**
+   The four vetoes are legal determinations about the customer's own position, not analyst work.
+   Any role may draft answers; attestation moves the profile from `draft` to `attested` and is
+   restricted. The stance prints the attesting user and date beside each veto answer.
+
+   The record's argument is specific: on one engagement the compliance owner who later sent 51
+   deletions across three documents had never been in a conversation with us. The person who
+   can overturn a determination should be the person who made it.
 3. **Renewal notifications.** Display-only in v1. Wiring the existing BullMQ notifications is a
    follow-up, and the trigger must be basis-derived rather than a 365-day countdown.
 4. **Corpus retention.** A generated corpus is synthetic and carries no real applicant data, so
