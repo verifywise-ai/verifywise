@@ -57,10 +57,6 @@ const optionalProjectBodyFields = [
     .isBoolean()
     .withMessage("enable_ai_data_insertion must be a boolean"),
   body("uc_id").optional({ nullable: true }).isString().withMessage("uc_id must be a string"),
-  body("approval_workflow_id")
-    .optional({ checkFalsy: true })
-    .isInt({ min: 1 })
-    .withMessage("approval_workflow_id must be a positive integer"),
   body("members")
     .optional({ nullable: true })
     .isArray()
@@ -87,6 +83,11 @@ export const validateProjectProjIdParam = [
   handleValidationErrors,
 ];
 
+const approvalWorkflowIdBodyField = body("approval_workflow_id")
+  .optional({ checkFalsy: true })
+  .isInt({ min: 1 })
+  .withMessage("approval_workflow_id must be a positive integer");
+
 export const validateCreateProject = [
   body("project_title")
     .isString()
@@ -98,9 +99,11 @@ export const validateCreateProject = [
     .isISO8601()
     .withMessage("start_date is required and must be a valid ISO 8601 date"),
   ...optionalProjectBodyFields,
+  approvalWorkflowIdBodyField,
   handleValidationErrors,
 ];
 
+// approval_workflow_id is deliberately absent: it is set once, at creation.
 export const validateUpdateProject = [
   projectIdParam,
   ...optionalProjectBodyFields,

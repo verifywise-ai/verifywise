@@ -50,6 +50,7 @@ import { AiRiskClassification } from "../../../../domain/enums/aiRiskClassificat
 import { HighRiskRole } from "../../../../domain/enums/highRiskRole.enum";
 import RiskAnalysisModal from "../RiskAnalysisModal";
 import type { ClassificationResult } from "../../../../domain/types/euAiActClassification";
+import { getApprovalWorkflowsByEntityType } from "../../../../application/repository/approvalWorkflow.repository";
 import { getAutocompleteStyles } from "../../../utils/inputStyles";
 import { useStyles } from "./styles";
 
@@ -297,6 +298,33 @@ const ProjectSettings = React.memo(
     }, [project]);
 
     const { users } = useUsers();
+    const [approvalWorkflows, setApprovalWorkflows] = useState<
+      Array<{ _id: number; name: string }>
+    >([]);
+
+    // Fetched only to show the title of the workflow the use case was created
+    // under; the workflow itself is fixed at creation.
+    useEffect(() => {
+      const controller = new AbortController();
+
+      getApprovalWorkflowsByEntityType({ entityType: "use_case", signal: controller.signal })
+        .then((workflows) => {
+          setApprovalWorkflows(
+            workflows.map((workflow: any) => ({
+              _id: workflow.id,
+              name: workflow.workflow_title,
+            })),
+          );
+        })
+        .catch((error) => {
+          if (!controller.signal.aborted) {
+            console.error("Failed to fetch approval workflows:", error);
+            setApprovalWorkflows([]);
+          }
+        });
+
+      return () => controller.abort();
+    }, []);
 
     const { filteredFrameworks: monitoredFrameworks, allFrameworks } = useFrameworks({
       listOfFrameworks: project?.framework || [],
@@ -1565,6 +1593,30 @@ const ProjectSettings = React.memo(
                       backgroundColor: theme.palette.background.main,
                     }}
                     error={errors.deploymentContext}
+                  />
+
+                  {/* Approval workflow Row */}
+                  <Box>
+                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
+                      Approval workflow
+                    </Typography>
+                    <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                      Set when the use case was created and cannot be changed.
+                    </Typography>
+                  </Box>
+                  <Select
+                    id="approval-workflow-input"
+                    label=""
+                    ariaLabel="Approval workflow"
+                    placeholder="None"
+                    value={project?.approval_workflow_id || ""}
+                    onChange={() => {}}
+                    items={approvalWorkflows}
+                    disabled
+                    sx={{
+                      width: 400,
+                      backgroundColor: theme.palette.background.main,
+                    }}
                   />
                 </Box>
               </Box>

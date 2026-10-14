@@ -263,6 +263,24 @@ POST /approval-workflows
 2. If last step → Request approved
 3. Notifications sent to next approvers
 
+### Who Gets Notified, and When
+
+Approvers are told it is their turn — they never have to discover the request by opening
+**Approval requests** themselves. Every notification below is in-app plus email; a failed email is
+logged and never blocks the in-app notification.
+
+| Moment | Who is notified | Sent by |
+|--------|-----------------|---------|
+| Request created manually | Step 1 approvers | `createApprovalRequest` (`approvalRequest.ctrl.ts`) |
+| Use case created with a workflow | Step 1 approvers | `notifyUseCaseApprovalRequested` (`services/projects/approvalRequest.service.ts`) |
+| Step completed, request advances | Next step's approvers, plus the requester | `approveRequest` (`approvalRequest.ctrl.ts`) |
+| Request auto-approved on creation | The requester only — there is nothing to approve | `notifyApprovalAutoApproved` |
+| Request rejected / fully approved | The requester | `rejectRequest` / `approveRequest` |
+
+All of them are sent **after** the transaction commits and are fire-and-forget: a mail or Redis
+failure is logged, never surfaced as a failed use case. On creation the requester is skipped if
+they are also a step 1 approver — nobody is asked to approve their own request.
+
 ## Framework Auto-Creation
 
 Upon final approval of a use case:
@@ -313,8 +331,10 @@ ai_incident_managements
     ↓
 3. If workflow provided:
    ├── Fetch workflow and steps
+   ├── Reject it (400) if inactive or not a use_case workflow
    ├── Create approval request
-   └── Set entity_type to "use_case"
+   ├── Set entity_type to "use_case"
+   └── Notify the step 1 approvers (after commit)
     ↓
 4. Workflow progresses through steps
     ↓
@@ -322,6 +342,41 @@ ai_incident_managements
    ├── Create pending frameworks
    └── Clear pending_frameworks field
 ```
+
+### Which Workflows May Be Submitted
+
+`createUseCaseApprovalRequest` (`Servers/services/projects/approvalRequest.service.ts`) rejects a
+submitted `approval_workflow_id` with a `400` — rolling the use case back, so nothing is created —
+when the workflow is either:
+
+- **inactive.** Deleting a workflow is a soft delete (`is_active = false`,
+  `deleteApprovalWorkflowQuery`), so the row stays readable and a stale id would otherwise still
+  start a request.
+- **for another entity type.** Only `entity_type = 'use_case'` workflows govern use cases.
+
+A workflow with no steps is not an error: no request is created and the use case is saved without
+one.
+
+### The Workflow Is Fixed at Creation
+
+`approval_workflow_id` is set once, when the use case is created, and is immutable from then on.
+The use case has already been through the workflow to exist at all, so there is nothing left for a
+second request to approve.
+
+This is enforced in three places:
+
+- **`updateProjectByIdQuery` never writes the column.** It is absent from the column whitelist in
+  `Servers/utils/project.utils.ts`.
+- **`updateProjectById` rejects a change.** Sending an `approval_workflow_id` that differs from the
+  stored one — attaching, swapping or clearing — returns `400` rather than dropping the value
+  silently. Echoing the stored value back is accepted, since the settings form round-trips it.
+- **It is not part of the update contract.** `validateUpdateProject` omits the
+  `approval_workflow_id` body rule; only `validateCreateProject` carries it
+  (`Servers/middleware/validators/project.validator.ts`).
+
+**Use case → Settings** shows the workflow as a disabled field
+(`Clients/src/presentation/pages/ProjectView/ProjectSettings`) so the use case's governance history
+stays visible without being editable. Workflow titles are fetched purely to render the name.
 
 ## Access Control
 

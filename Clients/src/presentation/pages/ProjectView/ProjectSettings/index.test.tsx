@@ -51,6 +51,12 @@ vi.mock("../../../../application/repository/project.repository", () => ({
   deleteProject: (...args: any[]) => mockDeleteProject(...args),
 }));
 
+const mockGetApprovalWorkflowsByEntityType = vi.fn();
+vi.mock("../../../../application/repository/approvalWorkflow.repository", () => ({
+  getApprovalWorkflowsByEntityType: (...args: any[]) =>
+    mockGetApprovalWorkflowsByEntityType(...args),
+}));
+
 vi.mock("../../../../application/tools/log.engine", () => ({
   logEngine: vi.fn(),
 }));
@@ -151,6 +157,9 @@ describe("ProjectSettings", () => {
       filteredFrameworks: [],
       allFrameworks: [euAiActFramework, iso42001Framework],
     });
+    mockGetApprovalWorkflowsByEntityType.mockResolvedValue([
+      { id: 7, workflow_title: "Use case sign-off", entity_type: "use_case" },
+    ]);
   });
 
   it("renders core project fields once loaded", async () => {
@@ -298,6 +307,38 @@ describe("ProjectSettings", () => {
       body: expect.objectContaining({ project_title: "Renamed Assistant" }),
     });
     expect(await screen.findByText("Project updated successfully")).toBeInTheDocument();
+  });
+
+  it("shows the approval workflow the use case was created under, read-only", async () => {
+    mockUseProjectData.mockReturnValue({
+      project: { ...baseProject, approval_workflow_id: 7 },
+    });
+    renderWithProviders(<ProjectSettings />);
+    await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());
+
+    const workflowField = await screen.findByLabelText("Approval workflow");
+    expect(workflowField).toHaveTextContent("Use case sign-off");
+    expect(workflowField).toHaveAttribute("aria-disabled", "true");
+    expect(
+      screen.getByText("Set when the use case was created and cannot be changed."),
+    ).toBeInTheDocument();
+  });
+
+  it("never sends the approval workflow when saving", async () => {
+    mockUpdateProject.mockResolvedValue({ status: 202 });
+    mockUseProjectData.mockReturnValue({
+      project: { ...baseProject, approval_workflow_id: 7 },
+    });
+    renderWithProviders(<ProjectSettings />);
+    await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());
+
+    fireEvent.change(screen.getByDisplayValue("Chatbot Assistant"), {
+      target: { value: "Renamed Assistant" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(mockUpdateProject).toHaveBeenCalled());
+    expect(mockUpdateProject.mock.calls[0][0].body).not.toHaveProperty("approval_workflow_id");
   });
 
   it("shows a server error message when saving fails with status 400", async () => {

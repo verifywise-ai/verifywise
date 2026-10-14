@@ -1,12 +1,13 @@
 import { Box, Typography, LinearProgress, Stack } from "@mui/material";
 import { status, text as textColors, border, background } from "../../themes/palette";
 
+/** One requirement that has no evidence, or only evidence graded as low quality. */
 interface GapItem {
   framework_type: string;
   control_id: number;
   control_title: string;
   evidence_count: number;
-  avg_quality: number;
+  adequate_count: number;
   gap_type: "no_evidence" | "low_quality" | "adequate";
 }
 
@@ -15,7 +16,8 @@ interface GapData {
   controls_without_evidence: number;
   controls_with_low_quality: number;
   controls_adequate: number;
-  quality_threshold: number;
+  /** Grades the API counted as low quality — D and F unless the caller widened it. */
+  low_grades?: string[];
   gaps: GapItem[];
 }
 
@@ -23,6 +25,15 @@ interface EvidenceGapChartProps {
   data: GapData | null;
   isLoading?: boolean;
 }
+
+/** The gaps list mixes frameworks, so each row says which one it belongs to. */
+const FRAMEWORK_LABELS: Record<string, string> = {
+  eu_ai_act: "EU AI Act",
+  iso_42001: "ISO 42001",
+};
+
+/** How many gaps to list before falling back to a count. */
+const VISIBLE_GAPS = 8;
 
 function CoverageBar({
   label,
@@ -48,6 +59,7 @@ function CoverageBar({
       <LinearProgress
         variant="determinate"
         value={pct}
+        aria-label={label}
         sx={{
           "height": 6,
           "borderRadius": 3,
@@ -66,7 +78,7 @@ export default function EvidenceGapChart({ data, isLoading }: EvidenceGapChartPr
   if (isLoading) {
     return (
       <Box sx={{ p: 2 }}>
-        <LinearProgress />
+        <LinearProgress aria-label="Loading evidence coverage" />
       </Box>
     );
   }
@@ -89,6 +101,9 @@ export default function EvidenceGapChart({ data, isLoading }: EvidenceGapChartPr
     );
   }
 
+  const lowGrades = data.low_grades?.length ? data.low_grades.join(", ") : "D, F";
+  const hiddenGaps = Math.max(data.gaps.length - VISIBLE_GAPS, 0);
+
   return (
     <Box
       sx={{
@@ -99,24 +114,24 @@ export default function EvidenceGapChart({ data, isLoading }: EvidenceGapChartPr
       }}
     >
       <Typography sx={{ fontSize: 15, fontWeight: 600, color: textColors.primary, mb: 2 }}>
-        Evidence Coverage
+        Evidence coverage
       </Typography>
 
       {/* Coverage summary bars */}
       <CoverageBar
-        label="Adequate Evidence"
+        label="Adequate evidence"
         count={data.controls_adequate}
         total={data.total_controls}
         color={status.success}
       />
       <CoverageBar
-        label="Low Quality Evidence"
+        label="Low-quality evidence"
         count={data.controls_with_low_quality}
         total={data.total_controls}
         color={status.warning}
       />
       <CoverageBar
-        label="No Evidence"
+        label="No evidence"
         count={data.controls_without_evidence}
         total={data.total_controls}
         color={status.error}
@@ -126,57 +141,69 @@ export default function EvidenceGapChart({ data, isLoading }: EvidenceGapChartPr
       {data.gaps.length > 0 && (
         <Box sx={{ mt: 2 }}>
           <Typography sx={{ fontSize: 12, fontWeight: 600, color: textColors.secondary, mb: 1 }}>
-            Controls Needing Attention ({data.gaps.length})
+            Controls needing attention ({data.gaps.length})
           </Typography>
           <Stack spacing={0.5}>
-            {data.gaps.slice(0, 8).map((gap, i) => (
-              <Box
-                key={i}
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  p: 1,
-                  borderRadius: 1,
-                  backgroundColor:
-                    gap.gap_type === "no_evidence" ? status.error.bg : status.warning.bg,
-                  border: `1px solid ${
-                    gap.gap_type === "no_evidence" ? status.error.border : status.warning.border
-                  }`,
-                }}
-              >
-                <Typography
+            {data.gaps.slice(0, VISIBLE_GAPS).map((gap) => {
+              const noEvidence = gap.gap_type === "no_evidence";
+              const tone = noEvidence ? status.error : status.warning;
+
+              return (
+                <Box
+                  key={`${gap.framework_type}-${gap.control_id}`}
                   sx={{
-                    fontSize: 12,
-                    color: textColors.secondary,
-                    flex: 1,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                    mr: 1,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    p: 1,
+                    borderRadius: 1,
+                    backgroundColor: tone.bg,
+                    border: `1px solid ${tone.border}`,
                   }}
                 >
-                  {gap.control_title}
-                </Typography>
-                <Typography
-                  sx={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: gap.gap_type === "no_evidence" ? status.error.text : status.warning.text,
-                    flexShrink: 0,
-                  }}
-                >
-                  {gap.gap_type === "no_evidence" ? "No evidence" : `Quality: ${gap.avg_quality}`}
-                </Typography>
-              </Box>
-            ))}
+                  <Typography
+                    sx={{
+                      fontSize: 12,
+                      color: textColors.secondary,
+                      flex: 1,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      mr: 1,
+                    }}
+                    title={gap.control_title}
+                  >
+                    {FRAMEWORK_LABELS[gap.framework_type] ?? gap.framework_type} ·{" "}
+                    {gap.control_title}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: tone.text,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {noEvidence
+                      ? "No evidence"
+                      : `${gap.evidence_count} file${gap.evidence_count === 1 ? "" : "s"}, none adequate`}
+                  </Typography>
+                </Box>
+              );
+            })}
           </Stack>
+          {hiddenGaps > 0 && (
+            <Typography sx={{ mt: 1, fontSize: 11, color: textColors.tertiary }}>
+              and {hiddenGaps} more
+            </Typography>
+          )}
         </Box>
       )}
 
-      {/* Quality threshold note */}
+      {/* What counts as low quality */}
       <Typography sx={{ mt: 2, fontSize: 10, color: textColors.accent }}>
-        Quality threshold: {data.quality_threshold}/100
+        Evidence graded {lowGrades} counts as low quality. Files with no AI analysis are not counted
+        as adequate.
       </Typography>
     </Box>
   );

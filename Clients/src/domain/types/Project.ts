@@ -44,6 +44,7 @@ export type Project = {
     | "Closed"
     | "On hold"
     | "Rejected";
+  approval_workflow_id?: number | null;
   has_pending_approval?: boolean;
   approval_status?: "pending" | "rejected" | null;
   _source?: string; // Plugin source identifier (e.g., 'jira-assets')

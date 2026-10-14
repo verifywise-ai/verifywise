@@ -8,6 +8,8 @@ import {
   useEvidenceSuggestions,
   useTriggerAnalysis,
   useApplySuggestions,
+  useInvalidateEvidenceGaps,
+  evidenceAiQueryKeys,
 } from "../useEvidenceAi";
 
 const mockGetAnalysis = vi.fn();
@@ -32,6 +34,16 @@ function createWrapper() {
   });
   return ({ children }: { children: React.ReactNode }) =>
     React.createElement(QueryClientProvider, { client: queryClient }, children);
+}
+
+/** Wrapper plus the client behind it, for tests that assert on cache state. */
+function createWrapperWithClient() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  const wrapper = ({ children }: { children: React.ReactNode }) =>
+    React.createElement(QueryClientProvider, { client: queryClient }, children);
+  return { wrapper, queryClient };
 }
 
 describe("useEvidenceAi", () => {
@@ -206,6 +218,33 @@ describe("useEvidenceAi", () => {
       expect(mockApplySuggestions).toHaveBeenCalledWith(1, [
         { control_id: 5, framework_type: "iso27001" },
       ]);
+    });
+  });
+
+  describe("useInvalidateEvidenceGaps", () => {
+    it("invalidates gaps queries whatever params they were fetched with", async () => {
+      const { wrapper, queryClient } = createWrapperWithClient();
+      const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+      mockGetEvidenceGaps.mockResolvedValue({ data: { gaps: [], total_controls: 0 } });
+
+      const { result } = renderHook(
+        () => ({
+          gaps: useEvidenceGaps({ framework_type: "eu_ai_act" }),
+          invalidate: useInvalidateEvidenceGaps(),
+        }),
+        { wrapper },
+      );
+      await waitFor(() => expect(result.current.gaps.isSuccess).toBe(true));
+
+      await act(async () => {
+        await result.current.invalidate();
+      });
+
+      // The prefix key must match a query cached under specific params,
+      // otherwise a framework-filtered panel would keep serving stale counts.
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: evidenceAiQueryKeys.gapsAll() });
+      // An observed query refetches on invalidation, so the repository is hit again
+      await waitFor(() => expect(mockGetEvidenceGaps).toHaveBeenCalledTimes(2));
     });
   });
 });

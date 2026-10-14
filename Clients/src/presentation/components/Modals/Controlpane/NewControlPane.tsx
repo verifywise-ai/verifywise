@@ -43,6 +43,7 @@ import { handleAlert } from "../../../../application/tools/alertUtils";
 import { AlertProps } from "../../../types/alert.types";
 import allowedRoles from "../../../../application/constants/permissions";
 import { updateControl } from "../../../../application/repository/control_eu_act.repository";
+import { useInvalidateEvidenceGaps } from "../../../../application/hooks/useEvidenceAi";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import useUsers from "../../../../application/hooks/useUsers";
 import { User } from "../../../../domain/types/User";
@@ -114,6 +115,7 @@ const NewControlPane = ({
   const [selectedSubcontrolIndex, setSelectedSubcontrolIndex] = useState(0);
   const [activeTab, setActiveTab] = useState("details");
   const [alert, setAlert] = useState<AlertProps | null>(null);
+  const invalidateEvidenceGaps = useInvalidateEvidenceGaps();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [projectMembers, setProjectMembers] = useState<User[]>([]);
   const [searchParams] = useSearchParams();
@@ -886,6 +888,8 @@ const NewControlPane = ({
         // Notify parent components to refresh data
         OnSave?.(controlData);
         onComplianceUpdate?.();
+        // Evidence attached here feeds framework coverage, which is cached
+        invalidateEvidenceGaps();
 
         handleAlert({
           variant: "success",

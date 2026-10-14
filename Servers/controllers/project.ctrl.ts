@@ -24,6 +24,7 @@ import { IProjectAttributes } from "../domain.layer/interfaces/i.project";
 import { IControl } from "../domain.layer/interfaces/i.control";
 import { IControlCategory } from "../domain.layer/interfaces/i.controlCategory";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
+import { logStructured } from "../utils/logger/fileLogger";
 import { createISO27001FrameworkQuery } from "../utils/iso27001.utils";
 import { createNISTAI_RMFFrameworkQuery } from "../utils/nistAiRmfCorrect.utils";
 import {
@@ -44,9 +45,10 @@ import {
 } from "../utils/useCaseChangeHistory.utils";
 import { hasPendingApprovalQuery } from "../utils/approvalRequest.utils";
 import { deleteProjectWithSideEffects } from "../utils/projectDeletion.utils";
-// SSE notifications disabled for now - can be re-enabled later if needed
-// import { notifyStepApprovers } from "../services/notification.service";
-import { createUseCaseApprovalRequest } from "../services/projects/approvalRequest.service";
+import {
+  createUseCaseApprovalRequest,
+  notifyUseCaseApprovalRequested,
+} from "../services/projects/approvalRequest.service";
 import {
   notifyUserAssigned,
   notifyApprovalAutoApproved,
@@ -303,6 +305,12 @@ export async function createProject(req: Request, res: Response): Promise<any> {
       }
 
       // Create approval request if an approval workflow is assigned to the use-case
+      logStructured(
+        "processing",
+        `use case ${createdProject.id} created with approval_workflow_id=${createdProject.approval_workflow_id ?? "none"} (body sent ${projectData.approval_workflow_id ?? "none"})`,
+        "createProject",
+        "project.ctrl.ts",
+      );
       const approvalResult = await createUseCaseApprovalRequest(
         createdProject,
         req.userId!,
@@ -329,6 +337,24 @@ export async function createProject(req: Request, res: Response): Promise<any> {
         ).catch((notifyError) => {
           console.error("Failed to send auto-approval notification:", notifyError);
         });
+      } else if (approvalResult) {
+        // Still pending: the step-1 approvers are the ones who have to act
+        notifyUseCaseApprovalRequested(
+          createdProject,
+          approvalResult,
+          req.userId!,
+          req.organizationId!,
+        ).catch(async (notifyError) => {
+          await logFailure({
+            eventType: "Create",
+            description: "Failed to notify step 1 approvers of the use case approval request",
+            functionName: "createProject",
+            fileName: "project.ctrl.ts",
+            error: notifyError as Error,
+            userId: req.userId!,
+            organizationId: req.organizationId!,
+          });
+        });
       }
 
       await logSuccess({
@@ -339,18 +365,6 @@ export async function createProject(req: Request, res: Response): Promise<any> {
         userId: req.userId!,
         organizationId: req.organizationId!,
       });
-
-      // SSE notifications disabled for now - can be re-enabled later if needed
-      // if ((createdProject as any)._approvalRequestId) {
-      //   notifyStepApprovers(
-      //     req.organizationId!,
-      //     (createdProject as any)._approvalRequestId,
-      //     1, // Step 1
-      //     (createdProject as any)._approvalRequestName
-      //   ).catch(error => {
-      //     console.error("Error sending approval notification:", error);
-      //   });
-      // }
 
       // Send project creation notification to admin (fire-and-forget, don't block response)
       sendProjectCreatedNotification({
@@ -528,6 +542,31 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
 
     delete updatedProject.members;
     delete updatedProject.id;
+
+    // The approval workflow is fixed when the use case is created: the use case
+    // has already been through it, so there is nothing left to approve. Reject
+    // an attempt to change it rather than dropping the value silently.
+    if (
+      "approval_workflow_id" in updatedProject &&
+      (updatedProject.approval_workflow_id || null) !==
+        (existingProject.approval_workflow_id ?? null)
+    ) {
+      await transaction.rollback();
+      await logFailure({
+        eventType: "Update",
+        description: `Rejected approval workflow change on project ID ${projectId}`,
+        functionName: "updateProjectById",
+        fileName: "project.ctrl.ts",
+        error: new Error("approval_workflow_id is immutable"),
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
+      return res.status(400).json(
+        STATUS_CODE[400]({
+          message: req.t!("The approval workflow cannot be changed after the use case is created"),
+        }),
+      );
+    }
 
     // if (!updatedProject.project_title || !updatedProject.owner) {
     //   return res.status(400).json(

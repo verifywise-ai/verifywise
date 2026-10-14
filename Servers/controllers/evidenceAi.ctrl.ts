@@ -441,7 +441,15 @@ export async function getGaps(req: Request, res: Response) {
     const noEvidence = gaps.filter((g: any) => g.gap_type === "no_evidence");
     const lowQuality = gaps.filter((g: any) => g.gap_type === "low_quality");
 
-    logStructured("successful", "evidence gaps fetched", functionName, fileName);
+    logStructured(
+      "successful",
+      `evidence gaps fetched for framework=${frameworkType ?? "all"}: ` +
+        `${gaps.length} requirements — ${noEvidence.length} without evidence, ` +
+        `${lowQuality.length} low quality, ` +
+        `${gaps.length - noEvidence.length - lowQuality.length} adequate`,
+      functionName,
+      fileName,
+    );
     return res.status(200).json(
       STATUS_CODE[200]({
         total_controls: gaps.length,

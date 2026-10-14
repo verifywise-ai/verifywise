@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   triggerAnalysis,
@@ -12,8 +13,10 @@ export const evidenceAiQueryKeys = {
   all: ["evidence-ai"] as const,
   analysis: (fileId: number) => [...evidenceAiQueryKeys.all, "analysis", fileId] as const,
   qualityScores: () => [...evidenceAiQueryKeys.all, "quality-scores"] as const,
+  /** Every gaps query, whatever its params — the key to invalidate against. */
+  gapsAll: () => [...evidenceAiQueryKeys.all, "gaps"] as const,
   gaps: (params?: { framework_type?: string; quality_threshold?: number }) =>
-    [...evidenceAiQueryKeys.all, "gaps", params] as const,
+    [...evidenceAiQueryKeys.gapsAll(), params] as const,
   suggestions: (fileId: number) => [...evidenceAiQueryKeys.all, "suggestions", fileId] as const,
 };
 
@@ -55,6 +58,23 @@ export const useEvidenceGaps = (params?: {
     },
     staleTime: 5 * 60 * 1000,
   });
+};
+
+/**
+ * Invalidate the evidence gap analysis.
+ *
+ * Call it after anything that changes which files are linked to a framework
+ * requirement. The gaps query is cached for five minutes, so without this a
+ * freshly linked piece of evidence does not show up in coverage until the
+ * cache expires.
+ */
+export const useInvalidateEvidenceGaps = () => {
+  const queryClient = useQueryClient();
+
+  return useCallback(
+    () => queryClient.invalidateQueries({ queryKey: evidenceAiQueryKeys.gapsAll() }),
+    [queryClient],
+  );
 };
 
 /** Fetch suggested control links for a file */
@@ -107,7 +127,7 @@ export const useApplySuggestions = () => {
     },
     onSuccess: (_data, { fileId }) => {
       queryClient.invalidateQueries({ queryKey: evidenceAiQueryKeys.suggestions(fileId) });
-      queryClient.invalidateQueries({ queryKey: evidenceAiQueryKeys.gaps() });
+      queryClient.invalidateQueries({ queryKey: evidenceAiQueryKeys.gapsAll() });
     },
   });
 };

@@ -186,6 +186,50 @@ enum FileSource {
 | GET | `/files` | Get user files metadata |
 | POST | `/files` | Upload file for assessment |
 
+### Evidence AI
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/evidence-ai/analyze/:fileId` | Analyze a file and grade its quality |
+| GET | `/evidence-ai/analysis/:fileId` | Stored analysis for a file |
+| GET | `/evidence-ai/quality-scores` | Quality scores across the organization |
+| GET | `/evidence-ai/gaps` | Evidence coverage per requirement |
+| GET | `/evidence-ai/suggestions/:fileId` | Suggested control links for a file |
+| POST | `/evidence-ai/suggestions/:fileId/apply` | Create links from accepted suggestions |
+
+`GET /gaps` takes `framework_type` (`eu_ai_act` or `iso_42001`; both when omitted, and an
+unrecognized value returns nothing rather than quietly answering for another framework) and
+`low_grades` (default `D,F`). It classifies every requirement as `no_evidence`, `low_quality` —
+evidence exists but none of it is graded above the low bar, which includes files with no AI
+analysis at all — or `adequate`, and returns the non-adequate ones plus the summary counts.
+**Evidence coverage** on **Model inventory → Evidence hub** renders it
+(`Clients/src/presentation/pages/ModelInventory/EvidenceCoveragePanel.tsx`).
+
+#### Counting evidence against a requirement
+
+Evidence is attached from several drawers, and each writes a different kind of id into
+`file_entity_links.entity_id`. The gap query maps each id space onto the requirement's template id
+before counting (`Servers/utils/evidenceAi.utils.ts`, `EVIDENCE_REQUIREMENT_SOURCES`):
+
+| Framework | `entity_type` | `entity_id` is | Counted against |
+|-----------|---------------|----------------|-----------------|
+| `eu_ai_act` | `control` | `controls_struct_eu.id` (AI suggestion accepted) | itself |
+| `eu_ai_act` | `subcontrol` | `subcontrols_eu.id` (subcontrol drawer) | `controls_eu.control_meta_id` |
+| `iso_42001` | `control` | `annexcategories_struct_iso.id` (AI suggestion accepted) | itself |
+| `iso_42001` | `annex_category` | `annexcategories_iso.id` (annex drawer) | `annexcategory_meta_id` |
+
+Two entity types are deliberately **not** counted, because they belong to a different axis and have
+no path to a control or annex category:
+
+- `eu_ai_act` / `assessment` stores an `answers_eu` id. Answers hang off
+  `questions_struct_eu → subtopics → topics`, which never reaches `controls_struct_eu` — the
+  assessment tracker is separate from the compliance tracker.
+- `iso_42001` / `subclause` stores a `subclauses_iso` id, which belongs to the clause axis.
+
+Counting those ids as control ids is what made the report wrong before: a subcontrol or answer id
+was joined straight onto the struct table, so a control could show evidence it did not have, or a
+gap it did not have.
+
 ## Evidence File Structure
 
 ```typescript
