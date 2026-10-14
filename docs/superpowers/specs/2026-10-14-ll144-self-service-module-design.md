@@ -605,9 +605,11 @@ Driven by the profile answers:
   whole corpus.
 - The qualification gradient from the expected criteria for the chosen JD, adjusted by
   `knockout.exists`.
-- Demographic allocation balanced across sex and race/ethnicity so every intersectional cell
-  clears the § 5-301(d) 2% threshold. A balanced synthetic pool is what makes all 14 cells
-  reportable, which a real applicant pool often cannot do.
+- Demographic allocation balanced across sex and race/ethnicity. A balanced synthetic pool is
+  what makes all 14 cells reportable, which a real applicant pool often cannot do. Note that a
+  balanced allocation clears § 5-301(d)'s 2% exclusion by construction at any size, since each
+  cell is always 1/14 of the sample: the exclusion is not the constraint on generated volume.
+  The constraint is per-cell count, which is statistical power, and the floor is 50 per cell.
 - Candidate IDs by seeded permutation. The manifest holding demographics is stored separately
   from the corpus, so the customer's platform scores blind.
 
