@@ -65,8 +65,11 @@ describe("module independence", () => {
 
   it("never embeds forbidden vocabulary in source strings", () => {
     const forbidden = ["compliant", "certified", "passed", "bias-free", "audited"];
+    // stance/vocabulary.ts is the one file that must spell the list out; it is
+    // exempt by exact path and every other source file stays scanned.
+    const VOCABULARY = path.join(MODULE, "stance", "vocabulary.ts");
     const offenders: string[] = [];
-    for (const f of files) {
+    for (const f of files.filter((x) => x !== VOCABULARY)) {
       const src = fs.readFileSync(f, "utf8").toLowerCase();
       for (const word of forbidden) {
         if (src.includes(word)) offenders.push(`${path.relative(MODULE, f)}: ${word}`);
