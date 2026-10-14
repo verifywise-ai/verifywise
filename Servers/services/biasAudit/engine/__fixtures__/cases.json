@@ -1,0 +1,157 @@
+[
+  {
+    "name": "selection_rate_balanced",
+    "config": {
+      "preset_id": "nyc_ll144",
+      "metric": "selection_rate",
+      "categories": { "sex": { "label": "Sex", "groups": ["Male", "Female"] } },
+      "threshold": 0.8,
+      "outcome_column": "selected"
+    },
+    "records_generator": "balanced_sex_60_40"
+  },
+  {
+    "name": "selection_rate_intersectional",
+    "config": {
+      "preset_id": "nyc_ll144",
+      "metric": "selection_rate",
+      "categories": {
+        "sex": { "label": "Sex", "groups": ["Male", "Female"] },
+        "race_ethnicity": {
+          "label": "Race/Ethnicity",
+          "groups": [
+            "White",
+            "Black or African American",
+            "Hispanic or Latino",
+            "Asian",
+            "Native Hawaiian or Pacific Islander",
+            "Native American or Alaska Native",
+            "Two or more races"
+          ]
+        }
+      },
+      "intersectional": { "required": true, "cross": ["sex", "race_ethnicity"] },
+      "threshold": 0.8,
+      "small_sample_exclusion": 0.02,
+      "outcome_column": "selected"
+    },
+    "records_generator": "ll144_full_14_cells"
+  },
+  {
+    "name": "selection_rate_single_group",
+    "config": {
+      "preset_id": "t",
+      "metric": "selection_rate",
+      "categories": { "sex": { "label": "Sex", "groups": ["Male"] } },
+      "threshold": 0.8,
+      "outcome_column": "selected"
+    },
+    "records_generator": "single_group_male_only"
+  },
+  {
+    "name": "selection_rate_all_selected",
+    "config": {
+      "preset_id": "t",
+      "metric": "selection_rate",
+      "categories": { "sex": { "label": "Sex", "groups": ["Male", "Female"] } },
+      "threshold": 0.8,
+      "outcome_column": "selected"
+    },
+    "records_generator": "all_selected"
+  },
+  {
+    "name": "selection_rate_none_selected",
+    "config": {
+      "preset_id": "t",
+      "metric": "selection_rate",
+      "categories": { "sex": { "label": "Sex", "groups": ["Male", "Female"] } },
+      "threshold": 0.8,
+      "outcome_column": "selected"
+    },
+    "records_generator": "none_selected"
+  },
+  {
+    "name": "selection_rate_blank_group_names",
+    "config": {
+      "preset_id": "t",
+      "metric": "selection_rate",
+      "categories": { "sex": { "label": "Sex", "groups": ["Male", "Female"] } },
+      "threshold": 0.8,
+      "outcome_column": "selected"
+    },
+    "records_generator": "mostly_blank_sex"
+  },
+  {
+    "name": "selection_rate_small_sample_excluded",
+    "config": {
+      "preset_id": "t",
+      "metric": "selection_rate",
+      "categories": {
+        "race_ethnicity": {
+          "label": "Race/Ethnicity",
+          "groups": ["White", "Asian", "Two or more races"]
+        }
+      },
+      "threshold": 0.8,
+      "small_sample_exclusion": 0.02,
+      "outcome_column": "selected"
+    },
+    "records_generator": "one_tiny_race_cell"
+  },
+  {
+    "name": "scoring_rate_continuous",
+    "config": {
+      "preset_id": "t",
+      "metric": "scoring_rate",
+      "categories": { "sex": { "label": "Sex", "groups": ["Male", "Female"] } },
+      "threshold": 0.8,
+      "score_column": "score"
+    },
+    "records_generator": "continuous_scores_0_100"
+  },
+  {
+    "name": "scoring_rate_median_equals_mode",
+    "config": {
+      "preset_id": "t",
+      "metric": "scoring_rate",
+      "categories": { "sex": { "label": "Sex", "groups": ["Male", "Female"] } },
+      "threshold": 0.8,
+      "score_column": "score"
+    },
+    "records_generator": "three_levels_75_at_top"
+  },
+  {
+    "name": "scoring_rate_rounding_half",
+    "config": {
+      "preset_id": "t",
+      "metric": "scoring_rate",
+      "categories": { "sex": { "label": "Sex", "groups": ["Male", "Female"] } },
+      "threshold": 0.8,
+      "score_column": "score"
+    },
+    "records_generator": "rates_producing_exact_half_at_7dp"
+  },
+  {
+    "name": "fairness_metrics_basic",
+    "config": {
+      "preset_id": "t",
+      "metric": "fairness_metrics",
+      "categories": { "sex": { "label": "Sex", "groups": ["Male", "Female"] } },
+      "prediction_column": "prediction",
+      "ground_truth_column": "ground_truth"
+    },
+    "records_generator": "prediction_and_truth"
+  },
+  {
+    "name": "score_distribution_present",
+    "config": {
+      "preset_id": "t",
+      "metric": "selection_rate",
+      "categories": { "sex": { "label": "Sex", "groups": ["Male", "Female"] } },
+      "threshold": 0.8,
+      "outcome_column": "selected",
+      "score_column": "score"
+    },
+    "records_generator": "selected_plus_scores"
+  }
+]
