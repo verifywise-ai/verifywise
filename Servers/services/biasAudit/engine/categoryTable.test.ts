@@ -42,6 +42,13 @@ describe("round6", () => {
     expect(round6(-1 / 128)).toBe(-0.007812);
   });
 
+  it("keeps near-ties around 1e-6 apart from true ties, matching Python", () => {
+    expect(round6(2.5e-6)).toBe(3e-6);
+    expect(round6(3.5e-6)).toBe(3e-6);
+    expect(round6(4.5e-6)).toBe(5e-6);
+    expect(round6(5e-7)).toBe(0);
+  });
+
   it("is reachable from real group sizes", () => {
     // 1 selected from a group of 128 is an ordinary cell, not a contrived one.
     expect(round6(1 / 128)).toBe(0.007812);

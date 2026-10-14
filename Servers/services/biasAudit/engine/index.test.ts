@@ -267,6 +267,10 @@ describe("summary text", () => {
       expect(rateFor(1, 16)).toBe("6.2%");
     });
 
+    it("rounds a float just above a half up (1/2000 -> 0.1%)", () => {
+      expect(rateFor(1, 2000)).toBe("0.1%");
+    });
+
     it("rounds an ordinary value normally (1/3 -> 33.3%)", () => {
       expect(rateFor(1, 3)).toBe("33.3%");
     });

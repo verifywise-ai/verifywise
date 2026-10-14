@@ -38,14 +38,14 @@ export function roundHalfEven(x: number, digits: number): number {
 
   const grain = 10 ** digits;
 
-  // Below the rounding grain, only an exact half needs the even rule.
-  if (Math.abs(x) < 1 / grain) {
-    return Math.abs(x) * grain === 0.5 ? 0 : Number(x.toFixed(digits));
-  }
-
-  // toFixed(20) never yields exponential notation, which a regex on the
-  // default string form would mis-parse for values like 5e-7.
-  const text = x.toFixed(20);
+  // Read the exact decimal expansion of the double. toFixed never yields
+  // exponential notation (which a regex on the default string form would
+  // mis-parse for values like 5e-7), and 100 digits is the maximum it
+  // allows: enough that near-ties around 1e-6 to 1e-4 (2.5e-6, 3.5e-6,
+  // 4.5e-6) are not collapsed into false exact ties. There is deliberately
+  // no shortcut for tiny values: a float like 0.05 multiplies by 10 to
+  // exactly 0.5 yet is really slightly above a half.
+  const text = x.toFixed(100);
   const parts = text.match(/^(-?)(\d+)\.(\d+)$/);
   if (!parts) return Number(x.toFixed(digits));
 
