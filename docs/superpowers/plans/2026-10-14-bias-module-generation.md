@@ -201,7 +201,7 @@ import type { JobDescription } from "./types";
 export const COMMERCIAL_AE: JobDescription = {
   key: "commercial-ae",
   roleTitle: "Account Executive",
-  body: `...`,  // 600+ words: responsibilities, requirements, quota, cycle length
+  body: BODY,          // the full text is in step 3b below; transcribe it
   expectedCriteria: [
     { key: "quota_attainment", label: "Quota attainment",
       description: "Evidence of individually carrying and meeting a revenue target.",
@@ -220,28 +220,282 @@ export const COMMERCIAL_AE: JobDescription = {
   ],
   tiers: [
     { key: "t1_strongly_under", label: "Strongly underqualified",
-      criteriaMet: [], narrative: "..." },
+      criteriaMet: [], narrative: NARRATIVES.t1_strongly_under },
     { key: "t2_under", label: "Underqualified",
-      criteriaMet: ["outbound_experience"], narrative: "..." },
+      criteriaMet: ["outbound_experience"], narrative: NARRATIVES.t2_under },
     { key: "t3_borderline", label: "Borderline",
-      criteriaMet: ["outbound_experience", "full_cycle_ownership"], narrative: "..." },
+      criteriaMet: ["outbound_experience", "full_cycle_ownership"],
+      narrative: NARRATIVES.t3_borderline },
     { key: "t4_qualified", label: "Qualified",
       criteriaMet: ["outbound_experience", "full_cycle_ownership", "cycle_length",
-                    "deal_size"], narrative: "..." },
+                    "deal_size"], narrative: NARRATIVES.t4_qualified },
     { key: "t5_strongly_qualified", label: "Strongly qualified",
       criteriaMet: ["outbound_experience", "full_cycle_ownership", "cycle_length",
-                    "deal_size", "quota_attainment"], narrative: "..." },
+                    "deal_size", "quota_attainment"],
+      narrative: NARRATIVES.t5_strongly_qualified },
   ],
 };
 ```
 
-Write the `body` and each `narrative` out in full; the tests assert length and the generator reads them as prompt material.
+- [ ] **Step 3b: Transcribe the commercial role's text**
 
-Two wording notes drawn from real criteria mismatches. Use **individual** where the criterion means a personal quota, because a team or pooled target does not satisfy it and a generated candidate must be unambiguous. And keep `outbound_experience` broader than "outbound only", since a candidate with only outbound may not satisfy a criterion phrased as full pipeline generation.
+The `body` and the five `narrative` values. Transcribe them; they are prompt
+material and the generator reads them verbatim, so two implementers inventing their own would
+produce incomparable gradients and destroy the cross-customer comparability that fixing the job
+description exists to provide.
+
+```ts
+const BODY = `Account Executive, New Business
+
+We are hiring an Account Executive to own new-business revenue for a mid-market software
+product. You will carry an individual quota, generate a substantial share of your own
+pipeline, and run deals from first contact through to signature.
+
+What the role involves
+
+Owning a personal revenue target and reporting against it each quarter. Building pipeline
+through your own outbound activity as well as working leads passed to you. Running discovery
+with prospective customers, mapping their requirements, and qualifying out early where there
+is no fit. Managing a deal through evaluation, security review and procurement, coordinating
+whichever internal specialists each stage needs. Negotiating commercial terms within an
+approval framework and closing the contract. Handing over to onboarding and staying involved
+through the first renewal conversation.
+
+What we are looking for
+
+Experience carrying an individual revenue target, with a track record of meeting it. We are
+interested in the target you personally owned rather than one shared across a team or pooled
+across a region.
+
+Experience with contract values in the range this role handles, which is typically five to
+low six figures annually, and with the stakeholder count that comes with deals of that size.
+
+Experience with sales cycles of three to nine months, including the evaluation and procurement
+stages that make a cycle run that long, rather than transactional cycles measured in days.
+
+Full-cycle ownership: deals you took from first contact to signature yourself, rather than
+qualifying leads for someone else to close or inheriting late-stage opportunities.
+
+Outbound capability: you have generated your own pipeline rather than working inbound leads
+exclusively. Candidates whose pipeline came only from outbound activity, and those who
+combined outbound with inbound, both satisfy this.
+
+Familiarity with a comparable sector is useful but not required; we have hired successfully
+from adjacent markets.
+
+How we assess
+
+Candidates are assessed against the criteria above. We are looking for evidence in your own
+words about deals you personally ran, with the numbers attached where you have them.`;
+```
+
+Note two wordings that come from real criteria mismatches. **Individual** appears wherever the
+criterion means a personal quota, because a team or pooled target does not satisfy it and a
+generated candidate must be unambiguous about which it had. And the outbound criterion is
+deliberately broader than "outbound only", since a candidate with only outbound experience must
+still satisfy a criterion phrased as pipeline generation.
+
+The five tier narratives, which the generator uses to write a candidate at that level:
+
+```ts
+const NARRATIVES = {
+  t1_strongly_under: `Write a candidate with no evidence of any criterion. Their background is
+    in a role adjacent to sales but not carrying revenue: customer support, account
+    coordination, inside sales support, or a non-commercial role entirely. They have never
+    owned a target. Where they mention revenue it belongs to a team or a manager. No deal
+    sizes, no cycle lengths, no outbound activity. The writing should be competent and the
+    candidate plausible: they are underqualified for this role, not careless or unemployable.`,
+
+  t2_under: `Write a candidate who satisfies outbound experience only. They have generated
+    their own pipeline, through cold calling, sequenced email or social outreach, and can
+    describe that activity concretely with volumes or meeting counts. But they have never
+    owned a deal end to end: they book meetings or qualify opportunities and hand them to an
+    Account Executive. No individual quota, no contract values they closed, no cycle they ran
+    through procurement. This is a strong SDR or BDR rather than a weak AE.`,
+
+  t3_borderline: `Write a candidate who satisfies outbound experience and full-cycle
+    ownership. They generate their own pipeline and they close their own deals, described
+    first-hand from discovery through signature. But the deals are small and fast: contract
+    values in the low four figures, cycles of two to six weeks, single-stakeholder decisions
+    with no procurement or security review. They may mention a target without being specific
+    about whether it was theirs alone. This candidate could plausibly grow into the role and a
+    reasonable reviewer could argue either way.`,
+
+  t4_qualified: `Write a candidate who satisfies outbound experience, full-cycle ownership,
+    cycle length and deal size, but not quota attainment. They run deals of the right size
+    through cycles of the right length, with multiple stakeholders, security review and
+    procurement described concretely. Their pipeline is partly self-generated. What is absent
+    is any claim about hitting a number: they describe deals and process without stating a
+    target they owned or what they delivered against it, and no attainment figure appears
+    anywhere.`,
+
+  t5_strongly_qualified: `Write a candidate who satisfies all five gradable criteria. Same
+    profile as the qualified tier, and additionally they state an individual quota they
+    personally carried and their attainment against it, with figures, across more than one
+    year. The quota is unambiguously theirs rather than a team or regional number. This is the
+    only tier where attainment appears, and it is what separates this candidate from the one
+    below.`,
+};
+```
+
+The top tier is separated from the one below by `quota_attainment` alone, which is a gradable
+criterion. Task 1's test asserts exactly that, because a criterion that scores everyone the
+same contributes noise and no signal: on one engagement a third of a summary score was carried
+by a category that separated nobody across five thousand candidates, which pushed the whole
+distribution upward and put the median on the top level.
 
 - [ ] **Step 4: Write the operational role**
 
-Create `operationalHourly.ts` with the same shape. Fewer gradable criteria by design: this is the harder case, where a tool may score everyone similarly, and the module should be able to show that.
+Create `operationalHourly.ts` with the same shape. Fewer gradable criteria by design: this is
+the harder case, where a tool may score everyone similarly, and the module should be able to
+show that rather than hide it.
+
+```ts
+import type { JobDescription } from "./types";
+
+/**
+ * Fixed job description 2 of 2: an operational hourly role with fewer gradable
+ * attributes.
+ *
+ * This is the harder case deliberately. Hourly roles have less to grade than
+ * commercial ones, so a tool may score every candidate similarly and the
+ * resulting impact ratios sit near 1.00 for reasons that have nothing to do
+ * with fairness. A customer should be able to see that, and the module should
+ * not present it as a clean result.
+ *
+ * On one engagement a third of a summary score was carried by a category that
+ * separated nobody across five thousand candidates, which pushed the whole
+ * distribution upward and put the sample median on the top level. Only
+ * gradable criteria separate the top two tiers here, for that reason.
+ */
+const BODY = `Warehouse Operations Associate
+
+We are hiring Operations Associates for a distribution facility running two shifts. The role
+is hourly, on site, and involves picking, packing, scanning and moving stock to a daily
+throughput target.
+
+What the role involves
+
+Picking orders against a handheld scanner to a rate target, with accuracy checked on a sample
+basis. Packing to the specification for each carrier. Operating a pallet truck and, where
+certified, a counterbalance or reach truck. Cycle counting and reporting discrepancies. Keeping
+the working area to the site's safety standard, including reporting near misses. Covering
+either shift pattern as the rota requires, including some weekend rotation.
+
+What we are looking for
+
+Experience in a warehouse, distribution, production or stockroom environment, with the pace
+and the physical standing that involves.
+
+A current forklift certification, or a lapsed one you are willing to renew. We will fund
+renewal for the right candidate, so a lapsed certificate is not a barrier.
+
+A verifiable record of reliable attendance in a shift role, since the rota depends on cover.
+Where you have attendance or punctuality figures from a previous employer, include them.
+
+Experience working to a measured rate or throughput target, and the ability to say what your
+rate was.
+
+Comfort with handheld scanning or warehouse management systems, at the level of using one
+daily rather than administering it.
+
+Availability for the shift pattern described, including the weekend rotation.
+
+How we assess
+
+Candidates are assessed against the criteria above. Concrete detail about the environments you
+have worked in, the rates you held and the equipment you are certified on is more useful than
+general statements about work ethic.`;
+
+const NARRATIVES = {
+  t1_strongly_under: `Write a candidate with no evidence of any criterion. No warehouse,
+    distribution, production or stockroom background; their experience is in an unrelated
+    setting such as retail front-of-house, hospitality or administration. No certification, no
+    rate figures, no shift work, and no mention of scanning systems. Where they discuss
+    reliability it is general rather than evidenced. The candidate should read as capable and
+    employable but plainly new to this kind of work.`,
+
+  t2_under: `Write a candidate who satisfies the environment criterion only. They have worked
+    in a warehouse, stockroom or production setting and can describe it concretely: the goods,
+    the layout, what a shift involved. But no certification of any kind, no rate or throughput
+    figure they can state, and their shift history is short or interrupted. They may mention a
+    scanner in passing without it being part of their daily work.`,
+
+  t3_borderline: `Write a candidate who satisfies the environment and the systems criteria.
+    Solid warehouse background with daily handheld scanner or WMS use described first-hand. No
+    forklift certification, current or lapsed. They reference working to targets without
+    giving a figure, and their attendance record is unstated rather than poor. A reasonable
+    reviewer could argue this candidate either way, which is what this tier is for.`,
+
+  t4_qualified: `Write a candidate who satisfies the environment, systems, certification and
+    shift-availability criteria, but not the measured-rate criterion. Strong warehouse
+    background, current forklift certification named specifically, daily scanner use, and
+    explicit availability for both shifts including weekend rotation. What is absent is any
+    rate figure: they describe the work and the equipment without stating what throughput they
+    held or what the target was.`,
+
+  t5_strongly_qualified: `Write a candidate who satisfies all five gradable criteria. Same
+    profile as the qualified tier, and additionally they state a measured rate or throughput
+    figure they personally held, with the unit and the target alongside it, over a stated
+    period. This is the only tier where a rate figure appears, and it is what separates this
+    candidate from the one below.`,
+};
+
+export const OPERATIONAL_HOURLY: JobDescription = {
+  key: "operational-hourly",
+  roleTitle: "Warehouse Operations Associate",
+  body: BODY,
+  expectedCriteria: [
+    { key: "environment_experience", label: "Warehouse or production environment",
+      description:
+        "Experience in a warehouse, distribution, production or stockroom setting, with the " +
+        "pace and standing it involves.",
+      gradable: true },
+    { key: "certification", label: "Forklift certification",
+      description:
+        "A current forklift certification, or a lapsed one the candidate is willing to renew.",
+      gradable: true },
+    { key: "measured_rate", label: "Measured rate or throughput",
+      description:
+        "Experience working to a measured rate target, with a figure the candidate can state.",
+      gradable: true },
+    { key: "systems_use", label: "Scanning or WMS use",
+      description:
+        "Daily use of a handheld scanner or warehouse management system, as a user.",
+      gradable: true },
+    { key: "shift_availability", label: "Shift availability",
+      description:
+        "Availability for the stated shift pattern, including the weekend rotation.",
+      gradable: false },
+    { key: "attendance_record", label: "Attendance record",
+      description:
+        "A verifiable record of reliable attendance in a shift role, with figures where held.",
+      gradable: false },
+  ],
+  tiers: [
+    { key: "t1_strongly_under", label: "Strongly underqualified",
+      criteriaMet: [], narrative: NARRATIVES.t1_strongly_under },
+    { key: "t2_under", label: "Underqualified",
+      criteriaMet: ["environment_experience"], narrative: NARRATIVES.t2_under },
+    { key: "t3_borderline", label: "Borderline",
+      criteriaMet: ["environment_experience", "systems_use"],
+      narrative: NARRATIVES.t3_borderline },
+    { key: "t4_qualified", label: "Qualified",
+      criteriaMet: ["environment_experience", "systems_use", "certification",
+                    "shift_availability"],
+      narrative: NARRATIVES.t4_qualified },
+    { key: "t5_strongly_qualified", label: "Strongly qualified",
+      criteriaMet: ["environment_experience", "systems_use", "certification",
+                    "shift_availability", "measured_rate"],
+      narrative: NARRATIVES.t5_strongly_qualified },
+  ],
+};
+```
+
+Four gradable criteria against the commercial role's five, which Task 1's test asserts as the
+difference between the two roles. `shift_availability` and `attendance_record` are marked
+non-gradable because almost every candidate satisfies them, so they add no separation; the top
+two tiers are separated by `measured_rate`, which is gradable.
 
 - [ ] **Step 5: Write the index and run the test**
 
@@ -1391,11 +1645,244 @@ it("serves a corpus download with no demographic column", async () => {
 });
 ```
 
-- [ ] **Step 3: Implement the job, controller, routes and pages**
+- [ ] **Step 3: Implement the job, controller and routes**
 
-The job runs under BullMQ, which the platform already operates. The settings page is Admin-only and write-only for the key: the GET returns `{ configured: boolean, model: string, baseUrl: string }` and never the key itself.
+The job runs under BullMQ, which the platform already operates. Follow the existing job
+registration in `Servers/jobs/`; find the pattern with
+`grep -rln "new Worker" Servers/jobs/ | head -3`.
 
-The generate page shows the chosen job description, the criteria-comparison field, and the release findings. Education content from plan 2's Task 8 renders on both pages (`run.job_description`, `run.criteria_comparison`).
+Endpoints, added to the route file plan 2 Task 12 created:
+
+| Method | Path | Role |
+| --- | --- | --- |
+| POST | `/api/bias-audit/corpora` | Admin or Editor |
+| GET | `/api/bias-audit/corpora/:id` | any authenticated |
+| GET | `/api/bias-audit/corpora/:id/download` | any authenticated |
+| POST | `/api/bias-audit/criteria-comparison` | Admin or Editor |
+| GET | `/api/bias-audit/settings/gateway` | Admin only |
+| PUT | `/api/bias-audit/settings/gateway` | Admin only |
+
+The settings endpoint is **write-only for the key**. The GET returns
+`{ configured: boolean, model: string, baseUrl: string }` and never the key, not even masked:
+a masked key still leaks its length and prefix.
+
+---
+
+### Task 8b: The generation and settings pages
+
+Split from Task 8 so the pages carry their own tests. Without them nothing constrains what gets
+built, and these two pages are where a customer chooses what to generate and where the API key
+is entered.
+
+**Files:**
+- Create: `Clients/src/presentation/pages/BiasAudit/GenerateCorpus.tsx`
+- Create: `Clients/src/presentation/pages/BiasAudit/BiasModuleSettings.tsx`
+- Test: `Clients/src/presentation/pages/BiasAudit/__tests__/GenerateCorpus.test.tsx`
+- Test: `Clients/src/presentation/pages/BiasAudit/__tests__/BiasModuleSettings.test.tsx`
+
+**Interfaces:**
+- Consumes: Task 8's endpoints; `EDUCATION` from plan 2 Task 8; `JOB_DESCRIPTIONS` for display.
+- Produces: `GenerateCorpus`, `BiasModuleSettings` (default exports).
+
+- [ ] **Step 1: Write the failing settings test**
+
+```tsx
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import BiasModuleSettings from "../BiasModuleSettings";
+
+const getSettings = vi.fn();
+const putSettings = vi.fn();
+vi.mock("../../../../infrastructure/api/biasAuditService", () => ({
+  getGatewaySettings: () => getSettings(),
+  putGatewaySettings: (b: unknown) => putSettings(b),
+}));
+
+beforeEach(() => {
+  getSettings.mockReset();
+  putSettings.mockReset();
+  getSettings.mockResolvedValue({ configured: true, model: "pinned-model-1",
+                                  baseUrl: "https://gateway.example/v1" });
+});
+
+describe("BiasModuleSettings", () => {
+  it("shows that a key is configured without showing the key", async () => {
+    render(<BiasModuleSettings />);
+    await waitFor(() => expect(screen.getByText(/configured/i)).toBeInTheDocument());
+    expect(screen.getByText("pinned-model-1")).toBeInTheDocument();
+    // No masked value either: a mask still leaks length and prefix.
+    expect(document.body.textContent).not.toMatch(/\*{3,}|•{3,}/);
+  });
+
+  it("renders the key field empty on load, never prefilled", async () => {
+    render(<BiasModuleSettings />);
+    const field = await screen.findByLabelText(/api key/i);
+    expect((field as HTMLInputElement).value).toBe("");
+  });
+
+  it("submits a new key and clears the field afterwards", async () => {
+    putSettings.mockResolvedValue({ ok: true });
+    render(<BiasModuleSettings />);
+    const field = await screen.findByLabelText(/api key/i);
+    await userEvent.type(field, "new-secret-value");
+    await userEvent.click(screen.getByRole("button", { name: /save/i }));
+    await waitFor(() => expect(putSettings).toHaveBeenCalled());
+    expect(putSettings.mock.calls[0][0]).toMatchObject({ apiKey: "new-secret-value" });
+    expect((field as HTMLInputElement).value).toBe("");
+  });
+
+  it("says a key is not configured when it is not", async () => {
+    getSettings.mockResolvedValue({ configured: false, model: "pinned-model-1",
+                                    baseUrl: "https://gateway.example/v1" });
+    render(<BiasModuleSettings />);
+    await waitFor(() =>
+      expect(screen.getByText(/not configured/i)).toBeInTheDocument());
+  });
+
+  it("states that the key is entered by VerifyWise and not visible to the customer", async () => {
+    render(<BiasModuleSettings />);
+    await waitFor(() =>
+      expect(screen.getByText(/entered by verifywise/i)).toBeInTheDocument());
+  });
+});
+```
+
+- [ ] **Step 2: Write the failing generate test**
+
+```tsx
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import GenerateCorpus from "../GenerateCorpus";
+
+const postCorpus = vi.fn();
+const postComparison = vi.fn();
+vi.mock("../../../../infrastructure/api/biasAuditService", () => ({
+  createCorpus: (b: unknown) => postCorpus(b),
+  compareCriteria: (b: unknown) => postComparison(b),
+}));
+
+const props = { projectId: 7, frameworkId: 15, mayGenerate: true, blockedReason: null };
+
+beforeEach(() => {
+  postCorpus.mockReset();
+  postComparison.mockReset();
+});
+
+describe("GenerateCorpus", () => {
+  it("offers exactly the two fixed job descriptions", () => {
+    render(<GenerateCorpus {...props} />);
+    expect(screen.getByText(/account executive/i)).toBeInTheDocument();
+    expect(screen.getByText(/warehouse operations associate/i)).toBeInTheDocument();
+    // No free-text job description field: the restriction is deliberate.
+    expect(screen.queryByLabelText(/paste.*job description|own job description/i))
+      .toBeNull();
+  });
+
+  it("states that the result describes the role tested, not all hiring", () => {
+    render(<GenerateCorpus {...props} />);
+    expect(screen.getByText(/on that role/i)).toBeInTheDocument();
+  });
+
+  it("renders the education panel for this page", () => {
+    render(<GenerateCorpus {...props} />);
+    expect(screen.getByText(/what this page decides/i)).toBeInTheDocument();
+    expect(screen.getByText(/5-301/)).toBeInTheDocument();
+  });
+
+  it("disables generation and names the reason when the gate blocks", () => {
+    render(<GenerateCorpus {...props} mayGenerate={false}
+                            blockedReason="pipeline.input_form is unanswered" />);
+    expect(screen.getByRole("button", { name: /generate/i })).toBeDisabled();
+    expect(screen.getByText(/pipeline\.input_form/)).toBeInTheDocument();
+  });
+
+  it("runs the criteria comparison and shows a divergent verdict", async () => {
+    postComparison.mockResolvedValue({
+      verdict: "divergent", unmatchedExpected: ["cycle_length", "deal_size"],
+      unmatchedSupplied: [], matched: [], supplied: ["Communication"],
+    });
+    render(<GenerateCorpus {...props} />);
+    await userEvent.click(screen.getByText(/account executive/i));
+    await userEvent.type(screen.getByLabelText(/criteria your platform/i), "Communication");
+    await userEvent.click(screen.getByRole("button", { name: /compare/i }));
+    await waitFor(() =>
+      expect(screen.getByText(/may not exercise your configuration/i)).toBeInTheDocument());
+    expect(screen.getByText(/cycle_length/)).toBeInTheDocument();
+  });
+
+  it("allows generation without a comparison, recording that it was not supplied", async () => {
+    postCorpus.mockResolvedValue({ corpusId: 3 });
+    render(<GenerateCorpus {...props} />);
+    await userEvent.click(screen.getByText(/account executive/i));
+    await userEvent.click(screen.getByRole("button", { name: /generate/i }));
+    await waitFor(() => expect(postCorpus).toHaveBeenCalled());
+    expect(postCorpus.mock.calls[0][0]).toMatchObject({
+      jobDescriptionKey: "commercial-ae",
+    });
+  });
+
+  it("never uses forbidden vocabulary", () => {
+    render(<GenerateCorpus {...props} />);
+    const text = document.body.textContent!.toLowerCase();
+    for (const w of ["compliant", "certified", "bias-free"]) {
+      expect(text).not.toContain(w);
+    }
+  });
+});
+```
+
+- [ ] **Step 3: Implement both pages**
+
+Reuse `CustomizableButton`, `PageHeader`, `EmptyState` and `HelperIcon` as
+`Clients/src/presentation/pages/EvalsDashboard/BiasAuditsList.tsx` does. Sentence case, border
+`#d0d5dd`, radius 4px, control height 30px, primary `#13715B`.
+
+`GenerateCorpus` takes `{ projectId, frameworkId, mayGenerate, blockedReason }`, shows the two
+job descriptions as selectable cards with their role titles and criteria lists, a text field
+for the platform's own criteria, a compare button, and a generate button disabled while
+`mayGenerate` is false with `blockedReason` displayed beside it. `EducationPanel` with
+`pageKey="run.job_description"`, and `pageKey="run.criteria_comparison"` beside the comparison
+field.
+
+`BiasModuleSettings` shows configured state, the pinned model and base URL as read-only text, an
+always-empty password field for the key, and a line stating the key is entered by VerifyWise and
+is not visible to the customer. Admin-only; the route already enforces it, and the page should
+not render the field for other roles.
+
+- [ ] **Step 4: Run the tests and typecheck**
+
+```bash
+cd ~/verifywise/Clients
+npx vitest run src/presentation/pages/BiasAudit
+npm run typecheck && npm run lint
+```
+
+Expected: PASS, 12 tests across the two files.
+
+- [ ] **Step 5: Commit**
+
+```bash
+cd ~/verifywise
+git add Clients/src/presentation/pages/BiasAudit/ Clients/src/infrastructure/api/biasAuditService.ts
+git commit -m "Add the generation and settings pages
+
+Split from the routes task so both pages carry written tests. These are
+where a customer chooses what to generate and where the gateway key is
+entered, and nothing else constrains them.
+
+The settings page never displays the key, not even masked: a mask still
+leaks length and prefix. The field is always empty on load and clears
+after a save, and the page states that the key is entered by VerifyWise.
+
+The generate page offers exactly the two fixed job descriptions with no
+free-text alternative, since the restriction is what makes the expected
+criteria known in advance and every corpus comparable. It states that the
+result describes the role tested rather than all of the customer's
+hiring, which is the 5-301 position: the audit attaches to the tool, not
+the position, so one role is defensible provided it is named."
+```
 
 - [ ] **Step 4: Regenerate the API surface**
 
@@ -1492,7 +1979,7 @@ the measured ID-order fractions and single observed model recorded here."
 
 **Spec coverage.** Two fixed job descriptions → Task 1. Allocation balanced across 14 cells, with a per-cell power floor → Task 2. Seeded ID assignment and the hard gate → Task 3. Vercel AI Gateway with the module-scoped key and per-record model recording → Task 4. Generation, manifest separation and resumability → Task 5. Criteria comparison → Task 6. Release gates → Task 7. Routes, job, settings and pages → Task 8. Verification → Task 9.
 
-**Placeholders.** Task 1's `body` and `narrative` fields are marked `...` with the instruction to write them out, constrained by length assertions. Task 8's implementation step describes the pages rather than writing the JSX. Both are weaker than the rest; Task 1's are content the tests bound, and Task 8's are the thinnest tasks in all three plans.
+**Placeholders.** None. Task 1's two job-description bodies and ten tier narratives are written out in steps 3b and 4, and Task 8 is split into 8 (job, controller, routes) and 8b (the two pages, with 12 written tests). The earlier version of this plan left all three as prose instructions; a subagent inventing tier narratives would have produced incomparable gradients, which is the one thing fixing the job description exists to prevent.
 
 **Type consistency.** `AllocationRow` defined in Task 2, consumed in 3 and 5. `GatewaySettings`/`CompletionResult` defined in Task 4, consumed in 5. `JobDescription`/`ExpectedCriterion` defined in Task 1, consumed in 2, 6, 7. `countRuns`/`expectedRuns` from plan 1, consumed in Task 3. `CriteriaComparison.verdict` from Task 6 feeds Task 7's `criteriaVerdict`.
 
