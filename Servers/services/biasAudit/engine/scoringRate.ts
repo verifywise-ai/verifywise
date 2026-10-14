@@ -1,12 +1,26 @@
 import type { AuditRecord } from "./types";
 
+/**
+ * A record's score as a finite number, or null when it has none.
+ *
+ * The one definition of a usable score across the module: the median, the
+ * scoring rate, the overall rate, score distributions and the gates all read
+ * scores through this. Blank (including whitespace-only) and non-numeric
+ * values are null; `Number("  ")` would otherwise read a blank cell as 0.
+ */
+export function scoreValue(record: AuditRecord, scoreColumn: string): number | null {
+  const v = record[scoreColumn];
+  if (v === null || v === undefined) return null;
+  if (typeof v === "string" && v.trim() === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
 function scores(records: AuditRecord[], scoreColumn: string): number[] {
   const out: number[] = [];
   for (const r of records) {
-    const v = r[scoreColumn];
-    if (v === null || v === undefined || v === "") continue;
-    const n = Number(v);
-    if (Number.isFinite(n)) out.push(n);
+    const n = scoreValue(r, scoreColumn);
+    if (n !== null) out.push(n);
   }
   return out;
 }
@@ -25,10 +39,8 @@ export function overallMedian(records: AuditRecord[], scoreColumn: string): numb
  */
 export function aboveMedian(median: number, scoreColumn: string) {
   return (record: AuditRecord): boolean => {
-    const v = record[scoreColumn];
-    if (v === null || v === undefined || v === "") return false;
-    const n = Number(v);
-    return Number.isFinite(n) && n > median;
+    const n = scoreValue(record, scoreColumn);
+    return n !== null && n > median;
   };
 }
 

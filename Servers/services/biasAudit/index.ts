@@ -40,11 +40,14 @@ function orderFinding(o: OrderFinding): GateFinding {
  * reason to withhold the arithmetic from the person who must judge it. It
  * does withhold the PDF, as a warning: an exported document outlives the
  * screen that explains the caveat.
+ *
+ * `protectedAttributes` defaults to every configured category, so no category
+ * reaches the ratios without also being order-checked.
  */
 export function runAudit(
   records: AuditRecord[],
   config: BiasAuditConfig,
-  protectedAttributes: string[],
+  protectedAttributes: string[] = Object.keys(config.categories),
 ): AuditOutcome {
   const dataGates = runDataGates(records, config);
   const order = checkIdOrder(records, protectedAttributes);

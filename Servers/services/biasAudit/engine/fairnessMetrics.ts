@@ -1,4 +1,5 @@
-import { groupValue } from "./groupValue";
+import { groupValue, isBlankValue } from "./groupValue";
+import { RECORD_KEYS } from "./recordKeys";
 import { round6 } from "./round";
 import type { AuditRecord, ConfusionMatrixGroupResult, FairnessMetricsTable } from "./types";
 
@@ -29,7 +30,11 @@ export function computeFairnessMetricsTable(args: FairnessMetricsArgs): Fairness
   for (const record of records) {
     const name = groupValue(record, categoryKey);
     if (name === null) continue;
-    if (!("prediction" in record) || !("ground_truth" in record)) continue;
+    // A record without both values cannot be placed in a confusion matrix.
+    // The Python checks only that the keys exist, so a null value counted as
+    // a negative; here a blank value excludes the record, as everywhere else.
+    if (isBlankValue(record[RECORD_KEYS.prediction])) continue;
+    if (isBlankValue(record[RECORD_KEYS.groundTruth])) continue;
     const list = groups.get(name) ?? [];
     list.push(record);
     groups.set(name, list);

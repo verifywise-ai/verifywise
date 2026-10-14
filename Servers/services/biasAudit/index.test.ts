@@ -139,6 +139,90 @@ describe("runAudit", () => {
     expect(outcome.result).toBeNull();
   });
 
+  // /code-review: inputs that previously reached an exportable result.
+  it("stops when the fairness columns exist but hold no values", () => {
+    const records = [...Array(40)].map((_, i) => ({
+      sex: i % 2 ? "Male" : "Female",
+      prediction: null,
+      ground_truth: null,
+    }));
+    const outcome = runAudit(records, { ...config, metric: "fairness_metrics" });
+    expect(outcome.gates.findings.map((x) => x.code)).toContain("fairness_columns_missing");
+    expect(outcome.result).toBeNull();
+  });
+
+  it("stops when every prediction, or every ground truth, is the same", () => {
+    const records = [...Array(40)].map((_, i) => ({
+      sex: i % 2 ? "Male" : "Female",
+      prediction: true,
+      ground_truth: i % 3 === 0,
+    }));
+    const outcome = runAudit(records, { ...config, metric: "fairness_metrics" });
+    const f = outcome.gates.findings.find((x) => x.code === "fairness_values_uniform");
+    expect(f).toBeDefined();
+    expect(f!.detail).toMatchObject({ column: "prediction" });
+    expect(outcome.result).toBeNull();
+  });
+
+  it("stops on an empty dataset", () => {
+    const outcome = runAudit([], config);
+    expect(outcome.gates.findings.map((x) => x.code)).toContain("no_records");
+    expect(outcome.gates.mayExportPdf).toBe(false);
+    expect(outcome.result).toBeNull();
+  });
+
+  it("stops when no protected category is configured", () => {
+    const outcome = runAudit(clean(), { ...config, categories: {} });
+    expect(outcome.gates.findings.map((x) => x.code)).toContain("no_protected_category");
+    expect(outcome.result).toBeNull();
+  });
+
+  it("stops when the intersectional analysis is required but not crossable", () => {
+    const outcome = runAudit(clean(), {
+      ...config,
+      intersectional: { required: true, cross: ["sex"] },
+    });
+    expect(outcome.gates.findings.map((x) => x.code)).toContain("intersectional_misconfigured");
+    expect(outcome.result).toBeNull();
+  });
+
+  it("order-checks every configured category when no attribute list is given", () => {
+    const records = [
+      ...[...Array(100)].map((_, i) => ({ sex: "Male", selected: i % 2 === 0 })),
+      ...[...Array(100)].map((_, i) => ({ sex: "Female", selected: i % 3 === 0 })),
+    ];
+    const outcome = runAudit(records, config);
+    expect(outcome.order.map((o) => o.attribute)).toEqual(["sex"]);
+    expect(outcome.gates.findings.map((x) => x.code)).toContain("attribute_order_clustered");
+  });
+
+  it("names intersectional cells as the engine's table rows do", () => {
+    const inter = {
+      ...config,
+      categories: {
+        sex: { label: "Sex", groups: [] },
+        race_ethnicity: { label: "Race/Ethnicity", groups: [] },
+      },
+      intersectional: { required: true, cross: ["sex", "race_ethnicity"] },
+      smallSampleExclusion: null,
+    };
+    const records: Record<string, unknown>[] = [];
+    for (let i = 0; i < 1000; i++) {
+      records.push({
+        sex: i % 7 === 0 ? "Female" : "Male",
+        race_ethnicity: i % 350 === 0 ? "Asian" : "White", // 3 Female-Asian records
+        selected: i % 4 === 0,
+      });
+    }
+    const outcome = runAudit(records, inter);
+    const f = outcome.gates.findings.find((x) => x.code === "cell_below_statutory_exclusion")!;
+    const cells = (f.detail!.cells as Array<{ cell: string }>).map((c) => c.cell);
+    const rowNames = outcome
+      .result!.tables.find((t) => t.categoryKey === "intersectional")!
+      .rows.map((r) => r.categoryName);
+    for (const cell of cells) expect(rowNames).toContain(cell);
+  });
+
   // Final review M2: every finding message, all five forbidden words.
   it("never uses forbidden vocabulary in any finding message", () => {
     const scoring = { ...config, metric: "scoring_rate", scoreColumn: "score" };
@@ -179,6 +263,18 @@ describe("runAudit", () => {
         })),
         ["sex", "race_ethnicity"],
       ],
+      [config, [], ["sex"]],
+      [{ ...config, categories: {} }, clean(), []],
+      [{ ...config, intersectional: { required: true, cross: ["sex"] } }, clean(), ["sex"]],
+      [
+        { ...config, metric: "fairness_metrics" },
+        [...Array(20)].map((_, i) => ({
+          sex: i % 2 ? "Male" : "Female",
+          prediction: true,
+          ground_truth: false,
+        })),
+        ["sex"],
+      ],
     ];
     const seen = new Set<string>();
     for (const [cfg, records, attrs] of scenarios) {
@@ -198,7 +294,11 @@ describe("runAudit", () => {
         "demographic_column_majority_missing",
         "demographic_values_missing",
         "fairness_columns_missing",
+        "fairness_values_uniform",
         "fewer_than_two_groups",
+        "intersectional_misconfigured",
+        "no_protected_category",
+        "no_records",
         "score_column_empty",
         "score_granularity_low",
       ].sort(),

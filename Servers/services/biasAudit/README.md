@@ -8,7 +8,8 @@ outside this directory: no EvalServer, no AIGateway, no database, no network.
 ```ts
 import { runAudit } from "./services/biasAudit";
 
-const outcome = runAudit(records, config, ["sex", "race_ethnicity"]);
+const outcome = runAudit(records, config);
+// order-checks every category in config.categories; pass a list to narrow it
 // outcome.gates   — findings, and whether ratios/PDF are permitted
 // outcome.order   — per-attribute run-count findings
 // outcome.result  — null when a hard stop fired

@@ -10,9 +10,12 @@ import type { AuditRecord } from "./types";
  * would put a whitespace group in a published table, and lets a mostly-blank
  * column look populated. Non-blank values are stringified unchanged.
  */
+/** Null, undefined, or a string that is empty after trimming. */
+export function isBlankValue(v: unknown): boolean {
+  return v === null || v === undefined || (typeof v === "string" && v.trim() === "");
+}
+
 export function groupValue(record: AuditRecord, key: string): string | null {
   const v = record[key];
-  if (v === null || v === undefined) return null;
-  const s = String(v);
-  return s.trim() === "" ? null : s;
+  return isBlankValue(v) ? null : String(v);
 }

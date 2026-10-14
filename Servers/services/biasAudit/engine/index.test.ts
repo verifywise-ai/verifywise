@@ -1,6 +1,7 @@
 import { computeBiasAudit } from "./index";
 import { allCases, exp } from "./__fixtures__/load";
-import { computeScoreDistributionTable } from "./scoreDistribution";
+import { computeScoreDistributionTable, ksTwoSample } from "./scoreDistribution";
+import { overallMedian } from "./scoringRate";
 import type { BiasAuditConfig } from "./types";
 
 const all = allCases();
@@ -73,6 +74,52 @@ describe("computeBiasAudit reproduces the Python oracle on every case", () => {
   }
 });
 
+// /code-review: ties and unusable score values.
+describe("score handling", () => {
+  it("measures the K-S gap only after a whole run of tied values", () => {
+    // Identical distributions. The Python's one-step merge reports D = 1 here.
+    expect(ksTwoSample([1, 1], [1, 1, 1, 1])).toEqual({ d: 0, p: 1 });
+    // A real difference still registers: scipy ks_2samp gives D = 0.5.
+    expect(ksTwoSample([1, 1, 2, 2], [1, 1, 1, 1]).d).toBe(0.5);
+  });
+
+  it("treats whitespace-only and non-numeric scores as missing, not as 0", () => {
+    expect(overallMedian([{ score: "  " }, { score: "  " }, { score: 5 }], "score")).toBe(5);
+    expect(overallMedian([{ score: "n/a" }, { score: 3 }, { score: 5 }], "score")).toBe(4);
+  });
+
+  it("keeps unusable scores out of score distributions", () => {
+    const table = computeScoreDistributionTable({
+      records: [
+        { sex: "Male", score: "n/a" },
+        { sex: "Male", score: "" },
+        { sex: "Male", score: 3 },
+        { sex: "Female", score: 5 },
+      ],
+      categoryKey: "sex",
+      categoryLabel: "Sex",
+    });
+    expect(table.overallMean).toBe(4);
+    const male = table.groups.find((g) => g.categoryName === "Male")!;
+    expect(male.count).toBe(1);
+    expect(male.bins.reduce((s, b) => s + b.count, 0)).toBe(1);
+  });
+
+  it("computes the overall scoring rate over the same sample as the median", () => {
+    // 4 numeric scores (median 2.5, 2 above) and 2 blanks: 2 of 4, not 2 of 6.
+    const records = [1, 2, 3, 4, "", " "].map((score, i) => ({
+      sex: i % 2 ? "Male" : "Female",
+      score,
+    }));
+    const got = computeBiasAudit(records, {
+      ...toConfig(all[0].config),
+      metric: "scoring_rate",
+      scoreColumn: "score",
+    });
+    expect(got.overallSelectionRate).toBe(0.5);
+  });
+});
+
 describe("score distribution tables match the Python, K-S included", () => {
   it("reproduces the per-group statistics and the K-S test", () => {
     const c = all.find((x) => x.name === "score_distribution_present")!;
@@ -93,7 +140,11 @@ describe("score distribution tables match the Python, K-S included", () => {
       expect(t.groups.map((g) => g.median)).toEqual(w.groups.map((g: any) => g.median));
       // pstdev, the POPULATION standard deviation, not the sample one.
       expect(t.groups.map((g) => g.std)).toEqual(w.groups.map((g: any) => g.std));
-      expect(t.groups.map((g) => g.ksStatistic)).toEqual(w.groups.map((g: any) => g.ks_statistic));
+      // K-S deliberately diverges from the Python, which mishandles ties
+      // (see ksTwoSample). The reference is scipy.stats.ks_2samp on the same
+      // samples: D = 0.005 for both groups, where the Python reports 0.015
+      // and 0.01. The p-values agree at 1.0 either way.
+      expect(t.groups.map((g) => g.ksStatistic)).toEqual([0.005, 0.005]);
       expect(t.groups.map((g) => g.ksPvalue)).toEqual(w.groups.map((g: any) => g.ks_pvalue));
       // 20 bins, with the edges rounded to 6dp as the Python has them.
       t.groups.forEach((g, gi) => {

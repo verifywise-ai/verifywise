@@ -23,6 +23,13 @@
  * applies only where the discarded tail is exactly "5" with nothing after
  * it.
  */
+/** Python's `f"{x:.1%}"`: scale by 100, then one decimal, half to even. */
+export function formatPercent(x: number): string {
+  // Python scales in floating point and then rounds the exact decimal half
+  // to even, so 1/16 prints "6.2%" where toFixed would print "6.3%".
+  return `${roundHalfEven(x * 100, 1).toFixed(1)}%`;
+}
+
 export function round6(x: number): number {
   return roundHalfEven(x, 6);
 }

@@ -2,9 +2,9 @@ import { computeCategoryTable } from "./categoryTable";
 import { computeFairnessMetricsTable } from "./fairnessMetrics";
 import { computeIntersectionalTable } from "./intersectional";
 import { RECORD_KEYS } from "./recordKeys";
-import { round6, roundHalfEven } from "./round";
+import { formatPercent, round6 } from "./round";
 import { computeScoreDistributionTable } from "./scoreDistribution";
-import { aboveMedian, detectDegenerateMedian, overallMedian } from "./scoringRate";
+import { aboveMedian, detectDegenerateMedian, overallMedian, scoreValue } from "./scoringRate";
 import type {
   AuditRecord,
   BiasAuditConfig,
@@ -17,15 +17,16 @@ import type {
 export { computeCategoryTable } from "./categoryTable";
 export { computeFairnessMetricsTable } from "./fairnessMetrics";
 export { computeIntersectionalTable } from "./intersectional";
-export { groupValue } from "./groupValue";
+export { groupValue, isBlankValue } from "./groupValue";
 export { RECORD_KEYS } from "./recordKeys";
-export { round6 } from "./round";
+export { formatPercent, round6 } from "./round";
 export { computeScoreDistributionTable, ksTwoSample } from "./scoreDistribution";
 export {
   aboveMedian,
   detectDegenerateMedian,
   overallMedian,
   MIN_ABOVE_MEDIAN_FRACTION,
+  scoreValue,
 } from "./scoringRate";
 export type { DegenerateMedian } from "./scoringRate";
 export type * from "./types";
@@ -33,13 +34,6 @@ export type * from "./types";
 /** Python's `f"{n:,}"`. */
 function withThousands(n: number): string {
   return n.toLocaleString("en-US");
-}
-
-/** Python's `f"{x:.1%}"`: multiply by 100, one decimal (half to even), percent sign. */
-function asPercent(x: number): string {
-  // Python scales in floating point and then rounds the exact decimal half
-  // to even, so 1/16 prints "6.2%" where toFixed would print "6.3%".
-  return `${roundHalfEven(x * 100, 1).toFixed(1)}%`;
 }
 
 /** Python's `f"{x:.2f}"`. */
@@ -133,10 +127,10 @@ export function computeBiasAudit(
     if (median === null) {
       throw new Error("Scoring rate mode requires a score column with numeric values.");
     }
-    const scored = records.filter(
-      (r) => r[RECORD_KEYS.score] !== null && r[RECORD_KEYS.score] !== undefined,
-    );
-    totalSelected = scored.filter((r) => Number(r[RECORD_KEYS.score]) > median!).length;
+    // The same sample the median was taken over: blank and non-numeric
+    // scores are in neither the numerator nor the denominator.
+    const scored = records.filter((r) => scoreValue(r, RECORD_KEYS.score) !== null);
+    totalSelected = scored.filter((r) => scoreValue(r, RECORD_KEYS.score)! > median!).length;
     overallRate = scored.length > 0 ? totalSelected / scored.length : 0;
     const rateOf = aboveMedian(median, RECORD_KEYS.score);
 
@@ -194,7 +188,7 @@ export function computeBiasAudit(
   }
 
   // Score distributions run whenever score data is present, regardless of metric.
-  if (records.some((r) => r[RECORD_KEYS.score] !== null && r[RECORD_KEYS.score] !== undefined)) {
+  if (records.some((r) => scoreValue(r, RECORD_KEYS.score) !== null)) {
     for (const [categoryKey, categoryConfig] of Object.entries(config.categories)) {
       const distTable = computeScoreDistributionTable({
         records,
@@ -210,7 +204,7 @@ export function computeBiasAudit(
 
   const summaryParts = [
     `Audit analyzed ${withThousands(totalApplicants)} applicants ` +
-      `(overall rate: ${asPercent(overallRate)}).`,
+      `(overall rate: ${formatPercent(overallRate)}).`,
   ];
   if (unknownCount > 0) {
     summaryParts.push(`${withThousands(unknownCount)} rows excluded due to missing data.`);
@@ -233,7 +227,7 @@ export function computeBiasAudit(
       summaryParts.push(
         `Scoring rates rest on only ${withThousands(d.above)} of ${withThousands(d.total)} ` +
           `records clearing the sample median (${d.median}), below the ` +
-          `${asPercent(d.floor)} floor, so the ratios are not a reliable basis for conclusions.`,
+          `${formatPercent(d.floor)} floor, so the ratios are not a reliable basis for conclusions.`,
       );
     }
   } else if (metric === "selection_rate" || metric === "scoring_rate") {

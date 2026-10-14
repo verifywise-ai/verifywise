@@ -1,5 +1,7 @@
 import { groupValue } from "./groupValue";
+import { RECORD_KEYS } from "./recordKeys";
 import { round6 } from "./round";
+import { scoreValue } from "./scoringRate";
 import type { AuditRecord, ScoreDistributionTable, ScoreDistributionGroup } from "./types";
 
 /** Arithmetic mean, matching Python's `statistics.mean`. */
@@ -30,8 +32,16 @@ function pstdev(values: number[]): number {
 /**
  * Two-sample Kolmogorov-Smirnov statistic and asymptotic p-value.
  *
- * Ported from EvalServer's `_ks_two_sample`: an O(n + m) merge traversal of
- * the two empirical CDFs. Returns nulls when either sample is empty.
+ * An O(n + m) merge traversal of the two empirical CDFs. Returns nulls when
+ * either sample is empty.
+ *
+ * Diverges from EvalServer's `_ks_two_sample` on ties, deliberately. The
+ * Python steps one value at a time and measures the gap part-way through a
+ * run of equal values, where neither CDF is defined; on a discrete score
+ * column that reports identical samples as maximally different
+ * ([1,1] against [1,1,1,1] gives D = 1). Here both pointers move past every
+ * copy of the current value before the gap is measured, which is the
+ * standard statistic (scipy's `ks_2samp`).
  */
 export function ksTwoSample(
   aSorted: number[],
@@ -45,8 +55,9 @@ export function ksTwoSample(
   let j = 0;
   let d = 0;
   while (i < n && j < m) {
-    if (aSorted[i] <= bSorted[j]) i += 1;
-    else j += 1;
+    const x = Math.min(aSorted[i], bSorted[j]);
+    while (i < n && aSorted[i] <= x) i += 1;
+    while (j < m && bSorted[j] <= x) j += 1;
     const diff = Math.abs(i / n - j / m);
     if (diff > d) d = diff;
   }
@@ -95,9 +106,8 @@ export function computeScoreDistributionTable(args: ScoreDistributionArgs): Scor
 
   const overallScores: number[] = [];
   for (const r of records) {
-    const v = r.score;
-    if (v === null || v === undefined) continue;
-    overallScores.push(Number(v));
+    const v = scoreValue(r, RECORD_KEYS.score);
+    if (v !== null) overallScores.push(v);
   }
 
   if (overallScores.length === 0) {
@@ -123,12 +133,12 @@ export function computeScoreDistributionTable(args: ScoreDistributionArgs): Scor
 
   const grouped = new Map<string, number[]>();
   for (const r of records) {
-    const v = r.score;
-    if (v === null || v === undefined) continue;
+    const v = scoreValue(r, RECORD_KEYS.score);
+    if (v === null) continue;
     const name = groupValue(r, categoryKey);
     if (name === null) continue;
     const list = grouped.get(name) ?? [];
-    list.push(Number(v));
+    list.push(v);
     grouped.set(name, list);
   }
 

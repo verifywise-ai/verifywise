@@ -14,7 +14,14 @@
  * Records arrive with canonical keys (see RECORD_KEYS); the dataset parser maps
  * uploaded columns onto them. The gates read the same keys the engine does.
  */
-import { RECORD_KEYS, detectDegenerateMedian, groupValue } from "./engine";
+import {
+  RECORD_KEYS,
+  detectDegenerateMedian,
+  formatPercent,
+  groupValue,
+  isBlankValue,
+  scoreValue,
+} from "./engine";
 import type { AuditRecord, BiasAuditConfig } from "./engine";
 
 export type GateSeverity = "stop" | "warn" | "note";
@@ -39,16 +46,8 @@ const MIN_DISTINCT_SCORES = 5;
 /** The 2% category exclusion in NYC Admin. Code § 5-301(d). */
 const STATUTORY_EXCLUSION = 0.02;
 
-/** Blank score values; demographic values use the engine's `groupValue`. */
-const isBlank = (v: unknown): boolean =>
-  v === null || v === undefined || (typeof v === "string" && v.trim() === "");
-
 function withThousands(n: number): string {
   return n.toLocaleString("en-US");
-}
-
-function percent(x: number): string {
-  return `${(x * 100).toFixed(1)}%`;
 }
 
 export interface UnknownCounts {
@@ -83,6 +82,36 @@ export function runDataGates(records: AuditRecord[], config: BiasAuditConfig): G
   const findings: GateFinding[] = [];
   const total = records.length;
   const categoryKeys = Object.keys(config.categories);
+
+  // Nothing to audit, or nothing to audit it by.
+  if (total === 0) {
+    findings.push({
+      code: "no_records",
+      severity: "stop",
+      message: "The dataset has no records, so there is nothing to compute.",
+      detail: { total },
+    });
+  }
+  if (categoryKeys.length === 0) {
+    findings.push({
+      code: "no_protected_category",
+      severity: "stop",
+      message:
+        "No protected category is configured, so no group can be compared with another " +
+        "and no impact ratio can be computed.",
+      detail: {},
+    });
+  }
+  if (config.intersectional.required && config.intersectional.cross.length < 2) {
+    findings.push({
+      code: "intersectional_misconfigured",
+      severity: "stop",
+      message:
+        "The intersectional analysis is required but names fewer than two categories to " +
+        "cross, so the sex by race/ethnicity table § 5-301(c) asks for would be missing.",
+      detail: { cross: config.intersectional.cross },
+    });
+  }
 
   // Demographic columns: majority missing, then fewer than two groups.
   for (const column of categoryKeys) {
@@ -171,28 +200,49 @@ export function runDataGates(records: AuditRecord[], config: BiasAuditConfig): G
     }
   }
 
-  // Fairness metrics: the engine needs both columns on at least one record.
-  if (
-    config.metric === "fairness_metrics" &&
-    !records.some((r) => RECORD_KEYS.prediction in r && RECORD_KEYS.groundTruth in r)
-  ) {
-    findings.push({
-      code: "fairness_columns_missing",
-      severity: "stop",
-      message:
-        `Fairness metrics need a "${RECORD_KEYS.prediction}" and a "${RECORD_KEYS.groundTruth}" ` +
-        `value on each record, and no record carries both.`,
-      detail: { columns: [RECORD_KEYS.prediction, RECORD_KEYS.groundTruth] },
-    });
+  // Fairness metrics: both values present on most records, and each column
+  // holding both outcomes. A key with a null value is not a value.
+  if (config.metric === "fairness_metrics" && total > 0) {
+    const complete = records.filter(
+      (r) => !isBlankValue(r[RECORD_KEYS.prediction]) && !isBlankValue(r[RECORD_KEYS.groundTruth]),
+    );
+    if (complete.length / total < MIN_PRESENT_FRACTION) {
+      findings.push({
+        code: "fairness_columns_missing",
+        severity: "stop",
+        message:
+          `Fairness metrics need a "${RECORD_KEYS.prediction}" and a ` +
+          `"${RECORD_KEYS.groundTruth}" value on each record; ${withThousands(complete.length)} ` +
+          `of ${withThousands(total)} records carry both.`,
+        detail: {
+          columns: [RECORD_KEYS.prediction, RECORD_KEYS.groundTruth],
+          present: complete.length,
+          total,
+        },
+      });
+    } else {
+      for (const column of [RECORD_KEYS.prediction, RECORD_KEYS.groundTruth]) {
+        const outcomes = new Set(complete.map((r) => Boolean(r[column])));
+        if (outcomes.size < 2) {
+          findings.push({
+            code: "fairness_values_uniform",
+            severity: "stop",
+            message:
+              `Every "${column}" value reads as ${[...outcomes][0] ? "positive" : "negative"}. ` +
+              `Error rates compare positives with negatives, so a column holding only one ` +
+              `of them leaves nothing to compare.`,
+            detail: { column, value: [...outcomes][0] },
+          });
+        }
+      }
+    }
   }
 
   // Scoring rate: score granularity and the degenerate median.
   if (config.metric === "scoring_rate") {
     const values = records
-      .map((r) => r[RECORD_KEYS.score])
-      .filter((v) => !isBlank(v))
-      .map(Number)
-      .filter((v) => Number.isFinite(v));
+      .map((r) => scoreValue(r, RECORD_KEYS.score))
+      .filter((v): v is number => v !== null);
     const distinctValues = new Set(values).size;
     if (values.length === 0) {
       findings.push({
@@ -219,7 +269,7 @@ export function runDataGates(records: AuditRecord[], config: BiasAuditConfig): G
     if (degenerate) {
       const stats =
         `${withThousands(degenerate.above)} of ${withThousands(degenerate.total)} records ` +
-        `(${percent(degenerate.aboveFraction)}) score above the sample median ` +
+        `(${formatPercent(degenerate.aboveFraction)}) score above the sample median ` +
         `(${degenerate.median}), across ${degenerate.distinctValues} distinct values`;
       findings.push({
         code: "degenerate_median",
@@ -227,7 +277,7 @@ export function runDataGates(records: AuditRecord[], config: BiasAuditConfig): G
         message:
           degenerate.kind === "none_above"
             ? `${stats}. No scoring rate can be computed from this dataset.`
-            : `${stats}, under the ${percent(degenerate.floor)} floor. ` +
+            : `${stats}, under the ${formatPercent(degenerate.floor)} floor. ` +
               `Ratios resting on so few records are not a reliable basis for conclusions.`,
         detail: { column: RECORD_KEYS.score, ...degenerate },
       });
@@ -246,7 +296,8 @@ export function runDataGates(records: AuditRecord[], config: BiasAuditConfig): G
     for (const r of records) {
       const parts = config.intersectional.cross.map((k) => groupValue(r, k));
       if (parts.some((p) => p === null)) continue;
-      const key = parts.join(" / ");
+      // The engine's cell name, so a finding can be matched to its row.
+      const key = parts.join(" - ");
       counts.set(key, (counts.get(key) ?? 0) + 1);
     }
     const small = [...counts.entries()]
