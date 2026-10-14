@@ -52,6 +52,8 @@ The intake schema. Plan 3 reads this to drive generation, so the generation-rele
   - `interface IntakeOption { value: string; label: string; consequence?: string; emits?: StanceConsequence[] }`
   - `interface StanceConsequence { kind: "limitation" | "scope_note" | "blank_field" | "metric_forced"; text: string; payload?: Record<string, string> }`
   - `interface IntakeQuestion { key, scope, prompt, statutoryRef?, weight, options, allowDontKnow, notesRequired, notesPrompt?, appliesWhen?, gates? }`
+  - `interface Predicate { not?: Predicate; all?: Predicate[]; any?: Predicate[]; answered?: string; equals?: { key: string; value: string } }`
+  - `IntakeQuestion.generationField?: "artifact_kind" | "knockout" | "score_scale"` — read by plan 3's generator.
   - `LL144_QUESTION_SET_VERSION: number` (= 1)
   - `LL144_QUESTIONS: IntakeQuestion[]`
   - `VETO_KEYS: readonly string[]`
@@ -1569,6 +1571,7 @@ year later a blank cannot be told from a question nobody asked."
 - Consumes: `Predicate`, `LL144_QUESTIONS` from Task 1.
 - Produces:
   - `type AnswerMap = Record<string, { value: string | null; dontKnow: boolean }>`
+  - `type AnswerWithNotes = Record<string, { value: string | null; notes: string | null; dontKnow: boolean }>` — the wider shape the stance needs, since it quotes verbatim notes. `AnswerMap` is a structural subset, so anything taking `AnswerMap` accepts an `AnswerWithNotes`.
   - `evaluatePredicate(p: Predicate | undefined, answers: AnswerMap): boolean`
   - `applicableQuestions(answers: AnswerMap, scope?: QuestionScope): IntakeQuestion[]`
 
@@ -2018,6 +2021,28 @@ describe("consequences", () => {
     expect(g.consequences.every((c) => c.kind === "scope_note")).toBe(true);
   });
 });
+
+describe("a gate is satisfied when its question does not apply", () => {
+  // Out of scope, data.basis is NOT applicable rather than unanswered, so the
+  // stance must still be produced. Withholding it would make the favourable
+  // outcome read as a failed run, which the spec resolves against directly.
+  it("permits a stance for an out-of-scope tool, with no data basis given", () => {
+    const g = runAnswerGates(a({ ...VETOES_OK, "scope.weighting": "one_of_several" }));
+    expect(g.mayProduceStance).toBe(true);
+    expect(g.blocked.stance ?? []).toEqual([]);
+  });
+
+  it("still blocks an in-scope stance when the basis is genuinely unanswered", () => {
+    const g = runAnswerGates(a({ ...VETOES_OK, "scope.weighting": "biggest" }));
+    expect(g.mayProduceStance).toBe(false);
+  });
+
+  it("blocks nothing on generation for an out-of-scope tool either", () => {
+    // Nothing to generate against, but the block must not read as a defect.
+    const g = runAnswerGates(a({ ...VETOES_OK, "scope.weighting": "one_of_several" }));
+    expect(g.blocked.generation ?? []).toEqual([]);
+  });
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -2027,7 +2052,37 @@ Expected: FAIL, cannot find module `./answerGates`.
 
 - [ ] **Step 3: Write the implementation**
 
-Create `answerGates.ts`. Walk the applicable questions; for each answered one, collect the chosen option's `emits`. For each don't-know on a question whose options carry limitations, emit a generic not-established limitation. Build the `blocked` map from each question's `gates`.
+Create `answerGates.ts`. Walk the applicable questions; for each answered one, collect the
+chosen option's `emits`. Build the `blocked` map from each question's `gates`.
+
+**Two rules that are not obvious and that the tests pin:**
+
+A gate is satisfied when its question is **not applicable**, not only when it is answered. Only
+an applicable-and-unanswered question blocks. Without this, an out-of-scope customer gets no
+stance, because `data.basis` never applies to them.
+
+A don't-know emits a generic limitation, since no option was selected and so no `emits` fired.
+Use this wording verbatim, so the text is reviewable here rather than invented per
+implementation:
+
+```ts
+const NOT_ESTABLISHED: Record<string, string> = {
+  "pipeline.preprocessing":
+    "Whether the input is transformed before scoring was not established, so no finding " +
+    "can be attributed to the scoring step alone.",
+  "knockout.exists":
+    "Whether any criterion fails a candidate outright was not established. If one does, " +
+    "the rate combines candidates who scored low with candidates who were failed outright.",
+  "cutoff.applied_by":
+    "Whether a cutoff is applied by the platform or by a person was not established, so " +
+    "which of 5-301(b) and 5-301(c) governs is unsettled.",
+  "history.prior_audit":
+    "Whether this tool has been audited before, and whether it has changed since, was not " +
+    "established.",
+};
+```
+
+A don't-know on a question absent from that map contributes an open item and no limitation.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -2503,6 +2558,220 @@ run is a record rather than an absence."
 
 ---
 
+### Task 9b: Derive the per-category data basis
+
+The spec requires the § 5-302(b) basis per protected category, and the intake asks it once.
+This derives the split from the two answers that already carry it, and marks it for the
+customer to confirm rather than presenting it as their statement.
+
+**Files:**
+- Create: `Servers/services/biasAudit/deriveBasis.ts`
+- Test: `Servers/services/biasAudit/deriveBasis.test.ts`
+
+**Interfaces:**
+- Consumes: `AnswerMap` from Task 5.
+- Produces:
+  - `type BasisKind = "historical" | "test_volume" | "test_attribute" | "test_availability" | "not_applicable"`
+  - `interface CategoryBasis { category: "sex" | "race_ethnicity" | "intersectional"; basis: BasisKind; expiryTrigger: string }`
+  - `interface DerivedBasis { perCategory: CategoryBasis[]; confirmed: boolean; summary: string }`
+  - `deriveBasis(answers: AnswerMap): DerivedBasis | null`
+
+- [ ] **Step 1: Write the failing test**
+
+```ts
+import { deriveBasis } from "./deriveBasis";
+import type { AnswerMap } from "./applicability";
+
+const a = (m: Record<string, string>): AnswerMap =>
+  Object.fromEntries(Object.entries(m).map(([k, v]) => [k, { value: v, dontKnow: false }]));
+
+const find = (d: ReturnType<typeof deriveBasis>, c: string) =>
+  d!.perCategory.find((x) => x.category === c)!;
+
+describe("the split that a single answer would flatten", () => {
+  // One engagement held sex for ~1,500-2,000 candidates and no race or
+  // ethnicity at all. Sex was auditable from historical data; race and all 11
+  // intersectional categories were not.
+  it("splits sex from race when only sex is held", () => {
+    const d = deriveBasis(a({ "data.held": "sex_only", "data.basis": "test_attribute" }));
+    expect(find(d, "sex").basis).toBe("historical");
+    expect(find(d, "race_ethnicity").basis).toBe("test_attribute");
+    expect(find(d, "intersectional").basis).toBe("test_attribute");
+  });
+
+  it("gives the race basis an expiry that sex volume cannot satisfy", () => {
+    const d = deriveBasis(a({ "data.held": "sex_only", "data.basis": "test_attribute" }));
+    const race = find(d, "race_ethnicity");
+    expect(race.expiryTrigger).toMatch(/race and ethnicity/i);
+    expect(race.expiryTrigger).toMatch(/sex-only records do not end it/i);
+    // The sex category has nothing to expire.
+    expect(find(d, "sex").expiryTrigger).toBe("");
+  });
+});
+
+describe("the uniform cases", () => {
+  it("marks every category test_attribute when nothing is held", () => {
+    const d = deriveBasis(a({ "data.held": "none", "data.basis": "test_attribute" }));
+    expect(d!.perCategory.every((c) => c.basis === "test_attribute")).toBe(true);
+  });
+
+  it("marks every category historical when all is held sufficiently", () => {
+    const d = deriveBasis(a({ "data.held": "all_sufficient", "data.basis": "historical" }));
+    expect(d!.perCategory.every((c) => c.basis === "historical")).toBe(true);
+    expect(d!.perCategory.every((c) => c.expiryTrigger === "")).toBe(true);
+  });
+
+  it("uses volume, not attribute, when all is held at low volume", () => {
+    const d = deriveBasis(a({ "data.held": "all_low_volume", "data.basis": "test_volume" }));
+    expect(find(d, "race_ethnicity").basis).toBe("test_volume");
+    expect(find(d, "race_ethnicity").expiryTrigger).toMatch(/volume/i);
+  });
+
+  it("uses availability when the customers hold it", () => {
+    const d = deriveBasis(
+      a({ "data.held": "customers_hold_it", "data.basis": "test_availability" }),
+    );
+    expect(d!.perCategory.every((c) => c.basis === "test_availability")).toBe(true);
+    expect(find(d, "sex").expiryTrigger).toMatch(/become available/i);
+  });
+});
+
+describe("the intersection needs both halves", () => {
+  it("is never historical unless both sex and race are", () => {
+    for (const held of ["sex_only", "none", "customers_hold_it", "all_low_volume"]) {
+      const d = deriveBasis(a({ "data.held": held, "data.basis": "test_attribute" }));
+      expect(find(d, "intersectional").basis).not.toBe("historical");
+    }
+    const all = deriveBasis(a({ "data.held": "all_sufficient", "data.basis": "historical" }));
+    expect(find(all, "intersectional").basis).toBe("historical");
+  });
+});
+
+describe("it is an inference, not a statement", () => {
+  it("starts unconfirmed", () => {
+    const d = deriveBasis(a({ "data.held": "sex_only", "data.basis": "test_attribute" }));
+    expect(d!.confirmed).toBe(false);
+  });
+
+  it("summarises in words that attribute the reading to us", () => {
+    const d = deriveBasis(a({ "data.held": "sex_only", "data.basis": "test_attribute" }));
+    expect(d!.summary).toMatch(/we read your answers/i);
+    expect(d!.summary).not.toMatch(/you (stated|said|confirmed)/i);
+  });
+});
+
+describe("missing input", () => {
+  it("returns null when the data basis is unanswered", () => {
+    expect(deriveBasis(a({ "data.held": "sex_only" }))).toBeNull();
+  });
+
+  it("returns null when the veto is unanswered", () => {
+    expect(deriveBasis(a({ "data.basis": "test_attribute" }))).toBeNull();
+  });
+
+  it("returns null on a don't-know for either", () => {
+    expect(deriveBasis({
+      "data.held": { value: null, dontKnow: true },
+      "data.basis": { value: "test_attribute", dontKnow: false },
+    })).toBeNull();
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `cd ~/verifywise/Servers && npm run test:unit -- services/biasAudit/deriveBasis.test.ts`
+Expected: FAIL, cannot find module `./deriveBasis`.
+
+- [ ] **Step 3: Write the implementation**
+
+```ts
+/**
+ * The § 5-302(b) basis, per protected category, derived rather than asked twice.
+ *
+ * `data.basis` states the reason for the run as a whole; the veto `data.held`
+ * already records what the customer holds per characteristic. The split falls
+ * out of the two, and asking a second per-category grid would add friction for
+ * information already given.
+ *
+ * Why the split matters. One engagement held sex for roughly 1,500 to 2,000
+ * candidates and no race or ethnicity at all. Sex was auditable from historical
+ * data while race, ethnicity and all 11 intersectional categories were not, and
+ * the expiry conditions differ: a race attribute basis ends when customers begin
+ * capturing race, and sex-only records never end it however far their volume
+ * grows. A customer who later collects 50,000 sex disclosures must not see a race
+ * basis reported as resolved.
+ *
+ * This is OUR INFERENCE, not the customer's statement. Writing an inference back
+ * as a client's words is a named failure that put a false sentence in a signed
+ * report, so `confirmed` starts false, the summary says "we read your answers as
+ * follows", and an unconfirmed split appears in the open items.
+ */
+```
+
+Map `data.held` to a per-characteristic availability, then combine with `data.basis`:
+
+| `data.held` | sex | race/ethnicity |
+| --- | --- | --- |
+| `none` | the stated basis | the stated basis |
+| `sex_only` | `historical` | the stated basis |
+| `all_low_volume` | `test_volume` | `test_volume` |
+| `all_sufficient` | `historical` | `historical` |
+| `customers_hold_it` | `test_availability` | `test_availability` |
+
+The intersection takes the weaker of the two: `historical` only when both are.
+
+Expiry trigger strings, keyed by basis:
+
+```ts
+const TRIGGERS: Record<BasisKind, string> = {
+  historical: "",
+  not_applicable: "",
+  test_volume:
+    "This basis ends when your historical records for this category reach a volume that " +
+    "supports the 14 intersectional categories 5-301(c)(4)(iii) requires.",
+  test_attribute:
+    "This basis ends when race and ethnicity begin to be captured at reportable volumes. " +
+    "Sex-only records do not end it, however far their volume grows.",
+  test_availability:
+    "This basis ends if the historical records become available to you.",
+};
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `cd ~/verifywise/Servers && npm run test:unit -- services/biasAudit/deriveBasis.test.ts`
+Expected: PASS, 12 tests.
+
+- [ ] **Step 5: Commit**
+
+```bash
+cd ~/verifywise
+git add Servers/services/biasAudit/deriveBasis.ts Servers/services/biasAudit/deriveBasis.test.ts
+git commit -m "Derive the 5-302(b) basis per protected category
+
+The schema carries a per-category basis and the intake asks it once, so
+the split is derived from data.held plus data.basis rather than asked
+twice.
+
+The case this exists for: one engagement held sex for roughly 1,500 to
+2,000 candidates and no race or ethnicity at all. Sex was auditable from
+historical data while race and all 11 intersectional categories were
+not, and the expiry conditions diverge. A single answer would have made
+one of the two wrong, and a customer who later collected 50,000 sex
+disclosures would have seen a race basis reported as resolved.
+
+The intersection takes the weaker of its two halves, so it is historical
+only when both sex and race are.
+
+It is marked as an inference rather than a statement: confirmed starts
+false and the summary reads 'we read your answers as follows'. Writing
+our inference back as a client's words is the failure that put a false
+sentence in a signed report."
+```
+
+---
+
 ### Task 10: Stance composition
 
 **Files:**
@@ -2512,8 +2781,23 @@ run is a record rather than an absence."
 **Interfaces:**
 - Consumes: Tasks 6, 7, 9.
 - Produces:
-  - `interface StanceModel { heading: string; scope: "in_scope" | "out_of_scope" | "undetermined"; sections: StanceSection[]; blankFields: Array<{ field: string; instruction: string }>; openItems: string[]; expiry: { date: string | null; trigger: string }; attestation: { user: string; date: string } | null }`
-  - `composeStance(args): StanceModel`
+  - `interface StanceSection { key: string; title: string; body: string }`
+  - `interface StanceModel { heading: string; scope: "in_scope" | "out_of_scope" | "undetermined"; sections: StanceSection[]; blankFields: Array<{ field: string; instruction: string }>; openItems: string[]; expiry: { date: string | null; trigger: string }; derivedBasis: DerivedBasis | null; attestation: { user: string; date: string } | null }`
+  - ```ts
+    interface ComposeStanceArgs {
+      projectName: string;
+      readiness: ReadinessResult;
+      gates: AnswerGateResult;
+      answers: AnswerWithNotes;
+      result: BiasAuditResult | null;
+      order: OrderFinding[];
+      expiry: { date: string | null; trigger: string };
+      derivedBasis: DerivedBasis | null;
+      attestation: { user: string; date: string } | null;
+      jobDescriptionKey: string | null;
+    }
+    ```
+  - `composeStance(args: ComposeStanceArgs): StanceModel`
   - `REQUIRED_SECTIONS: readonly string[]`
 
 - [ ] **Step 1: Write the failing test**
@@ -2739,12 +3023,16 @@ no ratios and no score, which must not read as a clearance."
 - Consumes: Task 10's `StanceModel`, `REQUIRED_SECTIONS`; Task 3's stance queries.
 - Produces:
   - `checkSections(html: string): { missing: string[]; ok: boolean }`
+  - `renderStanceHtml(model: StanceModel): string`
   - `renderStancePdf(model: StanceModel): Promise<{ pdf: Buffer; sha256: string }>`
   - `persistStance(args): Promise<{ stanceId: number; version: number; sha256: string }>`
 
 - [ ] **Step 1: Write the failing test**
 
 ```ts
+const utils = { createStanceQuery: jest.fn(), getNextStanceVersionQuery: jest.fn() };
+jest.mock("../../../utils/biasAudit.utils", () => utils);
+
 jest.mock("playwright", () => ({
   chromium: {
     launch: jest.fn().mockResolvedValue({
@@ -2797,17 +3085,17 @@ describe("renderStancePdf", () => {
     await expect(renderStancePdf(broken)).rejects.toThrow(/missing required section/i);
   });
 
-  it("is deterministic: the same model yields the same hash", async () => {
-    const a = await renderStancePdf(model);
-    const b = await renderStancePdf(model);
-    expect(a.sha256).toBe(b.sha256);
+  // No determinism test on the PDF bytes. Playwright is mocked here and
+  // returns a fixed buffer, so such a test would pass without verifying
+  // anything, and a real PDF embeds a creation timestamp and is not
+  // byte-deterministic anyway. The HTML is what we can pin:
+  it("renders the same HTML for the same model", async () => {
+    const { renderStanceHtml } = await import("./render");
+    expect(renderStanceHtml(model)).toBe(renderStanceHtml(model));
   });
 });
 
 describe("persistStance immutability", () => {
-  const utils = { createStanceQuery: jest.fn(), getNextStanceVersionQuery: jest.fn() };
-  jest.mock("../../../utils/biasAudit.utils", () => utils);
-
   // Review Focus 5
   it("denormalises the versions so the stance stays readable", async () => {
     const { persistStance } = await import("./render");
@@ -2879,7 +3167,112 @@ the fact, which is why the hash is recorded at generation."
 
 - [ ] **Step 1: Write the failing route test**
 
-Cover: 401 without auth; 403 when a non-Admin attempts attest; 404 for another organization's project; 400 when attesting with a veto unanswered; 200 returning only applicable questions.
+Create `Servers/routes/__tests__/biasAudit.route.test.ts`. Follow the harness used by the
+existing route tests in that directory: `grep -l "supertest" Servers/routes/__tests__/*.ts | head -1`
+and copy its app-construction and auth-mock setup, rather than inventing one.
+
+```ts
+import request from "supertest";
+import app from "../../app";
+
+// Mirror the auth mock from the existing route tests in this directory.
+const asRole = (roleId: number) => ({
+  Authorization: `Bearer test-token-role-${roleId}`,
+});
+const ADMIN = asRole(1);
+const EDITOR = asRole(3);
+const REVIEWER = asRole(2);
+
+describe("GET /api/bias-audit/questions/:frameworkId", () => {
+  it("401s without auth", async () => {
+    const res = await request(app).get("/api/bias-audit/questions/15");
+    expect(res.status).toBe(401);
+  });
+
+  it("returns only the applicable questions for the answers so far", async () => {
+    const res = await request(app)
+      .get("/api/bias-audit/questions/15?projectId=7")
+      .set(ADMIN);
+    expect(res.status).toBe(200);
+    const keys = res.body.questions.map((q: any) => q.key);
+    expect(keys).toContain("role.party");
+    // Nothing conditional on a later answer is offered yet.
+    expect(keys).not.toContain("cutoff.planned");
+  });
+
+  it("never returns another organization's project", async () => {
+    const res = await request(app)
+      .get("/api/bias-audit/questions/15?projectId=999999")
+      .set(ADMIN);
+    expect(res.status).toBe(404);
+  });
+});
+
+describe("PUT /api/bias-audit/profiles/:projectId/:frameworkId", () => {
+  it("permits an Editor to draft", async () => {
+    const res = await request(app)
+      .put("/api/bias-audit/profiles/7/15")
+      .send({ answers: [{ questionKey: "role.party", value: "vendor",
+                          notes: "We supply it.", dontKnow: false }] })
+      .set(EDITOR);
+    expect(res.status).toBe(200);
+  });
+
+  it("403s a Reviewer attempting to draft", async () => {
+    const res = await request(app)
+      .put("/api/bias-audit/profiles/7/15")
+      .send({ answers: [] })
+      .set(REVIEWER);
+    expect(res.status).toBe(403);
+  });
+
+  it("400s a veto answer with no notes", async () => {
+    const res = await request(app)
+      .put("/api/bias-audit/profiles/7/15")
+      .send({ answers: [{ questionKey: "role.party", value: "vendor",
+                          notes: "", dontKnow: false }] })
+      .set(ADMIN);
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/own words|notes/i);
+  });
+
+  it("ignores an organization_id in the body", async () => {
+    const res = await request(app)
+      .put("/api/bias-audit/profiles/7/15")
+      .send({ organizationId: 999999,
+              answers: [{ questionKey: "role.party", value: "vendor",
+                          notes: "x", dontKnow: false }] })
+      .set(ADMIN);
+    expect([200, 400]).toContain(res.status);
+    expect(JSON.stringify(res.body)).not.toContain("999999");
+  });
+});
+
+describe("POST /api/bias-audit/profiles/:projectId/:frameworkId/attest", () => {
+  it("403s an Editor", async () => {
+    const res = await request(app)
+      .post("/api/bias-audit/profiles/7/15/attest").set(EDITOR);
+    expect(res.status).toBe(403);
+  });
+
+  it("400s with a veto unanswered, and names which", async () => {
+    const res = await request(app)
+      .post("/api/bias-audit/profiles/7/15/attest").set(ADMIN);
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/scope\.weighting|data\.held|unanswered/i);
+  });
+});
+
+describe("POST /api/bias-audit/runs", () => {
+  it("400s when no attested profile exists", async () => {
+    const res = await request(app)
+      .post("/api/bias-audit/runs")
+      .send({ projectId: 7, frameworkId: 15, csv: "a,b\n1,2\n", mapping: {} })
+      .set(ADMIN);
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/attested profile/i);
+  });
+});
 
 - [ ] **Step 2: Write the module-rules test**
 
@@ -2948,9 +3341,42 @@ describe("module rules", () => {
 
 - [ ] **Step 3: Implement the controller and routes**
 
-Four-layer pattern. Register in `app.ts` beside the existing routes. Attest requires role 1; all handlers read `organization_id` from the auth context, never from the request body.
+Register in `app.ts` beside the existing routes, following the `app.use("/api/...", ...)`
+pattern already there. Apply `authenticateJWT` to the router so the generator emits
+`security: [bearerAuth: []]`, per `Servers/CLAUDE.md:170-173`.
 
-- [ ] **Step 4: Run the full module suite, build and lint**
+Permissions, per the spec's attestation section:
+
+| Action | Roles |
+| --- | --- |
+| Read questions, profile, runs, stances | any authenticated role |
+| Draft answers (`PUT .../profiles/...`) | Admin (1) or Editor (3) |
+| Attest (`POST .../attest`) | Admin (1) only |
+
+Reviewer (2) and Auditor (4) are read-only here. Note the platform's Auditor role is unrelated
+to the § 5-300 sense of auditor and confers nothing about independence.
+
+Use the project's existing role-guard middleware rather than comparing role ids inline; find it
+with `grep -rn "roleId" Servers/middleware/ | head`.
+
+All handlers read `organization_id` from the auth context, never from the request body.
+
+- [ ] **Step 4: Regenerate the API surface**
+
+`Servers/CLAUDE.md:164-204` makes this mandatory: the Express route layer is the single source
+of truth, and `Servers/swagger.yaml` plus `docs/api-docs/src/config/endpoints.ts` are generated
+from it and must never be hand-edited. `check:api-drift` fails CI if this is skipped.
+
+```bash
+cd ~/verifywise/Servers
+npm run generate:swagger
+npm run generate:endpoints
+npm run check:api-drift
+```
+
+Expected: no drift. Commit the regenerated files with the route change, in the same commit.
+
+- [ ] **Step 5: Run the full module suite, build and lint**
 
 ```bash
 cd ~/verifywise/Servers
@@ -2960,11 +3386,11 @@ npm run build && npm run lint
 
 Expected: all pass. Record the count for the commit message.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 cd ~/verifywise
-git add Servers/controllers/biasAudit.ctrl.ts Servers/routes/biasAudit.route.ts Servers/app.ts Servers/routes/__tests__/ Servers/services/biasAudit/__tests__/
+git add Servers/controllers/biasAudit.ctrl.ts Servers/routes/biasAudit.route.ts Servers/app.ts Servers/routes/__tests__/ Servers/services/biasAudit/__tests__/ Servers/swagger.yaml docs/api-docs/src/config/endpoints.ts
 git commit -m "Add bias audit routes and module-wide rule assertions
 
 Six endpoints on the four-layer pattern. organization_id comes from the
@@ -2989,7 +3415,7 @@ and every raw query filtered on organization_id."
 - Create: `Clients/src/presentation/pages/BiasAudit/StancePanel.tsx`
 - Create: `Clients/src/presentation/pages/BiasAudit/EducationPanel.tsx`
 - Create: `Clients/src/infrastructure/api/biasAuditService.ts`
-- Modify: the sidebar navigation to add the module entry
+- Modify: `Clients/src/application/config/routes.tsx` to register the page and add the sidebar entry (this is where `EvalsDashboard` is registered; follow that entry's shape)
 - Test: `Clients/src/presentation/pages/BiasAudit/__tests__/ProfileWizard.test.tsx`
 - Test: `Clients/src/presentation/pages/BiasAudit/__tests__/EducationPanel.test.tsx`
 
@@ -3030,7 +3456,17 @@ Cover: consequence text visible beside each option before selection; notes requi
 
 - [ ] **Step 3: Implement the components**
 
-MUI 7, sentence case throughout, border `#d0d5dd`, radius 4px, control height 30px, primary `#13715B`. `EducationPanel` renders on every page; the wizard shows each option's `consequence` inline rather than behind a tooltip.
+Reuse the project's own components rather than raw MUI: `CustomizableButton`, `SearchBox`,
+`PageHeader`, `EmptyState` and `HelperIcon`, as
+`Clients/src/presentation/pages/EvalsDashboard/BiasAuditsList.tsx` does. Sentence case
+throughout, border `#d0d5dd`, radius 4px, control height 30px, primary `#13715B`.
+
+`EducationPanel` renders on every page. The wizard shows each option's `consequence` inline
+beside the option rather than behind a tooltip.
+
+**This module does not touch the Evals dashboard.** The existing bias audit there stays as it
+is and keeps its own sidebar entry; the two coexist deliberately. Do not rewire, link or
+deprecate it from any task in this plan.
 
 - [ ] **Step 4: Run the client tests and typecheck**
 

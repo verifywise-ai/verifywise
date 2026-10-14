@@ -24,6 +24,26 @@ no demographic data — which, in all three engagements, was every client.
 
 ## Scope
 
+### Relationship to the existing bias audit UI
+
+`Clients/src/presentation/pages/EvalsDashboard/` already contains a working bias audit:
+`BiasAuditsList.tsx`, `BiasAuditDetail.tsx`, `NewBiasAuditModal.tsx`, backed by EvalServer and
+serving 17 framework presets.
+
+**It stays exactly as it is.** This module is a separate sidebar entry and changes nothing in
+the Evals dashboard. Decided 2026-10-14.
+
+Two surfaces therefore coexist, deliberately:
+
+| Surface | What it is |
+| --- | --- |
+| Evals dashboard bias audit | EvalServer-backed, 17 presets, upload-and-compute for an analyst who already holds scored results |
+| This module | Standalone, LL 144 only, intake-led, generates its own corpus, produces a readiness stance |
+
+Neither replaces the other and nothing migrates between them. A future decision may deprecate
+one; until that decision is taken, removing or rewiring either is out of scope for any task in
+these plans.
+
 ### In scope
 
 - A project-level AEDT profile: the customer's own answers to the questions that determine
@@ -158,8 +178,10 @@ nothing marking one as law and the other as convention.
 
 ## Architecture
 
-Node/TypeScript in `Servers/`, React in `Clients/`, following the existing four-layer pattern
-(route → controller → service → utils → model) and shared-schema tenancy with `organization_id`.
+Node/TypeScript in `Servers/`, React in `Clients/`, and shared-schema tenancy with
+`organization_id`. `Servers/CLAUDE.md` documents a four-layer pattern, route → controller →
+utils → model; this module adds a service layer between controller and utils, as the 40-plus
+existing directories under `Servers/services/` already do.
 
 **No dependency on EvalServer or the platform AIGateway.** The engine is ported to TypeScript;
 generation calls the Vercel AI Gateway directly.
@@ -306,8 +328,24 @@ created_by, created_at
 EEOC four-fifths convention, not adopted by the statute" rather than presenting a tuning knob.
 
 `data_basis_json` is per protected category, not per run. "We hold sex but not race" is a real
-and likely answer — it is exactly what Spotted Zebra reported — and a single value would flatten
-it into a wrong one.
+and likely answer, and a single value would flatten it into a wrong one. One engagement held sex
+for roughly 1,500 to 2,000 candidates and no race or ethnicity at all: sex was auditable from
+historical data while race and all 11 intersectional categories were not.
+
+**It is derived, not asked twice.** The veto question `data.held` already captures what the
+customer holds, per characteristic. `data.basis` states the reason for the run as a whole, and
+the per-category split is computed from the two. Asking a second per-category grid would add
+friction for information already given, and friction is what makes people click through.
+
+The derivation carries one obligation. A derived split is VerifyWise's inference, not the
+customer's statement, and writing our inference back as the client's words is a named failure
+that put a false sentence in a signed report. So the stance **shows the derived split and asks
+the customer to confirm it**, presented as "we read your answers as follows" rather than as
+something they said. An unconfirmed split appears in the open items.
+
+The expiry trigger is per category for the same reason. Sex-only records never end a race
+attribute basis, however far their volume grows, so a customer who later collects 50,000 sex
+disclosures must not see a race basis reported as resolved.
 
 `expiry_trigger` is text because the § 5-302(b) triggers are not dates.
 
@@ -552,6 +590,14 @@ expected = n + 1 - sum(n_i^2) / n
 The general formula, **not** `n * (1 - 1/k)`, which assumes equal group sizes and previously
 rejected a correct interleave.
 
+**Two thresholds, by provenance.** Uploaded data is checked at 0.5 of expected runs, because a
+real applicant file may legitimately cluster and the check exists to catch block structure
+rather than ordinary clustering. A generated corpus is gated at 0.9 and a failure blocks
+release, because a generator has no excuse. Measured on a seeded permutation: 7 categories over
+5,000 records give 4,305 observed against 4,286.7 expected (1.0043), and an unequal 700/300
+split gives 0.9762. Both clear 0.9, so the strict gate does not reject correct work, while the
+real defect measured 14 against 4,285.
+
 This check is also applied to generated corpora before they are released, where it is a hard gate
 rather than a warning: `assignCandidateIds` uses a seeded permutation and never `zip`, and the
 measured run counts are stored on the corpus row.
@@ -644,8 +690,10 @@ audits: `LLM_API_KEY` and `LLM_BASE_URL`.
 
 ### PDF, 2–3 pages
 
-Fixed section list, enforced by a checker ported from `check_report_sections.py`, which exists
-because six sections went missing once. Sections: scope and party status; basis for the data
+Fixed section list, enforced by a checker written for this module. It is equivalent to one used
+on prior engagements, which exists because six sections went missing from a report drafted from
+scratch, independence among them. That script is not in this repository, so the checker here is
+written fresh against the rendered HTML rather than ported. Sections: scope and party status; basis for the data
 used; what was tested (JD, corpus, model set, cell sizes); results; open items and limitations;
 independence declaration; expiry; data relied on, with hashes.
 
@@ -785,10 +833,11 @@ Following `Servers/database/migrations/` conventions and the timestamp-prefix na
    carries no ratios and no readiness score, because neither was computed. It must not read as
    a clearance: the heading is "Scope determination", not "Result".
 
-2. **Who may attest? Resolved: Admin or above, and the attesting user is named in the stance.**
+2. **Who may attest? Resolved: Admin only, and the attesting user is named in the stance.**
    The four vetoes are legal determinations about the customer's own position, not analyst work.
-   Any role may draft answers; attestation moves the profile from `draft` to `attested` and is
-   restricted. The stance prints the attesting user and date beside each veto answer.
+   **Admin (1) or Editor (3) may draft** answers; Reviewer (2) and Auditor (4) are read-only
+   here. Attestation moves the profile from `draft` to `attested` and is **restricted to
+   Admin**. The stance prints the attesting user and date beside each veto answer.
 
    The record's argument is specific: on one engagement the compliance owner who later sent 51
    deletions across three documents had never been in a conversation with us. The person who

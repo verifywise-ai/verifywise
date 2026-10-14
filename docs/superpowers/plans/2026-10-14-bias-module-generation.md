@@ -157,10 +157,16 @@ describe("content rules", () => {
   it("carries no demographic or protected-characteristic language", () => {
     // The JD is the generation input. Demographic terms in it would put a
     // signal into every candidate regardless of their assigned group.
-    const all = JSON.stringify(JOB_DESCRIPTIONS).toLowerCase();
-    for (const w of ["male", "female", "hispanic", "asian", "white", "black",
-                     "disability", "age ", "young", "older"]) {
-      expect(all).not.toContain(w);
+    //
+    // Word boundaries, NOT substrings. "age" appears inside "manage a" and
+    // "average"; "race" inside "trace" and "embrace"; "male" inside "female".
+    // A substring check fails on correct content, which teaches an
+    // implementer to weaken the test instead of the text.
+    const all = JSON.stringify(JOB_DESCRIPTIONS);
+    for (const w of ["male", "female", "hispanic", "latino", "asian", "white",
+                     "black", "disability", "disabled", "age", "aged", "young",
+                     "older", "ethnicity", "race"]) {
+      expect(all).not.toMatch(new RegExp(`\\b${w}\\b`, "i"));
     }
   });
 });
@@ -413,11 +419,12 @@ The guard against the defect that shipped twice.
 - Test: `Servers/services/biasAudit/generation/assignCandidateIds.test.ts`
 
 **Interfaces:**
-- Consumes: `countRuns`, `expectedRuns` from plan 1; `AllocationRow` from Task 2.
+- Consumes: `import { countRuns, expectedRuns } from "../idOrderCheck"` (plan 1 Task 7, one level up from `generation/`); `AllocationRow` from Task 2.
 - Produces:
   - `class IdOrderError extends Error`
   - `GENERATED_MIN_RUN_FRACTION = 0.9`
   - `assignCandidateIds(args: { rows: AllocationRow[]; seed: number; digits?: number; attributes?: string[] }): { assigned: Array<{ candidateId: string } & AllocationRow>; checks: Record<string, { observed: number; expected: number; fraction: number }> }`
+  - `verifyIdOrder(assigned: Array<{ candidateId: string } & AllocationRow>, attributes: string[], minFraction?: number): void` — throws `IdOrderError`. Exported so release gates can re-check without re-deriving.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -501,7 +508,7 @@ describe("assignCandidateIds", () => {
 
 describe("the measured properties of the real defect", () => {
   it("would have measured 14 runs against about 4,286 expected", () => {
-    const { countRuns, expectedRuns } = require("../../../services/biasAudit/idOrderCheck");
+    const { countRuns, expectedRuns } = require("../idOrderCheck");
     const races = ["W", "B", "H", "A", "NH", "AI", "TM"];
     const values: string[] = [];
     for (const _sex of ["M", "F"]) {
@@ -754,25 +761,94 @@ carry it in the text being wrapped."
 - Create: `Servers/services/biasAudit/generation/manifest.ts`
 - Create: `Servers/services/biasAudit/generation/generateCorpus.ts`
 - Create: `Servers/database/migrations/20261014130000-bias-audit-corpora.js`
+- Modify: `Servers/utils/biasAudit.utils.ts` — append the three corpus queries
 - Test: `Servers/services/biasAudit/generation/manifest.test.ts`
 - Test: `Servers/services/biasAudit/generation/generateCorpus.test.ts`
 
 **Interfaces:**
 - Consumes: Tasks 1–4.
 - Produces:
-  - `buildManifest(args: { assigned; log: GenerationLogEntry[] }): { rows: ManifestRow[]; counts: Record<string, number> }`
-  - `generateCorpus(args): Promise<{ corpusId: number; recordCount: number; modelsObserved: Record<string, number> }>`
-  - table `bias_audit_corpora`
+  - ```ts
+    interface AssignedRow {
+      candidateId: string;
+      demographics: { sex: string; raceEthnicity: string };
+      tierKey: string;
+    }
+
+    interface GenerationLogEntry {
+      candidateId: string;
+      validationStatus: "passed" | "failed";
+      modelName: string;
+      promptHash: string;
+    }
+
+    interface ManifestRow {
+      candidateId: string;
+      sex: string;
+      raceEthnicity: string;
+      tierKey: string;
+      modelName: string;
+      promptHash: string;
+      validationStatus: string;
+    }
+
+    interface GenerateCorpusArgs {
+      projectId: number;
+      profileId: number;
+      profileVersion: number;
+      organizationId: number;
+      userId: number;
+      jobDescriptionKey: "commercial-ae" | "operational-hourly";
+      artifactKind: "resume" | "transcript" | "structured";   // from pipeline.input_form
+      knockoutExists: boolean;                                 // from knockout.exists
+      count: number;
+      seed: number;
+    }
+    ```
+  - `buildManifest(args: { assigned: AssignedRow[]; log: GenerationLogEntry[] }): { rows: ManifestRow[]; counts: Record<string, number> }`
+  - `generateCorpus(args: GenerateCorpusArgs): Promise<{ corpusId: number; recordCount: number; modelsObserved: Record<string, number> }>`
+  - `createCorpusQuery`, `updateCorpusStatusQuery`, `getCorpusQuery` — appended to `Servers/utils/biasAudit.utils.ts`, following the tenant-scoped pattern established there.
+  - tables `bias_audit_corpora` and `bias_audit_settings`
+
+`artifactKind` and `knockoutExists` come from the question set's `generationField` markers
+(`pipeline.input_form` and `knockout.exists`). The caller resolves them from the attested
+profile; this function does not read answers itself.
 
 - [ ] **Step 1: Write the migration**
 
-Follow Task 2's pattern from plan 2. Columns per the spec, plus `status` (`running`/`complete`/`failed`), `seed`, `models_observed_json`, `id_order_check_json`, `manifest_sha256`, `corpus_sha256`, and a partial unique index preventing two running corpora per project:
+Two tables. Follow the `createTable` pattern from plan 2 Task 2, schema `verifywise`, with
+`organization_id` referencing `organizations` ON DELETE CASCADE.
+
+**`bias_audit_corpora`** — columns per the spec, plus `status`
+(`running` / `complete` / `failed`), `seed`, `models_observed_json`, `id_order_check_json`,
+`manifest_sha256`, `corpus_sha256`, `manifest_json`, `record_count`, `artifact_kind`,
+`job_description_key`, `profile_id`, `profile_version`, `generated_by`, `generated_at`.
+
+A partial unique index prevents two running corpora per project:
 
 ```sql
 CREATE UNIQUE INDEX bias_audit_corpora_one_running_uq
   ON verifywise.bias_audit_corpora (project_id)
   WHERE status = 'running';
 ```
+
+**`bias_audit_settings`** — the module-scoped gateway credentials. Nothing else in these plans
+creates this table, and Task 4's `getGatewaySettings` reads it, so it belongs here.
+
+```
+id, organization_id        unique, one row per organization
+base_url                   text
+api_key_encrypted          text, never returned by any endpoint
+model                      text, the pinned model
+updated_by, updated_at
+```
+
+Unique on `organization_id` alone, following
+`20261012091252-shadow-ai-settings-unique-org.js`.
+
+Retention: a generated corpus is synthetic and contains no real applicant data, so corpora are
+retained indefinitely and this module is deliberately outside the platform's data-retention
+subsystem. Stated here rather than left to inference.
 
 - [ ] **Step 2: Write the failing manifest test**
 
@@ -1040,7 +1116,25 @@ platform's own output, rather than implying agreement."
 - Consumes: Tasks 1–6; plan 1's `countRuns`/`expectedRuns`.
 - Produces:
   - `interface ReleaseFinding { code: string; severity: "stop" | "warn"; message: string }`
-  - `runReleaseGates(args): ReleaseFinding[]`
+  - ```ts
+    interface ReleaseGateArgs {
+      jobDescriptionKey: string;
+      recordCount: number;
+      manifestRowCount: number;
+      /** Keyed by attribute. Deliberately a different shape from plan 1's
+       *  OrderFinding[], which describes uploaded data; this one comes from
+       *  assignCandidateIds' `checks` and is keyed rather than listed. */
+      idOrderChecks: Record<string, { observed: number; expected: number; fraction: number }>;
+      /** Recomputed FROM THE MANIFEST, not from the plan: failed records are
+       *  excluded from the manifest, so a 5,000-record plan can yield uneven
+       *  cells. */
+      cellSizes: Record<string, number>;
+      modelsObserved: Record<string, number>;
+      tierSeparation: Record<string, number>;
+      criteriaVerdict: "close" | "divergent" | "not_supplied";
+    }
+    ```
+  - `runReleaseGates(args: ReleaseGateArgs): ReleaseFinding[]`
   - Codes: `id_order_blocked`, `cell_too_small`, `tier_does_not_separate`, `multiple_models`, `manifest_count_mismatch`, `criteria_divergent`
 
 - [ ] **Step 1: Write the failing test**
@@ -1283,7 +1377,17 @@ it("serves a corpus download with no demographic column", async () => {
   const res = await request(app).get("/api/bias-audit/corpora/3/download")
     .set(authAsAdmin);
   expect(res.status).toBe(200);
-  expect(res.text).not.toMatch(/sex|race|ethnicity/i);
+
+  // Assert on the HEADER ROW, not the body. Generated resume prose legitimately
+  // contains "embrace", "trace" and "manage a", so a body-wide /sex|race/ check
+  // fails on correct content.
+  const header = res.text.split("\n")[0].split(",").map((h) => h.trim().toLowerCase());
+  for (const forbidden of ["sex", "gender", "race", "race_ethnicity", "ethnicity",
+                           "age", "age_band", "disability", "tier",
+                           "qualification_tier"]) {
+    expect(header).not.toContain(forbidden);
+  }
+  expect(header).toContain("candidate_id");
 });
 ```
 
@@ -1293,7 +1397,19 @@ The job runs under BullMQ, which the platform already operates. The settings pag
 
 The generate page shows the chosen job description, the criteria-comparison field, and the release findings. Education content from plan 2's Task 8 renders on both pages (`run.job_description`, `run.criteria_comparison`).
 
-- [ ] **Step 4: Run everything**
+- [ ] **Step 4: Regenerate the API surface**
+
+Mandatory per `Servers/CLAUDE.md:164-204`; `check:api-drift` fails CI otherwise.
+
+```bash
+cd ~/verifywise/Servers
+npm run generate:swagger && npm run generate:endpoints && npm run check:api-drift
+```
+
+Commit the regenerated `swagger.yaml` and `docs/api-docs/src/config/endpoints.ts` with the
+route change.
+
+- [ ] **Step 5: Run everything**
 
 ```bash
 cd ~/verifywise/Servers
