@@ -28,7 +28,7 @@
 Five input classes the spec implies but which no task's happy-path tests would exercise. Each has its pinning test added to the owning task.
 
 1. **A score column whose median equals its modal value** produces every rate 0.0, every impact ratio null, and the summary "No adverse impact flags detected." The Python engine does this silently (verified: 100 records, three levels, 75 at the top level). A customer reads it as a clean result. Owned by Task 3.
-2. **A single group in a category** makes that group its own reference, so its impact ratio is 1.0 and no disparity is computable. Owned by Task 2.
+2. **A single group in a category** becomes its own reference, so no disparity is computable — and its impact ratio is `0.999999`, not `1.0`, because the engine divides the rounded rate by the unrounded highest rate. Owned by Task 2.
 3. **Unequal group sizes in the ID-order check.** The wrong formula passes a blocked corpus or rejects a correct interleave. Owned by Task 7.
 4. **All records selected, or none.** Impact ratios are undefined; the Python returns nulls with a reassuring summary. Owned by Task 6.
 5. **A demographic column present but mostly empty.** Rates computed on the few populated rows look authoritative. The Python skips blank group names silently (`if not group_name: continue`). Owned by Task 6.
@@ -41,13 +41,20 @@ The only task that touches Python. It produces the expected outputs every later 
 
 **Files:**
 - Create: `Servers/services/biasAudit/engine/__fixtures__/generate_oracle.py`
-- Create: `Servers/services/biasAudit/engine/__fixtures__/cases.json`
-- Create: `Servers/services/biasAudit/engine/__fixtures__/expected.json`
+- Create: `Servers/services/biasAudit/engine/__fixtures__/cases.json` (hand-written INPUT to the script)
+- Create: `Servers/services/biasAudit/engine/__fixtures__/cases.resolved.json` (written BY the script)
+- Create: `Servers/services/biasAudit/engine/__fixtures__/expected.json` (written BY the script)
+- Create: `Servers/services/biasAudit/engine/__fixtures__/load.ts`
 - Create: `Servers/services/biasAudit/engine/__fixtures__/README.md`
 
 **Interfaces:**
 - Consumes: nothing.
-- Produces: `cases.json` (array of `{name, records, config}`) and `expected.json` (map of case name to the Python's `BiasAuditResult` as `model_dump()`). Every later task reads these two files.
+- Produces:
+  - `cases.resolved.json` — array of `{name, records, config}`, with records expanded.
+  - `expected.json` — map of case name to the Python's `BiasAuditResult` as `model_dump_json()`.
+  - `load.ts` — `allCases(): Case[]`, `byName(name): Case`, `exp(name): any`. Every later task imports the fixtures **through this module**, never by a JSON import: `resolveJsonModule` is commented out in `Servers/tsconfig.json:43`, so `import x from "./foo.json"` fails `tsc` with TS2732. Enabling it would change shared compiler config for this feature's benefit; reading the files with `fs` does not.
+
+Three files, not two: `cases.json` is the script's hand-written input and keeps the case list readable; the script expands its `records_generator` keys into `cases.resolved.json`. Commit all three.
 
 - [ ] **Step 1: Write the case definitions**
 
@@ -274,7 +281,43 @@ print('summary:', e['summary'])
 
 Expected: overall rate `0.0`, all rates `0.0`, all IRs `null`, and a summary containing "No adverse impact flags detected." This is the behaviour Task 3 must detect rather than reproduce blindly.
 
-- [ ] **Step 5: Write the fixtures README**
+- [ ] **Step 5: Write the fixture loader**
+
+Create `load.ts`. Every test imports the fixtures through this, because a JSON import
+does not compile under the repo's current `tsconfig.json`.
+
+```ts
+import fs from "node:fs";
+import path from "node:path";
+
+export interface Case {
+  name: string;
+  records: Record<string, unknown>[];
+  config: Record<string, unknown>;
+}
+
+function read<T>(file: string): T {
+  return JSON.parse(fs.readFileSync(path.join(__dirname, file), "utf8")) as T;
+}
+
+export function allCases(): Case[] {
+  return read<Case[]>("cases.resolved.json");
+}
+
+export function byName(name: string): Case {
+  const found = allCases().find((c) => c.name === name);
+  if (!found) throw new Error(`no oracle case named ${name}`);
+  return found;
+}
+
+export function exp(name: string): any {
+  const expected = read<Record<string, any>>("expected.json");
+  if (!(name in expected)) throw new Error(`no oracle expectation for ${name}`);
+  return expected[name];
+}
+```
+
+- [ ] **Step 6: Write the fixtures README**
 
 Create `README.md`:
 
@@ -298,7 +341,7 @@ arithmetic and additionally returns a `degenerateMedian` diagnostic so callers c
 present it as a result. See the port's `scoringRate.ts` and Task 3 of the plan.
 ```
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 cd ~/verifywise
@@ -341,14 +384,9 @@ records with three score levels and 75 at the top level."
 Create `categoryTable.test.ts`:
 
 ```ts
-import cases from "./__fixtures__/cases.resolved.json";
-import expected from "./__fixtures__/expected.json";
 import { computeCategoryTable } from "./categoryTable";
 import { round6 } from "./round";
-
-type Case = { name: string; records: Record<string, unknown>[]; config: any };
-const byName = (n: string) => (cases as Case[]).find((c) => c.name === n)!;
-const exp = (n: string) => (expected as any)[n];
+import { byName, exp } from "./__fixtures__/load";
 
 describe("round6", () => {
   it("matches Python on an ordinary repeating fraction", () => {
@@ -468,7 +506,7 @@ describe("computeCategoryTable against the Python oracle", () => {
   });
 
   // Review Focus 2
-  it("gives a lone group an impact ratio of 1.0, so no disparity is computable", () => {
+  it("makes a lone group its own reference, but the ratio is not exactly 1", () => {
     const c = byName("selection_rate_single_group");
     const table = computeCategoryTable({
       records: c.records,
@@ -480,7 +518,13 @@ describe("computeCategoryTable against the Python oracle", () => {
       rateOf: (r) => Boolean(r.selected),
     });
     expect(table.rows).toHaveLength(1);
-    expect(table.rows[0].impactRatio).toBe(1);
+
+    // 0.999999, NOT 1.0. The engine divides the ROUNDED rate by the
+    // UNROUNDED highest rate: with 20 of 60 selected, round(1/3, 6) is
+    // 0.333333 while highestRate stays 0.3333333..., so the quotient is
+    // 0.999999. Verified against the Python. Preserve this asymmetry; it
+    // affects every ratio whose rate is not exactly representable.
+    expect(table.rows[0].impactRatio).toBe(0.999999);
     expect(table.rows[0].flagged).toBe(false);
     expect(table.rows.map((r) => r.impactRatio)).toEqual(
       exp("selection_rate_single_group").tables[0].rows.map((r: any) => r.impact_ratio),
@@ -709,11 +753,13 @@ Reproduces EvalServer's _compute_category_table against the committed
 oracle fixtures: rates, impact ratios, small-sample exclusion under
 5-301(d), flagging against the threshold, and alphabetical group order.
 
-Two preserved behaviours are pinned by test rather than left implicit: a
-blank group name is skipped, so the counted total can fall far below the
-record count; and a lone group is its own reference, giving an impact
-ratio of 1.0 with no disparity computable. Both are handled by the data
-gates rather than silently."
+Three preserved behaviours are pinned by test rather than left implicit.
+A blank group name is skipped, so the counted total can fall far below
+the record count. A lone group becomes its own reference with no
+disparity computable. And the impact ratio divides the ROUNDED rate by
+the UNROUNDED highest rate, so a lone group scores 0.999999 rather than
+1.0 whenever its rate is not exactly representable; that asymmetry is
+load-bearing and is asserted directly."
 ```
 
 ---
@@ -739,14 +785,9 @@ The Review Focus 1 defect. The port reproduces the arithmetic and adds a diagnos
 Create `scoringRate.test.ts`:
 
 ```ts
-import cases from "./__fixtures__/cases.resolved.json";
-import expected from "./__fixtures__/expected.json";
 import { computeCategoryTable } from "./categoryTable";
 import { aboveMedian, detectDegenerateMedian, overallMedian } from "./scoringRate";
-
-type Case = { name: string; records: Record<string, unknown>[]; config: any };
-const byName = (n: string) => (cases as Case[]).find((c) => c.name === n)!;
-const exp = (n: string) => (expected as any)[n];
+import { byName, exp } from "./__fixtures__/load";
 
 describe("overallMedian", () => {
   it("matches statistics.median on an even-length sample", () => {
@@ -837,6 +878,49 @@ describe("detectDegenerateMedian", () => {
     const d = detectDegenerateMedian(records, "score")!;
     expect(d.distinctValues).toBe(2);
     expect(d.median).toBe(1);
+    expect(d.kind).toBe("none_above");
+  });
+
+  // The near-degenerate case, which is the more dangerous of the two.
+  it("flags a column where a handful clear the median, and says so", () => {
+    // 97 at level 1, 3 at level 2. Verified against the Python: this yields
+    // Female IR 0.50 FLAGGED and Male IR 1.0, from 1 record against 2.
+    const records = [...Array(100)].map((_, i) => ({
+      sex: i % 2 ? "Male" : "Female",
+      score: i < 3 ? 2 : 1,
+    }));
+    const d = detectDegenerateMedian(records, "score")!;
+    expect(d).not.toBeNull();
+    expect(d.kind).toBe("too_few_above");
+    expect(d.above).toBe(3);
+    expect(d.total).toBe(100);
+    expect(d.aboveFraction).toBeCloseTo(0.03, 6);
+    expect(d.floor).toBe(0.05);
+  });
+
+  it("confirms the near-degenerate arithmetic it is warning about", () => {
+    const records = [...Array(100)].map((_, i) => ({
+      sex: i % 2 ? "Male" : "Female",
+      score: i < 3 ? 2 : 1,
+    }));
+    const median = overallMedian(records, "score")!;
+    const table = computeCategoryTable({
+      records, categoryKey: "sex", categoryLabel: "Sex",
+      totalApplicants: 100, threshold: 0.8, smallSampleExclusion: null,
+      rateOf: aboveMedian(median, "score"),
+      titlePrefix: "Scoring rate impact ratios",
+    });
+    const female = table.rows.find((r) => r.categoryName === "Female")!;
+    // An adverse-impact flag decided by one record against two.
+    expect(female.impactRatio).toBe(0.5);
+    expect(female.flagged).toBe(true);
+    expect(female.selectedCount).toBe(1);
+  });
+
+  it("does not flag a sample where enough clear the median", () => {
+    // 10 of 100 above, at the 0.05 floor.
+    const records = [...Array(100)].map((_, i) => ({ score: i < 10 ? 2 : 1 }));
+    expect(detectDegenerateMedian(records, "score")).toBeNull();
   });
 });
 ```
@@ -888,9 +972,22 @@ export function aboveMedian(median: number, scoreColumn: string) {
 export interface DegenerateMedian {
   median: number;
   atMedian: number;
+  above: number;
   total: number;
+  aboveFraction: number;
   distinctValues: number;
+  /** "none_above" when nothing clears the median, "too_few_above" otherwise. */
+  kind: "none_above" | "too_few_above";
+  /** The floor `aboveFraction` fell below, so the stance can print it. */
+  floor: number;
 }
+
+/**
+ * A scoring rate computed from fewer than this fraction of the sample is
+ * reported as degenerate. At 5% of 100 records, five candidates decide every
+ * ratio in the table.
+ */
+export const MIN_ABOVE_MEDIAN_FRACTION = 0.05;
 
 /**
  * Detect a score column whose median coincides with a modal value.
@@ -902,28 +999,50 @@ export interface DegenerateMedian {
  *
  * Returns null when the median separates the sample normally.
  *
- * Observed on a real engagement: a three-level stoplight output with 3,739 of
- * 5,000 candidates at the top level put the median on the top level, so the
- * strict rule gave every group a rate of zero. That audit disclosed an
- * at-or-above rule instead; the choice of rule changes every impact ratio and
- * belongs to whoever is accountable for the report, not to this function.
+ * TWO kinds, because the near-degenerate case is the more dangerous one.
+ *
+ * `none_above`: nothing clears the median. Every rate is 0.0 and every ratio
+ * null, while the Python's summary still reads "No adverse impact flags
+ * detected". Observed on a real engagement: a three-level stoplight output with
+ * 3,739 of 5,000 candidates at the top level.
+ *
+ * `too_few_above`: a handful clear it. The arithmetic completes and produces
+ * ratios that look like findings. Verified against the Python on 100 records
+ * with 97 at level 1 and 3 at level 2:
+ *
+ *   Female  n=50  selected=1  rate=0.02  IR=0.5   flagged=TRUE
+ *   Male    n=50  selected=2  rate=0.04  IR=1.0
+ *   summary: "1 group(s) flagged with impact ratio below 0.80 threshold."
+ *
+ * An adverse-impact flag at 0.50, decided by one record against two. This is
+ * worse than `none_above`, which at least looks broken on sight.
+ *
+ * The choice of an at-or-above rule instead changes every impact ratio and
+ * belongs to whoever is accountable for the report, not to this function. It
+ * reports the condition and the floor it applied.
  */
 export function detectDegenerateMedian(
   records: AuditRecord[],
   scoreColumn: string,
+  floor: number = MIN_ABOVE_MEDIAN_FRACTION,
 ): DegenerateMedian | null {
   const values = scores(records, scoreColumn);
   if (values.length === 0) return null;
 
   const median = overallMedian(records, scoreColumn)!;
   const above = values.filter((v) => v > median).length;
-  if (above > 0) return null;
+  const aboveFraction = above / values.length;
+  if (aboveFraction >= floor) return null;
 
   return {
     median,
     atMedian: values.filter((v) => v === median).length,
+    above,
     total: values.length,
+    aboveFraction,
     distinctValues: new Set(values).size,
+    kind: above === 0 ? "none_above" : "too_few_above",
+    floor,
   };
 }
 ```
@@ -973,13 +1092,8 @@ that choice to the caller."
 Create `intersectional.test.ts`:
 
 ```ts
-import cases from "./__fixtures__/cases.resolved.json";
-import expected from "./__fixtures__/expected.json";
 import { computeIntersectionalTable } from "./intersectional";
-
-type Case = { name: string; records: Record<string, unknown>[]; config: any };
-const byName = (n: string) => (cases as Case[]).find((c) => c.name === n)!;
-const exp = (n: string) => (expected as any)[n];
+import { byName, exp } from "./__fixtures__/load";
 
 describe("computeIntersectionalTable against the Python oracle", () => {
   const c = byName("selection_rate_intersectional");
@@ -1090,7 +1204,10 @@ export function computeIntersectionalTable(args: IntersectionalArgs): CategoryTa
   for (const record of records) {
     const parts = crossKeys.map((k) => String(record[k] ?? ""));
     if (parts.some((p) => !p)) continue;
-    const name = parts.join(" ");
+    // Python joins with " - " (engine.py:291), not a bare space. The cell
+    // name is also the sort key, so a wrong separator changes ordering and
+    // with it which cell becomes the reference.
+    const name = parts.join(" - ");
     const entry = groups.get(name) ?? { applicants: 0, selected: 0 };
     entry.applicants += 1;
     if (rateOf(record)) entry.selected += 1;
@@ -1186,7 +1303,47 @@ the cell count is asserted directly."
 - Produces:
   - `computeFairnessMetricsTable(args: {...}): FairnessMetricsTable`
   - `computeScoreDistributionTable(args: {...}): ScoreDistributionTable`
-  - `interface BiasAuditConfig` and `interface BiasAuditResult` (full shapes, in `types.ts`)
+  - The full config and result shapes, added to `types.ts`. Plan 2 constructs a
+    `BiasAuditConfig` to call `runAudit`, so the field list is fixed here rather than
+    left to be inferred from a test mapper. Only the fields the computation reads are
+    ported; the Python's presentation-only fields (`mode`, `preset_name`, `metrics`,
+    `required_metadata`, `metadata`, `results_format`, and the audit-metadata block)
+    are deliberately omitted.
+
+    ```ts
+    export interface CategoryConfig { label: string; groups: string[] }
+    export interface IntersectionalConfig { required: boolean; cross: string[] }
+
+    export interface BiasAuditConfig {
+      presetId: string;
+      metric: MetricMode;
+      categories: Record<string, CategoryConfig>;
+      intersectional: IntersectionalConfig;
+      threshold: number | null;
+      smallSampleExclusion: number | null;
+      outcomeColumn: string;
+      scoreColumn: string | null;
+      predictionColumn: string | null;
+      groundTruthColumn: string | null;
+      columnMapping?: Record<string, string>;
+    }
+
+    export interface BiasAuditResult {
+      metric: MetricMode;
+      tables: CategoryTable[];
+      scoreDistributionTables: ScoreDistributionTable[];
+      fairnessMetricsTables: FairnessMetricsTable[];
+      overallSelectionRate: number;
+      overallMedian: number | null;
+      totalApplicants: number;
+      totalSelected: number;
+      unknownCount: number;
+      flagsCount: number;
+      excludedCount: number;
+      summary: string;
+      diagnostics: { degenerateMedian: DegenerateMedian | null };
+    }
+    ```
   - `computeBiasAudit(records: AuditRecord[], config: BiasAuditConfig, unknownCount?: number): BiasAuditResult`
   - `BiasAuditResult.diagnostics: { degenerateMedian: DegenerateMedian | null }`
 
@@ -1203,13 +1360,10 @@ sed -n '430,564p' src/engines/bias_audit/engine.py   # fairness metrics
 Create `index.test.ts`:
 
 ```ts
-import cases from "./__fixtures__/cases.resolved.json";
-import expected from "./__fixtures__/expected.json";
 import { computeBiasAudit } from "./index";
+import { allCases, exp } from "./__fixtures__/load";
 
-type Case = { name: string; records: Record<string, unknown>[]; config: any };
-const all = cases as Case[];
-const exp = (n: string) => (expected as any)[n];
+const all = allCases();
 
 /** Map the committed snake_case config to the module's camelCase shape. */
 function toConfig(c: any) {
