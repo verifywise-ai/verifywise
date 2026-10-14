@@ -1,3 +1,4 @@
+import { applyImpactRatios } from "./impactRatios";
 import { round6 } from "./round";
 import type { AuditRecord, CategoryTable, GroupResult } from "./types";
 
@@ -68,23 +69,7 @@ export function computeCategoryTable(args: CategoryTableArgs): CategoryTable {
     });
   }
 
-  for (const row of rows) {
-    if (smallSampleExclusion && totalApplicants > 0) {
-      const proportion = row.applicantCount / totalApplicants;
-      if (proportion < smallSampleExclusion) {
-        row.excluded = true;
-        row.impactRatio = null;
-        continue;
-      }
-    }
-    if (highestRate > 0) {
-      const ratio = row.selectionRate / highestRate;
-      row.impactRatio = round6(ratio);
-      if (threshold !== null && ratio < threshold) row.flagged = true;
-    } else {
-      row.impactRatio = null;
-    }
-  }
+  applyImpactRatios(rows, { highestRate, totalApplicants, threshold, smallSampleExclusion });
 
   return {
     title: `${titlePrefix} by ${categoryLabel.toLowerCase()}`,
