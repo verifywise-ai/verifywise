@@ -7,12 +7,19 @@ export interface Case {
   config: Record<string, unknown>;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Expected = Record<string, any>;
+
+let casesCache: Case[] | undefined;
+let expectedCache: Expected | undefined;
+
 function read<T>(file: string): T {
   return JSON.parse(fs.readFileSync(path.join(__dirname, file), "utf8")) as T;
 }
 
 export function allCases(): Case[] {
-  return read<Case[]>("cases.resolved.json");
+  casesCache ??= read<Case[]>("cases.resolved.json");
+  return casesCache;
 }
 
 export function byName(name: string): Case {
@@ -23,8 +30,9 @@ export function byName(name: string): Case {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function exp(name: string): any {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const expected = read<Record<string, any>>("expected.json");
-  if (!(name in expected)) throw new Error(`no oracle expectation for ${name}`);
-  return expected[name];
+  expectedCache ??= read<Expected>("expected.json");
+  if (!(name in expectedCache)) {
+    throw new Error(`no oracle expectation for ${name}`);
+  }
+  return expectedCache[name];
 }

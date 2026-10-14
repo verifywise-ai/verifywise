@@ -98,12 +98,14 @@ def three_levels_75_at_top():
 
 
 def rates_producing_exact_half_at_7dp():
-    # 3/8 vs 7/8 -> ratio 0.428571428...; also exercises 6dp truncation.
+    # 128 Male (64 score 90.0, rest 10.0) and 128 Female (1 scores 90.0, rest 10.0).
+    # The median is 10.0, so the rates are 0.5 and 1/128 = 0.0078125, which Python
+    # rounds half-to-even to 0.007812 (round-half-up would give 0.007813).
     out = []
-    for i in range(16):
-        sex = "Male" if i < 8 else "Female"
-        above = (i % 8) < (7 if sex == "Male" else 3)
-        out.append({"sex": sex, "score": 90.0 if above else 10.0})
+    for i in range(128):
+        out.append({"sex": "Male", "score": 90.0 if i < 64 else 10.0})
+    for i in range(128):
+        out.append({"sex": "Female", "score": 90.0 if i < 1 else 10.0})
     return out
 
 
