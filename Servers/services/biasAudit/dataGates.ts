@@ -9,8 +9,11 @@
  * means the in-app view may show them with the finding attached, but the
  * PDF is withheld: an exported document outlives the context that explains
  * its caveats.
+ *
+ * Records arrive with canonical keys (see RECORD_KEYS); the dataset parser maps
+ * uploaded columns onto them. The gates read the same keys the engine does.
  */
-import { detectDegenerateMedian } from "./engine";
+import { RECORD_KEYS, detectDegenerateMedian } from "./engine";
 import type { AuditRecord, BiasAuditConfig } from "./engine";
 
 export type GateSeverity = "stop" | "warn";
@@ -81,7 +84,7 @@ export function runDataGates(records: AuditRecord[], config: BiasAuditConfig): G
 
   // Selection rate: every record selected or none.
   if (config.metric === "selection_rate" && total > 0) {
-    const selected = records.filter((r) => Boolean(r[config.outcomeColumn])).length;
+    const selected = records.filter((r) => Boolean(r[RECORD_KEYS.selected])).length;
     if (selected === 0 || selected === total) {
       findings.push({
         code: "all_or_none_selected",
@@ -90,15 +93,15 @@ export function runDataGates(records: AuditRecord[], config: BiasAuditConfig): G
           selected === total
             ? `All ${withThousands(total)} records are selected. Every group has the same rate, so there is nothing to compare.`
             : `None of the ${withThousands(total)} records is selected. Every group has a rate of zero, so there is nothing to compare.`,
-        detail: { column: config.outcomeColumn, selected, total },
+        detail: { column: RECORD_KEYS.selected, selected, total },
       });
     }
   }
 
   // Scoring rate: score granularity and the degenerate median.
-  if (config.metric === "scoring_rate" && config.scoreColumn) {
+  if (config.metric === "scoring_rate") {
     const values = records
-      .map((r) => r[config.scoreColumn as string])
+      .map((r) => r[RECORD_KEYS.score])
       .filter((v) => !isBlank(v))
       .map(Number)
       .filter((v) => Number.isFinite(v));
@@ -111,11 +114,11 @@ export function runDataGates(records: AuditRecord[], config: BiasAuditConfig): G
           `The score column has ${distinctValues} distinct value(s). With so few values ` +
           `many records tie at the median, and a rate defined as scoring above it ` +
           `depends heavily on where the ties fall.`,
-        detail: { column: config.scoreColumn, distinctValues },
+        detail: { column: RECORD_KEYS.score, distinctValues },
       });
     }
 
-    const degenerate = detectDegenerateMedian(records, config.scoreColumn);
+    const degenerate = detectDegenerateMedian(records, RECORD_KEYS.score);
     if (degenerate) {
       const stats =
         `${withThousands(degenerate.above)} of ${withThousands(degenerate.total)} records ` +
@@ -129,7 +132,7 @@ export function runDataGates(records: AuditRecord[], config: BiasAuditConfig): G
             ? `${stats}. No scoring rate can be computed from this dataset.`
             : `${stats}, under the ${percent(degenerate.floor)} floor. ` +
               `Ratios resting on so few records are not a reliable basis for conclusions.`,
-        detail: { column: config.scoreColumn, ...degenerate },
+        detail: { column: RECORD_KEYS.score, ...degenerate },
       });
     }
   }

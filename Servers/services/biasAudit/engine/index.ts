@@ -1,6 +1,7 @@
 import { computeCategoryTable } from "./categoryTable";
 import { computeFairnessMetricsTable } from "./fairnessMetrics";
 import { computeIntersectionalTable } from "./intersectional";
+import { RECORD_KEYS } from "./recordKeys";
 import { round6, roundHalfEven } from "./round";
 import { computeScoreDistributionTable } from "./scoreDistribution";
 import { aboveMedian, detectDegenerateMedian, overallMedian } from "./scoringRate";
@@ -16,6 +17,7 @@ import type {
 export { computeCategoryTable } from "./categoryTable";
 export { computeFairnessMetricsTable } from "./fairnessMetrics";
 export { computeIntersectionalTable } from "./intersectional";
+export { RECORD_KEYS } from "./recordKeys";
 export { round6 } from "./round";
 export { computeScoreDistributionTable, ksTwoSample } from "./scoreDistribution";
 export {
@@ -89,9 +91,9 @@ export function computeBiasAudit(
   };
 
   if (metric === "selection_rate") {
-    totalSelected = records.filter((r) => Boolean(r.selected)).length;
+    totalSelected = records.filter((r) => Boolean(r[RECORD_KEYS.selected])).length;
     overallRate = totalApplicants > 0 ? totalSelected / totalApplicants : 0;
-    const rateOf = (r: AuditRecord) => Boolean(r.selected);
+    const rateOf = (r: AuditRecord) => Boolean(r[RECORD_KEYS.selected]);
 
     for (const [categoryKey, categoryConfig] of Object.entries(config.categories)) {
       countTable(
@@ -120,14 +122,16 @@ export function computeBiasAudit(
       );
     }
   } else if (metric === "scoring_rate") {
-    median = overallMedian(records, "score");
+    median = overallMedian(records, RECORD_KEYS.score);
     if (median === null) {
       throw new Error("Scoring rate mode requires a score column with numeric values.");
     }
-    const scored = records.filter((r) => r.score !== null && r.score !== undefined);
-    totalSelected = scored.filter((r) => Number(r.score) > median!).length;
+    const scored = records.filter(
+      (r) => r[RECORD_KEYS.score] !== null && r[RECORD_KEYS.score] !== undefined,
+    );
+    totalSelected = scored.filter((r) => Number(r[RECORD_KEYS.score]) > median!).length;
     overallRate = scored.length > 0 ? totalSelected / scored.length : 0;
-    const rateOf = aboveMedian(median, "score");
+    const rateOf = aboveMedian(median, RECORD_KEYS.score);
 
     for (const [categoryKey, categoryConfig] of Object.entries(config.categories)) {
       countTable(
@@ -158,11 +162,13 @@ export function computeBiasAudit(
       );
     }
   } else if (metric === "fairness_metrics") {
-    const hasBoth = records.some((r) => "prediction" in r && "ground_truth" in r);
+    const hasBoth = records.some(
+      (r) => RECORD_KEYS.prediction in r && RECORD_KEYS.groundTruth in r,
+    );
     if (!hasBoth) {
       throw new Error("Fairness metrics mode requires both prediction and ground_truth columns.");
     }
-    totalSelected = records.filter((r) => Boolean(r.prediction)).length;
+    totalSelected = records.filter((r) => Boolean(r[RECORD_KEYS.prediction])).length;
     overallRate = totalApplicants > 0 ? totalSelected / totalApplicants : 0;
 
     for (const [categoryKey, categoryConfig] of Object.entries(config.categories)) {
@@ -181,7 +187,7 @@ export function computeBiasAudit(
   }
 
   // Score distributions run whenever score data is present, regardless of metric.
-  if (records.some((r) => r.score !== null && r.score !== undefined)) {
+  if (records.some((r) => r[RECORD_KEYS.score] !== null && r[RECORD_KEYS.score] !== undefined)) {
     for (const [categoryKey, categoryConfig] of Object.entries(config.categories)) {
       const distTable = computeScoreDistributionTable({
         records,
@@ -193,7 +199,7 @@ export function computeBiasAudit(
   }
 
   const degenerateMedian =
-    metric === "scoring_rate" ? detectDegenerateMedian(records, "score") : null;
+    metric === "scoring_rate" ? detectDegenerateMedian(records, RECORD_KEYS.score) : null;
 
   const summaryParts = [
     `Audit analyzed ${withThousands(totalApplicants)} applicants ` +

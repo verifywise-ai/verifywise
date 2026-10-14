@@ -57,6 +57,15 @@ describe("hard stops", () => {
     expect(codes(runDataGates(records, config))).toContain("all_or_none_selected");
   });
 
+  it("reads the canonical selected key even when outcomeColumn names another column", () => {
+    const renamed: BiasAuditConfig = { ...config, outcomeColumn: "hired" };
+    const records = [...Array(50)].map((_, i) => ({
+      sex: i % 2 ? "Male" : "Female",
+      selected: true,
+    }));
+    expect(codes(runDataGates(records, renamed))).toContain("all_or_none_selected");
+  });
+
   it("passes a clean dataset with no findings", () => {
     const records = [...Array(200)].map((_, i) => ({
       sex: i % 2 ? "Male" : "Female",
