@@ -1,3 +1,4 @@
+import { groupValue } from "./groupValue";
 import { round6 } from "./round";
 import type { AuditRecord, ConfusionMatrixGroupResult, FairnessMetricsTable } from "./types";
 
@@ -26,12 +27,12 @@ export function computeFairnessMetricsTable(args: FairnessMetricsArgs): Fairness
 
   const groups = new Map<string, AuditRecord[]>();
   for (const record of records) {
-    const groupName = String(record[categoryKey] ?? "");
-    if (!groupName) continue;
+    const name = groupValue(record, categoryKey);
+    if (name === null) continue;
     if (!("prediction" in record) || !("ground_truth" in record)) continue;
-    const list = groups.get(groupName) ?? [];
+    const list = groups.get(name) ?? [];
     list.push(record);
-    groups.set(groupName, list);
+    groups.set(name, list);
   }
 
   const groupResults: ConfusionMatrixGroupResult[] = [];

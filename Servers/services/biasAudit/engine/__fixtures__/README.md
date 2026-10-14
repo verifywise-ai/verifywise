@@ -14,4 +14,6 @@ regenerate to make a failing test pass.
 behaviour where the median equals the modal value — every rate 0.0, every impact ratio null,
 and a summary reading "No adverse impact flags detected." The TypeScript port reproduces the
 arithmetic and additionally returns a `degenerateMedian` diagnostic so callers can refuse to
-present it as a result. See the port's `scoringRate.ts` and Task 3 of the plan.
+present it as a result. Its summary also differs: it states why no ratio was computed instead
+of reporting an absence of flags, here and wherever a table has no reference group (for
+example `selection_rate_none_selected`). See the port's `engine/index.ts`.

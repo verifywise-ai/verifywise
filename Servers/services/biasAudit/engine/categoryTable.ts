@@ -1,3 +1,4 @@
+import { groupValue } from "./groupValue";
 import { applyImpactRatios } from "./impactRatios";
 import { round6 } from "./round";
 import type { AuditRecord, CategoryTable, GroupResult } from "./types";
@@ -38,12 +39,12 @@ export function computeCategoryTable(args: CategoryTableArgs): CategoryTable {
 
   const groups = new Map<string, { applicants: number; selected: number }>();
   for (const record of records) {
-    const groupName = String(record[categoryKey] ?? "");
-    if (!groupName) continue;
-    const entry = groups.get(groupName) ?? { applicants: 0, selected: 0 };
+    const name = groupValue(record, categoryKey);
+    if (name === null) continue;
+    const entry = groups.get(name) ?? { applicants: 0, selected: 0 };
     entry.applicants += 1;
     if (rateOf(record)) entry.selected += 1;
-    groups.set(groupName, entry);
+    groups.set(name, entry);
   }
 
   const rows: GroupResult[] = [];

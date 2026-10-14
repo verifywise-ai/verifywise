@@ -122,6 +122,27 @@ describe("computeCategoryTable against the Python oracle", () => {
     expect(c.records.length).toBe(100);
   });
 
+  // Final review M3: one definition of blank, shared with the data gates. A
+  // whitespace-only value is blank, not a group named " ". This diverges from
+  // the Python, which treats " " as a group; no oracle case contains one.
+  it("treats a whitespace-only group name as blank", () => {
+    const records = [
+      ...[...Array(4)].map(() => ({ sex: " ", selected: true })),
+      { sex: "Male", selected: true },
+      { sex: "Female", selected: false },
+    ];
+    const table = computeCategoryTable({
+      records,
+      categoryKey: "sex",
+      categoryLabel: "Sex",
+      totalApplicants: records.length,
+      threshold: 0.8,
+      smallSampleExclusion: null,
+      rateOf: (r) => Boolean(r.selected),
+    });
+    expect(table.rows.map((r) => r.categoryName)).toEqual(["Female", "Male"]);
+  });
+
   // Review Focus 2
   it("makes a lone group its own reference, but the ratio is not exactly 1", () => {
     const c = byName("selection_rate_single_group");

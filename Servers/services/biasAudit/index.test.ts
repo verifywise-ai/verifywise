@@ -80,6 +80,131 @@ describe("runAudit", () => {
     expect(outcome.result).not.toBeNull();
   });
 
+  // Final review C1: all-or-none within a category, not only across the file.
+  it("stops when every selected record lacks a value for a category", () => {
+    const records: Record<string, unknown>[] = [];
+    for (let i = 0; i < 100; i++) {
+      const hasSex = i % 5 < 3; // 60 of 100 carry a sex
+      records.push({
+        sex: hasSex ? (i % 2 ? "Male" : "Female") : "",
+        selected: !hasSex && i < 75, // 15 selected, all with blank sex
+      });
+    }
+    const outcome = runAudit(records, config, ["sex"]);
+    const f = outcome.gates.findings.find(
+      (x) => x.code === "all_or_none_selected" && x.detail?.column === "sex",
+    );
+    expect(f).toBeDefined();
+    expect(f!.severity).toBe("stop");
+    expect(f!.detail).toMatchObject({ column: "sex", selected: 0, withValue: 60 });
+    expect(outcome.result).toBeNull();
+  });
+
+  // Final review I1 and M3: blank demographic values are counted, reported
+  // and passed to the engine; whitespace-only counts as blank everywhere.
+  it("counts records with a blank demographic value and reports them", () => {
+    const records: Record<string, unknown>[] = [];
+    for (let i = 0; i < 100; i++) {
+      records.push({
+        sex: i < 45 ? (i % 3 === 0 ? " " : "") : i % 2 ? "Male" : "Female",
+        selected: i % 4 === 0,
+      });
+    }
+    const outcome = runAudit(records, config, []);
+    const f = outcome.gates.findings.find((x) => x.code === "demographic_values_missing");
+    expect(f).toBeDefined();
+    expect(f!.severity).toBe("note");
+    expect(f!.detail).toMatchObject({ unknownRecords: 45, byColumn: { sex: 45 } });
+    // A note informs; it does not withhold the PDF.
+    expect(outcome.gates.mayExportPdf).toBe(true);
+    expect(outcome.result!.unknownCount).toBe(45);
+    expect(outcome.result!.summary).toContain("45 rows excluded due to missing data.");
+    expect(outcome.result!.tables[0].rows.map((r) => r.categoryName)).toEqual(["Female", "Male"]);
+  });
+
+  // Final review I2: preconditions the engine would throw on are stops.
+  it("returns a stop, not a throw, when scoring mode has no numeric score", () => {
+    const records = [...Array(20)].map((_, i) => ({ sex: i % 2 ? "Male" : "Female" }));
+    const scoring = { ...config, metric: "scoring_rate", scoreColumn: "score" };
+    const outcome = runAudit(records, scoring, ["sex"]);
+    expect(outcome.gates.findings.map((x) => x.code)).toContain("score_column_empty");
+    expect(outcome.result).toBeNull();
+  });
+
+  it("returns a stop, not a throw, when fairness mode lacks its columns", () => {
+    const records = [...Array(20)].map((_, i) => ({ sex: i % 2 ? "Male" : "Female" }));
+    const fairness = { ...config, metric: "fairness_metrics" };
+    const outcome = runAudit(records, fairness, ["sex"]);
+    expect(outcome.gates.findings.map((x) => x.code)).toContain("fairness_columns_missing");
+    expect(outcome.result).toBeNull();
+  });
+
+  // Final review M2: every finding message, all five forbidden words.
+  it("never uses forbidden vocabulary in any finding message", () => {
+    const scoring = { ...config, metric: "scoring_rate", scoreColumn: "score" };
+    const inter = {
+      ...config,
+      categories: {
+        sex: { label: "Sex", groups: [] },
+        race_ethnicity: { label: "Race/Ethnicity", groups: [] },
+      },
+      intersectional: { required: true, cross: ["sex", "race_ethnicity"] },
+      smallSampleExclusion: null,
+    };
+    const scenarios: Array<[any, Record<string, unknown>[], string[]]> = [
+      [config, [...Array(10)].map(() => ({ sex: "", selected: true })), ["sex"]],
+      [config, [...Array(10)].map(() => ({ sex: "Male", selected: false })), ["sex"]],
+      [
+        scoring,
+        [...Array(100)].map((_, i) => ({ sex: i % 2 ? "Male" : "Female", score: i < 75 ? 3 : 1 })),
+        ["sex"],
+      ],
+      [
+        scoring,
+        [...Array(100)].map((_, i) => ({ sex: i % 2 ? "Male" : "Female", score: i < 3 ? 2 : 1 })),
+        ["sex"],
+      ],
+      [scoring, [...Array(10)].map((_, i) => ({ sex: i % 2 ? "Male" : "Female" })), ["sex"]],
+      [
+        { ...config, metric: "fairness_metrics" },
+        [...Array(10)].map((_, i) => ({ sex: i % 2 ? "Male" : "Female" })),
+        ["sex"],
+      ],
+      [
+        inter,
+        [...Array(1000)].map((_, i) => ({
+          sex: i < 5 ? "Female" : i < 600 ? "Male" : i < 900 ? "Female" : "",
+          race_ethnicity: i < 5 ? "Asian" : "White",
+          selected: i % 4 === 0,
+        })),
+        ["sex", "race_ethnicity"],
+      ],
+    ];
+    const seen = new Set<string>();
+    for (const [cfg, records, attrs] of scenarios) {
+      for (const f of runAudit(records, cfg, attrs).gates.findings) {
+        seen.add(f.code);
+        expect(f.message.toLowerCase()).not.toMatch(
+          /\b(compliant|certified|passed|bias-free|audited)\b/,
+        );
+      }
+    }
+    expect([...seen].sort()).toEqual(
+      [
+        "all_or_none_selected",
+        "attribute_order_clustered",
+        "cell_below_statutory_exclusion",
+        "degenerate_median",
+        "demographic_column_majority_missing",
+        "demographic_values_missing",
+        "fairness_columns_missing",
+        "fewer_than_two_groups",
+        "score_column_empty",
+        "score_granularity_low",
+      ].sort(),
+    );
+  });
+
   it("computes a result but blocks the PDF on a warning", () => {
     const inter = {
       ...config,

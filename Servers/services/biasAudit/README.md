@@ -18,6 +18,11 @@ Records arrive with canonical keys (`RECORD_KEYS`: `selected`, `score`, `predict
 `ground_truth`, plus one key per protected category). The dataset parser maps uploaded columns
 onto them before anything here runs; the engine and the gates read the same keys.
 
+Gate findings carry one of three severities. A `stop` means no figures are produced. A `warn`
+allows the in-app view but withholds the PDF. A `note` withholds nothing: it reports a fact the
+result must carry, such as the § 5-301(c) count of records in an unknown category, which
+`runAudit` also passes to the engine.
+
 ## Structure
 
 | File                          | Responsibility                                                       |
@@ -30,8 +35,9 @@ onto them before anything here runs; the engine and the gates read the same keys
 | `engine/scoreDistribution.ts` | Per-group distributions                                              |
 | `engine/round.ts`             | Python-compatible round half to even                                 |
 | `engine/recordKeys.ts`        | The canonical record keys                                            |
+| `engine/groupValue.ts`        | The one definition of a blank demographic value                      |
 | `engine/index.ts`             | `computeBiasAudit`                                                   |
-| `dataGates.ts`                | Input validation; hard stops and PDF-gating warnings                 |
+| `dataGates.ts`                | Input validation: stops, PDF-gating warnings, and notes              |
 | `idOrderCheck.ts`             | Run-count test on input ordering                                     |
 | `index.ts`                    | `runAudit`: gate, then compute; clustered ordering withholds the PDF |
 

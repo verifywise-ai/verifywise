@@ -40,29 +40,31 @@ describe("module independence", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("imports nothing from outside this module except node builtins", () => {
+  it("imports nothing from outside this module, not even node builtins", () => {
+    // Plan 1 is pure computation: every import is relative and resolves
+    // inside this directory. A relative path that climbs out ("../../utils")
+    // is as much an outside dependency as a package name.
     const offenders: string[] = [];
     for (const f of files) {
       const src = fs.readFileSync(f, "utf8");
-      for (const m of src.matchAll(/from\s+["']([^"']+)["']/g)) {
+      for (const m of src.matchAll(/(?:from|import)\s+["']([^"']+)["']/g)) {
         const spec = m[1];
-        if (spec.startsWith(".")) continue;
-        if (spec.startsWith("node:")) continue;
-        offenders.push(`${path.relative(MODULE, f)}: ${spec}`);
+        const inside =
+          spec.startsWith(".") && path.resolve(path.dirname(f), spec).startsWith(MODULE + path.sep);
+        if (!inside) offenders.push(`${path.relative(MODULE, f)}: ${spec}`);
       }
     }
-    // Plan 1 is pure computation: no third-party runtime dependency at all.
     expect(offenders).toEqual([]);
   });
 
   it("performs no I/O", () => {
-    const io = /\b(sequelize|fetch|axios|https?\.request|fs\.(read|write)|process\.env)\b/;
+    const io = /\b(sequelize|fetch|axios|https?\.request|process\.env)\b|\bfs\.\w+/;
     const offenders = files.filter((f) => io.test(fs.readFileSync(f, "utf8")));
     expect(offenders).toEqual([]);
   });
 
   it("never embeds forbidden vocabulary in source strings", () => {
-    const forbidden = ["compliant", "certified", "bias-free"];
+    const forbidden = ["compliant", "certified", "passed", "bias-free", "audited"];
     const offenders: string[] = [];
     for (const f of files) {
       const src = fs.readFileSync(f, "utf8").toLowerCase();

@@ -1,3 +1,4 @@
+import { groupValue } from "./groupValue";
 import { round6 } from "./round";
 import type { AuditRecord, ScoreDistributionTable, ScoreDistributionGroup } from "./types";
 
@@ -124,11 +125,11 @@ export function computeScoreDistributionTable(args: ScoreDistributionArgs): Scor
   for (const r of records) {
     const v = r.score;
     if (v === null || v === undefined) continue;
-    const groupName = String(r[categoryKey] ?? "");
-    if (!groupName) continue;
-    const list = grouped.get(groupName) ?? [];
+    const name = groupValue(r, categoryKey);
+    if (name === null) continue;
+    const list = grouped.get(name) ?? [];
     list.push(Number(v));
-    grouped.set(groupName, list);
+    grouped.set(name, list);
   }
 
   const sortedOverall = [...overallScores].sort((a, b) => a - b);

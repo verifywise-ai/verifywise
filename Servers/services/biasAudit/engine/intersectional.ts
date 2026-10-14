@@ -1,3 +1,4 @@
+import { groupValue } from "./groupValue";
 import { applyImpactRatios } from "./impactRatios";
 import { round6 } from "./round";
 import type { AuditRecord, CategoryTable, GroupResult } from "./types";
@@ -35,8 +36,9 @@ export function computeIntersectionalTable(args: IntersectionalArgs): CategoryTa
 
   const groups = new Map<string, { applicants: number; selected: number }>();
   for (const record of records) {
-    const parts = crossKeys.map((k) => String(record[k] ?? ""));
-    if (parts.some((p) => !p)) continue;
+    const names = crossKeys.map((k) => groupValue(record, k));
+    if (names.some((p) => p === null)) continue;
+    const parts = names as string[];
     // Python joins with " - " (engine.py:291), not a bare space. The cell
     // name is also the sort key, so a wrong separator changes ordering and
     // with it which cell becomes the reference.

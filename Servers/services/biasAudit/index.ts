@@ -1,6 +1,6 @@
 import { computeBiasAudit } from "./engine";
 import type { AuditRecord, BiasAuditConfig, BiasAuditResult } from "./engine/types";
-import { runDataGates, type GateFinding, type GateResult } from "./dataGates";
+import { countUnknown, runDataGates, type GateFinding, type GateResult } from "./dataGates";
 import { checkIdOrder, type OrderFinding } from "./idOrderCheck";
 
 export interface AuditOutcome {
@@ -56,13 +56,15 @@ export function runAudit(
     mayExportPdf: dataGates.mayExportPdf && orderFindings.length === 0,
   };
 
-  const result = gates.mayComputeRatios ? computeBiasAudit(records, config) : null;
+  // § 5-301(c) requires the count assessed but in an unknown category.
+  const unknown = countUnknown(records, config).unknownRecords;
+  const result = gates.mayComputeRatios ? computeBiasAudit(records, config, unknown) : null;
   return { gates, order, result };
 }
 
 export { computeBiasAudit, RECORD_KEYS } from "./engine";
-export { runDataGates } from "./dataGates";
+export { countUnknown, runDataGates } from "./dataGates";
 export { checkIdOrder, countRuns, expectedRuns } from "./idOrderCheck";
 export type { AuditRecord, BiasAuditConfig, BiasAuditResult } from "./engine/types";
-export type { GateFinding, GateResult, GateSeverity } from "./dataGates";
+export type { GateFinding, GateResult, GateSeverity, UnknownCounts } from "./dataGates";
 export type { OrderFinding } from "./idOrderCheck";

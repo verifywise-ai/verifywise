@@ -164,6 +164,32 @@ describe("diagnostics", () => {
   });
 });
 
+describe("summary backstop when no ratio is computable", () => {
+  // Final review C1: every selected record lacks a sex, so every sex rate is
+  // 0 and every ratio null. The summary must not read as a clean result.
+  it("does not report an absence of flags for a table with no reference rate", () => {
+    const records: Record<string, unknown>[] = [];
+    for (let i = 0; i < 100; i++) {
+      const hasSex = i % 5 < 3;
+      records.push({
+        sex: hasSex ? (i % 2 ? "Male" : "Female") : "",
+        selected: !hasSex && i < 75,
+      });
+    }
+    const got = computeBiasAudit(records, toConfig(all[0].config));
+    expect(got.tables[0].rows.every((r) => r.impactRatio === null)).toBe(true);
+    expect(got.summary).not.toContain("No adverse impact");
+    expect(got.summary).toContain("No impact ratio could be computed for impact ratios by sex");
+  });
+
+  it("does not report an absence of flags when no category is configured", () => {
+    const c = all.find((x) => x.name === "selection_rate_balanced")!;
+    const got = computeBiasAudit(c.records, { ...toConfig(c.config), categories: {} });
+    expect(got.tables).toHaveLength(0);
+    expect(got.summary).not.toContain("No adverse impact");
+  });
+});
+
 describe("summary text", () => {
   it("never claims a clean result when nothing was computed", () => {
     const c = all.find((x) => x.name === "scoring_rate_median_equals_mode")!;

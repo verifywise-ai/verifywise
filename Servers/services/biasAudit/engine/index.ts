@@ -17,6 +17,7 @@ import type {
 export { computeCategoryTable } from "./categoryTable";
 export { computeFairnessMetricsTable } from "./fairnessMetrics";
 export { computeIntersectionalTable } from "./intersectional";
+export { groupValue } from "./groupValue";
 export { RECORD_KEYS } from "./recordKeys";
 export { round6 } from "./round";
 export { computeScoreDistributionTable, ksTwoSample } from "./scoreDistribution";
@@ -60,12 +61,18 @@ function twoDecimals(x: number): string {
  * Like the Python, it reads those literal keys rather than the configured
  * column names, so a caller maps its columns before calling.
  *
- * ONE deliberate divergence from the Python, in the summary text only. Where
- * the median coincides with a modal value the Python reports "No adverse
- * impact flags detected" despite having computed nothing; this states that no
- * scoring rate could be computed, and why. The arithmetic is identical and
- * the condition is also returned in `diagnostics` so a caller can refuse to
- * present the run as a result.
+ * Deliberate divergences from the Python, all in the summary text; the
+ * arithmetic is identical. Where the Python reports "No adverse impact flags
+ * detected" for a computation that produced no ratios, this says why instead:
+ *
+ *  - a degenerate median: none, or too few, of the records score above it
+ *    (the condition is also returned in `diagnostics`);
+ *  - a table with no reference group, because no group with a value has a
+ *    non-zero rate;
+ *  - no protected category configured at all.
+ *
+ * Group names also differ in one respect: a whitespace-only value is blank
+ * (see groupValue.ts), where the Python treats it as a group.
  */
 export function computeBiasAudit(
   records: AuditRecord[],
@@ -230,12 +237,25 @@ export function computeBiasAudit(
       );
     }
   } else if (metric === "selection_rate" || metric === "scoring_rate") {
+    // The second divergence. A table whose highest rate is zero has no
+    // reference group, so it holds no ratios and therefore no flags; the
+    // Python still reports "No adverse impact flags detected" for it.
+    const noReference = tables.filter((t) => !t.highestRate);
     if (totalFlags > 0) {
       summaryParts.push(
         `${totalFlags} group(s) flagged with impact ratio below ` +
           `${twoDecimals(config.threshold || 0.8)} threshold.`,
       );
-    } else {
+    }
+    if (tables.length === 0) {
+      summaryParts.push("No impact ratios were computed: no protected category is configured.");
+    } else if (noReference.length > 0) {
+      const titles = noReference.map((t) => t.title.charAt(0).toLowerCase() + t.title.slice(1));
+      summaryParts.push(
+        `No impact ratio could be computed for ${titles.join("; ")}: ` +
+          `no group with a value has a non-zero rate.`,
+      );
+    } else if (totalFlags === 0) {
       summaryParts.push("No adverse impact flags detected.");
     }
   }
