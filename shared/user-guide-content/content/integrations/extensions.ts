@@ -203,7 +203,7 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Imports the model deployments in an Azure AI Foundry project. Agent discovery also uses this connection as one of its sources.',
+      text: 'Imports the model deployments in an Azure AI Foundry project. The AI agents page also uses this connection as one of its sources.',
     },
     {
       type: 'ordered-list',
@@ -303,7 +303,7 @@ export const extensionsContent: ArticleContent = {
         { text: 'Fill in **JIRA Base URL**, then **Workspace ID** (Cloud) or **Insight Object Schema ID** (Data Center), then **Email** and **API Token** (Cloud) or **Username** and **Password / Token** (Data Center).' },
         { text: 'Click **Test Connection**, then **Save Configuration**.' },
         { text: 'Pick the **Schema** and the **Object Type (AI Systems)** to import from.' },
-        { text: 'In the **Import & Sync** section, click **Import**, select the objects you want and click **Import N Selected**.' },
+        { text: 'In the **Import & Sync** section, click **Import**, select the objects you want and click **Import N Selected**. The list shows up to 1,000 objects at a time; if Jira has more, click **Load more**.' },
       ],
     },
     {
@@ -312,9 +312,15 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'callout',
+      variant: 'info',
+      title: 'Automatic sync',
+      text: 'Under **Step 3: Sync Settings**, turn on **Enable automatic sync** and pick a **Sync Interval** (every hour up to every 48 hours). Both are saved as soon as you change them; if saving fails, the settings switch back to what was last saved and an error appears. On that interval, counted from the last sync, VerifyWise refreshes the use cases you have imported with their latest details from Jira. Automatic sync never imports new objects. **Sync Now** runs in the background (the button shows progress and the result appears when it finishes) and also imports new objects of the selected type. Automatic sync starts after at least one use case has been imported and stops while the extension is disabled. Only one sync or import runs at a time; if one is already running you see "A sync is already running". Only Admins can change these settings or run a sync.',
+    },
+    {
+      type: 'callout',
       variant: 'warning',
-      title: 'Syncing is manual',
-      text: 'The panel shows an "Enable automatic sync" setting with a "Sync Interval", but scheduled syncing doesn\'t run yet. Click **Sync Now** whenever you want to pull changes from Jira.',
+      title: 'Syncs never delete use cases',
+      text: 'No sync, manual or automatic, removes a use case. When a sync has received every object of the type from Jira and an imported object is no longer there, the use case is flagged instead: it appears under **Missing in Jira** in the panel, with the date it went missing, and its overview shows a **Missing in Jira** chip. If the object comes back in Jira, the next sync clears the flag. To delete flagged use cases, an Admin ticks them in the list (nothing is selected by default; there is also a select-all), clicks **Remove selected use cases** and confirms; this permanently deletes those use cases and their data in VerifyWise. A use case that a sync found again in the meantime is not removed. A sync only flags use cases imported from the object type it is syncing, so changing the object type never flags the use cases imported from the previous one.',
     },
     {
       type: 'heading',

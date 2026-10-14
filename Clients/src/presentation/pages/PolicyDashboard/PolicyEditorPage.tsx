@@ -200,7 +200,7 @@ export default function PolicyEditorPage() {
           if (cancelled) return;
           setPolicy(fetchedPolicy);
         }
-      } catch (err: any) {
+      } catch {
         if (!cancelled) {
           setLoadError(id ? "Failed to load policy. It may not exist." : "Failed to load tags.");
         }

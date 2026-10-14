@@ -124,7 +124,7 @@ export default function EndpointsPage() {
   };
 
   const handleProviderSelect = (provider: string) => {
-    setForm((p) => ({ ...p, provider, model: "" }));
+    setForm((p) => ({ ...p, provider, model: "", api_key_id: "" }));
   };
 
   const handleModelSelect = (model: string) => {
@@ -230,7 +230,7 @@ export default function EndpointsPage() {
   };
 
   const apiKeyItems = apiKeys
-    .filter((k) => k.is_active)
+    .filter((k) => k.is_active && (!form.provider || k.provider === form.provider))
     .map((k) => ({ _id: String(k.id), name: `${k.key_name} (${k.provider})` }));
 
   const promptName = (id: number | null) => {

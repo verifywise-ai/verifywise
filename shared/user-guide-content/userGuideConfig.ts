@@ -160,9 +160,9 @@ export const collections: Collection[] = [
       },
       {
         id: 'agent-discovery',
-        title: 'Agent discovery',
+        title: 'AI agents',
         description: 'Discover and manage service accounts, technical users, and system identities across connected source systems.',
-        keywords: ['agent', 'discovery', 'service account', 'identity', 'technical user', 'non-human', 'permissions'],
+        keywords: ['agent', 'ai agents', 'discovery', 'service account', 'identity', 'technical user', 'non-human', 'permissions', 'owners'],
       },
       {
         id: 'project-overview',
@@ -720,8 +720,8 @@ export const collections: Collection[] = [
       {
         id: 'role-configuration',
         title: 'Role configuration',
-        description: 'Understand Admin, Editor, and Viewer roles.',
-        keywords: ['role', 'permission', 'admin', 'editor', 'viewer', 'access'],
+        description: 'Understand the Admin, Reviewer, Editor and Auditor roles.',
+        keywords: ['role', 'permission', 'admin', 'reviewer', 'editor', 'auditor', 'access'],
       },
       {
         id: 'notifications',

@@ -9,6 +9,7 @@ import {
 } from "sequelize-typescript";
 import { IApprovalWorkflowAttributes } from "../../interfaces/i.approvalWorkflow";
 import { EntityType } from "../../enums/approval-workflow.enum";
+import { AiRiskClassification } from "../../enums/ai-risk-classification.enum";
 import { UserModel } from "../user/user.model";
 import { ApprovalWorkflowStepModel } from "./approvalWorkflowStep.model";
 
@@ -45,6 +46,12 @@ export class ApprovalWorkflowModel
     allowNull: true,
   })
   description?: string;
+
+  @Column({
+    type: DataType.STRING(50),
+    allowNull: true,
+  })
+  auto_approve_max_risk?: AiRiskClassification | null;
 
   @Column({
     type: DataType.BOOLEAN,

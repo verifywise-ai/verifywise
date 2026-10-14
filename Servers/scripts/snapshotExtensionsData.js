@@ -39,6 +39,8 @@ const DATA_TABLES = [
   "jira_assets_config",
   "jira_assets_use_cases",
   "jira_assets_sync_history",
+  "extension_sync_settings",
+  "extension_sync_runs",
   "slack_webhooks",
   "mlflow_integrations",
   "mlflow_model_records",

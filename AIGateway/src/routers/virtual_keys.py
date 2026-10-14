@@ -10,7 +10,6 @@ from crud.virtual_keys import (
     revoke_virtual_key,
     update_virtual_key,
 )
-from middlewares.auth import verify_internal_key
 from utils.auth import get_org_id, get_user_id, require_admin
 from utils.notifications import notify_config_change
 
@@ -23,7 +22,6 @@ router = APIRouter(prefix="/virtual-keys", tags=["virtual-keys"])
 
 @router.get("", status_code=status.HTTP_200_OK)
 async def list_virtual_keys(request: Request):
-    verify_internal_key(request)
     org_id = get_org_id(request)
 
     keys = await get_all_virtual_keys(org_id)
@@ -36,7 +34,6 @@ async def list_virtual_keys(request: Request):
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_key(request: Request):
-    verify_internal_key(request)
     require_admin(request)
 
     body: dict[str, Any] = await request.json()
@@ -137,7 +134,6 @@ async def create_key(request: Request):
 
 @router.patch("/{key_id}", status_code=status.HTTP_200_OK)
 async def update_key(key_id: int, request: Request):
-    verify_internal_key(request)
     require_admin(request)
 
     body: dict[str, Any] = await request.json()
@@ -265,7 +261,6 @@ async def update_key(key_id: int, request: Request):
 
 @router.post("/{key_id}/revoke", status_code=status.HTTP_200_OK)
 async def revoke_key(key_id: int, request: Request):
-    verify_internal_key(request)
     require_admin(request)
 
     org_id = get_org_id(request)
@@ -297,7 +292,6 @@ async def revoke_key(key_id: int, request: Request):
 
 @router.delete("/{key_id}", status_code=status.HTTP_200_OK)
 async def delete_key(key_id: int, request: Request):
-    verify_internal_key(request)
     require_admin(request)
 
     org_id = get_org_id(request)
@@ -333,7 +327,6 @@ async def reset_all_virtual_key_budgets(request: Request):
     from sqlalchemy import text
     from database.db import get_db
 
-    verify_internal_key(request)
     async with get_db() as db:
         await db.execute(
             text("UPDATE ai_gateway_virtual_keys SET current_spend_usd = 0, updated_at = NOW()")

@@ -1,5 +1,5 @@
 import { IStatusData } from "../types/interfaces/i.chart";
-import { status, risk, text } from "../themes/palette";
+import { accent, status, risk, text } from "../themes/palette";
 
 // Color schemes for different entity statuses
 export const statusColorSchemes = {
@@ -7,7 +7,7 @@ export const statusColorSchemes = {
   models: {
     development: status.info.text,
     training: status.warning.text,
-    validation: "#8B5CF6",
+    validation: accent.purple.text,
     production: status.success.text,
   },
 

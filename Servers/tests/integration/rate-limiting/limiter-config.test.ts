@@ -79,6 +79,11 @@ const PRODUCTION = {
     maxRequests: 10,
     message: "Too many AI detection scan requests from this IP, please try again after 60 minutes",
   },
+  riskSuggestionsAi: {
+    windowMinutes: 60,
+    maxRequests: 10,
+    message: "Too many AI risk suggestion requests, please try again after 60 minutes",
+  },
   mrmIngestion: {
     windowMinutes: 15,
     maxRequests: 5000,
@@ -142,6 +147,7 @@ const RELAXED_MAX_REQUESTS: Record<string, number> = {
   invitationResend: 5, // deliberately not relaxed
   slackWebhookCreate: 10, // deliberately not relaxed
   slackWorkspaceCreate: 10, // deliberately not relaxed
+  riskSuggestionsAi: 10, // deliberately not relaxed — every call is a paid LLM request
   healthCheck: 100000,
 };
 
@@ -163,12 +169,14 @@ describe("production rate limit configuration", () => {
     expect(actual.message).toBe(expected.message);
   });
 
-  it("keys every limiter by IP except MRM ingestion", () => {
+  it("keys every limiter by IP except MRM ingestion and AI risk suggestions", () => {
     // A custom keyGenerator is a security-relevant choice: it decides who shares a
-    // budget. MRM ingestion keys by token on purpose (shared-NAT pipelines); a
-    // keyGenerator appearing anywhere else is a change that needs review.
+    // budget. MRM ingestion keys by token on purpose (shared-NAT pipelines), and
+    // riskSuggestionsAi keys by user on purpose (each request spends the org's own
+    // LLM budget). A keyGenerator appearing anywhere else is a change that needs
+    // review.
     const withCustomKey = Object.keys(configs).filter((key) => configs[key].keyGenerator);
-    expect(withCustomKey).toEqual(["mrmIngestion"]);
+    expect(withCustomKey.sort()).toEqual(["mrmIngestion", "riskSuggestionsAi"]);
   });
 });
 

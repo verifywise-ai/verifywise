@@ -13,7 +13,7 @@ import singleTheme from "../../../themes/v1SingleTheme";
 import { ScorerRow } from "./index";
 import { CustomizableButton } from "../../button/customizable-button";
 import { brand, text, background, border as borderPalette, status } from "../../../themes/palette";
-import { displayFormattedDateTime } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 
 interface ScorersTableBodyProps {
   rows: ScorerRow[];
@@ -24,9 +24,12 @@ interface ScorersTableBodyProps {
   onDelete?: (scorer: ScorerRow) => void;
 }
 
-const formatDate = (dateStr?: string | null): string => {
+const formatTimestamp = (
+  dateStr: string | null | undefined,
+  formatDate: ReturnType<typeof useFormattedDate>,
+): string => {
   if (!dateStr) return "-";
-  return displayFormattedDateTime(dateStr);
+  return formatDate(dateStr, { includeTime: true });
 };
 
 const ScorersTableBody: React.FC<ScorersTableBodyProps> = ({
@@ -37,6 +40,7 @@ const ScorersTableBody: React.FC<ScorersTableBodyProps> = ({
   onEdit,
   onDelete,
 }) => {
+  const formatDate = useFormattedDate();
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [menuRow, setMenuRow] = useState<ScorerRow | null>(null);
 
@@ -148,7 +152,7 @@ const ScorersTableBody: React.FC<ScorersTableBodyProps> = ({
             }}
           >
             <Typography sx={{ fontSize: "12px", color: `${status.default.text}` }}>
-              {formatDate(scorer.updatedAt || scorer.createdAt)}
+              {formatTimestamp(scorer.updatedAt || scorer.createdAt, formatDate)}
             </Typography>
           </TableCell>
 

@@ -1,14 +1,21 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Drawer, Stack, Typography, Divider, IconButton, useTheme } from "@mui/material";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { Drawer, Stack, Typography, Divider, IconButton } from "@mui/material";
 import { X } from "lucide-react";
 import Field from "../../Inputs/Field";
 import SelectComponent from "../../Inputs/Select";
+import MultiSelect from "../../Inputs/MultiSelect";
 import { CustomizableButton } from "../../button/customizable-button";
+import Alert from "../../Alert";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
-import { getAllEntities } from "../../../../application/repository/entity.repository";
+import { getClientErrorReason } from "../../../../application/utils/apiErrorReason";
+import { useUserNames } from "../../../pages/AgentDiscovery/useUserNames";
+import { getAgentOwnerIds, isUserIdLike } from "../../../pages/AgentDiscovery/agentLabels";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
 import { AgentPrimitiveRow } from "../../../../domain/interfaces/i.agentDiscovery";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
+import { palette } from "../../../themes/palette";
 
 interface ManualAgentModalProps {
   isOpen: boolean;
@@ -27,20 +34,47 @@ const PRIMITIVE_TYPES = [
   { _id: "other", name: "Other" },
 ];
 
+/** The agent's owners that are user ids (everything but legacy text). */
+function getOwnerUserIds(agent: AgentPrimitiveRow): number[] {
+  return getAgentOwnerIds(agent).filter(isUserIdLike).map(Number);
+}
+
 const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
   isOpen,
   setIsOpen,
   onSuccess,
   agent,
 }) => {
-  const theme = useTheme();
   const isEditMode = Boolean(agent);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [users, setUsers] = useState<{ _id: string; name: string }[]>([]);
+  const [ownerIds, setOwnerIds] = useState<number[]>([]);
+  // Owners are sent on an edit only when the owner selection was changed, so
+  // editing the name or notes never touches the owners.
+  const [ownersChanged, setOwnersChanged] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  // True once the users list has been refetched for this opening of the form.
+  const [usersRefreshed, setUsersRefreshed] = useState(false);
+  // Owner ids still missing from the refreshed users list (e.g. deleted
+  // users). They cannot be shown in the picker, and are dropped only if the
+  // owner selection is changed and saved, so say so.
+  const [unknownOwnerIds, setUnknownOwnerIds] = useState<number[]>([]);
+  // Whether this opening's owners have been checked against the user list yet.
+  const ownersCheckedRef = useRef(false);
+  const { users: orgUsers, formatUser, refreshUsers } = useUserNames();
+  const { t } = useTranslation();
+  // A free-text owner from the old single-owner API (not a VerifyWise user).
+  // It is shown read-only; choosing owners replaces it.
+  const legacyTextOwner = useMemo(
+    () => (agent ? (getAgentOwnerIds(agent).find((v) => !isUserIdLike(v)) ?? null) : null),
+    [agent],
+  );
+  const users = useMemo(
+    () => orgUsers.map((u) => ({ _id: u.id, name: formatUser(u.id) })),
+    [orgUsers, formatUser],
+  );
   const [formData, setFormData] = useState({
     display_name: "",
     primitive_type: "",
-    owner_id: "",
     notes: "",
   });
 
@@ -57,38 +91,66 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
   const { errors, validateAll, clearFieldError, resetErrors } =
     useFormValidation<typeof formData>(validators);
 
-  const fetchUsers = useCallback(async () => {
-    try {
-      const response = await getAllEntities({ routeUrl: "/users" });
-      const usersData = Array.isArray(response?.data) ? response.data : [];
-      setUsers(
-        usersData.map((u: { id: number; name: string; surname: string }) => ({
-          _id: String(u.id),
-          name: `${u.name} ${u.surname}`.trim(),
-        })),
-      );
-    } catch (error) {
-      console.error("Failed to fetch users:", error);
-    }
-  }, []);
-
   useEffect(() => {
-    if (isOpen) {
-      fetchUsers();
-      if (agent) {
-        setFormData({
-          display_name: agent.display_name || "",
-          primitive_type: agent.primitive_type || "",
-          owner_id: agent.owner_id || "",
-          notes: agent.metadata?.notes || "",
-        });
-      }
+    if (!isOpen) return;
+    setSaveError(null);
+    setOwnersChanged(false);
+    setUnknownOwnerIds([]);
+    setUsersRefreshed(false);
+    ownersCheckedRef.current = false;
+    if (agent) {
+      setFormData({
+        display_name: agent.display_name || "",
+        primitive_type: agent.primitive_type || "",
+        notes: agent.metadata?.notes || "",
+      });
+      setOwnerIds(getOwnerUserIds(agent));
     }
-  }, [isOpen, fetchUsers, agent]);
+    // Only an edit with owners needs fresh users: refetch them, so an owner who
+    // was added since the list was cached is not mistaken for an unknown one.
+    // A new agent (or one without owners) uses the cached list.
+    if (!agent || getOwnerUserIds(agent).length === 0) {
+      setUsersRefreshed(true);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        await refreshUsers();
+      } catch {
+        // Keep the cached list; the check below still runs on it.
+      } finally {
+        if (!cancelled) setUsersRefreshed(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, agent, refreshUsers]);
+
+  // Once the refreshed users have loaded, find owner ids that are still not
+  // users. They are left out of the picker (it cannot show them), and only
+  // reach the saved owners if the selection is not changed. An empty list
+  // means the users are not loaded (an organization always has at least the
+  // current user), so wait rather than call everyone unknown.
+  useEffect(() => {
+    if (!isOpen || !agent || !usersRefreshed || ownersCheckedRef.current) return;
+    if (orgUsers.length === 0) return;
+    ownersCheckedRef.current = true;
+    const known = new Set(orgUsers.map((u) => Number(u.id)));
+    const unknown = getOwnerUserIds(agent).filter((id) => !known.has(id));
+    if (unknown.length === 0) return;
+    setUnknownOwnerIds(unknown);
+    setOwnerIds((current) => current.filter((id) => known.has(id)));
+  }, [isOpen, agent, usersRefreshed, orgUsers]);
 
   const handleClose = () => {
     setIsOpen(false);
-    setFormData({ display_name: "", primitive_type: "", owner_id: "", notes: "" });
+    setFormData({ display_name: "", primitive_type: "", notes: "" });
+    setOwnerIds([]);
+    setOwnersChanged(false);
+    setSaveError(null);
+    setUnknownOwnerIds([]);
     resetErrors();
   };
 
@@ -96,13 +158,16 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
     if (!validateAll(formData)) return;
 
     setIsSubmitting(true);
+    setSaveError(null);
     try {
-      const payload = {
+      const payload: Record<string, unknown> = {
         display_name: formData.display_name.trim(),
         primitive_type: formData.primitive_type,
-        owner_id: formData.owner_id.trim() || undefined,
         metadata: formData.notes.trim() ? { notes: formData.notes.trim() } : {},
       };
+      // A new agent always gets its owners; an edit sends them only when the
+      // owner selection was changed, so other edits leave the owners as they are.
+      if (!isEditMode || ownersChanged) payload.owner_ids = ownerIds;
 
       if (isEditMode && agent) {
         await apiServices.patch(`/agent-primitives/${agent.id}`, payload);
@@ -112,7 +177,9 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
       handleClose();
       onSuccess();
     } catch (error) {
-      console.error(`Failed to ${isEditMode ? "update" : "create"} agent:`, error);
+      // Show the server's reason for a rejected save (e.g. an owner who is not
+      // in the organization); anything else gets the generic retry message.
+      setSaveError(getClientErrorReason(error) ?? "Could not save the agent. Try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -124,7 +191,7 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
       open={isOpen}
       onClose={handleClose}
       PaperProps={{
-        sx: { width: 440, backgroundColor: theme.palette.background.modal || "#FCFCFD" },
+        sx: { width: 440, backgroundColor: palette.background.modal },
       }}
     >
       {/* Header */}
@@ -146,6 +213,9 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
 
       {/* Form content */}
       <Stack sx={{ p: "24px", gap: "20px", flex: 1, overflow: "auto" }}>
+        {saveError && (
+          <Alert variant="error" body={saveError} hasIcon={false} sx={{ position: "static" }} />
+        )}
         <Field
           id="display_name"
           label="Display name"
@@ -176,19 +246,41 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
           }}
         />
 
-        <SelectComponent
-          id="owner_id"
-          label="Owner"
-          placeholder="Select owner"
-          value={formData.owner_id}
+        <MultiSelect
+          id="owner_ids"
+          label="Owners"
+          placeholder="Select owners"
+          value={ownerIds}
           items={users}
-          onChange={(e) =>
-            setFormData((prev) => ({
-              ...prev,
-              owner_id: e.target.value as string,
-            }))
-          }
+          onChange={(e) => {
+            setOwnerIds(e.target.value as number[]);
+            setOwnersChanged(true);
+          }}
         />
+        {legacyTextOwner && (
+          <Typography
+            fontSize={12}
+            color={palette.text.secondary}
+            data-testid="agent-legacy-owner-note"
+            sx={{ mt: "-12px", overflowWrap: "anywhere" }}
+          >
+            {fill(
+              t('Current owner "{owner}" is not a VerifyWise user. Choosing owners replaces it.'),
+              { owner: legacyTextOwner },
+            )}
+          </Typography>
+        )}
+        {unknownOwnerIds.length > 0 && (
+          <Typography
+            fontSize={12}
+            color={palette.text.secondary}
+            data-testid="agent-dropped-owners-note"
+            sx={{ mt: "-12px" }}
+          >
+            Some owners are no longer in your organization. They will be removed if you change the
+            owners.
+          </Typography>
+        )}
 
         <Field
           id="notes"
@@ -206,7 +298,7 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
       <Stack direction="row" justifyContent="flex-end" gap={1} sx={{ p: "16px 24px" }}>
         <CustomizableButton
           variant="outlined"
-          sx={{ border: "1px solid #d0d5dd" }}
+          sx={{ border: `1px solid ${palette.border.dark}` }}
           onClick={handleClose}
         >
           Cancel

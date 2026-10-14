@@ -134,6 +134,7 @@ const ProjectList = ({
           { value: "High Risk", label: "High risk" },
           { value: "Limited Risk", label: "Limited risk" },
           { value: "Minimal Risk", label: "Minimal risk" },
+          { value: "Out of scope", label: "Out of scope" },
         ],
       },
       {

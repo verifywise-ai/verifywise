@@ -119,7 +119,7 @@ export const routeMapping: Record<string, string> = {
   "/ai-incident-managements": "Incident management",
 
   // Agent discovery
-  "/agent-discovery": "Agent discovery",
+  "/agent-discovery": "AI agents",
 
   // Framework tabs (note: /framework itself shows dashboard, no /framework/dashboard route)
   "/framework/framework-risks": "Framework risks",

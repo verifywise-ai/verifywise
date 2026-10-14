@@ -1,47 +1,13 @@
 import riskData from "../../assets/IBMAIRISKDB.json";
 import RiskDatabaseModal from "../RiskDatabaseModal";
 import { RiskData, SelectedRiskData } from "../RiskDatabaseModal/types";
-import { Likelihood, Severity } from "../RiskLevel/constants";
+import { mapSeverityIBM, mapLikelihoodIBM } from "../AddNewRiskForm/riskSuggestionMappers";
 
 interface AddNewRiskIBMModalProps {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
   onRiskSelected?: (riskData: SelectedRiskData) => void;
 }
-
-/**
- * Maps IBM severity strings to Severity enum.
- * IBM uses Minor/Moderate/Major severity scale.
- */
-const mapSeverityIBM = (severity: string): Severity => {
-  switch (severity.toLowerCase()) {
-    case "minor":
-      return Severity.Minor;
-    case "moderate":
-      return Severity.Moderate;
-    case "major":
-      return Severity.Major;
-    default:
-      return Severity.Moderate;
-  }
-};
-
-/**
- * Maps IBM likelihood strings to Likelihood enum.
- * IBM uses Unlikely/Possible/Likely likelihood scale.
- */
-const mapLikelihoodIBM = (likelihood: string): Likelihood => {
-  switch (likelihood.toLowerCase()) {
-    case "unlikely":
-      return Likelihood.Unlikely;
-    case "possible":
-      return Likelihood.Possible;
-    case "likely":
-      return Likelihood.Likely;
-    default:
-      return Likelihood.Possible;
-  }
-};
 
 /**
  * Modal for adding a new risk from the IBM AI Risk Database.

@@ -147,4 +147,21 @@ describe("requireExtensionEnabled middleware", () => {
     expect(res.status).toHaveBeenCalledWith(500);
     expect(next).not.toHaveBeenCalled();
   });
+
+  it("takes the key from a route parameter when asked to", async () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { requireExtensionEnabledFromParam } = require("../requireExtensionEnabled.middleware");
+    mockFindByKey.mockResolvedValue({ id: 31 });
+    mockFindByExtensionId.mockResolvedValue({ enabled: true });
+    const mw = requireExtensionEnabledFromParam("key");
+    const req = { ...makeReq(7), params: { key: "param-ext" } } as unknown as Request;
+    const res = makeRes() as Response;
+    const next = jest.fn();
+
+    await mw(req, res, next);
+
+    expect(mockFindByKey).toHaveBeenCalledWith("param-ext");
+    expect(mockFindByExtensionId).toHaveBeenCalledWith(31, 7);
+    expect(next).toHaveBeenCalled();
+  });
 });

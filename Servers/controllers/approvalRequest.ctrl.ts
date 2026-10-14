@@ -27,16 +27,21 @@ import {
   getApprovalRequestByIdQuery,
   processApprovalQuery,
   withdrawApprovalRequestQuery,
+  tryAutoApproveRequestQuery,
 } from "../utils/approvalRequest.utils";
 import { TransientApprovalError } from "../advisor/approval/approvalGateway";
 import {
   getApprovalWorkflowByIdQuery,
   getWorkflowStepsQuery,
 } from "../utils/approvalWorkflow.utils";
-import { ApprovalResult } from "../domain.layer/enums/approval-workflow.enum";
+import {
+  ApprovalResult,
+  ApprovalRequestStatus,
+} from "../domain.layer/enums/approval-workflow.enum";
 import {
   notifyApprovalRequested,
   notifyApprovalComplete,
+  notifyApprovalAutoApproved,
   sendInAppNotification,
 } from "../services/inAppNotification.service";
 import { notifyRequesterStepCompleted } from "../services/notification.service";
@@ -112,18 +117,52 @@ export async function createApprovalRequest(req: Request, res: Response): Promis
       transaction,
     );
 
+    // Risk-based auto-approval: evaluates the use case's server-side risk
+    // classification against the workflow threshold (fail-closed)
+    const autoApproval = await tryAutoApproveRequestQuery(
+      request.id!,
+      workflow,
+      entity_type,
+      entity_id,
+      organizationId,
+      transaction,
+    );
+
+    if (autoApproval.autoApproved) {
+      request.setDataValue("status", ApprovalRequestStatus.APPROVED);
+      request.setDataValue("auto_approved_at", new Date());
+      request.setDataValue("auto_approval_risk_level", autoApproval.riskLevel ?? null);
+    }
+
     await transaction.commit();
 
     logStructured(
       "successful",
-      `created approval request ${request.id}`,
+      autoApproval.autoApproved
+        ? `created and auto-approved approval request ${request.id}`
+        : `created approval request ${request.id}`,
       "createApprovalRequest",
       "approvalRequest.ctrl.ts",
     );
 
-    // Send notifications to first step approvers (async, don't block response)
+    // Send notifications (async, don't block response): auto-approved
+    // requests notify the requester instead of the step-1 approvers
     (async () => {
       try {
+        const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+
+        if (autoApproval.autoApproved) {
+          await notifyApprovalAutoApproved(
+            organizationId,
+            userId,
+            { id: request.id!, name: request_name },
+            autoApproval.riskLevel!,
+            autoApproval.threshold!,
+            baseUrl,
+          );
+          return;
+        }
+
         // Get requester name
         const requesterResult = await sequelize.query<{ name: string; surname: string }>(
           `SELECT name, surname FROM users WHERE id = :userId`,
@@ -133,9 +172,6 @@ export async function createApprovalRequest(req: Request, res: Response): Promis
         const requesterName = requester
           ? `${requester.name} ${requester.surname}`.trim()
           : "Someone";
-
-        // Get base URL from env or default
-        const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
 
         // Get first step approvers
         const firstStep = workflowSteps.find((s: any) => s.step_number === 1) as any;
@@ -484,6 +520,15 @@ export async function approveRequest(req: Request, res: Response): Promise<any> 
       );
       return res.status(409).json(STATUS_CODE[409](error.message));
     }
+    if (error instanceof ValidationException) {
+      logStructured(
+        "processing",
+        `approval rejected — request no longer pending: ${error.message}`,
+        "approveRequest",
+        "approvalRequest.ctrl.ts",
+      );
+      return res.status(409).json(STATUS_CODE[409](translateError(req, error)));
+    }
     logStructured(
       "error",
       "failed to approve request",
@@ -600,6 +645,15 @@ export async function rejectRequest(req: Request, res: Response): Promise<any> {
       .json(STATUS_CODE[200]({ message: req.t!("Request rejected successfully") }));
   } catch (error) {
     await transaction.rollback();
+    if (error instanceof ValidationException) {
+      logStructured(
+        "processing",
+        `rejection rejected — request no longer pending: ${error.message}`,
+        "rejectRequest",
+        "approvalRequest.ctrl.ts",
+      );
+      return res.status(409).json(STATUS_CODE[409](translateError(req, error)));
+    }
     logStructured("error", "failed to reject request", "rejectRequest", "approvalRequest.ctrl.ts");
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }

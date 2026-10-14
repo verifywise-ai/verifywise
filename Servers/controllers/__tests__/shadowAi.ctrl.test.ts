@@ -31,6 +31,7 @@ jest.mock("../../utils/shadowAiConfig.utils", () => ({
   updateSyslogConfigQuery: jest.fn(),
   deleteSyslogConfigQuery: jest.fn(),
   getSettingsQuery: jest.fn(),
+  lockShadowAiSettings: jest.fn(),
   updateSettingsQuery: jest.fn(),
 }));
 jest.mock("../../utils/logger/logHelper", () => ({
@@ -51,6 +52,17 @@ jest.mock("../../utils/statusCode.utils", () => ({
     500: (d: any) => ({ message: "Internal Server Error", data: d }),
   },
 }));
+jest.mock("../../utils/retentionAudit.utils", () => ({
+  appendRetentionChangeToLedger: jest.fn<any>().mockResolvedValue(undefined),
+  // "Compliance lead" stands for a custom role granted organization.admin.
+  canChangeRetentionPeriods: jest.fn(
+    async (_orgId: number, role: string) => role === "Compliance lead",
+  ),
+}));
+jest.mock("../../utils/logger/fileLogger", () => ({
+  __esModule: true,
+  default: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+}));
 jest.mock("../../database/db", () => ({
   sequelize: {
     transaction: jest.fn<any>().mockResolvedValue({ commit: jest.fn(), rollback: jest.fn() }),
@@ -59,11 +71,13 @@ jest.mock("../../database/db", () => ({
 }));
 
 import { sequelize } from "../../database/db";
+import { appendRetentionChangeToLedger } from "../../utils/retentionAudit.utils";
 import {
   createSyslogConfigQuery,
   deleteSyslogConfigQuery,
   getSettingsQuery,
   getSyslogConfigsQuery,
+  lockShadowAiSettings,
   updateSettingsQuery,
   updateSyslogConfigQuery,
 } from "../../utils/shadowAiConfig.utils";
@@ -116,6 +130,7 @@ import {
   updateSettings,
   updateSyslogConfig,
   updateToolStatus,
+  describeShadowAiRetentionChanges,
 } from "../shadowAi.ctrl";
 
 const mockGetInsightsSummary = getInsightsSummaryQuery as jest.MockedFunction<any>;
@@ -142,6 +157,7 @@ const mockCreateSyslogConfig = createSyslogConfigQuery as jest.MockedFunction<an
 const mockUpdateSyslogConfig = updateSyslogConfigQuery as jest.MockedFunction<any>;
 const mockDeleteSyslogConfig = deleteSyslogConfigQuery as jest.MockedFunction<any>;
 const mockGetSettings = getSettingsQuery as jest.MockedFunction<any>;
+const mockLockSettings = lockShadowAiSettings as jest.MockedFunction<any>;
 const mockUpdateSettings = updateSettingsQuery as jest.MockedFunction<any>;
 const mockSequelizeQuery = sequelize.query as jest.MockedFunction<any>;
 const mockTransaction = sequelize.transaction as jest.MockedFunction<any>;
@@ -1032,6 +1048,62 @@ describe("shadowAi.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(403);
     });
 
+    it("lets a custom role granted organization.admin save retention periods", async () => {
+      mockUpdateSettings.mockResolvedValue({ retention_events_days: 60 });
+      const res = createRes();
+      await updateSettings(
+        createReq({ role: "Compliance lead", body: { retention_events_days: 60 } }),
+        res,
+      );
+      expect(mockUpdateSettings).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it("keeps the rate limit admin-only, even for a role granted organization.admin", async () => {
+      const res = createRes();
+      await updateSettings(
+        createReq({
+          role: "Compliance lead",
+          body: { retention_events_days: 60, rate_limit_max_events_per_hour: 5 },
+        }),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(mockUpdateSettings).not.toHaveBeenCalled();
+    });
+
+    it("refuses an elected SuperAdmin whose org role is Editor", async () => {
+      // SuperAdmin is a cross-tenant grant; inside an org the org role decides.
+      const res = createRes();
+      await updateSettings(
+        createReq({ role: "Editor", isSuperAdmin: true, body: { retention_events_days: 60 } }),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(mockUpdateSettings).not.toHaveBeenCalled();
+    });
+
+    it("keeps the rate limit to the Admin and SuperAdmin roles", async () => {
+      const res = createRes();
+      await updateSettings(
+        createReq({
+          role: "Editor",
+          isSuperAdmin: true,
+          body: { rate_limit_max_events_per_hour: 5 },
+        }),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(mockUpdateSettings).not.toHaveBeenCalled();
+    });
+
+    it("rejects a retention change from a role without organization.admin", async () => {
+      const res = createRes();
+      await updateSettings(createReq({ role: "Editor", body: { retention_events_days: 60 } }), res);
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(mockUpdateSettings).not.toHaveBeenCalled();
+    });
+
     it("should return 200 on success", async () => {
       mockUpdateSettings.mockResolvedValue({ rate_limit_max_events_per_hour: 2000 });
       const req = createReq({
@@ -1054,6 +1126,79 @@ describe("shadowAi.ctrl", () => {
       const res = createRes();
       await updateSettings(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+
+    const retention = {
+      retention_events_days: 30,
+      retention_daily_rollups_days: 365,
+      retention_alert_history_days: 0,
+    };
+
+    it("records a changed retention period in the audit ledger", async () => {
+      mockLockSettings.mockResolvedValue({ ...retention, rate_limit_max_events_per_hour: 100 });
+      mockUpdateSettings.mockResolvedValue({ ...retention, retention_events_days: 90 });
+      const res = createRes();
+      await updateSettings(createReq({ body: { retention_events_days: 90 } }), res);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(appendRetentionChangeToLedger).toHaveBeenCalledWith(
+        expect.objectContaining({
+          organizationId: 1,
+          userId: 1,
+          description: "Shadow AI retention changed: event retention from 30 days to 90 days",
+        }),
+      );
+    });
+
+    it("records nothing when only the rate limit changes", async () => {
+      mockUpdateSettings.mockResolvedValue({ ...retention, rate_limit_max_events_per_hour: 5 });
+      await updateSettings(createReq({ body: { rate_limit_max_events_per_hour: 5 } }), createRes());
+      expect(mockLockSettings).not.toHaveBeenCalled();
+      expect(appendRetentionChangeToLedger).not.toHaveBeenCalled();
+    });
+
+    it("records nothing when a retention value is sent unchanged", async () => {
+      mockLockSettings.mockResolvedValue(retention);
+      mockUpdateSettings.mockResolvedValue(retention);
+      await updateSettings(createReq({ body: { retention_events_days: 30 } }), createRes());
+      expect(appendRetentionChangeToLedger).not.toHaveBeenCalled();
+    });
+
+    it("reads the old periods under a lock in the save's transaction", async () => {
+      const tx = { commit: jest.fn(), rollback: jest.fn() };
+      (sequelize.transaction as jest.MockedFunction<any>).mockResolvedValueOnce(tx);
+      mockLockSettings.mockResolvedValue(retention);
+      mockUpdateSettings.mockResolvedValue({ ...retention, retention_events_days: 60 });
+      await updateSettings(createReq({ body: { retention_events_days: 60 } }), createRes());
+      expect(mockLockSettings).toHaveBeenCalledWith(1, tx);
+      expect(mockUpdateSettings).toHaveBeenCalledWith(1, expect.anything(), tx);
+      expect(tx.commit).toHaveBeenCalled();
+      expect(mockLockSettings.mock.invocationCallOrder[0]).toBeLessThan(
+        mockUpdateSettings.mock.invocationCallOrder[0],
+      );
+    });
+
+    it("rolls back and saves nothing when the locked read fails", async () => {
+      const tx = { commit: jest.fn(), rollback: jest.fn() };
+      (sequelize.transaction as jest.MockedFunction<any>).mockResolvedValueOnce(tx);
+      mockLockSettings.mockRejectedValue(new Error("read failed"));
+      const res = createRes();
+      await updateSettings(createReq({ body: { retention_alert_history_days: 0 } }), res);
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(tx.rollback).toHaveBeenCalled();
+      expect(mockUpdateSettings).not.toHaveBeenCalled();
+      expect(appendRetentionChangeToLedger).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("describeShadowAiRetentionChanges", () => {
+    it("describes only requested keys that changed, 0 as indefinitely", () => {
+      expect(
+        describeShadowAiRetentionChanges(
+          { retention_events_days: 30, retention_daily_rollups_days: 365 },
+          { retention_events_days: 0, retention_daily_rollups_days: 180 },
+          { retention_events_days: 0 },
+        ),
+      ).toEqual(["event retention from 30 days to indefinitely"]);
     });
   });
 });

@@ -1,6 +1,5 @@
 import Chip from "../../components/Chip";
 import { palette } from "../../themes/palette";
-import { displayFormattedDate } from "../../tools/isoDateToString";
 
 export function getStatusChip(status: string) {
   switch (status) {
@@ -58,9 +57,4 @@ export function getModeChip(mode: string) {
     custom: "Custom",
   };
   return <Chip label={labels[mode] || mode} size="small" uppercase={false} variant="default" />;
-}
-
-export function formatDate(dateStr: string | null) {
-  if (!dateStr) return "—";
-  return displayFormattedDate(dateStr);
 }

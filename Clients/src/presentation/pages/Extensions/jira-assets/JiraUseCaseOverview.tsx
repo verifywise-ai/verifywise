@@ -238,6 +238,8 @@ export const JiraUseCaseOverview: React.FC<JiraUseCaseOverviewProps> = ({ projec
   const formatDate = useFormattedDate();
   const [jiraData, setJiraData] = useState<JiraData | null>(null);
   const [syncStatus, setSyncStatus] = useState<string>("synced");
+  // Set when a sync no longer found this object in Jira (syncs never delete).
+  const [missingInJiraSince, setMissingInJiraSince] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -284,6 +286,7 @@ export const JiraUseCaseOverview: React.FC<JiraUseCaseOverviewProps> = ({ projec
         const data = response.data?.data || response.data;
         setJiraData(data._jira_data || null);
         setSyncStatus(data._sync_status || "synced");
+        setMissingInJiraSince(data._missing_in_jira_since || null);
         setError(null);
       } catch (err: any) {
         setError(err.message);
@@ -406,7 +409,7 @@ export const JiraUseCaseOverview: React.FC<JiraUseCaseOverviewProps> = ({ projec
     <Stack sx={{ width: "100%" }}>
       <Stack className="vw-project-overview" sx={{ width: "100%" }}>
         {/* JIRA Source Badge */}
-        <Box sx={{ mb: 10 }}>
+        <Box sx={{ mb: 10, display: "flex", gap: "8px", flexWrap: "wrap" }}>
           <Chip
             icon={<Database size={14} />}
             label="Imported from JIRA Assets"
@@ -417,6 +420,14 @@ export const JiraUseCaseOverview: React.FC<JiraUseCaseOverviewProps> = ({ projec
               "& .MuiChip-icon": { color: "#1565C0" },
             }}
           />
+          {missingInJiraSince && (
+            <Chip
+              label="Missing in Jira"
+              size="small"
+              title={formatDate(new Date(missingInJiraSince))}
+              sx={{ backgroundColor: "#FEF3F2", color: "#B42318" }}
+            />
+          )}
         </Box>
 
         {/* First row - Use case info */}

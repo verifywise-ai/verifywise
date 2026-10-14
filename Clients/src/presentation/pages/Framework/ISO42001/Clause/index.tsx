@@ -26,6 +26,8 @@ import allowedRoles from "../../../../../application/constants/permissions";
 import { Project } from "../../../../../domain/types/Project";
 import { TabFilterBar } from "../../../../components/FrameworkFilter/TabFilterBar";
 import { StatsCard } from "../../../../components/Cards/StatsCard";
+import { text } from "../../../../themes/palette";
+import { textStyles } from "../../../../themes/typography";
 
 const ISO42001Clause = ({
   project: _project,
@@ -477,6 +479,10 @@ const ISO42001Clause = ({
     <Stack className="iso-42001-clauses">
       {alert && <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />}
       <Typography sx={{ ...styles.title, mt: 4 }}>{"Management System Clauses"}</Typography>
+      <Typography sx={{ ...textStyles.body, color: text.tertiary, mb: 2 }}>
+        The core requirements from Clauses 4-10 that define what your AI management system must
+        include.
+      </Typography>
       <TabFilterBar
         statusFilter={statusFilter}
         onStatusChange={onStatusChange}

@@ -13,11 +13,10 @@ const CHANGELOG: ChangelogEntry[] = [
   {
     version: "v2.6",
     date: "October 7, 2026",
-    title: "Custom roles, risk inheritance, and evidence retention",
+    title: "Risk inheritance, evidence retention, and security hardening",
     summary:
-      "Release that adds custom organization roles with their own permissions, links risks across projects, vendors, and models so related risks can inherit from each other, and adds retention rules to the Evidence hub. It also tightens who can invite users and manage LLM keys, shows dates in your preferred format across the app, and fixes a broad set of issues found during release testing.",
+      "Release that links risks across projects, vendors, and models so related risks can inherit from each other, and adds retention rules to the Evidence hub. It also tightens who can invite users and manage LLM keys, shows dates in your preferred format across the app, and fixes a broad set of issues found during release testing.",
     items: [
-      'Custom organization roles — create roles such as "Model owner" under Settings → Roles and choose exactly what each one can do, module by module; the built-in roles keep working as before',
       "Risk inheritance — link project, vendor, and model risks as related or as parent and child, review suggested links, see when a parent risk's level changes, and explore the links on a new Risk inheritance page with reports on duplicates and control coverage",
       "Evidence hub retention — set a retention policy and expiry for evidence",
       "Dashboard — each recent activity row now opens the use case, risk, task, or other record it describes",
@@ -25,7 +24,7 @@ const CHANGELOG: ChangelogEntry[] = [
       "Date format everywhere — dates on the dashboard, in tables, the AI Gateway, the inventory, and monitoring now follow your date format preference",
       "LLM Evals — a failed experiment now shows why it failed, with credentials removed from the error text",
       "Integrations — MLflow and Azure AI Foundry sync failures now show their reason, and MLflow applies its configured request timeout",
-      "Invitations — invitation links stay valid for 30 days, and users can only invite into their own organization, up to their own level of access",
+      "Invitations — invitation links stay valid for 30 days, and only Admins can invite users, into their own organization only",
       "Security hardening — only admins manage LLM keys, roles can only be assigned within your organization, every organization keeps at least one Admin, other organizations' user records stay hidden, and signing out clears cached data",
       "Deployment — separate liveness and readiness health checks, so an AI Gateway outage no longer restarts the backend",
       "Fixes — ISO 27001 clauses overview, Annex chart control counts, adding a risk from a use case, translated table pagination, clearer form validation for incidents and training, bias audit dataset uploads, and the Colorado AI Act citation (SB 24-205)",

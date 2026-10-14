@@ -152,6 +152,60 @@ export const handlers = [
   }),
 
   // ==================== Risks ====================
+  // Button-triggered AI risk suggestion endpoint (POST /projectRisks/suggest-ai).
+  // No existing test calls it; the fixture exists for manual/UI development.
+  // Mirrors the real STATUS_CODE[200](data) envelope: { message, data }.
+  http.post("/api/projectRisks/suggest-ai", () =>
+    HttpResponse.json({
+      message: "OK",
+      data: {
+        matched: [
+          {
+            source: "mit",
+            id: 125,
+            summary: "Unauthorized access to model inference endpoints",
+            description:
+              "Attackers may gain unauthorized access to exposed model inference endpoints, leading to data exfiltration or model abuse.",
+            risk_category: ["Cybersecurity risk"],
+            likelihood: "Almost certain",
+            severity: "Major",
+            reason:
+              "The use case exposes LLM inference endpoints to external users without describing access controls.",
+            ai_lifecycle_phase: "Deployment & integration",
+          },
+          {
+            source: "ibm",
+            id: 42,
+            summary: "Training data memorization and regurgitation",
+            description:
+              "The model may memorize personal data seen during fine-tuning and regurgitate it in generated output.",
+            risk_category: ["Data privacy risk", "Compliance risk"],
+            likelihood: "Likely",
+            severity: "Moderate",
+            reason:
+              "The use case fine-tunes a foundation model on customer support transcripts containing personal data.",
+            ai_lifecycle_phase: "Model development & training",
+          },
+        ],
+        suggested: [
+          {
+            risk_name: "Vendor model deprecation mid-contract",
+            risk_description:
+              "The third-party LLM provider may deprecate the model version the product depends on before the contract ends.",
+            risk_category: ["Third-party/vendor risk"],
+            ai_lifecycle_phase: "Monitoring & maintenance",
+            likelihood: 3,
+            severity: 3,
+            impact: "Forced migration effort and potential service degradation.",
+            mitigation_plan:
+              "Pin model versions where possible and maintain an abstraction layer over the provider API.",
+          },
+        ],
+        suppressed_count: 0,
+      },
+    }),
+  ),
+
   // The app's risk repository reads a single risk from /api/projectRisks/:id
   // (projectRisk.repository.ts). Like the real controller, "not found" is a
   // 204, not a 404.

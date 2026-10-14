@@ -3,36 +3,17 @@ import { Box, Typography, Stack, Collapse, useTheme } from "@mui/material";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useEntityIntakeSubmission } from "../../../../application/hooks/useEntityIntakeSubmission";
 import type { IntakeSubmissionField } from "../../../../application/repository/intakeForm.repository";
-import { displayFormattedDate } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import { formatAnswer } from "../../../../application/utils/intakeAnswerFormat";
+import { isEmptyAnswer } from "../../../../application/utils/intakeFormLogic";
 
 interface IntakeSubmissionCardProps {
   projectId: number;
 }
 
-function renderFieldValue(field: IntakeSubmissionField): string {
-  const { value, type, options } = field;
-  if (value === null || value === undefined || value === "") return "\u2014";
-
-  if (type === "checkbox") return value ? "Yes" : "No";
-
-  if (type === "date") {
-    return displayFormattedDate(value as string);
-  }
-
-  if (type === "select" && options) {
-    const match = options.find((o) => o.value === value);
-    return match ? match.label : String(value);
-  }
-
-  if (type === "multiselect" && Array.isArray(value) && options) {
-    return value.map((v) => options.find((o) => o.value === v)?.label || v).join(", ");
-  }
-
-  return String(value);
-}
-
 function FieldRow({ field }: { field: IntakeSubmissionField }) {
   const theme = useTheme();
+  const formatDate = useFormattedDate();
 
   return (
     <Box
@@ -59,7 +40,7 @@ function FieldRow({ field }: { field: IntakeSubmissionField }) {
           wordBreak: "break-word",
         }}
       >
-        {renderFieldValue(field)}
+        {formatAnswer(field, field.value, formatDate)}
       </Typography>
     </Box>
   );
@@ -67,17 +48,18 @@ function FieldRow({ field }: { field: IntakeSubmissionField }) {
 
 export default function IntakeSubmissionCard({ projectId }: IntakeSubmissionCardProps) {
   const theme = useTheme();
+  const formatDate = useFormattedDate();
   const { data: submission, isLoading } = useEntityIntakeSubmission("use_case", projectId);
   const [showAdditional, setShowAdditional] = useState(false);
 
   if (isLoading || !submission) return null;
 
-  const mappedFields = submission.fields.filter(
-    (f) => f.isMapped && f.value !== null && f.value !== undefined && f.value !== "",
-  );
-  const unmappedFields = submission.fields.filter(
-    (f) => !f.isMapped && f.value !== null && f.value !== undefined && f.value !== "",
-  );
+  // Calculated fields count when the submission stored them (null shows "—");
+  // submissions from before a field existed have no key and show nothing.
+  const hasAnswer = (f: IntakeSubmissionField) =>
+    f.type === "calculated" ? Boolean(f.answered) : !isEmptyAnswer(f.value);
+  const mappedFields = submission.fields.filter((f) => f.isMapped && hasAnswer(f));
+  const unmappedFields = submission.fields.filter((f) => !f.isMapped && hasAnswer(f));
 
   if (mappedFields.length === 0 && unmappedFields.length === 0) return null;
 
@@ -111,7 +93,7 @@ export default function IntakeSubmissionCard({ projectId }: IntakeSubmissionCard
       {/* Meta line */}
       <Typography sx={{ fontSize: 12, color: theme.palette.text.accent, mb: 3 }}>
         {submission.formName}
-        {submission.submittedAt && <> &middot; {displayFormattedDate(submission.submittedAt)}</>}
+        {submission.submittedAt && <> &middot; {formatDate(submission.submittedAt)}</>}
         {(submission.submitterName || submission.submitterEmail) && (
           <> &middot; {submission.submitterName || submission.submitterEmail}</>
         )}
@@ -157,7 +139,10 @@ export default function IntakeSubmissionCard({ projectId }: IntakeSubmissionCard
             ) : (
               <ChevronDown size={15} strokeWidth={1.5} />
             )}
-            Additional answers ({unmappedFields.length})
+            {/* The label is its own text node so the DOM translator can match it. */}
+            <span>
+              <span>Additional answers</span> ({unmappedFields.length})
+            </span>
           </Box>
           <Collapse in={showAdditional} timeout="auto" unmountOnExit>
             <Stack

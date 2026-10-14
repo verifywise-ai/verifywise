@@ -555,7 +555,7 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
                         fontSize: "13px",
                       }}
                     >
-                      {formatCustomFieldValue(def, match?.value, users)}
+                      {formatCustomFieldValue(def, match?.value, users, formatUserDate)}
                     </TableCell>
                   );
                 })}

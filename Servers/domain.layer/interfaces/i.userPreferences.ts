@@ -5,4 +5,6 @@ export interface IUserPreferences {
   user_id: number;
   date_format: "DD-MM-YYYY" | "MM-DD-YYYY" | "DD/MM/YY" | "MM/DD/YY";
   language?: UserLanguage;
+  /** When true, the Advisor runs independent sub-tasks in parallel. */
+  parallel_agents?: boolean;
 }

@@ -17,20 +17,20 @@ import {
   notifyApprovalPending,
 } from "../services/aiGateway/aiGatewayNotifications";
 import { getMonitoringConfig } from "../utils/monitoringConfig.utils";
+import { getGatewayInternalKey } from "../utils/aiGatewayConfig";
 
 const router = Router();
-
-const INTERNAL_KEY = process.env.AI_GATEWAY_INTERNAL_KEY || "";
 
 /**
  * Verify the request comes from an authorized internal service.
  */
 function verifyInternalKey(req: Request, res: Response, next: () => void): void {
   const key = req.headers["x-internal-key"] as string;
+  const internalKey = getGatewayInternalKey();
   const provided = Buffer.from(key || "", "utf8");
-  const expected = Buffer.from(INTERNAL_KEY, "utf8");
+  const expected = Buffer.from(internalKey, "utf8");
   if (
-    !INTERNAL_KEY ||
+    !internalKey ||
     provided.length !== expected.length ||
     !crypto.timingSafeEqual(provided, expected)
   ) {

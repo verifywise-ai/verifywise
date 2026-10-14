@@ -8,7 +8,6 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, field_validator
 
 from crud import prompts as crud
-from middlewares.auth import verify_internal_key
 from services.llm_service import stream_chat_completion
 from services.proxy_service import resolve_endpoint_for_key
 from utils.auth import get_org_id, get_user_id, require_admin
@@ -122,7 +121,6 @@ class TestPromptRequest(BaseModel):
 @router.get("")
 async def list_prompts(request: Request):
     """List all prompts for the organisation."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
     prompts = await crud.get_all_prompts(org_id)
     return {"prompts": prompts}
@@ -131,7 +129,6 @@ async def list_prompts(request: Request):
 @router.post("", status_code=201)
 async def create_prompt(request: Request, body: CreatePromptRequest):
     """Create a new prompt (admin only)."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
     user_id = get_user_id(request)
     require_admin(request)
@@ -165,7 +162,6 @@ async def create_prompt(request: Request, body: CreatePromptRequest):
 @router.get("/{prompt_id}")
 async def get_prompt(request: Request, prompt_id: int):
     """Get a single prompt by ID."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
     prompt = await crud.get_prompt_by_id(org_id, prompt_id)
     if not prompt:
@@ -176,7 +172,6 @@ async def get_prompt(request: Request, prompt_id: int):
 @router.patch("/{prompt_id}")
 async def update_prompt(request: Request, prompt_id: int, body: UpdatePromptRequest):
     """Update a prompt's name or description."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
     prompt = await crud.update_prompt(org_id, prompt_id, body.model_dump(exclude_none=True))
     if not prompt:
@@ -187,7 +182,6 @@ async def update_prompt(request: Request, prompt_id: int, body: UpdatePromptRequ
 @router.delete("/{prompt_id}", status_code=200)
 async def delete_prompt(request: Request, prompt_id: int):
     """Delete a prompt and all its versions (admin only, CASCADE)."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
     require_admin(request)
 
@@ -208,7 +202,6 @@ async def delete_prompt(request: Request, prompt_id: int):
 @router.post("/{prompt_id}/versions", status_code=201)
 async def create_version(request: Request, prompt_id: int, body: CreateVersionRequest):
     """Create a new draft version for a prompt."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
     user_id = get_user_id(request)
 
@@ -232,7 +225,6 @@ async def create_version(request: Request, prompt_id: int, body: CreateVersionRe
 @router.get("/{prompt_id}/versions")
 async def list_versions(request: Request, prompt_id: int):
     """List all versions for a prompt, ordered by version DESC."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
     versions = await crud.get_versions(org_id, prompt_id)
     return {"versions": versions}
@@ -241,7 +233,6 @@ async def list_versions(request: Request, prompt_id: int):
 @router.post("/{prompt_id}/versions/{v}/publish")
 async def publish_version(request: Request, prompt_id: int, v: int):
     """Publish a specific version (admin only)."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
     user_id = get_user_id(request)
     require_admin(request)
@@ -268,7 +259,6 @@ async def publish_version(request: Request, prompt_id: int, v: int):
 @router.get("/{prompt_id}/labels")
 async def get_labels(request: Request, prompt_id: int):
     """Get all labels assigned to a prompt."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
     labels = await crud.get_labels(org_id, prompt_id)
     return {"labels": labels}
@@ -282,7 +272,6 @@ async def assign_label(
     body: AssignLabelRequest,
 ):
     """Assign (or update) a label on a prompt version."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
     user_id = get_user_id(request)
 
@@ -305,7 +294,6 @@ async def assign_label(
 @router.delete("/{prompt_id}/labels/{label}")
 async def remove_label(request: Request, prompt_id: int, label: str):
     """Remove a label from a prompt."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
 
     deleted = await crud.remove_label(org_id, prompt_id, label)
@@ -317,7 +305,6 @@ async def remove_label(request: Request, prompt_id: int, label: str):
 @router.get("/{prompt_id}/test-datasets")
 async def list_test_datasets(request: Request, prompt_id: int):
     """List all test datasets for a prompt."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
     datasets = await crud.get_test_datasets(org_id, prompt_id)
     return {"test_datasets": datasets}
@@ -330,7 +317,6 @@ async def create_test_dataset(
     body: CreateTestDatasetRequest,
 ):
     """Create a new test dataset for a prompt."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
     user_id = get_user_id(request)
 
@@ -352,7 +338,6 @@ async def update_test_dataset(
     body: UpdateTestDatasetRequest,
 ):
     """Update a test dataset's name or test cases."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
 
     dataset = await crud.update_test_dataset(
@@ -373,7 +358,6 @@ async def delete_test_dataset(
     dataset_id: int,
 ):
     """Delete a test dataset."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
 
     deleted = await crud.delete_test_dataset(org_id, prompt_id, dataset_id)
@@ -388,7 +372,6 @@ async def test_prompt(request: Request, body: TestPromptRequest):
     Test a prompt by resolving variables and streaming the LLM response.
     Returns an SSE stream compatible with the frontend's streamPromptTest().
     """
-    verify_internal_key(request)
     org_id = get_org_id(request)
 
     # Resolve variables in the prompt content

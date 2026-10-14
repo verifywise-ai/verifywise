@@ -1,59 +1,65 @@
 import React from "react";
 import { Stack, Typography, Box, useTheme } from "@mui/material";
 import { AlertCircle, AlertTriangle, Info, CheckCircle, RotateCcw, Save } from "lucide-react";
-import { ResultsDisplayProps } from "./iQuestion";
+import type { ClassificationResult } from "../../../../domain/types/euAiActClassification";
+import ReasonList from "../../../components/EuAiActQuestionnaire/ReasonList";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import { brand, status } from "../../../themes/palette";
 
-const Results: React.FC<ResultsDisplayProps> = ({ classification, onRestart, onSave }) => {
+interface ResultProps {
+  result: ClassificationResult;
+  onRestart?: () => void;
+  onSave?: () => void;
+  isSaving?: boolean;
+}
+
+const Results: React.FC<ResultProps> = ({ result, onRestart, onSave, isSaving }) => {
   const theme = useTheme();
 
   // Get styling based on risk level
   const getLevelConfig = () => {
-    switch (classification.level) {
-      case "PROHIBITED":
+    switch (result.level) {
+      case "Prohibited":
         return {
           color: `${status.error.text}`,
           bgColor: "#FFEBEE",
           icon: <AlertCircle size={32} />,
           title: "Prohibited AI system",
-          description:
-            "This AI system falls under prohibited practices and cannot be deployed under the EU AI Act.",
+          description: "The system falls under a prohibited practice in Article 5.",
         };
-      case "HIGH_RISK":
+      case "High risk":
         return {
           color: "#F57C00",
           bgColor: "#FFF3E0",
           icon: <AlertTriangle size={32} />,
-          title: "High-Risk AI system",
+          title: "High-risk AI system",
           description:
-            "This AI system is classified as high-risk and must comply with strict regulatory requirements.",
+            "This system is high risk and must meet the EU AI Act requirements for high-risk systems.",
         };
-      case "LIMITED_RISK":
+      case "Limited risk":
         return {
           color: "#FBC02D",
           bgColor: "#FFFDE7",
           icon: <Info size={32} />,
           title: "Limited risk",
-          description:
-            "This AI system has limited risk but requires specific transparency obligations.",
+          description: "This system has transparency obligations under Article 50.",
         };
-      case "MINIMAL_RISK":
+      case "Minimal risk":
         return {
           color: "#388E3C",
           bgColor: "#E8F5E9",
           icon: <CheckCircle size={32} />,
           title: "Minimal risk",
-          description:
-            "This AI system is classified as minimal risk with no specific regulatory obligations under the EU AI Act.",
+          description: "No specific EU AI Act obligations apply beyond AI literacy.",
         };
-      default:
+      case "Out of scope":
         return {
           color: theme.palette.text.secondary,
-          bgColor: theme.palette.background.paper,
+          bgColor: theme.palette.background.accent,
           icon: <Info size={32} />,
-          title: "Assessment pending",
-          description: "Complete the questionnaire to receive your classification.",
+          title: "Outside the EU AI Act",
+          description:
+            "Research and development systems not placed on the market or used are outside the EU AI Act.",
         };
     }
   };
@@ -85,6 +91,11 @@ const Results: React.FC<ResultsDisplayProps> = ({ classification, onRestart, onS
         </Stack>
       </Box>
 
+      {result.reasons.length > 0 && <ReasonList heading="Why" items={result.reasons} />}
+      {result.obligations.length > 0 && (
+        <ReasonList heading="Obligations" items={result.obligations} />
+      )}
+
       {/* Action Buttons */}
       <Stack direction="row" spacing={2} justifyContent="flex-end">
         {onRestart && (
@@ -93,6 +104,7 @@ const Results: React.FC<ResultsDisplayProps> = ({ classification, onRestart, onS
             text="Start new assessment"
             icon={<RotateCcw size={16} />}
             onClick={onRestart}
+            isDisabled={isSaving}
           />
         )}
         {onSave && (
@@ -101,6 +113,7 @@ const Results: React.FC<ResultsDisplayProps> = ({ classification, onRestart, onS
             text="Save results"
             icon={<Save size={16} />}
             onClick={onSave}
+            isDisabled={isSaving}
             sx={{
               "backgroundColor": `${brand.primary}`,
               "border": `1px solid ${brand.primary}`,

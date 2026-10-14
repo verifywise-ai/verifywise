@@ -1,7 +1,7 @@
 import { screen } from "@testing-library/react";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 
-let mockContextValue: any = { projects: [], userId: 1, organizationId: 1 };
+const mockContextValue: any = { projects: [], userId: 1, organizationId: 1 };
 
 vi.mock("../../../../../application/contexts/VerifyWise.context", () => ({
   VerifyWiseContext: {

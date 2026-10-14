@@ -316,7 +316,7 @@ export const userManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Users with Admin or Editor roles can invite new team members. Reviewers and Auditors can\'t send invitations.',
+      text: 'Only Admins can invite new team members, and only into their own organization. Editors, Reviewers and Auditors can\'t send invitations.',
     },
     {
       type: 'article-links',

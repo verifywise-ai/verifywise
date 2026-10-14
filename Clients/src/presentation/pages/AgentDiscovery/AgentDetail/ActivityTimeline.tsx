@@ -1,0 +1,160 @@
+import React from "react";
+import { Box, Stack, Typography } from "@mui/material";
+import { CheckCircle, Link2, Unlink, Pencil, Circle } from "lucide-react";
+import { AgentAuditLogEntry } from "src/domain/interfaces/i.agentDiscovery";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
+import { getReviewStatusDisplay, parseOwnerAuditValue } from "../agentLabels";
+import { palette } from "../../../themes/palette";
+
+interface ActivityTimelineProps {
+  entries: AgentAuditLogEntry[];
+  /** Shows a user id as a name (shared formatter from useUserNames). */
+  formatUser: (userId: number | string) => string;
+}
+
+/**
+ * Renders the agent's audit trail (agent_audit_log) as a vertical timeline.
+ * Each entry is a governance action taken on the agent — review changes, model
+ * link/unlink, and field edits.
+ */
+const ActivityTimeline: React.FC<ActivityTimelineProps> = ({ entries, formatUser }) => {
+  const formatUserDate = useFormattedDate();
+  const { t } = useTranslation();
+  if (!entries.length) {
+    return (
+      <Typography fontSize={13} color="text.secondary">
+        No activity recorded yet.
+      </Typography>
+    );
+  }
+
+  return (
+    <Stack spacing={0}>
+      {entries.map((entry, idx) => {
+        const isLast = idx === entries.length - 1;
+        const actor = entry.performed_by ? formatUser(entry.performed_by) : t("System");
+        return (
+          <Stack key={entry.id} direction="row" spacing={1.5}>
+            {/* Icon + connector rail */}
+            <Stack alignItems="center" sx={{ flexShrink: 0 }}>
+              <Box sx={{ mt: "2px" }}>{actionIcon(entry.action)}</Box>
+              {!isLast && (
+                <Box
+                  sx={{
+                    width: 2,
+                    flex: 1,
+                    backgroundColor: palette.border.light,
+                    my: "4px",
+                    minHeight: 20,
+                  }}
+                />
+              )}
+            </Stack>
+
+            {/* Content */}
+            <Box sx={{ pb: isLast ? 0 : "16px" }}>
+              <Typography fontSize={13} sx={{ color: palette.text.primary }}>
+                {describeAction(entry, formatUser, t)}
+              </Typography>
+              <Typography fontSize={12} color="text.secondary">
+                {actor} · {formatUserDate(entry.created_at, { includeTime: true })}
+              </Typography>
+            </Box>
+          </Stack>
+        );
+      })}
+    </Stack>
+  );
+};
+
+function actionIcon(action: string): React.ReactElement {
+  const size = 16;
+  const sw = 1.5;
+  switch (action) {
+    case "review_status_changed":
+      return <CheckCircle size={size} strokeWidth={sw} color={palette.brand.primary} />;
+    case "model_linked":
+      return <Link2 size={size} strokeWidth={sw} color={palette.status.info.text} />;
+    case "model_unlinked":
+      return <Unlink size={size} strokeWidth={sw} color={palette.text.muted} />;
+    case "field_updated":
+      return <Pencil size={size} strokeWidth={sw} color={palette.text.icon} />;
+    default:
+      return <Circle size={size} strokeWidth={sw} color={palette.text.muted} />;
+  }
+}
+
+// Whole-sentence templates per editable field, so each sentence is one
+// dictionary entry and translates with its word order intact.
+const FIELD_UPDATE_TEXT: Record<string, { change: string; plain: string }> = {
+  display_name: { change: 'Updated name: "{from}" → "{to}"', plain: "Updated name" },
+  primitive_type: { change: 'Updated type: "{from}" → "{to}"', plain: "Updated type" },
+  owner_id: {
+    change: 'Updated primary owner: "{from}" → "{to}"',
+    plain: "Updated primary owner",
+  },
+  owner_ids: { change: 'Updated owners: "{from}" → "{to}"', plain: "Updated owners" },
+  metadata: { change: 'Updated details: "{from}" → "{to}"', plain: "Updated details" },
+};
+
+// Fields whose values are owners: one (owner_id) or a list (owner_ids).
+const OWNER_FIELDS = new Set(["owner_id", "owner_ids"]);
+
+/** Resolve an owner audit value (see parseOwnerAuditValue) to names. */
+function formatOwners(
+  value: string | null | undefined,
+  field: "owner_id" | "owner_ids",
+  formatUser: (userId: number | string) => string,
+  t: (key: string) => string,
+): string {
+  const ids = parseOwnerAuditValue(value, field);
+  if (ids.length === 0) return t("None");
+  return ids.map((uid) => formatUser(uid)).join(", ");
+}
+
+/** Turn a raw audit row into a readable sentence. */
+function describeAction(
+  entry: AgentAuditLogEntry,
+  formatUser: (userId: number | string) => string,
+  t: (key: string) => string,
+): string {
+  switch (entry.action) {
+    case "review_status_changed":
+      return entry.new_value
+        ? fill(t("Review status changed to {status}"), {
+            // Same label as the status chips and filter, translated.
+            status: t(getReviewStatusDisplay(entry.new_value).label),
+          })
+        : t("Review status changed");
+    case "model_linked":
+      return t("Linked to a model in the inventory");
+    case "model_unlinked":
+      return t("Unlinked from its model");
+    case "field_updated": {
+      const fieldKey = entry.field_changed ?? "";
+      const text = FIELD_UPDATE_TEXT[fieldKey] ?? {
+        change: 'Updated {field}: "{from}" → "{to}"',
+        plain: "Updated {field}",
+      };
+      const field = fieldKey.replace(/_/g, " ") || "field";
+      if (OWNER_FIELDS.has(fieldKey)) {
+        const ownerField = fieldKey as "owner_id" | "owner_ids";
+        return fill(t(text.change), {
+          field,
+          from: formatOwners(entry.old_value, ownerField, formatUser, t),
+          to: formatOwners(entry.new_value, ownerField, formatUser, t),
+        });
+      }
+      if (entry.old_value != null && entry.new_value != null) {
+        return fill(t(text.change), { field, from: entry.old_value, to: entry.new_value });
+      }
+      return fill(t(text.plain), { field });
+    }
+    default:
+      return entry.action.replace(/_/g, " ");
+  }
+}
+
+export default ActivityTimeline;

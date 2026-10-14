@@ -696,7 +696,10 @@ const DEMO_AGENTS = [
 ];
 
 // Owner assignments by agent name (emails resolved via the users map). The first
-// email is the primary owner. Agents not listed fall back to the admin.
+// email is the primary owner. Agents not listed fall back to the admin. Only
+// manual agents get the full set: synced agents cannot have owners assigned in
+// VerifyWise, so they keep just the primary, as a source-reported text owner
+// (see sourceOwnerFor).
 const AGENT_OWNERS: Record<string, string[]> = {
   "Contract Review Agent": [
     ADMIN_EMAIL,
@@ -708,6 +711,19 @@ const AGENT_OWNERS: Record<string, string[]> = {
   "Sales Outreach Agent": ["miguel.torres@meridian.example"],
   "HR Onboarding Assistant": ["aisha.khan@meridian.example"],
 };
+
+/**
+ * The owner a source system reports for a synced agent: text, never a
+ * VerifyWise user id. A user id would dangle as "User #42" once that user is
+ * deleted, because owner reassignment skips synced agents. Derived from the
+ * seeded team member's name; the admin (whose email may come from the
+ * environment) maps to a generic platform account.
+ */
+function sourceOwnerFor(email: string): string {
+  const user = EXTRA_USERS.find((u) => u.email === email);
+  const local = user ? `${user.name}.${user.surname}`.toLowerCase() : "platform.admin";
+  return `${local}@meridian.example`;
+}
 
 async function seedAgentPrimitives(ctx: Ctx, usersByEmail: Record<string, number>) {
   // No public POST endpoint seeds a full agent with source/status/staleness in
@@ -722,11 +738,13 @@ async function seedAgentPrimitives(ctx: Ctx, usersByEmail: Record<string, number
     const metadata = a.manual
       ? { notes: "Added manually for governance tracking." }
       : { region: "eastus", project: "foundry-prod" };
-    // Resolve this agent's owner (first listed); default to the admin. The
-    // schema stores a single owner_id per agent.
+    // Resolve this agent's owners; default to the admin. For manual agents the
+    // first is the primary (agent_primitives.owner_id) and the full set goes to
+    // agent_primitive_owners below so the two stay in sync.
     const ownerEmails = AGENT_OWNERS[a.name] || [ADMIN_EMAIL];
-    const ownerIds = ownerEmails.map((e) => usersByEmail[e]).filter((v): v is number => !!v);
-    const primaryOwner = ownerIds.length > 0 ? ownerIds[0] : ctx.userId;
+    const resolvedOwners = ownerEmails.map((e) => usersByEmail[e]).filter((v): v is number => !!v);
+    const ownerIds = Array.from(new Set(resolvedOwners.length > 0 ? resolvedOwners : [ctx.userId]));
+    const primaryOwner = ownerIds[0];
     // reviewer for confirmed/rejected agents (drives the lifecycle attribution).
     const reviewed = a.status === "confirmed" || a.status === "rejected";
     await sequelize.query(
@@ -760,7 +778,8 @@ async function seedAgentPrimitives(ctx: Ctx, usersByEmail: Record<string, number
           type: a.type,
           ext: externalId,
           name: a.name,
-          owner: String(primaryOwner),
+          // Manual agents: the primary user id. Synced agents: the source's text owner.
+          owner: a.manual ? String(primaryOwner) : sourceOwnerFor(ownerEmails[0]),
           perms: JSON.stringify(a.perms),
           cats: JSON.stringify(a.cats),
           days: a.days,
@@ -783,6 +802,21 @@ async function seedAgentPrimitives(ctx: Ctx, usersByEmail: Record<string, number
     const agentId = idRows[0]?.id;
 
     if (agentId) {
+      // Full owner set (replace-all), primary first, matching owner_id above.
+      // Synced agents get no rows: their owner is only the source's owner_id.
+      await sequelize.query(
+        `DELETE FROM agent_primitive_owners WHERE organization_id = :orgId AND agent_primitive_id = :agentId`,
+        { replacements: { orgId: ctx.orgId, agentId } },
+      );
+      for (const userId of a.manual ? ownerIds : []) {
+        await sequelize.query(
+          `INSERT INTO agent_primitive_owners (organization_id, agent_primitive_id, user_id, created_at)
+           VALUES (:orgId, :agentId, :userId, NOW())
+           ON CONFLICT (organization_id, agent_primitive_id, user_id) DO NOTHING`,
+          { replacements: { orgId: ctx.orgId, agentId, userId } },
+        );
+      }
+
       // Audit trail (replace-all) so the detail page Activity timeline has content.
       await sequelize.query(
         `DELETE FROM agent_audit_log WHERE organization_id = :orgId AND agent_primitive_id = :agentId`,
@@ -809,7 +843,7 @@ async function seedAgentPrimitives(ctx: Ctx, usersByEmail: Record<string, number
     n++;
   }
   log(
-    `seeded ${n} agents (${DEMO_AGENTS.filter((a) => a.manual).length} manual + rest discovered; owner + audit trail attached)`,
+    `seeded ${n} agents (${DEMO_AGENTS.filter((a) => a.manual).length} manual + rest discovered; manual owners + audit trail attached)`,
   );
 }
 

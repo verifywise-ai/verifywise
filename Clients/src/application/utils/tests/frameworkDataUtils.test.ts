@@ -70,34 +70,6 @@ describe("frameworkDataUtils", () => {
       expect(result.isValid).toBe(false);
       expect(result.error).toContain("Unexpected response structure");
     });
-
-    /**
-     * This test mocks Array.isArray to force a specific code path that validates
-     * the extracted data is an array. This is an implementation detail test that
-     * ensures the guard clause at lines 106-111 works correctly. The mock forces
-     * the second Array.isArray call to return false, simulating a scenario where
-     * the extracted data unexpectedly becomes non-array after initial extraction.
-     *
-     * Note: This approach tests internal behavior rather than external behavior,
-     * making it potentially brittle to refactoring. However, it's necessary to
-     * achieve full branch coverage for this defensive code path.
-     */
-    it("returns invalid when extractedData is not an array (covers lines 106-111)", () => {
-      const isArraySpy = vi.spyOn(Array, "isArray");
-      isArraySpy
-        .mockImplementationOnce(() => true) // response is treated as array (for branch)
-        .mockImplementationOnce(() => false); // extractedData is not an array (forced)
-
-      const result = validateApiResponse([{ id: 1 }], "ISO 27001", "clauses");
-
-      expect(result).toEqual({
-        isValid: false,
-        data: [],
-        error: "Data is not an array for ISO 27001 clauses",
-      });
-
-      isArraySpy.mockRestore();
-    });
   });
 
   describe("processSubItems", () => {

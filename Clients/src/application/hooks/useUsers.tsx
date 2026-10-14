@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { User } from "../../domain/types/User";
 import { getAllUsers } from "../repository/user.repository";
@@ -45,9 +46,11 @@ const useUsers = () => {
     gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
   });
 
-  const refreshUsers = async () => {
+  // Stable across renders, so callers can use it in effect dependencies.
+  // Resolves once the users list has been refetched.
+  const refreshUsers = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
-  };
+  }, [queryClient]);
 
   return {
     users,

@@ -6,6 +6,7 @@ import { csrfProtection } from "./middleware/csrf.middleware";
 
 import assessmentRoutes from "./routes/assessment.route";
 import projectRoutes from "./routes/project.route";
+import euAiActClassificationRoutes from "./routes/euAiActClassification.route";
 import risksRoutes from "./routes/risks.route";
 import riskLinksRoutes from "./routes/riskLinks.route";
 import questionRoutes from "./routes/question.route";
@@ -54,6 +55,7 @@ import taskRoutes from "./routes/task.route";
 import deadlineRoutes from "./routes/deadline.route";
 import slackWebhookRoutes from "./routes/slackWebhook.route";
 import extensionRoutes from "./routes/extension.route";
+import extensionRunsRoutes from "./routes/extensionRuns.route";
 import tokenRoutes from "./routes/tokens.route";
 import shareLinkRoutes from "./routes/shareLink.route";
 import automation from "./routes/automation.route.js";
@@ -111,6 +113,7 @@ import aiAppRoutes from "./routes/aiApp.route";
 import aiAuditRoutes from "./routes/aiAudit.route";
 import observabilityRouter from "./routes/observability.route";
 import featureSettingsRoutes from "./routes/featureSettings.route";
+import dataRetentionRoutes from "./routes/dataRetention.route";
 import friaRoutes from "./routes/fria.route";
 import riskBenchmarkRoutes from "./routes/riskBenchmark.route";
 import quantitativeRiskRoutes from "./routes/quantitativeRisk.route";
@@ -127,6 +130,7 @@ import ssoConfigRoutes from "./routes/ssoConfig.route";
 import aiTrustIndexRoutes from "./routes/aiTrustIndex.route";
 import telemetryRoutes from "./routes/telemetry.route";
 import { requestMetricsMiddleware } from "./middleware/requestMetrics.middleware";
+import { getGatewayUrl } from "./utils/aiGatewayConfig";
 
 const swaggerDoc = YAML.load("./swagger.yaml");
 
@@ -229,9 +233,9 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   };
 
   const checkAiGateway = async (): Promise<HealthCheck> => {
-    const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || "http://localhost:8100";
     try {
-      const gwRes = await fetch(`${AI_GATEWAY_URL}/health`, { signal: AbortSignal.timeout(5000) });
+      // Same address every other gateway call uses (see aiGatewayConfig).
+      const gwRes = await fetch(`${getGatewayUrl()}/health`, { signal: AbortSignal.timeout(5000) });
       return gwRes.ok ? { status: "ok" } : { status: "error", error: `HTTP ${gwRes.status}` };
     } catch (err: unknown) {
       return { status: "error", error: (err as Error).message };
@@ -292,6 +296,7 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   app.use("/api/vendors", vendorRoutes);
   app.use("/api/vendor-change-history", vendorChangeHistoryRoutes);
   app.use("/api/projects", projectRoutes);
+  app.use("/api/eu-ai-act-classification", euAiActClassificationRoutes);
   app.use("/api/questions", questionRoutes);
   app.use("/api/autoDrivers", autoDriverRoutes);
   app.use("/api/assessments", assessmentRoutes);
@@ -322,6 +327,9 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   // sub-paths (which all use multi-segment paths like /oauth/workspaces,
   // /models, /config, /import, /sync, /use-cases, etc.).
   app.use("/api/extensions", extensionRoutes);
+  // Sync engine routes (/:key/runs, /:key/runs/status, /:key/schedule). A key
+  // without a sync provider falls through to the per-extension routers below.
+  app.use("/api/extensions", extensionRunsRoutes);
   app.use("/api/extensions/dataset-bulk-upload", datasetBulkUploadRoutes);
   app.use("/api/extensions/risk-import", riskImportRoutes);
   app.use("/api/extensions/slack", slackExtensionRoutes);
@@ -406,6 +414,7 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   app.use("/api/version", versionRoutes);
   app.use("/api/audit-ledger", auditLedgerRoutes);
   app.use("/api/feature-settings", featureSettingsRoutes);
+  app.use("/api/data-retention", dataRetentionRoutes);
   app.use("/api/fria", friaRoutes);
   app.use("/api/governance-os", governanceOsRoutes);
   app.use("/api/risk-benchmarks", riskBenchmarkRoutes);

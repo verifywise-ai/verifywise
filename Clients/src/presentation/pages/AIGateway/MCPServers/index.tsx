@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Box, Typography, Stack, IconButton, Tooltip } from "@mui/material";
 import {
   CirclePlus,
@@ -15,6 +15,7 @@ import { EmptyState } from "../../../components/EmptyState";
 import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import Chip from "../../../components/Chip";
+import Alert from "../../../components/Alert";
 import Field from "../../../components/Inputs/Field";
 import Select from "../../../components/Inputs/Select";
 import StandardModal from "../../../components/Modals/StandardModal";
@@ -64,6 +65,9 @@ interface MCPServer {
   is_active: boolean;
   health_status: string;
   tool_count: number;
+  last_discovery_error?: string | null;
+  auth_header?: string;
+  auth_secret_hint?: string;
   created_by_name: string;
   created_at: string;
 }
@@ -81,6 +85,48 @@ export default function MCPServersPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
 
   const [form, setForm] = useState<ServerForm>({ ...EMPTY_FORM });
+  const [alert, setAlert] = useState<{
+    variant: "success" | "warning" | "error";
+    title: string;
+    body?: string;
+  } | null>(null);
+  const [discoveringId, setDiscoveringId] = useState<number | null>(null);
+
+  // Fixed phrases go in the title (and the 0/1 tool counts in the body) so each
+  // renders as its own text node and the DOM translator can match it.
+  // One dismiss timer at a time: an older alert's timer must not close a newer one.
+  const alertTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showAlert = (variant: "success" | "warning" | "error", title: string, body?: string) => {
+    if (alertTimer.current) clearTimeout(alertTimer.current);
+    setAlert({ variant, title, body });
+    alertTimer.current = setTimeout(() => setAlert(null), 6000);
+  };
+  useEffect(
+    () => () => {
+      if (alertTimer.current) clearTimeout(alertTimer.current);
+    },
+    [],
+  );
+
+  type Discovery = {
+    status: "success" | "failed" | "skipped";
+    tools_discovered: number;
+    error: string | null;
+  };
+
+  const toolsFound = (n: number) =>
+    n === 0 ? "The server offered no tools" : n === 1 ? "One tool found" : `${n} tools found`;
+
+  const reportDiscovery = (prefix: string, discovery?: Discovery) => {
+    if (!discovery || discovery.status === "skipped") {
+      showAlert("success", prefix);
+    } else if (discovery.status === "success") {
+      showAlert("success", prefix, toolsFound(discovery.tools_discovered));
+    } else {
+      // The server is saved either way; say so, or the admin may think the save failed.
+      showAlert("warning", `${prefix}, but discovery failed`, discovery.error || undefined);
+    }
+  };
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -98,6 +144,12 @@ export default function MCPServersPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const isEditing = editingId !== null;
+  const editingServer = servers.find((s) => s.id === editingId);
+  // The stored secret only carries over while the auth type is unchanged;
+  // switching type means a new secret is required and no "current" hint applies.
+  const keepsStoredSecret = isEditing && editingServer?.auth_type === form.auth_type;
 
   const handleNameChange = (value: string) => {
     setForm((p) => ({
@@ -122,7 +174,7 @@ export default function MCPServersPage() {
       url: srv.url || "",
       auth_type: srv.auth_type || "none",
       auth_token: "",
-      auth_header_name: "",
+      auth_header_name: srv.auth_header || "",
       auth_api_key: "",
       description: srv.description || "",
     });
@@ -152,22 +204,27 @@ export default function MCPServersPage() {
     // Build auth_config based on auth_type
     if (form.auth_type === "bearer" && form.auth_token.trim()) {
       payload.auth_config = { token: form.auth_token.trim() };
-    } else if (form.auth_type === "api_key" && form.auth_api_key.trim()) {
-      payload.auth_config = {
-        header_name: form.auth_header_name.trim() || "X-API-Key",
-        api_key: form.auth_api_key.trim(),
-      };
+    } else if (form.auth_type === "api_key") {
+      const header = form.auth_header_name.trim();
+      const key = form.auth_api_key.trim();
+      if (key) {
+        payload.auth_config = { header: header || "X-API-Key", key };
+      } else if (editingServer && header && header !== (editingServer.auth_header || "")) {
+        payload.auth_config = { header };
+      }
     }
 
     try {
+      let res: { data?: Record<string, any> } | undefined;
       if (editingId === null) {
         payload.slug = form.slug;
-        await apiServices.post("/ai-gateway/mcp/servers", payload);
+        res = await apiServices.post("/ai-gateway/mcp/servers", payload);
       } else {
-        await apiServices.patch(`/ai-gateway/mcp/servers/${editingId}`, payload);
+        res = await apiServices.patch(`/ai-gateway/mcp/servers/${editingId}`, payload);
       }
       setIsModalOpen(false);
       setForm({ ...EMPTY_FORM });
+      reportDiscovery("Server saved", res?.data?.discovery);
       await loadData();
     } catch (err: any) {
       setFormError(
@@ -191,9 +248,27 @@ export default function MCPServersPage() {
     }
   };
 
+  const handleDiscover = async (id: number) => {
+    setDiscoveringId(id);
+    try {
+      const res = await apiServices.post<Record<string, any>>(
+        `/ai-gateway/mcp/servers/${id}/discover`,
+      );
+      showAlert("success", toolsFound(res?.data?.tools_discovered ?? 0));
+    } catch (err: any) {
+      showAlert("error", "Discovery failed", err?.response?.data?.detail);
+    } finally {
+      setDiscoveringId(null);
+      await loadData();
+    }
+  };
+
   const handleToggleActive = async (id: number, isActive: boolean) => {
     try {
-      await apiServices.patch(`/ai-gateway/mcp/servers/${id}`, { is_active: !isActive });
+      const res = await apiServices.patch<Record<string, any>>(`/ai-gateway/mcp/servers/${id}`, {
+        is_active: !isActive,
+      });
+      if (!isActive) reportDiscovery("Server switched on", res?.data?.discovery);
       await loadData();
     } catch {
       // Silently handle
@@ -212,8 +287,6 @@ export default function MCPServersPage() {
     return "Unknown";
   };
 
-  const isEditing = editingId !== null;
-
   return (
     <PageHeaderExtended
       title="MCP Servers"
@@ -228,6 +301,15 @@ export default function MCPServersPage() {
         />
       }
     >
+      {alert && (
+        <Alert
+          variant={alert.variant}
+          title={alert.title}
+          body={alert.body ?? ""}
+          isToast
+          onClick={() => setAlert(null)}
+        />
+      )}
       {loading ? (
         <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
       ) : loadError ? (
@@ -252,8 +334,8 @@ export default function MCPServersPage() {
           />
           <EmptyStateTip
             icon={Activity}
-            title="Health monitoring and tool discovery"
-            description="The gateway periodically checks server health and can discover available tools automatically. Unhealthy servers are temporarily bypassed to keep agents running."
+            title="Tool discovery"
+            description="Tools are discovered when you save a server, and you can run discovery again at any time from the server list."
           />
         </EmptyState>
       ) : (
@@ -277,12 +359,23 @@ export default function MCPServersPage() {
                 <Server size={14} strokeWidth={1.5} color={palette.text.tertiary} />
                 <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{srv.name}</Typography>
               </Stack>,
-              <Chip
-                label={getHealthLabel(srv.health_status)}
-                variant={getHealthChipVariant(srv.health_status)}
-                size="small"
-                uppercase={false}
-              />,
+              <Tooltip
+                title={
+                  srv.health_status === "unhealthy" && srv.last_discovery_error
+                    ? srv.last_discovery_error
+                    : ""
+                }
+                arrow
+              >
+                <span>
+                  <Chip
+                    label={getHealthLabel(srv.health_status)}
+                    variant={getHealthChipVariant(srv.health_status)}
+                    size="small"
+                    uppercase={false}
+                  />
+                </span>
+              </Tooltip>,
               <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
                 {srv.tool_count > 0 ? srv.tool_count : "—"}
               </Typography>,
@@ -316,10 +409,16 @@ export default function MCPServersPage() {
                 gap="2px"
                 onClick={(e) => e.stopPropagation()}
               >
-                <Tooltip title="Coming soon" arrow>
+                <Tooltip title="Discover tools" arrow>
                   <span>
-                    <IconButton size="small" disabled sx={{ p: 0.5 }} aria-label="Discover tools">
-                      <Search size={14} strokeWidth={1.5} color={palette.text.disabled} />
+                    <IconButton
+                      size="small"
+                      onClick={() => handleDiscover(srv.id)}
+                      disabled={discoveringId === srv.id}
+                      sx={{ p: 0.5 }}
+                      aria-label="Discover tools"
+                    >
+                      <Search size={14} strokeWidth={1.5} color={palette.text.tertiary} />
                     </IconButton>
                   </span>
                 </Tooltip>
@@ -412,8 +511,13 @@ export default function MCPServersPage() {
               placeholder="Enter the bearer token"
               value={form.auth_token}
               onChange={(e) => setForm((p) => ({ ...p, auth_token: e.target.value }))}
-              isRequired
+              isRequired={!keepsStoredSecret}
             />
+          )}
+          {form.auth_type === "bearer" && keepsStoredSecret && editingServer?.auth_secret_hint && (
+            <Typography sx={{ fontSize: 11, color: palette.text.tertiary }}>
+              {`Current token: ${editingServer.auth_secret_hint}. Leave blank to keep it.`}
+            </Typography>
           )}
 
           {form.auth_type === "api_key" && (
@@ -429,8 +533,13 @@ export default function MCPServersPage() {
                 placeholder="Enter the API key value"
                 value={form.auth_api_key}
                 onChange={(e) => setForm((p) => ({ ...p, auth_api_key: e.target.value }))}
-                isRequired
+                isRequired={!keepsStoredSecret}
               />
+              {keepsStoredSecret && editingServer?.auth_secret_hint && (
+                <Typography sx={{ fontSize: 11, color: palette.text.tertiary }}>
+                  {`Current key: ${editingServer.auth_secret_hint}. Leave blank to keep it.`}
+                </Typography>
+              )}
             </>
           )}
 

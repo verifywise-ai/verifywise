@@ -108,11 +108,11 @@ enum EvidenceType {
 
 ```typescript
 type ReviewStatus =
-  | "draft"           // Initial state, under development
-  | "pending_review"  // Submitted for review
-  | "approved"        // Reviewed and approved
-  | "rejected"        // Reviewed and rejected
-  | "expired"         // Past expiry date
+  | "draft" // Initial state, under development
+  | "pending_review" // Submitted for review
+  | "approved" // Reviewed and approved
+  | "rejected" // Reviewed and rejected
+  | "expired"; // Past expiry date
 ```
 
 ### File Source
@@ -151,40 +151,89 @@ enum FileSource {
 
 ### Evidence Hub
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/evidenceHub/` | Get all evidence |
-| GET | `/evidenceHub/:id` | Get evidence by ID |
-| POST | `/evidenceHub/` | Create evidence |
-| PATCH | `/evidenceHub/:id` | Update evidence |
-| DELETE | `/evidenceHub/:id` | Delete evidence |
+| Method | Endpoint           | Description        |
+| ------ | ------------------ | ------------------ |
+| GET    | `/evidenceHub/`    | Get all evidence   |
+| GET    | `/evidenceHub/:id` | Get evidence by ID |
+| POST   | `/evidenceHub/`    | Create evidence    |
+| PATCH  | `/evidenceHub/:id` | Update evidence    |
+| DELETE | `/evidenceHub/:id` | Delete evidence    |
 
 ### File Manager
 
-| Method | Endpoint | Description | Access |
-|--------|----------|-------------|--------|
-| POST | `/file-manager/` | Upload file | Admin, Editor, Reviewer |
-| GET | `/file-manager/` | List all files | All authenticated |
-| GET | `/file-manager/with-metadata` | List files with full metadata | All authenticated |
-| GET | `/file-manager/highlighted` | Get highlighted files (due, pending, recent) | All authenticated |
-| GET | `/file-manager/:id` | Download file | All authenticated |
-| GET | `/file-manager/:id/metadata` | Get file metadata | All authenticated |
-| PATCH | `/file-manager/:id/metadata` | Update file metadata | Admin, Editor, Reviewer |
-| GET | `/file-manager/:id/preview` | Preview file (max 5MB) | All authenticated |
-| DELETE | `/file-manager/:id` | Delete file | Admin, Editor, Reviewer |
+| Method | Endpoint                      | Description                                  | Access                  |
+| ------ | ----------------------------- | -------------------------------------------- | ----------------------- |
+| POST   | `/file-manager/`              | Upload file                                  | Admin, Editor, Reviewer |
+| GET    | `/file-manager/`              | List all files                               | All authenticated       |
+| GET    | `/file-manager/with-metadata` | List files with full metadata                | All authenticated       |
+| GET    | `/file-manager/highlighted`   | Get highlighted files (due, pending, recent) | All authenticated       |
+| GET    | `/file-manager/:id`           | Download file                                | All authenticated       |
+| GET    | `/file-manager/:id/metadata`  | Get file metadata                            | All authenticated       |
+| PATCH  | `/file-manager/:id/metadata`  | Update file metadata                         | Admin, Editor, Reviewer |
+| GET    | `/file-manager/:id/preview`   | Preview file (max 5MB)                       | All authenticated       |
+| DELETE | `/file-manager/:id`           | Delete file                                  | Admin, Editor, Reviewer |
 
 **Query parameters:**
+
 - POST: `model_id`, `source`
 - GET list: `page`, `pageSize`
 - GET highlighted: `daysUntilExpiry` (default 30), `recentDays` (default 7)
 
 ### Files
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/files/:id` | Get file content |
-| GET | `/files` | Get user files metadata |
-| POST | `/files` | Upload file for assessment |
+| Method | Endpoint     | Description                |
+| ------ | ------------ | -------------------------- |
+| GET    | `/files/:id` | Get file content           |
+| GET    | `/files`     | Get user files metadata    |
+| POST   | `/files`     | Upload file for assessment |
+
+### Evidence AI
+
+| Method | Endpoint                                 | Description                            |
+| ------ | ---------------------------------------- | -------------------------------------- |
+| POST   | `/evidence-ai/analyze/:fileId`           | Analyze a file and grade its quality   |
+| GET    | `/evidence-ai/analysis/:fileId`          | Stored analysis for a file             |
+| GET    | `/evidence-ai/quality-scores`            | Quality scores across the organization |
+| GET    | `/evidence-ai/gaps`                      | Evidence coverage per requirement      |
+| GET    | `/evidence-ai/suggestions/:fileId`       | Suggested control links for a file     |
+| POST   | `/evidence-ai/suggestions/:fileId/apply` | Create links from accepted suggestions |
+
+`GET /gaps` takes `framework_type` (`eu_ai_act` or `iso_42001`; both when omitted, and an
+unrecognized value returns nothing rather than quietly answering for another framework) and
+`low_grades` (default `D,F`). `getEvidenceGapsQuery` also accepts a `projectId`, which restricts
+counted evidence to files uploaded under that project (used by the advisor tool, not the HTTP
+route). It classifies every requirement as `no_evidence`, `low_quality` — evidence exists but none
+of it is graded above the low bar, which includes files with no AI analysis at all — or `adequate`,
+and returns the non-adequate ones plus the summary counts. **Evidence coverage** on
+**Model inventory → Evidence hub** renders it
+(`Clients/src/presentation/pages/ModelInventory/EvidenceCoveragePanel.tsx`).
+
+#### Counting evidence against a requirement
+
+Evidence is attached from several drawers, and each writes a different kind of id into
+`file_entity_links.entity_id`. The gap query maps each id space onto the requirement's template id
+before counting (`Servers/utils/evidenceAi.utils.ts`, `EVIDENCE_REQUIREMENT_SOURCES`):
+
+| Framework   | `entity_type`    | `entity_id` is                                           | Counted against               |
+| ----------- | ---------------- | -------------------------------------------------------- | ----------------------------- |
+| `eu_ai_act` | `control`        | `controls_struct_eu.id` (AI suggestion accepted)         | itself                        |
+| `eu_ai_act` | `subcontrol`     | `subcontrols_eu.id` (subcontrol drawer)                  | `controls_eu.control_meta_id` |
+| `iso_42001` | `control`        | `annexcategories_struct_iso.id` (AI suggestion accepted) | itself                        |
+| `iso_42001` | `annex_category` | `annexcategories_iso.id` (annex drawer)                  | `annexcategory_meta_id`       |
+
+Two entity types are deliberately **not** counted, because they belong to a different axis and have
+no path to a control or annex category:
+
+- `eu_ai_act` / `assessment` stores an `answers_eu` id. Answers hang off
+  `questions_struct_eu → subtopics → topics`, which never reaches `controls_struct_eu` — the
+  assessment tracker is separate from the compliance tracker.
+- `iso_42001` / `subclause` stores a `subclauses_iso` id, which belongs to the clause axis.
+
+Counting those ids as control ids is what made the report wrong before: a subcontrol or answer id
+was joined straight onto the struct table, so a control could show evidence it did not have, or a
+gap it did not have. `getEvidenceGapsQuery` logs the organization's links by entity type before
+counting, marking the ones it cannot attribute `NOT COUNTED` — that line explains a report that
+reads 0% while files exist.
 
 ## Evidence File Structure
 
@@ -240,25 +289,26 @@ PATCH /file-manager/:id/metadata
 ## Create Evidence Request
 
 ```typescript
-POST /evidenceHub/
-{
-  evidence_name: "GPT-4 Model Card",
-  evidence_type: "Model Card",
-  description: "Official model documentation",
-  evidence_files: [
-    {
-      id: 1,
-      filename: "gpt4-model-card.pdf",
-      size: 245000,
-      mimetype: "application/pdf",
-      upload_date: "2025-01-15",
-      uploaded_by: 5
-    }
-  ],
-  expiry_date: "2026-01-15",
-  mapped_model_ids: [1, 3, 5],
-  mapped_risk_ids: [12]
-}
+POST /
+  evidenceHub /
+  {
+    evidence_name: "GPT-4 Model Card",
+    evidence_type: "Model Card",
+    description: "Official model documentation",
+    evidence_files: [
+      {
+        id: 1,
+        filename: "gpt4-model-card.pdf",
+        size: 245000,
+        mimetype: "application/pdf",
+        upload_date: "2025-01-15",
+        uploaded_by: 5,
+      },
+    ],
+    expiry_date: "2026-01-15",
+    mapped_model_ids: [1, 3, 5],
+    mapped_risk_ids: [12],
+  };
 ```
 
 ## File Upload
@@ -266,6 +316,7 @@ POST /evidenceHub/
 ### Allowed MIME Types
 
 **Documents:**
+
 - PDF (`.pdf`)
 - Word (`.doc`, `.docx`)
 - Excel (`.xls`, `.xlsx`)
@@ -273,6 +324,7 @@ POST /evidenceHub/
 - Markdown (`.md`)
 
 **Images:**
+
 - JPEG (`.jpg`, `.jpeg`)
 - PNG (`.png`)
 - GIF (`.gif`)
@@ -282,6 +334,7 @@ POST /evidenceHub/
 - TIFF (`.tiff`)
 
 **Videos:**
+
 - MP4 (`.mp4`)
 - MPEG (`.mpeg`)
 - MOV (`.mov`)
@@ -312,7 +365,7 @@ POST /evidenceHub/
 ### Filename Sanitization
 
 ```typescript
-sanitizedFilename = filename.replace(/[^a-zA-Z0-9-_\.]/g, "_")
+sanitizedFilename = filename.replace(/[^a-zA-Z0-9-_\.]/g, "_");
 ```
 
 ## Entity Relationships
@@ -362,12 +415,14 @@ Evidence linked through junction table with `linked_by` and `linked_at` timestam
 ### Compliance Controls
 
 Evidence linked via `evidence_links` JSONB field on:
+
 - Subclauses (ISO 27001, ISO 42001, NIST AI RMF)
 - Annex Controls
 
 ### Assessments
 
 Evidence files attached to assessment answers via:
+
 - `evidence_files` array on question records
 - `parent_id` (topic), `sub_id` (subtopic), `meta_id` (question)
 
@@ -375,13 +430,13 @@ Evidence files attached to assessment answers via:
 
 ### Evidence Operations
 
-| Operation | Change Record |
-|-----------|---------------|
-| Create | "Evidence added: {name} ({type})" per model |
-| Update (field) | "{Field}: {old} → {new}" |
-| Update (model added) | "Evidence added: {name} ({type})" |
-| Update (model removed) | "Evidence removed: {name} ({type})" |
-| Delete | "Evidence removed: {name} ({type})" per model |
+| Operation              | Change Record                                 |
+| ---------------------- | --------------------------------------------- |
+| Create                 | "Evidence added: {name} ({type})" per model   |
+| Update (field)         | "{Field}: {old} → {new}"                      |
+| Update (model added)   | "Evidence added: {name} ({type})"             |
+| Update (model removed) | "Evidence removed: {name} ({type})"           |
+| Delete                 | "Evidence removed: {name} ({type})" per model |
 
 ### File Access Logging
 
@@ -402,6 +457,7 @@ Evidence files attached to assessment answers via:
 **Location:** `pages/ModelInventory/evidenceHubTable.tsx`
 
 **Features:**
+
 - Sortable columns (localStorage persistence)
 - Pagination (default 10 rows)
 - User/model name mapping
@@ -410,6 +466,7 @@ Evidence files attached to assessment answers via:
 - Tooltip support
 
 **Columns:**
+
 - evidence_name
 - evidence_type
 - mapped_models
@@ -423,6 +480,7 @@ Evidence files attached to assessment answers via:
 **Location:** `components/Modals/EvidenceHub/index.tsx`
 
 **Fields:**
+
 - evidence_name (text, required)
 - evidence_type (select dropdown)
 - description (textarea)
@@ -436,6 +494,7 @@ Evidence files attached to assessment answers via:
 **Location:** `components/Policies/LinkEvidenceSelectorModal.tsx`
 
 **Features:**
+
 - Evidence selection via checkboxes
 - Sortable table
 - Pagination
@@ -450,19 +509,21 @@ All endpoints require JWT authentication.
 
 ### File Manager
 
-| Operation | Required Role |
-|-----------|---------------|
-| Upload | Admin, Editor, Reviewer |
-| List | All authenticated |
-| Download | All authenticated |
-| Delete | Admin, Editor, Reviewer |
+| Operation | Required Role           |
+| --------- | ----------------------- |
+| Upload    | Admin, Editor, Reviewer |
+| List      | All authenticated       |
+| Download  | All authenticated       |
+| Delete    | Admin, Editor, Reviewer |
 
 ### File Access Checks
 
 **Organization files:**
+
 - User must be in same organization
 
 **Project files:**
+
 - User is project member, OR
 - User is project owner, OR
 - User is file uploader
@@ -499,33 +560,33 @@ validateFileUpload(file) {
 
 ### Backend
 
-| File | Purpose |
-|------|---------|
-| `domain.layer/models/evidenceHub/evidenceHub.model.ts` | Evidence model |
-| `domain.layer/models/file/file.model.ts` | File model |
-| `domain.layer/models/fileManager/fileAccessLog.model.ts` | Access log model |
-| `domain.layer/interfaces/i.evidenceHub.ts` | Interfaces |
-| `utils/evidenceHub.utils.ts` | Evidence queries |
-| `utils/fileUpload.utils.ts` | Upload utilities |
-| `utils/validations/fileManagerValidation.utils.ts` | Validation |
-| `controllers/evidenceHub.ctrl.ts` | Evidence controller |
-| `controllers/fileManager.ctrl.ts` | File manager controller (upload, download, metadata, preview) |
-| `controllers/file.ctrl.ts` | File controller |
-| `repositories/file.repository.ts` | File database queries |
-| `routes/evidenceHub.route.ts` | Evidence routes |
-| `routes/fileManager.route.ts` | File manager routes |
+| File                                                     | Purpose                                                       |
+| -------------------------------------------------------- | ------------------------------------------------------------- |
+| `domain.layer/models/evidenceHub/evidenceHub.model.ts`   | Evidence model                                                |
+| `domain.layer/models/file/file.model.ts`                 | File model                                                    |
+| `domain.layer/models/fileManager/fileAccessLog.model.ts` | Access log model                                              |
+| `domain.layer/interfaces/i.evidenceHub.ts`               | Interfaces                                                    |
+| `utils/evidenceHub.utils.ts`                             | Evidence queries                                              |
+| `utils/fileUpload.utils.ts`                              | Upload utilities                                              |
+| `utils/validations/fileManagerValidation.utils.ts`       | Validation                                                    |
+| `controllers/evidenceHub.ctrl.ts`                        | Evidence controller                                           |
+| `controllers/fileManager.ctrl.ts`                        | File manager controller (upload, download, metadata, preview) |
+| `controllers/file.ctrl.ts`                               | File controller                                               |
+| `repositories/file.repository.ts`                        | File database queries                                         |
+| `routes/evidenceHub.route.ts`                            | Evidence routes                                               |
+| `routes/fileManager.route.ts`                            | File manager routes                                           |
 
 ### Frontend
 
-| File | Purpose |
-|------|---------|
-| `domain/models/Common/evidenceHub/evidenceHub.model.ts` | Client model |
-| `domain/enums/evidenceHub.enum.ts` | Evidence types |
-| `application/repository/evidenceHub.repository.ts` | Evidence API |
-| `application/repository/file.repository.ts` | File API |
-| `pages/ModelInventory/evidenceHubTable.tsx` | Evidence table |
-| `components/Modals/EvidenceHub/index.tsx` | Evidence modal |
-| `components/Policies/LinkEvidenceSelectorModal.tsx` | Link selector |
+| File                                                    | Purpose        |
+| ------------------------------------------------------- | -------------- |
+| `domain/models/Common/evidenceHub/evidenceHub.model.ts` | Client model   |
+| `domain/enums/evidenceHub.enum.ts`                      | Evidence types |
+| `application/repository/evidenceHub.repository.ts`      | Evidence API   |
+| `application/repository/file.repository.ts`             | File API       |
+| `pages/ModelInventory/evidenceHubTable.tsx`             | Evidence table |
+| `components/Modals/EvidenceHub/index.tsx`               | Evidence modal |
+| `components/Policies/LinkEvidenceSelectorModal.tsx`     | Link selector  |
 
 ## Related Documentation
 

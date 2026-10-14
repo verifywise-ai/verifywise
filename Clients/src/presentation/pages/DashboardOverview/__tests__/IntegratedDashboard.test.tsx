@@ -182,7 +182,7 @@ let mockDashboardData: any = {
   ],
 };
 
-let mockMetricsData: any = {
+const mockMetricsData: any = {
   riskMetrics: { total: 10, distribution: { high: 3, medium: 5, low: 2, resolved: 0 }, recent: [] },
   evidenceMetrics: { total: 5, recent: [] },
   vendorRiskMetrics: {

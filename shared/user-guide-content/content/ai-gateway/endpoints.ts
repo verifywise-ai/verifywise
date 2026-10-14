@@ -83,13 +83,13 @@ export const endpointsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Select a fallback endpoint when creating or editing an endpoint. If the primary provider returns an error (timeout, 500, rate limit from the provider side), the gateway automatically retries the request using the fallback endpoint. This works for both non-streaming and streaming requests.',
+      text: 'Select a fallback endpoint when creating or editing an endpoint. If the primary provider returns an error (timeout, 500, rate limit from the provider side), the gateway automatically retries the request using the fallback endpoint. This works for all Playground requests and for non-streaming API requests. Streaming requests sent with a virtual key do not use the fallback yet.',
     },
     {
       type: 'callout',
       variant: 'info',
       title: 'Fallback chain',
-      text: 'The fallback endpoint can itself have a fallback, forming a chain. The gateway follows the chain until it finds a working endpoint or runs out of fallbacks. Guardrails run on each attempt in the chain. Avoid circular fallback chains (A to B to A) as they will loop.',
+      text: 'The fallback endpoint can itself have a fallback, forming a chain. The gateway follows the chain until it finds a working endpoint, up to 3 fallbacks after the first attempt. For API requests sent with a virtual key, guardrails run once, before the first attempt, and every fallback receives the already-scanned request. In the Playground, each attempt is scanned again and counts toward rate limits. Avoid circular chains (A to B to A): they stop after 4 provider calls, each of them logged as a failure.',
     },
     {
       type: 'heading',
@@ -109,15 +109,14 @@ export const endpointsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The model dropdown includes popular models from these providers. You can also type a custom model string in LiteLLM format:',
+      text: 'An endpoint uses a stored provider API key, so it can call models from these providers. The model dropdown lists their models, and you can also type a custom model string in LiteLLM format:',
     },
     {
       type: 'bullet-list',
       items: [
         { bold: 'Direct providers', text: 'OpenAI, Anthropic, Google Gemini, Mistral, xAI, Cohere' },
-        { bold: 'Cloud providers', text: 'AWS Bedrock, Azure OpenAI, Google Vertex AI' },
         { bold: 'Aggregators', text: 'OpenRouter, Together AI' },
-        { bold: 'Self-hosted', text: 'Ollama, vLLM, NVIDIA NIM' },
+        { bold: 'Not supported yet', text: 'Providers that need a base URL or cloud credentials as well as a key: AWS Bedrock, Azure OpenAI, Google Vertex AI and self-hosted models such as Ollama, vLLM and NVIDIA NIM' },
       ],
     },
     {

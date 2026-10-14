@@ -81,7 +81,7 @@ export const ROLE_PERMISSIONS = {
   },
   "auditLedger.admin": {
     module: "Audit ledger",
-    description: "Verify the audit ledger",
+    description: "Verify and export the audit ledger",
     legacyRoles: ADMIN,
   },
   "autoDriver.admin": {
@@ -179,6 +179,11 @@ export const ROLE_PERMISSIONS = {
   "intakeForm.edit": {
     module: "Intake forms",
     description: "Create and manage intake forms and submissions",
+    legacyRoles: EDITOR,
+  },
+  "useCase.classify": {
+    module: "Use cases",
+    description: "Classify a use case with the EU AI Act risk questionnaire",
     legacyRoles: EDITOR,
   },
   "fria.edit": {

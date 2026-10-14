@@ -459,7 +459,7 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
                   );
                   return (
                     <TableCell key={`cf_${def.id}`} sx={getCellStyle(row)}>
-                      {formatCustomFieldValue(def, match?.value, users)}
+                      {formatCustomFieldValue(def, match?.value, users, formatUserDate)}
                     </TableCell>
                   );
                 })}
@@ -500,6 +500,7 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
       customFieldDefs,
       users,
       formatDate,
+      formatUserDate,
     ],
   );
 

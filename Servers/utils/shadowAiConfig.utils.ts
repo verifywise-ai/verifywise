@@ -126,8 +126,17 @@ export async function deleteSyslogConfigQuery(
 
 // ─── Settings ──────────────────────────────────────────────────────
 
+/** Settings an organization has before it saves any (match the column defaults). */
+export const SHADOW_AI_SETTINGS_DEFAULTS = {
+  rate_limit_max_events_per_hour: 0,
+  retention_events_days: 30,
+  retention_daily_rollups_days: 365,
+  retention_alert_history_days: 90,
+} as const;
+
 /**
- * Get organization settings (always returns a row — created by migration).
+ * Get organization settings, or the defaults when the organization has not
+ * saved any yet.
  */
 export async function getSettingsQuery(organizationId: number): Promise<IShadowAiSettings> {
   const [rows] = await sequelize.query(
@@ -135,55 +144,92 @@ export async function getSettingsQuery(organizationId: number): Promise<IShadowA
     { replacements: { organizationId } },
   );
 
-  // Return defaults if no row exists yet
   if ((rows as any[]).length === 0) {
-    return {
-      rate_limit_max_events_per_hour: 0,
-      retention_events_days: 30,
-      retention_daily_rollups_days: 365,
-      retention_alert_history_days: 90,
-    };
+    return { ...SHADOW_AI_SETTINGS_DEFAULTS };
   }
 
   return (rows as IShadowAiSettings[])[0];
 }
 
 /**
- * Update organization settings.
+ * Read the organization's settings inside `transaction`, holding a row lock
+ * until it ends, so a concurrent save cannot change them between this read and
+ * the caller's update. A missing row is first created with the column
+ * defaults, so there is always a row to lock.
+ */
+export async function lockShadowAiSettings(
+  organizationId: number,
+  transaction: Transaction,
+): Promise<IShadowAiSettings> {
+  await sequelize.query(
+    `INSERT INTO shadow_ai_settings (organization_id)
+     VALUES (:organizationId)
+     ON CONFLICT (organization_id) DO NOTHING`,
+    { replacements: { organizationId }, transaction },
+  );
+  const [rows] = await sequelize.query(
+    `SELECT * FROM shadow_ai_settings
+      WHERE organization_id = :organizationId
+      FOR UPDATE`,
+    { replacements: { organizationId }, transaction },
+  );
+  return (rows as IShadowAiSettings[])[0];
+}
+
+/** Clamp a submitted value at 0; undefined (not submitted) becomes null. */
+function nonNegativeOrNull(value: number | undefined): number | null {
+  return value === undefined ? null : Math.max(0, value);
+}
+
+/**
+ * Save organization settings. Creates the row on the first save (missing
+ * fields take the defaults); afterwards only the submitted fields change.
  */
 export async function updateSettingsQuery(
   organizationId: number,
   updates: Partial<Omit<IShadowAiSettings, "id" | "updated_at">>,
   transaction?: Transaction,
 ): Promise<IShadowAiSettings> {
-  const setClauses: string[] = ["updated_at = NOW()"];
-  const replacements: Record<string, unknown> = { organizationId };
+  const replacements = {
+    organizationId,
+    rate_limit: nonNegativeOrNull(updates.rate_limit_max_events_per_hour),
+    ret_events: nonNegativeOrNull(updates.retention_events_days),
+    ret_rollups: nonNegativeOrNull(updates.retention_daily_rollups_days),
+    ret_alerts: nonNegativeOrNull(updates.retention_alert_history_days),
+    updated_by: updates.updated_by ?? null,
+    default_rate_limit: SHADOW_AI_SETTINGS_DEFAULTS.rate_limit_max_events_per_hour,
+    default_ret_events: SHADOW_AI_SETTINGS_DEFAULTS.retention_events_days,
+    default_ret_rollups: SHADOW_AI_SETTINGS_DEFAULTS.retention_daily_rollups_days,
+    default_ret_alerts: SHADOW_AI_SETTINGS_DEFAULTS.retention_alert_history_days,
+  };
 
-  if (updates.rate_limit_max_events_per_hour !== undefined) {
-    setClauses.push("rate_limit_max_events_per_hour = :rate_limit");
-    replacements.rate_limit = Math.max(0, updates.rate_limit_max_events_per_hour);
-  }
-  if (updates.retention_events_days !== undefined) {
-    setClauses.push("retention_events_days = :ret_events");
-    replacements.ret_events = Math.max(0, updates.retention_events_days);
-  }
-  if (updates.retention_daily_rollups_days !== undefined) {
-    setClauses.push("retention_daily_rollups_days = :ret_rollups");
-    replacements.ret_rollups = Math.max(0, updates.retention_daily_rollups_days);
-  }
-  if (updates.retention_alert_history_days !== undefined) {
-    setClauses.push("retention_alert_history_days = :ret_alerts");
-    replacements.ret_alerts = Math.max(0, updates.retention_alert_history_days);
-  }
-  if (updates.updated_by !== undefined) {
-    setClauses.push("updated_by = :updated_by");
-    replacements.updated_by = updates.updated_by;
-  }
-
+  // A NULL replacement means "not submitted": the insert takes the default and
+  // the update keeps the stored value.
   const [result] = await sequelize.query(
-    `UPDATE shadow_ai_settings
-     SET ${setClauses.join(", ")}
-     WHERE organization_id = :organizationId
+    `INSERT INTO shadow_ai_settings AS s (
+       organization_id,
+       rate_limit_max_events_per_hour,
+       retention_events_days,
+       retention_daily_rollups_days,
+       retention_alert_history_days,
+       updated_by,
+       updated_at
+     ) VALUES (
+       :organizationId,
+       COALESCE(:rate_limit, :default_rate_limit),
+       COALESCE(:ret_events, :default_ret_events),
+       COALESCE(:ret_rollups, :default_ret_rollups),
+       COALESCE(:ret_alerts, :default_ret_alerts),
+       :updated_by,
+       NOW()
+     )
+     ON CONFLICT (organization_id) DO UPDATE SET
+       rate_limit_max_events_per_hour = COALESCE(:rate_limit, s.rate_limit_max_events_per_hour),
+       retention_events_days = COALESCE(:ret_events, s.retention_events_days),
+       retention_daily_rollups_days = COALESCE(:ret_rollups, s.retention_daily_rollups_days),
+       retention_alert_history_days = COALESCE(:ret_alerts, s.retention_alert_history_days),
+       updated_by = COALESCE(:updated_by, s.updated_by),
+       updated_at = NOW()
      RETURNING *`,
     {
       replacements,

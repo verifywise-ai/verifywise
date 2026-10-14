@@ -32,6 +32,7 @@ import { TopicModel } from "../domain.layer/models/topic/topic.model";
 import { SubtopicModel } from "../domain.layer/models/subtopic/subtopic.model";
 import { QuestionModel } from "../domain.layer/models/question/question.model";
 import { deleteFileById } from "./fileUpload.utils";
+import { reassignAgentOwnersOfDeletedUsersQuery } from "./agentDiscovery.utils";
 import { AutomationModel } from "../domain.layer/models/automation/automation.model";
 
 /**
@@ -134,9 +135,12 @@ export const getUserByEmailQuery = async (
 export const getUserByIdQuery = async (
   id: number,
   transaction: Transaction | null = null,
+  /** When given, only a user of this organization is returned. */
+  organizationId?: number,
 ): Promise<UserModel> => {
-  const users = await sequelize.query<UserModel>("SELECT * FROM users WHERE id = :id", {
-    replacements: { id },
+  const orgFilter = organizationId !== undefined ? " AND organization_id = :organizationId" : "";
+  const users = await sequelize.query<UserModel>(`SELECT * FROM users WHERE id = :id${orgFilter}`, {
+    replacements: { id, organizationId },
     model: UserModel,
     mapToModel: true, // converts results into UserModel instances
     ...(transaction ? { transaction } : {}), // include transaction if provided
@@ -162,6 +166,30 @@ export const getUserByIdQuery = async (
  * console.log(user.name);
  * ```
  */
+/** Returns the ids in `userIds` that are not users of `organizationId` (invalid ids are ignored). */
+export const findUsersNotInOrganization = async (
+  userIds: number[],
+  organizationId: number,
+  transaction: Transaction | null = null,
+): Promise<number[]> => {
+  const unique = Array.from(new Set(userIds.filter((id) => Number.isInteger(id) && id > 0)));
+  if (unique.length === 0) return [];
+
+  const rows = (await sequelize.query(
+    `SELECT id FROM users
+     WHERE organization_id = :organizationId
+       AND id IN (:userIds);`,
+    {
+      replacements: { organizationId, userIds: unique },
+      type: QueryTypes.SELECT,
+      ...(transaction ? { transaction } : {}),
+    },
+  )) as { id: number }[];
+
+  const found = new Set(rows.map((r) => r.id));
+  return unique.filter((id) => !found.has(id));
+};
+
 export const getUserByIdOrThrow = async (id: number): Promise<UserModel> => {
   const user = await getUserByIdQuery(id);
   if (!user) {
@@ -417,6 +445,10 @@ export const deleteUserByIdQuery = async (
     );
   }
 
+  // Agents whose primary owner is this user move to their next remaining owner
+  // (the user's agent_primitive_owners rows go with the user via ON DELETE CASCADE).
+  await reassignAgentOwnersOfDeletedUsersQuery([id], organizationId, transaction);
+
   await sequelize.query(
     `DELETE FROM projects_members WHERE organization_id = :organizationId AND user_id = :user_id`,
     {
@@ -633,6 +665,15 @@ export const deleteDemoUsersQuery = async (
   organizationId: number,
   transaction: Transaction,
 ): Promise<void> => {
+  const demoUsers = (await sequelize.query(
+    `SELECT id FROM users WHERE organization_id = :organizationId AND is_demo = true`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT, transaction },
+  )) as { id: number }[];
+  await reassignAgentOwnersOfDeletedUsersQuery(
+    demoUsers.map((u) => Number(u.id)),
+    organizationId,
+    transaction,
+  );
   await sequelize.query(
     `DELETE FROM users WHERE organization_id = :organizationId AND is_demo = true`,
     { replacements: { organizationId }, transaction },

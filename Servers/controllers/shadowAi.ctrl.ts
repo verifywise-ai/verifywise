@@ -46,11 +46,16 @@ import {
   updateSyslogConfigQuery,
   deleteSyslogConfigQuery,
   getSettingsQuery,
+  lockShadowAiSettings,
   updateSettingsQuery,
 } from "../utils/shadowAiConfig.utils";
 import { ShadowAiToolStatus } from "../domain.layer/interfaces/i.shadowAi";
 
 import { translateError } from "../utils/i18n.utils";
+import {
+  appendRetentionChangeToLedger,
+  canChangeRetentionPeriods,
+} from "../utils/retentionAudit.utils";
 const FILE_NAME = "shadowAi.ctrl.ts";
 
 // ─── Helpers ────────────────────────────────────────────────────────────
@@ -1291,6 +1296,40 @@ export async function deleteSyslogConfig(req: Request, res: Response) {
 
 // ─── Settings (Rate Limiting & Data Retention) ──────────────────────────
 
+const SHADOW_AI_RETENTION_LABELS = {
+  retention_events_days: "event retention",
+  retention_daily_rollups_days: "daily rollup retention",
+  retention_alert_history_days: "alert history retention",
+} as const;
+
+type ShadowAiRetentionKey = keyof typeof SHADOW_AI_RETENTION_LABELS;
+
+/**
+ * Describe each Shadow AI retention period that changed. `before` is null when
+ * the old settings could not be read; the new value is then written as "set to".
+ */
+export function describeShadowAiRetentionChanges(
+  before: Partial<Record<ShadowAiRetentionKey, number>> | null,
+  after: Partial<Record<ShadowAiRetentionKey, number>>,
+  requested: Record<string, unknown>,
+): string[] {
+  const format = (days: number | undefined) =>
+    days === undefined ? "unknown" : Number(days) > 0 ? `${days} days` : "indefinitely";
+  const changes: string[] = [];
+  for (const key of Object.keys(SHADOW_AI_RETENTION_LABELS) as ShadowAiRetentionKey[]) {
+    if (requested[key] === undefined) continue;
+    if (before === null) {
+      changes.push(`${SHADOW_AI_RETENTION_LABELS[key]} set to ${format(after[key])}`);
+      continue;
+    }
+    if (Number(before[key]) === Number(after[key])) continue;
+    changes.push(
+      `${SHADOW_AI_RETENTION_LABELS[key]} from ${format(before[key])} to ${format(after[key])}`,
+    );
+  }
+  return changes;
+}
+
 export async function getSettings(req: Request, res: Response) {
   const fn = "getSettings";
   const userId = req.userId!;
@@ -1343,10 +1382,6 @@ export async function updateSettings(req: Request, res: Response) {
   });
 
   try {
-    if (req.role !== "Admin" && req.role !== "SuperAdmin") {
-      return res.status(403).json(STATUS_CODE[403](req.t!("Only admins can manage settings")));
-    }
-
     const {
       rate_limit_max_events_per_hour,
       retention_events_days,
@@ -1354,13 +1389,60 @@ export async function updateSettings(req: Request, res: Response) {
       retention_alert_history_days,
     } = req.body;
 
-    const updated = await updateSettingsQuery(organizationId, {
+    const body: Record<string, unknown> = req.body ?? {};
+    const setsRetention = (Object.keys(SHADOW_AI_RETENTION_LABELS) as ShadowAiRetentionKey[]).some(
+      (key) => body[key] !== undefined,
+    );
+
+    // Settings, including the rate limit, are admin-only. A save that changes
+    // only retention periods is also open to any role holding
+    // organization.admin (as on the Data retention page), so a custom role
+    // granted it can save those, never the rate limit.
+    const retentionOnly = setsRetention && rate_limit_max_events_per_hour === undefined;
+    const allowed =
+      req.role === "Admin" ||
+      req.role === "SuperAdmin" ||
+      (retentionOnly && (await canChangeRetentionPeriods(organizationId, req.role)));
+    if (!allowed) {
+      return res.status(403).json(STATUS_CODE[403](req.t!("Only admins can manage settings")));
+    }
+    const settingsUpdate = {
       rate_limit_max_events_per_hour,
       retention_events_days,
       retention_daily_rollups_days,
       retention_alert_history_days,
       updated_by: userId,
-    });
+    };
+    let before: Awaited<ReturnType<typeof getSettingsQuery>> | null = null;
+    let updated: Awaited<ReturnType<typeof updateSettingsQuery>>;
+    if (setsRetention) {
+      // Read the old periods under a row lock in the save's transaction, so a
+      // concurrent save cannot make the ledger's "from" values stale.
+      const transaction = await sequelize.transaction();
+      try {
+        before = (await lockShadowAiSettings(organizationId, transaction)) ?? null;
+        updated = await updateSettingsQuery(organizationId, settingsUpdate, transaction);
+        await transaction.commit();
+      } catch (saveError) {
+        await transaction.rollback();
+        throw saveError;
+      }
+    } else {
+      updated = await updateSettingsQuery(organizationId, settingsUpdate);
+    }
+
+    if (setsRetention && updated) {
+      const changes = describeShadowAiRetentionChanges(before, updated, body);
+      if (changes.length > 0) {
+        await appendRetentionChangeToLedger({
+          organizationId,
+          userId,
+          description: `Shadow AI retention changed: ${changes.join("; ")}`,
+          functionName: fn,
+          fileName: FILE_NAME,
+        });
+      }
+    }
 
     await logSuccess({
       eventType: "Update",

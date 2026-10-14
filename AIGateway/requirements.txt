@@ -1,8 +1,8 @@
 # Core
-fastapi>=0.142.2
-uvicorn>=0.53.0
+fastapi>=0.143.0
+uvicorn>=0.54.0
 python-dotenv>=1.2.4
-pydantic>=2.13.5
+pydantic>=2.14.0
 pydantic-settings>=2.15.0
 redis>=8.1.0
 cryptography>=50.0.2
@@ -10,7 +10,7 @@ httpx>=0.28.1
 
 # Database (async PostgreSQL)
 sqlalchemy[asyncio]>=2.1.1
-asyncpg>=0.31.0
+asyncpg>=0.32.0
 
 # LiteLLM SDK (MIT licensed)
 # Pinned to a specific version — updated per VerifyWise release
@@ -35,4 +35,4 @@ mcp>=2.2.0
 # Observability — OpenTelemetry metrics + logs (pushed to central OTLP collector)
 opentelemetry-api>=1.44.0
 opentelemetry-sdk>=1.45.0
-opentelemetry-exporter-otlp-proto-http>=1.44.0
+opentelemetry-exporter-otlp-proto-http>=1.45.1

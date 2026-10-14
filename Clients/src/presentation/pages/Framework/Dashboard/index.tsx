@@ -74,20 +74,6 @@ interface FrameworkData {
     implemented: number;
     needsRework: number;
   };
-  assignmentStatus?: {
-    assignedClauses: number;
-    totalClauses: number;
-    assignedAnnexes: number;
-    totalAnnexes: number;
-  };
-  statusBreakdown?: {
-    passing: number;
-    failing: number;
-    needsChanges: number;
-    inReview: number;
-    pending: number;
-    inProgress: number;
-  };
   // Generic-framework counts (SOC 2, GDPR, HIPAA, Data Governance, etc.)
   // — from GET /api/frameworks/:frameworkId/dashboard/:projectFrameworkId.
   genericProgress?: { total: number; done: number };
@@ -148,7 +134,7 @@ const FrameworkDashboard = ({ organizationalProject, filteredFrameworks }: Dashb
     // Determine framework index based on filtered frameworks. For built-in
     // frameworks we match by well-known substrings; for generic frameworks
     // we fall back to an exact name match against filteredFrameworks.
-    let frameworkIndex = 0;
+    let frameworkIndex: number;
     if (isISO27001) {
       frameworkIndex = filteredFrameworks.findIndex((f) =>
         f.name.toLowerCase().includes("iso 27001"),
@@ -282,7 +268,7 @@ const FrameworkDashboard = ({ organizationalProject, filteredFrameworks }: Dashb
           const isISO42001 = framework.name.toLowerCase().includes("iso 42001");
           const isNISTAIRMF = framework.name.toLowerCase().includes("nist ai rmf");
 
-          let clauseProgress, annexProgress, assignmentStatus, statusBreakdown;
+          let clauseProgress, annexProgress;
           let nistProgress,
             nistProgressByFunction,
             nistAssignments,
@@ -471,8 +457,6 @@ const FrameworkDashboard = ({ organizationalProject, filteredFrameworks }: Dashb
             nistAssignments,
             nistAssignmentsByFunction,
             nistStatusBreakdown,
-            assignmentStatus,
-            statusBreakdown,
             genericProgress,
             genericAssignments,
             genericStatusBreakdown,

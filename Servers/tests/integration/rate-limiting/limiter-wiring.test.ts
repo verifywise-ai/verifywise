@@ -122,6 +122,12 @@ const PROTECTED_ROUTES = [
     limiter: "aiDetectionScanLimiter",
   },
   {
+    mount: "/api/projectRisks",
+    method: "post",
+    path: "/suggest-ai",
+    limiter: "riskSuggestionsAiLimiter",
+  },
+  {
     mount: "/api/mrm",
     method: "post",
     path: "/models/:externalModelKey/metrics",

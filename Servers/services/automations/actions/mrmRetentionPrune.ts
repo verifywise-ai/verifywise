@@ -1,6 +1,7 @@
 import { getAllOrganizationsQuery } from "../../../utils/organization.utils";
 import { getMrmOrgSettings } from "../../../utils/mrmSettings.utils";
 import { getRetentionCutoffQuery, pruneMetricsBatchQuery } from "../../../utils/mrmRetention.utils";
+import { safeRecordRetentionRun } from "../../../utils/dataRetention.utils";
 import logger from "../../../utils/logger/fileLogger";
 
 /**
@@ -27,33 +28,57 @@ export interface RetentionPruneSummary {
   capped: boolean;
 }
 
-/** Prune one org. */
+/**
+ * Prune one org. A failure records a failed mrm_metrics run (with what was
+ * deleted before it) and is rethrown, so the all-orgs loop logs it.
+ */
 export async function runRetentionPrune(organizationId: number): Promise<RetentionPruneSummary> {
-  const settings = await getMrmOrgSettings(organizationId);
-  const cutoff = await getRetentionCutoffQuery(settings.retention_months);
-
+  let cutoff: string | null = null;
   let deleted = 0;
   let batches = 0;
   let capped = false;
 
-  for (;;) {
-    if (batches >= PRUNE_MAX_BATCHES) {
-      capped = true;
-      break;
-    }
-    const n = await pruneMetricsBatchQuery(
-      organizationId,
-      settings.retention_months,
-      PRUNE_BATCH_SIZE,
-    );
-    batches += 1;
-    deleted += n;
-    if (n < PRUNE_BATCH_SIZE) {
-      break;
-    }
-  }
+  try {
+    const settings = await getMrmOrgSettings(organizationId);
+    const runCutoff = await getRetentionCutoffQuery(settings.retention_months);
+    cutoff = runCutoff;
 
-  return { organization_id: organizationId, cutoff, deleted, batches, capped };
+    for (;;) {
+      if (batches >= PRUNE_MAX_BATCHES) {
+        capped = true;
+        break;
+      }
+      const n = await pruneMetricsBatchQuery(
+        organizationId,
+        settings.retention_months,
+        PRUNE_BATCH_SIZE,
+      );
+      batches += 1;
+      deleted += n;
+      if (n < PRUNE_BATCH_SIZE) {
+        break;
+      }
+    }
+
+    await safeRecordRetentionRun({
+      organizationId,
+      recordType: "mrm_metrics",
+      cutoff,
+      deletedCount: deleted,
+      status: capped ? "capped" : "success",
+    });
+    return { organization_id: organizationId, cutoff: runCutoff, deleted, batches, capped };
+  } catch (error) {
+    await safeRecordRetentionRun({
+      organizationId,
+      recordType: "mrm_metrics",
+      cutoff,
+      deletedCount: deleted,
+      status: "failed",
+      error,
+    });
+    throw error;
+  }
 }
 
 /**

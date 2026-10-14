@@ -68,7 +68,8 @@ const optionalProjectBodyFields = [
   body("members.*")
     .optional()
     .isInt({ min: 1 })
-    .withMessage("each member must be a positive integer"),
+    .withMessage("each member must be a positive integer")
+    .toInt(),
   body("framework")
     .optional({ nullable: true })
     .isArray()

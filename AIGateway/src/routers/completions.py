@@ -2,7 +2,6 @@ from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from middlewares.auth import verify_internal_key
 from services.cost_service import estimate_prompt_cost
 from services.llm_service import (
     chat_completion,
@@ -48,7 +47,6 @@ def _get_provider_key(request: Request) -> str:
 
 @router.post("/v1/chat/completions")
 async def chat_completions(request: Request, body: CompletionRequest):
-    verify_internal_key(request)
     api_key = _get_provider_key(request)
 
     kwargs = {}
@@ -89,7 +87,6 @@ async def chat_completions(request: Request, body: CompletionRequest):
 
 @router.post("/v1/embeddings")
 async def embeddings(request: Request, body: EmbeddingRequest):
-    verify_internal_key(request)
     api_key = _get_provider_key(request)
 
     result = await embedding(
@@ -103,7 +100,6 @@ async def embeddings(request: Request, body: EmbeddingRequest):
 @router.post("/v1/cost-estimate")
 async def cost_estimate(request: Request, body: CostEstimateRequest):
     """Pre-request cost estimation for budget enforcement."""
-    verify_internal_key(request)
 
     estimated_cost = estimate_prompt_cost(
         model=body.model,

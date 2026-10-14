@@ -100,7 +100,7 @@ export const mcpOverviewContent: ArticleContent = {
       items: [
         { bold: 'Security teams', text: 'who need to control which tools agents can access and scan inputs for sensitive data' },
         { bold: 'Compliance teams', text: 'who need an audit trail of every tool invocation for EU AI Act Article 12 (record-keeping) and Article 14 (human oversight)' },
-        { bold: 'Platform teams', text: 'who manage MCP servers and want centralized auth, health monitoring and rate limiting' },
+        { bold: 'Platform teams', text: 'who manage MCP servers and want centralized auth and rate limiting' },
         { bold: 'AI engineers', text: 'who build agents and want a single endpoint to discover all available tools across servers' },
       ],
     },
@@ -118,7 +118,7 @@ export const mcpOverviewContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { text: 'Register an MCP server in **AI Gateway > Agent Control > MCP Servers**.' },
-        { text: 'Wait for tool discovery (or trigger it manually once available).' },
+        { text: 'Check the result of tool discovery, which runs when you save the server. Use **Discover tools** to run it again.' },
         { text: 'Review discovered tools in the **MCP Tools** page. Set risk levels and approval requirements.' },
         { text: 'Create an agent key in **Agent keys**. Scope it to the tools the agent needs.' },
         { text: 'Point your agent at `POST /v1/mcp` with the key as a Bearer token.' },
@@ -162,7 +162,7 @@ export const mcpOverviewContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Agent keys', text: 'Create and manage API keys for agents' },
-        { bold: 'Servers', text: 'Register and monitor backend MCP servers' },
+        { bold: 'Servers', text: 'Register backend MCP servers and see their discovery results' },
         { bold: 'MCP Tools', text: 'View all discovered tools, set risk levels' },
         { bold: 'Activity', text: 'Review tool invocation history and stats' },
         { bold: 'Approvals', text: 'Approve or deny pending tool calls' },

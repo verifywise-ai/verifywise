@@ -16,6 +16,8 @@ import {
   startAiDetectionProgressCleanup,
   stopAiDetectionProgressCleanup,
 } from "./services/aiDetection.service";
+import { warnIfGatewayKeyMissing } from "./utils/aiGatewayKeyCheck";
+import logger from "./utils/logger/fileLogger";
 
 const DEFAULT_PORT = "3000";
 const DEFAULT_HOST = "localhost";
@@ -105,6 +107,10 @@ try {
   bootstrapAgentNetwork();
   registerAllWorkflows();
   startAiDetectionProgressCleanup();
+
+  // Warn when the AI Gateway is in use but the shared key is missing (rule in
+  // aiGatewayKeyCheck). Runs in the background; it never blocks startup.
+  void warnIfGatewayKeyMissing(logger);
 
   const server = app.listen(port, () => {
     console.log(`Server running on port http://${host}:${port}/`);

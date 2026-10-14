@@ -56,12 +56,14 @@ describe("Domain Enums", () => {
         "MINIMAL_RISK",
         "GPAI",
         "GENERAL_RISK",
+        "OUT_OF_SCOPE",
       ]);
     });
 
     it("should have correct string values", () => {
       expect(AiRiskClassification.PROHIBITED).toBe("Prohibited");
       expect(AiRiskClassification.HIGH_RISK).toBe("High risk");
+      expect(AiRiskClassification.OUT_OF_SCOPE).toBe("Out of scope");
     });
   });
 

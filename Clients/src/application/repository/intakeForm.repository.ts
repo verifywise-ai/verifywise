@@ -5,12 +5,29 @@ import {
   IntakeSubmissionStatus,
 } from "../../domain/intake/enums";
 import type {
+  Answers,
+  ClassificationResult,
+  ClassificationRole,
+  Questionnaire,
+} from "../../domain/types/euAiActClassification";
+import type {
   FieldType,
   FormDesignSettings,
 } from "../../presentation/pages/IntakeFormBuilder/types";
+import type { Visibility } from "../utils/intakeFormLogic";
 
 // Re-export enums for convenience
 export { IntakeFormStatus, IntakeEntityType, IntakeSubmissionStatus };
+
+/** EU AI Act classification returned with a submission preview (null when the form had no risk step). */
+export interface EuAiActClassificationPreview {
+  questionnaire: Questionnaire;
+  answers: Answers;
+  role: ClassificationRole | null;
+  current: ClassificationResult;
+  changedSinceSubmission: boolean;
+  submittedAt: string;
+}
 
 /**
  * Base URL for intake form API
@@ -52,6 +69,17 @@ export interface FormField {
   options?: FieldOption[];
   defaultValue?: string | number | boolean | string[];
   entityFieldMapping?: string;
+  /** Calculated fields: arithmetic over earlier number/calculated fields, e.g. "{cost} * 12". */
+  formula?: string;
+  /** Calculated fields: decimals to round and show, 0–6, default 2. */
+  decimals?: number;
+  /** Calculated fields: display-only text before / after the value, at most 10 characters. */
+  prefix?: string;
+  suffix?: string;
+  /** Show the field only when these conditions on earlier fields match. */
+  visibility?: Visibility;
+  /** The risk dimension this field's answer feeds. */
+  riskDimension?: string;
   order: number;
 }
 
@@ -82,6 +110,7 @@ export interface IntakeForm {
   riskAssessmentConfig?: Record<string, unknown> | null;
   llmKeyId?: number | null;
   suggestedQuestionsEnabled?: boolean;
+  euAiActRiskStepEnabled?: boolean;
   designSettings?: FormDesignSettings | null;
   createdBy: number;
   createdAt: Date;
@@ -129,6 +158,8 @@ export interface IntakeSubmission {
   id: number;
   formId: number;
   formData: Record<string, unknown>;
+  /** The stored answers, as the server sends them. */
+  data?: Record<string, unknown>;
   submitterEmail: string;
   submitterName?: string;
   status: IntakeSubmissionStatus;
@@ -206,6 +237,7 @@ export async function createIntakeForm(
     riskTierSystem?: string;
     llmKeyId?: number | null;
     suggestedQuestionsEnabled?: boolean;
+    euAiActRiskStepEnabled?: boolean;
     designSettings?: FormDesignSettings | null;
   },
   signal?: AbortSignal,
@@ -231,6 +263,7 @@ export async function updateIntakeForm(
     riskTierSystem?: string;
     llmKeyId?: number | null;
     suggestedQuestionsEnabled?: boolean;
+    euAiActRiskStepEnabled?: boolean;
     designSettings?: FormDesignSettings | null;
   },
   signal?: AbortSignal,
@@ -316,6 +349,7 @@ export async function getSubmissionPreview(
     };
     riskTier?: string | null;
     riskOverride?: RiskOverride | null;
+    euAiActClassification?: EuAiActClassificationPreview | null;
   };
 }> {
   const response = await apiServices.get(`${BASE_URL}/submissions/${submissionId}/preview`, {
@@ -335,6 +369,7 @@ export async function getSubmissionPreview(
       };
       riskTier?: string | null;
       riskOverride?: RiskOverride | null;
+      euAiActClassification?: EuAiActClassificationPreview | null;
     };
   };
 }
@@ -351,6 +386,7 @@ export async function approveSubmission(
       dimensionOverrides?: Record<string, number>;
       justification: string;
     };
+    euAiActOverride?: { level: string; justification: string };
   },
   signal?: AbortSignal,
 ): Promise<{ data: { submission: IntakeSubmission; createdEntity: unknown } }> {
@@ -389,6 +425,11 @@ export interface IntakeSubmissionField {
   options: Array<{ label: string; value: string }> | null;
   entityFieldMapping: string | null;
   isMapped: boolean;
+  /** Whether the submission stored this field (a calculated field may be stored as null). */
+  answered?: boolean;
+  decimals?: number | null;
+  prefix?: string | null;
+  suffix?: string | null;
 }
 
 /**
@@ -513,6 +554,8 @@ export async function getPublicForm(
     previousData?: Record<string, unknown>;
     previousSubmitterName?: string;
     previousSubmitterEmail?: string;
+    euAiActRiskStep?: { questionnaire: Questionnaire } | null;
+    previousRiskAnswers?: Answers;
   };
 }> {
   const queryParams = resubmissionToken ? `?token=${resubmissionToken}` : "";
@@ -535,6 +578,8 @@ export async function getPublicForm(
       previousData?: Record<string, unknown>;
       previousSubmitterName?: string;
       previousSubmitterEmail?: string;
+      euAiActRiskStep?: { questionnaire: Questionnaire } | null;
+      previousRiskAnswers?: Answers;
     };
   };
 }
@@ -552,6 +597,7 @@ export async function submitPublicForm(
     captchaToken: string;
     captchaAnswer: number;
     resubmissionToken?: string;
+    euAiActRiskAnswers?: Answers;
   },
 ): Promise<{
   data: {
@@ -588,6 +634,8 @@ export async function getPublicFormById(
     previousData?: Record<string, unknown>;
     previousSubmitterName?: string;
     previousSubmitterEmail?: string;
+    euAiActRiskStep?: { questionnaire: Questionnaire } | null;
+    previousRiskAnswers?: Answers;
   };
 }> {
   const queryParams = resubmissionToken ? `?token=${resubmissionToken}` : "";
@@ -608,6 +656,8 @@ export async function getPublicFormById(
       previousData?: Record<string, unknown>;
       previousSubmitterName?: string;
       previousSubmitterEmail?: string;
+      euAiActRiskStep?: { questionnaire: Questionnaire } | null;
+      previousRiskAnswers?: Answers;
     };
   };
 }
@@ -628,6 +678,7 @@ export async function submitPublicFormById(
     captchaToken: string;
     captchaAnswer: number;
     resubmissionToken?: string;
+    euAiActRiskAnswers?: Answers;
   },
 ): Promise<{
   data: {

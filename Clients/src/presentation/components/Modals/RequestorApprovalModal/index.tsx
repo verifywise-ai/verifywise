@@ -119,6 +119,14 @@ const getWorkflowChipProps = (value: string) => {
       bg: "#FFF9E6",
       color: "#F57C00",
     },
+    overdue: {
+      bg: "#FDECEA",
+      color: "#C62828",
+    },
+    escalated: {
+      bg: "#F3E8FF",
+      color: "#7C3AED",
+    },
     withdrawn: {
       bg: `${background.surface}`,
       color: "#616161",
@@ -430,6 +438,11 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
         setRequestDetails(details);
 
         if (requestData.steps) {
+          // A step is overdue only while it is still the request's current
+          // pending step — the first non-completed step in sequence.
+          const currentPendingStepId = requestData.steps.find(
+            (step: any) => step.status?.toLowerCase() !== ApprovalStepStatus.Completed,
+          )?.id;
           const timeline: ITimelineStep[] = requestData.steps.map((step: any, index: number) => ({
             id: step.id,
             title: step.step_name || `Step ${index + 1}`,
@@ -442,6 +455,12 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
             approvalResult: step.approvals?.[0]?.approval_result,
             comment: step.approvals?.[0]?.comments,
             showDetailsLink: step.approvals && step.approvals.length > 1,
+            dueAt: step.due_at ?? null,
+            escalatedAt: step.escalated_at ?? null,
+            isOverdue:
+              !!step.due_at &&
+              new Date(step.due_at).getTime() < Date.now() &&
+              step.id === currentPendingStepId,
           }));
           setTimelineData(timeline);
         }
@@ -855,10 +874,32 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
                                   {formatDate(step.date, { includeTime: true })}
                                 </Typography>
                               )}
+                              {step.status !== ApprovalStepStatus.Completed && step.dueAt && (
+                                <Typography
+                                  sx={{
+                                    ...stepDateStyle,
+                                    ...(step.isOverdue && { color: "#C62828", fontWeight: 600 }),
+                                  }}
+                                >
+                                  Due {formatDate(step.dueAt, { includeTime: true })}
+                                </Typography>
+                              )}
                             </Stack>
                             {step.approvalResult && (
                               <Chip
                                 {...(getWorkflowChipProps(step.approvalResult.toLowerCase()) || {})}
+                                sx={{ mt: 4, alignSelf: "flex-start" }}
+                              />
+                            )}
+                            {step.isOverdue && (
+                              <Chip
+                                {...(getWorkflowChipProps("overdue") || {})}
+                                sx={{ mt: 4, alignSelf: "flex-start" }}
+                              />
+                            )}
+                            {step.escalatedAt && (
+                              <Chip
+                                {...(getWorkflowChipProps("escalated") || {})}
                                 sx={{ mt: 4, alignSelf: "flex-start" }}
                               />
                             )}

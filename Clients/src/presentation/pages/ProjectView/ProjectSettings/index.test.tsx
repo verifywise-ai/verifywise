@@ -59,16 +59,64 @@ vi.mock("../IntakeSubmissionCard", () => ({
   default: () => <div data-testid="intake-submission-card" />,
 }));
 
-vi.mock("../../../components/CustomFieldsSection", () => ({
-  default: () => <div data-testid="custom-fields-section" />,
-}));
+const mockFlushCustomFields = vi.fn();
+vi.mock("../../../components/CustomFieldsSection", async () => {
+  const { forwardRef, useImperativeHandle } =
+    await vi.importActual<typeof import("react")>("react");
+  return {
+    default: forwardRef(({ onDirtyChange }: any, ref) => {
+      useImperativeHandle(ref, () => ({
+        flush: (...args: any[]) => mockFlushCustomFields(...args),
+        hasPendingValues: () => true,
+      }));
+      return (
+        <div data-testid="custom-fields-section">
+          <button type="button" onClick={() => onDirtyChange?.(true)}>
+            Change custom field
+          </button>
+        </div>
+      );
+    }),
+  };
+});
 
 vi.mock("../../../components/CustomFieldsSection/RequiredCustomFieldsGate", () => ({
   useRequiredCustomFieldsGate: () => ({ blocked: false, onPendingChange: vi.fn() }),
 }));
 
 vi.mock("../RiskAnalysisModal", () => ({
-  default: ({ isOpen }: any) => <div data-testid="risk-analysis-modal" data-open={isOpen} />,
+  default: ({ isOpen, updateClassification }: any) => (
+    <div data-testid="risk-analysis-modal" data-open={isOpen}>
+      <button
+        type="button"
+        onClick={() =>
+          updateClassification({
+            questionnaireVersion: 2,
+            level: "High risk",
+            role: "Provider",
+            reasons: [],
+            obligations: [],
+          })
+        }
+      >
+        mock wizard save
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          updateClassification({
+            questionnaireVersion: 2,
+            level: "Limited risk",
+            role: null,
+            reasons: [],
+            obligations: [],
+          })
+        }
+      >
+        Finish risk wizard
+      </button>
+    </div>
+  ),
 }));
 
 import ProjectSettings from "./index";
@@ -96,6 +144,7 @@ const iso42001Framework = { id: 2, name: "ISO 42001", is_organizational: false }
 describe("ProjectSettings", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockFlushCustomFields.mockResolvedValue(undefined);
     mockUserRoleName = "Admin";
     mockUseProjectData.mockReturnValue({ project: baseProject });
     mockUseFrameworks.mockReturnValue({
@@ -117,6 +166,65 @@ describe("ProjectSettings", () => {
     expect(screen.getByTestId("custom-fields-section")).toBeInTheDocument();
   });
 
+  it("clears the required error when the risk wizard fills in the classification", async () => {
+    mockUseFrameworks.mockReturnValue({
+      filteredFrameworks: [euAiActFramework],
+      allFrameworks: [euAiActFramework, iso42001Framework],
+    });
+    mockUseProjectData.mockReturnValue({
+      project: {
+        ...baseProject,
+        framework: [{ project_framework_id: 1, framework_id: 1, name: "EU AI Act" }],
+      },
+    });
+
+    renderWithProviders(<ProjectSettings />);
+    await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());
+
+    // Saving with an empty classification shows the required error
+    fireEvent.change(screen.getByDisplayValue("Chatbot Assistant"), {
+      target: { value: "Renamed Assistant" },
+    });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).not.toBeDisabled());
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(
+      await screen.findByText("AI risk classification is required when EU AI Act is selected."),
+    ).toBeInTheDocument();
+
+    // The wizard reports its result: the error goes away
+    fireEvent.click(screen.getByRole("button", { name: "Finish risk wizard" }));
+    await waitFor(() =>
+      expect(
+        screen.queryByText("AI risk classification is required when EU AI Act is selected."),
+      ).not.toBeInTheDocument(),
+    );
+    expect(screen.getByText("Limited risk")).toBeInTheDocument();
+  });
+
+  it("keeps Save disabled after the risk wizard, since the wizard already saved the value", async () => {
+    mockUseFrameworks.mockReturnValue({
+      filteredFrameworks: [euAiActFramework],
+      allFrameworks: [euAiActFramework, iso42001Framework],
+    });
+    mockUseProjectData.mockReturnValue({
+      project: {
+        ...baseProject,
+        framework: [{ project_framework_id: 1, framework_id: 1, name: "EU AI Act" }],
+      },
+    });
+
+    const triggerRefresh = vi.fn();
+    renderWithProviders(<ProjectSettings triggerRefresh={triggerRefresh} />);
+    await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Finish risk wizard" }));
+    await waitFor(() => expect(screen.getByText("Limited risk")).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    // The rest of the use case view is refreshed, as after a normal Save
+    expect(triggerRefresh).toHaveBeenCalledWith(true);
+  });
+
   it("disables the Save button until a field is modified", async () => {
     renderWithProviders(<ProjectSettings />);
     await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());
@@ -130,6 +238,46 @@ describe("ProjectSettings", () => {
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Save" })).not.toBeDisabled();
     });
+  });
+
+  it("enables Save when only a custom field answer changes", async () => {
+    renderWithProviders(<ProjectSettings />);
+    await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Change custom field" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Save" })).not.toBeDisabled();
+    });
+  });
+
+  it("saves only the custom field values when no project field changed", async () => {
+    mockFlushCustomFields.mockResolvedValue(undefined);
+    renderWithProviders(<ProjectSettings />);
+    await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Change custom field" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(mockFlushCustomFields).toHaveBeenCalledWith(5));
+    expect(mockUpdateProject).not.toHaveBeenCalled();
+    expect(await screen.findByText("Project updated successfully")).toBeInTheDocument();
+  });
+
+  it("disables Save while a save is in progress", async () => {
+    let finish: () => void = () => {};
+    mockFlushCustomFields.mockReturnValue(new Promise<void>((resolve) => (finish = resolve)));
+    renderWithProviders(<ProjectSettings />);
+    await waitFor(() => expect(screen.getByDisplayValue("Chatbot Assistant")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Change custom field" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).toBeDisabled());
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(mockFlushCustomFields).toHaveBeenCalledTimes(1);
+    finish();
   });
 
   it("saves updated project details successfully", async () => {
@@ -222,6 +370,51 @@ describe("ProjectSettings", () => {
     fireEvent.click(screen.getByText("Calculate your AI risk classification"));
 
     expect(screen.getByTestId("risk-analysis-modal")).toHaveAttribute("data-open", "true");
+  });
+
+  const euAiActProject = {
+    ...baseProject,
+    ai_risk_classification: "Minimal risk",
+    type_of_high_risk_role: "Deployer",
+    framework: [{ project_framework_id: 1, framework_id: 1, name: "EU AI Act" }],
+  };
+  const useEuAiAct = () => {
+    mockUseFrameworks.mockReturnValue({
+      filteredFrameworks: [euAiActFramework],
+      allFrameworks: [euAiActFramework, iso42001Framework],
+    });
+    mockUseProjectData.mockReturnValue({ project: euAiActProject });
+  };
+
+  it("takes the level and role the wizard saved, without marking the form as changed", async () => {
+    useEuAiAct();
+    mockUpdateProject.mockResolvedValue({ status: 202 });
+    renderWithProviders(<ProjectSettings />);
+    await screen.findByText("AI risk classification *");
+
+    fireEvent.click(screen.getByText("mock wizard save"));
+
+    await waitFor(() => expect(screen.getByText("High risk")).toBeInTheDocument());
+    expect(screen.getByText("Provider")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+
+    fireEvent.change(screen.getByDisplayValue("Chatbot Assistant"), {
+      target: { value: "Renamed Assistant" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(mockUpdateProject).toHaveBeenCalled());
+    expect(mockUpdateProject.mock.calls[0][0].body).toMatchObject({
+      ai_risk_classification: "High risk",
+      type_of_high_risk_role: "Provider",
+    });
+  });
+
+  it.each(["Reviewer", "Auditor"])("hides the classification wizard link from %s", async (role) => {
+    mockUserRoleName = role;
+    useEuAiAct();
+    renderWithProviders(<ProjectSettings />);
+    await screen.findByText("AI risk classification *");
+    expect(screen.queryByText("Calculate your AI risk classification")).not.toBeInTheDocument();
   });
 
   it("opens the delete confirmation dialog and deletes the project on confirm", async () => {

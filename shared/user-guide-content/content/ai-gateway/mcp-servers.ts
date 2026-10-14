@@ -31,8 +31,8 @@ export const mcpServersContent: ArticleContent = {
       items: [
         { bold: 'Server name', text: 'The display name you gave the server.' },
         { bold: 'Health status', text: 'A color-coded chip: green for "Healthy", red for "Unhealthy" or gray for "Unknown".' },
-        { bold: 'Tool count', text: 'How many tools have been discovered on this server.' },
-        { bold: 'URL', text: 'The server\'s endpoint URL.' },
+        { bold: 'Tool count', text: 'How many of this server\'s tools are currently available. Tools the server no longer offers aren\'t counted.' },
+        { bold: 'URL', text: 'The server\'s address.' },
         { bold: 'Auth type', text: 'Shows "no auth", "bearer" or "api_key".' },
         { bold: 'Slug', text: 'The URL-safe identifier, shown as a path segment (e.g., /my-server).' },
         { bold: 'Created by', text: 'The user who registered the server and the date.' },
@@ -62,9 +62,9 @@ export const mcpServersContent: ArticleContent = {
       rows: [
         { field: 'Server name', required: 'Yes', description: 'A human-readable name (e.g., "Production Search Server").' },
         { field: 'Slug', required: 'Yes', description: 'Auto-generated from the name. Lowercase letters, digits and hyphens only. Must start with a letter or digit. Can\'t be changed after creation.' },
-        { field: 'URL', required: 'Yes', description: 'The full URL of the MCP server (e.g., https://mcp-server.example.com).' },
+        { field: 'URL', required: 'Yes', description: 'The full address of the MCP server (e.g., https://mcp-server.example.com). It must start with http or https and can\'t contain a username or password. Cloud metadata addresses (169.254.169.254) and 0.0.0.0 are blocked. Private network addresses are allowed.' },
         { field: 'Description', required: 'No', description: 'A short note about what this server does (e.g., "Exposes search and retrieval tools").' },
-        { field: 'Authentication', required: 'No', description: 'How the gateway authenticates with this server. Options: None (default), Bearer token or API key.' },
+        { field: 'Authentication', required: 'No', description: 'How the gateway authenticates with this server. Options: None (default), Bearer token or API key. OAuth isn\'t supported yet.' },
       ],
     },
     {
@@ -75,7 +75,7 @@ export const mcpServersContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The gateway supports three authentication methods when connecting to your backend MCP servers:',
+      text: 'The gateway supports three authentication methods when connecting to your backend MCP servers. OAuth isn\'t supported yet. The gateway connects over Streamable HTTP and uses tools only (not resources or prompts).',
     },
     {
       type: 'bullet-list',
@@ -89,7 +89,7 @@ export const mcpServersContent: ArticleContent = {
       type: 'callout',
       variant: 'warning',
       title: 'Auth credentials are stored encrypted',
-      text: 'Bearer tokens and API keys are encrypted at rest, and only decrypted when the gateway forwards a request to the server. You won\'t see the full credential after saving.',
+      text: 'Bearer tokens and API keys are encrypted at rest and only decrypted when the gateway contacts the server. After saving, Admins see only a masked hint of the credential, never the full value.',
     },
     {
       type: 'heading',
@@ -99,11 +99,11 @@ export const mcpServersContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Click a server row or the pencil icon to open the edit modal. You can change the name, URL, description and auth configuration. The slug can\'t be changed after creation because agent keys and audit logs reference it.',
+      text: 'Click a server row or the pencil icon to open the edit modal. You can change the name, address, description and authentication. The slug can\'t be changed after creation because agent keys and audit logs reference it.',
     },
     {
       type: 'paragraph',
-      text: 'To update auth credentials, select the auth type and enter new values. Leave the credential fields empty to keep the existing values.',
+      text: 'To update auth credentials, select the auth type and enter new values. Leave the credential field blank to keep the existing credential.',
     },
     {
       type: 'heading',
@@ -125,29 +125,29 @@ export const mcpServersContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'This helps during maintenance windows, or when you need to quickly cut off access to a server without deleting it.',
+      text: 'The admin MCP Tools page still lists tools from a disabled server. This helps during maintenance windows, or when you need to quickly cut off access to a server without deleting it. Switching a server back on runs tool discovery again.',
     },
     {
       type: 'heading',
-      id: 'health-monitoring',
+      id: 'server-health',
       level: 2,
-      text: 'Health monitoring',
+      text: 'Server health',
     },
     {
       type: 'paragraph',
-      text: 'The gateway tracks each server\'s health status. The health chip next to the server name shows one of three states:',
+      text: 'The health chip next to the server name shows the result of the last tool discovery. It has one of three states:',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Healthy', text: '(green) The server responded successfully to the last health check or tool discovery.' },
-        { bold: 'Unhealthy', text: '(red) The server failed to respond or returned an error. The gateway will still attempt to route requests, but they\'ll likely fail.' },
-        { bold: 'Unknown', text: '(gray) No health check has run yet. This is normal for newly registered servers.' },
+        { bold: 'Healthy', text: '(green) The last tool discovery succeeded.' },
+        { bold: 'Unhealthy', text: '(red) The last tool discovery failed. Hover over the chip to see why.' },
+        { bold: 'Unknown', text: '(gray) No tool discovery has run yet.' },
       ],
     },
     {
       type: 'paragraph',
-      text: 'Health status updates automatically when tool discovery runs. Unhealthy servers aren\'t automatically bypassed, but you can disable them manually.',
+      text: 'Health only changes when tool discovery runs. There are no periodic health checks yet. Unhealthy servers aren\'t bypassed, so requests to them are still attempted and will likely fail. You can disable an unhealthy server manually.',
     },
     {
       type: 'heading',
@@ -157,17 +157,31 @@ export const mcpServersContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'After registering a server, the gateway can discover its tools automatically. The discover endpoint (`POST /mcp/servers/{id}/discover`) connects to the server, lists its tools and stores them in the tool catalog.',
+      text: 'The gateway discovers a server\'s tools by connecting to it, listing its tools and storing them in the tool catalog. Discovery runs while you save, in these cases:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { text: 'You create a server.' },
+        { text: 'You edit a server\'s address, authentication type or credentials.' },
+        { text: 'You switch a server on.' },
+      ],
     },
     {
       type: 'paragraph',
-      text: 'The discovery button in the UI is currently marked as "Coming soon". In the meantime, discovery runs through the API or when the gateway first routes a request to a server.',
+      text: 'Discovery during save has a 10-second limit. The server is always saved, even if discovery fails.',
     },
     {
-      type: 'callout',
-      variant: 'tip',
-      title: 'Manual discovery via API',
-      text: 'You can trigger discovery programmatically: `POST /api/ai-gateway/mcp/servers/{server_id}/discover`. This calls the server\'s `tools/list` method and stores the results.',
+      type: 'paragraph',
+      text: 'Admins can also click **Discover tools** on a server to run discovery again. This has a 25-second limit.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Each run shows its result: how many tools were found, that the server offered no tools, or the reason it failed.',
+    },
+    {
+      type: 'paragraph',
+      text: 'If a server stops offering a tool, the tool is deactivated on the next discovery. Its risk level and approval settings are kept, so they apply again if the tool comes back.',
     },
     {
       type: 'heading',

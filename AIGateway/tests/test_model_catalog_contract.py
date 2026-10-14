@@ -63,7 +63,6 @@ def fake_cost_map(monkeypatch):
     monkeypatch.setattr(models_router.litellm, "model_cost", FAKE_COST_MAP)
     monkeypatch.setattr(models_router, "_cached_catalog", None)
     monkeypatch.setattr(models_router, "_cached_models", None)
-    monkeypatch.setattr(tenant_chat, "verify_internal_key", lambda _request: None)
 
 
 # Regression: the Express-proxied catalog returned {model, input_cost_per_token,

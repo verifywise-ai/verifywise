@@ -202,7 +202,7 @@ export const mcpAuditContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Audit logs have a configurable retention period (set in the gateway configuration). A scheduled cleanup job removes logs and decided approval requests older than the retention window. This runs automatically.',
+      text: 'Admins set how long audit logs are kept in Settings → Data retention, under Agent Control logs. Each organization can keep the deployment default or set its own period in whole days, from the deployment\'s minimum (7 by default) up to 3650. A daily cleanup removes logs and decided or expired approval requests older than the period. Pending approvals that have not expired are kept.',
     },
     {
       type: 'callout',

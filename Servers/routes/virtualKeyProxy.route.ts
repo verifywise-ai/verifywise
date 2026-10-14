@@ -7,14 +7,17 @@
 
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { Router } from "express";
-
-const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || "http://127.0.0.1:8100";
+import { getGatewayUrl } from "../utils/aiGatewayConfig";
 
 function virtualKeyProxyRoutes() {
   const router = Router();
 
   const proxy = createProxyMiddleware({
-    target: AI_GATEWAY_URL,
+    // The startup fallback http-proxy-middleware requires; router below wins.
+    target: getGatewayUrl(),
+    // Resolve the gateway URL per request, so it follows AI_GATEWAY_URL as
+    // read now rather than when the router was built.
+    router: () => getGatewayUrl(),
     changeOrigin: true,
     // /v1/* → /v1/* (no rewrite — AIGateway already handles /v1/*)
     on: {

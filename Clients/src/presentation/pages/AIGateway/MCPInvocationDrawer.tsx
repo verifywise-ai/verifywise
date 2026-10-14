@@ -13,6 +13,7 @@ import {
   KEY_DISPLAY_BG,
   CODE_BLOCK_BG,
   CODE_BLOCK_TEXT,
+  drawerLabelSx as labelSx,
 } from "./shared";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
@@ -34,6 +35,8 @@ interface AuditLogDetail {
   agent_key_name?: string | null;
   result_status: string;
   result_summary: string | null;
+  matched_rule_id?: number | null;
+  matched_rule_name?: string | null;
   tool_use_id: string | null;
   session_id: string | null;
   arguments: Record<string, unknown> | null;
@@ -66,13 +69,6 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
   const colors = row
     ? MCP_STATUS_COLORS[row.result_status] || MCP_STATUS_FALLBACK
     : MCP_STATUS_FALLBACK;
-  const labelSx = {
-    fontSize: 11,
-    fontWeight: 600,
-    color: palette.text.tertiary,
-    letterSpacing: "0.5px",
-    mb: "6px",
-  };
   const codeBlockSx = {
     fontSize: 12,
     fontFamily: "monospace",
@@ -141,8 +137,31 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
 
           <Divider />
 
+          {/* Decision provenance — which rule produced a block / approval. */}
+          {row.matched_rule_name && (
+            <Box
+              sx={{
+                p: "12px",
+                borderRadius: "4px",
+                border: `1px solid ${palette.status.warning.border}`,
+                backgroundColor: palette.status.warning.bg,
+              }}
+            >
+              <Typography sx={labelSx}>
+                {row.result_status === "approval_required"
+                  ? "Approval required by rule"
+                  : "Blocked by rule"}
+              </Typography>
+              <Typography
+                sx={{ fontSize: 13, fontWeight: 600, color: palette.status.warning.text }}
+              >
+                {row.matched_rule_name}
+              </Typography>
+            </Box>
+          )}
+
           <Box>
-            <Typography sx={labelSx}>TOOL USE ID</Typography>
+            <Typography sx={labelSx}>Tool use ID</Typography>
             <Typography sx={{ fontSize: 12, fontFamily: "monospace", wordBreak: "break-all" }}>
               {row.tool_use_id || "—"}
             </Typography>
@@ -151,7 +170,7 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
           <Divider />
 
           <Box>
-            <Typography sx={labelSx}>ARGUMENTS</Typography>
+            <Typography sx={labelSx}>Arguments</Typography>
             <Box component="pre" sx={{ ...codeBlockSx, maxHeight: 200 }}>
               {JSON.stringify(row.arguments ?? {}, null, 2)}
             </Box>
@@ -160,7 +179,7 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
           <Divider />
 
           <Box>
-            <Typography sx={labelSx}>RESULT</Typography>
+            <Typography sx={labelSx}>Result</Typography>
             {row.result_response ? (
               <Box component="pre" sx={{ ...codeBlockSx, maxHeight: 280 }}>
                 {JSON.stringify(row.result_response, null, 2)}
@@ -176,7 +195,7 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
           <Divider />
 
           <Box>
-            <Typography sx={labelSx}>EVENTS</Typography>
+            <Typography sx={labelSx}>Events</Typography>
             <Stack gap="6px">
               {(row.events || []).map((e: InvocationEvent, i: number) => (
                 <Stack key={i} direction="row" justifyContent="space-between" gap="12px">

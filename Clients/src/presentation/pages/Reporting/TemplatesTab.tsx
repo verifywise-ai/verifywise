@@ -127,7 +127,7 @@ export default function TemplatesTab({
   // template into an org-wide report carrying the original's name and
   // description — the silent widening the run/schedule 400-gates exist to stop.
   const handleDuplicate = async (t: any) => {
-    let source = t;
+    let source;
     try {
       source = await getTemplate(t.id);
     } catch {

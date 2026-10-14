@@ -72,8 +72,8 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
     if (!sortConfig.key || !sortConfig.direction) return rows;
 
     return [...rows].sort((a, b) => {
-      let aVal: string | number = "";
-      let bVal: string | number = "";
+      let aVal: string | number;
+      let bVal: string | number;
 
       switch (sortConfig.key) {
         case "name":

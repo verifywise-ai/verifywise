@@ -2,7 +2,7 @@ import json
 import secrets
 import hashlib
 from typing import Any, Optional
-from sqlalchemy import text
+from sqlalchemy import bindparam, text
 from database.db import get_db
 
 
@@ -15,6 +15,22 @@ def generate_agent_key() -> dict:
         "key_hash": key_hash,
         "prefix": prefix,
     }
+
+
+async def get_active_org_agent_key_ids(org_id: int, key_ids: list[int]) -> set[int]:
+    """The subset of key_ids that are active (not revoked) agent keys of this
+    organization."""
+    if not key_ids:
+        return set()
+    async with get_db() as db:
+        result = await db.execute(
+            text(
+                "SELECT id FROM ai_gateway_mcp_agent_keys "
+                "WHERE organization_id = :org_id AND is_active = true AND id IN :ids"
+            ).bindparams(bindparam("ids", expanding=True)),
+            {"org_id": org_id, "ids": list(key_ids)},
+        )
+        return {row[0] for row in result.fetchall()}
 
 
 async def get_all_agent_keys(org_id: int) -> list[dict]:
@@ -223,8 +239,22 @@ async def revoke_agent_key(org_id: int, key_id: int) -> bool:
             """),
             {"org_id": org_id, "key_id": key_id},
         )
-        await db.commit()
         row = result.first()
+        if row is not None:
+            # A revoked key can never call again, so rules stop listing it. A
+            # rule left with no agents applies to none (agent_scope 'selected'
+            # matches only listed keys); it never widens to every agent.
+            await db.execute(
+                text("""
+                    UPDATE ai_gateway_mcp_guardrail_rules
+                    SET applies_to_agent_keys = array_remove(applies_to_agent_keys, :key_id),
+                        updated_at = NOW()
+                    WHERE organization_id = :org_id
+                      AND :key_id = ANY(applies_to_agent_keys)
+                """),
+                {"org_id": org_id, "key_id": key_id},
+            )
+        await db.commit()
         return row is not None
     return False
 

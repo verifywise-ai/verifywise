@@ -60,6 +60,7 @@ const LIMITERS = [
   { name: "authLimiter", key: "auth", limit: 5, windowMinutes: 15 },
   { name: "tokenRefreshLimiter", key: "tokenRefresh", limit: 60, windowMinutes: 15 },
   { name: "aiDetectionScanLimiter", key: "aiDetectionScan", limit: 10, windowMinutes: 60 },
+  { name: "riskSuggestionsAiLimiter", key: "riskSuggestionsAi", limit: 10, windowMinutes: 60 },
   { name: "mrmIngestionLimiter", key: "mrmIngestion", limit: 5000, windowMinutes: 15 },
   { name: "webhookLimiter", key: "webhook", limit: 100, windowMinutes: 1 },
   { name: "loginLimiter", key: "login", limit: 5, windowMinutes: 1 },
@@ -385,6 +386,73 @@ describe("mrmIngestionLimiter token keying", () => {
     expectLimitedResponse(await get(limited, "2001:db8:aaaa::3"), {
       limit: 2,
       windowMinutes: 15,
+      message: config.message,
+    });
+  });
+});
+
+/**
+ * riskSuggestionsAiLimiter is keyed per-user, not per-IP: each suggestion
+ * request spends the org's own LLM budget, so the allowance belongs to the
+ * account. Same scaled-down approach as the MRM token test — the production
+ * keyGenerator is used verbatim, only the limit is lowered.
+ */
+describe("riskSuggestionsAiLimiter per-user keying", () => {
+  const config = { ...PROD.riskSuggestionsAi, maxRequests: 2 };
+  const SHARED_NAT = "203.0.113.210";
+  let limited: LimitedApp;
+
+  const asUser = (userId: number, ip = SHARED_NAT) =>
+    getWith(limited, { "x-forwarded-for": ip, "x-test-user": String(userId) });
+
+  beforeAll(() => {
+    // Stands in for authenticateJWT, which runs ahead of the limiter in
+    // routes/risks.route.ts and attaches req.userId.
+    const attachUser = (req: Request, _res: Response, next: NextFunction) => {
+      const header = req.get("x-test-user");
+      if (header) {
+        (req as Request & { userId?: number }).userId = Number(header);
+      }
+      next();
+    };
+    limited = createLimitedApp(createRateLimiter(config), attachUser);
+  });
+
+  afterAll(async () => {
+    await limited.close();
+  });
+
+  it("spends one user's budget without touching another user on the same IP", async () => {
+    expect((await asUser(1)).status).toBe(200);
+    expect((await asUser(1)).status).toBe(200);
+    expectLimitedResponse(await asUser(1), {
+      limit: 2,
+      windowMinutes: 60,
+      message: config.message,
+    });
+
+    // Same NAT egress IP, different user — must be unaffected.
+    expectAllowedHeaders(await asUser(2), { limit: 2, remaining: 1, windowMinutes: 60 });
+  });
+
+  it("follows the user across source IPs", async () => {
+    expectLimitedResponse(await asUser(1, "198.51.100.77"), {
+      limit: 2,
+      windowMinutes: 60,
+      message: config.message,
+    });
+  });
+
+  it("falls back to a normalised IP key when no user is attached", async () => {
+    // Defensive path: authenticateJWT runs first in production, so this should
+    // be unreachable, but it must not throw or hand out an unkeyed budget.
+    const res = await get(limited, "2001:db8:bbbb::1");
+    expectAllowedHeaders(res, { limit: 2, remaining: 1, windowMinutes: 60 });
+
+    expect((await get(limited, "2001:db8:bbbb::2")).status).toBe(200);
+    expectLimitedResponse(await get(limited, "2001:db8:bbbb::3"), {
+      limit: 2,
+      windowMinutes: 60,
       message: config.message,
     });
   });

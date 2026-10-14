@@ -25,6 +25,15 @@ export type Lang = "en" | "de" | "fr" | "es";
 
 export const translations: Record<string, Record<string, string>> = {
   de: {
+    "Server saved": "Server gespeichert",
+    "Server switched on": "Server eingeschaltet",
+    "The server offered no tools": "Der Server hat keine Tools angeboten",
+    "One tool found": "Ein Tool gefunden",
+    "Discovery failed": "Erkennung fehlgeschlagen",
+    "Server saved, but discovery failed":
+      "Server gespeichert, aber die Erkennung ist fehlgeschlagen",
+    "Server switched on, but discovery failed":
+      "Server eingeschaltet, aber die Erkennung ist fehlgeschlagen",
     "Deployment name": "Bereitstellungsname",
     "Save the deployment name first, then generate the token.":
       "Speichern Sie zuerst den Bereitstellungsnamen, dann generieren Sie das Token.",
@@ -535,6 +544,80 @@ export const translations: Record<string, Record<string, string>> = {
     "Model Inventory": "Modellinventar",
     "Datasets": "Datensätze",
     "Agent discovery": "Agentenerkennung",
+    "AI agents": "KI-Agenten",
+    "Lifecycle": "Lebenszyklus",
+    "Each stage shows who is in charge and when it happened":
+      "Jede Phase zeigt, wer verantwortlich ist und wann sie stattfand",
+    "Ownership & capabilities": "Verantwortung & Fähigkeiten",
+    "Who is accountable, and what this agent can access":
+      "Wer verantwortlich ist und worauf dieser Agent zugreifen kann",
+    "Accountable owner": "Verantwortlicher Eigentümer",
+    "No owner assigned": "Kein Eigentümer zugewiesen",
+    "Access categories": "Zugriffskategorien",
+    "None recorded": "Keine erfasst",
+    "Governance actions taken on this agent": "Governance-Aktionen für diesen Agenten",
+    "No activity recorded yet.": "Noch keine Aktivität erfasst.",
+    "Agent not found": "Agent nicht gefunden",
+    "Could not load this agent.": "Dieser Agent konnte nicht geladen werden.",
+    "Back to AI agents": "Zurück zu KI-Agenten",
+    "Accountable owners": "Verantwortliche Eigentümer",
+    "Manually entered": "Manuell erfasst",
+    "Inactive 30+ days": "Seit über 30 Tagen inaktiv",
+    "Active (stale)": "Aktiv (veraltet)",
+    "STALE": "VERALTET",
+    "Stale: no activity from this agent for 30+ days. Re-sync or review whether it is still in use.":
+      "Veraltet: seit über 30 Tagen keine Aktivität dieses Agenten. Synchronisieren Sie erneut oder prüfen Sie, ob er noch verwendet wird.",
+    "This agent has been inactive for 30+ days": "Dieser Agent ist seit über 30 Tagen inaktiv",
+    "Delete this agent?": "Diesen Agenten löschen?",
+    "When you delete this agent, all data related to this agent will be removed. This action is non-recoverable.":
+      "Wenn Sie diesen Agenten löschen, werden alle zugehörigen Daten entfernt. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "Rows per page": "Zeilen pro Seite",
+    "Syncing...": "Wird synchronisiert...",
+    "Sync now": "Jetzt synchronisieren",
+    "No agents found. Make sure the Azure AI Foundry extension is enabled and configured.":
+      "Keine Agenten gefunden. Stellen Sie sicher, dass die Erweiterung Azure AI Foundry aktiviert und konfiguriert ist.",
+    "Sync failed. Check that the Azure AI Foundry extension is enabled and configured.":
+      "Synchronisierung fehlgeschlagen. Prüfen Sie, ob die Erweiterung Azure AI Foundry aktiviert und konfiguriert ist.",
+    "Agent review status updated.": "Prüfstatus des Agenten aktualisiert.",
+    "Agent updated successfully.": "Agent erfolgreich aktualisiert.",
+    "Agent added successfully.": "Agent erfolgreich hinzugefügt.",
+    "Agent deleted successfully.": "Agent erfolgreich gelöscht.",
+    "Failed to delete agent.": "Agent konnte nicht gelöscht werden.",
+    "Linking...": "Wird verknüpft...",
+    "Link model": "Modell verknüpfen",
+    "Type is required.": "Typ ist erforderlich.",
+    "Description cannot exceed 32,767 characters.":
+      "Die Beschreibung darf 32.767 Zeichen nicht überschreiten.",
+    "Description is required.": "Beschreibung ist erforderlich.",
+    "The selected use case is no longer available.":
+      "Der ausgewählte Anwendungsfall ist nicht mehr verfügbar.",
+    "The selected affected model is no longer available.":
+      "Das ausgewählte betroffene Modell ist nicht mehr verfügbar.",
+    "The selected owner is no longer available.":
+      "Der ausgewählte Verantwortliche ist nicht mehr verfügbar.",
+    "Description must be at least 5 characters.":
+      "Die Beschreibung muss mindestens 5 Zeichen lang sein.",
+    "Edit agent": "Agent bearbeiten",
+    "Add agent manually": "Agent manuell hinzufügen",
+    "Adding...": "Wird hinzugefügt...",
+    "User #{id}": "Benutzer #{id}",
+    "Review status changed to {status}": "Prüfstatus geändert in {status}",
+    "Review status changed": "Prüfstatus geändert",
+    "Linked to a model in the inventory": "Mit einem Modell im Inventar verknüpft",
+    "Unlinked from its model": "Verknüpfung mit dem Modell aufgehoben",
+    'Updated name: "{from}" → "{to}"': "Name aktualisiert: „{from}“ → „{to}“",
+    "Updated name": "Name aktualisiert",
+    'Updated type: "{from}" → "{to}"': "Typ aktualisiert: „{from}“ → „{to}“",
+    "Updated type": "Typ aktualisiert",
+    'Updated primary owner: "{from}" → "{to}"':
+      "Hauptverantwortlichen aktualisiert: „{from}“ → „{to}“",
+    "Updated primary owner": "Hauptverantwortlichen aktualisiert",
+    'Updated owners: "{from}" → "{to}"': "Verantwortliche aktualisiert: „{from}“ → „{to}“",
+    "Updated owners": "Verantwortliche aktualisiert",
+    'Updated details: "{from}" → "{to}"': "Details aktualisiert: „{from}“ → „{to}“",
+    "Updated details": "Details aktualisiert",
+    'Updated {field}: "{from}" → "{to}"': "{field} aktualisiert: „{from}“ → „{to}“",
+    "Updated {field}": "{field} aktualisiert",
     "ASSURANCE": "SICHERHEIT",
     "Risk management": "Risikomanagement",
     "Risk Management": "Risikomanagement",
@@ -782,6 +865,12 @@ export const translations: Record<string, Record<string, string>> = {
     "NAME": "NAME",
     "Description": "Beschreibung",
     "Owner": "Verantwortlicher",
+    "Owners": "Verantwortliche",
+    "Some owners are no longer in your organization. They will be removed if you change the owners.":
+      "Einige Verantwortliche gehören nicht mehr zu Ihrer Organisation. Sie werden entfernt, wenn Sie die Verantwortlichen ändern.",
+    'Current owner "{owner}" is not a VerifyWise user. Choosing owners replaces it.':
+      "Der aktuelle Verantwortliche „{owner}“ ist kein VerifyWise-Benutzer. Wenn Sie Verantwortliche auswählen, wird er ersetzt.",
+    "Delete agent": "Agent löschen",
     "OWNER": "VERANTWORTLICHER",
     "Owner name": "Name des Verantwortlichen",
     "Status": "Status",
@@ -931,6 +1020,8 @@ export const translations: Record<string, Record<string, string>> = {
     "EVIDENCE NAME": "NACHWEISNAME",
     "Evidence type": "Nachweistyp",
     "Evidence coverage": "Nachweisabdeckung",
+    "controls adequate": "Kontrollen angemessen",
+    "without evidence": "ohne Nachweis",
     "Report name": "Berichtsname",
     "Report type": "Berichtstyp",
     "Type of report": "Art des Berichts",
@@ -1636,14 +1727,12 @@ export const translations: Record<string, Record<string, string>> = {
       "Wenn eine Automatisierung ausgelöst wird (geplant, per Webhook oder manuell), wird ihre Ausführung hier mit Status und Dauer aufgezeichnet.",
     "You're viewing a public demo of the VerifyWise AI governance platform. Feel free to explore using demo data, but please don't enter any personal or company information.":
       "Sie sehen eine öffentliche Demo der VerifyWise-KI-Governance-Plattform. Erkunden Sie sie gerne mit Demodaten, geben Sie aber bitte keine personenbezogenen oder unternehmensbezogenen Daten ein.",
-    "Your provider API keys are encrypted using AES-256-CBC before being stored. They are only decrypted when proxying a request and are never exposed in logs.":
-      "Ihre Anbieter-API-Schlüssel werden vor der Speicherung mit AES-256-CBC verschlüsselt. Sie werden nur beim Weiterleiten einer Anfrage entschlüsselt und erscheinen nie in Protokollen.",
+    "Your provider API keys are encrypted using AES-256-GCM before being stored. They are only decrypted when proxying a request and are never exposed in logs.":
+      "Ihre Anbieter-API-Schlüssel werden vor der Speicherung mit AES-256-GCM verschlüsselt. Sie werden nur beim Weiterleiten einer Anfrage entschlüsselt und erscheinen nie in Protokollen.",
     "Playground settings": "Playground-Einstellungen",
 
-    // ==============================
-    // Extended coverage (full app)
-    // ==============================
-
+    // =======================    // Extended coverage (full app)
+    // =======================
     // Actions / buttons (extended)
     "Add a description...": "Beschreibung hinzufügen...",
     "Add a reason for this decision...": "Grund für diese Entscheidung angeben...",
@@ -1728,6 +1817,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Confirm your password": "Passwort bestätigen",
     "Connect data sources": "Datenquellen verbinden",
     "Connect external tool servers": "Externe Tool-Server verbinden",
+    "Tool discovery": "Tool-Erkennung",
+    "Tools are discovered when you save a server, and you can run discovery again at any time from the server list.":
+      "Tools werden beim Speichern eines Servers erkannt. Die Erkennung lässt sich jederzeit in der Serverliste erneut ausführen.",
     "Connect your GitHub repositories": "GitHub-Repositories verbinden",
     "Copy key": "Schlüssel kopieren",
     "Copy link": "Link kopieren",
@@ -1985,9 +2077,34 @@ export const translations: Record<string, Record<string, string>> = {
     "Action plan": "Aktionsplan",
     "Activity": "Aktivität",
     "Affected groups description": "Beschreibung der betroffenen Gruppen",
+    "Advisor": "Berater",
     "Agent": "Agent",
     "Agent key created": "Agentenschlüssel erstellt",
     "Agent keys": "Agentenschlüssel",
+    "Agent activity": "Agentenaktivität",
+    "View agent activity": "Agentenaktivität anzeigen",
+    "All agents": "Alle Agenten",
+    "Applies to agents": "Gilt für Agenten",
+    "No activity recorded for this agent yet":
+      "Für diesen Agenten wurde noch keine Aktivität erfasst",
+    "Failed to load agent activity": "Aktivität dieses Agenten konnte nicht geladen werden",
+    "Blocked by rule": "Blockiert durch Regel",
+    "Agent #{id}": "Agent #{id}",
+    "Selected agents": "Ausgewählte Agenten",
+    "Guardrail rules for selected agents stop listing this key. A rule that listed only this agent then applies to no agent until you choose another one in Guardrails.":
+      "Guardrail-Regeln für ausgewählte Agenten führen diesen Schlüssel nicht mehr auf. Eine Regel, die nur diesen Agenten aufführte, gilt dann für keinen Agenten, bis Sie unter Guardrails einen anderen auswählen.",
+    "Select agents": "Agenten auswählen",
+    "No agents": "Keine Agenten",
+    "Select at least one agent, or apply the rule to all agents":
+      "Wählen Sie mindestens einen Agenten aus oder wenden Sie die Regel auf alle Agenten an",
+    "The rule checks tool calls from these agents only. Revoked agent keys are not listed.":
+      "Die Regel prüft nur Tool-Aufrufe dieser Agenten. Widerrufene Agentenschlüssel werden nicht aufgeführt.",
+    "Last active {date}": "Zuletzt aktiv {date}",
+    "Tool use ID": "Tool-Use-ID",
+    "Approval required by rule": "Genehmigung erforderlich durch Regel",
+    "This agent": "Dieser Agent",
+    "{name} · last {days} days": "{name} · letzte {days} Tage",
+    "Rule: {name}": "Regel: {name}",
     "AI advisor": "KI-Berater",
     "AI analysis": "KI-Analyse",
     "AI Detection": "KI-Erkennung",
@@ -2434,6 +2551,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Recent requests": "Letzte Anfragen",
     "Recent searches": "Letzte Suchen",
     "Recent tool calls": "Letzte Tool-Aufrufe",
+    "1 call": "1 Aufruf",
+    "{count} calls": "{count} Aufrufe",
+    "{count} denied": "{count} abgelehnt",
     "Recipients": "Empfänger",
     "Recommendations": "Empfehlungen",
     "Redress and contestability process": "Beschwerde- und Anfechtungsverfahren",
@@ -2729,6 +2849,7 @@ export const translations: Record<string, Record<string, string>> = {
     "No arena battles found. Create a new battle to get started.":
       "Keine Arena-Vergleiche gefunden. Erstellen Sie einen neuen Vergleich, um zu starten.",
     "No audit ledger entries found.": "Keine Prüfjournal-Einträge gefunden.",
+    "Exporting...": "Export läuft...",
     "No audit logs yet": "Noch keine Prüfprotokolle",
     "No bias audits yet. Audit your models for fairness across demographic groups.":
       "Noch keine Verzerrungsprüfungen. Prüfen Sie Ihre Modelle auf Fairness über demografische Gruppen hinweg.",
@@ -3209,6 +3330,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Select organization": "Organisation auswählen",
     "Select outcome column": "Ergebnisspalte auswählen",
     "Select owner": "Verantwortlichen auswählen",
+    "Select owners": "Verantwortliche auswählen",
     "Select past issues level": "Stufe vergangener Probleme auswählen",
     "Select person": "Person auswählen",
     "Select phase": "Phase auswählen",
@@ -3648,7 +3770,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Content safety": "Inhaltssicherheit",
     "Prompt security": "Prompt-Sicherheit",
     "Data leakage prevention": "Verhinderung von Datenabfluss",
-    "Output quality": "Ausgabequalität",
     "Enabled": "Aktiviert",
     "Enable": "Aktivieren",
     "No guardrails match your search.": "Keine Guardrails entsprechen Ihrer Suche.",
@@ -3679,15 +3800,12 @@ export const translations: Record<string, Record<string, string>> = {
     "Database connection strings": "Datenbank-Verbindungszeichenfolgen",
     "Internal URLs": "Interne URLs",
     "Environment variables": "Umgebungsvariablen",
-    "JSON output enforcement": "Erzwingen der JSON-Ausgabe",
-    "Response length limit": "Längenbegrenzung der Antwort",
-    "Executable code in output": "Ausführbarer Code in der Ausgabe",
     "GDPR personal data (all)": "DSGVO-personenbezogene Daten (alle)",
     "HIPAA protected health info": "HIPAA-geschützte Gesundheitsdaten",
     "PCI DSS cardholder data": "PCI-DSS-Karteninhaberdaten",
     "SOC 2 sensitive data": "SOC-2-sensible Daten",
-    "Detect and protect email addresses in prompts and responses.":
-      "E-Mail-Adressen in Prompts und Antworten erkennen und schützen.",
+    "Detect and protect email addresses in prompts.":
+      "E-Mail-Adressen in Prompts erkennen und schützen.",
     "Detect phone numbers including international formats.":
       "Telefonnummern einschließlich internationaler Formate erkennen.",
     "Detect Visa, Mastercard, Amex, and other card formats.":
@@ -3734,11 +3852,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Verweise auf interne/private Netzwerk-URLs erkennen.",
     "Detect environment variable assignments with secrets.":
       "Zuweisungen von Umgebungsvariablen mit Geheimnissen erkennen.",
-    "Ensure responses contain valid JSON when expected.":
-      "Sicherstellen, dass Antworten bei Bedarf gültiges JSON enthalten.",
-    "Flag responses exceeding 4,000 words.": "Antworten mit mehr als 4.000 Wörtern kennzeichnen.",
-    "Detect script tags or executable code patterns in LLM responses.":
-      "Script-Tags oder Muster ausführbaren Codes in LLM-Antworten erkennen.",
     "Detect all GDPR-relevant personal data: email, phone, name, location, DOB, IP, nationality.":
       "Alle DSGVO-relevanten personenbezogenen Daten erkennen: E-Mail, Telefon, Name, Ort, Geburtsdatum, IP, Nationalität.",
     "Detect PHI identifiers: names, dates, SSNs, medical licenses, phone, email.":
@@ -4058,8 +4171,8 @@ export const translations: Record<string, Record<string, string>> = {
       'Wenn Prüfer fragen „Wann haben Sie diese Kontrolle eingeführt?" oder „Wie haben Sie auf diesen Vorfall reagiert?", liefern Ereignisprotokolle klare Antworten. Ein detaillierter Ereignisverlauf macht Erinnerungsabhängigkeit überflüssig und erzeugt objektive Nachweise.',
     "Filter events to find relevant information quickly.":
       "Filtern Sie Ereignisse, um relevante Informationen schnell zu finden.",
-    "With many events logged over time, filters help you find what you need. Filter by date range, event type, or related entity to quickly locate specific governance activities. Export filtered events for reports or documentation.":
-      "Bei vielen protokollierten Ereignissen helfen Filter, das Gesuchte zu finden. Filtern Sie nach Zeitraum, Ereignistyp oder verknüpfter Entität, um Governance-Aktivitäten schnell zu lokalisieren. Exportieren Sie gefilterte Ereignisse für Berichte oder Dokumentation.",
+    "With many events logged over time, filters help you find what you need. Filter by date range, event type, or related entity to quickly locate specific governance activities.":
+      "Bei vielen protokollierten Ereignissen helfen Filter, das Gesuchte zu finden. Filtern Sie nach Zeitraum, Ereignistyp oder verknüpfter Entität, um Governance-Aktivitäten schnell zu lokalisieren.",
 
     "Settings customize VerifyWise to your organization's needs.":
       "Einstellungen passen VerifyWise an die Anforderungen Ihrer Organisation an.",
@@ -4861,6 +4974,54 @@ export const translations: Record<string, Record<string, string>> = {
     "Field": "Feld",
     "Field mapping": "Feldzuordnung",
     "Field settings": "Feldeinstellungen",
+    "Choose a field above this one": "Wählen Sie ein Feld darüber",
+    "Show this field only if…": "Dieses Feld nur anzeigen, wenn…",
+    "Always shown": "Immer angezeigt",
+    "Shown when all conditions match": "Angezeigt, wenn alle Bedingungen zutreffen",
+    "Shown when any condition matches": "Angezeigt, wenn eine Bedingung zutrifft",
+    "is": "ist",
+    "is not": "ist nicht",
+    "is one of": "ist eines von",
+    "includes": "enthält",
+    "does not include": "enthält nicht",
+    "includes any of": "enthält eines von",
+    "is checked": "ist ausgewählt",
+    "is not checked": "ist nicht ausgewählt",
+    "contains": "enthält",
+    "is empty": "ist leer",
+    "is not empty": "ist nicht leer",
+    "Required when shown": "Erforderlich, wenn angezeigt",
+    "Type { to insert a field": "Geben Sie { ein, um ein Feld einzufügen",
+    "Add a field above this one to create a rule":
+      "Fügen Sie darüber ein Feld hinzu, um eine Regel zu erstellen",
+    "Add condition": "Bedingung hinzufügen",
+    "All conditions": "Alle Bedingungen",
+    "Any condition": "Eine beliebige Bedingung",
+    "Autonomy level": "Autonomiegrad",
+    "Conditional": "Bedingt",
+    "Domain criticality": "Kritikalität des Bereichs",
+    "Fix the highlighted fields before saving":
+      "Korrigieren Sie die markierten Felder vor dem Speichern",
+    "Impact scope": "Auswirkungsbereich",
+    "Remove condition": "Bedingung entfernen",
+    "Risk dimension": "Risikodimension",
+    "Add a number field above this one first": "Fügen Sie zuerst darüber ein Zahlenfeld hinzu",
+    "Advanced": "Erweitert",
+    "Calculated": "Berechnet",
+    "Other answers": "Weitere Antworten",
+    "This field is always shown: it fills a required field of the new entity":
+      "Dieses Feld wird immer angezeigt: Es füllt ein Pflichtfeld des neuen Eintrags",
+    "Fix the highlighted fields before publishing":
+      "Korrigieren Sie die markierten Felder vor dem Veröffentlichen",
+    "Draft saved. Fix the highlighted fields before publishing":
+      "Entwurf gespeichert. Korrigieren Sie die markierten Felder vor dem Veröffentlichen",
+    "Additional answers": "Zusätzliche Antworten",
+    "Calculation": "Berechnung",
+    "Decimals": "Dezimalstellen",
+    "Formula": "Formel",
+    "Read-only result of a formula": "Schreibgeschütztes Ergebnis einer Formel",
+    "Result with every input set to 1:": "Ergebnis, wenn jede Eingabe 1 ist:",
+    "Suffix": "Suffix",
     "Field types": "Feldtypen",
     "File details": "Dateidetails",
     "Files can belong to multiple folders. Select all folders where this file should appear.":
@@ -5252,8 +5413,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Project are loading...": "Projekt wird geladen...",
     "Prompt:": "Prompt:",
     "Provider API keys": "Anbieter-API-Schlüssel",
-    "Provider API keys are encrypted at rest (AES-256-CBC) and only decrypted when proxying a request.":
-      "Anbieter-API-Schlüssel werden im Ruhezustand verschlüsselt (AES-256-CBC) und nur beim Proxying einer Anfrage entschlüsselt.",
+    "Provider API keys are encrypted at rest (AES-256-GCM) and only decrypted when proxying a request.":
+      "Anbieter-API-Schlüssel werden im Ruhezustand verschlüsselt (AES-256-GCM) und nur beim Proxying einer Anfrage entschlüsselt.",
     "Quality metrics": "Qualitätsmetriken",
     "Quantitative Risk Assessment": "Quantitative Risikobewertung",
     "Questions about features, how-tos, or use cases?":
@@ -5317,7 +5478,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Risk approval": "Risikogenehmigung",
     "Risk assessment": "Risikobewertung",
     "Risk assessment (optional)": "Risikobewertung (optional)",
-    "Risk assessment pending...": "Risikobewertung ausstehend...",
+    "Intake risk score pending...": "Risikobewertung aus dem Eingangsformular ausstehend...",
     "Risk category data will appear here as risks are categorized.":
       "Risikokategoriedaten erscheinen hier, sobald Risiken kategorisiert werden.",
     "Risk register": "Risikoregister",
@@ -5339,6 +5500,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Safety metrics": "Sicherheitsmetriken",
     "Save failed": "Speichern fehlgeschlagen",
     "Saved": "Gespeichert",
+    "Saved key": "Gespeicherter Schlüssel",
     "Saved by": "Gespeichert von",
     "Scan completed": "Scan abgeschlossen",
     "Scan failed": "Scan fehlgeschlagen",
@@ -5649,8 +5811,8 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Chatbot for Customer Support": "KI-Chatbot für den Kundensupport",
     "AI Gateway": "AI Gateway",
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar und CI/CD-Scanning",
-    "Custom roles, risk inheritance, and evidence retention":
-      "Benutzerdefinierte Rollen, Risikovererbung und Aufbewahrung von Nachweisen",
+    "Risk inheritance, evidence retention, and security hardening":
+      "Risikovererbung, Aufbewahrung von Nachweisen und Sicherheitshärtung",
     "Built-in frameworks, Model Risk Management, and Extensions":
       "Integrierte Frameworks, Model Risk Management und Extensions",
     "AI Trust Index, AI Apps inventory, and Agent Control":
@@ -5688,6 +5850,7 @@ export const translations: Record<string, Record<string, string>> = {
     "AI objectives and planning to achieve them": "KI-Ziele und Planung zu deren Erreichung",
     "AI risk assessment (Operational)": "KI-Risikobewertung (Operativ)",
     "AI risk level": "KI-Risikoniveau",
+    "AI risk suggestions": "KI-Risikovorschläge",
     "AI risk treatment (Operational)": "KI-Risikobehandlung (Operativ)",
     "AI roles and responsibilities": "KI-Rollen und Verantwortlichkeiten",
     "AI system change documentation": "Dokumentation von KI-Systemänderungen",
@@ -6234,7 +6397,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Demonstrate and document the system": "System demonstrieren und dokumentieren",
     "Department of the user (e.g., Engineering, Finance)":
       "Abteilung des Benutzers (z. B. Engineering, Finanzen)",
-    "Deployer": "Bereitsteller",
+    "Deployer": "Betreiber",
     "Deployment & integration": "Bereitstellung und Integration",
     "Describe datasets used, including owned, free, and copyrighted data.":
       "Beschreiben Sie verwendete Datensätze, einschließlich eigener, freier und urheberrechtlich geschützter Daten.",
@@ -6542,6 +6705,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Failed to fetch slack integrations": "Abrufen der Slack-Integrationen fehlgeschlagen",
     "Failed to fetch user data.": "Abrufen der Benutzerdaten fehlgeschlagen.",
     "Failed to generate demo data.": "Generieren der Demodaten fehlgeschlagen.",
+    "Failed to generate risk suggestions. Please try again.":
+      "Generieren der Risikovorschläge fehlgeschlagen. Bitte versuchen Sie es erneut.",
     "Failed to generate share link. Please try again.":
       "Generieren des Freigabelinks fehlgeschlagen. Bitte erneut versuchen.",
     "Failed to install plugin. Please try again.":
@@ -6599,6 +6764,14 @@ export const translations: Record<string, Record<string, string>> = {
     "Failed to rename project": "Umbenennen des Projekts fehlgeschlagen",
     "Failed to replace share link. Please try again.":
       "Ersetzen des Freigabelinks fehlgeschlagen. Bitte erneut versuchen.",
+    "A share link is still being created. Try again in a moment.":
+      "Ein Freigabelink wird noch erstellt. Versuchen Sie es gleich noch einmal.",
+    "New share link created, but some of your previous links could not be disabled. Replace the link again to retry.":
+      "Neuer Freigabelink erstellt, aber einige Ihrer vorherigen Links konnten nicht deaktiviert werden. Ersetzen Sie den Link erneut, um es noch einmal zu versuchen.",
+    "New share link created. Links created by other users are still active; only they can disable them.":
+      "Neuer Freigabelink erstellt. Von anderen Benutzern erstellte Links sind noch aktiv; nur diese können sie deaktivieren.",
+    "Share link replaced. Previous links no longer work.":
+      "Freigabelink ersetzt. Vorherige Links funktionieren nicht mehr.",
     "Failed to restore the task. Please try again.":
       "Wiederherstellen der Aufgabe fehlgeschlagen. Bitte erneut versuchen.",
     "Failed to save": "Speichern fehlgeschlagen",
@@ -6897,6 +7070,12 @@ export const translations: Record<string, Record<string, string>> = {
     "Incident details": "Vorfallsdetails",
     "Incident management details": "Details des Vorfallsmanagements",
     "Incident updated successfully!": "Vorfall erfolgreich aktualisiert!",
+    "This incident was changed by someone else since you opened it. The form now shows their changes with your edits kept: save again to apply your edits.":
+      "Dieser Vorfall wurde von jemand anderem geändert, seit Sie ihn geöffnet haben. Das Formular zeigt jetzt diese Änderungen, Ihre Bearbeitungen bleiben erhalten: Speichern Sie erneut, um Ihre Bearbeitungen zu übernehmen.",
+    "Someone else also changed: {fields}. Saving again will replace their values with yours.":
+      "Jemand anderes hat auch geändert: {fields}. Beim erneuten Speichern werden diese Werte durch Ihre ersetzt.",
+    "This incident was changed by someone else since you opened it. Could not load the latest version; close and reopen the incident to continue.":
+      "Dieser Vorfall wurde von jemand anderem geändert, seit Sie ihn geöffnet haben. Die aktuelle Version konnte nicht geladen werden; schließen Sie den Vorfall und öffnen Sie ihn erneut, um fortzufahren.",
     "Indefinite": "Unbestimmt",
     "Individual event records from ingestion": "Einzelne Ereignisdatensätze aus der Aufnahme",
     "Individual user AI tool usage and risk scores":
@@ -7163,6 +7342,40 @@ export const translations: Record<string, Record<string, string>> = {
     "Multi-select": "Mehrfachauswahl",
     "Multiple choice": "Mehrfachauswahl",
     "Multiple selection dropdown": "Mehrfachauswahl-Dropdown",
+    "Scored select": "Bewertete Auswahl",
+    "New options can't receive answers until they are saved. Remove these answers now, or save the new options first and move the answers later.":
+      "Neue Optionen können erst nach dem Speichern Antworten erhalten. Entfernen Sie diese Antworten jetzt oder speichern Sie zuerst die neuen Optionen und verschieben Sie die Antworten danach.",
+    "Custom field": "Benutzerdefiniertes Feld",
+    "Option label": "Optionsbezeichnung",
+    "Move option up": "Option nach oben",
+    "Move option down": "Option nach unten",
+    "Remove option": "Option entfernen",
+    "Used by {count}": "Verwendet von {count}",
+    "Every option needs a label and a score.":
+      "Jede Option braucht eine Bezeichnung und eine Punktzahl.",
+    "Option labels must be unique.": "Optionsbezeichnungen müssen eindeutig sein.",
+    "Choose what happens to answers": "Festlegen, was mit den Antworten geschieht",
+    "Records use the options you removed. Move their answers to another option, or remove them.":
+      "Datensätze verwenden die entfernten Optionen. Verschieben Sie ihre Antworten zu einer anderen Option oder entfernen Sie sie.",
+    "Remove from records": "Aus Datensätzen entfernen",
+    "These answers will be deleted and can't be restored.":
+      "Diese Antworten werden gelöscht und können nicht wiederhergestellt werden.",
+    "This field is required, so these records will need a new answer.":
+      "Dieses Feld ist ein Pflichtfeld, daher brauchen diese Datensätze eine neue Antwort.",
+    "Choose an option for each removed option.":
+      "Wählen Sie für jede entfernte Option eine Option.",
+    "{option} is used by {count} {records}. Choose what happens to these answers:":
+      "{option} wird von {count} {records} verwendet. Legen Sie fest, was mit diesen Antworten geschieht:",
+    "This field has a value on {count} {records}.":
+      "Dieses Feld hat einen Wert in {count} {records}.",
+    "use case": "Anwendungsfall",
+    "use cases": "Anwendungsfälle",
+    "vendor": "Anbieter",
+    "vendors": "Anbieter",
+    "project risk": "Projektrisiko",
+    "project risks": "Projektrisiken",
+    "model risk": "Modellrisiko",
+    "model risks": "Modellrisiken",
     "Must be OpenAI-compatible API (POST /v1/chat/completions)":
       "Muss eine OpenAI-kompatible API sein (POST /v1/chat/completions)",
     "My Datasets": "Meine Datensätze",
@@ -9447,6 +9660,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Quality": "Qualität",
     "Recommended actions": "Empfohlene Maßnahmen",
     "Report level": "Berichtsebene",
+    "Risk added": "Risiko hinzugefügt",
+    "Risk added to risk register": "Risiko zum Risikoregister hinzugefügt",
     "Risk analysis": "Risikoanalyse",
     "Save to storage": "Im Speicher ablegen",
     "Schedule:": "Zeitplan:",
@@ -9567,6 +9782,78 @@ export const translations: Record<string, Record<string, string>> = {
     "Enable and configure integrations for your organization.":
       "Aktivieren und konfigurieren Sie Integrationen für Ihre Organisation.",
     "Enable automatic sync": "Automatische Synchronisierung aktivieren",
+    "Sync interval": "Synchronisierungsintervall",
+    "Failing since": "Fehlgeschlagen seit",
+    "Sync completed.": "Synchronisierung abgeschlossen.",
+    "Automatic sync refreshes use cases you have imported. It does not import new objects or remove any.":
+      "Die automatische Synchronisierung aktualisiert importierte Anwendungsfälle. Sie importiert keine neuen Objekte und entfernt keine.",
+    "Could not load the saved Jira connection. Reload the page to change the sync settings.":
+      "Die gespeicherte Jira-Verbindung konnte nicht geladen werden. Laden Sie die Seite neu, um die Synchronisierungseinstellungen zu ändern.",
+    "Could not save the sync settings. Try again.":
+      "Die Synchronisierungseinstellungen konnten nicht gespeichert werden. Versuchen Sie es erneut.",
+    "The sync is taking longer than expected. Check the last sync result later.":
+      "Die Synchronisierung dauert länger als erwartet. Prüfen Sie das Ergebnis der letzten Synchronisierung später.",
+    "Could not save the schema and object type. Try again.":
+      "Schema und Objekttyp konnten nicht gespeichert werden. Versuchen Sie es erneut.",
+    "More objects exist in Jira than are shown here.":
+      "In Jira gibt es mehr Objekte, als hier angezeigt werden.",
+    "Load more": "Mehr laden",
+    "The sync stopped responding. Try again.":
+      "Die Synchronisierung reagiert nicht mehr. Versuchen Sie es erneut.",
+    "Sync failed": "Synchronisierung fehlgeschlagen",
+    "Missing in Jira": "Fehlt in Jira",
+    "Missing since": "Fehlt seit",
+    "Failed to remove use cases": "Anwendungsfälle konnten nicht entfernt werden",
+    "Missing use cases removed.": "Fehlende Anwendungsfälle wurden entfernt.",
+    "The sync did not start. Try again.":
+      "Die Synchronisierung wurde nicht gestartet. Versuchen Sie es erneut.",
+    "These use cases and all their data in VerifyWise will be permanently deleted. This cannot be undone.":
+      "Diese Anwendungsfälle und alle zugehörigen Daten in VerifyWise werden dauerhaft gelöscht. Dies kann nicht rückgängig gemacht werden.",
+    "Jira no longer returns these objects. Syncs keep their use cases; remove them here if they should go.":
+      "Jira liefert diese Objekte nicht mehr. Synchronisierungen behalten ihre Anwendungsfälle; entfernen Sie sie hier, wenn sie wegfallen sollen.",
+    "Remove selected use cases": "Ausgewählte Anwendungsfälle entfernen",
+    "Use cases to remove:": "Zu entfernende Anwendungsfälle:",
+    "Select all missing use cases": "Alle fehlenden Anwendungsfälle auswählen",
+    "The removal was interrupted; nothing was removed. Try again.":
+      "Das Entfernen wurde unterbrochen; es wurde nichts entfernt. Versuchen Sie es erneut.",
+    "Another sync or import was running, so this sync did not start.":
+      "Eine andere Synchronisierung oder ein Import lief bereits, daher wurde diese Synchronisierung nicht gestartet.",
+    "Importing objects": "Objekte werden importiert",
+    "Use cases not removed:": "Nicht entfernte Anwendungsfälle:",
+    "Skipped, other missing items of the same use case not selected:":
+      "Übersprungen, andere fehlende Einträge desselben Anwendungsfalls nicht ausgewählt:",
+    "Removal finished, but some use cases were not removed because other missing items of the same use case were not selected. They are still selected; select the rest to remove it.":
+      "Entfernen abgeschlossen, aber einige Anwendungsfälle wurden nicht entfernt, weil andere fehlende Einträge desselben Anwendungsfalls nicht ausgewählt waren. Sie bleiben ausgewählt; wählen Sie die übrigen aus, um ihn zu entfernen.",
+    "Skipped, still linked to an object in Jira:":
+      "Übersprungen, noch mit einem Objekt in Jira verknüpft:",
+    "Skipped, other reason:": "Übersprungen, anderer Grund:",
+    "Jira links removed:": "Entfernte Jira-Verknüpfungen:",
+    "Removal finished. Some use cases were not removed because their use case is still linked to an object that exists in Jira.":
+      "Entfernen abgeschlossen. Einige Anwendungsfälle wurden nicht entfernt, weil ihr Anwendungsfall noch mit einem Objekt verknüpft ist, das in Jira existiert.",
+    "Skipped, no longer missing or no longer there:":
+      "Übersprungen, fehlt nicht mehr oder existiert nicht mehr:",
+    "Skipped, changed during the removal:": "Übersprungen, während des Entfernens geändert:",
+    "Removal finished, but some use cases were not removed. They are still selected.":
+      "Entfernen abgeschlossen, aber einige Anwendungsfälle wurden nicht entfernt. Sie bleiben ausgewählt.",
+    "Links cleaned up:": "Bereinigte Verknüpfungen:",
+    "Removal finished. Some use cases were not removed because they are no longer missing in Jira or no longer exist.":
+      "Entfernen abgeschlossen. Einige Anwendungsfälle wurden nicht entfernt, da sie in Jira nicht mehr fehlen oder nicht mehr existieren.",
+    "Import finished, but some objects could not be imported. They are still selected; import again to retry.":
+      "Import abgeschlossen, aber einige Objekte konnten nicht importiert werden. Sie bleiben ausgewählt; importieren Sie erneut, um es noch einmal zu versuchen.",
+    "Objects not imported:": "Nicht importierte Objekte:",
+    "Removing use cases": "Anwendungsfälle werden entfernt",
+    "Import finished.": "Import abgeschlossen.",
+    "Objects imported:": "Importierte Objekte:",
+    "Objects imported before it stopped:": "Vor dem Abbruch importierte Objekte:",
+    "The import was interrupted because another sync took over.":
+      "Der Import wurde unterbrochen, weil eine andere Synchronisierung übernommen hat.",
+    "The import failed.": "Der Import ist fehlgeschlagen.",
+    "Use cases removed:": "Entfernte Anwendungsfälle:",
+    "Use cases removed before it stopped:": "Vor dem Abbruch entfernte Anwendungsfälle:",
+    "The removal was interrupted before it finished. Try again for the rest.":
+      "Das Entfernen wurde vor dem Abschluss unterbrochen. Versuchen Sie es für die übrigen erneut.",
+    "A sync is already running. Try again when it finishes.":
+      "Es läuft bereits eine Synchronisierung. Versuchen Sie es erneut, wenn sie abgeschlossen ist.",
     "Error Details:": "Fehlerdetails:",
     "Every 12 hours": "Alle 12 Stunden",
     "Every 24 hours": "Alle 24 Stunden",
@@ -9621,6 +9908,8 @@ export const translations: Record<string, Record<string, string>> = {
     "No lifecycle phases configured. Contact an administrator to set up the model lifecycle.":
       "Keine Lebenszyklusphasen konfiguriert. Wenden Sie sich an einen Administrator, um den Modelllebenszyklus einzurichten.",
     "No use case found": "Kein Anwendungsfall gefunden",
+    "No use case selected. Open a use case before asking for risk suggestions.":
+      "Kein Anwendungsfall ausgewählt. Öffnen Sie einen Anwendungsfall, bevor Sie Risikovorschläge anfordern.",
     "No workspaces connected": "Keine Workspaces verbunden",
     "Notification Routing": "Benachrichtigungsweiterleitung",
     "Object Type": "Objekttyp",
@@ -9691,9 +9980,481 @@ export const translations: Record<string, Record<string, string>> = {
     "MCP server": "MCP-Server",
     "The MCP server source was not found next to the backend. It is included from MCPServer/ at build time.":
       "Die MCP-Server-Quelle wurde nicht neben dem Backend gefunden. Sie wird zur Build-Zeit aus MCPServer/ eingebunden.",
+    "SLA (hours)": "SLA (Stunden)",
+    "Enter hours": "Stunden eingeben",
+    "Escalation user": "Eskalationsbenutzer",
+    "Select escalation user": "Eskalationsbenutzer auswählen",
+    "Auto-approve up to risk level": "Automatisch genehmigen bis zur Risikostufe",
+    "Escalated": "Eskaliert",
+    // EU AI Act risk classification: questionnaire, results and reviewer panel
+    "No": "Nein",
+    "Another use in this area": "Eine andere Verwendung in diesem Bereich",
+    "None of these": "Nichts davon",
+    "Is the system developed and put into service only for scientific research and development, or is it still being researched, tested or developed before being placed on the market or put into service?":
+      "Wird das System ausschließlich für die wissenschaftliche Forschung und Entwicklung entwickelt und in Betrieb genommen, oder wird es noch erforscht, getestet oder entwickelt, bevor es in Verkehr gebracht oder in Betrieb genommen wird?",
+    "Yes, only scientific research or pre-market research, testing or development":
+      "Ja, ausschließlich wissenschaftliche Forschung oder Forschung, Tests oder Entwicklung vor dem Inverkehrbringen",
+    "No, it is or will be placed on the market or put into service":
+      "Nein, es wird in Verkehr gebracht oder in Betrieb genommen oder soll es werden",
+    "Are you the provider or the deployer of this AI system?":
+      "Sind Sie Anbieter oder Betreiber dieses KI-Systems?",
+    "We develop the system, or have it developed, and place it on the market or put it into service under our name.":
+      "Wir entwickeln das System oder lassen es entwickeln und bringen es unter unserem Namen in Verkehr oder nehmen es in Betrieb.",
+    "We use the system under our authority in a professional activity.":
+      "Wir verwenden das System in eigener Verantwortung im Rahmen einer beruflichen Tätigkeit.",
+    "Does the system do any of the following?":
+      "Trifft eine der folgenden Aussagen auf das System zu?",
+    "Uses subliminal, manipulative or deceptive techniques that materially distort people's behaviour and are likely to cause significant harm":
+      "Setzt unterschwellige, manipulative oder täuschende Techniken ein, die das Verhalten von Personen wesentlich verzerren und wahrscheinlich erheblichen Schaden verursachen",
+    "Exploits vulnerabilities due to age, disability or a social or economic situation to materially distort behaviour in a way likely to cause significant harm":
+      "Nutzt Schwächen aufgrund des Alters, einer Behinderung oder einer sozialen oder wirtschaftlichen Situation aus, um das Verhalten so wesentlich zu verzerren, dass wahrscheinlich erheblicher Schaden entsteht",
+    "Evaluates or classifies people based on social behaviour or personal characteristics, leading to unjustified or unrelated detrimental treatment (social scoring)":
+      "Bewertet oder klassifiziert Personen anhand ihres sozialen Verhaltens oder persönlicher Merkmale, was zu einer ungerechtfertigten oder sachfremden Schlechterstellung führt (soziale Bewertung)",
+    "Assesses or predicts the risk of a person committing a criminal offence based solely on profiling or personality traits":
+      "Bewertet oder prognostiziert das Risiko, dass eine Person eine Straftat begeht, ausschließlich auf Grundlage von Profiling oder Persönlichkeitsmerkmalen",
+    "Creates or expands facial recognition databases through untargeted scraping of facial images from the internet or CCTV footage":
+      "Erstellt oder erweitert Gesichtserkennungsdatenbanken durch das ungezielte Auslesen von Gesichtsbildern aus dem Internet oder von Überwachungsaufnahmen",
+    "Infers the emotions of people at work or in education institutions, other than for medical or safety reasons":
+      "Leitet Emotionen von Personen am Arbeitsplatz oder in Bildungseinrichtungen ab, außer aus medizinischen Gründen oder Sicherheitsgründen",
+    "Categorises people using biometric data to deduce race, political opinions, trade union membership, religious or philosophical beliefs, sex life or sexual orientation":
+      "Kategorisiert Personen anhand biometrischer Daten, um ihre Rasse, politischen Einstellungen, Gewerkschaftszugehörigkeit, religiösen oder weltanschaulichen Überzeugungen, ihr Sexualleben oder ihre sexuelle Ausrichtung abzuleiten",
+    "Is the system used for real-time remote biometric identification of people in publicly accessible spaces for law enforcement?":
+      "Wird das System zur biometrischen Echtzeit-Fernidentifizierung von Personen in öffentlich zugänglichen Räumen zu Strafverfolgungszwecken verwendet?",
+    "Is that use strictly necessary for one of these objectives, with the prior authorisation Article 5(3) requires?":
+      "Ist diese Verwendung für eines der folgenden Ziele unbedingt erforderlich und liegt die nach Artikel 5(3) erforderliche vorherige Genehmigung vor?",
+    "Targeted search for specific victims of abduction, trafficking in human beings or sexual exploitation, or for missing persons":
+      "Gezielte Suche nach bestimmten Opfern von Entführung, Menschenhandel oder sexueller Ausbeutung oder nach vermissten Personen",
+    "Preventing a specific, substantial and imminent threat to life or physical safety, or a genuine and present or foreseeable terrorist attack":
+      "Abwenden einer konkreten, erheblichen und unmittelbaren Gefahr für das Leben oder die körperliche Sicherheit oder einer tatsächlichen und bestehenden oder vorhersehbaren Gefahr eines Terroranschlags",
+    "Locating or identifying a person suspected of a serious criminal offence listed in Annex II, punishable by at least four years' custody":
+      "Aufspüren oder Identifizieren einer Person, die einer in Anhang II aufgeführten schweren Straftat verdächtigt wird, die mit einer Freiheitsstrafe von mindestens vier Jahren bedroht ist",
+    "None of these, or no prior authorisation": "Nichts davon oder keine vorherige Genehmigung",
+    "Can the system generate or manipulate images, video or audio showing real people in intimate situations without their consent, or child sexual abuse material?":
+      "Kann das System Bilder, Videos oder Audioinhalte erzeugen oder manipulieren, die reale Personen ohne deren Einwilligung in intimen Situationen zeigen, oder Darstellungen sexuellen Missbrauchs von Kindern?",
+    "Does the provider apply safeguards that prevent the system from generating such content?":
+      "Setzt der Anbieter Schutzmaßnahmen ein, die verhindern, dass das System solche Inhalte erzeugt?",
+    "Systems with adequate safeguards against generating this content are not covered by the ban.":
+      "Systeme mit angemessenen Schutzmaßnahmen gegen die Erzeugung solcher Inhalte fallen nicht unter das Verbot.",
+    "Is the system itself a product, or does it perform a safety function in a product, covered by the EU product legislation listed in Annex I?":
+      "Ist das System selbst ein Produkt oder erfüllt es eine Sicherheitsfunktion in einem Produkt, das unter die in Anhang I aufgeführten Produktrechtsvorschriften der EU fällt?",
+    "Yes: a product under Annex I Section A that needs a third-party conformity assessment":
+      "Ja: ein Produkt nach Anhang I Abschnitt A, das einer Konformitätsbewertung durch Dritte bedarf",
+    "For example medical devices, in vitro diagnostic devices, toys, lifts, radio equipment, pressure equipment or personal protective equipment.":
+      "Zum Beispiel Medizinprodukte, In-vitro-Diagnostika, Spielzeug, Aufzüge, Funkanlagen, Druckgeräte oder persönliche Schutzausrüstung.",
+    "Yes: a product under Annex I Section B that needs a third-party conformity assessment":
+      "Ja: ein Produkt nach Anhang I Abschnitt B, das einer Konformitätsbewertung durch Dritte bedarf",
+    "Vehicles, aviation, marine equipment, rail systems, agricultural and forestry vehicles, or machinery.":
+      "Fahrzeuge, Luftfahrt, Schiffsausrüstung, Eisenbahnsysteme, land- und forstwirtschaftliche Fahrzeuge oder Maschinen.",
+    "Is the system intended to be used in any of these areas?":
+      "Soll das System in einem der folgenden Bereiche verwendet werden?",
+    "Biometrics": "Biometrie",
+    "Critical infrastructure (digital infrastructure, road traffic, water, gas, heating or electricity supply)":
+      "Kritische Infrastruktur (digitale Infrastruktur, Straßenverkehr, Wasser-, Gas-, Wärme- oder Stromversorgung)",
+    "Education and vocational training": "Allgemeine und berufliche Bildung",
+    "Employment, workers' management and access to self-employment":
+      "Beschäftigung, Personalmanagement und Zugang zur Selbstständigkeit",
+    "Access to essential private and public services and benefits (public assistance, credit, insurance, emergency services)":
+      "Zugänglichkeit und Inanspruchnahme grundlegender privater und öffentlicher Dienste und Leistungen (öffentliche Unterstützungsleistungen, Kredite, Versicherungen, Notdienste)",
+    "Law enforcement": "Strafverfolgung",
+    "Migration, asylum and border control": "Migration, Asyl und Grenzkontrolle",
+    "Administration of justice and democratic processes": "Rechtspflege und demokratische Prozesse",
+    "How is the system used in biometrics?": "Wie wird das System im Bereich Biometrie verwendet?",
+    "Remote biometric identification": "Biometrische Fernidentifizierung",
+    "Verification only: confirming that a person is who they claim to be":
+      "Nur Verifizierung: Bestätigung, dass eine Person die ist, für die sie sich ausgibt",
+    "Categorising people by sensitive or protected attributes inferred from biometric data":
+      "Kategorisierung von Personen nach sensiblen oder geschützten Merkmalen, die aus biometrischen Daten abgeleitet werden",
+    "How is the system used in critical infrastructure?":
+      "Wie wird das System im Bereich kritische Infrastruktur verwendet?",
+    "As a safety component in managing or operating critical digital infrastructure, road traffic, or the supply of water, gas, heating or electricity":
+      "Als Sicherheitsbauteil bei der Verwaltung oder dem Betrieb kritischer digitaler Infrastruktur, des Straßenverkehrs oder der Wasser-, Gas-, Wärme- oder Stromversorgung",
+    "How is the system used in education?": "Wie wird das System im Bildungsbereich verwendet?",
+    "Deciding access or admission, or assigning people to institutions":
+      "Entscheidung über Zugang oder Zulassung oder Zuweisung von Personen zu Einrichtungen",
+    "Evaluating learning outcomes": "Bewertung von Lernergebnissen",
+    "Assessing the level of education a person will receive or access":
+      "Bewertung des Bildungsniveaus, das eine Person erhalten wird oder zu dem sie Zugang erhält",
+    "Monitoring and detecting prohibited behaviour during tests":
+      "Überwachung und Erkennung von verbotenem Verhalten bei Prüfungen",
+    "How is the system used in employment?":
+      "Wie wird das System im Bereich Beschäftigung verwendet?",
+    "Recruiting or selecting people, including targeted job ads and filtering or evaluating applications":
+      "Einstellung oder Auswahl von Personen, einschließlich gezielter Stellenanzeigen sowie Filterung oder Bewertung von Bewerbungen",
+    "Making decisions on terms of work, promotion or termination":
+      "Entscheidungen über Arbeitsbedingungen, Beförderung oder Kündigung",
+    "Allocating tasks based on behaviour or personal traits, or monitoring and evaluating performance":
+      "Zuweisung von Aufgaben auf Grundlage des Verhaltens oder persönlicher Merkmale oder Überwachung und Bewertung der Leistung",
+    "How is the system used for essential services?":
+      "Wie wird das System für grundlegende Dienste verwendet?",
+    "Evaluating eligibility for public assistance benefits and services":
+      "Prüfung des Anspruchs auf öffentliche Unterstützungsleistungen und -dienste",
+    "Evaluating creditworthiness or establishing a credit score":
+      "Prüfung der Kreditwürdigkeit oder Ermittlung der Kreditpunktzahl",
+    "Detecting financial fraud": "Aufdeckung von Finanzbetrug",
+    "Risk assessment and pricing for life or health insurance":
+      "Risikobewertung und Preisbildung bei Lebens- oder Krankenversicherungen",
+    "Evaluating and classifying emergency calls, dispatching emergency services or emergency patient triage":
+      "Bewertung und Klassifizierung von Notrufen, Entsendung von Notdiensten oder Triage von Patienten in der Notfallversorgung",
+    "How is the system used in law enforcement?":
+      "Wie wird das System in der Strafverfolgung verwendet?",
+    "Assessing the risk of a person becoming a victim of crime":
+      "Bewertung des Risikos, dass eine Person Opfer einer Straftat wird",
+    "As a polygraph or similar tool": "Als Lügendetektor oder ähnliches Instrument",
+    "Evaluating the reliability of evidence": "Bewertung der Verlässlichkeit von Beweismitteln",
+    "Assessing the risk of offending or re-offending, not solely based on profiling":
+      "Bewertung des Risikos einer Straftat oder erneuten Straftat, nicht ausschließlich auf Grundlage von Profiling",
+    "Profiling people in the detection, investigation or prosecution of criminal offences":
+      "Profiling von Personen bei der Aufdeckung, Ermittlung oder Verfolgung von Straftaten",
+    "How is the system used in migration, asylum or border control?":
+      "Wie wird das System in den Bereichen Migration, Asyl oder Grenzkontrolle verwendet?",
+    "Assessing security, irregular migration or health risks posed by a person":
+      "Bewertung eines Sicherheitsrisikos, eines Risikos der irregulären Migration oder eines Gesundheitsrisikos, das von einer Person ausgeht",
+    "Examining applications for asylum, visas or residence permits":
+      "Prüfung von Anträgen auf Asyl, Visa oder Aufenthaltstitel",
+    "Detecting, recognising or identifying people":
+      "Aufdeckung, Erkennung oder Identifizierung von Personen",
+    "Verifying travel documents": "Überprüfung von Reisedokumenten",
+    "How is the system used in justice or democratic processes?":
+      "Wie wird das System in der Rechtspflege oder in demokratischen Prozessen verwendet?",
+    "Assisting a judicial authority, or alternative dispute resolution, in researching and interpreting facts and law":
+      "Unterstützung einer Justizbehörde oder der alternativen Streitbeilegung bei der Ermittlung und Auslegung von Sachverhalten und Rechtsvorschriften",
+    "Influencing the outcome of an election or referendum, or people's voting behaviour":
+      "Beeinflussung des Ergebnisses einer Wahl oder eines Referendums oder des Wahlverhaltens von Personen",
+    "Organising, optimising or structuring political campaigns administratively or logistically":
+      "Organisation, Optimierung oder Strukturierung politischer Kampagnen in administrativer oder logistischer Hinsicht",
+    "Does the system profile people, meaning automated processing of personal data to evaluate aspects such as work performance, economic situation, health, preferences, interests, reliability, behaviour, location or movements?":
+      "Führt das System ein Profiling von Personen durch, also eine automatisierte Verarbeitung personenbezogener Daten zur Bewertung von Aspekten wie Arbeitsleistung, wirtschaftlicher Lage, Gesundheit, Vorlieben, Interessen, Zuverlässigkeit, Verhalten, Aufenthaltsort oder Ortswechsel?",
+    "Does one of these describe the system, so that it does not materially influence the outcome of decisions?":
+      "Trifft eine der folgenden Beschreibungen auf das System zu, sodass es das Ergebnis von Entscheidungen nicht wesentlich beeinflusst?",
+    "It performs a narrow procedural task": "Es erfüllt eine eng gefasste Verfahrensaufgabe",
+    "It improves the result of a previously completed human activity":
+      "Es verbessert das Ergebnis einer zuvor abgeschlossenen menschlichen Tätigkeit",
+    "It detects decision-making patterns or deviations from prior patterns, without replacing or influencing the human assessment without proper human review":
+      "Es erkennt Entscheidungsmuster oder Abweichungen von früheren Entscheidungsmustern, ohne die menschliche Bewertung ohne angemessene menschliche Überprüfung zu ersetzen oder zu beeinflussen",
+    "It performs a preparatory task to an assessment relevant to the Annex III uses":
+      "Es erfüllt eine vorbereitende Aufgabe für eine Bewertung, die für die in Anhang III aufgeführten Verwendungen relevant ist",
+    "Interacts directly with people, for example a chatbot or voice assistant":
+      "Interagiert direkt mit Personen, zum Beispiel als Chatbot oder Sprachassistent",
+    "Generates synthetic audio, images, video or text":
+      "Erzeugt synthetische Audio-, Bild-, Video- oder Textinhalte",
+    "Recognises emotions or categorises people using biometric data":
+      "Erkennt Emotionen oder kategorisiert Personen anhand biometrischer Daten",
+    "Produces deepfakes, or generates or edits text published to inform the public on matters of public interest":
+      "Erzeugt Deepfakes oder erzeugt oder bearbeitet Texte, die veröffentlicht werden, um die Öffentlichkeit über Angelegenheiten von öffentlichem Interesse zu informieren",
+    "Manipulative or deceptive techniques that materially distort behaviour and are likely to cause significant harm are prohibited.":
+      "Manipulative oder täuschende Techniken, die das Verhalten wesentlich verzerren und wahrscheinlich erheblichen Schaden verursachen, sind verboten.",
+    "Exploiting vulnerabilities due to age, disability or a social or economic situation is prohibited.":
+      "Das Ausnutzen von Schwächen aufgrund des Alters, einer Behinderung oder einer sozialen oder wirtschaftlichen Situation ist verboten.",
+    "Social scoring that leads to unjustified or unrelated detrimental treatment is prohibited.":
+      "Soziale Bewertung, die zu einer ungerechtfertigten oder sachfremden Schlechterstellung führt, ist verboten.",
+    "Predicting criminal offences based solely on profiling or personality traits is prohibited.":
+      "Die Vorhersage von Straftaten ausschließlich auf Grundlage von Profiling oder Persönlichkeitsmerkmalen ist verboten.",
+    "Building facial recognition databases through untargeted scraping is prohibited.":
+      "Der Aufbau von Gesichtserkennungsdatenbanken durch ungezieltes Auslesen ist verboten.",
+    "Emotion recognition at work or in education institutions, other than for medical or safety reasons, is prohibited.":
+      "Emotionserkennung am Arbeitsplatz oder in Bildungseinrichtungen ist verboten, außer aus medizinischen Gründen oder Sicherheitsgründen.",
+    "Biometric categorisation to infer sensitive characteristics is prohibited.":
+      "Biometrische Kategorisierung zur Ableitung sensibler Merkmale ist verboten.",
+    "AI systems that generate non-consensual intimate imagery of real people or child sexual abuse material are prohibited.":
+      "KI-Systeme, die intime Darstellungen realer Personen ohne deren Einwilligung oder Darstellungen sexuellen Missbrauchs von Kindern erzeugen, sind verboten.",
+    "Prohibited from 2 December 2026: AI systems that generate non-consensual intimate imagery of real people or child sexual abuse material.":
+      "Ab dem 2. Dezember 2026 verboten: KI-Systeme, die intime Darstellungen realer Personen ohne deren Einwilligung oder Darstellungen sexuellen Missbrauchs von Kindern erzeugen.",
+    "Biometric verification whose sole purpose is to confirm that a person is who they claim to be is excluded from the high-risk list.":
+      "Biometrische Verifizierung, deren einziger Zweck die Bestätigung ist, dass eine Person die ist, für die sie sich ausgibt, ist von der Hochrisiko-Liste ausgenommen.",
+    "AI systems used to detect financial fraud are excluded from the high-risk list.":
+      "KI-Systeme zur Aufdeckung von Finanzbetrug sind von der Hochrisiko-Liste ausgenommen.",
+    "Verification of travel documents is excluded from the high-risk list.":
+      "Die Überprüfung von Reisedokumenten ist von der Hochrisiko-Liste ausgenommen.",
+    "Tools that organise, optimise or structure political campaigns administratively or logistically are excluded from the high-risk list.":
+      "Instrumente zur Organisation, Optimierung oder Strukturierung politischer Kampagnen in administrativer oder logistischer Hinsicht sind von der Hochrisiko-Liste ausgenommen.",
+    "The system performs a narrow procedural task, so it is not high risk.":
+      "Das System erfüllt eine eng gefasste Verfahrensaufgabe und ist daher kein Hochrisiko-System.",
+    "The system improves the result of a previously completed human activity, so it is not high risk.":
+      "Das System verbessert das Ergebnis einer zuvor abgeschlossenen menschlichen Tätigkeit und ist daher kein Hochrisiko-System.",
+    "The system detects decision-making patterns without replacing or influencing the human assessment without review, so it is not high risk.":
+      "Das System erkennt Entscheidungsmuster, ohne die menschliche Bewertung ohne Überprüfung zu ersetzen oder zu beeinflussen, und ist daher kein Hochrisiko-System.",
+    "The system performs a preparatory task to an Annex III assessment, so it is not high risk.":
+      "Das System erfüllt eine vorbereitende Aufgabe für eine Bewertung nach Anhang III und ist daher kein Hochrisiko-System.",
+    "The system interacts directly with people.": "Das System interagiert direkt mit Personen.",
+    "Inform people that they are interacting with an AI system.":
+      "Informieren Sie Personen darüber, dass sie mit einem KI-System interagieren.",
+    "The system generates synthetic audio, images, video or text.":
+      "Das System erzeugt synthetische Audio-, Bild-, Video- oder Textinhalte.",
+    "Mark generated content in a machine-readable format. Systems already on the market must comply by 2 December 2026.":
+      "Kennzeichnen Sie erzeugte Inhalte in einem maschinenlesbaren Format. Bereits in Verkehr gebrachte Systeme müssen dies bis zum 2. Dezember 2026 erfüllen.",
+    "The system recognises emotions or categorises people using biometric data.":
+      "Das System erkennt Emotionen oder kategorisiert Personen anhand biometrischer Daten.",
+    "Inform the people exposed to the system.":
+      "Informieren Sie die Personen, die dem System ausgesetzt sind.",
+    "The system produces deepfakes or public-interest text.":
+      "Das System erzeugt Deepfakes oder Texte zu Angelegenheiten von öffentlichem Interesse.",
+    "Disclose that the content is artificially generated or manipulated.":
+      "Legen Sie offen, dass die Inhalte künstlich erzeugt oder manipuliert wurden.",
+    "Establish a risk management system.": "Richten Sie ein Risikomanagementsystem ein.",
+    "Apply data governance to training, validation and testing data.":
+      "Wenden Sie Daten-Governance auf Trainings-, Validierungs- und Testdaten an.",
+    "Draw up technical documentation (Annex IV).":
+      "Erstellen Sie die technische Dokumentation (Anhang IV).",
+    "Enable automatic event logging.":
+      "Ermöglichen Sie die automatische Protokollierung von Ereignissen.",
+    "Provide instructions for use to deployers.":
+      "Stellen Sie den Betreibern eine Betriebsanleitung bereit.",
+    "Design the system for effective human oversight.":
+      "Konzipieren Sie das System so, dass eine wirksame menschliche Aufsicht möglich ist.",
+    "Achieve appropriate accuracy, robustness and cybersecurity.":
+      "Erreichen Sie ein angemessenes Maß an Genauigkeit, Robustheit und Cybersicherheit.",
+    "Put a quality management system in place.": "Richten Sie ein Qualitätsmanagementsystem ein.",
+    "Complete the conformity assessment before placing the system on the market.":
+      "Führen Sie die Konformitätsbewertung durch, bevor Sie das System in Verkehr bringen.",
+    "Register the system in the EU database.": "Registrieren Sie das System in der EU-Datenbank.",
+    "Run post-market monitoring.": "Führen Sie eine Beobachtung nach dem Inverkehrbringen durch.",
+    "Report serious incidents.": "Melden Sie schwerwiegende Vorfälle.",
+    "Use the system according to the provider's instructions.":
+      "Verwenden Sie das System gemäß der Betriebsanleitung des Anbieters.",
+    "Assign human oversight to competent people.":
+      "Übertragen Sie die menschliche Aufsicht kompetenten Personen.",
+    "Make sure input data is relevant and sufficiently representative.":
+      "Stellen Sie sicher, dass die Eingabedaten relevant und ausreichend repräsentativ sind.",
+    "Monitor operation and inform the provider of risks and serious incidents.":
+      "Überwachen Sie den Betrieb und informieren Sie den Anbieter über Risiken und schwerwiegende Vorfälle.",
+    "Keep the automatically generated logs for at least six months.":
+      "Bewahren Sie die automatisch erzeugten Protokolle mindestens sechs Monate lang auf.",
+    "Inform workers' representatives and affected workers before use at the workplace.":
+      "Informieren Sie die Arbeitnehmervertreter und die betroffenen Arbeitnehmer vor der Verwendung am Arbeitsplatz.",
+    "Inform people that decisions about them are supported by a high-risk AI system.":
+      "Informieren Sie Personen darüber, dass Entscheidungen über sie von einem Hochrisiko-KI-System unterstützt werden.",
+    "Carry out a fundamental rights impact assessment where required (public bodies, public services, credit scoring, and life or health insurance).":
+      "Führen Sie, sofern erforderlich, eine Grundrechte-Folgenabschätzung durch (öffentliche Stellen, öffentliche Dienste, Kreditwürdigkeitsprüfung sowie Lebens- oder Krankenversicherung).",
+    "Ensure sufficient AI literacy of the staff who operate or use the system.":
+      "Sorgen Sie für ausreichende KI-Kompetenz des Personals, das das System betreibt oder nutzt.",
+    "AI systems developed and put into service only for scientific research and development, and research, testing or development before a system is placed on the market or put into service, are outside the scope of the EU AI Act.":
+      "KI-Systeme, die ausschließlich für die wissenschaftliche Forschung und Entwicklung entwickelt und in Betrieb genommen werden, sowie Forschungs-, Test- und Entwicklungstätigkeiten, bevor ein System in Verkehr gebracht oder in Betrieb genommen wird, fallen nicht in den Anwendungsbereich der EU-KI-Verordnung.",
+    "Real-time remote biometric identification in publicly accessible spaces for law enforcement, outside the authorised objectives, is prohibited.":
+      "Biometrische Echtzeit-Fernidentifizierung in öffentlich zugänglichen Räumen zu Strafverfolgungszwecken ist außerhalb der zulässigen Ziele verboten.",
+    "Do not place this system on the market, put it into service or use it in the EU.":
+      "Bringen Sie dieses System in der EU nicht in Verkehr, nehmen Sie es nicht in Betrieb und verwenden Sie es nicht.",
+    "Real-time remote biometric identification for an authorised objective needs prior authorisation and is a high-risk system.":
+      "Biometrische Echtzeit-Fernidentifizierung für ein zulässiges Ziel bedarf einer vorherigen Genehmigung und ist ein Hochrisiko-System.",
+    "The system is a product, or performs a safety function in a product, under Annex I Section A legislation that requires a third-party conformity assessment.":
+      "Das System ist ein Produkt oder erfüllt eine Sicherheitsfunktion in einem Produkt, das unter Rechtsvorschriften nach Anhang I Abschnitt A fällt, die eine Konformitätsbewertung durch Dritte vorschreiben.",
+    "The system is part of a product under Annex I Section B. Its high-risk requirements apply through that sector's legislation.":
+      "Das System ist Teil eines Produkts nach Anhang I Abschnitt B. Die Hochrisiko-Anforderungen gelten über die Rechtsvorschriften dieses Sektors.",
+    "The system is used for a listed high-risk purpose and profiles people, so the Article 6(3) exemption cannot apply.":
+      "Das System wird für einen als hochriskant aufgeführten Zweck verwendet und führt ein Profiling von Personen durch, daher kann die Ausnahme nach Artikel 6(3) nicht greifen.",
+    "The provider documents the assessment that the system is not high risk before placing it on the market or putting it into service.":
+      "Der Anbieter dokumentiert vor dem Inverkehrbringen oder der Inbetriebnahme seine Bewertung, dass das System kein Hochrisiko-System ist.",
+    "The provider registers the system in the EU database.":
+      "Der Anbieter registriert das System in der EU-Datenbank.",
+    "The system is used for a purpose listed as high risk in Annex III.":
+      "Das System wird für einen in Anhang III als hochriskant aufgeführten Zweck verwendet.",
+    "A justification of at least 10 characters is required when changing the EU AI Act classification.":
+      "Wenn Sie die Klassifizierung nach EU-KI-Verordnung ändern, ist eine Begründung mit mindestens 10 Zeichen erforderlich.",
+    "Answer these questions about the AI system first. They follow the EU AI Act.":
+      "Beantworten Sie zunächst diese Fragen zum KI-System. Sie folgen der EU-KI-Verordnung.",
+    "Answers": "Antworten",
+    "Applies from": "Gilt ab",
+    "Approving creates a use case classified as prohibited.":
+      "Bei Genehmigung wird ein als verboten eingestufter Anwendungsfall erstellt.",
+    "Back to risk classification": "Zurück zur Risikoklassifizierung",
+    "Classification for the new use case": "Klassifizierung für den neuen Anwendungsfall",
+    "Classification saved": "Klassifizierung gespeichert",
+    "Could not load the questionnaire. Try again later.":
+      "Der Fragebogen konnte nicht geladen werden. Versuchen Sie es später erneut.",
+    "Could not save the classification. Try again.":
+      "Die Klassifizierung konnte nicht gespeichert werden. Versuchen Sie es erneut.",
+    "Could not save the agent. Try again.":
+      "Der Agent konnte nicht gespeichert werden. Versuchen Sie es erneut.",
+    "Could not update the agent. Try again.":
+      "Der Agent konnte nicht aktualisiert werden. Versuchen Sie es erneut.",
+    "Could not score the answers. Try again.":
+      "Die Antworten konnten nicht ausgewertet werden. Versuchen Sie es erneut.",
+    "EU AI Act classification": "Klassifizierung nach EU-KI-Verordnung",
+    "EU AI Act risk classification step": "Schritt zur Risikoklassifizierung nach EU-KI-Verordnung",
+    "Submitters answer these questions first. The result is shown only to reviewers.":
+      "Einreichende beantworten diese Fragen zuerst. Das Ergebnis sehen nur Prüfende.",
+    "Loading questions...": "Fragen werden geladen...",
+    "The questions could not be loaded.": "Die Fragen konnten nicht geladen werden.",
+    "Questions": "Fragen",
+    "View questions": "Fragen ansehen",
+    "EU AI Act questionnaire": "Fragebogen zur EU-KI-Verordnung",
+    "questions": "Fragen",
+    "asked before the form": "vor dem Formular gestellt",
+    "Scope and role": "Anwendungsbereich und Rolle",
+    "Article 5 · Prohibited practices": "Artikel 5 · Verbotene Praktiken",
+    "Annex I · Product safety": "Anhang I · Produktsicherheit",
+    "Annex III · High-risk uses": "Anhang III · Hochrisiko-Verwendungen",
+    "Article 50 · Transparency": "Artikel 50 · Transparenz",
+    "Other questions": "Weitere Fragen",
+    "Select all that apply": "Alle zutreffenden auswählen",
+    "Cannot be combined with other answers": "Kann nicht mit anderen Antworten kombiniert werden",
+    "Shown when": "Angezeigt bei",
+    "or": "oder",
+    "Shown depending on earlier answers": "Abhängig von früheren Antworten angezeigt",
+    "Explain why you are changing the computed classification (min. 10 characters)":
+      "Erläutern Sie, warum Sie die berechnete Klassifizierung ändern (mind. 10 Zeichen)",
+    "High-risk AI system": "Hochrisiko-KI-System",
+    "Intake risk score": "Risikobewertung aus dem Eingangsformular",
+    "Justification must be at least 10 characters":
+      "Die Begründung muss mindestens 10 Zeichen lang sein",
+    "No specific EU AI Act obligations apply beyond AI literacy.":
+      "Über die KI-Kompetenz hinaus gelten keine besonderen Pflichten nach der EU-KI-Verordnung.",
+    "Obligations": "Pflichten",
+    "Out of scope": "Außerhalb des Anwendungsbereichs",
+    "Outside the EU AI Act": "Außerhalb der EU-KI-Verordnung",
+    "Override intake risk score": "Risikobewertung aus dem Eingangsformular überschreiben",
+    'Only the uses listed here are high risk under Annex III. Choose "Another use in this area" if none of them applies.':
+      "Nur die hier aufgeführten Verwendungen sind nach Anhang III hochriskant. Wählen Sie „Eine andere Verwendung in diesem Bereich“, wenn keine davon zutrifft.",
+    "Complete the conformity assessment under the product's sectoral procedure before placing the system on the market.":
+      "Führen Sie die Konformitätsbewertung nach dem sektoralen Verfahren für das Produkt durch, bevor Sie das System in Verkehr bringen.",
+    "Register the system at national level.": "Registrieren Sie das System auf nationaler Ebene.",
+    "Meet the AI requirements set through the product's sectoral legislation.":
+      "Erfüllen Sie die KI-Anforderungen, die über die sektoralen Rechtsvorschriften für das Produkt festgelegt werden.",
+    "From 2 December 2026, do not place this system on the market, put it into service or use it in the EU.":
+      "Bringen Sie dieses System ab dem 2. Dezember 2026 in der EU nicht in Verkehr, nehmen Sie es nicht in Betrieb und verwenden Sie es nicht.",
+    "Justification is required when overriding the intake risk score.":
+      "Beim Überschreiben der Risikobewertung aus dem Eingangsformular ist eine Begründung erforderlich.",
+    "Review the intake risk score, EU AI Act classification and entity data before approving or rejecting":
+      "Prüfen Sie die Risikobewertung aus dem Eingangsformular, die Klassifizierung nach EU-KI-Verordnung und die Entitätsdaten, bevor Sie genehmigen oder ablehnen",
+    "Review the intake risk score and entity data before approving or rejecting":
+      "Prüfen Sie die Risikobewertung aus dem Eingangsformular und die Entitätsdaten, bevor Sie genehmigen oder ablehnen",
+    "Please review your risk classification answers.":
+      "Bitte überprüfen Sie Ihre Antworten zur Risikoklassifizierung.",
+    "Prohibited": "Verboten",
+    "Research and development systems not placed on the market or used are outside the EU AI Act.":
+      "Forschungs- und Entwicklungssysteme, die weder in Verkehr gebracht noch verwendet werden, fallen nicht unter die EU-KI-Verordnung.",
+    "Role:": "Rolle:",
+    "Submitters answer the EU AI Act risk questionnaire before the form's questions. Reviewers see the result, and it becomes the use case's risk classification on approval.":
+      "Einreicher beantworten den Risikofragebogen zur EU-KI-Verordnung vor den Fragen des Formulars. Prüfer sehen das Ergebnis, und bei Genehmigung wird es zur Risikoklassifizierung des Anwendungsfalls.",
+    "The system falls under a prohibited practice in Article 5.":
+      "Das System fällt unter eine verbotene Praktik nach Artikel 5.",
+    "This system has transparency obligations under Article 50.":
+      "Für dieses System gelten Transparenzpflichten nach Artikel 50.",
+    "This system is high risk and must meet the EU AI Act requirements for high-risk systems.":
+      "Dieses System ist ein Hochrisiko-System und muss die Anforderungen der EU-KI-Verordnung an Hochrisiko-Systeme erfüllen.",
+    "Turning this on unmaps the questions that set the AI risk classification and the high-risk role. They stay on the form; delete them so submitters are not asked twice.":
+      "Beim Aktivieren wird die Zuordnung der Fragen aufgehoben, die die KI-Risikoklassifizierung und die Hochrisiko-Rolle festlegen. Sie bleiben im Formular; löschen Sie sie, damit Einreichende nicht doppelt gefragt werden.",
+    "Updated since submission": "Seit der Einreichung aktualisiert",
+    "Why": "Warum",
+    "Audit records": "Auditdatensätze",
+    "Audit ledger, event log, change history, AI Advisor actions, file access logs":
+      "Audit-Ledger, Ereignisprotokoll, Änderungshistorie, Aktionen des KI-Advisors, Dateizugriffsprotokolle",
+    "AI Gateway guardrail logs": "Guardrail-Protokolle des AI Gateway",
+    "AI Gateway spend logs": "Kostenprotokolle des AI Gateway",
+    "Agent Control logs": "Agent-Control-Protokolle",
+    "Tool-call logs and decided approvals": "Tool-Call-Protokolle und entschiedene Genehmigungen",
+    "Model risk metrics": "Modellrisiko-Kennzahlen",
+    "Default for new files; each file can set its own":
+      "Standard für neue Dateien; jede Datei kann einen eigenen festlegen",
+    "Shadow AI events": "Shadow-AI-Ereignisse",
+    "Shadow AI daily rollups": "Shadow-AI-Tagesaggregate",
+    "Shadow AI alert history": "Shadow-AI-Alarmverlauf",
+    "Server logs": "Serverprotokolle",
+    "Self-hosted application logs": "Protokolle selbst gehosteter Anwendungen",
+    "How long each kind of record is kept": "Wie lange jede Art von Datensatz aufbewahrt wird",
+    "{count} year": "{count} Jahr",
+    "{count} years": "{count} Jahre",
+    "{count} month": "{count} Monat",
+    "{count} months": "{count} Monate",
+    "{count} day": "{count} Tag",
+    "{count} days": "{count} Tage",
+    "Indefinitely": "Unbegrenzt",
+    "Archived, not deleted": "Archiviert, nicht gelöscht",
+    "Rotated daily": "Täglich rotiert",
+    "{date} · {count} removed": "{date} · {count} entfernt",
+    "Purge refused: internal key not configured":
+      "Löschung abgelehnt: interner Schlüssel nicht konfiguriert",
+    "Purge refused: internal key rejected":
+      "Löschung abgelehnt: interner Schlüssel nicht akzeptiert",
+    "{date} · {count} removed (more pending)": "{date} · {count} entfernt (weitere ausstehend)",
+    "Records": "Datensätze",
+    "Kept for": "Aufbewahrt für",
+    "Automatic deletion": "Automatische Löschung",
+    "Last cleanup": "Letzte Bereinigung",
+    "Unavailable": "Nicht verfügbar",
+    "Set by deployment: {setting}": "Durch die Bereitstellung festgelegt: {setting}",
+    "Edit retention: {name}": "Aufbewahrung bearbeiten: {name}",
+    "{count} logs deleted": "{count} Protokolle gelöscht",
+    "Permanently delete guardrail logs older than {days} days?":
+      "Guardrail-Protokolle, die älter als {days} Tage sind, endgültig löschen?",
+    "How long to keep guardrail detection logs and spend logs. Guardrail logs record every blocked or masked request for compliance auditing (EU AI Act Art. 12).":
+      "Wie lange Guardrail-Erkennungsprotokolle und Ausgabenprotokolle aufbewahrt werden. Guardrail-Protokolle erfassen jede blockierte oder maskierte Anfrage für die Compliance-Prüfung (EU-KI-Verordnung, Art. 12).",
+    "When on, logs older than their retention period are deleted every day. When off, logs are kept until you purge them.":
+      "Wenn aktiviert, werden Protokolle, die älter als ihre Aufbewahrungsfrist sind, täglich gelöscht. Wenn deaktiviert, werden Protokolle aufbewahrt, bis Sie sie löschen.",
+    "Only admins can change retention periods":
+      "Nur Administratoren können Aufbewahrungsfristen ändern",
+    "Records before {date} removed by retention policy":
+      "Datensätze vor dem {date} wurden durch die Aufbewahrungsrichtlinie entfernt",
+    "Spend log retention (days)": "Aufbewahrung der Ausgabenprotokolle (Tage)",
+    "Purge logs": "Protokolle löschen",
+    "This cannot be undone. The saved retention period is used, so save any change to it first.":
+      "Dies kann nicht rückgängig gemacht werden. Es gilt die gespeicherte Aufbewahrungsfrist, speichern Sie daher zuerst jede Änderung daran.",
+    "Delete old spend log entries based on the spend log retention period above.":
+      "Alte Ausgabenprotokolleinträge anhand der oben festgelegten Aufbewahrungsfrist für Ausgabenprotokolle löschen.",
+    "Retention periods must be whole numbers from {min} to {max} days":
+      "Aufbewahrungsfristen müssen ganze Zahlen von {min} bis {max} Tagen sein",
+    "Confirm automatic deletion": "Automatisches Löschen bestätigen",
+    "Failed to purge logs": "Protokolle konnten nicht gelöscht werden",
+    "Audit records before {date} were removed by the retention policy.":
+      "Auditdatensätze vor dem {date} wurden durch die Aufbewahrungsrichtlinie entfernt.",
+    "Choose how long these records are kept":
+      "Wählen Sie, wie lange diese Datensätze aufbewahrt werden",
+    "Keep indefinitely": "Unbegrenzt aufbewahren",
+    "Keep audit records for": "Auditdatensätze aufbewahren für",
+    "Keep for (days)": "Aufbewahren für (Tage)",
+    "Keep for (months)": "Aufbewahren für (Monate)",
+    "Delete automatically": "Automatisch löschen",
+    "This setting applies to both AI Gateway log types.":
+      "Diese Einstellung gilt für beide Protokolltypen des AI Gateway.",
+    "At least {min} months.": "Mindestens {min} Monate.",
+    "{period} (deployment default)": "{period} (Standard der Bereitstellung)",
+    "Use the deployment default": "Standard der Bereitstellung verwenden",
+    "Use the deployment default ({period})": "Standard der Bereitstellung verwenden ({period})",
+    "From {min} to {max} days.": "Von {min} bis {max} Tagen.",
+    "Tool-call logs and decided approvals older than {period} will be deleted permanently at the next daily cleanup. Deleted records cannot be restored.":
+      "Tool-Call-Protokolle und entschiedene Genehmigungen, die älter als {period} sind, werden bei der nächsten täglichen Bereinigung dauerhaft gelöscht. Gelöschte Datensätze können nicht wiederhergestellt werden.",
+    "Leave empty or enter 0 to keep indefinitely. Maximum {max}.":
+      "Leer lassen oder 0 eingeben, um unbegrenzt aufzubewahren. Maximum {max}.",
+    "Enter a whole number": "Geben Sie eine ganze Zahl ein",
+    "Enter a number of at least {min}": "Geben Sie eine Zahl von mindestens {min} ein",
+    "Enter a number no greater than {max}": "Geben Sie eine Zahl von höchstens {max} ein",
+    "The next cleanup will permanently delete {count} records older than {period}. Deleted records cannot be restored.":
+      "Die nächste Bereinigung löscht {count} Datensätze, die älter als {period} sind, dauerhaft. Gelöschte Datensätze können nicht wiederhergestellt werden.",
+    "No records are old enough to delete yet. From now on, records older than {period} will be deleted permanently. Deleted records cannot be restored.":
+      "Es sind noch keine Datensätze alt genug zum Löschen. Ab jetzt werden Datensätze, die älter als {period} sind, dauerhaft gelöscht. Gelöschte Datensätze können nicht wiederhergestellt werden.",
+    "Export CSV first": "Zuerst CSV exportieren",
+    "Delete records": "Datensätze löschen",
+    "Failed to save settings": "Einstellungen konnten nicht gespeichert werden",
+    "Retention settings could not be loaded.":
+      "Die Aufbewahrungseinstellungen konnten nicht geladen werden.",
+    "Guardrail logs older than {guardrailDays} days and spend logs older than {spendDays} days will be deleted permanently every day. Deleted logs cannot be restored.":
+      "Guardrail-Protokolle, die älter als {guardrailDays} Tage sind, und Kostenprotokolle, die älter als {spendDays} Tage sind, werden täglich dauerhaft gelöscht. Gelöschte Protokolle können nicht wiederhergestellt werden.",
+    "No evidence": "Keine Nachweise",
+    "This use case is waiting for approval. You can read this overview, but the other tabs stay disabled until the request is approved or rejected, and the frameworks picked at creation are added only once it is approved. Follow the request under Approval requests in the header.":
+      "Dieser Anwendungsfall wartet auf Genehmigung. Sie können diese Übersicht lesen, aber die übrigen Tabs bleiben deaktiviert, bis die Anfrage genehmigt oder abgelehnt wird, und die bei der Erstellung gewählten Rahmenwerke werden erst nach der Genehmigung hinzugefügt. Verfolgen Sie die Anfrage unter Genehmigungsanfragen in der Kopfzeile.",
+    "This use case was rejected, so it can no longer be used. The tabs stay disabled and the frameworks picked at creation were never added. See the rejection comment under Approval requests in the header.":
+      "Dieser Anwendungsfall wurde abgelehnt und kann nicht mehr verwendet werden. Die Tabs bleiben deaktiviert und die bei der Erstellung gewählten Rahmenwerke wurden nie hinzugefügt. Den Ablehnungskommentar finden Sie unter Genehmigungsanfragen in der Kopfzeile.",
+    "Adequate evidence": "Ausreichende Nachweise",
+    "Low-quality evidence": "Nachweise von geringer Qualität",
+    "Loading evidence coverage": "Nachweisabdeckung wird geladen",
+    "Show all {count}": "Alle {count} anzeigen",
+    "Show fewer": "Weniger anzeigen",
+    "Controls needing attention": "Kontrollen, die Aufmerksamkeit brauchen",
+    "file": "Datei",
+    "files": "Dateien",
+    "none adequate": "keine ausreichend",
+    "Evidence graded": "Mit",
+    "counts as low quality. Files with no AI analysis are not counted as adequate.":
+      "bewertete Nachweise gelten als von geringer Qualität. Dateien ohne KI-Analyse zählen nicht als ausreichend.",
   },
 
   fr: {
+    "Server saved": "Serveur enregistré",
+    "Server switched on": "Serveur activé",
+    "The server offered no tools": "Le serveur n'a proposé aucun outil",
+    "One tool found": "Un outil trouvé",
+    "Discovery failed": "Échec de la découverte",
+    "Server saved, but discovery failed": "Serveur enregistré, mais la découverte a échoué",
+    "Server switched on, but discovery failed": "Serveur activé, mais la découverte a échoué",
     "Deployment name": "Nom du déploiement",
     "Save the deployment name first, then generate the token.":
       "Enregistrez d'abord le nom du déploiement, puis générez le jeton.",
@@ -10204,6 +10965,80 @@ export const translations: Record<string, Record<string, string>> = {
     "Model Inventory": "Inventaire des modèles",
     "Datasets": "Jeux de données",
     "Agent discovery": "Découverte d'agents",
+    "AI agents": "Agents IA",
+    "Lifecycle": "Cycle de vie",
+    "Each stage shows who is in charge and when it happened":
+      "Chaque étape indique qui en est responsable et quand elle a eu lieu",
+    "Ownership & capabilities": "Responsabilité et capacités",
+    "Who is accountable, and what this agent can access":
+      "Qui est responsable et à quoi cet agent peut accéder",
+    "Accountable owner": "Propriétaire responsable",
+    "No owner assigned": "Aucun propriétaire attribué",
+    "Access categories": "Catégories d'accès",
+    "None recorded": "Aucune enregistrée",
+    "Governance actions taken on this agent": "Actions de gouvernance effectuées sur cet agent",
+    "No activity recorded yet.": "Aucune activité enregistrée pour le moment.",
+    "Agent not found": "Agent introuvable",
+    "Could not load this agent.": "Impossible de charger cet agent.",
+    "Back to AI agents": "Retour aux agents IA",
+    "Accountable owners": "Propriétaires responsables",
+    "Manually entered": "Saisi manuellement",
+    "Inactive 30+ days": "Inactif depuis plus de 30 jours",
+    "Active (stale)": "Actif (périmé)",
+    "STALE": "PÉRIMÉ",
+    "Stale: no activity from this agent for 30+ days. Re-sync or review whether it is still in use.":
+      "Périmé : aucune activité de cet agent depuis plus de 30 jours. Resynchronisez ou vérifiez s'il est toujours utilisé.",
+    "This agent has been inactive for 30+ days": "Cet agent est inactif depuis plus de 30 jours",
+    "Delete this agent?": "Supprimer cet agent ?",
+    "When you delete this agent, all data related to this agent will be removed. This action is non-recoverable.":
+      "Si vous supprimez cet agent, toutes les données associées seront supprimées. Cette action est irréversible.",
+    "Rows per page": "Lignes par page",
+    "Syncing...": "Synchronisation...",
+    "Sync now": "Synchroniser maintenant",
+    "No agents found. Make sure the Azure AI Foundry extension is enabled and configured.":
+      "Aucun agent trouvé. Vérifiez que l'extension Azure AI Foundry est activée et configurée.",
+    "Sync failed. Check that the Azure AI Foundry extension is enabled and configured.":
+      "Échec de la synchronisation. Vérifiez que l'extension Azure AI Foundry est activée et configurée.",
+    "Agent review status updated.": "Statut de relecture de l'agent mis à jour.",
+    "Agent updated successfully.": "Agent mis à jour avec succès.",
+    "Agent added successfully.": "Agent ajouté avec succès.",
+    "Agent deleted successfully.": "Agent supprimé avec succès.",
+    "Failed to delete agent.": "Impossible de supprimer l'agent.",
+    "Linking...": "Liaison...",
+    "Link model": "Lier le modèle",
+    "Type is required.": "Le type est obligatoire.",
+    "Description cannot exceed 32,767 characters.":
+      "La description ne peut pas dépasser 32 767 caractères.",
+    "Description is required.": "La description est obligatoire.",
+    "The selected use case is no longer available.":
+      "Le cas d'usage sélectionné n'est plus disponible.",
+    "The selected affected model is no longer available.":
+      "Le modèle concerné sélectionné n'est plus disponible.",
+    "The selected owner is no longer available.":
+      "Le responsable sélectionné n'est plus disponible.",
+    "Description must be at least 5 characters.":
+      "La description doit comporter au moins 5 caractères.",
+    "Edit agent": "Modifier l'agent",
+    "Add agent manually": "Ajouter un agent manuellement",
+    "Adding...": "Ajout...",
+    "User #{id}": "Utilisateur n°{id}",
+    "Review status changed to {status}": "Statut de relecture changé en {status}",
+    "Review status changed": "Statut de relecture modifié",
+    "Linked to a model in the inventory": "Lié à un modèle de l'inventaire",
+    "Unlinked from its model": "Dissocié de son modèle",
+    'Updated name: "{from}" → "{to}"': "Nom mis à jour : « {from} » → « {to} »",
+    "Updated name": "Nom mis à jour",
+    'Updated type: "{from}" → "{to}"': "Type mis à jour : « {from} » → « {to} »",
+    "Updated type": "Type mis à jour",
+    'Updated primary owner: "{from}" → "{to}"':
+      "Propriétaire principal mis à jour : « {from} » → « {to} »",
+    "Updated primary owner": "Propriétaire principal mis à jour",
+    'Updated owners: "{from}" → "{to}"': "Responsables mis à jour : « {from} » → « {to} »",
+    "Updated owners": "Responsables mis à jour",
+    'Updated details: "{from}" → "{to}"': "Détails mis à jour : « {from} » → « {to} »",
+    "Updated details": "Détails mis à jour",
+    'Updated {field}: "{from}" → "{to}"': "{field} mis à jour : « {from} » → « {to} »",
+    "Updated {field}": "{field} mis à jour",
     "ASSURANCE": "ASSURANCE",
     "Risk management": "Gestion des risques",
     "Risk Management": "Gestion des risques",
@@ -10440,6 +11275,12 @@ export const translations: Record<string, Record<string, string>> = {
     "Name": "Nom",
     "Description": "Description",
     "Owner": "Responsable",
+    "Owners": "Responsables",
+    "Some owners are no longer in your organization. They will be removed if you change the owners.":
+      "Certains responsables ne font plus partie de votre organisation. Ils seront supprimés si vous modifiez les responsables.",
+    'Current owner "{owner}" is not a VerifyWise user. Choosing owners replaces it.':
+      "Le responsable actuel « {owner} » n'est pas un utilisateur VerifyWise. Choisir des responsables le remplace.",
+    "Delete agent": "Supprimer l'agent",
     "Owner name": "Nom du responsable",
     "Status": "Statut",
     "Action": "Action",
@@ -10953,6 +11794,8 @@ export const translations: Record<string, Record<string, string>> = {
     "EVIDENCE NAME": "NOM DE LA PREUVE",
     "Evidence type": "Type de preuve",
     "Evidence coverage": "Couverture des preuves",
+    "controls adequate": "contrôles adéquats",
+    "without evidence": "sans preuve",
     "Report name": "Nom du rapport",
     "Report type": "Type de rapport",
     "Type of report": "Type de rapport",
@@ -11451,8 +12294,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Lorsqu'une automatisation se déclenche (planifiée, via webhook ou manuellement), son exécution est enregistrée ici avec son statut et sa durée.",
     "You're viewing a public demo of the VerifyWise AI governance platform. Feel free to explore using demo data, but please don't enter any personal or company information.":
       "Vous consultez une démo publique de la plateforme de gouvernance IA VerifyWise. Explorez librement avec les données de démonstration, mais n'y saisissez pas d'informations personnelles ou d'entreprise.",
-    "Your provider API keys are encrypted using AES-256-CBC before being stored. They are only decrypted when proxying a request and are never exposed in logs.":
-      "Vos clés API de fournisseurs sont chiffrées avec AES-256-CBC avant stockage. Elles ne sont déchiffrées que pour relayer une requête et ne sont jamais exposées dans les journaux.",
+    "Your provider API keys are encrypted using AES-256-GCM before being stored. They are only decrypted when proxying a request and are never exposed in logs.":
+      "Vos clés API de fournisseurs sont chiffrées avec AES-256-GCM avant stockage. Elles ne sont déchiffrées que pour relayer une requête et ne sont jamais exposées dans les journaux.",
     "Playground settings": "Paramètres du playground",
 
     "Add a description...": "Ajouter une description...",
@@ -11535,6 +12378,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Confirm your password": "Confirmez votre mot de passe",
     "Connect data sources": "Connecter les sources de données",
     "Connect external tool servers": "Connecter des serveurs d'outils externes",
+    "Tool discovery": "Découverte d'outils",
+    "Tools are discovered when you save a server, and you can run discovery again at any time from the server list.":
+      "Les outils sont découverts lorsque vous enregistrez un serveur, et vous pouvez relancer la découverte à tout moment depuis la liste des serveurs.",
     "Connect your GitHub repositories": "Connectez vos dépôts GitHub",
     "Copy key": "Copier la clé",
     "Copy link": "Copier le lien",
@@ -11771,9 +12617,34 @@ export const translations: Record<string, Record<string, string>> = {
     "Action plan": "Plan d'action",
     "Activity": "Activité",
     "Affected groups description": "Description des groupes affectés",
+    "Advisor": "Conseiller",
     "Agent": "Agent",
     "Agent key created": "Clé d'agent créée",
     "Agent keys": "Clés d'agent",
+    "Agent activity": "Activité de l'agent",
+    "View agent activity": "Voir l'activité de l'agent",
+    "All agents": "Tous les agents",
+    "Applies to agents": "S'applique aux agents",
+    "No activity recorded for this agent yet":
+      "Aucune activité enregistrée pour cet agent pour le moment",
+    "Failed to load agent activity": "Échec du chargement de l'activité de cet agent",
+    "Blocked by rule": "Bloqué par la règle",
+    "Agent #{id}": "Agent #{id}",
+    "Selected agents": "Agents sélectionnés",
+    "Guardrail rules for selected agents stop listing this key. A rule that listed only this agent then applies to no agent until you choose another one in Guardrails.":
+      "Les règles de guardrail pour des agents sélectionnés ne listent plus cette clé. Une règle qui ne listait que cet agent ne s'applique alors à aucun agent tant que vous n'en choisissez pas un autre dans Guardrails.",
+    "Select agents": "Sélectionner des agents",
+    "No agents": "Aucun agent",
+    "Select at least one agent, or apply the rule to all agents":
+      "Sélectionnez au moins un agent, ou appliquez la règle à tous les agents",
+    "The rule checks tool calls from these agents only. Revoked agent keys are not listed.":
+      "La règle vérifie uniquement les appels d'outils de ces agents. Les clés d'agent révoquées ne sont pas listées.",
+    "Last active {date}": "Dernière activité {date}",
+    "Tool use ID": "ID d'utilisation de l'outil",
+    "Approval required by rule": "Approbation requise par la règle",
+    "This agent": "Cet agent",
+    "{name} · last {days} days": "{name} · {days} derniers jours",
+    "Rule: {name}": "Règle : {name}",
     "AI advisor": "Conseiller IA",
     "AI analysis": "Analyse IA",
     "AI Frameworks": "Référentiels IA",
@@ -12222,6 +13093,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Recent requests": "Requêtes récentes",
     "Recent searches": "Recherches récentes",
     "Recent tool calls": "Appels d'outils récents",
+    "1 call": "1 appel",
+    "{count} calls": "{count} appels",
+    "{count} denied": "{count} refusés",
     "Recipients": "Destinataires",
     "Recommendations": "Recommandations",
     "Redress and contestability process": "Processus de recours et de contestation",
@@ -12509,6 +13383,7 @@ export const translations: Record<string, Record<string, string>> = {
     "No arena battles found. Create a new battle to get started.":
       "Aucune comparaison d'arène trouvée. Créez une nouvelle comparaison pour commencer.",
     "No audit ledger entries found.": "Aucune entrée trouvée dans le registre d'audit.",
+    "Exporting...": "Exportation...",
     "No audit logs yet": "Aucun journal d'audit pour le moment",
     "No bias audits yet. Audit your models for fairness across demographic groups.":
       "Aucun audit de biais pour le moment. Auditez vos modèles pour vérifier l'équité entre groupes démographiques.",
@@ -12993,6 +13868,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Select organization": "Sélectionner une organisation",
     "Select outcome column": "Sélectionner la colonne de résultat",
     "Select owner": "Sélectionner un responsable",
+    "Select owners": "Sélectionner des responsables",
     "Select past issues level": "Sélectionner le niveau de problèmes passés",
     "Select person": "Sélectionner une personne",
     "Select phase": "Sélectionner une phase",
@@ -13413,7 +14289,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Content safety": "Sécurité du contenu",
     "Prompt security": "Sécurité des prompts",
     "Data leakage prevention": "Prévention des fuites de données",
-    "Output quality": "Qualité de la sortie",
     "Enabled": "Activé",
     "Enable": "Activer",
     "No guardrails match your search.": "Aucun garde-fou ne correspond à votre recherche.",
@@ -13444,15 +14319,12 @@ export const translations: Record<string, Record<string, string>> = {
     "Database connection strings": "Chaînes de connexion à la base de données",
     "Internal URLs": "URL internes",
     "Environment variables": "Variables d'environnement",
-    "JSON output enforcement": "Application d'une sortie JSON",
-    "Response length limit": "Limite de longueur de réponse",
-    "Executable code in output": "Code exécutable dans la sortie",
     "GDPR personal data (all)": "Données personnelles RGPD (toutes)",
     "HIPAA protected health info": "Informations de santé protégées par HIPAA",
     "PCI DSS cardholder data": "Données de titulaires de carte PCI DSS",
     "SOC 2 sensitive data": "Données sensibles SOC 2",
-    "Detect and protect email addresses in prompts and responses.":
-      "Détecter et protéger les adresses e-mail dans les prompts et les réponses.",
+    "Detect and protect email addresses in prompts.":
+      "Détecter et protéger les adresses e-mail dans les prompts.",
     "Detect phone numbers including international formats.":
       "Détecter les numéros de téléphone, y compris les formats internationaux.",
     "Detect Visa, Mastercard, Amex, and other card formats.":
@@ -13500,11 +14372,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Détecter les références à des URL internes/de réseau privé.",
     "Detect environment variable assignments with secrets.":
       "Détecter les affectations de variables d'environnement contenant des secrets.",
-    "Ensure responses contain valid JSON when expected.":
-      "S'assurer que les réponses contiennent un JSON valide lorsque attendu.",
-    "Flag responses exceeding 4,000 words.": "Signaler les réponses dépassant 4 000 mots.",
-    "Detect script tags or executable code patterns in LLM responses.":
-      "Détecter les balises script ou les motifs de code exécutable dans les réponses LLM.",
     "Detect all GDPR-relevant personal data: email, phone, name, location, DOB, IP, nationality.":
       "Détecter toutes les données personnelles pertinentes au RGPD : e-mail, téléphone, nom, lieu, date de naissance, IP, nationalité.",
     "Detect PHI identifiers: names, dates, SSNs, medical licenses, phone, email.":
@@ -13788,8 +14655,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Lorsque les auditeurs demandent « Quand avez-vous mis en œuvre ce contrôle ? » ou « Comment avez-vous répondu à cet incident ? », les journaux d'événements fournissent des réponses précises. Un historique détaillé élimine la dépendance à la mémoire et constitue une preuve objective.",
     "Filter events to find relevant information quickly.":
       "Filtrer les événements pour trouver rapidement les informations pertinentes.",
-    "With many events logged over time, filters help you find what you need. Filter by date range, event type, or related entity to quickly locate specific governance activities. Export filtered events for reports or documentation.":
-      "Avec de nombreux événements journalisés dans le temps, les filtres vous aident à trouver ce dont vous avez besoin. Filtrez par plage de dates, type d'événement ou entité liée pour localiser rapidement des activités de gouvernance. Exportez les événements filtrés pour les rapports ou la documentation.",
+    "With many events logged over time, filters help you find what you need. Filter by date range, event type, or related entity to quickly locate specific governance activities.":
+      "Avec de nombreux événements journalisés dans le temps, les filtres vous aident à trouver ce dont vous avez besoin. Filtrez par plage de dates, type d'événement ou entité liée pour localiser rapidement des activités de gouvernance.",
     "Settings customize VerifyWise to your organization's needs.":
       "Les paramètres adaptent VerifyWise aux besoins de votre organisation.",
     "Configure user roles and system defaults to match your governance workflows. Taking time to properly configure settings upfront saves time and reduces confusion later. Review settings periodically as your organization grows.":
@@ -14479,6 +15346,54 @@ export const translations: Record<string, Record<string, string>> = {
     "Field": "Champ",
     "Field mapping": "Mappage des champs",
     "Field settings": "Paramètres du champ",
+    "Choose a field above this one": "Choisissez un champ au-dessus",
+    "Show this field only if…": "Afficher ce champ uniquement si…",
+    "Always shown": "Toujours affiché",
+    "Shown when all conditions match": "Affiché lorsque toutes les conditions sont remplies",
+    "Shown when any condition matches": "Affiché lorsqu'une condition est remplie",
+    "is": "est",
+    "is not": "n'est pas",
+    "is one of": "est l'un de",
+    "includes": "inclut",
+    "does not include": "n'inclut pas",
+    "includes any of": "inclut l'un de",
+    "is checked": "est coché",
+    "is not checked": "n'est pas coché",
+    "contains": "contient",
+    "is empty": "est vide",
+    "is not empty": "n'est pas vide",
+    "Required when shown": "Requis lorsqu'il est affiché",
+    "Type { to insert a field": "Tapez { pour insérer un champ",
+    "Add a field above this one to create a rule":
+      "Ajoutez un champ au-dessus pour créer une règle",
+    "Add condition": "Ajouter une condition",
+    "All conditions": "Toutes les conditions",
+    "Any condition": "N'importe quelle condition",
+    "Autonomy level": "Niveau d'autonomie",
+    "Conditional": "Conditionnel",
+    "Domain criticality": "Criticité du domaine",
+    "Fix the highlighted fields before saving":
+      "Corrigez les champs en surbrillance avant d'enregistrer",
+    "Impact scope": "Portée de l'impact",
+    "Remove condition": "Supprimer la condition",
+    "Risk dimension": "Dimension de risque",
+    "Add a number field above this one first": "Ajoutez d'abord un champ numérique au-dessus",
+    "Advanced": "Avancé",
+    "Calculated": "Calculé",
+    "Other answers": "Autres réponses",
+    "This field is always shown: it fills a required field of the new entity":
+      "Ce champ est toujours affiché : il remplit un champ obligatoire de la nouvelle entité",
+    "Fix the highlighted fields before publishing":
+      "Corrigez les champs en surbrillance avant de publier",
+    "Draft saved. Fix the highlighted fields before publishing":
+      "Brouillon enregistré. Corrigez les champs en surbrillance avant de publier",
+    "Additional answers": "Réponses supplémentaires",
+    "Calculation": "Calcul",
+    "Decimals": "Décimales",
+    "Formula": "Formule",
+    "Read-only result of a formula": "Résultat en lecture seule d'une formule",
+    "Result with every input set to 1:": "Résultat avec chaque entrée à 1 :",
+    "Suffix": "Suffixe",
     "Field types": "Types de champ",
     "File details": "Détails du fichier",
     "Files can belong to multiple folders. Select all folders where this file should appear.":
@@ -14871,8 +15786,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Project are loading...": "Le projet est en cours de chargement...",
     "Prompt:": "Invite :",
     "Provider API keys": "Clés API du fournisseur",
-    "Provider API keys are encrypted at rest (AES-256-CBC) and only decrypted when proxying a request.":
-      "Les clés API du fournisseur sont chiffrées au repos (AES-256-CBC) et déchiffrées uniquement lors du relais d'une requête.",
+    "Provider API keys are encrypted at rest (AES-256-GCM) and only decrypted when proxying a request.":
+      "Les clés API du fournisseur sont chiffrées au repos (AES-256-GCM) et déchiffrées uniquement lors du relais d'une requête.",
     "Quality metrics": "Métriques de qualité",
     "Quantitative Risk Assessment": "Évaluation quantitative des risques",
     "Questions about features, how-tos, or use cases?":
@@ -14935,7 +15850,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Risk approval": "Approbation du risque",
     "Risk assessment": "Évaluation des risques",
     "Risk assessment (optional)": "Évaluation des risques (optionnelle)",
-    "Risk assessment pending...": "Évaluation des risques en attente...",
+    "Intake risk score pending...": "Score de risque du formulaire d'entrée en attente...",
     "Risk category data will appear here as risks are categorized.":
       "Les données de catégorie de risque apparaîtront ici à mesure que les risques sont catégorisés.",
     "Risk register": "Registre des risques",
@@ -14957,6 +15872,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Safety metrics": "Métriques de sécurité",
     "Save failed": "Échec de l'enregistrement",
     "Saved": "Enregistré",
+    "Saved key": "Clé enregistrée",
     "Saved by": "Enregistré par",
     "Scan completed": "Analyse terminée",
     "Scan failed": "Échec de l'analyse",
@@ -15267,8 +16183,8 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Chatbot for Customer Support": "Chatbot IA pour le support client",
     "AI Gateway": "AI Gateway",
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar et analyse CI/CD",
-    "Custom roles, risk inheritance, and evidence retention":
-      "Rôles personnalisés, héritage des risques et conservation des preuves",
+    "Risk inheritance, evidence retention, and security hardening":
+      "Héritage des risques, conservation des preuves et renforcement de la sécurité",
     "Built-in frameworks, Model Risk Management, and Extensions":
       "Référentiels intégrés, Model Risk Management et Extensions",
     "AI Trust Index, AI Apps inventory, and Agent Control":
@@ -15306,6 +16222,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Objectifs IA et planification pour les atteindre",
     "AI risk assessment (Operational)": "Évaluation des risques IA (opérationnel)",
     "AI risk level": "Niveau de risque IA",
+    "AI risk suggestions": "Suggestions de risques IA",
     "AI risk treatment (Operational)": "Traitement des risques IA (opérationnel)",
     "AI roles and responsibilities": "Rôles et responsabilités IA",
     "AI system change documentation": "Documentation des modifications du système IA",
@@ -16157,6 +17074,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Failed to fetch slack integrations": "Échec de la récupération des intégrations Slack",
     "Failed to fetch user data.": "Échec de la récupération des données utilisateur.",
     "Failed to generate demo data.": "Échec de la génération des données de démonstration.",
+    "Failed to generate risk suggestions. Please try again.":
+      "Échec de la génération des suggestions de risques. Veuillez réessayer.",
     "Failed to generate share link. Please try again.":
       "Échec de la génération du lien de partage. Veuillez réessayer.",
     "Failed to install plugin. Please try again.":
@@ -16214,6 +17133,14 @@ export const translations: Record<string, Record<string, string>> = {
     "Failed to rename project": "Échec du renommage du projet",
     "Failed to replace share link. Please try again.":
       "Échec du remplacement du lien de partage. Veuillez réessayer.",
+    "A share link is still being created. Try again in a moment.":
+      "Un lien de partage est encore en cours de création. Réessayez dans un instant.",
+    "New share link created, but some of your previous links could not be disabled. Replace the link again to retry.":
+      "Nouveau lien de partage créé, mais certains de vos liens précédents n'ont pas pu être désactivés. Remplacez à nouveau le lien pour réessayer.",
+    "New share link created. Links created by other users are still active; only they can disable them.":
+      "Nouveau lien de partage créé. Les liens créés par d'autres utilisateurs sont encore actifs ; seuls eux peuvent les désactiver.",
+    "Share link replaced. Previous links no longer work.":
+      "Lien de partage remplacé. Les liens précédents ne fonctionnent plus.",
     "Failed to restore the task. Please try again.":
       "Échec de la restauration de la tâche. Veuillez réessayer.",
     "Failed to save": "Échec de l'enregistrement",
@@ -16511,6 +17438,12 @@ export const translations: Record<string, Record<string, string>> = {
     "Incident details": "Détails de l'incident",
     "Incident management details": "Détails de la gestion des incidents",
     "Incident updated successfully!": "Incident mis à jour avec succès !",
+    "This incident was changed by someone else since you opened it. The form now shows their changes with your edits kept: save again to apply your edits.":
+      "Cet incident a été modifié par quelqu'un d'autre depuis que vous l'avez ouvert. Le formulaire affiche maintenant ses modifications et conserve les vôtres : enregistrez à nouveau pour appliquer vos modifications.",
+    "Someone else also changed: {fields}. Saving again will replace their values with yours.":
+      "Quelqu'un d'autre a aussi modifié : {fields}. Enregistrer à nouveau remplacera ses valeurs par les vôtres.",
+    "This incident was changed by someone else since you opened it. Could not load the latest version; close and reopen the incident to continue.":
+      "Cet incident a été modifié par quelqu'un d'autre depuis que vous l'avez ouvert. Impossible de charger la dernière version ; fermez puis rouvrez l'incident pour continuer.",
     "Indefinite": "Indéfini",
     "Individual event records from ingestion":
       "Enregistrements d'événements individuels depuis l'ingestion",
@@ -16783,6 +17716,38 @@ export const translations: Record<string, Record<string, string>> = {
     "Multi-select": "Sélection multiple",
     "Multiple choice": "Choix multiple",
     "Multiple selection dropdown": "Liste déroulante à sélection multiple",
+    "Scored select": "Sélection notée",
+    "New options can't receive answers until they are saved. Remove these answers now, or save the new options first and move the answers later.":
+      "Les nouvelles options ne peuvent recevoir de réponses qu'une fois enregistrées. Retirez ces réponses maintenant, ou enregistrez d'abord les nouvelles options et déplacez les réponses ensuite.",
+    "Custom field": "Champ personnalisé",
+    "Option label": "Libellé de l'option",
+    "Move option up": "Monter l'option",
+    "Move option down": "Descendre l'option",
+    "Remove option": "Supprimer l'option",
+    "Used by {count}": "Utilisée par {count}",
+    "Every option needs a label and a score.": "Chaque option doit avoir un libellé et un score.",
+    "Option labels must be unique.": "Les libellés des options doivent être uniques.",
+    "Choose what happens to answers": "Choisir ce que deviennent les réponses",
+    "Records use the options you removed. Move their answers to another option, or remove them.":
+      "Des enregistrements utilisent les options supprimées. Déplacez leurs réponses vers une autre option ou retirez-les.",
+    "Remove from records": "Retirer des enregistrements",
+    "These answers will be deleted and can't be restored.":
+      "Ces réponses seront supprimées et ne pourront pas être restaurées.",
+    "This field is required, so these records will need a new answer.":
+      "Ce champ est obligatoire : ces enregistrements devront recevoir une nouvelle réponse.",
+    "Choose an option for each removed option.":
+      "Choisissez une option pour chaque option supprimée.",
+    "{option} is used by {count} {records}. Choose what happens to these answers:":
+      "{option} est utilisé par {count} {records}. Choisissez ce que deviennent ces réponses :",
+    "This field has a value on {count} {records}.": "Ce champ a une valeur dans {count} {records}.",
+    "use case": "cas d'usage",
+    "use cases": "cas d'usage",
+    "vendor": "fournisseur",
+    "vendors": "fournisseurs",
+    "project risk": "risque projet",
+    "project risks": "risques projet",
+    "model risk": "risque modèle",
+    "model risks": "risques modèles",
     "Must be OpenAI-compatible API (POST /v1/chat/completions)":
       "Doit être une API compatible OpenAI (POST /v1/chat/completions)",
     "My Datasets": "Mes jeux de données",
@@ -19062,6 +20027,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Quality": "Qualité",
     "Recommended actions": "Actions recommandées",
     "Report level": "Niveau de rapport",
+    "Risk added": "Risque ajouté",
+    "Risk added to risk register": "Risque ajouté au registre des risques",
     "Risk analysis": "Analyse des risques",
     "Save to storage": "Enregistrer dans le stockage",
     "Schedule:": "Planification :",
@@ -19180,6 +20147,74 @@ export const translations: Record<string, Record<string, string>> = {
     "Enable and configure integrations for your organization.":
       "Activez et configurez des intégrations pour votre organisation.",
     "Enable automatic sync": "Activer la synchronisation automatique",
+    "Sync interval": "Intervalle de synchronisation",
+    "Failing since": "En échec depuis",
+    "Sync completed.": "Synchronisation terminée.",
+    "Automatic sync refreshes use cases you have imported. It does not import new objects or remove any.":
+      "La synchronisation automatique met à jour les cas d'usage importés. Elle n'importe pas de nouveaux objets et n'en supprime aucun.",
+    "Could not load the saved Jira connection. Reload the page to change the sync settings.":
+      "Impossible de charger la connexion Jira enregistrée. Rechargez la page pour modifier les paramètres de synchronisation.",
+    "Could not save the sync settings. Try again.":
+      "Impossible d'enregistrer les paramètres de synchronisation. Réessayez.",
+    "The sync is taking longer than expected. Check the last sync result later.":
+      "La synchronisation prend plus de temps que prévu. Consultez le résultat de la dernière synchronisation plus tard.",
+    "Could not save the schema and object type. Try again.":
+      "Impossible d'enregistrer le schéma et le type d'objet. Réessayez.",
+    "More objects exist in Jira than are shown here.":
+      "Jira contient plus d'objets que ceux affichés ici.",
+    "Load more": "Charger plus",
+    "The sync stopped responding. Try again.": "La synchronisation ne répond plus. Réessayez.",
+    "Sync failed": "Échec de la synchronisation",
+    "Missing in Jira": "Absent de Jira",
+    "Missing since": "Absent depuis le",
+    "Failed to remove use cases": "Impossible de supprimer les cas d'usage",
+    "Missing use cases removed.": "Les cas d'usage absents ont été supprimés.",
+    "The sync did not start. Try again.": "La synchronisation n'a pas démarré. Réessayez.",
+    "These use cases and all their data in VerifyWise will be permanently deleted. This cannot be undone.":
+      "Ces cas d'usage et toutes leurs données dans VerifyWise seront définitivement supprimés. Cette action est irréversible.",
+    "Jira no longer returns these objects. Syncs keep their use cases; remove them here if they should go.":
+      "Jira ne renvoie plus ces objets. Les synchronisations conservent leurs cas d'usage ; supprimez-les ici s'ils doivent disparaître.",
+    "Remove selected use cases": "Supprimer les cas d'usage sélectionnés",
+    "Use cases to remove:": "Cas d'usage à supprimer :",
+    "Select all missing use cases": "Sélectionner tous les cas d'usage absents",
+    "The removal was interrupted; nothing was removed. Try again.":
+      "La suppression a été interrompue ; rien n'a été supprimé. Réessayez.",
+    "Another sync or import was running, so this sync did not start.":
+      "Une autre synchronisation ou importation était en cours, cette synchronisation n'a donc pas démarré.",
+    "Importing objects": "Importation des objets",
+    "Use cases not removed:": "Cas d'usage non supprimés :",
+    "Skipped, other missing items of the same use case not selected:":
+      "Ignorés, autres éléments absents du même cas d'usage non sélectionnés :",
+    "Removal finished, but some use cases were not removed because other missing items of the same use case were not selected. They are still selected; select the rest to remove it.":
+      "Suppression terminée, mais certains cas d'usage n'ont pas été supprimés, car d'autres éléments absents du même cas d'usage n'étaient pas sélectionnés. Ils restent sélectionnés ; sélectionnez les autres pour le supprimer.",
+    "Skipped, still linked to an object in Jira:": "Ignorés, encore liés à un objet dans Jira :",
+    "Skipped, other reason:": "Ignorés, autre raison :",
+    "Jira links removed:": "Liens Jira supprimés :",
+    "Removal finished. Some use cases were not removed because their use case is still linked to an object that exists in Jira.":
+      "Suppression terminée. Certains cas d'usage n'ont pas été supprimés, car leur cas d'usage est encore lié à un objet qui existe dans Jira.",
+    "Skipped, no longer missing or no longer there:": "Ignorés, plus absents ou n'existent plus :",
+    "Skipped, changed during the removal:": "Ignorés, modifiés pendant la suppression :",
+    "Removal finished, but some use cases were not removed. They are still selected.":
+      "Suppression terminée, mais certains cas d'usage n'ont pas été supprimés. Ils restent sélectionnés.",
+    "Links cleaned up:": "Liens nettoyés :",
+    "Removal finished. Some use cases were not removed because they are no longer missing in Jira or no longer exist.":
+      "Suppression terminée. Certains cas d'usage n'ont pas été supprimés, car ils ne sont plus absents de Jira ou n'existent plus.",
+    "Import finished, but some objects could not be imported. They are still selected; import again to retry.":
+      "Importation terminée, mais certains objets n'ont pas pu être importés. Ils restent sélectionnés ; relancez l'importation pour réessayer.",
+    "Objects not imported:": "Objets non importés :",
+    "Removing use cases": "Suppression des cas d'usage",
+    "Import finished.": "Importation terminée.",
+    "Objects imported:": "Objets importés :",
+    "Objects imported before it stopped:": "Objets importés avant l'arrêt :",
+    "The import was interrupted because another sync took over.":
+      "L'importation a été interrompue, car une autre synchronisation a pris le relais.",
+    "The import failed.": "L'importation a échoué.",
+    "Use cases removed:": "Cas d'usage supprimés :",
+    "Use cases removed before it stopped:": "Cas d'usage supprimés avant l'arrêt :",
+    "The removal was interrupted before it finished. Try again for the rest.":
+      "La suppression a été interrompue avant la fin. Réessayez pour les autres.",
+    "A sync is already running. Try again when it finishes.":
+      "Une synchronisation est déjà en cours. Réessayez une fois qu'elle est terminée.",
     "Error Details:": "Détails de l'erreur :",
     "Every 12 hours": "Toutes les 12 heures",
     "Every 24 hours": "Toutes les 24 heures",
@@ -19234,6 +20269,8 @@ export const translations: Record<string, Record<string, string>> = {
     "No lifecycle phases configured. Contact an administrator to set up the model lifecycle.":
       "Aucune phase de cycle de vie configurée. Contactez un administrateur pour configurer le cycle de vie du modèle.",
     "No use case found": "Aucun cas d'utilisation trouvé",
+    "No use case selected. Open a use case before asking for risk suggestions.":
+      "Aucun cas d'usage sélectionné. Ouvrez un cas d'usage avant de demander des suggestions de risques.",
     "No workspaces connected": "Aucun espace de travail connecté",
     "Notification Routing": "Routage des notifications",
     "Object Type": "Type d'objet",
@@ -19306,8 +20343,481 @@ export const translations: Record<string, Record<string, string>> = {
     "MCP server": "Serveur MCP",
     "The MCP server source was not found next to the backend. It is included from MCPServer/ at build time.":
       "Les sources du serveur MCP n'ont pas été trouvées à côté du backend. Elles sont incluses depuis MCPServer/ au moment de la compilation.",
+    "SLA (hours)": "SLA (heures)",
+    "Enter hours": "Saisir les heures",
+    "Escalation user": "Utilisateur d'escalade",
+    "Select escalation user": "Sélectionner un utilisateur d'escalade",
+    "Auto-approve up to risk level": "Approuver automatiquement jusqu'au niveau de risque",
+    "Escalated": "Escaladé",
+    // EU AI Act risk classification: questionnaire, results and reviewer panel
+    "No": "Non",
+    "Another use in this area": "Une autre utilisation dans ce domaine",
+    "None of these": "Aucune de ces options",
+    "Is the system developed and put into service only for scientific research and development, or is it still being researched, tested or developed before being placed on the market or put into service?":
+      "Le système est-il développé et mis en service uniquement à des fins de recherche et de développement scientifiques, ou fait-il encore l'objet de recherches, d'essais ou de développement avant sa mise sur le marché ou sa mise en service ?",
+    "Yes, only scientific research or pre-market research, testing or development":
+      "Oui, uniquement de la recherche scientifique ou de la recherche, des essais ou du développement avant la mise sur le marché",
+    "No, it is or will be placed on the market or put into service":
+      "Non, il est ou sera mis sur le marché ou mis en service",
+    "Are you the provider or the deployer of this AI system?":
+      "Êtes-vous le fournisseur ou le déployeur de ce système d'IA ?",
+    "We develop the system, or have it developed, and place it on the market or put it into service under our name.":
+      "Nous développons le système, ou le faisons développer, et le mettons sur le marché ou en service sous notre nom.",
+    "We use the system under our authority in a professional activity.":
+      "Nous utilisons le système sous notre propre autorité dans le cadre d'une activité professionnelle.",
+    "Does the system do any of the following?":
+      "Le système effectue-t-il l'une des opérations suivantes ?",
+    "Uses subliminal, manipulative or deceptive techniques that materially distort people's behaviour and are likely to cause significant harm":
+      "Recourt à des techniques subliminales, manipulatrices ou trompeuses qui altèrent substantiellement le comportement des personnes et sont susceptibles de causer un préjudice important",
+    "Exploits vulnerabilities due to age, disability or a social or economic situation to materially distort behaviour in a way likely to cause significant harm":
+      "Exploite les vulnérabilités dues à l'âge, au handicap ou à une situation sociale ou économique pour altérer substantiellement le comportement d'une manière susceptible de causer un préjudice important",
+    "Evaluates or classifies people based on social behaviour or personal characteristics, leading to unjustified or unrelated detrimental treatment (social scoring)":
+      "Évalue ou classe des personnes en fonction de leur comportement social ou de caractéristiques personnelles, entraînant un traitement préjudiciable injustifié ou sans rapport avec le contexte (notation sociale)",
+    "Assesses or predicts the risk of a person committing a criminal offence based solely on profiling or personality traits":
+      "Évalue ou prédit le risque qu'une personne commette une infraction pénale uniquement sur la base du profilage ou de traits de personnalité",
+    "Creates or expands facial recognition databases through untargeted scraping of facial images from the internet or CCTV footage":
+      "Crée ou développe des bases de données de reconnaissance faciale par le moissonnage non ciblé d'images faciales provenant de l'internet ou de la vidéosurveillance",
+    "Infers the emotions of people at work or in education institutions, other than for medical or safety reasons":
+      "Infère les émotions de personnes sur le lieu de travail ou dans des établissements d'enseignement, sauf pour des raisons médicales ou de sécurité",
+    "Categorises people using biometric data to deduce race, political opinions, trade union membership, religious or philosophical beliefs, sex life or sexual orientation":
+      "Catégorise des personnes à partir de données biométriques afin d'en déduire leur race, leurs opinions politiques, leur affiliation à une organisation syndicale, leurs convictions religieuses ou philosophiques, leur vie sexuelle ou leur orientation sexuelle",
+    "Is the system used for real-time remote biometric identification of people in publicly accessible spaces for law enforcement?":
+      "Le système est-il utilisé pour l'identification biométrique à distance en temps réel de personnes dans des espaces accessibles au public à des fins répressives ?",
+    "Is that use strictly necessary for one of these objectives, with the prior authorisation Article 5(3) requires?":
+      "Cette utilisation est-elle strictement nécessaire à l'un de ces objectifs, avec l'autorisation préalable exigée par l'article 5(3) ?",
+    "Targeted search for specific victims of abduction, trafficking in human beings or sexual exploitation, or for missing persons":
+      "Recherche ciblée de victimes spécifiques d'enlèvement, de traite des êtres humains ou d'exploitation sexuelle, ou de personnes disparues",
+    "Preventing a specific, substantial and imminent threat to life or physical safety, or a genuine and present or foreseeable terrorist attack":
+      "Prévention d'une menace spécifique, substantielle et imminente pour la vie ou la sécurité physique, ou d'une menace réelle et actuelle ou prévisible d'attaque terroriste",
+    "Locating or identifying a person suspected of a serious criminal offence listed in Annex II, punishable by at least four years' custody":
+      "Localisation ou identification d'une personne soupçonnée d'avoir commis une infraction pénale grave visée à l'annexe II, passible d'une peine privative de liberté d'au moins quatre ans",
+    "None of these, or no prior authorisation":
+      "Aucun de ces objectifs, ou pas d'autorisation préalable",
+    "Can the system generate or manipulate images, video or audio showing real people in intimate situations without their consent, or child sexual abuse material?":
+      "Le système peut-il générer ou manipuler des images, des vidéos ou des contenus audio montrant des personnes réelles dans des situations intimes sans leur consentement, ou du matériel pédopornographique ?",
+    "Does the provider apply safeguards that prevent the system from generating such content?":
+      "Le fournisseur applique-t-il des garde-fous qui empêchent le système de générer de tels contenus ?",
+    "Systems with adequate safeguards against generating this content are not covered by the ban.":
+      "Les systèmes dotés de garde-fous adéquats contre la génération de ces contenus ne sont pas visés par l'interdiction.",
+    "Is the system itself a product, or does it perform a safety function in a product, covered by the EU product legislation listed in Annex I?":
+      "Le système est-il lui-même un produit, ou remplit-il une fonction de sécurité dans un produit, relevant de la législation de l'UE sur les produits énumérée à l'annexe I ?",
+    "Yes: a product under Annex I Section A that needs a third-party conformity assessment":
+      "Oui : un produit relevant de l'annexe I, section A, qui nécessite une évaluation de la conformité par un tiers",
+    "For example medical devices, in vitro diagnostic devices, toys, lifts, radio equipment, pressure equipment or personal protective equipment.":
+      "Par exemple les dispositifs médicaux, les dispositifs médicaux de diagnostic in vitro, les jouets, les ascenseurs, les équipements radioélectriques, les équipements sous pression ou les équipements de protection individuelle.",
+    "Yes: a product under Annex I Section B that needs a third-party conformity assessment":
+      "Oui : un produit relevant de l'annexe I, section B, qui nécessite une évaluation de la conformité par un tiers",
+    "Vehicles, aviation, marine equipment, rail systems, agricultural and forestry vehicles, or machinery.":
+      "Véhicules, aviation, équipements marins, systèmes ferroviaires, véhicules agricoles et forestiers, ou machines.",
+    "Is the system intended to be used in any of these areas?":
+      "Le système est-il destiné à être utilisé dans l'un de ces domaines ?",
+    "Biometrics": "Biométrie",
+    "Critical infrastructure (digital infrastructure, road traffic, water, gas, heating or electricity supply)":
+      "Infrastructures critiques (infrastructures numériques, trafic routier, fourniture d'eau, de gaz, de chauffage ou d'électricité)",
+    "Education and vocational training": "Éducation et formation professionnelle",
+    "Employment, workers' management and access to self-employment":
+      "Emploi, gestion de la main-d'œuvre et accès à l'emploi indépendant",
+    "Access to essential private and public services and benefits (public assistance, credit, insurance, emergency services)":
+      "Accès et droit aux services privés essentiels et aux services publics et prestations sociales essentiels (aide sociale, crédit, assurance, services d'urgence)",
+    "Law enforcement": "Répression",
+    "Migration, asylum and border control":
+      "Migration, asile et gestion des contrôles aux frontières",
+    "Administration of justice and democratic processes":
+      "Administration de la justice et processus démocratiques",
+    "How is the system used in biometrics?":
+      "Comment le système est-il utilisé dans le domaine de la biométrie ?",
+    "Remote biometric identification": "Identification biométrique à distance",
+    "Verification only: confirming that a person is who they claim to be":
+      "Vérification uniquement : confirmer qu'une personne est bien celle qu'elle prétend être",
+    "Categorising people by sensitive or protected attributes inferred from biometric data":
+      "Catégorisation de personnes selon des attributs sensibles ou protégés déduits de données biométriques",
+    "How is the system used in critical infrastructure?":
+      "Comment le système est-il utilisé dans les infrastructures critiques ?",
+    "As a safety component in managing or operating critical digital infrastructure, road traffic, or the supply of water, gas, heating or electricity":
+      "Comme composant de sécurité dans la gestion ou l'exploitation d'infrastructures numériques critiques, du trafic routier ou de la fourniture d'eau, de gaz, de chauffage ou d'électricité",
+    "How is the system used in education?": "Comment le système est-il utilisé dans l'éducation ?",
+    "Deciding access or admission, or assigning people to institutions":
+      "Décider de l'accès ou de l'admission, ou affecter des personnes à des établissements",
+    "Evaluating learning outcomes": "Évaluer les acquis d'apprentissage",
+    "Assessing the level of education a person will receive or access":
+      "Évaluer le niveau d'enseignement qu'une personne recevra ou auquel elle pourra accéder",
+    "Monitoring and detecting prohibited behaviour during tests":
+      "Surveiller et détecter les comportements interdits pendant les examens",
+    "How is the system used in employment?": "Comment le système est-il utilisé dans l'emploi ?",
+    "Recruiting or selecting people, including targeted job ads and filtering or evaluating applications":
+      "Recruter ou sélectionner des personnes, y compris par des offres d'emploi ciblées et le filtrage ou l'évaluation des candidatures",
+    "Making decisions on terms of work, promotion or termination":
+      "Prendre des décisions sur les conditions de travail, la promotion ou la résiliation",
+    "Allocating tasks based on behaviour or personal traits, or monitoring and evaluating performance":
+      "Attribuer des tâches en fonction du comportement ou de traits personnels, ou surveiller et évaluer les performances",
+    "How is the system used for essential services?":
+      "Comment le système est-il utilisé pour les services essentiels ?",
+    "Evaluating eligibility for public assistance benefits and services":
+      "Évaluer l'éligibilité aux prestations et services d'aide sociale",
+    "Evaluating creditworthiness or establishing a credit score":
+      "Évaluer la solvabilité ou établir une note de crédit",
+    "Detecting financial fraud": "Détecter la fraude financière",
+    "Risk assessment and pricing for life or health insurance":
+      "Évaluation des risques et tarification en matière d'assurance vie ou maladie",
+    "Evaluating and classifying emergency calls, dispatching emergency services or emergency patient triage":
+      "Évaluer et classer les appels d'urgence, envoyer des services d'urgence ou trier les patients en situation d'urgence",
+    "How is the system used in law enforcement?":
+      "Comment le système est-il utilisé à des fins répressives ?",
+    "Assessing the risk of a person becoming a victim of crime":
+      "Évaluer le risque qu'une personne devienne victime d'infractions pénales",
+    "As a polygraph or similar tool": "Comme polygraphe ou outil similaire",
+    "Evaluating the reliability of evidence": "Évaluer la fiabilité des preuves",
+    "Assessing the risk of offending or re-offending, not solely based on profiling":
+      "Évaluer le risque de commission d'une infraction ou de récidive, pas uniquement sur la base du profilage",
+    "Profiling people in the detection, investigation or prosecution of criminal offences":
+      "Profilage de personnes dans le cadre de la détection d'infractions pénales, d'enquêtes ou de poursuites en la matière",
+    "How is the system used in migration, asylum or border control?":
+      "Comment le système est-il utilisé dans la migration, l'asile ou la gestion des contrôles aux frontières ?",
+    "Assessing security, irregular migration or health risks posed by a person":
+      "Évaluer un risque pour la sécurité, un risque de migration irrégulière ou un risque sanitaire présenté par une personne",
+    "Examining applications for asylum, visas or residence permits":
+      "Examiner les demandes d'asile, de visa ou de titre de séjour",
+    "Detecting, recognising or identifying people":
+      "Détecter, reconnaître ou identifier des personnes",
+    "Verifying travel documents": "Vérifier les documents de voyage",
+    "How is the system used in justice or democratic processes?":
+      "Comment le système est-il utilisé dans la justice ou les processus démocratiques ?",
+    "Assisting a judicial authority, or alternative dispute resolution, in researching and interpreting facts and law":
+      "Assister une autorité judiciaire, ou un mode alternatif de règlement des litiges, dans la recherche et l'interprétation des faits et du droit",
+    "Influencing the outcome of an election or referendum, or people's voting behaviour":
+      "Influencer le résultat d'une élection ou d'un référendum, ou le comportement électoral des personnes",
+    "Organising, optimising or structuring political campaigns administratively or logistically":
+      "Organiser, optimiser ou structurer des campagnes politiques sur le plan administratif ou logistique",
+    "Does the system profile people, meaning automated processing of personal data to evaluate aspects such as work performance, economic situation, health, preferences, interests, reliability, behaviour, location or movements?":
+      "Le système effectue-t-il un profilage de personnes, c'est-à-dire un traitement automatisé de données à caractère personnel visant à évaluer des aspects tels que le rendement au travail, la situation économique, la santé, les préférences, les intérêts, la fiabilité, le comportement, la localisation ou les déplacements ?",
+    "Does one of these describe the system, so that it does not materially influence the outcome of decisions?":
+      "L'une de ces descriptions correspond-elle au système, de sorte qu'il n'influence pas de manière significative le résultat des décisions ?",
+    "It performs a narrow procedural task": "Il exécute une tâche procédurale étroite",
+    "It improves the result of a previously completed human activity":
+      "Il améliore le résultat d'une activité humaine préalablement réalisée",
+    "It detects decision-making patterns or deviations from prior patterns, without replacing or influencing the human assessment without proper human review":
+      "Il détecte des schémas de prise de décision ou des écarts par rapport à des schémas antérieurs, sans remplacer ni influencer l'évaluation humaine sans examen humain approprié",
+    "It performs a preparatory task to an assessment relevant to the Annex III uses":
+      "Il exécute une tâche préparatoire à une évaluation pertinente pour les utilisations énumérées à l'annexe III",
+    "Interacts directly with people, for example a chatbot or voice assistant":
+      "Interagit directement avec des personnes, par exemple un chatbot ou un assistant vocal",
+    "Generates synthetic audio, images, video or text":
+      "Génère des contenus de synthèse de type audio, image, vidéo ou texte",
+    "Recognises emotions or categorises people using biometric data":
+      "Reconnaît les émotions ou catégorise des personnes à partir de données biométriques",
+    "Produces deepfakes, or generates or edits text published to inform the public on matters of public interest":
+      "Produit des hypertrucages, ou génère ou modifie des textes publiés dans le but d'informer le public sur des questions d'intérêt public",
+    "Manipulative or deceptive techniques that materially distort behaviour and are likely to cause significant harm are prohibited.":
+      "Les techniques manipulatrices ou trompeuses qui altèrent substantiellement le comportement et sont susceptibles de causer un préjudice important sont interdites.",
+    "Exploiting vulnerabilities due to age, disability or a social or economic situation is prohibited.":
+      "L'exploitation des vulnérabilités dues à l'âge, au handicap ou à une situation sociale ou économique est interdite.",
+    "Social scoring that leads to unjustified or unrelated detrimental treatment is prohibited.":
+      "La notation sociale entraînant un traitement préjudiciable injustifié ou sans rapport avec le contexte est interdite.",
+    "Predicting criminal offences based solely on profiling or personality traits is prohibited.":
+      "La prédiction d'infractions pénales fondée uniquement sur le profilage ou sur des traits de personnalité est interdite.",
+    "Building facial recognition databases through untargeted scraping is prohibited.":
+      "La constitution de bases de données de reconnaissance faciale par moissonnage non ciblé est interdite.",
+    "Emotion recognition at work or in education institutions, other than for medical or safety reasons, is prohibited.":
+      "La reconnaissance des émotions sur le lieu de travail ou dans les établissements d'enseignement est interdite, sauf pour des raisons médicales ou de sécurité.",
+    "Biometric categorisation to infer sensitive characteristics is prohibited.":
+      "La catégorisation biométrique visant à déduire des caractéristiques sensibles est interdite.",
+    "AI systems that generate non-consensual intimate imagery of real people or child sexual abuse material are prohibited.":
+      "Les systèmes d'IA qui génèrent des images intimes non consenties de personnes réelles ou du matériel pédopornographique sont interdits.",
+    "Prohibited from 2 December 2026: AI systems that generate non-consensual intimate imagery of real people or child sexual abuse material.":
+      "Interdits à partir du 2 décembre 2026 : les systèmes d'IA qui génèrent des images intimes non consenties de personnes réelles ou du matériel pédopornographique.",
+    "Biometric verification whose sole purpose is to confirm that a person is who they claim to be is excluded from the high-risk list.":
+      "La vérification biométrique dont la seule finalité est de confirmer qu'une personne est bien celle qu'elle prétend être est exclue de la liste des systèmes à haut risque.",
+    "AI systems used to detect financial fraud are excluded from the high-risk list.":
+      "Les systèmes d'IA utilisés pour détecter la fraude financière sont exclus de la liste des systèmes à haut risque.",
+    "Verification of travel documents is excluded from the high-risk list.":
+      "La vérification des documents de voyage est exclue de la liste des systèmes à haut risque.",
+    "Tools that organise, optimise or structure political campaigns administratively or logistically are excluded from the high-risk list.":
+      "Les outils qui organisent, optimisent ou structurent des campagnes politiques sur le plan administratif ou logistique sont exclus de la liste des systèmes à haut risque.",
+    "The system performs a narrow procedural task, so it is not high risk.":
+      "Le système exécute une tâche procédurale étroite ; il n'est donc pas à haut risque.",
+    "The system improves the result of a previously completed human activity, so it is not high risk.":
+      "Le système améliore le résultat d'une activité humaine préalablement réalisée ; il n'est donc pas à haut risque.",
+    "The system detects decision-making patterns without replacing or influencing the human assessment without review, so it is not high risk.":
+      "Le système détecte des schémas de prise de décision sans remplacer ni influencer l'évaluation humaine sans examen ; il n'est donc pas à haut risque.",
+    "The system performs a preparatory task to an Annex III assessment, so it is not high risk.":
+      "Le système exécute une tâche préparatoire à une évaluation relevant de l'annexe III ; il n'est donc pas à haut risque.",
+    "The system interacts directly with people.":
+      "Le système interagit directement avec des personnes.",
+    "Inform people that they are interacting with an AI system.":
+      "Informez les personnes qu'elles interagissent avec un système d'IA.",
+    "The system generates synthetic audio, images, video or text.":
+      "Le système génère des contenus de synthèse de type audio, image, vidéo ou texte.",
+    "Mark generated content in a machine-readable format. Systems already on the market must comply by 2 December 2026.":
+      "Marquez les contenus générés dans un format lisible par machine. Les systèmes déjà mis sur le marché doivent s'y conformer au plus tard le 2 décembre 2026.",
+    "The system recognises emotions or categorises people using biometric data.":
+      "Le système reconnaît les émotions ou catégorise des personnes à partir de données biométriques.",
+    "Inform the people exposed to the system.": "Informez les personnes exposées au système.",
+    "The system produces deepfakes or public-interest text.":
+      "Le système produit des hypertrucages ou des textes d'intérêt public.",
+    "Disclose that the content is artificially generated or manipulated.":
+      "Indiquez que le contenu a été généré ou manipulé artificiellement.",
+    "Establish a risk management system.": "Mettez en place un système de gestion des risques.",
+    "Apply data governance to training, validation and testing data.":
+      "Appliquez une gouvernance des données aux données d'entraînement, de validation et de test.",
+    "Draw up technical documentation (Annex IV).":
+      "Établissez la documentation technique (annexe IV).",
+    "Enable automatic event logging.": "Permettez l'enregistrement automatique des événements.",
+    "Provide instructions for use to deployers.":
+      "Fournissez une notice d'utilisation aux déployeurs.",
+    "Design the system for effective human oversight.":
+      "Concevez le système de manière à permettre un contrôle humain effectif.",
+    "Achieve appropriate accuracy, robustness and cybersecurity.":
+      "Atteignez un niveau approprié d'exactitude, de robustesse et de cybersécurité.",
+    "Put a quality management system in place.":
+      "Mettez en place un système de gestion de la qualité.",
+    "Complete the conformity assessment before placing the system on the market.":
+      "Réalisez l'évaluation de la conformité avant de mettre le système sur le marché.",
+    "Register the system in the EU database.":
+      "Enregistrez le système dans la base de données de l'UE.",
+    "Run post-market monitoring.": "Assurez la surveillance après commercialisation.",
+    "Report serious incidents.": "Signalez les incidents graves.",
+    "Use the system according to the provider's instructions.":
+      "Utilisez le système conformément à la notice d'utilisation du fournisseur.",
+    "Assign human oversight to competent people.":
+      "Confiez le contrôle humain à des personnes compétentes.",
+    "Make sure input data is relevant and sufficiently representative.":
+      "Veillez à ce que les données d'entrée soient pertinentes et suffisamment représentatives.",
+    "Monitor operation and inform the provider of risks and serious incidents.":
+      "Surveillez le fonctionnement et informez le fournisseur des risques et des incidents graves.",
+    "Keep the automatically generated logs for at least six months.":
+      "Conservez les journaux générés automatiquement pendant au moins six mois.",
+    "Inform workers' representatives and affected workers before use at the workplace.":
+      "Informez les représentants des travailleurs et les travailleurs concernés avant toute utilisation sur le lieu de travail.",
+    "Inform people that decisions about them are supported by a high-risk AI system.":
+      "Informez les personnes que les décisions les concernant sont assistées par un système d'IA à haut risque.",
+    "Carry out a fundamental rights impact assessment where required (public bodies, public services, credit scoring, and life or health insurance).":
+      "Réalisez une analyse d'impact sur les droits fondamentaux lorsque cela est requis (organismes publics, services publics, évaluation de la solvabilité, et assurance vie ou maladie).",
+    "Ensure sufficient AI literacy of the staff who operate or use the system.":
+      "Veillez à un niveau suffisant de maîtrise de l'IA du personnel qui exploite ou utilise le système.",
+    "AI systems developed and put into service only for scientific research and development, and research, testing or development before a system is placed on the market or put into service, are outside the scope of the EU AI Act.":
+      "Les systèmes d'IA développés et mis en service uniquement à des fins de recherche et de développement scientifiques, ainsi que les activités de recherche, d'essai ou de développement menées avant la mise sur le marché ou la mise en service d'un système, ne relèvent pas du champ d'application du règlement IA de l'UE.",
+    "Real-time remote biometric identification in publicly accessible spaces for law enforcement, outside the authorised objectives, is prohibited.":
+      "L'identification biométrique à distance en temps réel dans des espaces accessibles au public à des fins répressives est interdite en dehors des objectifs autorisés.",
+    "Do not place this system on the market, put it into service or use it in the EU.":
+      "Ne mettez pas ce système sur le marché, ne le mettez pas en service et ne l'utilisez pas dans l'UE.",
+    "Real-time remote biometric identification for an authorised objective needs prior authorisation and is a high-risk system.":
+      "L'identification biométrique à distance en temps réel poursuivant un objectif autorisé nécessite une autorisation préalable et constitue un système à haut risque.",
+    "The system is a product, or performs a safety function in a product, under Annex I Section A legislation that requires a third-party conformity assessment.":
+      "Le système est un produit, ou remplit une fonction de sécurité dans un produit, relevant de la législation de l'annexe I, section A, qui exige une évaluation de la conformité par un tiers.",
+    "The system is part of a product under Annex I Section B. Its high-risk requirements apply through that sector's legislation.":
+      "Le système fait partie d'un produit relevant de l'annexe I, section B. Les exigences applicables aux systèmes à haut risque s'appliquent par l'intermédiaire de la législation de ce secteur.",
+    "The system is used for a listed high-risk purpose and profiles people, so the Article 6(3) exemption cannot apply.":
+      "Le système est utilisé à une fin répertoriée comme à haut risque et effectue un profilage de personnes ; la dérogation de l'article 6(3) ne peut donc pas s'appliquer.",
+    "The provider documents the assessment that the system is not high risk before placing it on the market or putting it into service.":
+      "Le fournisseur documente son évaluation selon laquelle le système n'est pas à haut risque avant sa mise sur le marché ou sa mise en service.",
+    "The provider registers the system in the EU database.":
+      "Le fournisseur enregistre le système dans la base de données de l'UE.",
+    "The system is used for a purpose listed as high risk in Annex III.":
+      "Le système est utilisé à une fin répertoriée comme à haut risque à l'annexe III.",
+    "A justification of at least 10 characters is required when changing the EU AI Act classification.":
+      "Une justification d'au moins 10 caractères est requise pour modifier la classification selon le règlement IA de l'UE.",
+    "Answer these questions about the AI system first. They follow the EU AI Act.":
+      "Répondez d'abord à ces questions sur le système d'IA. Elles suivent le règlement IA de l'UE.",
+    "Answers": "Réponses",
+    "Applies from": "Applicable à partir du",
+    "Approving creates a use case classified as prohibited.":
+      "L'approbation crée un cas d'usage classé comme interdit.",
+    "Back to risk classification": "Retour à la classification des risques",
+    "Classification for the new use case": "Classification du nouveau cas d'usage",
+    "Classification saved": "Classification enregistrée",
+    "Could not load the questionnaire. Try again later.":
+      "Impossible de charger le questionnaire. Réessayez plus tard.",
+    "Could not save the classification. Try again.":
+      "Impossible d'enregistrer la classification. Réessayez.",
+    "Could not save the agent. Try again.": "Impossible d'enregistrer l'agent. Réessayez.",
+    "Could not update the agent. Try again.": "Impossible de mettre à jour l'agent. Réessayez.",
+    "Could not score the answers. Try again.": "Impossible d'évaluer les réponses. Réessayez.",
+    "EU AI Act classification": "Classification selon le règlement IA de l'UE",
+    "EU AI Act risk classification step":
+      "Étape de classification des risques selon le règlement IA de l'UE",
+    "Submitters answer these questions first. The result is shown only to reviewers.":
+      "Les demandeurs répondent d'abord à ces questions. Seuls les réviseurs voient le résultat.",
+    "Loading questions...": "Chargement des questions...",
+    "The questions could not be loaded.": "Les questions n'ont pas pu être chargées.",
+    "Questions": "Questions",
+    "View questions": "Voir les questions",
+    "EU AI Act questionnaire": "Questionnaire sur le règlement européen sur l'IA",
+    "questions": "questions",
+    "asked before the form": "posées avant le formulaire",
+    "Scope and role": "Champ d'application et rôle",
+    "Article 5 · Prohibited practices": "Article 5 · Pratiques interdites",
+    "Annex I · Product safety": "Annexe I · Sécurité des produits",
+    "Annex III · High-risk uses": "Annexe III · Utilisations à haut risque",
+    "Article 50 · Transparency": "Article 50 · Transparence",
+    "Other questions": "Autres questions",
+    "Select all that apply": "Sélectionnez toutes les réponses applicables",
+    "Cannot be combined with other answers": "Ne peut pas être combinée avec d'autres réponses",
+    "Shown when": "Affichée si",
+    "or": "ou",
+    "Shown depending on earlier answers": "Affichée selon les réponses précédentes",
+    "Explain why you are changing the computed classification (min. 10 characters)":
+      "Expliquez pourquoi vous modifiez la classification calculée (10 caractères min.)",
+    "High-risk AI system": "Système d'IA à haut risque",
+    "Intake risk score": "Score de risque du formulaire d'entrée",
+    "Justification must be at least 10 characters":
+      "La justification doit comporter au moins 10 caractères",
+    "No specific EU AI Act obligations apply beyond AI literacy.":
+      "Aucune obligation spécifique au titre du règlement IA de l'UE ne s'applique au-delà de la maîtrise de l'IA.",
+    "Obligations": "Obligations",
+    "Out of scope": "Hors du champ d'application",
+    "Outside the EU AI Act": "Hors du champ du règlement IA de l'UE",
+    "Override intake risk score": "Remplacer le score de risque du formulaire d'entrée",
+    'Only the uses listed here are high risk under Annex III. Choose "Another use in this area" if none of them applies.':
+      "Seules les utilisations énumérées ici sont à haut risque au titre de l'annexe III. Choisissez « Une autre utilisation dans ce domaine » si aucune ne s'applique.",
+    "Complete the conformity assessment under the product's sectoral procedure before placing the system on the market.":
+      "Réalisez l'évaluation de la conformité selon la procédure sectorielle applicable au produit avant de mettre le système sur le marché.",
+    "Register the system at national level.": "Enregistrez le système au niveau national.",
+    "Meet the AI requirements set through the product's sectoral legislation.":
+      "Respectez les exigences en matière d'IA fixées par la législation sectorielle applicable au produit.",
+    "From 2 December 2026, do not place this system on the market, put it into service or use it in the EU.":
+      "À partir du 2 décembre 2026, ne mettez pas ce système sur le marché, ne le mettez pas en service et ne l'utilisez pas dans l'UE.",
+    "Justification is required when overriding the intake risk score.":
+      "Une justification est requise pour remplacer le score de risque du formulaire d'entrée.",
+    "Review the intake risk score, EU AI Act classification and entity data before approving or rejecting":
+      "Vérifiez le score de risque du formulaire d'entrée, la classification selon le règlement IA de l'UE et les données de l'entité avant d'approuver ou de rejeter",
+    "Review the intake risk score and entity data before approving or rejecting":
+      "Vérifiez le score de risque du formulaire d'entrée et les données de l'entité avant d'approuver ou de rejeter",
+    "Please review your risk classification answers.":
+      "Veuillez vérifier vos réponses à la classification des risques.",
+    "Prohibited": "Interdit",
+    "Research and development systems not placed on the market or used are outside the EU AI Act.":
+      "Les systèmes de recherche et de développement qui ne sont ni mis sur le marché ni utilisés ne relèvent pas du règlement IA de l'UE.",
+    "Role:": "Rôle :",
+    "Submitters answer the EU AI Act risk questionnaire before the form's questions. Reviewers see the result, and it becomes the use case's risk classification on approval.":
+      "Les soumetteurs répondent au questionnaire de risque du règlement IA de l'UE avant les questions du formulaire. Les relecteurs voient le résultat, qui devient la classification des risques du cas d'usage lors de l'approbation.",
+    "The system falls under a prohibited practice in Article 5.":
+      "Le système relève d'une pratique interdite au titre de l'article 5.",
+    "This system has transparency obligations under Article 50.":
+      "Ce système est soumis aux obligations de transparence de l'article 50.",
+    "This system is high risk and must meet the EU AI Act requirements for high-risk systems.":
+      "Ce système est à haut risque et doit satisfaire aux exigences du règlement IA de l'UE applicables aux systèmes à haut risque.",
+    "Turning this on unmaps the questions that set the AI risk classification and the high-risk role. They stay on the form; delete them so submitters are not asked twice.":
+      "L'activation supprime l'association des questions qui définissent la classification du risque IA et le rôle à haut risque. Elles restent dans le formulaire ; supprimez-les pour que les demandeurs ne répondent pas deux fois.",
+    "Updated since submission": "Mis à jour depuis la soumission",
+    "Why": "Pourquoi",
+    "Audit records": "Enregistrements d'audit",
+    "Audit ledger, event log, change history, AI Advisor actions, file access logs":
+      "Registre d'audit, journal des événements, historique des modifications, actions de l'AI Advisor, journaux d'accès aux fichiers",
+    "AI Gateway guardrail logs": "Journaux des garde-fous de l'AI Gateway",
+    "AI Gateway spend logs": "Journaux de dépenses de l'AI Gateway",
+    "Agent Control logs": "Journaux d'Agent Control",
+    "Tool-call logs and decided approvals": "Journaux d'appels d'outils et approbations traitées",
+    "Model risk metrics": "Indicateurs de risque de modèle",
+    "Default for new files; each file can set its own":
+      "Valeur par défaut pour les nouveaux fichiers ; chaque fichier peut définir la sienne",
+    "Shadow AI events": "Événements Shadow AI",
+    "Shadow AI daily rollups": "Agrégats quotidiens Shadow AI",
+    "Shadow AI alert history": "Historique des alertes Shadow AI",
+    "Server logs": "Journaux du serveur",
+    "Self-hosted application logs": "Journaux d'application auto-hébergée",
+    "How long each kind of record is kept": "Durée de conservation de chaque type d'enregistrement",
+    "{count} year": "{count} an",
+    "{count} years": "{count} ans",
+    "{count} month": "{count} mois",
+    "{count} months": "{count} mois",
+    "{count} day": "{count} jour",
+    "{count} days": "{count} jours",
+    "Indefinitely": "Indéfiniment",
+    "Archived, not deleted": "Archivé, non supprimé",
+    "Rotated daily": "Rotation quotidienne",
+    "{date} · {count} removed": "{date} · {count} supprimés",
+    "Purge refused: internal key not configured": "Purge refusée : clé interne non configurée",
+    "Purge refused: internal key rejected": "Purge refusée : clé interne rejetée",
+    "{date} · {count} removed (more pending)": "{date} · {count} supprimés (d'autres en attente)",
+    "Records": "Enregistrements",
+    "Kept for": "Conservé pendant",
+    "Automatic deletion": "Suppression automatique",
+    "Last cleanup": "Dernier nettoyage",
+    "Unavailable": "Indisponible",
+    "Set by deployment: {setting}": "Défini par le déploiement : {setting}",
+    "Edit retention: {name}": "Modifier la conservation : {name}",
+    "{count} logs deleted": "{count} journaux supprimés",
+    "Permanently delete guardrail logs older than {days} days?":
+      "Supprimer définitivement les journaux de garde-fous datant de plus de {days} jours ?",
+    "How long to keep guardrail detection logs and spend logs. Guardrail logs record every blocked or masked request for compliance auditing (EU AI Act Art. 12).":
+      "Durée de conservation des journaux de détection des garde-fous et des journaux de dépenses. Les journaux des garde-fous enregistrent chaque requête bloquée ou masquée pour l'audit de conformité (règlement européen sur l'IA, art. 12).",
+    "When on, logs older than their retention period are deleted every day. When off, logs are kept until you purge them.":
+      "Si activé, les journaux plus anciens que leur durée de conservation sont supprimés chaque jour. Si désactivé, les journaux sont conservés jusqu'à ce que vous les purgiez.",
+    "Only admins can change retention periods":
+      "Seuls les administrateurs peuvent modifier les durées de conservation",
+    "Records before {date} removed by retention policy":
+      "Enregistrements antérieurs au {date} supprimés par la politique de conservation",
+    "Spend log retention (days)": "Conservation des journaux de dépenses (jours)",
+    "Purge logs": "Purger les journaux",
+    "This cannot be undone. The saved retention period is used, so save any change to it first.":
+      "Cette action est irréversible. La durée de conservation enregistrée est utilisée, enregistrez donc d'abord toute modification.",
+    "Delete old spend log entries based on the spend log retention period above.":
+      "Supprimer les anciennes entrées du journal des dépenses selon la durée de conservation des journaux de dépenses ci-dessus.",
+    "Retention periods must be whole numbers from {min} to {max} days":
+      "Les durées de conservation doivent être des nombres entiers de {min} à {max} jours",
+    "Confirm automatic deletion": "Confirmer la suppression automatique",
+    "Failed to purge logs": "Échec de la purge des journaux",
+    "Audit records before {date} were removed by the retention policy.":
+      "Les enregistrements d'audit antérieurs au {date} ont été supprimés par la politique de conservation.",
+    "Choose how long these records are kept":
+      "Choisissez la durée de conservation de ces enregistrements",
+    "Keep indefinitely": "Conserver indéfiniment",
+    "Keep audit records for": "Conserver les enregistrements d'audit pendant",
+    "Keep for (days)": "Conserver pendant (jours)",
+    "Keep for (months)": "Conserver pendant (mois)",
+    "Delete automatically": "Supprimer automatiquement",
+    "This setting applies to both AI Gateway log types.":
+      "Ce paramètre s'applique aux deux types de journaux de l'AI Gateway.",
+    "At least {min} months.": "Au moins {min} mois.",
+    "{period} (deployment default)": "{period} (valeur par défaut du déploiement)",
+    "Use the deployment default": "Utiliser la valeur par défaut du déploiement",
+    "Use the deployment default ({period})":
+      "Utiliser la valeur par défaut du déploiement ({period})",
+    "From {min} to {max} days.": "De {min} à {max} jours.",
+    "Tool-call logs and decided approvals older than {period} will be deleted permanently at the next daily cleanup. Deleted records cannot be restored.":
+      "Les journaux d'appels d'outils et les approbations traitées de plus de {period} seront définitivement supprimés lors du prochain nettoyage quotidien. Les enregistrements supprimés ne peuvent pas être restaurés.",
+    "Leave empty or enter 0 to keep indefinitely. Maximum {max}.":
+      "Laissez vide ou saisissez 0 pour conserver indéfiniment. Maximum {max}.",
+    "Enter a whole number": "Saisissez un nombre entier",
+    "Enter a number of at least {min}": "Saisissez un nombre d'au moins {min}",
+    "Enter a number no greater than {max}": "Saisissez un nombre d'au plus {max}",
+    "The next cleanup will permanently delete {count} records older than {period}. Deleted records cannot be restored.":
+      "Le prochain nettoyage supprimera définitivement {count} enregistrements de plus de {period}. Les enregistrements supprimés ne peuvent pas être restaurés.",
+    "No records are old enough to delete yet. From now on, records older than {period} will be deleted permanently. Deleted records cannot be restored.":
+      "Aucun enregistrement n'est encore assez ancien pour être supprimé. Désormais, les enregistrements de plus de {period} seront supprimés définitivement. Les enregistrements supprimés ne peuvent pas être restaurés.",
+    "Export CSV first": "Exporter d'abord en CSV",
+    "Delete records": "Supprimer les enregistrements",
+    "Failed to save settings": "Impossible d'enregistrer les paramètres",
+    "Retention settings could not be loaded.":
+      "Les paramètres de conservation n'ont pas pu être chargés.",
+    "Guardrail logs older than {guardrailDays} days and spend logs older than {spendDays} days will be deleted permanently every day. Deleted logs cannot be restored.":
+      "Les journaux des garde-fous de plus de {guardrailDays} jours et les journaux de dépenses de plus de {spendDays} jours seront supprimés définitivement chaque jour. Les journaux supprimés ne peuvent pas être restaurés.",
+    "No evidence": "Aucune preuve",
+    "This use case is waiting for approval. You can read this overview, but the other tabs stay disabled until the request is approved or rejected, and the frameworks picked at creation are added only once it is approved. Follow the request under Approval requests in the header.":
+      "Ce cas d'usage est en attente d'approbation. Vous pouvez consulter cette vue d'ensemble, mais les autres onglets restent désactivés tant que la demande n'est pas approuvée ou rejetée, et les référentiels choisis à la création ne sont ajoutés qu'une fois l'approbation obtenue. Suivez la demande sous Demandes d'approbation dans l'en-tête.",
+    "This use case was rejected, so it can no longer be used. The tabs stay disabled and the frameworks picked at creation were never added. See the rejection comment under Approval requests in the header.":
+      "Ce cas d'usage a été rejeté : il ne peut plus être utilisé. Les onglets restent désactivés et les référentiels choisis à la création n'ont jamais été ajoutés. Consultez le commentaire de rejet sous Demandes d'approbation dans l'en-tête.",
+    "Adequate evidence": "Preuves suffisantes",
+    "Low-quality evidence": "Preuves de faible qualité",
+    "Loading evidence coverage": "Chargement de la couverture des preuves",
+    "Show all {count}": "Afficher les {count}",
+    "Show fewer": "Afficher moins",
+    "Controls needing attention": "Contrôles nécessitant une attention",
+    "file": "fichier",
+    "files": "fichiers",
+    "none adequate": "aucun suffisant",
+    "Evidence graded": "Les preuves notées",
+    "counts as low quality. Files with no AI analysis are not counted as adequate.":
+      "sont considérées comme de faible qualité. Les fichiers sans analyse IA ne comptent pas comme suffisants.",
   },
   es: {
+    "Server saved": "Servidor guardado",
+    "Server switched on": "Servidor activado",
+    "The server offered no tools": "El servidor no ofreció herramientas",
+    "One tool found": "Se encontró una herramienta",
+    "Discovery failed": "Error en la detección",
+    "Server saved, but discovery failed": "Servidor guardado, pero la detección falló",
+    "Server switched on, but discovery failed": "Servidor activado, pero la detección falló",
     "Deployment name": "Nombre del despliegue",
     "Save the deployment name first, then generate the token.":
       "Primero guarde el nombre del despliegue y luego genere el token.",
@@ -19607,6 +21117,80 @@ export const translations: Record<string, Record<string, string>> = {
     "Model Inventory": "Inventario de modelos",
     "Datasets": "Conjuntos de datos",
     "Agent discovery": "Descubrimiento de agentes",
+    "AI agents": "Agentes de IA",
+    "Lifecycle": "Ciclo de vida",
+    "Each stage shows who is in charge and when it happened":
+      "Cada etapa muestra quién es responsable y cuándo ocurrió",
+    "Ownership & capabilities": "Responsabilidad y capacidades",
+    "Who is accountable, and what this agent can access":
+      "Quién es responsable y a qué puede acceder este agente",
+    "Accountable owner": "Propietario responsable",
+    "No owner assigned": "Ningún propietario asignado",
+    "Access categories": "Categorías de acceso",
+    "None recorded": "Ninguna registrada",
+    "Governance actions taken on this agent": "Acciones de gobernanza realizadas sobre este agente",
+    "No activity recorded yet.": "Aún no se ha registrado ninguna actividad.",
+    "Agent not found": "Agente no encontrado",
+    "Could not load this agent.": "No se pudo cargar este agente.",
+    "Back to AI agents": "Volver a agentes de IA",
+    "Accountable owners": "Propietarios responsables",
+    "Manually entered": "Introducido manualmente",
+    "Inactive 30+ days": "Inactivo desde hace más de 30 días",
+    "Active (stale)": "Activo (obsoleto)",
+    "STALE": "OBSOLETO",
+    "Stale: no activity from this agent for 30+ days. Re-sync or review whether it is still in use.":
+      "Obsoleto: este agente no tiene actividad desde hace más de 30 días. Vuelva a sincronizar o revise si sigue en uso.",
+    "This agent has been inactive for 30+ days": "Este agente lleva más de 30 días inactivo",
+    "Delete this agent?": "¿Eliminar este agente?",
+    "When you delete this agent, all data related to this agent will be removed. This action is non-recoverable.":
+      "Si elimina este agente, se eliminarán todos los datos relacionados con él. Esta acción no se puede deshacer.",
+    "Rows per page": "Filas por página",
+    "Syncing...": "Sincronizando...",
+    "Sync now": "Sincronizar ahora",
+    "No agents found. Make sure the Azure AI Foundry extension is enabled and configured.":
+      "No se encontraron agentes. Asegúrese de que la extensión Azure AI Foundry esté habilitada y configurada.",
+    "Sync failed. Check that the Azure AI Foundry extension is enabled and configured.":
+      "La sincronización falló. Compruebe que la extensión Azure AI Foundry esté habilitada y configurada.",
+    "Agent review status updated.": "Estado de revisión del agente actualizado.",
+    "Agent updated successfully.": "Agente actualizado correctamente.",
+    "Agent added successfully.": "Agente añadido correctamente.",
+    "Agent deleted successfully.": "Agente eliminado correctamente.",
+    "Failed to delete agent.": "No se pudo eliminar el agente.",
+    "Linking...": "Vinculando...",
+    "Link model": "Vincular modelo",
+    "Type is required.": "El tipo es obligatorio.",
+    "Description cannot exceed 32,767 characters.":
+      "La descripción no puede superar los 32.767 caracteres.",
+    "Description is required.": "La descripción es obligatoria.",
+    "The selected use case is no longer available.":
+      "El caso de uso seleccionado ya no está disponible.",
+    "The selected affected model is no longer available.":
+      "El modelo afectado seleccionado ya no está disponible.",
+    "The selected owner is no longer available.":
+      "El responsable seleccionado ya no está disponible.",
+    "Description must be at least 5 characters.":
+      "La descripción debe tener al menos 5 caracteres.",
+    "Edit agent": "Editar agente",
+    "Add agent manually": "Añadir agente manualmente",
+    "Adding...": "Añadiendo...",
+    "User #{id}": "Usuario n.º {id}",
+    "Review status changed to {status}": "Estado de revisión cambiado a {status}",
+    "Review status changed": "Estado de revisión cambiado",
+    "Linked to a model in the inventory": "Vinculado a un modelo del inventario",
+    "Unlinked from its model": "Desvinculado de su modelo",
+    'Updated name: "{from}" → "{to}"': "Nombre actualizado: «{from}» → «{to}»",
+    "Updated name": "Nombre actualizado",
+    'Updated type: "{from}" → "{to}"': "Tipo actualizado: «{from}» → «{to}»",
+    "Updated type": "Tipo actualizado",
+    'Updated primary owner: "{from}" → "{to}"':
+      "Propietario principal actualizado: «{from}» → «{to}»",
+    "Updated primary owner": "Propietario principal actualizado",
+    'Updated owners: "{from}" → "{to}"': "Responsables actualizados: «{from}» → «{to}»",
+    "Updated owners": "Responsables actualizados",
+    'Updated details: "{from}" → "{to}"': "Detalles actualizados: «{from}» → «{to}»",
+    "Updated details": "Detalles actualizados",
+    'Updated {field}: "{from}" → "{to}"': "{field} actualizado: «{from}» → «{to}»",
+    "Updated {field}": "{field} actualizado",
     "ASSURANCE": "GARANTÍA",
     "Risk management": "Gestión de riesgos",
     "Risk Management": "Gestión de riesgos",
@@ -19836,6 +21420,13 @@ export const translations: Record<string, Record<string, string>> = {
     "NAME": "NOMBRE",
     "Description": "Descripción",
     "Owner": "Responsable",
+    "Owners": "Responsables",
+    "Some owners are no longer in your organization. They will be removed if you change the owners.":
+      "Algunos responsables ya no pertenecen a su organización. Se eliminarán si cambia los responsables.",
+    'Current owner "{owner}" is not a VerifyWise user. Choosing owners replaces it.':
+      "El responsable actual “{owner}” no es un usuario de VerifyWise. Elegir responsables lo reemplaza.",
+    "Delete agent": "Eliminar agente",
+    "Select owners": "Seleccionar responsables",
     "OWNER": "RESPONSABLE",
     "Owner name": "Nombre del responsable",
     "Status": "Estado",
@@ -19985,6 +21576,8 @@ export const translations: Record<string, Record<string, string>> = {
     "EVIDENCE NAME": "NOMBRE DE LA EVIDENCIA",
     "Evidence type": "Tipo de evidencia",
     "Evidence coverage": "Cobertura de evidencias",
+    "controls adequate": "controles adecuados",
+    "without evidence": "sin evidencia",
     "Report name": "Nombre del informe",
     "Report type": "Tipo de informe",
     "Type of report": "Tipo de informe",
@@ -20547,6 +22140,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Confirm your password": "Confirme su contraseña",
     "Connect data sources": "Conectar fuentes de datos",
     "Connect external tool servers": "Conectar servidores de herramientas externas",
+    "Tool discovery": "Descubrimiento de herramientas",
+    "Tools are discovered when you save a server, and you can run discovery again at any time from the server list.":
+      "Las herramientas se descubren al guardar un servidor, y puede volver a ejecutar el descubrimiento en cualquier momento desde la lista de servidores.",
     "Connect your GitHub repositories": "Conecte sus repositorios de GitHub",
     "Copy key": "Copiar clave",
     "Copy link": "Copiar enlace",
@@ -20793,9 +22389,33 @@ export const translations: Record<string, Record<string, string>> = {
     "Action plan": "Plan de acción",
     "Activity": "Actividad",
     "Affected groups description": "Descripción de los grupos afectados",
+    "Advisor": "Asesor",
     "Agent": "Agente",
     "Agent key created": "Clave de agente creada",
     "Agent keys": "Claves de agente",
+    "Agent activity": "Actividad del agente",
+    "View agent activity": "Ver actividad del agente",
+    "All agents": "Todos los agentes",
+    "Applies to agents": "Se aplica a los agentes",
+    "No activity recorded for this agent yet": "Aún no se ha registrado actividad para este agente",
+    "Failed to load agent activity": "No se pudo cargar la actividad de este agente",
+    "Blocked by rule": "Bloqueado por la regla",
+    "Agent #{id}": "Agente #{id}",
+    "Selected agents": "Agentes seleccionados",
+    "Guardrail rules for selected agents stop listing this key. A rule that listed only this agent then applies to no agent until you choose another one in Guardrails.":
+      "Las reglas de guardrail para agentes seleccionados dejan de incluir esta clave. Una regla que solo incluía a este agente no se aplicará a ningún agente hasta que elijas otro en Guardrails.",
+    "Select agents": "Seleccionar agentes",
+    "No agents": "Ningún agente",
+    "Select at least one agent, or apply the rule to all agents":
+      "Selecciona al menos un agente o aplica la regla a todos los agentes",
+    "The rule checks tool calls from these agents only. Revoked agent keys are not listed.":
+      "La regla solo revisa las llamadas a herramientas de estos agentes. Las claves de agente revocadas no aparecen.",
+    "Last active {date}": "Última actividad {date}",
+    "Tool use ID": "ID de uso de herramienta",
+    "Approval required by rule": "Aprobación requerida por la regla",
+    "This agent": "Este agente",
+    "{name} · last {days} days": "{name} · últimos {days} días",
+    "Rule: {name}": "Regla: {name}",
     "AI advisor": "Asesor de IA",
     "AI analysis": "Análisis de IA",
     "AI Detection": "Detección de IA",
@@ -21223,6 +22843,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Recent requests": "Solicitudes recientes",
     "Recent searches": "Búsquedas recientes",
     "Recent tool calls": "Invocaciones de herramientas recientes",
+    "1 call": "1 invocación",
+    "{count} calls": "{count} invocaciones",
+    "{count} denied": "{count} denegadas",
     "Recipients": "Destinatarios",
     "Recommendations": "Recomendaciones",
     "Redress and contestability process": "Proceso de reparación y recurribilidad",
@@ -21482,6 +23105,7 @@ export const translations: Record<string, Record<string, string>> = {
     "No approval requests found.": "No se han encontrado solicitudes de aprobación.",
     "No approval required": "No se requiere aprobación",
     "No audit ledger entries found.": "No se han encontrado entradas en el registro de auditoría.",
+    "Exporting...": "Exportando...",
     "No audit logs yet": "Aún no hay registros de auditoría",
     "No dependencies found": "No se han encontrado dependencias",
     "No detections in this period": "No hay detecciones en este periodo",
@@ -21906,7 +23530,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Content safety": "Seguridad del contenido",
     "Prompt security": "Seguridad del prompt",
     "Data leakage prevention": "Prevención de fugas de datos",
-    "Output quality": "Calidad de la salida",
     "Enabled": "Activado",
     "Enable": "Activar",
     "No guardrails match your search.": "Ninguna barrera de protección coincide con tu búsqueda.",
@@ -21937,9 +23560,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Database connection strings": "Cadenas de conexión a la base de datos",
     "Internal URLs": "URL internas",
     "Environment variables": "Variables de entorno",
-    "JSON output enforcement": "Aplicación de salida en JSON",
-    "Response length limit": "Límite de longitud de respuesta",
-    "Executable code in output": "Código ejecutable en la salida",
     "GDPR personal data (all)": "Datos personales de GDPR (todos)",
     "HIPAA protected health info": "Información sanitaria protegida por HIPAA",
     "PCI DSS cardholder data": "Datos del titular de tarjeta de PCI DSS",
@@ -21951,7 +23571,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Detect IPv4 and IPv6 addresses.": "Detecta direcciones IPv4 e IPv6.",
     "Detect medical license and DEA numbers.": "Detecta números de licencia médica y DEA.",
     "Detect European phone number formats.": "Detecta formatos de números de teléfono europeos.",
-    "Flag responses exceeding 4,000 words.": "Marca las respuestas que superen las 4000 palabras.",
     "Phone number": "Número de teléfono",
     "Credit card": "Tarjeta de crédito",
     "Person name": "Nombre de persona",
@@ -22409,6 +24028,52 @@ export const translations: Record<string, Record<string, string>> = {
     "Field": "Campo",
     "Field mapping": "Asignación de campos",
     "Field settings": "Configuración del campo",
+    "Choose a field above this one": "Elija un campo encima",
+    "Show this field only if…": "Mostrar este campo solo si…",
+    "Always shown": "Siempre visible",
+    "Shown when all conditions match": "Visible cuando se cumplen todas las condiciones",
+    "Shown when any condition matches": "Visible cuando se cumple alguna condición",
+    "is": "es",
+    "is not": "no es",
+    "is one of": "es uno de",
+    "includes": "incluye",
+    "does not include": "no incluye",
+    "includes any of": "incluye alguno de",
+    "is checked": "está marcado",
+    "is not checked": "no está marcado",
+    "contains": "contiene",
+    "is empty": "está vacío",
+    "is not empty": "no está vacío",
+    "Required when shown": "Obligatorio cuando se muestra",
+    "Type { to insert a field": "Escriba { para insertar un campo",
+    "Add a field above this one to create a rule": "Agregue un campo encima para crear una regla",
+    "Add condition": "Agregar condición",
+    "All conditions": "Todas las condiciones",
+    "Any condition": "Cualquier condición",
+    "Autonomy level": "Nivel de autonomía",
+    "Conditional": "Condicional",
+    "Domain criticality": "Criticidad del dominio",
+    "Fix the highlighted fields before saving": "Corrija los campos resaltados antes de guardar",
+    "Impact scope": "Alcance del impacto",
+    "Remove condition": "Eliminar condición",
+    "Risk dimension": "Dimensión de riesgo",
+    "Add a number field above this one first": "Primero agregue un campo numérico encima",
+    "Advanced": "Avanzado",
+    "Calculated": "Calculado",
+    "Other answers": "Otras respuestas",
+    "This field is always shown: it fills a required field of the new entity":
+      "Este campo se muestra siempre: rellena un campo obligatorio de la nueva entidad",
+    "Fix the highlighted fields before publishing":
+      "Corrija los campos resaltados antes de publicar",
+    "Draft saved. Fix the highlighted fields before publishing":
+      "Borrador guardado. Corrija los campos resaltados antes de publicar",
+    "Additional answers": "Respuestas adicionales",
+    "Calculation": "Cálculo",
+    "Decimals": "Decimales",
+    "Formula": "Fórmula",
+    "Read-only result of a formula": "Resultado de solo lectura de una fórmula",
+    "Result with every input set to 1:": "Resultado con cada entrada en 1:",
+    "Suffix": "Sufijo",
     "Field types": "Tipos de campo",
     "File details": "Detalles del archivo",
     "Flag concern": "Marcar preocupación",
@@ -22712,7 +24377,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Risk approval": "Aprobación de riesgo",
     "Risk assessment": "Evaluación de riesgos",
     "Risk assessment (optional)": "Evaluación de riesgos (opcional)",
-    "Risk assessment pending...": "Evaluación de riesgos pendiente...",
+    "Intake risk score pending...": "Puntuación de riesgo del formulario de admisión pendiente...",
     "Risk register": "Registro de riesgos",
     "Risks to consider:": "Riesgos a tener en cuenta:",
     "Rounds": "Rondas",
@@ -22722,6 +24387,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Safety metrics": "Métricas de seguridad",
     "Save failed": "Error al guardar",
     "Saved": "Guardado",
+    "Saved key": "Clave guardada",
     "Saved by": "Guardado por",
     "Scan completed": "Análisis completado",
     "Scan failed": "Error en el análisis",
@@ -22870,8 +24536,8 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Chatbot for Customer Support": "Chatbot de IA para atención al cliente",
     "AI Gateway": "AI Gateway",
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar y análisis de CI/CD",
-    "Custom roles, risk inheritance, and evidence retention":
-      "Roles personalizados, herencia de riesgos y retención de evidencias",
+    "Risk inheritance, evidence retention, and security hardening":
+      "Herencia de riesgos, retención de evidencias y refuerzo de la seguridad",
     "Built-in frameworks, Model Risk Management, and Extensions":
       "Marcos integrados, Model Risk Management y Extensions",
     "AI Trust Index, AI Apps inventory, and Agent Control":
@@ -22902,6 +24568,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Objetivos de IA y planificación para alcanzarlos",
     "AI risk assessment (Operational)": "Evaluación de riesgos de IA (operativa)",
     "AI risk level": "Nivel de riesgo de IA",
+    "AI risk suggestions": "Sugerencias de riesgos de IA",
     "AI risk treatment (Operational)": "Tratamiento de riesgos de IA (operativo)",
     "AI roles and responsibilities": "Roles y responsabilidades de IA",
     "AI system change documentation": "Documentación de cambios del sistema de IA",
@@ -23294,6 +24961,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Failed to fetch slack integrations": "Error al obtener las integraciones de Slack",
     "Failed to fetch user data.": "Error al obtener los datos del usuario.",
     "Failed to generate demo data.": "Error al generar los datos de demostración.",
+    "Failed to generate risk suggestions. Please try again.":
+      "Error al generar las sugerencias de riesgos. Inténtelo de nuevo.",
     "Failed to link model": "Error al vincular el modelo",
     "Failed to load API keys": "Error al cargar las claves de API",
     "Failed to load FRIA": "Error al cargar la FRIA",
@@ -23492,6 +25161,12 @@ export const translations: Record<string, Record<string, string>> = {
     "Incident details": "Detalles del incidente",
     "Incident management details": "Detalles de la gestión de incidentes",
     "Incident updated successfully!": "¡Incidente actualizado correctamente!",
+    "This incident was changed by someone else since you opened it. The form now shows their changes with your edits kept: save again to apply your edits.":
+      "Otra persona modificó este incidente después de que lo abrieras. El formulario muestra ahora sus cambios y conserva los tuyos: guarda de nuevo para aplicar tus cambios.",
+    "Someone else also changed: {fields}. Saving again will replace their values with yours.":
+      "Otra persona también cambió: {fields}. Si guardas de nuevo, sus valores se sustituirán por los tuyos.",
+    "This incident was changed by someone else since you opened it. Could not load the latest version; close and reopen the incident to continue.":
+      "Otra persona modificó este incidente después de que lo abrieras. No se pudo cargar la versión más reciente; cierra y vuelve a abrir el incidente para continuar.",
     "Indefinite": "Indefinido",
     "Individual event records from ingestion": "Registros de eventos individuales de la ingesta",
     "Information security for AI systems": "Seguridad de la información para sistemas de IA",
@@ -23622,6 +25297,39 @@ export const translations: Record<string, Record<string, string>> = {
     "Multi-select": "Selección múltiple",
     "Multiple choice": "Opción múltiple",
     "Multiple selection dropdown": "Lista desplegable de selección múltiple",
+    "Scored select": "Selección con puntuación",
+    "New options can't receive answers until they are saved. Remove these answers now, or save the new options first and move the answers later.":
+      "Las opciones nuevas no pueden recibir respuestas hasta que se guarden. Quita estas respuestas ahora, o guarda primero las opciones nuevas y mueve las respuestas después.",
+    "Custom field": "Campo personalizado",
+    "Option label": "Etiqueta de la opción",
+    "Move option up": "Subir opción",
+    "Move option down": "Bajar opción",
+    "Remove option": "Quitar opción",
+    "Used by {count}": "Usada por {count}",
+    "Every option needs a label and a score.":
+      "Cada opción necesita una etiqueta y una puntuación.",
+    "Option labels must be unique.": "Las etiquetas de las opciones deben ser únicas.",
+    "Choose what happens to answers": "Elegir qué pasa con las respuestas",
+    "Records use the options you removed. Move their answers to another option, or remove them.":
+      "Hay registros que usan las opciones quitadas. Mueve sus respuestas a otra opción o quítalas.",
+    "Remove from records": "Quitar de los registros",
+    "These answers will be deleted and can't be restored.":
+      "Estas respuestas se eliminarán y no se podrán restaurar.",
+    "This field is required, so these records will need a new answer.":
+      "Este campo es obligatorio, así que estos registros necesitarán una nueva respuesta.",
+    "Choose an option for each removed option.": "Elige una opción para cada opción quitada.",
+    "{option} is used by {count} {records}. Choose what happens to these answers:":
+      "{option} se usa en {count} {records}. Elige qué pasa con estas respuestas:",
+    "This field has a value on {count} {records}.":
+      "Este campo tiene un valor en {count} {records}.",
+    "use case": "caso de uso",
+    "use cases": "casos de uso",
+    "vendor": "proveedor",
+    "vendors": "proveedores",
+    "project risk": "riesgo de proyecto",
+    "project risks": "riesgos de proyecto",
+    "model risk": "riesgo de modelo",
+    "model risks": "riesgos de modelo",
     "My Datasets": "Mis conjuntos de datos",
     "My datasets": "Mis conjuntos de datos",
     "My plugins": "Mis plugins",
@@ -24637,8 +26345,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Cuando se activa una automatización (de forma programada, mediante webhook o manualmente), su ejecución se registra aquí con el estado y la duración.",
     "You're viewing a public demo of the VerifyWise AI governance platform. Feel free to explore using demo data, but please don't enter any personal or company information.":
       "Está viendo una demostración pública de la plataforma de gobernanza de IA de VerifyWise. Explore libremente con los datos de demostración, pero no introduzca información personal ni de la empresa.",
-    "Your provider API keys are encrypted using AES-256-CBC before being stored. They are only decrypted when proxying a request and are never exposed in logs.":
-      "Las claves de API de su proveedor se cifran con AES-256-CBC antes de almacenarse. Solo se descifran al redirigir una solicitud y nunca se exponen en los registros.",
+    "Your provider API keys are encrypted using AES-256-GCM before being stored. They are only decrypted when proxying a request and are never exposed in logs.":
+      "Las claves de API de su proveedor se cifran con AES-256-GCM antes de almacenarse. Solo se descifran al redirigir una solicitud y nunca se exponen en los registros.",
     "Add data to see your governance score": "Añada datos para ver su puntuación de gobernanza",
     "Copy the key below. It will not be shown again.":
       "Copie la clave que aparece a continuación. No volverá a mostrarse.",
@@ -25187,8 +26895,8 @@ export const translations: Record<string, Record<string, string>> = {
       "El contenido que coincida con este patrón de filtro dejará de bloquearse o enmascararse.",
     "You can re-enable this guardrail at any time from the catalog or by creating a new rule.":
       "Puede volver a habilitar esta barrera de protección en cualquier momento desde el catálogo o creando una nueva regla.",
-    "Detect and protect email addresses in prompts and responses.":
-      "Detecte y proteja las direcciones de correo electrónico en los prompts y las respuestas.",
+    "Detect and protect email addresses in prompts.":
+      "Detecte y proteja las direcciones de correo electrónico en los prompts.",
     "Detect phone numbers including international formats.":
       "Detecte números de teléfono, incluidos los formatos internacionales.",
     "Detect Visa, Mastercard, Amex, and other card formats.":
@@ -25227,10 +26935,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Detecte referencias a URL de redes internas/privadas.",
     "Detect environment variable assignments with secrets.":
       "Detecte asignaciones de variables de entorno con secretos.",
-    "Ensure responses contain valid JSON when expected.":
-      "Garantice que las respuestas contengan JSON válido cuando se espera.",
-    "Detect script tags or executable code patterns in LLM responses.":
-      "Detecte etiquetas de script o patrones de código ejecutable en las respuestas del LLM.",
     "Detect all GDPR-relevant personal data: email, phone, name, location, DOB, IP, nationality.":
       "Detecte todos los datos personales relevantes para el GDPR: correo electrónico, teléfono, nombre, ubicación, fecha de nacimiento, IP, nacionalidad.",
     "Detect PHI identifiers: names, dates, SSNs, medical licenses, phone, email.":
@@ -25438,8 +27142,8 @@ export const translations: Record<string, Record<string, string>> = {
       'Cuando los auditores preguntan "¿Cuándo implementaron este control?" o "¿Cómo respondieron a ese incidente?", los registros de eventos proporcionan respuestas definitivas. Un historial de eventos detallado elimina la dependencia de la memoria y crea evidencia objetiva.',
     "Filter events to find relevant information quickly.":
       "Filtre los eventos para encontrar rápidamente la información relevante.",
-    "With many events logged over time, filters help you find what you need. Filter by date range, event type, or related entity to quickly locate specific governance activities. Export filtered events for reports or documentation.":
-      "Con muchos eventos registrados a lo largo del tiempo, los filtros le ayudan a encontrar lo que necesita. Filtre por intervalo de fechas, tipo de evento o entidad relacionada para localizar rápidamente actividades de gobernanza específicas. Exporte los eventos filtrados para informes o documentación.",
+    "With many events logged over time, filters help you find what you need. Filter by date range, event type, or related entity to quickly locate specific governance activities.":
+      "Con muchos eventos registrados a lo largo del tiempo, los filtros le ayudan a encontrar lo que necesita. Filtre por intervalo de fechas, tipo de evento o entidad relacionada para localizar rápidamente actividades de gobernanza específicas.",
     "Settings customize VerifyWise to your organization's needs.":
       "La configuración adapta VerifyWise a las necesidades de su organización.",
     "Configure user roles and system defaults to match your governance workflows. Taking time to properly configure settings upfront saves time and reduces confusion later. Review settings periodically as your organization grows.":
@@ -25953,8 +27657,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Resuelva este sencillo problema de matemáticas para verificar que es una persona",
     "Preview the onboarding modal for the AI Detection module.":
       "Previsualice la ventana modal de incorporación del módulo de detección de IA.",
-    "Provider API keys are encrypted at rest (AES-256-CBC) and only decrypted when proxying a request.":
-      "Las claves de API de los proveedores se cifran en reposo (AES-256-CBC) y solo se descifran al actuar como proxy de una solicitud.",
+    "Provider API keys are encrypted at rest (AES-256-GCM) and only decrypted when proxying a request.":
+      "Las claves de API de los proveedores se cifran en reposo (AES-256-GCM) y solo se descifran al actuar como proxy de una solicitud.",
     "Questions about features, how-tos, or use cases?":
       "¿Tiene preguntas sobre funciones, instrucciones o casos de uso?",
     "Questions asked during each monitoring cycle":
@@ -26621,6 +28325,14 @@ export const translations: Record<string, Record<string, string>> = {
       "No se pudo eliminar el marco. Inténtelo de nuevo.",
     "Failed to replace share link. Please try again.":
       "No se pudo reemplazar el enlace para compartir. Inténtelo de nuevo.",
+    "A share link is still being created. Try again in a moment.":
+      "Todavía se está creando un enlace para compartir. Inténtelo de nuevo en un momento.",
+    "New share link created, but some of your previous links could not be disabled. Replace the link again to retry.":
+      "Se creó un nuevo enlace para compartir, pero algunos de sus enlaces anteriores no se pudieron desactivar. Vuelva a reemplazar el enlace para reintentarlo.",
+    "New share link created. Links created by other users are still active; only they can disable them.":
+      "Se creó un nuevo enlace para compartir. Los enlaces creados por otros usuarios siguen activos; solo ellos pueden desactivarlos.",
+    "Share link replaced. Previous links no longer work.":
+      "Enlace para compartir reemplazado. Los enlaces anteriores ya no funcionan.",
     "Failed to restore the task. Please try again.":
       "No se pudo restaurar la tarea. Inténtelo de nuevo.",
     "Failed to save configuration. Please try again.":
@@ -28599,6 +30311,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Quality": "Calidad",
     "Recommended actions": "Acciones recomendadas",
     "Report level": "Nivel de informe",
+    "Risk added": "Riesgo añadido",
+    "Risk added to risk register": "Riesgo añadido al registro de riesgos",
     "Risk analysis": "Análisis de riesgos",
     "Save to storage": "Guardar en el almacenamiento",
     "Schedule:": "Programación:",
@@ -28717,6 +30431,75 @@ export const translations: Record<string, Record<string, string>> = {
     "Enable and configure integrations for your organization.":
       "Active y configure integraciones para su organización.",
     "Enable automatic sync": "Activar sincronización automática",
+    "Sync interval": "Intervalo de sincronización",
+    "Failing since": "Con errores desde",
+    "Sync completed.": "Sincronización completada.",
+    "Automatic sync refreshes use cases you have imported. It does not import new objects or remove any.":
+      "La sincronización automática actualiza los casos de uso importados. No importa objetos nuevos ni elimina ninguno.",
+    "Could not load the saved Jira connection. Reload the page to change the sync settings.":
+      "No se pudo cargar la conexión de Jira guardada. Recargue la página para cambiar la configuración de sincronización.",
+    "Could not save the sync settings. Try again.":
+      "No se pudo guardar la configuración de sincronización. Inténtelo de nuevo.",
+    "The sync is taking longer than expected. Check the last sync result later.":
+      "La sincronización está tardando más de lo esperado. Consulte el resultado de la última sincronización más tarde.",
+    "Could not save the schema and object type. Try again.":
+      "No se pudieron guardar el esquema y el tipo de objeto. Inténtelo de nuevo.",
+    "More objects exist in Jira than are shown here.":
+      "Hay más objetos en Jira de los que se muestran aquí.",
+    "Load more": "Cargar más",
+    "The sync stopped responding. Try again.":
+      "La sincronización dejó de responder. Inténtelo de nuevo.",
+    "Sync failed": "Error de sincronización",
+    "Missing in Jira": "Falta en Jira",
+    "Missing since": "Falta desde",
+    "Failed to remove use cases": "No se pudieron eliminar los casos de uso",
+    "Missing use cases removed.": "Se eliminaron los casos de uso que faltaban.",
+    "The sync did not start. Try again.": "La sincronización no se inició. Inténtelo de nuevo.",
+    "These use cases and all their data in VerifyWise will be permanently deleted. This cannot be undone.":
+      "Estos casos de uso y todos sus datos en VerifyWise se eliminarán de forma permanente. Esta acción no se puede deshacer.",
+    "Jira no longer returns these objects. Syncs keep their use cases; remove them here if they should go.":
+      "Jira ya no devuelve estos objetos. Las sincronizaciones conservan sus casos de uso; elimínelos aquí si deben desaparecer.",
+    "Remove selected use cases": "Eliminar los casos de uso seleccionados",
+    "Use cases to remove:": "Casos de uso que se eliminarán:",
+    "Select all missing use cases": "Seleccionar todos los casos de uso que faltan",
+    "The removal was interrupted; nothing was removed. Try again.":
+      "La eliminación se interrumpió; no se eliminó nada. Inténtelo de nuevo.",
+    "Another sync or import was running, so this sync did not start.":
+      "Había otra sincronización o importación en curso, por lo que esta sincronización no se inició.",
+    "Importing objects": "Importando objetos",
+    "Use cases not removed:": "Casos de uso no eliminados:",
+    "Skipped, other missing items of the same use case not selected:":
+      "Omitidos, otros elementos que faltan del mismo caso de uso no seleccionados:",
+    "Removal finished, but some use cases were not removed because other missing items of the same use case were not selected. They are still selected; select the rest to remove it.":
+      "Eliminación finalizada, pero algunos casos de uso no se eliminaron porque no se seleccionaron otros elementos que faltan del mismo caso de uso. Siguen seleccionados; seleccione el resto para eliminarlo.",
+    "Skipped, still linked to an object in Jira:": "Omitidos, aún vinculados a un objeto en Jira:",
+    "Skipped, other reason:": "Omitidos, otro motivo:",
+    "Jira links removed:": "Vínculos de Jira eliminados:",
+    "Removal finished. Some use cases were not removed because their use case is still linked to an object that exists in Jira.":
+      "Eliminación finalizada. Algunos casos de uso no se eliminaron porque su caso de uso sigue vinculado a un objeto que existe en Jira.",
+    "Skipped, no longer missing or no longer there:": "Omitidos, ya no faltan o ya no existen:",
+    "Skipped, changed during the removal:": "Omitidos, cambiaron durante la eliminación:",
+    "Removal finished, but some use cases were not removed. They are still selected.":
+      "Eliminación finalizada, pero algunos casos de uso no se eliminaron. Siguen seleccionados.",
+    "Links cleaned up:": "Vínculos depurados:",
+    "Removal finished. Some use cases were not removed because they are no longer missing in Jira or no longer exist.":
+      "Eliminación finalizada. Algunos casos de uso no se eliminaron porque ya no faltan en Jira o ya no existen.",
+    "Import finished, but some objects could not be imported. They are still selected; import again to retry.":
+      "Importación finalizada, pero algunos objetos no se pudieron importar. Siguen seleccionados; vuelva a importar para reintentarlo.",
+    "Objects not imported:": "Objetos no importados:",
+    "Removing use cases": "Eliminando casos de uso",
+    "Import finished.": "Importación finalizada.",
+    "Objects imported:": "Objetos importados:",
+    "Objects imported before it stopped:": "Objetos importados antes de detenerse:",
+    "The import was interrupted because another sync took over.":
+      "La importación se interrumpió porque otra sincronización tomó el control.",
+    "The import failed.": "La importación falló.",
+    "Use cases removed:": "Casos de uso eliminados:",
+    "Use cases removed before it stopped:": "Casos de uso eliminados antes de detenerse:",
+    "The removal was interrupted before it finished. Try again for the rest.":
+      "La eliminación se interrumpió antes de terminar. Inténtelo de nuevo para el resto.",
+    "A sync is already running. Try again when it finishes.":
+      "Ya hay una sincronización en curso. Inténtelo de nuevo cuando termine.",
     "Error Details:": "Detalles del error:",
     "Every 12 hours": "Cada 12 horas",
     "Every 24 hours": "Cada 24 horas",
@@ -28771,6 +30554,8 @@ export const translations: Record<string, Record<string, string>> = {
     "No lifecycle phases configured. Contact an administrator to set up the model lifecycle.":
       "No hay fases del ciclo de vida configuradas. Póngase en contacto con un administrador para configurar el ciclo de vida del modelo.",
     "No use case found": "No se encontró ningún caso de uso",
+    "No use case selected. Open a use case before asking for risk suggestions.":
+      "No se ha seleccionado ningún caso de uso. Abra un caso de uso antes de solicitar sugerencias de riesgos.",
     "No workspaces connected": "No hay espacios de trabajo conectados",
     "Notification Routing": "Enrutamiento de notificaciones",
     "Object Type": "Tipo de objeto",
@@ -28842,5 +30627,468 @@ export const translations: Record<string, Record<string, string>> = {
     "MCP server": "Servidor MCP",
     "The MCP server source was not found next to the backend. It is included from MCPServer/ at build time.":
       "No se encontró el código fuente del servidor MCP junto al backend. Se incluye desde MCPServer/ en tiempo de compilación.",
+    "SLA (hours)": "SLA (horas)",
+    "Enter hours": "Introducir las horas",
+    "Escalation user": "Usuario de escalada",
+    "Select escalation user": "Seleccionar usuario de escalada",
+    "Auto-approve up to risk level": "Aprobación automática hasta el nivel de riesgo",
+    "Escalated": "Escalada",
+    // EU AI Act risk classification: questionnaire, results and reviewer panel
+    "No": "No",
+    "Another use in this area": "Otro uso en este ámbito",
+    "None of these": "Ninguna de estas opciones",
+    "Is the system developed and put into service only for scientific research and development, or is it still being researched, tested or developed before being placed on the market or put into service?":
+      "¿Se desarrolla y pone en servicio el sistema exclusivamente con fines de investigación y desarrollo científicos, o sigue en fase de investigación, prueba o desarrollo antes de su introducción en el mercado o puesta en servicio?",
+    "Yes, only scientific research or pre-market research, testing or development":
+      "Sí, solo investigación científica o investigación, pruebas o desarrollo previos a la introducción en el mercado",
+    "No, it is or will be placed on the market or put into service":
+      "No, se introduce o se introducirá en el mercado o se pone o pondrá en servicio",
+    "Are you the provider or the deployer of this AI system?":
+      "¿Es usted el proveedor o el responsable del despliegue de este sistema de IA?",
+    "We develop the system, or have it developed, and place it on the market or put it into service under our name.":
+      "Desarrollamos el sistema, o encargamos su desarrollo, y lo introducimos en el mercado o lo ponemos en servicio con nuestro nombre.",
+    "We use the system under our authority in a professional activity.":
+      "Utilizamos el sistema bajo nuestra propia autoridad en el marco de una actividad profesional.",
+    "Does the system do any of the following?":
+      "¿Realiza el sistema alguna de las siguientes acciones?",
+    "Uses subliminal, manipulative or deceptive techniques that materially distort people's behaviour and are likely to cause significant harm":
+      "Utiliza técnicas subliminales, manipuladoras o engañosas que alteran de manera sustancial el comportamiento de las personas y pueden causar perjuicios considerables",
+    "Exploits vulnerabilities due to age, disability or a social or economic situation to materially distort behaviour in a way likely to cause significant harm":
+      "Explota vulnerabilidades derivadas de la edad, la discapacidad o una situación social o económica para alterar de manera sustancial el comportamiento de un modo que puede causar perjuicios considerables",
+    "Evaluates or classifies people based on social behaviour or personal characteristics, leading to unjustified or unrelated detrimental treatment (social scoring)":
+      "Evalúa o clasifica a las personas en función de su comportamiento social o de sus características personales, lo que provoca un trato perjudicial injustificado o sin relación con el contexto (puntuación ciudadana)",
+    "Assesses or predicts the risk of a person committing a criminal offence based solely on profiling or personality traits":
+      "Evalúa o predice el riesgo de que una persona cometa un delito basándose únicamente en la elaboración de perfiles o en rasgos de personalidad",
+    "Creates or expands facial recognition databases through untargeted scraping of facial images from the internet or CCTV footage":
+      "Crea o amplía bases de datos de reconocimiento facial mediante la extracción no selectiva de imágenes faciales de internet o de circuitos cerrados de televisión",
+    "Infers the emotions of people at work or in education institutions, other than for medical or safety reasons":
+      "Infiere las emociones de las personas en el lugar de trabajo o en centros educativos, salvo por motivos médicos o de seguridad",
+    "Categorises people using biometric data to deduce race, political opinions, trade union membership, religious or philosophical beliefs, sex life or sexual orientation":
+      "Categoriza a las personas a partir de datos biométricos para deducir su raza, opiniones políticas, afiliación sindical, convicciones religiosas o filosóficas, vida sexual u orientación sexual",
+    "Is the system used for real-time remote biometric identification of people in publicly accessible spaces for law enforcement?":
+      "¿Se utiliza el sistema para la identificación biométrica remota en tiempo real de personas en espacios de acceso público con fines de garantía del cumplimiento del Derecho?",
+    "Is that use strictly necessary for one of these objectives, with the prior authorisation Article 5(3) requires?":
+      "¿Es ese uso estrictamente necesario para alguno de estos objetivos y cuenta con la autorización previa que exige el artículo 5(3)?",
+    "Targeted search for specific victims of abduction, trafficking in human beings or sexual exploitation, or for missing persons":
+      "Búsqueda selectiva de víctimas concretas de secuestro, trata de seres humanos o explotación sexual, o de personas desaparecidas",
+    "Preventing a specific, substantial and imminent threat to life or physical safety, or a genuine and present or foreseeable terrorist attack":
+      "Prevención de una amenaza específica, importante e inminente para la vida o la seguridad física, o de una amenaza real y actual o previsible de atentado terrorista",
+    "Locating or identifying a person suspected of a serious criminal offence listed in Annex II, punishable by at least four years' custody":
+      "Localización o identificación de una persona sospechosa de haber cometido un delito grave enumerado en el anexo II, castigado con una pena privativa de libertad de al menos cuatro años",
+    "None of these, or no prior authorisation":
+      "Ninguno de estos objetivos, o sin autorización previa",
+    "Can the system generate or manipulate images, video or audio showing real people in intimate situations without their consent, or child sexual abuse material?":
+      "¿Puede el sistema generar o manipular imágenes, vídeos o audios que muestren a personas reales en situaciones íntimas sin su consentimiento, o material de abuso sexual infantil?",
+    "Does the provider apply safeguards that prevent the system from generating such content?":
+      "¿Aplica el proveedor salvaguardias que impidan al sistema generar este tipo de contenido?",
+    "Systems with adequate safeguards against generating this content are not covered by the ban.":
+      "Los sistemas con salvaguardias adecuadas contra la generación de este contenido no están sujetos a la prohibición.",
+    "Is the system itself a product, or does it perform a safety function in a product, covered by the EU product legislation listed in Annex I?":
+      "¿Es el propio sistema un producto, o desempeña una función de seguridad en un producto, regulado por la legislación de la UE sobre productos enumerada en el anexo I?",
+    "Yes: a product under Annex I Section A that needs a third-party conformity assessment":
+      "Sí: un producto del anexo I, sección A, que requiere una evaluación de la conformidad por terceros",
+    "For example medical devices, in vitro diagnostic devices, toys, lifts, radio equipment, pressure equipment or personal protective equipment.":
+      "Por ejemplo, productos sanitarios, productos sanitarios para diagnóstico in vitro, juguetes, ascensores, equipos radioeléctricos, equipos a presión o equipos de protección individual.",
+    "Yes: a product under Annex I Section B that needs a third-party conformity assessment":
+      "Sí: un producto del anexo I, sección B, que requiere una evaluación de la conformidad por terceros",
+    "Vehicles, aviation, marine equipment, rail systems, agricultural and forestry vehicles, or machinery.":
+      "Vehículos, aviación, equipos marinos, sistemas ferroviarios, vehículos agrícolas y forestales, o máquinas.",
+    "Is the system intended to be used in any of these areas?":
+      "¿Está previsto que el sistema se utilice en alguno de estos ámbitos?",
+    "Biometrics": "Biometría",
+    "Critical infrastructure (digital infrastructure, road traffic, water, gas, heating or electricity supply)":
+      "Infraestructuras críticas (infraestructuras digitales, tráfico rodado, suministro de agua, gas, calefacción o electricidad)",
+    "Education and vocational training": "Educación y formación profesional",
+    "Employment, workers' management and access to self-employment":
+      "Empleo, gestión de los trabajadores y acceso al autoempleo",
+    "Access to essential private and public services and benefits (public assistance, credit, insurance, emergency services)":
+      "Acceso a servicios privados esenciales y a servicios y prestaciones públicos esenciales (asistencia pública, crédito, seguros, servicios de emergencia)",
+    "Law enforcement": "Garantía del cumplimiento del Derecho",
+    "Migration, asylum and border control": "Migración, asilo y gestión del control fronterizo",
+    "Administration of justice and democratic processes":
+      "Administración de justicia y procesos democráticos",
+    "How is the system used in biometrics?":
+      "¿Cómo se utiliza el sistema en el ámbito de la biometría?",
+    "Remote biometric identification": "Identificación biométrica remota",
+    "Verification only: confirming that a person is who they claim to be":
+      "Solo verificación: confirmar que una persona es quien dice ser",
+    "Categorising people by sensitive or protected attributes inferred from biometric data":
+      "Categorización de personas según atributos sensibles o protegidos inferidos a partir de datos biométricos",
+    "How is the system used in critical infrastructure?":
+      "¿Cómo se utiliza el sistema en infraestructuras críticas?",
+    "As a safety component in managing or operating critical digital infrastructure, road traffic, or the supply of water, gas, heating or electricity":
+      "Como componente de seguridad en la gestión o el funcionamiento de infraestructuras digitales críticas, del tráfico rodado o del suministro de agua, gas, calefacción o electricidad",
+    "How is the system used in education?": "¿Cómo se utiliza el sistema en la educación?",
+    "Deciding access or admission, or assigning people to institutions":
+      "Decidir el acceso o la admisión, o asignar personas a centros",
+    "Evaluating learning outcomes": "Evaluar los resultados del aprendizaje",
+    "Assessing the level of education a person will receive or access":
+      "Evaluar el nivel educativo que recibirá una persona o al que podrá acceder",
+    "Monitoring and detecting prohibited behaviour during tests":
+      "Supervisar y detectar comportamientos prohibidos durante los exámenes",
+    "How is the system used in employment?": "¿Cómo se utiliza el sistema en el empleo?",
+    "Recruiting or selecting people, including targeted job ads and filtering or evaluating applications":
+      "Contratar o seleccionar personas, incluidos los anuncios de empleo selectivos y el filtrado o la evaluación de candidaturas",
+    "Making decisions on terms of work, promotion or termination":
+      "Tomar decisiones sobre las condiciones de trabajo, la promoción o la rescisión",
+    "Allocating tasks based on behaviour or personal traits, or monitoring and evaluating performance":
+      "Asignar tareas en función del comportamiento o de rasgos personales, o supervisar y evaluar el rendimiento",
+    "How is the system used for essential services?":
+      "¿Cómo se utiliza el sistema para servicios esenciales?",
+    "Evaluating eligibility for public assistance benefits and services":
+      "Evaluar la admisibilidad para prestaciones y servicios de asistencia pública",
+    "Evaluating creditworthiness or establishing a credit score":
+      "Evaluar la solvencia o establecer una calificación crediticia",
+    "Detecting financial fraud": "Detectar el fraude financiero",
+    "Risk assessment and pricing for life or health insurance":
+      "Evaluación de riesgos y fijación de precios en seguros de vida o de salud",
+    "Evaluating and classifying emergency calls, dispatching emergency services or emergency patient triage":
+      "Evaluar y clasificar llamadas de emergencia, enviar servicios de emergencia o realizar el triaje de pacientes en urgencias",
+    "How is the system used in law enforcement?":
+      "¿Cómo se utiliza el sistema con fines de garantía del cumplimiento del Derecho?",
+    "Assessing the risk of a person becoming a victim of crime":
+      "Evaluar el riesgo de que una persona sea víctima de delitos",
+    "As a polygraph or similar tool": "Como polígrafo o herramienta similar",
+    "Evaluating the reliability of evidence": "Evaluar la fiabilidad de las pruebas",
+    "Assessing the risk of offending or re-offending, not solely based on profiling":
+      "Evaluar el riesgo de comisión de un delito o de reincidencia, no basado únicamente en la elaboración de perfiles",
+    "Profiling people in the detection, investigation or prosecution of criminal offences":
+      "Elaboración de perfiles de personas durante la detección, la investigación o el enjuiciamiento de delitos",
+    "How is the system used in migration, asylum or border control?":
+      "¿Cómo se utiliza el sistema en la migración, el asilo o el control fronterizo?",
+    "Assessing security, irregular migration or health risks posed by a person":
+      "Evaluar un riesgo para la seguridad, de migración irregular o para la salud que plantee una persona",
+    "Examining applications for asylum, visas or residence permits":
+      "Examinar solicitudes de asilo, visado o permiso de residencia",
+    "Detecting, recognising or identifying people": "Detectar, reconocer o identificar a personas",
+    "Verifying travel documents": "Verificar documentos de viaje",
+    "How is the system used in justice or democratic processes?":
+      "¿Cómo se utiliza el sistema en la justicia o en procesos democráticos?",
+    "Assisting a judicial authority, or alternative dispute resolution, in researching and interpreting facts and law":
+      "Asistir a una autoridad judicial, o a la resolución alternativa de litigios, en la investigación e interpretación de hechos y del Derecho",
+    "Influencing the outcome of an election or referendum, or people's voting behaviour":
+      "Influir en el resultado de una elección o referéndum, o en el comportamiento electoral de las personas",
+    "Organising, optimising or structuring political campaigns administratively or logistically":
+      "Organizar, optimizar o estructurar campañas políticas desde el punto de vista administrativo o logístico",
+    "Does the system profile people, meaning automated processing of personal data to evaluate aspects such as work performance, economic situation, health, preferences, interests, reliability, behaviour, location or movements?":
+      "¿Elabora el sistema perfiles de personas, es decir, realiza un tratamiento automatizado de datos personales para evaluar aspectos como el rendimiento profesional, la situación económica, la salud, las preferencias, los intereses, la fiabilidad, el comportamiento, la ubicación o los movimientos?",
+    "Does one of these describe the system, so that it does not materially influence the outcome of decisions?":
+      "¿Describe alguna de estas opciones el sistema, de modo que no influye sustancialmente en el resultado de las decisiones?",
+    "It performs a narrow procedural task": "Realiza una tarea procedimental limitada",
+    "It improves the result of a previously completed human activity":
+      "Mejora el resultado de una actividad humana previamente realizada",
+    "It detects decision-making patterns or deviations from prior patterns, without replacing or influencing the human assessment without proper human review":
+      "Detecta patrones de toma de decisiones o desviaciones respecto de patrones previos, sin sustituir ni influir en la valoración humana sin una revisión humana adecuada",
+    "It performs a preparatory task to an assessment relevant to the Annex III uses":
+      "Realiza una tarea preparatoria para una evaluación pertinente a efectos de los usos enumerados en el anexo III",
+    "Interacts directly with people, for example a chatbot or voice assistant":
+      "Interactúa directamente con personas, por ejemplo, un chatbot o un asistente de voz",
+    "Generates synthetic audio, images, video or text":
+      "Genera contenidos sintéticos de audio, imagen, vídeo o texto",
+    "Recognises emotions or categorises people using biometric data":
+      "Reconoce emociones o categoriza a personas a partir de datos biométricos",
+    "Produces deepfakes, or generates or edits text published to inform the public on matters of public interest":
+      "Produce ultrasuplantaciones, o genera o edita textos que se publican con el fin de informar al público sobre asuntos de interés público",
+    "Manipulative or deceptive techniques that materially distort behaviour and are likely to cause significant harm are prohibited.":
+      "Están prohibidas las técnicas manipuladoras o engañosas que alteran de manera sustancial el comportamiento y pueden causar perjuicios considerables.",
+    "Exploiting vulnerabilities due to age, disability or a social or economic situation is prohibited.":
+      "Está prohibido explotar vulnerabilidades derivadas de la edad, la discapacidad o una situación social o económica.",
+    "Social scoring that leads to unjustified or unrelated detrimental treatment is prohibited.":
+      "Está prohibida la puntuación ciudadana que provoca un trato perjudicial injustificado o sin relación con el contexto.",
+    "Predicting criminal offences based solely on profiling or personality traits is prohibited.":
+      "Está prohibido predecir delitos basándose únicamente en la elaboración de perfiles o en rasgos de personalidad.",
+    "Building facial recognition databases through untargeted scraping is prohibited.":
+      "Está prohibido crear bases de datos de reconocimiento facial mediante extracción no selectiva.",
+    "Emotion recognition at work or in education institutions, other than for medical or safety reasons, is prohibited.":
+      "Está prohibido el reconocimiento de emociones en el lugar de trabajo o en centros educativos, salvo por motivos médicos o de seguridad.",
+    "Biometric categorisation to infer sensitive characteristics is prohibited.":
+      "Está prohibida la categorización biométrica para inferir características sensibles.",
+    "AI systems that generate non-consensual intimate imagery of real people or child sexual abuse material are prohibited.":
+      "Están prohibidos los sistemas de IA que generan imágenes íntimas no consentidas de personas reales o material de abuso sexual infantil.",
+    "Prohibited from 2 December 2026: AI systems that generate non-consensual intimate imagery of real people or child sexual abuse material.":
+      "Prohibidos a partir del 2 de diciembre de 2026: los sistemas de IA que generan imágenes íntimas no consentidas de personas reales o material de abuso sexual infantil.",
+    "Biometric verification whose sole purpose is to confirm that a person is who they claim to be is excluded from the high-risk list.":
+      "La verificación biométrica cuyo único fin es confirmar que una persona es quien dice ser queda excluida de la lista de alto riesgo.",
+    "AI systems used to detect financial fraud are excluded from the high-risk list.":
+      "Los sistemas de IA utilizados para detectar el fraude financiero quedan excluidos de la lista de alto riesgo.",
+    "Verification of travel documents is excluded from the high-risk list.":
+      "La verificación de documentos de viaje queda excluida de la lista de alto riesgo.",
+    "Tools that organise, optimise or structure political campaigns administratively or logistically are excluded from the high-risk list.":
+      "Las herramientas que organizan, optimizan o estructuran campañas políticas desde el punto de vista administrativo o logístico quedan excluidas de la lista de alto riesgo.",
+    "The system performs a narrow procedural task, so it is not high risk.":
+      "El sistema realiza una tarea procedimental limitada, por lo que no es de alto riesgo.",
+    "The system improves the result of a previously completed human activity, so it is not high risk.":
+      "El sistema mejora el resultado de una actividad humana previamente realizada, por lo que no es de alto riesgo.",
+    "The system detects decision-making patterns without replacing or influencing the human assessment without review, so it is not high risk.":
+      "El sistema detecta patrones de toma de decisiones sin sustituir ni influir en la valoración humana sin revisión, por lo que no es de alto riesgo.",
+    "The system performs a preparatory task to an Annex III assessment, so it is not high risk.":
+      "El sistema realiza una tarea preparatoria para una evaluación del anexo III, por lo que no es de alto riesgo.",
+    "The system interacts directly with people.":
+      "El sistema interactúa directamente con personas.",
+    "Inform people that they are interacting with an AI system.":
+      "Informe a las personas de que están interactuando con un sistema de IA.",
+    "The system generates synthetic audio, images, video or text.":
+      "El sistema genera contenidos sintéticos de audio, imagen, vídeo o texto.",
+    "Mark generated content in a machine-readable format. Systems already on the market must comply by 2 December 2026.":
+      "Marque los contenidos generados en un formato legible por máquina. Los sistemas ya introducidos en el mercado deben cumplir esta obligación a más tardar el 2 de diciembre de 2026.",
+    "The system recognises emotions or categorises people using biometric data.":
+      "El sistema reconoce emociones o categoriza a personas a partir de datos biométricos.",
+    "Inform the people exposed to the system.": "Informe a las personas expuestas al sistema.",
+    "The system produces deepfakes or public-interest text.":
+      "El sistema produce ultrasuplantaciones o textos de interés público.",
+    "Disclose that the content is artificially generated or manipulated.":
+      "Haga público que el contenido ha sido generado o manipulado de forma artificial.",
+    "Establish a risk management system.": "Establezca un sistema de gestión de riesgos.",
+    "Apply data governance to training, validation and testing data.":
+      "Aplique la gobernanza de datos a los datos de entrenamiento, validación y prueba.",
+    "Draw up technical documentation (Annex IV).": "Elabore la documentación técnica (anexo IV).",
+    "Enable automatic event logging.": "Permita el registro automático de eventos.",
+    "Provide instructions for use to deployers.":
+      "Facilite instrucciones de uso a los responsables del despliegue.",
+    "Design the system for effective human oversight.":
+      "Diseñe el sistema de modo que permita una supervisión humana efectiva.",
+    "Achieve appropriate accuracy, robustness and cybersecurity.":
+      "Alcance un nivel adecuado de precisión, solidez y ciberseguridad.",
+    "Put a quality management system in place.": "Implante un sistema de gestión de la calidad.",
+    "Complete the conformity assessment before placing the system on the market.":
+      "Complete la evaluación de la conformidad antes de introducir el sistema en el mercado.",
+    "Register the system in the EU database.": "Registre el sistema en la base de datos de la UE.",
+    "Run post-market monitoring.": "Lleve a cabo la vigilancia poscomercialización.",
+    "Report serious incidents.": "Notifique los incidentes graves.",
+    "Use the system according to the provider's instructions.":
+      "Utilice el sistema de acuerdo con las instrucciones de uso del proveedor.",
+    "Assign human oversight to competent people.":
+      "Encomiende la supervisión humana a personas competentes.",
+    "Make sure input data is relevant and sufficiently representative.":
+      "Asegúrese de que los datos de entrada sean pertinentes y suficientemente representativos.",
+    "Monitor operation and inform the provider of risks and serious incidents.":
+      "Vigile el funcionamiento e informe al proveedor de los riesgos y de los incidentes graves.",
+    "Keep the automatically generated logs for at least six months.":
+      "Conserve los archivos de registro generados automáticamente durante al menos seis meses.",
+    "Inform workers' representatives and affected workers before use at the workplace.":
+      "Informe a los representantes de los trabajadores y a los trabajadores afectados antes de utilizarlo en el lugar de trabajo.",
+    "Inform people that decisions about them are supported by a high-risk AI system.":
+      "Informe a las personas de que las decisiones que les afectan se apoyan en un sistema de IA de alto riesgo.",
+    "Carry out a fundamental rights impact assessment where required (public bodies, public services, credit scoring, and life or health insurance).":
+      "Realice una evaluación de impacto relativa a los derechos fundamentales cuando proceda (organismos públicos, servicios públicos, calificación crediticia y seguros de vida o de salud).",
+    "Ensure sufficient AI literacy of the staff who operate or use the system.":
+      "Garantice un nivel suficiente de alfabetización en materia de IA del personal que opera o utiliza el sistema.",
+    "AI systems developed and put into service only for scientific research and development, and research, testing or development before a system is placed on the market or put into service, are outside the scope of the EU AI Act.":
+      "Los sistemas de IA desarrollados y puestos en servicio exclusivamente con fines de investigación y desarrollo científicos, así como las actividades de investigación, prueba o desarrollo previas a la introducción en el mercado o puesta en servicio de un sistema, quedan fuera del ámbito de aplicación del Reglamento de IA de la UE.",
+    "Real-time remote biometric identification in publicly accessible spaces for law enforcement, outside the authorised objectives, is prohibited.":
+      "Está prohibida la identificación biométrica remota en tiempo real en espacios de acceso público con fines de garantía del cumplimiento del Derecho fuera de los objetivos autorizados.",
+    "Do not place this system on the market, put it into service or use it in the EU.":
+      "No introduzca este sistema en el mercado, no lo ponga en servicio ni lo utilice en la UE.",
+    "Real-time remote biometric identification for an authorised objective needs prior authorisation and is a high-risk system.":
+      "La identificación biométrica remota en tiempo real para un objetivo autorizado requiere autorización previa y es un sistema de alto riesgo.",
+    "The system is a product, or performs a safety function in a product, under Annex I Section A legislation that requires a third-party conformity assessment.":
+      "El sistema es un producto, o desempeña una función de seguridad en un producto, regulado por la legislación del anexo I, sección A, que exige una evaluación de la conformidad por terceros.",
+    "The system is part of a product under Annex I Section B. Its high-risk requirements apply through that sector's legislation.":
+      "El sistema forma parte de un producto del anexo I, sección B. Sus requisitos de alto riesgo se aplican a través de la legislación de ese sector.",
+    "The system is used for a listed high-risk purpose and profiles people, so the Article 6(3) exemption cannot apply.":
+      "El sistema se utiliza para una finalidad catalogada como de alto riesgo y elabora perfiles de personas, por lo que no puede aplicarse la excepción del artículo 6(3).",
+    "The provider documents the assessment that the system is not high risk before placing it on the market or putting it into service.":
+      "El proveedor documenta su evaluación de que el sistema no es de alto riesgo antes de introducirlo en el mercado o ponerlo en servicio.",
+    "The provider registers the system in the EU database.":
+      "El proveedor registra el sistema en la base de datos de la UE.",
+    "The system is used for a purpose listed as high risk in Annex III.":
+      "El sistema se utiliza para una finalidad catalogada como de alto riesgo en el anexo III.",
+    "A justification of at least 10 characters is required when changing the EU AI Act classification.":
+      "Se requiere una justificación de al menos 10 caracteres para cambiar la clasificación según el Reglamento de IA de la UE.",
+    "Answer these questions about the AI system first. They follow the EU AI Act.":
+      "Responda primero a estas preguntas sobre el sistema de IA. Siguen el Reglamento de IA de la UE.",
+    "Answers": "Respuestas",
+    "Applies from": "Aplicable desde",
+    "Approving creates a use case classified as prohibited.":
+      "Al aprobar se crea un caso de uso clasificado como prohibido.",
+    "Back to risk classification": "Volver a la clasificación de riesgos",
+    "Classification for the new use case": "Clasificación del nuevo caso de uso",
+    "Classification saved": "Clasificación guardada",
+    "Could not load the questionnaire. Try again later.":
+      "No se pudo cargar el cuestionario. Inténtelo de nuevo más tarde.",
+    "Could not save the classification. Try again.":
+      "No se pudo guardar la clasificación. Inténtelo de nuevo.",
+    "Could not save the agent. Try again.": "No se pudo guardar el agente. Inténtelo de nuevo.",
+    "Could not update the agent. Try again.":
+      "No se pudo actualizar el agente. Inténtelo de nuevo.",
+    "Could not score the answers. Try again.":
+      "No se pudieron evaluar las respuestas. Inténtelo de nuevo.",
+    "EU AI Act classification": "Clasificación según el Reglamento de IA de la UE",
+    "EU AI Act risk classification step":
+      "Paso de clasificación de riesgos según el Reglamento de IA de la UE",
+    "Submitters answer these questions first. The result is shown only to reviewers.":
+      "Los solicitantes responden primero a estas preguntas. Solo los revisores ven el resultado.",
+    "Loading questions...": "Cargando preguntas...",
+    "The questions could not be loaded.": "No se pudieron cargar las preguntas.",
+    "Questions": "Preguntas",
+    "View questions": "Ver preguntas",
+    "EU AI Act questionnaire": "Cuestionario de la Ley de IA de la UE",
+    "questions": "preguntas",
+    "asked before the form": "se preguntan antes del formulario",
+    "Scope and role": "Ámbito y función",
+    "Article 5 · Prohibited practices": "Artículo 5 · Prácticas prohibidas",
+    "Annex I · Product safety": "Anexo I · Seguridad de los productos",
+    "Annex III · High-risk uses": "Anexo III · Usos de alto riesgo",
+    "Article 50 · Transparency": "Artículo 50 · Transparencia",
+    "Other questions": "Otras preguntas",
+    "Select all that apply": "Seleccione todas las que correspondan",
+    "Cannot be combined with other answers": "No se puede combinar con otras respuestas",
+    "Shown when": "Se muestra si",
+    "or": "o",
+    "Shown depending on earlier answers": "Se muestra según las respuestas anteriores",
+    "Explain why you are changing the computed classification (min. 10 characters)":
+      "Explique por qué cambia la clasificación calculada (mín. 10 caracteres)",
+    "High-risk AI system": "Sistema de IA de alto riesgo",
+    "Intake risk score": "Puntuación de riesgo del formulario de admisión",
+    "Justification must be at least 10 characters":
+      "La justificación debe tener al menos 10 caracteres",
+    "No specific EU AI Act obligations apply beyond AI literacy.":
+      "No se aplican obligaciones específicas del Reglamento de IA de la UE más allá de la alfabetización en materia de IA.",
+    "Obligations": "Obligaciones",
+    "Out of scope": "Fuera del ámbito de aplicación",
+    "Outside the EU AI Act": "Fuera del Reglamento de IA de la UE",
+    "Override intake risk score": "Anular la puntuación de riesgo del formulario de admisión",
+    'Only the uses listed here are high risk under Annex III. Choose "Another use in this area" if none of them applies.':
+      "Solo los usos enumerados aquí son de alto riesgo según el anexo III. Elija «Otro uso en este ámbito» si ninguno de ellos se aplica.",
+    "Complete the conformity assessment under the product's sectoral procedure before placing the system on the market.":
+      "Complete la evaluación de la conformidad conforme al procedimiento sectorial del producto antes de introducir el sistema en el mercado.",
+    "Register the system at national level.": "Registre el sistema a nivel nacional.",
+    "Meet the AI requirements set through the product's sectoral legislation.":
+      "Cumpla los requisitos de IA establecidos a través de la legislación sectorial del producto.",
+    "From 2 December 2026, do not place this system on the market, put it into service or use it in the EU.":
+      "A partir del 2 de diciembre de 2026, no introduzca este sistema en el mercado, no lo ponga en servicio ni lo utilice en la UE.",
+    "Justification is required when overriding the intake risk score.":
+      "Se requiere una justificación para anular la puntuación de riesgo del formulario de admisión.",
+    "Review the intake risk score, EU AI Act classification and entity data before approving or rejecting":
+      "Revise la puntuación de riesgo del formulario de admisión, la clasificación según el Reglamento de IA de la UE y los datos de la entidad antes de aprobar o rechazar",
+    "Review the intake risk score and entity data before approving or rejecting":
+      "Revise la puntuación de riesgo del formulario de admisión y los datos de la entidad antes de aprobar o rechazar",
+    "Please review your risk classification answers.":
+      "Revise sus respuestas a la clasificación de riesgos.",
+    "Prohibited": "Prohibido",
+    "Research and development systems not placed on the market or used are outside the EU AI Act.":
+      "Los sistemas de investigación y desarrollo que no se introducen en el mercado ni se utilizan quedan fuera del Reglamento de IA de la UE.",
+    "Role:": "Rol:",
+    "Submitters answer the EU AI Act risk questionnaire before the form's questions. Reviewers see the result, and it becomes the use case's risk classification on approval.":
+      "Los remitentes responden al cuestionario de riesgos del Reglamento de IA de la UE antes de las preguntas del formulario. Los revisores ven el resultado, que se convierte en la clasificación de riesgos del caso de uso al aprobarlo.",
+    "The system falls under a prohibited practice in Article 5.":
+      "El sistema constituye una práctica prohibida en virtud del artículo 5.",
+    "This system has transparency obligations under Article 50.":
+      "Este sistema está sujeto a las obligaciones de transparencia del artículo 50.",
+    "This system is high risk and must meet the EU AI Act requirements for high-risk systems.":
+      "Este sistema es de alto riesgo y debe cumplir los requisitos del Reglamento de IA de la UE para los sistemas de alto riesgo.",
+    "Turning this on unmaps the questions that set the AI risk classification and the high-risk role. They stay on the form; delete them so submitters are not asked twice.":
+      "Al activarlo se elimina la asignación de las preguntas que establecen la clasificación de riesgo de IA y el rol de alto riesgo. Permanecen en el formulario; elimínelas para que no se pregunte dos veces a los solicitantes.",
+    "Updated since submission": "Actualizado desde el envío",
+    "Why": "Por qué",
+    "Audit records": "Registros de auditoría",
+    "Audit ledger, event log, change history, AI Advisor actions, file access logs":
+      "Libro de auditoría, registro de eventos, historial de cambios, acciones del AI Advisor, registros de acceso a archivos",
+    "AI Gateway guardrail logs": "Registros de guardrails del AI Gateway",
+    "AI Gateway spend logs": "Registros de gasto del AI Gateway",
+    "Agent Control logs": "Registros de Agent Control",
+    "Tool-call logs and decided approvals":
+      "Registros de llamadas a herramientas y aprobaciones resueltas",
+    "Model risk metrics": "Métricas de riesgo de modelo",
+    "Default for new files; each file can set its own":
+      "Valor predeterminado para archivos nuevos; cada archivo puede definir el suyo",
+    "Shadow AI events": "Eventos de Shadow AI",
+    "Shadow AI daily rollups": "Resúmenes diarios de Shadow AI",
+    "Shadow AI alert history": "Historial de alertas de Shadow AI",
+    "Server logs": "Registros del servidor",
+    "Self-hosted application logs": "Registros de la aplicación autoalojada",
+    "How long each kind of record is kept": "Cuánto tiempo se conserva cada tipo de registro",
+    "{count} year": "{count} año",
+    "{count} years": "{count} años",
+    "{count} month": "{count} mes",
+    "{count} months": "{count} meses",
+    "{count} day": "{count} día",
+    "{count} days": "{count} días",
+    "Indefinitely": "Indefinidamente",
+    "Archived, not deleted": "Archivado, no eliminado",
+    "Rotated daily": "Rotación diaria",
+    "{date} · {count} removed": "{date} · {count} eliminados",
+    "Purge refused: internal key not configured": "Purga rechazada: clave interna no configurada",
+    "Purge refused: internal key rejected": "Purga rechazada: clave interna rechazada",
+    "{date} · {count} removed (more pending)":
+      "{date} · {count} eliminados (quedan más pendientes)",
+    "Records": "Registros",
+    "Kept for": "Se conserva durante",
+    "Automatic deletion": "Eliminación automática",
+    "Last cleanup": "Última limpieza",
+    "Unavailable": "No disponible",
+    "Set by deployment: {setting}": "Definido por el despliegue: {setting}",
+    "Edit retention: {name}": "Editar retención: {name}",
+    "{count} logs deleted": "{count} registros eliminados",
+    "Permanently delete guardrail logs older than {days} days?":
+      "¿Eliminar permanentemente los registros de guardrails con más de {days} días?",
+    "How long to keep guardrail detection logs and spend logs. Guardrail logs record every blocked or masked request for compliance auditing (EU AI Act Art. 12).":
+      "Cuánto tiempo se conservan los registros de detección de guardrails y los registros de gasto. Los registros de guardrails recogen cada solicitud bloqueada o enmascarada para la auditoría de cumplimiento (Reglamento de IA de la UE, art. 12).",
+    "When on, logs older than their retention period are deleted every day. When off, logs are kept until you purge them.":
+      "Si está activado, los registros más antiguos que su periodo de retención se eliminan cada día. Si está desactivado, los registros se conservan hasta que los purgues.",
+    "Only admins can change retention periods":
+      "Solo los administradores pueden cambiar los periodos de retención",
+    "Records before {date} removed by retention policy":
+      "Registros anteriores al {date} eliminados por la política de retención",
+    "Spend log retention (days)": "Retención de registros de gasto (días)",
+    "Purge logs": "Purgar registros",
+    "This cannot be undone. The saved retention period is used, so save any change to it first.":
+      "Esta acción no se puede deshacer. Se usa el periodo de retención guardado, así que guarda primero cualquier cambio.",
+    "Delete old spend log entries based on the spend log retention period above.":
+      "Eliminar las entradas antiguas del registro de gasto según el periodo de retención de registros de gasto indicado arriba.",
+    "Retention periods must be whole numbers from {min} to {max} days":
+      "Los periodos de retención deben ser números enteros de {min} a {max} días",
+    "Confirm automatic deletion": "Confirmar la eliminación automática",
+    "Failed to purge logs": "No se pudieron purgar los registros",
+    "Audit records before {date} were removed by the retention policy.":
+      "Los registros de auditoría anteriores al {date} se eliminaron por la política de retención.",
+    "Choose how long these records are kept": "Elige cuánto tiempo se conservan estos registros",
+    "Keep indefinitely": "Conservar indefinidamente",
+    "Keep audit records for": "Conservar los registros de auditoría durante",
+    "Keep for (days)": "Conservar durante (días)",
+    "Keep for (months)": "Conservar durante (meses)",
+    "Delete automatically": "Eliminar automáticamente",
+    "This setting applies to both AI Gateway log types.":
+      "Este ajuste se aplica a ambos tipos de registros del AI Gateway.",
+    "At least {min} months.": "Al menos {min} meses.",
+    "{period} (deployment default)": "{period} (valor predeterminado de la implementación)",
+    "Use the deployment default": "Usar el valor predeterminado de la implementación",
+    "Use the deployment default ({period})":
+      "Usar el valor predeterminado de la implementación ({period})",
+    "From {min} to {max} days.": "De {min} a {max} días.",
+    "Tool-call logs and decided approvals older than {period} will be deleted permanently at the next daily cleanup. Deleted records cannot be restored.":
+      "Los registros de llamadas a herramientas y las aprobaciones resueltas de más de {period} se eliminarán de forma permanente en la próxima limpieza diaria. Los registros eliminados no se pueden restaurar.",
+    "Leave empty or enter 0 to keep indefinitely. Maximum {max}.":
+      "Déjalo vacío o escribe 0 para conservar indefinidamente. Máximo {max}.",
+    "Enter a whole number": "Introduce un número entero",
+    "Enter a number of at least {min}": "Introduce un número de al menos {min}",
+    "Enter a number no greater than {max}": "Introduce un número no mayor que {max}",
+    "The next cleanup will permanently delete {count} records older than {period}. Deleted records cannot be restored.":
+      "La próxima limpieza eliminará de forma permanente {count} registros con más de {period}. Los registros eliminados no se pueden restaurar.",
+    "No records are old enough to delete yet. From now on, records older than {period} will be deleted permanently. Deleted records cannot be restored.":
+      "Ningún registro es lo bastante antiguo para eliminarse todavía. A partir de ahora, los registros con más de {period} se eliminarán de forma permanente. Los registros eliminados no se pueden restaurar.",
+    "Export CSV first": "Exportar CSV primero",
+    "Delete records": "Eliminar registros",
+    "Failed to save settings": "No se pudo guardar la configuración",
+    "Retention settings could not be loaded.": "No se pudo cargar la configuración de retención.",
+    "Guardrail logs older than {guardrailDays} days and spend logs older than {spendDays} days will be deleted permanently every day. Deleted logs cannot be restored.":
+      "Los registros de guardrails con más de {guardrailDays} días y los registros de gasto con más de {spendDays} días se eliminarán de forma permanente cada día. Los registros eliminados no se pueden restaurar.",
+    "No evidence": "Sin evidencia",
+    "This use case is waiting for approval. You can read this overview, but the other tabs stay disabled until the request is approved or rejected, and the frameworks picked at creation are added only once it is approved. Follow the request under Approval requests in the header.":
+      "Este caso de uso está esperando aprobación. Puede leer esta vista general, pero las demás pestañas permanecen deshabilitadas hasta que la solicitud se apruebe o se rechace, y los marcos elegidos al crearlo solo se añaden una vez aprobado. Siga la solicitud en Solicitudes de aprobación en la cabecera.",
+    "This use case was rejected, so it can no longer be used. The tabs stay disabled and the frameworks picked at creation were never added. See the rejection comment under Approval requests in the header.":
+      "Este caso de uso fue rechazado, por lo que ya no se puede usar. Las pestañas permanecen deshabilitadas y los marcos elegidos al crearlo nunca se añadieron. Consulte el comentario de rechazo en Solicitudes de aprobación en la cabecera.",
+    "Adequate evidence": "Evidencia suficiente",
+    "Low-quality evidence": "Evidencia de baja calidad",
+    "Loading evidence coverage": "Cargando la cobertura de evidencia",
+    "Show all {count}": "Mostrar los {count}",
+    "Show fewer": "Mostrar menos",
+    "Controls needing attention": "Controles que requieren atención",
+    "file": "archivo",
+    "files": "archivos",
+    "none adequate": "ninguno suficiente",
+    "Evidence graded": "La evidencia calificada",
+    "counts as low quality. Files with no AI analysis are not counted as adequate.":
+      "se considera de baja calidad. Los archivos sin análisis de IA no cuentan como suficientes.",
   },
 };

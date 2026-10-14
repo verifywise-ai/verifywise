@@ -6,6 +6,7 @@ import {
   deleteCustomFieldDefinition,
   deleteCustomFieldValue,
   getCustomFieldDefinitionById,
+  getCustomFieldUsage,
   getCustomFieldValuesForEntity,
   getMissingRequiredCustomFields,
   listCustomFieldDefinitions,
@@ -18,6 +19,12 @@ import authorize from "../middleware/accessControl.middleware";
 
 // Definitions — Admin can mutate; any authenticated user can read.
 router.get("/definitions/by-id/:id", authenticateJWT, getCustomFieldDefinitionById);
+router.get(
+  "/definitions/by-id/:id/usage",
+  authenticateJWT,
+  authorize("customField.admin"),
+  getCustomFieldUsage,
+);
 router.get("/definitions/:entityType", authenticateJWT, listCustomFieldDefinitions);
 router.post(
   "/definitions",

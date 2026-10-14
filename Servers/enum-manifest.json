@@ -5,7 +5,8 @@
     "Limited risk",
     "Minimal risk",
     "GPAI",
-    "General Risk"
+    "General Risk",
+    "Out of scope"
   ],
   "highRiskRole": ["Deployer", "Provider"],
   "projectStatus": [

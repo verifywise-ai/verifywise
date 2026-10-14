@@ -24,7 +24,7 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise has four built-in roles. Organizations can also create custom roles (see Custom roles below).',
+      text: 'VerifyWise has four predefined roles:',
     },
     {
       type: 'icon-cards',
@@ -141,9 +141,8 @@ export const roleConfigurationContent: ArticleContent = {
       type: 'checklist',
       items: [
         'Create, edit and delete use cases and assessments',
-        'Manage models, vendors, policies and training records',
-        'Invite new team members',
-        'Update organization settings (name and logo)',
+        'Manage models, vendors and policies',
+        'View training records and organization settings',
         'Generate reports',
         'Access most settings tabs',
       ],
@@ -155,6 +154,9 @@ export const roleConfigurationContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
+        { text: 'Invite users or manage team members' },
+        { text: 'Edit organization settings' },
+        { text: 'Create, edit or delete training records' },
         { text: 'Manage integrations (Slack, MLflow)' },
         { text: 'Create or delete API keys' },
         { text: 'Change their own role' },
@@ -200,23 +202,13 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'heading',
-      id: 'custom-roles',
-      level: 2,
-      text: 'Custom roles',
-    },
-    {
-      type: 'paragraph',
-      text: 'Go to **Settings → Roles** to create roles for your organization and choose exactly which permissions each one has. The built-in roles are fixed and cannot be changed. A custom role with no permissions can sign in but cannot do anything. The Roles tab is available to users with permission to manage roles.',
-    },
-    {
-      type: 'heading',
       id: 'assigning-roles',
       level: 2,
       text: 'Assigning roles',
     },
     {
       type: 'paragraph',
-      text: 'Built-in and custom roles are assigned the same way, in two places:',
+      text: 'Roles are assigned in two ways:',
     },
     {
       type: 'heading',
@@ -272,10 +264,10 @@ export const roleConfigurationContent: ArticleContent = {
         { feature: 'Models', admin: 'Full access', reviewer: 'View + approve', editor: 'Full access', auditor: 'View only' },
         { feature: 'Vendors', admin: 'Full access', reviewer: 'View + approve', editor: 'Full access', auditor: 'View only' },
         { feature: 'Policies', admin: 'Full access', reviewer: 'View + approve', editor: 'Full access', auditor: 'View only' },
-        { feature: 'Training', admin: 'Full access', reviewer: 'View only', editor: 'Full access', auditor: 'View only' },
+        { feature: 'Training', admin: 'Full access', reviewer: 'View only', editor: 'View only', auditor: 'View only' },
         { feature: 'Reports', admin: 'Generate', reviewer: 'View only', editor: 'Generate', auditor: 'View only' },
-        { feature: 'Team management', admin: 'Full access', reviewer: 'None', editor: 'Invite only', auditor: 'None' },
-        { feature: 'Organization settings', admin: 'Full access', reviewer: 'View only', editor: 'Edit', auditor: 'View only' },
+        { feature: 'Team management', admin: 'Full access', reviewer: 'None', editor: 'None', auditor: 'None' },
+        { feature: 'Organization settings', admin: 'Full access', reviewer: 'View only', editor: 'View only', auditor: 'View only' },
         { feature: 'Integrations', admin: 'Full access', reviewer: 'None', editor: 'None', auditor: 'None' },
         { feature: 'API keys', admin: 'Full access', reviewer: 'None', editor: 'None', auditor: 'None' },
       ],
@@ -309,7 +301,7 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Yes. Go to **Settings → Roles** to create custom roles for your organization and choose exactly which permissions each one has. The four built-in roles (Admin, Reviewer, Editor, Auditor) are fixed and cannot be changed. A custom role with no permissions can sign in but cannot do anything. The Roles tab is available to users with permission to manage roles.',
+      text: 'Not right now. VerifyWise has four predefined roles (Admin, Reviewer, Editor, Auditor). Custom role configuration isn\'t available in this version.',
     },
     {
       type: 'heading',

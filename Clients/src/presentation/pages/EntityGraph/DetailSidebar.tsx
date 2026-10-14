@@ -28,7 +28,7 @@ import { useNavigate } from "react-router";
 import { EntityType } from "./EntityNode";
 import { VWLink } from "../../components/Link";
 import { text } from "../../themes/palette";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 export interface EntityDetails {
   id: string;
@@ -74,13 +74,15 @@ const entityRoutes: Record<EntityType, string> = {
   user: "/settings",
 };
 
-// Helper function to format dates
-const formatDate = (dateValue: unknown): string => {
+const formatDetailDate = (
+  dateValue: unknown,
+  formatDate: ReturnType<typeof useFormattedDate>,
+): string => {
   if (!dateValue) return "";
   try {
     const date = new Date(String(dateValue));
     if (isNaN(date.getTime())) return String(dateValue);
-    return displayFormattedDate(date);
+    return formatDate(date);
   } catch {
     return String(dateValue);
   }
@@ -135,6 +137,7 @@ const DetailText: React.FC<{ label: string; value: string }> = ({ label, value }
 
 const DetailSidebar: React.FC<DetailSidebarProps> = ({ entity, onClose, onNavigateToEntity }) => {
   const navigate = useNavigate();
+  const formatDate = useFormattedDate();
 
   if (!entity) return null;
 
@@ -283,14 +286,14 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({ entity, onClose, onNaviga
                 <DetailRow
                   icon={<Calendar size={14} />}
                   label="Start date"
-                  value={formatDate(rawData.start_date)}
+                  value={formatDetailDate(rawData.start_date, formatDate)}
                 />
               )}
               {Boolean(rawData.last_updated) && (
                 <DetailRow
                   icon={<Clock size={14} />}
                   label="Last updated"
-                  value={formatDate(rawData.last_updated)}
+                  value={formatDetailDate(rawData.last_updated, formatDate)}
                 />
               )}
               {Boolean(rawData.target_industry) && (
@@ -364,14 +367,14 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({ entity, onClose, onNaviga
                 <DetailRow
                   icon={<Calendar size={14} />}
                   label="Status date"
-                  value={formatDate(rawData.status_date)}
+                  value={formatDetailDate(rawData.status_date, formatDate)}
                 />
               )}
               {Boolean(rawData.created_at) && (
                 <DetailRow
                   icon={<Clock size={14} />}
                   label="Created"
-                  value={formatDate(rawData.created_at)}
+                  value={formatDetailDate(rawData.created_at, formatDate)}
                 />
               )}
             </>
@@ -426,7 +429,7 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({ entity, onClose, onNaviga
                 <DetailRow
                   icon={<Calendar size={14} />}
                   label="Review date"
-                  value={formatDate(rawData.review_date)}
+                  value={formatDetailDate(rawData.review_date, formatDate)}
                 />
               )}
               {Boolean(rawData.review_result) && (
@@ -526,7 +529,7 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({ entity, onClose, onNaviga
                 <DetailRow
                   icon={<Calendar size={14} />}
                   label="Deadline"
-                  value={formatDate(rawData.deadline)}
+                  value={formatDetailDate(rawData.deadline, formatDate)}
                 />
               )}
               {Boolean(rawData.approval_status) && (
@@ -573,7 +576,7 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({ entity, onClose, onNaviga
                 <DetailRow
                   icon={<Calendar size={14} />}
                   label="Expiry date"
-                  value={formatDate(rawData.expiry_date)}
+                  value={formatDetailDate(rawData.expiry_date, formatDate)}
                 />
               )}
               {Array.isArray(rawData.mapped_model_ids) && rawData.mapped_model_ids.length > 0 && (
@@ -587,7 +590,7 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({ entity, onClose, onNaviga
                 <DetailRow
                   icon={<Clock size={14} />}
                   label="Created"
-                  value={formatDate(rawData.created_at)}
+                  value={formatDetailDate(rawData.created_at, formatDate)}
                 />
               )}
             </>
@@ -610,7 +613,7 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({ entity, onClose, onNaviga
                 <DetailRow
                   icon={<Clock size={14} />}
                   label="Created"
-                  value={formatDate(rawData.created_at)}
+                  value={formatDetailDate(rawData.created_at, formatDate)}
                 />
               )}
             </>

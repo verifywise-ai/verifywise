@@ -18,7 +18,6 @@ from pydantic import BaseModel
 from sqlalchemy import text
 
 from database.db import get_db
-from middlewares.auth import verify_internal_key
 from utils.auth import get_org_id, get_user_id, require_admin
 from crud.risk import (
     get_risk_settings,
@@ -59,7 +58,6 @@ class DismissSuggestionBody(BaseModel):
 @router.get("/settings")
 async def get_risk_settings_route(request: Request):
     """Return risk settings merged with CONDITION_DEFINITIONS defaults."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
 
     db_settings = await get_risk_settings(org_id)
@@ -106,7 +104,6 @@ async def upsert_risk_setting_route(
     request: Request,
 ):
     """Create or update a risk condition setting (admin only)."""
-    verify_internal_key(request)
     require_admin(request)
     org_id = get_org_id(request)
 
@@ -130,7 +127,6 @@ async def get_suggestions_route(
     status: Optional[str] = Query(default=None),
 ):
     """Return risk suggestions, optionally filtered by status."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
 
     suggestions = await get_suggestions(org_id, status=status)
@@ -145,7 +141,6 @@ async def accept_suggestion_route(suggestion_id: int, request: Request):
     Creates a row in the ``risks`` table and then marks the suggestion as
     accepted, linking it to the newly created risk.
     """
-    verify_internal_key(request)
     org_id = get_org_id(request)
     user_id = get_user_id(request)
 
@@ -259,7 +254,6 @@ async def dismiss_suggestion_route(
     request: Request,
 ):
     """Dismiss a risk suggestion with a required reason."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
     user_id = get_user_id(request)
 
@@ -288,7 +282,6 @@ async def detect_risks_route(request: Request):
     Run all enabled risk condition evaluators and persist any new detections
     as pending suggestions (admin only).
     """
-    verify_internal_key(request)
     require_admin(request)
     org_id = get_org_id(request)
 
@@ -329,7 +322,6 @@ async def detect_risks_route(request: Request):
 @router.get("/detection-orgs")
 async def get_detection_orgs(request: Request):
     """Return org IDs that have AI Gateway endpoints. Used by BullMQ risk detection job."""
-    verify_internal_key(request)
     async with get_db() as db:
         result = await db.execute(
             text("SELECT DISTINCT organization_id FROM ai_gateway_endpoints")

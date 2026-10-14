@@ -1,12 +1,12 @@
 # AIGateway — LLM Gateway Service
 
-> **Last Updated:** 2026-06-18
+> **Last Updated:** 2026-10-08
 
 ---
 
 ## Overview
 
-FastAPI service that proxies LLM requests through governance controls. Accepts OpenAI-compatible API requests, applies guardrails, enforces budgets, and routes to 100+ providers via LiteLLM.
+FastAPI service that proxies LLM requests through governance controls. Accepts OpenAI-compatible API requests, applies guardrails, enforces budgets, and routes to providers via LiteLLM. Provider API keys can be stored for the providers in `VALID_PROVIDERS` (`src/routers/api_keys.py`); keep that set in sync with `API_KEY_PROVIDERS` in `Clients/src/presentation/pages/AIGateway/shared.ts`.
 
 Port: **8100**
 
@@ -17,9 +17,9 @@ Port: **8100**
 ```
 Express Backend (proxy)  →  FastAPI (AIGateway)
                               ├─ Auth (virtual key validation)
-                              ├─ Pre-request guardrails (PII, content filter)
-                              ├─ LiteLLM → LLM Provider
-                              ├─ Post-response guardrails
+                              ├─ Pre-request guardrails (PII, content filter; user messages only)
+                              ├─ LiteLLM → LLM Provider (fallback chain, max depth 3, non-streaming /v1 only)
+                              │   Model responses are NOT scanned by guardrails.
                               ├─ Cost calculation + spend logging
                               └─ Risk condition evaluation (daily)
 ```
@@ -47,7 +47,7 @@ alembic upgrade head          # Run migrations
 alembic downgrade -1          # Rollback last
 ```
 
-Tables use `verifywise` schema with `search_path`. All `ai_gateway_*` tables: endpoints, api_keys, virtual_keys, guardrail_rules, guardrail_logs, logs, cache, spend, budgets, risk_suggestions.
+Tables use `verifywise` schema with `search_path`. Main `ai_gateway_*` tables: endpoints, api_keys, virtual_keys, guardrails, guardrail_logs, guardrail_settings, spend_logs, cache, budgets, risk_settings, risk_suggestions, plus change-history, prompt and `mcp_*` (Agent Control) tables. See `src/database/migrations/versions/` for the full list.
 
 ---
 
@@ -76,7 +76,7 @@ cd src && uvicorn app:app --host 0.0.0.0 --port 8100 --reload   # Development
 
 ## Express Proxy
 
-Express backend at `Servers/routes/aiGateway.route.ts` proxies `/api/ai-gateway/*` to `http://ai_gateway:8100/` with JWT auth forwarding (`x-organization-id`, `x-user-id`, `x-role` headers).
+Express backend at `Servers/routes/aiGateway.route.ts` proxies `/api/ai-gateway/*` to `/internal/*` on the gateway (`http://ai_gateway:8100`) with JWT auth forwarding (`x-organization-id`, `x-user-id`, `x-role` headers). `Servers/routes/virtualKeyProxy.route.ts` passes `/v1/*` through unchanged; virtual-key auth happens in the gateway.
 
 ---
 

@@ -45,10 +45,20 @@ export const agentDiscoveryEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/agent-primitives',
     summary: "Create Agent Primitive",
-    description: "Requires role: Admin",
+    description: "Adds a manual agent. Owners: send owner_ids, the user ids of the owners, primary first. The legacy owner_id is still accepted. Sent alone, a user id makes that user the only owner, and any other text is stored as is as a free-text owner (owner_ids stays empty). Sent with owner_ids, owner_id must be a user id; it becomes the primary owner and is moved to the front. An agent can have at most 50 owners. Requires role: Admin",
     requiresAuth: true,
+    requestBody: {
+      "display_name": "string (required)",
+      "primitive_type": "string (required)",
+      "owner_ids": "array (optional)",
+      "owner_id": "string (optional, nullable)",
+      "permissions": "array (optional)",
+      "permission_categories": "array (optional)",
+      "metadata": "object (optional)",
+    },
     responses: [
-      { status: 201, description: "Created successfully" },
+      { status: 201, description: "Created successfully. The agent includes owner_ids." },
+      { status: 400, description: "Missing display_name or primitive_type, an invalid owner id, an owner who is not a user of your organization, owner_id that is not a user id when sent with owner_ids, a text owner_id longer than 255 characters, or more than 50 owners" },
       { status: 401, description: "Unauthorized" },
       { status: 500, description: "Internal server error" },
     ],
@@ -109,14 +119,24 @@ export const agentDiscoveryEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/agent-primitives/{id}',
     summary: "Update Agent Primitive",
-    description: "Requires role: Admin",
+    description: "Edits a manual agent. Owners change only when owner_ids or owner_id is sent, so an edit of other fields leaves them as they are. owner_ids replaces the full owner set, primary first. owner_id sent alone (legacy): a user id becomes the primary owner, replacing the previous primary and keeping the other owners; null or an empty string removes only the primary owner, and the next owner becomes primary (or none is left); any other text replaces all owners with that one free-text owner. Sent with owner_ids, owner_id must be a user id; it becomes the primary owner and is moved to the front. An agent can have at most 50 owners. Requires role: Admin",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
+    requestBody: {
+      "display_name": "string (optional)",
+      "primitive_type": "string (optional)",
+      "owner_ids": "array (optional)",
+      "owner_id": "string (optional, nullable)",
+      "metadata": "object (optional)",
+    },
     responses: [
-      { status: 200, description: "Success" },
+      { status: 200, description: "Success. The agent includes owner_ids." },
+      { status: 400, description: "No fields to update, an invalid owner id, a newly added owner who is not a user of your organization, owner_id that is not a user id when sent with owner_ids, a text owner_id longer than 255 characters, or more than 50 owners" },
       { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Only manually-added agents can be edited" },
+      { status: 404, description: "Agent primitive not found" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Agent Discovery",
@@ -1211,6 +1231,21 @@ export const aiDetectionEndpoints: Endpoint[] = [
   },
 ];
 
+// AI Gateway endpoints
+export const aiGatewayEndpoints: Endpoint[] = [
+  {
+    method: 'PUT',
+    path: '/ai-gateway/guardrails/settings',
+    summary: "Update Guardrail Settings",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "AI Gateway",
+  },
+];
+
 // Incidents endpoints
 export const aiIncidentEndpoints: Endpoint[] = [
   {
@@ -1964,6 +1999,25 @@ export const auditEndpoints: Endpoint[] = [
     ],
     tag: "Audit",
   },
+  {
+    method: 'GET',
+    path: '/audit-ledger/export',
+    summary: "Export Audit Ledger as CSV",
+    description: "Streams the organization audit ledger as a CSV attachment (UTF-8 with BOM, oldest entry first, batches of 1000). Requires role: Admin",
+    requiresAuth: true,
+    parameters: [
+      { name: 'entity_type', in: 'query', type: 'string', required: false, description: "Only entries for this entity type" },
+      { name: 'entry_type', in: 'query', type: 'string', required: false, description: "Only entries of this kind" },
+    ],
+    responses: [
+      { status: 200, description: "CSV file attachment (audit-ledger-YYYY-MM-DD.csv)" },
+      { status: 400, description: "Invalid entry_type" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Audit",
+  },
 ];
 
 // Authentication endpoints
@@ -2429,6 +2483,19 @@ export const customFieldsEndpoints: Endpoint[] = [
   },
   {
     method: 'GET',
+    path: '/custom-fields/definitions/by-id/{id}/usage',
+    summary: "Get Custom Field Usage",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Answer counts. total is the number of saved answers; by_option maps each option to its count: the option id for scored select, the option text for select and multiselect (a multiselect record counts once per option it holds); empty for other types." },
+      { status: 404, description: "Definition not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Custom Fields",
+  },
+  {
+    method: 'GET',
     path: '/custom-fields/definitions/{entityType}',
     summary: "List Custom Field Definitions",
     requiresAuth: true,
@@ -2442,7 +2509,7 @@ export const customFieldsEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/custom-fields/definitions',
     summary: "Create Custom Field Definition",
-    description: "Requires role: Admin",
+    description: "Requires role: Admin. field_type is one of text, number, date, boolean, select, multiselect, user, scored_select. For scored_select, options is an array of { id, label, score }; omit id for new options (the server assigns it).",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -2456,8 +2523,16 @@ export const customFieldsEndpoints: Endpoint[] = [
     summary: "Update Custom Field Definition",
     description: "Requires role: Admin",
     requiresAuth: true,
+    requestBody: {
+      "label": "string (optional)",
+      "required": "boolean (optional)",
+      "options": "array (optional)",
+      "option_moves": "object (optional)",
+      "option_removals": "array (optional)",
+    },
     responses: [
       { status: 200, description: "Success" },
+      { status: 409, description: "Removed options are still in use. data has code options_in_use, in_use [{ id, label, count }] and entity_type; retry with option_moves and/or option_removals." },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Custom Fields",
@@ -2533,6 +2608,51 @@ export const dashboardEndpoints: Endpoint[] = [
       { status: 500, description: "Internal server error" },
     ],
     tag: "Dashboard",
+  },
+];
+
+// Data Retention endpoints
+export const dataRetentionEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/data-retention',
+    summary: "List data retention settings",
+    description: "Returns how long each kind of record is kept for the organization (audit records, AI gateway logs, Agent Control logs, model risk management metrics, evidence files, Shadow AI data, server logs), the latest cleanup per type, and the point the audit ledger has been pruned through. Admin only.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 403, description: "Admin access required" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Data Retention",
+  },
+  {
+    method: 'GET',
+    path: '/data-retention/audit-records/preview',
+    summary: "Preview audit record cleanup",
+    description: "Returns how many audit records would be deleted now if the given retention period (months: 12, 24, 36, 60, 84 or 120) were applied. Read-only. Admin only.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "Invalid retention period" },
+      { status: 403, description: "Admin access required" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Data Retention",
+  },
+  {
+    method: 'PUT',
+    path: '/data-retention/audit-records',
+    summary: "Set audit record retention",
+    description: "Sets how long audit records are kept. Body: { months: 12 | 24 | 36 | 60 | 84 | 120 | null }, where null keeps records indefinitely. The change is recorded in the audit ledger. Admin only.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "Invalid retention period" },
+      { status: 403, description: "Admin access required" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Data Retention",
   },
 ];
 
@@ -3134,6 +3254,32 @@ export const euAiActEndpoints: Endpoint[] = [
   },
 ];
 
+// Eu Ai Act Classification endpoints
+export const euAiActClassificationEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/eu-ai-act-classification/questionnaire',
+    summary: "Get Questionnaire",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Eu Ai Act Classification",
+  },
+  {
+    method: 'POST',
+    path: '/eu-ai-act-classification/score',
+    summary: "Score Answers",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Eu Ai Act Classification",
+  },
+];
+
 // Evidence AI endpoints
 export const evidenceAiEndpoints: Endpoint[] = [
   {
@@ -3414,6 +3560,50 @@ export const extensionEndpoints: Endpoint[] = [
     tag: "Extensions",
   },
   {
+    method: 'GET',
+    path: '/extensions/{key}/runs',
+    summary: "Get Runs Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'POST',
+    path: '/extensions/{key}/runs',
+    summary: "Post Run Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/{key}/runs/status',
+    summary: "Get Run Status Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'PATCH',
+    path: '/extensions/{key}/schedule',
+    summary: "Patch Schedule Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
     method: 'POST',
     path: '/extensions/dataset-bulk-upload/upload',
     summary: "Upload Dataset File",
@@ -3663,11 +3853,50 @@ export const extensionEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/extensions/jira-assets/config',
     summary: "Post Config",
-    description: "Requires the jira-assets extension to be enabled for the organization (403 otherwise).",
+    description: "Requires the jira-assets extension to be enabled for the organization and the extension.admin permission (Admin); 403 otherwise.",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
+      { status: 400, description: "Validation error (missing connection field, or sync_interval_hours outside 1-168)" },
       { status: 403, description: "Extension not enabled for this organization, or role not allowed" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'PATCH',
+    path: '/extensions/jira-assets/config/sync',
+    summary: "Patch Sync Settings",
+    description: "Updates only the automatic-sync settings; connection fields are left untouched. Requires the jira-assets extension to be enabled for the organization and the extension.admin permission (Admin); 403 otherwise.",
+    requiresAuth: true,
+    requestBody: {
+      "sync_enabled": "boolean (optional)",
+      "sync_interval_hours": "integer (optional)",
+    },
+    responses: [
+      { status: 200, description: "Updated sync settings ({ sync_enabled, sync_interval_hours })" },
+      { status: 400, description: "Validation error (no field given, non-boolean sync_enabled, or sync_interval_hours outside 1-168)" },
+      { status: 403, description: "Extension not enabled for this organization, or role not allowed" },
+      { status: 404, description: "No Jira connection saved yet" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'PATCH',
+    path: '/extensions/jira-assets/config/selection',
+    summary: "Patch Selection",
+    description: "Updates only the selected schema and/or object type; a field left out is kept, null clears it. Requires the jira-assets extension to be enabled for the organization and the extension.admin permission (Admin); 403 otherwise.",
+    requiresAuth: true,
+    requestBody: {
+      "selected_schema_id": "string (optional, nullable)",
+      "selected_object_type_id": "string (optional, nullable)",
+    },
+    responses: [
+      { status: 200, description: "Updated selection ({ selected_schema_id, selected_object_type_id })" },
+      { status: 400, description: "Validation error (no field given, or an id that is not a Jira id)" },
+      { status: 403, description: "Extension not enabled for this organization, or role not allowed" },
+      { status: 404, description: "No Jira connection saved yet" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Extensions",
@@ -3734,15 +3963,18 @@ export const extensionEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/extensions/jira-assets/object-types/{objectTypeId}/objects',
     summary: "Get Objects",
-    description: "Requires the jira-assets extension to be enabled for the organization (403 otherwise).",
+    description: "One page (up to 1000 objects) for the import picker, as { objects, hasMore, nextStartAt }; pass nextStartAt as startAt to load more. Requires the jira-assets extension to be enabled for the organization (403 otherwise).",
     requiresAuth: true,
     parameters: [
       { name: 'objectTypeId', in: 'path', type: 'string', required: true, description: "The objectTypeId" },
+      { name: 'startAt', in: 'query', type: 'integer', required: false, description: "Offset of the first object (default 0)" },
     ],
     responses: [
       { status: 200, description: "Success" },
       { status: 403, description: "Extension not enabled for this organization, or role not allowed" },
+      { status: 404, description: "Jira Assets is not configured" },
       { status: 500, description: "Internal server error" },
+      { status: 502, description: "Jira or network failure (reason in error)" },
     ],
     tag: "Extensions",
   },
@@ -3750,12 +3982,16 @@ export const extensionEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/extensions/jira-assets/import',
     summary: "Post Import",
-    description: "Requires the jira-assets extension to be enabled for the organization (403 otherwise).",
+    description: "Requires the jira-assets extension to be enabled for the organization and the extension.admin permission (Admin); 403 otherwise.",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
+      { status: 400, description: "object_ids is empty or names more than 100 objects" },
       { status: 403, description: "Extension not enabled for this organization, or role not allowed" },
+      { status: 404, description: "Jira Assets is not configured" },
+      { status: 409, description: "A sync or import is already running, or this import was interrupted part-way ({ message, code: import_interrupted, imported, skipped })" },
       { status: 500, description: "Internal server error" },
+      { status: 502, description: "Jira or network failure (reason in error)" },
     ],
     tag: "Extensions",
   },
@@ -3763,12 +3999,16 @@ export const extensionEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/extensions/jira-assets/sync',
     summary: "Post Sync",
-    description: "Requires the jira-assets extension to be enabled for the organization (403 otherwise).",
+    description: "Starts a manual sync in the background. Requires the jira-assets extension to be enabled for the organization and the extension.admin permission (Admin); 403 otherwise.",
     requiresAuth: true,
     responses: [
-      { status: 200, description: "Success" },
+      { status: 202, description: "Sync job queued ({ jobId, previousRunId }); the worker claims the run at pickup. Poll GET /extensions/jira-assets/sync/status until nothing is queued or running and latest_run is newer than previousRunId" },
+      { status: 400, description: "No object type selected" },
       { status: 403, description: "Extension not enabled for this organization, or role not allowed" },
+      { status: 404, description: "Jira Assets is not configured" },
+      { status: 409, description: "A run is live, or a sync job for this organization is already waiting" },
       { status: 500, description: "Internal server error" },
+      { status: 503, description: "Background jobs are unavailable (the queue did not answer within 5 seconds)" },
     ],
     tag: "Extensions",
   },
@@ -3779,7 +4019,7 @@ export const extensionEndpoints: Endpoint[] = [
     description: "Requires the jira-assets extension to be enabled for the organization (403 otherwise).",
     requiresAuth: true,
     responses: [
-      { status: 200, description: "Success" },
+      { status: 200, description: "Last-sync fields, running, latest_run (with is_live), and queued (a sync job waiting in the queue; null if the queue did not answer)" },
       { status: 403, description: "Extension not enabled for this organization, or role not allowed" },
       { status: 500, description: "Internal server error" },
     ],
@@ -3812,6 +4052,24 @@ export const extensionEndpoints: Endpoint[] = [
     tag: "Extensions",
   },
   {
+    method: 'POST',
+    path: '/extensions/jira-assets/use-cases/remove-missing',
+    summary: "Remove Missing Ctrl",
+    description: "Deletes the listed use cases (projects and their data) that are still flagged as missing in Jira. Syncs never delete. Requires the jira-assets extension to be enabled for the organization and the extension.admin permission (Admin); 403 otherwise.",
+    requiresAuth: true,
+    requestBody: {
+      "use_case_ids": "array (required)",
+    },
+    responses: [
+      { status: 200, description: "Removed the listed use cases still flagged as missing in Jira ({ removed, links_removed, unlinked, skipped, skipped_items }). removed counts use cases (projects) deleted and links_removed the links that went with them; unlinked counts links whose project is not in this organization (only the link was deleted); skipped_items lists [{ id, reason }] with reason no_longer_missing, not_found, changed, has_live_links or other_links_not_selected (a use case is removed only when all its missing links are in the request)" },
+      { status: 400, description: "use_case_ids is not a list of 1 to 1000 use case ids (up to 25,000 when they all belong to one use case), or covers more than 100 use cases" },
+      { status: 403, description: "Extension not enabled for this organization, or role not allowed" },
+      { status: 409, description: "A Jira Assets sync or import is running, or the removal was interrupted, nothing removed ({ message, code: removal_interrupted })" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
     method: 'GET',
     path: '/extensions/jira-assets/use-cases/{id}',
     summary: "Get Use Case Ctrl",
@@ -3831,14 +4089,17 @@ export const extensionEndpoints: Endpoint[] = [
     method: 'DELETE',
     path: '/extensions/jira-assets/use-cases/{id}',
     summary: "Delete Use Case Ctrl",
-    description: "Requires the jira-assets extension to be enabled for the organization (403 otherwise).",
+    description: "Requires the jira-assets extension to be enabled for the organization and the extension.admin permission (Admin); 403 otherwise.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
     responses: [
-      { status: 200, description: "Success" },
+      { status: 200, description: "Deleted ({ success, unlinked, links_removed }); the project goes with all its links (links_removed); unlinked is true when only the link was deleted because its project is not in this organization" },
+      { status: 400, description: "Invalid use case id" },
       { status: 403, description: "Extension not enabled for this organization, or role not allowed" },
+      { status: 404, description: "No Jira Assets use case with that project id" },
+      { status: 409, description: "A Jira Assets sync, import or removal is running, or the deletion was interrupted, nothing removed ({ message, code: removal_interrupted })" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Extensions",
@@ -4367,6 +4628,28 @@ export const fileEndpoints: Endpoint[] = [
     responses: [
       { status: 200, description: "Success" },
       { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'GET',
+    path: '/file-manager/org-settings',
+    summary: "Get File Org Settings Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Files",
+  },
+  {
+    method: 'PUT',
+    path: '/file-manager/org-settings',
+    summary: "Update File Org Settings Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Files",
@@ -8644,6 +8927,28 @@ export const projectEndpoints: Endpoint[] = [
   },
   {
     method: 'GET',
+    path: '/projects/{id}/eu-ai-act-classification',
+    summary: "Get Use Case Classification",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Projects",
+  },
+  {
+    method: 'POST',
+    path: '/projects/{id}/eu-ai-act-classification',
+    summary: "Classify Use Case",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Projects",
+  },
+  {
+    method: 'GET',
     path: '/projects/all/compliance/progress',
     summary: "Get compliance progress across all projects",
     requiresAuth: true,
@@ -8806,6 +9111,28 @@ export const projectRiskEndpoints: Endpoint[] = [
     responses: [
       { status: 200, description: "Success" },
       { status: 500, description: "Internal server error" },
+    ],
+    tag: "Project Risks",
+  },
+  {
+    method: 'POST',
+    path: '/projectRisks/suggest-ai',
+    summary: "Suggest Risks With AI",
+    description: "Read-only: the org-configured LLM returns matching entries from the built-in MIT and IBM risk catalogs plus free-form suggested risks for the use case of the project. Nothing is persisted. Rate limited to 10 requests per hour per user.",
+    requiresAuth: true,
+    requestBody: {
+      "projectId": "integer (required)",
+      "technologySummary": "string (optional)",
+      "llmKeyId": "integer (optional)",
+    },
+    responses: [
+      { status: 200, description: "Suggestions generated" },
+      { status: 400, description: "Invalid request, or no LLM keys configured for the organization" },
+      { status: 401, description: "Unauthorized" },
+      { status: 404, description: "Project not found" },
+      { status: 429, description: "Rate limit exceeded (10 requests per hour per user)" },
+      { status: 500, description: "Internal server error" },
+      { status: 502, description: "The configured AI provider rejected or failed the request" },
     ],
     tag: "Project Risks",
   },
@@ -11005,7 +11332,7 @@ export const userEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/users/preferences',
     summary: "Get current user preferences",
-    description: "Returns the authenticated user's persisted preferences (date_format, language) from user_preferences. If no row exists, returns safe defaults including a transient theme default.",
+    description: "Returns the authenticated user's persisted preferences (date_format, language, parallel_agents) from user_preferences. If no row exists, returns safe defaults including a transient theme default and parallel_agents false.",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Preferences found or defaults returned" },
@@ -11018,7 +11345,7 @@ export const userEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/users/me/preferences',
     summary: "Get current user preferences",
-    description: "Returns the authenticated user's persisted preferences (date_format, language) from user_preferences. If no row exists, returns safe defaults including a transient theme default. Preferred alias of GET /users/preferences.",
+    description: "Returns the authenticated user's persisted preferences (date_format, language, parallel_agents) from user_preferences. If no row exists, returns safe defaults including a transient theme default and parallel_agents false. Preferred alias of GET /users/preferences.",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Preferences found or defaults returned" },
@@ -11032,11 +11359,12 @@ export const userEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/users/me/preferences',
     summary: "Update current user preferences",
-    description: "Upserts the authenticated user's date_format and/or language. At least one field is required. Unknown format strings and languages are rejected. Any user_id in the body is ignored; the JWT user is always the target.",
+    description: "Upserts the authenticated user's date_format, language, and/or parallel_agents. At least one field is required. Unknown format strings, languages, and non-boolean parallel_agents values are rejected. Any user_id in the body is ignored; the JWT user is always the target.",
     requiresAuth: true,
     requestBody: {
       "date_format": "DD-MM-YYYY | MM-DD-YYYY | DD/MM/YY | MM/DD/YY (optional)",
       "language": "en | de | fr | es (optional)",
+      "parallel_agents": "boolean (optional)",
     },
     responses: [
       { status: 200, description: "Preferences saved" },
@@ -11621,6 +11949,7 @@ export const allEndpoints = {
   aiConfirmation: aiConfirmationEndpoints,
   aiContent: aiContentEndpoints,
   aiDetection: aiDetectionEndpoints,
+  aiGateway: aiGatewayEndpoints,
   aiIncident: aiIncidentEndpoints,
   aiTrustCentre: aiTrustCentreEndpoints,
   aiTrustIndex: aiTrustIndexEndpoints,
@@ -11634,12 +11963,14 @@ export const allEndpoints = {
   compliance: complianceEndpoints,
   customFields: customFieldsEndpoints,
   dashboard: dashboardEndpoints,
+  dataRetention: dataRetentionEndpoints,
   dataset: datasetEndpoints,
   deadlines: deadlinesEndpoints,
   demoData: demoDataEndpoints,
   email: emailEndpoints,
   entityGraph: entityGraphEndpoints,
   euAiAct: euAiActEndpoints,
+  euAiActClassification: euAiActClassificationEndpoints,
   evidenceAi: evidenceAiEndpoints,
   evidenceHub: evidenceHubEndpoints,
   extension: extensionEndpoints,

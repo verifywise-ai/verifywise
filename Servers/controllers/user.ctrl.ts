@@ -117,9 +117,9 @@ import { UserLanguage } from "../domain.layer/interfaces/i.userPreferences";
 /**
  * Retrieves the currently authenticated user's preferences.
  *
- * Returns persisted date_format and language from `user_preferences`. If no
- * preferences row exists yet, returns safe defaults so the client can hydrate
- * without an error.
+ * Returns persisted date_format, language, and parallel_agents from
+ * `user_preferences`. If no preferences row exists yet, returns safe defaults
+ * so the client can hydrate without an error.
  *
  * @async
  * @param {Request} req - Express request with userId from JWT middleware
@@ -155,7 +155,13 @@ async function getPreferencesForCurrentUser(req: Request, res: Response): Promis
         "getPreferencesForCurrentUser",
         "user.ctrl.ts",
       );
-      return res.status(200).json(STATUS_CODE[200](userPreference.toJSON()));
+      const preferences = userPreference.toJSON();
+      return res.status(200).json(
+        STATUS_CODE[200]({
+          ...preferences,
+          parallel_agents: preferences.parallel_agents ?? false,
+        }),
+      );
     }
 
     logStructured(
@@ -169,6 +175,7 @@ async function getPreferencesForCurrentUser(req: Request, res: Response): Promis
         date_format: UserDateFormat.DD_MM_YYYY_DASH,
         language: "en",
         theme: "light",
+        parallel_agents: false,
       }),
     );
   } catch (error) {
@@ -186,9 +193,10 @@ async function getPreferencesForCurrentUser(req: Request, res: Response): Promis
 /**
  * Upserts the currently authenticated user's preferences.
  *
- * Persists `date_format` and/or `language` for `req.userId`. Any `user_id` in
- * the body is ignored so callers cannot write another user's preferences.
- * Creates a row when none exists; updates the existing row otherwise.
+ * Persists `date_format`, `language`, and/or `parallel_agents` for
+ * `req.userId`. Any `user_id` in the body is ignored so callers cannot write
+ * another user's preferences. Creates a row when none exists; updates the
+ * existing row otherwise.
  *
  * @async
  * @param {Request} req - Express request with userId from JWT middleware
@@ -206,17 +214,25 @@ async function patchPreferencesForCurrentUser(req: Request, res: Response): Prom
 
   const dateFormat = req.body?.date_format as UserDateFormat | undefined;
   const language = req.body?.language as UserLanguage | undefined;
+  const hasParallelAgents = Object.prototype.hasOwnProperty.call(req.body ?? {}, "parallel_agents");
+  const parallelAgents = hasParallelAgents
+    ? (req.body.parallel_agents as boolean | undefined)
+    : undefined;
 
-  if (dateFormat === undefined && language === undefined) {
+  if (dateFormat === undefined && language === undefined && !hasParallelAgents) {
     logStructured(
       "error",
-      "missing date_format and language in request body",
+      "missing date_format, language, and parallel_agents in request body",
       functionName,
       "user.ctrl.ts",
     );
     return res
       .status(400)
-      .json(STATUS_CODE[400](req.t!("At least one of date_format or language is required")));
+      .json(
+        STATUS_CODE[400](
+          req.t!("At least one of date_format, language, or parallel_agents is required"),
+        ),
+      );
   }
 
   const transaction = await sequelize.transaction();
@@ -237,6 +253,7 @@ async function patchPreferencesForCurrentUser(req: Request, res: Response): Prom
         userId,
         dateFormat ?? UserDateFormat.DD_MM_YYYY_DASH,
         language,
+        parallelAgents,
       );
       await createNewUserPreferencesQuery(saved, transaction);
     } else {
@@ -244,6 +261,7 @@ async function patchPreferencesForCurrentUser(req: Request, res: Response): Prom
       await saved.updateUserPreferences({
         date_format: dateFormat,
         language,
+        parallel_agents: parallelAgents,
       });
       await updateUserPreferencesByIdQuery(userId, saved, transaction);
     }
@@ -268,6 +286,7 @@ async function patchPreferencesForCurrentUser(req: Request, res: Response): Prom
         ...saved.toJSON(),
         date_format: saved.date_format,
         language: saved.language,
+        parallel_agents: saved.parallel_agents ?? false,
       }),
     );
   } catch (error) {

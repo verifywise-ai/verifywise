@@ -35,6 +35,14 @@ import { computeDerivedFields, recordPortfolioSnapshot } from "../utils/quantita
 import { validateQuantitativeRiskFields } from "../utils/validations/quantitativeRiskValidation.utils";
 import { createRiskService } from "../services/risk.service";
 import { enqueueRiskLinkRecompute } from "../services/automations/automationProducer";
+import { getProjectByIdQuery } from "../utils/project.utils";
+import { getLLMKeysWithKeyQuery, getLLMProviderUrl } from "../utils/llmKey.utils";
+import { LLMProvider } from "../domain.layer/interfaces/i.llmKey";
+import { createModelFromKey } from "../advisor/llmModelFactory";
+import {
+  RiskSuggestionError,
+  suggestRisksForUseCase,
+} from "../services/riskSuggestions/riskSuggestions.service";
 
 import { translateError } from "../utils/i18n.utils";
 // Helper function to get user name
@@ -856,5 +864,176 @@ export async function bulkUpdateProjectRisks(req: Request, res: Response): Promi
       return res.status(403).json(STATUS_CODE[403](error.message));
     }
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+/**
+ * Mirrors selectLLMKey in advisor.ctrl.ts (not exported there): an explicit
+ * llmKeyId wins when it exists; anything else falls back to the org's first
+ * key — the same row the empty-check above saw, since getLLMKeysWithKeyQuery
+ * orders by created_at DESC.
+ */
+function selectLLMKeyForSuggestion(clients: any[], llmKeyId?: number): any {
+  if (llmKeyId !== undefined) {
+    const found = clients.find((k: any) => k.id === llmKeyId);
+    if (found) return found;
+    logger.warn(`LLM key ID ${llmKeyId} not found, using default key`);
+  }
+  return clients[0];
+}
+
+/**
+ * POST /api/projectRisks/suggest-ai
+ *
+ * Body: { projectId: number, technologySummary?: string, llmKeyId?: number }
+ *
+ * Ask the org-configured LLM for risks relevant to a use case: matches from
+ * the built-in MIT/IBM risk catalogs plus free-form suggestions. Read-only —
+ * nothing is persisted; accepting a suggestion is a separate flow.
+ *
+ * Error mapping: a RiskSuggestionError means the paid provider call failed,
+ * which is an upstream failure → 502 with a safe, actionable message chosen
+ * from the provider's HTTP status (taxonomy per advisor.ctrl.ts's onError).
+ * The raw provider body, prompt and API key never leave the server. Anything
+ * else is an internal failure → 500.
+ */
+export async function suggestRisksWithAI(req: Request, res: Response): Promise<any> {
+  const projectId = Number(req.body?.projectId);
+
+  logStructured(
+    "processing",
+    `suggesting risks with AI for project ID: ${projectId}`,
+    "suggestRisksWithAI",
+    "risks.ctrl.ts",
+  );
+  logger.debug(`🤖 AI risk suggestions requested for project ID: ${projectId}`);
+
+  try {
+    const organizationId = req.organizationId!;
+
+    if (!Number.isInteger(projectId) || projectId < 1) {
+      return res.status(400).json(STATUS_CODE[400](req.t!("projectId must be a positive integer")));
+    }
+
+    const project = await getProjectByIdQuery(projectId, organizationId);
+    if (!project) {
+      logStructured(
+        "error",
+        `project not found: ID ${projectId}`,
+        "suggestRisksWithAI",
+        "risks.ctrl.ts",
+      );
+      await logEvent(
+        "Error",
+        `AI risk suggestions failed — project not found: ID ${projectId}`,
+        req.userId!,
+        organizationId,
+      );
+      return res.status(404).json(STATUS_CODE[404](req.t!("Project not found")));
+    }
+
+    const clients = await getLLMKeysWithKeyQuery(organizationId);
+    if (clients.length === 0) {
+      logger.debug(`No LLM keys found for organization: ${organizationId}`);
+      return res
+        .status(400)
+        .json(STATUS_CODE[400]("No LLM keys configured for this organization."));
+    }
+
+    const llmKeyId = req.body?.llmKeyId !== undefined ? Number(req.body.llmKeyId) : undefined;
+    const llmKey = selectLLMKeyForSuggestion(clients, llmKeyId);
+    const model = createModelFromKey({
+      name: llmKey.name,
+      key: llmKey.key,
+      url: llmKey.url || getLLMProviderUrl(llmKey.name as LLMProvider),
+      model: llmKey.model,
+      custom_headers: llmKey.custom_headers ?? null,
+    });
+
+    const technologySummary =
+      typeof req.body?.technologySummary === "string" &&
+      req.body.technologySummary.trim().length > 0
+        ? req.body.technologySummary.trim()
+        : undefined;
+
+    const existingRisks = (await getRisksByProjectQuery(projectId, organizationId)) ?? [];
+    const existingRiskNames = existingRisks
+      .map((risk) => risk.risk_name)
+      .filter((name): name is string => Boolean(name));
+
+    const result = await suggestRisksForUseCase({
+      model,
+      useCase: {
+        name: project.project_title,
+        purpose: project.goal || project.use_case_purpose || project.description || undefined,
+        technology:
+          technologySummary || project.deployment_context || project.use_case_category || undefined,
+      },
+      existingRiskNames,
+    });
+
+    logStructured(
+      "successful",
+      `AI risk suggestions generated for project ID: ${projectId}`,
+      "suggestRisksWithAI",
+      "risks.ctrl.ts",
+    );
+    return res.status(200).json(STATUS_CODE[200](result));
+  } catch (error) {
+    if (error instanceof RiskSuggestionError) {
+      // The provider's HTTP status, when present, rides on the wrapped cause
+      // (@ai-sdk/* providers expose `statusCode`). Message and status decide
+      // the client answer; the raw provider body is never echoed.
+      const cause = (error as { cause?: unknown }).cause;
+      const statusCode = (cause as { statusCode?: number } | undefined)?.statusCode;
+      const causeMessage = cause instanceof Error ? cause.message : "";
+
+      let safeMessage: string;
+      if (statusCode === 401 || /invalid.*api.*key|unauthorized/i.test(causeMessage)) {
+        safeMessage =
+          "The configured LLM API key was rejected by the provider. Ask an Admin to verify the LLM key in Settings.";
+      } else if (statusCode === 429 || /rate.*limit/i.test(causeMessage)) {
+        safeMessage = "The AI provider is rate-limiting requests. Please wait and try again.";
+      } else if (statusCode !== undefined && statusCode >= 500) {
+        safeMessage = "The AI provider is currently unavailable. Please try again shortly.";
+      } else {
+        safeMessage =
+          "Failed to generate risk suggestions with the configured AI provider. Please try again later.";
+      }
+
+      logStructured(
+        "error",
+        `AI risk suggestion failed for project ID ${projectId}`,
+        "suggestRisksWithAI",
+        "risks.ctrl.ts",
+      );
+      await logEvent(
+        "Error",
+        `AI risk suggestion failed for project ID ${projectId}`,
+        req.userId!,
+        req.organizationId!,
+      );
+      // Status only: the service already logged the provider message, and the
+      // prompt/key/raw completion must never be logged or returned.
+      logger.error(
+        `❌ suggestRisksWithAI: provider call failed for project ${projectId} (status ${statusCode ?? "n/a"})`,
+      );
+      return res.status(502).json(STATUS_CODE[502](safeMessage));
+    }
+
+    logStructured(
+      "error",
+      `unexpected error suggesting risks for project ID ${projectId}`,
+      "suggestRisksWithAI",
+      "risks.ctrl.ts",
+    );
+    await logEvent(
+      "Error",
+      `Unexpected error during AI risk suggestion for project ID ${projectId}: ${(error as Error).message}`,
+      req.userId!,
+      req.organizationId!,
+    );
+    logger.error("❌ Error in suggestRisksWithAI:", error);
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

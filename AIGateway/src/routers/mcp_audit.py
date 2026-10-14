@@ -4,13 +4,13 @@ from fastapi import APIRouter, HTTPException, Request, status
 
 from crud.mcp_audit import (
     delete_expired_audit_logs,
+    get_agent_activity,
     get_audit_log_by_id,
     get_audit_logs,
     get_audit_stats,
     get_audit_stats_by_agent,
     get_audit_stats_by_tool,
 )
-from middlewares.auth import verify_internal_key
 from utils.auth import get_org_id
 
 router = APIRouter(prefix="/mcp/audit", tags=["mcp-audit"])
@@ -31,7 +31,6 @@ async def list_audit_logs(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
 ):
-    verify_internal_key(request)
     org_id = get_org_id(request)
 
     filters: dict = {}
@@ -62,7 +61,6 @@ async def list_audit_logs(
 
 @router.get("/logs/{log_id}", status_code=status.HTTP_200_OK)
 async def get_audit_log(log_id: int, request: Request):
-    verify_internal_key(request)
     org_id = get_org_id(request)
     row = await get_audit_log_by_id(org_id, log_id)
     if not row:
@@ -76,7 +74,6 @@ async def get_audit_log(log_id: int, request: Request):
 
 @router.get("/stats", status_code=status.HTTP_200_OK)
 async def audit_stats(request: Request, days: int = 7):
-    verify_internal_key(request)
     org_id = get_org_id(request)
 
     stats = await get_audit_stats(org_id, days=days)
@@ -89,7 +86,6 @@ async def audit_stats(request: Request, days: int = 7):
 
 @router.get("/stats/by-tool", status_code=status.HTTP_200_OK)
 async def audit_stats_by_tool(request: Request, days: int = 7):
-    verify_internal_key(request)
     org_id = get_org_id(request)
 
     stats = await get_audit_stats_by_tool(org_id, days=days)
@@ -102,11 +98,21 @@ async def audit_stats_by_tool(request: Request, days: int = 7):
 
 @router.get("/stats/by-agent", status_code=status.HTTP_200_OK)
 async def audit_stats_by_agent(request: Request, days: int = 7):
-    verify_internal_key(request)
     org_id = get_org_id(request)
 
     stats = await get_audit_stats_by_agent(org_id, days=days)
     return {"status": "success", "data": stats}
+
+
+@router.get("/agent/{agent_key_id}", status_code=status.HTTP_200_OK)
+async def agent_activity(agent_key_id: int, request: Request, days: int = 30):
+    """Everything one agent has been doing: summary + per-tool + recent calls."""
+    org_id = get_org_id(request)
+
+    # Keep the window to a sensible range (1 day to 1 year).
+    days = max(1, min(int(days), 365))
+    activity = await get_agent_activity(org_id, agent_key_id, days=days)
+    return {"status": "success", "data": activity}
 
 
 # ---------------------------------------------------------------------------
@@ -116,10 +122,11 @@ async def audit_stats_by_agent(request: Request, days: int = 7):
 @router.post("/cleanup", status_code=status.HTTP_200_OK)
 async def cleanup_audit_logs(request: Request):
     """Delete audit logs older than retention period. Called by scheduled job."""
-    verify_internal_key(request)
     from config import settings
 
-    deleted = await delete_expired_audit_logs(settings.mcp_audit_retention_days)
+    deleted = await delete_expired_audit_logs(
+        settings.mcp_audit_retention_days, settings.mcp_audit_retention_min_days
+    )
     return {"status": "success", "deleted": deleted}
 
 
@@ -130,9 +137,10 @@ async def cleanup_audit_logs(request: Request):
 @router.post("/cleanup-approvals", status_code=status.HTTP_200_OK)
 async def cleanup_approval_requests(request: Request):
     """Delete decided/expired approval requests older than retention period."""
-    verify_internal_key(request)
     from config import settings
     from crud.mcp_approvals import delete_expired_approval_requests
 
-    deleted = await delete_expired_approval_requests(settings.mcp_audit_retention_days)
+    deleted = await delete_expired_approval_requests(
+        settings.mcp_audit_retention_days, settings.mcp_audit_retention_min_days
+    )
     return {"status": "success", "deleted": deleted}

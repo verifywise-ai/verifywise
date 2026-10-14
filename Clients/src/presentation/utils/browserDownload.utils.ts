@@ -32,21 +32,24 @@ export const triggerBrowserDownload = (blob: Blob, filename: string): void => {
 };
 
 /**
- * Extracts filename from Content-Disposition header
+ * The filename in a Content-Disposition header value, as axios exposes it
+ * (`response.headers["content-disposition"]`). Handles quoted, unquoted and
+ * RFC 5987 (`filename*=UTF-8''...`) forms.
  *
- * @param {Headers} headers - Response headers
- * @param {string} fallback - Fallback filename if header not found
- * @returns {string} Extracted or fallback filename
+ * @param {unknown} disposition - The raw header value, if any
+ * @param {string} fallback - Name to use when the header has none
+ * @returns {string} The filename or the fallback
  */
-export const extractFilenameFromHeaders = (
-  headers: Headers,
-  fallback: string = "download",
-): string => {
-  const headerContent = headers.get("Content-Disposition");
-  if (!headerContent) return fallback;
-
-  const fileAttachment = [...headerContent.matchAll(/"([^"]+)"/g)];
-  const filenames = fileAttachment.map((m) => m[1]);
-
-  return filenames[0] || fallback;
+export const filenameFromContentDisposition = (disposition: unknown, fallback: string): string => {
+  if (typeof disposition !== "string") return fallback;
+  const encoded = /filename\*\s*=\s*UTF-8''([^;]+)/i.exec(disposition);
+  if (encoded) {
+    try {
+      return decodeURIComponent(encoded[1].trim());
+    } catch {
+      // Malformed encoding: fall through to the plain filename.
+    }
+  }
+  const plain = /filename\s*=\s*"?([^";]+)"?/i.exec(disposition);
+  return plain?.[1].trim() || fallback;
 };

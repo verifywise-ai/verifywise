@@ -49,23 +49,37 @@ export function useRequiredCustomFieldsGate(
   blocked: boolean;
   reason: string | null;
   missingLabels: string[];
-  onPendingChange: (pendingDefinitionIds: ReadonlySet<number>) => void;
+  onPendingChange: (
+    pendingDefinitionIds: ReadonlySet<number>,
+    clearedRequired?: ReadonlyArray<{ id: number; label: string }>,
+  ) => void;
 } {
   const { data: missing = [], isLoading } = useMissingRequiredCustomFields(entityType, entityId);
   const [pending, setPending] = useState<ReadonlySet<number>>(() => new Set());
+  // Required fields whose stored value is about to be cleared; the server
+  // does not report them as missing until the clear is saved.
+  const [clearedRequired, setClearedRequired] = useState<
+    ReadonlyArray<{ id: number; label: string }>
+  >([]);
 
   // setPending is reactively wired into CustomFieldsSection via the returned
   // onPendingChange — keep its reference stable so the callback prop doesn't
   // thrash and re-trigger the child's effect every render.
-  const onPendingChange = useCallback((ids: ReadonlySet<number>) => {
-    setPending(ids);
-  }, []);
+  const onPendingChange = useCallback(
+    (ids: ReadonlySet<number>, cleared: ReadonlyArray<{ id: number; label: string }> = []) => {
+      setPending(ids);
+      setClearedRequired(cleared);
+    },
+    [],
+  );
 
   return useMemo(() => {
-    if (isLoading) {
-      return { blocked: false, reason: null, missingLabels: [], onPendingChange };
-    }
-    const stillMissing = missing.filter((m) => !pending.has(m.id));
+    // While the server's list loads, only a cleared required field blocks.
+    const serverMissing = isLoading ? [] : missing;
+    const stillMissing = [
+      ...serverMissing.filter((m) => !pending.has(m.id)),
+      ...clearedRequired.filter((c) => !serverMissing.some((m) => m.id === c.id)),
+    ];
     if (stillMissing.length === 0) {
       return { blocked: false, reason: null, missingLabels: [], onPendingChange };
     }
@@ -76,5 +90,5 @@ export function useRequiredCustomFieldsGate(
       missingLabels: labels,
       onPendingChange,
     };
-  }, [isLoading, missing, pending, onPendingChange]);
+  }, [isLoading, missing, pending, clearedRequired, onPendingChange]);
 }

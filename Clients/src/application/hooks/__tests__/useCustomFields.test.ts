@@ -132,6 +132,42 @@ describe("useUpdateCustomFieldDefinition", () => {
     await result.current.mutateAsync({ id: 1, body: { label: "Updated" } } as any);
     expect(mockUpdateDefinition).toHaveBeenCalledWith({ id: 1, body: { label: "Updated" } });
   });
+
+  const renderWithClient = () => {
+    const queryClient = new QueryClient();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    const wrapper = ({ children }: { children: React.ReactNode }) =>
+      React.createElement(QueryClientProvider, { client: queryClient }, children);
+    const { result } = renderHook(() => useUpdateCustomFieldDefinition("project"), { wrapper });
+    return { result, invalidate };
+  };
+
+  it("refreshes every cached list after moving answers, since lists embed record values", async () => {
+    mockUpdateDefinition.mockResolvedValue({} as any);
+    const { result, invalidate } = renderWithClient();
+    await result.current.mutateAsync({
+      id: 1,
+      body: { options: [], option_moves: { opt_m: "opt_l" } },
+    } as any);
+    expect(invalidate).toHaveBeenCalledWith();
+  });
+
+  it("refreshes every cached list after removing answers", async () => {
+    mockUpdateDefinition.mockResolvedValue({} as any);
+    const { result, invalidate } = renderWithClient();
+    await result.current.mutateAsync({
+      id: 1,
+      body: { options: ["Cloud"], option_removals: ["Legacy"] },
+    } as any);
+    expect(invalidate).toHaveBeenCalledWith();
+  });
+
+  it("does not refresh every list for an update without moves", async () => {
+    mockUpdateDefinition.mockResolvedValue({} as any);
+    const { result, invalidate } = renderWithClient();
+    await result.current.mutateAsync({ id: 1, body: { label: "Updated" } } as any);
+    expect(invalidate).not.toHaveBeenCalledWith();
+  });
 });
 
 describe("useDeleteCustomFieldDefinition", () => {

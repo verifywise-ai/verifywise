@@ -17,6 +17,7 @@ export interface NewApprovalWorkflowStepFormErrors {
   step_name?: string;
   approver?: string;
   conditions?: string;
+  sla_hours?: string;
 }
 
 export interface ICreateApprovalWorkflowProps {
@@ -26,12 +27,14 @@ export interface ICreateApprovalWorkflowProps {
     workflow_title: string;
     entity: number;
     steps: ApprovalWorkflowStepModel[];
+    auto_approve_max_risk?: string | null;
   };
   isEdit?: boolean;
   onSuccess?: (data: {
     workflow_title: string;
     entity: number;
     steps: ApprovalWorkflowStepModel[];
+    auto_approve_max_risk: string | null;
   }) => void;
 }
 
@@ -63,6 +66,9 @@ export interface ITimelineStep {
   comment?: string;
   showDetailsLink?: boolean;
   approvalResult?: "approved" | "rejected" | "pending";
+  dueAt?: string | null;
+  escalatedAt?: string | null;
+  isOverdue?: boolean;
 }
 
 export interface IStepDetails {

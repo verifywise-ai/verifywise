@@ -190,7 +190,7 @@ describe("useDashboardMetrics", () => {
 
   it("should track progress steps during sequential fetch groups", async () => {
     // Use a slow mock to observe progress
-    let resolvers: (() => void)[] = [];
+    const resolvers: (() => void)[] = [];
     mockGetAllEntities.mockImplementation(
       () =>
         new Promise<any>((resolve) => {

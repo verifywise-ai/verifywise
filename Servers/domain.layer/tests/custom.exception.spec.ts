@@ -174,6 +174,19 @@ describe("ConflictException", () => {
     expect(ex.metadata.resource).toBe("User");
     expect(ex.metadata.conflictField).toBe("email");
   });
+
+  it("keeps resource and conflictField when extra metadata is passed", () => {
+    const ex = new ConflictException("In use", "custom_field_definition", "options", {
+      metadata: { code: "options_in_use" },
+    });
+    expect(ex.metadata).toEqual(
+      expect.objectContaining({
+        resource: "custom_field_definition",
+        conflictField: "options",
+        code: "options_in_use",
+      }),
+    );
+  });
 });
 
 describe("BusinessLogicException", () => {

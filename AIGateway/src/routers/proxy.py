@@ -482,36 +482,44 @@ async def proxy_embeddings(request: Request, body: ProxyEmbeddingRequest):
 
 @router.get("/v1/models")
 async def list_models_for_key(request: Request):
-    """List available endpoint slugs for the authenticated virtual key."""
+    """List the endpoint slugs this virtual key can actually call.
+
+    Applies the same checks as POST /v1/chat/completions: the key's endpoint
+    allowlist, an active endpoint with an active provider key, and the key's
+    model/provider ACLs.
+    """
     vk = await _extract_virtual_key(request)
-    from src.database.db import get_db
+    from database.db import get_db
     from sqlalchemy import text as sql_text
 
-    db = await get_db()
-    try:
-        allowed = vk.get("allowed_endpoint_ids") or []
-        if allowed:
-            result = await db.execute(
-                sql_text("""
-                    SELECT slug AS id, display_name AS name, provider, model
-                    FROM ai_gateway_endpoints
-                    WHERE organization_id = :org_id AND is_active = true
-                      AND id = ANY(:ids)
-                    ORDER BY display_name
-                """),
-                {"org_id": vk["organization_id"], "ids": allowed},
-            )
-        else:
-            result = await db.execute(
-                sql_text("""
-                    SELECT slug AS id, display_name AS name, provider, model
-                    FROM ai_gateway_endpoints
-                    WHERE organization_id = :org_id AND is_active = true
-                    ORDER BY display_name
-                """),
-                {"org_id": vk["organization_id"]},
-            )
-        models = [dict(r) for r in result.mappings().fetchall()]
-        return {"object": "list", "data": [{"id": m["id"], "object": "model", "owned_by": m["provider"]} for m in models]}
-    finally:
-        await db.close()
+    allowed = vk.get("allowed_endpoint_ids") or []
+    async with get_db() as db:
+        result = await db.execute(
+            # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            sql_text("""
+                SELECT e.id, e.slug, e.display_name, e.provider, e.model
+                FROM ai_gateway_endpoints e
+                JOIN ai_gateway_api_keys k ON e.api_key_id = k.id
+                WHERE e.organization_id = :org_id
+                  AND e.is_active = true
+                  AND k.is_active = true
+                ORDER BY e.display_name
+            """),
+            {"org_id": vk["organization_id"]},
+        )
+        endpoints = [dict(r) for r in result.mappings().fetchall()]
+
+    callable_endpoints = []
+    for endpoint in endpoints:
+        if allowed and endpoint["id"] not in allowed:
+            continue
+        try:
+            enforce_model_provider_acls(vk, endpoint)
+        except ValueError:
+            continue
+        callable_endpoints.append(endpoint)
+
+    return {
+        "object": "list",
+        "data": [{"id": e["slug"], "object": "model", "owned_by": e["provider"]} for e in callable_endpoints],
+    }

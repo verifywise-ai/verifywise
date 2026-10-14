@@ -13,6 +13,7 @@ export interface UserPreferences {
   date_format?: string;
   language?: UserLanguage;
   theme?: "light" | "dark" | "system";
+  parallel_agents?: boolean;
   [key: string]: unknown;
 }
 

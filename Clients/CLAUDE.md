@@ -1,6 +1,6 @@
 # Clients — Frontend Development Guide
 
-> **Last Updated:** 2026-10-01
+> **Last Updated:** 2026-10-13
 
 ---
 
@@ -55,10 +55,12 @@ npm install && npm run dev       # Start development
 npm run typecheck                # tsc -b — the ONLY thing that typechecks
 npm run build                    # Build → /dist (esbuild; does NOT typecheck)
 npx vitest run                   # Vitest, single run
-npm run lint                     # eslint . — repo-wide backlog, see below
+npm run lint                     # eslint . — 0 errors in src; warnings are backlog
 ```
 
-`npm run lint` currently reports a large pre-existing backlog (574 errors, 3075 warnings as of 2026-08-13), so a non-zero exit does not mean _you_ broke something. Compare against the baseline for the files you touched rather than reading the total.
+`src/` lints with 0 errors (2026-10-13), and the pre-commit hook runs `eslint --fix` on staged files, so a new error blocks the commit. The React Compiler rules from `eslint-plugin-react-hooks` v7 (`set-state-in-effect`, `refs`, `immutability`, `static-components`, `preserve-manual-memoization`, `purity`) are set to `warn` in `eslint.config.js` because of their pre-existing backlog (~4.5k warnings in total); raise each back to `error` once its findings are fixed.
+
+**TypeScript is installed twice.** `typescript` is an npm alias of `@typescript/typescript6` (the 6.0 API, which typescript-eslint needs: TS 7.0 ships no API), and `@typescript/native` is TypeScript 7, which provides `tsc`. `npm run typecheck` therefore checks with 7.0. Do not "fix" the alias back to `typescript@7` until typescript-eslint supports it, or eslint and the pre-commit hook crash again.
 
 **Always run `npm run typecheck` and `npm run build` before opening a PR.** Both are required: `build` is `node scripts/build.js`, which strips types with esbuild and never invokes `tsc`, so **type errors survive a green build**. A build that succeeds is not evidence the code typechecks.
 

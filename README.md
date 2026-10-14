@@ -371,4 +371,4 @@ You’ll need to open ports 80 and 443 so VerifyWise can be accessed from the in
 
 ## Security
 
-If you find a vulnerability, please report it [here](https://github.com/bluewave-labs/verifywise/security/advisories/new).
+If you find a vulnerability, please report it [here](https://github.com/verifywise-ai/verifywise/security/advisories/new).

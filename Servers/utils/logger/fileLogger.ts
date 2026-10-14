@@ -3,6 +3,7 @@ import DailyRotateFile from "winston-daily-rotate-file";
 import path from "path";
 import { getTenantIdForLogging, ensureTenantLogDirectory } from "../tenant/tenantContext";
 import { emitOtlpLog } from "../../observability/otel";
+import { getServerLogRetentionDays } from "./logRetention";
 
 const { combine, timestamp, printf, colorize } = format;
 const isDev = process.env.NODE_ENV !== "production";
@@ -52,7 +53,7 @@ function createTenantRotatingFileTransport(tenant: string): DailyRotateFile {
     filename: path.join(tenantLogDir, "app-%DATE%.log"),
     datePattern: "YYYY-MM-DD",
     maxSize: "10m",
-    maxFiles: "14d",
+    maxFiles: `${getServerLogRetentionDays()}d`,
     level: "info",
     utc: true, // Force UTC timezone to prevent date inconsistencies
   });

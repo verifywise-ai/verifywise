@@ -9,6 +9,7 @@ import {
   getRetentionCutoffQuery,
   pruneMetricsBatchQuery,
 } from "../../../../utils/mrmRetention.utils";
+import { safeRecordRetentionRun } from "../../../../utils/dataRetention.utils";
 import { getAllOrganizationsQuery } from "../../../../utils/organization.utils";
 
 jest.mock("../../../../utils/mrmSettings.utils", () => ({
@@ -17,6 +18,9 @@ jest.mock("../../../../utils/mrmSettings.utils", () => ({
 jest.mock("../../../../utils/mrmRetention.utils", () => ({
   getRetentionCutoffQuery: jest.fn(),
   pruneMetricsBatchQuery: jest.fn(),
+}));
+jest.mock("../../../../utils/dataRetention.utils", () => ({
+  safeRecordRetentionRun: jest.fn(),
 }));
 jest.mock("../../../../utils/organization.utils", () => ({
   getAllOrganizationsQuery: jest.fn(),
@@ -71,6 +75,58 @@ describe("runRetentionPrune", () => {
     expect(summary.batches).toBe(PRUNE_MAX_BATCHES);
     expect(summary.deleted).toBe(PRUNE_BATCH_SIZE * PRUNE_MAX_BATCHES);
     expect(summary.capped).toBe(true);
+  });
+
+  it("records an mrm_metrics run with the cutoff and outcome", async () => {
+    mockPruneBatch.mockResolvedValueOnce(42);
+    await runRetentionPrune(1);
+    expect(safeRecordRetentionRun).toHaveBeenCalledWith({
+      organizationId: 1,
+      recordType: "mrm_metrics",
+      cutoff: "2024-06-10 00:00:00+00",
+      deletedCount: 42,
+      status: "success",
+    });
+  });
+
+  it("records a capped run when the batch cap is hit", async () => {
+    mockPruneBatch.mockResolvedValue(PRUNE_BATCH_SIZE);
+    await runRetentionPrune(1);
+    expect(safeRecordRetentionRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "capped",
+        deletedCount: PRUNE_BATCH_SIZE * PRUNE_MAX_BATCHES,
+      }),
+    );
+  });
+
+  it("records a failed run with the rows deleted so far and rethrows", async () => {
+    mockPruneBatch
+      .mockResolvedValueOnce(PRUNE_BATCH_SIZE)
+      .mockRejectedValueOnce(new Error("statement timeout"));
+    await expect(runRetentionPrune(1)).rejects.toThrow("statement timeout");
+    expect(safeRecordRetentionRun).toHaveBeenCalledTimes(1);
+    expect(safeRecordRetentionRun).toHaveBeenCalledWith({
+      organizationId: 1,
+      recordType: "mrm_metrics",
+      cutoff: "2024-06-10 00:00:00+00",
+      deletedCount: PRUNE_BATCH_SIZE,
+      status: "failed",
+      error: expect.objectContaining({ message: "statement timeout" }),
+    });
+  });
+
+  it("records a failed run without a cutoff when the settings read fails", async () => {
+    mockSettings.mockRejectedValueOnce(new Error("settings down"));
+    await expect(runRetentionPrune(1)).rejects.toThrow("settings down");
+    expect(safeRecordRetentionRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cutoff: null,
+        deletedCount: 0,
+        status: "failed",
+        error: expect.objectContaining({ message: "settings down" }),
+      }),
+    );
   });
 
   it("uses the org's configured retention_months", async () => {

@@ -54,7 +54,14 @@ def _check_prompt_injection(input_text: str) -> list[str]:
 # ─── MCP Tool Input Scanning ───────────────────────────────────────────────
 
 async def scan_tool_input(
-    org_id: int, tool_name: str, arguments: dict, field_aware: bool = False
+    org_id: int,
+    tool_name: str,
+    arguments: dict,
+    field_aware: bool = False,
+    *,
+    # Required, so no caller can forget it: a call without the agent key would
+    # silently skip every rule scoped to specific agents.
+    agent_key_id: Optional[int],
 ) -> ScanResult:
     """
     Scan MCP tool call arguments through org guardrail rules.
@@ -97,9 +104,13 @@ async def scan_tool_input(
                       OR array_length(applies_to_tools, 1) IS NULL
                       OR :tool_name = ANY(applies_to_tools)
                   )
+                  AND (
+                      agent_scope = 'all'
+                      OR :agent_key_id = ANY(applies_to_agent_keys)
+                  )
                 ORDER BY created_at
             """),
-            {"org_id": org_id, "tool_name": tool_name},
+            {"org_id": org_id, "tool_name": tool_name, "agent_key_id": agent_key_id},
         )
         mcp_rules = [dict(r) for r in rules_result.mappings().fetchall()]
 
@@ -145,14 +156,19 @@ async def scan_tool_input(
     if injection_rules:
         matched_patterns = _check_prompt_injection(input_text)
         if matched_patterns:
-            # Use action from the first prompt_injection rule
-            injection_action = injection_rules[0].get("action", "block")
+            # The strictest matching rule decides: a block rule (for example
+            # one scoped to this agent) wins over an earlier mask rule.
+            injection_rule = next(
+                (r for r in injection_rules if r.get("action", "block") == "block"),
+                injection_rules[0],
+            )
+            injection_action = injection_rule.get("action", "block")
             from services.guardrail_service import Detection
 
             for pattern_name in matched_patterns:
                 result.detections.append(
                     Detection(
-                        guardrail_id=injection_rules[0].get("id"),
+                        guardrail_id=injection_rule.get("id"),
                         guardrail_type="prompt_injection",
                         entity_type=pattern_name,
                         action=injection_action,
@@ -163,21 +179,52 @@ async def scan_tool_input(
                     )
                 )
 
-            if injection_action == "block":
+            # Keep an earlier block's reason: the reason describes the first
+            # blocking detection, which is the rule blocking_rule() records.
+            if injection_action == "block" and not result.blocked:
                 result.blocked = True
                 result.block_reason = (
                     f"prompt_injection: {matched_patterns[0]} detected"
                 )
 
+    result.rule_names = {r["id"]: r["name"] for r in mcp_rules}
     result.execution_time_ms = int((time.time() - start_time) * 1000)
     return result
 
 
-async def scan_result_blob(org_id: int, blob: str) -> str:
+def blocking_rule(
+    result: ScanResult, *, include_mask: bool = False
+) -> tuple[Optional[int], Optional[str]]:
+    """The id and name of the rule that caused a block.
+
+    That is the first detection whose action is "block" (the one block_reason
+    describes), not simply the first detection, which can be a non-blocking mask
+    hit. With include_mask (the hook path escalates a mask hit to a deny), a mask
+    detection counts when nothing blocked outright.
+    """
+    detection = next((d for d in result.detections if d.action == "block"), None)
+    if detection is None and include_mask:
+        detection = next((d for d in result.detections if d.action == "mask"), None)
+    if detection is None or detection.guardrail_id is None:
+        return None, None
+    return detection.guardrail_id, result.rule_names.get(detection.guardrail_id)
+
+
+async def scan_result_blob(
+    org_id: int,
+    blob: str,
+    *,
+    # Required for the same reason as in scan_tool_input.
+    agent_key_id: Optional[int],
+) -> str:
     """Mask PII / filtered content in a flat result string (tool stdout/stderr,
     serialized tool_response). Returns the masked string. Never blocks — a tool
     result has already been produced; we only sanitize what we store at rest.
-    Fails open (returns the original blob) on any error."""
+    Fails open (returns the original blob) on any error.
+
+    Rules apply by agent scope, as on the input side. Tool scope is not applied:
+    the result's tool name comes from the client, unauthenticated, while the
+    agent key is the caller's own credential."""
     if not blob or not blob.strip():
         return blob
     try:
@@ -187,9 +234,13 @@ async def scan_result_blob(org_id: int, blob: str) -> str:
                     SELECT id, name, rule_type, config, scope, action
                     FROM ai_gateway_mcp_guardrail_rules
                     WHERE organization_id = :org_id AND is_active = true
+                      AND (
+                          agent_scope = 'all'
+                          OR :agent_key_id = ANY(applies_to_agent_keys)
+                      )
                     ORDER BY created_at
                 """),
-                {"org_id": org_id},
+                {"org_id": org_id, "agent_key_id": agent_key_id},
             )
             mcp_rules = [dict(r) for r in rules_result.mappings().fetchall()]
             settings_result = await db.execute(

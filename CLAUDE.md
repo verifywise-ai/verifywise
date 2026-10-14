@@ -1,6 +1,6 @@
 # VerifyWise - Development Guide
 
-> **Last Updated:** 2026-10-01
+> **Last Updated:** 2026-10-11
 
 This document contains cross-cutting rules for the VerifyWise codebase. Directory-scoped guides load automatically when working in each area:
 
@@ -214,6 +214,7 @@ Read the relevant file BEFORE implementing changes in that area:
 | AI Trust Index | `docs/technical/domains/ai-trust-index.md` |
 | Readiness scoring (requirements + assessments + evidence) | `docs/technical/domains/readiness.md` |
 | Model Risk Management (MRM: bank model-risk governance — tiering, validation, findings, monitoring/ingestion, threshold eval, revalidation triggers, attestation; SR 26-2 / SS1/23 / OSFI E-23) | `docs/technical/domains/mrm.md` |
+| Data retention (audit record periods, ledger pruning and checkpoints, daily prune job, AI Gateway auto purge) | `docs/technical/domains/data-retention.md` |
 | AI Detection | `docs/technical/domains/ai-detection.md` |
 | Risk management | `docs/technical/domains/risk-management.md` |
 | Vendors | `docs/technical/domains/vendors.md` |

@@ -2,8 +2,18 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useTheme } from "@mui/material";
 import { PROVIDER_ICONS } from "../../components/ProviderIcons";
 import { apiServices } from "../../../infrastructure/api/networkServices";
+import palette from "../../themes/palette";
 
 export const sectionTitleSx = { fontWeight: 600, fontSize: 16 };
+
+/** Section label inside the agent-control drawers. */
+export const drawerLabelSx = {
+  fontSize: 11,
+  fontWeight: 600,
+  color: palette.text.tertiary,
+  letterSpacing: "0.5px",
+  mb: "6px",
+};
 
 /** Guardrail action colors — blocked (red) and masked (amber) */
 export const GUARDRAIL_ACTION_COLORS = { blocked: "#DC2626", masked: "#D97706" } as const;
@@ -24,6 +34,9 @@ export const MCP_STATUS_COLORS: Record<string, { bg: string; text: string }> = {
 } as const;
 
 export const MCP_STATUS_FALLBACK = { bg: "#F3F4F6", text: "#374151" } as const;
+
+/** A stored tool-call status ("approval_required") as screen text ("approval required"). */
+export const formatMcpStatus = (status: string) => status.replace(/_/g, " ");
 
 export function useCardSx() {
   const theme = useTheme();
@@ -92,19 +105,24 @@ export function ProviderIcon({ provider, size = 16 }: { provider: string; size?:
 
 // ─── Shared constants ─────────────────────────────────────────────────────────
 
-/** Top LLM providers for Select dropdowns */
-export const TOP_PROVIDERS = [
+/**
+ * Providers an API key can be stored for. Must match VALID_PROVIDERS in
+ * AIGateway/src/routers/api_keys.py, which rejects anything else. Each of these
+ * works with a single API key; providers that also need a base URL, API version
+ * or cloud credentials (Azure OpenAI, AWS Bedrock) are not supported yet.
+ */
+export const API_KEY_PROVIDERS = [
   { _id: "openai", name: "OpenAI" },
   { _id: "anthropic", name: "Anthropic" },
   { _id: "gemini", name: "Google Gemini" },
   { _id: "mistral", name: "Mistral" },
   { _id: "xai", name: "xAI" },
   { _id: "openrouter", name: "OpenRouter" },
-  { _id: "bedrock", name: "AWS Bedrock" },
-  { _id: "azure", name: "Azure OpenAI" },
   { _id: "together_ai", name: "Together AI" },
   { _id: "cohere", name: "Cohere" },
 ];
+
+const API_KEY_PROVIDER_IDS = new Set(API_KEY_PROVIDERS.map((p) => p._id));
 
 /**
  * Hook: fetch models from the AI Gateway (LiteLLM registry) and provide
@@ -132,9 +150,10 @@ export function useGatewayModels() {
         const allModels: Record<string, { id: string; provider: string; mode: string }[]> =
           data.models || {};
 
-        // Only keep providers that have chat models
+        // Only keep providers that an API key can be stored for and that have chat models
         const filtered: Record<string, { id: string; mode: string }[]> = {};
         for (const p of allProviders) {
+          if (!API_KEY_PROVIDER_IDS.has(p)) continue;
           const models = (allModels[p] || [])
             .filter((m: any) => m.mode === "chat" || m.mode === "completion")
             .sort((a: any, b: any) => a.id.localeCompare(b.id));

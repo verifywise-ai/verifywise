@@ -6,11 +6,27 @@ import {
   ForbiddenException,
   ConflictException,
 } from "../domain.layer/exceptions/custom.exception";
+import {
+  IScoredOption,
+  OPTION_MAX,
+  OPTION_MIN,
+  OPTIONS_IN_USE,
+  removedOptions,
+  validateOptionMoves,
+  validateOptionRemovals,
+  validateScoredOptions,
+} from "./customFieldScoredSelect.utils";
+import {
+  ClearedAnswers,
+  diffDefinitionForLedger,
+  MovedAnswers,
+  recordDefinitionChanges,
+} from "./customFieldAudit.utils";
 
 // ---------- Types ----------
 
 export type CustomFieldType =
-  "text" | "number" | "date" | "boolean" | "select" | "multiselect" | "user";
+  "text" | "number" | "date" | "boolean" | "select" | "multiselect" | "user" | "scored_select";
 
 export type CustomFieldEntityType =
   | "vendor"
@@ -38,7 +54,7 @@ export interface ICustomFieldDefinition {
   field_key: string;
   label: string;
   field_type: CustomFieldType;
-  options: string[] | null;
+  options: string[] | IScoredOption[] | null;
   required: boolean;
   created_by: number | null;
   created_at: Date;
@@ -66,13 +82,12 @@ const FIELD_TYPES: ReadonlySet<CustomFieldType> = new Set([
   "select",
   "multiselect",
   "user",
+  "scored_select",
 ]);
 
 const FIELD_KEY_PATTERN = /^[a-z][a-z0-9_]{0,63}$/;
 const LABEL_MIN = 1;
 const LABEL_MAX = 255;
-const OPTION_MIN = 1;
-const OPTION_MAX = 255;
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?)?$/;
 
 // entity_type -> the SQL table that owns the entity. Used to verify the
@@ -112,13 +127,24 @@ const assertEntityType = (v: unknown): CustomFieldEntityType => {
   return v;
 };
 
-const validateOptionsForType = (fieldType: CustomFieldType, options: unknown): string[] | null => {
+const stringOptionsOf = (def: ICustomFieldDefinition): string[] =>
+  def.field_type === "scored_select" ? [] : ((def.options ?? []) as string[]);
+
+const validateOptionsForType = (
+  fieldType: CustomFieldType,
+  options: unknown,
+  existing: IScoredOption[] | null = null,
+): string[] | IScoredOption[] | null => {
+  if (fieldType === "scored_select") {
+    return validateScoredOptions(options, existing);
+  }
+
   const needsOptions = fieldType === "select" || fieldType === "multiselect";
 
   if (!needsOptions) {
     if (options !== null && options !== undefined) {
       throw new ValidationException(
-        "options is only allowed for select/multiselect fields",
+        "options is only allowed for select, multiselect and scored select fields",
         "options",
       );
     }
@@ -177,7 +203,7 @@ const validateDefinitionInput = (input: {
   field_key: string;
   label: string;
   field_type: CustomFieldType;
-  options: string[] | null;
+  options: string[] | IScoredOption[] | null;
   required: boolean;
 } => {
   const entity_type = assertEntityType(input.entity_type);
@@ -253,7 +279,7 @@ const validateValueForDefinition = async (
       return raw;
     }
     case "select": {
-      if (typeof raw !== "string" || !def.options?.includes(raw)) {
+      if (typeof raw !== "string" || !stringOptionsOf(def).includes(raw)) {
         throw new ValidationException("Value must be one of the allowed options", "value", raw);
       }
       return raw;
@@ -264,13 +290,20 @@ const validateValueForDefinition = async (
       }
       const seen = new Set<string>();
       for (const v of raw) {
-        if (typeof v !== "string" || !def.options?.includes(v)) {
+        if (typeof v !== "string" || !stringOptionsOf(def).includes(v)) {
           throw new ValidationException("All values must match the allowed options", "value", v);
         }
         if (seen.has(v)) {
           throw new ValidationException("Duplicate value in multiselect", "value", v);
         }
         seen.add(v);
+      }
+      return raw;
+    }
+    case "scored_select": {
+      const options = (def.options ?? []) as IScoredOption[];
+      if (typeof raw !== "string" || !options.some((o) => o.id === raw)) {
+        throw new ValidationException("Value must be one of the allowed options", "value", raw);
       }
       return raw;
     }
@@ -365,13 +398,185 @@ export const getCustomFieldDefinitionByIdQuery = async (
   return rows[0] ?? null;
 };
 
+/**
+ * Read a definition inside a transaction with a row lock. A definition update
+ * takes FOR UPDATE; a value write takes FOR SHARE. The two then serialize, so a
+ * value can never be validated against options a concurrent update removes.
+ */
+export const selectDefinitionForLock = async (
+  id: number,
+  organizationId: number,
+  transaction: Transaction,
+  lock: "SHARE" | "UPDATE",
+): Promise<ICustomFieldDefinition | null> => {
+  const sql =
+    lock === "UPDATE"
+      ? `SELECT * FROM custom_field_definitions
+           WHERE id = :id AND organization_id = :organizationId FOR UPDATE`
+      : `SELECT * FROM custom_field_definitions
+           WHERE id = :id AND organization_id = :organizationId FOR SHARE`;
+  const rows = (await sequelize.query(sql, {
+    replacements: { id, organizationId },
+    type: QueryTypes.SELECT,
+    transaction,
+  })) as ICustomFieldDefinition[];
+  return rows[0] ?? null;
+};
+
+/** Value counts for one field, keyed by the stored value as text (an option id for scored selects). */
+const countValuesByKey = async (
+  id: number,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<Record<string, number>> => {
+  const rows = (await sequelize.query(
+    `SELECT value #>> '{}' AS option_key, COUNT(*)::int AS count
+       FROM custom_field_values
+      WHERE definition_id = :id AND organization_id = :organizationId
+      GROUP BY 1`,
+    { replacements: { id, organizationId }, type: QueryTypes.SELECT, transaction },
+  )) as Array<{ option_key: string; count: number }>;
+  return toCounts(rows);
+};
+
+/**
+ * Counts keyed by option, with no prototype: plain option text is free text,
+ * and a key such as "constructor" must not resolve to an inherited member.
+ */
+const toCounts = (rows: Array<{ option_key: string; count: number }>): Record<string, number> =>
+  Object.assign(
+    Object.create(null),
+    Object.fromEntries(rows.map((r) => [r.option_key, Number(r.count)])),
+  );
+
+const sumCounts = (counts: Record<string, number>): number =>
+  Object.values(counts).reduce((a, b) => a + b, 0);
+
+/**
+ * Records per option. A multiselect record counts once for each option it
+ * contains; other types store one option per record (see countValuesByKey).
+ */
+const countAnswersByOption = async (
+  definition: ICustomFieldDefinition,
+  transaction?: Transaction,
+): Promise<Record<string, number>> => {
+  if (definition.field_type !== "multiselect") {
+    return countValuesByKey(definition.id, definition.organization_id, transaction);
+  }
+  const rows = (await sequelize.query(
+    `SELECT option_key, COUNT(*)::int AS count
+       FROM custom_field_values v,
+            jsonb_array_elements_text(
+              CASE WHEN jsonb_typeof(v.value) = 'array' THEN v.value ELSE '[]'::jsonb END
+            ) AS option_key
+      WHERE v.definition_id = :id AND v.organization_id = :organizationId
+      GROUP BY 1`,
+    {
+      replacements: { id: definition.id, organizationId: definition.organization_id },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  )) as Array<{ option_key: string; count: number }>;
+  return toCounts(rows);
+};
+
+const OPTION_LIST_TYPES: ReadonlySet<CustomFieldType> = new Set([
+  "select",
+  "multiselect",
+  "scored_select",
+]);
+
+/**
+ * Options keyed the way records store them: scored options by id, plain
+ * select and multiselect options by their text.
+ */
+const optionKeys = (
+  fieldType: CustomFieldType,
+  options: unknown,
+): Array<{ id: string; label: string }> =>
+  fieldType === "scored_select"
+    ? ((options ?? []) as IScoredOption[])
+    : ((options ?? []) as string[]).map((o) => ({ id: o, label: o }));
+
+/** Point every record holding the removed option at the target option. */
+const MOVE_SINGLE_SQL = `
+  UPDATE custom_field_values
+     SET value = to_jsonb(CAST(:target AS text)), updated_at = NOW()
+   WHERE definition_id = :id AND organization_id = :organizationId
+     AND value = to_jsonb(CAST(:removed AS text))
+  RETURNING 1`;
+
+/**
+ * Replace the removed option with the target in each multiselect list that
+ * contains it. A list that already has the target keeps one copy, at its
+ * first position; the other options keep their order.
+ */
+const MOVE_MULTISELECT_SQL = `
+  UPDATE custom_field_values
+     SET value = (
+           SELECT jsonb_agg(option ORDER BY first_pos)
+             FROM (
+               SELECT CASE WHEN raw = CAST(:removed AS text) THEN CAST(:target AS text) ELSE raw END
+                        AS option,
+                      MIN(pos) AS first_pos
+                 FROM jsonb_array_elements_text(value) WITH ORDINALITY AS t(raw, pos)
+                GROUP BY 1
+             ) deduped
+         ),
+         updated_at = NOW()
+   WHERE definition_id = :id AND organization_id = :organizationId
+     AND jsonb_typeof(value) = 'array'
+     AND value @> jsonb_build_array(CAST(:removed AS text))
+  RETURNING 1`;
+
+/** Delete the value of every record holding the removed option. */
+const CLEAR_SINGLE_SQL = `
+  DELETE FROM custom_field_values
+   WHERE definition_id = :id AND organization_id = :organizationId
+     AND value = to_jsonb(CAST(:removed AS text))
+  RETURNING 1`;
+
+/** Drop the removed option from each multiselect list that contains it. */
+const CLEAR_MULTISELECT_SQL = `
+  UPDATE custom_field_values
+     SET value = value - CAST(:removed AS text), updated_at = NOW()
+   WHERE definition_id = :id AND organization_id = :organizationId
+     AND jsonb_typeof(value) = 'array'
+     AND value @> jsonb_build_array(CAST(:removed AS text))
+  RETURNING 1`;
+
+/** An empty multiselect is not a valid answer: delete lists a removal emptied. */
+const DELETE_EMPTY_LISTS_SQL = `
+  DELETE FROM custom_field_values
+   WHERE definition_id = :id AND organization_id = :organizationId
+     AND value = '[]'::jsonb`;
+
+export const getCustomFieldUsageQuery = async (
+  id: number,
+  organizationId: number,
+): Promise<{ total: number; by_option: Record<string, number> } | null> => {
+  assertPositiveInt(id, "id");
+  assertPositiveInt(organizationId, "organizationId");
+  const definition = await getCustomFieldDefinitionByIdQuery(id, organizationId);
+  if (!definition) return null;
+  // One value row per record, so the per-value counts add up to the record
+  // count. Only multiselect needs a second, per-option query.
+  const byValue = await countValuesByKey(id, organizationId);
+  const byOption =
+    definition.field_type === "multiselect" ? await countAnswersByOption(definition) : byValue;
+  return {
+    total: sumCounts(byValue),
+    by_option: OPTION_LIST_TYPES.has(definition.field_type) ? byOption : {},
+  };
+};
+
 export const createCustomFieldDefinitionQuery = async (
   input: {
     entity_type: CustomFieldEntityType;
     field_key: string;
     label: string;
     field_type: CustomFieldType;
-    options?: string[] | null;
+    options?: unknown;
     required?: boolean;
   },
   organizationId: number,
@@ -406,7 +611,14 @@ export const createCustomFieldDefinitionQuery = async (
       },
     )) as ICustomFieldDefinition[];
 
-    return rows[0];
+    const created = rows[0];
+    await recordDefinitionChanges(
+      organizationId,
+      userId,
+      created.id,
+      diffDefinitionForLedger(null, created),
+    );
+    return created;
   } catch (err: any) {
     if (err?.original?.code === "23505") {
       throw new ConflictException(
@@ -422,66 +634,197 @@ export const createCustomFieldDefinitionQuery = async (
 export const updateCustomFieldDefinitionQuery = async (
   id: number,
   organizationId: number,
-  patch: { label?: string; required?: boolean; options?: string[] | null },
+  patch: {
+    label?: unknown;
+    required?: unknown;
+    options?: unknown;
+    option_moves?: unknown;
+    option_removals?: unknown;
+  },
+  userId: number | null = null,
 ): Promise<ICustomFieldDefinition> => {
   assertPositiveInt(id, "id");
   assertPositiveInt(organizationId, "organizationId");
 
-  // field_type, field_key, entity_type are immutable on update — changing them
-  // would invalidate existing values. Force a create + delete instead.
-  const existing = await getCustomFieldDefinitionByIdQuery(id, organizationId);
-  if (!existing) {
-    throw new NotFoundException("Custom field definition not found", "custom_field_definition", id);
+  const transaction = await sequelize.transaction();
+  // Assigned inside the try; the catch always rethrows.
+  let before!: ICustomFieldDefinition;
+  let after!: ICustomFieldDefinition;
+  const moved: MovedAnswers[] = [];
+  const cleared: ClearedAnswers[] = [];
+  try {
+    // field_type, field_key, entity_type are immutable on update — changing them
+    // would invalidate existing values. Force a create + delete instead.
+    const existing = await selectDefinitionForLock(id, organizationId, transaction, "UPDATE");
+    if (!existing) {
+      throw new NotFoundException(
+        "Custom field definition not found",
+        "custom_field_definition",
+        id,
+      );
+    }
+    before = existing;
+    const isScored = existing.field_type === "scored_select";
+    for (const key of ["option_moves", "option_removals"] as const) {
+      const given = patch[key] !== undefined && patch[key] !== null;
+      if (given && !OPTION_LIST_TYPES.has(existing.field_type)) {
+        throw new ValidationException(
+          `${key} is only allowed for select, multiselect and scored select fields`,
+          key,
+        );
+      }
+    }
+
+    const label = patch.label !== undefined ? validateLabel(patch.label) : existing.label;
+    const required = patch.required !== undefined ? Boolean(patch.required) : existing.required;
+    const options =
+      patch.options !== undefined
+        ? validateOptionsForType(
+            existing.field_type,
+            patch.options,
+            isScored ? ((existing.options ?? []) as IScoredOption[]) : null,
+          )
+        : existing.options;
+
+    if (OPTION_LIST_TYPES.has(existing.field_type)) {
+      // Scored options are matched by id; plain options by their text, which is
+      // also what records store, so renaming a plain option removes the old one.
+      const prev = optionKeys(existing.field_type, existing.options);
+      const next = optionKeys(existing.field_type, options);
+      const removed = removedOptions(prev, next);
+      const moves = validateOptionMoves(patch.option_moves, removed, next);
+      const removals = validateOptionRemovals(patch.option_removals, removed, moves);
+      if (removed.length > 0) {
+        const counts = await countAnswersByOption(existing, transaction);
+        const inUse = removed
+          .filter((o) => (counts[o.id] ?? 0) > 0 && !moves[o.id] && !removals.has(o.id))
+          .map((o) => ({ id: o.id, label: o.label, count: counts[o.id] }));
+        if (inUse.length > 0) {
+          throw new ConflictException(
+            "Some removed options are in use. Choose where to move their answers.",
+            "custom_field_definition",
+            "options",
+            {
+              metadata: { code: OPTIONS_IN_USE, in_use: inUse, entity_type: existing.entity_type },
+            },
+          );
+        }
+        for (const option of removed) {
+          if (removals.has(option.id) && counts[option.id]) {
+            const rows = await sequelize.query(
+              existing.field_type === "multiselect" ? CLEAR_MULTISELECT_SQL : CLEAR_SINGLE_SQL,
+              {
+                replacements: { removed: option.id, id, organizationId },
+                type: QueryTypes.SELECT,
+                transaction,
+              },
+            );
+            cleared.push({ from: { id: option.id, label: option.label }, count: rows.length });
+            continue;
+          }
+          const target = moves[option.id];
+          // Nothing to move when no record uses the option; skip the no-op write and ledger line.
+          if (!target || !counts[option.id]) continue;
+          const rows = await sequelize.query(
+            existing.field_type === "multiselect" ? MOVE_MULTISELECT_SQL : MOVE_SINGLE_SQL,
+            {
+              replacements: { target, removed: option.id, id, organizationId },
+              type: QueryTypes.SELECT,
+              transaction,
+            },
+          );
+          const to = next.find((o) => o.id === target)!;
+          moved.push({
+            from: { id: option.id, label: option.label },
+            to: { id: to.id, label: to.label },
+            count: rows.length,
+          });
+        }
+        if (existing.field_type === "multiselect" && cleared.length > 0) {
+          await sequelize.query(DELETE_EMPTY_LISTS_SQL, {
+            replacements: { id, organizationId },
+            transaction,
+          });
+        }
+      }
+    }
+
+    const rows = (await sequelize.query(
+      `UPDATE custom_field_definitions
+          SET label = :label,
+              required = :required,
+              options = CAST(:options AS JSONB),
+              updated_at = NOW()
+        WHERE id = :id AND organization_id = :organizationId
+        RETURNING *`,
+      {
+        replacements: {
+          id,
+          organizationId,
+          label,
+          required,
+          options: options ? JSON.stringify(options) : null,
+        },
+        type: QueryTypes.SELECT,
+        transaction,
+      },
+    )) as ICustomFieldDefinition[];
+    after = rows[0];
+    await transaction.commit();
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
   }
 
-  const label = patch.label !== undefined ? validateLabel(patch.label) : existing.label;
-  const required = patch.required !== undefined ? Boolean(patch.required) : existing.required;
-  const options =
-    patch.options !== undefined
-      ? validateOptionsForType(existing.field_type, patch.options)
-      : existing.options;
-
-  const rows = (await sequelize.query(
-    `UPDATE custom_field_definitions
-        SET label = :label,
-            required = :required,
-            options = CAST(:options AS JSONB),
-            updated_at = NOW()
-      WHERE id = :id AND organization_id = :organizationId
-      RETURNING *`,
-    {
-      replacements: {
-        id,
-        organizationId,
-        label,
-        required,
-        options: options ? JSON.stringify(options) : null,
-      },
-      type: QueryTypes.SELECT,
-    },
-  )) as ICustomFieldDefinition[];
-
-  return rows[0];
+  await recordDefinitionChanges(
+    organizationId,
+    userId,
+    id,
+    diffDefinitionForLedger(before, after, { moved, cleared }),
+  );
+  return after;
 };
 
 export const deleteCustomFieldDefinitionQuery = async (
   id: number,
   organizationId: number,
+  userId: number | null = null,
 ): Promise<boolean> => {
   assertPositiveInt(id, "id");
   assertPositiveInt(organizationId, "organizationId");
 
-  // Cascade on FK removes all values for this definition.
-  const rows = await sequelize.query(
-    `DELETE FROM custom_field_definitions
-       WHERE id = :id AND organization_id = :organizationId
-       RETURNING id`,
-    {
-      replacements: { id, organizationId },
-      type: QueryTypes.SELECT,
-    },
+  const transaction = await sequelize.transaction();
+  // Assigned inside the try; the catch always rethrows.
+  let deleted!: ICustomFieldDefinition;
+  let lostAnswers!: number;
+  try {
+    const existing = await selectDefinitionForLock(id, organizationId, transaction, "UPDATE");
+    if (!existing) {
+      await transaction.rollback();
+      return false;
+    }
+    lostAnswers = sumCounts(await countValuesByKey(id, organizationId, transaction));
+    // Cascade on FK removes all values for this definition.
+    await sequelize.query(
+      `DELETE FROM custom_field_definitions
+         WHERE id = :id AND organization_id = :organizationId
+         RETURNING id`,
+      { replacements: { id, organizationId }, type: QueryTypes.SELECT, transaction },
+    );
+    deleted = existing;
+    await transaction.commit();
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+
+  await recordDefinitionChanges(
+    organizationId,
+    userId,
+    id,
+    diffDefinitionForLedger(deleted, null, { lostAnswers }),
   );
-  return rows.length > 0;
+  return true;
 };
 
 // ---------- Public: values ----------
@@ -499,7 +842,13 @@ export const setCustomFieldValueQuery = async (
   const definitionId = assertPositiveInt(args.definition_id, "definition_id");
   const entityId = assertPositiveInt(args.entity_id, "entity_id");
 
-  const definition = await getCustomFieldDefinitionByIdQuery(definitionId, organizationId);
+  // Inside the caller's transaction, lock the definition (see
+  // selectDefinitionForLock). The type isn't known before the read, so every
+  // value write takes the shared lock; it only blocks a concurrent definition
+  // update of the same field.
+  const definition = transaction
+    ? await selectDefinitionForLock(definitionId, organizationId, transaction, "SHARE")
+    : await getCustomFieldDefinitionByIdQuery(definitionId, organizationId);
   if (!definition) {
     throw new NotFoundException(
       "Custom field definition not found",

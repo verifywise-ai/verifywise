@@ -20,6 +20,7 @@
  * - tokenRefreshLimiter: 60/15min — automatic access-token refresh
  * - fileOperationsLimiter: 100/15min — file uploads, downloads, deletions
  * - aiDetectionScanLimiter: 10/hour — expensive scans
+ * - riskSuggestionsAiLimiter: 10/hour, keyed by user — LLM-backed risk suggestions
  * - mrmIngestionLimiter: 5000/15min, keyed by token — machine-to-machine push
  * - webhookLimiter: 100/min — inbound signature-verified webhooks
  * - passwordResetEmailLimiter / inviteEmailLimiter / invitationResendLimiter:
@@ -106,6 +107,22 @@ export const buildRateLimitConfigs = (relaxed: boolean): Record<string, RateLimi
     windowMinutes: 60,
     maxRequests: 10,
     message: "Too many AI detection scan requests from this IP, please try again after 60 minutes",
+  },
+  // AI risk suggestions cost one paid LLM call per request. Same 10/hour
+  // value as aiDetectionScan, but keyed per-USER rather than per-IP: the cost
+  // is billed to the org's own LLM key, so the budget belongs to the account
+  // spending it — and a shared office NAT must not let one user exhaust
+  // everyone's allowance. authenticateJWT runs before this limiter, so
+  // req.userId is present for every real request; the IP branch is a
+  // defensive fallback (ipKeyGenerator for IPv6-safe normalization).
+  riskSuggestionsAi: {
+    windowMinutes: 60,
+    maxRequests: 10,
+    message: "Too many AI risk suggestion requests, please try again after 60 minutes",
+    keyGenerator: (req) => {
+      const userId = (req as { userId?: number }).userId;
+      return userId !== undefined ? `user:${userId}` : ipKeyGenerator(req.ip ?? "");
+    },
   },
   // MRM metric ingestion is a machine-to-machine push from a customer's
   // monitoring pipeline. It is legitimately high-volume (a nightly job may push
@@ -248,6 +265,13 @@ export const tokenRefreshLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.tokenRef
  * Moderate limits as scans are resource-intensive
  */
 export const aiDetectionScanLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.aiDetectionScan);
+
+/**
+ * Rate limiter for AI-generated risk suggestions (POST /projectRisks/suggest-ai).
+ * Keyed per-user: each request spends the org's own LLM budget, so the
+ * allowance follows the account, not the network.
+ */
+export const riskSuggestionsAiLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.riskSuggestionsAi);
 
 /**
  * Dedicated rate limiter for the MRM metric-ingestion push endpoint.

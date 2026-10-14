@@ -1,7 +1,6 @@
 import litellm
 from fastapi import APIRouter, Request
 
-from middlewares.auth import verify_internal_key
 from services.cost_service import validate_model
 
 router = APIRouter()
@@ -42,7 +41,6 @@ def build_models_grouped() -> dict:
 @router.get("/v1/models")
 async def list_models(request: Request):
     """Return list of supported models grouped by provider."""
-    verify_internal_key(request)
     return build_models_grouped()
 
 
@@ -98,7 +96,6 @@ def build_model_catalog() -> list:
 @router.get("/v1/models/catalog")
 async def model_catalog(request: Request):
     """Return full model catalog with pricing and feature metadata."""
-    verify_internal_key(request)
     catalog = build_model_catalog()
     return {"models": catalog, "total": len(catalog)}
 
@@ -106,7 +103,6 @@ async def model_catalog(request: Request):
 @router.get("/v1/models/{model:path}/validate")
 async def validate_model_endpoint(request: Request, model: str):
     """Validate a model string and return its info."""
-    verify_internal_key(request)
 
     info = validate_model(model)
     if info is None:

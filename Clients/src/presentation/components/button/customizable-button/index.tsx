@@ -98,8 +98,8 @@ const CustomizableButton = memo(
       fullWidth = false,
       className,
       title,
-      indicator,
-      textColor,
+      indicator: _indicator,
+      textColor: _textColor,
       iconOnly = false,
       ...rest
     },
@@ -119,21 +119,6 @@ const CustomizableButton = memo(
         onClick?.(event);
       },
       [onClick, loading, isDisabled],
-    );
-
-    // Handle keyboard events for accessibility
-    const handleKeyDown = useCallback(
-      (event: React.KeyboardEvent<HTMLButtonElement>) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          if (!loading && !isDisabled) {
-            // For keyboard accessibility, call handleClick directly
-            // We need to create a proper synthetic event to avoid TypeScript errors
-            handleClick(event as unknown as React.MouseEvent<HTMLButtonElement>);
-          }
-        }
-      },
-      [handleClick, loading, isDisabled],
     );
 
     const sizeKey = size === "small" ? "small" : "medium";
@@ -157,7 +142,10 @@ const CustomizableButton = memo(
       />
     );
 
-    const { selectionFollowsFocus, ...filteredRest } = rest as Record<string, unknown>;
+    const { selectionFollowsFocus: _selectionFollowsFocus, ...filteredRest } = rest as Record<
+      string,
+      unknown
+    >;
 
     return (
       <Button
@@ -169,7 +157,6 @@ const CustomizableButton = memo(
         disabled={isDisabled || loading}
         color={color as ButtonProps["color"]}
         onClick={handleClick}
-        onKeyDown={handleKeyDown}
         type={type}
         fullWidth={fullWidth}
         title={title}

@@ -5,7 +5,8 @@ import { createISO27001FrameworkQuery } from "../../utils/iso27001.utils";
 import { createDataGovernanceFrameworkQuery } from "../../utils/frameworkRegistry.utils";
 import { createAiAppQuery } from "../../utils/aiApp.utils";
 import { sequelize } from "../../database/db";
-import { createNewProjectQuery, deleteProjectByIdQuery } from "../../utils/project.utils";
+import { createNewProjectQuery, lockProjectForDelete } from "../../utils/project.utils";
+import { deleteProjectWithSideEffects } from "../../utils/projectDeletion.utils";
 import { createRiskQuery } from "../../utils/risk.utils";
 import { createNewVendorQuery } from "../../utils/vendor.utils";
 import { createNewVendorRiskQuery } from "../../utils/vendorRisk.utils";
@@ -1195,10 +1196,16 @@ export async function deleteMockData(organizationId: number) {
     // 9. Delete demo projects (this will also delete projects_frameworks, projects_members, files, etc.)
     const demoProjects = (await getData("projects", organizationId, transaction)) as ProjectModel[];
     for (let project of demoProjects) {
-      // Delete NIST AI RMF framework data first
+      // Lock the project first, like every other deletion path, then the
+      // NIST AI RMF framework data, then the project itself (no approval
+      // withdrawal or change history for demo data, as before).
+      await lockProjectForDelete(project.id!, organizationId, transaction);
       await deleteProjectFrameworkNISTQuery(project.id!, organizationId, transaction);
-      // Then delete the project
-      await deleteProjectByIdQuery(project.id!, organizationId, transaction);
+      await deleteProjectWithSideEffects(project.id!, organizationId, transaction, {
+        alreadyLocked: true,
+        withdrawApproval: false,
+        recordHistory: false,
+      });
     }
 
     // 10. Delete demo users (last, as they may be referenced by other entities)

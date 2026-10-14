@@ -4,7 +4,7 @@ A large, cross-functional software-company roster of AI agents for product disco
 
 ## Quick Start
 
-1. Read `agent.md` to activate the **Master Orchestrator**.
+1. Read `00-TEAM_WORKFLOW.md`, which defines how the **Orchestrator** runs each phase.
 2. The Orchestrator will recursively load every `.md` file in this directory.
 3. Follow the 12-phase interactive workflow in `00-TEAM_WORKFLOW.md`.
 4. Use `roster.json` as the canonical agent index.
@@ -138,5 +138,5 @@ Every phase of the workflow ends with a user checkpoint. The Orchestrator asks c
 
 1. Add or edit a `{role-key}.md` file using the same front-matter and section structure as existing agents.
 2. Update `roster.json` (or regenerate it) to include the new agent.
-3. Update the Dispatch Matrix in `agent.md` if the role changes task routing.
+3. Update the agent's category in `roster.json` if the role changes task routing.
 4. Update `00-TEAM_WORKFLOW.md` if the role changes phase ownership or gates.

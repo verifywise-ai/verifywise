@@ -3,7 +3,6 @@
 from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
 
-from middlewares.auth import verify_internal_key
 from services.guardrail_service import scan_text
 
 router = APIRouter()
@@ -18,7 +17,6 @@ class GuardrailTestRequest(BaseModel):
 @router.post("/v1/guardrails/test")
 async def test_guardrails(request: Request, body: GuardrailTestRequest):
     """Test guardrail rules against sample text without logging."""
-    verify_internal_key(request)
 
     result = scan_text(
         text=body.text,
@@ -52,7 +50,6 @@ async def scan_for_guardrails(request: Request, body: GuardrailTestRequest):
     Production scan endpoint called by Express proxy before LLM completion.
     Same as test but intended for the live flow.
     """
-    verify_internal_key(request)
 
     result = scan_text(
         text=body.text,

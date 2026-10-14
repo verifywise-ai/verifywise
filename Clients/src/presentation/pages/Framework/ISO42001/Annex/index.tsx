@@ -23,6 +23,8 @@ import { Project } from "../../../../../domain/types/Project";
 import { useSearchParams } from "react-router";
 import { TabFilterBar } from "../../../../components/FrameworkFilter/TabFilterBar";
 import { StatsCard } from "../../../../components/Cards/StatsCard";
+import { text } from "../../../../themes/palette";
+import { textStyles } from "../../../../themes/typography";
 
 const ISO42001Annex = ({
   project,
@@ -333,7 +335,13 @@ const ISO42001Annex = ({
   return (
     <Stack className="iso-42001-annexes">
       {alert && <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />}
-      <Typography sx={{ ...styles.title, mt: 4 }}>{"Information Security Controls"}</Typography>
+      <Typography sx={{ ...styles.title, mt: 4 }}>{"Reference controls (Annex A)"}</Typography>
+      <Typography sx={{ ...textStyles.body, color: text.tertiary, mb: 2 }}>
+        On top of the management system clauses, ISO 42001 includes Annex A, a catalog of reference
+        controls designed for AI systems. The clauses are mandatory, but Annex A is different. You
+        select controls based on your risk assessment and either implement them or document why they
+        don&apos;t apply to your context.
+      </Typography>
       <TabFilterBar
         statusFilter={statusFilter}
         onStatusChange={onStatusChange}

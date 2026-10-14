@@ -5,7 +5,16 @@ import { IntakeEntityType } from "../enums/intake-entity-type.enum";
  * Field type options for intake form fields
  */
 export type IntakeFieldType =
-  "text" | "textarea" | "select" | "multiselect" | "checkbox" | "date" | "email" | "url" | "number";
+  | "text"
+  | "textarea"
+  | "select"
+  | "multiselect"
+  | "checkbox"
+  | "date"
+  | "email"
+  | "url"
+  | "number"
+  | "calculated";
 
 /**
  * Individual field definition in the form schema
@@ -29,6 +38,20 @@ export interface IIntakeFormField {
     max?: number;
     pattern?: string;
   };
+  /** Calculated fields: arithmetic over earlier number/calculated fields, e.g. "{cost} * 12". */
+  formula?: string;
+  /** Calculated fields: decimals to round and show, 0–6, default 2. */
+  decimals?: number;
+  /** Calculated fields: display-only text before / after the value, at most 10 characters. */
+  prefix?: string;
+  suffix?: string;
+  /** Show the field only when these conditions on earlier fields match. */
+  visibility?: {
+    match: "all" | "any";
+    conditions: Array<{ fieldId: string; operator: string; value?: string | number | string[] }>;
+  };
+  /** The risk dimension this field's answer feeds (see intakeRiskScoring.service.ts). */
+  riskDimension?: string;
 }
 
 /**
@@ -58,6 +81,7 @@ export interface IIntakeForm {
   riskAssessmentConfig: Record<string, unknown> | null;
   llmKeyId: number | null;
   suggestedQuestionsEnabled: boolean;
+  euAiActRiskStepEnabled: boolean;
   designSettings: Record<string, unknown> | null;
   createdBy: number;
   createdAt: Date;
@@ -81,6 +105,7 @@ export interface ICreateIntakeFormInput {
   riskAssessmentConfig?: Record<string, unknown>;
   llmKeyId?: number | null;
   suggestedQuestionsEnabled?: boolean;
+  euAiActRiskStepEnabled?: boolean;
   designSettings?: Record<string, unknown> | null;
   createdBy: number;
 }
@@ -102,6 +127,7 @@ export interface IUpdateIntakeFormInput {
   riskAssessmentConfig?: Record<string, unknown>;
   llmKeyId?: number | null;
   suggestedQuestionsEnabled?: boolean;
+  euAiActRiskStepEnabled?: boolean;
   designSettings?: Record<string, unknown> | null;
 }
 
@@ -117,5 +143,6 @@ export interface IPublicIntakeForm {
   schema: IIntakeFormSchema;
   submitButtonText: string;
   publicId: string | null;
+  euAiActRiskStepEnabled: boolean;
   designSettings: Record<string, unknown> | null;
 }

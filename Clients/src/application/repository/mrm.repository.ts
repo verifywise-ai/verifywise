@@ -8,7 +8,7 @@
 
 import { apiServices } from "../../infrastructure/api/networkServices";
 import {
-  extractFilenameFromHeaders,
+  filenameFromContentDisposition,
   triggerBrowserDownload,
 } from "../../presentation/utils/browserDownload.utils";
 import {
@@ -270,12 +270,10 @@ export async function downloadAttestationReport(): Promise<void> {
   if (!(response.data instanceof Blob) || response.data.size === 0) {
     throw new Error("Attestation report generation failed on the server.");
   }
-  const headers = new Headers();
-  const disposition = response.headers?.["content-disposition"];
-  if (typeof disposition === "string") {
-    headers.set("Content-Disposition", disposition);
-  }
-  const filename = extractFilenameFromHeaders(headers, "mrm-attestation-report.docx");
+  const filename = filenameFromContentDisposition(
+    response.headers?.["content-disposition"],
+    "mrm-attestation-report.docx",
+  );
   const blob = new Blob([response.data as BlobPart], {
     type:
       (response.data as Blob)?.type ||

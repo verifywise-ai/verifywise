@@ -18,7 +18,12 @@
 
 import { sequelize } from "../database/db";
 import { Transaction, QueryTypes } from "sequelize";
-import { EntityType, getEntityConfig, GENERIC_FORMATTERS } from "../config/changeHistory.config";
+import {
+  EntityType,
+  FormatterContext,
+  getEntityConfig,
+  GENERIC_FORMATTERS,
+} from "../config/changeHistory.config";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 import logger from "./logger/fileLogger";
 import { appendToAuditLedger } from "./auditLedger.utils";
@@ -49,6 +54,11 @@ function escapePgName(ident: string): string {
  * @param oldValue - Optional previous value of the field
  * @param newValue - Optional new value of the field
  * @param transaction - Optional database transaction
+ * @param changedBySystem - True for a change made by an integration or job
+ *   rather than a person: the row is stored with a null actor and
+ *   changed_by_system = true (migration
+ *   20261005130617-change-history-changed-by-system; not the ai_gateway_*
+ *   tables). changedByUserId is ignored.
  */
 export const recordEntityChange = async (
   entityType: EntityType,
@@ -60,17 +70,22 @@ export const recordEntityChange = async (
   oldValue?: string,
   newValue?: string,
   transaction?: Transaction,
+  changedBySystem = false,
 ): Promise<void> => {
   try {
     const config = getEntityConfig(entityType);
 
     const tableName = escapePgName(config.tableName);
     const foreignKey = escapePgName(config.foreignKeyField);
+    const actorId = changedBySystem ? null : changedByUserId;
+    // Only name the column when it is set, so tables without it still work.
+    const systemColumn = changedBySystem ? ", changed_by_system" : "";
+    const systemValue = changedBySystem ? ", true" : "";
 
     await sequelize.query(
       `INSERT INTO ${tableName}
-       (organization_id, ${foreignKey}, action, field_name, old_value, new_value, changed_by_user_id, changed_at)
-       VALUES (:organization_id, :entity_id, :action, :field_name, :old_value, :new_value, :changed_by_user_id, NOW())`,
+       (organization_id, ${foreignKey}, action, field_name, old_value, new_value, changed_by_user_id${systemColumn}, changed_at)
+       VALUES (:organization_id, :entity_id, :action, :field_name, :old_value, :new_value, :changed_by_user_id${systemValue}, NOW())`,
       {
         replacements: {
           organization_id: organizationId,
@@ -79,7 +94,7 @@ export const recordEntityChange = async (
           field_name: fieldName || null,
           old_value: oldValue || null,
           new_value: newValue || null,
-          changed_by_user_id: changedByUserId,
+          changed_by_user_id: actorId,
         },
         transaction,
       },
@@ -93,7 +108,7 @@ export const recordEntityChange = async (
       appendToAuditLedger({
         organizationId,
         entryType: "change_history",
-        userId: changedByUserId,
+        userId: actorId,
         entityType,
         entityId,
         action,
@@ -123,14 +138,16 @@ export const recordEntityChange = async (
  * @param organizationId - Organization ID for tenant isolation
  * @param changes - Array of field changes to record
  * @param transaction - Optional database transaction
+ * @param changedBySystem - Record the changes as made by the system (see recordEntityChange)
  */
 export const recordMultipleFieldChanges = async (
   entityType: EntityType,
   entityId: number,
-  changedByUserId: number,
+  changedByUserId: number | null,
   organizationId: number,
   changes: Array<{ fieldName: string; oldValue: string; newValue: string }>,
   transaction?: Transaction,
+  changedBySystem = false,
 ): Promise<void> => {
   for (const change of changes) {
     await recordEntityChange(
@@ -143,6 +160,7 @@ export const recordMultipleFieldChanges = async (
       change.oldValue,
       change.newValue,
       transaction,
+      changedBySystem,
     );
   }
 };
@@ -282,12 +300,15 @@ export const getEntityChangeHistory = async (
  * @param entityType - The type of entity
  * @param fieldName - The name of the field being formatted
  * @param value - The value to format
+ * @param context - Organization (tenant-scopes lookups) and transaction for
+ *   formatters that resolve ids to names
  * @returns Formatted string representation of the value
  */
 export const formatFieldValue = async (
   entityType: EntityType,
   fieldName: string,
   value: any,
+  context?: FormatterContext,
 ): Promise<string> => {
   if (value === null || value === undefined || value === "") {
     return "-";
@@ -298,7 +319,7 @@ export const formatFieldValue = async (
 
     // Check if entity has a custom formatter for this field
     if (config.fieldFormatters && config.fieldFormatters[fieldName]) {
-      return await config.fieldFormatters[fieldName](value);
+      return await config.fieldFormatters[fieldName](value, context);
     }
 
     // Default to text formatter
@@ -339,6 +360,7 @@ export const trackEntityChanges = async (
   entityType: EntityType,
   oldData: any,
   newData: any,
+  context?: FormatterContext,
 ): Promise<Array<{ fieldName: string; oldValue: string; newValue: string }>> => {
   const changes: Array<{
     fieldName: string;
@@ -355,8 +377,8 @@ export const trackEntityChanges = async (
     if (newValue === undefined) continue;
 
     // Format values for comparison
-    const oldValueStr = await formatFieldValue(entityType, field, oldValue);
-    const newValueStr = await formatFieldValue(entityType, field, newValue);
+    const oldValueStr = await formatFieldValue(entityType, field, oldValue, context);
+    const newValueStr = await formatFieldValue(entityType, field, newValue, context);
 
     // Record change if values differ
     if (oldValueStr !== newValueStr) {
@@ -368,6 +390,34 @@ export const trackEntityChanges = async (
     }
   }
 
+  return changes;
+};
+
+/**
+ * Build history entries for fields the caller has already decided changed
+ * (for example from the same diff that drives its UPDATE), so the history
+ * matches the write exactly. Unlike trackEntityChanges this does not compare
+ * values again; it only keeps tracked fields and formats old/new values.
+ * `context` tenant-scopes any id-to-name lookups and runs them on the given
+ * transaction.
+ */
+export const formatEntityFieldChanges = async (
+  entityType: EntityType,
+  oldData: Record<string, unknown>,
+  newData: Record<string, unknown>,
+  changedFields: string[],
+  context?: FormatterContext,
+): Promise<Array<{ fieldName: string; oldValue: string; newValue: string }>> => {
+  const config = getEntityConfig(entityType);
+  const changes: Array<{ fieldName: string; oldValue: string; newValue: string }> = [];
+  for (const field of config.fieldsToTrack) {
+    if (!changedFields.includes(field)) continue;
+    changes.push({
+      fieldName: getFieldLabel(entityType, field),
+      oldValue: await formatFieldValue(entityType, field, oldData[field], context),
+      newValue: await formatFieldValue(entityType, field, newData[field], context),
+    });
+  }
   return changes;
 };
 
@@ -405,7 +455,8 @@ export const recordEntityCreation = async (
         organizationId,
         getFieldLabel(entityType, field),
         "-",
-        await formatFieldValue(entityType, field, value),
+        // Tenant-scoped name lookups, on the creating transaction.
+        await formatFieldValue(entityType, field, value, { organizationId, transaction }),
         transaction,
       );
     }

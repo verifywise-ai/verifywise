@@ -80,6 +80,9 @@ services:
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set in the env file before starting}
       - REDIS_URL=redis://redis:6379/0
       - ENCRYPTION_KEY=$ENCRYPTION_KEY
+      # The worker runs the daily retention purge, which calls the AI Gateway.
+      - AI_GATEWAY_URL=http://ai_gateway:8100
+      - AI_GATEWAY_INTERNAL_KEY=${AI_GATEWAY_INTERNAL_KEY:?AI_GATEWAY_INTERNAL_KEY must be set in the env file before starting}
     restart: unless-stopped
   eval_server:
     depends_on:

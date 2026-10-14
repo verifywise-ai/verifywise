@@ -119,7 +119,7 @@ export const DOMPURIFY_CONFIG: NonNullable<Parameters<typeof DOMPurify.sanitize>
   ],
   ALLOW_DATA_ATTR: false,
   // Restrict URI schemes to safe values (http, https, blob, mailto, tel).
-  ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|blob|mailto|tel):|[^a-z]|[a-z.+\-]+(?:[^a-z.+\-:]|$))/i,
+  ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|blob|mailto|tel):|[^a-z]|[a-z.+-]+(?:[^a-z.+\-:]|$))/i,
 };
 
 /**

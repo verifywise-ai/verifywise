@@ -225,6 +225,44 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'conditional-fields',
+      level: 2,
+      text: 'Conditional fields',
+    },
+    {
+      type: 'paragraph',
+      text: 'Open "Show this field only if…" in a field\'s settings to show it only when answers above it match. Add one or more conditions and choose whether all or any must match. A condition can only use fields above the one you are editing. Until the earlier question is answered, the field stays hidden.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Hidden fields are never required and their answers are not saved. Fields mapped to the use case name, the use case goal or the model name cannot have conditions, because those values are needed to create the entity.',
+    },
+    {
+      type: 'heading',
+      id: 'calculated-fields',
+      level: 2,
+      text: 'Calculated fields',
+    },
+    {
+      type: 'paragraph',
+      text: 'A calculated field shows a read-only result that updates as the submitter types, for example annual cost from a monthly cost. Add one from the Advanced section of the field palette. Formulas use + − × ÷ (typed as + - * /), parentheses and numbers, and refer to number or calculated fields above the field. Type { in the formula box to insert a field.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Set decimals (0 to 6) and an optional prefix or suffix, such as € or people. If an input is empty or hidden, the result shows a dash. The value is recalculated by VerifyWise when the form is submitted and is shown to reviewers.',
+    },
+    {
+      type: 'heading',
+      id: 'risk-dimension-tags',
+      level: 2,
+      text: 'Risk dimension tags',
+    },
+    {
+      type: 'paragraph',
+      text: 'Under "Risk scoring" in a text, dropdown or checkbox field\'s settings, choose the risk dimension its answer should feed. A dimension is scored from its tagged answers when they contain any of its keywords; otherwise every answer is used. A tag never hides risk found elsewhere: a high-risk keyword in any untagged answer keeps the dimension at least as high as that keyword alone would put it. Tagging a field never changes how that field\'s own answer is scored.',
+    },
+    {
+      type: 'heading',
       id: 'entity-field-mapping',
       level: 3,
       text: 'Entity field mapping',
@@ -468,7 +506,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Every submission is scored across multiple risk dimensions. Each dimension produces a score from 1 to 10, a weight and a set of signals (short explanations of what drove the score).',
+      text: 'Every submission is scored across six risk dimensions. Each dimension produces a score from 0 to 100 (higher is riskier), a weight and a set of signals naming the keyword and the field it came from. Keywords match at the start of a word in text answers, the labels of chosen options and the labels of ticked checkboxes, so "health" also matches "healthcare" but "name" does not match "renamed". Number, date and calculated answers are not scored. Tag a field with a risk dimension to have its answer decide that dimension first.',
     },
     {
       type: 'table',
@@ -477,12 +515,12 @@ export const intakeFormsContent: ArticleContent = {
         { key: 'description', label: 'What it measures', width: '75%' },
       ],
       rows: [
-        { dimension: 'Impact', description: 'How severe the harm could be if the system fails or behaves incorrectly' },
-        { dimension: 'Likelihood', description: 'How probable a failure or unintended outcome is' },
-        { dimension: 'Scope', description: 'How many people or processes the system affects' },
-        { dimension: 'Reversibility', description: 'Whether the consequences of a mistake can be undone' },
-        { dimension: 'Contestability', description: 'Whether affected individuals can challenge the system\'s decisions' },
-        { dimension: 'Transparency', description: 'How explainable the system\'s behavior is to stakeholders' },
+        { dimension: 'Data sensitivity', description: 'Whether personal, financial, health or other sensitive data is involved (weight 20%)' },
+        { dimension: 'Autonomy level', description: 'How much the system decides without a person (weight 20%)' },
+        { dimension: 'Impact scope', description: 'How many people or how much of the organization it reaches (weight 15%)' },
+        { dimension: 'Transparency', description: 'Whether its behaviour can be explained and is documented (weight 15%)' },
+        { dimension: 'Human oversight', description: 'How closely people monitor and review it (weight 15%)' },
+        { dimension: 'Domain criticality', description: 'How critical the domain is, such as healthcare, hiring or finance (weight 15%)' },
       ],
     },
     {
@@ -498,6 +536,62 @@ export const intakeFormsContent: ArticleContent = {
     {
       type: 'paragraph',
       text: 'Reviewers can override the calculated risk tier during approval. You need to provide a justification, and the override is logged with your identity and timestamp. This matters when the automatic scoring misses context you have, like a system that scores "medium" but affects a protected population.',
+    },
+    {
+      type: 'heading',
+      id: 'eu-ai-act-risk-step',
+      level: 2,
+      text: 'EU AI Act risk classification step',
+    },
+    {
+      type: 'paragraph',
+      text: 'Use case forms can ask the EU AI Act risk questionnaire before the form\'s own questions. Turn on **EU AI Act risk classification step** in the builder\'s settings panel and save the form. The toggle only appears on use case forms. Model inventory forms do not have it. New use case forms start with the step on, and their default questions no longer ask for a risk level or a high-risk role, because the step sets both. Forms you saved earlier keep their setting. While the step is on, the builder canvas shows it above the form\'s questions as a read-only card. Select **View questions** to open the questionnaire, read-only, in a sidebar.',
+    },
+    {
+      type: 'paragraph',
+      text: 'The step sets the new use case\'s AI risk classification, so a form cannot have both the step and a question mapped to `ai_risk_classification`. Turning the step on removes that mapping. The question itself stays on the form and its answers are still saved with the submission.',
+    },
+    {
+      type: 'heading',
+      id: 'eu-ai-act-risk-step-submitters',
+      level: 3,
+      text: 'What submitters see',
+    },
+    {
+      type: 'paragraph',
+      text: 'The public form opens on the risk questionnaire. Each answer decides which question comes next, so a system built only for research and development finishes after one question. The follow-up questions for each Annex III area accept several answers, and any listed use makes the system high risk. After the last question the submitter moves on to the form, and can go back with **Back to risk classification**. Submitters do not see the resulting classification. The browser sends only the answers: VerifyWise checks and scores them on the server when the form is submitted. If the server rejects the answers, the form returns to the risk questionnaire.',
+    },
+    {
+      type: 'heading',
+      id: 'eu-ai-act-risk-step-reviewers',
+      level: 3,
+      text: 'What reviewers see',
+    },
+    {
+      type: 'paragraph',
+      text: 'The review dialog adds an **EU AI Act classification** panel with:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { text: 'The computed level: Prohibited, High risk, Limited risk, Minimal risk or Out of scope' },
+        { text: 'The reasons, each with its article and, where one applies, the date it applies from' },
+        { text: 'The role (provider or deployer) the submitter chose' },
+        { text: 'Every question and the answer given' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'The panel scores the stored answers again when you open it. If that gives a different level from the one at submission, the panel marks it **Updated since submission**.',
+    },
+    {
+      type: 'paragraph',
+      text: 'You can pick a different level under **Classification for the new use case**. Only the five levels above are offered, and a change needs a justification of at least 10 characters. On approval the use case gets the chosen level and the role, the answers are copied to the use case, and its change history records the level together with the computed level and your justification when you changed it. Because the classification comes from the EU AI Act step, the new use case also gets the EU AI Act framework, with its assessment and controls. A submission without a classification from the step, for example from a form that does not use the step, gets no framework on approval. When the selected level is Prohibited, the panel warns that approving creates a use case classified as prohibited.',
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      text: 'Submissions from forms without the step, and submissions made before the step was turned on, have no classification panel and are approved as before.',
     },
     {
       type: 'heading',

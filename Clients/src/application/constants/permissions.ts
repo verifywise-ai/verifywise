@@ -5,6 +5,8 @@ const allowedRoles = {
     edit: ["Admin", "Editor"],
     delete: ["Admin", "Editor"],
     editTeamMembers: ["Admin"],
+    // Mirrors the server's useCase.classify permission.
+    classify: ["Admin", "Editor"],
   },
   projectRisks: {
     view: ["Admin", "Editor", "Auditor"],

@@ -135,6 +135,30 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     testFile: "file-org-settings.isolation.test.ts",
   },
   {
+    name: "data_retention",
+    tables: [
+      "data_retention_settings",
+      "data_retention_runs",
+      "audit_ledger_retention_checkpoints",
+    ],
+    baseRoute: "/api/data-retention",
+    testFile: "data-retention.isolation.test.ts",
+  },
+  {
+    // Sync engine runs and schedules. The routes are keyed by extension key
+    // (/api/extensions/:key/runs…), not by row id, so a hand-written file covers them.
+    name: "extension_sync",
+    tables: ["extension_sync_runs", "extension_sync_settings"],
+    baseRoute: "/api/extensions/:key/runs",
+    testFile: "extensionRuns.isolation.test.ts",
+  },
+  {
+    name: "eu_ai_act_classifications",
+    tables: ["eu_ai_act_classifications"],
+    baseRoute: "/api/projects/:id/eu-ai-act-classification",
+    testFile: "eu-ai-act-classifications.isolation.test.ts",
+  },
+  {
     name: "file_change_history",
     tables: ["file_change_history"],
     baseRoute: "/api/file-change-history",

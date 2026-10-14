@@ -59,9 +59,11 @@ import { EvidenceHubModel } from "../../../domain/models/Common/evidenceHub/evid
 import NewEvidenceHub from "../../components/Modals/EvidenceHub";
 import { createEvidenceHub } from "../../../application/repository/evidenceHub.repository";
 import EvidenceHubTable from "./evidenceHubTable";
+import EvidenceCoveragePanel from "./EvidenceCoveragePanel";
 import FilePreviewPanel from "../FileManager/components/FilePreviewPanel";
 import { FileMetadata } from "../../../application/repository/file.repository";
 import { earliestFileExpiry } from "../../../application/utils/fileExpiry";
+import { replaceShareLink } from "../../../application/utils/replaceShareLink";
 import ModelEvaluationsTab from "./ModelEvaluationsTab";
 import ModelRiskManagementTab from "./mrm";
 import ShareButton from "../../components/ShareViewDropdown/ShareButton";
@@ -172,7 +174,7 @@ const ModelInventory: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [showAlert, setShowAlert] = useState(false);
 
-  const { userRoleName } = useAuth();
+  const { userRoleName, userId } = useAuth();
   const isCreatingDisabled = !userRoleName || !["Admin", "Editor"].includes(userRoleName);
   const theme = useTheme();
 
@@ -1391,34 +1393,48 @@ const ModelInventory: React.FC = () => {
 
   const handleConfirmReplace = async () => {
     setShowReplaceConfirmation(false);
+    // A link is already being created; replacing now would disable it.
+    if (isCreatingLink) {
+      setAlert({
+        variant: "info",
+        body: "A share link is still being created. Try again in a moment.",
+      });
+      return;
+    }
 
     try {
-      // Fetch ALL existing share links for this resource and disable them
       const existingLinksResponse: any = await getShareLinksForResource("model", 0);
-      const existingLinks = existingLinksResponse?.data?.data || [];
+      const existingLinks: { id: number; is_enabled: boolean; created_by: number }[] =
+        existingLinksResponse?.data?.data || [];
 
-      // Disable all existing links
-      let disabledCount = 0;
-      for (const link of existingLinks) {
-        if (link.is_enabled) {
-          try {
-            await updateShareMutation.mutateAsync({
-              id: link.id,
-              is_enabled: false,
-            });
-            disabledCount++;
-          } catch (updateError) {
-            throw updateError;
-          }
-        }
+      const result = await replaceShareLink({
+        existingLinks,
+        currentUserId: userId,
+        // Shows its own error and returns "" when creation fails.
+        createLink: () => generateShareableLink(shareSettings),
+        disableLink: (id) => updateShareMutation.mutateAsync({ id, is_enabled: false }),
+      });
+      if (!result.created) return;
+
+      if (result.failed > 0) {
+        console.error("Failed to disable previous share links:", result.errors);
+        setAlert({
+          variant: "warning",
+          body: "New share link created, but some of your previous links could not be disabled. Replace the link again to retry.",
+        });
+        return;
       }
-
-      // Create a new link
-      await generateShareableLink(shareSettings);
+      if (result.othersStillActive > 0) {
+        setAlert({
+          variant: "warning",
+          body: "New share link created. Links created by other users are still active; only they can disable them.",
+        });
+        return;
+      }
 
       setAlert({
         variant: "success",
-        body: `Share link replaced successfully! ${disabledCount} previous link(s) invalidated.`,
+        body: "Share link replaced. Previous links no longer work.",
       });
     } catch (error) {
       console.error("Error replacing share link:", error);
@@ -1434,7 +1450,7 @@ const ModelInventory: React.FC = () => {
   };
 
   const handleModelInventorySuccess = async (formData: any) => {
-    let modelId: number | null = null;
+    let modelId: number | null;
 
     if (selectedModelInventory) {
       // Update existing model inventory
@@ -2438,6 +2454,11 @@ const ModelInventory: React.FC = () => {
 
         {activeTab === "evidence-hub" && (
           <>
+            {/* Mounted once at the tab level (the table below is reused per
+                group and in modals), and above the empty state so coverage
+                shows even when there is no evidence yet (#4911). */}
+            <EvidenceCoveragePanel />
+
             <Stack
               direction="row"
               justifyContent="space-between"

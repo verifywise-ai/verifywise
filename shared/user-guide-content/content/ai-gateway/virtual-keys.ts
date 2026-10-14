@@ -107,8 +107,8 @@ print(response.choices[0].message.content)`,
       items: [
         { bold: 'Reset', text: 'Budgets reset on the 1st of each month' },
         { bold: 'Scope', text: 'Per-key, separate from endpoint or org-wide budgets' },
-        { bold: 'Notifications', text: 'Admins get an email when a key\'s budget runs out' },
-        { bold: 'Response', text: 'A budget-exhausted key gets a 429 with a message explaining why' },
+        { bold: 'Response', text: 'A key that has used up its budget gets a 401 with the message "Virtual key budget exhausted"' },
+        { bold: 'Notifications', text: 'No email is sent when a key\'s budget runs out yet. Check the key\'s spend on the Virtual keys tab' },
       ],
     },
     {

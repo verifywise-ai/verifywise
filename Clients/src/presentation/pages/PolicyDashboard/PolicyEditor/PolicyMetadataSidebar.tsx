@@ -15,7 +15,10 @@ export interface PolicyMetadataSidebarProps {
   clearFieldError: (field: keyof PolicyFormData) => void;
   customFieldsRef: RefObject<CustomFieldsSectionHandle | null>;
   entityId: number | null;
-  onPendingChange: (pendingDefinitionIds: ReadonlySet<number>) => void;
+  onPendingChange: (
+    pendingDefinitionIds: ReadonlySet<number>,
+    clearedRequired?: ReadonlyArray<{ id: number; label: string }>,
+  ) => void;
 }
 
 /** Metadata form and custom fields region of the policy editor. */

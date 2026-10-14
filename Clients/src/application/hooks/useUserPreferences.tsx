@@ -8,6 +8,7 @@ const defaultUserPreferences: Omit<UserPreferencesModel, "id" | "user_id"> = {
   date_format: UserDateFormat.DD_MM_YYYY_DASH,
   language: "en",
   theme: "light",
+  parallel_agents: false,
 };
 
 const USER_PREFERENCES_QUERY_KEY = ["userPreferences"] as const;

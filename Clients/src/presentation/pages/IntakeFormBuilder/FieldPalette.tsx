@@ -15,10 +15,12 @@ import {
   RefreshCw,
   AlertCircle,
   X,
+  Calculator,
 } from "lucide-react";
 import { useState, useEffect, useCallback, useRef, useImperativeHandle, forwardRef } from "react";
 import {
   PALETTE_ITEMS,
+  ADVANCED_PALETTE_ITEMS,
   PaletteItem,
   HARDCODED_SUGGESTED_QUESTIONS,
   SuggestedQuestion,
@@ -26,6 +28,7 @@ import {
   generateFieldId,
   createFieldFromPalette,
 } from "./types";
+import { EditorSection } from "./EditorSection";
 import {
   getLLMSuggestedQuestions,
   LLMSuggestedQuestion,
@@ -57,6 +60,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   ArrowDropDownCircle: ChevronDown,
   Checklist: ListChecks,
   CheckBox: CheckSquare,
+  Calculate: Calculator,
 };
 
 interface ClickablePaletteItemProps {
@@ -436,7 +440,7 @@ export const SuggestedQuestionsPanel = forwardRef<
             triggerSparkle();
           }
         }
-      } catch (err: unknown) {
+      } catch {
         if (!controller.signal.aborted) {
           setLlmError("Could not generate questions. Check your LLM key.");
           setLlmFetched(true);
@@ -483,16 +487,23 @@ export const SuggestedQuestionsPanel = forwardRef<
     [llmKeyId, entityType, buildContext, addedLabels, dismissedLabels, llmQuestions],
   );
 
-  // Auto-fetch on mount when LLM key is set
+  // Fetch whenever the key is set or changes. What the previous key fetched,
+  // or failed to fetch, does not apply to the new one, so it is cleared.
   useEffect(() => {
-    if (hasLLM && !llmFetched && !llmLoading) {
+    setLlmFetched(false);
+    setLlmError(null);
+    setLlmQuestions([]);
+    if (hasLLM) {
       fetchLLMQuestions();
       triggerSparkle();
     }
     return () => {
       if (abortRef.current) abortRef.current.abort();
+      // An aborted fetch leaves loading as is (its finally skips aborted
+      // requests), which would leave the panel loading for the next key.
+      setLlmLoading(false);
     };
-  }, [hasLLM]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [llmKeyId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cleanup timers on unmount
   useEffect(() => {
@@ -803,6 +814,13 @@ export function FieldPalette({ disabled = false, fieldCount = 0, onAddField }: F
               <ClickablePaletteItem key={item.type} item={item} onAdd={handleAddPaletteItem} />
             ))}
           </Box>
+        </Box>
+        <Box sx={{ p: "8px", borderTop: `1px solid ${theme.palette.border.dark}` }}>
+          <EditorSection title="Advanced">
+            {ADVANCED_PALETTE_ITEMS.map((item) => (
+              <ClickablePaletteItem key={item.type} item={item} onAdd={handleAddPaletteItem} />
+            ))}
+          </EditorSection>
         </Box>
       </Box>
     </Box>

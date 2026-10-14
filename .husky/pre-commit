@@ -1,10 +1,36 @@
+#!/usr/bin/env sh
+
+warn() { printf '\033[33mWARNING: %s\033[0m\n' "$1"; }
+fail() { printf '\033[31mERROR: %s\033[0m\n' "$1"; }
+
 # Secret scanning: scan staged changes with gitleaks before linting.
 # Soft dependency: if gitleaks is not installed we warn and continue so
 # developers without it are not blocked (CI/server-side scans still apply).
 if command -v gitleaks >/dev/null 2>&1; then
-  gitleaks protect --staged --verbose
+  gitleaks protect --staged --verbose || exit 1
 else
-  echo "\033[33mWARNING: gitleaks not found on PATH — skipping staged secret scan. Install gitleaks to enable pre-commit secret detection.\033[0m"
+  warn "gitleaks not found on PATH — skipping staged secret scan. Install gitleaks to enable pre-commit secret detection."
 fi
 
-cd Servers && npx lint-staged && cd ../Clients && npx lint-staged
+(cd Servers && npx lint-staged) || exit 1
+(cd Clients && npx lint-staged) || exit 1
+
+# API docs: swagger.yaml and endpoints.ts are generated from the route layer,
+# and CI's "API Docs Drift" job fails if the committed copies are stale.
+# Regenerate and stage them whenever a commit touches their inputs. The
+# generators read the working tree, so skip if any input has unstaged edits:
+# the result would describe routes this commit does not contain.
+DOCS_INPUTS='^Servers/(app\.ts|routes/.*|extensions/.*\.route\.ts|swagger\.yaml|scripts/generate(Swagger|EndpointsTs)\.ts)$|^docs/api-docs/src/config/endpoints\.ts$'
+if git diff --cached --name-only | grep -qE "$DOCS_INPUTS"; then
+  if git diff --name-only | grep -qE "$DOCS_INPUTS"; then
+    warn "Route or API docs files have unstaged changes — skipping API docs generation. Run 'npm run generate:swagger && npm run generate:endpoints' in Servers/ before pushing."
+  elif [ ! -d Servers/node_modules ]; then
+    warn "Servers/node_modules missing — skipping API docs generation. CI's API Docs Drift check still applies."
+  else
+    (cd Servers && npm run --silent generate:swagger && npm run --silent generate:endpoints) || {
+      fail "API docs generation failed. Run 'npm run generate:swagger && npm run generate:endpoints' in Servers/ to see why."
+      exit 1
+    }
+    git add Servers/swagger.yaml docs/api-docs/src/config/endpoints.ts
+  fi
+fi

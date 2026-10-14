@@ -5,6 +5,7 @@ import { translateError } from "../utils/i18n.utils";
 import { CustomException } from "../domain.layer/exceptions/custom.exception";
 import { getFileOrgSettings, upsertFileOrgSettings } from "../utils/fileOrgSettings.utils";
 import { isRetentionPolicy } from "../utils/retention.utils";
+import { appendRetentionChangeToLedger } from "../utils/retentionAudit.utils";
 
 const FILE = "fileOrgSettings.ctrl.ts";
 
@@ -54,9 +55,34 @@ export async function updateFileOrgSettingsHandler(req: Request, res: Response) 
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid retention policy")));
     }
 
+    let previousPolicy: string | null | undefined;
+    try {
+      previousPolicy = (await getFileOrgSettings(req.organizationId!)).default_retention_policy;
+    } catch (readError) {
+      // The update still goes through; the ledger entry will say "set to".
+      logger.warn(
+        `Reading file org settings before an update failed: ${(readError as Error)?.message ?? readError}`,
+      );
+    }
+
     const settings = await upsertFileOrgSettings(req.organizationId!, {
       default_retention_policy: body.default_retention_policy,
     });
+
+    const newPolicy = settings.default_retention_policy ?? null;
+    if (previousPolicy === undefined || (previousPolicy ?? null) !== newPolicy) {
+      const label = (policy: string | null) => (policy ? policy.replace(/_/g, " ") : "none");
+      await appendRetentionChangeToLedger({
+        organizationId: req.organizationId!,
+        userId: req.userId,
+        description:
+          previousPolicy === undefined
+            ? `Default evidence retention policy set to ${label(newPolicy)}`
+            : `Default evidence retention policy changed from ${label(previousPolicy ?? null)} to ${label(newPolicy)}`,
+        functionName: fn,
+        fileName: FILE,
+      });
+    }
     logStructured("successful", "file org settings updated", fn, FILE);
     return res.status(200).json(STATUS_CODE[200](settings));
   } catch (error) {

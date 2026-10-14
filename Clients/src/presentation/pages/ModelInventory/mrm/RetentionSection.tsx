@@ -3,6 +3,7 @@ import { Box, Typography } from "@mui/material";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import Field from "../../../components/Inputs/Field";
 import { useMrmSettings, useUpdateMrmSettings } from "../../../../application/hooks/useMrm";
+import { useHasPermission } from "../../../../application/hooks/useMyPermissions";
 import { mrmErrorMessage } from "./constants";
 import { mrmSectionIntroStyle } from "./mrmStyles";
 
@@ -16,6 +17,10 @@ const MIN_RETENTION_MONTHS = 13;
 const RetentionSection = ({ onError, onSuccess }: RetentionSectionProps) => {
   const { data: settings } = useMrmSettings();
   const updateSettings = useUpdateMrmSettings();
+  // The server allows any role holding organization.admin (custom roles too).
+  // SuperAdmin is a cross-tenant grant, not admin access inside an org, so an
+  // elected SuperAdmin follows their org role here.
+  const canEdit = useHasPermission("organization.admin", { fallbackToAdmin: true });
   const [months, setMonths] = useState<string>("");
 
   // Seed the input from the loaded settings; keep user edits afterwards.
@@ -24,6 +29,7 @@ const RetentionSection = ({ onError, onSuccess }: RetentionSectionProps) => {
   }, [settings]);
 
   const handleSave = async () => {
+    if (!canEdit) return;
     const parsed = Number(months);
     if (!Number.isInteger(parsed) || parsed < MIN_RETENTION_MONTHS) {
       onError("Retention must be at least 13 months");
@@ -51,7 +57,12 @@ const RetentionSection = ({ onError, onSuccess }: RetentionSectionProps) => {
           label="Monitoring data retention (months)"
           value={months}
           onChange={(e) => setMonths(e.target.value)}
-          helperText="Breach and evaluation history is always retained; this only ages out benign monitoring points."
+          disabled={!canEdit}
+          helperText={
+            canEdit
+              ? "Breach and evaluation history is always retained; this only ages out benign monitoring points."
+              : "Only admins can change retention periods"
+          }
         />
       </Box>
 
@@ -59,7 +70,7 @@ const RetentionSection = ({ onError, onSuccess }: RetentionSectionProps) => {
         variant="contained"
         text="Save retention"
         onClick={handleSave}
-        isDisabled={updateSettings.isPending}
+        isDisabled={updateSettings.isPending || !canEdit}
         testId="mrm-save-retention-btn"
       />
     </Box>

@@ -37,6 +37,7 @@ export function mapRiskClassification(
     "high risk": AiRiskClassification.HIGH_RISK,
     "limited risk": AiRiskClassification.LIMITED_RISK,
     "minimal risk": AiRiskClassification.MINIMAL_RISK,
+    "out of scope": AiRiskClassification.OUT_OF_SCOPE,
   };
   return mapping[value.toLowerCase()] || AiRiskClassification.MINIMAL_RISK;
 }

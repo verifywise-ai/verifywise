@@ -24,7 +24,7 @@ import {
 } from "@mui/material";
 import TabContext from "@mui/lab/TabContext";
 import TabBar from "../../components/TabBar";
-import { displayFormattedDate } from "../../tools/isoDateToString";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import {
   Plus,
   Settings,
@@ -72,10 +72,13 @@ import { pageOfLabel } from "../../components/Table/pageOfLabel";
 // Helpers
 // ============================================================================
 
-function formatDate(date: Date | string): string {
+function formatIntakeDate(
+  date: Date | string,
+  formatDate: ReturnType<typeof useFormattedDate>,
+): string {
   const d = new Date(date);
   if (isNaN(d.getTime())) return "—";
-  return displayFormattedDate(d);
+  return formatDate(d);
 }
 
 const ENTITY_LABELS: Record<string, string> = {
@@ -122,6 +125,7 @@ export function IntakeFormsListPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
+  const formatDate = useFormattedDate();
 
   // Main tab derived from URL path
   const mainTab = location.pathname.includes("/intake-forms/submissions") ? "submissions" : "forms";
@@ -521,12 +525,12 @@ export function IntakeFormsListPage() {
                       </TableCell>
                       <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                         <Typography sx={{ fontSize: "13px", color: theme.palette.text.accent }}>
-                          {formatDate(form.createdAt)}
+                          {formatIntakeDate(form.createdAt, formatDate)}
                         </Typography>
                       </TableCell>
                       <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                         <Typography sx={{ fontSize: "13px", color: theme.palette.text.accent }}>
-                          {form.updatedAt ? formatDate(form.updatedAt) : "\u2014"}
+                          {form.updatedAt ? formatIntakeDate(form.updatedAt, formatDate) : "\u2014"}
                         </Typography>
                       </TableCell>
                       <TableCell
@@ -700,7 +704,7 @@ export function IntakeFormsListPage() {
                         </TableCell>
                         <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                           <Typography sx={{ fontSize: "13px", color: theme.palette.text.accent }}>
-                            {formatDate(submission.createdAt)}
+                            {formatIntakeDate(submission.createdAt, formatDate)}
                           </Typography>
                         </TableCell>
                         <TableCell sx={singleTheme.tableStyles.primary.body.cell}>

@@ -27,15 +27,9 @@ describe("TagChip", () => {
     expect(chip).toBeInTheDocument();
   });
 
-  it("renders as an inline-block span", () => {
+  it("renders through StatusBadge", () => {
     renderWithProviders(<TagChip tag="fairness" />);
     const chip = screen.getByText("fairness");
-    expect(chip).toHaveStyle({ display: "inline-block" });
-  });
-
-  it("applies correct font size and weight", () => {
-    renderWithProviders(<TagChip tag="security" />);
-    const chip = screen.getByText("security");
-    expect(chip).toHaveStyle({ fontWeight: 500, fontSize: "11px" });
+    expect(chip).toHaveStyle({ display: "inline-flex", fontSize: "11px", fontWeight: 400 });
   });
 });

@@ -110,12 +110,15 @@ export const createApprovalWorkflowQuery = async (
     workflow_title: string;
     entity_type: EntityType;
     description?: string;
+    auto_approve_max_risk?: string | null;
     created_by: number;
     steps: Array<{
       step_name: string;
       description?: string;
       approver_ids: number[];
       requires_all_approvers: boolean;
+      sla_hours?: number | null;
+      escalation_user_id?: number | null;
     }>;
   },
   organizationId: number,
@@ -124,8 +127,8 @@ export const createApprovalWorkflowQuery = async (
   // Create workflow
   const [workflow] = await sequelize.query(
     `INSERT INTO approval_workflows
-     (organization_id, workflow_title, entity_type, description, created_by, is_active, created_at, updated_at)
-     VALUES (:organizationId, :workflow_title, :entity_type, :description, :created_by, true, NOW(), NOW())
+     (organization_id, workflow_title, entity_type, description, auto_approve_max_risk, created_by, is_active, created_at, updated_at)
+     VALUES (:organizationId, :workflow_title, :entity_type, :description, :auto_approve_max_risk, :created_by, true, NOW(), NOW())
      RETURNING *`,
     {
       replacements: {
@@ -133,6 +136,7 @@ export const createApprovalWorkflowQuery = async (
         workflow_title: workflowData.workflow_title,
         entity_type: workflowData.entity_type,
         description: workflowData.description || null,
+        auto_approve_max_risk: workflowData.auto_approve_max_risk ?? null,
         created_by: workflowData.created_by,
       },
       mapToModel: true,
@@ -147,8 +151,8 @@ export const createApprovalWorkflowQuery = async (
 
     const [step] = await sequelize.query(
       `INSERT INTO approval_workflow_steps
-       (organization_id, workflow_id, step_number, step_name, description, requires_all_approvers, created_at)
-       VALUES (:organizationId, :workflow_id, :step_number, :step_name, :description, :requires_all_approvers, NOW())
+       (organization_id, workflow_id, step_number, step_name, description, requires_all_approvers, sla_hours, escalation_user_id, created_at)
+       VALUES (:organizationId, :workflow_id, :step_number, :step_name, :description, :requires_all_approvers, :sla_hours, :escalation_user_id, NOW())
        RETURNING *`,
       {
         replacements: {
@@ -158,6 +162,8 @@ export const createApprovalWorkflowQuery = async (
           step_name: stepData.step_name,
           description: stepData.description || null,
           requires_all_approvers: stepData.requires_all_approvers,
+          sla_hours: stepData.sla_hours ?? null,
+          escalation_user_id: stepData.escalation_user_id ?? null,
         },
         mapToModel: true,
         model: ApprovalWorkflowStepModel,
@@ -205,21 +211,29 @@ export const updateApprovalWorkflowQuery = async (
   workflowData: {
     workflow_title?: string;
     description?: string;
+    auto_approve_max_risk?: string | null;
     steps?: Array<{
       step_name: string;
       description?: string;
       approver_ids: number[];
       requires_all_approvers: boolean;
+      sla_hours?: number | null;
+      escalation_user_id?: number | null;
     }>;
   },
   organizationId: number,
   transaction: Transaction,
 ): Promise<ApprovalWorkflowModel | null> => {
-  // Update workflow
+  // Update workflow. auto_approve_max_risk is only touched when the key is
+  // present in the payload, so callers can clear it with an explicit null.
   await sequelize.query(
     `UPDATE approval_workflows
      SET workflow_title = COALESCE(:workflow_title, workflow_title),
          description = COALESCE(:description, description),
+         auto_approve_max_risk = CASE
+           WHEN :auto_approve_max_risk_provided THEN :auto_approve_max_risk
+           ELSE auto_approve_max_risk
+         END,
          updated_at = NOW()
      WHERE organization_id = :organizationId AND id = :workflowId`,
     {
@@ -228,6 +242,8 @@ export const updateApprovalWorkflowQuery = async (
         workflowId,
         workflow_title: workflowData.workflow_title || null,
         description: workflowData.description || null,
+        auto_approve_max_risk: workflowData.auto_approve_max_risk ?? null,
+        auto_approve_max_risk_provided: workflowData.auto_approve_max_risk !== undefined,
       },
       transaction,
     },
@@ -263,8 +279,8 @@ export const updateApprovalWorkflowQuery = async (
 
       const [step] = await sequelize.query(
         `INSERT INTO approval_workflow_steps
-         (organization_id, workflow_id, step_number, step_name, description, requires_all_approvers, created_at)
-         VALUES (:organizationId, :workflow_id, :step_number, :step_name, :description, :requires_all_approvers, NOW())
+         (organization_id, workflow_id, step_number, step_name, description, requires_all_approvers, sla_hours, escalation_user_id, created_at)
+         VALUES (:organizationId, :workflow_id, :step_number, :step_name, :description, :requires_all_approvers, :sla_hours, :escalation_user_id, NOW())
          RETURNING *`,
         {
           replacements: {
@@ -274,6 +290,8 @@ export const updateApprovalWorkflowQuery = async (
             step_name: stepData.step_name,
             description: stepData.description || null,
             requires_all_approvers: stepData.requires_all_approvers,
+            sla_hours: stepData.sla_hours ?? null,
+            escalation_user_id: stepData.escalation_user_id ?? null,
           },
           mapToModel: true,
           model: ApprovalWorkflowStepModel,

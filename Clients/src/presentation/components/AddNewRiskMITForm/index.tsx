@@ -1,55 +1,13 @@
 import { useState, useEffect } from "react";
 import RiskDatabaseModal from "../RiskDatabaseModal";
 import { RiskData, SelectedRiskData } from "../RiskDatabaseModal/types";
-import { Likelihood, Severity } from "../RiskLevel/constants";
+import { mapSeverityMIT, mapLikelihoodMIT } from "../AddNewRiskForm/riskSuggestionMappers";
 
 interface AddNewRiskMITModalProps {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
   onRiskSelected?: (riskData: SelectedRiskData) => void;
 }
-
-/**
- * Maps MIT severity strings to Severity enum.
- * MIT uses Negligible/Minor/Moderate/Major/Catastrophic severity scale.
- */
-const mapSeverityMIT = (severity: string): Severity => {
-  switch (severity.toLowerCase()) {
-    case "negligible":
-      return Severity.Negligible;
-    case "minor":
-      return Severity.Minor;
-    case "moderate":
-      return Severity.Moderate;
-    case "major":
-      return Severity.Major;
-    case "catastrophic":
-      return Severity.Catastrophic;
-    default:
-      return Severity.Moderate;
-  }
-};
-
-/**
- * Maps MIT likelihood strings to Likelihood enum.
- * MIT uses Rare/Unlikely/Possible/Likely/Almost Certain likelihood scale.
- */
-const mapLikelihoodMIT = (likelihood: string): Likelihood => {
-  switch (likelihood.toLowerCase()) {
-    case "rare":
-      return Likelihood.Rare;
-    case "unlikely":
-      return Likelihood.Unlikely;
-    case "possible":
-      return Likelihood.Possible;
-    case "likely":
-      return Likelihood.Likely;
-    case "almost certain":
-      return Likelihood.AlmostCertain;
-    default:
-      return Likelihood.Possible;
-  }
-};
 
 /**
  * Modal for adding a new risk from the MIT AI Risk Database.

@@ -9,8 +9,11 @@ def _text(sql: str):
 from database.db import get_db
 
 
-async def get_all_tools(org_id: int) -> list[dict]:
-    """Get all active tools for an organization, joined with server details."""
+async def get_all_tools(org_id: int, active_servers_only: bool = False) -> list[dict]:
+    """Get all active tools for an organization, joined with server details.
+
+    With active_servers_only=True (agent-facing tools/list), tools of disabled
+    servers are hidden. The admin catalog passes False and keeps every server."""
     async with get_db() as db:
         result = await db.execute(
             text("""
@@ -32,9 +35,10 @@ async def get_all_tools(org_id: int) -> list[dict]:
                 JOIN ai_gateway_mcp_servers s ON t.server_id = s.id
                 WHERE t.organization_id = :org_id
                   AND t.is_active = true
+                  AND (:active_servers_only = false OR s.is_active = true)
                 ORDER BY t.tool_name
             """),
-            {"org_id": org_id},
+            {"org_id": org_id, "active_servers_only": active_servers_only},
         )
         rows = result.mappings().all()
         return [

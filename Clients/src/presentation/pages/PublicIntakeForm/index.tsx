@@ -1,12 +1,22 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router";
 import { useForm } from "react-hook-form";
-import { Box, Typography } from "@mui/material";
+import { Box, Collapse, Typography } from "@mui/material";
 import { Send, Loader2, Info, AlertCircle } from "lucide-react";
 import Field from "../../components/Inputs/Field";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { FormFieldRenderer, FormFieldHint } from "./FormFieldRenderer";
+import { CalculatedFieldDisplay } from "./CalculatedFieldDisplay";
+import {
+  cleanSubmission,
+  evaluateForm,
+  firstMissingVisibleInput,
+  sortFields,
+} from "../../../application/utils/intakeFormLogic";
 import { MathCaptcha } from "./MathCaptcha";
+import EuAiActQuestionnaire from "../../components/EuAiActQuestionnaire";
+import { pruneHiddenAnswers } from "../../../application/utils/euAiActQuestionnaire";
+import type { Answers, Questionnaire } from "../../../domain/types/euAiActClassification";
 import {
   getPublicForm,
   getPublicFormById,
@@ -143,16 +153,48 @@ export function PublicIntakeForm() {
   const [captchaToken, setCaptchaToken] = useState("");
   const [captchaError, setCaptchaError] = useState<string | null>(null);
   const [captchaRefreshTrigger, setCaptchaRefreshTrigger] = useState(0);
+  const [riskStep, setRiskStep] = useState<{ questionnaire: Questionnaire } | null>(null);
+  const [riskAnswers, setRiskAnswers] = useState<Answers>({});
+  const [step, setStep] = useState<"risk" | "form">("form");
 
   // Form state
   const {
     control,
     handleSubmit,
     reset,
+    watch,
+    unregister,
     formState: { errors },
   } = useForm<Record<string, unknown>>({
     defaultValues: {},
   });
+
+  // Show/hide rules and calculated values, recomputed on every change.
+  const watchedValues = watch();
+  const evaluation = formData ? evaluateForm(formData.schema, watchedValues) : null;
+  const hiddenFieldKey = formData
+    ? formData.schema.fields
+        .filter((field) => !evaluation?.visibleIds.has(field.id))
+        .map((field) => field.id)
+        .join("|")
+    : "";
+
+  // Fields present when the form step first renders appear at once; only
+  // fields a rule reveals later animate in. Re-armed each time the form step
+  // is entered (it follows the EU AI Act risk step when that is on).
+  const [fieldsShown, setFieldsShown] = useState(false);
+  useEffect(() => {
+    setFieldsShown(Boolean(formData) && step === "form");
+  }, [formData, step]);
+
+  // A hidden field must not block submit: drop its validation but keep the
+  // typed value, so showing it again restores the answer.
+  useEffect(() => {
+    if (!hiddenFieldKey) return;
+    for (const id of hiddenFieldKey.split("|")) {
+      unregister(id, { keepValue: true, keepDefaultValue: true });
+    }
+  }, [hiddenFieldKey, unregister]);
 
   // Submitter info
   const [submitterEmail, setSubmitterEmail] = useState("");
@@ -172,6 +214,14 @@ export function PublicIntakeForm() {
         : await getPublicForm(tenantSlug!, formSlug!, resubmissionToken);
       if (response.data) {
         setFormData(response.data.form as PublicFormData);
+        const definition = response.data.euAiActRiskStep ?? null;
+        setRiskStep(definition);
+        setStep(definition ? "risk" : "form");
+        if (definition && response.data.previousRiskAnswers) {
+          setRiskAnswers(
+            pruneHiddenAnswers(definition.questionnaire, response.data.previousRiskAnswers),
+          );
+        }
         if (response.data.organizationLogo) {
           setOrganizationLogo(response.data.organizationLogo);
         }
@@ -251,12 +301,15 @@ export function PublicIntakeForm() {
 
     try {
       const payload = {
-        formData: data,
+        formData: cleanSubmission(formData.schema, data).data,
         submitterEmail: collectContactInfo ? submitterEmail || "" : "",
         submitterName: collectContactInfo ? submitterName || undefined : undefined,
         captchaToken,
         captchaAnswer: captchaNum,
         resubmissionToken,
+        ...(riskStep
+          ? { euAiActRiskAnswers: pruneHiddenAnswers(riskStep.questionnaire, riskAnswers) }
+          : {}),
       };
 
       const response = isNewFormat
@@ -280,7 +333,18 @@ export function PublicIntakeForm() {
     } catch (err: unknown) {
       console.error("Failed to submit form:", err);
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
-      if (errorMessage.includes("captcha") || errorMessage.includes("incorrect")) {
+      // apiServices throws CustomException: status on the error, the server envelope
+      // ({ message, data: { message, errors } }) on `response`.
+      const status = (err as { status?: number })?.status;
+      const detail = (err as { response?: { data?: { message?: string; step?: string } } })
+        ?.response?.data;
+      if (riskStep && status === 400 && detail?.step === "eu_ai_act_risk") {
+        // The server rejected the risk answers: send the submitter back to that step.
+        setError(detail.message || "Please review your risk classification answers.");
+        setStep("risk");
+        setCaptchaValue("");
+        setCaptchaRefreshTrigger((prev) => prev + 1);
+      } else if (errorMessage.includes("captcha") || errorMessage.includes("incorrect")) {
         setCaptchaError("Incorrect answer. Please try again.");
         setCaptchaValue("");
         setCaptchaRefreshTrigger((prev) => prev + 1);
@@ -366,7 +430,8 @@ export function PublicIntakeForm() {
     return null;
   }
 
-  const sortedFields = [...formData.schema.fields].sort((a, b) => a.order - b.order);
+  // Same order the show/hide rules and formulas use.
+  const sortedFields = sortFields(formData.schema.fields);
 
   // Resolve design settings
   const ds = formData.designSettings ?? DEFAULT_DESIGN_SETTINGS;
@@ -429,170 +494,247 @@ export function PublicIntakeForm() {
             )}
           </GradientBanner>
 
-          {/* Form body */}
-          <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ p: "32px" }}>
-            {/* Resubmission alert */}
-            {previousData && (
-              <Box
-                sx={{
-                  mb: 3,
-                  p: "12px 16px",
-                  fontSize: "13px",
-                  borderRadius: "8px",
-                  border: "1px solid #bfdbfe",
-                  backgroundColor: "#eff6ff",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                }}
+          {/* Risk classification step */}
+          {riskStep && step === "risk" && (
+            <Box sx={{ p: "32px" }}>
+              <Typography
+                component="h2"
+                sx={{ fontWeight: 600, color: "#1e293b", mb: "8px", fontSize: "16px" }}
               >
-                <Info size={18} color="#3b82f6" style={{ flexShrink: 0 }} />
-                <Typography sx={{ fontSize: "13px", color: "#1e40af" }}>
-                  Your previous submission data has been pre-filled. You can update and resubmit.
-                </Typography>
-              </Box>
-            )}
-
-            {/* Error alert */}
-            {error && (
-              <Box
-                sx={{
-                  mb: 3,
-                  p: "12px 16px",
-                  fontSize: "13px",
-                  borderRadius: "8px",
-                  border: "1px solid #fecaca",
-                  backgroundColor: "#fef2f2",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                }}
-              >
-                <AlertCircle size={18} color="#ef4444" style={{ flexShrink: 0 }} />
-                <Typography sx={{ fontSize: "13px", color: "#991b1b" }}>{error}</Typography>
-              </Box>
-            )}
-
-            {/* Contact info section */}
-            {collectContactInfo && (
-              <>
-                <Typography
-                  component="h2"
+                Risk classification
+              </Typography>
+              <Typography sx={{ fontSize: "13px", color: "#475569", mb: "24px" }}>
+                Answer these questions about the AI system first. They follow the EU AI Act.
+              </Typography>
+              {error && (
+                <Box
                   sx={{
-                    fontWeight: 600,
-                    color: "#1e293b",
-                    mb: 2,
-                    fontSize: "16px",
+                    mb: "24px",
+                    p: "12px 16px",
+                    fontSize: "13px",
+                    borderRadius: "8px",
+                    border: "1px solid #fecaca",
+                    backgroundColor: "#fef2f2",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
                   }}
                 >
-                  Your contact information
-                </Typography>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: "20px", mb: 3 }}>
-                  <Field
-                    id="submitter-name"
-                    label="Name"
-                    placeholder="Your name"
-                    value={submitterName}
-                    onChange={(e) => setSubmitterName(e.target.value)}
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        "borderRadius": "8px",
-                        "fontSize": "15px",
-                        "& fieldset": { borderColor: "#e2e8f0" },
-                        "&:hover fieldset": { borderColor: "#cbd5e1" },
-                        "&.Mui-focused fieldset": { borderColor: ds.colorTheme },
-                      },
-                      "& .MuiOutlinedInput-input": {
-                        padding: "12px 14px",
-                      },
-                    }}
-                  />
-                  <Field
-                    id="submitter-email"
-                    label="Email"
-                    type="email"
-                    isRequired
-                    value={submitterEmail}
-                    onChange={(e) => {
-                      setSubmitterEmail(e.target.value);
-                      setEmailError(null);
-                    }}
-                    error={emailError || undefined}
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        "borderRadius": "8px",
-                        "fontSize": "15px",
-                        "& fieldset": { borderColor: emailError ? "#ef4444" : "#e2e8f0" },
-                        "&:hover fieldset": { borderColor: emailError ? "#ef4444" : "#cbd5e1" },
-                        "&.Mui-focused fieldset": {
-                          borderColor: emailError ? "#ef4444" : ds.colorTheme,
-                        },
-                      },
-                      "& .MuiOutlinedInput-input": {
-                        padding: "12px 14px",
-                      },
-                    }}
-                  />
-                  <FormFieldHint text="We'll send you updates about your submission" />
+                  <AlertCircle size={18} color="#ef4444" style={{ flexShrink: 0 }} />
+                  <Typography sx={{ fontSize: "13px", color: "#991b1b" }}>{error}</Typography>
                 </Box>
-
-                <Box sx={{ my: 4, borderTop: "1px solid #e2e8f0" }} />
-              </>
-            )}
-
-            {/* Form fields */}
-            <Box sx={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-              {sortedFields.map((field) => (
-                <FormFieldRenderer key={field.id} field={field} control={control} errors={errors} />
-              ))}
-            </Box>
-
-            {/* Captcha */}
-            <Box sx={{ mt: "32px", mb: "32px" }}>
-              <MathCaptcha
-                value={captchaValue}
-                onChange={handleCaptchaChange}
-                error={captchaError || undefined}
-                refreshTrigger={captchaRefreshTrigger}
+              )}
+              <EuAiActQuestionnaire
+                questionnaire={riskStep.questionnaire}
+                answers={riskAnswers}
+                onAnswersChange={setRiskAnswers}
+                onComplete={() => {
+                  setError(null);
+                  setStep("form");
+                }}
+                completeLabel="Continue"
               />
             </Box>
+          )}
 
-            {/* Submit button */}
-            <CustomizableButton
-              type="submit"
-              variant="contained"
-              isDisabled={isSubmitting}
-              startIcon={
-                isSubmitting ? (
-                  <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
-                ) : (
-                  <Send size={16} />
-                )
-              }
-              text={isSubmitting ? "Submitting..." : formData.submitButtonText}
-              sx={{
-                "width": "100%",
-                "height": 48,
-                "backgroundColor": ds.colorTheme,
-                "fontSize": "15px",
-                "fontWeight": 600,
-                "borderRadius": "8px",
-                "textTransform": "none",
-                "boxShadow": "none",
-                "&:hover": {
-                  backgroundColor: `${ds.colorTheme}dd`,
-                  boxShadow: `0 2px 8px ${ds.colorTheme}40`,
-                },
-                "&:disabled": {
-                  backgroundColor: "#cbd5e1",
-                  color: "background.main",
-                },
-                "& .MuiButton-startIcon": {
-                  marginRight: "8px",
-                },
-              }}
-            />
-          </Box>
+          {/* Form body */}
+          {(!riskStep || step === "form") && (
+            <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ p: "32px" }}>
+              {/* Back to the risk step */}
+              {riskStep && (
+                <Box sx={{ mb: "16px" }}>
+                  <CustomizableButton
+                    variant="text"
+                    text="Back to risk classification"
+                    onClick={() => setStep("risk")}
+                  />
+                </Box>
+              )}
+
+              {/* Resubmission alert */}
+              {previousData && (
+                <Box
+                  sx={{
+                    mb: 3,
+                    p: "12px 16px",
+                    fontSize: "13px",
+                    borderRadius: "8px",
+                    border: "1px solid #bfdbfe",
+                    backgroundColor: "#eff6ff",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                  }}
+                >
+                  <Info size={18} color="#3b82f6" style={{ flexShrink: 0 }} />
+                  <Typography sx={{ fontSize: "13px", color: "#1e40af" }}>
+                    Your previous submission data has been pre-filled. You can update and resubmit.
+                  </Typography>
+                </Box>
+              )}
+
+              {/* Error alert */}
+              {error && (
+                <Box
+                  sx={{
+                    mb: 3,
+                    p: "12px 16px",
+                    fontSize: "13px",
+                    borderRadius: "8px",
+                    border: "1px solid #fecaca",
+                    backgroundColor: "#fef2f2",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                  }}
+                >
+                  <AlertCircle size={18} color="#ef4444" style={{ flexShrink: 0 }} />
+                  <Typography sx={{ fontSize: "13px", color: "#991b1b" }}>{error}</Typography>
+                </Box>
+              )}
+
+              {/* Contact info section */}
+              {collectContactInfo && (
+                <>
+                  <Typography
+                    component="h2"
+                    sx={{
+                      fontWeight: 600,
+                      color: "#1e293b",
+                      mb: 2,
+                      fontSize: "16px",
+                    }}
+                  >
+                    Your contact information
+                  </Typography>
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: "20px", mb: 3 }}>
+                    <Field
+                      id="submitter-name"
+                      label="Name"
+                      placeholder="Your name"
+                      value={submitterName}
+                      onChange={(e) => setSubmitterName(e.target.value)}
+                      sx={{
+                        "& .MuiOutlinedInput-root": {
+                          "borderRadius": "8px",
+                          "fontSize": "15px",
+                          "& fieldset": { borderColor: "#e2e8f0" },
+                          "&:hover fieldset": { borderColor: "#cbd5e1" },
+                          "&.Mui-focused fieldset": { borderColor: ds.colorTheme },
+                        },
+                        "& .MuiOutlinedInput-input": {
+                          padding: "12px 14px",
+                        },
+                      }}
+                    />
+                    <Field
+                      id="submitter-email"
+                      label="Email"
+                      type="email"
+                      isRequired
+                      value={submitterEmail}
+                      onChange={(e) => {
+                        setSubmitterEmail(e.target.value);
+                        setEmailError(null);
+                      }}
+                      error={emailError || undefined}
+                      sx={{
+                        "& .MuiOutlinedInput-root": {
+                          "borderRadius": "8px",
+                          "fontSize": "15px",
+                          "& fieldset": { borderColor: emailError ? "#ef4444" : "#e2e8f0" },
+                          "&:hover fieldset": { borderColor: emailError ? "#ef4444" : "#cbd5e1" },
+                          "&.Mui-focused fieldset": {
+                            borderColor: emailError ? "#ef4444" : ds.colorTheme,
+                          },
+                        },
+                        "& .MuiOutlinedInput-input": {
+                          padding: "12px 14px",
+                        },
+                      }}
+                    />
+                    <FormFieldHint text="We'll send you updates about your submission" />
+                  </Box>
+
+                  <Box sx={{ my: 4, borderTop: "1px solid #e2e8f0" }} />
+                </>
+              )}
+
+              {/* Form fields */}
+              <Box sx={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                {sortedFields.map((field) => {
+                  // A hidden field unmounts at once (react-hook-form re-registers a
+                  // mounted Controller with its rules on every render, so an exit
+                  // animation would keep a hidden required field blocking submit);
+                  // only showing a field is animated.
+                  if (evaluation && !evaluation.visibleIds.has(field.id)) return null;
+                  return (
+                    <Collapse key={field.id} in appear={fieldsShown} timeout={150}>
+                      {field.type === "calculated" ? (
+                        <CalculatedFieldDisplay
+                          field={field}
+                          value={evaluation?.calculated[field.id] ?? null}
+                          missingLabel={
+                            evaluation
+                              ? firstMissingVisibleInput(formData.schema, evaluation, field.id)
+                              : null
+                          }
+                        />
+                      ) : (
+                        <FormFieldRenderer field={field} control={control} errors={errors} />
+                      )}
+                    </Collapse>
+                  );
+                })}
+              </Box>
+
+              {/* Captcha */}
+              <Box sx={{ mt: "32px", mb: "32px" }}>
+                <MathCaptcha
+                  value={captchaValue}
+                  onChange={handleCaptchaChange}
+                  error={captchaError || undefined}
+                  refreshTrigger={captchaRefreshTrigger}
+                />
+              </Box>
+
+              {/* Submit button */}
+              <CustomizableButton
+                type="submit"
+                variant="contained"
+                isDisabled={isSubmitting}
+                startIcon={
+                  isSubmitting ? (
+                    <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
+                  ) : (
+                    <Send size={16} />
+                  )
+                }
+                text={isSubmitting ? "Submitting..." : formData.submitButtonText}
+                sx={{
+                  "width": "100%",
+                  "height": 48,
+                  "backgroundColor": ds.colorTheme,
+                  "fontSize": "15px",
+                  "fontWeight": 600,
+                  "borderRadius": "8px",
+                  "textTransform": "none",
+                  "boxShadow": "none",
+                  "&:hover": {
+                    backgroundColor: `${ds.colorTheme}dd`,
+                    boxShadow: `0 2px 8px ${ds.colorTheme}40`,
+                  },
+                  "&:disabled": {
+                    backgroundColor: "#cbd5e1",
+                    color: "background.main",
+                  },
+                  "& .MuiButton-startIcon": {
+                    marginRight: "8px",
+                  },
+                }}
+              />
+            </Box>
+          )}
         </Box>
 
         <PoweredByFooter />

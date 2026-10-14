@@ -19,11 +19,12 @@ export async function getQualityScores() {
 
 export async function getEvidenceGaps(params?: {
   framework_type?: string;
-  quality_threshold?: number;
+  /** Grades the API counts as low quality. Defaults to D,F server-side. */
+  low_grades?: string[];
 }) {
   const query = new URLSearchParams();
   if (params?.framework_type) query.set("framework_type", params.framework_type);
-  if (params?.quality_threshold) query.set("quality_threshold", String(params.quality_threshold));
+  if (params?.low_grades?.length) query.set("low_grades", params.low_grades.join(","));
   const qs = query.toString();
   const response = await apiServices.get<any>(`${BASE_URL}/gaps${qs ? `?${qs}` : ""}`);
   return response.data;

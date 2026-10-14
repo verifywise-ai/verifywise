@@ -253,7 +253,7 @@ const Login: React.FC = () => {
       .catch((error) => {
         setIsSubmitting(false);
 
-        let message = "An error occurred. Please try again.";
+        let message: string;
         const status = error.status || error.response?.status;
         const responseData = error.response?.data;
 

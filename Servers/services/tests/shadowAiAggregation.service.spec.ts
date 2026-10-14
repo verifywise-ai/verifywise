@@ -31,6 +31,10 @@ jest.mock("../../utils/shadowAiConfig.utils", () => ({
   getSettingsQuery: jest.fn(),
 }));
 
+jest.mock("../../utils/dataRetention.utils", () => ({
+  safeRecordRetentionRun: jest.fn(),
+}));
+
 import {
   runDailyRollup,
   runMonthlyRollup,
@@ -41,6 +45,7 @@ import { sequelize } from "../../database/db";
 import { calculateRiskScoresForOrganization } from "../shadowAiRiskScoring.service";
 import { getSettingsQuery } from "../../utils/shadowAiConfig.utils";
 import logger from "../../utils/logger/fileLogger";
+import { safeRecordRetentionRun as recordRetentionRun } from "../../utils/dataRetention.utils";
 
 // Cast mocks
 const mockQuery = sequelize.query as jest.MockedFunction<typeof sequelize.query>;
@@ -53,6 +58,10 @@ describe("shadowAiAggregation.service", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
+
+  // A purge statement returns one row: the database's cutoff and the count.
+  const CUTOFF = "2026-09-12 02:00:00.123+00";
+  const purged = (count: number) => [[{ cutoff: CUTOFF, deleted_count: count }], 1] as any;
 
   // Helper: mock getAllOrganizationIds to return specified org IDs
   const mockOrgIds = (orgIds: number[]) => {
@@ -131,16 +140,35 @@ describe("shadowAiAggregation.service", () => {
         retention_daily_rollups_days: 90,
         retention_alert_history_days: 180,
       } as any);
-      // Each delete query returns [undefined, rowCount]
-      mockQuery.mockResolvedValueOnce([undefined, 5] as any);
-      mockQuery.mockResolvedValueOnce([undefined, 2] as any);
-      mockQuery.mockResolvedValueOnce([undefined, 1] as any);
+      mockQuery.mockResolvedValueOnce(purged(5));
+      mockQuery.mockResolvedValueOnce(purged(2));
+      mockQuery.mockResolvedValueOnce(purged(1));
 
       await purgeOldEvents();
 
       expect(mockGetSettings).toHaveBeenCalledWith(1);
       // 1 getAllOrgs + 3 delete queries
       expect(mockQuery).toHaveBeenCalledTimes(4);
+      // The cutoff is computed in SQL and the DELETE compares against it.
+      const deleteSql = String(mockQuery.mock.calls[1][0]);
+      expect(deleteSql).toContain("SELECT NOW() - INTERVAL '1 day' * :days AS cutoff");
+      expect(deleteSql).toContain("t.event_timestamp < params.cutoff");
+      expect(recordRetentionRun).toHaveBeenCalledTimes(3);
+      expect(recordRetentionRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          organizationId: 1,
+          recordType: "shadow_ai_events",
+          deletedCount: 5,
+          status: "success",
+          cutoff: CUTOFF,
+        }),
+      );
+      expect(recordRetentionRun).toHaveBeenCalledWith(
+        expect.objectContaining({ recordType: "shadow_ai_daily_rollups", deletedCount: 2 }),
+      );
+      expect(recordRetentionRun).toHaveBeenCalledWith(
+        expect.objectContaining({ recordType: "shadow_ai_alert_history", deletedCount: 1 }),
+      );
     });
 
     it("should skip purge when retention days is 0", async () => {
@@ -155,6 +183,7 @@ describe("shadowAiAggregation.service", () => {
 
       // 1 getAllOrgs only, no delete queries
       expect(mockQuery).toHaveBeenCalledTimes(1);
+      expect(recordRetentionRun).not.toHaveBeenCalled();
       expect(mockGetSettings).toHaveBeenCalledWith(1);
     });
 
@@ -165,13 +194,73 @@ describe("shadowAiAggregation.service", () => {
         retention_daily_rollups_days: 0,
         retention_alert_history_days: 0,
       } as any);
-      mockQuery.mockResolvedValue([undefined, 0] as any);
+      mockQuery.mockResolvedValue(purged(0));
 
       await purgeOldEvents();
 
       expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining("Data retention cleanup failed for organization 1"),
         expect.any(Error),
+      );
+      // Without its settings, org 1 records a failed run (no cutoff) per type.
+      for (const recordType of [
+        "shadow_ai_events",
+        "shadow_ai_daily_rollups",
+        "shadow_ai_alert_history",
+      ]) {
+        expect(recordRetentionRun).toHaveBeenCalledWith({
+          organizationId: 1,
+          recordType,
+          cutoff: null,
+          deletedCount: 0,
+          status: "failed",
+          error: expect.objectContaining({ message: "settings error" }),
+        });
+      }
+      // Org 2 still ran its events cleanup.
+      expect(recordRetentionRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          organizationId: 2,
+          recordType: "shadow_ai_events",
+          status: "success",
+        }),
+      );
+      expect(recordRetentionRun).toHaveBeenCalledTimes(4);
+    });
+
+    it("records a failed run for a cleanup that fails and still runs the others", async () => {
+      mockOrgIds([1]);
+      mockGetSettings.mockResolvedValue({
+        retention_events_days: 30,
+        retention_daily_rollups_days: 90,
+        retention_alert_history_days: 0,
+      } as any);
+      mockQuery.mockRejectedValueOnce(new Error("lock timeout"));
+      mockQuery.mockResolvedValueOnce(purged(4));
+
+      await purgeOldEvents();
+
+      expect(recordRetentionRun).toHaveBeenCalledTimes(2);
+      expect(recordRetentionRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          organizationId: 1,
+          recordType: "shadow_ai_events",
+          deletedCount: 0,
+          status: "failed",
+          cutoff: null,
+          error: expect.objectContaining({ message: "lock timeout" }),
+        }),
+      );
+      expect(recordRetentionRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recordType: "shadow_ai_daily_rollups",
+          deletedCount: 4,
+          status: "success",
+        }),
+      );
+      // Period 0 means keep forever: no run, failed or otherwise.
+      expect(recordRetentionRun).not.toHaveBeenCalledWith(
+        expect.objectContaining({ recordType: "shadow_ai_alert_history" }),
       );
     });
   });

@@ -57,6 +57,11 @@ export interface RequestParams {
   // `undefined` values are permitted so callers can drop a default header
   // (e.g. `"Content-Type": undefined` for multipart uploads).
   headers?: Record<string, string | undefined>;
+  /**
+   * Skip the global error toast for this request's failures because the
+   * caller shows its own message (read by customAxios showGlobalErrorAlert).
+   */
+  suppressGlobalErrorToast?: boolean;
   [key: string]: unknown;
 }
 

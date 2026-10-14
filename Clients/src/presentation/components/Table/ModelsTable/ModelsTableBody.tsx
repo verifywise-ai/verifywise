@@ -14,7 +14,7 @@ import singleTheme from "../../../themes/v1SingleTheme";
 import { ModelRow } from "./index";
 import { CustomizableButton } from "../../button/customizable-button";
 import { text, background, border as borderPalette, status } from "../../../themes/palette";
-import { displayFormattedDateTime } from "../../../tools/isoDateToString";
+import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 
 interface ModelsTableBodyProps {
   rows: ModelRow[];
@@ -24,9 +24,12 @@ interface ModelsTableBodyProps {
   onDelete?: (model: ModelRow) => void;
 }
 
-const formatDate = (dateStr?: string | null): string => {
+const formatTimestamp = (
+  dateStr: string | null | undefined,
+  formatDate: ReturnType<typeof useFormattedDate>,
+): string => {
   if (!dateStr) return "-";
-  return displayFormattedDateTime(dateStr);
+  return formatDate(dateStr, { includeTime: true });
 };
 
 // Provider color mapping for chips
@@ -169,6 +172,7 @@ const ModelsTableBody: React.FC<ModelsTableBodyProps> = ({
   onRowClick,
   onDelete,
 }) => {
+  const formatDate = useFormattedDate();
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [menuRow, setMenuRow] = useState<ModelRow | null>(null);
 
@@ -277,7 +281,7 @@ const ModelsTableBody: React.FC<ModelsTableBodyProps> = ({
               }}
             >
               <Typography sx={{ fontSize: "13px", color: `${status.default.text}` }}>
-                {formatDate(model.updatedAt)}
+                {formatTimestamp(model.updatedAt, formatDate)}
               </Typography>
             </TableCell>
 

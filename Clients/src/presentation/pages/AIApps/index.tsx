@@ -99,7 +99,7 @@ export default function AIApps() {
     try {
       await deleteAiAppMutation.mutateAsync(appPendingDelete.id);
       setAlert({ variant: "success", body: "AI app deleted successfully" });
-    } catch (err) {
+    } catch {
       setAlert({ variant: "error", body: "Failed to delete AI app" });
     } finally {
       setAppPendingDelete(null);

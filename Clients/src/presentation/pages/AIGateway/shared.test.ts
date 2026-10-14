@@ -5,6 +5,7 @@ import { ThemeProvider } from "@mui/material/styles";
 import { light } from "../../themes";
 import {
   formatEntityType,
+  formatMcpStatus,
   getProviderIcon,
   ProviderIcon,
   useCardSx,
@@ -163,6 +164,29 @@ describe("AIGateway shared utilities", () => {
         { _id: "anthropic/claude-3-opus", name: "claude-3-opus" },
       ]);
       expect(result.current.getModelsForProvider("unknown")).toEqual([]);
+    });
+
+    it("drops providers that an API key cannot be stored for", async () => {
+      mockGet.mockResolvedValue({
+        data: {
+          data: {
+            providers: ["openai", "bedrock", "azure", "cohere"],
+            models: {
+              openai: [{ id: "gpt-4o", mode: "chat" }],
+              bedrock: [{ id: "anthropic.claude-3", mode: "chat" }],
+              azure: [{ id: "gpt-4o", mode: "chat" }],
+              cohere: [{ id: "command-r", mode: "chat" }],
+            },
+          },
+        },
+      });
+
+      const { result } = renderHook(() => useGatewayModels());
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(result.current.providers).toEqual(["cohere", "openai"]);
+      expect(result.current.getModelsForProvider("bedrock")).toEqual([]);
     });
 
     it("sets an error message when the request fails", async () => {
@@ -467,6 +491,14 @@ describe("AIGateway shared utilities", () => {
         streamPromptTest({ endpointSlug: "e", messages: [], onDelta: vi.fn() }),
       ).rejects.toThrow("stream broke");
       expect(reader.releaseLock).toHaveBeenCalled();
+    });
+  });
+
+  describe("formatMcpStatus", () => {
+    it("turns every underscore into a space", () => {
+      expect(formatMcpStatus("approval_required")).toBe("approval required");
+      expect(formatMcpStatus("a_b_c")).toBe("a b c");
+      expect(formatMcpStatus("blocked")).toBe("blocked");
     });
   });
 });

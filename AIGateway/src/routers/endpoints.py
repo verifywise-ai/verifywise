@@ -3,7 +3,6 @@ import logging
 from fastapi import APIRouter, HTTPException, Request
 from typing import Any, Optional
 
-from middlewares.auth import verify_internal_key
 from utils.auth import get_org_id, get_user_id, get_role_id, require_admin
 from utils.notifications import notify_config_change
 from utils.change_history import record_endpoint_change
@@ -31,7 +30,6 @@ def _validate_slug(slug: str) -> None:
 
 @router.get("")
 async def list_endpoints(request: Request) -> Any:
-    verify_internal_key(request)
 
     org_id = get_org_id(request)
     role_id = get_role_id(request)
@@ -42,7 +40,6 @@ async def list_endpoints(request: Request) -> Any:
 
 @router.get("/{endpoint_id}")
 async def get_endpoint(endpoint_id: int, request: Request) -> Any:
-    verify_internal_key(request)
 
     org_id = get_org_id(request)
 
@@ -55,7 +52,6 @@ async def get_endpoint(endpoint_id: int, request: Request) -> Any:
 
 @router.post("")
 async def create_endpoint(request: Request) -> Any:
-    verify_internal_key(request)
     require_admin(request)
 
     org_id = get_org_id(request)
@@ -91,7 +87,6 @@ async def create_endpoint(request: Request) -> Any:
 
 @router.patch("/{endpoint_id}")
 async def update_endpoint(endpoint_id: int, request: Request) -> Any:
-    verify_internal_key(request)
     require_admin(request)
 
     org_id = get_org_id(request)
@@ -134,7 +129,6 @@ async def update_endpoint(endpoint_id: int, request: Request) -> Any:
 
 @router.delete("/{endpoint_id}")
 async def delete_endpoint(endpoint_id: int, request: Request) -> Any:
-    verify_internal_key(request)
     require_admin(request)
 
     org_id = get_org_id(request)

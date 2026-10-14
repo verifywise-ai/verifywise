@@ -21,6 +21,7 @@ from routers.virtual_keys import router as virtual_keys_router
 from routers.prompts import router as prompts_router
 from routers.risk import router as risk_router
 from routers.cache import router as cache_router
+from routers.retention import router as retention_router
 from routers.mcp_agent_keys import router as mcp_agent_keys_router
 from routers.mcp_servers import router as mcp_servers_router
 from routers.mcp_approvals import router as mcp_approvals_router
@@ -31,6 +32,7 @@ from routers.mcp_tools import router as mcp_tools_router
 from routers.mcp_proxy import router as mcp_proxy_router
 from routers.mcp_hook import router as mcp_hook_router
 from routers.tenant_chat import router as tenant_chat_router
+from middlewares.auth import include_internal_router
 
 # Disable LiteLLM verbose logging to prevent key leakage
 litellm.suppress_debug_info = True
@@ -74,35 +76,37 @@ from observability import setup_observability  # noqa: E402
 
 setup_observability(app, "verifywise-ai-gateway")
 
-# Internal routes (Express backend → Gateway, authenticated via x-internal-key)
+# Internal routes (Express backend → Gateway). include_internal_router mounts
+# each under /internal with the x-internal-key check as a router dependency.
 # Mounted under /internal prefix to avoid conflict with public /v1 routes
-app.include_router(completions_router, prefix="/internal", tags=["Internal"])
-app.include_router(models_router, prefix="/internal", tags=["Internal"])
-app.include_router(guardrails_router, prefix="/internal", tags=["Internal"])
+include_internal_router(app, completions_router, tags=["Internal"])
+include_internal_router(app, models_router, tags=["Internal"])
+include_internal_router(app, guardrails_router, tags=["Internal"])
 
 # CRUD routes (Express backend → Gateway, authenticated via internal key + tenant headers)
-app.include_router(api_keys_router, prefix="/internal", tags=["CRUD"])
-app.include_router(budget_router, prefix="/internal", tags=["CRUD"])
-app.include_router(endpoints_router, prefix="/internal", tags=["CRUD"])
-app.include_router(spend_router, prefix="/internal", tags=["CRUD"])
-app.include_router(guardrails_crud_router, prefix="/internal", tags=["CRUD"])
-app.include_router(virtual_keys_router, prefix="/internal", tags=["CRUD"])
-app.include_router(prompts_router, prefix="/internal", tags=["CRUD"])
-app.include_router(risk_router, prefix="/internal", tags=["CRUD"])
-app.include_router(cache_router, prefix="/internal", tags=["CRUD"])
+include_internal_router(app, api_keys_router, tags=["CRUD"])
+include_internal_router(app, budget_router, tags=["CRUD"])
+include_internal_router(app, endpoints_router, tags=["CRUD"])
+include_internal_router(app, spend_router, tags=["CRUD"])
+include_internal_router(app, guardrails_crud_router, tags=["CRUD"])
+include_internal_router(app, virtual_keys_router, tags=["CRUD"])
+include_internal_router(app, prompts_router, tags=["CRUD"])
+include_internal_router(app, risk_router, tags=["CRUD"])
+include_internal_router(app, cache_router, tags=["CRUD"])
+include_internal_router(app, retention_router, tags=["CRUD"])
 
 # MCP Gateway CRUD routes (internal)
-app.include_router(mcp_agent_keys_router, prefix="/internal", tags=["MCP CRUD"])
-app.include_router(mcp_servers_router, prefix="/internal", tags=["MCP CRUD"])
-app.include_router(mcp_approvals_router, prefix="/internal", tags=["MCP CRUD"])
-app.include_router(mcp_audit_router, prefix="/internal", tags=["MCP CRUD"])
-app.include_router(mcp_runs_router, prefix="/internal", tags=["MCP CRUD"])
-app.include_router(mcp_guardrails_router, prefix="/internal", tags=["MCP CRUD"])
-app.include_router(mcp_tools_router, prefix="/internal", tags=["MCP CRUD"])
+include_internal_router(app, mcp_agent_keys_router, tags=["MCP CRUD"])
+include_internal_router(app, mcp_servers_router, tags=["MCP CRUD"])
+include_internal_router(app, mcp_approvals_router, tags=["MCP CRUD"])
+include_internal_router(app, mcp_audit_router, tags=["MCP CRUD"])
+include_internal_router(app, mcp_runs_router, tags=["MCP CRUD"])
+include_internal_router(app, mcp_guardrails_router, tags=["MCP CRUD"])
+include_internal_router(app, mcp_tools_router, tags=["MCP CRUD"])
 
 # Tenant proxy routes (Express proxy → Gateway, JWT-authenticated via headers)
 # Chat, streaming, embeddings, providers, model catalog
-app.include_router(tenant_chat_router, prefix="/internal", tags=["Tenant Proxy"])
+include_internal_router(app, tenant_chat_router, tags=["Tenant Proxy"])
 
 # Public routes (Employee SDK → Gateway, authenticated via virtual key)
 # OpenAI-compatible: /v1/chat/completions, /v1/embeddings, /v1/models

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Drawer, Stack, Typography, Divider, IconButton, useTheme } from "@mui/material";
+import { Drawer, Stack, Typography, Divider, IconButton } from "@mui/material";
 import { X } from "lucide-react";
 import SelectComponent from "../../Inputs/Select";
 import { CustomizableButton } from "../../button/customizable-button";
 import { getAllEntities } from "../../../../application/repository/entity.repository";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
+import { formatModelLabel, ModelLabelSource } from "../../../pages/AgentDiscovery/agentLabels";
+import { palette } from "../../../themes/palette";
 
 interface LinkModelModalProps {
   isOpen: boolean;
@@ -19,7 +21,6 @@ const LinkModelModal: React.FC<LinkModelModalProps> = ({
   agentId,
   onSuccess,
 }) => {
-  const theme = useTheme();
   const [models, setModels] = useState<{ _id: number | string; name: string }[]>([]);
   const [selectedModelId, setSelectedModelId] = useState<string | number>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -36,12 +37,7 @@ const LinkModelModal: React.FC<LinkModelModalProps> = ({
         routeUrl: "/modelInventory",
       });
       const data = response?.data || [];
-      setModels(
-        data.map((m: any) => ({
-          _id: m.id,
-          name: m.model_name || m.name || `Model #${m.id}`,
-        })),
-      );
+      setModels(data.map((m: ModelLabelSource) => ({ _id: m.id, name: formatModelLabel(m) })));
     } catch (error) {
       console.error("Failed to fetch models:", error);
     }
@@ -75,7 +71,7 @@ const LinkModelModal: React.FC<LinkModelModalProps> = ({
       open={isOpen}
       onClose={handleClose}
       PaperProps={{
-        sx: { width: 400, backgroundColor: theme.palette.background.modal || "#FCFCFD" },
+        sx: { width: 400, backgroundColor: palette.background.modal },
       }}
     >
       {/* Header */}
@@ -117,7 +113,7 @@ const LinkModelModal: React.FC<LinkModelModalProps> = ({
       <Stack direction="row" justifyContent="flex-end" gap={1} sx={{ p: "16px 24px" }}>
         <CustomizableButton
           variant="outlined"
-          sx={{ border: "1px solid #d0d5dd" }}
+          sx={{ border: `1px solid ${palette.border.dark}` }}
           onClick={handleClose}
         >
           Cancel

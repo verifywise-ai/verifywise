@@ -1,4 +1,5 @@
 import { IIntakeFormField, IIntakeFormSchema } from "../domain.layer/interfaces/i.intakeForm";
+import { validateSchemaLogic } from "../services/intakeFormLogic";
 
 /**
  * Accessibility validation for intake-form schemas.
@@ -83,4 +84,48 @@ export function validateIntakeFormSchemaLabels(schema: unknown): string[] {
   }
 
   return fields.flatMap((field, index) => validateField(field as IIntakeFormField, index));
+}
+
+/**
+ * The EU AI Act risk step sets the use case's AI risk classification. It only
+ * exists on use case forms (forced off elsewhere) and cannot coexist with a
+ * question mapped to that field.
+ */
+export function resolveEuAiActRiskStep(input: {
+  entityType: string;
+  enabled: boolean;
+  schema?: IIntakeFormSchema | null;
+}): { enabled: boolean; errors: string[] } {
+  const enabled = input.enabled && input.entityType === "use_case";
+  if (!enabled) return { enabled: false, errors: [] };
+  const mapped = (input.schema?.fields ?? []).some(
+    (f) => f?.entityFieldMapping === "ai_risk_classification",
+  );
+  return {
+    enabled,
+    errors: mapped
+      ? [
+          "Remove the AI risk classification mapping from the form's questions before turning on the EU AI Act risk classification step",
+        ]
+      : [],
+  };
+}
+
+/**
+ * Calculated fields, show/hide rules and risk dimension tags (see
+ * services/intakeFormLogic). Runs only on a well-formed schema; the label
+ * check above reports malformed ones.
+ */
+export function validateIntakeFormSchemaLogic(schema: unknown, entityType: string): string[] {
+  if (
+    schema === undefined ||
+    schema === null ||
+    typeof schema !== "object" ||
+    Array.isArray(schema)
+  ) {
+    return [];
+  }
+  const { fields } = schema as Partial<IIntakeFormSchema>;
+  if (!Array.isArray(fields)) return [];
+  return validateSchemaLogic({ fields }, entityType).map((error) => error.message);
 }

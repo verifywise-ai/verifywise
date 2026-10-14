@@ -48,6 +48,7 @@ describe("useUserPreferences", () => {
     expect(result.current.userPreferences.date_format).toBe("MM-DD-YYYY");
     expect(result.current.userPreferences.language).toBe("en");
     expect(result.current.userPreferences.theme).toBe("light");
+    expect(result.current.userPreferences.parallel_agents).toBe(false);
   });
 
   it("returns defaults on error", async () => {

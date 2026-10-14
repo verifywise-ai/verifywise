@@ -6,6 +6,7 @@ import {
   VALID_PROVIDERS,
 } from "../domain.layer/models/evaluationLlmApiKey/evaluationLlmApiKey.model";
 import { getDecryptedAiGatewayKeyForProviderQuery } from "../utils/aiGatewayEvalKey.utils";
+import { getGatewayInternalKey, getGatewayUrl } from "../utils/aiGatewayConfig";
 
 // JSON body parser for routes that need to inspect/modify the body before proxying
 const jsonParser = express.json({ limit: "50mb" });
@@ -57,6 +58,46 @@ export const toLiteLLMModel = (prov: string, mdl: string): string => {
   if (p === "xai" && !mdl.startsWith("xai/")) return `xai/${mdl}`;
   return mdl;
 };
+
+/**
+ * The text of a gateway `detail`, which FastAPI sends as a string, as
+ * `{ message, code }` for internal-key refusals, or as a list of validation
+ * errors (422). List entries are joined as "field: msg"; the offending input
+ * is never echoed. Always a string or null, so the client can render it.
+ */
+export function gatewayDetailMessage(detail: unknown): string | null {
+  if (typeof detail === "string") return detail || null;
+  if (Array.isArray(detail)) {
+    const parts = detail
+      .map((entry) => {
+        const e = entry as { loc?: unknown; msg?: unknown } | null;
+        if (typeof e?.msg !== "string" || !e.msg) return null;
+        const field = Array.isArray(e.loc)
+          ? e.loc.filter((l) => l !== "body" && l !== "query").join(".")
+          : "";
+        return field ? `${field}: ${e.msg}` : e.msg;
+      })
+      .filter((m): m is string => m !== null);
+    return parts.length ? parts.join("; ") : null;
+  }
+  const message = (detail as { message?: unknown } | null)?.message;
+  return typeof message === "string" && message ? message : null;
+}
+
+/**
+ * The message shown for a failed gateway call. Uses the structured fields when
+ * the body is JSON; raw body text is only used when it is not JSON, so parsed
+ * error bodies (which can echo user input) never reach the client verbatim.
+ */
+export function gatewayErrorMessage(status: number, rawText: string, data: any): string {
+  return (
+    gatewayDetailMessage(data?.detail) ||
+    data?.error?.message ||
+    data?.message ||
+    (data === null ? rawText.slice(0, 300) : "") ||
+    `Gateway error ${status}`
+  );
+}
 
 /**
  * Middleware to inject API keys for experiment creation and arena comparisons
@@ -315,9 +356,6 @@ function deepEvalRoutes() {
   const targetUrl = process.env.LLM_EVALS_URL || "http://127.0.0.1:8000";
   const EVAL_SERVER_KEY = process.env.EVAL_SERVER_INTERNAL_KEY || "";
 
-  const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || "http://127.0.0.1:8100";
-  const AI_GATEWAY_KEY = process.env.AI_GATEWAY_INTERNAL_KEY || "";
-
   // ── Playground chat endpoint ──────────────────────────────────────────────
   // POST /api/deepeval/playground/chat
   // Body: { model: string, provider: string, messages: {role,content}[] }
@@ -362,11 +400,11 @@ function deepEvalRoutes() {
       const litellmModel = toLiteLLMModel(normalizedProvider, model);
 
       try {
-        const gatewayRes = await fetch(`${AI_GATEWAY_URL}/internal/v1/chat/completions`, {
+        const gatewayRes = await fetch(`${getGatewayUrl()}/internal/v1/chat/completions`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-internal-key": AI_GATEWAY_KEY,
+            "x-internal-key": getGatewayInternalKey(),
             "x-organization-id": String(orgId || ""),
             "x-provider-key": apiKey,
             ...(req.requestId ? { "x-request-id": req.requestId } : {}),
@@ -385,12 +423,7 @@ function deepEvalRoutes() {
         }
 
         if (!gatewayRes.ok) {
-          const errMsg =
-            data?.detail ||
-            data?.error?.message ||
-            data?.message ||
-            rawText.slice(0, 300) ||
-            `Gateway error ${gatewayRes.status}`;
+          const errMsg = gatewayErrorMessage(gatewayRes.status, rawText, data);
           res.status(gatewayRes.status).json({ error: errMsg });
           return;
         }

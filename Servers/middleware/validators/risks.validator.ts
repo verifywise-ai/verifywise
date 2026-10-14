@@ -225,3 +225,19 @@ export const validateBulkUpdateProjectRisks = [
     .withMessage("action must be one of: set_owner, set_category, archive"),
   handleValidationErrors,
 ];
+
+// POST /suggest-ai — AI-generated risk suggestions for a use case.
+export const validateSuggestRisksWithAI = [
+  body("projectId").isInt({ min: 1 }).withMessage("projectId must be a positive integer"),
+  body("technologySummary")
+    .optional({ nullable: true })
+    .isString()
+    .trim()
+    .isLength({ max: 2000 })
+    .withMessage("technologySummary must be a string of at most 2000 characters"),
+  body("llmKeyId")
+    .optional({ nullable: true })
+    .isInt({ min: 1 })
+    .withMessage("llmKeyId must be a positive integer"),
+  handleValidationErrors,
+];

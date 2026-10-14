@@ -210,6 +210,7 @@ export class ProjectModel extends Model<ProjectModel> implements IProjectAttribu
       members: dataValues?.members,
       has_pending_approval: dataValues?.has_pending_approval,
       approval_status: dataValues?.approval_status,
+      custom_fields: dataValues?.custom_fields,
     };
   }
 

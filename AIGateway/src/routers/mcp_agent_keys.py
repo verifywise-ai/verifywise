@@ -10,7 +10,6 @@ from crud.mcp_agent_keys import (
     revoke_agent_key,
     update_agent_key,
 )
-from middlewares.auth import verify_internal_key
 from utils.auth import get_org_id, get_user_id, require_admin
 from utils.notifications import notify_config_change
 
@@ -23,7 +22,6 @@ router = APIRouter(prefix="/mcp/agent-keys", tags=["mcp-agent-keys"])
 
 @router.get("", status_code=status.HTTP_200_OK)
 async def list_agent_keys(request: Request):
-    verify_internal_key(request)
     org_id = get_org_id(request)
 
     keys = await get_all_agent_keys(org_id)
@@ -36,7 +34,6 @@ async def list_agent_keys(request: Request):
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_key(request: Request):
-    verify_internal_key(request)
     require_admin(request)
 
     body: dict[str, Any] = await request.json()
@@ -163,7 +160,6 @@ async def create_key(request: Request):
 
 @router.patch("/{key_id}", status_code=status.HTTP_200_OK)
 async def update_key(key_id: int, request: Request):
-    verify_internal_key(request)
     require_admin(request)
 
     body: dict[str, Any] = await request.json()
@@ -296,7 +292,6 @@ async def update_key(key_id: int, request: Request):
 
 @router.post("/{key_id}/revoke", status_code=status.HTTP_200_OK)
 async def revoke_key(key_id: int, request: Request):
-    verify_internal_key(request)
     require_admin(request)
 
     org_id = get_org_id(request)
@@ -328,7 +323,6 @@ async def revoke_key(key_id: int, request: Request):
 
 @router.delete("/{key_id}", status_code=status.HTTP_200_OK)
 async def delete_key(key_id: int, request: Request):
-    verify_internal_key(request)
     require_admin(request)
 
     org_id = get_org_id(request)

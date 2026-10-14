@@ -15,7 +15,6 @@ from crud.api_keys import (
     update_api_key,
     delete_api_key,
 )
-from middlewares.auth import verify_internal_key
 from utils.auth import get_org_id, get_user_id, require_admin, require_admin_or_editor
 from utils.notifications import notify_config_change
 
@@ -25,7 +24,12 @@ router = APIRouter(prefix="/keys", tags=["API Keys"])
 
 FRONTEND_URL = "http://localhost:5173"  # overridable via env if needed
 
-VALID_PROVIDERS = {"openai", "anthropic", "gemini", "xai", "mistral", "openrouter"}
+# Providers that LiteLLM can call with a single API key. Keep in sync with
+# API_KEY_PROVIDERS in Clients/src/presentation/pages/AIGateway/shared.ts.
+# Azure OpenAI and AWS Bedrock also need a base URL / API version or cloud
+# credentials, which ai_gateway_api_keys has no columns for, so they are not
+# accepted here.
+VALID_PROVIDERS = {"openai", "anthropic", "gemini", "xai", "mistral", "openrouter", "together_ai", "cohere"}
 
 # Provider verification endpoints (matches Express controller)
 PROVIDER_VERIFY_ENDPOINTS: dict[str, dict] = {
@@ -53,13 +57,20 @@ PROVIDER_VERIFY_ENDPOINTS: dict[str, dict] = {
         "url": lambda _k: "https://openrouter.ai/api/v1/models",
         "headers": lambda k: {"Authorization": f"Bearer {k}"},
     },
+    "together_ai": {
+        "url": lambda _k: "https://api.together.xyz/v1/models",
+        "headers": lambda k: {"Authorization": f"Bearer {k}"},
+    },
+    "cohere": {
+        "url": lambda _k: "https://api.cohere.com/v1/models",
+        "headers": lambda k: {"Authorization": f"Bearer {k}"},
+    },
 }
 
 
 @router.post("/verify")
 async def verify_api_key(request: Request):
     """Verify a provider API key by hitting the provider's models endpoint."""
-    verify_internal_key(request)
     require_admin(request)
 
     body = await request.json()
@@ -97,7 +108,6 @@ async def verify_api_key(request: Request):
 @router.get("")
 async def list_api_keys(request: Request):
     """Get all API keys for the organization (masked)."""
-    verify_internal_key(request)
     org_id = get_org_id(request)
     keys = await get_all_api_keys(org_id)
     return {"data": keys}
@@ -111,7 +121,6 @@ def _safe_key(key: dict) -> dict:
 @router.post("")
 async def create_key(request: Request):
     """Create a new provider API key."""
-    verify_internal_key(request)
     require_admin_or_editor(request)
     org_id = get_org_id(request)
     user_id = get_user_id(request)
@@ -150,11 +159,18 @@ async def create_key(request: Request):
 @router.patch("/{key_id}")
 async def update_key(key_id: int, request: Request):
     """Update an existing API key."""
-    verify_internal_key(request)
     require_admin(request)
     org_id = get_org_id(request)
 
     body = await request.json()
+    if "provider" in body:
+        provider = str(body.get("provider") or "").strip().lower()
+        if provider not in VALID_PROVIDERS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid provider '{provider}'. Must be one of: {', '.join(sorted(VALID_PROVIDERS))}",
+            )
+        body["provider"] = provider
     updated = await update_api_key(org_id, key_id, body)
 
     if not updated:
@@ -166,7 +182,6 @@ async def update_key(key_id: int, request: Request):
 @router.delete("/{key_id}")
 async def delete_key(key_id: int, request: Request):
     """Delete an API key."""
-    verify_internal_key(request)
     require_admin(request)
     org_id = get_org_id(request)
     user_id = get_user_id(request)

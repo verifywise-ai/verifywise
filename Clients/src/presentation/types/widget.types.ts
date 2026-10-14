@@ -51,6 +51,8 @@ export interface IconButtonProps {
   onDownload?: () => void | Promise<void>;
   isVisible?: boolean;
   canDelete?: boolean;
+  /** Hides the Edit item when false (honoured by the "agent" type). Defaults to true. */
+  canEdit?: boolean;
   checkForRisks?: () => Promise<boolean>;
   onDeleteWithRisks?: (deleteRisks: boolean) => void;
   onView?: () => void;

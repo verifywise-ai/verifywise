@@ -45,6 +45,7 @@ components:
         - 'Minimal risk'
         - GPAI
         - 'General Risk'
+        - 'Out of scope'
       description: 'EU AI Act risk classification level'
     HighRiskRole:
       type: string
@@ -3708,6 +3709,9 @@ components:
           type: string
         description:
           type: string
+          description: 'Incident description. Lengths are measured after trimming leading and trailing whitespace.'
+          minLength: 5
+          maxLength: 32767
         relationship_causality:
           type: string
         immediate_mitigations:
@@ -3763,6 +3767,9 @@ components:
           type: string
         description:
           type: string
+          description: 'Incident description. Lengths are measured after trimming leading and trailing whitespace.'
+          minLength: 5
+          maxLength: 32767
         relationship_causality:
           type: string
         immediate_mitigations:
@@ -5253,6 +5260,8 @@ components:
       properties:
         date_format:
           type: string
+        parallel_agents:
+          type: boolean
     UserPreference:
       type: object
       properties:
@@ -5266,6 +5275,9 @@ components:
         language:
           type: string
           example: en
+        parallel_agents:
+          type: boolean
+          example: false
         theme:
           type: string
           example: light
@@ -7689,6 +7701,8 @@ tags:
   -
     name: 'AI Detection'
   -
+    name: 'AI Gateway'
+  -
     name: 'AI Trust Centre'
   -
     name: 'Agent Discovery'
@@ -7715,6 +7729,8 @@ tags:
   -
     name: Dashboard
   -
+    name: 'Data Retention'
+  -
     name: Datasets
   -
     name: Deadlines
@@ -7724,6 +7740,8 @@ tags:
     name: 'EU AI Act'
   -
     name: 'Entity Graph'
+  -
+    name: 'Eu Ai Act Classification'
   -
     name: Evidence
   -
@@ -7876,7 +7894,7 @@ paths:
   /users/preferences:
     get:
       summary: 'Get current user preferences'
-      description: "Returns the authenticated user's persisted preferences (date_format,\nlanguage) from user_preferences. If no row exists, returns safe\ndefaults including a transient theme default.\n"
+      description: "Returns the authenticated user's persisted preferences (date_format,\nlanguage, parallel_agents) from user_preferences. If no row exists, returns safe\ndefaults including a transient theme default and parallel_agents false.\n"
       tags:
         - Users
       security:
@@ -7900,7 +7918,7 @@ paths:
   /users/me/preferences:
     get:
       summary: 'Get current user preferences'
-      description: "Returns the authenticated user's persisted preferences (date_format,\nlanguage) from user_preferences. If no row exists, returns safe\ndefaults including a transient theme default. Preferred alias of\nGET /users/preferences.\n"
+      description: "Returns the authenticated user's persisted preferences (date_format,\nlanguage, parallel_agents) from user_preferences. If no row exists, returns safe\ndefaults including a transient theme default and parallel_agents false. Preferred alias of\nGET /users/preferences.\n"
       tags:
         - Users
       security:
@@ -7925,7 +7943,7 @@ paths:
       operationId: users_getPreferencesForCurrentUser
     patch:
       summary: 'Update current user preferences'
-      description: "Upserts the authenticated user's date_format and/or language. At least\none field is required. Unknown format strings and languages are rejected.\nAny user_id in the body is ignored; the JWT user is always the target.\n"
+      description: "Upserts the authenticated user's date_format, language, and/or\nparallel_agents. At least one field is required. Unknown format strings,\nlanguages, and non-boolean parallel_agents values are rejected.\nAny user_id in the body is ignored; the JWT user is always the target.\n"
       tags:
         - Users
       security:
@@ -7946,6 +7964,9 @@ paths:
                   type: string
                   enum: [en, de, fr, es]
                   example: en
+                parallel_agents:
+                  type: boolean
+                  example: false
       responses:
         '200':
           description: 'Preferences saved'
@@ -9612,6 +9633,33 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ServerError'
+  '/projects/{id}/eu-ai-act-classification':
+    get:
+      summary: 'Get Use Case Classification'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Projects
+      operationId: getUseCaseClassification
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Classify Use Case'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Projects
+      operationId: classifyUseCase
+      security:
+        -
+          bearerAuth: []
   /projects/all/compliance/progress:
     get:
       summary: 'Get compliance progress across all projects'
@@ -9731,6 +9779,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ServerError'
+  /eu-ai-act-classification/questionnaire:
+    get:
+      summary: 'Get Questionnaire'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Eu Ai Act Classification'
+      operationId: getQuestionnaire
+      security:
+        -
+          bearerAuth: []
+  /eu-ai-act-classification/score:
+    post:
+      summary: 'Score Answers'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Eu Ai Act Classification'
+      operationId: scoreAnswers
+      security:
+        -
+          bearerAuth: []
   /questions:
     get:
       tags:
@@ -10237,6 +10313,58 @@ paths:
         -
           bearerAuth: []
       description: 'Requires role: Admin or Editor'
+  /projectRisks/suggest-ai:
+    post:
+      summary: 'Suggest Risks With AI'
+      responses:
+        '200':
+          description: 'Suggestions generated'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {matched: {type: array, items: {type: object, properties: {source: {type: string, enum: [mit, ibm]}, id: {type: integer}, summary: {type: string}, description: {type: string}, risk_category: {type: array, items: {type: string}}, likelihood: {type: string}, severity: {type: string}, reason: {type: string}, ai_lifecycle_phase: {type: string}}}}, suggested: {type: array, items: {type: object, properties: {risk_name: {type: string}, risk_description: {type: string}, risk_category: {type: array, items: {type: string}}, ai_lifecycle_phase: {type: string}, likelihood: {type: integer, minimum: 1, maximum: 5}, severity: {type: integer, minimum: 1, maximum: 5}, impact: {type: string}, mitigation_plan: {type: string}}}}, suppressed_count: {type: integer}}}
+        '400':
+          description: 'Invalid request, or no LLM keys configured for the organization'
+        '401':
+          description: Unauthorized
+        '404':
+          description: 'Project not found'
+        '429':
+          description: 'Rate limit exceeded (10 requests per hour per user)'
+        '500':
+          description: 'Internal server error'
+        '502':
+          description: 'The configured AI provider rejected or failed the request'
+      tags:
+        - 'Project Risks'
+      operationId: suggestRisksWithAI
+      security:
+        -
+          bearerAuth: []
+      description: 'Read-only: the org-configured LLM returns matching entries from the built-in MIT and IBM risk catalogs plus free-form suggested risks for the use case of the project. Nothing is persisted. Rate limited to 10 requests per hour per user.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - projectId
+              properties:
+                projectId:
+                  type: integer
+                  minimum: 1
+                technologySummary:
+                  type: string
+                  maxLength: 2000
+                  description: 'Optional technology summary; overrides project fields in the prompt.'
+                llmKeyId:
+                  type: integer
+                  minimum: 1
+                  description: 'Optional LLM key id; defaults to the most recent key of the organization.'
   /riskLinks/recompute:
     post:
       summary: 'Recompute All Risk Links'
@@ -13674,6 +13802,61 @@ paths:
               properties:
                 configuration:
                   type: object
+  '/extensions/{key}/runs':
+    post:
+      summary: 'Post Run Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: postRunCtrl
+      security:
+        -
+          bearerAuth: []
+    get:
+      summary: 'Get Runs Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getRunsCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/{key}/runs/status':
+    get:
+      summary: 'Get Run Status Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getRunStatusCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/{key}/schedule':
+    patch:
+      summary: 'Patch Schedule Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: patchScheduleCtrl
+      security:
+        -
+          bearerAuth: []
   /extensions/dataset-bulk-upload/upload:
     post:
       summary: 'Upload Dataset File'
@@ -14032,6 +14215,8 @@ paths:
       responses:
         '200':
           description: Success
+        '400':
+          description: 'Validation error (missing connection field, or sync_interval_hours outside 1-168)'
         '403':
           description: 'Extension not enabled for this organization, or role not allowed'
         '500':
@@ -14042,7 +14227,75 @@ paths:
       security:
         -
           bearerAuth: []
-      description: 'Requires the jira-assets extension to be enabled for the organization (403 otherwise).'
+      description: 'Requires the jira-assets extension to be enabled for the organization and the extension.admin permission (Admin); 403 otherwise.'
+  /extensions/jira-assets/config/sync:
+    patch:
+      summary: 'Patch Sync Settings'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sync_enabled:
+                  type: boolean
+                sync_interval_hours:
+                  type: integer
+                  minimum: 1
+                  maximum: 168
+      responses:
+        '200':
+          description: 'Updated sync settings ({ sync_enabled, sync_interval_hours })'
+        '400':
+          description: 'Validation error (no field given, non-boolean sync_enabled, or sync_interval_hours outside 1-168)'
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
+        '404':
+          description: 'No Jira connection saved yet'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: patchSyncSettings
+      security:
+        -
+          bearerAuth: []
+      description: 'Updates only the automatic-sync settings; connection fields are left untouched. Requires the jira-assets extension to be enabled for the organization and the extension.admin permission (Admin); 403 otherwise.'
+  /extensions/jira-assets/config/selection:
+    patch:
+      summary: 'Patch Selection'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                selected_schema_id:
+                  type: string
+                  nullable: true
+                selected_object_type_id:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: 'Updated selection ({ selected_schema_id, selected_object_type_id })'
+        '400':
+          description: 'Validation error (no field given, or an id that is not a Jira id)'
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
+        '404':
+          description: 'No Jira connection saved yet'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: patchSelection
+      security:
+        -
+          bearerAuth: []
+      description: 'Updates only the selected schema and/or object type; a field left out is kept, null clears it. Requires the jira-assets extension to be enabled for the organization and the extension.admin permission (Admin); 403 otherwise.'
   /extensions/jira-assets/vw-attributes:
     get:
       summary: 'Get Vw Attributes'
@@ -14135,15 +14388,19 @@ paths:
           description: Success
         '403':
           description: 'Extension not enabled for this organization, or role not allowed'
+        '404':
+          description: 'Jira Assets is not configured'
         '500':
           description: 'Internal server error'
+        '502':
+          description: 'Jira or network failure (reason in error)'
       tags:
         - Extensions
       operationId: getObjects
       security:
         -
           bearerAuth: []
-      description: 'Requires the jira-assets extension to be enabled for the organization (403 otherwise).'
+      description: 'One page (up to 1000 objects) for the import picker, as { objects, hasMore, nextStartAt }; pass nextStartAt as startAt to load more. Requires the jira-assets extension to be enabled for the organization (403 otherwise).'
       parameters:
         -
           name: objectTypeId
@@ -14152,46 +14409,70 @@ paths:
           description: 'The objectTypeId'
           schema:
             type: string
+        -
+          name: startAt
+          in: query
+          required: false
+          description: 'Offset of the first object (default 0)'
+          schema:
+            type: integer
+            minimum: 0
   /extensions/jira-assets/import:
     post:
       summary: 'Post Import'
       responses:
         '200':
           description: Success
+        '400':
+          description: 'object_ids is empty or names more than 100 objects'
         '403':
           description: 'Extension not enabled for this organization, or role not allowed'
+        '404':
+          description: 'Jira Assets is not configured'
+        '409':
+          description: 'A sync or import is already running, or this import was interrupted part-way ({ message, code: import_interrupted, imported, skipped })'
         '500':
           description: 'Internal server error'
+        '502':
+          description: 'Jira or network failure (reason in error)'
       tags:
         - Extensions
       operationId: postImport
       security:
         -
           bearerAuth: []
-      description: 'Requires the jira-assets extension to be enabled for the organization (403 otherwise).'
+      description: 'Requires the jira-assets extension to be enabled for the organization and the extension.admin permission (Admin); 403 otherwise.'
   /extensions/jira-assets/sync:
     post:
       summary: 'Post Sync'
       responses:
-        '200':
-          description: Success
+        '202':
+          description: 'Sync job queued ({ jobId, previousRunId }); the worker claims the run at pickup. Poll GET /extensions/jira-assets/sync/status until nothing is queued or running and latest_run is newer than previousRunId'
+        '400':
+          description: 'No object type selected'
         '403':
           description: 'Extension not enabled for this organization, or role not allowed'
+        '404':
+          description: 'Jira Assets is not configured'
+        '409':
+          description: 'A run is live, or a sync job for this organization is already waiting'
         '500':
           description: 'Internal server error'
+        '503':
+          description: 'Background jobs are unavailable (the queue did not answer within 5 seconds)'
       tags:
         - Extensions
       operationId: postSync
       security:
         -
           bearerAuth: []
-      description: 'Requires the jira-assets extension to be enabled for the organization (403 otherwise).'
+      description: 'Starts a manual sync in the background. Requires the jira-assets extension to be enabled for the organization and the extension.admin permission (Admin); 403 otherwise.'
   /extensions/jira-assets/sync/status:
     get:
       summary: 'Get Sync Status Ctrl'
       responses:
         '200':
-          description: Success
+          description: 'Last-sync fields, running, latest_run (with is_live), and queued (a sync job waiting in the queue; null if the queue did not answer)'
         '403':
           description: 'Extension not enabled for this organization, or role not allowed'
         '500':
@@ -14237,6 +14518,41 @@ paths:
         -
           bearerAuth: []
       description: 'Requires the jira-assets extension to be enabled for the organization (403 otherwise).'
+  /extensions/jira-assets/use-cases/remove-missing:
+    post:
+      summary: 'Remove Missing Ctrl'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - use_case_ids
+              properties:
+                use_case_ids:
+                  type: array
+                  minItems: 1
+                  maxItems: 25000
+                  items: {type: integer, minimum: 1}
+      responses:
+        '200':
+          description: 'Removed the listed use cases still flagged as missing in Jira ({ removed, links_removed, unlinked, skipped, skipped_items }). removed counts use cases (projects) deleted and links_removed the links that went with them; unlinked counts links whose project is not in this organization (only the link was deleted); skipped_items lists [{ id, reason }] with reason no_longer_missing, not_found, changed, has_live_links or other_links_not_selected (a use case is removed only when all its missing links are in the request)'
+        '400':
+          description: 'use_case_ids is not a list of 1 to 1000 use case ids (up to 25,000 when they all belong to one use case), or covers more than 100 use cases'
+        '403':
+          description: 'Extension not enabled for this organization, or role not allowed'
+        '409':
+          description: 'A Jira Assets sync or import is running, or the removal was interrupted, nothing removed ({ message, code: removal_interrupted })'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: removeMissingCtrl
+      security:
+        -
+          bearerAuth: []
+      description: 'Deletes the listed use cases (projects and their data) that are still flagged as missing in Jira. Syncs never delete. Requires the jira-assets extension to be enabled for the organization and the extension.admin permission (Admin); 403 otherwise.'
   '/extensions/jira-assets/use-cases/{id}':
     get:
       summary: 'Get Use Case Ctrl'
@@ -14266,9 +14582,15 @@ paths:
       summary: 'Delete Use Case Ctrl'
       responses:
         '200':
-          description: Success
+          description: 'Deleted ({ success, unlinked, links_removed }); the project goes with all its links (links_removed); unlinked is true when only the link was deleted because its project is not in this organization'
+        '400':
+          description: 'Invalid use case id'
         '403':
           description: 'Extension not enabled for this organization, or role not allowed'
+        '404':
+          description: 'No Jira Assets use case with that project id'
+        '409':
+          description: 'A Jira Assets sync, import or removal is running, or the deletion was interrupted, nothing removed ({ message, code: removal_interrupted })'
         '500':
           description: 'Internal server error'
       tags:
@@ -14277,7 +14599,7 @@ paths:
       security:
         -
           bearerAuth: []
-      description: 'Requires the jira-assets extension to be enabled for the organization (403 otherwise).'
+      description: 'Requires the jira-assets extension to be enabled for the organization and the extension.admin permission (Admin); 403 otherwise.'
       parameters:
         -
           name: id
@@ -17404,6 +17726,33 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+  /file-manager/org-settings:
+    get:
+      summary: 'Get File Org Settings Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Files
+      operationId: getFileOrgSettingsHandler
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Update File Org Settings Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Files
+      operationId: updateFileOrgSettingsHandler
+      security:
+        -
+          bearerAuth: []
   '/file-manager/{id}':
     get:
       tags:
@@ -23116,18 +23465,46 @@ paths:
         -
           bearerAuth: []
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               type: object
+              required:
+                - display_name
+                - primitive_type
+              properties:
+                display_name:
+                  type: string
+                primitive_type:
+                  type: string
+                owner_ids:
+                  type: array
+                  items: {type: integer, minimum: 1}
+                  maxItems: 50
+                  description: 'User ids of the owners, all users of your organization, primary first. At most 50.'
+                owner_id:
+                  type: string
+                  nullable: true
+                  description: 'Legacy single owner. See the operation description.'
+                permissions:
+                  type: array
+                  items: {}
+                permission_categories:
+                  type: array
+                  items: {type: string}
+                metadata:
+                  type: object
       responses:
         '201':
-          description: 'Created successfully'
+          description: 'Created successfully. The agent includes owner_ids.'
+        '400':
+          description: 'Missing display_name or primitive_type, an invalid owner id, an owner who is not a user of your organization, owner_id that is not a user id when sent with owner_ids, a text owner_id longer than 255 characters, or more than 50 owners'
         '401':
           description: Unauthorized
         '500':
           description: 'Internal server error'
-      description: 'Requires role: Admin'
+      description: 'Adds a manual agent. Owners: send owner_ids, the user ids of the owners, primary first. The legacy owner_id is still accepted. Sent alone, a user id makes that user the only owner, and any other text is stored as is as a free-text owner (owner_ids stays empty). Sent with owner_ids, owner_id must be a user id; it becomes the primary owner and is moved to the front. An agent can have at most 50 owners. Requires role: Admin'
   /agent-primitives/stats:
     get:
       tags:
@@ -23215,18 +23592,41 @@ paths:
           schema:
             type: integer
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               type: object
+              properties:
+                display_name:
+                  type: string
+                primitive_type:
+                  type: string
+                owner_ids:
+                  type: array
+                  items: {type: integer, minimum: 1}
+                  maxItems: 50
+                  description: 'User ids of the owners, all users of your organization, primary first. At most 50.'
+                owner_id:
+                  type: string
+                  nullable: true
+                  description: 'Legacy single owner. See the operation description.'
+                metadata:
+                  type: object
       responses:
         '200':
-          description: Success
+          description: 'Success. The agent includes owner_ids.'
+        '400':
+          description: 'No fields to update, an invalid owner id, a newly added owner who is not a user of your organization, owner_id that is not a user id when sent with owner_ids, a text owner_id longer than 255 characters, or more than 50 owners'
         '401':
           description: Unauthorized
+        '403':
+          description: 'Only manually-added agents can be edited'
+        '404':
+          description: 'Agent primitive not found'
         '500':
           description: 'Internal server error'
-      description: 'Requires role: Admin'
+      description: 'Edits a manual agent. Owners change only when owner_ids or owner_id is sent, so an edit of other fields leaves them as they are. owner_ids replaces the full owner set, primary first. owner_id sent alone (legacy): a user id becomes the primary owner, replacing the previous primary and keeping the other owners; null or an empty string removes only the primary owner, and the next owner becomes primary (or none is left); any other text replaces all owners with that one free-text owner. Sent with owner_ids, owner_id must be a user id; it becomes the primary owner and is moved to the front. An agent can have at most 50 owners. Requires role: Admin'
     delete:
       tags:
         - 'Agent Discovery'
@@ -23949,6 +24349,49 @@ paths:
           description: 'Forbidden - insufficient role'
         '500':
           description: 'Internal server error'
+  /audit-ledger/export:
+    get:
+      summary: 'Export Audit Ledger as CSV'
+      description: 'Streams the organization audit ledger as a CSV attachment (UTF-8 with BOM, oldest entry first, batches of 1000). Requires role: Admin'
+      parameters:
+        -
+          name: entity_type
+          in: query
+          required: false
+          schema:
+            type: string
+          description: 'Only entries for this entity type'
+        -
+          name: entry_type
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - event_log
+              - change_history
+          description: 'Only entries of this kind'
+      responses:
+        '200':
+          description: 'CSV file attachment (audit-ledger-YYYY-MM-DD.csv)'
+          content:
+            text/csv:
+              schema:
+                type: string
+        '400':
+          description: 'Invalid entry_type'
+        '401':
+          description: Unauthorized
+        '403':
+          description: 'Forbidden - insufficient role'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Audit
+      operationId: exportAuditLedger
+      security:
+        -
+          bearerAuth: []
   /feature-settings:
     get:
       tags:
@@ -23985,6 +24428,61 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+  /data-retention:
+    get:
+      summary: 'List data retention settings'
+      description: 'Returns how long each kind of record is kept for the organization (audit records, AI gateway logs, Agent Control logs, model risk management metrics, evidence files, Shadow AI data, server logs), the latest cleanup per type, and the point the audit ledger has been pruned through. Admin only.'
+      responses:
+        '200':
+          description: Success
+        '403':
+          description: 'Admin access required'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Data Retention'
+      operationId: getDataRetention
+      security:
+        -
+          bearerAuth: []
+  /data-retention/audit-records/preview:
+    get:
+      summary: 'Preview audit record cleanup'
+      description: 'Returns how many audit records would be deleted now if the given retention period (months: 12, 24, 36, 60, 84 or 120) were applied. Read-only. Admin only.'
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: 'Invalid retention period'
+        '403':
+          description: 'Admin access required'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Data Retention'
+      operationId: previewAuditRetention
+      security:
+        -
+          bearerAuth: []
+  /data-retention/audit-records:
+    put:
+      summary: 'Set audit record retention'
+      description: 'Sets how long audit records are kept. Body: { months: 12 | 24 | 36 | 60 | 84 | 120 | null }, where null keeps records indefinitely. The change is recorded in the audit ledger. Admin only.'
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: 'Invalid retention period'
+        '403':
+          description: 'Admin access required'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Data Retention'
+      operationId: updateAuditRetention
+      security:
+        -
+          bearerAuth: []
   '/fria/{friaId}/rights':
     put:
       tags:
@@ -24970,6 +25468,20 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+  /ai-gateway/guardrails/settings:
+    put:
+      summary: 'Update Guardrail Settings'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'AI Gateway'
+      operationId: updateGuardrailSettings
+      security:
+        -
+          bearerAuth: []
   '/custom-fields/definitions/by-id/{id}':
     get:
       summary: 'Get Custom Field Definition By Id'
@@ -24984,6 +25496,30 @@ paths:
       security:
         -
           bearerAuth: []
+  '/custom-fields/definitions/by-id/{id}/usage':
+    get:
+      summary: 'Get Custom Field Usage'
+      responses:
+        '200':
+          description: 'Answer counts. total is the number of saved answers; by_option maps each option to its count: the option id for scored select, the option text for select and multiselect (a multiselect record counts once per option it holds); empty for other types.'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total: {type: integer}
+                  by_option: {type: object, additionalProperties: {type: integer}}
+        '404':
+          description: 'Definition not found'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Custom Fields'
+      operationId: getCustomFieldUsage
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin'
   '/custom-fields/definitions/{entityType}':
     get:
       summary: 'List Custom Field Definitions'
@@ -25012,13 +25548,37 @@ paths:
       security:
         -
           bearerAuth: []
-      description: 'Requires role: Admin'
+      description: 'Requires role: Admin. field_type is one of text, number, date, boolean, select, multiselect, user, scored_select. For scored_select, options is an array of { id, label, score }; omit id for new options (the server assigns it).'
   '/custom-fields/definitions/{id}':
     patch:
       summary: 'Update Custom Field Definition'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label:
+                  type: string
+                required:
+                  type: boolean
+                options:
+                  type: array
+                  description: 'For scored_select, objects { id, label, score }; id omitted for new options.'
+                  items: {}
+                option_moves:
+                  type: object
+                  description: 'select, multiselect and scored_select. Maps a removed option to the remaining option that should receive its answers: by id for scored_select, by option text for select and multiselect (so a renamed option maps old text to new text).'
+                  additionalProperties: {type: string}
+                option_removals:
+                  type: array
+                  description: 'select, multiselect and scored_select. Removed options whose answers are deleted instead of moved (for multiselect, the option is dropped from each list; a list left empty is deleted). An option cannot be both moved and removed.'
+                  items: {type: string}
       responses:
         '200':
           description: Success
+        '409':
+          description: 'Removed options are still in use. data has code options_in_use, in_use [{ id, label, count }] and entity_type; retry with option_moves and/or option_removals.'
         '500':
           description: 'Internal server error'
       tags:

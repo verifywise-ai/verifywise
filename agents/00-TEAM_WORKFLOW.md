@@ -211,7 +211,7 @@ Required: mockups/prototypes complete, state inventory defined, accessibility no
    - Clear inputs, outputs, and acceptance criteria
 2. Build the dependency graph and identify parallel vs. sequential work.
 3. Group tasks into waves and implementation cycles (6A–6D).
-4. Assign agents using the Dispatch Matrix in `agent.md`.
+4. Assign agents by category from `roster.json`.
 5. Produce the **Task Board** in `MULTI_AGENT_PLAN.md`:
    - Task ID
    - Title

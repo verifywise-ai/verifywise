@@ -17,6 +17,7 @@
 
 import { IAIIncidentManagement } from "../domain.layer/interfaces/i.aiIncidentManagement";
 import { Transaction } from "sequelize";
+import { FormatterContext } from "../config/changeHistory.config";
 import {
   recordEntityChange,
   recordMultipleFieldChanges as recordMultipleFieldChangesGeneric,
@@ -94,8 +95,9 @@ export const getIncidentChangeHistory = async (
 export const trackIncidentChanges = async (
   oldModel: IAIIncidentManagement,
   newModel: Partial<IAIIncidentManagement>,
+  context?: FormatterContext,
 ): Promise<Array<{ fieldName: string; oldValue: string; newValue: string }>> => {
-  return trackEntityChanges("incident", oldModel, newModel);
+  return trackEntityChanges("incident", oldModel, newModel, context);
 };
 
 /**

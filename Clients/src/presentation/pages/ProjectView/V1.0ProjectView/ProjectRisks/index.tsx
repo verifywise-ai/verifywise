@@ -1,9 +1,10 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { Project } from "../../../../../domain/types/Project";
 import { useSearchParams } from "react-router";
 import { getAllProjectRisksByProjectId } from "../../../../../application/repository/projectRisk.repository";
 import RisksView from "../../../../components/RisksView";
 import { RiskModel } from "../../../../../domain/models/Common/risks/risk.model";
+import AiRiskSuggestions from "./AiRiskSuggestions";
 
 const VWProjectRisks = ({ project }: { project?: Project }) => {
   const [searchParams] = useSearchParams();
@@ -12,6 +13,7 @@ const VWProjectRisks = ({ project }: { project?: Project }) => {
   const projectId = rawProjectId.includes("-")
     ? parseInt(rawProjectId.substring(rawProjectId.lastIndexOf("-") + 1), 10) || project!.id
     : parseInt(rawProjectId, 10) || project!.id;
+  const [aiSuggestionRefreshTrigger, setAiSuggestionRefreshTrigger] = useState(0);
 
   // Create fetch function for use case risks
   const fetchProjectRisks = useCallback(
@@ -30,7 +32,17 @@ const VWProjectRisks = ({ project }: { project?: Project }) => {
     [projectId],
   );
 
-  return <RisksView fetchRisks={fetchProjectRisks} title="Use case risks" readOnly />;
+  return (
+    <RisksView
+      fetchRisks={fetchProjectRisks}
+      title="Use case risks"
+      readOnly
+      refreshTrigger={aiSuggestionRefreshTrigger}
+      actions={
+        <AiRiskSuggestions onRiskSaved={() => setAiSuggestionRefreshTrigger((key) => key + 1)} />
+      }
+    />
+  );
 };
 
 export default VWProjectRisks;

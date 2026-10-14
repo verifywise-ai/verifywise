@@ -6,14 +6,16 @@ import {
 } from "../../domain.layer/enums/ai-incident-management.enum";
 import {
   getAllIncidentsQuery,
-  getIncidentByIdQuery,
   createNewIncidentQuery,
-  updateIncidentByIdQuery,
   deleteIncidentByIdQuery,
   archiveIncidentByIdQuery,
 } from "../../utils/incidentManagement.utils";
 import { AIIncidentManagementModel } from "../../domain.layer/models/incidentManagement/incidemtManagement.model";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
+import {
+  IncidentUpdateValidationError,
+  updateIncident,
+} from "../../services/incidentManagement.service";
 import { sequelize } from "../../database/db";
 import logger from "../../utils/logger/fileLogger";
 
@@ -120,7 +122,7 @@ const fetchIncidents = async (
       approval_status: i.approval_status,
       categories_of_harm: i.categories_of_harm,
       archived: i.archived,
-      created_at: i.created_at,
+      created_at: i.createdAt ?? i.created_at,
     }));
   } catch (error) {
     logger.error("Error fetching incidents:", error);
@@ -464,7 +466,8 @@ const agentCreateIncident = createWriteToolFn({
     try {
       const incidentData = {
         ai_project: (params.title as string) || "",
-        description: (params.description as string) || "",
+        // Required by the tool schema; the write query enforces the length rule.
+        description: params.description as string,
         type: (params.type as string) || "Malfunction",
         severity: (params.severity as string) || "Minor",
         status: "Open",
@@ -496,42 +499,52 @@ const agentCreateIncident = createWriteToolFn({
   },
 });
 
+/**
+ * Applies `fields` to an incident on behalf of an advisor write tool through
+ * the shared incident write path (reopen approval reset, change history).
+ * History is recorded as the approving user, or as the system when the
+ * execution carries no user id. No expectedUpdatedAt: the tool is a
+ * background writer, not an editor holding a loaded copy.
+ */
+async function applyIncidentUpdate(
+  params: Record<string, unknown>,
+  organizationId: number,
+  fields: Record<string, unknown>,
+) {
+  const incidentId = params.incident_id as number;
+  const userId = (params._userId as number | undefined) || null;
+  let result;
+  try {
+    result = await updateIncident(organizationId, incidentId, fields, userId, {
+      changedBySystem: userId === null,
+    });
+  } catch (error) {
+    // Surface the field messages (for example the description length rule)
+    // as the tool error instead of the generic summary.
+    if (error instanceof IncidentUpdateValidationError) {
+      throw new Error(error.errors.map((e) => e.message).join(" "));
+    }
+    throw error;
+  }
+  if (!result) {
+    throw new Error(`Incident #${incidentId} not found`);
+  }
+  return { id: result.id, ai_project: result.ai_project, status: result.status };
+}
+
 const agentUpdateIncident = createWriteToolFn({
   toolName: "agent_update_incident",
   warningLevel: "warning",
   descriptionFn: (params) =>
     `Update incident #${params.incident_id}${params.title ? ` title to "${params.title}"` : ""}`,
   executeFn: async (params, organizationId) => {
-    const transaction = await sequelize.transaction();
-    try {
-      // Fetch existing incident to merge with updates
-      const existing = await getIncidentByIdQuery(params.incident_id as number, organizationId);
-      if (!existing) {
-        throw new Error(`Incident #${params.incident_id} not found`);
-      }
-
-      const incidentData = {
-        ...existing.dataValues,
-        ai_project: params.title !== undefined ? (params.title as string) : existing.ai_project,
-        description:
-          params.description !== undefined ? (params.description as string) : existing.description,
-        type: params.type !== undefined ? (params.type as string) : existing.type,
-        severity: params.severity !== undefined ? (params.severity as string) : existing.severity,
-        status: params.status !== undefined ? (params.status as string) : existing.status,
-      } as AIIncidentManagementModel;
-
-      const result = await updateIncidentByIdQuery(
-        params.incident_id as number,
-        incidentData,
-        organizationId,
-        transaction,
-      );
-      await transaction.commit();
-      return { id: result.id, ai_project: result.ai_project, status: result.status };
-    } catch (error) {
-      await transaction.rollback();
-      throw error;
-    }
+    const fields: Record<string, unknown> = {};
+    if (params.title !== undefined) fields.ai_project = params.title;
+    if (params.description !== undefined) fields.description = params.description;
+    if (params.type !== undefined) fields.type = params.type;
+    if (params.severity !== undefined) fields.severity = params.severity;
+    if (params.status !== undefined) fields.status = params.status;
+    return applyIncidentUpdate(params, organizationId, fields);
   },
 });
 
@@ -539,32 +552,8 @@ const agentUpdateIncidentStatus = createWriteToolFn({
   toolName: "agent_update_incident_status",
   warningLevel: "warning",
   descriptionFn: (params) => `Update incident #${params.incident_id} status to "${params.status}"`,
-  executeFn: async (params, organizationId) => {
-    const transaction = await sequelize.transaction();
-    try {
-      const existing = await getIncidentByIdQuery(params.incident_id as number, organizationId);
-      if (!existing) {
-        throw new Error(`Incident #${params.incident_id} not found`);
-      }
-
-      const incidentData = {
-        ...existing.dataValues,
-        status: params.status as string,
-      } as AIIncidentManagementModel;
-
-      const result = await updateIncidentByIdQuery(
-        params.incident_id as number,
-        incidentData,
-        organizationId,
-        transaction,
-      );
-      await transaction.commit();
-      return { id: result.id, ai_project: result.ai_project, status: result.status };
-    } catch (error) {
-      await transaction.rollback();
-      throw error;
-    }
-  },
+  executeFn: async (params, organizationId) =>
+    applyIncidentUpdate(params, organizationId, { status: params.status }),
 });
 
 const agentArchiveIncident = createWriteToolFn({

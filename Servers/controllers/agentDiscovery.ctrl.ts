@@ -13,13 +13,182 @@ import {
   getLatestSyncStatusQuery,
   createAuditLogQuery,
   getAuditLogsForAgentQuery,
+  setAgentOwnersQuery,
+  getAgentOwnersQuery,
+  getUserIdsInOrganizationQuery,
+  lockAgentPrimitiveQuery,
 } from "../utils/agentDiscovery.utils";
+import { ForeignKeyConstraintError, Transaction } from "sequelize";
+import { sequelize } from "../database/db";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { logStructured } from "../utils/logger/fileLogger";
 import { runAgentDiscoverySyncForTenant } from "../services/agentDiscovery/agentDiscoverySync.service";
 
 import { translateError } from "../utils/i18n.utils";
 const fileName = "agentDiscovery.ctrl.ts";
+
+/** Largest value a Postgres INTEGER user id can hold. */
+const MAX_USER_ID = 2147483647;
+
+/** Longest text agent_primitives.owner_id can hold (VARCHAR(255)). */
+const MAX_OWNER_TEXT_LENGTH = 255;
+
+/** Most owners one agent can have. */
+const MAX_OWNERS = 50;
+const TOO_MANY_OWNERS = "An agent can have at most 50 owners";
+
+/** True for a decimal string, i.e. something meant as a user id. */
+const isUserIdLike = (value: string) => /^\d+$/.test(value.trim());
+
+/**
+ * Parse one owner id. Accepts a number or a decimal string; returns null unless
+ * it is a positive safe integer that fits a Postgres INTEGER.
+ */
+function parseOwnerId(value: unknown): number | null {
+  let n: number;
+  if (typeof value === "number") {
+    n = value;
+  } else if (typeof value === "string" && isUserIdLike(value)) {
+    n = Number(value.trim());
+  } else {
+    return null;
+  }
+  return Number.isSafeInteger(n) && n > 0 && n <= MAX_USER_ID ? n : null;
+}
+
+/**
+ * The owner change a create or update request asks for.
+ * - `set`: `owner_ids` was sent; the full owner set, primary first. An
+ *   `owner_id` sent with it must be a user id and is moved to the front.
+ * - `primary`: only a numeric `owner_id` was sent; it becomes the primary.
+ * - `removePrimary`: only `owner_id: null` (or "") was sent; the primary owner
+ *   is removed and the next owner becomes primary.
+ * - `text`: only a non-numeric `owner_id` was sent. The old single-owner API
+ *   stored any string, so it is kept as the agent's only owner, as free text.
+ */
+type OwnerChange =
+  | { kind: "set"; owners: number[] }
+  | { kind: "primary"; owner: number }
+  | { kind: "removePrimary" }
+  | { kind: "text"; text: string };
+
+/**
+ * Read the owner fields of a request. Returns undefined when neither field was
+ * sent, or `{ error }` with the message for a 400.
+ */
+function parseOwnerChange(
+  ownerIds: unknown,
+  rawOwnerId: unknown,
+): OwnerChange | undefined | { error: string } {
+  // Free text is stored trimmed; whitespace-only counts as blank, like "".
+  const ownerId = typeof rawOwnerId === "string" ? rawOwnerId.trim() : rawOwnerId;
+  const ownerIdSent = ownerId !== undefined && ownerId !== null && ownerId !== "";
+  if (ownerIds !== undefined) {
+    if (ownerIds !== null && !Array.isArray(ownerIds)) {
+      return { error: "Owner IDs must be valid user IDs" };
+    }
+    if (ownerIdSent && parseOwnerId(ownerId) === null) {
+      return { error: "owner_id must be a user ID when sent with owner_ids" };
+    }
+    // Checked before the dedup loop, so an oversized array is never walked.
+    if ((ownerIds?.length ?? 0) > MAX_OWNERS) return { error: TOO_MANY_OWNERS };
+    const owners: number[] = [];
+    for (const value of [...(ownerIdSent ? [ownerId] : []), ...(ownerIds ?? [])]) {
+      const n = parseOwnerId(value);
+      if (n === null) return { error: "Owner IDs must be valid user IDs" };
+      if (!owners.includes(n)) owners.push(n);
+    }
+    // An owner_id sent alongside 50 other owners would make 51.
+    if (owners.length > MAX_OWNERS) return { error: TOO_MANY_OWNERS };
+    return { kind: "set", owners };
+  }
+  if (ownerId === undefined) return undefined;
+  if (!ownerIdSent) return { kind: "removePrimary" };
+  if (typeof ownerId === "string" && !isUserIdLike(ownerId)) {
+    if (ownerId.length > MAX_OWNER_TEXT_LENGTH) {
+      return { error: "owner_id must be at most 255 characters" };
+    }
+    return { kind: "text", text: ownerId };
+  }
+  const owner = parseOwnerId(ownerId);
+  return owner === null
+    ? { error: "Owner IDs must be valid user IDs" }
+    : { kind: "primary", owner };
+}
+
+/**
+ * The owner rows an agent has after a user-id change (any kind but `text`),
+ * given its current rows (primary first).
+ */
+function ownersAfterChange(change: Exclude<OwnerChange, { kind: "text" }>, current: number[]) {
+  switch (change.kind) {
+    case "set":
+      return change.owners;
+    case "primary":
+      // The new primary replaces the old one; the other owners stay.
+      return [change.owner, ...current.slice(1).filter((u) => u !== change.owner)];
+    case "removePrimary":
+      return current.slice(1);
+  }
+}
+
+/**
+ * An agent's owners as shown and audited, primary first. The
+ * agent_primitive_owners rows are the source of truth. The legacy owner_id
+ * column stands in only when there are none and it is not a manual agent's
+ * user id: a synced agent's source-reported owner, or free text a manual agent
+ * got from the old single-owner API. (A manual agent's numeric owner_id with
+ * no rows names someone who is not a user of the organization.)
+ */
+function effectiveOwners(
+  owners: number[],
+  agent: { owner_id: string | null; is_manual: boolean },
+): string[] {
+  if (owners.length > 0) return owners.map(String);
+  if (!agent.owner_id) return [];
+  if (agent.is_manual && isUserIdLike(agent.owner_id)) return [];
+  return [agent.owner_id];
+}
+
+/**
+ * An owner set as stored in the audit log: a JSON array of strings (user ids
+ * and source or free-text owners), or null when there are none. JSON rather
+ * than a comma-joined list, so an owner like "Doe, Jane" stays one owner.
+ */
+function ownerAuditValue(owners: string[]): string | null {
+  return owners.length > 0 ? JSON.stringify(owners) : null;
+}
+
+/** True when every id in `ownerIds` belongs to a user of the organization. */
+async function ownersBelongToOrganization(
+  ownerIds: number[],
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<boolean> {
+  if (ownerIds.length === 0) return true;
+  const found = await getUserIdsInOrganizationQuery(ownerIds, organizationId, transaction);
+  return ownerIds.every((id) => found.includes(id));
+}
+
+/**
+ * True for a foreign-key violation on agent_primitive_owners.user_id: an owner
+ * whose user was deleted after the membership check, before the insert.
+ */
+function isOwnerUserForeignKeyViolation(error: unknown): boolean {
+  const err = error as {
+    index?: string;
+    table?: string;
+    parent?: { code?: string; constraint?: string; table?: string };
+  } | null;
+  const isFkViolation = error instanceof ForeignKeyConstraintError || err?.parent?.code === "23503";
+  if (!isFkViolation) return false;
+  const table = err?.table ?? err?.parent?.table;
+  const constraint = err?.index ?? err?.parent?.constraint ?? "";
+  return table === "agent_primitive_owners" && constraint.includes("user_id");
+}
+
+const sameOwnerSet = (a: string[], b: string[]) =>
+  a.length === b.length && [...a].sort().join(",") === [...b].sort().join(",");
 
 /**
  * Get all agent primitives with optional filters
@@ -37,7 +206,10 @@ export async function getAllAgentPrimitives(req: Request, res: Response) {
       search: req.query.search as string | undefined,
     };
 
-    const primitives = await getAllAgentPrimitivesQuery(req.organizationId!, filters);
+    // The list page shows each agent's owners, so attach the owner sets.
+    const primitives = await getAllAgentPrimitivesQuery(req.organizationId!, filters, {
+      includeOwners: true,
+    });
     logStructured(
       "successful",
       `found ${primitives.length} agent primitives`,
@@ -115,7 +287,9 @@ export async function getAgentPrimitiveById(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid agent primitive ID")));
     }
 
-    const primitive = await getAgentPrimitiveByIdQuery(id, req.organizationId!);
+    const primitive = await getAgentPrimitiveByIdQuery(id, req.organizationId!, {
+      includeOwners: true,
+    });
     if (!primitive) {
       logStructured("error", "agent primitive not found", functionName, fileName);
       return res.status(404).json(STATUS_CODE[404](req.t!("Agent primitive not found")));
@@ -137,28 +311,67 @@ export async function createAgentPrimitive(req: Request, res: Response) {
   logStructured("processing", "creating agent primitive", functionName, fileName);
 
   try {
-    const { display_name, primitive_type, owner_id, permissions, permission_categories, metadata } =
-      req.body;
+    const {
+      display_name,
+      primitive_type,
+      owner_id,
+      owner_ids,
+      permissions,
+      permission_categories,
+      metadata,
+    } = req.body;
     if (!display_name || !primitive_type) {
       return res
         .status(400)
         .json(STATUS_CODE[400](req.t!("display_name and primitive_type are required")));
     }
 
-    const primitive = await createAgentPrimitiveQuery(
-      {
-        display_name,
-        primitive_type,
-        owner_id,
-        permissions,
-        permission_categories,
-        metadata,
-        source_system: "manual",
-        external_id: `manual_${Date.now()}`,
-        is_manual: true,
-      },
-      req.organizationId!,
-    );
+    // Owners: an owner_ids array (multi-owner, primary first) and/or the legacy
+    // single owner_id, which may also be free text (see parseOwnerChange).
+    const change = parseOwnerChange(owner_ids, owner_id);
+    if (change && "error" in change) {
+      return res.status(400).json(STATUS_CODE[400](req.t!(change.error)));
+    }
+    const textOwner = change?.kind === "text" ? change.text : null;
+    const owners = change && change.kind !== "text" ? ownersAfterChange(change, []) : [];
+    const notInOrganization = () =>
+      res.status(400).json(STATUS_CODE[400](req.t!("Owners must be users in your organization")));
+
+    const transaction = await sequelize.transaction();
+    let primitive;
+    try {
+      // Checked in the transaction, like an update. A user deleted between this
+      // check and the owner insert fails the foreign key, mapped to the same 400.
+      if (!(await ownersBelongToOrganization(owners, req.organizationId!, transaction))) {
+        await transaction.rollback();
+        return notInOrganization();
+      }
+      primitive = await createAgentPrimitiveQuery(
+        {
+          display_name,
+          primitive_type,
+          owner_id: textOwner ?? (owners.length > 0 ? String(owners[0]) : undefined),
+          permissions,
+          permission_categories,
+          metadata,
+          source_system: "manual",
+          external_id: `manual_${Date.now()}`,
+          is_manual: true,
+        },
+        req.organizationId!,
+        transaction,
+      );
+
+      if (owners.length > 0) {
+        await setAgentOwnersQuery(primitive.id!, owners, req.organizationId!, transaction);
+      }
+      await transaction.commit();
+    } catch (error) {
+      await transaction.rollback();
+      if (isOwnerUserForeignKeyViolation(error)) return notInOrganization();
+      throw error;
+    }
+    (primitive as any).owner_ids = owners;
 
     logStructured("successful", "agent primitive created", functionName, fileName);
     return res.status(201).json(STATUS_CODE[201](primitive));
@@ -191,49 +404,133 @@ export async function updateAgentPrimitive(req: Request, res: Response) {
         .json(STATUS_CODE[403](req.t!("Only manually-added agents can be edited")));
     }
 
-    const { display_name, primitive_type, owner_id, metadata } = req.body;
+    const { display_name, primitive_type, owner_id, owner_ids, metadata } = req.body;
 
     if (
       display_name === undefined &&
       primitive_type === undefined &&
       owner_id === undefined &&
+      owner_ids === undefined &&
       metadata === undefined
     ) {
       return res.status(400).json(STATUS_CODE[400](req.t!("No fields to update")));
     }
 
-    const updated = await updateAgentPrimitiveQuery(
-      id,
-      { display_name, primitive_type, owner_id, metadata },
-      req.organizationId!,
-    );
+    const organizationId = req.organizationId!;
+    // What to do with the owners. Undefined when the request leaves them alone
+    // (e.g. a name-only edit), so the owner set is never touched.
+    const change = parseOwnerChange(owner_ids, owner_id);
+    if (change && "error" in change) {
+      return res.status(400).json(STATUS_CODE[400](req.t!(change.error)));
+    }
 
-    // Create audit log entries for each changed field
-    const fieldsToCheck: Array<{ field: string; oldVal: any; newVal: any }> = [
-      { field: "display_name", oldVal: existing.display_name, newVal: display_name },
-      { field: "primitive_type", oldVal: existing.primitive_type, newVal: primitive_type },
-      { field: "owner_id", oldVal: existing.owner_id, newVal: owner_id },
-      {
-        field: "metadata",
-        oldVal: JSON.stringify(existing.metadata),
-        newVal: metadata !== undefined ? JSON.stringify(metadata) : undefined,
-      },
-    ];
-
-    for (const { field, oldVal, newVal } of fieldsToCheck) {
-      if (newVal !== undefined && String(oldVal ?? "") !== String(newVal ?? "")) {
-        await createAuditLogQuery(
-          {
-            agent_primitive_id: id,
-            action: "field_updated",
-            field_changed: field,
-            old_value: oldVal != null ? String(oldVal) : null,
-            new_value: newVal != null ? String(newVal) : null,
-            performed_by: req.userId!,
-          },
-          req.organizationId!,
-        );
+    const transaction = await sequelize.transaction();
+    let updated;
+    try {
+      // Lock the agent row so concurrent edits of the owner set serialize.
+      const locked = await lockAgentPrimitiveQuery(id, organizationId, transaction);
+      if (!locked) {
+        // Deleted between the existence check and the lock.
+        await transaction.rollback();
+        return res.status(404).json(STATUS_CODE[404](req.t!("Agent primitive not found")));
       }
+      // Old values for the audit come from the locked row, not from `existing`
+      // (read before the lock, so a concurrent edit could have changed it).
+      const previousPrimary = locked.owner_id;
+      const currentOwners = await getAgentOwnersQuery(id, organizationId, transaction);
+      const previousShown = effectiveOwners(currentOwners, {
+        owner_id: previousPrimary,
+        is_manual: true,
+      });
+
+      let newOwners = currentOwners;
+      let primaryOwnerId: string | null | undefined;
+      let newShown = previousShown;
+      if (change) {
+        if (change.kind === "text") {
+          // A free-text owner replaces every owner: the agent now has one
+          // owner, who is not a VerifyWise user.
+          newOwners = [];
+          primaryOwnerId = change.text;
+        } else {
+          newOwners = ownersAfterChange(change, currentOwners);
+          // Only owners being newly added are checked; current owner rows are
+          // removed when their user is deleted, so they are always users.
+          const added = newOwners.filter((u) => !currentOwners.includes(u));
+          if (!(await ownersBelongToOrganization(added, organizationId, transaction))) {
+            await transaction.rollback();
+            return res
+              .status(400)
+              .json(STATUS_CODE[400](req.t!("Owners must be users in your organization")));
+          }
+          primaryOwnerId = newOwners.length > 0 ? String(newOwners[0]) : null;
+        }
+        newShown = effectiveOwners(newOwners, { owner_id: primaryOwnerId, is_manual: true });
+      }
+
+      updated = await updateAgentPrimitiveQuery(
+        id,
+        { display_name, primitive_type, owner_id: primaryOwnerId, metadata },
+        organizationId,
+        transaction,
+      );
+      if (change) {
+        await setAgentOwnersQuery(id, newOwners, organizationId, transaction);
+      }
+      if (updated) (updated as any).owner_ids = newOwners;
+
+      // One audit row per changed field. A change to the owner set is recorded
+      // once, as owner_ids; owner_id is recorded only when the set is the same
+      // but the primary owner changed (a reorder).
+      const ownerSetChanged = change !== undefined && !sameOwnerSet(previousShown, newShown);
+      const fieldsToCheck: Array<{ field: string; oldVal: any; newVal: any }> = [
+        { field: "display_name", oldVal: locked.display_name, newVal: display_name },
+        { field: "primitive_type", oldVal: locked.primitive_type, newVal: primitive_type },
+        {
+          field: "owner_ids",
+          // A JSON array, so a text owner containing a comma stays one owner.
+          oldVal: ownerAuditValue(previousShown),
+          newVal: ownerSetChanged ? ownerAuditValue(newShown) : undefined,
+        },
+        {
+          field: "owner_id",
+          oldVal: previousPrimary,
+          newVal: change !== undefined && !ownerSetChanged ? primaryOwnerId : undefined,
+        },
+        {
+          field: "metadata",
+          oldVal: JSON.stringify(locked.metadata),
+          newVal: metadata !== undefined ? JSON.stringify(metadata) : undefined,
+        },
+      ];
+
+      for (const { field, oldVal, newVal } of fieldsToCheck) {
+        if (newVal !== undefined && String(oldVal ?? "") !== String(newVal ?? "")) {
+          await createAuditLogQuery(
+            {
+              agent_primitive_id: id,
+              action: "field_updated",
+              field_changed: field,
+              old_value: oldVal != null ? String(oldVal) : null,
+              new_value: newVal != null ? String(newVal) : null,
+              performed_by: req.userId!,
+            },
+            organizationId,
+            transaction,
+          );
+        }
+      }
+
+      await transaction.commit();
+    } catch (error) {
+      await transaction.rollback();
+      // A newly added owner deleted between the membership check and the insert.
+      if (isOwnerUserForeignKeyViolation(error)) {
+        return res
+          .status(400)
+          .json(STATUS_CODE[400](req.t!("Owners must be users in your organization")));
+      }
+      throw error;
     }
 
     logStructured("successful", "agent primitive updated", functionName, fileName);

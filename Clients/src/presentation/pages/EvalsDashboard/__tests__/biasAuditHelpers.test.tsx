@@ -1,12 +1,8 @@
 import { screen } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
-import { formatDate, getModeChip, getStatusChip } from "../biasAuditHelpers";
+import { getModeChip, getStatusChip } from "../biasAuditHelpers";
 
 describe("biasAuditHelpers", () => {
-  beforeEach(() => {
-    localStorage.clear();
-  });
-
   describe("getStatusChip", () => {
     it.each([
       ["completed", "Completed"],
@@ -31,20 +27,6 @@ describe("biasAuditHelpers", () => {
     ] as const)("maps %s to its chip label", (mode, expectedLabel) => {
       renderWithProviders(<>{getModeChip(mode)}</>);
       expect(screen.getByText(expectedLabel)).toBeInTheDocument();
-    });
-  });
-
-  describe("formatDate", () => {
-    it("returns an em dash for a null date", () => {
-      expect(formatDate(null)).toBe("—");
-    });
-
-    it("returns an em dash for an empty date string", () => {
-      expect(formatDate("")).toBe("—");
-    });
-
-    it("formats a valid ISO date using the default DD-MM-YYYY preference", () => {
-      expect(formatDate("2025-06-01")).toBe("01-06-2025");
     });
   });
 });

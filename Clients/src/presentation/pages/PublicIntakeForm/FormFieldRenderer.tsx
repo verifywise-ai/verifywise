@@ -4,6 +4,7 @@ import Field from "../../components/Inputs/Field";
 import Select from "../../components/Inputs/Select";
 import Checkbox from "../../components/Inputs/Checkbox";
 import { FormField } from "../IntakeFormBuilder/types";
+import { isEmptyAnswer } from "../../../application/utils/intakeFormLogic";
 
 /**
  * Renders a field label.
@@ -116,6 +117,9 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
   const error = errors[field.id];
   const errorMessage = error?.message as string | undefined;
   const isRequired = field.validation?.required;
+  // The server treats whitespace-only text and empty lists as missing; so must the form.
+  const notBlankWhenRequired = (value: unknown) =>
+    !isRequired || !isEmptyAnswer(value) || "This field is required";
   // Field/Select put this id on the rendered input, so the label can point at it.
   const controlId = `field-${field.id}`;
   const labelId = `${controlId}-label`;
@@ -134,6 +138,7 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
               defaultValue={field.defaultValue || ""}
               rules={{
                 required: isRequired ? "This field is required" : false,
+                validate: notBlankWhenRequired,
                 minLength: field.validation?.minLength
                   ? {
                       value: field.validation.minLength,
@@ -187,6 +192,7 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
               defaultValue={field.defaultValue || ""}
               rules={{
                 required: isRequired ? "This field is required" : false,
+                validate: notBlankWhenRequired,
                 minLength: field.validation?.minLength
                   ? {
                       value: field.validation.minLength,
@@ -229,6 +235,7 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
               defaultValue={field.defaultValue || ""}
               rules={{
                 required: isRequired ? "This field is required" : false,
+                validate: notBlankWhenRequired,
                 min:
                   field.validation?.min !== undefined
                     ? {
@@ -273,6 +280,7 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
               defaultValue={field.defaultValue || ""}
               rules={{
                 required: isRequired ? "This field is required" : false,
+                validate: notBlankWhenRequired,
               }}
               render={({ field: fieldProps }) => (
                 <>
@@ -302,6 +310,7 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
               defaultValue={field.defaultValue || ""}
               rules={{
                 required: isRequired ? "This field is required" : false,
+                validate: notBlankWhenRequired,
               }}
               render={({ field: fieldProps }) => (
                 <Box>
@@ -346,6 +355,7 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
               defaultValue={field.defaultValue || []}
               rules={{
                 required: isRequired ? "This field is required" : false,
+                validate: notBlankWhenRequired,
               }}
               render={({ field: fieldProps }) => {
                 const selectedArr = (fieldProps.value as string[]) || [];
@@ -466,6 +476,7 @@ export function FormFieldRenderer({ field, control, errors }: FormFieldRendererP
             defaultValue={field.defaultValue || false}
             rules={{
               required: isRequired ? "This field is required" : false,
+              validate: notBlankWhenRequired,
             }}
             render={({ field: fieldProps }) => (
               <Box>

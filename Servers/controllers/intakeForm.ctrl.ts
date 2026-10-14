@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { createHmac, timingSafeEqual } from "crypto";
+import { Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import {
   getAllIntakeFormsQuery,
@@ -27,6 +28,8 @@ import {
 } from "../utils/intakeForm.utils";
 import { createNewModelInventoryQuery } from "../utils/modelInventory.utils";
 import { createNewProjectQuery } from "../utils/project.utils";
+import { createEUFrameworkQuery } from "../utils/eu.utils";
+import { EU_AI_ACT_FRAMEWORK_ID } from "../utils/validations/projectValidation.utils";
 import { IntakeFormStatus } from "../domain.layer/enums/intake-form-status.enum";
 import { IntakeSubmissionStatus } from "../domain.layer/enums/intake-submission-status.enum";
 import { IntakeEntityType } from "../domain.layer/enums/intake-entity-type.enum";
@@ -35,8 +38,30 @@ import { ProjectStatus } from "../domain.layer/enums/project-status.enum";
 import { AiRiskClassification } from "../domain.layer/enums/ai-risk-classification.enum";
 import { ModelInventoryModel } from "../domain.layer/models/modelInventory/modelInventory.model";
 import { IIntakeFormSchema } from "../domain.layer/interfaces/i.intakeForm";
-import { validateIntakeFormSchemaLabels } from "../utils/intakeFormSchema.validation";
+import {
+  validateIntakeFormSchemaLabels,
+  validateIntakeFormSchemaLogic,
+  resolveEuAiActRiskStep,
+} from "../utils/intakeFormSchema.validation";
+import {
+  getQuestionnaire,
+  CURRENT_QUESTIONNAIRE_VERSION,
+  prepareIntakeRiskStep,
+  scoreClassification,
+  validateAnswers,
+  type Answers,
+  type ClassificationResult,
+  type PreparedRun,
+  type Questionnaire,
+} from "../services/euAiActClassification";
+import {
+  getLatestRunForSubmissionQuery,
+  insertClassificationRunQuery,
+} from "../utils/euAiActClassification.utils";
+import { recordMultipleFieldChanges } from "../utils/useCaseChangeHistory.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
+import { NotFoundException } from "../domain.layer/exceptions/custom.exception";
+import { llmKeyExistsQuery } from "../utils/llmKey.utils";
 import { sanitizeUserHtml } from "../utils/sanitization.utils";
 import logger from "../utils/logger/fileLogger";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
@@ -47,6 +72,7 @@ import {
   sendSubmissionRejectedEmail,
 } from "../services/intakeFormEmail.service";
 import { calculateSubmissionRisk } from "../services/intakeRiskScoring.service";
+import { cleanSubmission, isEmptyAnswer, parseFormula } from "../services/intakeFormLogic";
 import { generateSuggestedQuestions, generateFieldGuidance } from "../services/intakeLLM.service";
 import { getCompanyLogoQuery } from "../utils/aiTrustCentre.utils";
 
@@ -74,6 +100,7 @@ function mapToAiRiskClassification(value: string): AiRiskClassification | string
     "limited risk": AiRiskClassification.LIMITED_RISK,
     "high risk": AiRiskClassification.HIGH_RISK,
     prohibited: AiRiskClassification.PROHIBITED,
+    "out of scope": AiRiskClassification.OUT_OF_SCOPE,
   };
   return map[value?.toLowerCase()?.trim()] || value || "";
 }
@@ -107,6 +134,157 @@ function parseId(param: string | string[]): number {
   return toId(paramStr(param));
 }
 
+/** A positive integer LLM key id, or NaN. */
+function parseLlmKeyId(value: unknown): number {
+  const id = toId(value);
+  return id > 0 ? id : NaN;
+}
+
+/**
+ * Checks the llmKeyId of a form write. null/absent stays as is; anything else
+ * must be one of the caller's organization's keys (intake_forms.llm_key_id has
+ * a foreign key, but that alone would accept another organization's key).
+ * The check runs in the write's transaction and locks the key row, so the key
+ * cannot be deleted before the write commits.
+ */
+async function resolveFormLlmKeyId(
+  req: Request,
+  llmKeyId: unknown,
+  transaction: Transaction,
+): Promise<{ llmKeyId: number | null | undefined } | { error: string }> {
+  if (llmKeyId === undefined || llmKeyId === null) return { llmKeyId };
+  const id = parseLlmKeyId(llmKeyId);
+  if (isNaN(id)) return { error: req.t!("LLM key ID must be a positive integer") };
+  if (!(await llmKeyExistsQuery(id, req.organizationId!, transaction))) {
+    return { error: req.t!("LLM key not found") };
+  }
+  return { llmKeyId: id };
+}
+
+/**
+ * Shared shell of the LLM endpoints, run once the caller has checked its
+ * required input: answers 400 for an invalid key id, 404 when the key is not
+ * one of the organization's, and 500 for anything else.
+ */
+async function handleLlmKeyRequest(
+  req: Request,
+  res: Response,
+  functionName: string,
+  llmKeyId: unknown,
+  generate: (keyId: number) => Promise<Response>,
+): Promise<Response> {
+  const keyId = parseLlmKeyId(llmKeyId);
+  if (isNaN(keyId)) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("LLM key ID must be a positive integer")));
+  }
+  try {
+    return await generate(keyId);
+  } catch (error) {
+    if (error instanceof NotFoundException) {
+      return res.status(404).json(STATUS_CODE[404]({ message: req.t!("LLM key not found") }));
+    }
+    logger.error(`Error in ${functionName}:`, error);
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+// ============================================================================
+// EU AI ACT RISK STEP HELPERS
+// ============================================================================
+
+/**
+ * Scores a stored classification run again under its own questionnaire version.
+ * Returns null when the version is unknown to this server or the stored answers
+ * no longer validate against it (e.g. an option was removed), so callers treat
+ * it as no run. The run is handed back with its questionnaire and result so a
+ * caller branches on this one value; its answers are the validated ones, so
+ * answers to questions now hidden are neither scored nor copied.
+ */
+function rescoreStoredRun<
+  R extends { id?: number; questionnaireVersion: number; answers: Answers },
+>(run: R): { run: R; questionnaire: Questionnaire; result: ClassificationResult } | null {
+  const questionnaire = getQuestionnaire(run.questionnaireVersion);
+  if (!questionnaire) return null;
+  const { errors, answers } = validateAnswers(questionnaire, run.answers);
+  if (errors.length > 0) {
+    logger.warn(
+      `EU AI Act classification run ${run.id} no longer validates; treating it as no run: ${errors.join("; ")}`,
+    );
+    return null;
+  }
+  try {
+    return {
+      run: { ...run, answers },
+      questionnaire,
+      result: scoreClassification(run.questionnaireVersion, answers),
+    };
+  } catch (error) {
+    logger.warn(
+      `EU AI Act classification run ${run.id} could not be re-scored; treating it as no run: ${(error as Error).message}`,
+    );
+    return null;
+  }
+}
+
+/** Stores the scored EU AI Act answers of a public submission as its classification run. */
+async function persistIntakeRiskRun(
+  submissionId: number,
+  prepared: PreparedRun,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> {
+  await insertClassificationRunQuery(
+    {
+      useCaseId: null,
+      intakeSubmissionId: submissionId,
+      questionnaireVersion: prepared.questionnaireVersion,
+      role: prepared.result.role,
+      answers: prepared.answers,
+      result: prepared.result,
+      reviewerLevel: null,
+      reviewerJustification: null,
+      reviewedBy: null,
+      source: "intake",
+      createdBy: null,
+    },
+    organizationId,
+    transaction,
+  );
+}
+
+/**
+ * The public form's EU AI Act step: the current questionnaire when the form has
+ * the step on, plus the answers of the submission being resubmitted, if any.
+ * Previous answers are returned only when they were given to the current
+ * questionnaire and still validate; otherwise the submitter starts afresh.
+ */
+async function buildPublicRiskStep(
+  form: { euAiActRiskStepEnabled?: boolean | null },
+  previousSubmissionId: number | undefined,
+  organizationId: number,
+): Promise<{
+  euAiActRiskStep: { questionnaire: Questionnaire | null } | null;
+  previousRiskAnswers: Answers | undefined;
+}> {
+  if (!form.euAiActRiskStepEnabled) {
+    return { euAiActRiskStep: null, previousRiskAnswers: undefined };
+  }
+  const questionnaire = getQuestionnaire(CURRENT_QUESTIONNAIRE_VERSION);
+  const previousRun =
+    previousSubmissionId !== undefined
+      ? await getLatestRunForSubmissionQuery(previousSubmissionId, organizationId)
+      : null;
+  let previousRiskAnswers: Answers | undefined;
+  if (questionnaire && previousRun?.questionnaireVersion === CURRENT_QUESTIONNAIRE_VERSION) {
+    const { errors, answers } = validateAnswers(questionnaire, previousRun.answers);
+    if (errors.length === 0) previousRiskAnswers = answers;
+  }
+  return {
+    euAiActRiskStep: { questionnaire },
+    previousRiskAnswers,
+  };
+}
+
 // ============================================================================
 // SERVER-SIDE FORM DATA VALIDATION
 // ============================================================================
@@ -115,16 +293,25 @@ function parseId(param: string | string[]): number {
  * Validate submitted form data against the form schema.
  * Returns an array of error messages (empty if valid).
  */
-function validateFormData(formData: Record<string, unknown>, schema: IIntakeFormSchema): string[] {
+function validateFormData(
+  formData: Record<string, unknown>,
+  schema: IIntakeFormSchema,
+  visibleIds?: Set<string>,
+): string[] {
   const errors: string[] = [];
 
   for (const field of schema.fields) {
+    // Hidden fields are never required; calculated values come from the server.
+    if (visibleIds && !visibleIds.has(field.id)) continue;
+    if (field.type === "calculated") continue;
     const value = formData[field.id];
-    const isEmpty = value === undefined || value === null || value === "";
+    // Same notion of blank as the show/hide rules: whitespace and [] are empty.
+    const isEmpty = isEmptyAnswer(value);
 
     // Required check — field.required (backend interface) or field.validation.required (frontend schema)
     const isRequired = field.required || field.validation?.required;
-    if (isRequired && isEmpty) {
+    // A required checkbox must be checked, as the public form enforces.
+    if (isRequired && (isEmpty || (field.type === "checkbox" && value !== true))) {
       errors.push(`"${field.label}" is required`);
       continue;
     }
@@ -231,6 +418,42 @@ function validateFormData(formData: Record<string, unknown>, schema: IIntakeForm
   }
 
   return errors;
+}
+
+/**
+ * The schema as the public form gets it: risk dimension tags are internal
+ * scoring hints, so they are left out (a submitter could otherwise see which
+ * answers feed which risk score).
+ */
+function publicSchema(schema: IIntakeFormSchema): IIntakeFormSchema {
+  if (!schema || !Array.isArray(schema.fields)) return schema;
+  return {
+    ...schema,
+    fields: schema.fields.map((field) => {
+      const copy = { ...field };
+      delete copy.riskDimension;
+      return copy;
+    }),
+  };
+}
+
+/**
+ * Applies the form's show/hide rules and formulas to submitted answers. The
+ * browser is never trusted: answers to hidden fields and unknown keys are
+ * dropped and calculated values are recomputed here.
+ */
+function prepareSubmissionData(
+  formData: Record<string, unknown>,
+  schema: IIntakeFormSchema,
+): { data: Record<string, unknown>; visibleIds: Set<string> } {
+  for (const field of schema.fields ?? []) {
+    if (field.type === "calculated" && !parseFormula(field.formula ?? "").ok) {
+      logger.warn(
+        `Intake form field ${field.id} has a formula that does not parse; storing no value`,
+      );
+    }
+  }
+  return cleanSubmission(schema, formData);
 }
 
 // ============================================================================
@@ -356,6 +579,7 @@ export async function createIntakeForm(req: Request, res: Response) {
       riskAssessmentConfig,
       llmKeyId,
       suggestedQuestionsEnabled,
+      euAiActRiskStepEnabled,
       designSettings,
     } = req.body;
 
@@ -383,6 +607,33 @@ export async function createIntakeForm(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](schemaErrors.join("; ")));
     }
 
+    // Drafts may hold unfinished logic (a new calculated field starts with an
+    // empty formula); only a form that will be live must be valid.
+    const logicErrors =
+      (status ?? IntakeFormStatus.DRAFT) === IntakeFormStatus.ACTIVE
+        ? validateIntakeFormSchemaLogic(schema, entityType)
+        : [];
+    if (logicErrors.length > 0) {
+      await transaction.rollback();
+      return res.status(400).json(STATUS_CODE[400](logicErrors.join("; ")));
+    }
+
+    const riskStep = resolveEuAiActRiskStep({
+      entityType: entityType,
+      enabled: Boolean(euAiActRiskStepEnabled),
+      schema: schema,
+    });
+    if (riskStep.errors.length > 0) {
+      await transaction.rollback();
+      return res.status(400).json(STATUS_CODE[400](req.t!(riskStep.errors[0])));
+    }
+
+    const llmKey = await resolveFormLlmKeyId(req, llmKeyId, transaction);
+    if ("error" in llmKey) {
+      await transaction.rollback();
+      return res.status(400).json(STATUS_CODE[400](llmKey.error));
+    }
+
     const form = await createIntakeFormQuery(
       {
         name,
@@ -396,8 +647,9 @@ export async function createIntakeForm(req: Request, res: Response) {
         recipients,
         riskTierSystem,
         riskAssessmentConfig,
-        llmKeyId,
+        llmKeyId: llmKey.llmKeyId,
         suggestedQuestionsEnabled,
+        euAiActRiskStepEnabled: riskStep.enabled,
         designSettings,
         createdBy: req.userId!,
       },
@@ -473,6 +725,7 @@ export async function updateIntakeForm(req: Request, res: Response) {
       riskAssessmentConfig,
       llmKeyId,
       suggestedQuestionsEnabled,
+      euAiActRiskStepEnabled,
       designSettings,
     } = req.body;
 
@@ -495,6 +748,42 @@ export async function updateIntakeForm(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](schemaErrors.join("; ")));
     }
 
+    // Drafts may hold unfinished logic; only a form that will be live after
+    // this update must be valid (publishing a draft sends status "active").
+    // An update that leaves the schema, entity type and status alone (e.g.
+    // recipients only) is not blocked by a problem it did not touch.
+    const touchesLogic = schema !== undefined || entityType !== undefined || status !== undefined;
+    const logicErrors =
+      touchesLogic && (status ?? existingForm.status) === IntakeFormStatus.ACTIVE
+        ? validateIntakeFormSchemaLogic(
+            schema ?? existingForm.schema,
+            entityType ?? existingForm.entityType,
+          )
+        : [];
+    if (logicErrors.length > 0) {
+      await transaction.rollback();
+      return res.status(400).json(STATUS_CODE[400](logicErrors.join("; ")));
+    }
+
+    const riskStep = resolveEuAiActRiskStep({
+      entityType: entityType ?? existingForm.entityType,
+      enabled:
+        euAiActRiskStepEnabled != null
+          ? Boolean(euAiActRiskStepEnabled)
+          : existingForm.euAiActRiskStepEnabled,
+      schema: schema ?? existingForm.schema,
+    });
+    if (riskStep.errors.length > 0) {
+      await transaction.rollback();
+      return res.status(400).json(STATUS_CODE[400](req.t!(riskStep.errors[0])));
+    }
+
+    const llmKey = await resolveFormLlmKeyId(req, llmKeyId, transaction);
+    if ("error" in llmKey) {
+      await transaction.rollback();
+      return res.status(400).json(STATUS_CODE[400](llmKey.error));
+    }
+
     const form = await updateIntakeFormQuery(
       formId,
       {
@@ -509,8 +798,9 @@ export async function updateIntakeForm(req: Request, res: Response) {
         recipients,
         riskTierSystem,
         riskAssessmentConfig,
-        llmKeyId,
+        llmKeyId: llmKey.llmKeyId,
         suggestedQuestionsEnabled,
+        euAiActRiskStepEnabled: riskStep.enabled,
         designSettings,
       },
       req.organizationId!,
@@ -824,6 +1114,23 @@ export async function getSubmissionPreview(req: Request, res: Response) {
       form.schema,
     );
 
+    const storedRun = await getLatestRunForSubmissionQuery(submission.id!, req.organizationId!);
+    // A run that can no longer be scored shows no panel rather than failing the
+    // whole preview.
+    const rescored = storedRun ? rescoreStoredRun(storedRun) : null;
+    const euAiActClassification = rescored
+      ? {
+          questionnaire: rescored.questionnaire,
+          answers: rescored.run.answers,
+          role: rescored.result.role,
+          current: rescored.result,
+          changedSinceSubmission:
+            rescored.result.level !== rescored.run.result.level ||
+            (rescored.result.role ?? null) !== (rescored.run.result.role ?? null),
+          submittedAt: rescored.run.createdAt,
+        }
+      : null;
+
     return res.status(200).json(
       STATUS_CODE[200]({
         submission,
@@ -838,6 +1145,7 @@ export async function getSubmissionPreview(req: Request, res: Response) {
         riskTier: submission.riskTier,
         riskOverride: submission.riskOverride,
         entityPreview: entityData,
+        euAiActClassification,
       }),
     );
   } catch (error) {
@@ -883,7 +1191,7 @@ export async function getSubmissionByEntity(req: Request, res: Response) {
     }
 
     const { submission, formName, formSchema } = result;
-    const submissionData = submission.data as Record<string, unknown>;
+    const submissionData = (submission.data ?? {}) as Record<string, unknown>;
 
     // Build a structured fields array using the form schema for labels/types
     const schemaFields = (formSchema as any)?.fields || [];
@@ -894,7 +1202,13 @@ export async function getSubmissionByEntity(req: Request, res: Response) {
         label: field.label,
         type: field.type,
         value: submissionData[field.id] ?? null,
+        // A visible calculated field without a result is stored as null; a
+        // hidden one, or a submission from before the field existed, has no key.
+        answered: Object.prototype.hasOwnProperty.call(submissionData, field.id),
         options: field.options || null,
+        decimals: field.decimals ?? null,
+        prefix: field.prefix ?? null,
+        suffix: field.suffix ?? null,
         entityFieldMapping: field.entityFieldMapping || null,
         isMapped: Boolean(field.entityFieldMapping),
       }));
@@ -1029,10 +1343,75 @@ export async function approveSubmission(req: Request, res: Response) {
     const formName = form.name;
 
     // Use confirmed entity data from admin if provided, otherwise build from mapping
-    const { confirmedEntityData, riskOverride } = req.body;
-    const entityData =
+    const { confirmedEntityData, riskOverride, euAiActOverride } = req.body;
+    let entityData: Record<string, unknown> =
       confirmedEntityData ||
       buildEntityDataFromSubmission(submission.data as Record<string, unknown>, form.schema);
+
+    // The EU AI Act step owns the use case's level: score the stored answers
+    // again and apply a justified reviewer change; the dialog's level is
+    // ignored. The computed role replaces the dialog's role, which stays only
+    // when the result has no role (Out of scope). A run that can no longer be
+    // scored is treated as no run.
+    const storedRun =
+      submission.entityType === IntakeEntityType.USE_CASE
+        ? await getLatestRunForSubmissionQuery(submissionId, req.organizationId!, transaction)
+        : null;
+    const rescored = storedRun ? rescoreStoredRun(storedRun) : null;
+    let classification: {
+      questionnaireVersion: number;
+      answers: Answers;
+      computed: ClassificationResult;
+      finalLevel: string;
+      justification: string | null;
+    } | null = null;
+    if (rescored) {
+      const computed = rescored.result;
+      const finalLevel = euAiActOverride?.level ?? computed.level;
+      // The levels the questionnaire can produce; GPAI and General Risk are not
+      // offered here.
+      const ALLOWED_LEVELS: string[] = [
+        AiRiskClassification.PROHIBITED,
+        AiRiskClassification.HIGH_RISK,
+        AiRiskClassification.LIMITED_RISK,
+        AiRiskClassification.MINIMAL_RISK,
+        AiRiskClassification.OUT_OF_SCOPE,
+      ];
+      if (!ALLOWED_LEVELS.includes(finalLevel)) {
+        await transaction.rollback();
+        return res
+          .status(400)
+          .json(STATUS_CODE[400](req.t!("Invalid EU AI Act classification level")));
+      }
+      const justification =
+        typeof euAiActOverride?.justification === "string"
+          ? euAiActOverride.justification.trim()
+          : "";
+      if (finalLevel !== computed.level && justification.length < 10) {
+        await transaction.rollback();
+        return res
+          .status(400)
+          .json(
+            STATUS_CODE[400](
+              req.t!(
+                "A justification of at least 10 characters is required when changing the computed EU AI Act classification",
+              ),
+            ),
+          );
+      }
+      classification = {
+        questionnaireVersion: rescored.run.questionnaireVersion,
+        answers: rescored.run.answers,
+        computed,
+        finalLevel,
+        justification: finalLevel !== computed.level ? justification : null,
+      };
+      entityData = {
+        ...entityData,
+        ai_risk_classification: finalLevel,
+        ...(computed.role ? { type_of_high_risk_role: computed.role } : {}),
+      };
+    }
 
     // Apply risk override if provided
     if (riskOverride && riskOverride.tier && riskOverride.justification) {
@@ -1050,6 +1429,9 @@ export async function approveSubmission(req: Request, res: Response) {
 
     // Create the entity based on entity type
     let entityId: number;
+    const aiRiskClassification = mapToAiRiskClassification(
+      entityData.ai_risk_classification as string,
+    );
 
     if (submission.entityType === IntakeEntityType.MODEL) {
       const model = ModelInventoryModel.createNewModelInventory({
@@ -1086,20 +1468,56 @@ export async function approveSubmission(req: Request, res: Response) {
             : new Date(),
           goal: (entityData.goal as string) || (entityData.description as string) || "",
           owner: req.userId!,
-          ai_risk_classification: mapToAiRiskClassification(
-            entityData.ai_risk_classification as string,
-          ) as any,
+          ai_risk_classification: aiRiskClassification as any,
           type_of_high_risk_role: (entityData.type_of_high_risk_role as string as any) || undefined,
           geography: entityData.geography ? Number(entityData.geography) : 1,
           status: ProjectStatus.UNDER_REVIEW,
         },
         [],
-        [],
+        // Only a level that comes from the EU AI Act step (a scorable run)
+        // brings the EU AI Act framework along. Submissions without a run keep
+        // their mapped or reviewer level and get no framework.
+        classification ? [EU_AI_ACT_FRAMEWORK_ID] : [],
         req.organizationId!,
         req.userId!,
         transaction,
       );
       entityId = createdProject.id!;
+      if (classification) {
+        await createEUFrameworkQuery(entityId, false, req.organizationId!, transaction);
+        await insertClassificationRunQuery(
+          {
+            useCaseId: entityId,
+            intakeSubmissionId: null,
+            questionnaireVersion: classification.questionnaireVersion,
+            role: classification.computed.role,
+            answers: classification.answers,
+            result: classification.computed,
+            reviewerLevel: classification.justification ? classification.finalLevel : null,
+            reviewerJustification: classification.justification,
+            reviewedBy: classification.justification ? req.userId! : null,
+            source: "intake",
+            createdBy: req.userId!,
+          },
+          req.organizationId!,
+          transaction,
+        );
+        await recordMultipleFieldChanges(
+          entityId,
+          req.userId!,
+          req.organizationId!,
+          [
+            {
+              fieldName: "AI risk classification",
+              oldValue: "-",
+              newValue: classification.justification
+                ? `${classification.finalLevel} (computed ${classification.computed.level}; changed by reviewer: ${classification.justification})`
+                : `${classification.finalLevel} (from the intake EU AI Act classification)`,
+            },
+          ],
+          transaction,
+        );
+      }
     } else {
       await transaction.rollback();
       return res.status(400).json(STATUS_CODE[400](req.t!("Unsupported entity type")));
@@ -1277,60 +1695,46 @@ export async function rejectSubmission(req: Request, res: Response) {
  * Get LLM-suggested questions
  */
 export async function getLLMSuggestedQuestions(req: Request, res: Response) {
-  try {
-    const { entityType, context, llmKeyId } = req.body;
-
-    if (!llmKeyId) {
-      return res.status(400).json(STATUS_CODE[400](req.t!("LLM key ID is required")));
-    }
-
+  const { entityType, context, llmKeyId } = req.body ?? {};
+  if (!llmKeyId) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("LLM key ID is required")));
+  }
+  return handleLlmKeyRequest(req, res, "getLLMSuggestedQuestions", llmKeyId, async (keyId) => {
     const questions = await generateSuggestedQuestions(
       entityType || "use_case",
       context || "",
-      llmKeyId,
+      keyId,
       req.organizationId!,
     );
-
     if (!questions) {
       return res.status(500).json(STATUS_CODE[500](req.t!("Failed to generate questions")));
     }
-
     return res.status(200).json(STATUS_CODE[200](questions));
-  } catch (error) {
-    logger.error("Error in getLLMSuggestedQuestions:", error);
-    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
-  }
+  });
 }
 
 /**
  * Generate field guidance text
  */
 export async function getFieldGuidance(req: Request, res: Response) {
-  try {
-    const { fieldLabel, entityType, llmKeyId } = req.body;
-
-    if (!fieldLabel || !llmKeyId) {
-      return res
-        .status(400)
-        .json(STATUS_CODE[400](req.t!("Field label and LLM key ID are required")));
-    }
-
+  const { fieldLabel, entityType, llmKeyId } = req.body ?? {};
+  if (!fieldLabel || !llmKeyId) {
+    return res
+      .status(400)
+      .json(STATUS_CODE[400](req.t!("Field label and LLM key ID are required")));
+  }
+  return handleLlmKeyRequest(req, res, "getFieldGuidance", llmKeyId, async (keyId) => {
     const guidanceText = await generateFieldGuidance(
       fieldLabel,
       entityType || "use_case",
-      llmKeyId,
+      keyId,
       req.organizationId!,
     );
-
     if (!guidanceText) {
       return res.status(500).json(STATUS_CODE[500](req.t!("Failed to generate guidance")));
     }
-
     return res.status(200).json(STATUS_CODE[200]({ guidanceText }));
-  } catch (error) {
-    logger.error("Error in getFieldGuidance:", error);
-    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
-  }
+  });
 }
 
 // ============================================================================
@@ -1413,6 +1817,7 @@ export async function getPublicFormByPublicId(req: Request, res: Response) {
     let previousData: Record<string, unknown> | undefined;
     let previousSubmitterName: string | undefined;
     let previousSubmitterEmail: string | undefined;
+    let previousSubmissionId: number | undefined;
     if (resubmissionToken) {
       const decoded = verifySignedToken<{
         submissionId: number;
@@ -1438,6 +1843,7 @@ export async function getPublicFormByPublicId(req: Request, res: Response) {
             previousData = previousSubmission.data as Record<string, unknown>;
             previousSubmitterName = previousSubmission.submitterName ?? undefined;
             previousSubmitterEmail = previousSubmission.submitterEmail ?? undefined;
+            previousSubmissionId = previousSubmission.id;
           }
         }
       }
@@ -1451,7 +1857,7 @@ export async function getPublicFormByPublicId(req: Request, res: Response) {
           description: form.description,
           slug: form.slug,
           entityType: form.entityType,
-          schema: form.schema,
+          schema: publicSchema(form.schema),
           submitButtonText: form.submitButtonText,
           publicId: form.publicId,
           designSettings: form.designSettings ?? null,
@@ -1460,6 +1866,7 @@ export async function getPublicFormByPublicId(req: Request, res: Response) {
         previousData,
         previousSubmitterName,
         previousSubmitterEmail,
+        ...(await buildPublicRiskStep(form, previousSubmissionId, tenantInfo.orgId)),
       }),
     );
   } catch (error) {
@@ -1506,6 +1913,7 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
       captchaToken,
       captchaAnswer,
       resubmissionToken,
+      euAiActRiskAnswers,
     } = req.body;
 
     // Validate contact info (always required)
@@ -1526,9 +1934,16 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Form data must be an object")));
     }
 
-    // Validate form data against schema
+    // Apply show/hide rules and formulas, then validate what will be stored
+    let cleanedData: Record<string, unknown> = formData;
     if (fullFormForValidation?.schema) {
-      const validationErrors = validateFormData(formData, fullFormForValidation.schema);
+      const prepared = prepareSubmissionData(formData, fullFormForValidation.schema);
+      cleanedData = prepared.data;
+      const validationErrors = validateFormData(
+        cleanedData,
+        fullFormForValidation.schema,
+        prepared.visibleIds,
+      );
       if (validationErrors.length > 0) {
         return res.status(400).json(
           STATUS_CODE[400]({
@@ -1537,6 +1952,21 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
           }),
         );
       }
+    }
+
+    // Score the EU AI Act step on the server when the form has it
+    const riskStep = prepareIntakeRiskStep(
+      Boolean(form.euAiActRiskStepEnabled),
+      euAiActRiskAnswers,
+    );
+    if (!riskStep.ok) {
+      return res.status(400).json(
+        STATUS_CODE[400]({
+          message: req.t!(riskStep.message),
+          errors: riskStep.errors,
+          step: "eu_ai_act_risk",
+        }),
+      );
     }
 
     // Validate CAPTCHA
@@ -1600,7 +2030,7 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
           formId: form.id,
           submitterEmail: resolvedEmail,
           submitterName: resolvedName,
-          data: formData,
+          data: cleanedData,
           entityType: form.entityType,
           originalSubmissionId,
           ipAddress: clientIp,
@@ -1608,6 +2038,15 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
         tenantInfo.orgId,
         transaction,
       );
+
+      if (riskStep.prepared) {
+        await persistIntakeRiskRun(
+          submission.id!,
+          riskStep.prepared,
+          tenantInfo.orgId,
+          transaction,
+        );
+      }
 
       await transaction.commit();
 
@@ -1660,7 +2099,7 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
       // Trigger async risk scoring
       if (fullForm) {
         calculateSubmissionRisk(
-          formData,
+          cleanedData,
           fullForm.schema,
           fullForm.riskTierSystem || "eu_ai_act",
           fullForm.llmKeyId,
@@ -1732,6 +2171,7 @@ export async function getPublicForm(req: Request, res: Response) {
     let previousData: Record<string, unknown> | undefined;
     let previousSubmitterName: string | undefined;
     let previousSubmitterEmail: string | undefined;
+    let previousSubmissionId: number | undefined;
     if (resubmissionToken) {
       const decoded = verifySignedToken<{
         submissionId: number;
@@ -1757,6 +2197,7 @@ export async function getPublicForm(req: Request, res: Response) {
             previousData = previousSubmission.data as Record<string, unknown>;
             previousSubmitterName = previousSubmission.submitterName ?? undefined;
             previousSubmitterEmail = previousSubmission.submitterEmail ?? undefined;
+            previousSubmissionId = previousSubmission.id;
           }
         }
       }
@@ -1770,7 +2211,7 @@ export async function getPublicForm(req: Request, res: Response) {
           description: form.description,
           slug: form.slug,
           entityType: form.entityType,
-          schema: form.schema,
+          schema: publicSchema(form.schema),
           submitButtonText: form.submitButtonText,
           publicId: form.publicId,
           designSettings: form.designSettings ?? null,
@@ -1779,6 +2220,7 @@ export async function getPublicForm(req: Request, res: Response) {
         previousData,
         previousSubmitterName,
         previousSubmitterEmail,
+        ...(await buildPublicRiskStep(form, previousSubmissionId, tenantInfo.id)),
       }),
     );
   } catch (error) {
@@ -1828,6 +2270,7 @@ export async function submitPublicForm(req: Request, res: Response) {
       captchaToken,
       captchaAnswer,
       resubmissionToken,
+      euAiActRiskAnswers,
     } = req.body;
 
     // Validate contact info (always required)
@@ -1848,9 +2291,16 @@ export async function submitPublicForm(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Form data must be an object")));
     }
 
-    // Validate form data against schema
+    // Apply show/hide rules and formulas, then validate what will be stored
+    let cleanedData: Record<string, unknown> = formData;
     if (fullFormForValidation?.schema) {
-      const validationErrors = validateFormData(formData, fullFormForValidation.schema);
+      const prepared = prepareSubmissionData(formData, fullFormForValidation.schema);
+      cleanedData = prepared.data;
+      const validationErrors = validateFormData(
+        cleanedData,
+        fullFormForValidation.schema,
+        prepared.visibleIds,
+      );
       if (validationErrors.length > 0) {
         return res.status(400).json(
           STATUS_CODE[400]({
@@ -1861,6 +2311,22 @@ export async function submitPublicForm(req: Request, res: Response) {
       }
     }
 
+    // Score the EU AI Act step on the server when the form has it
+    const riskStep = prepareIntakeRiskStep(
+      Boolean(form.euAiActRiskStepEnabled),
+      euAiActRiskAnswers,
+    );
+    if (!riskStep.ok) {
+      return res.status(400).json(
+        STATUS_CODE[400]({
+          message: req.t!(riskStep.message),
+          errors: riskStep.errors,
+          step: "eu_ai_act_risk",
+        }),
+      );
+    }
+
+    // Validate CAPTCHA
     if (!captchaToken || captchaAnswer === undefined) {
       return res.status(400).json(STATUS_CODE[400](req.t!("CAPTCHA verification required")));
     }
@@ -1921,7 +2387,7 @@ export async function submitPublicForm(req: Request, res: Response) {
           formId: form.id,
           submitterEmail: resolvedEmail,
           submitterName: resolvedName,
-          data: formData,
+          data: cleanedData,
           entityType: form.entityType,
           originalSubmissionId,
           ipAddress: clientIp,
@@ -1929,6 +2395,10 @@ export async function submitPublicForm(req: Request, res: Response) {
         tenantInfo.id,
         transaction,
       );
+
+      if (riskStep.prepared) {
+        await persistIntakeRiskRun(submission.id!, riskStep.prepared, tenantInfo.id, transaction);
+      }
 
       await transaction.commit();
 
@@ -1993,7 +2463,7 @@ export async function submitPublicForm(req: Request, res: Response) {
       // Trigger async risk scoring
       if (fullForm) {
         calculateSubmissionRisk(
-          formData,
+          cleanedData,
           fullForm.schema,
           fullForm.riskTierSystem || "eu_ai_act",
           fullForm.llmKeyId,

@@ -5,10 +5,15 @@ import { translateError } from "../utils/i18n.utils";
 import { CustomException } from "../domain.layer/exceptions/custom.exception";
 import {
   getMrmOrgSettings,
+  lockMrmOrgSettings,
   MIN_RETENTION_MONTHS,
   upsertMrmOrgSettings,
 } from "../utils/mrmSettings.utils";
 import { sequelize } from "../database/db";
+import {
+  appendRetentionChangeToLedger,
+  canChangeRetentionPeriods,
+} from "../utils/retentionAudit.utils";
 import {
   getAlertExtraRecipientsQuery,
   getOrgMemberIdsQuery,
@@ -49,6 +54,18 @@ export async function updateMrmSettingsHandler(req: Request, res: Response) {
   try {
     const body = req.body ?? {};
     const has = (key: string) => Object.prototype.hasOwnProperty.call(body, key);
+
+    // Retention is an organization-wide policy: only roles holding
+    // organization.admin may change it. Alert fields keep their existing
+    // permissions.
+    if (
+      has("retention_months") &&
+      !(await canChangeRetentionPeriods(req.organizationId, req.role))
+    ) {
+      return res
+        .status(403)
+        .json(STATUS_CODE[403](req.t!("Only admins can change retention periods")));
+    }
 
     // PARTIAL semantics: only fields present in the body are validated and
     // updated (RetentionSection PUTs only retention_months; AlertsSection
@@ -100,7 +117,14 @@ export async function updateMrmSettingsHandler(req: Request, res: Response) {
 
     const transaction = await sequelize.transaction();
     let settings;
+    let previousRetention: number | undefined;
     try {
+      // Read the old period under a row lock in the same transaction, so a
+      // concurrent save cannot make the ledger's "from" value stale.
+      if (has("retention_months")) {
+        previousRetention = (await lockMrmOrgSettings(req.organizationId!, transaction))
+          .retention_months;
+      }
       settings = await upsertMrmOrgSettings(
         req.organizationId!,
         {
@@ -119,6 +143,15 @@ export async function updateMrmSettingsHandler(req: Request, res: Response) {
     } catch (error) {
       await transaction.rollback();
       throw error;
+    }
+    if (previousRetention !== undefined && previousRetention !== settings.retention_months) {
+      await appendRetentionChangeToLedger({
+        organizationId: req.organizationId!,
+        userId: req.userId,
+        description: `Model risk metric retention changed from ${previousRetention} to ${settings.retention_months} months`,
+        functionName: fn,
+        fileName: FILE,
+      });
     }
     const alert_recipients = await getAlertExtraRecipientsQuery(req.organizationId!);
     logStructured("successful", "MRM settings updated", fn, FILE);

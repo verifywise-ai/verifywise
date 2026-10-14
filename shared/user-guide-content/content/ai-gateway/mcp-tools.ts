@@ -144,11 +144,11 @@ export const mcpToolsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Tools appear in the catalog after the gateway runs tool discovery on a registered server. Discovery calls the server\'s `tools/list` MCP method and stores each tool with its name, description and input schema.',
+      text: 'Tools appear in the catalog after the gateway runs tool discovery on a registered server. Discovery runs when you create a server, change its address or credentials, or switch it on. Admins can also run it with the **Discover tools** button on the MCP Servers page. Discovery calls the server\'s `tools/list` MCP method and stores each tool with its name, description and input schema.',
     },
     {
       type: 'paragraph',
-      text: 'You can\'t manually add tools. They always come from a server\'s discovery response. If a tool disappears from the server, it stays in the catalog until the server is deleted.',
+      text: 'You can\'t manually add tools. They always come from a server\'s discovery response. If a server stops offering a tool, the tool is deactivated on the next discovery. Its risk level and approval settings are kept, so they apply again if the tool comes back. Tools a server stops offering are hidden from this page until it offers them again. Tools from a disabled server are hidden from agents, but this page still lists them.',
     },
     {
       type: 'heading',
@@ -173,7 +173,7 @@ export const mcpToolsContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { text: 'Register MCP servers and trigger tool discovery.' },
+        { text: 'Register an MCP server. Tools are discovered when you save it. If none appear, use **Discover tools** on the MCP Servers page.' },
         { text: 'Once tools appear, assign risk levels and enable approval for sensitive operations.' },
       ],
     },

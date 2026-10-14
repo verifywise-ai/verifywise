@@ -177,7 +177,7 @@ describe("MCPInvocationDrawer", () => {
       expect(screen.getByText("search_docs")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("EVENTS")).toBeInTheDocument();
+    expect(screen.getByText("Events")).toBeInTheDocument();
     expect(screen.queryByText("queued")).not.toBeInTheDocument();
   });
 

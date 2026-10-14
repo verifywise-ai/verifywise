@@ -38,7 +38,7 @@ export const gettingStartedContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The gateway needs your provider\'s API key to forward requests. Keys are encrypted at rest (AES-256-CBC) and only decrypted when proxying a request.',
+      text: 'The gateway needs your provider\'s API key to forward requests. Keys are encrypted at rest (AES-256-GCM) and only decrypted when proxying a request.',
     },
     {
       type: 'ordered-list',

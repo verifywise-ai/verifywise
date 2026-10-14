@@ -42,6 +42,7 @@ import {
 } from "../../../../application/repository/annexCategory_iso.repository";
 import { getEntityById } from "../../../../application/repository/entity.repository";
 import { attachFilesToEntity } from "../../../../application/repository/file.repository";
+import { useInvalidateEvidenceGaps } from "../../../../application/hooks/useEvidenceAi";
 import allowedRoles from "../../../../application/constants/permissions";
 
 const FRAMEWORK_TYPE = "iso_42001";
@@ -108,6 +109,7 @@ const VWISO42001AnnexDrawerDialog = ({
 
   const [isLoading, setIsLoading] = useState(false);
   const [alert, setAlert] = useState<AlertProps | null>(null);
+  const invalidateEvidenceGaps = useInvalidateEvidenceGaps();
   const [activeTab, setActiveTab] = useState("details");
   const [fetchedAnnex, setFetchedAnnex] = useState<AnnexCategoryISO>();
   const [date, setDate] = useState<Dayjs | null>(null);
@@ -294,6 +296,9 @@ const VWISO42001AnnexDrawerDialog = ({
             console.error("Failed to attach files:", attachError);
           }
         }
+
+        // Evidence attached here feeds framework coverage, which is cached
+        invalidateEvidenceGaps();
 
         handleAlert({ variant: "success", body: "Annex category saved successfully" });
         onSaveSuccess?.(true, "Annex category saved successfully");

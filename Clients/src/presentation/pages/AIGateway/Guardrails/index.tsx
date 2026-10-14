@@ -20,7 +20,6 @@ import {
   Shield,
   AlertTriangle,
   KeyRound,
-  FileCheck,
   Scale,
   RotateCcw,
 } from "lucide-react";
@@ -59,7 +58,6 @@ const CATALOG_CATEGORIES = [
   { id: "content_safety", label: "Content safety", icon: Shield },
   { id: "prompt_security", label: "Prompt security", icon: AlertTriangle },
   { id: "data_leakage", label: "Data leakage prevention", icon: KeyRound },
-  { id: "output_quality", label: "Output quality", icon: FileCheck },
   { id: "compliance", label: "Compliance", icon: Scale },
 ];
 
@@ -69,7 +67,7 @@ const GUARDRAIL_CATALOG: CatalogItem[] = [
     id: "pii-email",
     category: "pii",
     name: "Email addresses",
-    description: "Detect and protect email addresses in prompts and responses.",
+    description: "Detect and protect email addresses in prompts.",
     guardrail_type: "pii",
     default_action: "mask",
     config: { entities: { EMAIL_ADDRESS: "mask" }, score_thresholds: { ALL: 0.7 }, language: "en" },
@@ -445,47 +443,6 @@ const GUARDRAIL_CATALOG: CatalogItem[] = [
     detects: ["DATABASE_URL=postgres://...", 'export JWT_SECRET="abc123..."'],
   },
 
-  // ── Output Quality ─────────────────────────────────────────────────
-  {
-    id: "oq-json-fence",
-    category: "output_quality",
-    name: "JSON output enforcement",
-    description: "Ensure responses contain valid JSON when expected.",
-    guardrail_type: "content_filter",
-    default_action: "block",
-    config: { type: "regex", pattern: "^(?!.*\\{[^}]*\\}).*$" },
-    compliance: [],
-    method: "Pattern match",
-    detects: ["Flags responses that contain no JSON object"],
-  },
-  {
-    id: "oq-max-length",
-    category: "output_quality",
-    name: "Response length limit",
-    description: "Flag responses exceeding 4,000 words.",
-    guardrail_type: "content_filter",
-    default_action: "mask",
-    config: { type: "regex", pattern: "^(\\S+\\s+){4000,}" },
-    compliance: [],
-    method: "Pattern match",
-    detects: ["Catches responses with more than 4,000 words"],
-  },
-  {
-    id: "oq-code-injection",
-    category: "output_quality",
-    name: "Executable code in output",
-    description: "Detect script tags or executable code patterns in LLM responses.",
-    guardrail_type: "content_filter",
-    default_action: "block",
-    config: {
-      type: "regex",
-      pattern: "(<script[^>]*>|javascript:|eval\\(|exec\\(|subprocess\\.|os\\.system\\()",
-    },
-    compliance: ["OWASP Top 10"],
-    method: "Pattern match",
-    detects: ["<script> tags", "javascript: URIs", "subprocess calls", "shell commands"],
-  },
-
   // ── Compliance ─────────────────────────────────────────────────────
   {
     id: "comp-gdpr-bundle",
@@ -788,7 +745,8 @@ export default function GuardrailsPage() {
   const toggleCategory = (catId: string) => {
     setExpandedCategories((prev) => {
       const next = new Set(prev);
-      next.has(catId) ? next.delete(catId) : next.add(catId);
+      if (next.has(catId)) next.delete(catId);
+      else next.add(catId);
       return next;
     });
   };

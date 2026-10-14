@@ -15,6 +15,11 @@ import type {
   ICustomFieldDefinition,
 } from "../../../domain/interfaces/i.customField";
 import {
+  scoredOptions,
+  stringOptions,
+  formatScoredOption,
+} from "../../../domain/interfaces/i.customField";
+import {
   customFieldsKeys,
   useCustomFieldDefinitions,
   useCustomFieldValues,
@@ -50,13 +55,23 @@ interface CustomFieldsSectionProps {
    * Called whenever the set of definitionIds with a non-empty staged value
    * changes. Wire to `useRequiredCustomFieldsGate().onPendingChange` so the
    * parent Save button unblocks as the user types — see the gate docs for
-   * the deadlock this prevents.
+   * the deadlock this prevents. The second argument lists required fields
+   * whose stored value the user cleared, so the gate can block Save.
    */
-  onPendingChange?: (pendingDefinitionIds: ReadonlySet<number>) => void;
+  onPendingChange?: (
+    pendingDefinitionIds: ReadonlySet<number>,
+    clearedRequired: ReadonlyArray<{ id: number; label: string }>,
+  ) => void;
+  /**
+   * Called with true while any value is set, changed or cleared but not yet
+   * flushed, and false once there is nothing left to save. Lets a parent
+   * enable its Save button when only custom field values changed.
+   */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
 const CustomFieldsSection = forwardRef<CustomFieldsSectionHandle, CustomFieldsSectionProps>(
-  ({ entityType, entityId, onPendingChange }, ref) => {
+  ({ entityType, entityId, onPendingChange, onDirtyChange }, ref) => {
     const theme = useTheme();
     const queryClient = useQueryClient();
     const isCreateMode = entityId === null || entityId <= 0;
@@ -90,14 +105,22 @@ const CustomFieldsSection = forwardRef<CustomFieldsSectionHandle, CustomFieldsSe
         if (Array.isArray(value) && value.length === 0) continue;
         ids.add(defId);
       }
-      onPendingChange(ids);
-    }, [stagedValues, clearedDefs, onPendingChange]);
+      const clearedRequired = (definitions ?? [])
+        .filter((d) => d.required && clearedDefs.has(d.id))
+        .map((d) => ({ id: d.id, label: d.label }));
+      onPendingChange(ids, clearedRequired);
+    }, [stagedValues, clearedDefs, definitions, onPendingChange]);
+
+    const isDirty = stagedValues.size > 0 || clearedDefs.size > 0;
+    useEffect(() => {
+      onDirtyChange?.(isDirty);
+    }, [isDirty, onDirtyChange]);
 
     useImperativeHandle(
       ref,
       () => ({
         flush: async (id: number) => {
-          if (stagedValues.size === 0 && clearedDefs.size === 0) return;
+          if (!isDirty) return;
           setFlushError(null);
           try {
             await Promise.all([
@@ -128,9 +151,9 @@ const CustomFieldsSection = forwardRef<CustomFieldsSectionHandle, CustomFieldsSe
             throw err;
           }
         },
-        hasPendingValues: () => stagedValues.size > 0 || clearedDefs.size > 0,
+        hasPendingValues: () => isDirty,
       }),
-      [stagedValues, clearedDefs, queryClient, entityType],
+      [stagedValues, clearedDefs, isDirty, queryClient, entityType],
     );
 
     const stageValue = (definitionId: number, value: unknown) => {
@@ -397,6 +420,8 @@ function renderInput(props: InputProps): React.ReactNode {
       return <MultiSelectInput {...props} />;
     case "user":
       return <UserInput {...props} />;
+    case "scored_select":
+      return <ScoredSelectInput {...props} />;
     default:
       return null;
   }
@@ -458,7 +483,7 @@ const BooleanInput: React.FC<InputProps> = ({ draft, setDraft, disabled }) => (
 );
 
 const SelectInput: React.FC<InputProps> = ({ definition, draft, setDraft, disabled }) => {
-  const items = (definition.options ?? []).map((opt) => ({
+  const items = stringOptions(definition).map((opt) => ({
     _id: opt,
     name: opt,
   }));
@@ -474,9 +499,28 @@ const SelectInput: React.FC<InputProps> = ({ definition, draft, setDraft, disabl
   );
 };
 
+const ScoredSelectInput: React.FC<InputProps> = ({ definition, draft, setDraft, disabled }) => {
+  const items = scoredOptions(definition).map((opt) => ({
+    _id: opt.id,
+    name: formatScoredOption(opt),
+  }));
+  // An id that is no longer an option shows as empty instead of an out-of-range value.
+  const value = typeof draft === "string" && items.some((i) => i._id === draft) ? draft : "";
+  return (
+    <Select
+      id={`cf-${definition.id}`}
+      value={value}
+      items={items}
+      onChange={(e) => setDraft((e.target.value as string) || null)}
+      disabled={disabled}
+      placeholder="Select an option"
+    />
+  );
+};
+
 const MultiSelectInput: React.FC<InputProps> = ({ definition, draft, setDraft, disabled }) => {
   const selected = Array.isArray(draft) ? (draft as string[]) : [];
-  const options = definition.options ?? [];
+  const options = stringOptions(definition);
   return (
     <AutoCompleteField<string, true>
       multiple

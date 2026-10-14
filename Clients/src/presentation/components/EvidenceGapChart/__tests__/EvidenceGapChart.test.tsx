@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import EvidenceGapChart from "../index";
 
@@ -7,22 +7,22 @@ const mockData = {
   controls_without_evidence: 20,
   controls_with_low_quality: 15,
   controls_adequate: 65,
-  quality_threshold: 70,
+  low_grades: ["D", "F"],
   gaps: [
     {
       framework_type: "eu_ai_act",
       control_id: 1,
-      control_title: "Risk Management",
+      control_title: "Risk management",
       evidence_count: 0,
-      avg_quality: 0,
+      adequate_count: 0,
       gap_type: "no_evidence" as const,
     },
     {
       framework_type: "iso_42001",
       control_id: 2,
-      control_title: "Data Governance",
+      control_title: "Data governance",
       evidence_count: 2,
-      avg_quality: 45,
+      adequate_count: 0,
       gap_type: "low_quality" as const,
     },
   ],
@@ -47,7 +47,7 @@ describe("EvidenceGapChart", () => {
           controls_without_evidence: 0,
           controls_with_low_quality: 0,
           controls_adequate: 0,
-          quality_threshold: 70,
+          low_grades: ["D", "F"],
           gaps: [],
         }}
       />,
@@ -57,10 +57,11 @@ describe("EvidenceGapChart", () => {
 
   it("renders title and coverage bars", () => {
     renderWithProviders(<EvidenceGapChart data={mockData} />);
-    expect(screen.getByText("Evidence Coverage")).toBeInTheDocument();
-    expect(screen.getByText("Adequate Evidence")).toBeInTheDocument();
-    expect(screen.getByText("Low Quality Evidence")).toBeInTheDocument();
-    expect(screen.getByText("No Evidence")).toBeInTheDocument();
+    expect(screen.getByText("Evidence coverage")).toBeInTheDocument();
+    expect(screen.getByText("Adequate evidence")).toBeInTheDocument();
+    expect(screen.getByText("Low-quality evidence")).toBeInTheDocument();
+    // "No evidence" is also the badge on a gap row, so the bar label is one of several
+    expect(screen.getAllByText("No evidence").length).toBeGreaterThan(0);
   });
 
   it("shows coverage counts with percentages", () => {
@@ -70,46 +71,84 @@ describe("EvidenceGapChart", () => {
     expect(screen.getByText("20 (20%)")).toBeInTheDocument();
   });
 
-  it("renders gap details when gaps exist", () => {
+  it("names the framework each gap belongs to, since the list mixes them", () => {
     renderWithProviders(<EvidenceGapChart data={mockData} />);
-    expect(screen.getByText("Controls Needing Attention (2)")).toBeInTheDocument();
-    expect(screen.getByText("Risk Management")).toBeInTheDocument();
-    expect(screen.getByText("Data Governance")).toBeInTheDocument();
+    expect(screen.getByText("Controls needing attention (2)")).toBeInTheDocument();
+    expect(screen.getByText(/EU AI Act · Risk management/)).toBeInTheDocument();
+    expect(screen.getByText(/ISO 42001 · Data governance/)).toBeInTheDocument();
   });
 
-  it("shows 'No evidence' for no_evidence gap type", () => {
+  it("distinguishes a control with no evidence from one whose evidence is all low quality", () => {
     renderWithProviders(<EvidenceGapChart data={mockData} />);
-    expect(screen.getByText("No evidence")).toBeInTheDocument();
+    expect(screen.getAllByText("No evidence").length).toBeGreaterThan(0);
+    expect(screen.getByText("2 files, none adequate")).toBeInTheDocument();
   });
 
-  it("shows quality score for low_quality gap type", () => {
-    renderWithProviders(<EvidenceGapChart data={mockData} />);
-    expect(screen.getByText("Quality: 45")).toBeInTheDocument();
+  it("counts a single low-quality file in the singular", () => {
+    renderWithProviders(
+      <EvidenceGapChart
+        data={{
+          ...mockData,
+          gaps: [{ ...mockData.gaps[1], evidence_count: 1 }],
+        }}
+      />,
+    );
+    expect(screen.getByText("1 file, none adequate")).toBeInTheDocument();
   });
 
   it("does not render gap details when gaps array is empty", () => {
     renderWithProviders(<EvidenceGapChart data={{ ...mockData, gaps: [] }} />);
-    expect(screen.queryByText("Controls Needing Attention (0)")).not.toBeInTheDocument();
+    expect(screen.queryByText("Controls needing attention (0)")).not.toBeInTheDocument();
   });
 
-  it("shows quality threshold note", () => {
-    renderWithProviders(<EvidenceGapChart data={mockData} />);
-    expect(screen.getByText("Quality threshold: 70/100")).toBeInTheDocument();
+  it("says which grades count as low quality", () => {
+    renderWithProviders(<EvidenceGapChart data={{ ...mockData, low_grades: ["C", "D", "F"] }} />);
+    expect(screen.getByText(/Evidence graded C, D, F counts as low quality/)).toBeInTheDocument();
   });
 
-  it("limits gap details to 8 items", () => {
+  it("falls back to the default grades when the API did not say", () => {
+    const { low_grades: _ignored, ...withoutGrades } = mockData;
+    renderWithProviders(<EvidenceGapChart data={withoutGrades} />);
+    expect(screen.getByText(/Evidence graded D, F counts as low quality/)).toBeInTheDocument();
+  });
+
+  it("lists 8 gaps until asked for the rest", () => {
     const manyGaps = Array.from({ length: 12 }, (_, i) => ({
       framework_type: "eu_ai_act",
       control_id: i + 1,
       control_title: `Control ${i + 1}`,
       evidence_count: 0,
-      avg_quality: 0,
+      adequate_count: 0,
       gap_type: "no_evidence" as const,
     }));
     renderWithProviders(<EvidenceGapChart data={{ ...mockData, gaps: manyGaps }} />);
-    expect(screen.getByText("Controls Needing Attention (12)")).toBeInTheDocument();
-    expect(screen.getByText("Control 1")).toBeInTheDocument();
-    expect(screen.getByText("Control 8")).toBeInTheDocument();
-    expect(screen.queryByText("Control 9")).not.toBeInTheDocument();
+    expect(screen.getByText("Controls needing attention (12)")).toBeInTheDocument();
+    expect(screen.getByText(/Control 1$/)).toBeInTheDocument();
+    expect(screen.getByText(/Control 8$/)).toBeInTheDocument();
+    expect(screen.queryByText(/Control 9$/)).not.toBeInTheDocument();
+  });
+
+  it("can list every gap past the first 8, and collapse again", () => {
+    const manyGaps = Array.from({ length: 12 }, (_, i) => ({
+      framework_type: "eu_ai_act",
+      control_id: i + 1,
+      control_title: `Control ${i + 1}`,
+      evidence_count: 0,
+      adequate_count: 0,
+      gap_type: "no_evidence" as const,
+    }));
+    renderWithProviders(<EvidenceGapChart data={{ ...mockData, gaps: manyGaps }} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Show all 12" }));
+    expect(screen.getByText(/Control 9$/)).toBeInTheDocument();
+    expect(screen.getByText(/Control 12$/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Show fewer" }));
+    expect(screen.queryByText(/Control 9$/)).not.toBeInTheDocument();
+  });
+
+  it("offers no toggle when every gap already fits", () => {
+    renderWithProviders(<EvidenceGapChart data={mockData} />);
+    expect(screen.queryByRole("button", { name: /Show all/ })).not.toBeInTheDocument();
   });
 });
