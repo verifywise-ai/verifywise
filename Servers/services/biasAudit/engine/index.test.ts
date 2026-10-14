@@ -1,5 +1,6 @@
 import { computeBiasAudit } from "./index";
 import { allCases, exp } from "./__fixtures__/load";
+import { computeScoreDistributionTable } from "./scoreDistribution";
 import type { BiasAuditConfig } from "./types";
 
 const all = allCases();
@@ -189,7 +190,9 @@ describe("summary text", () => {
   it("uses no forbidden vocabulary", () => {
     for (const c of all) {
       const got = computeBiasAudit(c.records, toConfig(c.config));
-      expect(got.summary.toLowerCase()).not.toMatch(/\b(compliant|certified|passed|bias-free)\b/);
+      expect(got.summary.toLowerCase()).not.toMatch(
+        /\b(compliant|certified|passed|bias-free|audited)\b/,
+      );
     }
   });
 
@@ -218,5 +221,75 @@ describe("summary text", () => {
         metric: "scoring_rate",
       }),
     ).toThrow(/score column/i);
+  });
+
+  describe("too_few_above degenerate median", () => {
+    const scored = [...Array(3).fill(9), ...Array(60).fill(5), ...Array(37).fill(1)].map(
+      (score, i) => ({ sex: i % 2 === 0 ? "Male" : "Female", score }),
+    );
+
+    it("states the above/total basis without claiming nothing was computed", () => {
+      const got = computeBiasAudit(scored, {
+        ...toConfig(all[0].config),
+        metric: "scoring_rate",
+        scoreColumn: "score",
+      });
+      expect(got.diagnostics.degenerateMedian?.kind).toBe("too_few_above");
+      expect(got.summary).toContain(
+        "only 3 of 100 records clearing the sample median (5), below the 5.0% floor",
+      );
+      expect(got.summary).toContain("not a reliable basis for conclusions");
+      expect(got.summary).not.toContain("No scoring rate could be computed");
+      expect(got.summary).not.toContain("no record scores above it");
+      expect(got.summary).not.toContain("No adverse impact");
+      expect(got.summary.toLowerCase()).not.toMatch(
+        /\b(compliant|certified|passed|bias-free|audited)\b/,
+      );
+    });
+  });
+
+  describe("overall rate percent formatting", () => {
+    // Reads the "overall rate" figure out of the summary for n records, k selected.
+    function rateFor(k: number, n: number): string {
+      const records = Array.from({ length: n }, (_, i) => ({
+        sex: i % 2 === 0 ? "Male" : "Female",
+        selected: i < k ? 1 : 0,
+      }));
+      const got = computeBiasAudit(records, {
+        ...toConfig(all[0].config),
+        metric: "selection_rate",
+        outcomeColumn: "selected",
+      });
+      return /overall rate: ([\d.]+%)/.exec(got.summary)![1];
+    }
+
+    it("rounds an exact tie half to even like Python (1/16 -> 6.2%)", () => {
+      expect(rateFor(1, 16)).toBe("6.2%");
+    });
+
+    it("rounds an ordinary value normally (1/3 -> 33.3%)", () => {
+      expect(rateFor(1, 3)).toBe("33.3%");
+    });
+  });
+});
+
+describe("computeScoreDistributionTable at scale", () => {
+  it("handles 300,000 scored records without overflowing the stack", () => {
+    const n = 300_000;
+    const records = Array.from({ length: n }, (_, i) => ({
+      sex: i % 2 === 0 ? "Male" : "Female",
+      score: i % 1000,
+    }));
+    const table = computeScoreDistributionTable({
+      records,
+      categoryKey: "sex",
+      categoryLabel: "Sex",
+      bins: 10,
+    });
+    expect(table.groups.map((g) => g.categoryName).sort()).toEqual(["Female", "Male"]);
+    const bins = table.groups[0].bins;
+    expect(bins).toHaveLength(10);
+    expect(bins[0].lower).toBe(0);
+    expect(bins[9].upper).toBe(999);
   });
 });

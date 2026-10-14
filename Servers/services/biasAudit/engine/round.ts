@@ -24,25 +24,36 @@
  * it.
  */
 export function round6(x: number): number {
+  return roundHalfEven(x, 6);
+}
+
+/**
+ * Round to `digits` decimal places, half to even, like Python's
+ * `round(x, digits)`. `round6` is this with six digits; see its comment for
+ * why `toFixed` and `Math.round` cannot be used.
+ */
+export function roundHalfEven(x: number, digits: number): number {
   if (!Number.isFinite(x)) return x;
   if (x === 0) return 0;
 
+  const grain = 10 ** digits;
+
   // Below the rounding grain, only an exact half needs the even rule.
-  if (Math.abs(x) < 1e-6) {
-    return Math.abs(x) * 1e6 === 0.5 ? 0 : Number(x.toFixed(6));
+  if (Math.abs(x) < 1 / grain) {
+    return Math.abs(x) * grain === 0.5 ? 0 : Number(x.toFixed(digits));
   }
 
   // toFixed(20) never yields exponential notation, which a regex on the
   // default string form would mis-parse for values like 5e-7.
   const text = x.toFixed(20);
   const parts = text.match(/^(-?)(\d+)\.(\d+)$/);
-  if (!parts) return Number(x.toFixed(6));
+  if (!parts) return Number(x.toFixed(digits));
 
   const sign = parts[1] === "-" ? -1 : 1;
   const integerPart = parts[2];
   const fraction = parts[3];
-  const keep = fraction.slice(0, 6);
-  const discarded = fraction.slice(6);
+  const keep = fraction.slice(0, digits);
+  const discarded = fraction.slice(digits);
 
   let scaled = parseInt(integerPart + keep, 10);
   const firstDiscarded = discarded[0] ?? "0";
@@ -54,5 +65,5 @@ export function round6(x: number): number {
     if (scaled % 2 !== 0) scaled += 1; // exact tie: round to even
   }
 
-  return (sign * scaled) / 1e6;
+  return (sign * scaled) / grain;
 }

@@ -1,7 +1,7 @@
 import { computeCategoryTable } from "./categoryTable";
 import { computeFairnessMetricsTable } from "./fairnessMetrics";
 import { computeIntersectionalTable } from "./intersectional";
-import { round6 } from "./round";
+import { round6, roundHalfEven } from "./round";
 import { computeScoreDistributionTable } from "./scoreDistribution";
 import { aboveMedian, detectDegenerateMedian, overallMedian } from "./scoringRate";
 import type {
@@ -32,9 +32,11 @@ function withThousands(n: number): string {
   return n.toLocaleString("en-US");
 }
 
-/** Python's `f"{x:.1%}"`: multiply by 100, one decimal, percent sign. */
+/** Python's `f"{x:.1%}"`: multiply by 100, one decimal (half to even), percent sign. */
 function asPercent(x: number): string {
-  return `${(x * 100).toFixed(1)}%`;
+  // Python scales in floating point and then rounds the exact decimal half
+  // to even, so 1/16 prints "6.2%" where toFixed would print "6.3%".
+  return `${roundHalfEven(x * 100, 1).toFixed(1)}%`;
 }
 
 /** Python's `f"{x:.2f}"`. */
@@ -207,13 +209,20 @@ export function computeBiasAudit(
     // happen: the median coincided with a modal value, so almost nothing
     // scores above it and every ratio collapses.
     const d = degenerateMedian;
-    summaryParts.push(
-      `No scoring rate could be computed: the sample median (${d.median}) is also the ` +
-        `highest observed value for ${withThousands(d.atMedian)} of ` +
-        `${withThousands(d.total)} records, across only ${d.distinctValues} distinct ` +
-        `values, so ${d.above === 0 ? "no record scores" : `only ${d.above} records score`} ` +
-        `above it.`,
-    );
+    if (d.kind === "none_above") {
+      summaryParts.push(
+        `No scoring rate could be computed: the sample median (${d.median}) is also the ` +
+          `highest observed value for ${withThousands(d.atMedian)} of ` +
+          `${withThousands(d.total)} records, across only ${d.distinctValues} distinct ` +
+          `values, so no record scores above it.`,
+      );
+    } else {
+      summaryParts.push(
+        `Scoring rates rest on only ${withThousands(d.above)} of ${withThousands(d.total)} ` +
+          `records clearing the sample median (${d.median}), below the ` +
+          `${asPercent(d.floor)} floor, so the ratios are not a reliable basis for conclusions.`,
+      );
+    }
   } else if (metric === "selection_rate" || metric === "scoring_rate") {
     if (totalFlags > 0) {
       summaryParts.push(

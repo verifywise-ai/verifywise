@@ -109,8 +109,14 @@ export function computeScoreDistributionTable(args: ScoreDistributionArgs): Scor
     };
   }
 
-  const lo = Math.min(...overallScores);
-  let hi = Math.max(...overallScores);
+  // A loop, not Math.min(...xs): spreading hundreds of thousands of
+  // arguments overflows the call stack.
+  let lo = overallScores[0];
+  let hi = overallScores[0];
+  for (const v of overallScores) {
+    if (v < lo) lo = v;
+    if (v > hi) hi = v;
+  }
   if (hi === lo) hi = lo + 1; // avoid zero-width bins
   const binWidth = (hi - lo) / bins;
 
