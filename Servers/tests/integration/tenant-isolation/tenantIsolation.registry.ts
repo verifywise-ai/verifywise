@@ -153,6 +153,13 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     testFile: "extensionRuns.isolation.test.ts",
   },
   {
+    // Self-service LL 144 bias module. Routes arrive with the controller task;
+    // until then the hand-written file pins what the schema guarantees.
+    name: "bias_audit",
+    tables: ["aedt_profiles", "aedt_profile_answers", "bias_audit_runs", "bias_audit_stances"],
+    baseRoute: "/api/bias-audit",
+  },
+  {
     name: "eu_ai_act_classifications",
     tables: ["eu_ai_act_classifications"],
     baseRoute: "/api/projects/:id/eu-ai-act-classification",
