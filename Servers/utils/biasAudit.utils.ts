@@ -194,12 +194,34 @@ export async function attestProfileQuery(
   transaction: Transaction,
 ): Promise<AedtProfile> {
   try {
+    // Lock the target first so a concurrent attestation of the same draft
+    // waits, then sees a non-draft status and gets a clean conflict.
+    const target = firstRow<{ id: number; status: string }>(
+      await sequelize.query(
+        `SELECT id, status FROM aedt_profiles
+          WHERE id = :id AND organization_id = :organization_id
+          FOR UPDATE`,
+        {
+          replacements: { id: profileId, organization_id: organizationId },
+          transaction,
+        },
+      ),
+    );
+    if (!target) refuseCrossOrg("Profile", profileId);
+    if (target.status !== "draft") {
+      throw new ConflictException(
+        `Profile ${profileId} is ${target.status}, not a draft, so it cannot be attested. Reload and retry.`,
+        "AedtProfile",
+        "status",
+      );
+    }
     await sequelize.query(
       `UPDATE aedt_profiles SET status = 'superseded', superseded_at = NOW()
          WHERE project_id = (SELECT project_id FROM aedt_profiles
                               WHERE id = :id AND organization_id = :organization_id)
            AND framework_id = (SELECT framework_id FROM aedt_profiles
                                 WHERE id = :id AND organization_id = :organization_id)
+           AND id <> :id
            AND status = 'attested' AND organization_id = :organization_id`,
       { replacements: { id: profileId, organization_id: organizationId }, transaction },
     );
@@ -215,15 +237,10 @@ export async function attestProfileQuery(
       },
     );
     const row = firstRow<AedtProfile>(result);
-    if (!row) {
-      throw new NotFoundException(
-        `Draft profile ${profileId} was not found in this organization`,
-        "AedtProfile",
-      );
-    }
+    if (!row) refuseCrossOrg("Profile", profileId);
     return row;
   } catch (error: unknown) {
-    // The partial unique index is the real guard; translate it rather than
+    // The partial unique index is the backstop; translate it rather than
     // letting a 23505 reach the client as a 500.
     if ((error as { original?: { code?: string } })?.original?.code === "23505") {
       logger.warn(`Concurrent attestation conflict on profile ${profileId}`);
@@ -242,9 +259,7 @@ export async function attestProfileQuery(
 export interface CreateRunArgs {
   projectId: number;
   profileId: number;
-  profileVersion: number;
   presetId: string;
-  questionSetVersion: number;
   jobDescriptionKey?: string | null;
   metric: string;
   threshold: number | null;
@@ -282,8 +297,8 @@ export async function createRunQuery(
         result_json, result_schema_version, gate_findings_json,
         order_findings_json, dataset_sha256, dataset_retained, row_count,
         corpus_id, created_by)
-     SELECT pr.organization_id, pr.id, ap.id, :profile_version, :preset_id,
-            :question_set_version, :job_description_key, :metric, :threshold,
+     SELECT pr.organization_id, pr.id, ap.id, ap.version, :preset_id,
+            ap.question_set_version, :job_description_key, :metric, :threshold,
             :threshold_source, :small_sample_exclusion,
             CAST(:data_basis_json AS JSONB),
             :expiry_date, :expiry_trigger, :readiness_score,
@@ -297,14 +312,13 @@ export async function createRunQuery(
                        AND pr.organization_id = :organization_id
       WHERE ap.id = :profile_id AND ap.project_id = :project_id
         AND ap.organization_id = :organization_id
+        AND ap.status = 'attested'
      RETURNING *`,
     {
       replacements: {
         project_id: args.projectId,
         profile_id: args.profileId,
-        profile_version: args.profileVersion,
         preset_id: args.presetId,
-        question_set_version: args.questionSetVersion,
         job_description_key: args.jobDescriptionKey ?? null,
         metric: args.metric,
         threshold: args.threshold,
@@ -343,8 +357,6 @@ export interface CreateStanceArgs {
   pdfFileId: number | null;
   scoreAtGeneration: number | null;
   scopeAtGeneration: string;
-  profileVersion: number;
-  questionSetVersion: number;
   generatedBy: number;
 }
 
@@ -362,7 +374,7 @@ export async function createStanceQuery(
         question_set_version, generated_by)
      SELECT r.organization_id, r.project_id, r.id, :version, :pdf_sha256,
             :pdf_file_id, :score_at_generation, :scope_at_generation,
-            :profile_version, :question_set_version, :generated_by
+            r.profile_version, r.question_set_version, :generated_by
        FROM bias_audit_runs r
       WHERE r.id = :run_id AND r.organization_id = :organization_id
      RETURNING *`,
@@ -374,8 +386,6 @@ export async function createStanceQuery(
         pdf_file_id: args.pdfFileId,
         score_at_generation: args.scoreAtGeneration,
         scope_at_generation: args.scopeAtGeneration,
-        profile_version: args.profileVersion,
-        question_set_version: args.questionSetVersion,
         generated_by: args.generatedBy,
         organization_id: organizationId,
       },

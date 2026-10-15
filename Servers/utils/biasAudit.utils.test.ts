@@ -19,6 +19,7 @@ import {
   upsertAnswerQuery,
   CreateRunArgs,
 } from "./biasAudit.utils";
+import { ConflictException } from "../domain.layer/exceptions/custom.exception";
 
 const tx = undefined as any;
 
@@ -27,9 +28,7 @@ beforeEach(() => mockQuery.mockReset());
 const RUN_ARGS: CreateRunArgs = {
   projectId: 7,
   profileId: 5,
-  profileVersion: 2,
   presetId: "nyc_ll144",
-  questionSetVersion: 1,
   metric: "selection_rate",
   threshold: 0.8,
   thresholdSource: "convention",
@@ -150,6 +149,8 @@ describe("cross-organisation references are refused", () => {
     expect(sql).toMatch(/pr\.organization_id = :organization_id/);
     expect(sql).toMatch(/ap\.organization_id = :organization_id/);
     expect(sql).toMatch(/ap\.project_id = :project_id/);
+    expect(sql).toMatch(/ap\.status = 'attested'/);
+    expect(sql).toMatch(/ap\.version/);
   });
 
   it("stance for a run in another org", async () => {
@@ -163,8 +164,6 @@ describe("cross-organisation references are refused", () => {
           pdfFileId: null,
           scoreAtGeneration: 80,
           scopeAtGeneration: "full",
-          profileVersion: 2,
-          questionSetVersion: 1,
           generatedBy: 9,
         },
         42,
@@ -177,13 +176,13 @@ describe("cross-organisation references are refused", () => {
   });
 
   it("attesting a profile in another org attests nothing", async () => {
-    mockQuery.mockResolvedValueOnce([[]]).mockResolvedValueOnce([[]]);
+    mockQuery.mockResolvedValueOnce([[]]);
     await expect(attestProfileQuery(99, 9, 42, tx)).rejects.toThrow(
       /not found in this organization/i,
     );
-    for (const call of mockQuery.mock.calls) {
-      expect(String(call[0])).toContain("organization_id = :organization_id");
-    }
+    // The lock lookup finds nothing, so neither the supersede nor the promote runs.
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    expect(String(mockQuery.mock.calls[0][0])).toContain("organization_id = :organization_id");
   });
 });
 
@@ -196,7 +195,6 @@ describe("runs and stances", () => {
     expect(replacements).toMatchObject({
       organization_id: 42,
       profile_id: 5,
-      profile_version: 2,
       metric: "selection_rate",
       data_basis_json: JSON.stringify({ basis: "test_attribute" }),
       result_json: null,
@@ -214,8 +212,6 @@ describe("runs and stances", () => {
         pdfFileId: null,
         scoreAtGeneration: 80,
         scopeAtGeneration: "full",
-        profileVersion: 2,
-        questionSetVersion: 1,
         generatedBy: 9,
       },
       42,
@@ -228,20 +224,36 @@ describe("runs and stances", () => {
 
 describe("append-only profiles", () => {
   it("supersedes the previous attested version when attesting", async () => {
-    mockQuery.mockResolvedValue([[{ id: 5, status: "attested" }]]);
+    mockQuery
+      .mockResolvedValueOnce([[{ id: 5, status: "draft" }]])
+      .mockResolvedValueOnce([[]])
+      .mockResolvedValueOnce([[{ id: 5, status: "attested" }]]);
     await attestProfileQuery(5, 9, 42, tx);
     const statements = mockQuery.mock.calls.map((c) => String(c[0]));
-    expect(statements.some((s) => /superseded/i.test(s))).toBe(true);
-    expect(statements.some((s) => /status\s*=\s*'attested'/i.test(s))).toBe(true);
+    expect(statements).toHaveLength(3);
+    expect(statements[0]).toMatch(/FOR UPDATE/);
+    expect(statements[1]).toMatch(/SET status = 'superseded'/);
+    expect(statements[1]).toMatch(/id <> :id/);
+    expect(statements[2]).toMatch(/SET status = 'attested'/);
   });
+
+  it.each(["attested", "superseded"])(
+    "refuses to attest a %s profile with a conflict and supersedes nothing",
+    async (status) => {
+      mockQuery.mockResolvedValueOnce([[{ id: 5, status }]]);
+      await expect(attestProfileQuery(5, 9, 42, tx)).rejects.toBeInstanceOf(ConflictException);
+      expect(mockQuery).toHaveBeenCalledTimes(1);
+    },
+  );
 
   // Review Focus 2
   it("surfaces a unique-violation on concurrent attestation as a typed error", async () => {
     const err: any = new Error("duplicate key value violates unique constraint");
     err.original = { code: "23505", constraint: "aedt_profiles_one_attested_uq" };
-    mockQuery.mockRejectedValueOnce(err);
-    await expect(attestProfileQuery(5, 9, 42, tx)).rejects.toMatchObject({
-      name: expect.any(String),
+    mockQuery.mockResolvedValueOnce([[{ id: 5, status: "draft" }]]).mockRejectedValueOnce(err);
+    const rejected = attestProfileQuery(5, 9, 42, tx);
+    await expect(rejected).rejects.toBeInstanceOf(ConflictException);
+    await expect(rejected).rejects.toMatchObject({
       message: expect.stringMatching(/already attested|concurrent/i),
       statusCode: 409,
     });
