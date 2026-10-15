@@ -9,8 +9,11 @@ import { createTestProject } from "../../factories";
  * Bias audit module tables: schema-level isolation. The module's routes arrive
  * with the controller task; until then this pins what the schema itself
  * guarantees: every row carries its organization, a query scoped by
- * organization_id never returns the other tenant's rows, and a row cannot be
- * attached to a different organization's project through the cascade chain.
+ * organization_id never returns the other tenant's rows. The schema has no
+ * composite foreign keys, so consistency down the FK chain (a row citing a
+ * project, profile or run of the same organization) is enforced in the
+ * application queries (Tasks 3 and 4); Task 12 adds route-level cross-tenant
+ * tests.
  */
 
 afterEach(async () => {
@@ -28,58 +31,54 @@ const insertProfile = async (orgId: number, projectId: number, userId: number) =
 };
 
 describe("bias audit tables tenant isolation", () => {
-  it("scopes profiles, answers, runs and stances to the owning organization", async () => {
+  it("never returns the other organization's rows from an organization-scoped query", async () => {
     const { owner, attacker } = await seedTwoTenantContexts();
-    const ownerProject = await createTestProject(owner.orgId, owner.userId);
-    const attackerProject = await createTestProject(attacker.orgId, attacker.userId);
-    const ownerProfile = await insertProfile(owner.orgId, ownerProject, owner.userId);
-    await insertProfile(attacker.orgId, attackerProject, attacker.userId);
+    const ids: Record<string, Record<number, number>> = {
+      aedt_profiles: {},
+      aedt_profile_answers: {},
+      bias_audit_runs: {},
+      bias_audit_stances: {},
+    };
 
-    await sequelize.query(
-      `INSERT INTO aedt_profile_answers
-         (organization_id, profile_id, question_key, question_set_version)
-       VALUES (:orgId, :profileId, 'scope.uses_aedt', 1)`,
-      { replacements: { orgId: owner.orgId, profileId: ownerProfile } },
-    );
-    const [runRows] = await sequelize.query(
-      `INSERT INTO bias_audit_runs
-         (organization_id, project_id, profile_id, profile_version, preset_id,
-          question_set_version, metric)
-       VALUES (:orgId, :projectId, :profileId, 1, 'nyc_ll144', 1, 'impact_ratio')
-       RETURNING id`,
-      { replacements: { orgId: owner.orgId, projectId: ownerProject, profileId: ownerProfile } },
-    );
-    await sequelize.query(
-      `INSERT INTO bias_audit_stances
-         (organization_id, project_id, run_id, scope_at_generation, profile_version,
-          question_set_version)
-       VALUES (:orgId, :projectId, :runId, 'full', 1, 1)`,
-      {
-        replacements: {
-          orgId: owner.orgId,
-          projectId: ownerProject,
-          runId: (runRows as any[])[0].id,
-        },
-      },
-    );
+    for (const ctx of [owner, attacker]) {
+      const project = await createTestProject(ctx.orgId, ctx.userId);
+      const profile = await insertProfile(ctx.orgId, project, ctx.userId);
+      ids.aedt_profiles[ctx.orgId] = profile;
+      const [answerRows] = await sequelize.query(
+        `INSERT INTO aedt_profile_answers
+           (organization_id, profile_id, question_key, question_set_version)
+         VALUES (:orgId, :profile, 'scope.uses_aedt', 1) RETURNING id`,
+        { replacements: { orgId: ctx.orgId, profile } },
+      );
+      ids.aedt_profile_answers[ctx.orgId] = (answerRows as any[])[0].id;
+      const [runRows] = await sequelize.query(
+        `INSERT INTO bias_audit_runs
+           (organization_id, project_id, profile_id, profile_version, preset_id,
+            question_set_version, metric)
+         VALUES (:orgId, :project, :profile, 1, 'nyc_ll144', 1, 'impact_ratio')
+         RETURNING id`,
+        { replacements: { orgId: ctx.orgId, project, profile } },
+      );
+      const runId = (runRows as any[])[0].id;
+      ids.bias_audit_runs[ctx.orgId] = runId;
+      const [stanceRows] = await sequelize.query(
+        `INSERT INTO bias_audit_stances
+           (organization_id, project_id, run_id, scope_at_generation, profile_version,
+            question_set_version)
+         VALUES (:orgId, :project, :runId, 'full', 1, 1) RETURNING id`,
+        { replacements: { orgId: ctx.orgId, project, runId } },
+      );
+      ids.bias_audit_stances[ctx.orgId] = (stanceRows as any[])[0].id;
+    }
 
-    for (const table of [
-      "aedt_profiles",
-      "aedt_profile_answers",
-      "bias_audit_runs",
-      "bias_audit_stances",
-    ]) {
+    for (const table of Object.keys(ids)) {
       const [ownerRows] = await sequelize.query(
-        `SELECT organization_id FROM ${table} WHERE organization_id = :orgId`,
+        `SELECT id FROM ${table} WHERE organization_id = :orgId`,
         { replacements: { orgId: owner.orgId } },
       );
-      const [attackerRows] = await sequelize.query(
-        `SELECT organization_id FROM ${table} WHERE organization_id = :orgId`,
-        { replacements: { orgId: attacker.orgId } },
-      );
-      expect(ownerRows.length).toBeGreaterThan(0);
-      expect((ownerRows as any[]).every((r) => r.organization_id === owner.orgId)).toBe(true);
-      expect((attackerRows as any[]).every((r) => r.organization_id === attacker.orgId)).toBe(true);
+      const returned = (ownerRows as any[]).map((r) => r.id);
+      expect(returned).toContain(ids[table][owner.orgId]);
+      expect(returned).not.toContain(ids[table][attacker.orgId]);
     }
   });
 
@@ -98,13 +97,17 @@ describe("bias audit tables tenant isolation", () => {
         { replacements: { orgId: owner.orgId, project } },
       )
       .then(
-        () => "inserted",
-        () => "rejected",
+        () => null,
+        (err) => err,
       );
-    expect(second).toBe("rejected");
+    expect(second).not.toBeNull();
+    expect(second.original?.code ?? second.parent?.code).toBe("23505");
+    expect(second.original?.constraint ?? second.parent?.constraint).toBe(
+      "aedt_profiles_one_attested_uq",
+    );
   });
 
-  it("lets a project delete cascade through profiles and runs, and keeps stances", async () => {
+  it("lets a project delete cascade through profiles, runs and stances", async () => {
     const { owner } = await seedTwoTenantContexts();
     const project = await createTestProject(owner.orgId, owner.userId);
     const profile = await insertProfile(owner.orgId, project, owner.userId);
@@ -142,8 +145,15 @@ describe("bias audit tables tenant isolation", () => {
        VALUES (:orgId, :project, :profile, 1, 'nyc_ll144', 1, 'impact_ratio')`,
       { replacements: { orgId: owner.orgId, project, profile } },
     );
-    await expect(
-      sequelize.query(`DELETE FROM projects WHERE id = :project`, { replacements: { project } }),
-    ).resolves.toBeDefined();
+    await sequelize.query(`DELETE FROM projects WHERE id = :project`, {
+      replacements: { project },
+    });
+    for (const table of ["aedt_profiles", "bias_audit_runs", "bias_audit_stances"]) {
+      const [remaining] = await sequelize.query(
+        `SELECT id FROM ${table} WHERE project_id = :project`,
+        { replacements: { project } },
+      );
+      expect(remaining).toEqual([]);
+    }
   });
 });

@@ -148,6 +148,11 @@ module.exports = {
       `);
 
       await run(`
+        CREATE INDEX bias_audit_runs_profile_idx
+          ON verifywise.bias_audit_runs (profile_id);
+      `);
+
+      await run(`
         CREATE TABLE verifywise.bias_audit_stances (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER NOT NULL
