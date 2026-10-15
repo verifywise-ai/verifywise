@@ -1,3 +1,4 @@
+import { HighRiskRole } from "../../domain/enums/highRiskRole.enum";
 import type { Project } from "../../domain/types/Project";
 
 export function buildProject(overrides?: Partial<Project>): Project {
@@ -9,7 +10,7 @@ export function buildProject(overrides?: Partial<Project>): Project {
     members: [],
     start_date: new Date("2024-01-01"),
     ai_risk_classification: "high risk",
-    type_of_high_risk_role: "deployer",
+    high_risk_roles: [HighRiskRole.DEPLOYER],
     goal: "Test goal",
     last_updated: new Date("2025-01-15"),
     last_updated_by: 1,

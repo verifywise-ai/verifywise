@@ -1,3 +1,4 @@
+import { HighRiskRole } from "../../../../../domain/enums/highRiskRole.enum";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import ISO42001Clauses from "../index";
 
@@ -27,7 +28,7 @@ describe("ISO42001Clauses Page", () => {
     members: [],
     start_date: new Date("2024-01-01"),
     ai_risk_classification: "high risk" as const,
-    type_of_high_risk_role: "provider" as const,
+    high_risk_roles: [HighRiskRole.PROVIDER],
     goal: "Test goal",
     last_updated: new Date("2024-01-01"),
     last_updated_by: 1,

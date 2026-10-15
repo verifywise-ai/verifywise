@@ -69,7 +69,7 @@ CREATE TABLE projects (
   start_date DATE,
   geography INTEGER,
   ai_risk_classification VARCHAR(255),
-  type_of_high_risk_role VARCHAR(255),
+  high_risk_roles TEXT[] NOT NULL DEFAULT '{}',
   goal VARCHAR(255),
   target_industry VARCHAR(255),
   description VARCHAR(255),

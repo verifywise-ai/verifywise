@@ -25,6 +25,18 @@ export type Lang = "en" | "de" | "fr" | "es";
 
 export const translations: Record<string, Record<string, string>> = {
   de: {
+    // High-risk roles (several EU AI Act roles per use case)
+    "High-risk roles": "Hochrisiko-Rollen",
+    "High-risk roles *": "Hochrisiko-Rollen *",
+    "Select roles": "Rollen auswählen",
+    "Select at least one high-risk role when EU AI Act is selected.":
+      "Wählen Sie mindestens eine Hochrisiko-Rolle aus, wenn der EU AI Act ausgewählt ist.",
+    "Not a high-risk role:": "Keine Hochrisiko-Rolle:",
+    "Roles:": "Rollen:",
+    "Provider, Deployer or both": "Anbieter, Betreiber oder beides",
+    "Provider, Deployer": "Anbieter, Betreiber",
+    "What is your role for this AI system? Select all that apply.":
+      "Welche Rolle haben Sie für dieses KI-System? Wählen Sie alle zutreffenden aus.",
     "Server saved": "Server gespeichert",
     "Server switched on": "Server eingeschaltet",
     "The server offered no tools": "Der Server hat keine Tools angeboten",
@@ -10448,6 +10460,18 @@ export const translations: Record<string, Record<string, string>> = {
   },
 
   fr: {
+    // High-risk roles (several EU AI Act roles per use case)
+    "High-risk roles": "Rôles à haut risque",
+    "High-risk roles *": "Rôles à haut risque *",
+    "Select roles": "Sélectionner des rôles",
+    "Select at least one high-risk role when EU AI Act is selected.":
+      "Sélectionnez au moins un rôle à haut risque lorsque l'EU AI Act est sélectionné.",
+    "Not a high-risk role:": "Pas un rôle à haut risque :",
+    "Roles:": "Rôles :",
+    "Provider, Deployer or both": "Fournisseur, déployeur ou les deux",
+    "Provider, Deployer": "Fournisseur, Déployeur",
+    "What is your role for this AI system? Select all that apply.":
+      "Quel est votre rôle pour ce système d'IA ? Sélectionnez tout ce qui s'applique.",
     "Server saved": "Serveur enregistré",
     "Server switched on": "Serveur activé",
     "The server offered no tools": "Le serveur n'a proposé aucun outil",
@@ -20811,6 +20835,18 @@ export const translations: Record<string, Record<string, string>> = {
       "sont considérées comme de faible qualité. Les fichiers sans analyse IA ne comptent pas comme suffisants.",
   },
   es: {
+    // High-risk roles (several EU AI Act roles per use case)
+    "High-risk roles": "Roles de alto riesgo",
+    "High-risk roles *": "Roles de alto riesgo *",
+    "Select roles": "Seleccionar roles",
+    "Select at least one high-risk role when EU AI Act is selected.":
+      "Seleccione al menos un rol de alto riesgo cuando la EU AI Act esté seleccionada.",
+    "Not a high-risk role:": "No es un rol de alto riesgo:",
+    "Roles:": "Roles:",
+    "Provider, Deployer or both": "Proveedor, responsable del despliegue o ambos",
+    "Provider, Deployer": "Proveedor, Responsable del despliegue",
+    "What is your role for this AI system? Select all that apply.":
+      "¿Cuál es su rol para este sistema de IA? Seleccione todos los que correspondan.",
     "Server saved": "Servidor guardado",
     "Server switched on": "Servidor activado",
     "The server offered no tools": "El servidor no ofreció herramientas",

@@ -27,7 +27,11 @@ interface QuestionViewProps {
 const QuestionView = ({ question, answers, onSelect }: QuestionViewProps) => {
   const headingId = `eu-ai-act-question-${question.id}`;
   const answer = answers[question.id];
-  const current = (Array.isArray(answer) ? answer : []) as string[];
+  // A saved single answer to a question that became multi-select (the role
+  // question) is shown as a one-item selection.
+  const current = (
+    Array.isArray(answer) ? answer : typeof answer === "string" ? [answer] : []
+  ) as string[];
   const exclusiveValues = question.options.filter((o) => o.exclusive).map((o) => o.value);
 
   return (

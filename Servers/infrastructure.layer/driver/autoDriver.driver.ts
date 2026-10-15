@@ -80,7 +80,7 @@ export async function insertMockData(
           description:
             "An AI-powered platform that automates candidate screening, resume parsing, and preliminary assessments for recruitment processes. The system uses machine learning to rank candidates based on job requirements and historical hiring data.",
           ai_risk_classification: AiRiskClassification.HIGH_RISK,
-          type_of_high_risk_role: HighRiskRole.DEPLOYER,
+          high_risk_roles: [HighRiskRole.DEPLOYER],
           goal: "To streamline recruitment while ensuring fair, unbiased, and transparent candidate evaluation in compliance with EU AI Act requirements for high-risk employment systems",
           last_updated: new Date(Date.now()),
           last_updated_by: userId,
@@ -611,7 +611,7 @@ export async function insertMockData(
           description:
             "An internally deployed AI pair-programming tool integrated into developer IDEs and CI pipelines. It suggests code, generates unit tests, and summarizes changes for reviewers. Access is restricted to authenticated employees; prompts and completions are logged for audit, and outputs are treated as suggestions requiring human review before merge.",
           ai_risk_classification: AiRiskClassification.LIMITED_RISK,
-          type_of_high_risk_role: HighRiskRole.DEPLOYER,
+          high_risk_roles: [HighRiskRole.DEPLOYER],
           goal: "Give engineers an LLM coding assistant for code completion, generation, refactoring and test writing across internal repositories, while keeping proprietary source and secrets within governed, audited boundaries.",
           last_updated: new Date(Date.now()),
           last_updated_by: userId,
@@ -641,7 +641,7 @@ export async function insertMockData(
           description:
             "A machine-learning demand-forecasting and inventory-optimization system that predicts SKU-level demand from historical sales, seasonality, promotions and external signals, then recommends purchase and replenishment quantities. Forecasts feed planning dashboards; automated ordering stays within human-approved thresholds, and model performance is monitored for drift.",
           ai_risk_classification: AiRiskClassification.LIMITED_RISK,
-          type_of_high_risk_role: HighRiskRole.DEPLOYER,
+          high_risk_roles: [HighRiskRole.DEPLOYER],
           goal: "Forecast product demand and optimize inventory and replenishment across the supply chain using ML models, reducing stockouts and overstock while improving service levels and working-capital efficiency.",
           last_updated: new Date(Date.now()),
           last_updated_by: userId,

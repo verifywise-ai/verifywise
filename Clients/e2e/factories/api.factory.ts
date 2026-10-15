@@ -233,7 +233,7 @@ export interface CreateProjectPayload {
   start_date: string;
   goal: string;
   ai_risk_classification?: string;
-  type_of_high_risk_role?: string;
+  high_risk_roles?: string[];
   members?: number[];
   framework?: number[];
   enable_ai_data_insertion?: boolean;

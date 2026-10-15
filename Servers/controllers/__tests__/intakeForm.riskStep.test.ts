@@ -196,6 +196,7 @@ describe("public submit with the EU AI Act step", () => {
         createdBy: null,
       });
       expect(run.result.level).toBe("Limited risk");
+      expect(run.roles).toEqual(["Deployer"]);
       const data = r.json.mock.calls[0][0].data;
       expect(data).not.toHaveProperty("result");
       expect(data).not.toHaveProperty("level");
@@ -253,6 +254,108 @@ describe("approval with the EU AI Act step", () => {
     intake.approveSubmissionQuery.mockResolvedValue({ id: 9 });
     projects.createNewProjectQuery.mockResolvedValue({ id: 50 });
     runs.insertClassificationRunQuery.mockResolvedValue({ id: 4 });
+  });
+
+  it("gives the new use case both roles from a two-role run", async () => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue({
+      ...RUN,
+      answers: { ...ANSWERS, role: ["provider", "deployer"] },
+    });
+    const r = await approve({ confirmedEntityData: { project_title: "P" } });
+    expect(r.status).toHaveBeenCalledWith(200);
+    expect(projects.createNewProjectQuery.mock.calls[0][0].high_risk_roles).toEqual([
+      "Provider",
+      "Deployer",
+    ]);
+    expect(runs.insertClassificationRunQuery.mock.calls[0][0].roles).toEqual([
+      "Provider",
+      "Deployer",
+    ]);
+  });
+
+  it("still approves a run saved with a single-role string, as Deployer", async () => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue(RUN); // answers.role === "deployer"
+    const r = await approve({ confirmedEntityData: { project_title: "P" } });
+    expect(r.status).toHaveBeenCalledWith(200);
+    expect(projects.createNewProjectQuery.mock.calls[0][0]).toMatchObject({
+      ai_risk_classification: "Limited risk",
+      high_risk_roles: ["Deployer"],
+    });
+    expect(projects.createNewProjectQuery.mock.calls[0][2]).toEqual([1]);
+  });
+
+  it("keeps the reviewer's role list when the run names no role", async () => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue({
+      ...RUN,
+      answers: { scope: "research_only" },
+      result: { ...RUN.result, level: "Out of scope", role: null },
+    });
+    await approve({
+      confirmedEntityData: { project_title: "P", high_risk_roles: ["Deployer", "Provider"] },
+    });
+    expect(projects.createNewProjectQuery.mock.calls[0][0].high_risk_roles).toEqual([
+      "Provider",
+      "Deployer",
+    ]);
+  });
+
+  it("preview resolves a mapped role question by option label and lists the rest", async () => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue(null);
+    intake.getSubmissionByIdQuery.mockResolvedValue({
+      id: 9,
+      status: "pending",
+      formId: 1,
+      entityType: "use_case",
+      data: { f_role: ["opt_1", "opt_2", "deployer"] },
+      submitterEmail: null,
+    });
+    intake.getIntakeFormByIdQuery.mockResolvedValue({
+      id: 1,
+      name: "F",
+      entityType: "use_case",
+      schema: {
+        version: "1.0",
+        fields: [
+          {
+            id: "f_role",
+            type: "multiselect",
+            label: "Your role",
+            required: false,
+            order: 0,
+            entityFieldMapping: "type_of_high_risk_role",
+            options: [
+              { value: "opt_1", label: "Provider" },
+              { value: "opt_2", label: "Importer" },
+              { value: "deployer", label: "We use it" },
+            ],
+          },
+        ],
+      },
+    });
+    const r = res();
+    await ctrl.getSubmissionPreview(req({ params: { id: "9" } }) as any, r);
+    const preview = r.json.mock.calls[0][0].data.entityPreview;
+    expect(preview.high_risk_roles).toEqual(["Provider", "Deployer"]);
+    expect(preview.high_risk_roles_unmatched).toEqual(["Importer"]);
+    expect(preview).not.toHaveProperty("type_of_high_risk_role");
+  });
+
+  it("preview returns the roles and compares them as a set", async () => {
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue({
+      ...RUN,
+      answers: { ...ANSWERS, role: ["deployer", "provider"] },
+      result: {
+        ...RUN.result,
+        level: "Limited risk",
+        role: "Provider",
+        roles: ["Provider", "Deployer"],
+      },
+    });
+    const r = res();
+    await ctrl.getSubmissionPreview(req({ params: { id: "9" } }) as any, r);
+    const panel = r.json.mock.calls[0][0].data.euAiActClassification;
+    expect(panel.roles).toEqual(["Provider", "Deployer"]);
+    expect(panel.changedSinceSubmission).toBe(false);
   });
 
   it("without a run, approval keeps the reviewer's level and copies no run", async () => {
@@ -356,7 +459,7 @@ describe("approval with the EU AI Act step", () => {
     expect(r.status).toHaveBeenCalledWith(200);
     expect(projects.createNewProjectQuery.mock.calls[0][0]).toMatchObject({
       ai_risk_classification: "High risk",
-      type_of_high_risk_role: "Provider",
+      high_risk_roles: ["Provider"],
     });
     expect(projects.createNewProjectQuery.mock.calls[0][2]).toEqual([]);
     expect(euFramework.createEUFrameworkQuery).not.toHaveBeenCalled();
@@ -377,7 +480,7 @@ describe("approval with the EU AI Act step", () => {
     expect(r.status).toHaveBeenCalledWith(200);
     expect(projects.createNewProjectQuery.mock.calls[0][0]).toMatchObject({
       ai_risk_classification: "Out of scope",
-      type_of_high_risk_role: "Provider",
+      high_risk_roles: ["Provider"],
     });
   });
 
@@ -389,7 +492,7 @@ describe("approval with the EU AI Act step", () => {
     expect(r.status).toHaveBeenCalledWith(200);
     expect(projects.createNewProjectQuery.mock.calls[0][0]).toMatchObject({
       ai_risk_classification: "Limited risk",
-      type_of_high_risk_role: "Deployer",
+      high_risk_roles: ["Deployer"],
     });
     expect(runs.insertClassificationRunQuery.mock.calls[0][0]).toMatchObject({
       useCaseId: 50,
@@ -477,7 +580,7 @@ describe("approval with the EU AI Act step", () => {
     expect(euFramework.createEUFrameworkQuery).not.toHaveBeenCalled();
     expect(projects.createNewProjectQuery.mock.calls[0][0]).toMatchObject({
       ai_risk_classification: "High risk",
-      type_of_high_risk_role: "Provider",
+      high_risk_roles: ["Provider"],
     });
     expect(runs.insertClassificationRunQuery).not.toHaveBeenCalled();
     expect(history.recordMultipleFieldChanges).not.toHaveBeenCalled();
@@ -497,7 +600,7 @@ describe("approval with the EU AI Act step", () => {
     runs.getLatestRunForSubmissionQuery.mockResolvedValue({ ...RUN, role: "Provider" });
     const r = await approve({ confirmedEntityData: { project_title: "P" } });
     expect(r.status).toHaveBeenCalledWith(200);
-    expect(runs.insertClassificationRunQuery.mock.calls[0][0].role).toBe("Deployer");
+    expect(runs.insertClassificationRunQuery.mock.calls[0][0].roles).toEqual(["Deployer"]);
 
     const p = res();
     await ctrl.getSubmissionPreview(req({ params: { id: "9" } }) as any, p);
@@ -530,7 +633,8 @@ describe("public form with a resubmission token", () => {
 
   it("returns the previous risk answers when the step is on", async () => {
     const data = await load(true);
-    expect(data.previousRiskAnswers).toEqual(ANSWERS);
+    // A run saved with a single-role string comes back as a one-item list.
+    expect(data.previousRiskAnswers).toEqual({ ...ANSWERS, role: ["deployer"] });
   });
 
   it("returns only the answers to visible questions", async () => {

@@ -10,6 +10,7 @@ export interface EntityGraphData {
     created_at?: string;
     // Additional fields
     ai_risk_classification?: string;
+    high_risk_roles?: string[];
     type_of_high_risk_role?: string;
     start_date?: string;
     last_updated?: string;

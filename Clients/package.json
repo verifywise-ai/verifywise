@@ -153,7 +153,7 @@
     "vitest": "^5.0.3"
   },
   "overrides": {
-    "@typescript/old": "6.0.3",
+    "@typescript/old": "npm:typescript@6.0.3",
     "archiver": "^7.0.1",
     "shell-quote": "^1.11.0",
     "readdir-glob": "^3.0.0",

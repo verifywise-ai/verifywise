@@ -13,6 +13,7 @@ import {
 } from "../domain.layer/enums/approval-workflow.enum";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 import { logStructured } from "./logger/fileLogger";
+import { withLegacyHighRiskRole } from "./highRiskRoles.utils";
 import { executeAiAction } from "../advisor/aiActions";
 
 /**
@@ -494,7 +495,7 @@ export const getApprovalRequestByIdQuery = async (
       p.goal,
       p.target_industry,
       p.ai_risk_classification,
-      p.type_of_high_risk_role,
+      p.high_risk_roles,
       p.start_date,
       p.geography,
       owner_user.name as owner_name,
@@ -557,7 +558,7 @@ export const getApprovalRequestByIdQuery = async (
     return null;
   }
 
-  const request = requestData as any;
+  const request = withLegacyHighRiskRole(requestData as any);
 
   // Load steps
   const steps = await sequelize.query(

@@ -9,6 +9,7 @@
 import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import logger from "../utils/logger/fileLogger";
+import { formatHighRiskRoles } from "../utils/highRiskRoles.utils";
 
 /**
  * User query result type for formatters
@@ -421,7 +422,7 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       "start_date",
       "geography",
       "ai_risk_classification",
-      "type_of_high_risk_role",
+      "high_risk_roles",
       "goal",
       "target_industry",
       "description",
@@ -436,7 +437,7 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       start_date: "Start date",
       geography: "Geography",
       ai_risk_classification: "AI risk classification",
-      type_of_high_risk_role: "Type of high-risk role",
+      high_risk_roles: "High-risk roles",
       goal: "Goal",
       target_industry: "Target industry",
       description: "Description",
@@ -448,6 +449,9 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       owner: GENERIC_FORMATTERS.user,
       members: GENERIC_FORMATTERS.userArray,
       start_date: GENERIC_FORMATTERS.date,
+      // Compared as a set: the formatter sorts Provider first, so a reorder
+      // formats the same and records nothing.
+      high_risk_roles: async (value: unknown): Promise<string> => formatHighRiskRoles(value) || "-",
       framework: GENERIC_FORMATTERS.frameworkArray,
       monitored_regulations_and_standards: GENERIC_FORMATTERS.array,
     },

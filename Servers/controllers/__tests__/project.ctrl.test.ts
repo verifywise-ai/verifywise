@@ -303,6 +303,47 @@ describe("project.ctrl", () => {
       await createProject(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
     });
+
+    it("stores the role list normalised and drops the legacy field", async () => {
+      mockCreate.mockResolvedValue({ ...buildProject(), owner: 1, members: [] } as any);
+      const req = createReq({
+        body: {
+          project_title: "P1",
+          owner: 1,
+          framework: [],
+          high_risk_roles: ["Deployer", "Provider"],
+        },
+      });
+      await createProject(req, createRes());
+      const stored = mockCreate.mock.calls[0][0] as any;
+      expect(stored.high_risk_roles).toEqual(["Provider", "Deployer"]);
+      expect(stored).not.toHaveProperty("type_of_high_risk_role");
+    });
+
+    it("turns a legacy single role into a one-item list", async () => {
+      mockCreate.mockResolvedValue({ ...buildProject(), owner: 1, members: [] } as any);
+      const req = createReq({
+        body: { project_title: "P1", owner: 1, framework: [], type_of_high_risk_role: "Deployer" },
+      });
+      await createProject(req, createRes());
+      expect((mockCreate.mock.calls[0][0] as any).high_risk_roles).toEqual(["Deployer"]);
+    });
+
+    it("rejects a legacy role that disagrees with the list, writing nothing", async () => {
+      const req = createReq({
+        body: {
+          project_title: "P1",
+          owner: 1,
+          framework: [],
+          high_risk_roles: ["Provider"],
+          type_of_high_risk_role: "Deployer",
+        },
+      });
+      const res = createRes();
+      await createProject(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
     it("notifies step-1 approvers when a created use case starts an approval request (#4905)", async () => {
       const project = { ...buildProject(), owner: 1, approval_workflow_id: 5, members: [] };
       mockCreate.mockResolvedValue(project as any);
@@ -641,6 +682,59 @@ describe("project.ctrl", () => {
       const res = createRes();
       await updateProjectById(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+
+    const updateWith = async (body: object, stored: string[]) => {
+      mockGetById.mockResolvedValue({
+        ...buildProject(),
+        owner: 1,
+        high_risk_roles: stored,
+      } as any);
+      mockGetMembers.mockResolvedValue([] as any);
+      mockUpdate.mockResolvedValue({ ...buildProject(), owner: 1, members: [] } as any);
+      const res = createRes();
+      await updateProjectById(createReq({ params: { id: "1" }, body }), res);
+      return res;
+    };
+
+    it("keeps both roles when an older client writes back the derived role", async () => {
+      await updateWith({ type_of_high_risk_role: "Provider" }, ["Provider", "Deployer"]);
+      expect((mockUpdate.mock.calls[0][1] as any).high_risk_roles).toEqual([
+        "Provider",
+        "Deployer",
+      ]);
+    });
+
+    it("replaces the list when the legacy role is not in it", async () => {
+      await updateWith({ type_of_high_risk_role: "Deployer" }, ["Provider"]);
+      expect((mockUpdate.mock.calls[0][1] as any).high_risk_roles).toEqual(["Deployer"]);
+    });
+
+    it("clears the list when the legacy role is null", async () => {
+      await updateWith({ type_of_high_risk_role: null }, ["Provider"]);
+      expect((mockUpdate.mock.calls[0][1] as any).high_risk_roles).toEqual([]);
+    });
+
+    it("replaces the list with high_risk_roles and never passes the legacy field on", async () => {
+      await updateWith({ high_risk_roles: ["Deployer", "Provider"] }, ["Provider"]);
+      const passed = mockUpdate.mock.calls[0][1] as any;
+      expect(passed.high_risk_roles).toEqual(["Provider", "Deployer"]);
+      expect(passed).not.toHaveProperty("type_of_high_risk_role");
+    });
+
+    it("leaves the roles alone when neither field is sent", async () => {
+      await updateWith({ project_title: "P2" }, ["Provider"]);
+      expect(mockUpdate.mock.calls[0][1]).not.toHaveProperty("high_risk_roles");
+    });
+
+    it("returns 400 and rolls back when the two fields disagree", async () => {
+      const res = await updateWith(
+        { high_risk_roles: ["Provider"], type_of_high_risk_role: "Deployer" },
+        ["Provider"],
+      );
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockUpdate).not.toHaveBeenCalled();
+      expect((await openedTransaction()).rollback).toHaveBeenCalled();
     });
   });
 

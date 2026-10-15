@@ -59,7 +59,7 @@ setup("authenticate", async ({ page }) => {
     start_date: new Date().toISOString(),
     goal: "Global setup baseline project",
     ai_risk_classification: "Minimal risk",
-    type_of_high_risk_role: "Deployer",
+    high_risk_roles: ["Deployer"],
     members: [admin.userId],
     framework: [1],
     enable_ai_data_insertion: false,

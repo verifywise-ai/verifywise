@@ -52,7 +52,7 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
   users: string;
   start_date: Date;
   ai_risk_classification: string;
-  type_of_high_risk_role: string;
+  high_risk_roles: HighRiskRole[]; // "Provider", "Deployer" or both
   goal: string;
   last_updated?: Date;
   last_updated_by?: number;
@@ -60,7 +60,7 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
 ```
 
 - **Response**:
-  - 201: Created with project and assessment data
+  - 201: Created with project and assessment data. The project carries `high_risk_roles` and the derived, deprecated `type_of_high_risk_role` (Provider if the list holds Provider, Deployer if only Deployer, null if empty). Requests may still send `type_of_high_risk_role` instead of `high_risk_roles`.
   - 400: Bad request
   - 503: Service unavailable
   - 500: Server error
@@ -77,7 +77,7 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
   users: string;
   start_date: Date;
   ai_risk_classification: string;
-  type_of_high_risk_role: string;
+  high_risk_roles: HighRiskRole[]; // "Provider", "Deployer" or both
   goal: string;
   last_updated: Date;
   last_updated_by: string;
@@ -125,7 +125,7 @@ interface Project {
   users: string;
   start_date: Date;
   ai_risk_classification: string;
-  type_of_high_risk_role: string;
+  high_risk_roles: HighRiskRole[]; // "Provider", "Deployer" or both
   goal: string;
   last_updated?: Date;
   last_updated_by?: number;

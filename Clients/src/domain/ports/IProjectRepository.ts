@@ -13,6 +13,8 @@ export interface Project {
   owner: number;
   start_date?: string;
   ai_risk_classification?: string;
+  high_risk_roles?: string[];
+  /** @deprecated derived single role; use high_risk_roles */
   type_of_high_risk_role?: string;
   goal?: string;
   last_updated?: string;
@@ -28,6 +30,8 @@ export interface CreateProjectDTO {
   owner: number;
   start_date?: string;
   ai_risk_classification?: string;
+  high_risk_roles?: string[];
+  /** @deprecated derived single role; use high_risk_roles */
   type_of_high_risk_role?: string;
   goal?: string;
 }
@@ -40,6 +44,8 @@ export interface UpdateProjectDTO {
   owner?: number;
   start_date?: string;
   ai_risk_classification?: string;
+  high_risk_roles?: string[];
+  /** @deprecated derived single role; use high_risk_roles */
   type_of_high_risk_role?: string;
   goal?: string;
 }

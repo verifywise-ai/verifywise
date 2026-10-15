@@ -1,4 +1,4 @@
-import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
@@ -106,6 +106,21 @@ vi.mock("../RiskAnalysisModal", () => ({
         onClick={() =>
           updateClassification({
             questionnaireVersion: 2,
+            level: "High risk",
+            role: "Provider",
+            roles: ["Provider", "Deployer"],
+            reasons: [],
+            obligations: [],
+          })
+        }
+      >
+        mock wizard save both
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          updateClassification({
+            questionnaireVersion: 2,
             level: "Limited risk",
             role: null,
             reasons: [],
@@ -131,7 +146,7 @@ const baseProject = {
   members: ["2"],
   start_date: "2024-05-01T00:00:00Z",
   ai_risk_classification: null,
-  type_of_high_risk_role: null,
+  high_risk_roles: [],
   geography: 1,
   target_industry: "",
   description: "",
@@ -349,7 +364,7 @@ describe("ProjectSettings", () => {
     renderWithProviders(<ProjectSettings />);
 
     expect(await screen.findByText("AI risk classification *")).toBeInTheDocument();
-    expect(screen.getByText("Type of high risk role *")).toBeInTheDocument();
+    expect(screen.getByText("High-risk roles *")).toBeInTheDocument();
   });
 
   it("opens the risk analysis modal from the classification helper link", async () => {
@@ -375,7 +390,7 @@ describe("ProjectSettings", () => {
   const euAiActProject = {
     ...baseProject,
     ai_risk_classification: "Minimal risk",
-    type_of_high_risk_role: "Deployer",
+    high_risk_roles: ["Deployer"],
     framework: [{ project_framework_id: 1, framework_id: 1, name: "EU AI Act" }],
   };
   const useEuAiAct = () => {
@@ -405,8 +420,54 @@ describe("ProjectSettings", () => {
     await waitFor(() => expect(mockUpdateProject).toHaveBeenCalled());
     expect(mockUpdateProject.mock.calls[0][0].body).toMatchObject({
       ai_risk_classification: "High risk",
-      type_of_high_risk_role: "Provider",
+      high_risk_roles: ["Provider"],
     });
+  });
+
+  it("takes both roles from the wizard without marking the form as changed", async () => {
+    useEuAiAct();
+    renderWithProviders(<ProjectSettings />);
+    await screen.findByText("AI risk classification *");
+    fireEvent.click(screen.getByText("mock wizard save both"));
+    await waitFor(() => expect(screen.getByText("Provider")).toBeInTheDocument());
+    expect(screen.getByText("Deployer")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+  });
+
+  it("saves a second role picked in the multi-select", async () => {
+    useEuAiAct();
+    mockUpdateProject.mockResolvedValue({ status: 202 });
+    renderWithProviders(<ProjectSettings />);
+    await screen.findByText("AI risk classification *");
+    fireEvent.keyDown(document.getElementById("high-risk-roles-input")!, { key: "ArrowDown" });
+    fireEvent.click(within(screen.getByRole("listbox")).getByText("Provider"));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(mockUpdateProject).toHaveBeenCalled());
+    expect(mockUpdateProject.mock.calls[0][0].body).toMatchObject({
+      high_risk_roles: ["Provider", "Deployer"],
+    });
+    expect(mockUpdateProject.mock.calls[0][0].body).not.toHaveProperty("type_of_high_risk_role");
+  });
+
+  it("requires a role when EU AI Act is selected", async () => {
+    mockUseFrameworks.mockReturnValue({
+      filteredFrameworks: [euAiActFramework],
+      allFrameworks: [euAiActFramework, iso42001Framework],
+    });
+    mockUseProjectData.mockReturnValue({
+      project: { ...euAiActProject, high_risk_roles: [] },
+    });
+    renderWithProviders(<ProjectSettings />);
+    await screen.findByText("AI risk classification *");
+    fireEvent.change(screen.getByDisplayValue("Chatbot Assistant"), {
+      target: { value: "Renamed Assistant" },
+    });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Save" })).not.toBeDisabled());
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(
+      await screen.findByText("Select at least one high-risk role when EU AI Act is selected."),
+    ).toBeInTheDocument();
+    expect(mockUpdateProject).not.toHaveBeenCalled();
   });
 
   it.each(["Reviewer", "Auditor"])("hides the classification wizard link from %s", async (role) => {

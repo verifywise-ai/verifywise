@@ -44,6 +44,11 @@ import useUsers from "../../../application/hooks/useUsers";
 import { useCustomFieldDefinitions } from "../../../application/hooks/useCustomFields";
 import { formatCustomFieldValue } from "../CustomFieldsSection/formatCustomFieldValue";
 import { pageOfLabel } from "../Table/pageOfLabel";
+import {
+  formatHighRiskRoles,
+  highRiskRolesSortKey,
+  projectHighRiskRoles,
+} from "../../../application/utils/highRiskRoles";
 
 const SelectorVertical = (props: React.SVGAttributes<SVGSVGElement>) => (
   <ChevronsUpDown size={16} {...props} />
@@ -341,8 +346,8 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
           break;
 
         case "role":
-          aValue = (a.type_of_high_risk_role || "").toLowerCase();
-          bValue = (b.type_of_high_risk_role || "").toLowerCase();
+          aValue = highRiskRolesSortKey(a);
+          bValue = highRiskRolesSortKey(b);
           break;
 
         case "startDate":
@@ -511,7 +516,7 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
                       backgroundColor: sortConfig.key === "role" ? "background.surface" : "inherit",
                     }}
                   >
-                    {project.type_of_high_risk_role?.replace(/_/g, " ") || "—"}
+                    {formatHighRiskRoles(projectHighRiskRoles(project)) || "—"}
                   </TableCell>
                 )}
 

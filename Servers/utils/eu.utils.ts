@@ -24,6 +24,7 @@ import { validateRiskArray } from "./utility.utils";
 import { getEvidenceFilesForEntities } from "./files/evidenceFiles.utils";
 import { logStructured } from "./logger/fileLogger";
 import { demoDueDate } from "./demoSeedFields";
+import { highRiskRolesArraySql } from "./highRiskRoles.utils";
 
 const getDemoAnswers = (): string[] => {
   const answers = [];
@@ -631,21 +632,18 @@ export const getAssessmentsEUByProjectIdQuery = async (
 
 /**
  * Resolve which EU AI Act category ids are visible to a project, given its
- * `type_of_high_risk_role` + `ai_risk_classification`. Returns `null` when
- * either is missing — callers should interpret that as "no filter, show all".
+ * `high_risk_roles` + `ai_risk_classification`.
  *
  * Rules:
  *   - Categories tagged `General Risk` always show (horizontal obligations
  *     like Art 4 AI literacy that apply regardless of risk level).
  *   - Categories matching the project's tier show. Role is additionally
  *     required to match when the selected tier is `High risk` or `GPAI`
- *     (those are the only tiers where provider/deployer obligations diverge).
+ *     (those are the only tiers where provider/deployer obligations diverge):
+ *     a role-filtered category matches when its role is any of the project's
+ *     roles, and a project with no roles matches none.
  *   - For Prohibited / Limited risk / Minimal risk, role is ignored — both
  *     providers and deployers see the same list.
- *
- * Both `type_of_high_risk_role` and `ai_risk_classification` are required on
- * project-based framework creation (validated on the form), so we treat them
- * as always-set for EU AI Act projects.
  */
 export const getVisibleEuCategoryIdsForProject = async (
   projectFrameworkId: number,
@@ -653,7 +651,7 @@ export const getVisibleEuCategoryIdsForProject = async (
   transaction: Transaction | null = null,
 ): Promise<number[]> => {
   const [[project]] = (await sequelize.query(
-    `SELECT p.type_of_high_risk_role AS role, p.ai_risk_classification AS tier
+    `SELECT p.high_risk_roles AS roles, p.ai_risk_classification AS tier
      FROM projects p
      JOIN projects_frameworks pf ON pf.project_id = p.id
        AND pf.organization_id = p.organization_id
@@ -664,10 +662,13 @@ export const getVisibleEuCategoryIdsForProject = async (
       replacements: { projectFrameworkId, organizationId },
       ...(transaction ? { transaction } : {}),
     },
-  )) as [{ role: string; tier: string }[], number];
+  )) as [{ roles: string[] | null; tier: string }[], number];
 
   const ROLE_FILTERED_TIERS = new Set(["High risk", "GPAI"]);
   const applyRoleFilter = ROLE_FILTERED_TIERS.has(project.tier);
+  // ANY('{}'::text[]) matches nothing: a use case with no role sees no
+  // role-filtered category, as a null role did.
+  const roles = highRiskRolesArraySql(project.roles, "roles");
 
   const [rows] = (await sequelize.query(
     `SELECT cc.id
@@ -694,7 +695,7 @@ export const getVisibleEuCategoryIdsForProject = async (
                SELECT 1 FROM controlcategories_struct_eu__roles ccr
                JOIN eu_act_roles r ON r.id = ccr.role_id
                WHERE ccr.control_category_id = cc.id
-                 AND r.name = :role
+                 AND r.name = ANY(${roles.sql})
              )
            )
          )
@@ -702,8 +703,8 @@ export const getVisibleEuCategoryIdsForProject = async (
     {
       replacements: {
         tier: project.tier,
-        role: project.role,
         applyRoleFilter,
+        ...roles.replacements,
       },
       ...(transaction ? { transaction } : {}),
     },

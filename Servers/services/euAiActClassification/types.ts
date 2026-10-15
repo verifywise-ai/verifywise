@@ -24,6 +24,11 @@ export interface Question {
   help?: string;
   articleRef: string;
   inputType: "single_select" | "multi_select";
+  /**
+   * A multi_select question that used to be single_select: a saved single
+   * answer (a string) still validates and is read as a one-item list.
+   */
+  acceptsSingleValue?: boolean;
   options: QuestionOption[];
   /** Shown when any group matches; a group matches when all its conditions hold. Omitted: always shown. */
   showWhen?: Condition[][];
@@ -45,7 +50,19 @@ export interface ClassificationReason {
 export interface ClassificationResult {
   questionnaireVersion: number;
   level: ClassificationLevel;
+  /** The roles the answers name, Provider first. Always set by the scorer. */
+  roles: ClassificationRole[];
+  /** Deprecated single role: Provider when present, else Deployer, else null. */
   role: ClassificationRole | null;
   reasons: ClassificationReason[];
   obligations: ClassificationReason[];
 }
+
+/**
+ * A result as stored in eu_ai_act_classifications.result (JSONB). Results
+ * stored before the role list existed have no `roles`; read them with
+ * `result.roles ?? result.role`.
+ */
+export type StoredClassificationResult = Omit<ClassificationResult, "roles"> & {
+  roles?: ClassificationRole[];
+};

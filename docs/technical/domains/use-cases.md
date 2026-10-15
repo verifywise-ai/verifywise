@@ -35,7 +35,7 @@ projects
 ├── start_date
 ├── geography
 ├── ai_risk_classification   # PROHIBITED, HIGH_RISK, LIMITED_RISK, MINIMAL_RISK
-├── type_of_high_risk_role   # DEPLOYER, PROVIDER, DISTRIBUTOR, etc.
+├── high_risk_roles          # text[]: Provider, Deployer or both (Provider first)
 ├── goal
 ├── target_industry
 ├── description
@@ -72,10 +72,6 @@ The EU AI Act questionnaire produces only Prohibited, High risk, Limited risk, M
 enum HighRiskRole {
   DEPLOYER = "Deployer"
   PROVIDER = "Provider"
-  DISTRIBUTOR = "Distributor"
-  IMPORTER = "Importer"
-  PRODUCT_MANUFACTURER = "Product manufacturer"
-  AUTHORIZED_REPRESENTATIVE = "Authorized representative"
 }
 ```
 
@@ -186,7 +182,7 @@ POST /projects
   framework: number[],             // Required, framework IDs
   start_date: Date,                // Required
   ai_risk_classification: string,  // Required
-  type_of_high_risk_role: string,  // Required
+  high_risk_roles?: ("Provider" | "Deployer")[], // replaces the list; or legacy type_of_high_risk_role
   goal: string,                    // Required
   geography?: number,
   target_industry?: string,
@@ -234,7 +230,7 @@ PATCH /projects/:id
   members?: number[],
   start_date?: Date,
   ai_risk_classification?: string,
-  type_of_high_risk_role?: string,
+  high_risk_roles?: ("Provider" | "Deployer")[] | null,
   goal?: string,
   geography?: number,
   target_industry?: string,
@@ -436,7 +432,7 @@ getProjectProgressData({routeUrl, signal?})
   members: ProjectMemberDTO[],
   start_date: string,
   ai_risk_classification: number,
-  type_of_high_risk_role: number,
+  high_risk_roles?: HighRiskRole[],
   goal: string,
   framework_type?: string,
   geography?: number,
@@ -461,9 +457,20 @@ getProjectProgressData({routeUrl, signal?})
 }
 ```
 
+## High-risk roles
+
+A use case holds its EU AI Act roles in `projects.high_risk_roles` (`TEXT[] NOT NULL DEFAULT '{}'`, CHECK: only `Provider` and `Deployer`). It is stored normalised: no duplicates, Provider first. All role logic lives in `Servers/utils/highRiskRoles.utils.ts` (frontend mirror: `Clients/src/application/utils/highRiskRoles.ts`).
+
+- **API read:** project responses carry `high_risk_roles` and the deprecated, derived `type_of_high_risk_role`: `Provider` when the list contains Provider, `Deployer` when it contains only Deployer, `null` when empty. Rows read with `SELECT *` go through `withLegacyHighRiskRole` so readers of the old name do not silently get `undefined`.
+- **API write:** `high_risk_roles` replaces the list. `type_of_high_risk_role: X` keeps the list when it already holds X (a client writing back the derived value cannot drop a role), otherwise sets `[X]`; `null` clears. Both fields present and disagreeing → 400.
+- **SQL:** arrays are bound with `highRiskRolesArraySql` — `ARRAY[:name]::text[]`, or the literal `'{}'::text[]` for an empty list (Sequelize would bind `[]` as `NULL`).
+- **Requirements filter:** `getVisibleEuCategoryIdsForProject` shows a High risk or GPAI category when its role is any of the use case's roles (`r.name = ANY(...)`); no roles shows none of those categories.
+- **Questionnaire:** the role question is a multi-select. Answers saved when it was single-select (`role: "deployer"`) still validate (`acceptsSingleValue`) and are read as a one-item list. Results carry `roles` and the derived `role`.
+- **Intake:** a select or multi-select question mapped to `type_of_high_risk_role` is matched option by option (label or value, case-insensitive); unmatched options are shown to the reviewer.
+
 ## EU AI Act classification
 
-A server-scored questionnaire that sets a use case's `ai_risk_classification` (and `type_of_high_risk_role` when the answers name a role). It is used by the use case risk wizard (`ProjectView/RiskAnalysisModal`) and by the optional risk step on use case intake forms. The client only renders the definition and decides which questions are visible; scoring always happens on the server.
+A server-scored questionnaire that sets a use case's `ai_risk_classification` (and `high_risk_roles` when the answers name a role). It is used by the use case risk wizard (`ProjectView/RiskAnalysisModal`) and by the optional risk step on use case intake forms. The client only renders the definition and decides which questions are visible; scoring always happens on the server.
 
 ### Module
 
