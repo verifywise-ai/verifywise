@@ -1,0 +1,222 @@
+/**
+ * Runs the LL 144 bias-audit engine against an uploaded dataset and stores
+ * the run.
+ *
+ * The module records the customer's determination and makes none of its own.
+ * A run is attached to the attested profile, takes its metric from the cutoff
+ * answer, and stores its gate findings whether or not a result was computed,
+ * so a blocked run is a record rather than an absence. The dataset itself is
+ * hashed and not retained.
+ */
+import { createHash } from "node:crypto";
+import { sequelize } from "../../database/db";
+import {
+  NotFoundException,
+  ValidationException,
+} from "../../domain.layer/exceptions/custom.exception";
+import {
+  createRunQuery,
+  getAttestedProfileQuery,
+  getProfileAnswersQuery,
+} from "../../utils/biasAudit.utils";
+import type { AnswerMap } from "./applicability";
+import { runAnswerGates } from "./answerGates";
+import { deriveBasis } from "./deriveBasis";
+import { computeReadiness, type ReadinessResult } from "./readinessScore";
+import { DatasetParseError, parseDataset, type ParsedDataset } from "./datasetParser";
+import { runAudit, RECORD_KEYS } from "./index";
+import type { AuditOutcome, BiasAuditConfig } from "./index";
+import type { GateFinding } from "./dataGates";
+
+/** The 0.8 figure is a convention the rule's guidance uses, not a statutory value. */
+export const LL144_THRESHOLD_SOURCE = "convention";
+
+/** The LL 144 configuration. The metric is set per run from the cutoff answer. */
+export const LL144_CONFIG: BiasAuditConfig = {
+  presetId: "nyc_ll144",
+  metric: "selection_rate",
+  categories: {
+    sex: { label: "Sex", groups: ["Male", "Female"] },
+    race_ethnicity: {
+      label: "Race/Ethnicity",
+      groups: [
+        "Hispanic or Latino",
+        "White",
+        "Black or African American",
+        "Native Hawaiian or Pacific Islander",
+        "Asian",
+        "Native American or Alaska Native",
+        "Two or more races",
+      ],
+    },
+  },
+  intersectional: { required: true, cross: ["sex", "race_ethnicity"] },
+  threshold: 0.8,
+  smallSampleExclusion: 0.02,
+  outcomeColumn: RECORD_KEYS.selected,
+  scoreColumn: RECORD_KEYS.score,
+  predictionColumn: null,
+  groundTruthColumn: null,
+};
+
+export interface CreateRunInput {
+  projectId: number;
+  frameworkId: number;
+  organizationId: number;
+  userId: number;
+  csv: string;
+  /** Canonical key (a category key, `selected` or `score`) to the file's column header. */
+  mapping: Record<string, string>;
+}
+
+export interface CreateRunResult {
+  runId: number;
+  readiness: ReadinessResult;
+  outcome: AuditOutcome;
+}
+
+const METRICS = ["selection_rate", "scoring_rate"] as const;
+type RunMetric = (typeof METRICS)[number];
+
+function isRunMetric(m: string | null): m is RunMetric {
+  return m !== null && (METRICS as readonly string[]).includes(m);
+}
+
+function stop(code: string, message: string, detail: Record<string, unknown> = {}): GateFinding {
+  return { code, severity: "stop", message, detail };
+}
+
+/** A run that could not compute: findings stored, nothing exportable. */
+function blockedOutcome(findings: GateFinding[]): AuditOutcome {
+  return {
+    gates: { findings, mayComputeRatios: false, mayExportPdf: false },
+    order: [],
+    result: null,
+  };
+}
+
+/** The rule's expiry is one year from the audit date (5-301(a)). */
+function oneYearFromToday(): string {
+  const d = new Date();
+  d.setUTCFullYear(d.getUTCFullYear() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+export async function createRun(input: CreateRunInput): Promise<CreateRunResult> {
+  const { projectId, frameworkId, organizationId, userId, csv, mapping } = input;
+
+  const profile = await getAttestedProfileQuery(projectId, frameworkId, organizationId);
+  if (!profile) {
+    throw new NotFoundException(
+      "There is no attested profile for this project, so a run cannot be recorded against it. " +
+        "Attest the profile first.",
+      "AedtProfile",
+    );
+  }
+
+  const rows = await getProfileAnswersQuery(profile.id!, organizationId);
+  const answers: AnswerMap = {};
+  for (const r of rows) {
+    answers[r.question_key] = { value: r.answer_value ?? null, dontKnow: Boolean(r.is_dont_know) };
+  }
+  const readiness = computeReadiness(answers);
+  const answerGates = runAnswerGates(answers);
+
+  if (!isRunMetric(answerGates.forcedMetric)) {
+    throw new ValidationException(
+      "The cutoff answer in the attested profile does not establish which metric applies " +
+        "(selection rate or scoring rate), so a run cannot be started. Answer cutoff.applied_by " +
+        "and attest again.",
+      "cutoff.applied_by",
+    );
+  }
+  const metric = answerGates.forcedMetric;
+
+  // Only keys the engine reads may be mapped.
+  const allowed = new Set<string>([
+    ...Object.keys(LL144_CONFIG.categories),
+    metric === "scoring_rate" ? RECORD_KEYS.score : RECORD_KEYS.selected,
+  ]);
+  for (const key of Object.keys(mapping)) {
+    if (!allowed.has(key)) {
+      throw new ValidationException(
+        `"${key}" is not a column the module reads for this run. Mappable keys: ${[...allowed].join(", ")}.`,
+        "mapping",
+        key,
+      );
+    }
+  }
+
+  let parsed: ParsedDataset;
+  try {
+    parsed = parseDataset(csv, mapping);
+  } catch (error: unknown) {
+    if (error instanceof DatasetParseError) {
+      throw new ValidationException(error.message, "csv");
+    }
+    throw error;
+  }
+  const config: BiasAuditConfig = { ...LL144_CONFIG, metric };
+
+  const blockers: GateFinding[] = [];
+  for (const message of parsed.mappingErrors) {
+    blockers.push(stop("mapping_column_absent", message));
+  }
+  if (parsed.unreadableOutcomeCount > 0) {
+    blockers.push(
+      stop(
+        "outcome_values_unreadable",
+        `${parsed.unreadableOutcomeCount} outcome value(s) are neither blank nor a recognised ` +
+          `yes/no value (1, 0, true, false, yes, no), so selection rates would be wrong. Fix the ` +
+          `outcome column or the mapping and upload again.`,
+        { count: parsed.unreadableOutcomeCount },
+      ),
+    );
+  }
+  if (!answerGates.mayComputeRatios) {
+    blockers.push(
+      stop(
+        "answers_withhold_ratios",
+        `The profile answers withhold ratios: ${answerGates.blocked.ratios.join("; ")}.`,
+        { blocked: answerGates.blocked.ratios },
+      ),
+    );
+  }
+
+  const outcome = blockers.length > 0 ? blockedOutcome(blockers) : runAudit(parsed.records, config);
+
+  const derived = deriveBasis(answers);
+  const triggers = derived
+    ? [...new Set(derived.perCategory.map((c) => c.expiryTrigger).filter((t) => t !== ""))]
+    : [];
+
+  const row = await sequelize.transaction((transaction) =>
+    createRunQuery(
+      {
+        projectId,
+        profileId: profile.id!,
+        presetId: config.presetId,
+        metric,
+        threshold: config.threshold,
+        thresholdSource: LL144_THRESHOLD_SOURCE,
+        smallSampleExclusion: config.smallSampleExclusion,
+        dataBasisJson: derived,
+        expiryDate: oneYearFromToday(),
+        expiryTrigger: triggers.length > 0 ? triggers.join(" ") : null,
+        readinessScore: readiness.score,
+        readinessBlockedReason: readiness.blockedReason,
+        resultJson: outcome.result,
+        gateFindingsJson: outcome.gates.findings,
+        orderFindingsJson: outcome.order,
+        datasetSha256: createHash("sha256").update(csv).digest("hex"),
+        datasetRetained: false,
+        rowCount: parsed.records.length,
+        createdBy: userId,
+      },
+      organizationId,
+      transaction,
+    ),
+  );
+
+  return { runId: row.id!, readiness, outcome };
+}

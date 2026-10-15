@@ -15,6 +15,8 @@ const QUESTION_SET = path.resolve(MODULE, "../../structures/NYC-Local-Law-144");
 const IO_LAYER: Record<string, string> = {
   [path.join(MODULE, "profileService.ts")]:
     "persists profile versions through utils/biasAudit.utils and the db",
+  [path.join(MODULE, "runService.ts")]:
+    "reads the attested profile and stores the run through utils/biasAudit.utils and the db; hashes the upload with node:crypto",
 };
 
 /** Every .ts file in the module, tests and fixtures included. */
