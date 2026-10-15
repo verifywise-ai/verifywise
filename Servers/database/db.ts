@@ -108,6 +108,10 @@ import { AiAppModel } from "../domain.layer/models/aiApp/aiApp.model";
 import { GovernanceControlMappingModel } from "../domain.layer/models/governanceOs/governanceControlMapping.model";
 import { GovernanceScenarioModel } from "../domain.layer/models/governanceOs/governanceScenario.model";
 import { GovernanceScenarioRuleModel } from "../domain.layer/models/governanceOs/governanceScenarioRule.model";
+import { AedtProfile } from "../domain.layer/models/biasAudit/aedtProfile.model";
+import { AedtProfileAnswer } from "../domain.layer/models/biasAudit/aedtProfileAnswer.model";
+import { BiasAuditRun } from "../domain.layer/models/biasAudit/biasAuditRun.model";
+import { BiasAuditStance } from "../domain.layer/models/biasAudit/biasAuditStance.model";
 import { GovernanceOrgPreferencesModel } from "../domain.layer/models/governanceOs/governanceOrgPreferences.model";
 import { GovernanceCoverageCacheModel } from "../domain.layer/models/governanceOs/governanceCoverageCache.model";
 import { GovernanceScenarioActivationModel } from "../domain.layer/models/governanceOs/governanceScenarioActivation.model";
@@ -243,6 +247,10 @@ const sequelize = new Sequelize(conf.database!, conf.username!, conf.password, {
     GovernanceOrgPreferencesModel,
     GovernanceCoverageCacheModel,
     GovernanceScenarioActivationModel,
+    AedtProfile,
+    AedtProfileAnswer,
+    BiasAuditRun,
+    BiasAuditStance,
   ],
 }) as Sequelize;
 
