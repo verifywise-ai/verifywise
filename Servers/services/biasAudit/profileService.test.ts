@@ -172,6 +172,60 @@ describe("saveAnswers", () => {
   });
 });
 
+describe("saveAnswers authorship and races", () => {
+  it("keeps the original author and time on carried-forward answers", async () => {
+    const when = new Date("2026-01-02T03:04:05Z");
+    utils.getCurrentProfileQuery.mockResolvedValue({ id: 5, version: 2, status: "attested" });
+    utils.getProfileAnswersQuery.mockResolvedValue([
+      row("role.party", "vendor", { answered_by_user_id: 3, answered_at: when }),
+      row("scope.weighting", "biggest", { answered_by_user_id: 4, answered_at: when }),
+    ]);
+    utils.createProfileVersionQuery.mockResolvedValue({ id: 6, version: 3 });
+    await saveAnswers({
+      ...base,
+      answers: [
+        { questionKey: "role.party", value: "employer", notes: "Changed.", dontKnow: false },
+      ],
+    });
+    const written = Object.fromEntries(
+      utils.upsertAnswerQuery.mock.calls.map((c) => [c[0].questionKey, c[0]]),
+    );
+    expect(written["role.party"].answeredByUserId).toBe(9);
+    expect(written["role.party"].answeredAt).toBeNull();
+    expect(written["scope.weighting"].answeredByUserId).toBe(4);
+    expect(written["scope.weighting"].answeredAt).toBe(when);
+  });
+
+  it("turns a version-number race into a conflict", async () => {
+    utils.getCurrentProfileQuery.mockResolvedValue({ id: 5, version: 2, status: "attested" });
+    utils.getProfileAnswersQuery.mockResolvedValue([]);
+    utils.createProfileVersionQuery.mockRejectedValue(
+      Object.assign(new Error("duplicate key"), {
+        name: "SequelizeUniqueConstraintError",
+        original: { code: "23505" },
+      }),
+    );
+    await expect(
+      saveAnswers({
+        ...base,
+        answers: [{ questionKey: "role.party", value: "vendor", notes: "x", dontKnow: false }],
+      }),
+    ).rejects.toThrow(/reload and retry/i);
+    expect(utils.upsertAnswerQuery).not.toHaveBeenCalled();
+  });
+
+  it("does not swallow other errors from the version create", async () => {
+    utils.getCurrentProfileQuery.mockResolvedValue(null);
+    utils.createProfileVersionQuery.mockRejectedValue(new Error("boom"));
+    await expect(
+      saveAnswers({
+        ...base,
+        answers: [{ questionKey: "role.party", value: "vendor", notes: "x", dontKnow: false }],
+      }),
+    ).rejects.toThrow("boom");
+  });
+});
+
 describe("attestProfile", () => {
   const allFour = [
     row("role.party", "vendor"),
@@ -183,8 +237,8 @@ describe("attestProfile", () => {
   it("refuses to attest with a veto unanswered", async () => {
     utils.getCurrentProfileQuery.mockResolvedValue({ id: 5, version: 1, status: "draft" });
     utils.getProfileAnswersQuery.mockResolvedValue([row("role.party", "vendor")]);
+    utils.attestProfileQuery.mockResolvedValue({ id: 5, version: 1, status: "attested" });
     await expect(attestProfile(base)).rejects.toThrow(/scope\.weighting|unanswered/i);
-    expect(utils.attestProfileQuery).not.toHaveBeenCalled();
   });
 
   it("refuses to attest when a veto is answered don't know", async () => {
@@ -194,7 +248,20 @@ describe("attestProfile", () => {
         row(k, null),
       ),
     );
+    utils.attestProfileQuery.mockResolvedValue({ id: 5, version: 1, status: "attested" });
     await expect(attestProfile(base)).rejects.toThrow(/don't know|unanswered/i);
+  });
+
+  it("checks the vetoes after the row is locked, on a read inside the transaction", async () => {
+    utils.getCurrentProfileQuery.mockResolvedValue({ id: 5, version: 1, status: "draft" });
+    utils.getProfileAnswersQuery.mockResolvedValue(allFour);
+    utils.attestProfileQuery.mockResolvedValue({ id: 5, version: 1, status: "attested" });
+    await attestProfile(base);
+    expect(utils.attestProfileQuery.mock.invocationCallOrder[0]).toBeLessThan(
+      utils.getProfileAnswersQuery.mock.invocationCallOrder[0],
+    );
+    // The answers are read with the transaction handle, not outside it.
+    expect(utils.getProfileAnswersQuery.mock.calls[0][2]).toBeDefined();
   });
 
   it("attests when all four vetoes carry a value", async () => {

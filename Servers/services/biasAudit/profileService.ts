@@ -97,6 +97,25 @@ function toWorkingSet(rows: Awaited<ReturnType<typeof getProfileAnswersQuery>>):
   return out;
 }
 
+/** Who first gave an answer and when, so a carried-forward answer keeps its author. */
+type Authorship = { userId: number; answeredAt: Date | null };
+
+function toAuthorship(rows: Awaited<ReturnType<typeof getProfileAnswersQuery>>) {
+  const out = new Map<string, Authorship>();
+  for (const r of rows) {
+    if (r.answered_by_user_id != null) {
+      out.set(r.question_key, { userId: r.answered_by_user_id, answeredAt: r.answered_at ?? null });
+    }
+  }
+  return out;
+}
+
+/** A concurrent save that took the same version number loses to the unique index. */
+function isUniqueViolation(error: unknown): boolean {
+  const e = error as { name?: string; original?: { code?: string } };
+  return e?.original?.code === "23505" || e?.name === "SequelizeUniqueConstraintError";
+}
+
 export async function saveAnswers(
   args: ProfileScope & { answers: AnswerInput[] },
 ): Promise<ProfileRef> {
@@ -105,12 +124,14 @@ export async function saveAnswers(
 
   return sequelize.transaction(async (transaction) => {
     const current = await getCurrentProfileQuery(projectId, frameworkId, organizationId);
-    const existing = current
-      ? toWorkingSet(await getProfileAnswersQuery(current.id!, organizationId))
-      : {};
+    const existingRows = current ? await getProfileAnswersQuery(current.id!, organizationId) : [];
+    const existing = toWorkingSet(existingRows);
+    const authors = toAuthorship(existingRows);
 
     const merged: AnswerWithNotes = { ...existing };
+    const changed = new Set<string>();
     for (const a of answers) {
+      changed.add(a.questionKey);
       merged[a.questionKey] = {
         value: a.dontKnow ? null : a.value,
         notes: a.notes,
@@ -119,26 +140,42 @@ export async function saveAnswers(
     }
 
     // A draft is edited in place; an attested profile is never touched.
-    const target =
-      current && current.status === "draft"
-        ? current
-        : await createProfileVersionQuery(
-            {
-              projectId,
-              frameworkId,
-              version: current ? current.version + 1 : 1,
-              questionSetVersion: LL144_QUESTION_SET_VERSION,
-              createdBy: userId,
-            },
-            organizationId,
-            transaction,
+    let target;
+    if (current && current.status === "draft") {
+      target = current;
+    } else {
+      try {
+        target = await createProfileVersionQuery(
+          {
+            projectId,
+            frameworkId,
+            version: current ? current.version + 1 : 1,
+            questionSetVersion: LL144_QUESTION_SET_VERSION,
+            createdBy: userId,
+          },
+          organizationId,
+          transaction,
+        );
+      } catch (error: unknown) {
+        if (isUniqueViolation(error)) {
+          throw new ConflictException(
+            "Another save created this profile version first. Reload and retry.",
+            "AedtProfile",
+            "version",
           );
+        }
+        throw error;
+      }
+    }
 
     // Applicability depends on the other answers, so it is recomputed for
     // every stored answer, not just the ones in this request. A not-applicable
     // answer is flagged, never deleted, so it returns if the scope changes back.
+    // Only answers in this request are attributed to the current user; the rest
+    // keep their author and timestamp, since per-veto attestation reads them.
     const applicable = new Set(applicableQuestions(merged).map((q) => q.key));
     for (const [questionKey, a] of Object.entries(merged)) {
+      const prior = changed.has(questionKey) ? undefined : authors.get(questionKey);
       await upsertAnswerQuery(
         {
           profileId: target.id!,
@@ -148,7 +185,8 @@ export async function saveAnswers(
           answerNotes: a.notes,
           isDontKnow: a.dontKnow,
           isNotApplicable: !applicable.has(questionKey),
-          answeredByUserId: userId,
+          answeredByUserId: prior ? prior.userId : userId,
+          answeredAt: prior ? prior.answeredAt : null,
         },
         organizationId,
         transaction,
@@ -164,25 +202,31 @@ export async function attestProfile(args: ProfileScope): Promise<ProfileRef> {
   if (!current) {
     throw new NotFoundException("No profile exists to attest for this project", "AedtProfile");
   }
-  const answers = toWorkingSet(await getProfileAnswersQuery(current.id!, organizationId));
-
-  const unanswered = VETO_KEYS.filter((k) => answers[k] === undefined);
-  const dontKnow = VETO_KEYS.filter(
-    (k) => answers[k]?.dontKnow || (answers[k] && answers[k].value === null),
-  );
-  if (unanswered.length > 0 || dontKnow.length > 0) {
-    const parts: string[] = [];
-    if (unanswered.length > 0) parts.push(`unanswered: ${unanswered.join(", ")}`);
-    if (dontKnow.length > 0) parts.push(`answered "I don't know": ${dontKnow.join(", ")}`);
-    throw new ConflictException(
-      `Cannot attest while a deciding question is open (${parts.join("; ")})`,
-      "AedtProfile",
-      "answers",
-    );
-  }
 
   return sequelize.transaction(async (transaction) => {
+    // attestProfileQuery locks the row and refuses a non-draft, so the veto
+    // check below reads answers after the lock is held. Throwing rolls the
+    // attestation back, so a veto flipped to don't-know by a concurrent edit
+    // cannot slip through.
     const attested = await attestProfileQuery(current.id!, userId, organizationId, transaction);
+    const answers = toWorkingSet(
+      await getProfileAnswersQuery(current.id!, organizationId, transaction),
+    );
+
+    const unanswered = VETO_KEYS.filter((k) => answers[k] === undefined);
+    const dontKnow = VETO_KEYS.filter(
+      (k) => answers[k] && (answers[k].dontKnow || answers[k].value === null),
+    );
+    if (unanswered.length > 0 || dontKnow.length > 0) {
+      const parts: string[] = [];
+      if (unanswered.length > 0) parts.push(`unanswered: ${unanswered.join(", ")}`);
+      if (dontKnow.length > 0) parts.push(`answered "I don't know": ${dontKnow.join(", ")}`);
+      throw new ConflictException(
+        `Cannot attest while a deciding question is open (${parts.join("; ")})`,
+        "AedtProfile",
+        "answers",
+      );
+    }
     return { profileId: attested.id!, version: attested.version };
   });
 }

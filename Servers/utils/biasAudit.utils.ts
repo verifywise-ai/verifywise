@@ -82,6 +82,7 @@ export async function getCurrentProfileQuery(
 export async function getProfileAnswersQuery(
   profileId: number,
   organizationId: number,
+  transaction?: Transaction,
 ): Promise<AedtProfileAnswer[]> {
   return (await sequelize.query(
     `SELECT * FROM aedt_profile_answers
@@ -90,6 +91,7 @@ export async function getProfileAnswersQuery(
     {
       replacements: { profile_id: profileId, organization_id: organizationId },
       type: QueryTypes.SELECT,
+      transaction,
     },
   )) as AedtProfileAnswer[];
 }
@@ -142,6 +144,8 @@ export interface UpsertAnswerArgs {
   isDontKnow: boolean;
   isNotApplicable: boolean;
   answeredByUserId: number;
+  /** Carried-forward answers keep their original timestamp; omitted means now. */
+  answeredAt?: Date | null;
 }
 
 export async function upsertAnswerQuery(
@@ -157,7 +161,7 @@ export async function upsertAnswerQuery(
         answered_by_user_id, answered_at)
      SELECT p.organization_id, p.id, :question_key, :question_set_version,
             :answer_value, :answer_notes, :is_dont_know, :is_not_applicable,
-            :answered_by_user_id, NOW()
+            :answered_by_user_id, COALESCE(:answered_at, NOW())
        FROM aedt_profiles p
       WHERE p.id = :profile_id AND p.organization_id = :organization_id
      ON CONFLICT (profile_id, question_key) DO UPDATE SET
@@ -167,7 +171,7 @@ export async function upsertAnswerQuery(
        is_dont_know = EXCLUDED.is_dont_know,
        is_not_applicable = EXCLUDED.is_not_applicable,
        answered_by_user_id = EXCLUDED.answered_by_user_id,
-       answered_at = NOW()
+       answered_at = COALESCE(:answered_at, NOW())
      RETURNING id`,
     {
       replacements: {
@@ -179,6 +183,7 @@ export async function upsertAnswerQuery(
         is_dont_know: args.isDontKnow,
         is_not_applicable: args.isNotApplicable,
         answered_by_user_id: args.answeredByUserId,
+        answered_at: args.answeredAt ?? null,
         organization_id: organizationId,
       },
       transaction,
