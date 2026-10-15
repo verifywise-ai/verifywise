@@ -19,7 +19,7 @@ export const toolsDefinition: any[] = [
     function: {
       name: "list_projects",
       description:
-        "List projects (also called 'use cases' in the product UI) in the current organization. Use this to resolve a project name or use-case code (e.g. 'UC-7') mentioned by the user into a numeric project id, which write tools require for fields like `project_ids`. Returns id, uc_id, project_title, status, ai_risk_classification, and owner for each project. Supports an optional case-insensitive `search` filter that matches against `project_title` and `uc_id`. Prefer this lightweight tool for id resolution; use `fetch_use_cases` for deeper analytics.",
+        "List projects (also called 'use cases' in the product UI) in the current organization. Use this to resolve a project name or use-case code (e.g. 'UC-7') mentioned by the user into a numeric project id, which write tools require for fields like `project_ids`. Returns id, uc_id, project_title, status, ai_risk_classification, owner, and is_organizational for each project — is_organizational=true marks the organization's org-wide project, which is where organizational frameworks (NIST AI RMF, ISO 42001, ISO 27001) are tracked. Supports an optional case-insensitive `search` filter that matches against `project_title` and `uc_id`. Prefer this lightweight tool for id resolution; use `fetch_use_cases` for deeper analytics.",
       parameters: {
         type: "object",
         properties: {
