@@ -17,7 +17,7 @@
  */
 import { VETO_KEYS } from "../../structures/NYC-Local-Law-144/intake.questions";
 import type { QuestionWeight } from "../../structures/NYC-Local-Law-144/intake.types";
-import { applicableQuestions } from "./applicability";
+import { applicableQuestions, hasValue } from "./applicability";
 import type { AnswerMap } from "./applicability";
 
 const WEIGHTS: Record<Exclude<QuestionWeight, "veto">, number> = {
@@ -34,11 +34,6 @@ export interface ReadinessResult {
   scope: "in_scope" | "out_of_scope" | "undetermined";
   earned: number;
   possible: number;
-}
-
-function hasValue(answers: AnswerMap, key: string): boolean {
-  const a = answers[key];
-  return a !== undefined && !a.dontKnow && a.value !== null && a.value !== "";
 }
 
 export function computeReadiness(answers: AnswerMap): ReadinessResult {

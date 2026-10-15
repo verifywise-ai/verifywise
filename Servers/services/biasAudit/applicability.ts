@@ -45,3 +45,9 @@ export function applicableQuestions(answers: AnswerMap, scope?: QuestionScope): 
     (q) => (scope === undefined || q.scope === scope) && evaluatePredicate(q.appliesWhen, answers),
   );
 }
+
+/** True when the key holds a usable answer: present, not a don't-know, not blank. */
+export function hasValue(answers: AnswerMap, key: string): boolean {
+  const a = answers[key];
+  return a !== undefined && !a.dontKnow && a.value !== null && a.value !== "";
+}
