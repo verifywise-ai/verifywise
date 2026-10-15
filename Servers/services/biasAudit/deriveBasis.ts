@@ -8,7 +8,7 @@
  *
  * Why the split matters. One engagement held sex for roughly 1,500 to 2,000
  * candidates and no race or ethnicity at all. Sex could be reported from
- * historical data while race, ethnicity and all 11 intersectional categories
+ * historical data while race, ethnicity and the intersectional categories
  * could not, and the expiry conditions differ: a race attribute basis ends when
  * customers begin capturing race, and records of another characteristic never
  * end it however far their volume grows. A customer who later collects 50,000
@@ -51,7 +51,7 @@ const TRIGGERS: Record<BasisCategory, Record<BasisKind, string>> = {
     not_applicable: NO_TRIGGER,
     test_volume:
       "This basis ends when your historical records of sex reach a volume that supports " +
-      "the 14 intersectional categories 5-301(c)(4)(iii) requires.",
+      "the intersectional categories 5-301(c) requires.",
     test_attribute: "This basis ends when sex begins to be captured at reportable volumes.",
     test_availability: "This basis ends if the historical records of sex become available to you.",
   },
@@ -60,7 +60,7 @@ const TRIGGERS: Record<BasisCategory, Record<BasisKind, string>> = {
     not_applicable: NO_TRIGGER,
     test_volume:
       "This basis ends when your historical records of race and ethnicity reach a volume that " +
-      "supports the 14 intersectional categories 5-301(c)(4)(iii) requires.",
+      "supports the intersectional categories 5-301(c) requires.",
     test_attribute:
       "This basis ends when race and ethnicity begin to be captured at reportable volumes. " +
       "Growth in the volume of any other record does not end it.",
@@ -71,8 +71,8 @@ const TRIGGERS: Record<BasisCategory, Record<BasisKind, string>> = {
     historical: NO_TRIGGER,
     not_applicable: NO_TRIGGER,
     test_volume:
-      "This basis ends when your historical records reach a volume that supports the 14 " +
-      "intersectional categories 5-301(c)(4)(iii) requires.",
+      "This basis ends when your historical records reach a volume that supports the " +
+      "intersectional categories 5-301(c) requires.",
     test_attribute:
       "This basis ends only when both sex and race and ethnicity are captured at reportable " +
       "volumes. Either one alone does not end it.",
@@ -102,6 +102,14 @@ const BASIS_KINDS: readonly BasisKind[] = [
   "not_applicable",
 ];
 
+/**
+ * A characteristic that is not held cannot rest on historical data, so a stated
+ * "historical" becomes test_attribute for it; any other stated basis stands.
+ */
+function notHeld(stated: BasisKind): BasisKind {
+  return stated === "historical" ? "test_attribute" : stated;
+}
+
 /** Per-characteristic basis from what is held, falling back to the stated basis. */
 function perCharacteristic(
   held: string,
@@ -109,9 +117,9 @@ function perCharacteristic(
 ): { sex: BasisKind; race: BasisKind } | null {
   switch (held) {
     case "none":
-      return { sex: stated, race: stated };
+      return { sex: notHeld(stated), race: notHeld(stated) };
     case "sex_only":
-      return { sex: "historical", race: stated };
+      return { sex: "historical", race: notHeld(stated) };
     case "all_low_volume":
       return { sex: "test_volume", race: "test_volume" };
     case "all_sufficient":

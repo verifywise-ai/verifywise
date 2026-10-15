@@ -58,11 +58,65 @@ describe("the uniform cases", () => {
 describe("the intersection needs both halves", () => {
   it("is never historical unless both sex and race are", () => {
     for (const held of ["sex_only", "none", "customers_hold_it", "all_low_volume"]) {
-      const d = deriveBasis(a({ "data.held": held, "data.basis": "test_attribute" }));
-      expect(find(d, "intersectional").basis).not.toBe("historical");
+      for (const basis of ["test_attribute", "historical"]) {
+        const d = deriveBasis(a({ "data.held": held, "data.basis": basis }));
+        expect(find(d, "intersectional").basis).not.toBe("historical");
+      }
     }
     const all = deriveBasis(a({ "data.held": "all_sufficient", "data.basis": "historical" }));
     expect(find(all, "intersectional").basis).toBe("historical");
+  });
+});
+
+describe("a stated historical basis cannot cover what is not held", () => {
+  it("none + historical makes every category test_attribute with a trigger", () => {
+    const d = deriveBasis(a({ "data.held": "none", "data.basis": "historical" }));
+    for (const c of ["sex", "race_ethnicity", "intersectional"]) {
+      expect(find(d, c).basis).toBe("test_attribute");
+      expect(find(d, c).expiryTrigger).not.toBe("");
+    }
+  });
+
+  it("sex_only + historical keeps sex historical and moves race and the intersection", () => {
+    const d = deriveBasis(a({ "data.held": "sex_only", "data.basis": "historical" }));
+    expect(find(d, "sex").basis).toBe("historical");
+    expect(find(d, "sex").expiryTrigger).toBe("");
+    expect(find(d, "race_ethnicity").basis).toBe("test_attribute");
+    expect(find(d, "race_ethnicity").expiryTrigger).toMatch(/race and ethnicity/i);
+    expect(find(d, "intersectional").basis).toBe("test_attribute");
+    expect(find(d, "intersectional").expiryTrigger).not.toBe("");
+  });
+});
+
+describe("the intersectional trigger", () => {
+  it("requires both sex and race for test_attribute", () => {
+    const d = deriveBasis(a({ "data.held": "none", "data.basis": "test_attribute" }));
+    const t = find(d, "intersectional").expiryTrigger;
+    expect(t).toMatch(/both sex and race and ethnicity/i);
+    expect(t).toMatch(/either one alone does not end it/i);
+  });
+
+  it("cites 5-301(c) only and states no count", () => {
+    const d = deriveBasis(a({ "data.held": "all_low_volume", "data.basis": "test_volume" }));
+    for (const c of d!.perCategory) {
+      expect(c.expiryTrigger).toMatch(/5-301\(c\)/);
+      expect(c.expiryTrigger).not.toMatch(/\(4\)|\(iii\)|\d+ intersectional/);
+    }
+  });
+});
+
+describe("invalid input", () => {
+  it("returns null for an unknown data.held value", () => {
+    expect(deriveBasis(a({ "data.held": "mystery", "data.basis": "historical" }))).toBeNull();
+  });
+
+  it("returns null for an invalid data.basis value", () => {
+    expect(deriveBasis(a({ "data.held": "none", "data.basis": "bogus" }))).toBeNull();
+  });
+
+  it("treats an empty-string answer as unanswered", () => {
+    expect(deriveBasis(a({ "data.held": "", "data.basis": "historical" }))).toBeNull();
+    expect(deriveBasis(a({ "data.held": "none", "data.basis": "" }))).toBeNull();
   });
 });
 
