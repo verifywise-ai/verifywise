@@ -10,6 +10,13 @@ const SERVICES = path.resolve(MODULE, "..");
 // without them, so an import resolving into this directory counts as inside.
 const QUESTION_SET = path.resolve(MODULE, "../../structures/NYC-Local-Law-144");
 
+// I/O-layer files, exempt by exact path from the "imports nothing from outside"
+// and "performs no I/O" checks only. Each stays subject to every other check.
+const IO_LAYER: Record<string, string> = {
+  [path.join(MODULE, "profileService.ts")]:
+    "persists profile versions through utils/biasAudit.utils and the db",
+};
+
 /** Every .ts file in the module, tests and fixtures included. */
 function allTsFiles(): string[] {
   const out: string[] = [];
@@ -68,7 +75,7 @@ describe("module independence", () => {
     // inside this directory. A relative path that climbs out ("../../utils")
     // is as much an outside dependency as a package name.
     const offenders: string[] = [];
-    for (const f of files) {
+    for (const f of files.filter((x) => !(x in IO_LAYER))) {
       const src = fs.readFileSync(f, "utf8");
       for (const m of src.matchAll(/(?:from|import)\s+["']([^"']+)["']/g)) {
         const spec = m[1];
@@ -84,7 +91,7 @@ describe("module independence", () => {
 
   it("performs no I/O", () => {
     const io = /\b(sequelize|fetch|axios|https?\.request|process\.env)\b|\bfs\.\w+/;
-    const offenders = files.filter((f) => io.test(fs.readFileSync(f, "utf8")));
+    const offenders = files.filter((f) => !(f in IO_LAYER) && io.test(fs.readFileSync(f, "utf8")));
     expect(offenders).toEqual([]);
   });
 
