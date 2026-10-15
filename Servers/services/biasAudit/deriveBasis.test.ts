@@ -9,7 +9,7 @@ const find = (d: ReturnType<typeof deriveBasis>, c: string) =>
 
 describe("the split that a single answer would flatten", () => {
   // One engagement held sex for ~1,500-2,000 candidates and no race or
-  // ethnicity at all. Sex was auditable from historical data; race and all 11
+  // ethnicity at all. Sex was auditable from historical data; race and the
   // intersectional categories were not.
   it("splits sex from race when only sex is held", () => {
     const d = deriveBasis(a({ "data.held": "sex_only", "data.basis": "test_attribute" }));
