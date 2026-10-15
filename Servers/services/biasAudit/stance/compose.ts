@@ -17,6 +17,7 @@ import type { AnswerWithNotes } from "../applicability";
 import type { AnswerGateResult } from "../answerGates";
 import type { DerivedBasis } from "../deriveBasis";
 import type { ReadinessResult } from "../readinessScore";
+import { FORBIDDEN_WORDS } from "./vocabulary";
 import type { BiasAuditResult, GateFinding, OrderFinding } from "../index";
 
 export interface StanceSection {
@@ -90,6 +91,29 @@ const BASIS_LABEL: Record<string, string> = {
 function optionLabel(key: string, value: string | null): string {
   const option = LL144_QUESTIONS.find((q) => q.key === key)?.options.find((o) => o.value === value);
   return option?.label ?? value ?? "";
+}
+
+/**
+ * Short wording for an open item whose question text carries a word the
+ * document never uses, keyed by question.
+ */
+const OPEN_ITEM_TEXT: Record<string, string> = {
+  "history.prior_audit":
+    "Say whether this tool has had a bias review before, and whether it has changed since.",
+};
+
+function openItemText(key: string, prompt: string): string {
+  const text = OPEN_ITEM_TEXT[key] ?? prompt;
+  const lower = text.toLowerCase();
+  return FORBIDDEN_WORDS.some((w) => lower.includes(w))
+    ? `Answer the question recorded as ${key}.`
+    : text;
+}
+
+/** What the customer was told the chosen option means, which names the rule's limb. */
+function chosenConsequence(key: string, value: string | null | undefined): string {
+  const option = LL144_QUESTIONS.find((q) => q.key === key)?.options.find((o) => o.value === value);
+  return option?.consequence ?? "";
 }
 
 function questionPrompt(key: string): string {
@@ -200,18 +224,40 @@ function dataBody(args: ComposeStanceArgs): string {
   return lines.join("\n");
 }
 
+/** `args.expiry.trigger` already joins the per-category triggers, so it is printed once. */
 function expiryBody(args: ComposeStanceArgs): string {
   const lines = [
     args.expiry.date
-      ? `This document is dated to ${args.expiry.date}.`
-      : "No expiry date is recorded for this document.",
+      ? `This result expires on ${args.expiry.date} (5-301(a)).`
+      : "No expiry date is recorded for this result.",
   ];
-  if (args.expiry.trigger) lines.push(args.expiry.trigger);
-  for (const c of args.derivedBasis?.perCategory ?? []) {
-    if (c.expiryTrigger)
-      lines.push(`${CATEGORY_LABEL[c.category] ?? c.category}: ${c.expiryTrigger}`);
+  if (args.expiry.trigger) {
+    lines.push(args.expiry.trigger);
+  } else {
+    for (const c of args.derivedBasis?.perCategory ?? []) {
+      if (c.expiryTrigger) lines.push(c.expiryTrigger);
+    }
   }
   return lines.join("\n");
+}
+
+/** Notes the gates collected from one question, by the question that emitted them. */
+function notesFrom(args: ComposeStanceArgs, test: (key: string | undefined) => boolean): string[] {
+  return args.gates.consequences
+    .filter((c) => c.kind === "scope_note" && test(c.sourceKey))
+    .map((c) => c.text);
+}
+
+const isIndependenceKey = (k: string | undefined) => k === "independence.auditor";
+const isPartyKey = (k: string | undefined) => k === "role.party";
+const isScopeKey = (k: string | undefined) => !isIndependenceKey(k) && !isPartyKey(k);
+
+function readinessBody(args: ComposeStanceArgs): string {
+  return (
+    `Readiness score: ${args.readiness.score ?? "not computed"} of 100. ` +
+    "This is VerifyWise's own measure of how ready you are to commission an independent audit. " +
+    "No regulator recognises it, and it is not a finding about the tool."
+  );
 }
 
 function testedBody(args: ComposeStanceArgs): string {
@@ -233,6 +279,7 @@ function testedBody(args: ComposeStanceArgs): string {
 function independenceBody(args: ComposeStanceArgs): string {
   return [
     vetoBlock(args, "independence.auditor"),
+    ...notesFrom(args, isIndependenceKey),
     "5-300 calls for an independent auditor. What is described here was run by the party named above through this module, and the document should be read with that in mind.",
   ].join("\n\n");
 }
@@ -240,12 +287,13 @@ function independenceBody(args: ComposeStanceArgs): string {
 function openItemsOf(args: ComposeStanceArgs, scope: StanceModel["scope"]): string[] {
   const items: string[] = [];
   if (scope === "undetermined") {
-    if (args.readiness.blockedReason) items.push(args.readiness.blockedReason);
-    for (const k of args.readiness.missingVetoes) items.push(`Answer ${k}.`);
+    for (const k of args.readiness.missingVetoes) items.push(`Answer: ${questionPrompt(k)}`);
     return items;
   }
   if (scope === "out_of_scope") return items;
-  for (const o of args.readiness.openItems) items.push(`Not established: ${o.prompt}`);
+  for (const o of args.readiness.openItems) {
+    items.push(`Not established: ${openItemText(o.key, o.prompt)}`);
+  }
   if (args.derivedBasis && !args.derivedBasis.confirmed) {
     items.push("Confirm or correct how we read your answers about the data you hold.");
   }
@@ -274,16 +322,24 @@ export function composeStance(args: ComposeStanceArgs): StanceModel {
       body: [
         `Tool: ${args.projectName}.`,
         vetoBlock(args, "scope.weighting"),
+        chosenConsequence("scope.weighting", args.answers["scope.weighting"]?.value),
+        ...notesFrom(args, isScopeKey),
         NOT_VERIFIED,
         "A change in how the output is used may bring the tool into scope. Revisit this determination if the use changes.",
-      ].join("\n\n"),
+      ]
+        .filter((p) => p !== "")
+        .join("\n\n"),
     });
-    sections.push({ key: "party", title: "Party", body: vetoBlock(args, "role.party") });
+    sections.push({
+      key: "party",
+      title: "Party",
+      body: [vetoBlock(args, "role.party"), ...notesFrom(args, isPartyKey)].join("\n\n"),
+    });
     sections.push({ key: "open_items", title: "Open items", body: listBody(openItems) });
     sections.push({
       key: "expiry",
       title: "Expiry",
-      body: expiryBody({ ...args, derivedBasis: null }),
+      body: "No basis expiry applies to a scope determination. Revisit it if the way the output is used changes.",
     });
     return {
       heading: "Scope determination",
@@ -291,26 +347,29 @@ export function composeStance(args: ComposeStanceArgs): StanceModel {
       sections,
       blankFields: [],
       openItems,
-      expiry: args.expiry,
+      expiry: { date: null, trigger: "" },
       derivedBasis: null,
       attestation: args.attestation,
     };
   }
 
-  const scopeNotes = args.gates.consequences.filter((c) => c.kind === "scope_note");
   sections.push({
     key: "scope",
     title: "Scope",
     body: [
       `Tool: ${args.projectName}.`,
       scope === "undetermined"
-        ? "Scope is not established: at least one scope answer is missing."
+        ? "Scope is not established: a required answer is missing."
         : vetoBlock(args, "scope.weighting"),
       NOT_VERIFIED,
-      ...scopeNotes.map((n) => n.text),
+      ...notesFrom(args, isScopeKey),
     ].join("\n\n"),
   });
-  sections.push({ key: "party", title: "Party", body: vetoBlock(args, "role.party") });
+  sections.push({
+    key: "party",
+    title: "Party",
+    body: [vetoBlock(args, "role.party"), ...notesFrom(args, isPartyKey)].join("\n\n"),
+  });
 
   if (scope === "undetermined") {
     sections.push({ key: "open_items", title: "Open items", body: listBody(openItems) });
@@ -326,6 +385,7 @@ export function composeStance(args: ComposeStanceArgs): StanceModel {
     };
   }
 
+  sections.push({ key: "readiness", title: "Readiness", body: readinessBody(args) });
   sections.push({ key: "basis", title: "Basis for the data", body: basisBody(args) });
   sections.push({ key: "what_was_tested", title: "What was tested", body: testedBody(args) });
   sections.push({ key: "results", title: "Results", body: resultsBody(args) });

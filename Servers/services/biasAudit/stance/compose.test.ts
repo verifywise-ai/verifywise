@@ -56,6 +56,10 @@ const base: ComposeStanceArgs = {
     missingVetoes: [],
     openItems: [
       { key: "pipeline.preprocessing", prompt: "Is the input transformed before scoring?" },
+      {
+        key: "history.prior_audit",
+        prompt: "Has this tool been audited for bias before, and has it changed since?",
+      },
     ],
     scope: "in_scope",
     earned: 7,
@@ -70,7 +74,17 @@ const base: ComposeStanceArgs = {
     consequences: [
       {
         kind: "scope_note",
-        text: "Self-administered test. 5-300 requires an independent auditor.",
+        sourceKey: "independence.auditor",
+        text:
+          "Self-administered test. 5-300 requires an independent auditor. " +
+          "This result is not a Local Law 144 bias audit.",
+      },
+      {
+        kind: "scope_note",
+        sourceKey: "role.party",
+        text:
+          "This result was commissioned by the supplier of the tool. It does not " +
+          "discharge the publication duty of any employer deploying it.",
       },
       {
         kind: "limitation",
@@ -110,7 +124,10 @@ const base: ComposeStanceArgs = {
     },
   ],
   order: [{ attribute: "sex", observedRuns: 180, expectedRuns: 201, ratio: 0.9, blocked: false }],
-  expiry: { date: "2027-10-14", trigger: "This basis ends when characteristics are captured." },
+  expiry: {
+    date: "2027-10-14",
+    trigger: "Sex trigger text. Race trigger text. Intersectional trigger text.",
+  },
   derivedBasis: {
     perCategory: [
       { category: "sex", basis: "test_attribute", expiryTrigger: "Sex trigger text." },
@@ -345,7 +362,98 @@ describe("an undetermined scope", () => {
     });
     expect(s.scope).toBe("undetermined");
     expect(s.sections.map((x) => x.key)).not.toContain("results");
-    expect(s.openItems.join(" ")).toContain("scope.weighting");
+    expect(s.openItems.join(" ")).toMatch(/biggest single factor/i);
+  });
+});
+
+describe("fix round 1", () => {
+  it("routes the independence note to independence and the vendor note to party", () => {
+    const s = composeStance(base);
+    expect(section(s, "independence").body).toContain("not a Local Law 144 bias audit");
+    expect(section(s, "scope").body).not.toContain("not a Local Law 144 bias audit");
+    expect(section(s, "party").body).toContain("does not discharge the publication duty");
+    expect(section(s, "scope").body).not.toContain("does not discharge the publication duty");
+  });
+
+  it("carries the not-determined note and the limb in the out-of-scope scope body", () => {
+    const s = composeStance({
+      ...base,
+      readiness: { ...base.readiness, score: null, scope: "out_of_scope", openItems: [] },
+      answers: {
+        ...base.answers,
+        "scope.weighting": { value: "one_of_several", notes: "One input.", dontKnow: false },
+      },
+      gates: {
+        ...base.gates,
+        consequences: [
+          {
+            kind: "scope_note",
+            sourceKey: "scope.weighting",
+            text:
+              "VerifyWise did not verify this and does not determine whether any deployment " +
+              "is an automated employment decision tool.",
+          },
+        ],
+      },
+      result: null,
+      gateFindings: [],
+    });
+    const body = section(s, "scope").body;
+    expect(body).toContain("does not determine whether any deployment");
+    expect(body).toContain("5-300 definition");
+  });
+
+  it("rewords an open item whose question text carries a forbidden word", () => {
+    const s = composeStance(base);
+    const all = s.openItems.join(" ").toLowerCase();
+    expect(all).not.toContain("audited");
+    expect(all).toMatch(/bias review/);
+  });
+
+  it("carries the readiness score and says it is VerifyWise's own construct", () => {
+    const s = composeStance(base);
+    const r = section(s, "readiness");
+    expect(r.body).toContain("72");
+    expect(r.body).toMatch(/VerifyWise's own/i);
+    expect(r.body).toMatch(/not a finding about the tool/i);
+  });
+
+  it("states an expiry of the result with its date", () => {
+    const body = section(composeStance(base), "expiry").body;
+    expect(body).toContain("This result expires on 2027-10-14 (5-301(a))");
+    expect(body).not.toContain("dated to");
+  });
+
+  it("prints each expiry trigger once", () => {
+    const body = section(composeStance(base), "expiry").body;
+    expect(body.split("Sex trigger text.").length - 1).toBe(1);
+  });
+
+  it("gives the out-of-scope expiry no basis trigger", () => {
+    const s = composeStance({
+      ...base,
+      readiness: { ...base.readiness, score: null, scope: "out_of_scope", openItems: [] },
+      result: null,
+    });
+    expect(section(s, "expiry").body).not.toContain("Sex trigger text.");
+    expect(s.expiry.trigger).toBe("");
+  });
+
+  it("names undetermined open items by question text without repeating the blocked reason", () => {
+    const s = composeStance({
+      ...base,
+      readiness: {
+        ...base.readiness,
+        score: null,
+        scope: "undetermined",
+        missingVetoes: ["scope.weighting"],
+        blockedReason: "Scope is not established: answer scope.weighting.",
+      },
+      result: null,
+    });
+    expect(s.openItems.join(" ")).not.toContain("scope.weighting");
+    expect(s.openItems.join(" ")).toMatch(/weigh|look|output/i);
+    expect(section(s, "scope").body).toContain("a required answer is missing");
   });
 });
 

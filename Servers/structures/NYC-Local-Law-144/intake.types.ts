@@ -7,6 +7,8 @@ export interface StanceConsequence {
   kind: "limitation" | "scope_note" | "blank_field" | "metric_forced";
   text: string;
   payload?: Record<string, string>;
+  /** The question key that emitted this consequence; set when the gates collect it. */
+  sourceKey?: string;
 }
 
 export interface IntakeOption {

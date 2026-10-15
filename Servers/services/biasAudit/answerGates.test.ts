@@ -193,3 +193,18 @@ describe("a gate is satisfied when its question does not apply", () => {
     expect(g.blocked.generation ?? []).toEqual([]);
   });
 });
+
+describe("consequence sources", () => {
+  it("records the question key that emitted each consequence", () => {
+    const g = runAnswerGates({
+      "role.party": { value: "vendor", dontKnow: false },
+      "scope.weighting": { value: "biggest", dontKnow: false },
+      "independence.auditor": { value: "self", dontKnow: false },
+      "data.held": { value: "none", dontKnow: false },
+    });
+    const ind = g.consequences.find((c) => c.text.includes("Self-administered"));
+    expect(ind?.sourceKey).toBe("independence.auditor");
+    const ven = g.consequences.find((c) => c.text.includes("supplier of the tool"));
+    expect(ven?.sourceKey).toBe("role.party");
+  });
+});

@@ -74,13 +74,13 @@ export function runAnswerGates(answers: AnswerMap): AnswerGateResult {
         for (const target of q.gates ?? []) blocked[target].push(`${q.key} is unanswered`);
       }
       if (answer?.dontKnow && NOT_ESTABLISHED[q.key] !== undefined) {
-        consequences.push({ kind: "limitation", text: NOT_ESTABLISHED[q.key] });
+        consequences.push({ kind: "limitation", text: NOT_ESTABLISHED[q.key], sourceKey: q.key });
       }
       continue;
     }
     const option = q.options.find((o) => o.value === answer.value);
     for (const c of option?.emits ?? []) {
-      consequences.push(c);
+      consequences.push({ ...c, sourceKey: q.key });
       if (c.kind === "metric_forced" && forcedMetric === null) {
         forcedMetric = c.payload?.metric ?? c.text;
       }
