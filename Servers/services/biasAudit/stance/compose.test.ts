@@ -338,6 +338,12 @@ describe("the out-of-scope variant", () => {
     expect(body).toContain("A. Admin");
   });
 
+  it("lists the customer's note in `quotes` so the renderer can mark it structurally", () => {
+    const sec = section(composeStance(oos), "scope");
+    expect(sec.quotes).toEqual(["One of several inputs, no extra weight."]);
+    expect(sec.body).toContain(`In your words: "${sec.quotes![0]}"`);
+  });
+
   it("does not read as a clearance", () => {
     const all = composeStance(oos)
       .sections.map((x) => x.body)

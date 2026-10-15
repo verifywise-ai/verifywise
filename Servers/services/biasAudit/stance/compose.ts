@@ -24,6 +24,12 @@ export interface StanceSection {
   key: string;
   title: string;
   body: string;
+  /**
+   * Customer-authored notes quoted verbatim in `body` as `In your words: "..."`.
+   * The renderer puts each in a marked element that the vocabulary lint skips,
+   * so the customer's words are never altered and everything else is linted.
+   */
+  quotes?: string[];
 }
 
 export interface StanceModel {
@@ -310,7 +316,20 @@ function listBody(items: string[]): string {
   return items.length === 0 ? "None recorded." : items.map((i) => `- ${i}`).join("\n");
 }
 
+/** Notes quoted in a section body, found by the exact text vetoBlock wrote. */
+function withQuotes(args: ComposeStanceArgs, section: StanceSection): StanceSection {
+  const quotes = Object.values(args.answers)
+    .map((a) => a.notes)
+    .filter((n): n is string => !!n && section.body.includes(`In your words: "${n}"`));
+  return quotes.length > 0 ? { ...section, quotes: [...new Set(quotes)] } : section;
+}
+
 export function composeStance(args: ComposeStanceArgs): StanceModel {
+  const model = composeSections(args);
+  return { ...model, sections: model.sections.map((s) => withQuotes(args, s)) };
+}
+
+function composeSections(args: ComposeStanceArgs): StanceModel {
   const scope = args.readiness.scope;
   const openItems = openItemsOf(args, scope);
   const sections: StanceSection[] = [];
