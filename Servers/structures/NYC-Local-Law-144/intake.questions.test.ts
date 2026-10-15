@@ -94,6 +94,7 @@ describe("scope short-circuit", () => {
     expect(q.options.map((o) => o.value)).toEqual(
       expect.arrayContaining(["only", "biggest", "one_of_several"]),
     );
+    expect(q.options.map((o) => o.value)).toContain("overrules");
   });
 
   it("makes every non-veto question conditional on scope not being out", () => {

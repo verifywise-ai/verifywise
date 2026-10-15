@@ -16,7 +16,7 @@ export interface IntersectionalArgs {
 /**
  * Impact ratios for each combination of the crossed categories.
  *
- * § 5-301(c)(4)(iii) makes the sex × race/ethnicity intersection mandatory,
+ * § 5-301(c) makes the sex × race/ethnicity intersection mandatory,
  * and it is the requirement most often skipped by anyone working from the
  * four-fifths rule rather than the rule text. For LL 144 this is 14 cells.
  *

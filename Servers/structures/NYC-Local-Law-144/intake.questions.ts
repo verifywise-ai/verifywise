@@ -87,12 +87,18 @@ export const LL144_QUESTIONS: IntakeQuestion[] = [
       {
         value: "only",
         label: "It is the only thing looked at",
-        consequence: "This meets the first limb of the 5-300 definition.",
+        consequence: "This describes the first limb of the 5-300 definition.",
       },
       {
         value: "biggest",
         label: "It is the biggest single factor",
-        consequence: "This meets the second limb of the 5-300 definition.",
+        consequence: "This describes the second limb of the 5-300 definition.",
+      },
+      {
+        value: "overrules",
+        label: "It can overrule a person's conclusion",
+        consequence:
+          "This describes the third limb of the 5-300 definition: output used to overrule a conclusion a person reached.",
       },
       {
         value: "one_of_several",
@@ -208,9 +214,9 @@ export const LL144_QUESTIONS: IntakeQuestion[] = [
         value: "all_sufficient",
         label: "All of it, for many candidates",
         consequence:
-          "Historical data is required under 5-302(a) where it is sufficient. Example 3 " +
-          "to 5-302 states that an employer holding statistically significant historical " +
-          "data may not rely on a test-data audit.",
+          "Historical data is required under 5-302(a) where it is sufficient; 5-302(b) " +
+          "permits test data only where historical data is insufficient for a " +
+          "statistically significant audit.",
       },
       {
         value: "customers_hold_it",
@@ -484,7 +490,7 @@ export const LL144_QUESTIONS: IntakeQuestion[] = [
       {
         value: "historical",
         label: "Historical applicant data",
-        consequence: "5-302(a) is satisfied directly and no expiry condition attaches.",
+        consequence: "Historical data is the 5-302(a) basis, and no expiry condition attaches.",
       },
       {
         value: "test_volume",
@@ -551,7 +557,7 @@ export const LL144_QUESTIONS: IntakeQuestion[] = [
         label: "Sex, and race or ethnicity",
         consequence:
           "All three required tables can be produced, including the mandatory " +
-          "sex by race/ethnicity intersection under 5-301(c)(4)(iii).",
+          "sex by race/ethnicity intersection under 5-301(c).",
       },
       {
         value: "sex_only",

@@ -29,7 +29,7 @@ result must carry, such as the § 5-301(c) count of records in an unknown catego
 | File                          | Responsibility                                                       |
 | ----------------------------- | -------------------------------------------------------------------- |
 | `engine/categoryTable.ts`     | Rates and impact ratios for one category                             |
-| `engine/intersectional.ts`    | The mandatory sex × race/ethnicity cells, § 5-301(c)(4)(iii)         |
+| `engine/intersectional.ts`    | The mandatory sex × race/ethnicity cells, § 5-301(c)                 |
 | `engine/impactRatios.ts`      | Exclusion, ratio and flag pass shared by both tables                 |
 | `engine/scoringRate.ts`       | The § 5-301(c) median rule, plus degenerate-median detection         |
 | `engine/fairnessMetrics.ts`   | Confusion-matrix metrics                                             |

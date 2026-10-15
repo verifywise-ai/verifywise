@@ -16,7 +16,7 @@ describe("computeIntersectionalTable against the Python oracle", () => {
     rateOf: (r) => Boolean(r.selected),
   });
 
-  it("produces the mandatory 14 cells required by 5-301(c)(4)(iii)", () => {
+  it("produces the mandatory 14 cells required by 5-301(c)", () => {
     expect(table.rows).toHaveLength(14);
     expect(want.rows).toHaveLength(14);
   });
