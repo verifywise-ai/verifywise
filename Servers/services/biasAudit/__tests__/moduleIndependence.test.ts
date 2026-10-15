@@ -4,6 +4,11 @@ import path from "node:path";
 
 const MODULE = path.resolve(__dirname, "..");
 const SELF = path.resolve(__filename);
+const SERVICES = path.resolve(MODULE, "..");
+// The question set is this module's own data: the intake types and questions
+// live beside the other LL 144 structure files, and the module cannot work
+// without them, so an import resolving into this directory counts as inside.
+const QUESTION_SET = path.resolve(MODULE, "../../structures/NYC-Local-Law-144");
 
 /** Every .ts file in the module, tests and fixtures included. */
 function allTsFiles(): string[] {
@@ -40,6 +45,24 @@ describe("module independence", () => {
     expect(offenders).toEqual([]);
   });
 
+  it("imports no sibling service other than biasAudit", () => {
+    // Amendment N: services/intakeFormLogic and its siblings are other modules.
+    // Checked both by literal path and by where a relative import resolves.
+    const sibling = /from\s+["'][^"']*services\/(?!biasAudit\b)\w/;
+    const offenders: string[] = [];
+    for (const f of files) {
+      const src = fs.readFileSync(f, "utf8");
+      if (sibling.test(src)) offenders.push(`${path.relative(MODULE, f)}: services/ path`);
+      for (const m of src.matchAll(/(?:from|import)\s+["'](\.[^"']*)["']/g)) {
+        const target = path.resolve(path.dirname(f), m[1]);
+        if (target.startsWith(SERVICES + path.sep) && !target.startsWith(MODULE + path.sep)) {
+          offenders.push(`${path.relative(MODULE, f)}: ${m[1]}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
   it("imports nothing from outside this module, not even node builtins", () => {
     // Plan 1 is pure computation: every import is relative and resolves
     // inside this directory. A relative path that climbs out ("../../utils")
@@ -49,8 +72,10 @@ describe("module independence", () => {
       const src = fs.readFileSync(f, "utf8");
       for (const m of src.matchAll(/(?:from|import)\s+["']([^"']+)["']/g)) {
         const spec = m[1];
+        const target = spec.startsWith(".") ? path.resolve(path.dirname(f), spec) : "";
         const inside =
-          spec.startsWith(".") && path.resolve(path.dirname(f), spec).startsWith(MODULE + path.sep);
+          target !== "" &&
+          (target.startsWith(MODULE + path.sep) || target.startsWith(QUESTION_SET + path.sep));
         if (!inside) offenders.push(`${path.relative(MODULE, f)}: ${spec}`);
       }
     }
