@@ -160,4 +160,92 @@ describe("createRun", () => {
     expect(stored()).toHaveProperty("readinessScore");
     expect(stored()).toHaveProperty("readinessBlockedReason");
   });
+
+  it("counts blank-demographic rows in the result's unknown count", async () => {
+    const rows = ["gender,race,outcome"];
+    for (let i = 0; i < 200; i++) {
+      rows.push(`${i % 2 ? "Male" : "Female"},${i % 3 ? "White" : "Asian"},${i % 5 < 2 ? 1 : 0}`);
+    }
+    rows.push(",White,1", "Male,,0");
+    const out = await run({ csv: rows.join("\n") + "\n" });
+    expect(out.outcome.result?.unknownCount).toBe(2);
+  });
+
+  it("stores a stop naming the mapping when the outcome key is not mapped at all", async () => {
+    await run({ mapping: { sex: "gender", race_ethnicity: "race" } });
+    expect(stored().resultJson).toBeNull();
+    const f = stored().gateFindingsJson.find(
+      (x: { code: string }) => x.code === "mapping_outcome_key_absent",
+    );
+    expect(f.severity).toBe("stop");
+    expect(f.message).toContain('"selected"');
+    expect(f.message).toMatch(/mapping/i);
+  });
+
+  it("does not tell an out-of-scope profile to answer a question it is never shown", async () => {
+    utils.getProfileAnswersQuery.mockResolvedValue(
+      ANSWERS.map((a) =>
+        a.question_key === "scope.weighting" ? ans("scope.weighting", "one_of_several") : a,
+      ),
+    );
+    const err = await run().catch((e: Error) => e);
+    expect(err.message).toMatch(/outside the rule's scope/i);
+    expect(err.message).not.toMatch(/answer cutoff/i);
+  });
+});
+
+describe("createRun, scoring rate", () => {
+  const PERSON = ANSWERS.map((a) =>
+    a.question_key === "cutoff.applied_by" ? ans("cutoff.applied_by", "person") : a,
+  );
+  const SCORE_MAPPING = { sex: "gender", race_ethnicity: "race", score: "s" };
+  const scoreCsv = (bad = false) => {
+    const rows = ["gender,race,s"];
+    for (let i = 0; i < 300; i++) {
+      rows.push(
+        `${i % 2 ? "Male" : "Female"},${i % 3 ? "White" : "Asian"},${bad && i === 0 ? "n/a" : ((i * 7) % 100) / 10}`,
+      );
+    }
+    return rows.join("\n") + "\n";
+  };
+
+  it("runs end to end on a score column and stores a result", async () => {
+    utils.getProfileAnswersQuery.mockResolvedValue([
+      ...PERSON,
+      ans("threshold.operational", "stated"),
+    ]);
+    const out = await run({ csv: scoreCsv(), mapping: SCORE_MAPPING });
+    expect(stored().metric).toBe("scoring_rate");
+    expect(out.outcome.gates.mayComputeRatios).toBe(true);
+    expect(stored().resultJson).not.toBeNull();
+    expect(stored().resultJson.metric).toBe("scoring_rate");
+    expect(stored().resultJson.totalApplicants).toBe(300);
+  });
+
+  it("accepts the score key and refuses the selected key for a scoring run", async () => {
+    utils.getProfileAnswersQuery.mockResolvedValue([
+      ...PERSON,
+      ans("threshold.operational", "stated"),
+    ]);
+    await expect(
+      run({ csv: scoreCsv(), mapping: { ...SCORE_MAPPING, selected: "s" } }),
+    ).rejects.toThrow(/not a column the module reads/i);
+  });
+
+  it("stores a stop when the operational cutoff is unanswered", async () => {
+    utils.getProfileAnswersQuery.mockResolvedValue(PERSON);
+    await run({ csv: scoreCsv(), mapping: SCORE_MAPPING });
+    expect(stored().resultJson).toBeNull();
+    expect(JSON.stringify(stored().gateFindingsJson)).toContain("answers_withhold_scoring_rate");
+  });
+
+  it("stores a stop when score values are unreadable", async () => {
+    utils.getProfileAnswersQuery.mockResolvedValue([
+      ...PERSON,
+      ans("threshold.operational", "stated"),
+    ]);
+    await run({ csv: scoreCsv(true), mapping: SCORE_MAPPING });
+    expect(stored().resultJson).toBeNull();
+    expect(JSON.stringify(stored().gateFindingsJson)).toContain("score_values_unreadable");
+  });
 });

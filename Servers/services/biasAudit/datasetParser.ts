@@ -29,6 +29,8 @@ export interface ParsedDataset {
   mappingErrors: string[];
   /** Outcome cells that were neither blank nor a recognised yes/no value. */
   unreadableOutcomeCount: number;
+  /** Score cells that were neither blank nor a number. */
+  unreadableScoreCount: number;
 }
 
 const TRUE_WORDS = new Set(["1", "true", "yes", "y", "t"]);
@@ -62,6 +64,12 @@ function readCsv(text: string): string[][] {
       row = [];
     } else field += ch;
   }
+  if (quoted) {
+    throw new DatasetParseError(
+      "A quoted value is never closed, so the rest of the file would be read as one value. " +
+        "Check the file for a stray quotation mark.",
+    );
+  }
   if (field !== "" || row.length > 0) {
     row.push(field);
     rows.push(row);
@@ -94,6 +102,7 @@ export function parseDataset(csv: string, mapping: Record<string, string>): Pars
   }
 
   let unreadableOutcomeCount = 0;
+  let unreadableScoreCount = 0;
   const records: AuditRecord[] = dataRows.map((cells) => {
     const record: AuditRecord = {};
     for (const [key, at] of index) {
@@ -108,10 +117,11 @@ export function parseDataset(csv: string, mapping: Record<string, string>): Pars
       } else if (key === RECORD_KEYS.score) {
         const n = raw === "" ? NaN : Number(raw);
         record[key] = Number.isFinite(n) ? n : null;
+        if (raw !== "" && !Number.isFinite(n)) unreadableScoreCount++;
       } else record[key] = raw;
     }
     return record;
   });
 
-  return { records, headers, mappingErrors, unreadableOutcomeCount };
+  return { records, headers, mappingErrors, unreadableOutcomeCount, unreadableScoreCount };
 }

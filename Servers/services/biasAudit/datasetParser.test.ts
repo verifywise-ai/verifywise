@@ -85,4 +85,16 @@ describe("parseDataset", () => {
   it("rejects a header-only file", () => {
     expect(() => parseDataset("a,b,c\n", {})).toThrow(/no rows/i);
   });
+
+  it("rejects a file whose quoted value is never closed", () => {
+    expect(() => parseDataset('gender,outcome\nMale,"1\nFemale,0\n', {})).toThrow(/never closed/i);
+  });
+
+  it("counts score cells that are neither blank nor numeric", () => {
+    const out = parseDataset("gender,s\nMale,0.7\nMale,abc\nMale,\n", {
+      sex: "gender",
+      score: "s",
+    });
+    expect(out.unreadableScoreCount).toBe(1);
+  });
 });

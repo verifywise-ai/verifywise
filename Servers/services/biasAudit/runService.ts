@@ -20,6 +20,7 @@ import {
   getProfileAnswersQuery,
 } from "../../utils/biasAudit.utils";
 import type { AnswerMap } from "./applicability";
+import { applicableQuestions } from "./applicability";
 import { runAnswerGates } from "./answerGates";
 import { deriveBasis } from "./deriveBasis";
 import { computeReadiness, type ReadinessResult } from "./readinessScore";
@@ -123,6 +124,14 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
   const answerGates = runAnswerGates(answers);
 
   if (!isRunMetric(answerGates.forcedMetric)) {
+    const cutoffShown = applicableQuestions(answers).some((q) => q.key === "cutoff.applied_by");
+    if (!cutoffShown) {
+      throw new ValidationException(
+        "The attested profile records this tool as outside the rule's scope, so the module " +
+          "does not run its measures against it.",
+        "scope.weighting",
+      );
+    }
     throw new ValidationException(
       "The cutoff answer in the attested profile does not establish which metric applies " +
         "(selection rate or scoring rate), so a run cannot be started. Answer cutoff.applied_by " +
@@ -159,6 +168,17 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
   const config: BiasAuditConfig = { ...LL144_CONFIG, metric };
 
   const blockers: GateFinding[] = [];
+  const outcomeKey = metric === "scoring_rate" ? RECORD_KEYS.score : RECORD_KEYS.selected;
+  if (!(outcomeKey in mapping)) {
+    blockers.push(
+      stop(
+        "mapping_outcome_key_absent",
+        `The column mapping has no entry for "${outcomeKey}", which this run needs. ` +
+          `Map "${outcomeKey}" to a column of the file; the file itself may be fine.`,
+        { key: outcomeKey },
+      ),
+    );
+  }
   for (const message of parsed.mappingErrors) {
     blockers.push(stop("mapping_column_absent", message));
   }
@@ -170,6 +190,25 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
           `yes/no value (1, 0, true, false, yes, no), so selection rates would be wrong. Fix the ` +
           `outcome column or the mapping and upload again.`,
         { count: parsed.unreadableOutcomeCount },
+      ),
+    );
+  }
+  if (parsed.unreadableScoreCount > 0) {
+    blockers.push(
+      stop(
+        "score_values_unreadable",
+        `${parsed.unreadableScoreCount} score value(s) are neither blank nor a number, so the ` +
+          `scoring rate would be wrong. Fix the score column or the mapping and upload again.`,
+        { count: parsed.unreadableScoreCount },
+      ),
+    );
+  }
+  if (metric === "scoring_rate" && !answerGates.mayComputeScoringRate) {
+    blockers.push(
+      stop(
+        "answers_withhold_scoring_rate",
+        `The profile answers withhold the scoring rate: ${answerGates.blocked.scoring_rate.join("; ")}.`,
+        { blocked: answerGates.blocked.scoring_rate },
       ),
     );
   }
