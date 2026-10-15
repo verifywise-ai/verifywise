@@ -25,11 +25,23 @@ export interface StanceSection {
   title: string;
   body: string;
   /**
-   * Customer-authored notes quoted verbatim in `body` as `In your words: "..."`.
-   * The renderer puts each in a marked element that the vocabulary lint skips,
-   * so the customer's words are never altered and everything else is linted.
+   * Customer-authored strings that appear verbatim in `body`: answer notes,
+   * the tool name and the names of the people who answered. The renderer
+   * puts each in one structural marker that the vocabulary lint skips, so
+   * the customer's words are never altered and everything else is linted.
    */
-  quotes?: string[];
+  customerText?: CustomerSpan[];
+}
+
+/**
+ * A customer-authored string and the exact text around it in the body. The
+ * renderer finds `lead + text + tail` and marks only `text`, so a short note
+ * such as "No" is never marked inside some other word.
+ */
+export interface CustomerSpan {
+  lead: string;
+  text: string;
+  tail: string;
 }
 
 export interface StanceModel {
@@ -316,17 +328,32 @@ function listBody(items: string[]): string {
   return items.length === 0 ? "None recorded." : items.map((i) => `- ${i}`).join("\n");
 }
 
-/** Notes quoted in a section body, found by the exact text vetoBlock wrote. */
-function withQuotes(args: ComposeStanceArgs, section: StanceSection): StanceSection {
-  const quotes = Object.values(args.answers)
-    .map((a) => a.notes)
-    .filter((n): n is string => !!n && section.body.includes(`In your words: "${n}"`));
-  return quotes.length > 0 ? { ...section, quotes: [...new Set(quotes)] } : section;
+/** Customer-authored strings in a section body, found by the exact text this file wrote. */
+function withCustomerText(args: ComposeStanceArgs, section: StanceSection): StanceSection {
+  const candidates: CustomerSpan[] = [];
+  for (const a of Object.values(args.answers)) {
+    if (a.notes) candidates.push({ lead: `In your words: "`, text: a.notes, tail: `"` });
+  }
+  for (const author of Object.values(args.answerAuthors)) {
+    if (author.user) {
+      candidates.push({ lead: "Answered by ", text: author.user, tail: ` on ${author.date}.` });
+    }
+  }
+  if (args.projectName) candidates.push({ lead: "Tool: ", text: args.projectName, tail: "." });
+
+  const seen = new Set<string>();
+  const found = candidates.filter((c) => {
+    const id = `${c.lead}\u0000${c.text}\u0000${c.tail}`;
+    if (seen.has(id) || !section.body.includes(c.lead + c.text + c.tail)) return false;
+    seen.add(id);
+    return true;
+  });
+  return found.length > 0 ? { ...section, customerText: found } : section;
 }
 
 export function composeStance(args: ComposeStanceArgs): StanceModel {
   const model = composeSections(args);
-  return { ...model, sections: model.sections.map((s) => withQuotes(args, s)) };
+  return { ...model, sections: model.sections.map((s) => withCustomerText(args, s)) };
 }
 
 function composeSections(args: ComposeStanceArgs): StanceModel {

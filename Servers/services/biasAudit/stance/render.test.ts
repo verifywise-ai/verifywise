@@ -1,4 +1,5 @@
 const utils = {
+  getRunProjectIdQuery: jest.fn(),
   createStanceQuery: jest.fn(),
   getNextStanceVersionQuery: jest.fn(),
 };
@@ -25,7 +26,11 @@ import * as renderModule from "./render";
 const model: any = {
   heading: "Bias testing result",
   scope: "in_scope",
-  sections: REQUIRED_SECTIONS.map((k) => ({ key: k, title: k, body: `body of ${k}` })),
+  sections: [...REQUIRED_SECTIONS, "readiness"].map((k) => ({
+    key: k,
+    title: k,
+    body: `body of ${k}`,
+  })),
   blankFields: [
     { field: "distribution_date", instruction: "To be completed by the deploying employer." },
   ],
@@ -59,6 +64,7 @@ beforeEach(() => {
     }),
     close: jest.fn(),
   });
+  utils.getRunProjectIdQuery.mockResolvedValue(7);
 });
 
 describe("checkSections", () => {
@@ -87,17 +93,24 @@ describe("renderStanceHtml", () => {
   it("emits a section per key, the blank fields and the not-an-audit footer", () => {
     const html = renderStanceHtml(model, evidence);
     expect(checkSections(html).ok).toBe(true);
-    expect(html).toContain("distribution_date");
+    expect(html).toContain("Distribution date");
+    expect(html).not.toContain("distribution_date");
     expect(html).toContain("To be completed by the deploying employer.");
-    expect(html).toMatch(/not a Local Law 144 bias audit/i);
+    expect(html).toContain(
+      "This document is not a Local Law 144 bias audit. It records the answers given and the figures computed from the file supplied, as given. The scope determination belongs to the party that answered.",
+    );
   });
 
   it("shows the dataset hash and what was tested", () => {
     const html = renderStanceHtml(model, evidence);
     expect(html).toContain("a".repeat(64));
     expect(html).toContain("1234");
-    expect(html).toContain("selection_rate");
-    expect(html).toContain("0.80");
+    expect(html).toContain("Selection rate");
+    expect(html).not.toContain("selection_rate");
+    expect(html).not.toContain("nyc_ll144");
+    expect(html).toContain("New York City Local Law 144");
+    expect(html).toContain("0.80 (EEOC four-fifths convention; the statute does not adopt it)");
+    expect(html).toContain("2% (§ 5-301(d))");
     expect(html).toContain("Race and ethnicity");
     expect(html).toMatch(/not retained/i);
   });
@@ -125,7 +138,9 @@ describe("customer quotes and the vocabulary lint", () => {
         ? {
             ...s,
             body: `Question: Q\nAnswer: A.\nIn your words: "We were audited last year"\nAnswered by U on 2026-10-01.`,
-            quotes: ["We were audited last year"],
+            customerText: [
+              { lead: `In your words: "`, text: "We were audited last year", tail: `"` },
+            ],
           }
         : s,
     ),
@@ -133,7 +148,7 @@ describe("customer quotes and the vocabulary lint", () => {
 
   it("renders a customer note verbatim in a marked element, and the lint skips it", () => {
     const html = renderStanceHtml(quoted, evidence);
-    expect(html).toMatch(/<blockquote data-customer-quote[^>]*>[^<]*We were audited last year/);
+    expect(html).toMatch(/<span data-customer-text>We were audited last year/);
     expect(findForbiddenWords(html)).toEqual([]);
   });
 
@@ -188,6 +203,12 @@ describe("renderStancePdf", () => {
     expect(launch).not.toHaveBeenCalled();
   });
 
+  it("refuses to render a PDF without evidence, before launching a browser", async () => {
+    await expect(renderStancePdf(model, undefined as any)).rejects.toThrow(/evidence/i);
+    await expect(renderStancePdf(model, null as any)).rejects.toThrow(/evidence/i);
+    expect(launch).not.toHaveBeenCalled();
+  });
+
   it("accepts the narrower section list of an out-of-scope determination", async () => {
     const out = {
       ...model,
@@ -196,7 +217,7 @@ describe("renderStancePdf", () => {
         ["scope", "party", "open_items", "expiry"].includes(s.key),
       ),
     };
-    await expect(renderStancePdf(out)).resolves.toBeDefined();
+    await expect(renderStancePdf(out, evidence)).resolves.toBeDefined();
   });
 
   it("closes the browser even when the PDF step fails", async () => {
@@ -289,11 +310,156 @@ describe("persistStance immutability", () => {
     await expect(persistStance(base as any)).rejects.toMatchObject({ name: "ConflictException" });
   });
 
+  it("refuses to persist without evidence and writes nothing", async () => {
+    await expect(persistStance({ ...base, evidence: undefined } as any)).rejects.toThrow(
+      /evidence/i,
+    );
+    expect(uploadFile).not.toHaveBeenCalled();
+  });
+
+  it("reads the run's project, scoped to the organization, and files the PDF under it", async () => {
+    utils.getRunProjectIdQuery.mockResolvedValue(7);
+    utils.getNextStanceVersionQuery.mockResolvedValue(1);
+    utils.createStanceQuery.mockResolvedValue({ id: 9, version: 1 });
+    await persistStance(base as any);
+    expect(utils.getRunProjectIdQuery).toHaveBeenCalledWith(11, 42);
+    expect(uploadFile.mock.calls[0][2]).toBe(7);
+  });
+
+  it("refuses a project id that does not match the run, before rendering or writing", async () => {
+    utils.getRunProjectIdQuery.mockResolvedValue(8);
+    await expect(persistStance(base as any)).rejects.toThrow(/project/i);
+    expect(launch).not.toHaveBeenCalled();
+    expect(uploadFile).not.toHaveBeenCalled();
+    expect(utils.createStanceQuery).not.toHaveBeenCalled();
+  });
+
   it("does not write anything when the gates forbid export", async () => {
     await expect(
       persistStance({ ...base, evidence: { ...evidence, mayExportPdf: false } } as any),
     ).rejects.toThrow(/export/i);
     expect(uploadFile).not.toHaveBeenCalled();
     expect(utils.createStanceQuery).not.toHaveBeenCalled();
+  });
+});
+
+describe("customer-authored text", () => {
+  const withScope = (body: string, customerText: any[]) => ({
+    ...model,
+    sections: model.sections.map((s: any) =>
+      s.key === "scope" ? { ...s, body, customerText } : s,
+    ),
+  });
+
+  it("renders a project named with a forbidden word, verbatim inside the marker", async () => {
+    const m = withScope("Tool: Certified Candidate Ranker.", [
+      { lead: "Tool: ", text: "Certified Candidate Ranker", tail: "." },
+    ]);
+    const html = renderStanceHtml(m, evidence);
+    expect(html).toContain("<span data-customer-text>Certified Candidate Ranker</span>");
+    expect(findForbiddenWords(html)).toEqual([]);
+    await expect(renderStancePdf(m, evidence)).resolves.toBeDefined();
+  });
+
+  it("marks the attestation user's name", async () => {
+    const m = { ...model, attestation: { user: "Passed Admin", date: "2026-10-14" } };
+    const html = renderStanceHtml(m, evidence);
+    expect(html).toContain("<span data-customer-text>Passed Admin</span>");
+    await expect(renderStancePdf(m, evidence)).resolves.toBeDefined();
+  });
+
+  it("marks an answer author's name", () => {
+    const m = withScope("Answered by Certified Cara on 2026-10-01.", [
+      { lead: "Answered by ", text: "Certified Cara", tail: " on 2026-10-01." },
+    ]);
+    expect(renderStanceHtml(m, evidence)).toContain(
+      "<span data-customer-text>Certified Cara</span>",
+    );
+  });
+
+  it("marks both strings when the list order is the reverse of the body order", () => {
+    const m = withScope('Tool: Alpha.\nIn your words: "Bravo"\nAnswered by Cy on d.', [
+      { lead: "Answered by ", text: "Cy", tail: " on d." },
+      { lead: `In your words: "`, text: "Bravo", tail: `"` },
+      { lead: "Tool: ", text: "Alpha", tail: "." },
+    ]);
+    const html = renderStanceHtml(m, evidence);
+    const a = html.indexOf("<span data-customer-text>Alpha</span>");
+    const b = html.indexOf("<span data-customer-text>Bravo</span>");
+    const c = html.indexOf("<span data-customer-text>Cy</span>");
+    expect(a).toBeGreaterThan(-1);
+    expect(b).toBeGreaterThan(a);
+    expect(c).toBeGreaterThan(b);
+  });
+
+  it("keeps a note with a closing tag and a script inside the marker, escaped and exempt", () => {
+    const note = "</blockquote></span><script>alert(1)</script> certified";
+    const m = withScope(`In your words: "${note}"`, [
+      { lead: `In your words: "`, text: note, tail: `"` },
+    ]);
+    const html = renderStanceHtml(m, evidence);
+    expect(html).not.toContain("<script>alert(1)");
+    expect(html).toContain(
+      "<span data-customer-text>&lt;/blockquote&gt;&lt;/span&gt;&lt;script&gt;alert(1)&lt;/script&gt; certified</span>",
+    );
+    expect(findForbiddenWords(html)).toEqual([]);
+  });
+
+  it("does not let our own text forge the marker", () => {
+    const m = withScope("<span data-customer-text>certified</span>", []);
+    const html = renderStanceHtml(m, evidence);
+    expect(html).not.toContain("<span data-customer-text>certified</span>");
+    expect(findForbiddenWords(html)).toEqual(["certified"]);
+  });
+});
+
+describe("the vocabulary lint matches whole words", () => {
+  const lint = (body: string) =>
+    findForbiddenWords(
+      renderStanceHtml(
+        {
+          ...model,
+          sections: model.sections.map((s: any) => (s.key === "results" ? { ...s, body } : s)),
+        },
+        evidence,
+      ),
+    );
+
+  it("does not flag words that merely contain a forbidden word", () => {
+    expect(lint("The test was bypassed. The tool is uncertified. Surpassed.")).toEqual([]);
+  });
+
+  it("still flags the words themselves, including the hyphenated one", () => {
+    expect(lint("It passed.")).toEqual(["passed"]);
+    expect(lint("It is bias-free.")).toEqual(["bias-free"]);
+    expect(lint("Non-compliant, Audited!")).toEqual(["compliant", "audited"]);
+  });
+});
+
+describe("customer-visible labels", () => {
+  it("prints a customer-set reference line without claiming the convention", () => {
+    const html = renderStanceHtml(model, { ...evidence, thresholdSource: "customer" });
+    expect(html).not.toContain("EEOC");
+    expect(html).toContain("0.80 (source recorded as customer)");
+  });
+
+  it("says when the source or the exclusion is not recorded", () => {
+    const html = renderStanceHtml(model, {
+      ...evidence,
+      thresholdSource: null,
+      smallSampleExclusion: null,
+    });
+    expect(html).toContain("0.80 (source not recorded)");
+    expect(html).toContain("Small-sample exclusion</dt><dd>not recorded");
+  });
+
+  it("never prints the slug of an unknown preset or metric", () => {
+    const html = renderStanceHtml(model, {
+      ...evidence,
+      presetId: "some_preset",
+      metric: "odd_rate",
+    });
+    expect(html).toContain("Some preset");
+    expect(html).toContain("Odd rate");
   });
 });

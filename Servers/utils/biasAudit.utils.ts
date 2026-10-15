@@ -402,6 +402,20 @@ export async function createStanceQuery(
   return row;
 }
 
+/** The project a run belongs to, within the organization. Refuses a run outside it. */
+export async function getRunProjectIdQuery(runId: number, organizationId: number): Promise<number> {
+  const rows = (await sequelize.query(
+    `SELECT project_id FROM bias_audit_runs
+      WHERE id = :run_id AND organization_id = :organization_id`,
+    {
+      replacements: { run_id: runId, organization_id: organizationId },
+      type: QueryTypes.SELECT,
+    },
+  )) as Array<{ project_id: number }>;
+  if (rows.length === 0) refuseCrossOrg("Run", runId);
+  return rows[0].project_id;
+}
+
 /**
  * Next stance version for a run. A regenerate always gets a new version and
  * never overwrites. Not a uniqueness guarantee once a run is deleted

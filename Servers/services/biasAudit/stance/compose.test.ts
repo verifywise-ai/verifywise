@@ -338,10 +338,14 @@ describe("the out-of-scope variant", () => {
     expect(body).toContain("A. Admin");
   });
 
-  it("lists the customer's note in `quotes` so the renderer can mark it structurally", () => {
+  it("lists the customer's note in `customerText` so the renderer can mark it structurally", () => {
     const sec = section(composeStance(oos), "scope");
-    expect(sec.quotes).toEqual(["One of several inputs, no extra weight."]);
-    expect(sec.body).toContain(`In your words: "${sec.quotes![0]}"`);
+    expect(sec.customerText).toContainEqual({
+      lead: `In your words: "`,
+      text: "One of several inputs, no extra weight.",
+      tail: `"`,
+    });
+    expect(sec.body).toContain(`In your words: "One of several inputs, no extra weight."`);
   });
 
   it("does not read as a clearance", () => {
@@ -460,6 +464,31 @@ describe("fix round 1", () => {
     expect(s.openItems.join(" ")).not.toContain("scope.weighting");
     expect(s.openItems.join(" ")).toMatch(/weigh|look|output/i);
     expect(section(s, "scope").body).toContain("a required answer is missing");
+  });
+});
+
+describe("customer-authored text is listed for marking", () => {
+  it("lists the tool name and the answering user beside each veto, with their surroundings", () => {
+    const sec = section(composeStance(base), "scope");
+    expect(sec.customerText).toContainEqual({ lead: "Tool: ", text: "Screening tool", tail: "." });
+    expect(sec.customerText).toContainEqual({
+      lead: "Answered by ",
+      text: "A. Admin",
+      tail: " on 2026-10-11.",
+    });
+  });
+
+  it("lists the note in the party section too", () => {
+    const sec = section(composeStance(base), "party");
+    expect(sec.customerText?.map((c) => c.text)).toEqual([
+      "We supply it to staffing agencies.",
+      "E. Editor",
+    ]);
+  });
+
+  it("never alters the customer's text", () => {
+    const m = composeStance({ ...base, projectName: "Certified Candidate Ranker" });
+    expect(section(m, "scope").body).toContain("Tool: Certified Candidate Ranker.");
   });
 });
 
