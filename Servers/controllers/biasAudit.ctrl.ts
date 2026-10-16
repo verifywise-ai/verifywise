@@ -296,7 +296,10 @@ export async function downloadStance(req: Request, res: Response): Promise<Respo
   logProcessing({ ...log, description: "starting downloadStance" });
   try {
     const stanceId = positiveInt(req.params.id, "id");
-    const pdf = await getStanceDownload(stanceId, req.organizationId!);
+    const pdf = await getStanceDownload(stanceId, req.organizationId!, {
+      userId: req.userId!,
+      role: req.role ?? "",
+    });
     await logSuccess({ ...log, eventType: "Read", description: `Downloaded stance ${stanceId}` });
     const safeName = pdf.filename.replace(/[^\w.-]/g, "_");
     res.setHeader("Content-Type", "application/pdf");
@@ -311,7 +314,7 @@ export async function downloadStance(req: Request, res: Response): Promise<Respo
       error: error as Error,
     });
     if (isCustomException(error)) {
-      const status = error.statusCode as 400 | 404 | 409 | 410;
+      const status = error.statusCode as 400 | 404 | 409 | 410 | 422;
       return res.status(status).json(STATUS_CODE[status](error.message));
     }
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));

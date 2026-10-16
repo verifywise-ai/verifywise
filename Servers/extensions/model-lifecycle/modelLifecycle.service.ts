@@ -1,5 +1,6 @@
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
+import { BIAS_AUDIT_STANCE_SOURCE } from "../../utils/fileUpload.utils";
 
 /**
  * DB helpers for the model-lifecycle extension.
@@ -536,10 +537,12 @@ export async function detachFile(
         );`,
     { replacements: { organizationId, fileId, modelId, itemId } },
   );
-  // Hard-delete the file so we don't accumulate orphans.
+  // Hard-delete the file so we don't accumulate orphans. A bias audit stance
+  // PDF can be attached by id but is never deleted here: the stance cites it.
   await sequelize.query(
-    `DELETE FROM files WHERE organization_id = :organizationId AND id = :fileId;`,
-    { replacements: { organizationId, fileId } },
+    `DELETE FROM files WHERE organization_id = :organizationId AND id = :fileId
+        AND source IS DISTINCT FROM :stanceSource;`,
+    { replacements: { organizationId, fileId, stanceSource: BIAS_AUDIT_STANCE_SOURCE } },
   );
 }
 
@@ -673,8 +676,10 @@ async function unlinkAndDeleteFiles(
   })) as Array<{ file_id: number }>;
   if (linked.length === 0) return;
   const fileIds = linked.map((r) => r.file_id);
+  // A bias audit stance PDF attached here is unlinked but never deleted.
   await sequelize.query(
-    `DELETE FROM files WHERE organization_id = :organizationId AND id IN (:fileIds);`,
-    { replacements: { organizationId, fileIds } },
+    `DELETE FROM files WHERE organization_id = :organizationId AND id IN (:fileIds)
+        AND source IS DISTINCT FROM :stanceSource;`,
+    { replacements: { organizationId, fileIds, stanceSource: BIAS_AUDIT_STANCE_SOURCE } },
   );
 }

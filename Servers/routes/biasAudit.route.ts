@@ -8,10 +8,10 @@
  * confers nothing about independence.
  */
 import express from "express";
+import multer from "multer";
 import path from "path";
 import authenticateJWT from "../middleware/auth.middleware";
 import authorize from "../middleware/accessControl.middleware";
-import { createMemoryUpload } from "../utils/upload.utils";
 import {
   attestProfile,
   confirmDerivedBasis,
@@ -30,11 +30,31 @@ import {
 
 const router = express.Router();
 
+/**
+ * The types browsers and tools actually send for a .csv file. Windows with
+ * Excel installed reports application/vnd.ms-excel; some clients send
+ * text/plain or a generic binary type. The bytes are only parsed in memory,
+ * never stored or served, so the extension plus this list is the whole check.
+ */
+const CSV_MIME_TYPES = new Set([
+  "text/csv",
+  "application/csv",
+  "text/x-csv",
+  "application/vnd.ms-excel",
+  "text/plain",
+  "application/octet-stream",
+]);
+
 // One CSV per run, held in memory only long enough to hash and read it.
-const datasetUpload = createMemoryUpload({
-  fileSize: DATASET_MAX_BYTES,
-  files: 1,
-  accept: (file) => path.extname(file.originalname).toLowerCase() === ".csv",
+const datasetUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: DATASET_MAX_BYTES, files: 1 },
+  fileFilter: (_req, file, cb) => {
+    const isCsv =
+      path.extname(file.originalname).toLowerCase() === ".csv" && CSV_MIME_TYPES.has(file.mimetype);
+    if (isCsv) cb(null, true);
+    else cb(new Error("UNSUPPORTED_FILE_TYPE"));
+  },
 });
 
 router.use(authenticateJWT);

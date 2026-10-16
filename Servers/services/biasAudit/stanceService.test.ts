@@ -88,6 +88,20 @@ describe("generateStance", () => {
     expect(persistStance).not.toHaveBeenCalled();
   });
 
+  it("refuses with 422 when every non-veto answer is don't-know, writing nothing", async () => {
+    // Spec Review Focus 3: nothing to describe, so no stance, not a 0% result.
+    utils.getProfileAnswersQuery.mockResolvedValue([
+      answer("role.party", "vendor"),
+      answer("scope.weighting", "biggest"),
+      answer("independence.auditor", "self"),
+      answer("data.held", "none"),
+      answer("data.basis", null),
+      answer("cutoff.applied_by", null),
+    ]);
+    await expect(generateStance(args)).rejects.toMatchObject({ statusCode: 422 });
+    expect(persistStance).not.toHaveBeenCalled();
+  });
+
   it("composes from the answers of the run's own profile, not the current one", async () => {
     await generateStance(args);
     expect(utils.getProfileByIdQuery).toHaveBeenCalledWith(5, 42);
@@ -157,11 +171,54 @@ describe("generateStance", () => {
 describe("getStanceDownload", () => {
   const pdf = Buffer.from("%PDF-1.4 stance");
   const sha = createHash("sha256").update(pdf).digest("hex");
+  const member = { userId: 9, role: "Editor" };
+  const stored = (access: boolean) => ({
+    id: 3,
+    version: 1,
+    pdf_sha256: sha,
+    pdf_file_id: 77,
+    file_id: 77,
+    filename: "s.pdf",
+    content: pdf,
+    viewer_has_project_access: access,
+  });
 
   it("refuses a stance outside the organization with a not-found", async () => {
     utils.getStanceDownloadQuery.mockResolvedValue(null);
-    await expect(getStanceDownload(3, 42)).rejects.toMatchObject({ statusCode: 404 });
-    expect(utils.getStanceDownloadQuery).toHaveBeenCalledWith(3, 42);
+    await expect(getStanceDownload(3, 42, member)).rejects.toMatchObject({ statusCode: 404 });
+    expect(utils.getStanceDownloadQuery).toHaveBeenCalledWith(3, 42, 9);
+  });
+
+  it.each(["Editor", "Reviewer", "Auditor"])(
+    "refuses a %s outside the stance's project with the same not-found",
+    async (role) => {
+      utils.getStanceDownloadQuery.mockResolvedValue(stored(false));
+      await expect(getStanceDownload(3, 42, { userId: 9, role })).rejects.toMatchObject({
+        statusCode: 404,
+      });
+    },
+  );
+
+  it("refuses a gone PDF to a non-member as not-found, not gone", async () => {
+    utils.getStanceDownloadQuery.mockResolvedValue({
+      ...stored(false),
+      file_id: null,
+      content: null,
+    });
+    await expect(getStanceDownload(3, 42, member)).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("lets an Admin of the organization download without project membership", async () => {
+    utils.getStanceDownloadQuery.mockResolvedValue(stored(false));
+    const out = await getStanceDownload(3, 42, { userId: 1, role: "Admin" });
+    expect(out.sha256).toBe(sha);
+  });
+
+  it("gives SuperAdmin no in-org bypass", async () => {
+    utils.getStanceDownloadQuery.mockResolvedValue(stored(false));
+    await expect(getStanceDownload(3, 42, { userId: 1, role: "SuperAdmin" })).rejects.toMatchObject(
+      { statusCode: 404 },
+    );
   });
 
   it("answers 410 when the stance's file row is gone", async () => {
@@ -173,8 +230,9 @@ describe("getStanceDownload", () => {
       file_id: null,
       filename: null,
       content: null,
+      viewer_has_project_access: true,
     });
-    await expect(getStanceDownload(3, 42)).rejects.toMatchObject({ statusCode: 410 });
+    await expect(getStanceDownload(3, 42, member)).rejects.toMatchObject({ statusCode: 410 });
   });
 
   it("refuses a stored file whose bytes no longer match the recorded hash", async () => {
@@ -186,8 +244,9 @@ describe("getStanceDownload", () => {
       file_id: 77,
       filename: "s.pdf",
       content: pdf,
+      viewer_has_project_access: true,
     });
-    await expect(getStanceDownload(3, 42)).rejects.toMatchObject({ statusCode: 409 });
+    await expect(getStanceDownload(3, 42, member)).rejects.toMatchObject({ statusCode: 409 });
   });
 
   it("returns the PDF bytes with their hash", async () => {
@@ -199,8 +258,9 @@ describe("getStanceDownload", () => {
       file_id: 77,
       filename: "bias-audit-stance-run-11-v2.pdf",
       content: pdf,
+      viewer_has_project_access: true,
     });
-    const out = await getStanceDownload(3, 42);
+    const out = await getStanceDownload(3, 42, member);
     expect(out.content.equals(pdf)).toBe(true);
     expect(out.sha256).toBe(sha);
     expect(out.filename).toBe("bias-audit-stance-run-11-v2.pdf");

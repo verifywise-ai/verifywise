@@ -1,0 +1,46 @@
+/**
+ * A bias audit stance PDF must survive every delete path, not only the file
+ * manager. These cover the paths that delete files rows directly.
+ */
+const mockQuery = jest.fn();
+jest.mock("../../database/db", () => ({
+  sequelize: { query: (...args: any[]) => mockQuery(...args) },
+}));
+
+import { ConflictException } from "../../domain.layer/exceptions/custom.exception";
+import { BIAS_AUDIT_STANCE_SOURCE } from "../fileUpload.utils";
+import { deleteReportByIdQuery } from "../reporting.utils";
+import { detachFile } from "../../extensions/model-lifecycle/modelLifecycle.service";
+
+const tx = {} as any;
+
+beforeEach(() => mockQuery.mockReset());
+
+describe("report delete", () => {
+  it("refuses a stance PDF passed as a report id and deletes nothing", async () => {
+    mockQuery.mockResolvedValueOnce([{ source: BIAS_AUDIT_STANCE_SOURCE }]);
+    await expect(deleteReportByIdQuery(77, 5, tx)).rejects.toBeInstanceOf(ConflictException);
+    const sql = mockQuery.mock.calls.map((c) => c[0] as string);
+    expect(sql.some((s) => s.includes("DELETE"))).toBe(false);
+  });
+
+  it("still deletes a report", async () => {
+    mockQuery
+      .mockResolvedValueOnce([{ source: "Reporting" }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 77 }]);
+    await expect(deleteReportByIdQuery(77, 5, tx)).resolves.toBe(true);
+    expect(mockQuery.mock.calls[2][0]).toContain("DELETE FROM files");
+  });
+});
+
+describe("model lifecycle detach", () => {
+  it("unlinks the file but never deletes a stance PDF", async () => {
+    mockQuery.mockResolvedValue([]);
+    await detachFile(5, 3, 4, 77);
+    const [sql, opts] = mockQuery.mock.calls[1];
+    expect(sql).toContain("DELETE FROM files");
+    expect(sql).toContain("source IS DISTINCT FROM :stanceSource");
+    expect(opts.replacements.stanceSource).toBe(BIAS_AUDIT_STANCE_SOURCE);
+  });
+});

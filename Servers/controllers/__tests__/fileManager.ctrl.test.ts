@@ -249,6 +249,17 @@ describe("fileManager.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(400);
     });
 
+    it("refuses a client-supplied stance source with 400 and writes nothing", async () => {
+      // Only the stance generator may write that source; a client file under
+      // it would be undeletable and pose as a stance record.
+      mockValidateUpload.mockReturnValue({ valid: true });
+      const req = createReq({ file: makeFile(), body: { source: "Bias audit stance report" } });
+      const res = createRes();
+      await uploadFile(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockUploadOrgFile).not.toHaveBeenCalled();
+    });
+
     it("should return 201 on successful upload", async () => {
       mockValidateUpload.mockReturnValue({ valid: true });
       mockUploadOrgFile.mockResolvedValue({

@@ -331,7 +331,11 @@ describe("route reads and the basis confirmation", () => {
     ["runs list", () => listRunsQuery(7, 12, 42), { project_id: 7, framework_id: 12 }],
     ["trend rows", () => listTrendRunsQuery(7, 12, 42), { project_id: 7, framework_id: 12 }],
     ["stances of a run", () => listStancesForRunQuery(11, 42), { run_id: 11 }],
-    ["stance download", () => getStanceDownloadQuery(3, 42), { stance_id: 3 }],
+    [
+      "stance download",
+      () => getStanceDownloadQuery(3, 42, 9),
+      { stance_id: 3, viewer_user_id: 9 },
+    ],
     ["user names", () => getUserNamesQuery([9, 10], 42), { user_ids: [9, 10] }],
   ];
 
@@ -348,7 +352,7 @@ describe("route reads and the basis confirmation", () => {
       () => getProjectQuery(7, 42),
       () => getProfileByIdQuery(5, 42),
       () => getRunQuery(11, 42),
-      () => getStanceDownloadQuery(3, 42),
+      () => getStanceDownloadQuery(3, 42, 9),
     ]) {
       mockQuery.mockResolvedValueOnce([]);
       await expect(call()).resolves.toBeNull();
@@ -368,9 +372,20 @@ describe("route reads and the basis confirmation", () => {
     expect(sql).toMatch(/ap\.framework_id = :framework_id/);
   });
 
+  it("decides project access for the viewer within the organization", async () => {
+    mockQuery.mockResolvedValueOnce([]);
+    await getStanceDownloadQuery(3, 42, 9);
+    const [sql, opts] = mockQuery.mock.calls[0];
+    expect(sql).toMatch(/s\.generated_by = :viewer_user_id/);
+    expect(sql).toMatch(/p\.owner = :viewer_user_id OR pm\.user_id = :viewer_user_id/);
+    expect(sql).toMatch(/p\.organization_id = :organization_id/);
+    expect(sql).toMatch(/pm\.organization_id = :organization_id/);
+    expect(opts.replacements.viewer_user_id).toBe(9);
+  });
+
   it("joins the stance PDF only from the same organization's files", async () => {
     mockQuery.mockResolvedValueOnce([]);
-    await getStanceDownloadQuery(3, 42);
+    await getStanceDownloadQuery(3, 42, 9);
     const [sql] = mockQuery.mock.calls[0];
     expect(sql).toMatch(
       /LEFT JOIN files f ON f\.id = s\.pdf_file_id\s+AND f\.organization_id = :organization_id/,

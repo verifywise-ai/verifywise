@@ -32,6 +32,7 @@ jest.mock("../../utils/statusCode.utils", () => ({
     401: (d: any) => ({ message: "Unauthorized", data: d }),
     403: (d: any) => ({ message: "Forbidden", data: d }),
     404: (d: any) => ({ message: "Not Found", data: d }),
+    409: (d: any) => ({ message: "Conflict", data: d }),
     500: (d: any) => ({ message: "Internal Server Error", data: d }),
   },
 }));
@@ -251,6 +252,22 @@ describe("file.ctrl", () => {
       const res = createRes();
       await postFileContent(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+
+    it("answers 409, not 500, when the delete list names a stance PDF", async () => {
+      mockDeleteFile.mockRejectedValue(
+        Object.assign(new Error("This file is a bias audit stance record and cannot be deleted"), {
+          statusCode: 409,
+        }),
+      );
+      const req = createReq({
+        body: { question_id: "1", project_id: 1, user_id: 1, delete: "[77]" },
+        files: [],
+      });
+      const res = createRes();
+      await postFileContent(req, res);
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(mockUpload).not.toHaveBeenCalled();
     });
   });
 

@@ -16,11 +16,6 @@ export interface MemoryUploadOptions {
   fileSize?: number;
   /** Max number of files per request. Defaults to 10. */
   files?: number;
-  /**
-   * Narrows the accepted types. A file must pass the shared allow-list and,
-   * when given, this check too, so a route can only ever accept less.
-   */
-  accept?: (file: Express.Multer.File) => boolean;
 }
 
 const DEFAULT_FILE_SIZE = 30 * 1024 * 1024; // 30MB
@@ -36,8 +31,7 @@ export function createMemoryUpload(options: MemoryUploadOptions = {}) {
     fileFilter: (_req: Express.Request, file: Express.Multer.File, cb: any) => {
       const allowedExts = ALLOWED_MIME_TYPES[file.mimetype as keyof typeof ALLOWED_MIME_TYPES];
       const ext = path.extname(file.originalname).toLowerCase();
-      const allowed = allowedExts && Array.isArray(allowedExts) && allowedExts.includes(ext);
-      if (allowed && (!options.accept || options.accept(file))) {
+      if (allowedExts && Array.isArray(allowedExts) && allowedExts.includes(ext)) {
         cb(null, true);
       } else {
         cb(new Error("UNSUPPORTED_FILE_TYPE"));

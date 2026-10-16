@@ -3,6 +3,7 @@ import { ProjectsMembersModel } from "../domain.layer/models/projectsMembers/pro
 import { FileModel } from "../domain.layer/models/file/file.model";
 import { QueryTypes, Transaction } from "sequelize";
 import { getVisibleEuCategoryIdsForProject } from "./eu.utils";
+import { assertFileDeletable } from "./fileUpload.utils";
 import { AnnexStructISOModel } from "../domain.layer/frameworks/ISO-42001/annexStructISO.model";
 import { ClauseStructISOModel } from "../domain.layer/frameworks/ISO-42001/clauseStructISO.model";
 import { ISO27001AnnexStructModel } from "../domain.layer/frameworks/ISO-27001/ISO27001AnnexStruct.model";
@@ -123,6 +124,10 @@ export const deleteReportByIdQuery = async (
   organizationId: number,
   transaction: Transaction,
 ) => {
+  // The report delete route loads any file by id, so it must refuse a bias
+  // audit stance PDF like every other delete path.
+  await assertFileDeletable(id, organizationId, transaction);
+
   // Clean up any virtual folder mappings for this file
   await sequelize.query(
     `DELETE FROM file_folder_mappings WHERE organization_id = :organizationId AND file_id = :id`,

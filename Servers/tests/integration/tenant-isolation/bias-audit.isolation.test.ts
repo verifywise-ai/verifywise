@@ -495,7 +495,7 @@ describe("bias audit routes tenant isolation", () => {
       attacker.request.post(`/api/bias-audit/runs/${runId}/stance`),
     ];
     for (const w of writes) {
-      expect([403, 404]).toContain((await w).status);
+      expect((await w).status).toBe(404);
     }
     expect(await snapshot(project)).toEqual(before);
   });

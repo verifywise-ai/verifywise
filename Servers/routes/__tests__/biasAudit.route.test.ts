@@ -151,4 +151,23 @@ describe("dataset upload layer", () => {
     expect(res.status).toBe(415);
     expect(received).not.toHaveBeenCalled();
   });
+
+  it.each(["application/vnd.ms-excel", "text/plain", "application/octet-stream"])(
+    "accepts a .csv sent as %s, as Windows browsers and other clients do",
+    async (contentType) => {
+      const res = await request(app)
+        .post("/runs")
+        .attach("file", Buffer.from("a,b\n1,2\n"), { filename: "d.csv", contentType });
+      expect(res.status).toBe(201);
+    },
+  );
+
+  it("refuses a spreadsheet named .xls even with the Excel type", async () => {
+    const res = await request(app).post("/runs").attach("file", Buffer.from("x"), {
+      filename: "d.xls",
+      contentType: "application/vnd.ms-excel",
+    });
+    expect(res.status).toBe(415);
+    expect(received).not.toHaveBeenCalled();
+  });
 });

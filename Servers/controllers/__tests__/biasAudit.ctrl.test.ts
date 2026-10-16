@@ -379,7 +379,10 @@ describe("downloadStance", () => {
     svc(stanceService.getStanceDownload).mockRejectedValue(new NotFoundException("nope"));
     const { status } = await call(ctrl.downloadStance, mockReq({ params: { id: "3" } }));
     expect(status).toBe(404);
-    expect(stanceService.getStanceDownload).toHaveBeenCalledWith(3, 42);
+    expect(stanceService.getStanceDownload).toHaveBeenCalledWith(3, 42, {
+      userId: 9,
+      role: "Admin",
+    });
   });
 
   it("sends the PDF bytes with their hash", async () => {

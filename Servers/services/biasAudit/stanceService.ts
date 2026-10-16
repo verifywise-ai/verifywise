@@ -11,6 +11,7 @@
  */
 import { createHash } from "node:crypto";
 import {
+  BusinessLogicException,
   ConflictException,
   CustomException,
   NotFoundException,
@@ -81,6 +82,17 @@ export async function generateStance(input: GenerateStanceInput): Promise<Genera
     };
   }
 
+  // Spec Review Focus 3: a profile whose every applicable answer is
+  // "I don't know" describes nothing, so no stance is produced at all
+  // rather than one that reads as a 0% result.
+  const answerGates = runAnswerGates(answers);
+  if (!answerGates.mayProduceStance) {
+    throw new BusinessLogicException(
+      `A stance cannot be generated: ${answerGates.blocked.stance.join("; ")}.`,
+      "stance_answer_gate",
+    );
+  }
+
   const userIds = [
     ...new Set(
       [...rows.map((r) => r.answered_by_user_id), profile.attested_by_user_id].filter(
@@ -117,7 +129,7 @@ export async function generateStance(input: GenerateStanceInput): Promise<Genera
   const model = composeStance({
     projectName: project.project_title,
     readiness,
-    gates: runAnswerGates(answers),
+    gates: answerGates,
     answers,
     answerAuthors,
     result: (run.result_json ?? null) as BiasAuditResult | null,
@@ -162,12 +174,26 @@ export interface StanceDownload {
  * assumed impossible, and its bytes are checked against the hash recorded at
  * generation before they are served.
  */
+export interface StanceViewer {
+  userId: number;
+  role: string;
+}
+
 export async function getStanceDownload(
   stanceId: number,
   organizationId: number,
+  viewer: StanceViewer,
 ): Promise<StanceDownload> {
-  const row = await getStanceDownloadQuery(stanceId, organizationId);
-  if (!row) throw new NotFoundException(`Stance ${stanceId} was not found`, "AedtStance", stanceId);
+  const row = await getStanceDownloadQuery(stanceId, organizationId, viewer.userId);
+  // Project files are readable by the organization's Admins and by the
+  // project's owner and members (canUserAccessFile); a stance PDF follows the
+  // same rule. SuperAdmin is cross-tenant administration, not an in-org
+  // Admin, so it gets no bypass here. A viewer without access gets the same
+  // not-found as a stance in another organization, so its existence is not
+  // disclosed.
+  if (!row || (viewer.role !== "Admin" && !row.viewer_has_project_access)) {
+    throw new NotFoundException(`Stance ${stanceId} was not found`, "AedtStance", stanceId);
+  }
 
   if (row.file_id === null || row.content === null) {
     throw new CustomException(

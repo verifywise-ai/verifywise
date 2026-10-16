@@ -600,6 +600,12 @@ export interface StanceDownloadRow {
   file_id: number | null;
   filename: string | null;
   content: Buffer | null;
+  /**
+   * Whether the viewer owns or is a member of the stance's project, or
+   * generated the stance. The same rule canUserAccessFile applies to project
+   * files; the Admin bypass is applied by the caller from the role.
+   */
+  viewer_has_project_access: boolean;
 }
 
 /**
@@ -609,16 +615,30 @@ export interface StanceDownloadRow {
 export async function getStanceDownloadQuery(
   stanceId: number,
   organizationId: number,
+  viewerUserId: number,
 ): Promise<StanceDownloadRow | null> {
   const rows = (await sequelize.query(
     `SELECT s.id, s.run_id, s.version, s.pdf_sha256, s.pdf_file_id,
-            f.id AS file_id, f.filename, f.content
+            f.id AS file_id, f.filename, f.content,
+            (s.generated_by = :viewer_user_id OR EXISTS (
+               SELECT 1
+                 FROM projects p
+                 LEFT JOIN projects_members pm
+                        ON pm.project_id = p.id AND pm.organization_id = :organization_id
+                WHERE p.id = s.project_id
+                  AND p.organization_id = :organization_id
+                  AND (p.owner = :viewer_user_id OR pm.user_id = :viewer_user_id)
+            )) AS viewer_has_project_access
        FROM bias_audit_stances s
        LEFT JOIN files f ON f.id = s.pdf_file_id
                         AND f.organization_id = :organization_id
       WHERE s.id = :stance_id AND s.organization_id = :organization_id`,
     {
-      replacements: { stance_id: stanceId, organization_id: organizationId },
+      replacements: {
+        stance_id: stanceId,
+        organization_id: organizationId,
+        viewer_user_id: viewerUserId,
+      },
       type: QueryTypes.SELECT,
     },
   )) as StanceDownloadRow[];

@@ -291,6 +291,10 @@ export async function postFileContent(req: RequestWithFile, res: Response): Prom
       organizationId: req.organizationId!,
     });
 
+    // e.g. a delete list naming a bias audit stance PDF, which is never deletable
+    if ((error as { statusCode?: number })?.statusCode === 409) {
+      return res.status(409).json(STATUS_CODE[409](translateError(req, error)));
+    }
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
