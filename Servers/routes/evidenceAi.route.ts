@@ -1,5 +1,7 @@
 import express from "express";
 import authenticateJWT from "../middleware/auth.middleware";
+import authorize from "../middleware/accessControl.middleware";
+import { requireFileAccess } from "../middleware/fileAccess.middleware";
 import {
   analyzeFile,
   getAnalysis,
@@ -12,10 +14,17 @@ import {
 const router = express.Router();
 
 // POST trigger AI analysis for a file
-router.post("/analyze/:fileId", authenticateJWT, analyzeFile);
+// Analysis spends AI credits and stores a result, so it needs write access.
+router.post(
+  "/analyze/:fileId",
+  authenticateJWT,
+  authorize("file.contribute"),
+  requireFileAccess("fileId"),
+  analyzeFile,
+);
 
 // GET analysis results for a file
-router.get("/analysis/:fileId", authenticateJWT, getAnalysis);
+router.get("/analysis/:fileId", authenticateJWT, requireFileAccess("fileId"), getAnalysis);
 
 // GET quality scores dashboard
 router.get("/quality-scores", authenticateJWT, getQualityScores);
@@ -24,9 +33,15 @@ router.get("/quality-scores", authenticateJWT, getQualityScores);
 router.get("/gaps", authenticateJWT, getGaps);
 
 // GET suggested control links for a file
-router.get("/suggestions/:fileId", authenticateJWT, getSuggestions);
+router.get("/suggestions/:fileId", authenticateJWT, requireFileAccess("fileId"), getSuggestions);
 
 // POST apply suggested control links
-router.post("/suggestions/:fileId/apply", authenticateJWT, applySuggestions);
+router.post(
+  "/suggestions/:fileId/apply",
+  authenticateJWT,
+  authorize("file.contribute"),
+  requireFileAccess("fileId"),
+  applySuggestions,
+);
 
 export default router;

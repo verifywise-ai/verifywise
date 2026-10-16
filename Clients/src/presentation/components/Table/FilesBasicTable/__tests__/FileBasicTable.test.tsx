@@ -30,6 +30,12 @@ const mockLLMKeyStatus = vi.hoisted(() => ({
   error: null as string | null,
 }));
 
+const mockAuth = vi.hoisted(() => ({ userRoleName: "Editor" }));
+
+vi.mock("../../../../../application/hooks/useAuth", () => ({
+  useAuth: () => mockAuth,
+}));
+
 vi.mock("../../../../../application/hooks/useBulkSelection", () => ({
   useBulkSelection: () => mockBulkState,
 }));
@@ -326,6 +332,7 @@ describe("FileBasicTable", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     setBulkSelected([]);
     mockQuality.data = [];
+    mockAuth.userRoleName = "Editor";
     mockTrigger.isPending = false;
     mockLLMKeyStatus.data = { hasKeys: true, keyCount: 1, providers: ["Anthropic"] };
     mockLLMKeyStatus.loading = false;
@@ -828,5 +835,12 @@ describe("FileBasicTable", () => {
     const analyzeButtons = screen.getAllByRole("button", { name: /analyze with ai/i });
     analyzeButtons.forEach((btn) => expect(btn).not.toBeDisabled());
     expect(screen.getByTestId("bulk-action-analyze_ai")).not.toBeDisabled();
+  });
+
+  it("hides the per-row and bulk analyze actions from a read-only Auditor", () => {
+    mockAuth.userRoleName = "Auditor";
+    renderWithProviders(<FileBasicTable {...defaultProps} canRunBulkActions />);
+    expect(screen.queryAllByRole("button", { name: /analyze with ai/i })).toHaveLength(0);
+    expect(screen.queryByTestId("bulk-action-analyze_ai")).toBeNull();
   });
 });

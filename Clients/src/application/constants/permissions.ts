@@ -76,6 +76,10 @@ const allowedRoles = {
     view: ["Admin", "Editor", "Auditor"],
     edit: ["Admin", "Editor"],
   },
+  // Mirrors the server's file.contribute permission on /evidence-ai analyze and apply.
+  evidenceAi: {
+    analyze: ["Admin", "Reviewer", "Editor"],
+  },
 };
 
 export default allowedRoles;

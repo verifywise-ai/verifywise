@@ -54,6 +54,8 @@ import { useBulkSelection } from "../../../../application/hooks/useBulkSelection
 import { useBulkUpdateFiles } from "../../../../application/hooks/useBulkUpdateFiles";
 import { useTriggerAnalysis, useQualityScores } from "../../../../application/hooks/useEvidenceAi";
 import { useLLMKeyStatus } from "../../../../application/hooks/useLLMKeyStatus";
+import { useAuth } from "../../../../application/hooks/useAuth";
+import allowedRoles from "../../../../application/constants/permissions";
 import EvidenceAnalysisPanel from "../../EvidenceAnalysisPanel";
 import EvidenceQualityBadge, { type QualityGrade } from "../../EvidenceQualityBadge";
 import StandardModal from "../../Modals/StandardModal";
@@ -416,6 +418,9 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
   const triggerAnalysis = useTriggerAnalysis();
   const { data: qualityScores } = useQualityScores();
   const { hasKeys: hasLLMKey } = useLLMKeyStatus();
+  const { userRoleName } = useAuth();
+  // Read-only roles may view an analysis but not run one (server: file.contribute).
+  const canAnalyze = allowedRoles.evidenceAi.analyze.includes(userRoleName);
   const analysisByFileId = useMemo(() => {
     const m = new Map<number, { grade: QualityGrade | null; analysis: unknown }>();
     (qualityScores ?? []).forEach((q: any) => {
@@ -550,15 +555,19 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
         onClick: handleOpenTagsDialog,
         disabled: bulkMutation.isPending,
       },
-      {
-        id: "analyze_ai",
-        label: "Analyze with AI",
-        icon: <Sparkles size={16} />,
-        disabled: triggerAnalysis.isPending || !hasLLMKey,
-        onClick: async () => {
-          await Promise.all(selectedIds.map((id) => triggerAnalysis.mutateAsync(id)));
-        },
-      },
+      ...(canAnalyze
+        ? [
+            {
+              id: "analyze_ai",
+              label: "Analyze with AI",
+              icon: <Sparkles size={16} />,
+              disabled: triggerAnalysis.isPending || !hasLLMKey,
+              onClick: async () => {
+                await Promise.all(selectedIds.map((id) => triggerAnalysis.mutateAsync(id)));
+              },
+            },
+          ]
+        : []),
     ],
     [
       handleOpenFolderDialog,
@@ -567,6 +576,7 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
       triggerAnalysis,
       selectedIds,
       hasLLMKey,
+      canAnalyze,
     ],
   );
 
@@ -915,32 +925,34 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                                   <EvidenceQualityBadge grade={entry.grade} />
                                 </Box>
                               )}
-                              <Tooltip
-                                title={
-                                  !hasLLMKey
-                                    ? "Configure an LLM key to enable AI analysis"
-                                    : entry?.grade
-                                      ? "Re-analyze with AI"
-                                      : "Analyze with AI"
-                                }
-                                arrow
-                              >
-                                <span>
-                                  <MUIIconButton
-                                    aria-label={
-                                      entry?.grade ? "Re-analyze with AI" : "Analyze with AI"
-                                    }
-                                    size="small"
-                                    disabled={triggerAnalysis.isPending || !hasLLMKey}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (fid) triggerAnalysis.mutate(fid);
-                                    }}
-                                  >
-                                    <Sparkles size={14} />
-                                  </MUIIconButton>
-                                </span>
-                              </Tooltip>
+                              {canAnalyze && (
+                                <Tooltip
+                                  title={
+                                    !hasLLMKey
+                                      ? "Configure an LLM key to enable AI analysis"
+                                      : entry?.grade
+                                        ? "Re-analyze with AI"
+                                        : "Analyze with AI"
+                                  }
+                                  arrow
+                                >
+                                  <span>
+                                    <MUIIconButton
+                                      aria-label={
+                                        entry?.grade ? "Re-analyze with AI" : "Analyze with AI"
+                                      }
+                                      size="small"
+                                      disabled={triggerAnalysis.isPending || !hasLLMKey}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (fid) triggerAnalysis.mutate(fid);
+                                      }}
+                                    >
+                                      <Sparkles size={14} />
+                                    </MUIIconButton>
+                                  </span>
+                                </Tooltip>
+                              )}
                             </>
                           );
                         })()}
