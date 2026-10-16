@@ -92,6 +92,19 @@ describe("ChipSection", () => {
   });
 });
 
+describe("EmptyStatesSection", () => {
+  it("documents the unified loading, error, and empty list states", () => {
+    renderWithProviders(<EmptyStatesSection />);
+
+    expect(screen.getByText("Unified list states")).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Loading datasets" })).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("Failed to load datasets");
+    expect(
+      screen.getAllByText("No datasets found. Add a dataset to get started.").length,
+    ).toBeGreaterThan(0);
+  });
+});
+
 describe("StyleGuide sections", () => {
   it.each(sections)(
     "$name renders without crashing and shows its title",
