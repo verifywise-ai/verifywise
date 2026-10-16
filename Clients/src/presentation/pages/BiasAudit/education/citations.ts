@@ -1,10 +1,9 @@
 /**
  * Every statutory reference the education content may cite.
  *
- * A reference not in this list fails the content test. The list exists
- * because a prior report cited 5-301(a) for a proposition it does not
- * contain, and the resulting table had to be deleted from a signed
- * document.
+ * A reference not in this list fails the content test. The list exists so
+ * that no provision is cited for a proposition it does not contain, which
+ * would put a false statement of the law into a signed document.
  *
  * References stop at the level the rule text supports: "5-301(c)", never a
  * deeper sub-paragraph, and no worked example is cited.

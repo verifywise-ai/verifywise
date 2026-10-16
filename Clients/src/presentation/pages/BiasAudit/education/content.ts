@@ -12,7 +12,7 @@ export const EDUCATION: Record<string, EducationBlock> = {
       refs: ["5-303", "FAQ V.1"],
     },
     goesWrong:
-      "One tool supplier was assumed to be the employer. Three signed documents stated obligations that were not theirs and had to be reissued, and one told them to post a summary on their own careers site, which was advice to nobody in the room. A supplier also has no single distribution date, because 5-303(a)(2) means the date a given employer began using the tool and that differs for every customer.",
+      "A tool supplier is easily assumed to be the employer. A document that states obligations that are not the supplier's has to be reissued, and one that tells a supplier to post a summary on its own careers site is advice to nobody in the room. A supplier also has no single distribution date, because 5-303(a)(2) means the date a given employer began using the tool and that differs for every customer.",
   },
 
   "profile.scope": {
@@ -23,7 +23,7 @@ export const EDUCATION: Record<string, EducationBlock> = {
       refs: ["5-300"],
     },
     goesWrong:
-      "Answering that the score is one of several is a complete and favourable result, not a failure. One audit asserted a tool was in scope on the client's own description of it; the client's counsel later disagreed, and the determination had to be withdrawn from a signed report. VerifyWise does not make this determination for you, and records your answer as yours.",
+      "Answering that the score is one of several is a complete and favourable result, not a failure. An audit that asserts a tool is in scope on the client's own description of it can be disputed later by the client's counsel, and the determination then has to be withdrawn from a signed report. VerifyWise does not make this determination for you, and records your answer as yours.",
   },
 
   "profile.data_held": {
@@ -35,7 +35,7 @@ export const EDUCATION: Record<string, EducationBlock> = {
       refs: ["5-302(a)", "5-302(b)"],
     },
     goesWrong:
-      '"We don\'t have breakdowns" means two different things: you hold none of it, or you hold it and have not separated it out. One engagement read it the wrong way and never resolved it before signing. Holding sex but not race is the common case and produces a split basis: sex may be auditable from historical data while race, ethnicity and every intersectional category are not, and records carrying only sex never end a race basis however far their volume grows.',
+      '"We don\'t have breakdowns" means two different things: you hold none of it, or you hold it and have not separated it out. Reading it the wrong way and never resolving it before signing leaves the basis wrong. Holding sex but not race is the common case and produces a split basis: sex may be auditable from historical data while race, ethnicity and every intersectional category are not, and records carrying only sex never end a race basis however far their volume grows.',
   },
 
   "profile.independence": {
@@ -57,7 +57,7 @@ export const EDUCATION: Record<string, EducationBlock> = {
       refs: ["5-301(b)", "5-301(c)"],
     },
     goesWrong:
-      "One client's own team gave both answers minutes apart on the same call. Another returned five thousand rows with the decision column entirely blank, which settled it as a scoring rate after the corpus had already been built. If automation is planned but not live, say so: the result then carries a dated statement of what was tested and stops describing your platform when the feature ships.",
+      "A team can give both answers minutes apart on the same call. A file returned with the decision column entirely blank settles it as a scoring rate, even after the corpus has already been built. If automation is planned but not live, say so: the result then carries a dated statement of what was tested and stops describing your platform when the feature ships.",
   },
 
   "run.knockout": {
@@ -68,7 +68,7 @@ export const EDUCATION: Record<string, EducationBlock> = {
       refs: [],
     },
     goesWrong:
-      "One engagement asked four times and got the answer after shipping. A knockout on a single criterion cut the usable sample from five thousand candidates to three thousand. Where knocked-out candidates are not recorded in their own column, a rate mixes candidates who scored low with candidates who were failed outright, and the two have different causes and different remedies.",
+      "Asking repeatedly and getting the answer only after shipping is too late. A knockout on a single criterion can cut the usable sample sharply, for example from five thousand candidates to three thousand. Where knocked-out candidates are not recorded in their own column, a rate mixes candidates who scored low with candidates who were failed outright, and the two have different causes and different remedies.",
   },
 
   "run.preprocessing": {
@@ -79,7 +79,7 @@ export const EDUCATION: Record<string, EducationBlock> = {
       refs: [],
     },
     goesWrong:
-      "One client volunteered, unprompted, that their evaluation runs on extracted and normalised answers rather than on the transcripts submitted to it. The intermediate form was never seen, so the report had to disclose that the scored input was not the submitted input, and that remained the largest open gap in the audit. If anything transforms the material before scoring, no finding can be attributed to the scoring step alone.",
+      "An evaluation may run on extracted and normalised answers rather than on the transcripts submitted to it. If the intermediate form is never seen, the report has to disclose that the scored input was not the submitted input, and that remains the largest open gap in the audit. If anything transforms the material before scoring, no finding can be attributed to the scoring step alone.",
   },
 
   "run.job_description": {
@@ -91,7 +91,7 @@ export const EDUCATION: Record<string, EducationBlock> = {
       refs: ["5-301", "FAQ III.4", "20-871(a)(1)"],
     },
     goesWrong:
-      "A sample for a junior hourly role was once used to reason about a senior role at four times the salary. The two job descriptions offered here are fixed so that the criteria are known in advance and every customer's corpus is comparable; your result states which role was tested and that it describes your platform's behaviour on that role, not across your hiring.",
+      "A sample for a junior hourly role must not be used to reason about a senior role at four times the salary. The two job descriptions offered here are fixed so that the criteria are known in advance and every customer's corpus is comparable; your result states which role was tested and that it describes your platform's behaviour on that role, not across your hiring.",
   },
 
   "run.criteria_comparison": {
@@ -102,7 +102,7 @@ export const EDUCATION: Record<string, EducationBlock> = {
       refs: ["5-302(b)"],
     },
     goesWrong:
-      "One platform generated five criteria from a job description where eight had been reconstructed from the same text. The qualification gradient lost its top rung, because the only criterion separating a solid candidate from a strong one was not among the five, and the corpus had to be remapped. Pasting back what your platform generates takes one field and catches that before you spend a scoring cycle.",
+      "A platform may generate five criteria from a job description where eight could be reconstructed from the same text. The qualification gradient then loses its top rung, because the only criterion separating a solid candidate from a strong one is not among the five, and the corpus has to be remapped. Pasting back what your platform generates takes one field and catches that before you spend a scoring cycle.",
   },
 
   "run.upload": {
@@ -113,7 +113,7 @@ export const EDUCATION: Record<string, EducationBlock> = {
       refs: ["5-301(d)", "5-301(c)"],
     },
     goesWrong:
-      "A demographic column that is mostly blank cannot produce a ratio at any volume, and a rate computed from the few populated rows still looks authoritative. If a mapped column is missing from your file the fault is in the mapping rather than the data, and this module says which. Three distinct score levels once put the sample median on the modal value, so counting strictly above it gave every group a rate of zero.",
+      "A demographic column that is mostly blank cannot produce a ratio at any volume, and a rate computed from the few populated rows still looks authoritative. If a mapped column is missing from your file the fault is in the mapping rather than the data, and this module says which. With only three distinct score levels the sample median can sit on the modal value, so counting strictly above it gives every group a rate of zero.",
   },
 
   "results.figures": {
@@ -136,7 +136,7 @@ export const EDUCATION: Record<string, EducationBlock> = {
       refs: ["5-302(b)"],
     },
     goesWrong:
-      "A clean impact ratio from a badly built dataset is more dangerous than a flagged one, because nobody looks at it twice. One corpus assigned demographics in contiguous blocks while generation ran in order, and returned 0.9770 on sex precisely because sex was the most perfectly blocked attribute: a two-block split averages position effects over half the data each and they cancel. Every balance check came back clean throughout.",
+      "A clean impact ratio from a badly built dataset is more dangerous than a flagged one, because nobody looks at it twice. A corpus that assigns demographics in contiguous blocks while generation runs in order can return a ratio close to 1 on sex precisely because sex is the most perfectly blocked attribute: a two-block split averages position effects over half the data each and they cancel. Every balance check can come back clean throughout.",
   },
 
   "stance": {
@@ -158,6 +158,6 @@ export const EDUCATION: Record<string, EducationBlock> = {
       refs: ["5-301(a)", "5-302(b)"],
     },
     goesWrong:
-      "The rule contains no trigger for a change of role, configuration, weighting or model. One report cited 5-301(a) for re-audit triggers it does not contain and the claim had to be withdrawn. Your test-data basis expires on a condition rather than a date: if it rests on race not being recorded, it ends when race begins to be captured, and collecting more records of other characteristics does not end it.",
+      "The rule contains no trigger for a change of role, configuration, weighting or model. A report that cites 5-301(a) for re-audit triggers it does not contain has to have the claim withdrawn. Your test-data basis expires on a condition rather than a date: if it rests on race not being recorded, it ends when race begins to be captured, and collecting more records of other characteristics does not end it.",
   },
 };

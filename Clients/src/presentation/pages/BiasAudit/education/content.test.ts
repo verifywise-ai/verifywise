@@ -42,6 +42,22 @@ describe("coverage", () => {
   });
 });
 
+describe("warnings make no claim about a past engagement", () => {
+  // Education text is general guidance. It may say what goes wrong, never that
+  // it happened to a named or unnamed client, audit or report.
+  const HISTORY =
+    /\b(one|another|a prior|a previous) (client|engagement|audit|report|corpus|platform|tool supplier|team)\b|\bthe client's counsel later\b|\bonce\b|\bhad to be (reissued|withdrawn|remapped|deleted)\b|\bwas once\b|\bcame back\b|\bwere reconstructed\b|\bthree signed documents\b/i;
+
+  it("describes what goes wrong in general terms only", () => {
+    for (const [key, block] of blocks) {
+      expect({ key, hit: block.goesWrong.match(HISTORY)?.[0] ?? null }).toEqual({
+        key,
+        hit: null,
+      });
+    }
+  });
+});
+
 describe("citations resolve", () => {
   it("uses only references from the citation table", () => {
     for (const block of Object.values(EDUCATION)) {
@@ -52,8 +68,8 @@ describe("citations resolve", () => {
   });
 
   it("cites 5-301(a) only in the expiry block", () => {
-    // A prior report cited 5-301(a) for re-audit triggers it does not
-    // contain and the claim had to be withdrawn.
+    // The rule's only re-audit trigger is the one-year expiry; citing 5-301(a)
+    // for any other trigger would misstate it.
     for (const [key, block] of blocks) {
       if (block.law.refs.includes("5-301(a)")) {
         expect(key).toBe("expiry");
