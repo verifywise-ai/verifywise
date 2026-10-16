@@ -25,7 +25,7 @@ import {
   getUserNamesQuery,
 } from "../../utils/biasAudit.utils";
 import { assertProjectAccess, runNotFound } from "./projectAccess";
-import type { AnswerWithNotes } from "./applicability";
+import { answerMapFromRows } from "./serviceHelpers";
 import { runAnswerGates } from "./answerGates";
 import { computeReadiness } from "./readinessScore";
 import { composeStance } from "./stance/compose";
@@ -76,15 +76,7 @@ export async function generateStance(input: GenerateStanceInput): Promise<Genera
     );
   }
   const rows = await getProfileAnswersQuery(profile.id!, organizationId);
-
-  const answers: AnswerWithNotes = {};
-  for (const r of rows) {
-    answers[r.question_key] = {
-      value: r.answer_value ?? null,
-      notes: r.answer_notes ?? null,
-      dontKnow: Boolean(r.is_dont_know),
-    };
-  }
+  const answers = answerMapFromRows(rows, "with_notes");
 
   // Spec Review Focus 3: a profile whose every applicable answer is
   // "I don't know" describes nothing, so no stance is produced at all

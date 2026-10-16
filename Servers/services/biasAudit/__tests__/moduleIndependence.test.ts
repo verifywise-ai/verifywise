@@ -19,6 +19,8 @@ const IO_LAYER: Record<string, string> = {
     "reads the attested profile and stores the run through utils/biasAudit.utils and the db; hashes the upload with node:crypto",
   [path.join(MODULE, "stanceService.ts")]:
     "reads the run, its profile, answers and names through utils/biasAudit.utils to compose a stance; hashes the stored PDF with node:crypto",
+  [path.join(MODULE, "serviceHelpers.ts")]:
+    "reads a project through utils/biasAudit.utils for the services' shared project check",
   [path.join(MODULE, "projectAccess.ts")]:
     "asks utils/biasAudit.utils whether a user owns or belongs to a project",
   [path.join(MODULE, "stance", "render.ts")]:

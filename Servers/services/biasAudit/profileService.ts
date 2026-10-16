@@ -18,7 +18,6 @@ import {
   getAttestedProfileQuery,
   getCurrentProfileQuery,
   getProfileAnswersQuery,
-  getProjectQuery,
   upsertAnswerQuery,
 } from "../../utils/biasAudit.utils";
 import {
@@ -27,6 +26,7 @@ import {
   VETO_KEYS,
 } from "../../structures/NYC-Local-Law-144/intake.questions";
 import { assertProjectAccess, type Viewer } from "./projectAccess";
+import { answerMapFromRows, assertProject, isUniqueViolation } from "./serviceHelpers";
 import { applicableQuestions, type AnswerWithNotes } from "./applicability";
 import { computeReadiness, type ReadinessResult } from "./readinessScore";
 import type { IntakeQuestion } from "../../structures/NYC-Local-Law-144/intake.types";
@@ -91,19 +91,6 @@ function validateAnswer(a: AnswerInput): void {
   }
 }
 
-/** Answers for a profile, keyed by question, in the service's working shape. */
-function toWorkingSet(rows: Awaited<ReturnType<typeof getProfileAnswersQuery>>): AnswerWithNotes {
-  const out: AnswerWithNotes = {};
-  for (const r of rows) {
-    out[r.question_key] = {
-      value: r.answer_value ?? null,
-      notes: r.answer_notes ?? null,
-      dontKnow: Boolean(r.is_dont_know),
-    };
-  }
-  return out;
-}
-
 /** Who first gave an answer and when, so a carried-forward answer keeps its author. */
 type Authorship = { userId: number; answeredAt: Date | null };
 
@@ -115,12 +102,6 @@ function toAuthorship(rows: Awaited<ReturnType<typeof getProfileAnswersQuery>>) 
     }
   }
   return out;
-}
-
-/** A concurrent save that took the same version number loses to the unique index. */
-function isUniqueViolation(error: unknown): boolean {
-  const e = error as { name?: string; original?: { code?: string } };
-  return e?.original?.code === "23505" || e?.name === "SequelizeUniqueConstraintError";
 }
 
 export async function saveAnswers(
@@ -142,7 +123,7 @@ export async function saveAnswers(
     const existingRows = current
       ? await getProfileAnswersQuery(current.id!, organizationId, transaction)
       : [];
-    const existing = toWorkingSet(existingRows);
+    const existing = answerMapFromRows(existingRows, "with_notes");
     const authors = toAuthorship(existingRows);
 
     const merged: AnswerWithNotes = { ...existing };
@@ -227,8 +208,9 @@ export async function attestProfile(args: ProfileScope): Promise<ProfileRef> {
     // attestation back, so a veto flipped to don't-know by a concurrent edit
     // cannot slip through.
     const attested = await attestProfileQuery(current.id!, userId, organizationId, transaction);
-    const answers = toWorkingSet(
+    const answers = answerMapFromRows(
       await getProfileAnswersQuery(current.id!, organizationId, transaction),
+      "with_notes",
     );
 
     const unanswered = VETO_KEYS.filter((k) => answers[k] === undefined);
@@ -257,14 +239,6 @@ interface ReadScope {
   organizationId: number;
 }
 
-async function assertProject(projectId: number, organizationId: number) {
-  const project = await getProjectQuery(projectId, organizationId);
-  if (!project) {
-    throw new NotFoundException(`Project ${projectId} was not found`, "Project", projectId);
-  }
-  return project;
-}
-
 /** The current profile's answers, or none, in the service's working shape. */
 async function currentAnswers(scope: ReadScope) {
   const current = await getCurrentProfileQuery(
@@ -273,15 +247,14 @@ async function currentAnswers(scope: ReadScope) {
     scope.organizationId,
   );
   const rows = current ? await getProfileAnswersQuery(current.id!, scope.organizationId) : [];
-  return { current, rows, answers: toWorkingSet(rows) };
+  return { current, rows, answers: answerMapFromRows(rows, "with_notes") };
 }
 
 /** The questions that apply given the answers saved so far. */
 export async function getApplicableQuestions(
   scope: ReadScope & Viewer,
 ): Promise<{ questions: IntakeQuestion[] }> {
-  await assertProjectAccess(scope.projectId, scope.organizationId, scope);
-  await assertProject(scope.projectId, scope.organizationId);
+  await assertProject(scope.projectId, scope.organizationId, scope);
   const { answers } = await currentAnswers(scope);
   return { questions: applicableQuestions(answers) };
 }
@@ -314,11 +287,10 @@ export interface ProfileView {
 export async function getProfileView(
   scope: ReadScope & { userId: number; role: string },
 ): Promise<ProfileView> {
-  await assertProjectAccess(scope.projectId, scope.organizationId, {
+  const project = await assertProject(scope.projectId, scope.organizationId, {
     userId: scope.userId,
     role: scope.role,
   });
-  const project = await assertProject(scope.projectId, scope.organizationId);
   const { current, rows, answers } = await currentAnswers(scope);
   const attested = await getAttestedProfileQuery(
     scope.projectId,

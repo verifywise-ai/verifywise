@@ -20,7 +20,6 @@ import {
   createRunQuery,
   getAttestedProfileQuery,
   getProfileAnswersQuery,
-  getProjectQuery,
   getRunQuery,
   listRunsQuery,
   listStancesForRunQuery,
@@ -30,9 +29,9 @@ import {
 } from "../../utils/biasAudit.utils";
 import type { BiasAuditRun } from "../../domain.layer/models/biasAudit/biasAuditRun.model";
 import type { BiasAuditStance } from "../../domain.layer/models/biasAudit/biasAuditStance.model";
-import type { AnswerMap } from "./applicability";
 import { applicableQuestions } from "./applicability";
 import { assertProjectAccess, runNotFound, type Viewer } from "./projectAccess";
+import { answerMapFromRows, assertProject } from "./serviceHelpers";
 import { runAnswerGates } from "./answerGates";
 import { deriveBasis } from "./deriveBasis";
 import { computeReadiness, type ReadinessResult } from "./readinessScore";
@@ -135,11 +134,10 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
     );
   }
 
-  const rows = await getProfileAnswersQuery(profile.id!, organizationId);
-  const answers: AnswerMap = {};
-  for (const r of rows) {
-    answers[r.question_key] = { value: r.answer_value ?? null, dontKnow: Boolean(r.is_dont_know) };
-  }
+  const answers = answerMapFromRows(
+    await getProfileAnswersQuery(profile.id!, organizationId),
+    "without_notes",
+  );
   const readiness = computeReadiness(answers);
   const answerGates = runAnswerGates(answers);
 
@@ -312,14 +310,6 @@ interface ProjectScope {
   role: string;
 }
 
-async function assertProject(scope: ProjectScope): Promise<void> {
-  const { projectId, organizationId, userId, role } = scope;
-  await assertProjectAccess(projectId, organizationId, { userId, role });
-  if (!(await getProjectQuery(projectId, organizationId))) {
-    throw new NotFoundException(`Project ${projectId} was not found`, "Project", projectId);
-  }
-}
-
 /**
  * Whether a stored run may be exported, by the rule runAudit applies to its
  * gates: only notes withhold nothing. A run that stored no findings record is
@@ -331,7 +321,7 @@ export function mayExportStoredRun(gateFindings: unknown): boolean {
 }
 
 export async function listRuns(scope: ProjectScope): Promise<{ runs: RunSummaryRow[] }> {
-  await assertProject(scope);
+  await assertProject(scope.projectId, scope.organizationId, scope);
   return {
     runs: await listRunsQuery(scope.projectId, scope.frameworkId, scope.organizationId),
   };
@@ -339,7 +329,7 @@ export async function listRuns(scope: ProjectScope): Promise<{ runs: RunSummaryR
 
 /** Runs oldest first in the shape the trend series reads. */
 export async function getTrendRows(scope: ProjectScope): Promise<{ runs: TrendRunRow[] }> {
-  await assertProject(scope);
+  await assertProject(scope.projectId, scope.organizationId, scope);
   return {
     runs: await listTrendRunsQuery(scope.projectId, scope.frameworkId, scope.organizationId),
   };

@@ -36,6 +36,7 @@ import { REQUIRED_SECTIONS, type StanceModel, type StanceSection } from "./compo
 import { checkSections } from "./sectionChecker";
 import { blankFieldLabel, metricLabel, presetLabel } from "./labels";
 import { findForbidden } from "./vocabulary";
+import { isUniqueViolation } from "../serviceHelpers";
 
 /**
  * What the stored run holds that the model does not: the dataset hash and
@@ -267,12 +268,6 @@ export interface PersistStanceArgs {
   model: StanceModel;
   evidence: StanceEvidence;
   scoreAtGeneration: number | null;
-}
-
-/** A concurrent regenerate that took the same version loses to the unique index. */
-function isUniqueViolation(error: unknown): boolean {
-  const e = error as { name?: string; original?: { code?: string } };
-  return e?.original?.code === "23505" || e?.name === "SequelizeUniqueConstraintError";
 }
 
 /**
