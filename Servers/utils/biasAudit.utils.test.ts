@@ -77,6 +77,17 @@ describe("tenant isolation", () => {
     expect(sql).toMatch(/ORDER BY version DESC/);
     expect(opts.replacements.organization_id).toBe(42);
     expect(row).toMatchObject({ id: 6 });
+    expect(sql).not.toMatch(/FOR UPDATE/);
+  });
+
+  it("locks the current profile row inside the caller's transaction when asked", async () => {
+    const lockTx = { id: "lock" } as any;
+    mockQuery.mockResolvedValueOnce([{ id: 6, status: "draft" }]);
+    await getCurrentProfileQuery(7, 15, 42, { transaction: lockTx });
+    const [sql, opts] = mockQuery.mock.calls[0];
+    expect(sql).toMatch(/FOR UPDATE/);
+    expect(sql).toContain("organization_id = :organization_id");
+    expect(opts.transaction).toBe(lockTx);
   });
 
   it("filters every answer read on organization_id", async () => {
@@ -290,6 +301,41 @@ describe("answers", () => {
     const [, opts] = mockQuery.mock.calls[0];
     expect(opts.replacements.is_dont_know).toBe(true);
     expect(opts.replacements.answer_value).toBeNull();
+  });
+
+  const draftAnswer = {
+    profileId: 3,
+    questionKey: "role.party",
+    questionSetVersion: 1,
+    answerValue: "vendor",
+    answerNotes: "We supply it.",
+    isDontKnow: false,
+    isNotApplicable: false,
+    answeredByUserId: 9,
+  };
+
+  it("writes an answer only into a draft profile", async () => {
+    mockQuery.mockResolvedValueOnce([[{ id: 1 }]]);
+    await upsertAnswerQuery(draftAnswer, 42, tx);
+    expect(String(mockQuery.mock.calls[0][0])).toMatch(/p\.status = 'draft'/);
+  });
+
+  it("answers 409 when the profile exists but is no longer a draft, and writes nothing", async () => {
+    mockQuery.mockResolvedValueOnce([[]]); // the guarded insert matched no draft
+    mockQuery.mockResolvedValueOnce([[{ status: "attested" }]]);
+    await expect(upsertAnswerQuery(draftAnswer, 42, tx)).rejects.toBeInstanceOf(ConflictException);
+    const [sql, opts] = mockQuery.mock.calls[1];
+    expect(sql).toMatch(/organization_id = :organization_id/);
+    expect(opts.replacements).toMatchObject({ id: 3, organization_id: 42 });
+    expect(opts.transaction).toBe(tx);
+  });
+
+  it("answers not-found when the profile is not in the organization", async () => {
+    mockQuery.mockResolvedValueOnce([[]]);
+    mockQuery.mockResolvedValueOnce([[]]);
+    await expect(upsertAnswerQuery(draftAnswer, 42, tx)).rejects.toMatchObject({
+      statusCode: 404,
+    });
   });
 
   it("upserts on the profile and question key", async () => {

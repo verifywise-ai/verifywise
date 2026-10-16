@@ -131,8 +131,17 @@ export async function saveAnswers(
   answers.forEach(validateAnswer);
 
   return sequelize.transaction(async (transaction) => {
-    const current = await getCurrentProfileQuery(projectId, frameworkId, organizationId);
-    const existingRows = current ? await getProfileAnswersQuery(current.id!, organizationId) : [];
+    // The current profile is locked before its answers are read, so a
+    // concurrent attestation or save finishes first and is seen here: an
+    // attested profile then gets a new version, and another save's answers
+    // are carried forward rather than lost. upsertAnswerQuery refuses any
+    // profile that is no longer a draft as the backstop.
+    const current = await getCurrentProfileQuery(projectId, frameworkId, organizationId, {
+      transaction,
+    });
+    const existingRows = current
+      ? await getProfileAnswersQuery(current.id!, organizationId, transaction)
+      : [];
     const existing = toWorkingSet(existingRows);
     const authors = toAuthorship(existingRows);
 

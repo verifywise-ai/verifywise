@@ -113,18 +113,24 @@ export async function getAttestedProfileQuery(
   return rows[0] ?? null;
 }
 
-/** Latest draft-or-attested profile: the one a user is editing. */
+/**
+ * Latest draft-or-attested profile: the one a user is editing. With `lock`,
+ * the row is read FOR UPDATE inside that transaction, so a save holds it
+ * against a concurrent attestation (attestProfileQuery locks the same row)
+ * or a concurrent save, and reads after the lock see what they committed.
+ */
 export async function getCurrentProfileQuery(
   projectId: number,
   frameworkId: number,
   organizationId: number,
+  lock?: { transaction: Transaction },
 ): Promise<AedtProfile | null> {
   const rows = (await sequelize.query(
     `SELECT * FROM aedt_profiles
       WHERE project_id = :project_id AND framework_id = :framework_id
         AND status <> 'superseded' AND organization_id = :organization_id
       ORDER BY version DESC
-      LIMIT 1`,
+      LIMIT 1${lock ? " FOR UPDATE" : ""}`,
     {
       replacements: {
         project_id: projectId,
@@ -132,6 +138,7 @@ export async function getCurrentProfileQuery(
         organization_id: organizationId,
       },
       type: QueryTypes.SELECT,
+      transaction: lock?.transaction,
     },
   )) as AedtProfile[];
   return rows[0] ?? null;
@@ -211,7 +218,9 @@ export async function upsertAnswerQuery(
   organizationId: number,
   transaction: Transaction,
 ): Promise<void> {
-  // Selecting from the profile row keeps the answer in the profile's org.
+  // Selecting from the profile row keeps the answer in the profile's org,
+  // and only a draft is written to: an attested profile is what runs and
+  // stances cite, so it never changes once attested.
   const result = await sequelize.query(
     `INSERT INTO aedt_profile_answers
        (organization_id, profile_id, question_key, question_set_version,
@@ -222,6 +231,7 @@ export async function upsertAnswerQuery(
             :answered_by_user_id, COALESCE(:answered_at, NOW())
        FROM aedt_profiles p
       WHERE p.id = :profile_id AND p.organization_id = :organization_id
+        AND p.status = 'draft'
      ON CONFLICT (profile_id, question_key) DO UPDATE SET
        question_set_version = EXCLUDED.question_set_version,
        answer_value = EXCLUDED.answer_value,
@@ -247,7 +257,24 @@ export async function upsertAnswerQuery(
       transaction,
     },
   );
-  if (!firstRow(result)) refuseCrossOrg("Profile", args.profileId);
+  if (firstRow(result)) return;
+
+  // Nothing was written: either the profile is not in this organization, or
+  // it stopped being a draft (attested meanwhile). The second is a conflict
+  // the caller can retry from a reload, not a missing profile.
+  const existing = firstRow<{ status: string }>(
+    await sequelize.query(
+      `SELECT status FROM aedt_profiles
+        WHERE id = :id AND organization_id = :organization_id`,
+      { replacements: { id: args.profileId, organization_id: organizationId }, transaction },
+    ),
+  );
+  if (!existing) refuseCrossOrg("Profile", args.profileId);
+  throw new ConflictException(
+    `Profile ${args.profileId} is ${existing.status}, not a draft, so its answers cannot be changed. Reload and retry.`,
+    "AedtProfile",
+    "status",
+  );
 }
 
 export async function attestProfileQuery(

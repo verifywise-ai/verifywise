@@ -9,8 +9,9 @@ const utils = {
   userCanAccessProjectQuery: jest.fn(),
 };
 jest.mock("../../utils/biasAudit.utils", () => utils);
+const mockTx = { id: "tx" };
 jest.mock("../../database/db", () => ({
-  sequelize: { transaction: (fn: (t: object) => unknown) => fn({}) },
+  sequelize: { transaction: (fn: (t: object) => unknown) => fn(mockTx) },
 }));
 
 import {
@@ -220,6 +221,38 @@ describe("saveAnswers authorship and races", () => {
       }),
     ).rejects.toThrow(/reload and retry/i);
     expect(utils.upsertAnswerQuery).not.toHaveBeenCalled();
+  });
+
+  // A save racing an attestation, or another save, must read the profile it
+  // writes to under a row lock, so it sees the attestation or the other
+  // save's answers instead of writing over them.
+  it("locks the current profile and reads its answers inside the transaction", async () => {
+    utils.getCurrentProfileQuery.mockResolvedValue({ id: 5, version: 1, status: "draft" });
+    utils.getProfileAnswersQuery.mockResolvedValue([]);
+    await saveAnswers({
+      ...base,
+      answers: [{ questionKey: "role.party", value: "vendor", notes: "x", dontKnow: false }],
+    });
+    expect(utils.getCurrentProfileQuery).toHaveBeenCalledWith(7, 15, 42, { transaction: mockTx });
+    expect(utils.getProfileAnswersQuery).toHaveBeenCalledWith(5, 42, mockTx);
+    expect(utils.upsertAnswerQuery.mock.calls[0][2]).toBe(mockTx);
+  });
+
+  it("passes on the conflict the answer write raises for a profile that is no longer a draft", async () => {
+    utils.getCurrentProfileQuery.mockResolvedValue({ id: 5, version: 1, status: "draft" });
+    utils.getProfileAnswersQuery.mockResolvedValue([]);
+    const { ConflictException } = jest.requireActual(
+      "../../domain.layer/exceptions/custom.exception",
+    );
+    utils.upsertAnswerQuery.mockRejectedValue(
+      new ConflictException("Profile 5 is attested", "AedtProfile", "status"),
+    );
+    await expect(
+      saveAnswers({
+        ...base,
+        answers: [{ questionKey: "role.party", value: "vendor", notes: "x", dontKnow: false }],
+      }),
+    ).rejects.toMatchObject({ statusCode: 409 });
   });
 
   it("does not swallow other errors from the version create", async () => {

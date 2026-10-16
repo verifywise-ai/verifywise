@@ -13,6 +13,7 @@ import {
   createProfileVersionQuery,
   createRunQuery,
   createStanceQuery,
+  getCurrentProfileQuery,
   getProfileAnswersQuery,
   upsertAnswerQuery,
 } from "../../../utils/biasAudit.utils";
@@ -378,6 +379,54 @@ describe("bias audit query layer against the database", () => {
       expect(await getProfileAnswersQuery(profile, owner.orgId)).toHaveLength(0);
     });
     expect(await getProfileAnswersQuery(profile, owner.orgId)).toHaveLength(1);
+  });
+
+  it("refuses to write an answer into an attested profile with a conflict, writing nothing", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const project = await createTestProject(owner.orgId, owner.userId);
+    const profile = await insertProfile(owner.orgId, project, owner.userId);
+    await sequelize.transaction((t) => attestProfileQuery(profile, owner.userId, owner.orgId, t));
+
+    await expect(
+      sequelize.transaction((t) =>
+        upsertAnswerQuery(answer(profile, owner.userId), owner.orgId, t),
+      ),
+    ).rejects.toMatchObject({ statusCode: 409 });
+    expect(await getProfileAnswersQuery(profile, owner.orgId)).toHaveLength(0);
+  });
+
+  it("makes an attestation wait for a save holding the current profile's lock", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const project = await createTestProject(owner.orgId, owner.userId);
+    const profile = await insertProfile(owner.orgId, project, owner.userId);
+
+    const save = await sequelize.transaction();
+    try {
+      const locked = await getCurrentProfileQuery(project, 1, owner.orgId, { transaction: save });
+      expect(locked).toMatchObject({ id: profile, status: "draft" });
+
+      let settled = false;
+      const attest = sequelize
+        .transaction((t) => attestProfileQuery(profile, owner.userId, owner.orgId, t))
+        .finally(() => {
+          settled = true;
+        });
+      await new Promise((r) => setTimeout(r, 300));
+      expect(settled).toBe(false);
+
+      // The save writes while it holds the lock; the attestation then sees it.
+      await upsertAnswerQuery(answer(profile, owner.userId), owner.orgId, save);
+      await save.commit();
+      await attest;
+    } catch (error) {
+      if (!(save as unknown as { finished?: string }).finished) await save.rollback();
+      throw error;
+    }
+    expect(await getProfileAnswersQuery(profile, owner.orgId)).toHaveLength(1);
+    const [rows] = await sequelize.query(`SELECT status FROM aedt_profiles WHERE id = :profile`, {
+      replacements: { profile },
+    });
+    expect(rows).toEqual([{ status: "attested" }]);
   });
 });
 
