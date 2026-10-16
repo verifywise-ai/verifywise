@@ -425,7 +425,9 @@ describe("fix round 1", () => {
     const r = section(s, "readiness");
     expect(r.body).toContain("72");
     expect(r.body).toMatch(/VerifyWise's own/i);
-    expect(r.body).toMatch(/not a finding about the tool/i);
+    expect(r.body).toMatch(/measure of how ready you are to commission an independent audit/i);
+    expect(r.body).toMatch(/not a finding of compliance/i);
+    expect(r.body).not.toMatch(/about the tool/i);
   });
 
   it("states an expiry of the result with its date", () => {
