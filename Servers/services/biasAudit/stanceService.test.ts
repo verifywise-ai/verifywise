@@ -277,6 +277,18 @@ describe("getStanceDownload", () => {
     await expect(getStanceDownload(3, 42, member)).rejects.toMatchObject({ statusCode: 409 });
   });
 
+  // Fails closed: a stance with no recorded hash cannot be checked, so its
+  // bytes are not served as if they had been.
+  it.each([null, ""])(
+    "refuses a stored file with no recorded hash (%p) as unverifiable",
+    async (recorded) => {
+      utils.getStanceDownloadQuery.mockResolvedValue({ ...stored(true), pdf_sha256: recorded });
+      const refusal = getStanceDownload(3, 42, member);
+      await expect(refusal).rejects.toMatchObject({ statusCode: 409 });
+      await expect(refusal).rejects.toThrow(/cannot be verified/);
+    },
+  );
+
   it("returns the PDF bytes with their hash", async () => {
     utils.getStanceDownloadQuery.mockResolvedValue({
       id: 3,

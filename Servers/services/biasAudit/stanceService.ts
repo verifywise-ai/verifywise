@@ -207,7 +207,16 @@ export async function getStanceDownload(
   }
   const content = Buffer.isBuffer(row.content) ? row.content : Buffer.from(row.content);
   const sha256 = createHash("sha256").update(content).digest("hex");
-  if (row.pdf_sha256 && row.pdf_sha256 !== sha256) {
+  // Fails closed: with no hash recorded at generation the bytes cannot be
+  // checked, so they are refused rather than served as if they had been.
+  if (!row.pdf_sha256) {
+    throw new ConflictException(
+      `The stored PDF for stance ${stanceId} cannot be verified: no hash was recorded when it was generated.`,
+      "AedtStance",
+      "pdf_sha256",
+    );
+  }
+  if (row.pdf_sha256 !== sha256) {
     throw new ConflictException(
       `The stored PDF for stance ${stanceId} no longer matches the hash recorded when it was generated.`,
       "AedtStance",
