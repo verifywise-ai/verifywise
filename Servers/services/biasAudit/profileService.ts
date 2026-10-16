@@ -113,9 +113,13 @@ export async function saveAnswers(
 
   return sequelize.transaction(async (transaction) => {
     // The current profile is locked before its answers are read, so a
-    // concurrent attestation or save finishes first and is seen here: an
-    // attested profile then gets a new version, and another save's answers
-    // are carried forward rather than lost. upsertAnswerQuery refuses any
+    // concurrent attestation or save on the same row finishes first and is
+    // seen here. When that row is a draft, another save's answers are read
+    // and carried forward rather than lost. When it is attested, two saves
+    // both read the same attested row and both try to create the next
+    // version: the second hits the unique version constraint and gets the
+    // 409 "Another save created this profile version first", which the
+    // client can retry against the new draft. upsertAnswerQuery refuses any
     // profile that is no longer a draft as the backstop.
     const current = await getCurrentProfileQuery(projectId, frameworkId, organizationId, {
       transaction,
