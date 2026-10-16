@@ -256,6 +256,37 @@ describe("createRun", () => {
     expect(runService.createRun).not.toHaveBeenCalled();
   });
 
+  // The parser trims header names when it matches them, so "Gender " and
+  // "Gender" are one column there and must be one column here.
+  it("400s two keys mapped to the same column once surrounding spaces are ignored", async () => {
+    const { status, body: out } = await call(
+      ctrl.createRun,
+      mockReq({
+        file,
+        body: { ...body, mapping: JSON.stringify({ sex: "Gender", race_ethnicity: "Gender " }) },
+      }),
+    );
+    expect(status).toBe(400);
+    expect(out.data).toMatch(/sex/);
+    expect(out.data).toMatch(/race_ethnicity/);
+    expect(runService.createRun).not.toHaveBeenCalled();
+  });
+
+  it("hands the service trimmed column names", async () => {
+    svc(runService.createRun).mockResolvedValue({ runId: 11, readiness: {}, outcome: {} });
+    await call(
+      ctrl.createRun,
+      mockReq({
+        file,
+        body: { ...body, mapping: JSON.stringify({ sex: " gender ", selected: "outcome\t" }) },
+      }),
+    );
+    expect(svc(runService.createRun).mock.calls[0][0].mapping).toEqual({
+      sex: "gender",
+      selected: "outcome",
+    });
+  });
+
   it("hands the service the raw upload bytes and the caller's organization", async () => {
     svc(runService.createRun).mockResolvedValue({ runId: 11, readiness: {}, outcome: {} });
     const { status } = await call(
@@ -407,6 +438,21 @@ describe("downloadStance", () => {
     expect(res.setHeader).toHaveBeenCalledWith("Content-Type", "application/pdf");
     expect(res.setHeader).toHaveBeenCalledWith("X-Content-SHA256", "f".repeat(64));
     expect(res.send).toHaveBeenCalledWith(pdf);
+  });
+
+  it("answers an unexpected failure with a generic translated 500, keeping the detail in the log", async () => {
+    const { logFailure } = jest.requireMock("../../utils/logger/logHelper") as {
+      logFailure: jest.Mock;
+    };
+    const internal = new Error('relation "files" does not exist at character 112');
+    svc(stanceService.getStanceDownload).mockRejectedValue(internal);
+    const t = jest.fn((key: string) => `translated:${key}`);
+    const { status, body } = await call(ctrl.downloadStance, mockReq({ params: { id: "3" }, t }));
+    expect(status).toBe(500);
+    expect(JSON.stringify(body)).not.toMatch(/relation|character 112/);
+    expect(body.error).toBe("translated:Internal server error");
+    expect(t).toHaveBeenCalledWith("Internal server error");
+    expect(logFailure).toHaveBeenCalledWith(expect.objectContaining({ error: internal }));
   });
 });
 

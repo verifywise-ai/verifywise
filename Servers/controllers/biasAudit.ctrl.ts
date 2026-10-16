@@ -141,13 +141,16 @@ function parseMapping(raw: unknown): Record<string, string> {
   }
   const mapping: Record<string, string> = {};
   const byColumn = new Map<string, string>();
-  for (const [key, column] of Object.entries(value as Record<string, unknown>)) {
-    if (typeof column !== "string" || column.trim() === "") {
+  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof raw !== "string" || raw.trim() === "") {
       throw new ValidationException(
         `mapping.${key} must name a column of the file`,
         `mapping.${key}`,
       );
     }
+    // The parser trims header names before matching, so "Gender " and
+    // "Gender" are the same column and are compared that way here.
+    const column = raw.trim();
     const prior = byColumn.get(column);
     if (prior !== undefined) {
       throw new ValidationException(
@@ -323,7 +326,8 @@ export async function downloadStance(req: Request, res: Response): Promise<Respo
       const status = error.statusCode as 400 | 404 | 409 | 410 | 422;
       return res.status(status).json(STATUS_CODE[status](error.message));
     }
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    // The detail is in the failure log above; the client gets a generic answer.
+    return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
 }
 
