@@ -32,16 +32,31 @@ function refuseCrossOrg(what: string, id: number): never {
 }
 
 /**
+ * The project-id expressions PROJECT_MEMBER_SQL accepts, one per caller:
+ * `target.id` in userCanAccessProjectQuery (the outer `projects target`
+ * row) and `s.project_id` in getStanceDownloadQuery (the stance row). The
+ * expression is interpolated into SQL and must be qualified with the
+ * caller's alias: a bare column such as `id` binds to `p.id` inside the
+ * subquery, which makes the check true for every project. A new caller adds
+ * its exact expression here, and to this comment, rather than passing a
+ * string.
+ */
+const PROJECT_MEMBER_EXPRS = ["target.id", "s.project_id"] as const;
+export type ProjectMemberExpr = (typeof PROJECT_MEMBER_EXPRS)[number];
+
+/**
  * The project-member rule, written once. True when the viewer owns the
  * project or is in projects_members for it, both within the organization.
  * The Admin allowance is the caller's, from the role. Same rule as
- * canUserAccessFile (utils/fileUpload.utils.ts). `projectExpr` is a SQL
- * expression for the project id and `:organization_id` / `:viewer_user_id`
- * are replacements the caller supplies. `projectExpr` must be qualified or a
- * replacement: a bare column such as `id` binds to `p.id` inside the
- * subquery, which makes the check true for every project.
+ * canUserAccessFile (utils/fileUpload.utils.ts). `:organization_id` and
+ * `:viewer_user_id` are replacements the caller supplies. Exported for its
+ * test; the run-time check backs the type for callers that cast.
  */
-const PROJECT_MEMBER_SQL = (projectExpr: string) => `EXISTS (
+export const PROJECT_MEMBER_SQL = (projectExpr: ProjectMemberExpr): string => {
+  if (!(PROJECT_MEMBER_EXPRS as readonly string[]).includes(projectExpr)) {
+    throw new Error(`Unsupported project-member expression: ${String(projectExpr)}`);
+  }
+  return `EXISTS (
                SELECT 1
                  FROM projects p
                  LEFT JOIN projects_members pm
@@ -50,6 +65,7 @@ const PROJECT_MEMBER_SQL = (projectExpr: string) => `EXISTS (
                   AND p.organization_id = :organization_id
                   AND (p.owner = :viewer_user_id OR pm.user_id = :viewer_user_id)
             )`;
+};
 
 /** Whether the user owns, or is a member of, this project in this organization. */
 export async function userCanAccessProjectQuery(

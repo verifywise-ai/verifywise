@@ -27,6 +27,7 @@ import {
   getStanceDownloadQuery,
   getUserNamesQuery,
   confirmRunDerivedBasisQuery,
+  PROJECT_MEMBER_SQL,
 } from "./biasAudit.utils";
 import { ConflictException } from "../domain.layer/exceptions/custom.exception";
 
@@ -405,5 +406,21 @@ describe("route reads and the basis confirmation", () => {
   it("confirms nothing for a run with no derived basis or outside the organization", async () => {
     mockQuery.mockResolvedValueOnce([[], 0]);
     await expect(confirmRunDerivedBasisQuery(11, 9, 42)).resolves.toBeNull();
+  });
+});
+
+describe("the project-member expression", () => {
+  // A bare column such as `id` binds to p.id inside the EXISTS subquery and
+  // makes the member check true for every project. Only the two qualified
+  // expressions the callers use are accepted, by the type and at run time.
+  it("accepts the qualified expressions the callers use", () => {
+    expect(PROJECT_MEMBER_SQL("target.id")).toMatch(/WHERE p\.id = target\.id/);
+    expect(PROJECT_MEMBER_SQL("s.project_id")).toMatch(/WHERE p\.id = s\.project_id/);
+  });
+
+  it("refuses a bare column, at compile time and at run time", () => {
+    // @ts-expect-error a bare column is not a ProjectMemberExpr
+    expect(() => PROJECT_MEMBER_SQL("id")).toThrow(/project-member expression/);
+    expect(() => PROJECT_MEMBER_SQL("project_id" as never)).toThrow(/project-member expression/);
   });
 });
