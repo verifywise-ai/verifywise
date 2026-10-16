@@ -18,6 +18,15 @@ import {
   getProfileAnswersQuery,
   upsertAnswerQuery,
   CreateRunArgs,
+  getProjectQuery,
+  getProfileByIdQuery,
+  getRunQuery,
+  listRunsQuery,
+  listTrendRunsQuery,
+  listStancesForRunQuery,
+  getStanceDownloadQuery,
+  getUserNamesQuery,
+  confirmRunDerivedBasisQuery,
 } from "./biasAudit.utils";
 import { ConflictException } from "../domain.layer/exceptions/custom.exception";
 
@@ -311,5 +320,75 @@ describe("stance versioning", () => {
   it("returns max + 1 so a regenerate never overwrites", async () => {
     mockQuery.mockResolvedValueOnce([{ max: 3 }]);
     expect(await getNextStanceVersionQuery(11, 42)).toBe(4);
+  });
+});
+
+describe("route reads and the basis confirmation", () => {
+  const reads: Array<[string, () => Promise<unknown>, Record<string, unknown>]> = [
+    ["project", () => getProjectQuery(7, 42), { project_id: 7 }],
+    ["profile by id", () => getProfileByIdQuery(5, 42), { profile_id: 5 }],
+    ["run", () => getRunQuery(11, 42), { run_id: 11 }],
+    ["runs list", () => listRunsQuery(7, 12, 42), { project_id: 7, framework_id: 12 }],
+    ["trend rows", () => listTrendRunsQuery(7, 12, 42), { project_id: 7, framework_id: 12 }],
+    ["stances of a run", () => listStancesForRunQuery(11, 42), { run_id: 11 }],
+    ["stance download", () => getStanceDownloadQuery(3, 42), { stance_id: 3 }],
+    ["user names", () => getUserNamesQuery([9, 10], 42), { user_ids: [9, 10] }],
+  ];
+
+  it.each(reads)("scopes the %s read to the organization", async (_name, call, ids) => {
+    mockQuery.mockResolvedValueOnce([]);
+    await call();
+    const [sql, opts] = mockQuery.mock.calls[0];
+    expect(sql).toMatch(/organization_id = :organization_id/);
+    expect(opts.replacements).toMatchObject({ ...ids, organization_id: 42 });
+  });
+
+  it("returns null for a project, profile, run or stance outside the organization", async () => {
+    for (const call of [
+      () => getProjectQuery(7, 42),
+      () => getProfileByIdQuery(5, 42),
+      () => getRunQuery(11, 42),
+      () => getStanceDownloadQuery(3, 42),
+    ]) {
+      mockQuery.mockResolvedValueOnce([]);
+      await expect(call()).resolves.toBeNull();
+    }
+  });
+
+  it("asks for no user names when there are no ids", async () => {
+    await expect(getUserNamesQuery([], 42)).resolves.toEqual([]);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it("filters runs on the framework through the profile, in the same organization", async () => {
+    mockQuery.mockResolvedValueOnce([]);
+    await listRunsQuery(7, 12, 42);
+    const [sql] = mockQuery.mock.calls[0];
+    expect(sql).toMatch(/ap\.organization_id = :organization_id/);
+    expect(sql).toMatch(/ap\.framework_id = :framework_id/);
+  });
+
+  it("joins the stance PDF only from the same organization's files", async () => {
+    mockQuery.mockResolvedValueOnce([]);
+    await getStanceDownloadQuery(3, 42);
+    const [sql] = mockQuery.mock.calls[0];
+    expect(sql).toMatch(
+      /LEFT JOIN files f ON f\.id = s\.pdf_file_id\s+AND f\.organization_id = :organization_id/,
+    );
+  });
+
+  it("confirms the basis in the run's own organization and records who confirmed it", async () => {
+    mockQuery.mockResolvedValueOnce([[{ id: 11, data_basis_json: { confirmed: true } }], 1]);
+    const row = await confirmRunDerivedBasisQuery(11, 9, 42);
+    const [sql, opts] = mockQuery.mock.calls[0];
+    expect(sql).toMatch(/organization_id = :organization_id/);
+    expect(sql).toMatch(/data_basis_json IS NOT NULL/);
+    expect(opts.replacements).toMatchObject({ run_id: 11, user_id: 9, organization_id: 42 });
+    expect(row).toMatchObject({ id: 11 });
+  });
+
+  it("confirms nothing for a run with no derived basis or outside the organization", async () => {
+    mockQuery.mockResolvedValueOnce([[], 0]);
+    await expect(confirmRunDerivedBasisQuery(11, 9, 42)).resolves.toBeNull();
   });
 });

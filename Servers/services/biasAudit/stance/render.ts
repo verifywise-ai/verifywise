@@ -22,6 +22,7 @@ import * as ejs from "ejs";
 import { chromium } from "playwright";
 import { sequelize } from "../../../database/db";
 import {
+  BusinessLogicException,
   ConflictException,
   ValidationException,
 } from "../../../domain.layer/exceptions/custom.exception";
@@ -30,7 +31,7 @@ import {
   getNextStanceVersionQuery,
   getRunProjectIdQuery,
 } from "../../../utils/biasAudit.utils";
-import { uploadFile } from "../../../utils/fileUpload.utils";
+import { BIAS_AUDIT_STANCE_SOURCE, uploadFile } from "../../../utils/fileUpload.utils";
 import { REQUIRED_SECTIONS, type StanceModel, type StanceSection } from "./compose";
 import { checkSections } from "./sectionChecker";
 import { blankFieldLabel, metricLabel, presetLabel } from "./labels";
@@ -195,15 +196,25 @@ export function findForbiddenWords(html: string): string[] {
   return findForbidden(html.replace(/<span data-customer-text>[^<]*<\/span>/g, ""));
 }
 
-/** The export gate. Fails closed: no evidence, or evidence that withholds export, refuses. */
+/**
+ * The export gate. Fails closed: no evidence, or evidence that withholds export,
+ * refuses. Every refusal here and in renderStancePdf is a BusinessLogicException
+ * (422), so a caller maps it to a client error rather than a server fault.
+ */
 function assertMayExport(
   evidence: StanceEvidence | null | undefined,
 ): asserts evidence is StanceEvidence {
   if (!evidence) {
-    throw new Error("A stance PDF cannot be rendered without the run's evidence.");
+    throw new BusinessLogicException(
+      "A stance PDF cannot be rendered without the run's evidence.",
+      "stance_evidence",
+    );
   }
   if (evidence.mayExportPdf !== true) {
-    throw new Error("The data checks for this run do not allow the stance to be exported.");
+    throw new BusinessLogicException(
+      "The data checks for this run do not allow the stance to be exported.",
+      "stance_export_gate",
+    );
   }
 }
 
@@ -216,11 +227,17 @@ export async function renderStancePdf(
 
   const { missing } = checkSections(html, REQUIRED_BY_SCOPE[model.scope]);
   if (missing.length > 0) {
-    throw new Error(`Stance is missing required section(s): ${missing.join(", ")}`);
+    throw new BusinessLogicException(
+      `Stance is missing required section(s): ${missing.join(", ")}`,
+      "stance_sections",
+    );
   }
   const forbidden = findForbiddenWords(html);
   if (forbidden.length > 0) {
-    throw new Error(`Stance contains forbidden vocabulary: ${forbidden.join(", ")}`);
+    throw new BusinessLogicException(
+      `Stance contains forbidden vocabulary: ${forbidden.join(", ")}`,
+      "stance_vocabulary",
+    );
   }
 
   const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
@@ -305,7 +322,7 @@ export async function persistStance(
         },
         userId,
         runProjectId,
-        "Bias audit stance report",
+        BIAS_AUDIT_STANCE_SOURCE,
         organizationId,
         transaction,
       );

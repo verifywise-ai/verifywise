@@ -11,14 +11,25 @@
 import { createHash } from "node:crypto";
 import { sequelize } from "../../database/db";
 import {
+  ConflictException,
   NotFoundException,
   ValidationException,
 } from "../../domain.layer/exceptions/custom.exception";
 import {
+  confirmRunDerivedBasisQuery,
   createRunQuery,
   getAttestedProfileQuery,
   getProfileAnswersQuery,
+  getProjectQuery,
+  getRunQuery,
+  listRunsQuery,
+  listStancesForRunQuery,
+  listTrendRunsQuery,
+  type RunSummaryRow,
+  type TrendRunRow,
 } from "../../utils/biasAudit.utils";
+import type { BiasAuditRun } from "../../domain.layer/models/biasAudit/biasAuditRun.model";
+import type { BiasAuditStance } from "../../domain.layer/models/biasAudit/biasAuditStance.model";
 import type { AnswerMap } from "./applicability";
 import { applicableQuestions } from "./applicability";
 import { runAnswerGates } from "./answerGates";
@@ -65,7 +76,12 @@ export interface CreateRunInput {
   frameworkId: number;
   organizationId: number;
   userId: number;
-  csv: string;
+  /**
+   * The uploaded file exactly as received. It is hashed as bytes, so a
+   * customer who hashes their own copy gets the SHA-256 the stance prints,
+   * BOM and encoding included; it is decoded as UTF-8 only for reading.
+   */
+  data: Buffer;
   /** Canonical key (a category key, `selected` or `score`) to the file's column header. */
   mapping: Record<string, string>;
 }
@@ -104,7 +120,7 @@ function oneYearFromToday(): string {
 }
 
 export async function createRun(input: CreateRunInput): Promise<CreateRunResult> {
-  const { projectId, frameworkId, organizationId, userId, csv, mapping } = input;
+  const { projectId, frameworkId, organizationId, userId, data, mapping } = input;
 
   const profile = await getAttestedProfileQuery(projectId, frameworkId, organizationId);
   if (!profile) {
@@ -158,7 +174,7 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
 
   let parsed: ParsedDataset;
   try {
-    parsed = parseDataset(csv, mapping);
+    parsed = parseDataset(data.toString("utf8"), mapping);
   } catch (error: unknown) {
     if (error instanceof DatasetParseError) {
       throw new ValidationException(error.message, "csv");
@@ -247,7 +263,7 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
         resultJson: outcome.result,
         gateFindingsJson: outcome.gates.findings,
         orderFindingsJson: outcome.order,
-        datasetSha256: createHash("sha256").update(csv).digest("hex"),
+        datasetSha256: createHash("sha256").update(data).digest("hex"),
         datasetRetained: false,
         rowCount: parsed.records.length,
         createdBy: userId,
@@ -258,4 +274,82 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
   );
 
   return { runId: row.id!, readiness, outcome };
+}
+
+// ------------------------------------------------------------------ reads
+
+interface ProjectScope {
+  projectId: number;
+  frameworkId: number;
+  organizationId: number;
+}
+
+async function assertProject(projectId: number, organizationId: number): Promise<void> {
+  if (!(await getProjectQuery(projectId, organizationId))) {
+    throw new NotFoundException(`Project ${projectId} was not found`, "Project", projectId);
+  }
+}
+
+/**
+ * Whether a stored run may be exported, by the rule runAudit applies to its
+ * gates: only notes withhold nothing. A run that stored no findings record is
+ * not known to be clean, so it fails closed.
+ */
+export function mayExportStoredRun(gateFindings: unknown): boolean {
+  if (!Array.isArray(gateFindings)) return false;
+  return (gateFindings as Array<GateFinding | null>).every((f) => f?.severity === "note");
+}
+
+export async function listRuns(scope: ProjectScope): Promise<{ runs: RunSummaryRow[] }> {
+  await assertProject(scope.projectId, scope.organizationId);
+  return {
+    runs: await listRunsQuery(scope.projectId, scope.frameworkId, scope.organizationId),
+  };
+}
+
+/** Runs oldest first in the shape the trend series reads. */
+export async function getTrendRows(scope: ProjectScope): Promise<{ runs: TrendRunRow[] }> {
+  await assertProject(scope.projectId, scope.organizationId);
+  return {
+    runs: await listTrendRunsQuery(scope.projectId, scope.frameworkId, scope.organizationId),
+  };
+}
+
+export interface RunView {
+  run: BiasAuditRun;
+  stances: BiasAuditStance[];
+  mayExportPdf: boolean;
+}
+
+export async function getRunView(runId: number, organizationId: number): Promise<RunView> {
+  const run = await getRunQuery(runId, organizationId);
+  if (!run) throw new NotFoundException(`Run ${runId} was not found`, "BiasAuditRun", runId);
+  return {
+    run,
+    stances: await listStancesForRunQuery(runId, organizationId),
+    mayExportPdf: mayExportStoredRun(run.gate_findings_json),
+  };
+}
+
+/**
+ * The customer confirms the per-category basis VerifyWise derived from their
+ * answers. Until then the stance presents it as our reading and lists it as
+ * an open item.
+ */
+export async function confirmDerivedBasis(
+  runId: number,
+  userId: number,
+  organizationId: number,
+): Promise<{ runId: number; derivedBasis: unknown }> {
+  const run = await getRunQuery(runId, organizationId);
+  if (!run) throw new NotFoundException(`Run ${runId} was not found`, "BiasAuditRun", runId);
+  const updated = await confirmRunDerivedBasisQuery(runId, userId, organizationId);
+  if (!updated) {
+    throw new ConflictException(
+      "This run has no derived data basis to confirm.",
+      "BiasAuditRun",
+      "data_basis_json",
+    );
+  }
+  return { runId, derivedBasis: updated.data_basis_json };
 }

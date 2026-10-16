@@ -6,7 +6,10 @@ const utils = {
 jest.mock("../../../utils/biasAudit.utils", () => utils);
 
 const uploadFile = jest.fn();
-jest.mock("../../../utils/fileUpload.utils", () => ({ uploadFile }));
+jest.mock("../../../utils/fileUpload.utils", () => ({
+  uploadFile,
+  BIAS_AUDIT_STANCE_SOURCE: "Bias audit stance report",
+}));
 
 const tx = { id: "tx" };
 jest.mock("../../../database/db", () => ({
@@ -201,6 +204,24 @@ describe("renderStancePdf", () => {
       /export/i,
     );
     expect(launch).not.toHaveBeenCalled();
+  });
+
+  it("refuses with a 422 business-rule error, never a bare Error, so no refusal reaches a client as a 500", async () => {
+    const forbidden = {
+      ...model,
+      sections: model.sections.map((s: any) =>
+        s.key === "results" ? { ...s, body: "passed" } : s,
+      ),
+    };
+    const refusals = [
+      () => renderStancePdf(model, { ...evidence, mayExportPdf: false }),
+      () => renderStancePdf(model, null as any),
+      () => renderStancePdf({ ...model, sections: model.sections.slice(0, 2) }, evidence),
+      () => renderStancePdf(forbidden, evidence),
+    ];
+    for (const r of refusals) {
+      await expect(r()).rejects.toMatchObject({ name: "BusinessLogicException", statusCode: 422 });
+    }
   });
 
   it("refuses to render a PDF without evidence, before launching a browser", async () => {

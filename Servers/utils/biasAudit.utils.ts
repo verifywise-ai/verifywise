@@ -436,3 +436,241 @@ export async function getNextStanceVersionQuery(
   )) as Array<{ max: number | null }>;
   return (rows[0]?.max ?? 0) + 1;
 }
+
+// ------------------------------------------------------------ route reads
+
+/** A project in this organization, or null. */
+export async function getProjectQuery(
+  projectId: number,
+  organizationId: number,
+): Promise<{ id: number; project_title: string } | null> {
+  const rows = (await sequelize.query(
+    `SELECT id, project_title FROM projects
+      WHERE id = :project_id AND organization_id = :organization_id`,
+    {
+      replacements: { project_id: projectId, organization_id: organizationId },
+      type: QueryTypes.SELECT,
+    },
+  )) as Array<{ id: number; project_title: string }>;
+  return rows[0] ?? null;
+}
+
+/** A profile version by id, in this organization, or null. */
+export async function getProfileByIdQuery(
+  profileId: number,
+  organizationId: number,
+): Promise<AedtProfile | null> {
+  const rows = (await sequelize.query(
+    `SELECT * FROM aedt_profiles
+      WHERE id = :profile_id AND organization_id = :organization_id`,
+    {
+      replacements: { profile_id: profileId, organization_id: organizationId },
+      type: QueryTypes.SELECT,
+    },
+  )) as AedtProfile[];
+  return rows[0] ?? null;
+}
+
+/** A run by id, in this organization, or null. */
+export async function getRunQuery(
+  runId: number,
+  organizationId: number,
+): Promise<BiasAuditRun | null> {
+  const rows = (await sequelize.query(
+    `SELECT * FROM bias_audit_runs
+      WHERE id = :run_id AND organization_id = :organization_id`,
+    {
+      replacements: { run_id: runId, organization_id: organizationId },
+      type: QueryTypes.SELECT,
+    },
+  )) as BiasAuditRun[];
+  return rows[0] ?? null;
+}
+
+/** Summary of a run for a list: no result or findings payloads. */
+export interface RunSummaryRow {
+  id: number;
+  profile_id: number;
+  profile_version: number;
+  question_set_version: number;
+  job_description_key: string | null;
+  metric: string;
+  readiness_score: number | null;
+  readiness_blocked_reason: string | null;
+  expiry_date: string | null;
+  row_count: number | null;
+  dataset_sha256: string | null;
+  has_result: boolean;
+  created_by: number | null;
+  created_at: Date;
+}
+
+/** Runs of a project for one framework, newest first. */
+export async function listRunsQuery(
+  projectId: number,
+  frameworkId: number,
+  organizationId: number,
+): Promise<RunSummaryRow[]> {
+  return (await sequelize.query(
+    `SELECT r.id, r.profile_id, r.profile_version, r.question_set_version,
+            r.job_description_key, r.metric, r.readiness_score,
+            r.readiness_blocked_reason, r.expiry_date, r.row_count,
+            r.dataset_sha256, (r.result_json IS NOT NULL) AS has_result,
+            r.created_by, r.created_at
+       FROM bias_audit_runs r
+       JOIN aedt_profiles ap ON ap.id = r.profile_id
+                            AND ap.organization_id = :organization_id
+      WHERE r.project_id = :project_id AND ap.framework_id = :framework_id
+        AND r.organization_id = :organization_id
+      ORDER BY r.created_at DESC, r.id DESC`,
+    {
+      replacements: {
+        project_id: projectId,
+        framework_id: frameworkId,
+        organization_id: organizationId,
+      },
+      type: QueryTypes.SELECT,
+    },
+  )) as RunSummaryRow[];
+}
+
+/** The fields a trend series reads from a run. */
+export interface TrendRunRow {
+  id: number;
+  created_at: Date | string;
+  profile_version: number;
+  question_set_version: number;
+  job_description_key: string | null;
+  metric: string;
+  result_json: unknown;
+}
+
+/** Runs of a project for one framework, oldest first, for the trend view. */
+export async function listTrendRunsQuery(
+  projectId: number,
+  frameworkId: number,
+  organizationId: number,
+): Promise<TrendRunRow[]> {
+  return (await sequelize.query(
+    `SELECT r.id, r.created_at, r.profile_version, r.question_set_version,
+            r.job_description_key, r.metric, r.result_json
+       FROM bias_audit_runs r
+       JOIN aedt_profiles ap ON ap.id = r.profile_id
+                            AND ap.organization_id = :organization_id
+      WHERE r.project_id = :project_id AND ap.framework_id = :framework_id
+        AND r.organization_id = :organization_id
+      ORDER BY r.created_at ASC, r.id ASC`,
+    {
+      replacements: {
+        project_id: projectId,
+        framework_id: frameworkId,
+        organization_id: organizationId,
+      },
+      type: QueryTypes.SELECT,
+    },
+  )) as TrendRunRow[];
+}
+
+/** Stance versions generated from a run, newest first. */
+export async function listStancesForRunQuery(
+  runId: number,
+  organizationId: number,
+): Promise<BiasAuditStance[]> {
+  return (await sequelize.query(
+    `SELECT id, project_id, run_id, version, pdf_sha256, pdf_file_id,
+            score_at_generation, scope_at_generation, profile_version,
+            question_set_version, generated_by, generated_at
+       FROM bias_audit_stances
+      WHERE run_id = :run_id AND organization_id = :organization_id
+      ORDER BY version DESC`,
+    {
+      replacements: { run_id: runId, organization_id: organizationId },
+      type: QueryTypes.SELECT,
+    },
+  )) as BiasAuditStance[];
+}
+
+export interface StanceDownloadRow {
+  id: number;
+  run_id: number | null;
+  version: number;
+  pdf_sha256: string | null;
+  pdf_file_id: number | null;
+  /** Null when the files row the stance points at no longer exists. */
+  file_id: number | null;
+  filename: string | null;
+  content: Buffer | null;
+}
+
+/**
+ * A stance and its PDF. pdf_file_id has no foreign key, so the file is
+ * joined rather than assumed: a missing files row comes back as nulls.
+ */
+export async function getStanceDownloadQuery(
+  stanceId: number,
+  organizationId: number,
+): Promise<StanceDownloadRow | null> {
+  const rows = (await sequelize.query(
+    `SELECT s.id, s.run_id, s.version, s.pdf_sha256, s.pdf_file_id,
+            f.id AS file_id, f.filename, f.content
+       FROM bias_audit_stances s
+       LEFT JOIN files f ON f.id = s.pdf_file_id
+                        AND f.organization_id = :organization_id
+      WHERE s.id = :stance_id AND s.organization_id = :organization_id`,
+    {
+      replacements: { stance_id: stanceId, organization_id: organizationId },
+      type: QueryTypes.SELECT,
+    },
+  )) as StanceDownloadRow[];
+  return rows[0] ?? null;
+}
+
+/** Names of users in this organization, for attributing answers in a stance. */
+export async function getUserNamesQuery(
+  userIds: number[],
+  organizationId: number,
+): Promise<Array<{ id: number; name: string; surname: string }>> {
+  if (userIds.length === 0) return [];
+  return (await sequelize.query(
+    `SELECT id, name, surname FROM users
+      WHERE id IN (:user_ids) AND organization_id = :organization_id`,
+    {
+      replacements: { user_ids: userIds, organization_id: organizationId },
+      type: QueryTypes.SELECT,
+    },
+  )) as Array<{ id: number; name: string; surname: string }>;
+}
+
+/**
+ * Record that the customer confirmed the derived per-category basis. The
+ * derived split is VerifyWise's reading of the answers; confirming it makes
+ * it the customer's statement, so who confirmed and when are kept beside it.
+ * Stances already generated are untouched; the next one reads the
+ * confirmation. Returns null for a run with no derived basis, or outside the
+ * organization.
+ */
+export async function confirmRunDerivedBasisQuery(
+  runId: number,
+  userId: number,
+  organizationId: number,
+): Promise<BiasAuditRun | null> {
+  const result = await sequelize.query(
+    `UPDATE bias_audit_runs
+        SET data_basis_json = CASE
+              -- A second confirmation keeps the first confirmer and date.
+              WHEN data_basis_json->>'confirmed' = 'true' THEN data_basis_json
+              ELSE data_basis_json
+                || jsonb_build_object('confirmed', true,
+                                      'confirmedBy', CAST(:user_id AS INTEGER),
+                                      'confirmedAt', NOW())
+            END
+      WHERE id = :run_id AND organization_id = :organization_id
+        AND data_basis_json IS NOT NULL
+        AND jsonb_typeof(data_basis_json) = 'object'
+      RETURNING *`,
+    {
+      replacements: { run_id: runId, user_id: userId, organization_id: organizationId },
+    },
+  );
+  return firstRow<BiasAuditRun>(result) ?? null;
+}

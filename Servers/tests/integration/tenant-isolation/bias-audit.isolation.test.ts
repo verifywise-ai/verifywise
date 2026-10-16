@@ -1,6 +1,8 @@
 jest.setTimeout(60000);
 
 import { cleanupDatabase } from "../helpers";
+import { NotFoundException } from "../../../domain.layer/exceptions/custom.exception";
+import { uploadFile } from "../../../utils/fileUpload.utils";
 import { sequelize } from "../../../database/db";
 import { seedTwoTenantContexts } from "./tenantIsolation.harness";
 import { createTestProject } from "../../factories";
@@ -9,6 +11,7 @@ import {
   createProfileVersionQuery,
   createRunQuery,
   createStanceQuery,
+  getProfileAnswersQuery,
   upsertAnswerQuery,
 } from "../../../utils/biasAudit.utils";
 
@@ -176,6 +179,9 @@ describe("bias audit tables tenant isolation", () => {
       { replacements: { orgId: owner.orgId, project, profile } },
     );
     const runId = (runRows as any[])[0].id as number;
+    // Attested first, so the createRunQuery refusal below is the organization
+    // check and not the attested-only guard.
+    await sequelize.transaction((t) => attestProfileQuery(profile, owner.userId, owner.orgId, t));
     const count = async (table: string) => {
       const [rows] = await sequelize.query(`SELECT COUNT(*)::int AS n FROM ${table}`);
       return (rows as any[])[0].n as number;
@@ -252,7 +258,7 @@ describe("bias audit tables tenant isolation", () => {
           t,
         ),
       ),
-    ).rejects.toThrow();
+    ).rejects.toBeInstanceOf(NotFoundException);
     await expect(
       asAttacker((t) =>
         createStanceQuery(
@@ -322,5 +328,242 @@ describe("bias audit tables tenant isolation", () => {
       replacements: { first },
     });
     expect(rows).toEqual([{ status: "attested" }]);
+  });
+});
+
+describe("bias audit query layer against the database", () => {
+  const answer = (profileId: number, userId: number, answeredAt?: Date | null) => ({
+    profileId,
+    questionKey: "role.party",
+    questionSetVersion: 1,
+    answerValue: "vendor",
+    answerNotes: "We supply it.",
+    isDontKnow: false,
+    isNotApplicable: false,
+    answeredByUserId: userId,
+    answeredAt,
+  });
+
+  it("keeps a carried-forward answer's original timestamp, and stamps now when omitted", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const project = await createTestProject(owner.orgId, owner.userId);
+    const profile = await insertProfile(owner.orgId, project, owner.userId);
+    const original = new Date("2026-01-02T03:04:05Z");
+
+    await sequelize.transaction((t) =>
+      upsertAnswerQuery(answer(profile, owner.userId, original), owner.orgId, t),
+    );
+    let [row] = await getProfileAnswersQuery(profile, owner.orgId);
+    expect(new Date(row.answered_at as any).toISOString()).toBe(original.toISOString());
+
+    const before = Date.now();
+    await sequelize.transaction((t) =>
+      upsertAnswerQuery(answer(profile, owner.userId, null), owner.orgId, t),
+    );
+    [row] = await getProfileAnswersQuery(profile, owner.orgId);
+    expect(new Date(row.answered_at as any).getTime()).toBeGreaterThanOrEqual(before - 5000);
+  });
+
+  it("reads answers inside the caller's transaction when one is passed", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const project = await createTestProject(owner.orgId, owner.userId);
+    const profile = await insertProfile(owner.orgId, project, owner.userId);
+
+    await sequelize.transaction(async (t) => {
+      await upsertAnswerQuery(answer(profile, owner.userId), owner.orgId, t);
+      // Uncommitted: visible on the transaction, not on another connection.
+      expect(await getProfileAnswersQuery(profile, owner.orgId, t)).toHaveLength(1);
+      expect(await getProfileAnswersQuery(profile, owner.orgId)).toHaveLength(0);
+    });
+    expect(await getProfileAnswersQuery(profile, owner.orgId)).toHaveLength(1);
+  });
+});
+
+describe("bias audit routes tenant isolation", () => {
+  const LL144 = 12;
+  const IN_SCOPE_ANSWERS = [
+    { questionKey: "role.party", value: "vendor", notes: "We supply the tool.", dontKnow: false },
+    {
+      questionKey: "scope.weighting",
+      value: "biggest",
+      notes: "It ranks applicants.",
+      dontKnow: false,
+    },
+    {
+      questionKey: "independence.auditor",
+      value: "self",
+      notes: "Our team runs it.",
+      dontKnow: false,
+    },
+    { questionKey: "data.held", value: "none", notes: "We hold none.", dontKnow: false },
+    { questionKey: "data.basis", value: "test_attribute", notes: "Test data.", dontKnow: false },
+    { questionKey: "cutoff.applied_by", value: "platform", notes: null, dontKnow: false },
+  ];
+  const CSV = (() => {
+    const rows = ["gender,race,outcome"];
+    for (let i = 0; i < 200; i++) {
+      rows.push(`${i % 2 ? "Male" : "Female"},${i % 3 ? "White" : "Asian"},${i % 5 < 2 ? 1 : 0}`);
+    }
+    return Buffer.from(rows.join("\n") + "\n");
+  })();
+  const MAPPING = JSON.stringify({ sex: "gender", race_ethnicity: "race", selected: "outcome" });
+
+  /** Owner drafts, attests and records one run through the API. */
+  async function ownerWithRun() {
+    const { owner, attacker } = await seedTwoTenantContexts();
+    const project = await createTestProject(owner.orgId, owner.userId);
+    const put = await owner.request
+      .put(`/api/bias-audit/profiles/${project}/${LL144}`)
+      .send({ answers: IN_SCOPE_ANSWERS });
+    expect(put.status).toBe(200);
+    const attest = await owner.request.post(`/api/bias-audit/profiles/${project}/${LL144}/attest`);
+    expect(attest.status).toBe(200);
+    const run = await owner.request
+      .post("/api/bias-audit/runs")
+      .field("projectId", String(project))
+      .field("frameworkId", String(LL144))
+      .field("mapping", MAPPING)
+      // The body carries the attacker's organization; the server must ignore it.
+      .field("organizationId", String(attacker.orgId))
+      .attach("file", CSV, { filename: "d.csv", contentType: "text/csv" });
+    expect(run.status).toBe(201);
+    return { owner, attacker, project, runId: run.body.data.runId as number };
+  }
+
+  const snapshot = async (project: number) => {
+    const [rows] = await sequelize.query(
+      `SELECT (SELECT COUNT(*) FROM aedt_profiles WHERE project_id = :project)::int AS profiles,
+              (SELECT COUNT(*) FROM aedt_profile_answers a JOIN aedt_profiles p ON p.id = a.profile_id
+                WHERE p.project_id = :project)::int AS answers,
+              (SELECT COUNT(*) FROM bias_audit_runs WHERE project_id = :project)::int AS runs,
+              (SELECT COUNT(*) FROM bias_audit_stances WHERE project_id = :project)::int AS stances,
+              (SELECT string_agg(status::text || ':' || version, ',' ORDER BY id)
+                 FROM aedt_profiles WHERE project_id = :project) AS statuses,
+              (SELECT string_agg(COALESCE(data_basis_json::text, ''), ',' ORDER BY id)
+                 FROM bias_audit_runs WHERE project_id = :project) AS bases`,
+      { replacements: { project } },
+    );
+    return (rows as any[])[0];
+  };
+
+  it("stamps the run with the caller's organization, never the body's", async () => {
+    const { owner, runId } = await ownerWithRun();
+    const [rows] = await sequelize.query(
+      `SELECT organization_id FROM bias_audit_runs WHERE id = :runId`,
+      { replacements: { runId } },
+    );
+    expect((rows as any[])[0].organization_id).toBe(owner.orgId);
+  });
+
+  it("denies every read of another organization's project, run and list", async () => {
+    const { owner, attacker, project, runId } = await ownerWithRun();
+    const reads = [
+      `/api/bias-audit/questions/${LL144}?projectId=${project}`,
+      `/api/bias-audit/profiles/${project}/${LL144}`,
+      `/api/bias-audit/runs?projectId=${project}&frameworkId=${LL144}`,
+      `/api/bias-audit/runs/trend?projectId=${project}&frameworkId=${LL144}`,
+      `/api/bias-audit/runs/${runId}`,
+    ];
+    for (const route of reads) {
+      // Owner positive control first: a missing route would also answer 404.
+      expect((await owner.request.get(route)).status).toBe(200);
+      const res = await attacker.request.get(route);
+      expect(res.status).toBe(404);
+      expect(JSON.stringify(res.body)).not.toContain("It ranks applicants");
+    }
+    const list = await owner.request.get(
+      `/api/bias-audit/runs?projectId=${project}&frameworkId=${LL144}`,
+    );
+    expect(list.body.data.runs.map((r: any) => r.id)).toEqual([runId]);
+  });
+
+  it("denies every write to another organization's profile and run, changing nothing", async () => {
+    const { attacker, project, runId } = await ownerWithRun();
+    const before = await snapshot(project);
+    const writes = [
+      attacker.request
+        .put(`/api/bias-audit/profiles/${project}/${LL144}`)
+        .send({ answers: IN_SCOPE_ANSWERS }),
+      attacker.request.post(`/api/bias-audit/profiles/${project}/${LL144}/attest`),
+      attacker.request
+        .post("/api/bias-audit/runs")
+        .field("projectId", String(project))
+        .field("frameworkId", String(LL144))
+        .field("mapping", MAPPING)
+        .attach("file", CSV, { filename: "d.csv", contentType: "text/csv" }),
+      attacker.request.post(`/api/bias-audit/runs/${runId}/derived-basis/confirm`),
+      attacker.request.post(`/api/bias-audit/runs/${runId}/stance`),
+    ];
+    for (const w of writes) {
+      expect([403, 404]).toContain((await w).status);
+    }
+    expect(await snapshot(project)).toEqual(before);
+  });
+
+  it("serves a stance PDF only to its organization, 410 once the file is gone, and refuses its deletion", async () => {
+    const { owner, attacker, project, runId } = await ownerWithRun();
+    const pdf = Buffer.from("%PDF-1.4 seeded stance");
+    const sha = require("node:crypto").createHash("sha256").update(pdf).digest("hex");
+    const stanceId = await sequelize.transaction(async (t) => {
+      const file = await uploadFile(
+        {
+          fieldname: "file",
+          originalname: "stance.pdf",
+          mimetype: "application/pdf",
+          buffer: pdf,
+          size: pdf.length,
+        } as any,
+        owner.userId,
+        project,
+        "Bias audit stance report",
+        owner.orgId,
+        t,
+      );
+      const row = await createStanceQuery(
+        {
+          runId,
+          version: 1,
+          pdfSha256: sha,
+          pdfFileId: file.id!,
+          scoreAtGeneration: null,
+          scopeAtGeneration: "in_scope",
+          generatedBy: owner.userId,
+        },
+        owner.orgId,
+        t,
+      );
+      return row.id!;
+    });
+    const route = `/api/bias-audit/stances/${stanceId}/download`;
+
+    const ok = await owner.request
+      .get(route)
+      .buffer(true)
+      .parse((res, cb) => {
+        const chunks: Buffer[] = [];
+        res.on("data", (c: Buffer) => chunks.push(c));
+        res.on("end", () => cb(null, Buffer.concat(chunks)));
+      });
+    expect(ok.status).toBe(200);
+    expect(ok.headers["content-type"]).toMatch(/application\/pdf/);
+    expect(ok.headers["x-content-sha256"]).toBe(sha);
+    expect((ok.body as Buffer).equals(pdf)).toBe(true);
+
+    expect((await attacker.request.get(route)).status).toBe(404);
+
+    const [files] = await sequelize.query(
+      `SELECT pdf_file_id FROM bias_audit_stances WHERE id = :stanceId`,
+      { replacements: { stanceId } },
+    );
+    const fileId = (files as any[])[0].pdf_file_id;
+    const del = await owner.request.delete(`/api/file-manager/${fileId}`);
+    expect(del.status).toBe(409);
+
+    // A files row removed by any other path leaves the stance readable but its PDF gone.
+    await sequelize.query(`DELETE FROM files WHERE id = :fileId`, { replacements: { fileId } });
+    expect((await owner.request.get(route)).status).toBe(410);
+    expect(
+      (await owner.request.get(`/api/bias-audit/runs/${runId}`)).body.data.stances,
+    ).toHaveLength(1);
   });
 });

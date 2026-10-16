@@ -15,8 +15,10 @@ import {
 import {
   attestProfileQuery,
   createProfileVersionQuery,
+  getAttestedProfileQuery,
   getCurrentProfileQuery,
   getProfileAnswersQuery,
+  getProjectQuery,
   upsertAnswerQuery,
 } from "../../utils/biasAudit.utils";
 import {
@@ -25,6 +27,8 @@ import {
   VETO_KEYS,
 } from "../../structures/NYC-Local-Law-144/intake.questions";
 import { applicableQuestions, type AnswerWithNotes } from "./applicability";
+import { computeReadiness, type ReadinessResult } from "./readinessScore";
+import type { IntakeQuestion } from "../../structures/NYC-Local-Law-144/intake.types";
 
 export type AnswerInput = {
   questionKey: string;
@@ -229,4 +233,97 @@ export async function attestProfile(args: ProfileScope): Promise<ProfileRef> {
     }
     return { profileId: attested.id!, version: attested.version };
   });
+}
+
+// ------------------------------------------------------------------ reads
+
+interface ReadScope {
+  projectId: number;
+  frameworkId: number;
+  organizationId: number;
+}
+
+async function assertProject(projectId: number, organizationId: number) {
+  const project = await getProjectQuery(projectId, organizationId);
+  if (!project) {
+    throw new NotFoundException(`Project ${projectId} was not found`, "Project", projectId);
+  }
+  return project;
+}
+
+/** The current profile's answers, or none, in the service's working shape. */
+async function currentAnswers(scope: ReadScope) {
+  const current = await getCurrentProfileQuery(
+    scope.projectId,
+    scope.frameworkId,
+    scope.organizationId,
+  );
+  const rows = current ? await getProfileAnswersQuery(current.id!, scope.organizationId) : [];
+  return { current, rows, answers: toWorkingSet(rows) };
+}
+
+/** The questions that apply given the answers saved so far. */
+export async function getApplicableQuestions(
+  scope: ReadScope,
+): Promise<{ questions: IntakeQuestion[] }> {
+  await assertProject(scope.projectId, scope.organizationId);
+  const { answers } = await currentAnswers(scope);
+  return { questions: applicableQuestions(answers) };
+}
+
+export interface ProfileAnswerView {
+  questionKey: string;
+  value: string | null;
+  notes: string | null;
+  dontKnow: boolean;
+  notApplicable: boolean;
+  answeredByUserId: number | null;
+  answeredAt: Date | null;
+}
+
+export interface ProfileView {
+  project: { id: number; title: string };
+  /** The version being edited: the latest draft, else the attested one. */
+  profile: { id: number; version: number; status: string } | null;
+  /** The attested version runs are recorded against, if any. */
+  attested: {
+    id: number;
+    version: number;
+    attestedByUserId: number | null;
+    attestedAt: Date | null;
+  } | null;
+  answers: ProfileAnswerView[];
+  readiness: ReadinessResult;
+}
+
+export async function getProfileView(scope: ReadScope): Promise<ProfileView> {
+  const project = await assertProject(scope.projectId, scope.organizationId);
+  const { current, rows, answers } = await currentAnswers(scope);
+  const attested = await getAttestedProfileQuery(
+    scope.projectId,
+    scope.frameworkId,
+    scope.organizationId,
+  );
+  return {
+    project: { id: project.id, title: project.project_title },
+    profile: current ? { id: current.id!, version: current.version, status: current.status } : null,
+    attested: attested
+      ? {
+          id: attested.id!,
+          version: attested.version,
+          attestedByUserId: attested.attested_by_user_id ?? null,
+          attestedAt: attested.attested_at ?? null,
+        }
+      : null,
+    answers: rows.map((r) => ({
+      questionKey: r.question_key,
+      value: r.answer_value ?? null,
+      notes: r.answer_notes ?? null,
+      dontKnow: Boolean(r.is_dont_know),
+      notApplicable: Boolean(r.is_not_applicable),
+      answeredByUserId: r.answered_by_user_id ?? null,
+      answeredAt: r.answered_at ?? null,
+    })),
+    readiness: computeReadiness(answers),
+  };
 }

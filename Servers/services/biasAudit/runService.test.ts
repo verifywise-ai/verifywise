@@ -2,13 +2,27 @@ const utils = {
   createRunQuery: jest.fn(),
   getAttestedProfileQuery: jest.fn(),
   getProfileAnswersQuery: jest.fn(),
+  getProjectQuery: jest.fn(),
+  getRunQuery: jest.fn(),
+  listRunsQuery: jest.fn(),
+  listTrendRunsQuery: jest.fn(),
+  listStancesForRunQuery: jest.fn(),
+  confirmRunDerivedBasisQuery: jest.fn(),
 };
 jest.mock("../../utils/biasAudit.utils", () => utils);
 jest.mock("../../database/db", () => ({
   sequelize: { transaction: (f: (t: object) => unknown) => f({}) },
 }));
 
-import { createRun } from "./runService";
+import { createHash } from "node:crypto";
+import {
+  confirmDerivedBasis,
+  createRun,
+  getRunView,
+  getTrendRows,
+  listRuns,
+  mayExportStoredRun,
+} from "./runService";
 
 const ans = (k: string, v: string | null, extra: Record<string, unknown> = {}) => ({
   question_key: k,
@@ -38,8 +52,11 @@ const CSV = (n = 200) => {
 const base = { projectId: 7, frameworkId: 15, organizationId: 42, userId: 9 };
 const MAPPING = { sex: "gender", race_ethnicity: "race", selected: "outcome" };
 
-const run = (over: Record<string, unknown> = {}) =>
-  createRun({ ...base, csv: CSV(), mapping: MAPPING, ...over });
+// Tests write the file as text; the service receives the raw upload bytes.
+const run = (over: Record<string, unknown> = {}) => {
+  const { csv = CSV(), ...rest } = over;
+  return createRun({ ...base, data: Buffer.from(csv as string), mapping: MAPPING, ...rest });
+};
 const stored = () => utils.createRunQuery.mock.calls[0][0];
 
 beforeEach(() => {
@@ -105,6 +122,30 @@ describe("createRun", () => {
     expect(stored().expiryDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(stored().dataBasisJson.confirmed).toBe(false);
     expect(stored().dataBasisJson.perCategory).toHaveLength(3);
+  });
+
+  it("hashes the raw upload bytes, so a BOM-prefixed file hashes as the customer's copy does", async () => {
+    const data = Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(CSV())]);
+    const out = await run({ data });
+    expect(stored().datasetSha256).toBe(createHash("sha256").update(data).digest("hex"));
+    // The BOM is not part of the first header, so the file still reads.
+    expect(out.outcome.result).not.toBeNull();
+  });
+
+  it("hashes bytes that are not valid UTF-8 as uploaded, not as decoded", async () => {
+    const latin1 = Buffer.from(
+      CSV().replace("gender,race,outcome", "gender,race,outcome,note"),
+      "latin1",
+    );
+    const data = Buffer.concat([
+      latin1,
+      Buffer.from([0x4d, 0x61, 0x6c, 0x65, 0x2c, 0x57, 0x2c, 0x31, 0x2c, 0xe9, 0x0a]),
+    ]);
+    await run({ data });
+    const raw = createHash("sha256").update(data).digest("hex");
+    const decoded = createHash("sha256").update(data.toString("utf8")).digest("hex");
+    expect(raw).not.toBe(decoded);
+    expect(stored().datasetSha256).toBe(raw);
   });
 
   it("refuses when no attested profile exists", async () => {
@@ -247,5 +288,81 @@ describe("createRun, scoring rate", () => {
     await run({ csv: scoreCsv(true), mapping: SCORE_MAPPING });
     expect(stored().resultJson).toBeNull();
     expect(JSON.stringify(stored().gateFindingsJson)).toContain("score_values_unreadable");
+  });
+});
+
+describe("run reads", () => {
+  const scope = { projectId: 7, frameworkId: 12, organizationId: 42 };
+
+  it("lists a project's runs in the organization, refusing a project outside it", async () => {
+    utils.getProjectQuery.mockResolvedValue(null);
+    await expect(listRuns(scope)).rejects.toMatchObject({ statusCode: 404 });
+    expect(utils.listRunsQuery).not.toHaveBeenCalled();
+
+    utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
+    utils.listRunsQuery.mockResolvedValue([{ id: 11 }]);
+    await expect(listRuns(scope)).resolves.toEqual({ runs: [{ id: 11 }] });
+    expect(utils.listRunsQuery).toHaveBeenCalledWith(7, 12, 42);
+  });
+
+  it("returns trend rows oldest first, as the query orders them", async () => {
+    utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
+    utils.listTrendRunsQuery.mockResolvedValue([{ id: 1 }, { id: 2 }]);
+    await expect(getTrendRows(scope)).resolves.toEqual({ runs: [{ id: 1 }, { id: 2 }] });
+    expect(utils.listTrendRunsQuery).toHaveBeenCalledWith(7, 12, 42);
+  });
+
+  it("returns a run with its stances and whether it may be exported", async () => {
+    utils.getRunQuery.mockResolvedValue({ id: 11, gate_findings_json: [] });
+    utils.listStancesForRunQuery.mockResolvedValue([{ id: 3, version: 1 }]);
+    const out = await getRunView(11, 42);
+    expect(out).toMatchObject({ run: { id: 11 }, stances: [{ id: 3 }], mayExportPdf: true });
+    expect(utils.getRunQuery).toHaveBeenCalledWith(11, 42);
+    expect(utils.listStancesForRunQuery).toHaveBeenCalledWith(11, 42);
+  });
+
+  it("refuses a run outside the organization with a not-found", async () => {
+    utils.getRunQuery.mockResolvedValue(null);
+    await expect(getRunView(11, 42)).rejects.toMatchObject({ statusCode: 404 });
+  });
+});
+
+describe("mayExportStoredRun", () => {
+  it("allows export only when every stored finding is a note", () => {
+    expect(mayExportStoredRun([])).toBe(true);
+    expect(mayExportStoredRun([{ severity: "note" }])).toBe(true);
+    expect(mayExportStoredRun([{ severity: "note" }, { severity: "warn" }])).toBe(false);
+    expect(mayExportStoredRun([{ severity: "stop" }])).toBe(false);
+  });
+
+  it("fails closed on a missing or malformed findings record", () => {
+    expect(mayExportStoredRun(null)).toBe(false);
+    expect(mayExportStoredRun({})).toBe(false);
+    expect(mayExportStoredRun([null])).toBe(false);
+  });
+});
+
+describe("confirmDerivedBasis", () => {
+  it("records the confirmation in the organization", async () => {
+    utils.getRunQuery.mockResolvedValue({ id: 11, data_basis_json: { confirmed: false } });
+    utils.confirmRunDerivedBasisQuery.mockResolvedValue({
+      id: 11,
+      data_basis_json: { confirmed: true },
+    });
+    const out = await confirmDerivedBasis(11, 9, 42);
+    expect(utils.confirmRunDerivedBasisQuery).toHaveBeenCalledWith(11, 9, 42);
+    expect(out.derivedBasis).toEqual({ confirmed: true });
+  });
+
+  it("refuses a run outside the organization with a not-found", async () => {
+    utils.getRunQuery.mockResolvedValue(null);
+    await expect(confirmDerivedBasis(11, 9, 42)).rejects.toMatchObject({ statusCode: 404 });
+    expect(utils.confirmRunDerivedBasisQuery).not.toHaveBeenCalled();
+  });
+
+  it("refuses with a conflict when the run has no derived basis to confirm", async () => {
+    utils.getRunQuery.mockResolvedValue({ id: 11, data_basis_json: null });
+    utils.confirmRunDerivedBasisQuery.mockResolvedValue(null);
+    await expect(confirmDerivedBasis(11, 9, 42)).rejects.toMatchObject({ statusCode: 409 });
   });
 });

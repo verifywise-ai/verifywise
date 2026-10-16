@@ -66,7 +66,8 @@ export interface ControllerOptions<T> {
  * - 500: Internal Server Error - DatabaseException, ConfigurationException, or unhandled errors
  * - 502: Bad Gateway - ExternalServiceException
  */
-export type HttpStatusCode = 200 | 201 | 202 | 204 | 400 | 401 | 403 | 404 | 409 | 422 | 500 | 502;
+export type HttpStatusCode =
+  200 | 201 | 202 | 204 | 400 | 401 | 403 | 404 | 409 | 410 | 422 | 500 | 502;
 
 /**
  * Return type for controller handler functions.

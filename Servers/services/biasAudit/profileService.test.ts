@@ -4,13 +4,20 @@ const utils = {
   createProfileVersionQuery: jest.fn(),
   upsertAnswerQuery: jest.fn(),
   attestProfileQuery: jest.fn(),
+  getProjectQuery: jest.fn(),
+  getAttestedProfileQuery: jest.fn(),
 };
 jest.mock("../../utils/biasAudit.utils", () => utils);
 jest.mock("../../database/db", () => ({
   sequelize: { transaction: (fn: (t: object) => unknown) => fn({}) },
 }));
 
-import { attestProfile, saveAnswers } from "./profileService";
+import {
+  attestProfile,
+  getApplicableQuestions,
+  getProfileView,
+  saveAnswers,
+} from "./profileService";
 
 const base = { projectId: 7, frameworkId: 15, userId: 9, organizationId: 42 };
 const row = (k: string, v: string | null, extra: Record<string, unknown> = {}) => ({
@@ -276,5 +283,80 @@ describe("attestProfile", () => {
   it("refuses when there is no profile to attest", async () => {
     utils.getCurrentProfileQuery.mockResolvedValue(null);
     await expect(attestProfile(base)).rejects.toThrow(/no profile/i);
+  });
+});
+
+describe("getApplicableQuestions", () => {
+  const scope = { projectId: 7, frameworkId: 12, organizationId: 42 };
+
+  it("refuses a project outside the organization with a not-found", async () => {
+    utils.getProjectQuery.mockResolvedValue(null);
+    await expect(getApplicableQuestions(scope)).rejects.toMatchObject({ statusCode: 404 });
+    expect(utils.getProjectQuery).toHaveBeenCalledWith(7, 42);
+    expect(utils.getCurrentProfileQuery).not.toHaveBeenCalled();
+  });
+
+  it("offers only what applies to the answers so far", async () => {
+    utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
+    utils.getCurrentProfileQuery.mockResolvedValue(null);
+    const out = await getApplicableQuestions(scope);
+    const keys = out.questions.map((q) => q.key);
+    expect(keys).toContain("role.party");
+    expect(keys).not.toContain("cutoff.planned");
+  });
+
+  it("reads the current profile's answers in the organization", async () => {
+    utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
+    utils.getCurrentProfileQuery.mockResolvedValue({ id: 3, version: 1, status: "draft" });
+    utils.getProfileAnswersQuery.mockResolvedValue([row("role.party", "vendor")]);
+    await getApplicableQuestions(scope);
+    expect(utils.getCurrentProfileQuery).toHaveBeenCalledWith(7, 12, 42);
+    expect(utils.getProfileAnswersQuery).toHaveBeenCalledWith(3, 42);
+  });
+});
+
+describe("getProfileView", () => {
+  const scope = { projectId: 7, frameworkId: 12, organizationId: 42 };
+
+  it("refuses a project outside the organization with a not-found", async () => {
+    utils.getProjectQuery.mockResolvedValue(null);
+    await expect(getProfileView(scope)).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("returns no profile, no answers and no readiness figure before anything is saved", async () => {
+    utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
+    utils.getCurrentProfileQuery.mockResolvedValue(null);
+    utils.getAttestedProfileQuery.mockResolvedValue(null);
+    const out = await getProfileView(scope);
+    expect(out.profile).toBeNull();
+    expect(out.attested).toBeNull();
+    expect(out.answers).toEqual([]);
+    expect(out.readiness.score).toBeNull();
+  });
+
+  it("shows a draft over an attested version, and names the attested one separately", async () => {
+    utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
+    utils.getCurrentProfileQuery.mockResolvedValue({ id: 4, version: 2, status: "draft" });
+    utils.getAttestedProfileQuery.mockResolvedValue({
+      id: 3,
+      version: 1,
+      status: "attested",
+      attested_by_user_id: 9,
+      attested_at: "2026-10-01",
+    });
+    utils.getProfileAnswersQuery.mockResolvedValue([
+      row("role.party", "vendor", { answer_notes: "We supply it.", answered_by_user_id: 9 }),
+    ]);
+    const out = await getProfileView(scope);
+    expect(out.profile).toMatchObject({ id: 4, version: 2, status: "draft" });
+    expect(out.attested).toMatchObject({ id: 3, version: 1, attestedByUserId: 9 });
+    expect(out.answers[0]).toMatchObject({
+      questionKey: "role.party",
+      value: "vendor",
+      notes: "We supply it.",
+      dontKnow: false,
+      answeredByUserId: 9,
+    });
+    expect(utils.getProfileAnswersQuery).toHaveBeenCalledWith(4, 42);
   });
 });

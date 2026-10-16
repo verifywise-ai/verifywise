@@ -17,6 +17,8 @@ const IO_LAYER: Record<string, string> = {
     "persists profile versions through utils/biasAudit.utils and the db",
   [path.join(MODULE, "runService.ts")]:
     "reads the attested profile and stores the run through utils/biasAudit.utils and the db; hashes the upload with node:crypto",
+  [path.join(MODULE, "stanceService.ts")]:
+    "reads the run, its profile, answers and names through utils/biasAudit.utils to compose a stance; hashes the stored PDF with node:crypto",
   [path.join(MODULE, "stance", "render.ts")]:
     "reads the ejs template from disk, drives playwright, and writes the files and stance rows through utils and the db; hashes the PDF with node:crypto",
 };
