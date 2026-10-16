@@ -10,12 +10,15 @@
  * one Servers/.env names, or when there is no target at all.
  */
 
-import { describe, expect, it } from "@jest/globals";
+import { describe, expect, it, jest } from "@jest/globals";
+import path from "node:path";
 
 const {
+  assertConnectionIsTestDatabase,
   assertSafeTestDatabase,
   assertSafeToTruncate,
   checkDatabaseName,
+  installConnectionGuard,
   isTestDatabaseName,
 } = require("../testDatabaseGuard");
 
@@ -158,6 +161,8 @@ describe("isTestDatabaseName", () => {
 describe("one policy for globalSetup and the connection checks", () => {
   const cases: [string | undefined, string | undefined, string | null][] = [
     [undefined, "verifywise", "unnamed"],
+    ["", "verifywise", "blank"],
+    ["   ", undefined, "blank"],
     ["verifywise_test", "verifywise_test", "development"],
     ["verifywise", undefined, "not-test"],
     ["verifywise_attestations", "verifywise", "not-test"],
@@ -217,14 +222,94 @@ describe("fix advice by DB_NAME source", () => {
       assertSafeTestDatabase({ dbName: undefined, devDbName: undefined, envTestPath }),
     ).toThrow(/neither \/repo\/Servers\/\.env\.test nor Servers\/\.env sets it/);
   });
+});
 
-  it("the connection check names the source when it is known", () => {
+/**
+ * An exported empty DB_NAME survives dotenv (it never overrides), and pg then
+ * connects to the database named after DB_USER, so it must be refused rather
+ * than treated as unset.
+ */
+describe("blank DB_NAME", () => {
+  it.each(["", "  "])("globalSetup refuses %j with a clear message", (dbName) => {
     expect(() =>
-      assertSafeToTruncate({
-        currentDb: "verifywise",
-        devDbName: undefined,
-        origin: { source: "environment", envTestPath },
+      assertSafeTestDatabase({
+        dbName,
+        devDbName: "verifywise",
+        envTestPath,
+        source: "environment",
       }),
-    ).toThrow(/exported in the environment/);
+    ).toThrow(/DB_NAME is set but empty[\s\S]*exported in the environment/);
+  });
+});
+
+function connectionTo(name: string | undefined) {
+  return {
+    query: jest.fn(async (_sql: string) => ({ rows: [{ name }] })),
+    end: jest.fn(async () => undefined),
+  };
+}
+
+/** db.ts's afterConnect hook under jest.integration.config.js. */
+describe("assertConnectionIsTestDatabase", () => {
+  it("closes a refused connection before throwing", async () => {
+    const connection = connectionTo("latest");
+
+    await expect(assertConnectionIsTestDatabase(connection)).rejects.toThrow(
+      /Refusing to truncate "latest"/,
+    );
+    expect(connection.end).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the refusal when closing fails", async () => {
+    const connection = connectionTo("contest_app");
+    connection.end.mockRejectedValue(new Error("socket already closed"));
+
+    await expect(assertConnectionIsTestDatabase(connection)).rejects.toThrow(/Refusing/);
+  });
+
+  it("closes the connection when the lookup itself fails", async () => {
+    const connection = connectionTo(undefined);
+    connection.query.mockRejectedValue(new Error("boom"));
+
+    await expect(assertConnectionIsTestDatabase(connection)).rejects.toThrow("boom");
+    expect(connection.end).toHaveBeenCalledTimes(1);
+  });
+
+  it("asks every connection, with no cache, and leaves a test database open", async () => {
+    const good = connectionTo("verifywise_test2");
+
+    await assertConnectionIsTestDatabase(good);
+    await assertConnectionIsTestDatabase(good);
+
+    expect(good.query).toHaveBeenCalledTimes(2);
+    expect(good.end).not.toHaveBeenCalled();
+  });
+
+  it("is what installConnectionGuard registers as afterConnect", () => {
+    const sequelize = { addHook: jest.fn() };
+
+    installConnectionGuard(sequelize);
+
+    expect(sequelize.addHook).toHaveBeenCalledWith(
+      "afterConnect",
+      "integrationTestDatabaseGuard",
+      assertConnectionIsTestDatabase,
+    );
+  });
+});
+
+describe("readDevDbName", () => {
+  it("reads Servers/.env from loadEnv's SERVERS_ROOT, so it also works from dist/", () => {
+    const readEnvFile = jest.fn((_file: string) => ({ DB_NAME: "dev_db" }));
+    jest.isolateModules(() => {
+      jest.doMock("../../database/config/loadEnv", () => ({
+        readEnvFile,
+        SERVERS_ROOT: "/srv/Servers",
+      }));
+      expect(require("../testDatabaseGuard").readDevDbName()).toBe("dev_db");
+    });
+    jest.dontMock("../../database/config/loadEnv");
+
+    expect(readEnvFile).toHaveBeenCalledWith(path.join("/srv/Servers", ".env"));
   });
 });

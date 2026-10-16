@@ -6,8 +6,7 @@ const { assertSafeTestDatabase, readDevDbName } = require("../testDatabaseGuard"
 module.exports = async function globalSetup() {
   // Same loader and precedence as database/config/config.js (exported env >
   // .env.test > .env), so the name checked below is the one the test workers
-  // will connect to. The workers inherit this process's environment, including
-  // the record of where DB_NAME came from (for the guard's messages).
+  // will connect to. The workers inherit this process's environment.
   const { envTestPath, envTestLoaded, dbNameSource } = loadEnv({ nodeEnv: "test" });
 
   // Refuse to run against anything but a dedicated test database, before the

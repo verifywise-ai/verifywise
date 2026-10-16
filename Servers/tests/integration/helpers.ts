@@ -1,38 +1,5 @@
 import { sequelize } from "../../database/db";
 import bcrypt from "bcrypt";
-import { execSync } from "child_process";
-import path from "path";
-
-import { assertConnectedToTestDatabase } from "./databaseGuard";
-
-const testDatabaseGuard = require("../testDatabaseGuard");
-const { resolveTestDbName } = require("../../database/config/loadEnv");
-
-/**
- * Run pending Sequelize migrations against the configured test database.
- * This ensures integration tests see the same schema the application expects
- * without relying on a manually migrated local database.
- *
- * The sequelize CLI is a child process, outside the afterConnect hook, so the
- * DB_NAME it will resolve (its env, then .env.test, then .env — the same
- * loadEnv precedence) is checked against the test-database rule first.
- */
-export function runMigrations(): void {
-  const env = { ...process.env, NODE_ENV: "test" };
-  const { dbName, source, envTestPath, envTestExists } = resolveTestDbName({ env });
-  testDatabaseGuard.assertSafeTestDatabase({
-    dbName,
-    devDbName: testDatabaseGuard.readDevDbName(),
-    envTestPath,
-    source,
-    envTestExists,
-  });
-  execSync("npx sequelize db:migrate", {
-    cwd: path.join(__dirname, "../.."),
-    stdio: "pipe",
-    env,
-  });
-}
 
 export async function createTestOrganization(name?: string): Promise<number> {
   const orgName = name || `Test Org ${Date.now()}`;
@@ -104,19 +71,10 @@ export async function seedFrameworks(): Promise<void> {
   );
 }
 
-/** current_database() through the app's pool, for cleanupDatabase()'s cached check. */
-async function currentDatabase(): Promise<string | undefined> {
-  const [rows] = (await sequelize.query("SELECT current_database() AS name")) as [
-    { name?: string }[],
-    unknown,
-  ];
-  return rows[0]?.name;
-}
-
 export async function cleanupDatabase(): Promise<void> {
-  // Checked on the connection itself, not on env vars, so it holds however jest
-  // was started (see tests/testDatabaseGuard.js). Cached per test file.
-  await assertConnectedToTestDatabase(currentDatabase);
+  // No check of its own: under jest.integration.config.js db.ts's afterConnect
+  // hook refuses any connection this TRUNCATE could run on unless it is a
+  // dedicated test database (tests/testDatabaseGuard.js).
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       await sequelize.query(

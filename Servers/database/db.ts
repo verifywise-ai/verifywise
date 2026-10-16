@@ -248,4 +248,11 @@ const sequelize = new Sequelize(conf.database!, conf.username!, conf.password, {
 // RLS-scoped transaction (SET LOCAL app.current_org). No-op otherwise.
 enableRlsQueryScoping(sequelize);
 
+// Integration tests only (jest.integration.config.js sets the flag): refuse
+// any connection that is not a dedicated test database, since the suite
+// truncates it. Never active in development or production.
+if (process.env.NODE_ENV === "test" && process.env.VERIFYWISE_INTEGRATION_GUARD === "1") {
+  require("../tests/testDatabaseGuard").installConnectionGuard(sequelize);
+}
+
 export { sequelize };

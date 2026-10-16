@@ -2,52 +2,40 @@
  * Guard for the integration suite's target database.
  *
  * The suite truncates every table it touches, so it may only ever run against
- * a dedicated test database. One rule decides that, everywhere it is checked
- * (checkDatabaseName below): the database
+ * a dedicated test database. One rule (checkDatabaseName) decides that: the
+ * database
  *
- *   1. is named (DB_NAME set / current_database() answered),
- *   2. is not the database Servers/.env names (the development database), and
+ *   1. is named, with a non-blank name (an exported empty DB_NAME makes pg
+ *      connect to the database named after the user);
+ *   2. is not the database Servers/.env names (the development database);
  *   3. has "test" or "tests" as a name token, optionally followed by digits,
  *      delimited by the start/end of the name, "_" or "-" (TEST_NAME_TOKEN):
  *      verifywise_test, verifywise_tests, verifywise_test2, verifywise_mrm_test
  *      and test_verifywise pass; verifywise_attestations, latest, contest_app,
  *      verifywise_testing_prod, verifywisetest and vw_testdb do not.
  *
- * Rule 2 alone is not enough: CI has neither .env.test nor .env and injects
- * DB_* into the environment, and a developer can export DB_NAME or point
- * .env.test at a database Servers/.env does not name. Rule 3 alone is not
- * enough either: Servers/.env can itself name a "test" database.
+ * It is checked in two places, both only under jest.integration.config.js:
  *
- * Where the rule is enforced (also listed in
- * docs/feature-inventory/testing-playbook.md, "Database guard errors"):
+ *   - globalSetup (assertSafeTestDatabase), on DB_NAME, before it builds the
+ *     backend or runs migrations;
+ *   - database/db.ts's afterConnect hook (installConnectionGuard), on
+ *     current_database() of every new connection the app's sequelize opens,
+ *     uncached. db.ts installs it only when NODE_ENV=test and
+ *     VERIFYWISE_INTEGRATION_GUARD=1, which jest.integration.config.js sets.
  *
- *   - globalSetup (assertSafeTestDatabase) on DB_NAME, before it builds the
- *     backend or runs migrations, for every run of jest.integration.config.js;
- *   - runMigrations() in tests/integration/helpers.ts, on the DB_NAME the
- *     sequelize CLI child will resolve, before it spawns it;
- *   - tests/integration/setupDatabaseGuard.ts, on current_database() of every
- *     new connection the app's sequelize instance (database/db.ts) opens in an
- *     integration test file, uncached;
- *   - cleanupDatabase(), on current_database() (cached per test file, in
- *     tests/integration/databaseGuard.ts), right before it truncates.
- *
- * Raw pg clients and other Sequelize instances a suite creates itself are not
- * checked by the connection hook; nothing in tests/integration does that today.
+ * Raw pg clients or other Sequelize instances a suite creates itself are not
+ * covered; nothing in tests/integration does that today.
  */
 
-const fs = require("node:fs");
 const path = require("node:path");
-const dotenv = require("dotenv");
-
-const DEV_ENV_PATH = path.resolve(__dirname, "../.env");
+const { readEnvFile, SERVERS_ROOT } = require("../database/config/loadEnv");
 
 /** "test"/"tests" (+ optional digits) as a whole token, delimited by start/end, "_" or "-". */
 const TEST_NAME_TOKEN = /(^|[_-])tests?\d*([_-]|$)/i;
 
 /** DB_NAME from Servers/.env (the development database), or undefined if there is no such file. */
 function readDevDbName() {
-  if (!fs.existsSync(DEV_ENV_PATH)) return undefined;
-  return dotenv.parse(fs.readFileSync(DEV_ENV_PATH, "utf8")).DB_NAME;
+  return readEnvFile(path.join(SERVERS_ROOT, ".env"))?.DB_NAME;
 }
 
 /** @param {string} name */
@@ -62,10 +50,11 @@ function isTestDatabaseName(name) {
  * @param {object} args
  * @param {string|undefined} args.name       The target or connected database.
  * @param {string|undefined} args.devDbName  DB_NAME from Servers/.env, if that file exists.
- * @returns {"unnamed"|"development"|"not-test"|null}
+ * @returns {"unnamed"|"blank"|"development"|"not-test"|null}
  */
 function checkDatabaseName({ name, devDbName }) {
-  if (!name) return "unnamed";
+  if (name === undefined || name === null) return "unnamed";
+  if (!name.trim()) return "blank";
   if (devDbName && name === devDbName) return "development";
   if (!isTestDatabaseName(name)) return "not-test";
   return null;
@@ -78,10 +67,10 @@ const NOT_TEST_RULE =
   "vw_testdb or verifywise_testing_prod), because the integration suite truncates it";
 
 /**
- * Where DB_NAME came from and how to fix it there.
+ * Where DB_NAME came from (loadEnv's dbNameSource) and how to fix it there.
  *
  * @param {object} origin
- * @param {"environment"|".env.test"|".env"|undefined} origin.source  From loadEnv / resolveTestDbName.
+ * @param {"environment"|".env.test"|".env"|undefined} origin.source
  * @param {string} origin.envTestPath     Absolute path to Servers/.env.test.
  * @param {boolean} [origin.envTestExists]
  */
@@ -115,14 +104,13 @@ function fixAdvice({ source, envTestPath, envTestExists = true }) {
 }
 
 /**
- * The check of a DB_NAME before anything connects to it: globalSetup, and
- * runMigrations() before it spawns the sequelize CLI.
+ * globalSetup's check of DB_NAME, before anything touches the database.
  *
  * @param {object} args
- * @param {string|undefined} args.dbName     Target database.
+ * @param {string|undefined} args.dbName     Target database (process.env.DB_NAME).
  * @param {string|undefined} args.devDbName  DB_NAME from Servers/.env, if that file exists.
  * @param {string} args.envTestPath          Absolute path to Servers/.env.test, for messages.
- * @param {"environment"|".env.test"|".env"|undefined} [args.source]  Where dbName came from.
+ * @param {"environment"|".env.test"|".env"|undefined} [args.source]  loadEnv's dbNameSource.
  * @param {boolean} [args.envTestExists]     Whether Servers/.env.test exists.
  */
 function assertSafeTestDatabase({ dbName, devDbName, envTestPath, source, envTestExists = true }) {
@@ -131,6 +119,11 @@ function assertSafeTestDatabase({ dbName, devDbName, envTestPath, source, envTes
   switch (checkDatabaseName({ name: dbName, devDbName })) {
     case "unnamed":
       throw new Error(`Integration tests have no target database: DB_NAME is not set.\n${fix}`);
+    case "blank":
+      throw new Error(
+        "Integration tests have no target database: DB_NAME is set but empty, so Postgres " +
+          `would connect to the database named after DB_USER.\n${fix}`,
+      );
     case "development":
       throw new Error(
         `Refusing to run: DB_NAME="${dbName}" is the same database as Servers/.env.\n` +
@@ -143,42 +136,67 @@ function assertSafeTestDatabase({ dbName, devDbName, envTestPath, source, envTes
   }
 }
 
+const CONNECTION_FIX =
+  "Run integration tests with `npm run test:integration`, and point DB_NAME at a dedicated " +
+  "test database, e.g. verifywise_test (exported DB_NAME > Servers/.env.test > Servers/.env).";
+
 /**
  * The check on a live connection, before it is used or truncated.
  *
  * @param {object} args
  * @param {string|undefined} args.currentDb  SELECT current_database() on the live connection.
  * @param {string|undefined} args.devDbName  DB_NAME from Servers/.env, if that file exists.
- * @param {{ source?: "environment"|".env.test"|".env", envTestPath: string, envTestExists?: boolean }} [args.origin]
- *   Where this process's DB_NAME came from, when known, to point at the fix.
  */
-function assertSafeToTruncate({ currentDb, devDbName, origin }) {
-  const fix =
-    "Run integration tests with `npm run test:integration` (or jest.integration.config.js). " +
-    (origin
-      ? fixAdvice(origin)
-      : "Point DB_NAME in Servers/.env.test (or the environment) at a dedicated test " +
-        "database, e.g. verifywise_test.");
-
+function assertSafeToTruncate({ currentDb, devDbName }) {
   switch (checkDatabaseName({ name: currentDb, devDbName })) {
     case "unnamed":
-      throw new Error(`Refusing to truncate: could not tell which database is connected.\n${fix}`);
+    case "blank":
+      throw new Error(
+        `Refusing to truncate: could not tell which database is connected.\n${CONNECTION_FIX}`,
+      );
     case "development":
       throw new Error(
         `Refusing to truncate "${currentDb}": it is the same database as Servers/.env (the ` +
-          `development database).\n${fix}`,
+          `development database).\n${CONNECTION_FIX}`,
       );
     case "not-test":
-      throw new Error(`Refusing to truncate "${currentDb}": ${NOT_TEST_RULE}.\n${fix}`);
+      throw new Error(`Refusing to truncate "${currentDb}": ${NOT_TEST_RULE}.\n${CONNECTION_FIX}`);
     default:
   }
 }
 
+/**
+ * afterConnect hook body: asks the new raw pg connection which database it
+ * reached, every time (pools are small), and closes a refused connection
+ * before throwing — sequelize leaves a connection open when the hook fails.
+ *
+ * @param {{ query: (sql: string) => Promise<{ rows: { name?: string }[] }>, end?: () => unknown }} connection
+ */
+async function assertConnectionIsTestDatabase(connection) {
+  try {
+    const result = await connection.query("SELECT current_database() AS name");
+    assertSafeToTruncate({ currentDb: result.rows[0]?.name, devDbName: readDevDbName() });
+  } catch (error) {
+    try {
+      await connection.end?.();
+    } catch {
+      // The refusal is what matters; the connection is unusable either way.
+    }
+    throw error;
+  }
+}
+
+/** Called by database/db.ts under the integration config only. */
+function installConnectionGuard(sequelize) {
+  sequelize.addHook("afterConnect", "integrationTestDatabaseGuard", assertConnectionIsTestDatabase);
+}
+
 module.exports = {
+  assertConnectionIsTestDatabase,
   assertSafeTestDatabase,
   assertSafeToTruncate,
   checkDatabaseName,
-  fixAdvice,
+  installConnectionGuard,
   isTestDatabaseName,
   readDevDbName,
 };

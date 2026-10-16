@@ -156,7 +156,7 @@ npm run start
    - `e2e/.auth/admin.json` — org Admin
 
 **Integration tests:**
-- `tests/integration/globalSetup.js` (declared in `jest.integration.config.js`) refuses anything but a dedicated test DB, then creates it if missing, builds the backend, and runs migrations. `tests/integration/setupDatabaseGuard.ts` re-checks `current_database()` on every new connection the app's `sequelize` (`database/db.ts`) opens, and closes a refused one. What is and is not covered is listed in [7.5](#75-database-guard-errors).
+- `tests/integration/globalSetup.js` (declared in `jest.integration.config.js`) refuses anything but a dedicated test DB, then creates it if missing, builds the backend, and runs migrations. `database/db.ts` then re-checks `current_database()` on every new connection its `sequelize` opens, and closes a refused one. What is and is not covered is listed in [7.5](#75-database-guard-errors).
 - Env precedence under `NODE_ENV=test`: exported variables > `Servers/.env.test` > `Servers/.env` (`database/config/loadEnv.js`).
 - `npm run test:ratelimit` uses `jest.ratelimit.config.js`: no database, no global setup.
 - Each test uses helpers from `tests/integration/helpers.ts` (`createTestOrganization`, `createTestUser`, `seedFrameworks`, `cleanupDatabase`).
@@ -881,7 +881,7 @@ curl -X POST http://localhost:3000/api/users/login \
 
 The integration suite truncates every table it touches, so it only runs against a dedicated test database. One rule (`Servers/tests/testDatabaseGuard.js`) decides that. The database must:
 
-1. be named (`DB_NAME` is set somewhere);
+1. be named, with a non-blank name (`DB_NAME` set somewhere; an exported empty `DB_NAME` is refused, because Postgres would connect to the database named after `DB_USER`);
 2. not be the database `Servers/.env` names (your development database);
 3. have `test` or `tests` as a separate word in its name, optionally followed by digits, between `_` or `-` or at either end. `verifywise_test`, `verifywise_tests`, `verifywise_test2`, `verifywise_mrm_test` and `test_verifywise` pass. `verifywisetest`, `vw_testdb`, `verifywise_testing_prod`, `verifywise_attestations`, `latest` and `contest_app` are refused.
 
@@ -890,9 +890,7 @@ The integration suite truncates every table it touches, so it only runs against 
 **Where the rule is checked:**
 
 - `globalSetup` (every run of `jest.integration.config.js`), on `DB_NAME`, before it builds the backend or runs migrations.
-- `runMigrations()` in `tests/integration/helpers.ts`, on the `DB_NAME` the sequelize CLI child will get, before it is spawned.
-- `tests/integration/setupDatabaseGuard.ts`, on `current_database()` of every new connection the app's `sequelize` (`database/db.ts`) opens in an integration test file. No cache; a refused connection is closed.
-- `cleanupDatabase()`, on `current_database()` (cached once per test file), right before it truncates.
+- `database/db.ts`'s `afterConnect` hook, on `current_database()` of every new connection the app's `sequelize` opens. No cache; a refused connection is closed. `db.ts` installs it only when `NODE_ENV=test` and `VERIFYWISE_INTEGRATION_GUARD=1`, which `jest.integration.config.js` sets, so it is never active in development or production. `cleanupDatabase()` relies on it.
 
 Not covered: raw `pg` clients or other Sequelize instances a test file creates itself (none do today). Plain `npx jest` does not select `tests/integration/` at all.
 
@@ -900,11 +898,12 @@ Not covered: raw `pg` clients or other Sequelize instances a test file creates i
 
 ```
 Integration tests have no target database: DB_NAME is not set.
+Integration tests have no target database: DB_NAME is set but empty, so Postgres would connect to the database named after DB_USER.
 Refusing to run: DB_NAME="<name>" is the same database as Servers/.env.
 Refusing to run against DB_NAME="<name>": the name must contain "test" or "tests" as a separate word, optionally followed by digits, between "_" or "-" or at either end (...), because the integration suite truncates it.
 ```
 
-On a connection or before truncating, it is `Refusing to truncate "<name>": ...` with the same reasons. The next line says where `DB_NAME` came from and what to do:
+The next line says where `DB_NAME` came from and what to do:
 
 | Source | Message says | Fix |
 |---|---|---|
@@ -912,6 +911,8 @@ On a connection or before truncating, it is `Refusing to truncate "<name>": ...`
 | `.env.test` | `DB_NAME comes from <path>/.env.test. Change it there to a dedicated test database, e.g. DB_NAME=verifywise_test.` | Edit `DB_NAME` in `Servers/.env.test` |
 | `.env` | `DB_NAME comes from Servers/.env (your development settings) because <path>/.env.test does not exist. Create it with DB_NAME=verifywise_test (or another dedicated test database).` (or "does not set DB_NAME. Add ...") | Create `Servers/.env.test`, or add `DB_NAME` to it |
 | Nowhere | `DB_NAME is not exported and neither <path>/.env.test nor Servers/.env sets it. Add DB_NAME=verifywise_test to <path>/.env.test, or export DB_NAME.` | Add `DB_NAME` to `Servers/.env.test` |
+
+A refused connection (the `afterConnect` hook) reads `Refusing to truncate "<name>": ...` with the same reasons, followed by the generic fix: run through `npm run test:integration` and point `DB_NAME` at a dedicated test database (exported > `.env.test` > `.env`).
 
 ### 7.6 Auth state stale
 

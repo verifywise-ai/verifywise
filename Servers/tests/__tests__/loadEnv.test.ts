@@ -15,29 +15,7 @@ import os from "node:os";
 import path from "node:path";
 
 const dotenv = require("dotenv");
-const { loadEnv, resolveTestDbName, SOURCE_MARKER } = require("../../database/config/loadEnv");
-
-const KEYS = ["GUARD_T_EXPORTED", "GUARD_T_BOTH", "GUARD_T_DEV_ONLY", "GUARD_T_TEST_ONLY"];
-
-/** Run `fn` against a fresh loadEnv whose dotenv.config loads nothing; returns that mock. */
-function withMockedDotenv(
-  fn: (fresh: { loadEnv: (options?: Record<string, unknown>) => unknown }) => void,
-) {
-  const config = jest.fn((_options?: unknown) => ({ parsed: {} }));
-  jest.isolateModules(() => {
-    jest.doMock("dotenv", () => ({ ...dotenv, config }));
-    fn(require("../../database/config/loadEnv"));
-  });
-  jest.dontMock("dotenv");
-  return config;
-}
-
-function restoreEnv(snapshot: NodeJS.ProcessEnv) {
-  for (const key of Object.keys(process.env)) {
-    if (!(key in snapshot)) delete process.env[key];
-  }
-  Object.assign(process.env, snapshot);
-}
+const { loadEnv } = require("../../database/config/loadEnv");
 
 describe("loadEnv", () => {
   let dir: string;
@@ -45,7 +23,15 @@ describe("loadEnv", () => {
 
   beforeEach(() => {
     snapshot = { ...process.env };
-    for (const k of [...KEYS, "DB_NAME", SOURCE_MARKER]) delete process.env[k];
+    for (const k of [
+      "GUARD_T_EXPORTED",
+      "GUARD_T_BOTH",
+      "GUARD_T_DEV_ONLY",
+      "GUARD_T_TEST_ONLY",
+      "DB_NAME",
+    ]) {
+      delete process.env[k];
+    }
     dir = fs.mkdtempSync(path.join(os.tmpdir(), "loadenv-"));
     fs.writeFileSync(
       path.join(dir, ".env"),
@@ -58,8 +44,8 @@ describe("loadEnv", () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
-    restoreEnv(snapshot);
+    for (const key of Object.keys(process.env)) if (!(key in snapshot)) delete process.env[key];
+    Object.assign(process.env, snapshot);
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
@@ -84,9 +70,7 @@ describe("loadEnv", () => {
 
     const result = loadEnv({ nodeEnv: "test", serversRoot: dir });
 
-    expect(result.envTestLoaded).toBe(false);
-    expect(result.dbNameSource).toBe(".env");
-    expect(process.env.GUARD_T_BOTH).toBe("from_env");
+    expect(result).toMatchObject({ envTestLoaded: false, dbNameSource: ".env" });
     expect(process.env.DB_NAME).toBe("dev_db");
   });
 
@@ -95,6 +79,13 @@ describe("loadEnv", () => {
 
     expect(loadEnv({ nodeEnv: "test", serversRoot: dir }).dbNameSource).toBe("environment");
     expect(process.env.DB_NAME).toBe("exported_test");
+  });
+
+  it("keeps an exported empty DB_NAME (as pg will see it) and reports it as exported", () => {
+    process.env.DB_NAME = "";
+
+    expect(loadEnv({ nodeEnv: "test", serversRoot: dir }).dbNameSource).toBe("environment");
+    expect(process.env.DB_NAME).toBe("");
   });
 
   it("ignores .env.test outside NODE_ENV=test and loads only the given .env", () => {
@@ -107,71 +98,39 @@ describe("loadEnv", () => {
     expect(result.dbNameSource).toBeUndefined();
     expect(process.env.GUARD_T_BOTH).toBe("from_env");
     expect(process.env.GUARD_T_TEST_ONLY).toBeUndefined();
-    expect(process.env[SOURCE_MARKER]).toBeUndefined();
   });
 
-  it("outside NODE_ENV=test calls dotenv like `dotenv/config` did: cwd .env, quiet", () => {
-    delete process.env.DOTENV_QUIET;
-    delete process.env.DOTENV_CONFIG_QUIET;
+  describe("with dotenv.config mocked", () => {
+    const config = jest.fn((_options?: unknown) => ({ parsed: {} }));
+    let fresh: { loadEnv: (options?: Record<string, unknown>) => unknown };
 
-    const config = withMockedDotenv((fresh) => fresh.loadEnv({ nodeEnv: "production" }));
-
-    expect(config).toHaveBeenCalledTimes(1);
-    expect(config).toHaveBeenCalledWith({ quiet: true });
-  });
-
-  it("is idempotent: a second call without options loads nothing", () => {
-    const config = withMockedDotenv((fresh) => {
-      const first = fresh.loadEnv();
-      expect(fresh.loadEnv()).toBe(first);
+    beforeEach(() => {
+      config.mockClear();
+      jest.isolateModules(() => {
+        jest.doMock("dotenv", () => ({ ...dotenv, config }));
+        fresh = require("../../database/config/loadEnv");
+      });
     });
 
-    const callsForOneLoad = process.env.NODE_ENV === "test" ? 2 : 1;
-    expect(config).toHaveBeenCalledTimes(callsForOneLoad);
-  });
-
-  it("hands the source to child processes, so a worker does not report it as exported", () => {
-    loadEnv({ nodeEnv: "test", serversRoot: dir });
-    const childEnv = { ...process.env };
-
-    expect(resolveTestDbName({ env: childEnv, serversRoot: dir })).toMatchObject({
-      dbName: "dev_test",
-      source: ".env.test",
+    afterEach(() => {
+      jest.dontMock("dotenv");
     });
-  });
 
-  it("does not trust a stale source record once DB_NAME has changed", () => {
-    loadEnv({ nodeEnv: "test", serversRoot: dir });
-    const childEnv = { ...process.env, DB_NAME: "someone_exported_this" };
+    it("outside NODE_ENV=test calls dotenv like `dotenv/config` did: cwd .env, quiet", () => {
+      delete process.env.DOTENV_QUIET;
+      delete process.env.DOTENV_CONFIG_QUIET;
 
-    expect(resolveTestDbName({ env: childEnv, serversRoot: dir }).source).toBe("environment");
-  });
-});
+      fresh.loadEnv({ nodeEnv: "production", serversRoot: dir });
 
-describe("resolveTestDbName", () => {
-  let dir: string;
+      expect(config).toHaveBeenCalledTimes(1);
+      expect(config).toHaveBeenCalledWith({ quiet: true });
+    });
 
-  beforeEach(() => {
-    dir = fs.mkdtempSync(path.join(os.tmpdir(), "resolvedb-"));
-  });
+    it("is idempotent: a repeat call with the same options loads nothing", () => {
+      const first = fresh.loadEnv({ nodeEnv: "test", serversRoot: dir });
 
-  afterEach(() => {
-    fs.rmSync(dir, { recursive: true, force: true });
-  });
-
-  it.each([
-    ["exported wins", { DB_NAME: "x_test" }, "a_test", "dev", "x_test", "environment"],
-    [".env.test beats .env", {}, "a_test", "dev", "a_test", ".env.test"],
-    [".env when .env.test has no DB_NAME", {}, undefined, "dev", "dev", ".env"],
-    ["nothing anywhere", {}, undefined, undefined, undefined, undefined],
-  ])("%s", (_label, env, envTestDb, envDb, dbName, source) => {
-    fs.writeFileSync(path.join(dir, ".env.test"), envTestDb ? `DB_NAME=${envTestDb}\n` : "X=1\n");
-    if (envDb) fs.writeFileSync(path.join(dir, ".env"), `DB_NAME=${envDb}\n`);
-
-    expect(resolveTestDbName({ env, serversRoot: dir })).toMatchObject({
-      dbName,
-      source,
-      envTestExists: true,
+      expect(fresh.loadEnv({ nodeEnv: "test", serversRoot: dir })).toBe(first);
+      expect(config).toHaveBeenCalledTimes(2); // .env.test and .env, once
     });
   });
 });
