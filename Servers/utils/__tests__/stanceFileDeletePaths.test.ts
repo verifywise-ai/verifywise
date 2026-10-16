@@ -10,7 +10,7 @@ jest.mock("../../database/db", () => ({
 import { ConflictException } from "../../domain.layer/exceptions/custom.exception";
 import { BIAS_AUDIT_STANCE_SOURCE } from "../fileUpload.utils";
 import { deleteReportByIdQuery } from "../reporting.utils";
-import { detachFile } from "../../extensions/model-lifecycle/modelLifecycle.service";
+import { deleteItem, detachFile } from "../../extensions/model-lifecycle/modelLifecycle.service";
 
 const tx = {} as any;
 
@@ -42,5 +42,17 @@ describe("model lifecycle detach", () => {
     expect(sql).toContain("DELETE FROM files");
     expect(sql).toContain("source IS DISTINCT FROM :stanceSource");
     expect(opts.replacements.stanceSource).toBe(BIAS_AUDIT_STANCE_SOURCE);
+  });
+
+  it("never deletes a stance PDF when an item and its attached files are removed", async () => {
+    mockQuery.mockResolvedValueOnce([{ file_id: 77 }]).mockResolvedValue([]);
+    await deleteItem(5, 4);
+    const [sql, opts] = mockQuery.mock.calls[1];
+    expect(sql).toContain("DELETE FROM files");
+    expect(sql).toContain("source IS DISTINCT FROM :stanceSource");
+    expect(opts.replacements).toMatchObject({
+      fileIds: [77],
+      stanceSource: BIAS_AUDIT_STANCE_SOURCE,
+    });
   });
 });
