@@ -2204,6 +2204,131 @@ export const automationEndpoints: Endpoint[] = [
   },
 ];
 
+// Bias Audit endpoints
+export const biasAuditEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/bias-audit/questions/{frameworkId}',
+    summary: "Get Questions",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/bias-audit/profiles/{projectId}/{frameworkId}',
+    summary: "Get Profile",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'PUT',
+    path: '/bias-audit/profiles/{projectId}/{frameworkId}',
+    summary: "Save Profile Answers",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/bias-audit/profiles/{projectId}/{frameworkId}/attest',
+    summary: "Attest Profile",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/bias-audit/runs',
+    summary: "List Runs",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/bias-audit/runs',
+    summary: "Create Run",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/bias-audit/runs/trend',
+    summary: "Get Run Trend",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/bias-audit/runs/{id}',
+    summary: "Get Run",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/bias-audit/runs/{id}/derived-basis/confirm',
+    summary: "Confirm Derived Basis",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/bias-audit/runs/{id}/stance',
+    summary: "Generate Stance",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/bias-audit/stances/{id}/download',
+    summary: "Download Stance",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+];
+
 // CE Marking endpoints
 export const ceMarkingEndpoints: Endpoint[] = [
   {
@@ -11958,6 +12083,7 @@ export const allEndpoints = {
   audit: auditEndpoints,
   authentication: authenticationEndpoints,
   automation: automationEndpoints,
+  biasAudit: biasAuditEndpoints,
   ceMarking: ceMarkingEndpoints,
   changeHistory: changeHistoryEndpoints,
   compliance: complianceEndpoints,

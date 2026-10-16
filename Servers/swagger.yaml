@@ -7719,6 +7719,8 @@ tags:
   -
     name: Automations
   -
+    name: 'Bias Audit'
+  -
     name: 'CE Marking'
   -
     name: 'Change History'
@@ -24389,6 +24391,158 @@ paths:
       tags:
         - Audit
       operationId: exportAuditLedger
+      security:
+        -
+          bearerAuth: []
+  '/bias-audit/questions/{frameworkId}':
+    get:
+      summary: 'Get Questions'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: bias_audit_getQuestions
+      security:
+        -
+          bearerAuth: []
+  '/bias-audit/profiles/{projectId}/{frameworkId}':
+    get:
+      summary: 'Get Profile'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: getProfile
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Save Profile Answers'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: saveProfileAnswers
+      security:
+        -
+          bearerAuth: []
+  '/bias-audit/profiles/{projectId}/{frameworkId}/attest':
+    post:
+      summary: 'Attest Profile'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: attestProfile
+      security:
+        -
+          bearerAuth: []
+  /bias-audit/runs:
+    post:
+      summary: 'Create Run'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: createRun
+      security:
+        -
+          bearerAuth: []
+    get:
+      summary: 'List Runs'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: bias_audit_listRuns
+      security:
+        -
+          bearerAuth: []
+  /bias-audit/runs/trend:
+    get:
+      summary: 'Get Run Trend'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: getRunTrend
+      security:
+        -
+          bearerAuth: []
+  '/bias-audit/runs/{id}':
+    get:
+      summary: 'Get Run'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: bias_audit_getRun
+      security:
+        -
+          bearerAuth: []
+  '/bias-audit/runs/{id}/derived-basis/confirm':
+    post:
+      summary: 'Confirm Derived Basis'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: confirmDerivedBasis
+      security:
+        -
+          bearerAuth: []
+  '/bias-audit/runs/{id}/stance':
+    post:
+      summary: 'Generate Stance'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: generateStance
+      security:
+        -
+          bearerAuth: []
+  '/bias-audit/stances/{id}/download':
+    get:
+      summary: 'Download Stance'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: downloadStance
       security:
         -
           bearerAuth: []
