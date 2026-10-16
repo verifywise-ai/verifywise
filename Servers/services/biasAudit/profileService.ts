@@ -26,6 +26,7 @@ import {
   LL144_QUESTIONS,
   VETO_KEYS,
 } from "../../structures/NYC-Local-Law-144/intake.questions";
+import { assertProjectAccess } from "./projectAccess";
 import { applicableQuestions, type AnswerWithNotes } from "./applicability";
 import { computeReadiness, type ReadinessResult } from "./readinessScore";
 import type { IntakeQuestion } from "../../structures/NYC-Local-Law-144/intake.types";
@@ -41,6 +42,8 @@ interface ProfileScope {
   projectId: number;
   frameworkId: number;
   userId: number;
+  /** The caller's role, for the project-member rule (projectAccess.ts). */
+  role: string;
   organizationId: number;
 }
 
@@ -123,7 +126,8 @@ function isUniqueViolation(error: unknown): boolean {
 export async function saveAnswers(
   args: ProfileScope & { answers: AnswerInput[] },
 ): Promise<ProfileRef> {
-  const { projectId, frameworkId, userId, organizationId, answers } = args;
+  const { projectId, frameworkId, userId, role, organizationId, answers } = args;
+  await assertProjectAccess(projectId, organizationId, { userId, role });
   answers.forEach(validateAnswer);
 
   return sequelize.transaction(async (transaction) => {
@@ -201,7 +205,8 @@ export async function saveAnswers(
 }
 
 export async function attestProfile(args: ProfileScope): Promise<ProfileRef> {
-  const { projectId, frameworkId, userId, organizationId } = args;
+  const { projectId, frameworkId, userId, role, organizationId } = args;
+  await assertProjectAccess(projectId, organizationId, { userId, role });
   const current = await getCurrentProfileQuery(projectId, frameworkId, organizationId);
   if (!current) {
     throw new NotFoundException("No profile exists to attest for this project", "AedtProfile");
@@ -296,7 +301,13 @@ export interface ProfileView {
   readiness: ReadinessResult;
 }
 
-export async function getProfileView(scope: ReadScope): Promise<ProfileView> {
+export async function getProfileView(
+  scope: ReadScope & { userId: number; role: string },
+): Promise<ProfileView> {
+  await assertProjectAccess(scope.projectId, scope.organizationId, {
+    userId: scope.userId,
+    role: scope.role,
+  });
   const project = await assertProject(scope.projectId, scope.organizationId);
   const { current, rows, answers } = await currentAnswers(scope);
   const attested = await getAttestedProfileQuery(

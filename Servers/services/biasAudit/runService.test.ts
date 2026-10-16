@@ -8,6 +8,7 @@ const utils = {
   listTrendRunsQuery: jest.fn(),
   listStancesForRunQuery: jest.fn(),
   confirmRunDerivedBasisQuery: jest.fn(),
+  userCanAccessProjectQuery: jest.fn(),
 };
 jest.mock("../../utils/biasAudit.utils", () => utils);
 jest.mock("../../database/db", () => ({
@@ -49,7 +50,8 @@ const CSV = (n = 200) => {
   return rows.join("\n") + "\n";
 };
 
-const base = { projectId: 7, frameworkId: 15, organizationId: 42, userId: 9 };
+const base = { projectId: 7, frameworkId: 15, organizationId: 42, userId: 9, role: "Admin" };
+const ADMIN = { userId: 9, role: "Admin" };
 const MAPPING = { sex: "gender", race_ethnicity: "race", selected: "outcome" };
 
 // Tests write the file as text; the service receives the raw upload bytes.
@@ -292,7 +294,7 @@ describe("createRun, scoring rate", () => {
 });
 
 describe("run reads", () => {
-  const scope = { projectId: 7, frameworkId: 12, organizationId: 42 };
+  const scope = { projectId: 7, frameworkId: 12, organizationId: 42, userId: 9, role: "Admin" };
 
   it("lists a project's runs in the organization, refusing a project outside it", async () => {
     utils.getProjectQuery.mockResolvedValue(null);
@@ -315,7 +317,7 @@ describe("run reads", () => {
   it("returns a run with its stances and whether it may be exported", async () => {
     utils.getRunQuery.mockResolvedValue({ id: 11, gate_findings_json: [] });
     utils.listStancesForRunQuery.mockResolvedValue([{ id: 3, version: 1 }]);
-    const out = await getRunView(11, 42);
+    const out = await getRunView(11, 42, ADMIN);
     expect(out).toMatchObject({ run: { id: 11 }, stances: [{ id: 3 }], mayExportPdf: true });
     expect(utils.getRunQuery).toHaveBeenCalledWith(11, 42);
     expect(utils.listStancesForRunQuery).toHaveBeenCalledWith(11, 42);
@@ -323,7 +325,7 @@ describe("run reads", () => {
 
   it("refuses a run outside the organization with a not-found", async () => {
     utils.getRunQuery.mockResolvedValue(null);
-    await expect(getRunView(11, 42)).rejects.toMatchObject({ statusCode: 404 });
+    await expect(getRunView(11, 42, ADMIN)).rejects.toMatchObject({ statusCode: 404 });
   });
 });
 
@@ -349,20 +351,80 @@ describe("confirmDerivedBasis", () => {
       id: 11,
       data_basis_json: { confirmed: true },
     });
-    const out = await confirmDerivedBasis(11, 9, 42);
+    const out = await confirmDerivedBasis(11, 42, ADMIN);
     expect(utils.confirmRunDerivedBasisQuery).toHaveBeenCalledWith(11, 9, 42);
     expect(out.derivedBasis).toEqual({ confirmed: true });
   });
 
   it("refuses a run outside the organization with a not-found", async () => {
     utils.getRunQuery.mockResolvedValue(null);
-    await expect(confirmDerivedBasis(11, 9, 42)).rejects.toMatchObject({ statusCode: 404 });
+    await expect(confirmDerivedBasis(11, 42, ADMIN)).rejects.toMatchObject({ statusCode: 404 });
     expect(utils.confirmRunDerivedBasisQuery).not.toHaveBeenCalled();
   });
 
   it("refuses with a conflict when the run has no derived basis to confirm", async () => {
     utils.getRunQuery.mockResolvedValue({ id: 11, data_basis_json: null });
     utils.confirmRunDerivedBasisQuery.mockResolvedValue(null);
-    await expect(confirmDerivedBasis(11, 9, 42)).rejects.toMatchObject({ statusCode: 409 });
+    await expect(confirmDerivedBasis(11, 42, ADMIN)).rejects.toMatchObject({ statusCode: 409 });
+  });
+});
+
+describe("project-member access", () => {
+  const editor = { userId: 9, role: "Editor" };
+  const scope = { projectId: 7, frameworkId: 12, organizationId: 42 };
+  const outsiderRoles = ["Editor", "Reviewer", "Auditor", "SuperAdmin"];
+
+  beforeEach(() => {
+    utils.getRunQuery.mockResolvedValue({ id: 11, project_id: 7, gate_findings_json: [] });
+    utils.getAttestedProfileQuery.mockResolvedValue({ id: 5, version: 1 });
+  });
+
+  it.each(outsiderRoles)(
+    "answers 404 to a %s who is not on the project for create, list and trend, writing nothing",
+    async (role) => {
+      utils.userCanAccessProjectQuery.mockResolvedValue(false);
+      const who = { ...scope, userId: 9, role };
+      await expect(run({ role })).rejects.toMatchObject({ statusCode: 404 });
+      await expect(listRuns(who)).rejects.toMatchObject({ statusCode: 404 });
+      await expect(getTrendRows(who)).rejects.toMatchObject({ statusCode: 404 });
+      expect(utils.createRunQuery).not.toHaveBeenCalled();
+      expect(utils.getAttestedProfileQuery).not.toHaveBeenCalled();
+      expect(utils.listRunsQuery).not.toHaveBeenCalled();
+      expect(utils.listTrendRunsQuery).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(outsiderRoles)(
+    "answers 404 to a %s who is not on the run's project for view and confirm",
+    async (role) => {
+      utils.userCanAccessProjectQuery.mockResolvedValue(false);
+      await expect(getRunView(11, 42, { userId: 9, role })).rejects.toMatchObject({
+        statusCode: 404,
+      });
+      await expect(confirmDerivedBasis(11, 42, { userId: 9, role })).rejects.toMatchObject({
+        statusCode: 404,
+      });
+      expect(utils.userCanAccessProjectQuery).toHaveBeenCalledWith(7, 9, 42);
+      expect(utils.listStancesForRunQuery).not.toHaveBeenCalled();
+      expect(utils.confirmRunDerivedBasisQuery).not.toHaveBeenCalled();
+    },
+  );
+
+  it("lets the project's owner or a member read, list and confirm", async () => {
+    utils.userCanAccessProjectQuery.mockResolvedValue(true);
+    utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
+    utils.listRunsQuery.mockResolvedValue([{ id: 11 }]);
+    utils.listStancesForRunQuery.mockResolvedValue([]);
+    utils.confirmRunDerivedBasisQuery.mockResolvedValue({ id: 11, data_basis_json: {} });
+    await expect(listRuns({ ...scope, ...editor })).resolves.toEqual({ runs: [{ id: 11 }] });
+    await expect(getRunView(11, 42, editor)).resolves.toMatchObject({ run: { id: 11 } });
+    await expect(confirmDerivedBasis(11, 42, editor)).resolves.toMatchObject({ runId: 11 });
+    expect(utils.confirmRunDerivedBasisQuery).toHaveBeenCalledWith(11, 9, 42);
+  });
+
+  it("still answers 404 for a run in another organization, before any membership check", async () => {
+    utils.getRunQuery.mockResolvedValue(null);
+    await expect(getRunView(11, 42, editor)).rejects.toMatchObject({ statusCode: 404 });
+    expect(utils.userCanAccessProjectQuery).not.toHaveBeenCalled();
   });
 });

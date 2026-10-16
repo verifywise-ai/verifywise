@@ -32,6 +32,7 @@ import type { BiasAuditRun } from "../../domain.layer/models/biasAudit/biasAudit
 import type { BiasAuditStance } from "../../domain.layer/models/biasAudit/biasAuditStance.model";
 import type { AnswerMap } from "./applicability";
 import { applicableQuestions } from "./applicability";
+import { assertProjectAccess, type Viewer } from "./projectAccess";
 import { runAnswerGates } from "./answerGates";
 import { deriveBasis } from "./deriveBasis";
 import { computeReadiness, type ReadinessResult } from "./readinessScore";
@@ -76,6 +77,8 @@ export interface CreateRunInput {
   frameworkId: number;
   organizationId: number;
   userId: number;
+  /** The caller's role, for the project-member rule (projectAccess.ts). */
+  role: string;
   /**
    * The uploaded file exactly as received. It is hashed as bytes, so a
    * customer who hashes their own copy gets the SHA-256 the stance prints,
@@ -120,7 +123,8 @@ function oneYearFromToday(): string {
 }
 
 export async function createRun(input: CreateRunInput): Promise<CreateRunResult> {
-  const { projectId, frameworkId, organizationId, userId, data, mapping } = input;
+  const { projectId, frameworkId, organizationId, userId, role, data, mapping } = input;
+  await assertProjectAccess(projectId, organizationId, { userId, role });
 
   const profile = await getAttestedProfileQuery(projectId, frameworkId, organizationId);
   if (!profile) {
@@ -282,9 +286,13 @@ interface ProjectScope {
   projectId: number;
   frameworkId: number;
   organizationId: number;
+  userId: number;
+  role: string;
 }
 
-async function assertProject(projectId: number, organizationId: number): Promise<void> {
+async function assertProject(scope: ProjectScope): Promise<void> {
+  const { projectId, organizationId, userId, role } = scope;
+  await assertProjectAccess(projectId, organizationId, { userId, role });
   if (!(await getProjectQuery(projectId, organizationId))) {
     throw new NotFoundException(`Project ${projectId} was not found`, "Project", projectId);
   }
@@ -301,7 +309,7 @@ export function mayExportStoredRun(gateFindings: unknown): boolean {
 }
 
 export async function listRuns(scope: ProjectScope): Promise<{ runs: RunSummaryRow[] }> {
-  await assertProject(scope.projectId, scope.organizationId);
+  await assertProject(scope);
   return {
     runs: await listRunsQuery(scope.projectId, scope.frameworkId, scope.organizationId),
   };
@@ -309,7 +317,7 @@ export async function listRuns(scope: ProjectScope): Promise<{ runs: RunSummaryR
 
 /** Runs oldest first in the shape the trend series reads. */
 export async function getTrendRows(scope: ProjectScope): Promise<{ runs: TrendRunRow[] }> {
-  await assertProject(scope.projectId, scope.organizationId);
+  await assertProject(scope);
   return {
     runs: await listTrendRunsQuery(scope.projectId, scope.frameworkId, scope.organizationId),
   };
@@ -321,9 +329,14 @@ export interface RunView {
   mayExportPdf: boolean;
 }
 
-export async function getRunView(runId: number, organizationId: number): Promise<RunView> {
+export async function getRunView(
+  runId: number,
+  organizationId: number,
+  viewer: Viewer,
+): Promise<RunView> {
   const run = await getRunQuery(runId, organizationId);
   if (!run) throw new NotFoundException(`Run ${runId} was not found`, "BiasAuditRun", runId);
+  await assertProjectAccess(run.project_id, organizationId, viewer);
   return {
     run,
     stances: await listStancesForRunQuery(runId, organizationId),
@@ -338,11 +351,13 @@ export async function getRunView(runId: number, organizationId: number): Promise
  */
 export async function confirmDerivedBasis(
   runId: number,
-  userId: number,
   organizationId: number,
+  viewer: Viewer,
 ): Promise<{ runId: number; derivedBasis: unknown }> {
   const run = await getRunQuery(runId, organizationId);
   if (!run) throw new NotFoundException(`Run ${runId} was not found`, "BiasAuditRun", runId);
+  await assertProjectAccess(run.project_id, organizationId, viewer);
+  const userId = viewer.userId;
   const updated = await confirmRunDerivedBasisQuery(runId, userId, organizationId);
   if (!updated) {
     throw new ConflictException(

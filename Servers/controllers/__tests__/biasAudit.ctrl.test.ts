@@ -129,6 +129,7 @@ describe("saveProfileAnswers", () => {
       projectId: 7,
       frameworkId: 12,
       userId: 9,
+      role: "Admin",
       organizationId: 42,
       answers: [good],
     });
@@ -199,6 +200,7 @@ describe("attestProfile", () => {
       projectId: 7,
       frameworkId: 12,
       userId: 9,
+      role: "Admin",
       organizationId: 42,
     });
   });
@@ -298,6 +300,8 @@ describe("runs", () => {
       projectId: 7,
       frameworkId: 12,
       organizationId: 42,
+      userId: 9,
+      role: "Admin",
     });
   });
 
@@ -313,14 +317,17 @@ describe("runs", () => {
     expect((await call(ctrl.getRun, mockReq({ params: { id: "-1" } }))).status).toBe(400);
     svc(runService.getRunView).mockRejectedValue(new NotFoundException("Run 5 was not found"));
     expect((await call(ctrl.getRun, mockReq({ params: { id: "5" } }))).status).toBe(404);
-    expect(runService.getRunView).toHaveBeenCalledWith(5, 42);
+    expect(runService.getRunView).toHaveBeenCalledWith(5, 42, { userId: 9, role: "Admin" });
   });
 
   it("confirms a derived basis as the caller", async () => {
     svc(runService.confirmDerivedBasis).mockResolvedValue({ runId: 5, derivedBasis: {} });
     const { status } = await call(ctrl.confirmDerivedBasis, mockReq({ params: { id: "5" } }));
     expect(status).toBe(200);
-    expect(runService.confirmDerivedBasis).toHaveBeenCalledWith(5, 9, 42);
+    expect(runService.confirmDerivedBasis).toHaveBeenCalledWith(5, 42, {
+      userId: 9,
+      role: "Admin",
+    });
   });
 });
 
@@ -333,6 +340,7 @@ describe("generateStance", () => {
       runId: 11,
       organizationId: 42,
       userId: 9,
+      role: "Admin",
     });
   });
 
@@ -433,5 +441,50 @@ describe("handleDatasetUploadError", () => {
     const err = new Error("other");
     ctrl.handleDatasetUploadError(err, mockReq(), res, next);
     expect(next).toHaveBeenCalledWith(err);
+  });
+});
+
+describe("the caller's role reaches every project endpoint", () => {
+  const as = { role: "Editor" };
+  const params = { projectId: "7", frameworkId: LL144 };
+  const seen = (fn: unknown) => (fn as jest.Mock).mock.calls[0];
+
+  it("passes the role, never a role from the request body", async () => {
+    svc(profileService.getProfileView).mockResolvedValue({});
+    svc(profileService.attestProfile).mockResolvedValue({ profileId: 1, version: 1 });
+    svc(runService.listRuns).mockResolvedValue({ runs: [] });
+    svc(runService.getTrendRows).mockResolvedValue({ runs: [] });
+    svc(runService.getRunView).mockResolvedValue({});
+    svc(runService.confirmDerivedBasis).mockResolvedValue({ runId: 5, derivedBasis: {} });
+    svc(stanceService.generateStance).mockResolvedValue({ stanceId: 3, version: 1, sha256: "a" });
+
+    const body = { role: "Admin" };
+    await call(ctrl.getProfile, mockReq({ ...as, params, body }));
+    await call(ctrl.attestProfile, mockReq({ ...as, params, body }));
+    const q = { projectId: "7", frameworkId: LL144 };
+    await call(ctrl.listRuns, mockReq({ ...as, query: q, body }));
+    await call(ctrl.getRunTrend, mockReq({ ...as, query: q, body }));
+    await call(ctrl.getRun, mockReq({ ...as, params: { id: "5" }, body }));
+    await call(ctrl.confirmDerivedBasis, mockReq({ ...as, params: { id: "5" }, body }));
+    await call(ctrl.generateStance, mockReq({ ...as, params: { id: "5" }, body }));
+
+    expect(seen(profileService.getProfileView)[0]).toMatchObject({ role: "Editor", userId: 9 });
+    expect(seen(profileService.attestProfile)[0]).toMatchObject({ role: "Editor", userId: 9 });
+    expect(seen(runService.listRuns)[0]).toMatchObject({ role: "Editor", userId: 9 });
+    expect(seen(runService.getTrendRows)[0]).toMatchObject({ role: "Editor", userId: 9 });
+    expect(seen(runService.getRunView)[2]).toEqual({ userId: 9, role: "Editor" });
+    expect(seen(runService.confirmDerivedBasis)[2]).toEqual({ userId: 9, role: "Editor" });
+    expect(seen(stanceService.generateStance)[0]).toMatchObject({ role: "Editor", userId: 9 });
+  });
+
+  it("maps a service 404 for a non-member to 404 on a write", async () => {
+    svc(profileService.saveAnswers).mockRejectedValue(
+      new NotFoundException("Project 7 was not found"),
+    );
+    const { status } = await call(
+      ctrl.saveProfileAnswers,
+      mockReq({ ...as, params, body: { answers: [] } }),
+    );
+    expect(status).toBe(404);
   });
 });

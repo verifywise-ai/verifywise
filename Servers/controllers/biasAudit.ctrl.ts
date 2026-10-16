@@ -73,12 +73,22 @@ function frameworkId(raw: unknown): number {
   return id;
 }
 
+/** The caller, for the project-member rule the services enforce. */
+function viewerOf(req: Request) {
+  return { userId: req.userId!, role: req.role ?? "" };
+}
+
 function projectScope(projectRaw: unknown, frameworkRaw: unknown, req: Request) {
   return {
     projectId: positiveInt(projectRaw, "projectId"),
     frameworkId: frameworkId(frameworkRaw),
     organizationId: req.organizationId!,
   };
+}
+
+/** A project scope plus the caller, for endpoints limited to project members. */
+function memberScope(projectRaw: unknown, frameworkRaw: unknown, req: Request) {
+  return { ...projectScope(projectRaw, frameworkRaw, req), ...viewerOf(req) };
 }
 
 const isNullableString = (v: unknown) => v === null || typeof v === "string";
@@ -166,16 +176,16 @@ export const getQuestions = controllerWrapper(
 export const getProfile = controllerWrapper(
   async (req) => ({
     status: 200,
-    data: await getProfileView(projectScope(req.params.projectId, req.params.frameworkId, req)),
+    data: await getProfileView(memberScope(req.params.projectId, req.params.frameworkId, req)),
   }),
   { functionName: "getProfile", fileName: FILE_NAME, eventType: "Read" },
 );
 
 export const saveProfileAnswers = controllerWrapper(
   async (req) => {
-    const scope = projectScope(req.params.projectId, req.params.frameworkId, req);
+    const scope = memberScope(req.params.projectId, req.params.frameworkId, req);
     const answers = parseAnswers(req.body?.answers);
-    return { status: 200, data: await saveAnswers({ ...scope, userId: req.userId!, answers }) };
+    return { status: 200, data: await saveAnswers({ ...scope, answers }) };
   },
   {
     functionName: "saveProfileAnswers",
@@ -187,8 +197,8 @@ export const saveProfileAnswers = controllerWrapper(
 
 export const attestProfile = controllerWrapper(
   async (req) => {
-    const scope = projectScope(req.params.projectId, req.params.frameworkId, req);
-    return { status: 200, data: await attestProfileService({ ...scope, userId: req.userId! }) };
+    const scope = memberScope(req.params.projectId, req.params.frameworkId, req);
+    return { status: 200, data: await attestProfileService(scope) };
   },
   {
     functionName: "attestProfile",
@@ -202,7 +212,7 @@ export const attestProfile = controllerWrapper(
 
 export const createRun = controllerWrapper(
   async (req) => {
-    const scope = projectScope(req.body?.projectId, req.body?.frameworkId, req);
+    const scope = memberScope(req.body?.projectId, req.body?.frameworkId, req);
     const file = (req as Request & { file?: { buffer: Buffer } }).file;
     if (!file?.buffer) {
       throw new ValidationException("Attach the dataset as a CSV file in the field 'file'", "file");
@@ -210,7 +220,6 @@ export const createRun = controllerWrapper(
     const mapping = parseMapping(req.body?.mapping);
     const result = await createRunService({
       ...scope,
-      userId: req.userId!,
       data: file.buffer,
       mapping,
     });
@@ -227,7 +236,7 @@ export const createRun = controllerWrapper(
 export const listRuns = controllerWrapper(
   async (req) => ({
     status: 200,
-    data: await listRunsService(projectScope(req.query.projectId, req.query.frameworkId, req)),
+    data: await listRunsService(memberScope(req.query.projectId, req.query.frameworkId, req)),
   }),
   { functionName: "listRuns", fileName: FILE_NAME, eventType: "Read" },
 );
@@ -235,7 +244,7 @@ export const listRuns = controllerWrapper(
 export const getRunTrend = controllerWrapper(
   async (req) => ({
     status: 200,
-    data: await getTrendRows(projectScope(req.query.projectId, req.query.frameworkId, req)),
+    data: await getTrendRows(memberScope(req.query.projectId, req.query.frameworkId, req)),
   }),
   { functionName: "getRunTrend", fileName: FILE_NAME, eventType: "Read" },
 );
@@ -243,7 +252,7 @@ export const getRunTrend = controllerWrapper(
 export const getRun = controllerWrapper(
   async (req) => ({
     status: 200,
-    data: await getRunView(positiveInt(req.params.id, "id"), req.organizationId!),
+    data: await getRunView(positiveInt(req.params.id, "id"), req.organizationId!, viewerOf(req)),
   }),
   { functionName: "getRun", fileName: FILE_NAME, eventType: "Read" },
 );
@@ -253,8 +262,8 @@ export const confirmDerivedBasis = controllerWrapper(
     status: 200,
     data: await confirmDerivedBasisService(
       positiveInt(req.params.id, "id"),
-      req.userId!,
       req.organizationId!,
+      viewerOf(req),
     ),
   }),
   {
@@ -273,7 +282,7 @@ export const generateStance = controllerWrapper(
     data: await generateStanceService({
       runId: positiveInt(req.params.id, "id"),
       organizationId: req.organizationId!,
-      userId: req.userId!,
+      ...viewerOf(req),
     }),
   }),
   {
@@ -296,10 +305,7 @@ export async function downloadStance(req: Request, res: Response): Promise<Respo
   logProcessing({ ...log, description: "starting downloadStance" });
   try {
     const stanceId = positiveInt(req.params.id, "id");
-    const pdf = await getStanceDownload(stanceId, req.organizationId!, {
-      userId: req.userId!,
-      role: req.role ?? "",
-    });
+    const pdf = await getStanceDownload(stanceId, req.organizationId!, viewerOf(req));
     await logSuccess({ ...log, eventType: "Read", description: `Downloaded stance ${stanceId}` });
     const safeName = pdf.filename.replace(/[^\w.-]/g, "_");
     res.setHeader("Content-Type", "application/pdf");

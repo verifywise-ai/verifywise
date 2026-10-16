@@ -6,6 +6,7 @@ const utils = {
   attestProfileQuery: jest.fn(),
   getProjectQuery: jest.fn(),
   getAttestedProfileQuery: jest.fn(),
+  userCanAccessProjectQuery: jest.fn(),
 };
 jest.mock("../../utils/biasAudit.utils", () => utils);
 jest.mock("../../database/db", () => ({
@@ -19,7 +20,7 @@ import {
   saveAnswers,
 } from "./profileService";
 
-const base = { projectId: 7, frameworkId: 15, userId: 9, organizationId: 42 };
+const base = { projectId: 7, frameworkId: 15, userId: 9, organizationId: 42, role: "Admin" };
 const row = (k: string, v: string | null, extra: Record<string, unknown> = {}) => ({
   question_key: k,
   answer_value: v,
@@ -316,7 +317,7 @@ describe("getApplicableQuestions", () => {
 });
 
 describe("getProfileView", () => {
-  const scope = { projectId: 7, frameworkId: 12, organizationId: 42 };
+  const scope = { projectId: 7, frameworkId: 12, organizationId: 42, userId: 9, role: "Admin" };
 
   it("refuses a project outside the organization with a not-found", async () => {
     utils.getProjectQuery.mockResolvedValue(null);
@@ -358,5 +359,75 @@ describe("getProfileView", () => {
       answeredByUserId: 9,
     });
     expect(utils.getProfileAnswersQuery).toHaveBeenCalledWith(4, 42);
+  });
+});
+
+describe("project-member access", () => {
+  const outsider = { ...base, role: "Editor" };
+  const viewScope = {
+    projectId: 7,
+    frameworkId: 12,
+    organizationId: 42,
+    userId: 9,
+    role: "Editor",
+  };
+  const answers = [
+    { questionKey: "role.party", value: "vendor", notes: "We supply it.", dontKnow: false },
+  ];
+
+  it.each(["Editor", "Reviewer", "Auditor", "SuperAdmin"])(
+    "answers 404 to a %s who is not on the project, touching nothing, on save, attest and view",
+    async (role) => {
+      utils.userCanAccessProjectQuery.mockResolvedValue(false);
+      const who = { ...outsider, role };
+      await expect(saveAnswers({ ...who, answers })).rejects.toMatchObject({ statusCode: 404 });
+      await expect(attestProfile(who)).rejects.toMatchObject({ statusCode: 404 });
+      await expect(getProfileView({ ...viewScope, role })).rejects.toMatchObject({
+        statusCode: 404,
+      });
+      expect(utils.createProfileVersionQuery).not.toHaveBeenCalled();
+      expect(utils.upsertAnswerQuery).not.toHaveBeenCalled();
+      expect(utils.attestProfileQuery).not.toHaveBeenCalled();
+      expect(utils.getCurrentProfileQuery).not.toHaveBeenCalled();
+    },
+  );
+
+  it("checks access before it validates, so an outsider learns nothing from a 400", async () => {
+    utils.userCanAccessProjectQuery.mockResolvedValue(false);
+    await expect(
+      saveAnswers({
+        ...outsider,
+        answers: [{ questionKey: "nope", value: "x", notes: null, dontKnow: false }],
+      }),
+    ).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it("lets a project member save, attest and view", async () => {
+    utils.userCanAccessProjectQuery.mockResolvedValue(true);
+    utils.getCurrentProfileQuery.mockResolvedValue(null);
+    utils.createProfileVersionQuery.mockResolvedValue({ id: 1, version: 1 });
+    await expect(saveAnswers({ ...outsider, answers })).resolves.toEqual({
+      profileId: 1,
+      version: 1,
+    });
+    await expect(attestProfile(outsider)).rejects.toThrow(/no profile/i);
+    utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
+    utils.getAttestedProfileQuery.mockResolvedValue(null);
+    await expect(getProfileView(viewScope)).resolves.toMatchObject({ project: { id: 7 } });
+    expect(utils.userCanAccessProjectQuery).toHaveBeenCalledWith(7, 9, 42);
+  });
+
+  it("lets an organization Admin through without a membership lookup", async () => {
+    utils.getCurrentProfileQuery.mockResolvedValue(null);
+    utils.createProfileVersionQuery.mockResolvedValue({ id: 1, version: 1 });
+    await saveAnswers({ ...base, answers });
+    expect(utils.userCanAccessProjectQuery).not.toHaveBeenCalled();
+  });
+
+  it("leaves the question set org-wide", async () => {
+    utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
+    utils.getCurrentProfileQuery.mockResolvedValue(null);
+    await getApplicableQuestions({ projectId: 7, frameworkId: 12, organizationId: 42 });
+    expect(utils.userCanAccessProjectQuery).not.toHaveBeenCalled();
   });
 });

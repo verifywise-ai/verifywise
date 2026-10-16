@@ -8,6 +8,7 @@ const utils = {
   getUserNamesQuery: jest.fn(),
   getProjectQuery: jest.fn(),
   getStanceDownloadQuery: jest.fn(),
+  userCanAccessProjectQuery: jest.fn(),
 };
 jest.mock("../../utils/biasAudit.utils", () => utils);
 const persistStance = jest.fn();
@@ -61,7 +62,7 @@ const RUN = {
   job_description_key: null,
 };
 
-const args = { runId: 11, organizationId: 42, userId: 9 };
+const args = { runId: 11, organizationId: 42, userId: 9, role: "Admin" };
 
 beforeEach(() => {
   Object.values(utils).forEach((f) => f.mockReset());
@@ -165,6 +166,30 @@ describe("generateStance", () => {
     const text = model.sections.map((s: any) => s.body).join("\n");
     expect(text).not.toContain("Ada Admin");
     expect(text).toContain("The author and date of this answer are not recorded.");
+  });
+});
+
+describe("generateStance project-member access", () => {
+  it.each(["Editor", "Reviewer", "Auditor", "SuperAdmin"])(
+    "answers 404 to a %s who is not on the run's project, writing nothing",
+    async (role) => {
+      utils.userCanAccessProjectQuery.mockResolvedValue(false);
+      await expect(generateStance({ ...args, role })).rejects.toMatchObject({ statusCode: 404 });
+      expect(utils.userCanAccessProjectQuery).toHaveBeenCalledWith(7, 9, 42);
+      expect(persistStance).not.toHaveBeenCalled();
+    },
+  );
+
+  it("lets a project member generate", async () => {
+    utils.userCanAccessProjectQuery.mockResolvedValue(true);
+    await expect(generateStance({ ...args, role: "Editor" })).resolves.toMatchObject({
+      stanceId: 3,
+    });
+  });
+
+  it("does not ask the database for an organization Admin", async () => {
+    await generateStance(args);
+    expect(utils.userCanAccessProjectQuery).not.toHaveBeenCalled();
   });
 });
 

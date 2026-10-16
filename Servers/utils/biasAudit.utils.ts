@@ -31,6 +31,46 @@ function refuseCrossOrg(what: string, id: number): never {
   throw new NotFoundException(`${what} ${id} was not found in this organization`, what);
 }
 
+/**
+ * The project-member rule, written once. True when the viewer owns the
+ * project or is in projects_members for it, both within the organization.
+ * The Admin allowance is the caller's, from the role. Same rule as
+ * canUserAccessFile (utils/fileUpload.utils.ts). `projectExpr` is a SQL
+ * expression for the project id and `:organization_id` / `:viewer_user_id`
+ * are replacements the caller supplies.
+ */
+const PROJECT_MEMBER_SQL = (projectExpr: string) => `EXISTS (
+               SELECT 1
+                 FROM projects p
+                 LEFT JOIN projects_members pm
+                        ON pm.project_id = p.id AND pm.organization_id = :organization_id
+                WHERE p.id = ${projectExpr}
+                  AND p.organization_id = :organization_id
+                  AND (p.owner = :viewer_user_id OR pm.user_id = :viewer_user_id)
+            )`;
+
+/** Whether the user owns, or is a member of, this project in this organization. */
+export async function userCanAccessProjectQuery(
+  projectId: number,
+  userId: number,
+  organizationId: number,
+): Promise<boolean> {
+  const rows = (await sequelize.query(
+    `SELECT ${PROJECT_MEMBER_SQL("id")} AS allowed
+       FROM projects
+      WHERE id = :project_id AND organization_id = :organization_id`,
+    {
+      replacements: {
+        project_id: projectId,
+        viewer_user_id: userId,
+        organization_id: organizationId,
+      },
+      type: QueryTypes.SELECT,
+    },
+  )) as Array<{ allowed: boolean }>;
+  return rows[0]?.allowed === true;
+}
+
 // ---------------------------------------------------------------- profiles
 
 export async function getAttestedProfileQuery(
@@ -620,15 +660,7 @@ export async function getStanceDownloadQuery(
   const rows = (await sequelize.query(
     `SELECT s.id, s.run_id, s.version, s.pdf_sha256, s.pdf_file_id,
             f.id AS file_id, f.filename, f.content,
-            (s.generated_by = :viewer_user_id OR EXISTS (
-               SELECT 1
-                 FROM projects p
-                 LEFT JOIN projects_members pm
-                        ON pm.project_id = p.id AND pm.organization_id = :organization_id
-                WHERE p.id = s.project_id
-                  AND p.organization_id = :organization_id
-                  AND (p.owner = :viewer_user_id OR pm.user_id = :viewer_user_id)
-            )) AS viewer_has_project_access
+            (s.generated_by = :viewer_user_id OR ${PROJECT_MEMBER_SQL("s.project_id")}) AS viewer_has_project_access
        FROM bias_audit_stances s
        LEFT JOIN files f ON f.id = s.pdf_file_id
                         AND f.organization_id = :organization_id
