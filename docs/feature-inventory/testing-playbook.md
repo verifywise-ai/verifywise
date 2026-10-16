@@ -80,11 +80,13 @@ npm run test:watch
 # Run a single unit test file
 npx jest controllers/__tests__/project.ctrl.test.ts
 
-# Integration tests (requires PostgreSQL, uses a dedicated test DB)
+# Integration tests (requires PostgreSQL, uses a dedicated test DB).
+# Plain `npx jest` never selects tests/integration/ (jest.config.js excludes it);
+# the integration scripts use jest.integration.config.js plus the guarded globalSetup.
 npm run test:integration
 
 # Run a single integration test
-npx jest --config jest.config.js --globalSetup="<rootDir>/tests/integration/globalSetup.js" tests/integration/projects.test.ts --runInBand
+npm run test:integration -- --testPathPatterns=tests/integration/projects.test.ts
 
 # Smoke test (deadline summary endpoint)
 npm run test:smoke
@@ -914,7 +916,7 @@ cd Clients && npm run test:ci && npm run test:e2e
 # One spec each
 npx playwright test e2e/vendors.spec.ts
 npx jest controllers/__tests__/project.ctrl.test.ts
-npx jest --config jest.config.js --globalSetup="<rootDir>/tests/integration/globalSetup.js" tests/integration/projects.test.ts --runInBand
+npm run test:integration -- --testPathPatterns=tests/integration/projects.test.ts
 
 # Debug
 npm run test:e2e:debug

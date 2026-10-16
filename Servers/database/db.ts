@@ -112,11 +112,8 @@ import { GovernanceOrgPreferencesModel } from "../domain.layer/models/governance
 import { GovernanceCoverageCacheModel } from "../domain.layer/models/governanceOs/governanceCoverageCache.model";
 import { GovernanceScenarioActivationModel } from "../domain.layer/models/governanceOs/governanceScenarioActivation.model";
 
+// Servers/.env.test is loaded by ./config/config, which captures DB_* at import.
 dotenv.config();
-
-if (process.env.NODE_ENV === "test") {
-  dotenv.config({ path: ".env.test", override: true });
-}
 
 const env = process.env.NODE_ENV || "development";
 const conf = (dbConfig as Record<string, any>)[env] || dbConfig.development;

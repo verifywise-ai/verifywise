@@ -20,7 +20,12 @@ module.exports = {
     "/node_modules/(?!(ai|@ai-sdk|@workflow|@standard-schema|sanitize-html|htmlparser2|domhandler|domutils|dom-serializer|entities|domelementtype)/)",
   ],
   modulePathIgnorePatterns: ["<rootDir>/dist/"],
-  testPathIgnorePatterns: ["/helpers/"],
+  // tests/integration/ truncates the database it connects to, so a plain
+  // `npx jest <pattern>` must never pick it up: on 2026-10-15 `npx jest
+  // reporting` matched an integration file, skipped globalSetup's guard and
+  // wiped the development database. The integration scripts use
+  // jest.integration.config.js, which lifts this exclusion.
+  testPathIgnorePatterns: ["/helpers/", "/tests/integration/"],
   moduleNameMapper: {
     "^http-proxy-middleware$": "<rootDir>/tests/integration/__mocks__/http-proxy-middleware.js",
     "^jsdom$": "<rootDir>/tests/integration/__mocks__/jsdom.js",

@@ -1,4 +1,18 @@
-require("dotenv").config();
+const path = require("path");
+const dotenv = require("dotenv");
+
+// Under NODE_ENV=test, Servers/.env.test must win over Servers/.env, and it has
+// to be loaded here: this module captures DB_NAME at import time, so loading
+// .env.test anywhere later (db.ts used to) never reaches the connection. A plain
+// `npx jest <pattern>` that matched an integration file therefore connected to
+// the development database and truncated it (2026-10-15). Resolved from this
+// file so it does not depend on cwd; the dist/ hop covers the compiled copy.
+if (process.env.NODE_ENV === "test") {
+  const root = path.resolve(__dirname, "../..");
+  const serversRoot = path.basename(root) === "dist" ? path.dirname(root) : root;
+  dotenv.config({ path: path.join(serversRoot, ".env.test"), override: true });
+}
+dotenv.config();
 
 // RLS Phase 2 runtime-role split (docs/technical/security/rls-rollout.md):
 // when enforcement is enabled AND dedicated app-role credentials exist, the

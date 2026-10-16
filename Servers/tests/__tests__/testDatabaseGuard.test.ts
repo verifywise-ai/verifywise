@@ -12,7 +12,7 @@
 
 import { describe, expect, it } from "@jest/globals";
 
-const { assertSafeTestDatabase } = require("../testDatabaseGuard");
+const { assertSafeTestDatabase, assertSafeToTruncate } = require("../testDatabaseGuard");
 
 const envTestPath = "/repo/Servers/.env.test";
 
@@ -71,5 +71,44 @@ describe("assertSafeTestDatabase", () => {
         hasEnvTest: false,
       }),
     ).toThrow();
+  });
+});
+
+/**
+ * The last line of defence: cleanupDatabase() asks Postgres which database it
+ * is connected to and checks that name right before truncating. It holds no
+ * matter how jest was started — on 2026-10-15 a plain `npx jest reporting`
+ * matched an integration file, skipped globalSetup and truncated the
+ * development database.
+ */
+describe("assertSafeToTruncate", () => {
+  it("refuses the database Servers/.env names", () => {
+    expect(() =>
+      assertSafeToTruncate({ currentDb: "verifywise_test", devDbName: "verifywise_test" }),
+    ).toThrow(/Servers\/\.env/);
+  });
+
+  it("refuses a database whose name does not mark it as a test database", () => {
+    expect(() => assertSafeToTruncate({ currentDb: "verifywise", devDbName: undefined })).toThrow(
+      /"test"/,
+    );
+  });
+
+  it("refuses when the connected database is unknown", () => {
+    expect(() => assertSafeToTruncate({ currentDb: undefined, devDbName: "verifywise" })).toThrow(
+      /Refusing to truncate/,
+    );
+  });
+
+  it("allows a dedicated test database", () => {
+    expect(() =>
+      assertSafeToTruncate({ currentDb: "verifywise_mrm_test", devDbName: "verifywise" }),
+    ).not.toThrow();
+  });
+
+  it("allows CI's test database, where there is no Servers/.env", () => {
+    expect(() =>
+      assertSafeToTruncate({ currentDb: "verifywise_test", devDbName: undefined }),
+    ).not.toThrow();
   });
 });

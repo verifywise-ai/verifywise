@@ -1,13 +1,14 @@
-const fs = require("node:fs");
 const path = require("node:path");
 const dotenv = require("dotenv");
 const { Client } = require("pg");
 const { execSync } = require("node:child_process");
-const { assertSafeTestDatabase } = require("../testDatabaseGuard");
+const { assertSafeTestDatabase, readDevDbName } = require("../testDatabaseGuard");
 
 module.exports = async function globalSetup() {
   const envTestPath = path.resolve(__dirname, "../../.env.test");
-  const loaded = dotenv.config({ path: envTestPath });
+  // override matches database/config/config.js, so the name checked below is
+  // the one the test workers will connect to.
+  const loaded = dotenv.config({ path: envTestPath, override: true });
 
   // Refuse to run against the development database.
   //
@@ -19,10 +20,7 @@ module.exports = async function globalSetup() {
   // neither that file nor Servers/.env and injects DB_* into the environment,
   // where a file-existence check fails while proving nothing about what is
   // about to be truncated. See tests/testDatabaseGuard.js.
-  const devEnvPath = path.resolve(__dirname, "../../.env");
-  const devDbName = fs.existsSync(devEnvPath)
-    ? dotenv.parse(fs.readFileSync(devEnvPath, "utf8")).DB_NAME
-    : undefined;
+  const devDbName = readDevDbName();
 
   const dbName = process.env.DB_NAME;
   assertSafeTestDatabase({ dbName, devDbName, envTestPath, hasEnvTest: !loaded.error });

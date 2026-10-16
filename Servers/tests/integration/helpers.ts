@@ -3,6 +3,8 @@ import bcrypt from "bcrypt";
 import { execSync } from "child_process";
 import path from "path";
 
+const testDatabaseGuard = require("../testDatabaseGuard");
+
 /**
  * Run pending Sequelize migrations against the configured test database.
  * This ensures integration tests see the same schema the application expects
@@ -86,7 +88,25 @@ export async function seedFrameworks(): Promise<void> {
   );
 }
 
+/**
+ * Throw unless the live connection is a dedicated test database. Checked on the
+ * connection itself, not on env vars, because this suite can be reached
+ * without globalSetup's guard (a plain `npx jest <pattern>` matching an
+ * integration file) — see tests/testDatabaseGuard.js.
+ */
+async function assertConnectedToTestDatabase(): Promise<void> {
+  const [rows] = (await sequelize.query("SELECT current_database() AS name")) as [
+    { name?: string }[],
+    unknown,
+  ];
+  testDatabaseGuard.assertSafeToTruncate({
+    currentDb: rows[0]?.name,
+    devDbName: testDatabaseGuard.readDevDbName(),
+  });
+}
+
 export async function cleanupDatabase(): Promise<void> {
+  await assertConnectedToTestDatabase();
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       await sequelize.query(

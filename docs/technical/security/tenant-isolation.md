@@ -367,7 +367,7 @@ it("shows the error and never renders Org B's project", async () => {
 
 ### 6.5 Running locally
 
-The integration suite truncates every table it touches. Point `Servers/.env.test` at a dedicated test database; the global setup refuses to run against the database named in `Servers/.env`.
+The integration suite truncates every table it touches. Point `Servers/.env.test` at a dedicated test database; the global setup refuses to run against the database named in `Servers/.env`, and `cleanupDatabase()` refuses to truncate any connected database that is that one or whose name does not contain `test`. Plain `npx jest` does not select `tests/integration/`; run it through `npm run test:integration`.
 
 ```bash
 cd Servers
