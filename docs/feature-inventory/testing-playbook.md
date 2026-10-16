@@ -81,8 +81,9 @@ npm run test:watch
 npx jest controllers/__tests__/project.ctrl.test.ts
 
 # Integration tests (requires PostgreSQL, uses a dedicated test DB).
-# Plain `npx jest` never selects tests/integration/ (jest.config.js excludes it);
-# the integration scripts use jest.integration.config.js plus the guarded globalSetup.
+# Plain `npx jest` never selects tests/integration/ (jest.config.js excludes it).
+# jest.integration.config.js declares the guarded globalSetup itself, so it refuses
+# any database that is Servers/.env's or lacks a `test` name token.
 npm run test:integration
 
 # Run a single integration test
@@ -154,7 +155,9 @@ npm run start
    - `e2e/.auth/admin.json` — org Admin
 
 **Integration tests:**
-- `tests/integration/globalSetup.js` creates the test DB if missing, builds the backend, and runs migrations.
+- `tests/integration/globalSetup.js` (declared in `jest.integration.config.js`) refuses anything but a dedicated test DB, then creates it if missing, builds the backend, and runs migrations. `tests/integration/setupDatabaseGuard.ts` re-checks `current_database()` on every connection.
+- Env precedence under `NODE_ENV=test`: exported variables > `Servers/.env.test` > `Servers/.env` (`database/config/loadEnv.js`).
+- `npm run test:ratelimit` uses `jest.ratelimit.config.js`: no database, no global setup.
 - Each test uses helpers from `tests/integration/helpers.ts` (`createTestOrganization`, `createTestUser`, `seedFrameworks`, `cleanupDatabase`).
 
 ---

@@ -12,7 +12,12 @@
 
 import { describe, expect, it } from "@jest/globals";
 
-const { assertSafeTestDatabase, assertSafeToTruncate } = require("../testDatabaseGuard");
+const {
+  assertSafeTestDatabase,
+  assertSafeToTruncate,
+  checkDatabaseName,
+  isTestDatabaseName,
+} = require("../testDatabaseGuard");
 
 const envTestPath = "/repo/Servers/.env.test";
 
@@ -110,5 +115,58 @@ describe("assertSafeToTruncate", () => {
     expect(() =>
       assertSafeToTruncate({ currentDb: "verifywise_test", devDbName: undefined }),
     ).not.toThrow();
+  });
+});
+
+describe("isTestDatabaseName", () => {
+  // Local names, plus every DB_NAME the CI and E2E workflows use (all
+  // verifywise_test in .github/workflows/*.yml at the time of writing).
+  it.each([
+    "verifywise_test",
+    "verifywise_mrm_test",
+    "verifywise_jira_test",
+    "test_verifywise",
+    "test",
+    "app-test-db",
+  ])("accepts %s", (name) => {
+    expect(isTestDatabaseName(name)).toBe(true);
+  });
+
+  it.each([
+    "verifywise",
+    "verifywise_attestations",
+    "latest",
+    "contest_app",
+    "verifywise_testing_prod",
+  ])("rejects %s", (name) => {
+    expect(isTestDatabaseName(name)).toBe(false);
+  });
+});
+
+/**
+ * globalSetup (before build and migrations) and the connection checks apply
+ * one rule, so a name globalSetup lets through is never refused later, and the
+ * reverse.
+ */
+describe("one policy for globalSetup and the connection checks", () => {
+  const cases: [string | undefined, string | undefined, string | null][] = [
+    [undefined, "verifywise", "unnamed"],
+    ["verifywise_test", "verifywise_test", "development"],
+    ["verifywise", undefined, "not-test"],
+    ["verifywise_attestations", "verifywise", "not-test"],
+    ["verifywise_mrm_test", "verifywise", null],
+  ];
+
+  it.each(cases)("DB %s with dev DB %s -> %s", (name, devDbName, reason) => {
+    expect(checkDatabaseName({ name, devDbName })).toBe(reason);
+    const setup = () => assertSafeTestDatabase({ dbName: name, devDbName, envTestPath });
+    const connection = () => assertSafeToTruncate({ currentDb: name, devDbName });
+    if (reason) {
+      expect(setup).toThrow();
+      expect(connection).toThrow();
+    } else {
+      expect(setup).not.toThrow();
+      expect(connection).not.toThrow();
+    }
   });
 });

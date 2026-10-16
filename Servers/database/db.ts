@@ -1,4 +1,3 @@
-import dotenv from "dotenv";
 import { Sequelize } from "sequelize-typescript";
 import { RoleModel } from "../domain.layer/models/role/role.model";
 import { AssessmentModel } from "../domain.layer/models/assessment/assessment.model";
@@ -112,8 +111,8 @@ import { GovernanceOrgPreferencesModel } from "../domain.layer/models/governance
 import { GovernanceCoverageCacheModel } from "../domain.layer/models/governanceOs/governanceCoverageCache.model";
 import { GovernanceScenarioActivationModel } from "../domain.layer/models/governanceOs/governanceScenarioActivation.model";
 
-// Servers/.env.test is loaded by ./config/config, which captures DB_* at import.
-dotenv.config();
+// Environment files (Servers/.env, and Servers/.env.test under NODE_ENV=test)
+// are loaded by ./config/config before it captures DB_*. See config/loadEnv.js.
 
 const env = process.env.NODE_ENV || "development";
 const conf = (dbConfig as Record<string, any>)[env] || dbConfig.development;

@@ -88,21 +88,43 @@ export async function seedFrameworks(): Promise<void> {
   );
 }
 
+/** Verdict for this module instance (one per test file); a refusal is kept too. */
+let connectedDatabaseVerdict: Promise<void> | undefined;
+
 /**
  * Throw unless the live connection is a dedicated test database. Checked on the
- * connection itself, not on env vars, because this suite can be reached
- * without globalSetup's guard (a plain `npx jest <pattern>` matching an
- * integration file) — see tests/testDatabaseGuard.js.
+ * connection itself, not on env vars, so it holds however jest was started —
+ * see tests/testDatabaseGuard.js. The first call asks Postgres and reads
+ * Servers/.env; later calls reuse that verdict, so cleanupDatabase() in a
+ * beforeEach costs nothing extra.
+ *
+ * The verdict is cached only once the lookup has answered. The default lookup
+ * opens a pool connection, whose afterConnect hook (setupDatabaseGuard.ts)
+ * calls back in here with the raw connection; caching the in-flight lookup
+ * would make that hook wait on itself.
+ *
+ * @param currentDatabase  How to ask for current_database(). The afterConnect
+ *   hook passes the raw connection it is handed.
  */
-async function assertConnectedToTestDatabase(): Promise<void> {
-  const [rows] = (await sequelize.query("SELECT current_database() AS name")) as [
-    { name?: string }[],
-    unknown,
-  ];
-  testDatabaseGuard.assertSafeToTruncate({
-    currentDb: rows[0]?.name,
-    devDbName: testDatabaseGuard.readDevDbName(),
-  });
+export async function assertConnectedToTestDatabase(
+  currentDatabase: () => Promise<string | undefined> = async () => {
+    const [rows] = (await sequelize.query("SELECT current_database() AS name")) as [
+      { name?: string }[],
+      unknown,
+    ];
+    return rows[0]?.name;
+  },
+): Promise<void> {
+  if (!connectedDatabaseVerdict) {
+    const currentDb = await currentDatabase();
+    connectedDatabaseVerdict ??= Promise.resolve().then(() =>
+      testDatabaseGuard.assertSafeToTruncate({
+        currentDb,
+        devDbName: testDatabaseGuard.readDevDbName(),
+      }),
+    );
+  }
+  return connectedDatabaseVerdict;
 }
 
 export async function cleanupDatabase(): Promise<void> {

@@ -203,9 +203,9 @@ Uses VerifyWise components + theme tokens; i18n de/fr/es via the DOM-level runti
    `date_trunc`/`extract` over `timestamptz` is only STABLE. Truncate in the INSERT instead.
 3. **`express-rate-limit` v8** rejects a custom `keyGenerator` that reads `req.ip` directly —
    use the exported `ipKeyGenerator` for IPv6 safety.
-4. **Running isolation tests:** always use `--globalSetup` (it creates the DB + runs migrations).
-   An isolated `jest --testMatch=...` WITHOUT it runs against an unmigrated DB and gives bogus
-   "relation does not exist". Drop `verifywise_mrm_test` between full runs if one failed mid-migration.
+4. **Running isolation tests:** use `npm run test:integration -- --testPathPatterns=...` (or
+   `--config jest.integration.config.js`, which declares the globalSetup that creates the DB and
+   runs migrations). Plain `npx jest` excludes `tests/integration/`. Drop `verifywise_mrm_test` between full runs if one failed mid-migration.
 
 ---
 

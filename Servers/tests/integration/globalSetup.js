@@ -1,16 +1,16 @@
-const path = require("node:path");
-const dotenv = require("dotenv");
 const { Client } = require("pg");
 const { execSync } = require("node:child_process");
+const { loadEnv } = require("../../database/config/loadEnv");
 const { assertSafeTestDatabase, readDevDbName } = require("../testDatabaseGuard");
 
 module.exports = async function globalSetup() {
-  const envTestPath = path.resolve(__dirname, "../../.env.test");
-  // override matches database/config/config.js, so the name checked below is
-  // the one the test workers will connect to.
-  const loaded = dotenv.config({ path: envTestPath, override: true });
+  // Same loader and precedence as database/config/config.js (exported env >
+  // .env.test > .env), so the name checked below is the one the test workers
+  // will connect to. The workers inherit this process's environment.
+  const { envTestPath, envTestLoaded } = loadEnv({ nodeEnv: "test" });
 
-  // Refuse to run against the development database.
+  // Refuse to run against anything but a dedicated test database, before the
+  // build and migrations below touch it.
   //
   // This suite truncates every table it touches, and .env.test is gitignored,
   // so a fresh clone can easily end up pointing at the development database —
@@ -23,7 +23,7 @@ module.exports = async function globalSetup() {
   const devDbName = readDevDbName();
 
   const dbName = process.env.DB_NAME;
-  assertSafeTestDatabase({ dbName, devDbName, envTestPath, hasEnvTest: !loaded.error });
+  assertSafeTestDatabase({ dbName, devDbName, envTestPath, hasEnvTest: envTestLoaded });
 
   const client = new Client({
     user: process.env.DB_USER,
