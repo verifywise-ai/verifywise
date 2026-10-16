@@ -149,7 +149,7 @@ Templates are stored in `Servers/templates/` as `.mjml` files.
 
 | Template | Purpose | Key Variables |
 |----------|---------|---------------|
-| `account-creation-email.mjml` | New account invitation | `{{name}}`, `{{link}}` |
+| `account-creation-email.mjml` | New account invitation | `{{link}}`, plus translated copy (`{{heading}}`, `{{greeting}}`, `{{intro}}`, `{{instruction}}`, `{{button}}`, `{{ignore}}`, `{{thanks}}`, `{{footer}}`) |
 | `password-reset-email.mjml` | Password reset | `{{name}}`, `{{email}}`, `{{url}}` |
 | `project-created-admin.mjml` | New project notification | `{{admin_name}}`, `{{project_name}}`, `{{project_url}}` |
 | `user-added-project-admin.mjml` | Added as admin | `{{user_name}}`, `{{project_name}}`, `{{actor_name}}` |
@@ -163,6 +163,8 @@ Templates are stored in `Servers/templates/` as `.mjml` files.
 | `pmm-escalation.mjml` | PMM escalation | Escalation details |
 | `pmm-completed.mjml` | PMM completed | `{{completed_by_name}}`, `{{completed_at}}` |
 | `pmm-flagged-concern.mjml` | Concern flagged | `{{flagged_questions_html}}` |
+
+**Language.** `sendInviteEmail` fills the invitation copy from the backend dictionaries. A known recipient gets the language saved in Settings. An address with no user yet gets the inviter's language. Spanish is a frontend language, so a saved Spanish preference is sent in English, the same as other backend mail.
 
 **Link lifetimes.** An invitation link (`account-creation-email.mjml`) is valid for 30 days after it is sent or resent (`INVITATION_LIFETIME_MS` in `Servers/utils/jwt.utils.ts`). The same constant sets `invitations.expires_at`, which the Team page uses to show "Pending" or "Expired". Invitations sent before this was raised from 7 days keep their original 7-day link; resending issues a new 30-day one. Password-reset links last 1 hour.
 

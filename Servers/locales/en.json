@@ -834,5 +834,13 @@
   "A justification of at least 10 characters is required when changing the computed EU AI Act classification": "A justification of at least 10 characters is required when changing the computed EU AI Act classification",
   "Invalid EU AI Act classification level": "Invalid EU AI Act classification level",
   "Only admins can change retention periods": "Only admins can change retention periods",
-  "Invalid retention period": "Invalid retention period"
+  "Invalid retention period": "Invalid retention period",
+  "Welcome to VerifyWise": "Welcome to VerifyWise",
+  "Hello {name},": "Hello {name},",
+  "An administrator has created an account for you on the VerifyWise server.": "An administrator has created an account for you on the VerifyWise server.",
+  "Click the button below to set up your account and get started.": "Click the button below to set up your account and get started.",
+  "Create account": "Create account",
+  "If you did not expect this invitation, please ignore this email.": "If you did not expect this invitation, please ignore this email.",
+  "Thank you.": "Thank you.",
+  "Sent with care from VerifyWise": "Sent with care from VerifyWise"
 }
