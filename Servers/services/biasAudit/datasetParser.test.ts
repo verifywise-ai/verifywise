@@ -72,6 +72,42 @@ describe("parseDataset", () => {
     expect(out.wrongWidthRowCount).toBe(0);
   });
 
+  // Spreadsheet exports often end with full-width rows of empty cells. Such a
+  // row carries no applicant, so it must not count as a record, a blank
+  // outcome or a wrong-width row.
+  it("skips trailing rows whose cells are all blank", () => {
+    const out = parseDataset("gender,race,outcome\nMale,White,1\nFemale,Asian,0\n,,\n , ,\n,,\n", {
+      sex: "gender",
+      race_ethnicity: "race",
+      selected: "outcome",
+    });
+    expect(out.records).toHaveLength(2);
+    expect(out.blankOutcomeCount).toBe(0);
+    expect(out.wrongWidthRowCount).toBe(0);
+  });
+
+  it("skips an all-blank row in the middle of the data", () => {
+    const out = parseDataset("gender,race,outcome\nMale,White,1\n,,,,\nFemale,Asian,0\n", {
+      sex: "gender",
+      race_ethnicity: "race",
+      selected: "outcome",
+    });
+    expect(out.records).toHaveLength(2);
+    expect(out.records.map((r) => r.sex)).toEqual(["Male", "Female"]);
+    expect(out.blankOutcomeCount).toBe(0);
+    expect(out.wrongWidthRowCount).toBe(0);
+  });
+
+  it("still counts a row with a value and a blank outcome", () => {
+    const out = parseDataset("gender,race,outcome\nMale,,\n", {
+      sex: "gender",
+      race_ethnicity: "race",
+      selected: "outcome",
+    });
+    expect(out.records).toHaveLength(1);
+    expect(out.blankOutcomeCount).toBe(1);
+  });
+
   it("counts outcome values it cannot read instead of silently calling them not selected", () => {
     const out = parseDataset("gender,outcome\nMale,maybe\nMale,1\n", {
       sex: "gender",

@@ -81,7 +81,10 @@ function readCsv(text: string): string[][] {
     row.push(field);
     rows.push(row);
   }
-  return rows.filter((r) => !(r.length === 1 && r[0].trim() === ""));
+  // A row whose cells are all blank carries no applicant: an empty line, or the
+  // full-width ",,,," rows a spreadsheet export often ends with. Drop it before
+  // anything counts rows, so it is not read as a blank outcome or a short row.
+  return rows.filter((r) => r.some((cell) => cell.trim() !== ""));
 }
 
 function mappingError(key: string, column: string): string {
