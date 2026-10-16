@@ -7,6 +7,7 @@ jest.mock("../../utils/fileUpload.utils", () => ({
   getFileMetadataByProjectId: jest.fn(),
   uploadFile: jest.fn(),
   canUserAccessFile: jest.fn(),
+  BIAS_AUDIT_STANCE_SOURCE: "Bias audit stance report",
 }));
 jest.mock("../../utils/files/getUserFilesMetaData.utils", () => ({
   __esModule: true,
@@ -164,6 +165,21 @@ describe("file.ctrl", () => {
       await getFileContentById(req, res);
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.end).toHaveBeenCalled();
+    });
+    it("should answer a stance PDF as not found, even to an Admin", async () => {
+      mockCanAccess.mockResolvedValue(true);
+      mockGetFile.mockResolvedValue({
+        id: 1,
+        filename: "stance.pdf",
+        type: "application/pdf",
+        source: "Bias audit stance report",
+        content: Buffer.from("%PDF"),
+      } as any);
+      const req = createReq({ params: { id: "1" } });
+      const res = createRes();
+      await getFileContentById(req, res);
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.end).not.toHaveBeenCalled();
     });
     it("should return 404 when file is not found", async () => {
       mockCanAccess.mockResolvedValue(true);

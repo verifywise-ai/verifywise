@@ -652,11 +652,13 @@ describe("bias audit routes tenant isolation", () => {
   ) {
     const pdf = Buffer.from("%PDF-1.4 seeded stance");
     const sha = require("node:crypto").createHash("sha256").update(pdf).digest("hex");
+    const filename = `stance-${Date.now()}-${Math.floor(Math.random() * 1e6)}.pdf`;
+    let fileId = 0;
     const stanceId = await sequelize.transaction(async (t) => {
       const file = await uploadFile(
         {
           fieldname: "file",
-          originalname: "stance.pdf",
+          originalname: filename,
           mimetype: "application/pdf",
           buffer: pdf,
           size: pdf.length,
@@ -667,6 +669,7 @@ describe("bias audit routes tenant isolation", () => {
         owner.orgId,
         t,
       );
+      fileId = file.id!;
       const row = await createStanceQuery(
         {
           runId,
@@ -682,8 +685,64 @@ describe("bias audit routes tenant isolation", () => {
       );
       return row.id!;
     });
-    return { pdf, sha, stanceId };
+    return { pdf, sha, stanceId, fileId, filename };
   }
+
+  it("keeps stance PDFs out of the generic file lists and file-id endpoints, for every role", async () => {
+    const { owner, project, runId } = await ownerWithRun();
+    const { fileId, filename, stanceId } = await seedStance(owner, project, runId);
+    const editor = await sameOrgUser(owner.orgId, 3, "Editor");
+    const superAdmin = testRequest(
+      await createTestApp({
+        bypassAuth: true,
+        mockUser: { userId: owner.userId, organizationId: owner.orgId, role: "SuperAdmin" },
+      }),
+    );
+    const viewers = { admin: owner.request, editor: editor.request, superAdmin };
+
+    const lists = [
+      "/api/file-manager",
+      "/api/file-manager/with-metadata",
+      `/api/file-manager/search?q=stance`,
+      "/api/files",
+      `/api/files/by-projid/${project}`,
+    ];
+    const byId = [
+      `/api/files/${fileId}`,
+      `/api/file-manager/${fileId}`,
+      `/api/file-manager/${fileId}/metadata`,
+      `/api/file-manager/${fileId}/versions`,
+      `/api/file-manager/${fileId}/preview`,
+    ];
+
+    const leaked: unknown[] = [];
+    for (const [who, request] of Object.entries(viewers)) {
+      for (const route of lists) {
+        const res = await request.get(route);
+        if (JSON.stringify(res.body).includes(filename)) leaked.push([who, route]);
+      }
+      for (const route of byId) {
+        const res = await request.get(route);
+        // 403 only where the role may not use the endpoint at all.
+        if (res.status !== 404 && res.status !== 403) leaked.push([who, route, res.status]);
+      }
+      const patch = await request
+        .patch(`/api/file-manager/${fileId}/metadata`)
+        .send({ description: "changed" });
+      if (patch.status !== 404 && patch.status !== 403)
+        leaked.push([who, "PATCH metadata", patch.status]);
+    }
+    expect(leaked).toEqual([]);
+
+    // Admin, who may use every endpoint, gets the not-found a missing file gets.
+    for (const route of byId) {
+      expect([route, (await owner.request.get(route)).status]).toEqual([route, 404]);
+    }
+    // The stance endpoint still serves it.
+    expect((await owner.request.get(`/api/bias-audit/stances/${stanceId}/download`)).status).toBe(
+      200,
+    );
+  });
 
   it("serves a stance PDF only to its project's people, not to others in the organization", async () => {
     const { owner, project, runId } = await ownerWithRun();

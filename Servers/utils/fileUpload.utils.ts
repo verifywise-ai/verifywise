@@ -200,9 +200,10 @@ export const getFileMetadataByProjectId = async (project_id: number, organizatio
     FROM files f
   JOIN users u ON f.uploaded_by = u.id
     WHERE f.organization_id = :organizationId AND project_id = :project_id
+      AND f.source IS DISTINCT FROM :stanceSource
     ORDER BY uploaded_time DESC, id ASC`;
   const result = await sequelize.query(query, {
-    replacements: { organizationId, project_id },
+    replacements: { organizationId, project_id, stanceSource: BIAS_AUDIT_STANCE_SOURCE },
     mapToModel: true,
     model: FileModel,
   });

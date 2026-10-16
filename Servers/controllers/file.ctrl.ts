@@ -6,6 +6,7 @@ import {
   getFileMetadataByProjectId,
   uploadFile,
   canUserAccessFile,
+  BIAS_AUDIT_STANCE_SOURCE,
 } from "../utils/fileUpload.utils";
 import { RequestWithFile, UploadedFile } from "../utils/question.utils";
 import { FileType } from "../domain.layer/models/file/file.model";
@@ -74,7 +75,8 @@ export async function getFileContentById(req: Request, res: Response): Promise<a
     }
 
     const file = await getFileById(fileId, req.organizationId!);
-    if (file) {
+    // A stance PDF is served only by the bias audit stance endpoint.
+    if (file && file.source !== BIAS_AUDIT_STANCE_SOURCE) {
       await logSuccess({
         eventType: "Read",
         description: `Retrieved file content for ID ${req.params.id}`,
