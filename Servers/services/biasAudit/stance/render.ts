@@ -19,7 +19,6 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import * as ejs from "ejs";
-import { chromium } from "playwright";
 import { sequelize } from "../../../database/db";
 import {
   BusinessLogicException,
@@ -32,6 +31,7 @@ import {
   getRunProjectIdQuery,
 } from "../../../utils/biasAudit.utils";
 import { BIAS_AUDIT_STANCE_SOURCE, uploadFile } from "../../../utils/fileUpload.utils";
+import { getSharedBrowser } from "../../../utils/pdfBrowser.utils";
 import { REQUIRED_SECTIONS, type StanceModel, type StanceSection } from "./compose";
 import { checkSections } from "./sectionChecker";
 import { blankFieldLabel, metricLabel, presetLabel } from "./labels";
@@ -240,29 +240,22 @@ export async function renderStancePdf(
     );
   }
 
-  const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
-  const browser = await chromium.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
-    ...(executablePath ? { executablePath } : {}),
-  });
+  // The browser is the server's shared one; this render owns only its page.
+  // browser.newPage opens the page in its own context, which page.close ends.
+  const browser = await getSharedBrowser();
+  const page = await browser.newPage();
   try {
-    const page = await browser.newPage();
-    try {
-      await page.setContent(html, { waitUntil: "load" });
-      const pdf = Buffer.from(
-        await page.pdf({
-          format: "A4",
-          margin: { top: "0.75in", right: "0.75in", bottom: "0.75in", left: "0.75in" },
-          printBackground: true,
-        }),
-      );
-      return { pdf, sha256: createHash("sha256").update(pdf).digest("hex") };
-    } finally {
-      await page.close();
-    }
+    await page.setContent(html, { waitUntil: "load" });
+    const pdf = Buffer.from(
+      await page.pdf({
+        format: "A4",
+        margin: { top: "0.75in", right: "0.75in", bottom: "0.75in", left: "0.75in" },
+        printBackground: true,
+      }),
+    );
+    return { pdf, sha256: createHash("sha256").update(pdf).digest("hex") };
   } finally {
-    await browser.close();
+    await page.close();
   }
 }
 

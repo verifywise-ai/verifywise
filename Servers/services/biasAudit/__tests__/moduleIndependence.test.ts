@@ -22,7 +22,7 @@ const IO_LAYER: Record<string, string> = {
   [path.join(MODULE, "projectAccess.ts")]:
     "asks utils/biasAudit.utils whether a user owns or belongs to a project",
   [path.join(MODULE, "stance", "render.ts")]:
-    "reads the ejs template from disk, drives playwright, and writes the files and stance rows through utils and the db; hashes the PDF with node:crypto",
+    "reads the ejs template from disk, renders on the shared browser from utils/pdfBrowser.utils, and writes the files and stance rows through utils and the db; hashes the PDF with node:crypto",
 };
 
 /** Every .ts file in the module, tests and fixtures included. */

@@ -17,7 +17,12 @@ jest.mock("../../../database/db", () => ({
 }));
 
 const pdfMock = jest.fn().mockResolvedValue(Buffer.from("%PDF-1.4 fake"));
-const launch = jest.fn();
+// The stance renders on the server's shared browser; it never launches its own.
+const getSharedBrowser = jest.fn();
+jest.mock("../../../utils/pdfBrowser.utils", () => ({ getSharedBrowser }));
+const launch = jest.fn(() => {
+  throw new Error("renderStancePdf must not launch a browser of its own");
+});
 jest.mock("playwright", () => ({ chromium: { launch } }));
 
 import { checkSections } from "./sectionChecker";
@@ -59,7 +64,7 @@ const evidence: StanceEvidence = {
 beforeEach(() => {
   jest.clearAllMocks();
   pdfMock.mockResolvedValue(Buffer.from("%PDF-1.4 fake"));
-  launch.mockResolvedValue({
+  getSharedBrowser.mockResolvedValue({
     newPage: jest.fn().mockResolvedValue({
       setContent: jest.fn(),
       pdf: pdfMock,
@@ -178,7 +183,7 @@ describe("customer quotes and the vocabulary lint", () => {
       ),
     };
     await expect(renderStancePdf(own, evidence)).rejects.toThrow(/forbidden/i);
-    expect(launch).not.toHaveBeenCalled();
+    expect(getSharedBrowser).not.toHaveBeenCalled();
   });
 
   it("renders a PDF for a stance that quotes the word", async () => {
@@ -196,14 +201,14 @@ describe("renderStancePdf", () => {
   it("refuses to render when a required section is absent, before launching a browser", async () => {
     const broken = { ...model, sections: model.sections.slice(0, 2) };
     await expect(renderStancePdf(broken, evidence)).rejects.toThrow(/missing required section/i);
-    expect(launch).not.toHaveBeenCalled();
+    expect(getSharedBrowser).not.toHaveBeenCalled();
   });
 
   it("refuses to render when the gates do not allow export", async () => {
     await expect(renderStancePdf(model, { ...evidence, mayExportPdf: false })).rejects.toThrow(
       /export/i,
     );
-    expect(launch).not.toHaveBeenCalled();
+    expect(getSharedBrowser).not.toHaveBeenCalled();
   });
 
   it("refuses with a 422 business-rule error, never a bare Error, so no refusal reaches a client as a 500", async () => {
@@ -227,7 +232,7 @@ describe("renderStancePdf", () => {
   it("refuses to render a PDF without evidence, before launching a browser", async () => {
     await expect(renderStancePdf(model, undefined as any)).rejects.toThrow(/evidence/i);
     await expect(renderStancePdf(model, null as any)).rejects.toThrow(/evidence/i);
-    expect(launch).not.toHaveBeenCalled();
+    expect(getSharedBrowser).not.toHaveBeenCalled();
   });
 
   it("accepts the narrower section list of an out-of-scope determination", async () => {
@@ -241,18 +246,30 @@ describe("renderStancePdf", () => {
     await expect(renderStancePdf(out, evidence)).resolves.toBeDefined();
   });
 
-  it("closes the browser even when the PDF step fails", async () => {
-    const close = jest.fn();
-    launch.mockResolvedValue({
-      newPage: jest.fn().mockResolvedValue({
-        setContent: jest.fn(),
-        pdf: jest.fn().mockRejectedValue(new Error("boom")),
-        close: jest.fn(),
-      }),
-      close,
-    });
+  it("renders on the shared browser, opening and closing only its own page", async () => {
+    const page = { setContent: jest.fn(), pdf: pdfMock, close: jest.fn() };
+    const browser = { newPage: jest.fn().mockResolvedValue(page), close: jest.fn() };
+    getSharedBrowser.mockResolvedValue(browser);
+    await renderStancePdf(model, evidence);
+    await renderStancePdf(model, evidence);
+    expect(getSharedBrowser).toHaveBeenCalledTimes(2);
+    expect(launch).not.toHaveBeenCalled();
+    expect(browser.newPage).toHaveBeenCalledTimes(2);
+    expect(page.close).toHaveBeenCalledTimes(2);
+    expect(browser.close).not.toHaveBeenCalled();
+  });
+
+  it("closes its page, and leaves the shared browser open, when the PDF step fails", async () => {
+    const page = {
+      setContent: jest.fn(),
+      pdf: jest.fn().mockRejectedValue(new Error("boom")),
+      close: jest.fn(),
+    };
+    const browser = { newPage: jest.fn().mockResolvedValue(page), close: jest.fn() };
+    getSharedBrowser.mockResolvedValue(browser);
     await expect(renderStancePdf(model, evidence)).rejects.toThrow("boom");
-    expect(close).toHaveBeenCalled();
+    expect(page.close).toHaveBeenCalled();
+    expect(browser.close).not.toHaveBeenCalled();
   });
 });
 
@@ -350,7 +367,7 @@ describe("persistStance immutability", () => {
   it("refuses a project id that does not match the run, before rendering or writing", async () => {
     utils.getRunProjectIdQuery.mockResolvedValue(8);
     await expect(persistStance(base as any)).rejects.toThrow(/project/i);
-    expect(launch).not.toHaveBeenCalled();
+    expect(getSharedBrowser).not.toHaveBeenCalled();
     expect(uploadFile).not.toHaveBeenCalled();
     expect(utils.createStanceQuery).not.toHaveBeenCalled();
   });

@@ -92,29 +92,34 @@ const frameworkSections = {
 
 ### Playwright Configuration
 
+The server shares one headless Chromium for every HTML-to-PDF render. It lives
+in `Servers/utils/pdfBrowser.utils.ts`; the report generator and the bias audit
+stance PDF (`services/biasAudit/stance/render.ts`) both use it, each opening and
+closing only its own page.
+
 ```typescript
-// File: Servers/services/reporting/pdfGenerator.ts
+// File: Servers/utils/pdfBrowser.utils.ts
 
-import { chromium, Browser, Page } from "playwright";
+let browserInstance: Browser | null = null;
+let launching: Promise<Browser> | null = null;
 
-let browser: Browser | null = null;
-
-const getBrowser = async (): Promise<Browser> => {
-  if (!browser) {
-    browser = await chromium.launch({
-      headless: true,
-      executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-      ],
-    });
+export async function getSharedBrowser(): Promise<Browser> {
+  if (browserInstance && browserInstance.isConnected()) return browserInstance;
+  // Concurrent first calls share one launch; a failed launch or a
+  // disconnected browser is replaced on the next call.
+  if (!launching) {
+    launching = launchBrowser() // headless, --no-sandbox etc., PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+      .then((b) => (browserInstance = b))
+      .finally(() => (launching = null));
   }
-  return browser;
-};
+  return launching;
+}
+
+export async function closeSharedBrowser(): Promise<void>; // on shutdown
 ```
+
+`closeBrowser()` in `services/reporting/pdfGenerator.ts` (called by the
+reporting `cleanup()` on shutdown) closes this shared browser.
 
 ### PDF Generation
 
@@ -122,7 +127,7 @@ const getBrowser = async (): Promise<Browser> => {
 export const generatePDF = async (
   reportData: ReportData
 ): Promise<{ filename: string; content: Buffer }> => {
-  const browser = await getBrowser();
+  const browser = await getSharedBrowser();
   const page = await browser.newPage();
 
   try {

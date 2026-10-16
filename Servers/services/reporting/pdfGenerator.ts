@@ -4,7 +4,7 @@
  * Following VerifyWise clean architecture patterns
  */
 
-import { chromium, Browser, Page } from "playwright";
+import { Page } from "playwright";
 import * as ejs from "ejs";
 import * as path from "path";
 import * as fs from "fs";
@@ -13,39 +13,14 @@ import {
   ReportGenerationResult,
 } from "../../domain.layer/interfaces/i.reportGeneration";
 import { ANALYSIS_LABELS } from "./analyzers/mapToSummaries";
-
-// Browser instance singleton for reuse
-let browserInstance: Browser | null = null;
+import { closeSharedBrowser, getSharedBrowser } from "../../utils/pdfBrowser.utils";
 
 /**
- * Get or create browser instance
- */
-async function getBrowser(): Promise<Browser> {
-  if (!browserInstance || !browserInstance.isConnected()) {
-    const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
-
-    browserInstance = await chromium.launch({
-      headless: true,
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-dev-shm-usage",
-        "--disable-gpu",
-      ],
-      ...(executablePath ? { executablePath } : {}),
-    });
-  }
-  return browserInstance;
-}
-
-/**
- * Close browser instance (for cleanup)
+ * Close the shared browser (utils/pdfBrowser.utils), on server shutdown.
+ * The bias audit stance PDF renders on the same browser.
  */
 export async function closeBrowser(): Promise<void> {
-  if (browserInstance) {
-    await browserInstance.close();
-    browserInstance = null;
-  }
+  await closeSharedBrowser();
 }
 
 /**
@@ -88,7 +63,7 @@ export async function generatePDF(reportData: ReportData): Promise<ReportGenerat
     const html = await renderTemplate(reportData);
 
     // Get browser and create page
-    const browser = await getBrowser();
+    const browser = await getSharedBrowser();
     page = await browser.newPage();
 
     // Set content
@@ -154,7 +129,7 @@ export async function generatePDFWithOptions(
   try {
     const html = await renderTemplate(reportData);
 
-    const browser = await getBrowser();
+    const browser = await getSharedBrowser();
     page = await browser.newPage();
 
     await page.setContent(html, {
@@ -211,7 +186,7 @@ export async function screenshotChart(html: string, selector: string): Promise<B
   let page: Page | null = null;
 
   try {
-    const browser = await getBrowser();
+    const browser = await getSharedBrowser();
     page = await browser.newPage();
 
     await page.setContent(html, {
