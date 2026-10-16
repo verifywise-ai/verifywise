@@ -35,6 +35,7 @@ import {
   FileContentSearchOptions,
 } from "../repositories/file.repository";
 import { isRetentionPolicy } from "../utils/retention.utils";
+import { BIAS_AUDIT_STANCE_SOURCE } from "../utils/fileUpload.utils";
 import { sequelize } from "../database/db";
 import { ApprovalWorkflowStepModel } from "../domain.layer/models/approvalWorkflow/approvalWorkflowStep.model";
 import { ApprovalRequestStatus } from "../domain.layer/enums/approval-workflow.enum";
@@ -914,6 +915,25 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
         });
         return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
       }
+    }
+
+    // A bias audit stance is an immutable record that cites its PDF by id and
+    // hash; deleting the file would leave the stance pointing at nothing.
+    if (file.source === BIAS_AUDIT_STANCE_SOURCE) {
+      await logFailure({
+        eventType: "Error",
+        description: `Refused deletion of bias audit stance PDF ${fileId}`,
+        functionName: "removeFile",
+        fileName: "fileManager.ctrl.ts",
+        error: new Error("Stance PDFs cannot be deleted"),
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
+      return res
+        .status(409)
+        .json(
+          STATUS_CODE[409](req.t!("This file is a bias audit stance record and cannot be deleted")),
+        );
     }
 
     // If file has a pending approval request, reject it first

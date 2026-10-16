@@ -21,6 +21,7 @@ import {
 import { ProjectModel } from "../domain.layer/models/project/project.model";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 import { FILE_GROUP_LABEL_CASE_SQL } from "../utils/files/fileGroupLabel.sql";
+import { assertFileDeletable } from "../utils/fileUpload.utils";
 import {
   attachLinkProjections,
   FileEntityLinkProjection,
@@ -491,6 +492,8 @@ export async function deleteFileById(
   const txn = transaction || (await sequelize.transaction());
 
   try {
+    await assertFileDeletable(fileId, organizationId, txn);
+
     // Clean up any virtual folder mappings for this file
     await sequelize.query(
       `DELETE FROM file_folder_mappings WHERE organization_id = :organizationId AND file_id = :fileId`,

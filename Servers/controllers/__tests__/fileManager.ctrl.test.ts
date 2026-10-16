@@ -51,6 +51,7 @@ jest.mock("../../utils/statusCode.utils", () => ({
     400: (d: any) => ({ message: "Bad Request", data: d }),
     403: (d: any) => ({ message: "Forbidden", data: d }),
     404: (d: any) => ({ message: "Not Found", data: d }),
+    409: (d: any) => ({ message: "Conflict", data: d }),
     413: (d: any) => ({ message: "Payload Too Large", data: d }),
     500: (d: any) => ({ message: "Internal Server Error", data: d }),
   },
@@ -587,6 +588,17 @@ describe("fileManager.ctrl", () => {
       const res = createRes();
       await removeFile(req, res);
       expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    it("refuses to delete a bias audit stance PDF with 409 and deletes nothing", async () => {
+      // A stance is an immutable record that cites its PDF by id and hash.
+      mockGetFileById.mockResolvedValue(makeDbFile({ source: "Bias audit stance report" }) as any);
+      const req = createReq({ params: { id: "1" } });
+      const res = createRes();
+      await removeFile(req, res);
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(JSON.stringify(res.json.mock.calls[0][0])).toMatch(/stance/i);
+      expect(deleteFileById).not.toHaveBeenCalled();
     });
 
     it("should return 403 when org_id does not match", async () => {

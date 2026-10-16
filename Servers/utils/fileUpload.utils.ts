@@ -4,6 +4,7 @@ import { FileModel, FileSource } from "../domain.layer/models/file/file.model";
 import { Transaction, QueryTypes } from "sequelize";
 import { ProjectModel } from "../domain.layer/models/project/project.model";
 import { resolveFileExpiryOnCreate } from "./retention.utils";
+import { ConflictException } from "../domain.layer/exceptions/custom.exception";
 
 const sanitizeFilename = (name: string) => name.replace(/[^a-zA-Z0-9-_\.]/g, "_");
 
@@ -75,11 +76,43 @@ export const uploadFile = async (
   return Array.isArray(result[0]) && result[0].length > 0 ? result[0][0] : result[0];
 };
 
+/** Source of the PDF a bias audit stance cites by id and hash. Never deletable. */
+export const BIAS_AUDIT_STANCE_SOURCE: FileSource = "Bias audit stance report";
+
+/**
+ * A stance is an immutable record that cites its PDF by id and hash. Every
+ * delete path calls this first so none of them (file manager, question
+ * evidence, bulk) can orphan a stance.
+ */
+export const assertFileDeletable = async (
+  id: number,
+  organizationId: number,
+  transaction?: Transaction | null,
+): Promise<void> => {
+  const [target] = (await sequelize.query(
+    `SELECT source FROM files WHERE organization_id = :organizationId AND id = :id`,
+    {
+      replacements: { organizationId, id },
+      type: QueryTypes.SELECT,
+      ...(transaction && { transaction }),
+    },
+  )) as Array<{ source: string | null }>;
+  if (target?.source === BIAS_AUDIT_STANCE_SOURCE) {
+    throw new ConflictException(
+      "This file is a bias audit stance record and cannot be deleted",
+      "File",
+      "source",
+    );
+  }
+};
+
 export const deleteFileById = async (
   id: number,
   organizationId: number,
   transaction: Transaction,
 ) => {
+  await assertFileDeletable(id, organizationId, transaction);
+
   // Clean up any virtual folder mappings for this file
   await sequelize.query(
     `DELETE FROM file_folder_mappings WHERE organization_id = :organizationId AND file_id = :id`,
