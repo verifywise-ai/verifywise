@@ -38,6 +38,17 @@ export const POLICY_STATUS_ENUM = [
 ] as const;
 
 /**
+ * review_status values written by updatePolicyReviewStatusQuery.
+ * NULL means no review has been recorded. Must match
+ * policy_manager_review_status_check.
+ */
+export const POLICY_REVIEW_STATUS_ENUM = [
+  "pending_review",
+  "approved",
+  "changes_requested",
+] as const;
+
+/**
  * Policy tags enum values
  */
 export const POLICY_TAGS_ENUM = POLICY_TAGS;

@@ -48,12 +48,14 @@ export const INCIDENT_VALIDATION_LIMITS = {
 } as const;
 
 /**
- * Incident severity levels
+ * Incident severity levels. Must match ai-incident-management.enum.ts and
+ * the CHECK constraint ai_incident_managements_severity_check.
  */
-export const INCIDENT_SEVERITY_ENUM = ["Minor", "Serious", "Very Serious"] as const;
+export const INCIDENT_SEVERITY_ENUM = ["Minor", "Serious", "Very serious"] as const;
 
 /**
- * Incident status values
+ * Incident status values. Must match ai-incident-management.enum.ts and
+ * the CHECK constraint ai_incident_managements_status_check.
  */
 export const INCIDENT_STATUS_ENUM = [
   "Open",
@@ -65,9 +67,10 @@ export const INCIDENT_STATUS_ENUM = [
 ] as const;
 
 /**
- * Approval status values
+ * Approval status values. Must match ai-incident-management.enum.ts and
+ * the CHECK constraint ai_incident_managements_approval_status_check.
  */
-export const APPROVAL_STATUS_ENUM = ["Pending", "Approved", "Rejected", "Not Required"] as const;
+export const APPROVAL_STATUS_ENUM = ["Pending", "Approved", "Rejected", "Not required"] as const;
 
 /**
  * Categories of harm per EU AI Act Article 73
