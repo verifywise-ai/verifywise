@@ -274,7 +274,7 @@ function readinessBody(args: ComposeStanceArgs): string {
   return (
     `Readiness score: ${args.readiness.score ?? "not computed"} of 100. ` +
     "This is VerifyWise's own measure of how ready you are to commission an independent audit. " +
-    "No regulator recognises it. It measures readiness to commission an independent audit and is not a finding of compliance."
+    "No regulator recognises it, and it is not a finding of compliance."
   );
 }
 

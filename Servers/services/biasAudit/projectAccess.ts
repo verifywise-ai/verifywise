@@ -20,12 +20,23 @@ export interface Viewer {
   role: string;
 }
 
+/**
+ * `notFound` is what a denied caller gets. A path reached by a run id passes
+ * the run's own not-found, so the answer matches a run id that does not exist
+ * and does not name the project.
+ */
 export async function assertProjectAccess(
   projectId: number,
   organizationId: number,
   viewer: Viewer,
+  notFound: () => Error = () =>
+    new NotFoundException(`Project ${projectId} was not found`, "Project", projectId),
 ): Promise<void> {
   if (viewer.role === "Admin") return;
   if (await userCanAccessProjectQuery(projectId, viewer.userId, organizationId)) return;
-  throw new NotFoundException(`Project ${projectId} was not found`, "Project", projectId);
+  throw notFound();
 }
+
+/** The not-found for a run id, shared by every path that looks a run up. */
+export const runNotFound = (runId: number) => () =>
+  new NotFoundException(`Run ${runId} was not found`, "BiasAuditRun", runId);

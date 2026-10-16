@@ -32,7 +32,7 @@ import type { BiasAuditRun } from "../../domain.layer/models/biasAudit/biasAudit
 import type { BiasAuditStance } from "../../domain.layer/models/biasAudit/biasAuditStance.model";
 import type { AnswerMap } from "./applicability";
 import { applicableQuestions } from "./applicability";
-import { assertProjectAccess, type Viewer } from "./projectAccess";
+import { assertProjectAccess, runNotFound, type Viewer } from "./projectAccess";
 import { runAnswerGates } from "./answerGates";
 import { deriveBasis } from "./deriveBasis";
 import { computeReadiness, type ReadinessResult } from "./readinessScore";
@@ -335,8 +335,8 @@ export async function getRunView(
   viewer: Viewer,
 ): Promise<RunView> {
   const run = await getRunQuery(runId, organizationId);
-  if (!run) throw new NotFoundException(`Run ${runId} was not found`, "BiasAuditRun", runId);
-  await assertProjectAccess(run.project_id, organizationId, viewer);
+  if (!run) throw runNotFound(runId)();
+  await assertProjectAccess(run.project_id, organizationId, viewer, runNotFound(runId));
   return {
     run,
     stances: await listStancesForRunQuery(runId, organizationId),
@@ -355,8 +355,8 @@ export async function confirmDerivedBasis(
   viewer: Viewer,
 ): Promise<{ runId: number; derivedBasis: unknown }> {
   const run = await getRunQuery(runId, organizationId);
-  if (!run) throw new NotFoundException(`Run ${runId} was not found`, "BiasAuditRun", runId);
-  await assertProjectAccess(run.project_id, organizationId, viewer);
+  if (!run) throw runNotFound(runId)();
+  await assertProjectAccess(run.project_id, organizationId, viewer, runNotFound(runId));
   const userId = viewer.userId;
   const updated = await confirmRunDerivedBasisQuery(runId, userId, organizationId);
   if (!updated) {

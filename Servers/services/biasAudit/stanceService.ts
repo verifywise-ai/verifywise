@@ -24,7 +24,7 @@ import {
   getStanceDownloadQuery,
   getUserNamesQuery,
 } from "../../utils/biasAudit.utils";
-import { assertProjectAccess } from "./projectAccess";
+import { assertProjectAccess, runNotFound } from "./projectAccess";
 import type { AnswerWithNotes } from "./applicability";
 import { runAnswerGates } from "./answerGates";
 import { computeReadiness } from "./readinessScore";
@@ -64,8 +64,8 @@ export async function generateStance(input: GenerateStanceInput): Promise<Genera
   const { runId, organizationId, userId, role } = input;
 
   const run = await getRunQuery(runId, organizationId);
-  if (!run) throw new NotFoundException(`Run ${runId} was not found`, "BiasAuditRun", runId);
-  await assertProjectAccess(run.project_id, organizationId, { userId, role });
+  if (!run) throw runNotFound(runId)();
+  await assertProjectAccess(run.project_id, organizationId, { userId, role }, runNotFound(runId));
 
   const profile = await getProfileByIdQuery(run.profile_id, organizationId);
   if (!profile) {

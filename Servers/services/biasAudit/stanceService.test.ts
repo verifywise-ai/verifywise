@@ -174,7 +174,10 @@ describe("generateStance project-member access", () => {
     "answers 404 to a %s who is not on the run's project, writing nothing",
     async (role) => {
       utils.userCanAccessProjectQuery.mockResolvedValue(false);
-      await expect(generateStance({ ...args, role })).rejects.toMatchObject({ statusCode: 404 });
+      await expect(generateStance({ ...args, role })).rejects.toMatchObject({
+        statusCode: 404,
+        message: `Run ${args.runId} was not found`,
+      });
       expect(utils.userCanAccessProjectQuery).toHaveBeenCalledWith(7, 9, 42);
       expect(persistStance).not.toHaveBeenCalled();
     },

@@ -398,11 +398,14 @@ describe("project-member access", () => {
     "answers 404 to a %s who is not on the run's project for view and confirm",
     async (role) => {
       utils.userCanAccessProjectQuery.mockResolvedValue(false);
+      // The same answer as a run that does not exist, so the project is not named.
       await expect(getRunView(11, 42, { userId: 9, role })).rejects.toMatchObject({
         statusCode: 404,
+        message: "Run 11 was not found",
       });
       await expect(confirmDerivedBasis(11, 42, { userId: 9, role })).rejects.toMatchObject({
         statusCode: 404,
+        message: "Run 11 was not found",
       });
       expect(utils.userCanAccessProjectQuery).toHaveBeenCalledWith(7, 9, 42);
       expect(utils.listStancesForRunQuery).not.toHaveBeenCalled();

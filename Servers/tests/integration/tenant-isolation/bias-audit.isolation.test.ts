@@ -583,7 +583,40 @@ describe("bias audit routes tenant isolation", () => {
       .put(`/api/bias-audit/profiles/${project}/${LL144}`)
       .send({ answers: IN_SCOPE_ANSWERS });
     expect(put.status).toBe(200);
-    expect((await snapshot(project)).profiles).toBeGreaterThan(before.profiles - 1);
+    expect((await snapshot(project)).profiles).toBeGreaterThan(before.profiles);
+  });
+
+  it("lets a non-Admin project owner in without a member row", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const editor = await sameOrgUser(owner.orgId, 3, "Editor");
+    const project = await createTestProject(owner.orgId, editor.userId);
+    const routes = [
+      `/api/bias-audit/profiles/${project}/${LL144}`,
+      `/api/bias-audit/questions/${LL144}?projectId=${project}`,
+      `/api/bias-audit/runs?projectId=${project}&frameworkId=${LL144}`,
+      `/api/bias-audit/runs/trend?projectId=${project}&frameworkId=${LL144}`,
+    ];
+    const statuses = await Promise.all(
+      routes.map(async (route) => [route, (await editor.request.get(route)).status]),
+    );
+    expect(statuses).toEqual(routes.map((route) => [route, 200]));
+  });
+
+  it("answers a non-member the same for a run they cannot see as for a run that does not exist", async () => {
+    const { owner, runId } = await ownerWithRun();
+    const editor = await sameOrgUser(owner.orgId, 3, "Editor");
+    const [[{ max }]] = (await sequelize.query(
+      `SELECT MAX(id)::int AS max FROM bias_audit_runs`,
+    )) as [Array<{ max: number }>, unknown];
+    const missing = max + 1000;
+    const answer = async (id: number) => {
+      const res = await editor.request.get(`/api/bias-audit/runs/${id}`);
+      const stance = await editor.request.post(`/api/bias-audit/runs/${id}/stance`);
+      return [res.status, JSON.stringify(res.body), stance.status, JSON.stringify(stance.body)].map(
+        (v) => String(v).replace(String(id), "<id>"),
+      );
+    };
+    expect(await answer(runId)).toEqual(await answer(missing));
   });
 
   it("does not let membership of one project open another in the same organization", async () => {
