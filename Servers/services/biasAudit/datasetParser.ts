@@ -31,6 +31,13 @@ export interface ParsedDataset {
   unreadableOutcomeCount: number;
   /** Score cells that were neither blank nor a number. */
   unreadableScoreCount: number;
+  /** Outcome cells that were blank; each is read as not selected, so the caller decides. */
+  blankOutcomeCount: number;
+  /**
+   * Data rows with more or fewer cells than the header. Their values sit
+   * under the wrong columns, so the caller must not compute from them.
+   */
+  wrongWidthRowCount: number;
 }
 
 const TRUE_WORDS = new Set(["1", "true", "yes", "y", "t"]);
@@ -103,7 +110,10 @@ export function parseDataset(csv: string, mapping: Record<string, string>): Pars
 
   let unreadableOutcomeCount = 0;
   let unreadableScoreCount = 0;
+  let blankOutcomeCount = 0;
+  let wrongWidthRowCount = 0;
   const records: AuditRecord[] = dataRows.map((cells) => {
+    if (cells.length !== headers.length) wrongWidthRowCount++;
     const record: AuditRecord = {};
     for (const [key, at] of index) {
       const raw = (cells[at] ?? "").trim();
@@ -112,7 +122,8 @@ export function parseDataset(csv: string, mapping: Record<string, string>): Pars
         if (TRUE_WORDS.has(word)) record[key] = true;
         else {
           record[key] = false;
-          if (word !== "" && !FALSE_WORDS.has(word)) unreadableOutcomeCount++;
+          if (word === "") blankOutcomeCount++;
+          else if (!FALSE_WORDS.has(word)) unreadableOutcomeCount++;
         }
       } else if (key === RECORD_KEYS.score) {
         const n = raw === "" ? NaN : Number(raw);
@@ -123,5 +134,13 @@ export function parseDataset(csv: string, mapping: Record<string, string>): Pars
     return record;
   });
 
-  return { records, headers, mappingErrors, unreadableOutcomeCount, unreadableScoreCount };
+  return {
+    records,
+    headers,
+    mappingErrors,
+    unreadableOutcomeCount,
+    unreadableScoreCount,
+    blankOutcomeCount,
+    wrongWidthRowCount,
+  };
 }

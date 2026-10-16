@@ -202,6 +202,28 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
   for (const message of parsed.mappingErrors) {
     blockers.push(stop("mapping_column_absent", message));
   }
+  if (parsed.wrongWidthRowCount > 0) {
+    blockers.push(
+      stop(
+        "rows_wrong_width",
+        `${parsed.wrongWidthRowCount} row(s) have more or fewer values than the header has ` +
+          `columns, so their values would be read under the wrong columns. Check the file for ` +
+          `missing or extra commas in those rows and upload again.`,
+        { count: parsed.wrongWidthRowCount, columns: parsed.headers.length },
+      ),
+    );
+  }
+  if (parsed.blankOutcomeCount > 0) {
+    blockers.push(
+      stop(
+        "outcome_values_blank",
+        `${parsed.blankOutcomeCount} outcome value(s) are blank. A blank outcome would be counted ` +
+          `as not selected, so selection rates would be wrong. Fill in the outcome for every row ` +
+          `(1, 0, true, false, yes, no), or remove the rows, and upload again.`,
+        { count: parsed.blankOutcomeCount },
+      ),
+    );
+  }
   if (parsed.unreadableOutcomeCount > 0) {
     blockers.push(
       stop(

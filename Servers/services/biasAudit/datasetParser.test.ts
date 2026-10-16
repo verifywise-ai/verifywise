@@ -40,10 +40,36 @@ describe("parseDataset", () => {
     expect(out.records.map((r) => r.selected)).toEqual([true, true, true, false]);
   });
 
-  it("treats a blank outcome as not selected rather than guessing", () => {
-    const out = parseDataset("gender,outcome\nMale,\n", { sex: "gender", selected: "outcome" });
+  it("counts a blank outcome separately from an unreadable one", () => {
+    const out = parseDataset("gender,outcome\nMale,\nFemale,  \nMale,1\n", {
+      sex: "gender",
+      selected: "outcome",
+    });
     expect(out.records[0].selected).toBe(false);
+    expect(out.blankOutcomeCount).toBe(2);
     expect(out.unreadableOutcomeCount).toBe(0);
+  });
+
+  it("counts no blank outcomes when the outcome column is not mapped", () => {
+    const out = parseDataset("gender,outcome\nMale,\n", { sex: "gender" });
+    expect(out.blankOutcomeCount).toBe(0);
+  });
+
+  // A row with more or fewer cells than the header has its values under the
+  // wrong columns, so its demographics and outcome cannot be trusted.
+  it("counts rows whose cell count differs from the header's", () => {
+    const csv = "gender,race,outcome\nMale,White,1\nFemale,1\nMale,White,0,extra\n";
+    const out = parseDataset(csv, { sex: "gender", race_ethnicity: "race", selected: "outcome" });
+    expect(out.wrongWidthRowCount).toBe(2);
+  });
+
+  it("does not count a trailing empty line, or a quoted newline, as a short row", () => {
+    const out = parseDataset('gender,note,outcome\nMale,"a\nb",1\nFemale,x,0\n\n', {
+      sex: "gender",
+      selected: "outcome",
+    });
+    expect(out.records).toHaveLength(2);
+    expect(out.wrongWidthRowCount).toBe(0);
   });
 
   it("counts outcome values it cannot read instead of silently calling them not selected", () => {

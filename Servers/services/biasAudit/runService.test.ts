@@ -183,6 +183,32 @@ describe("createRun", () => {
     expect(JSON.stringify(stored().gateFindingsJson)).toContain("outcome_values_unreadable");
   });
 
+  it("stores a stop and no result when rows do not line up with the header", async () => {
+    const csv = [
+      "gender,race,outcome",
+      ...Array(59).fill("Male,White,1"),
+      "Female,0", // one cell short: "0" would be read as the race
+    ].join("\n");
+    const out = await run({ csv });
+    expect(stored().resultJson).toBeNull();
+    expect(out.outcome.gates.mayComputeRatios).toBe(false);
+    const finding = (stored().gateFindingsJson as any[]).find((f) => f.code === "rows_wrong_width");
+    expect(finding).toMatchObject({ severity: "stop", detail: { count: 1 } });
+    expect(finding.message).toMatch(/1 row/);
+  });
+
+  it("stores a stop and no result when outcome cells are blank", async () => {
+    const csv = ["gender,race,outcome", ...Array(59).fill("Male,White,1"), "Female,Asian,"].join(
+      "\n",
+    );
+    await run({ csv });
+    expect(stored().resultJson).toBeNull();
+    const finding = (stored().gateFindingsJson as any[]).find(
+      (f) => f.code === "outcome_values_blank",
+    );
+    expect(finding).toMatchObject({ severity: "stop", detail: { count: 1 } });
+  });
+
   it("stores a stop and no result when the answers withhold ratios", async () => {
     utils.getProfileAnswersQuery.mockResolvedValue(
       ANSWERS.filter((a) => a.question_key !== "independence.auditor"),
