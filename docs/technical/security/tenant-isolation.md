@@ -367,7 +367,7 @@ it("shows the error and never renders Org B's project", async () => {
 
 ### 6.5 Running locally
 
-The integration suite truncates every table it touches. Point `Servers/.env.test` at a dedicated test database (an exported `DB_NAME` wins over `.env.test`, which wins over `.env`). One rule decides what is safe: the database is not the one `Servers/.env` names, and it has `test` as a separate word in its name (`verifywise_test`, `verifywise_mrm_test`; not `verifywise_attestations`). `jest.integration.config.js` enforces it in its global setup, before the build and migrations, and again on every connection the suite opens. Plain `npx jest` does not select `tests/integration/`; run it through `npm run test:integration`.
+The integration suite truncates every table it touches. Point `Servers/.env.test` at a dedicated test database (an exported `DB_NAME` wins over `.env.test`, which wins over `.env`). One rule decides what is safe: the database is not the one `Servers/.env` names, and it has `test` or `tests` as a separate word in its name, optionally followed by digits (`verifywise_test`, `verifywise_test2`, `verifywise_mrm_test`; not `verifywise_attestations` or `verifywisetest`). `jest.integration.config.js` enforces it in its global setup, before the build and migrations, and again on every new connection the app's `sequelize` opens; `cleanupDatabase()` and `runMigrations()` check it too. Details and fixes: `docs/feature-inventory/testing-playbook.md`, section 7.5. Plain `npx jest` does not select `tests/integration/`; run it through `npm run test:integration`.
 
 ```bash
 cd Servers

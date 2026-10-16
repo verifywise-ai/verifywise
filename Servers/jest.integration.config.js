@@ -10,8 +10,10 @@ const base = require("./jest.config");
  *
  *   - globalSetup refuses anything but a dedicated test database before it
  *     builds the backend or runs migrations;
- *   - setupDatabaseGuard.ts checks current_database() on every connection the
- *     app's sequelize opens, before a suite can seed, DELETE or TRUNCATE.
+ *   - setupDatabaseGuard.ts checks current_database() on every new connection
+ *     the app's sequelize (database/db.ts) opens, before a suite can seed,
+ *     DELETE or TRUNCATE through it, and closes a refused one. Raw pg clients
+ *     a suite might build itself are not covered (none do today).
  *
  * The rate-limiter suites need no database and run in CI without one, so
  * test:ratelimit uses jest.ratelimit.config.js, which has neither.

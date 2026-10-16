@@ -3,18 +3,34 @@ import bcrypt from "bcrypt";
 import { execSync } from "child_process";
 import path from "path";
 
+import { assertConnectedToTestDatabase } from "./databaseGuard";
+
 const testDatabaseGuard = require("../testDatabaseGuard");
+const { resolveTestDbName } = require("../../database/config/loadEnv");
 
 /**
  * Run pending Sequelize migrations against the configured test database.
  * This ensures integration tests see the same schema the application expects
  * without relying on a manually migrated local database.
+ *
+ * The sequelize CLI is a child process, outside the afterConnect hook, so the
+ * DB_NAME it will resolve (its env, then .env.test, then .env — the same
+ * loadEnv precedence) is checked against the test-database rule first.
  */
 export function runMigrations(): void {
+  const env = { ...process.env, NODE_ENV: "test" };
+  const { dbName, source, envTestPath, envTestExists } = resolveTestDbName({ env });
+  testDatabaseGuard.assertSafeTestDatabase({
+    dbName,
+    devDbName: testDatabaseGuard.readDevDbName(),
+    envTestPath,
+    source,
+    envTestExists,
+  });
   execSync("npx sequelize db:migrate", {
     cwd: path.join(__dirname, "../.."),
     stdio: "pipe",
-    env: { ...process.env, NODE_ENV: "test" },
+    env,
   });
 }
 
@@ -88,47 +104,19 @@ export async function seedFrameworks(): Promise<void> {
   );
 }
 
-/** Verdict for this module instance (one per test file); a refusal is kept too. */
-let connectedDatabaseVerdict: Promise<void> | undefined;
-
-/**
- * Throw unless the live connection is a dedicated test database. Checked on the
- * connection itself, not on env vars, so it holds however jest was started —
- * see tests/testDatabaseGuard.js. The first call asks Postgres and reads
- * Servers/.env; later calls reuse that verdict, so cleanupDatabase() in a
- * beforeEach costs nothing extra.
- *
- * The verdict is cached only once the lookup has answered. The default lookup
- * opens a pool connection, whose afterConnect hook (setupDatabaseGuard.ts)
- * calls back in here with the raw connection; caching the in-flight lookup
- * would make that hook wait on itself.
- *
- * @param currentDatabase  How to ask for current_database(). The afterConnect
- *   hook passes the raw connection it is handed.
- */
-export async function assertConnectedToTestDatabase(
-  currentDatabase: () => Promise<string | undefined> = async () => {
-    const [rows] = (await sequelize.query("SELECT current_database() AS name")) as [
-      { name?: string }[],
-      unknown,
-    ];
-    return rows[0]?.name;
-  },
-): Promise<void> {
-  if (!connectedDatabaseVerdict) {
-    const currentDb = await currentDatabase();
-    connectedDatabaseVerdict ??= Promise.resolve().then(() =>
-      testDatabaseGuard.assertSafeToTruncate({
-        currentDb,
-        devDbName: testDatabaseGuard.readDevDbName(),
-      }),
-    );
-  }
-  return connectedDatabaseVerdict;
+/** current_database() through the app's pool, for cleanupDatabase()'s cached check. */
+async function currentDatabase(): Promise<string | undefined> {
+  const [rows] = (await sequelize.query("SELECT current_database() AS name")) as [
+    { name?: string }[],
+    unknown,
+  ];
+  return rows[0]?.name;
 }
 
 export async function cleanupDatabase(): Promise<void> {
-  await assertConnectedToTestDatabase();
+  // Checked on the connection itself, not on env vars, so it holds however jest
+  // was started (see tests/testDatabaseGuard.js). Cached per test file.
+  await assertConnectedToTestDatabase(currentDatabase);
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       await sequelize.query(

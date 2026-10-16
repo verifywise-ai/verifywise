@@ -3044,6 +3044,7 @@ Scripts are defined in `Servers/package.json`. Tests are run from the `Servers/`
 ### Integration / tenant-isolation tests
 
 - `tests/__tests__/testDatabaseGuard.test.ts`
+- `tests/__tests__/integrationDatabaseGuard.test.ts`
 - `tests/integration/approval-workflows.test.ts`
 - `tests/integration/deadline-summary.test.ts`
 - `tests/integration/framework-gap-workflow.test.ts`

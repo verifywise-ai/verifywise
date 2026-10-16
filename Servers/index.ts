@@ -1,4 +1,6 @@
-import "dotenv/config";
+// Load the environment before anything reads it (Servers/.env; under
+// NODE_ENV=test, exported > .env.test > .env). See database/config/loadEnv.js.
+import "./database/config/env";
 import "./utils/localStoragePolyfill";
 import { createApp } from "./app";
 import { addAllJobs } from "./jobs/producer";

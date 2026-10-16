@@ -1,5 +1,6 @@
-// Load .env before anything reads the environment, as the API entry does.
-import "dotenv/config";
+// Load the environment before anything reads it, with the same loader and
+// precedence as the API entry (database/config/loadEnv.js).
+import "../database/config/env";
 import { Worker } from "bullmq";
 import { createNotificationWorker } from "../services/slack/slackWorker";
 import { createAutomationWorker } from "../services/automations/automationWorker";

@@ -1,6 +1,5 @@
 import { execFileSync } from "child_process";
-import dotenv from "dotenv";
-import { existsSync, mkdtempSync, readFileSync, unlinkSync } from "fs";
+import { mkdtempSync, readFileSync, unlinkSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { tmpdir } from "os";
@@ -33,17 +32,13 @@ export interface SeedOutput {
 const E2E_NODE_ENV = process.env.E2E_NODE_ENV || "test";
 
 export function seedAdminInOrg(orgId: number, extraArgs: string[] = []): SeedOutput {
+  // seedE2EAdmin.ts connects via Servers/database/db.ts, whose config resolves
+  // DB_* with Servers/database/config/loadEnv.js: under NODE_ENV=test, exported
+  // env > Servers/.env.test > Servers/.env. The backend (index.ts) uses the
+  // same loader, so a backend started with NODE_ENV=test and this seed reach
+  // the same database. Copying .env.test over the child env here (as this
+  // helper used to) made .env.test beat an exported DB_NAME for the seed only.
   const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: E2E_NODE_ENV };
-  if (E2E_NODE_ENV === "test") {
-    // seedE2EAdmin.ts connects via Servers/database/db.ts, whose config module
-    // loads Servers/.env.test under NODE_ENV=test. Putting the test DB values
-    // in the child env as well keeps this explicit and mirrors the
-    // integration-suite convention (tests/integration/globalSetup.js).
-    const envTestPath = path.resolve(SERVERS_DIR, ".env.test");
-    if (existsSync(envTestPath)) {
-      Object.assign(env, dotenv.parse(readFileSync(envTestPath, "utf8")));
-    }
-  }
 
   const tmpDir = mkdtempSync(path.join(tmpdir(), "vw-e2e-"));
   const credentialsFile = path.join(tmpDir, "e2e-credentials.json");

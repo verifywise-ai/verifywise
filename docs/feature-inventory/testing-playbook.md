@@ -83,7 +83,7 @@ npx jest controllers/__tests__/project.ctrl.test.ts
 # Integration tests (requires PostgreSQL, uses a dedicated test DB).
 # Plain `npx jest` never selects tests/integration/ (jest.config.js excludes it).
 # jest.integration.config.js declares the guarded globalSetup itself, so it refuses
-# any database that is Servers/.env's or lacks a `test` name token.
+# any database that is Servers/.env's or lacks a `test`/`tests` name token (see 7.5).
 npm run test:integration
 
 # Run a single integration test
@@ -123,7 +123,8 @@ Stack: Jest, ts-jest, Supertest, `createTestApp` helper.
 
 **Backend:**
 - Copy `Servers/.env.example` to `Servers/.env` and fill it.
-- For integration tests, copy `Servers/.env` to `Servers/.env.test` and change `DB_NAME` to a dedicated test database (e.g., `verifywise_test`). The integration guard refuses to run if `DB_NAME` matches the dev database.
+- For integration tests, copy `Servers/.env` to `Servers/.env.test` and change `DB_NAME` to a dedicated test database (e.g., `verifywise_test`). The integration guard refuses a `DB_NAME` that is the dev database (the one `Servers/.env` names) or that lacks a `test`/`tests` name token; see [7.5 Database guard errors](#75-database-guard-errors) for the rule and each fix.
+- Under `NODE_ENV=test` every backend process (API, worker, sequelize CLI, seed scripts, the integration suite) resolves the environment the same way, through `Servers/database/config/loadEnv.js`: exported variables > `Servers/.env.test` > `Servers/.env`. Outside `NODE_ENV=test` only the working directory's `.env` is read, as before. For local E2E, start the backend with `NODE_ENV=test npm run watch` so it uses the same database as the E2E seed (`seedE2EAdmin`, which runs with `NODE_ENV=test`).
 - Key variables: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `REDIS_HOST`, `REDIS_PORT`, `JWT_SECRET`, `REFRESH_TOKEN_SECRET`, `SUPERADMIN_EMAIL`, `SUPERADMIN_PASSWORD`, `MULTI_TENANCY_ENABLED`.
 
 **Frontend E2E:**
@@ -155,7 +156,7 @@ npm run start
    - `e2e/.auth/admin.json` — org Admin
 
 **Integration tests:**
-- `tests/integration/globalSetup.js` (declared in `jest.integration.config.js`) refuses anything but a dedicated test DB, then creates it if missing, builds the backend, and runs migrations. `tests/integration/setupDatabaseGuard.ts` re-checks `current_database()` on every connection.
+- `tests/integration/globalSetup.js` (declared in `jest.integration.config.js`) refuses anything but a dedicated test DB, then creates it if missing, builds the backend, and runs migrations. `tests/integration/setupDatabaseGuard.ts` re-checks `current_database()` on every new connection the app's `sequelize` (`database/db.ts`) opens, and closes a refused one. What is and is not covered is listed in [7.5](#75-database-guard-errors).
 - Env precedence under `NODE_ENV=test`: exported variables > `Servers/.env.test` > `Servers/.env` (`database/config/loadEnv.js`).
 - `npm run test:ratelimit` uses `jest.ratelimit.config.js`: no database, no global setup.
 - Each test uses helpers from `tests/integration/helpers.ts` (`createTestOrganization`, `createTestUser`, `seedFrameworks`, `cleanupDatabase`).
@@ -878,11 +879,39 @@ curl -X POST http://localhost:3000/api/users/login \
 
 ### 7.5 Database guard errors
 
+The integration suite truncates every table it touches, so it only runs against a dedicated test database. One rule (`Servers/tests/testDatabaseGuard.js`) decides that. The database must:
+
+1. be named (`DB_NAME` is set somewhere);
+2. not be the database `Servers/.env` names (your development database);
+3. have `test` or `tests` as a separate word in its name, optionally followed by digits, between `_` or `-` or at either end. `verifywise_test`, `verifywise_tests`, `verifywise_test2`, `verifywise_mrm_test` and `test_verifywise` pass. `verifywisetest`, `vw_testdb`, `verifywise_testing_prod`, `verifywise_attestations`, `latest` and `contest_app` are refused.
+
+**Where `DB_NAME` comes from.** Under `NODE_ENV=test` it is resolved as: exported in the environment > `Servers/.env.test` > `Servers/.env` (`Servers/database/config/loadEnv.js`). The error says which of the three set it.
+
+**Where the rule is checked:**
+
+- `globalSetup` (every run of `jest.integration.config.js`), on `DB_NAME`, before it builds the backend or runs migrations.
+- `runMigrations()` in `tests/integration/helpers.ts`, on the `DB_NAME` the sequelize CLI child will get, before it is spawned.
+- `tests/integration/setupDatabaseGuard.ts`, on `current_database()` of every new connection the app's `sequelize` (`database/db.ts`) opens in an integration test file. No cache; a refused connection is closed.
+- `cleanupDatabase()`, on `current_database()` (cached once per test file), right before it truncates.
+
+Not covered: raw `pg` clients or other Sequelize instances a test file creates itself (none do today). Plain `npx jest` does not select `tests/integration/` at all.
+
+**Messages and fixes.** At startup (globalSetup) the first line is one of:
+
 ```
-Refusing to run: .env.test sets DB_NAME="verifywise", the same database as Servers/.env.
+Integration tests have no target database: DB_NAME is not set.
+Refusing to run: DB_NAME="<name>" is the same database as Servers/.env.
+Refusing to run against DB_NAME="<name>": the name must contain "test" or "tests" as a separate word, optionally followed by digits, between "_" or "-" or at either end (...), because the integration suite truncates it.
 ```
 
-Fix: set `DB_NAME=verifywise_test` in `Servers/.env.test`.
+On a connection or before truncating, it is `Refusing to truncate "<name>": ...` with the same reasons. The next line says where `DB_NAME` came from and what to do:
+
+| Source | Message says | Fix |
+|---|---|---|
+| Exported | `DB_NAME is exported in the environment, which overrides .env.test and .env. Run \`unset DB_NAME\` to use <path>/.env.test, or export a dedicated test database, e.g. DB_NAME=verifywise_test.` | `unset DB_NAME`, or export a test database name |
+| `.env.test` | `DB_NAME comes from <path>/.env.test. Change it there to a dedicated test database, e.g. DB_NAME=verifywise_test.` | Edit `DB_NAME` in `Servers/.env.test` |
+| `.env` | `DB_NAME comes from Servers/.env (your development settings) because <path>/.env.test does not exist. Create it with DB_NAME=verifywise_test (or another dedicated test database).` (or "does not set DB_NAME. Add ...") | Create `Servers/.env.test`, or add `DB_NAME` to it |
+| Nowhere | `DB_NAME is not exported and neither <path>/.env.test nor Servers/.env sets it. Add DB_NAME=verifywise_test to <path>/.env.test, or export DB_NAME.` | Add `DB_NAME` to `Servers/.env.test` |
 
 ### 7.6 Auth state stale
 

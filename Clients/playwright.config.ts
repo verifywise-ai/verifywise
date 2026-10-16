@@ -9,7 +9,11 @@ dotenv.config({ quiet: true });
  * Prerequisites:
  *   1. PostgreSQL + Redis running
  *   2. Backend built and seeded: cd Servers && npm run build && npx sequelize db:migrate
- *   3. Backend running: cd Servers && npm run watch
+ *   3. Backend running: cd Servers && NODE_ENV=test npm run watch
+ *      seedE2EAdmin (global.setup) runs with NODE_ENV=test (E2E_NODE_ENV), and
+ *      both resolve DB_* the same way (Servers/database/config/loadEnv.js:
+ *      exported > Servers/.env.test > Servers/.env), so they share a database
+ *      only if the backend runs under NODE_ENV=test too.
  *   4. Frontend dev server started automatically via webServer block below
  */
 

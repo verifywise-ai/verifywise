@@ -40,9 +40,10 @@ describe("assertSafeTestDatabase", () => {
         dbName: "verifywise",
         devDbName: "verifywise",
         envTestPath,
-        hasEnvTest: false,
+        source: ".env",
+        envTestExists: false,
       }),
-    ).toThrow(/\.env\.test/);
+    ).toThrow(/because \/repo\/Servers\/\.env\.test does not exist\. Create it with DB_NAME=/);
   });
 
   it("allows a dedicated test database alongside a development .env", () => {
@@ -51,7 +52,7 @@ describe("assertSafeTestDatabase", () => {
         dbName: "verifywise_test",
         devDbName: "verifywise",
         envTestPath,
-        hasEnvTest: true,
+        envTestExists: true,
       }),
     ).not.toThrow();
   });
@@ -62,7 +63,7 @@ describe("assertSafeTestDatabase", () => {
         dbName: "verifywise_test",
         devDbName: undefined,
         envTestPath,
-        hasEnvTest: false,
+        envTestExists: false,
       }),
     ).not.toThrow();
   });
@@ -73,7 +74,7 @@ describe("assertSafeTestDatabase", () => {
         dbName: "verifywise",
         devDbName: "verifywise",
         envTestPath,
-        hasEnvTest: false,
+        envTestExists: false,
       }),
     ).toThrow();
   });
@@ -123,9 +124,13 @@ describe("isTestDatabaseName", () => {
   // verifywise_test in .github/workflows/*.yml at the time of writing).
   it.each([
     "verifywise_test",
+    "verifywise_tests",
+    "verifywise_test2",
     "verifywise_mrm_test",
     "verifywise_jira_test",
     "test_verifywise",
+    "tests_verifywise",
+    "VerifyWise_TEST",
     "test",
     "app-test-db",
   ])("accepts %s", (name) => {
@@ -138,6 +143,8 @@ describe("isTestDatabaseName", () => {
     "latest",
     "contest_app",
     "verifywise_testing_prod",
+    "verifywisetest",
+    "vw_testdb",
   ])("rejects %s", (name) => {
     expect(isTestDatabaseName(name)).toBe(false);
   });
@@ -168,5 +175,56 @@ describe("one policy for globalSetup and the connection checks", () => {
       expect(setup).not.toThrow();
       expect(connection).not.toThrow();
     }
+  });
+});
+
+/**
+ * The refusal says where the bad DB_NAME came from (loadEnv records it) and
+ * gives the fix for that place.
+ */
+describe("fix advice by DB_NAME source", () => {
+  const refuse = (source: string | undefined, envTestExists = true) => {
+    try {
+      assertSafeTestDatabase({
+        dbName: "verifywise",
+        devDbName: "verifywise",
+        envTestPath,
+        source,
+        envTestExists,
+      });
+    } catch (error) {
+      return (error as Error).message;
+    }
+    throw new Error("expected a refusal");
+  };
+
+  it("exported: unset it or export a test database", () => {
+    expect(refuse("environment")).toMatch(/exported in the environment[\s\S]*unset DB_NAME/);
+  });
+
+  it(".env.test: change it there", () => {
+    expect(refuse(".env.test")).toMatch(
+      /comes from \/repo\/Servers\/\.env\.test\. Change it there/,
+    );
+  });
+
+  it(".env with a .env.test lacking DB_NAME: add it", () => {
+    expect(refuse(".env")).toMatch(/does not set DB_NAME\. Add DB_NAME=verifywise_test/);
+  });
+
+  it("not set anywhere", () => {
+    expect(() =>
+      assertSafeTestDatabase({ dbName: undefined, devDbName: undefined, envTestPath }),
+    ).toThrow(/neither \/repo\/Servers\/\.env\.test nor Servers\/\.env sets it/);
+  });
+
+  it("the connection check names the source when it is known", () => {
+    expect(() =>
+      assertSafeToTruncate({
+        currentDb: "verifywise",
+        devDbName: undefined,
+        origin: { source: "environment", envTestPath },
+      }),
+    ).toThrow(/exported in the environment/);
   });
 });
