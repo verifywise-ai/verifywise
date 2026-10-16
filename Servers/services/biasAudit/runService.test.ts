@@ -308,6 +308,24 @@ describe("createRun, scoring rate", () => {
     expect(JSON.stringify(stored().gateFindingsJson)).toContain("answers_withhold_scoring_rate");
   });
 
+  it("is not stopped by blank or unreadable cells in an unmapped selection column", async () => {
+    utils.getProfileAnswersQuery.mockResolvedValue([
+      ...PERSON,
+      ans("threshold.operational", "stated"),
+    ]);
+    const rows = ["gender,race,s,outcome"];
+    for (let i = 0; i < 300; i++) {
+      rows.push(
+        `${i % 2 ? "Male" : "Female"},${i % 3 ? "White" : "Asian"},${((i * 7) % 100) / 10},${i % 2 ? "" : "maybe"}`,
+      );
+    }
+    await run({ csv: rows.join("\n") + "\n", mapping: SCORE_MAPPING });
+    const codes = (stored().gateFindingsJson as Array<{ code: string }>).map((f) => f.code);
+    expect(codes).not.toContain("outcome_values_blank");
+    expect(codes).not.toContain("outcome_values_unreadable");
+    expect(stored().resultJson).not.toBeNull();
+  });
+
   it("stores a stop when score values are unreadable", async () => {
     utils.getProfileAnswersQuery.mockResolvedValue([
       ...PERSON,

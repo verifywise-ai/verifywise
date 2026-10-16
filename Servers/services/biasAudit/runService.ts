@@ -211,7 +211,10 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
       ),
     );
   }
-  if (parsed.blankOutcomeCount > 0) {
+  // The selection column is the outcome only for a selection-rate run. A scoring
+  // run cannot map it today, but these stops must not depend on that refusal.
+  const outcomeIsSelection = outcomeKey === RECORD_KEYS.selected;
+  if (outcomeIsSelection && parsed.blankOutcomeCount > 0) {
     blockers.push(
       stop(
         "outcome_values_blank",
@@ -222,7 +225,7 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
       ),
     );
   }
-  if (parsed.unreadableOutcomeCount > 0) {
+  if (outcomeIsSelection && parsed.unreadableOutcomeCount > 0) {
     blockers.push(
       stop(
         "outcome_values_unreadable",
