@@ -288,7 +288,7 @@ describe("attestProfile", () => {
 });
 
 describe("getApplicableQuestions", () => {
-  const scope = { projectId: 7, frameworkId: 12, organizationId: 42 };
+  const scope = { projectId: 7, frameworkId: 12, organizationId: 42, userId: 9, role: "Admin" };
 
   it("refuses a project outside the organization with a not-found", async () => {
     utils.getProjectQuery.mockResolvedValue(null);
@@ -424,10 +424,19 @@ describe("project-member access", () => {
     expect(utils.userCanAccessProjectQuery).not.toHaveBeenCalled();
   });
 
-  it("leaves the question set org-wide", async () => {
+  it("answers 404 on the question set to a non-member, since it is filtered by the project's answers", async () => {
+    utils.userCanAccessProjectQuery.mockResolvedValue(false);
+    utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
+    await expect(getApplicableQuestions(viewScope)).rejects.toMatchObject({ statusCode: 404 });
+    expect(utils.getCurrentProfileQuery).not.toHaveBeenCalled();
+    expect(utils.getProfileAnswersQuery).not.toHaveBeenCalled();
+  });
+
+  it("gives a member the question set", async () => {
+    utils.userCanAccessProjectQuery.mockResolvedValue(true);
     utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
     utils.getCurrentProfileQuery.mockResolvedValue(null);
-    await getApplicableQuestions({ projectId: 7, frameworkId: 12, organizationId: 42 });
-    expect(utils.userCanAccessProjectQuery).not.toHaveBeenCalled();
+    await expect(getApplicableQuestions(viewScope)).resolves.toHaveProperty("questions");
+    expect(utils.userCanAccessProjectQuery).toHaveBeenCalledWith(7, 9, 42);
   });
 });

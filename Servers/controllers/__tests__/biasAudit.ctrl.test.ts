@@ -94,6 +94,8 @@ describe("getQuestions", () => {
       projectId: 7,
       frameworkId: 12,
       organizationId: 42,
+      userId: 9,
+      role: "Admin",
     });
   });
 

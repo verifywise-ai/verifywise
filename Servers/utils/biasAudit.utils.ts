@@ -37,7 +37,9 @@ function refuseCrossOrg(what: string, id: number): never {
  * The Admin allowance is the caller's, from the role. Same rule as
  * canUserAccessFile (utils/fileUpload.utils.ts). `projectExpr` is a SQL
  * expression for the project id and `:organization_id` / `:viewer_user_id`
- * are replacements the caller supplies.
+ * are replacements the caller supplies. `projectExpr` must be qualified or a
+ * replacement: a bare column such as `id` binds to `p.id` inside the
+ * subquery, which makes the check true for every project.
  */
 const PROJECT_MEMBER_SQL = (projectExpr: string) => `EXISTS (
                SELECT 1
@@ -56,9 +58,9 @@ export async function userCanAccessProjectQuery(
   organizationId: number,
 ): Promise<boolean> {
   const rows = (await sequelize.query(
-    `SELECT ${PROJECT_MEMBER_SQL("id")} AS allowed
-       FROM projects
-      WHERE id = :project_id AND organization_id = :organization_id`,
+    `SELECT ${PROJECT_MEMBER_SQL("target.id")} AS allowed
+       FROM projects target
+      WHERE target.id = :project_id AND target.organization_id = :organization_id`,
     {
       replacements: {
         project_id: projectId,

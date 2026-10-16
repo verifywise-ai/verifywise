@@ -167,7 +167,7 @@ export const getQuestions = controllerWrapper(
   async (req) => ({
     status: 200,
     data: await getApplicableQuestions(
-      projectScope(req.query.projectId, req.params.frameworkId, req),
+      memberScope(req.query.projectId, req.params.frameworkId, req),
     ),
   }),
   { functionName: "getQuestions", fileName: FILE_NAME, eventType: "Read" },

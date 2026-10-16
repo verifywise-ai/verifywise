@@ -26,7 +26,7 @@ import {
   LL144_QUESTIONS,
   VETO_KEYS,
 } from "../../structures/NYC-Local-Law-144/intake.questions";
-import { assertProjectAccess } from "./projectAccess";
+import { assertProjectAccess, type Viewer } from "./projectAccess";
 import { applicableQuestions, type AnswerWithNotes } from "./applicability";
 import { computeReadiness, type ReadinessResult } from "./readinessScore";
 import type { IntakeQuestion } from "../../structures/NYC-Local-Law-144/intake.types";
@@ -269,8 +269,9 @@ async function currentAnswers(scope: ReadScope) {
 
 /** The questions that apply given the answers saved so far. */
 export async function getApplicableQuestions(
-  scope: ReadScope,
+  scope: ReadScope & Viewer,
 ): Promise<{ questions: IntakeQuestion[] }> {
+  await assertProjectAccess(scope.projectId, scope.organizationId, scope);
   await assertProject(scope.projectId, scope.organizationId);
   const { answers } = await currentAnswers(scope);
   return { questions: applicableQuestions(answers) };
