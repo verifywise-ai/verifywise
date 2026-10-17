@@ -52,7 +52,11 @@ export interface StanceModel {
   openItems: string[];
   expiry: { date: string | null; trigger: string };
   derivedBasis: DerivedBasis | null;
-  attestation: { user: string; date: string } | null;
+  /**
+   * Who attested the profile and when. `user` is null when the attester is no
+   * longer in the organization: the attestation stands, unattributed.
+   */
+  attestation: { user: string | null; date: string } | null;
 }
 
 export interface ComposeStanceArgs {
@@ -67,7 +71,7 @@ export interface ComposeStanceArgs {
   order: OrderFinding[];
   expiry: { date: string | null; trigger: string };
   derivedBasis: DerivedBasis | null;
-  attestation: { user: string; date: string } | null;
+  attestation: { user: string | null; date: string } | null;
   jobDescriptionKey: string | null;
 }
 

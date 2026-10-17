@@ -86,9 +86,11 @@ function assertMayProduceStance(answers: AnswerWithNotes) {
 }
 
 /**
- * Who answered each question and who attested the profile, by name. An author
- * no longer in the organization is left unattributed rather than given a
- * placeholder name; compose then says the author is not recorded.
+ * Who answered each question and who attested the profile, by name. An answer
+ * author no longer in the organization is left unattributed rather than given
+ * a placeholder name; compose then says the author is not recorded. An
+ * attestation keeps its date with a null user, for run stances and scope
+ * determinations alike.
  */
 async function attributionFor(
   rows: AedtProfileAnswer[],
@@ -96,7 +98,7 @@ async function attributionFor(
   organizationId: number,
 ): Promise<{
   answerAuthors: Record<string, { user: string; date: string }>;
-  attestation: { user: string; date: string } | null;
+  attestation: { user: string | null; date: string } | null;
 }> {
   const userIds = [
     ...new Set(
@@ -118,10 +120,13 @@ async function attributionFor(
     const date = isoDate(r.answered_at);
     if (user && date) answerAuthors[r.question_key] = { user, date };
   }
+  // The attestation date is the record: a profile with one was attested, even
+  // when the attester has since left the organization. Their name is then
+  // null and the template says the attester is no longer in the organization.
+  const attestedOn = isoDate(profile.attested_at);
   const attester =
     profile.attested_by_user_id != null ? names.get(profile.attested_by_user_id) : undefined;
-  const attestedOn = isoDate(profile.attested_at);
-  const attestation = attester && attestedOn ? { user: attester, date: attestedOn } : null;
+  const attestation = attestedOn ? { user: attester ?? null, date: attestedOn } : null;
   return { answerAuthors, attestation };
 }
 

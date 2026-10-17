@@ -129,6 +129,26 @@ describe("generateStance", () => {
     expect(utils.getUserNamesQuery).toHaveBeenCalledWith([9], 42);
   });
 
+  it("keeps the attestation date when the attester is no longer in the organization", async () => {
+    // The attester left: their name is not found, but the profile was attested.
+    utils.getUserNamesQuery.mockResolvedValue([]);
+    await generateStance(args);
+    const { model } = persistStance.mock.calls[0][0];
+    expect(model.attestation).toEqual({ user: null, date: "2026-10-02" });
+  });
+
+  it("records no attestation when the profile carries no attestation date", async () => {
+    utils.getProfileByIdQuery.mockResolvedValue({
+      id: 5,
+      version: 1,
+      status: "superseded",
+      attested_by_user_id: 9,
+      attested_at: null,
+    });
+    await generateStance(args);
+    expect(persistStance.mock.calls[0][0].model.attestation).toBeNull();
+  });
+
   it("builds the evidence from the stored run, export allowed when every finding is a note", async () => {
     await generateStance(args);
     const { evidence } = persistStance.mock.calls[0][0];
@@ -242,6 +262,13 @@ describe("generateProfileStance", () => {
       scoreAtGeneration: null,
     });
     expect(call).not.toHaveProperty("runId");
+  });
+
+  it("keeps a scope determination's attestation when the attester has left the organization", async () => {
+    utils.getUserNamesQuery.mockResolvedValue([]);
+    await generateProfileStance(input);
+    const { model } = persistStance.mock.calls[0][0];
+    expect(model.attestation).toEqual({ user: null, date: "2026-10-02" });
   });
 
   it("composes the out-of-scope document: no result, no figures, the attestation", async () => {

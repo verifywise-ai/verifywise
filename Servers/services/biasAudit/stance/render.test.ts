@@ -412,6 +412,19 @@ describe("customer-authored text", () => {
     await expect(renderStancePdf(m, evidence)).resolves.toBeDefined();
   });
 
+  it("keeps the attestation date and says the attester is no longer in the organization", () => {
+    const html = renderStanceHtml({ ...model, attestation: { user: null, date: "2026-10-14" } });
+    expect(html).toContain("Attested on 2026-10-14 by a user no longer in this organization.");
+    expect(html).not.toContain("No attestation is recorded.");
+    expect(findForbiddenWords(html)).toEqual([]);
+  });
+
+  it("says no attestation is recorded when there is none", () => {
+    expect(renderStanceHtml({ ...model, attestation: null })).toContain(
+      "No attestation is recorded.",
+    );
+  });
+
   it("marks an answer author's name", () => {
     const m = withScope("Answered by Certified Cara on 2026-10-01.", [
       { lead: "Answered by ", text: "Certified Cara", tail: " on 2026-10-01." },
