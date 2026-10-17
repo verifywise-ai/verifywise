@@ -211,7 +211,7 @@ export function findForbiddenWords(html: string): string[] {
   return findForbidden(html.replace(/<span data-customer-text>[^<]*<\/span>/g, ""));
 }
 
-/** What a stance is generated from. Every render entry point must name it. */
+/** What a stance is generated from. The export gate must be told which. */
 export type StanceParentKind = "run" | "profile";
 
 /**
@@ -246,23 +246,9 @@ function assertMayExport(
 }
 
 /**
- * `evidence` may be null only for an out-of-scope document generated from a
- * profile (a scope determination); `parent` says which, see assertMayExport.
- */
-export async function renderStancePdf(
-  model: StanceModel,
-  evidence: StanceEvidence | null,
-  parent: StanceParentKind,
-): Promise<{ pdf: Buffer; sha256: string }> {
-  assertMayExport(evidence, model.scope, parent);
-  return renderGatedPdf(model, evidence);
-}
-
-/**
- * The render after the export gate. Not exported: every caller outside this
- * module goes through renderStancePdf, which gates first. persistStance gates
- * itself, before any database read, and then calls this, so the gate runs
- * once per persist.
+ * The render after the export gate. Not exported: the one way to a stance PDF
+ * is persistStance, which runs assertMayExport before any database read and
+ * then calls this, so the gate runs once per persist and cannot be skipped.
  */
 async function renderGatedPdf(
   model: StanceModel,

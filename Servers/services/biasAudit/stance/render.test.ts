@@ -26,12 +26,12 @@ const pdfMock = jest.fn().mockResolvedValue(Buffer.from("%PDF-1.4 fake"));
 const getSharedBrowser = jest.fn();
 jest.mock("../../../utils/pdfBrowser.utils", () => ({ getSharedBrowser }));
 const launch = jest.fn(() => {
-  throw new Error("renderStancePdf must not launch a browser of its own");
+  throw new Error("the stance render must not launch a browser of its own");
 });
 jest.mock("playwright", () => ({ chromium: { launch } }));
 
 import { checkSections } from "./sectionChecker";
-import { renderStanceHtml, renderStancePdf, persistStance, findForbiddenWords } from "./render";
+import { renderStanceHtml, persistStance, findForbiddenWords } from "./render";
 import type { StanceEvidence } from "./render";
 import { REQUIRED_SECTIONS } from "./compose";
 import * as renderModule from "./render";
@@ -82,6 +82,36 @@ beforeEach(() => {
   });
   utils.getRunProjectIdQuery.mockResolvedValue(7);
 });
+
+/**
+ * Renders through persistStance, the one gated path to a stance PDF, and
+ * returns the PDF it filed with its hash. Removing the export gate from that
+ * path fails the evidence-rule tests that use this.
+ */
+async function renderThroughPersist(
+  m: any,
+  ev: StanceEvidence | null | undefined,
+  parent: "run" | "profile",
+): Promise<{ pdf: Buffer; sha256: string }> {
+  uploadFile.mockResolvedValue({ id: 501 });
+  utils.getNextStanceVersionQuery.mockResolvedValue(1);
+  utils.createStanceQuery.mockResolvedValue({ id: 9, version: 1 });
+  utils.getNextProfileStanceVersionQuery.mockResolvedValue(1);
+  utils.createProfileStanceQuery.mockResolvedValue({ id: 30, version: 1 });
+  const common = {
+    projectId: 7,
+    organizationId: 42,
+    userId: 9,
+    model: m,
+    evidence: ev,
+    scoreAtGeneration: null,
+  };
+  const out = await persistStance(
+    (parent === "run" ? { ...common, runId: 11 } : { ...common, profileId: 5 }) as any,
+  );
+  const filed = uploadFile.mock.calls[uploadFile.mock.calls.length - 1][0];
+  return { pdf: filed.buffer, sha256: out.sha256 };
+}
 
 describe("checkSections", () => {
   it("passes when every required section is present", () => {
@@ -190,25 +220,25 @@ describe("customer quotes and the vocabulary lint", () => {
         s.key === "results" ? { ...s, body: "bias-free" } : s,
       ),
     };
-    await expect(renderStancePdf(own, evidence, "run")).rejects.toThrow(/forbidden/i);
+    await expect(renderThroughPersist(own, evidence, "run")).rejects.toThrow(/forbidden/i);
     expect(getSharedBrowser).not.toHaveBeenCalled();
   });
 
   it("renders a PDF for a stance that quotes the word", async () => {
-    await expect(renderStancePdf(quoted, evidence, "run")).resolves.toBeDefined();
+    await expect(renderThroughPersist(quoted, evidence, "run")).resolves.toBeDefined();
   });
 });
 
-describe("renderStancePdf", () => {
+describe("rendering the stance PDF, through persistStance", () => {
   it("returns a buffer and its sha256", async () => {
-    const out = await renderStancePdf(model, evidence, "run");
+    const out = await renderThroughPersist(model, evidence, "run");
     expect(out.pdf).toBeInstanceOf(Buffer);
     expect(out.sha256).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it("refuses to render when a required section is absent, before launching a browser", async () => {
     const broken = { ...model, sections: model.sections.slice(0, 2) };
-    await expect(renderStancePdf(broken, evidence, "run")).rejects.toThrow(
+    await expect(renderThroughPersist(broken, evidence, "run")).rejects.toThrow(
       /missing required section/i,
     );
     expect(getSharedBrowser).not.toHaveBeenCalled();
@@ -216,7 +246,7 @@ describe("renderStancePdf", () => {
 
   it("refuses to render when the gates do not allow export", async () => {
     await expect(
-      renderStancePdf(model, { ...evidence, mayExportPdf: false }, "run"),
+      renderThroughPersist(model, { ...evidence, mayExportPdf: false }, "run"),
     ).rejects.toThrow(/export/i);
     expect(getSharedBrowser).not.toHaveBeenCalled();
   });
@@ -229,10 +259,11 @@ describe("renderStancePdf", () => {
       ),
     };
     const refusals = [
-      () => renderStancePdf(model, { ...evidence, mayExportPdf: false }, "run"),
-      () => renderStancePdf(model, null as any, "run"),
-      () => renderStancePdf({ ...model, sections: model.sections.slice(0, 2) }, evidence, "run"),
-      () => renderStancePdf(forbidden, evidence, "run"),
+      () => renderThroughPersist(model, { ...evidence, mayExportPdf: false }, "run"),
+      () => renderThroughPersist(model, null as any, "run"),
+      () =>
+        renderThroughPersist({ ...model, sections: model.sections.slice(0, 2) }, evidence, "run"),
+      () => renderThroughPersist(forbidden, evidence, "run"),
     ];
     for (const r of refusals) {
       await expect(r()).rejects.toMatchObject({ name: "BusinessLogicException", statusCode: 422 });
@@ -240,8 +271,8 @@ describe("renderStancePdf", () => {
   });
 
   it("refuses to render a PDF without evidence, before launching a browser", async () => {
-    await expect(renderStancePdf(model, undefined as any, "run")).rejects.toThrow(/evidence/i);
-    await expect(renderStancePdf(model, null as any, "run")).rejects.toThrow(/evidence/i);
+    await expect(renderThroughPersist(model, undefined as any, "run")).rejects.toThrow(/evidence/i);
+    await expect(renderThroughPersist(model, null as any, "run")).rejects.toThrow(/evidence/i);
     expect(getSharedBrowser).not.toHaveBeenCalled();
   });
 
@@ -253,15 +284,15 @@ describe("renderStancePdf", () => {
         ["scope", "party", "open_items", "expiry"].includes(s.key),
       ),
     };
-    await expect(renderStancePdf(out, evidence, "run")).resolves.toBeDefined();
+    await expect(renderThroughPersist(out, evidence, "run")).resolves.toBeDefined();
   });
 
   it("renders on the shared browser, opening and closing only its own page", async () => {
     const page = { setContent: jest.fn(), pdf: pdfMock, close: jest.fn() };
     const browser = { newPage: jest.fn().mockResolvedValue(page), close: jest.fn() };
     getSharedBrowser.mockResolvedValue(browser);
-    await renderStancePdf(model, evidence, "run");
-    await renderStancePdf(model, evidence, "run");
+    await renderThroughPersist(model, evidence, "run");
+    await renderThroughPersist(model, evidence, "run");
     expect(getSharedBrowser).toHaveBeenCalledTimes(2);
     expect(launch).not.toHaveBeenCalled();
     expect(browser.newPage).toHaveBeenCalledTimes(2);
@@ -277,7 +308,7 @@ describe("renderStancePdf", () => {
     };
     const browser = { newPage: jest.fn().mockResolvedValue(page), close: jest.fn() };
     getSharedBrowser.mockResolvedValue(browser);
-    await expect(renderStancePdf(model, evidence, "run")).rejects.toThrow("boom");
+    await expect(renderThroughPersist(model, evidence, "run")).rejects.toThrow("boom");
     expect(page.close).toHaveBeenCalled();
     expect(browser.close).not.toHaveBeenCalled();
   });
@@ -415,14 +446,14 @@ describe("customer-authored text", () => {
     const html = renderStanceHtml(m, evidence);
     expect(html).toContain("<span data-customer-text>Certified Candidate Ranker</span>");
     expect(findForbiddenWords(html)).toEqual([]);
-    await expect(renderStancePdf(m, evidence, "run")).resolves.toBeDefined();
+    await expect(renderThroughPersist(m, evidence, "run")).resolves.toBeDefined();
   });
 
   it("marks the attestation user's name", async () => {
     const m = { ...model, attestation: { user: "Passed Admin", date: "2026-10-14" } };
     const html = renderStanceHtml(m, evidence);
     expect(html).toContain("<span data-customer-text>Passed Admin</span>");
-    await expect(renderStancePdf(m, evidence, "run")).resolves.toBeDefined();
+    await expect(renderThroughPersist(m, evidence, "run")).resolves.toBeDefined();
   });
 
   it("keeps the attestation date and says the attester is no longer in the organization", () => {
@@ -563,13 +594,13 @@ const oosModel: any = {
 
 describe("a scope determination has no dataset", () => {
   it("renders an out-of-scope document without run evidence", async () => {
-    await expect(renderStancePdf(oosModel, null, "profile")).resolves.toMatchObject({
+    await expect(renderThroughPersist(oosModel, null, "profile")).resolves.toMatchObject({
       sha256: expect.stringMatching(/^[0-9a-f]{64}$/),
     });
   });
 
   it("refuses an out-of-scope run model without evidence: the parent is required", async () => {
-    await expect(renderStancePdf(oosModel, null, "run")).rejects.toMatchObject({
+    await expect(renderThroughPersist(oosModel, null, "run")).rejects.toMatchObject({
       statusCode: 422,
       message: "A stance PDF cannot be rendered without the run's evidence.",
     });
@@ -578,7 +609,9 @@ describe("a scope determination has no dataset", () => {
 
   it("still refuses an in-scope or undetermined document without evidence", async () => {
     for (const scope of ["in_scope", "undetermined"]) {
-      await expect(renderStancePdf({ ...model, scope }, null, "profile")).rejects.toMatchObject({
+      await expect(
+        renderThroughPersist({ ...model, scope }, null, "profile"),
+      ).rejects.toMatchObject({
         name: "BusinessLogicException",
         statusCode: 422,
       });
