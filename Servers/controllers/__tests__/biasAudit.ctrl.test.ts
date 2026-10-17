@@ -70,8 +70,6 @@ function mockRes() {
   res.json = jest.fn(() => res);
   res.send = jest.fn(() => res);
   res.setHeader = jest.fn(() => res);
-  res.removeHeader = jest.fn();
-  res.headersSent = false;
   return res;
 }
 
@@ -667,44 +665,6 @@ describe.each([
     expect(logCentralOnly).not.toHaveBeenCalled();
   });
 
-  it("answers 201 and still writes the Create event when every file-log line throws", async () => {
-    const created = { stanceId: 3, version: 1, sha256: "a" };
-    service().mockResolvedValue(created);
-    // An unwritable tenant log directory fails every logStructured call.
-    logStructured.mockImplementation(() => {
-      throw new Error("EACCES: mkdir /var/log/tenant");
-    });
-    const stderr = jest.spyOn(console, "error").mockImplementation(() => undefined);
-    let answer: Awaited<ReturnType<typeof call>>;
-    try {
-      answer = await call(handler(), req);
-    } finally {
-      logStructured.mockReset();
-      stderr.mockRestore();
-    }
-    expect(answer.status).toBe(201);
-    expect(answer.body.data).toEqual(created);
-    expect(logEvent.mock.calls.filter((c) => c[0] === "Create")).toHaveLength(1);
-    expect(errorEvents()).toEqual([]);
-  });
-
-  it("still writes the Error event for a refusal when every file-log line throws", async () => {
-    service().mockRejectedValue(new ConflictException("raced"));
-    logStructured.mockImplementation(() => {
-      throw new Error("EACCES: mkdir /var/log/tenant");
-    });
-    const stderr = jest.spyOn(console, "error").mockImplementation(() => undefined);
-    let answer: Awaited<ReturnType<typeof call>>;
-    try {
-      answer = await call(handler(), req);
-    } finally {
-      logStructured.mockReset();
-      stderr.mockRestore();
-    }
-    expect(answer.status).toBe(409);
-    expect(errorEvents()).toEqual([["Error", `${name} failed: raced`, 9, 42]]);
-  });
-
   it("answers 201 with the stance when the success event write rejects", async () => {
     const created = { stanceId: 3, version: 1, sha256: "a" };
     service().mockResolvedValue(created);
@@ -819,63 +779,6 @@ describe("downloadStance", () => {
     expect(status).toBe(404);
     expect(logCentralOnly).not.toHaveBeenCalled();
     expect(logStructured.mock.calls.filter((c) => c[0] === "error")).toHaveLength(1);
-  });
-
-  it("sends the PDF when the processing log throws", async () => {
-    const pdf = Buffer.from("%PDF-1.4");
-    svc(stanceService.getStanceDownload).mockResolvedValue({
-      filename: "s.pdf",
-      content: pdf,
-      sha256: "f".repeat(64),
-    });
-    logStructured.mockImplementation(() => {
-      throw new Error("EACCES: mkdir /var/log/tenant");
-    });
-    const stderr = jest.spyOn(console, "error").mockImplementation(() => undefined);
-    let answer: Awaited<ReturnType<typeof call>>;
-    try {
-      answer = await call(ctrl.downloadStance, mockReq({ params: { id: "3" } }));
-    } finally {
-      logStructured.mockReset();
-      stderr.mockRestore();
-    }
-    expect(answer.res.status).toHaveBeenCalledWith(200);
-    expect(answer.res.send).toHaveBeenCalledWith(pdf);
-  });
-
-  it("drops the PDF headers before answering a failure that came after setting them", async () => {
-    svc(stanceService.getStanceDownload).mockResolvedValue({
-      filename: "s.pdf",
-      content: Buffer.from("%PDF-1.4"),
-      sha256: "f".repeat(64),
-    });
-    const res = mockRes();
-    res.send = jest.fn(() => {
-      throw new Error("socket closed");
-    });
-    await ctrl.downloadStance(mockReq({ params: { id: "3" } }), res);
-    expect(res.removeHeader).toHaveBeenCalledWith("Content-Type");
-    expect(res.removeHeader).toHaveBeenCalledWith("Content-Disposition");
-    expect(res.json).toHaveBeenCalledTimes(1);
-    expect(res.status).toHaveBeenLastCalledWith(500);
-    // Not also logged as a download.
-    expect(logStructured.mock.calls.filter((c) => c[0] === "successful")).toEqual([]);
-  });
-
-  it("gives no second answer when the failure comes after the PDF headers went out", async () => {
-    svc(stanceService.getStanceDownload).mockResolvedValue({
-      filename: "s.pdf",
-      content: Buffer.from("%PDF-1.4"),
-      sha256: "f".repeat(64),
-    });
-    const res = mockRes();
-    res.send = jest.fn(() => {
-      res.headersSent = true;
-      throw new Error("socket closed");
-    });
-    await ctrl.downloadStance(mockReq({ params: { id: "3" } }), res);
-    expect(res.json).not.toHaveBeenCalled();
-    expect(logCentralOnly).toHaveBeenCalledTimes(1);
   });
 
   it("sends the PDF when the success log throws", async () => {

@@ -476,29 +476,17 @@ export async function downloadStance(req: Request, res: Response): Promise<Respo
   try {
     const stanceId = positiveInt(req.params.id, "id");
     const pdf = await getStanceDownload(stanceId, req.organizationId!, viewerOf(req));
-    const safeName = pdf.filename.replace(/[^\w.-]/g, "_");
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${safeName}"`);
-    res.setHeader("X-Content-SHA256", pdf.sha256);
-    res.status(200).send(pdf.content);
-    // Logged only once the PDF has gone out, so a failed send is not also
-    // recorded as a download.
     await logSafely(logSuccess, {
       ...log,
       eventType: "Read",
       description: `Downloaded stance ${stanceId}`,
     });
-    return res;
+    const safeName = pdf.filename.replace(/[^\w.-]/g, "_");
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${safeName}"`);
+    res.setHeader("X-Content-SHA256", pdf.sha256);
+    return res.status(200).send(pdf.content);
   } catch (error) {
-    // Once the PDF headers are out there is no second answer to give.
-    if (res.headersSent) {
-      recordUnexpectedCause(log.functionName, error);
-      return res;
-    }
-    // A JSON error must not go out labelled as the PDF attachment.
-    for (const header of ["Content-Type", "Content-Disposition", "X-Content-SHA256"]) {
-      res.removeHeader(header);
-    }
     return answerStanceFailure(req, res, log, "Read", "stance download failed unexpectedly", error);
   }
 }

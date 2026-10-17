@@ -127,6 +127,25 @@ export function logCentralOnly(
   });
 }
 
+/** Tenants whose file log could not be written, so each is reported once. */
+const failedTenantLogs = new Set<string>();
+
+/**
+ * Writes one line to the tenant's file log. A failure (the tenant log
+ * directory cannot be created, say) goes to stderr once per tenant and is
+ * never thrown: it must not reject a log call, hang a request, or stop the
+ * central line and the event-log write that follow it.
+ */
+function writeTenantLine(tenant: string, line: string): void {
+  try {
+    getTenantLogger(tenant).info(line);
+  } catch (error) {
+    if (failedTenantLogs.has(tenant)) return;
+    failedTenantLogs.add(tenant);
+    console.error(`Failed to write the file log for tenant ${tenant}:`, error);
+  }
+}
+
 export function logStructured(
   state: LogState,
   description: string,
@@ -140,9 +159,7 @@ export function logStructured(
 
   // Resolve the tenant scope from request context; falls back to 'default' when unset.
   const tenant = getTenantIdForLogging();
-  const tenantLogger = getTenantLogger(tenant);
-
-  tenantLogger.info(line);
+  writeTenantLine(tenant, line);
 
   // Ship the same line to the central stack. File format unchanged.
   logCentralOnly(state, line, functionName, fileName, tenant);
