@@ -487,6 +487,111 @@ export async function createStanceQuery(
   return row;
 }
 
+export interface CreateProfileStanceArgs {
+  profileId: number;
+  version: number;
+  pdfSha256: string | null;
+  pdfFileId: number | null;
+  scopeAtGeneration: string;
+  generatedBy: number;
+}
+
+/**
+ * A stance generated from an attested profile: the out-of-scope "Scope
+ * determination", which has no run. The project and both versions are taken
+ * from the profile row, as createStanceQuery takes them from the run, and
+ * only an attested profile of this organization (and of a project in it) is
+ * accepted. No readiness score is stored, because none was computed.
+ */
+export async function createProfileStanceQuery(
+  args: CreateProfileStanceArgs,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<BiasAuditStance> {
+  const result = await sequelize.query(
+    `INSERT INTO bias_audit_stances
+       (organization_id, project_id, run_id, profile_id, version, pdf_sha256,
+        pdf_file_id, score_at_generation, scope_at_generation, profile_version,
+        question_set_version, generated_by)
+     SELECT ap.organization_id, ap.project_id, NULL, ap.id, :version, :pdf_sha256,
+            :pdf_file_id, NULL, :scope_at_generation, ap.version,
+            ap.question_set_version, :generated_by
+       FROM aedt_profiles ap
+       JOIN projects pr ON pr.id = ap.project_id
+                       AND pr.organization_id = :organization_id
+      WHERE ap.id = :profile_id AND ap.organization_id = :organization_id
+        AND ap.status = 'attested'
+     RETURNING *`,
+    {
+      replacements: {
+        profile_id: args.profileId,
+        version: args.version,
+        pdf_sha256: args.pdfSha256,
+        pdf_file_id: args.pdfFileId,
+        scope_at_generation: args.scopeAtGeneration,
+        generated_by: args.generatedBy,
+        organization_id: organizationId,
+      },
+      transaction,
+    },
+  );
+  const row = firstRow<BiasAuditStance>(result);
+  if (!row) refuseCrossOrg("Profile", args.profileId);
+  return row;
+}
+
+/**
+ * Next stance version for a profile. Like getNextStanceVersionQuery, this
+ * read is not the uniqueness guarantee: the partial unique index on
+ * (profile_id, version) is, and a lost race surfaces as a 23505.
+ */
+export async function getNextProfileStanceVersionQuery(
+  profileId: number,
+  organizationId: number,
+): Promise<number> {
+  const rows = (await sequelize.query(
+    `SELECT MAX(version) AS max FROM bias_audit_stances
+      WHERE profile_id = :profile_id AND organization_id = :organization_id`,
+    {
+      replacements: { profile_id: profileId, organization_id: organizationId },
+      type: QueryTypes.SELECT,
+    },
+  )) as Array<{ max: number | null }>;
+  return (rows[0]?.max ?? 0) + 1;
+}
+
+/**
+ * Scope determinations of a project for one framework, newest first. These
+ * stances have no run, so they never appear in a run's stance list; the
+ * profile view lists them instead.
+ */
+export async function listProfileStancesQuery(
+  projectId: number,
+  frameworkId: number,
+  organizationId: number,
+): Promise<BiasAuditStance[]> {
+  return (await sequelize.query(
+    `SELECT s.id, s.project_id, s.profile_id, s.version, s.pdf_sha256,
+            s.pdf_file_id, s.score_at_generation, s.scope_at_generation,
+            s.profile_version, s.question_set_version, s.generated_by,
+            s.generated_at
+       FROM bias_audit_stances s
+       JOIN aedt_profiles ap ON ap.id = s.profile_id
+                            AND ap.organization_id = :organization_id
+      WHERE s.project_id = :project_id AND ap.framework_id = :framework_id
+        AND s.organization_id = :organization_id
+      ORDER BY s.generated_at DESC, s.id DESC`,
+    {
+      replacements: {
+        project_id: projectId,
+        framework_id: frameworkId,
+        organization_id: organizationId,
+      },
+      type: QueryTypes.SELECT,
+    },
+  )) as BiasAuditStance[];
+}
+
 /** The project a run belongs to, within the organization. Refuses a run outside it. */
 export async function getRunProjectIdQuery(runId: number, organizationId: number): Promise<number> {
   const rows = (await sequelize.query(
