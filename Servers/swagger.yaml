@@ -24487,6 +24487,20 @@ paths:
       security:
         -
           bearerAuth: []
+  '/bias-audit/profiles/{projectId}/{frameworkId}/stance':
+    post:
+      summary: 'Generate Profile Stance'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: generateProfileStance
+      security:
+        -
+          bearerAuth: []
   /bias-audit/runs:
     post:
       summary: 'Create Run'

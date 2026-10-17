@@ -2251,6 +2251,17 @@ export const biasAuditEndpoints: Endpoint[] = [
     tag: "Bias Audit",
   },
   {
+    method: 'POST',
+    path: '/bias-audit/profiles/{projectId}/{frameworkId}/stance',
+    summary: "Generate Profile Stance",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
     method: 'GET',
     path: '/bias-audit/runs',
     summary: "List Runs",
