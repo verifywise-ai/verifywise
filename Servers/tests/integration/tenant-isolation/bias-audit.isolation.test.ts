@@ -1213,6 +1213,13 @@ describe("bias audit routes tenant isolation", () => {
       [2, "attested"],
     ]);
     expect(rows[0].profile_id).not.toBe(rows[1].profile_id);
+
+    // The profile view marks only the determination of the attested profile current.
+    const view = await owner.request.get(`/api/bias-audit/profiles/${project}/${LL144}`);
+    expect(view.body.data.scopeDeterminations.map((s: any) => [s.version, s.isCurrent])).toEqual([
+      [2, true],
+      [1, false],
+    ]);
   });
 
   it("refuses a scope determination for an in-scope profile with 422, pointing at a run", async () => {

@@ -610,6 +610,22 @@ export async function getNextProfileStanceVersionQuery(
   return (rows[0]?.max ?? 0) + 1;
 }
 
+/** A scope determination as the profile view lists it: plain columns, no model. */
+export interface ProfileStanceRow {
+  id: number;
+  project_id: number;
+  profile_id: number;
+  version: number;
+  pdf_sha256: string | null;
+  pdf_file_id: number | null;
+  score_at_generation: number | null;
+  scope_at_generation: string;
+  profile_version: number;
+  question_set_version: number;
+  generated_by: number | null;
+  generated_at: Date;
+}
+
 /**
  * Scope determinations of a project for one framework, newest first. These
  * stances have no run, so they never appear in a run's stance list; the
@@ -619,7 +635,7 @@ export async function listProfileStancesQuery(
   projectId: number,
   frameworkId: number,
   organizationId: number,
-): Promise<BiasAuditStance[]> {
+): Promise<ProfileStanceRow[]> {
   return (await sequelize.query(
     `SELECT s.id, s.project_id, s.profile_id, s.version, s.pdf_sha256,
             s.pdf_file_id, s.score_at_generation, s.scope_at_generation,
@@ -639,7 +655,7 @@ export async function listProfileStancesQuery(
       },
       type: QueryTypes.SELECT,
     },
-  )) as BiasAuditStance[];
+  )) as ProfileStanceRow[];
 }
 
 /** The project a run belongs to, within the organization. Refuses a run outside it. */

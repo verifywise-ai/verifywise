@@ -20,6 +20,7 @@ import {
   getProfileAnswersQuery,
   listProfileStancesQuery,
   upsertAnswerQuery,
+  type ProfileStanceRow,
 } from "../../utils/biasAudit.utils";
 import {
   LL144_QUESTION_SET_VERSION,
@@ -31,7 +32,6 @@ import { answerMapFromRows, assertProject, isUniqueViolation } from "./serviceHe
 import { applicableQuestions, type AnswerWithNotes } from "./applicability";
 import { computeReadiness, type ReadinessResult } from "./readinessScore";
 import type { IntakeQuestion } from "../../structures/NYC-Local-Law-144/intake.types";
-import type { BiasAuditStance } from "../../domain.layer/models/biasAudit/biasAuditStance.model";
 
 export type AnswerInput = {
   questionKey: string;
@@ -292,8 +292,10 @@ export interface ProfileView {
    * Scope determinations generated from this project's attested profiles,
    * newest first. They have no run, so no run's stance list carries them;
    * each downloads through GET /stances/:id/download like any stance.
+   * `isCurrent` is true only for one that cites the currently attested
+   * profile; an earlier one records a determination since re-attested.
    */
-  scopeDeterminations: BiasAuditStance[];
+  scopeDeterminations: Array<ProfileStanceRow & { isCurrent: boolean }>;
 }
 
 export async function getProfileView(
@@ -303,12 +305,12 @@ export async function getProfileView(
     userId: scope.userId,
     role: scope.role,
   });
-  const { current, rows, answers } = await currentAnswers(scope);
-  const attested = await getAttestedProfileQuery(
-    scope.projectId,
-    scope.frameworkId,
-    scope.organizationId,
-  );
+  // The member check above stays first; these reads are independent of each other.
+  const [{ current, rows, answers }, attested, stances] = await Promise.all([
+    currentAnswers(scope),
+    getAttestedProfileQuery(scope.projectId, scope.frameworkId, scope.organizationId),
+    listProfileStancesQuery(scope.projectId, scope.frameworkId, scope.organizationId),
+  ]);
   return {
     project: { id: project.id, title: project.project_title },
     profile: current ? { id: current.id!, version: current.version, status: current.status } : null,
@@ -330,10 +332,9 @@ export async function getProfileView(
       answeredAt: r.answered_at ?? null,
     })),
     readiness: computeReadiness(answers),
-    scopeDeterminations: await listProfileStancesQuery(
-      scope.projectId,
-      scope.frameworkId,
-      scope.organizationId,
-    ),
+    scopeDeterminations: stances.map((s) => ({
+      ...s,
+      isCurrent: attested?.id != null && s.profile_id === attested.id,
+    })),
   };
 }

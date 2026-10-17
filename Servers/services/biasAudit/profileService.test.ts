@@ -32,7 +32,11 @@ const row = (k: string, v: string | null, extra: Record<string, unknown> = {}) =
   ...extra,
 });
 
-beforeEach(() => Object.values(utils).forEach((f) => f.mockReset()));
+beforeEach(() => {
+  Object.values(utils).forEach((f) => f.mockReset());
+  // The query returns an array, never undefined; tests that list some override it.
+  utils.listProfileStancesQuery.mockResolvedValue([]);
+});
 
 describe("saveAnswers", () => {
   it("creates version 1 when no profile exists", async () => {
@@ -414,7 +418,41 @@ describe("getProfileView", () => {
     utils.listProfileStancesQuery.mockResolvedValue([stance]);
     const out = await getProfileView(scope);
     expect(utils.listProfileStancesQuery).toHaveBeenCalledWith(7, 12, 42);
-    expect(out.scopeDeterminations).toEqual([stance]);
+    // No attested profile now, so none of them cites the current one.
+    expect(out.scopeDeterminations).toEqual([{ ...stance, isCurrent: false }]);
+  });
+
+  it("marks only the scope determinations of the currently attested profile as current", async () => {
+    utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
+    utils.getCurrentProfileQuery.mockResolvedValue(null);
+    utils.getAttestedProfileQuery.mockResolvedValue({ id: 3, version: 2, status: "attested" });
+    utils.listProfileStancesQuery.mockResolvedValue([
+      { id: 31, profile_id: 3, version: 2 },
+      { id: 30, profile_id: 2, version: 1 },
+    ]);
+    const out = await getProfileView(scope);
+    expect(out.scopeDeterminations.map((s) => [s.id, s.isCurrent])).toEqual([
+      [31, true],
+      [30, false],
+    ]);
+  });
+
+  it("reads the attested profile and the scope determinations concurrently", async () => {
+    const order: string[] = [];
+    utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
+    utils.getCurrentProfileQuery.mockResolvedValue(null);
+    utils.getAttestedProfileQuery.mockImplementation(async () => {
+      order.push("attested:start");
+      await new Promise((r) => setImmediate(r));
+      order.push("attested:end");
+      return null;
+    });
+    utils.listProfileStancesQuery.mockImplementation(async () => {
+      order.push("stances:start");
+      return [];
+    });
+    await getProfileView(scope);
+    expect(order.indexOf("stances:start")).toBeLessThan(order.indexOf("attested:end"));
   });
 
   it("reads no scope determinations for a viewer the member rule refuses", async () => {
