@@ -2,8 +2,9 @@ import { describe, expect, it, jest } from "@jest/globals";
 
 const emitOtlpLog = jest.fn();
 jest.mock("../../../observability/otel", () => ({ emitOtlpLog }));
+const getTenantIdForLogging = jest.fn(() => "42");
 jest.mock("../../tenant/tenantContext", () => ({
-  getTenantIdForLogging: () => "42",
+  getTenantIdForLogging,
   ensureTenantLogDirectory: () => "/nonexistent",
 }));
 // The tenant file log is not under test here; keep it off the disk.
@@ -50,5 +51,21 @@ describe("the central log line", () => {
       "log.file": "file.ts",
       "service.name": "verifywise-backend",
     });
+  });
+
+  it("logStructured resolves the tenant once and hands it to logCentralOnly", () => {
+    emitOtlpLog.mockClear();
+    getTenantIdForLogging.mockClear();
+    logStructured("processing", "starting", "fnName", "file.ts");
+    expect(getTenantIdForLogging).toHaveBeenCalledTimes(1);
+    expect(emitOtlpLog.mock.calls[0][2]).toMatchObject({ "tenant.hash": "42" });
+  });
+
+  it("logCentralOnly uses a tenant it is given instead of resolving one", () => {
+    emitOtlpLog.mockClear();
+    getTenantIdForLogging.mockClear();
+    logCentralOnly("error", "it failed", "fnName", "file.ts", "7");
+    expect(getTenantIdForLogging).not.toHaveBeenCalled();
+    expect(emitOtlpLog.mock.calls[0][2]).toMatchObject({ "tenant.hash": "7" });
   });
 });

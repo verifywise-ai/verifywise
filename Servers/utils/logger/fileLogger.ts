@@ -108,16 +108,18 @@ type LogState = "processing" | "successful" | "error";
  * every structured line carries; the deployment name is added by
  * emitOtlpLog. No-op when observability is disabled. Writes nothing to the
  * tenant file log, so a line sent only here is not readable by org users.
- * logStructured sends its own line through this.
+ * logStructured sends its own line through this, passing the tenant it has
+ * already resolved; other callers leave it out and it is resolved here.
  */
 export function logCentralOnly(
   state: LogState,
   text: string,
   functionName: string,
   fileName: string,
+  tenant: string = getTenantIdForLogging(),
 ): void {
   emitOtlpLog(state === "error" ? "error" : "info", text, {
-    "tenant.hash": getTenantIdForLogging(),
+    "tenant.hash": tenant,
     "log.state": state,
     "log.function": functionName,
     "log.file": fileName,
@@ -143,7 +145,7 @@ export function logStructured(
   tenantLogger.info(line);
 
   // Ship the same line to the central stack. File format unchanged.
-  logCentralOnly(state, line, functionName, fileName);
+  logCentralOnly(state, line, functionName, fileName, tenant);
 }
 
 /**
