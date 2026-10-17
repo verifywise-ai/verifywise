@@ -174,6 +174,9 @@ export function renderStanceHtml(
   const template = fs.readFileSync(TEMPLATE_PATH, "utf8");
   return ejs.render(template, {
     model,
+    // The footer says whether figures were computed from a file. That follows
+    // the run evidence, not the scope: an out-of-scope run still has a file.
+    hasEvidence: evidence !== null,
     sections: model.sections.map((s) => ({ ...s, parts: toParts(s) })),
     blankFieldLabel,
     tested: {

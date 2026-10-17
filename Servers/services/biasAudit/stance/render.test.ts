@@ -554,8 +554,27 @@ describe("a scope determination has no dataset", () => {
   it("does not claim figures were computed from a file", () => {
     const html = renderStanceHtml(oosModel, null);
     expect(html).not.toMatch(/figures computed/i);
+    expect(html).toContain("No file was supplied and no figures were computed.");
     expect(html).toContain("This document is not a Local Law 144 bias audit.");
     expect(html).toContain("The scope determination belongs to the party that answered.");
+  });
+});
+
+describe("the footer follows the run evidence, not the scope", () => {
+  const RUN_FOOTER =
+    "It records the answers given and the figures computed from the file supplied, as given.";
+  const NO_FILE_FOOTER = "No file was supplied and no figures were computed.";
+
+  it("an out-of-scope run stance, which has evidence, keeps the run wording", () => {
+    const html = renderStanceHtml(oosModel, evidence);
+    expect(html).toContain(RUN_FOOTER);
+    expect(html).not.toContain(NO_FILE_FOOTER);
+  });
+
+  it("a document rendered without evidence says no file was supplied, whatever its scope", () => {
+    const html = renderStanceHtml(model, null);
+    expect(html).toContain(NO_FILE_FOOTER);
+    expect(html).not.toContain(RUN_FOOTER);
   });
 });
 
