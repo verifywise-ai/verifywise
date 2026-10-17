@@ -518,6 +518,21 @@ function refuseUnlessAttested(status: string | undefined, profileId: number): vo
 }
 
 /**
+ * The cited profile, written once for the three statements that read it
+ * (checkProfileAttestedQuery, assertProfileAttestedQuery and
+ * createProfileStanceQuery): the profile row by id, of the caller's project,
+ * joined to that project within the organization. It ends in an open WHERE,
+ * so each statement appends `AND ap.organization_id = :organization_id`
+ * itself, where the module-rules test sees the organization filter, and then
+ * anything of its own (a status filter, a lock). `:profile_id`,
+ * `:project_id` and `:organization_id` are replacements the caller supplies.
+ */
+const CITED_PROFILE_SQL = `aedt_profiles ap
+       JOIN projects pr ON pr.id = ap.project_id
+                       AND pr.organization_id = :organization_id
+      WHERE ap.id = :profile_id AND ap.project_id = :project_id`;
+
+/**
  * The cheap check run before a scope determination's PDF is rendered, so a
  * profile that is missing, another project's or no longer attested launches
  * no browser. A plain read with no lock: it runs outside any transaction,
@@ -531,11 +546,8 @@ export async function checkProfileAttestedQuery(
 ): Promise<void> {
   const rows = (await sequelize.query(
     `SELECT ap.status
-       FROM aedt_profiles ap
-       JOIN projects pr ON pr.id = ap.project_id
-                       AND pr.organization_id = :organization_id
-      WHERE ap.id = :profile_id AND ap.organization_id = :organization_id
-        AND ap.project_id = :project_id`,
+       FROM ${CITED_PROFILE_SQL}
+        AND ap.organization_id = :organization_id`,
     {
       replacements: {
         profile_id: profileId,
@@ -568,11 +580,8 @@ export async function assertProfileAttestedQuery(
 ): Promise<void> {
   const rows = (await sequelize.query(
     `SELECT ap.status
-       FROM aedt_profiles ap
-       JOIN projects pr ON pr.id = ap.project_id
-                       AND pr.organization_id = :organization_id
-      WHERE ap.id = :profile_id AND ap.organization_id = :organization_id
-        AND ap.project_id = :project_id
+       FROM ${CITED_PROFILE_SQL}
+        AND ap.organization_id = :organization_id
         FOR SHARE OF ap`,
     {
       replacements: {
@@ -613,11 +622,8 @@ export async function createProfileStanceQuery(
      SELECT ap.organization_id, ap.project_id, NULL, ap.id, :version, :pdf_sha256,
             :pdf_file_id, NULL, :scope_at_generation, ap.version,
             ap.question_set_version, :generated_by
-       FROM aedt_profiles ap
-       JOIN projects pr ON pr.id = ap.project_id
-                       AND pr.organization_id = :organization_id
-      WHERE ap.id = :profile_id AND ap.organization_id = :organization_id
-        AND ap.project_id = :project_id AND ap.status = 'attested'
+       FROM ${CITED_PROFILE_SQL}
+        AND ap.organization_id = :organization_id AND ap.status = 'attested'
      RETURNING *`,
     {
       replacements: {
