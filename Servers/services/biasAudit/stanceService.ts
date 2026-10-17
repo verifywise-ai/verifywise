@@ -34,7 +34,7 @@ import { assertProjectAccess, runNotFound } from "./projectAccess";
 import { answerMapFromRows, assertProject } from "./serviceHelpers";
 import { runAnswerGates } from "./answerGates";
 import { computeReadiness } from "./readinessScore";
-import { composeStance } from "./stance/compose";
+import { composeStance, type StanceAttestation } from "./stance/compose";
 import { evidenceFromRun, persistStance } from "./stance/render";
 import { LL144_CONFIG, mayExportStoredRun } from "./runService";
 import type { DerivedBasis } from "./deriveBasis";
@@ -89,8 +89,9 @@ function assertMayProduceStance(answers: AnswerWithNotes) {
  * Who answered each question and who attested the profile, by name. An answer
  * author no longer in the organization is left unattributed rather than given
  * a placeholder name; compose then says the author is not recorded. An
- * attestation keeps its date with a null user, for run stances and scope
- * determinations alike.
+ * attestation keeps its date with a null user and a reason, for run stances
+ * and scope determinations alike: "departed" when the attester is not found
+ * in the organization, "unnamed" when found with a blank name.
  */
 async function attributionFor(
   rows: AedtProfileAnswer[],
@@ -98,7 +99,7 @@ async function attributionFor(
   organizationId: number,
 ): Promise<{
   answerAuthors: Record<string, { user: string; date: string }>;
-  attestation: { user: string | null; date: string } | null;
+  attestation: StanceAttestation | null;
 }> {
   const userIds = [
     ...new Set(
@@ -121,12 +122,21 @@ async function attributionFor(
     if (user && date) answerAuthors[r.question_key] = { user, date };
   }
   // The attestation date is the record: a profile with one was attested, even
-  // when the attester has since left the organization. Their name is then
-  // null and the template says the attester is no longer in the organization.
+  // when the attester has since left the organization (not found: undefined)
+  // or has no recorded name (found: ""). The template words each truthfully.
   const attestedOn = isoDate(profile.attested_at);
   const attester =
     profile.attested_by_user_id != null ? names.get(profile.attested_by_user_id) : undefined;
-  const attestation = attestedOn ? { user: attester ?? null, date: attestedOn } : null;
+  let attestation: StanceAttestation | null = null;
+  if (attestedOn) {
+    attestation = attester
+      ? { user: attester, date: attestedOn }
+      : {
+          user: null,
+          date: attestedOn,
+          reason: attester === undefined ? "departed" : "unnamed",
+        };
+  }
   return { answerAuthors, attestation };
 }
 

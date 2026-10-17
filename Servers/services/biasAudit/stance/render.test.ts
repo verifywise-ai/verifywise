@@ -416,9 +416,23 @@ describe("customer-authored text", () => {
   });
 
   it("keeps the attestation date and says the attester is no longer in the organization", () => {
-    const html = renderStanceHtml({ ...model, attestation: { user: null, date: "2026-10-14" } });
+    const html = renderStanceHtml({
+      ...model,
+      attestation: { user: null, date: "2026-10-14", reason: "departed" },
+    });
     expect(html).toContain("Attested on 2026-10-14 by a user no longer in this organization.");
     expect(html).not.toContain("No attestation is recorded.");
+    expect(findForbiddenWords(html)).toEqual([]);
+  });
+
+  it("labels an attester with no recorded name truthfully, as our own text", () => {
+    const html = renderStanceHtml({
+      ...model,
+      attestation: { user: null, date: "2026-10-14", reason: "unnamed" },
+    });
+    expect(html).toContain("Attested on 2026-10-14 by a user with no recorded name.");
+    expect(html).not.toContain("no longer in this organization");
+    expect(html).not.toMatch(/<span data-customer-text>[^<]*no recorded name/);
     expect(findForbiddenWords(html)).toEqual([]);
   });
 

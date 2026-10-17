@@ -22,7 +22,7 @@
 <body>
 <h1><%= model.heading %></h1>
 <div class="meta">
-  <% if (model.attestation && model.attestation.user) { %>Attested by <span data-customer-text><%= model.attestation.user %></span> on <%= model.attestation.date %>.<% } else if (model.attestation) { %>Attested on <%= model.attestation.date %> by a user no longer in this organization.<% } else { %>No attestation is recorded.<% } %>
+  <% if (model.attestation && model.attestation.user) { %>Attested by <span data-customer-text><%= model.attestation.user %></span> on <%= model.attestation.date %>.<% } else if (model.attestation && model.attestation.reason === 'unnamed') { %>Attested on <%= model.attestation.date %> by a user with no recorded name.<% } else if (model.attestation) { %>Attested on <%= model.attestation.date %> by a user no longer in this organization.<% } else { %>No attestation is recorded.<% } %>
 </div>
 
 <% sections.forEach(function (s) { %>

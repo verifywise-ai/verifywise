@@ -134,7 +134,14 @@ describe("generateStance", () => {
     utils.getUserNamesQuery.mockResolvedValue([]);
     await generateStance(args);
     const { model } = persistStance.mock.calls[0][0];
-    expect(model.attestation).toEqual({ user: null, date: "2026-10-02" });
+    expect(model.attestation).toEqual({ user: null, date: "2026-10-02", reason: "departed" });
+  });
+
+  it("tells an attester with a blank name apart from one who left", async () => {
+    utils.getUserNamesQuery.mockResolvedValue([{ id: 9, name: " ", surname: "" }]);
+    await generateStance(args);
+    const { model } = persistStance.mock.calls[0][0];
+    expect(model.attestation).toEqual({ user: null, date: "2026-10-02", reason: "unnamed" });
   });
 
   it("records no attestation when the profile carries no attestation date", async () => {
@@ -268,7 +275,14 @@ describe("generateProfileStance", () => {
     utils.getUserNamesQuery.mockResolvedValue([]);
     await generateProfileStance(input);
     const { model } = persistStance.mock.calls[0][0];
-    expect(model.attestation).toEqual({ user: null, date: "2026-10-02" });
+    expect(model.attestation).toEqual({ user: null, date: "2026-10-02", reason: "departed" });
+  });
+
+  it("labels a scope determination's attester whose name is blank", async () => {
+    utils.getUserNamesQuery.mockResolvedValue([{ id: 9, name: "", surname: "" }]);
+    await generateProfileStance(input);
+    const { model } = persistStance.mock.calls[0][0];
+    expect(model.attestation).toEqual({ user: null, date: "2026-10-02", reason: "unnamed" });
   });
 
   it("composes the out-of-scope document: no result, no figures, the attestation", async () => {

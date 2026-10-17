@@ -44,6 +44,14 @@ export interface CustomerSpan {
   tail: string;
 }
 
+/**
+ * Who attested the profile and when. With no name to print, `reason` says
+ * why: the attester is no longer in the organization ("departed"), or is but
+ * has no recorded name ("unnamed"). The attestation stands either way.
+ */
+export type StanceAttestation =
+  { user: string; date: string } | { user: null; date: string; reason: "departed" | "unnamed" };
+
 export interface StanceModel {
   heading: string;
   scope: "in_scope" | "out_of_scope" | "undetermined";
@@ -52,11 +60,7 @@ export interface StanceModel {
   openItems: string[];
   expiry: { date: string | null; trigger: string };
   derivedBasis: DerivedBasis | null;
-  /**
-   * Who attested the profile and when. `user` is null when the attester is no
-   * longer in the organization: the attestation stands, unattributed.
-   */
-  attestation: { user: string | null; date: string } | null;
+  attestation: StanceAttestation | null;
 }
 
 export interface ComposeStanceArgs {
@@ -71,7 +75,7 @@ export interface ComposeStanceArgs {
   order: OrderFinding[];
   expiry: { date: string | null; trigger: string };
   derivedBasis: DerivedBasis | null;
-  attestation: { user: string | null; date: string } | null;
+  attestation: StanceAttestation | null;
   jobDescriptionKey: string | null;
 }
 
