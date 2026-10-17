@@ -45,12 +45,15 @@ export interface CustomerSpan {
 }
 
 /**
- * Who attested the profile and when. With no name to print, `reason` says
- * why: the attester is no longer in the organization ("departed"), or is but
- * has no recorded name ("unnamed"). The attestation stands either way.
+ * Who did something (answered a question, attested the profile) and when.
+ * With no name to print, `reason` says why: the user is no longer in the
+ * organization ("departed"), or is but has no recorded name ("unnamed").
  */
-export type StanceAttestation =
+export type StanceAttribution =
   { user: string; date: string } | { user: null; date: string; reason: "departed" | "unnamed" };
+
+/** Who attested the profile and when. The attestation stands either way. */
+export type StanceAttestation = StanceAttribution;
 
 export interface StanceModel {
   heading: string;
@@ -68,8 +71,12 @@ export interface ComposeStanceArgs {
   readiness: ReadinessResult;
   gates: AnswerGateResult;
   answers: AnswerWithNotes;
-  /** The user and date of each answer, by question key. Carried-forward answers keep their original author. */
-  answerAuthors: Record<string, { user: string; date: string }>;
+  /**
+   * The user and date of each answer, by question key. Carried-forward
+   * answers keep their original author. A key with no entry has no recorded
+   * date.
+   */
+  answerAuthors: Record<string, StanceAttribution>;
   result: BiasAuditResult | null;
   gateFindings: GateFinding[];
   order: OrderFinding[];
@@ -147,6 +154,20 @@ function questionPrompt(key: string): string {
 }
 
 /** One veto answer in the customer's words, with who answered it and when. */
+/**
+ * Our own wording of who answered: by name, or, for a user found in the
+ * organization with no recorded name, said so as the attestation line says
+ * it. An author no longer in the organization, or an answer with no date,
+ * is not recorded.
+ */
+function authorLine(author: StanceAttribution | undefined): string {
+  if (author?.user) return `Answered by ${author.user} on ${author.date}.`;
+  if (author && author.user === null && author.reason === "unnamed") {
+    return `Answered on ${author.date} by a user with no recorded name.`;
+  }
+  return "The author and date of this answer are not recorded.";
+}
+
 function vetoBlock(args: ComposeStanceArgs, key: string): string {
   const answer = args.answers[key];
   const lines = [`Question: ${questionPrompt(key)}`];
@@ -158,12 +179,7 @@ function vetoBlock(args: ComposeStanceArgs, key: string): string {
     answer.dontKnow ? "Answer: I don't know." : `Answer: ${optionLabel(key, answer.value)}.`,
   );
   if (answer.notes) lines.push(`In your words: "${answer.notes}"`);
-  const author = args.answerAuthors[key];
-  lines.push(
-    author
-      ? `Answered by ${author.user} on ${author.date}.`
-      : "The author and date of this answer are not recorded.",
-  );
+  lines.push(authorLine(args.answerAuthors[key]));
   return lines.join("\n");
 }
 

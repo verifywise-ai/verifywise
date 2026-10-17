@@ -196,6 +196,15 @@ describe("generateStance", () => {
     expect(text).not.toContain("Ada Admin");
     expect(text).toContain("The author and date of this answer are not recorded.");
   });
+
+  it("says an answer author found with a blank name is a user with no recorded name", async () => {
+    utils.getUserNamesQuery.mockResolvedValue([{ id: 9, name: " ", surname: "" }]);
+    await generateStance(args);
+    const { model } = persistStance.mock.calls[0][0];
+    const text = model.sections.map((s: any) => s.body).join("\n");
+    expect(text).toContain("Answered on 2026-10-01 by a user with no recorded name.");
+    expect(text).not.toContain("The author and date of this answer are not recorded.");
+  });
 });
 
 describe("generateStance project-member access", () => {

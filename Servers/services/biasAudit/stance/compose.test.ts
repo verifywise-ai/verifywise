@@ -1,6 +1,6 @@
 import { composeStance, REQUIRED_SECTIONS } from "./compose";
 import type { ComposeStanceArgs } from "./compose";
-import { FORBIDDEN_WORDS } from "./vocabulary";
+import { FORBIDDEN_WORDS, findForbidden } from "./vocabulary";
 import type { BiasAuditResult } from "../index";
 
 const result = {
@@ -191,6 +191,35 @@ describe("quoting rather than characterising", () => {
   it("says plainly when the author of a veto answer is not recorded", () => {
     const s = composeStance({ ...base, answerAuthors: {} });
     expect(section(s, "party").body).toMatch(/author .*not recorded/i);
+  });
+
+  it("says an author found with a blank name is a user with no recorded name, as our own text", () => {
+    const s = composeStance({
+      ...base,
+      answerAuthors: {
+        ...base.answerAuthors,
+        "role.party": { user: null, date: "2026-10-10", reason: "unnamed" },
+      },
+    });
+    const party = section(s, "party");
+    expect(party.body).toContain("Answered on 2026-10-10 by a user with no recorded name.");
+    expect(party.body).not.toMatch(/author .*not recorded/i);
+    // Our wording, so it is not marked as customer text, and it passes the vocabulary lint.
+    expect(JSON.stringify(party.customerText ?? [])).not.toContain("no recorded name");
+    expect(findForbidden(party.body)).toEqual([]);
+  });
+
+  it("keeps the not-recorded wording for an author no longer in the organization", () => {
+    const s = composeStance({
+      ...base,
+      answerAuthors: {
+        ...base.answerAuthors,
+        "role.party": { user: null, date: "2026-10-10", reason: "departed" },
+      },
+    });
+    const body = section(s, "party").body;
+    expect(body).toContain("The author and date of this answer are not recorded.");
+    expect(body).not.toContain("no recorded name");
   });
 });
 

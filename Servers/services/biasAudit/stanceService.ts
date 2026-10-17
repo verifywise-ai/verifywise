@@ -34,7 +34,7 @@ import { assertProjectAccess, runNotFound } from "./projectAccess";
 import { answerMapFromRows, assertProject } from "./serviceHelpers";
 import { runAnswerGates } from "./answerGates";
 import { computeReadiness } from "./readinessScore";
-import { composeStance, type StanceAttestation } from "./stance/compose";
+import { composeStance, type StanceAttestation, type StanceAttribution } from "./stance/compose";
 import { evidenceFromRun, persistStance } from "./stance/render";
 import { LL144_CONFIG, mayExportStoredRun } from "./runService";
 import type { DerivedBasis } from "./deriveBasis";
@@ -86,19 +86,37 @@ function assertMayProduceStance(answers: AnswerWithNotes) {
 }
 
 /**
- * Who answered each question and who attested the profile, by name. An answer
- * author no longer in the organization is left unattributed rather than given
- * a placeholder name; compose then says the author is not recorded. An
- * attestation keeps its date with a null user and a reason, for run stances
- * and scope determinations alike: "departed" when the attester is not found
- * in the organization, "unnamed" when found with a blank name.
+ * Who did something and when, as a stance prints it. No date: nothing to
+ * attribute (null). Otherwise the name, or with a null user a reason:
+ * "departed" when the user is not found in the organization (or none was
+ * recorded), "unnamed" when found with a blank name.
+ */
+function attribute(
+  userId: number | null | undefined,
+  at: Date | string | null | undefined,
+  names: Map<number, string>,
+): StanceAttribution | null {
+  const date = isoDate(at);
+  if (!date) return null;
+  const user = userId != null ? names.get(userId) : undefined;
+  if (user) return { user, date };
+  return { user: null, date, reason: user === undefined ? "departed" : "unnamed" };
+}
+
+/**
+ * Who answered each question and who attested the profile, by name, for run
+ * stances and scope determinations alike. Both use attribute: an answer or
+ * attestation by a user no longer in the organization, or found with a blank
+ * name, keeps its date with a null user and the reason, and compose and the
+ * template word each truthfully. The attestation date is the record: a
+ * profile with one was attested, even when the attester has since left.
  */
 async function attributionFor(
   rows: AedtProfileAnswer[],
   profile: Pick<AedtProfile, "attested_by_user_id" | "attested_at">,
   organizationId: number,
 ): Promise<{
-  answerAuthors: Record<string, { user: string; date: string }>;
+  answerAuthors: Record<string, StanceAttribution>;
   attestation: StanceAttestation | null;
 }> {
   const userIds = [
@@ -115,28 +133,12 @@ async function attributionFor(
     ]),
   );
 
-  const answerAuthors: Record<string, { user: string; date: string }> = {};
+  const answerAuthors: Record<string, StanceAttribution> = {};
   for (const r of rows) {
-    const user = r.answered_by_user_id != null ? names.get(r.answered_by_user_id) : undefined;
-    const date = isoDate(r.answered_at);
-    if (user && date) answerAuthors[r.question_key] = { user, date };
+    const author = attribute(r.answered_by_user_id, r.answered_at, names);
+    if (author) answerAuthors[r.question_key] = author;
   }
-  // The attestation date is the record: a profile with one was attested, even
-  // when the attester has since left the organization (not found: undefined)
-  // or has no recorded name (found: ""). The template words each truthfully.
-  const attestedOn = isoDate(profile.attested_at);
-  const attester =
-    profile.attested_by_user_id != null ? names.get(profile.attested_by_user_id) : undefined;
-  let attestation: StanceAttestation | null = null;
-  if (attestedOn) {
-    attestation = attester
-      ? { user: attester, date: attestedOn }
-      : {
-          user: null,
-          date: attestedOn,
-          reason: attester === undefined ? "departed" : "unnamed",
-        };
-  }
+  const attestation = attribute(profile.attested_by_user_id, profile.attested_at, names);
   return { answerAuthors, attestation };
 }
 
