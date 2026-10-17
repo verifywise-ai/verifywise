@@ -34,7 +34,7 @@ import { assertProjectAccess, runNotFound } from "./projectAccess";
 import { answerMapFromRows, assertProject } from "./serviceHelpers";
 import { runAnswerGates } from "./answerGates";
 import { computeReadiness } from "./readinessScore";
-import { composeStance, type StanceAttestation, type StanceAttribution } from "./stance/compose";
+import { composeStance, type StanceAttribution } from "./stance/compose";
 import { evidenceFromRun, persistStance } from "./stance/render";
 import { LL144_CONFIG, mayExportStoredRun } from "./runService";
 import type { DerivedBasis } from "./deriveBasis";
@@ -117,7 +117,7 @@ async function attributionFor(
   organizationId: number,
 ): Promise<{
   answerAuthors: Record<string, StanceAttribution>;
-  attestation: StanceAttestation | null;
+  attestation: StanceAttribution | null;
 }> {
   const userIds = [
     ...new Set(

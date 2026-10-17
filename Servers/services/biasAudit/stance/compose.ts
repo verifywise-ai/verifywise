@@ -52,9 +52,6 @@ export interface CustomerSpan {
 export type StanceAttribution =
   { user: string; date: string } | { user: null; date: string; reason: "departed" | "unnamed" };
 
-/** Who attested the profile and when. The attestation stands either way. */
-export type StanceAttestation = StanceAttribution;
-
 export interface StanceModel {
   heading: string;
   scope: "in_scope" | "out_of_scope" | "undetermined";
@@ -63,7 +60,8 @@ export interface StanceModel {
   openItems: string[];
   expiry: { date: string | null; trigger: string };
   derivedBasis: DerivedBasis | null;
-  attestation: StanceAttestation | null;
+  /** Who attested the profile and when; the attestation stands either way. */
+  attestation: StanceAttribution | null;
 }
 
 export interface ComposeStanceArgs {
@@ -82,7 +80,7 @@ export interface ComposeStanceArgs {
   order: OrderFinding[];
   expiry: { date: string | null; trigger: string };
   derivedBasis: DerivedBasis | null;
-  attestation: StanceAttestation | null;
+  attestation: StanceAttribution | null;
   jobDescriptionKey: string | null;
 }
 
@@ -153,7 +151,6 @@ function questionPrompt(key: string): string {
   return LL144_QUESTIONS.find((q) => q.key === key)?.prompt ?? key;
 }
 
-/** One veto answer in the customer's words, with who answered it and when. */
 /**
  * Our own wording of who answered: by name, or, for a user found in the
  * organization with no recorded name, said so as the attestation line says
@@ -168,6 +165,7 @@ function authorLine(author: StanceAttribution | undefined): string {
   return "The author and date of this answer are not recorded.";
 }
 
+/** One veto answer in the customer's words, with who answered it and when. */
 function vetoBlock(args: ComposeStanceArgs, key: string): string {
   const answer = args.answers[key];
   const lines = [`Question: ${questionPrompt(key)}`];
