@@ -70,6 +70,12 @@ describe("parseDataset", () => {
     expect(out.wrongWidthRowCount).toBe(0);
   });
 
+  it("still counts a missing named cell or a value under a blank trailing header", () => {
+    const csv = "gender,race,outcome,\nMale,White\nFemale,Asian,0,extra\nMale,White,1\n";
+    const out = parseDataset(csv, { sex: "gender", race_ethnicity: "race", selected: "outcome" });
+    expect(out.wrongWidthRowCount).toBe(2);
+  });
+
   it("does not count rows as short when the header ends in a blank name", () => {
     const csv = "gender,race,outcome,\nMale,White,1\nFemale,Asian,0\n";
     const out = parseDataset(csv, { sex: "gender", race_ethnicity: "race", selected: "outcome" });

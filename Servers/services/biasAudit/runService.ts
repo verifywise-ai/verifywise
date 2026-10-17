@@ -35,7 +35,12 @@ import { answerMapFromRows, assertProject } from "./serviceHelpers";
 import { runAnswerGates } from "./answerGates";
 import { deriveBasis } from "./deriveBasis";
 import { computeReadiness, type ReadinessResult } from "./readinessScore";
-import { DatasetParseError, parseDataset, type ParsedDataset } from "./datasetParser";
+import {
+  DatasetParseError,
+  namedColumnCount,
+  parseDataset,
+  type ParsedDataset,
+} from "./datasetParser";
 import { runAudit, RECORD_KEYS } from "./index";
 import type { AuditOutcome, BiasAuditConfig } from "./index";
 import type { GateFinding } from "./dataGates";
@@ -207,7 +212,7 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
         `${parsed.wrongWidthRowCount} row(s) have more or fewer values than the header has ` +
           `columns, so their values would be read under the wrong columns. Check the file for ` +
           `missing or extra commas in those rows and upload again.`,
-        { count: parsed.wrongWidthRowCount, columns: parsed.headers.length },
+        { count: parsed.wrongWidthRowCount, columns: namedColumnCount(parsed.headers) },
       ),
     );
   }

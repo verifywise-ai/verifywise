@@ -1001,6 +1001,10 @@ export async function linkFriaEvidence(req: Request, res: Response): Promise<Res
     if (!file_id || !entity_type) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Missing file_id or entity_type")));
     }
+    const fileId = Number(file_id);
+    if (!Number.isInteger(fileId) || fileId <= 0) {
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
+    }
 
     const fria = await getFriaByIdQuery(friaId, organizationId);
     if (!fria) {
@@ -1009,7 +1013,7 @@ export async function linkFriaEvidence(req: Request, res: Response): Promise<Res
 
     await createFileEntityLink(
       organizationId,
-      file_id,
+      fileId,
       "fria",
       entity_type,
       friaId,
@@ -1019,7 +1023,7 @@ export async function linkFriaEvidence(req: Request, res: Response): Promise<Res
 
     await logSuccess({
       eventType: "Create",
-      description: `Linked evidence file ${file_id} to FRIA ${friaId} section ${entity_type}`,
+      description: `Linked evidence file ${fileId} to FRIA ${friaId} section ${entity_type}`,
       functionName: "linkFriaEvidence",
       fileName: FILE_NAME,
       userId,
@@ -1028,8 +1032,9 @@ export async function linkFriaEvidence(req: Request, res: Response): Promise<Res
 
     return res.status(201).json(STATUS_CODE[201]({ linked: true }));
   } catch (error) {
-    // Logged before the 404 too: a missing, cross-org or stance file id is
-    // worth a failure record when someone probes for one.
+    if (error instanceof NotFoundException) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
+    }
     await logFailure({
       eventType: "Create",
       description: "Failed to link FRIA evidence",
@@ -1039,9 +1044,6 @@ export async function linkFriaEvidence(req: Request, res: Response): Promise<Res
       userId,
       organizationId,
     });
-    if (error instanceof NotFoundException) {
-      return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
-    }
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

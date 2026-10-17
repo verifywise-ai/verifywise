@@ -94,6 +94,13 @@ function mappingError(key: string, column: string): string {
   );
 }
 
+/** Columns up to the last named header: blank names after it are trailing commas. */
+export function namedColumnCount(headers: string[]): number {
+  let count = headers.length;
+  while (count > 0 && headers[count - 1] === "") count--;
+  return count;
+}
+
 export function parseDataset(csv: string, mapping: Record<string, string>): ParsedDataset {
   const table = readCsv(csv);
   if (table.length === 0) throw new DatasetParseError("The file is empty: it has no rows.");
@@ -115,12 +122,13 @@ export function parseDataset(csv: string, mapping: Record<string, string>): Pars
   let unreadableScoreCount = 0;
   let blankOutcomeCount = 0;
   let wrongWidthRowCount = 0;
+  const namedColumns = namedColumnCount(headers);
   const records: AuditRecord[] = dataRows.map((cells) => {
-    // Blank cells past the last column, or missing cells under blank header
-    // names (a trailing comma from a spreadsheet export, in a data row or in
-    // the header), do not move any value, so they do not count.
+    // Trailing commas, in the header or in a row, add blank cells past the
+    // last named column and move no value. A row is wrong width when it is
+    // missing a named column's cell or has a value past the last named one.
     const missingNamed = headers.slice(cells.length).some((h) => h !== "");
-    const filledExtra = cells.slice(headers.length).some((c) => c.trim() !== "");
+    const filledExtra = cells.slice(namedColumns).some((c) => c.trim() !== "");
     if (missingNamed || filledExtra) wrongWidthRowCount++;
     const record: AuditRecord = {};
     for (const [key, at] of index) {
