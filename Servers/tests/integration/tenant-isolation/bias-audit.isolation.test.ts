@@ -580,6 +580,9 @@ describe("bias audit query layer against the database", () => {
       return (r as any[])[0].pid as number;
     };
     let attestCommitted = false;
+    // Set when the attestation settles either way; its error, if it rejected.
+    let attestSettled = false;
+    let attestError: unknown;
     let attestPid: number | undefined;
     let attest: Promise<void> | undefined;
     const written = await sequelize.transaction(async (t) => {
@@ -590,15 +593,24 @@ describe("bias audit query layer against the database", () => {
           attestPid = await backendPid(t2);
           await attestProfileQuery(b, owner.userId, owner.orgId, t2);
         })
-        .then(() => {
-          attestCommitted = true;
+        .then(
+          () => {
+            attestCommitted = true;
+          },
+          (err: unknown) => {
+            attestError = err;
+          },
+        )
+        .finally(() => {
+          attestSettled = true;
         });
       // Poll, on a third connection, until the attestation's backend is
-      // waiting on a lock held by this transaction (or it got through, which
-      // means the lock is missing). Bounded, so a regression fails, not hangs.
+      // waiting on a lock held by this transaction (or it settled: through,
+      // which means the lock is missing, or rejected). Bounded, so a
+      // regression fails, not hangs.
       let blocked = false;
       const deadline = Date.now() + 10_000;
-      while (!attestCommitted && Date.now() < deadline) {
+      while (!attestSettled && Date.now() < deadline) {
         if (attestPid !== undefined) {
           const [w] = await sequelize.query(
             `SELECT a.wait_event_type = 'Lock' AS waiting,
@@ -625,6 +637,8 @@ describe("bias audit query layer against the database", () => {
     });
     await attest;
 
+    // A rejected attestation fails here, with its error, not as a missing lock.
+    expect(attestError).toBeUndefined();
     expect(written.blocked).toBe(true);
     expect(written.row).toMatchObject({ profile_id: a, version: 1 });
     expect(attestCommitted).toBe(true);
