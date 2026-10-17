@@ -23,6 +23,7 @@ jest.mock("../../controllers/biasAudit.ctrl", () => ({
   getRun: jest.fn(),
   confirmDerivedBasis: jest.fn(),
   generateStance: jest.fn(),
+  generateProfileStance: jest.fn(),
   downloadStance: jest.fn(),
   // The real upload error mapper and limit, so the upload layer is exercised.
   handleDatasetUploadError: jest.requireActual<any>("../../controllers/biasAudit.ctrl")
@@ -52,6 +53,13 @@ const ROUTES: Array<[string, string, string, unknown]> = [
   ["get", "/profiles/:projectId/:frameworkId", "biasAudit.read", ctrl.getProfile],
   ["put", "/profiles/:projectId/:frameworkId", "biasAudit.edit", ctrl.saveProfileAnswers],
   ["post", "/profiles/:projectId/:frameworkId/attest", "biasAudit.attest", ctrl.attestProfile],
+  // A scope determination is a stance: same permission as generating one from a run.
+  [
+    "post",
+    "/profiles/:projectId/:frameworkId/stance",
+    "biasAudit.edit",
+    ctrl.generateProfileStance,
+  ],
   ["post", "/runs", "biasAudit.edit", ctrl.createRun],
   ["get", "/runs", "biasAudit.read", ctrl.listRuns],
   ["get", "/runs/trend", "biasAudit.read", ctrl.getRunTrend],

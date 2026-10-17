@@ -1,8 +1,9 @@
 /**
  * Bias audit (NYC Local Law 144) routes.
  *
- * Read: every built-in role. Draft answers, record runs and generate stances:
- * Admin and Editor. Attest a profile and confirm the derived data basis:
+ * Read: every built-in role. Draft answers, record runs and generate stances
+ * (from a run, or a scope determination from the attested profile): Admin
+ * and Editor. Attest a profile and confirm the derived data basis:
  * Admin only, since both record the customer's own legal position. The
  * platform's Auditor role is unrelated to the § 5-300 independent auditor and
  * confers nothing about independence.
@@ -18,6 +19,7 @@ import {
   createRun,
   DATASET_MAX_BYTES,
   downloadStance,
+  generateProfileStance,
   generateStance,
   getProfile,
   getQuestions,
@@ -70,6 +72,13 @@ router.post(
   "/profiles/:projectId/:frameworkId/attest",
   authorize("biasAudit.attest"),
   attestProfile,
+);
+// A scope determination (out of scope, so no run) is a stance: same permission
+// as generating one from a run.
+router.post(
+  "/profiles/:projectId/:frameworkId/stance",
+  authorize("biasAudit.edit"),
+  generateProfileStance,
 );
 
 router.post(

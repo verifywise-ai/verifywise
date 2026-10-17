@@ -14,6 +14,7 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
 import { controllerWrapper } from "../utils/controllerWrapper.utils";
 import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper";
 import {
+  CustomException,
   isCustomException,
   NotFoundException,
   ValidationException,
@@ -33,6 +34,7 @@ import {
   listRuns as listRunsService,
 } from "../services/biasAudit/runService";
 import {
+  generateProfileStance as generateProfileStanceService,
   generateStance as generateStanceService,
   getStanceDownload,
 } from "../services/biasAudit/stanceService";
@@ -279,20 +281,77 @@ export const confirmDerivedBasis = controllerWrapper(
 
 // --------------------------------------------------------------- stances
 
+/**
+ * Stance generation drives a headless browser, whose failures carry paths and
+ * internals. Expected refusals pass through with their own status; anything
+ * else keeps its detail in the failure log and reaches the client as a generic
+ * 500, never as the raw error text.
+ */
+async function withGenericServerError<T>(
+  req: Request,
+  functionName: string,
+  work: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await work();
+  } catch (error) {
+    if (isCustomException(error)) throw error;
+    await logFailure({
+      functionName,
+      fileName: FILE_NAME,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+      eventType: "Create",
+      description: `${functionName} failed unexpectedly`,
+      error: error as Error,
+    });
+    throw new CustomException(req.t?.("Internal server error") ?? "Internal server error", {
+      code: "INTERNAL_ERROR",
+      statusCode: 500,
+    });
+  }
+}
+
 export const generateStance = controllerWrapper(
   async (req) => ({
     status: 201,
-    data: await generateStanceService({
-      runId: positiveInt(req.params.id, "id"),
-      organizationId: req.organizationId!,
-      ...viewerOf(req),
-    }),
+    data: await withGenericServerError(req, "generateStance", () =>
+      generateStanceService({
+        runId: positiveInt(req.params.id, "id"),
+        organizationId: req.organizationId!,
+        ...viewerOf(req),
+      }),
+    ),
   }),
   {
     functionName: "generateStance",
     fileName: FILE_NAME,
     eventType: "Create",
     successDescription: (r) => `Generated bias audit stance ${r?.stanceId} (version ${r?.version})`,
+  },
+);
+
+/**
+ * The "Scope determination" for a project whose attested profile places the
+ * tool out of scope. It has no run, so it is addressed by project and
+ * framework; the response is the run-stance route's.
+ */
+export const generateProfileStance = controllerWrapper(
+  async (req) => {
+    const scope = memberScope(req.params.projectId, req.params.frameworkId, req);
+    return {
+      status: 201,
+      data: await withGenericServerError(req, "generateProfileStance", () =>
+        generateProfileStanceService(scope),
+      ),
+    };
+  },
+  {
+    functionName: "generateProfileStance",
+    fileName: FILE_NAME,
+    eventType: "Create",
+    successDescription: (r) =>
+      `Generated bias audit scope determination ${r?.stanceId} (version ${r?.version})`,
   },
 );
 

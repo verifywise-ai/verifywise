@@ -20,6 +20,7 @@ jest.mock("../../services/biasAudit/runService", () => ({
 }));
 jest.mock("../../services/biasAudit/stanceService", () => ({
   generateStance: jest.fn(),
+  generateProfileStance: jest.fn(),
   getStanceDownload: jest.fn(),
 }));
 
@@ -397,9 +398,88 @@ describe("generateStance", () => {
     expect((await call(ctrl.generateStance, mockReq({ params: { id: "11" } }))).status).toBe(409);
   });
 
-  it("answers an unexpected failure with 500", async () => {
+  it("answers an unexpected failure with a generic 500, keeping the raw text out", async () => {
     svc(stanceService.generateStance).mockRejectedValue(new Error("browser died"));
-    expect((await call(ctrl.generateStance, mockReq({ params: { id: "11" } }))).status).toBe(500);
+    const { status, body } = await call(ctrl.generateStance, mockReq({ params: { id: "11" } }));
+    expect(status).toBe(500);
+    expect(JSON.stringify(body)).not.toContain("browser died");
+  });
+});
+
+describe("generateProfileStance", () => {
+  const req = (params: Record<string, unknown> = { projectId: "7", frameworkId: LL144 }) =>
+    mockReq({ params });
+
+  it("creates a scope determination as the caller, answering like the run-stance route", async () => {
+    svc(stanceService.generateProfileStance).mockResolvedValue({
+      stanceId: 30,
+      version: 1,
+      sha256: "c",
+    });
+    const { status, body } = await call(ctrl.generateProfileStance, req());
+    expect(status).toBe(201);
+    expect(body.data).toEqual({ stanceId: 30, version: 1, sha256: "c" });
+    expect(stanceService.generateProfileStance).toHaveBeenCalledWith({
+      projectId: 7,
+      frameworkId: 12,
+      organizationId: 42,
+      userId: 9,
+      role: "Admin",
+    });
+  });
+
+  it.each([["abc"], ["0"], ["-1"], ["1.5"], ["9007199254740993"]])(
+    "400s a projectId of %s without calling the service",
+    async (projectId) => {
+      const { status } = await call(
+        ctrl.generateProfileStance,
+        req({ projectId, frameworkId: LL144 }),
+      );
+      expect(status).toBe(400);
+      expect(stanceService.generateProfileStance).not.toHaveBeenCalled();
+    },
+  );
+
+  it("400s a frameworkId that is not a positive whole number and 404s another framework", async () => {
+    expect(
+      (await call(ctrl.generateProfileStance, req({ projectId: "7", frameworkId: "x" }))).status,
+    ).toBe(400);
+    expect(
+      (await call(ctrl.generateProfileStance, req({ projectId: "7", frameworkId: "1" }))).status,
+    ).toBe(404);
+    expect(stanceService.generateProfileStance).not.toHaveBeenCalled();
+  });
+
+  it("ignores an organization id in the body", async () => {
+    svc(stanceService.generateProfileStance).mockResolvedValue({ stanceId: 30 });
+    await call(
+      ctrl.generateProfileStance,
+      mockReq({ params: { projectId: "7", frameworkId: LL144 }, body: { organizationId: 1 } }),
+    );
+    expect(svc(stanceService.generateProfileStance).mock.calls[0][0]).toMatchObject({
+      organizationId: 42,
+    });
+  });
+
+  it.each([
+    [new NotFoundException("No attested profile exists for this project"), 404],
+    [new BusinessLogicException("A stance for an in-scope profile comes from a run"), 422],
+    [new ConflictException("raced"), 409],
+    [new ValidationException("The project does not match the profile's project", "projectId"), 400],
+  ])("maps %s to %i with its message", async (error, expected) => {
+    svc(stanceService.generateProfileStance).mockRejectedValue(error);
+    const { status, body } = await call(ctrl.generateProfileStance, req());
+    expect(status).toBe(expected);
+    expect(body.data).toBe((error as Error).message);
+  });
+
+  it("answers an unexpected failure with a generic 500, never the raw error text", async () => {
+    svc(stanceService.generateProfileStance).mockRejectedValue(
+      new Error("browser died at /srv/secret/path"),
+    );
+    const { status, body } = await call(ctrl.generateProfileStance, req());
+    expect(status).toBe(500);
+    expect(JSON.stringify(body)).not.toContain("/srv/secret/path");
   });
 });
 
