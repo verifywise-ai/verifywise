@@ -296,6 +296,19 @@ async function logSafely<P>(log: (params: P) => Promise<void>, params: P): Promi
 }
 
 /**
+ * logSafely for the synchronous processing log, which runs before a
+ * handler's try: a throw there (the tenant log directory cannot be created,
+ * say) would reject the handler and leave the request hanging in Express 4.
+ */
+function logProcessingSafely(params: Parameters<typeof logProcessing>[0]): void {
+  try {
+    logProcessing(params);
+  } catch {
+    // Nothing further to do: the response does not depend on the log.
+  }
+}
+
+/**
  * The local server record of an unexpected cause: one line on the server
  * process's own output, which org users cannot read. Where the default logger
  * has a transport (its console transport, in development), it writes there.
@@ -340,15 +353,19 @@ function recordUnexpectedCause(functionName: string, error: unknown): void {
   }
 }
 
-/** What the event log and tenant log say about an unexpected failure. */
-const UNEXPECTED_STANCE_FAILURE = "stance generation failed unexpectedly";
+/** The fields every stance handler's log entries share. */
+interface StanceLog {
+  functionName: string;
+  fileName: string;
+  userId: number;
+  organizationId: number;
+}
 
 /**
- * The handler for the two stance-generation routes. Generation drives a
- * headless browser, whose failures carry paths and internals, so this does
- * not use controllerWrapper: its fallback sends the raw error text with the
- * 500, and wrapping it would log the failure twice (once here with the real
- * error, once there with the replacement).
+ * The failure answer for the stance handlers, which do not use
+ * controllerWrapper: generation drives a headless browser and a download
+ * reads stored files, and both failures can carry paths and internals, while
+ * controllerWrapper's fallback sends the raw error text with the 500.
  *
  * A client refusal (a CustomException with a 4xx status) answers with its own
  * status and message and is logged through logFailure as thrown: its message
@@ -356,13 +373,56 @@ const UNEXPECTED_STANCE_FAILURE = "stance generation failed unexpectedly";
  *
  * Anything else, a non-custom error or a CustomException with a 5xx status
  * (database, configuration, external service), is unexpected. Its real cause
- * is recorded once, by recordUnexpectedCause, on the central log stack and
- * in one local server record (console or process stderr) only. The tenant file log and the event log, which
- * org users can read, each get one entry with a generic error and no raw
- * text (logFailure with serverLog off, so the generic stand-in is not logged
- * again as if it were the cause). The client gets a generic "Internal server
- * error". No log can fail or change the response. The logging and response
- * shape otherwise mirror controllerWrapper.
+ * is recorded once, by recordUnexpectedCause, on the central log stack and in
+ * one local server record (console or process stderr) only. The tenant file
+ * log and the event log, which org users can read, get one entry with a
+ * generic error and no raw text (logFailure with serverLog off, so the
+ * generic stand-in is not logged again as if it were the cause). logFailure
+ * writes no event for eventType "Read", so a failed download reaches the
+ * tenant file log only. The client gets a generic "Internal server error".
+ * No log can fail or change the response.
+ */
+async function answerStanceFailure(
+  req: Request,
+  res: Response,
+  log: StanceLog,
+  eventType: "Create" | "Read",
+  unexpectedMessage: string,
+  error: unknown,
+): Promise<Response> {
+  const description = `${log.functionName} failed`;
+  if (isCustomException(error) && error.statusCode >= 400 && error.statusCode < 500) {
+    await logSafely(logFailure, { ...log, eventType, description, error });
+    const status = error.statusCode as HttpStatusCode;
+    return res.status(status).json(STATUS_CODE[status](error.message));
+  }
+  recordUnexpectedCause(log.functionName, error);
+  await logSafely(logFailure, {
+    ...log,
+    eventType,
+    description,
+    error: new Error(unexpectedMessage),
+    serverLog: false,
+  });
+  return res
+    .status(500)
+    .json(STATUS_CODE[500](req.t?.("Internal server error") ?? "Internal server error"));
+}
+
+function stanceLog(functionName: string, req: Request): StanceLog {
+  return {
+    functionName,
+    fileName: FILE_NAME,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  };
+}
+
+/**
+ * The handler for the two stance-generation routes. Failures are answered by
+ * answerStanceFailure; the logging and response shape otherwise mirror
+ * controllerWrapper, which is not used because it would log the failure
+ * twice (once here with the real error, once there with the replacement).
  */
 function stanceGenerationHandler(
   functionName: string,
@@ -370,13 +430,8 @@ function stanceGenerationHandler(
   work: (req: Request) => Promise<{ stanceId: number; version: number; sha256: string }>,
 ): (req: Request, res: Response) => Promise<Response> {
   return async (req, res) => {
-    const log = {
-      functionName,
-      fileName: FILE_NAME,
-      userId: req.userId!,
-      organizationId: req.organizationId!,
-    };
-    logProcessing({ ...log, description: `starting ${functionName}` });
+    const log = stanceLog(functionName, req);
+    logProcessingSafely({ ...log, description: `starting ${functionName}` });
     try {
       const data = await work(req);
       // The stance is committed: from here the answer is 201 with its data,
@@ -389,31 +444,14 @@ function stanceGenerationHandler(
       });
       return res.status(201).json(STATUS_CODE[201](data));
     } catch (error) {
-      const refusal =
-        isCustomException(error) && error.statusCode >= 400 && error.statusCode < 500
-          ? error
-          : null;
-      if (refusal) {
-        await logSafely(logFailure, {
-          ...log,
-          eventType: "Create",
-          description: `${functionName} failed`,
-          error: refusal,
-        });
-        const status = refusal.statusCode as HttpStatusCode;
-        return res.status(status).json(STATUS_CODE[status](refusal.message));
-      }
-      recordUnexpectedCause(functionName, error);
-      await logSafely(logFailure, {
-        ...log,
-        eventType: "Create",
-        description: `${functionName} failed`,
-        error: new Error(UNEXPECTED_STANCE_FAILURE),
-        serverLog: false,
-      });
-      return res
-        .status(500)
-        .json(STATUS_CODE[500](req.t?.("Internal server error") ?? "Internal server error"));
+      return answerStanceFailure(
+        req,
+        res,
+        log,
+        "Create",
+        "stance generation failed unexpectedly",
+        error,
+      );
     }
   };
 }
@@ -441,16 +479,13 @@ export const generateProfileStance = stanceGenerationHandler(
     generateProfileStanceService(memberScope(req.params.projectId, req.params.frameworkId, req)),
 );
 
-/** Sends bytes, so it cannot use controllerWrapper's JSON response. */
+/**
+ * Sends bytes, so it cannot use controllerWrapper's JSON response. Failures
+ * are answered by answerStanceFailure, as for generation.
+ */
 export async function downloadStance(req: Request, res: Response): Promise<Response> {
-  const functionName = "downloadStance";
-  const log = {
-    functionName,
-    fileName: FILE_NAME,
-    userId: req.userId!,
-    organizationId: req.organizationId!,
-  };
-  logProcessing({ ...log, description: "starting downloadStance" });
+  const log = stanceLog("downloadStance", req);
+  logProcessingSafely({ ...log, description: "starting downloadStance" });
   try {
     const stanceId = positiveInt(req.params.id, "id");
     const pdf = await getStanceDownload(stanceId, req.organizationId!, viewerOf(req));
@@ -465,22 +500,7 @@ export async function downloadStance(req: Request, res: Response): Promise<Respo
     res.setHeader("X-Content-SHA256", pdf.sha256);
     return res.status(200).send(pdf.content);
   } catch (error) {
-    await logSafely(logFailure, {
-      ...log,
-      eventType: "Read",
-      description: "downloadStance failed",
-      error: error as Error,
-    });
-    // Only a client refusal keeps its own status and message: a 5xx
-    // CustomException (database, configuration) can carry internal detail.
-    if (isCustomException(error) && error.statusCode >= 400 && error.statusCode < 500) {
-      const status = error.statusCode as 400 | 404 | 409 | 410 | 422;
-      return res.status(status).json(STATUS_CODE[status](error.message));
-    }
-    // The detail is in the failure log above; the client gets a generic answer.
-    return res
-      .status(500)
-      .json(STATUS_CODE[500](req.t?.("Internal server error") ?? "Internal server error"));
+    return answerStanceFailure(req, res, log, "Read", "stance download failed unexpectedly", error);
   }
 }
 

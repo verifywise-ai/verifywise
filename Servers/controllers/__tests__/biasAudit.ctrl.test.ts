@@ -665,6 +665,23 @@ describe.each([
     expect(logCentralOnly).not.toHaveBeenCalled();
   });
 
+  it("answers 201 with the stance when the processing log throws", async () => {
+    const created = { stanceId: 3, version: 1, sha256: "a" };
+    service().mockResolvedValue(created);
+    logStructured.mockImplementation((state: unknown) => {
+      if (state === "processing") throw new Error("EACCES: mkdir /var/log/tenant");
+    });
+    let answer: Awaited<ReturnType<typeof call>>;
+    try {
+      answer = await call(handler(), req);
+    } finally {
+      logStructured.mockReset();
+    }
+    expect(answer.status).toBe(201);
+    expect(answer.body.data).toEqual(created);
+    expect(errorLines()).toEqual([]);
+  });
+
   it("answers 201 with the stance when the success event write rejects", async () => {
     const created = { stanceId: 3, version: 1, sha256: "a" };
     service().mockResolvedValue(created);
@@ -732,10 +749,7 @@ describe("downloadStance", () => {
     expect(res.send).toHaveBeenCalledWith(pdf);
   });
 
-  it("answers an unexpected failure with a generic translated 500, keeping the detail in the log", async () => {
-    const { logFailure } = jest.requireMock("../../utils/logger/logHelper") as {
-      logFailure: jest.Mock;
-    };
+  it("answers an unexpected failure with a generic translated 500, recording the cause once, centrally", async () => {
     const internal = new Error('relation "files" does not exist at character 112');
     svc(stanceService.getStanceDownload).mockRejectedValue(internal);
     const t = jest.fn((key: string) => `translated:${key}`);
@@ -744,7 +758,21 @@ describe("downloadStance", () => {
     expect(JSON.stringify(body)).not.toMatch(/relation|character 112/);
     expect(body.error).toBe("translated:Internal server error");
     expect(t).toHaveBeenCalledWith("Internal server error");
-    expect(logFailure).toHaveBeenCalledWith(expect.objectContaining({ error: internal }));
+
+    // The cause: once on the central stack and once in the local record.
+    expect(logCentralOnly).toHaveBeenCalledTimes(1);
+    const [state, text, functionName] = logCentralOnly.mock.calls[0] as string[];
+    expect([state, functionName]).toEqual(["error", "downloadStance"]);
+    expect(text).toContain('relation "files" does not exist at character 112');
+    expect(serverLogger.error).toHaveBeenCalledTimes(1);
+    expect(serverLogger.error.mock.calls[0][0]).toBe(text);
+
+    // The org-readable tenant log gets one generic line; a "Read" writes no event.
+    expect(logStructured.mock.calls.filter((c) => c[0] === "error")).toEqual([
+      ["error", "downloadStance failed", "downloadStance", "biasAudit.ctrl.ts"],
+    ]);
+    expect(logEvent).not.toHaveBeenCalled();
+    expect(JSON.stringify(logStructured.mock.calls)).not.toMatch(/relation|character 112/);
   });
 
   it("answers a 5xx CustomException with the generic 500, not its message", async () => {
@@ -757,6 +785,37 @@ describe("downloadStance", () => {
     const { status, body } = await call(ctrl.downloadStance, mockReq({ params: { id: "3" } }));
     expect(status).toBe(500);
     expect(JSON.stringify(body)).not.toMatch(/db\.internal/);
+    expect(logCentralOnly).toHaveBeenCalledTimes(1);
+    expect(logCentralOnly.mock.calls[0][1]).toContain("db.internal");
+    expect(JSON.stringify(logStructured.mock.calls)).not.toMatch(/db\.internal/);
+  });
+
+  it("logs a client refusal as thrown, with nothing on the central stack", async () => {
+    svc(stanceService.getStanceDownload).mockRejectedValue(new NotFoundException("nope"));
+    const { status } = await call(ctrl.downloadStance, mockReq({ params: { id: "3" } }));
+    expect(status).toBe(404);
+    expect(logCentralOnly).not.toHaveBeenCalled();
+    expect(logStructured.mock.calls.filter((c) => c[0] === "error")).toHaveLength(1);
+  });
+
+  it("sends the PDF when the processing log throws", async () => {
+    const pdf = Buffer.from("%PDF-1.4");
+    svc(stanceService.getStanceDownload).mockResolvedValue({
+      filename: "s.pdf",
+      content: pdf,
+      sha256: "f".repeat(64),
+    });
+    logStructured.mockImplementation((state: unknown) => {
+      if (state === "processing") throw new Error("EACCES: mkdir /var/log/tenant");
+    });
+    let answer: Awaited<ReturnType<typeof call>>;
+    try {
+      answer = await call(ctrl.downloadStance, mockReq({ params: { id: "3" } }));
+    } finally {
+      logStructured.mockReset();
+    }
+    expect(answer.res.status).toHaveBeenCalledWith(200);
+    expect(answer.res.send).toHaveBeenCalledWith(pdf);
   });
 
   it("sends the PDF when the success log throws", async () => {
