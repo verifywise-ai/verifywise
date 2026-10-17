@@ -10,7 +10,15 @@ jest.mock("../../utils/logger/logHelper", () => {
     logFailure: jest.fn(actual.logFailure),
   };
 });
-const serverLogger = { error: jest.fn(), info: jest.fn(), warn: jest.fn(), debug: jest.fn() };
+// One transport, as the default logger has in development; a test empties it
+// to stand for production, where it has none.
+const serverLogger = {
+  error: jest.fn(),
+  info: jest.fn(),
+  warn: jest.fn(),
+  debug: jest.fn(),
+  transports: [{}] as unknown[],
+};
 const logStructured = jest.fn();
 const logCentralOnly = jest.fn();
 jest.mock("../../utils/logger/fileLogger", () => ({
@@ -536,7 +544,8 @@ describe.each([
     expect(text).toContain(raw.stack!.split("\n")[1].trim());
     expect(text).not.toContain("hunter2");
 
-    // Development console: the same text, once; nothing else logs an error there.
+    // Local server record (the development console here): the same text,
+    // once; nothing else logs an error there.
     expect(serverLogger.error).toHaveBeenCalledTimes(1);
     expect(serverLogger.error.mock.calls[0][0]).toBe(text);
 
@@ -569,6 +578,28 @@ describe.each([
       ["Error", `${name} failed: stance generation failed unexpectedly`, 9, 42],
     ]);
     expect(seen(logStructured) + seen(logEvent)).not.toMatch(/secret_table/);
+  });
+
+  it("writes the local record to stderr, not the transport-less default logger, in production", async () => {
+    const raw = new Error("chromium crashed at /srv/secret/path");
+    service().mockRejectedValue(raw);
+    const stderr = jest.spyOn(console, "error").mockImplementation(() => undefined);
+    const devTransports = serverLogger.transports;
+    serverLogger.transports = [];
+    let stderrCalls: unknown[][];
+    try {
+      const { status, body } = await call(handler(), req);
+      expect(status).toBe(500);
+      expect(body.error).toBe("Internal server error");
+    } finally {
+      serverLogger.transports = devTransports;
+      stderrCalls = [...stderr.mock.calls];
+      stderr.mockRestore();
+    }
+    const text = logCentralOnly.mock.calls[0][1];
+    expect(text).toContain("chromium crashed at /srv/secret/path");
+    expect(stderrCalls).toEqual([[text]]);
+    expect(serverLogger.error).not.toHaveBeenCalled();
   });
 
   it("still answers a generic 500 when the console logger throws", async () => {

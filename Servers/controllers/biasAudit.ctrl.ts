@@ -295,12 +295,29 @@ async function logFailureSafely(params: Parameters<typeof logFailure>[0]): Promi
 }
 
 /**
- * The one server-side record of an unexpected failure's real cause: its
- * message and stack, redacted, sent to the central log stack (OTLP), which
- * org users cannot read. The default logger prints the same text to the
- * console in development; it has no transport in production. The cause is
- * kept out of the tenant file log and the event log, both of which org users
- * can read (GET /api/logger/logs and /api/logger/events). Cannot throw.
+ * The local server record of an unexpected cause: one line on the server
+ * process's own output, which org users cannot read. Where the default logger
+ * has a transport (its console transport, in development), it writes there.
+ * Where it has none (production), the line goes to process stderr through
+ * console.error, as logHelper does for a failed event-log write, and so to
+ * the container logs. Never through the default logger with no transport:
+ * winston would print the whole entry to stderr only as part of its
+ * "no transports" warning, by accident rather than by design.
+ */
+function writeLocalServerRecord(text: string): void {
+  if (logger.transports.length > 0) logger.error(text);
+  else console.error(text);
+}
+
+/**
+ * Records an unexpected failure's real cause, its message and stack,
+ * redacted, in exactly two places, neither of them readable by org users:
+ * the central log stack (OTLP, when observability is enabled; logCentralOnly
+ * writes nothing to the tenant file log) and one local server record
+ * (writeLocalServerRecord: the development console, or process stderr in
+ * production). The cause is kept out of the tenant file log and the event
+ * log, both of which org users can read (GET /api/logger/logs and
+ * /api/logger/events). Cannot throw.
  */
 function recordUnexpectedCause(functionName: string, error: unknown): void {
   try {
@@ -313,9 +330,9 @@ function recordUnexpectedCause(functionName: string, error: unknown): void {
       // The response below does not depend on the central log.
     }
     try {
-      logger.error(text);
+      writeLocalServerRecord(text);
     } catch {
-      // The response below does not depend on the console log.
+      // The response below does not depend on the local record.
     }
   } catch {
     // Building the text failed (an exotic thrown value); nothing to record.
@@ -339,7 +356,7 @@ const UNEXPECTED_STANCE_FAILURE = "stance generation failed unexpectedly";
  * Anything else, a non-custom error or a CustomException with a 5xx status
  * (database, configuration, external service), is unexpected. Its real cause
  * is recorded once, by recordUnexpectedCause, on the central log stack and
- * the development console only. The tenant file log and the event log, which
+ * in one local server record (console or process stderr) only. The tenant file log and the event log, which
  * org users can read, each get one entry with a generic error and no raw
  * text (logFailure with serverLog off, so the generic stand-in is not logged
  * again as if it were the cause). The client gets a generic "Internal server
