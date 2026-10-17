@@ -13,6 +13,7 @@ import multer from "multer";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { controllerWrapper, type HttpStatusCode } from "../utils/controllerWrapper.utils";
 import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper";
+import logger from "../utils/logger/fileLogger";
 import {
   isCustomException,
   NotFoundException,
@@ -298,11 +299,16 @@ async function logFailureSafely(params: Parameters<typeof logFailure>[0]): Promi
  * headless browser, whose failures carry paths and internals, so this does
  * not use controllerWrapper: its fallback sends the raw error text with the
  * 500, and wrapping it would log the failure twice (once here with the real
- * error, once there with the replacement). Here every failure is logged
- * exactly once with the error as thrown, through logFailureSafely; an
- * expected refusal answers with its own status and message, and anything
- * else answers a generic "Internal server error". The logging and response
- * shape otherwise mirror controllerWrapper.
+ * error, once there with the replacement).
+ *
+ * A client refusal (a CustomException with a 4xx status) answers with its own
+ * status and message and is written to the event log as thrown: its message
+ * is the one the client sees. Anything else, a non-custom error or a
+ * CustomException with a 5xx status (database, configuration, external
+ * service), is unexpected: the raw error goes to the server logger only, the
+ * org-visible event log gets one entry with a generic error, and the client
+ * gets a generic "Internal server error". Neither log can fail the response.
+ * The logging and response shape otherwise mirror controllerWrapper.
  */
 function stanceGenerationHandler(
   functionName: string,
@@ -322,15 +328,26 @@ function stanceGenerationHandler(
       await logSuccess({ ...log, eventType: "Create", description: successDescription(data) });
       return res.status(201).json(STATUS_CODE[201](data));
     } catch (error) {
+      const refusal =
+        isCustomException(error) && error.statusCode >= 400 && error.statusCode < 500
+          ? error
+          : null;
+      if (!refusal) {
+        try {
+          logger.error(`${functionName} failed unexpectedly:`, error);
+        } catch {
+          // The response below does not depend on the server log.
+        }
+      }
       await logFailureSafely({
         ...log,
         eventType: "Create",
         description: `${functionName} failed`,
-        error: error as Error,
+        error: refusal ?? new Error("stance generation failed unexpectedly"),
       });
-      if (isCustomException(error)) {
-        const status = error.statusCode as HttpStatusCode;
-        return res.status(status).json(STATUS_CODE[status](error.message));
+      if (refusal) {
+        const status = refusal.statusCode as HttpStatusCode;
+        return res.status(status).json(STATUS_CODE[status](refusal.message));
       }
       return res
         .status(500)

@@ -5,6 +5,8 @@ jest.mock("../../utils/logger/logHelper", () => ({
   logSuccess: jest.fn<any>().mockResolvedValue(undefined),
   logFailure: jest.fn<any>().mockResolvedValue(undefined),
 }));
+const serverLogger = { error: jest.fn(), info: jest.fn(), warn: jest.fn(), debug: jest.fn() };
+jest.mock("../../utils/logger/fileLogger", () => ({ __esModule: true, default: serverLogger }));
 jest.mock("../../services/biasAudit/profileService", () => ({
   getApplicableQuestions: jest.fn(),
   getProfileView: jest.fn(),
@@ -499,15 +501,52 @@ describe.each([
         : stanceService.generateProfileStance,
     );
 
-  it("logs the real error exactly once and answers a generic 500", async () => {
+  it("keeps the raw error in the server log only, with one generic event-log entry", async () => {
     const raw = new Error("chromium crashed at /srv/secret/path");
     service().mockRejectedValue(raw);
     const { status, body } = await call(handler(), req);
     expect(status).toBe(500);
     expect(body.error).toBe("Internal server error");
     expect(JSON.stringify(body)).not.toContain("/srv/secret/path");
+    // The server logger gets the raw error, once.
+    expect(serverLogger.error).toHaveBeenCalledTimes(1);
+    expect(serverLogger.error.mock.calls[0]).toContain(raw);
+    // The org-visible event log gets one entry, with no raw text.
     expect(logFailure).toHaveBeenCalledTimes(1);
-    expect(svc(logFailure).mock.calls[0][0]).toMatchObject({ functionName: name, error: raw });
+    const entry = svc(logFailure).mock.calls[0][0];
+    expect(entry).toMatchObject({ functionName: name });
+    expect(entry.error).not.toBe(raw);
+    expect(entry.error.message).toBe("stance generation failed unexpectedly");
+    expect(JSON.stringify(entry)).not.toMatch(/secret/);
+  });
+
+  it.each([
+    ["DatabaseException-like 500", 500],
+    ["ExternalServiceException-like 502", 502],
+  ])("treats a CustomException with status >= 500 (%s) as unexpected", async (_l, code) => {
+    service().mockRejectedValue(
+      new CustomException("relation verifywise.secret_table does not exist", {
+        statusCode: code,
+      }),
+    );
+    const { status, body } = await call(handler(), req);
+    expect(status).toBe(500);
+    expect(body.error).toBe("Internal server error");
+    expect(JSON.stringify(body)).not.toMatch(/secret_table/);
+    expect(svc(logFailure).mock.calls[0][0].error.message).toBe(
+      "stance generation failed unexpectedly",
+    );
+  });
+
+  it("still answers a generic 500 when the server logger throws", async () => {
+    service().mockRejectedValue(new Error("chromium crashed at /srv/secret/path"));
+    serverLogger.error.mockImplementationOnce(() => {
+      throw new Error("disk full at /var/log/secret");
+    });
+    const { status, body } = await call(handler(), req);
+    expect(status).toBe(500);
+    expect(body.error).toBe("Internal server error");
+    expect(logFailure).toHaveBeenCalledTimes(1);
   });
 
   it("still answers a generic 500 when logging the failure fails", async () => {
@@ -525,6 +564,7 @@ describe.each([
     expect(status).toBe(409);
     expect(body.data).toBe("raced");
     expect(logFailure).toHaveBeenCalledTimes(1);
+    expect(svc(logFailure).mock.calls[0][0].error.message).toBe("raced");
   });
 });
 
