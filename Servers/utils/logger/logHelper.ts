@@ -20,6 +20,13 @@ interface LogSuccessParams extends LogProcessingParams {
 interface LogFailureParams extends LogProcessingParams {
   eventType: EventType;
   error: Error;
+  /**
+   * Also write `error` to the default server logger. Defaults to true. A
+   * caller that has already recorded the real cause itself, and passes a
+   * generic stand-in as `error`, sets it to false so the stand-in is not
+   * logged a second time as if it were the cause.
+   */
+  serverLog?: boolean;
 }
 
 export function logProcessing({
@@ -61,9 +68,10 @@ export async function logFailure({
   error,
   userId,
   organizationId,
+  serverLog = true,
 }: LogFailureParams): Promise<void> {
   logStructured(logState, description, functionName, fileName);
-  logger.error(`❌ ${description}:`, error);
+  if (serverLog) logger.error(`❌ ${description}:`, error);
   if (eventType != "Read") {
     try {
       await logEvent("Error", `${description}: ${error.message}`, userId, organizationId ?? 0);

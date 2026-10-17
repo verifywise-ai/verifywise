@@ -12,7 +12,7 @@ const isDev = process.env.NODE_ENV !== "production";
  * Defense-in-depth redaction for accidentally-logged secrets.
  * Applied to every log message before it reaches the transport.
  */
-function redactSensitiveInfo(input: string): string {
+export function redactSensitiveInfo(input: string): string {
   return (
     input
       // OpenAI-style API keys and similar long key prefixes

@@ -13,7 +13,8 @@ import multer from "multer";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { controllerWrapper, type HttpStatusCode } from "../utils/controllerWrapper.utils";
 import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper";
-import logger from "../utils/logger/fileLogger";
+import logger, { redactSensitiveInfo } from "../utils/logger/fileLogger";
+import { emitOtlpLog } from "../observability/otel";
 import {
   isCustomException,
   NotFoundException,
@@ -295,6 +296,47 @@ async function logFailureSafely(params: Parameters<typeof logFailure>[0]): Promi
 }
 
 /**
+ * The one server-side record of an unexpected failure's real cause: its
+ * message and stack, redacted, sent to the central log stack (OTLP), which
+ * org users cannot read. The default logger prints the same text to the
+ * console in development; it has no transport in production. The cause is
+ * kept out of the tenant file log and the event log, both of which org users
+ * can read (GET /api/logger/logs and /api/logger/events). Cannot throw.
+ */
+function recordUnexpectedCause(
+  functionName: string,
+  organizationId: number | undefined,
+  error: unknown,
+): void {
+  try {
+    const detail =
+      error instanceof Error ? (error.stack ?? `${error.name}: ${error.message}`) : String(error);
+    const text = redactSensitiveInfo(`${functionName} failed unexpectedly: ${detail}`);
+    try {
+      emitOtlpLog("error", text, {
+        "tenant.hash": String(organizationId ?? "default"),
+        "log.state": "error",
+        "log.function": functionName,
+        "log.file": FILE_NAME,
+        "service.name": "verifywise-backend",
+      });
+    } catch {
+      // The response below does not depend on the central log.
+    }
+    try {
+      logger.error(text);
+    } catch {
+      // The response below does not depend on the console log.
+    }
+  } catch {
+    // Building the text failed (an exotic thrown value); nothing to record.
+  }
+}
+
+/** What the event log and tenant log say about an unexpected failure. */
+const UNEXPECTED_STANCE_FAILURE = "stance generation failed unexpectedly";
+
+/**
  * The handler for the two stance-generation routes. Generation drives a
  * headless browser, whose failures carry paths and internals, so this does
  * not use controllerWrapper: its fallback sends the raw error text with the
@@ -302,13 +344,18 @@ async function logFailureSafely(params: Parameters<typeof logFailure>[0]): Promi
  * error, once there with the replacement).
  *
  * A client refusal (a CustomException with a 4xx status) answers with its own
- * status and message and is written to the event log as thrown: its message
- * is the one the client sees. Anything else, a non-custom error or a
- * CustomException with a 5xx status (database, configuration, external
- * service), is unexpected: the raw error goes to the server logger only, the
- * org-visible event log gets one entry with a generic error, and the client
- * gets a generic "Internal server error". Neither log can fail the response.
- * The logging and response shape otherwise mirror controllerWrapper.
+ * status and message and is logged through logFailure as thrown: its message
+ * is the one the client sees.
+ *
+ * Anything else, a non-custom error or a CustomException with a 5xx status
+ * (database, configuration, external service), is unexpected. Its real cause
+ * is recorded once, by recordUnexpectedCause, on the central log stack and
+ * the development console only. The tenant file log and the event log, which
+ * org users can read, each get one entry with a generic error and no raw
+ * text (logFailure with serverLog off, so the generic stand-in is not logged
+ * again as if it were the cause). The client gets a generic "Internal server
+ * error". No log can fail or change the response. The logging and response
+ * shape otherwise mirror controllerWrapper.
  */
 function stanceGenerationHandler(
   functionName: string,
@@ -332,23 +379,24 @@ function stanceGenerationHandler(
         isCustomException(error) && error.statusCode >= 400 && error.statusCode < 500
           ? error
           : null;
-      if (!refusal) {
-        try {
-          logger.error(`${functionName} failed unexpectedly:`, error);
-        } catch {
-          // The response below does not depend on the server log.
-        }
+      if (refusal) {
+        await logFailureSafely({
+          ...log,
+          eventType: "Create",
+          description: `${functionName} failed`,
+          error: refusal,
+        });
+        const status = refusal.statusCode as HttpStatusCode;
+        return res.status(status).json(STATUS_CODE[status](refusal.message));
       }
+      recordUnexpectedCause(functionName, req.organizationId, error);
       await logFailureSafely({
         ...log,
         eventType: "Create",
         description: `${functionName} failed`,
-        error: refusal ?? new Error("stance generation failed unexpectedly"),
+        error: new Error(UNEXPECTED_STANCE_FAILURE),
+        serverLog: false,
       });
-      if (refusal) {
-        const status = refusal.statusCode as HttpStatusCode;
-        return res.status(status).json(STATUS_CODE[status](refusal.message));
-      }
       return res
         .status(500)
         .json(STATUS_CODE[500](req.t?.("Internal server error") ?? "Internal server error"));

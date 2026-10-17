@@ -1,12 +1,27 @@
 import { afterEach, describe, expect, it, jest } from "@jest/globals";
 
-jest.mock("../../utils/logger/logHelper", () => ({
-  logProcessing: jest.fn(),
-  logSuccess: jest.fn<any>().mockResolvedValue(undefined),
-  logFailure: jest.fn<any>().mockResolvedValue(undefined),
-}));
+// logHelper runs for real (spied), so the tests see what reaches each sink
+// below it: a duplicate log line would show up as an extra call on a sink.
+jest.mock("../../utils/logger/logHelper", () => {
+  const actual = jest.requireActual("../../utils/logger/logHelper") as Record<string, any>;
+  return {
+    logProcessing: jest.fn(actual.logProcessing),
+    logSuccess: jest.fn(actual.logSuccess),
+    logFailure: jest.fn(actual.logFailure),
+  };
+});
 const serverLogger = { error: jest.fn(), info: jest.fn(), warn: jest.fn(), debug: jest.fn() };
-jest.mock("../../utils/logger/fileLogger", () => ({ __esModule: true, default: serverLogger }));
+const logStructured = jest.fn();
+jest.mock("../../utils/logger/fileLogger", () => ({
+  __esModule: true,
+  default: serverLogger,
+  logStructured,
+  redactSensitiveInfo: (s: string) => s.replace(/password=\S+/g, "password=[REDACTED]"),
+}));
+const logEvent = jest.fn<any>().mockResolvedValue(undefined);
+jest.mock("../../utils/logger/dbLogger", () => ({ logEvent }));
+const emitOtlpLog = jest.fn();
+jest.mock("../../observability/otel", () => ({ emitOtlpLog }));
 jest.mock("../../services/biasAudit/profileService", () => ({
   getApplicableQuestions: jest.fn(),
   getProfileView: jest.fn(),
@@ -31,7 +46,6 @@ import * as ctrl from "../biasAudit.ctrl";
 import * as profileService from "../../services/biasAudit/profileService";
 import * as runService from "../../services/biasAudit/runService";
 import * as stanceService from "../../services/biasAudit/stanceService";
-import { logFailure } from "../../utils/logger/logHelper";
 import {
   BusinessLogicException,
   ConflictException,
@@ -501,23 +515,40 @@ describe.each([
         : stanceService.generateProfileStance,
     );
 
-  it("keeps the raw error in the server log only, with one generic event-log entry", async () => {
-    const raw = new Error("chromium crashed at /srv/secret/path");
+  /** Every text one sink received, joined, to look for leaks. */
+  const seen = (sink: jest.Mock) => JSON.stringify(sink.mock.calls);
+  const errorLines = () => logStructured.mock.calls.filter((c) => c[0] === "error");
+  const errorEvents = () => logEvent.mock.calls.filter((c) => c[0] === "Error");
+
+  it("records the raw cause once, on the central stack, and one generic entry in each org-visible log", async () => {
+    const raw = new Error("chromium crashed at /srv/secret/path password=hunter2");
     service().mockRejectedValue(raw);
     const { status, body } = await call(handler(), req);
     expect(status).toBe(500);
     expect(body.error).toBe("Internal server error");
     expect(JSON.stringify(body)).not.toContain("/srv/secret/path");
-    // The server logger gets the raw error, once.
+
+    // Central stack: exactly one error record, with message and stack, redacted.
+    expect(emitOtlpLog).toHaveBeenCalledTimes(1);
+    const [level, text, attributes] = emitOtlpLog.mock.calls[0] as [string, string, any];
+    expect(level).toBe("error");
+    expect(text).toContain("chromium crashed at /srv/secret/path");
+    expect(text).toContain(raw.stack!.split("\n")[1].trim());
+    expect(text).not.toContain("hunter2");
+    expect(attributes).toMatchObject({ "log.function": name, "tenant.hash": "42" });
+
+    // Development console: the same text, once; nothing else logs an error there.
     expect(serverLogger.error).toHaveBeenCalledTimes(1);
-    expect(serverLogger.error.mock.calls[0]).toContain(raw);
-    // The org-visible event log gets one entry, with no raw text.
-    expect(logFailure).toHaveBeenCalledTimes(1);
-    const entry = svc(logFailure).mock.calls[0][0];
-    expect(entry).toMatchObject({ functionName: name });
-    expect(entry.error).not.toBe(raw);
-    expect(entry.error.message).toBe("stance generation failed unexpectedly");
-    expect(JSON.stringify(entry)).not.toMatch(/secret/);
+    expect(serverLogger.error.mock.calls[0][0]).toBe(text);
+
+    // Tenant file log (org-readable): one error line, generic.
+    expect(errorLines()).toEqual([["error", `${name} failed`, name, "biasAudit.ctrl.ts"]]);
+    // Event log (org-readable): one entry, generic.
+    expect(logEvent).toHaveBeenCalledTimes(1);
+    expect(errorEvents()).toEqual([
+      ["Error", `${name} failed: stance generation failed unexpectedly`, 9, 42],
+    ]);
+    expect(seen(logStructured) + seen(logEvent)).not.toMatch(/secret|chromium|hunter2/);
   });
 
   it.each([
@@ -533,12 +564,15 @@ describe.each([
     expect(status).toBe(500);
     expect(body.error).toBe("Internal server error");
     expect(JSON.stringify(body)).not.toMatch(/secret_table/);
-    expect(svc(logFailure).mock.calls[0][0].error.message).toBe(
-      "stance generation failed unexpectedly",
-    );
+    expect(emitOtlpLog).toHaveBeenCalledTimes(1);
+    expect(emitOtlpLog.mock.calls[0][1]).toContain("secret_table");
+    expect(errorEvents()).toEqual([
+      ["Error", `${name} failed: stance generation failed unexpectedly`, 9, 42],
+    ]);
+    expect(seen(logStructured) + seen(logEvent)).not.toMatch(/secret_table/);
   });
 
-  it("still answers a generic 500 when the server logger throws", async () => {
+  it("still answers a generic 500 when the console logger throws", async () => {
     service().mockRejectedValue(new Error("chromium crashed at /srv/secret/path"));
     serverLogger.error.mockImplementationOnce(() => {
       throw new Error("disk full at /var/log/secret");
@@ -546,25 +580,51 @@ describe.each([
     const { status, body } = await call(handler(), req);
     expect(status).toBe(500);
     expect(body.error).toBe("Internal server error");
-    expect(logFailure).toHaveBeenCalledTimes(1);
+    expect(emitOtlpLog).toHaveBeenCalledTimes(1);
+    expect(logEvent).toHaveBeenCalledTimes(1);
   });
 
-  it("still answers a generic 500 when logging the failure fails", async () => {
+  it("still answers a generic 500 when the central log throws", async () => {
     service().mockRejectedValue(new Error("chromium crashed at /srv/secret/path"));
-    svc(logFailure).mockRejectedValueOnce(new Error("log store down at /var/log/secret"));
+    emitOtlpLog.mockImplementationOnce(() => {
+      throw new Error("exporter down at /var/log/secret");
+    });
     const { status, body } = await call(handler(), req);
+    expect(status).toBe(500);
+    expect(body.error).toBe("Internal server error");
+    expect(logEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("still answers a generic 500 when the event log or the tenant log fails", async () => {
+    service().mockRejectedValue(new Error("chromium crashed at /srv/secret/path"));
+    logEvent.mockRejectedValueOnce(new Error("log store down at /var/log/secret"));
+    jest.spyOn(console, "error").mockImplementationOnce(() => undefined);
+    let { status, body } = await call(handler(), req);
+    expect(status).toBe(500);
+    expect(JSON.stringify(body)).not.toMatch(/secret/);
+
+    logStructured.mockImplementation((state: unknown) => {
+      if (state === "error") throw new Error("tenant log dir gone at /var/log/secret");
+    });
+    try {
+      ({ status, body } = await call(handler(), req));
+    } finally {
+      logStructured.mockReset();
+    }
     expect(status).toBe(500);
     expect(body.error).toBe("Internal server error");
     expect(JSON.stringify(body)).not.toMatch(/secret/);
   });
 
-  it("logs an expected refusal once and answers with its own status and message", async () => {
+  it("logs an expected refusal once, as thrown, and answers with its own status and message", async () => {
     service().mockRejectedValue(new ConflictException("raced"));
     const { status, body } = await call(handler(), req);
     expect(status).toBe(409);
     expect(body.data).toBe("raced");
-    expect(logFailure).toHaveBeenCalledTimes(1);
-    expect(svc(logFailure).mock.calls[0][0].error.message).toBe("raced");
+    expect(emitOtlpLog).not.toHaveBeenCalled();
+    expect(serverLogger.error).toHaveBeenCalledTimes(1);
+    expect(errorLines()).toHaveLength(1);
+    expect(errorEvents()).toEqual([["Error", `${name} failed: raced`, 9, 42]]);
   });
 });
 
