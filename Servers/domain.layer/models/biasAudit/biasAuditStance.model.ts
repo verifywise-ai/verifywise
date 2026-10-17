@@ -31,6 +31,17 @@ export class BiasAuditStance extends Model<BiasAuditStance> {
   })
   run_id?: number;
 
+  /**
+   * Set only on a stance generated from an attested profile (an out-of-scope
+   * scope determination, which has no run). A stance carries a run_id or a
+   * profile_id, never both (CHECK bias_audit_stances_run_or_profile_ck).
+   */
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+  })
+  profile_id?: number | null;
+
   @Column({
     type: DataType.INTEGER,
     allowNull: false,

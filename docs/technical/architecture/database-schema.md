@@ -577,6 +577,34 @@ Also indexes `(organization_id, changed_at)` on `ai_gateway_endpoint_change_hist
 
 ---
 
+## Bias Audit (NYC Local Law 144) Tables
+
+Migrations `20261014120000` (tables), `20261014120200` (RLS), `20261017133420` (`bias_audit_stances.profile_id`). `aedt_profiles` is append-only and versioned, with one attested version per project and framework (`aedt_profiles_one_attested_uq`); `aedt_profile_answers` holds one row per question; `bias_audit_runs` cites the attested profile version it ran against (`profile_id` NO ACTION).
+
+### bias_audit_stances
+
+Immutable stance documents: insert-only, a regenerate adds the next `version`. A stance is generated from a run, or, for an out-of-scope "Scope determination" (which has no run), from the attested profile.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | SERIAL PK | |
+| `organization_id` | INTEGER NOT NULL | FK `organizations(id)` ON DELETE CASCADE |
+| `project_id` | INTEGER NOT NULL | FK `projects(id)` ON DELETE CASCADE |
+| `run_id` | INTEGER NULL | FK `bias_audit_runs(id)` ON DELETE SET NULL: the stance outlives its run |
+| `profile_id` | INTEGER NULL | FK `aedt_profiles(id)` ON DELETE SET NULL; set only on a profile stance |
+| `version` | INTEGER NOT NULL | per run, or per profile |
+| `pdf_sha256` | VARCHAR(64) NULL | hash of the stored PDF |
+| `pdf_file_id` | INTEGER NULL | `files.id`, no FK; source `Bias audit stance report` |
+| `score_at_generation` | INTEGER NULL | readiness score; NULL for a scope determination |
+| `scope_at_generation` | VARCHAR(32) | `in_scope`, `out_of_scope`, `undetermined` |
+| `profile_version`, `question_set_version` | INTEGER NOT NULL | denormalised from the run or the profile |
+| `generated_by` | INTEGER NULL | FK `users(id)` ON DELETE SET NULL |
+| `generated_at` | TIMESTAMPTZ | default `now()` |
+
+CHECK `bias_audit_stances_run_or_profile_ck (run_id IS NULL OR profile_id IS NULL)`. Unique `bias_audit_stances_run_version_uq (run_id, version)` and partial unique `bias_audit_stances_profile_version_uq (profile_id, version) WHERE profile_id IS NOT NULL`. The partial index is keyed on `profile_id`, not on `run_id IS NULL`, because a run stance's `run_id` becomes NULL when its run is deleted; run stances never carry a `profile_id`, so they stay outside it.
+
+---
+
 ## Approval Workflow Tables
 
 ### Approval Workflows
