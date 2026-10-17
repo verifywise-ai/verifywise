@@ -68,4 +68,27 @@ describe("shared PDF browser", () => {
     await getSharedBrowser();
     expect(launch).toHaveBeenCalledTimes(2);
   });
+
+  it("closes a browser whose launch was still pending, and does not keep it", async () => {
+    const late = fakeBrowser();
+    let finishLaunch!: (browser: unknown) => void;
+    launch.mockReturnValueOnce(new Promise((resolve) => (finishLaunch = resolve)));
+    const pendingCall = getSharedBrowser();
+    const closing = closeSharedBrowser();
+    finishLaunch(late);
+    await pendingCall;
+    await closing;
+    expect(late.close).toHaveBeenCalledTimes(1);
+
+    const next = fakeBrowser();
+    launch.mockResolvedValueOnce(next);
+    await expect(getSharedBrowser()).resolves.toBe(next);
+  });
+
+  it("closes nothing when the pending launch fails", async () => {
+    launch.mockRejectedValueOnce(new Error("no chromium"));
+    const pendingCall = getSharedBrowser();
+    await expect(closeSharedBrowser()).resolves.toBeUndefined();
+    await expect(pendingCall).rejects.toThrow("no chromium");
+  });
 });

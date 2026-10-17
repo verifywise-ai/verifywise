@@ -19,9 +19,17 @@ import {
   toExpiryDateString,
 } from "../utils/retention.utils";
 import { ProjectModel } from "../domain.layer/models/project/project.model";
-import { ValidationException } from "../domain.layer/exceptions/custom.exception";
+import {
+  NotFoundException,
+  ValidationException,
+} from "../domain.layer/exceptions/custom.exception";
 import { FILE_GROUP_LABEL_CASE_SQL } from "../utils/files/fileGroupLabel.sql";
 import { assertFileDeletable } from "../utils/fileUpload.utils";
+import {
+  allFilesVisibleQuery,
+  VISIBLE_FILE_REPLACEMENTS,
+  VISIBLE_FILE_SQL,
+} from "../utils/files/visibleFiles";
 import {
   attachLinkProjections,
   FileEntityLinkProjection,
@@ -554,8 +562,8 @@ export async function getOrganizationFiles(
   const { limit, offset } = options;
 
   // Show all files regardless of approval status - UI handles display
-  // Bias audit stance PDFs ('Bias audit stance report', BIAS_AUDIT_STANCE_SOURCE)
-  // are served only by the bias audit stance endpoint, so they are left out here.
+  // Bias audit stance PDFs are served only by the bias audit stance endpoint,
+  // so VISIBLE_FILE_SQL leaves them out here.
   // Use organization_id for tenant isolation (org_id may be NULL on migrated files)
   // Source/link_groups resolved from file_entity_links — see FILE_LINK_GROUPS_*.
   let query = `
@@ -575,14 +583,20 @@ export async function getOrganizationFiles(
     FROM files f
     JOIN users u ON f.uploaded_by = u.id${FILE_LINK_GROUPS_JOIN_SQL}
     WHERE f.organization_id = :organizationId
-      AND (f.source IS NULL OR f.source NOT IN ('policy_editor', 'Bias audit stance report'))
+      AND (f.source IS NULL OR f.source NOT IN ('policy_editor'))
+      AND ${VISIBLE_FILE_SQL("f")}
     ORDER BY f.uploaded_time DESC, f.id DESC
     LIMIT :limit`;
 
   if (offset !== undefined) query += ` OFFSET :offset`;
 
   const files = await sequelize.query(query, {
-    replacements: { organizationId, limit: clampListLimit(limit), offset },
+    replacements: {
+      organizationId,
+      limit: clampListLimit(limit),
+      offset,
+      ...VISIBLE_FILE_REPLACEMENTS,
+    },
     type: QueryTypes.SELECT,
   });
 
@@ -590,10 +604,11 @@ export async function getOrganizationFiles(
     SELECT COUNT(*) as count
     FROM files
     WHERE organization_id = :organizationId
-      AND (source IS NULL OR source NOT IN ('policy_editor', 'Bias audit stance report'))`;
+      AND (source IS NULL OR source NOT IN ('policy_editor'))
+      AND ${VISIBLE_FILE_SQL("files")}`;
 
   const countResult = await sequelize.query(countQuery, {
-    replacements: { organizationId },
+    replacements: { organizationId, ...VISIBLE_FILE_REPLACEMENTS },
     type: QueryTypes.SELECT,
   });
 
@@ -743,7 +758,8 @@ export async function searchFilesByContent(
     WHERE
       f.organization_id = :organizationId
       AND f.project_id IS NULL
-      AND (f.source IS NULL OR f.source NOT IN ('policy_editor', 'Bias audit stance report'))
+      AND (f.source IS NULL OR f.source NOT IN ('policy_editor'))
+      AND ${VISIBLE_FILE_SQL("f")}
       AND f.content_search IS NOT NULL
       AND f.content_search @@ plainto_tsquery('english', :q)
     ORDER BY ts_rank(f.content_search, plainto_tsquery('english', :q)) DESC, f.uploaded_time DESC, f.id DESC
@@ -755,7 +771,13 @@ export async function searchFilesByContent(
   }
 
   const files = await sequelize.query(query, {
-    replacements: { organizationId, q: queryText, limit: clampListLimit(limit), offset },
+    replacements: {
+      organizationId,
+      q: queryText,
+      limit: clampListLimit(limit),
+      offset,
+      ...VISIBLE_FILE_REPLACEMENTS,
+    },
     type: QueryTypes.SELECT,
   });
 
@@ -970,7 +992,8 @@ export async function getOrganizationFilesWithMetadata(
     LEFT JOIN users m ON f.last_modified_by = m.id
     LEFT JOIN approval_workflows aw ON aw.organization_id = f.organization_id AND f.approval_workflow_id = aw.id${FILE_LINK_GROUPS_JOIN_SQL}
     WHERE f.organization_id = :organizationId
-      AND (f.source IS NULL OR f.source NOT IN ('policy_editor', 'Bias audit stance report'))
+      AND (f.source IS NULL OR f.source NOT IN ('policy_editor'))
+      AND ${VISIBLE_FILE_SQL("f")}
     ORDER BY f.uploaded_time DESC, f.id DESC
     LIMIT :limit`;
 
@@ -983,6 +1006,7 @@ export async function getOrganizationFilesWithMetadata(
       offset,
       daysUntilExpiry: safeDaysUntilExpiry,
       recentDays: safeRecentDays,
+      ...VISIBLE_FILE_REPLACEMENTS,
     },
     type: QueryTypes.SELECT,
   });
@@ -991,10 +1015,11 @@ export async function getOrganizationFilesWithMetadata(
     SELECT COUNT(*) as count
     FROM files
     WHERE organization_id = :organizationId
-      AND (source IS NULL OR source NOT IN ('policy_editor', 'Bias audit stance report'))`;
+      AND (source IS NULL OR source NOT IN ('policy_editor'))
+      AND ${VISIBLE_FILE_SQL("files")}`;
 
   const countResult = await sequelize.query(countQuery, {
-    replacements: { organizationId },
+    replacements: { organizationId, ...VISIBLE_FILE_REPLACEMENTS },
     type: QueryTypes.SELECT,
   });
 
@@ -1229,6 +1254,10 @@ export async function createFileEntityLink(
   transaction?: Transaction,
 ): Promise<FileEntityLink | null> {
   validateOrganizationId(organizationId);
+  // A missing id, another organization's file and a stance PDF are refused alike.
+  if (!(await allFilesVisibleQuery([link.file_id], organizationId, transaction))) {
+    throw new NotFoundException("File not found", "File", link.file_id);
+  }
 
   const query = `
     INSERT INTO file_entity_links
@@ -1362,6 +1391,7 @@ export async function getFilesWithMetadataForEntity(
     entityType,
     entityId,
     limit: clampListLimit(limit),
+    ...VISIBLE_FILE_REPLACEMENTS,
   };
   let query = `
     SELECT
@@ -1384,6 +1414,7 @@ export async function getFilesWithMetadataForEntity(
     JOIN files f ON f.organization_id = fel.organization_id AND fel.file_id = f.id
     JOIN users u ON f.uploaded_by = u.id
     WHERE fel.organization_id = :organizationId
+      AND ${VISIBLE_FILE_SQL("f")}
       AND fel.framework_type = :frameworkType
       AND fel.entity_type = :entityType
       AND fel.entity_id = :entityId
@@ -1399,13 +1430,21 @@ export async function getFilesWithMetadataForEntity(
     sequelize.query(query, { replacements, type: QueryTypes.SELECT }),
     sequelize.query(
       `SELECT COUNT(*) as count
-       FROM file_entity_links
-       WHERE organization_id = :organizationId
-         AND framework_type = :frameworkType
-         AND entity_type = :entityType
-         AND entity_id = :entityId`,
+       FROM file_entity_links fel
+       JOIN files f ON f.organization_id = fel.organization_id AND fel.file_id = f.id
+       WHERE fel.organization_id = :organizationId
+         AND ${VISIBLE_FILE_SQL("f")}
+         AND fel.framework_type = :frameworkType
+         AND fel.entity_type = :entityType
+         AND fel.entity_id = :entityId`,
       {
-        replacements: { organizationId, frameworkType, entityType, entityId },
+        replacements: {
+          organizationId,
+          frameworkType,
+          entityType,
+          entityId,
+          ...VISIBLE_FILE_REPLACEMENTS,
+        },
         type: QueryTypes.SELECT,
       },
     ),

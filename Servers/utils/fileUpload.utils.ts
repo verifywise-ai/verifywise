@@ -5,6 +5,11 @@ import { Transaction, QueryTypes } from "sequelize";
 import { ProjectModel } from "../domain.layer/models/project/project.model";
 import { resolveFileExpiryOnCreate } from "./retention.utils";
 import { ConflictException } from "../domain.layer/exceptions/custom.exception";
+import {
+  BIAS_AUDIT_STANCE_SOURCE,
+  VISIBLE_FILE_REPLACEMENTS,
+  VISIBLE_FILE_SQL,
+} from "./files/visibleFiles";
 
 const sanitizeFilename = (name: string) => name.replace(/[^a-zA-Z0-9-_\.]/g, "_");
 
@@ -76,8 +81,8 @@ export const uploadFile = async (
   return Array.isArray(result[0]) && result[0].length > 0 ? result[0][0] : result[0];
 };
 
-/** Source of the PDF a bias audit stance cites by id and hash. Never deletable. */
-export const BIAS_AUDIT_STANCE_SOURCE: FileSource = "Bias audit stance report";
+// Defined beside the visible-file predicate; re-exported for existing importers.
+export { BIAS_AUDIT_STANCE_SOURCE };
 
 /**
  * A stance is an immutable record that cites its PDF by id and hash. Every
@@ -200,10 +205,10 @@ export const getFileMetadataByProjectId = async (project_id: number, organizatio
     FROM files f
   JOIN users u ON f.uploaded_by = u.id
     WHERE f.organization_id = :organizationId AND project_id = :project_id
-      AND f.source IS DISTINCT FROM :stanceSource
+      AND ${VISIBLE_FILE_SQL("f")}
     ORDER BY uploaded_time DESC, id ASC`;
   const result = await sequelize.query(query, {
-    replacements: { organizationId, project_id, stanceSource: BIAS_AUDIT_STANCE_SOURCE },
+    replacements: { organizationId, project_id, ...VISIBLE_FILE_REPLACEMENTS },
     mapToModel: true,
     model: FileModel,
   });

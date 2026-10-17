@@ -9,6 +9,7 @@
 
 import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
+import { VISIBLE_FILE_REPLACEMENTS, VISIBLE_FILE_SQL } from "./files/visibleFiles";
 import {
   IVirtualFolder,
   IVirtualFolderInput,
@@ -278,9 +279,10 @@ export const getFilesInFolderQuery = async (
     LEFT JOIN users u ON f.uploaded_by = u.id
     LEFT JOIN projects p ON f.project_id = p.id AND p.organization_id = :organizationId
     WHERE f.organization_id = :organizationId AND ffm.folder_id = :folderId
+      AND ${VISIBLE_FILE_SQL("f")}
     ORDER BY f.uploaded_time DESC`,
     {
-      replacements: { organizationId, folderId },
+      replacements: { organizationId, folderId, ...VISIBLE_FILE_REPLACEMENTS },
       type: QueryTypes.SELECT,
     },
   );
@@ -379,13 +381,13 @@ export const getUncategorizedFilesQuery = async (
     FROM files f
     LEFT JOIN users u ON f.uploaded_by = u.id
     LEFT JOIN projects p ON f.project_id = p.id AND p.organization_id = :organizationId
-    WHERE f.organization_id = :organizationId AND NOT EXISTS (
+    WHERE f.organization_id = :organizationId AND ${VISIBLE_FILE_SQL("f")} AND NOT EXISTS (
       SELECT 1 FROM file_folder_mappings ffm
       WHERE ffm.organization_id = :organizationId AND ffm.file_id = f.id
     )
     ORDER BY f.uploaded_time DESC`,
     {
-      replacements: { organizationId },
+      replacements: { organizationId, ...VISIBLE_FILE_REPLACEMENTS },
       type: QueryTypes.SELECT,
     },
   );
@@ -408,10 +410,12 @@ export const getFileFoldersQuery = async (
     `SELECT vf.*
     FROM virtual_folders vf
     INNER JOIN file_folder_mappings ffm ON vf.id = ffm.folder_id AND ffm.organization_id = :organizationId
+    INNER JOIN files f ON f.id = ffm.file_id AND f.organization_id = :organizationId
     WHERE vf.organization_id = :organizationId AND ffm.file_id = :fileId
+      AND ${VISIBLE_FILE_SQL("f")}
     ORDER BY vf.name ASC`,
     {
-      replacements: { organizationId, fileId },
+      replacements: { organizationId, fileId, ...VISIBLE_FILE_REPLACEMENTS },
       type: QueryTypes.SELECT,
     },
   );

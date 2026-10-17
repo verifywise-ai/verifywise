@@ -93,9 +93,13 @@ const frameworkSections = {
 ### Playwright Configuration
 
 The server shares one headless Chromium for every HTML-to-PDF render. It lives
-in `Servers/utils/pdfBrowser.utils.ts`; the report generator and the bias audit
-stance PDF (`services/biasAudit/stance/render.ts`) both use it, each opening and
-closing only its own page.
+in `Servers/utils/pdfBrowser.utils.ts`. Every PDF renderer uses it, each opening
+and closing only its own page: the report generator
+(`services/reporting/pdfGenerator.ts`), the bias audit stance PDF
+(`services/biasAudit/stance/render.ts`), the post-market monitoring report
+(`services/postMarketMonitoring/pmmPdfGenerator.ts`) and the policy PDF export
+(`services/policies/policyExporter.ts`). A new renderer calls
+`getSharedBrowser()` too; it never launches Chromium itself.
 
 ```typescript
 // File: Servers/utils/pdfBrowser.utils.ts
@@ -118,8 +122,9 @@ export async function getSharedBrowser(): Promise<Browser> {
 export async function closeSharedBrowser(): Promise<void>; // on shutdown
 ```
 
-`closeBrowser()` in `services/reporting/pdfGenerator.ts` (called by the
-reporting `cleanup()` on shutdown) closes this shared browser.
+The graceful shutdown in `Servers/index.ts` calls `closeSharedBrowser()`. It
+also closes a browser whose launch was still in flight, so one started just
+before shutdown is not left running.
 
 ### PDF Generation
 
@@ -740,14 +745,14 @@ PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 ## Cleanup
 
-```typescript
-// Call on server shutdown
-import { cleanup } from "./services/reporting";
+The shared browser is closed by the server's graceful shutdown (SIGTERM and
+SIGINT) in `Servers/index.ts`:
 
-process.on("SIGTERM", async () => {
-  await cleanup();  // Closes Playwright browser
-  process.exit(0);
-});
+```typescript
+import { closeSharedBrowser } from "./utils/pdfBrowser.utils";
+
+// inside shutdown(), after the HTTP server has closed
+await closeSharedBrowser();
 ```
 
 ## Key Files

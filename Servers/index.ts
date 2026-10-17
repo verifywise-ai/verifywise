@@ -17,6 +17,7 @@ import {
   stopAiDetectionProgressCleanup,
 } from "./services/aiDetection.service";
 import { warnIfGatewayKeyMissing } from "./utils/aiGatewayKeyCheck";
+import { closeSharedBrowser } from "./utils/pdfBrowser.utils";
 import logger from "./utils/logger/fileLogger";
 
 const DEFAULT_PORT = "3000";
@@ -129,6 +130,13 @@ try {
         console.log("Notification subscriber closed");
       } catch (err: unknown) {
         console.error("Error closing notification subscriber:", err);
+      }
+
+      try {
+        await closeSharedBrowser();
+        console.log("PDF browser closed");
+      } catch (err: unknown) {
+        console.error("Error closing PDF browser:", err);
       }
 
       try {

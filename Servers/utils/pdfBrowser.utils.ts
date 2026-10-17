@@ -37,9 +37,20 @@ export async function getSharedBrowser(): Promise<Browser> {
   return launching;
 }
 
-/** Close the shared browser, if one is open. The next call launches again. */
+/**
+ * Close the shared browser, if one is open. A launch still in flight is
+ * awaited and closed too, so a browser started just before shutdown is not
+ * left running. The next call launches again.
+ */
 export async function closeSharedBrowser(): Promise<void> {
+  const pending = launching;
   const browser = browserInstance;
   browserInstance = null;
   if (browser) await browser.close();
+  if (!pending) return;
+  // A failed launch has nothing to close; its caller already sees the error.
+  const launched = await pending.catch(() => null);
+  if (!launched) return;
+  if (browserInstance === launched) browserInstance = null;
+  await launched.close();
 }

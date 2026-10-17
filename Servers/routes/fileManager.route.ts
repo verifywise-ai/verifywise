@@ -326,6 +326,7 @@ router.delete(
   authenticateJWT,
   authorize("fileManager.contribute"),
   validateFileIdParam,
+  refuseStanceFile,
   removeFile,
 );
 

@@ -787,7 +787,85 @@ describe("bias audit routes tenant isolation", () => {
     for (const route of byId) {
       expect([route, (await owner.request.get(route)).status]).toEqual([route, 404]);
     }
-    // The stance endpoint still serves it.
+    // Every route that takes a file id from the client answers a stance PDF
+    // exactly as it answers an id that names no file.
+    const missingId = 2147483000;
+    const sameAsMissing = async (
+      label: string,
+      send: (id: number) => Promise<{ status: number; body: unknown }>,
+    ) => {
+      const [stance, missing] = [await send(fileId), await send(missingId)];
+      const body = (b: unknown) => JSON.stringify(b).split(String(missingId)).join(String(fileId));
+      expect([label, stance.status, body(stance.body)]).toEqual([
+        label,
+        missing.status,
+        body(missing.body),
+      ]);
+      return stance;
+    };
+
+    // Virtual folders.
+    const folder = await owner.request
+      .post("/api/virtual-folders")
+      .send({ name: `stance-guard-${Date.now()}` });
+    expect(folder.status).toBe(201);
+    const folderId = folder.body.data.id as number;
+    const uncategorized = await owner.request.get("/api/virtual-folders/uncategorized");
+    expect(uncategorized.status).toBe(200);
+    expect(JSON.stringify(uncategorized.body)).not.toContain(filename);
+    const assign = await sameAsMissing("assign to folder", (id) =>
+      owner.request.post(`/api/virtual-folders/${folderId}/files`).send({ file_ids: [id] }),
+    );
+    expect(assign.status).toBe(404);
+    const setFolders = await sameAsMissing("set file folders", (id) =>
+      owner.request.patch(`/api/files/${id}/folders`).send({ folder_ids: [folderId] }),
+    );
+    expect(setFolders.status).toBe(404);
+    // A mapping or link written before these checks existed stays hidden.
+    await sequelize.query(
+      `INSERT INTO file_folder_mappings (organization_id, file_id, folder_id, assigned_by)
+       VALUES (:org, :fileId, :folderId, :user)`,
+      { replacements: { org: owner.orgId, fileId, folderId, user: owner.userId } },
+    );
+    const inFolder = await owner.request.get(`/api/virtual-folders/${folderId}/files`);
+    expect(inFolder.status).toBe(200);
+    expect(JSON.stringify(inFolder.body)).not.toContain(filename);
+    await sameAsMissing("file folders", (id) => owner.request.get(`/api/files/${id}/folders`));
+
+    // Entity links.
+    const entity = { framework_type: "eu_ai_act", entity_type: "assessment", entity_id: 991 };
+    const attach = await sameAsMissing("attach", (id) =>
+      owner.request.post("/api/files/attach").send({ ...entity, file_id: id }),
+    );
+    expect(attach.status).toBe(404);
+    await sameAsMissing("attach bulk", (id) =>
+      owner.request.post("/api/files/attach-bulk").send({ ...entity, file_ids: [id] }),
+    );
+    await sequelize.query(
+      `INSERT INTO file_entity_links
+         (organization_id, file_id, framework_type, entity_type, entity_id, link_type, created_at)
+       VALUES (:org, :fileId, 'eu_ai_act', 'assessment', 991, 'evidence', NOW())`,
+      { replacements: { org: owner.orgId, fileId } },
+    );
+    const linked = await owner.request.get("/api/files/entity/eu_ai_act/assessment/991");
+    expect(linked.status).toBe(200);
+    expect(JSON.stringify(linked.body)).not.toContain(filename);
+    expect(linked.body.pagination.total).toBe(0);
+
+    // Bulk tags, and deletion.
+    await sameAsMissing("bulk tags", (id) =>
+      owner.request.patch("/api/files/bulk-tags").send({ ids: [id], mode: "set", tags: ["leak"] }),
+    );
+    const del = await sameAsMissing("delete", (id) =>
+      owner.request.delete(`/api/file-manager/${id}`),
+    );
+    expect(del.status).toBe(404);
+
+    // Nothing above changed the stance PDF, and the stance endpoint still serves it.
+    const [after] = await sequelize.query(`SELECT tags FROM files WHERE id = :fileId`, {
+      replacements: { fileId },
+    });
+    expect((after as any[])[0].tags ?? []).not.toContain("leak");
     expect((await owner.request.get(`/api/bias-audit/stances/${stanceId}/download`)).status).toBe(
       200,
     );
@@ -821,7 +899,7 @@ describe("bias audit routes tenant isolation", () => {
     expect((await editor.get(route)).status).toBe(200);
   });
 
-  it("serves a stance PDF only to its organization, 410 once the file is gone, and refuses its deletion", async () => {
+  it("serves a stance PDF only to its organization, 410 once the file is gone, and hides it from deletion", async () => {
     const { owner, attacker, project, runId } = await ownerWithRun();
     const { pdf, sha, stanceId } = await seedStance(owner, project, runId);
     const route = `/api/bias-audit/stances/${stanceId}/download`;
@@ -846,8 +924,9 @@ describe("bias audit routes tenant isolation", () => {
       { replacements: { stanceId } },
     );
     const fileId = (files as any[])[0].pdf_file_id;
+    // The file manager answers a stance PDF as a missing file, so it is not deleted.
     const del = await owner.request.delete(`/api/file-manager/${fileId}`);
-    expect(del.status).toBe(409);
+    expect(del.status).toBe(404);
 
     // A files row removed by any other path leaves the stance readable but its PDF gone.
     await sequelize.query(`DELETE FROM files WHERE id = :fileId`, { replacements: { fileId } });

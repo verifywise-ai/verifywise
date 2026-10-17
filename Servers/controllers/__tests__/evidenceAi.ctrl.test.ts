@@ -88,6 +88,39 @@ describe("analyzeFile", () => {
     expect(upsertAnalysisQuery).not.toHaveBeenCalled();
   });
 
+  // A stance PDF is served only by the bias audit stance endpoint. Both file
+  // lookups exclude it, so it answers exactly as a missing file does.
+  it("looks the file up only among visible files, so a stance PDF answers as a missing one", async () => {
+    (getLLMKeysWithKeyQuery as jest.Mock).mockResolvedValue([
+      { key: "sk-test", url: "https://api.anthropic.com", model: "m", name: "Anthropic" },
+    ]);
+    (sequelize.query as jest.Mock).mockResolvedValueOnce([[], {}]);
+
+    const res = createRes();
+    await analyzeFile(createReq(), res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith(STATUS_CODE[404]("File not found"));
+    const [sql, options] = (sequelize.query as jest.Mock).mock.calls[0];
+    expect(sql).toContain("files.source IS DISTINCT FROM :stanceSource");
+    expect(options.replacements).toMatchObject({ stanceSource: "Bias audit stance report" });
+  });
+
+  it("reads the content only of a visible file", async () => {
+    (getLLMKeysWithKeyQuery as jest.Mock).mockResolvedValue([
+      { key: "sk-test", url: "https://api.anthropic.com", model: "m", name: "Anthropic" },
+    ]);
+    (sequelize.query as jest.Mock)
+      .mockResolvedValueOnce([[{ id: 42, filename: "a.pdf", type: "application/pdf" }], {}])
+      .mockRejectedValueOnce(new Error("stop after the content lookup"));
+
+    await analyzeFile(createReq(), createRes());
+
+    const [sql, options] = (sequelize.query as jest.Mock).mock.calls[1];
+    expect(sql).toContain("files.source IS DISTINCT FROM :stanceSource");
+    expect(options.replacements).toMatchObject({ stanceSource: "Bias audit stance report" });
+  });
+
   it("returns 200 and persists the analyzer result when a key is configured", async () => {
     (getLLMKeysWithKeyQuery as jest.Mock).mockResolvedValue([
       {

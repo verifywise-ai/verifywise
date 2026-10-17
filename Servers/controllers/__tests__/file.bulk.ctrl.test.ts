@@ -52,10 +52,14 @@ jest.mock("../../repositories/file.repository", () => ({
 jest.mock("../../database/db", () => ({
   sequelize: { transaction: jest.fn() },
 }));
+jest.mock("../../utils/files/visibleFiles", () => ({
+  allFilesVisibleQuery: jest.fn<any>().mockResolvedValue(true),
+}));
 
 import { bulkUpdateFileTags } from "../file.ctrl";
 import { bulkUpdateFileTagsQuery } from "../../utils/files/bulkFiles.utils";
 import { parseBulkIds, assertOrgOwnsIds, withBulkTransaction } from "../../utils/bulkAction.utils";
+import { allFilesVisibleQuery } from "../../utils/files/visibleFiles";
 import {
   ForbiddenException,
   ValidationException,
@@ -63,6 +67,9 @@ import {
 
 const mockParseBulkIds = parseBulkIds as jest.MockedFunction<typeof parseBulkIds>;
 const mockAssertOrgOwnsIds = assertOrgOwnsIds as jest.MockedFunction<typeof assertOrgOwnsIds>;
+const mockAllFilesVisible = allFilesVisibleQuery as jest.MockedFunction<
+  typeof allFilesVisibleQuery
+>;
 const mockWithBulkTransaction = withBulkTransaction as jest.MockedFunction<
   typeof withBulkTransaction
 >;
@@ -192,6 +199,19 @@ describe("bulkUpdateFileTags", () => {
 
     await bulkUpdateFileTags(req as Request, res as Response);
 
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(mockBulkUpdateFileTagsQuery).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 when an id is a stance PDF, as for a cross-org id", async () => {
+    mockAllFilesVisible.mockResolvedValueOnce(false);
+
+    const req = createReq({ ids: [1, 2], tags: ["a"], mode: "add" });
+    const res = createRes();
+
+    await bulkUpdateFileTags(req as Request, res as Response);
+
+    expect(mockAllFilesVisible).toHaveBeenCalledWith([1, 2], 4, expect.anything());
     expect(res.status).toHaveBeenCalledWith(403);
     expect(mockBulkUpdateFileTagsQuery).not.toHaveBeenCalled();
   });

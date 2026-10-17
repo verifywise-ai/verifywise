@@ -27,8 +27,10 @@ import {
 import { parseBulkIds, assertOrgOwnsIds, withBulkTransaction } from "../utils/bulkAction.utils";
 import {
   ForbiddenException,
+  NotFoundException,
   ValidationException,
 } from "../domain.layer/exceptions/custom.exception";
+import { allFilesVisibleQuery } from "../utils/files/visibleFiles";
 
 export async function getFileContentById(req: Request, res: Response): Promise<any> {
   const fileId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
@@ -367,6 +369,9 @@ export async function attachFileToEntity(req: Request, res: Response): Promise<a
       return res.status(200).json({ message: req.t!("File already attached to this entity") });
     }
   } catch (error) {
+    if (error instanceof NotFoundException) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
+    }
     await logFailure({
       eventType: "Create",
       description: "Failed to attach file to entity",
@@ -722,6 +727,15 @@ export async function bulkUpdateFileTags(req: Request, res: Response): Promise<a
           organizationId: req.organizationId!,
           transaction,
         });
+        // A stance PDF is refused exactly as an id outside the organization is.
+        if (!(await allFilesVisibleQuery(ids, req.organizationId!, transaction))) {
+          throw new ForbiddenException(
+            "One or more ids are not accessible in this organization",
+            "files",
+            "bulk_action",
+            { metadata: { expected: ids.length } },
+          );
+        }
 
         await bulkUpdateFileTagsQuery({
           organizationId: req.organizationId!,

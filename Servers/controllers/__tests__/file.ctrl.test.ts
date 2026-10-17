@@ -63,6 +63,7 @@ jest.mock("../../utils/bulkAction.utils", () => ({
 }));
 jest.mock("../../domain.layer/exceptions/custom.exception", () => ({
   ForbiddenException: class ForbiddenException extends Error {},
+  NotFoundException: class NotFoundException extends Error {},
   ValidationException: class ValidationException extends Error {},
 }));
 
@@ -320,6 +321,18 @@ describe("file.ctrl", () => {
       const res = createRes();
       await attachFileToEntity(req, res);
       expect(res.status).toHaveBeenCalledWith(200);
+    });
+    it("should return 404 when the file is not visible", async () => {
+      const { NotFoundException } = jest.requireMock(
+        "../../domain.layer/exceptions/custom.exception",
+      );
+      mockCreateLink.mockRejectedValue(new NotFoundException("File not found"));
+      const req = createReq({
+        body: { file_id: 1, framework_type: "eu", entity_type: "control", entity_id: 1 },
+      });
+      const res = createRes();
+      await attachFileToEntity(req, res);
+      expect(res.status).toHaveBeenCalledWith(404);
     });
     it("should return 500 on error", async () => {
       mockCreateLink.mockRejectedValue(new Error("DB error"));
