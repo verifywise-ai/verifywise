@@ -389,6 +389,15 @@ describe("persistStance immutability", () => {
     expect(uploadFile).not.toHaveBeenCalled();
     expect(utils.createStanceQuery).not.toHaveBeenCalled();
   });
+
+  it("answers the export refusal (422) before the project check (400), reading nothing", async () => {
+    utils.getRunProjectIdQuery.mockResolvedValue(8);
+    await expect(
+      persistStance({ ...base, evidence: { ...evidence, mayExportPdf: false } } as any),
+    ).rejects.toMatchObject({ statusCode: 422, message: expect.stringMatching(/export/i) });
+    expect(utils.getRunProjectIdQuery).not.toHaveBeenCalled();
+    expect(getSharedBrowser).not.toHaveBeenCalled();
+  });
 });
 
 describe("customer-authored text", () => {
@@ -726,6 +735,8 @@ describe("persistStance from an attested profile", () => {
     }
     expect(getSharedBrowser).not.toHaveBeenCalled();
     expect(uploadFile).not.toHaveBeenCalled();
+    // The evidence refusal comes before any database read.
+    for (const query of Object.values(utils)) expect(query).not.toHaveBeenCalled();
   });
 
   it("passes the insert's not-found and re-attestation conflict through unchanged", async () => {

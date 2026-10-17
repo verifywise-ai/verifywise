@@ -220,8 +220,9 @@ export type StanceParentKind = "run" | "profile";
  * scope determination: a document generated from a profile has no run and so
  * no dataset to gate, and an out-of-scope one may pass with no evidence. A run
  * stance never renders without its run's evidence, whatever its scope. The
- * parent is a required argument so no caller can skip that distinction. Every
- * refusal here and in renderStancePdf is a BusinessLogicException (422), so a
+ * parent is a required argument so no caller can skip that distinction. It
+ * reads nothing from the database, so persistStance runs it before any read.
+ * Every refusal here and in the render is a BusinessLogicException (422), so a
  * caller maps it to a client error rather than a server fault.
  */
 function assertMayExport(
@@ -254,6 +255,19 @@ export async function renderStancePdf(
   parent: StanceParentKind,
 ): Promise<{ pdf: Buffer; sha256: string }> {
   assertMayExport(evidence, model.scope, parent);
+  return renderGatedPdf(model, evidence);
+}
+
+/**
+ * The render after the export gate. Not exported: every caller outside this
+ * module goes through renderStancePdf, which gates first. persistStance gates
+ * itself, before any database read, and then calls this, so the gate runs
+ * once per persist.
+ */
+async function renderGatedPdf(
+  model: StanceModel,
+  evidence: StanceEvidence | null,
+): Promise<{ pdf: Buffer; sha256: string }> {
   const html = renderStanceHtml(model, evidence);
 
   const { missing } = checkSections(html, REQUIRED_BY_SCOPE[model.scope]);
@@ -321,6 +335,10 @@ interface StanceParent {
     row: { version: number; pdfSha256: string; pdfFileId: number },
     transaction: Transaction,
   ) => Promise<{ id?: number; version: number }>;
+}
+
+function parentKindOf(args: PersistStanceArgs): StanceParentKind {
+  return args.profileId !== undefined ? "profile" : "run";
 }
 
 async function resolveParent(args: PersistStanceArgs): Promise<StanceParent> {
@@ -394,11 +412,13 @@ export async function persistStance(
   args: PersistStanceArgs,
 ): Promise<{ stanceId: number; version: number; sha256: string }> {
   const { organizationId, userId, model, evidence } = args;
-  // resolveParent checks the parent, and renderStancePdf applies the export
-  // gate before it launches a browser; both run before the transaction, so a
-  // refusal from either writes nothing.
+  // The export gate runs first, before any database read, so an export
+  // refusal (422) answers ahead of any parent refusal (400/404/409). Then
+  // resolveParent checks the parent, and the render runs without gating
+  // again. All of it runs before the transaction, so a refusal writes nothing.
+  assertMayExport(evidence, model.scope, parentKindOf(args));
   const parent = await resolveParent(args);
-  const { pdf, sha256 } = await renderStancePdf(model, evidence, parent.label);
+  const { pdf, sha256 } = await renderGatedPdf(model, evidence);
 
   try {
     return await sequelize.transaction(async (transaction) => {
