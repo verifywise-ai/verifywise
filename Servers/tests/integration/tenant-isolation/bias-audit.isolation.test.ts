@@ -1,5 +1,20 @@
 jest.setTimeout(60000);
 
+// Stance generation renders through the server's shared Chromium. Backend CI
+// installs no browser, and the PDF bytes are not what these tests are about
+// (render.test.ts covers rendering), so the browser is a stub that returns a
+// fixed PDF. Everything else, the database included, is real.
+jest.mock("../../../utils/pdfBrowser.utils", () => ({
+  getSharedBrowser: async () => ({
+    newPage: async () => ({
+      setContent: async () => undefined,
+      pdf: async () => Buffer.from("%PDF-1.4 stubbed scope determination"),
+      close: async () => undefined,
+    }),
+  }),
+  closeSharedBrowser: async () => undefined,
+}));
+
 import { cleanupDatabase } from "../helpers";
 import { NotFoundException } from "../../../domain.layer/exceptions/custom.exception";
 import { uploadFile } from "../../../utils/fileUpload.utils";
@@ -11,6 +26,7 @@ import { createTestProject } from "../../factories";
 import {
   attestProfileQuery,
   createProfileVersionQuery,
+  createProfileStanceQuery,
   createRunQuery,
   createStanceQuery,
   getCurrentProfileQuery,
@@ -427,6 +443,114 @@ describe("bias audit query layer against the database", () => {
       replacements: { profile },
     });
     expect(rows).toEqual([{ status: "attested" }]);
+  });
+
+  const profileStance = (profileId: number, userId: number, version = 1) => ({
+    profileId,
+    version,
+    pdfSha256: null,
+    pdfFileId: null,
+    scopeAtGeneration: "out_of_scope",
+    generatedBy: userId,
+  });
+
+  it("creates a profile stance only from an attested profile, taking its project and versions", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const project = await createTestProject(owner.orgId, owner.userId);
+    const profile = await insertProfile(owner.orgId, project, owner.userId);
+    await sequelize.query(
+      `UPDATE aedt_profiles SET version = 3, question_set_version = 2 WHERE id = :profile`,
+      { replacements: { profile } },
+    );
+
+    // A draft is refused, and nothing is written.
+    await expect(
+      sequelize.transaction((t) =>
+        createProfileStanceQuery(profileStance(profile, owner.userId), owner.orgId, t),
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    await sequelize.transaction((t) => attestProfileQuery(profile, owner.userId, owner.orgId, t));
+    const row = await sequelize.transaction((t) =>
+      createProfileStanceQuery(profileStance(profile, owner.userId), owner.orgId, t),
+    );
+    expect(row).toMatchObject({
+      organization_id: owner.orgId,
+      project_id: project,
+      profile_id: profile,
+      run_id: null,
+      version: 1,
+      profile_version: 3,
+      question_set_version: 2,
+      score_at_generation: null,
+      scope_at_generation: "out_of_scope",
+    });
+
+    const [stances] = await sequelize.query(
+      `SELECT COUNT(*)::int AS n FROM bias_audit_stances WHERE project_id = :project`,
+      { replacements: { project } },
+    );
+    expect((stances as any[])[0].n).toBe(1);
+  });
+
+  it("refuses another organization's profile stance and enforces the profile-stance constraints", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts();
+    const project = await createTestProject(owner.orgId, owner.userId);
+    const profile = await insertProfile(owner.orgId, project, owner.userId);
+    await sequelize.transaction((t) => attestProfileQuery(profile, owner.userId, owner.orgId, t));
+
+    await expect(
+      sequelize.transaction((t) =>
+        createProfileStanceQuery(profileStance(profile, attacker.userId), attacker.orgId, t),
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    await sequelize.transaction((t) =>
+      createProfileStanceQuery(profileStance(profile, owner.userId), owner.orgId, t),
+    );
+    // A second version 1 for the same profile loses to the partial unique index.
+    const duplicate = await sequelize
+      .transaction((t) =>
+        createProfileStanceQuery(profileStance(profile, owner.userId), owner.orgId, t),
+      )
+      .then(
+        () => null,
+        (err) => err,
+      );
+    expect(duplicate?.original?.code ?? duplicate?.parent?.code).toBe("23505");
+    expect(duplicate?.original?.constraint ?? duplicate?.parent?.constraint).toBe(
+      "bias_audit_stances_profile_version_uq",
+    );
+
+    // A stance cites a run or a profile, never both.
+    const [runRows] = await sequelize.query(
+      `INSERT INTO bias_audit_runs
+         (organization_id, project_id, profile_id, profile_version, preset_id,
+          question_set_version, metric)
+       VALUES (:orgId, :project, :profile, 1, 'nyc_ll144', 1, 'selection_rate') RETURNING id`,
+      { replacements: { orgId: owner.orgId, project, profile } },
+    );
+    const both = await sequelize
+      .query(
+        `INSERT INTO bias_audit_stances
+           (organization_id, project_id, run_id, profile_id, version, scope_at_generation,
+            profile_version, question_set_version)
+         VALUES (:orgId, :project, :runId, :profile, 9, 'out_of_scope', 1, 1)`,
+        {
+          replacements: { orgId: owner.orgId, project, profile, runId: (runRows as any[])[0].id },
+        },
+      )
+      .then(
+        () => null,
+        (err) => err,
+      );
+    expect(both?.original?.code ?? both?.parent?.code).toBe("23514");
+
+    const [counts] = await sequelize.query(
+      `SELECT COUNT(*)::int AS n FROM bias_audit_stances WHERE project_id = :project`,
+      { replacements: { project } },
+    );
+    expect((counts as any[])[0].n).toBe(1);
   });
 });
 
@@ -934,5 +1058,166 @@ describe("bias audit routes tenant isolation", () => {
     expect(
       (await owner.request.get(`/api/bias-audit/runs/${runId}`)).body.data.stances,
     ).toHaveLength(1);
+  });
+  const OUT_OF_SCOPE_ANSWERS = [
+    { questionKey: "role.party", value: "employer", notes: "We hire with it.", dontKnow: false },
+    {
+      questionKey: "scope.weighting",
+      value: "one_of_several",
+      notes: "Recruiters read it beside interviews.",
+      dontKnow: false,
+    },
+    { questionKey: "independence.auditor", value: "self", notes: "Our HR team.", dontKnow: false },
+    { questionKey: "data.held", value: "none", notes: "We hold none.", dontKnow: false },
+  ];
+
+  /** Owner drafts and attests an out-of-scope profile through the API; no run. */
+  async function ownerWithOutOfScopeProfile() {
+    const { owner, attacker } = await seedTwoTenantContexts();
+    const project = await createTestProject(owner.orgId, owner.userId);
+    const put = await owner.request
+      .put(`/api/bias-audit/profiles/${project}/${LL144}`)
+      .send({ answers: OUT_OF_SCOPE_ANSWERS });
+    expect(put.status).toBe(200);
+    const attest = await owner.request.post(`/api/bias-audit/profiles/${project}/${LL144}/attest`);
+    expect(attest.status).toBe(200);
+    return {
+      owner,
+      attacker,
+      project,
+      stanceRoute: `/api/bias-audit/profiles/${project}/${LL144}/stance`,
+    };
+  }
+
+  it("generates a scope determination for an out-of-scope project, with no run", async () => {
+    const { owner, project, stanceRoute } = await ownerWithOutOfScopeProfile();
+
+    const first = await owner.request.post(stanceRoute);
+    expect(first.status).toBe(201);
+    expect(first.body.data).toMatchObject({ stanceId: expect.any(Number), version: 1 });
+    expect(first.body.data.sha256).toMatch(/^[0-9a-f]{64}$/);
+    const second = await owner.request.post(stanceRoute);
+    expect(second.status).toBe(201);
+    expect(second.body.data.version).toBe(2);
+
+    const [rows] = await sequelize.query(
+      `SELECT s.run_id, s.profile_id, s.version, s.score_at_generation, s.scope_at_generation,
+              s.pdf_sha256, f.source, f.filename, f.project_id AS file_project
+         FROM bias_audit_stances s JOIN files f ON f.id = s.pdf_file_id
+        WHERE s.project_id = :project ORDER BY s.version`,
+      { replacements: { project } },
+    );
+    const [profileRow] = (await sequelize.query(
+      `SELECT id FROM aedt_profiles WHERE project_id = :project AND status = 'attested'`,
+      { replacements: { project } },
+    )) as [Array<{ id: number }>, unknown];
+    expect(rows).toEqual(
+      [1, 2].map((version) => ({
+        run_id: null,
+        profile_id: profileRow[0].id,
+        version,
+        score_at_generation: null,
+        scope_at_generation: "out_of_scope",
+        pdf_sha256: version === 1 ? first.body.data.sha256 : second.body.data.sha256,
+        source: "Bias audit stance report",
+        filename: expect.stringMatching(
+          new RegExp(`^bias-audit-scope-determination-profile-${profileRow[0].id}-v${version}`),
+        ),
+        file_project: project,
+      })),
+    );
+    const [runs] = await sequelize.query(
+      `SELECT COUNT(*)::int AS n FROM bias_audit_runs WHERE project_id = :project`,
+      { replacements: { project } },
+    );
+    expect((runs as any[])[0].n).toBe(0);
+
+    // Listed on the profile view, downloadable like any stance.
+    const view = await owner.request.get(`/api/bias-audit/profiles/${project}/${LL144}`);
+    expect(view.body.data.scopeDeterminations.map((s: any) => s.version)).toEqual([2, 1]);
+    const dl = await owner.request.get(
+      `/api/bias-audit/stances/${first.body.data.stanceId}/download`,
+    );
+    expect(dl.status).toBe(200);
+    expect(dl.headers["x-content-sha256"]).toBe(first.body.data.sha256);
+  });
+
+  it("refuses a scope determination for an in-scope profile with 422, pointing at a run", async () => {
+    const { owner, project } = await ownerWithRun();
+    const before = await snapshot(project);
+    const res = await owner.request.post(`/api/bias-audit/profiles/${project}/${LL144}/stance`);
+    expect(res.status).toBe(422);
+    expect(res.body.data).toMatch(/comes from a run/);
+    expect(await snapshot(project)).toEqual(before);
+  });
+
+  it("answers 404 when there is no attested profile", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const project = await createTestProject(owner.orgId, owner.userId);
+    const res = await owner.request.post(`/api/bias-audit/profiles/${project}/${LL144}/stance`);
+    expect(res.status).toBe(404);
+  });
+
+  it("limits scope determinations to the organization, the project's people and the edit roles", async () => {
+    const { owner, attacker, project, stanceRoute } = await ownerWithOutOfScopeProfile();
+    const before = await snapshot(project);
+
+    // Another organization: 404, nothing written.
+    expect((await attacker.request.post(stanceRoute)).status).toBe(404);
+    // Same organization, not on the project: an Editor gets the member rule's
+    // 404; Reviewer and Auditor hold no bias-audit edit permission, so the
+    // role gate answers 403 before the project is looked at.
+    const editor = await sameOrgUser(owner.orgId, 3, "Editor");
+    const reviewer = await sameOrgUser(owner.orgId, 2, "Reviewer");
+    const auditor = await sameOrgUser(owner.orgId, 4, "Auditor");
+    expect((await editor.request.post(stanceRoute)).status).toBe(404);
+    expect((await reviewer.request.post(stanceRoute)).status).toBe(403);
+    expect((await auditor.request.post(stanceRoute)).status).toBe(403);
+    expect(await snapshot(project)).toEqual(before);
+
+    // On the project: the Editor may generate; Reviewer and Auditor still may not.
+    for (const u of [editor, reviewer, auditor]) {
+      await sequelize.query(
+        `INSERT INTO projects_members (organization_id, user_id, project_id)
+         VALUES (:org, :user, :project)`,
+        { replacements: { org: owner.orgId, user: u.userId, project } },
+      );
+    }
+    expect((await reviewer.request.post(stanceRoute)).status).toBe(403);
+    expect((await auditor.request.post(stanceRoute)).status).toBe(403);
+    const made = await editor.request.post(stanceRoute);
+    expect(made.status).toBe(201);
+    const stanceId = made.body.data.stanceId as number;
+
+    // The download follows the stance-download rule: project people, not others.
+    const download = `/api/bias-audit/stances/${stanceId}/download`;
+    expect((await attacker.request.get(download)).status).toBe(404);
+    const outsider = await sameOrgUser(owner.orgId, 3, "Editor");
+    expect((await outsider.request.get(download)).status).toBe(404);
+    expect((await reviewer.request.get(download)).status).toBe(200);
+    expect((await owner.request.get(download)).status).toBe(200);
+  });
+
+  it("protects a scope determination's PDF like any stance PDF", async () => {
+    const { owner, stanceRoute } = await ownerWithOutOfScopeProfile();
+    const made = await owner.request.post(stanceRoute);
+    expect(made.status).toBe(201);
+    const [files] = await sequelize.query(
+      `SELECT pdf_file_id FROM bias_audit_stances WHERE id = :id`,
+      { replacements: { id: made.body.data.stanceId } },
+    );
+    const fileId = (files as any[])[0].pdf_file_id as number;
+
+    // The generic file paths answer it as missing, so it is neither served nor deleted.
+    expect((await owner.request.get(`/api/files/${fileId}`)).status).toBe(404);
+    expect((await owner.request.delete(`/api/file-manager/${fileId}`)).status).toBe(404);
+    const [still] = await sequelize.query(`SELECT id FROM files WHERE id = :fileId`, {
+      replacements: { fileId },
+    });
+    expect(still).toHaveLength(1);
+    expect(
+      (await owner.request.get(`/api/bias-audit/stances/${made.body.data.stanceId}/download`))
+        .status,
+    ).toBe(200);
   });
 });
