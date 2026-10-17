@@ -33,9 +33,13 @@ export interface ParsedDataset {
   unreadableScoreCount: number;
   /** Outcome cells that were blank; each is read as not selected, so the caller decides. */
   blankOutcomeCount: number;
+  /** Columns up to the last named header; blank names after it are trailing commas. */
+  namedColumnCount: number;
   /**
-   * Data rows with more or fewer cells than the header. Their values sit
-   * under the wrong columns, so the caller must not compute from them.
+   * Data rows missing a cell under a named column, or with a value past the
+   * last named column (an extra comma, or a column with no header name).
+   * Their values may sit under the wrong columns, so the caller must not
+   * compute from them.
    */
   wrongWidthRowCount: number;
 }
@@ -94,8 +98,7 @@ function mappingError(key: string, column: string): string {
   );
 }
 
-/** Columns up to the last named header: blank names after it are trailing commas. */
-export function namedColumnCount(headers: string[]): number {
+function countNamedColumns(headers: string[]): number {
   let count = headers.length;
   while (count > 0 && headers[count - 1] === "") count--;
   return count;
@@ -122,14 +125,13 @@ export function parseDataset(csv: string, mapping: Record<string, string>): Pars
   let unreadableScoreCount = 0;
   let blankOutcomeCount = 0;
   let wrongWidthRowCount = 0;
-  const namedColumns = namedColumnCount(headers);
+  const namedColumns = countNamedColumns(headers);
   const records: AuditRecord[] = dataRows.map((cells) => {
     // Trailing commas, in the header or in a row, add blank cells past the
     // last named column and move no value. A row is wrong width when it is
     // missing a named column's cell or has a value past the last named one.
-    const missingNamed = headers.slice(cells.length).some((h) => h !== "");
     const filledExtra = cells.slice(namedColumns).some((c) => c.trim() !== "");
-    if (missingNamed || filledExtra) wrongWidthRowCount++;
+    if (cells.length < namedColumns || filledExtra) wrongWidthRowCount++;
     const record: AuditRecord = {};
     for (const [key, at] of index) {
       const raw = (cells[at] ?? "").trim();
@@ -157,6 +159,7 @@ export function parseDataset(csv: string, mapping: Record<string, string>): Pars
     unreadableOutcomeCount,
     unreadableScoreCount,
     blankOutcomeCount,
+    namedColumnCount: namedColumns,
     wrongWidthRowCount,
   };
 }

@@ -998,10 +998,16 @@ export async function linkFriaEvidence(req: Request, res: Response): Promise<Res
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid FRIA ID")));
     }
 
-    if (!file_id || !entity_type) {
+    if (file_id === undefined || file_id === null || file_id === "" || !entity_type) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Missing file_id or entity_type")));
     }
-    const fileId = Number(file_id);
+    // A JSON number or a string of digits; Number() alone would take true, [7] or "1e2".
+    const fileId =
+      typeof file_id === "number"
+        ? file_id
+        : typeof file_id === "string" && /^\d+$/.test(file_id)
+          ? Number(file_id)
+          : NaN;
     if (!Number.isInteger(fileId) || fileId <= 0) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
     }
