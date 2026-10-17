@@ -646,6 +646,43 @@ describe.each([
     expect(JSON.stringify(body)).not.toMatch(/secret/);
   });
 
+  it("answers 201 with the stance when the success log throws, logging no failure", async () => {
+    const created = { stanceId: 3, version: 1, sha256: "a" };
+    service().mockResolvedValue(created);
+    logStructured.mockImplementation((state: unknown) => {
+      if (state === "successful") throw new Error("tenant log dir gone at /var/log/secret");
+    });
+    let answer: Awaited<ReturnType<typeof call>>;
+    try {
+      answer = await call(handler(), req);
+    } finally {
+      logStructured.mockReset();
+    }
+    expect(answer.status).toBe(201);
+    expect(answer.body.data).toEqual(created);
+    expect(errorLines()).toEqual([]);
+    expect(errorEvents()).toEqual([]);
+    expect(logCentralOnly).not.toHaveBeenCalled();
+  });
+
+  it("answers 201 with the stance when the success event write rejects", async () => {
+    const created = { stanceId: 3, version: 1, sha256: "a" };
+    service().mockResolvedValue(created);
+    logEvent.mockRejectedValueOnce(new Error("log store down at /var/log/secret"));
+    const stderr = jest.spyOn(console, "error").mockImplementation(() => undefined);
+    let answer: Awaited<ReturnType<typeof call>>;
+    try {
+      answer = await call(handler(), req);
+    } finally {
+      stderr.mockRestore();
+    }
+    expect(answer.status).toBe(201);
+    expect(answer.body.data).toEqual(created);
+    expect(errorLines()).toEqual([]);
+    expect(errorEvents()).toEqual([]);
+    expect(logCentralOnly).not.toHaveBeenCalled();
+  });
+
   it("logs an expected refusal once, as thrown, and answers with its own status and message", async () => {
     service().mockRejectedValue(new ConflictException("raced"));
     const { status, body } = await call(handler(), req);

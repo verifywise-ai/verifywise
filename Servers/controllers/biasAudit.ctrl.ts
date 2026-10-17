@@ -282,15 +282,16 @@ export const confirmDerivedBasis = controllerWrapper(
 // --------------------------------------------------------------- stances
 
 /**
- * A failure log that cannot itself fail the response. The client's answer
- * must not depend on the log store being up, and a logging error's text must
- * not reach the client in place of the generic 500.
+ * A success or failure log that cannot itself fail or change the response.
+ * The client's answer must not depend on the log store being up, a logging
+ * error's text must not reach the client in place of the generic 500, and a
+ * success log that throws must not turn a committed stance into a 500.
  */
-async function logFailureSafely(params: Parameters<typeof logFailure>[0]): Promise<void> {
+async function logSafely<P>(log: (params: P) => Promise<void>, params: P): Promise<void> {
   try {
-    await logFailure(params);
+    await log(params);
   } catch {
-    // Nothing further to do: the response below does not depend on the log.
+    // Nothing further to do: the response does not depend on the log.
   }
 }
 
@@ -378,7 +379,14 @@ function stanceGenerationHandler(
     logProcessing({ ...log, description: `starting ${functionName}` });
     try {
       const data = await work(req);
-      await logSuccess({ ...log, eventType: "Create", description: successDescription(data) });
+      // The stance is committed: from here the answer is 201 with its data,
+      // whatever the success log does. A 500 here would make the client
+      // retry and file a second version.
+      await logSafely(logSuccess, {
+        ...log,
+        eventType: "Create",
+        description: successDescription(data),
+      });
       return res.status(201).json(STATUS_CODE[201](data));
     } catch (error) {
       const refusal =
@@ -386,7 +394,7 @@ function stanceGenerationHandler(
           ? error
           : null;
       if (refusal) {
-        await logFailureSafely({
+        await logSafely(logFailure, {
           ...log,
           eventType: "Create",
           description: `${functionName} failed`,
@@ -396,7 +404,7 @@ function stanceGenerationHandler(
         return res.status(status).json(STATUS_CODE[status](refusal.message));
       }
       recordUnexpectedCause(functionName, error);
-      await logFailureSafely({
+      await logSafely(logFailure, {
         ...log,
         eventType: "Create",
         description: `${functionName} failed`,
@@ -453,7 +461,7 @@ export async function downloadStance(req: Request, res: Response): Promise<Respo
     res.setHeader("X-Content-SHA256", pdf.sha256);
     return res.status(200).send(pdf.content);
   } catch (error) {
-    await logFailureSafely({
+    await logSafely(logFailure, {
       ...log,
       eventType: "Read",
       description: "downloadStance failed",
