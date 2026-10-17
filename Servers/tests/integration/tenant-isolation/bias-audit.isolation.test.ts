@@ -445,8 +445,9 @@ describe("bias audit query layer against the database", () => {
     expect(rows).toEqual([{ status: "attested" }]);
   });
 
-  const profileStance = (profileId: number, userId: number, version = 1) => ({
+  const profileStance = (profileId: number, projectId: number, userId: number, version = 1) => ({
     profileId,
+    projectId,
     version,
     pdfSha256: null,
     pdfFileId: null,
@@ -466,13 +467,13 @@ describe("bias audit query layer against the database", () => {
     // A draft is refused, and nothing is written.
     await expect(
       sequelize.transaction((t) =>
-        createProfileStanceQuery(profileStance(profile, owner.userId), owner.orgId, t),
+        createProfileStanceQuery(profileStance(profile, project, owner.userId), owner.orgId, t),
       ),
     ).rejects.toBeInstanceOf(NotFoundException);
 
     await sequelize.transaction((t) => attestProfileQuery(profile, owner.userId, owner.orgId, t));
     const row = await sequelize.transaction((t) =>
-      createProfileStanceQuery(profileStance(profile, owner.userId), owner.orgId, t),
+      createProfileStanceQuery(profileStance(profile, project, owner.userId), owner.orgId, t),
     );
     expect(row).toMatchObject({
       organization_id: owner.orgId,
@@ -501,17 +502,21 @@ describe("bias audit query layer against the database", () => {
 
     await expect(
       sequelize.transaction((t) =>
-        createProfileStanceQuery(profileStance(profile, attacker.userId), attacker.orgId, t),
+        createProfileStanceQuery(
+          profileStance(profile, project, attacker.userId),
+          attacker.orgId,
+          t,
+        ),
       ),
     ).rejects.toBeInstanceOf(NotFoundException);
 
     await sequelize.transaction((t) =>
-      createProfileStanceQuery(profileStance(profile, owner.userId), owner.orgId, t),
+      createProfileStanceQuery(profileStance(profile, project, owner.userId), owner.orgId, t),
     );
     // A second version 1 for the same profile loses to the partial unique index.
     const duplicate = await sequelize
       .transaction((t) =>
-        createProfileStanceQuery(profileStance(profile, owner.userId), owner.orgId, t),
+        createProfileStanceQuery(profileStance(profile, project, owner.userId), owner.orgId, t),
       )
       .then(
         () => null,
@@ -551,6 +556,40 @@ describe("bias audit query layer against the database", () => {
       { replacements: { project } },
     );
     expect((counts as any[])[0].n).toBe(1);
+  });
+  it("answers 409 for a profile superseded before the insert, and 404 for another project", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const project = await createTestProject(owner.orgId, owner.userId);
+    const other = await createTestProject(owner.orgId, owner.userId);
+    const profile = await insertProfile(owner.orgId, project, owner.userId);
+    await sequelize.transaction((t) => attestProfileQuery(profile, owner.userId, owner.orgId, t));
+
+    // The profile is the organization's, but not the project's the PDF is filed under.
+    await expect(
+      sequelize.transaction((t) =>
+        createProfileStanceQuery(profileStance(profile, other, owner.userId), owner.orgId, t),
+      ),
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    // A re-attestation superseded it while the document was being generated.
+    await sequelize.query(`UPDATE aedt_profiles SET status = 'superseded' WHERE id = :profile`, {
+      replacements: { profile },
+    });
+    await expect(
+      sequelize.transaction((t) =>
+        createProfileStanceQuery(profileStance(profile, project, owner.userId), owner.orgId, t),
+      ),
+    ).rejects.toMatchObject({
+      name: "ConflictException",
+      statusCode: 409,
+      message: expect.stringMatching(/re-attested while the document was being generated/),
+    });
+
+    const [counts] = await sequelize.query(
+      `SELECT COUNT(*)::int AS n FROM bias_audit_stances WHERE project_id IN (:project, :other)`,
+      { replacements: { project, other } },
+    );
+    expect((counts as any[])[0].n).toBe(0);
   });
 });
 
@@ -1140,6 +1179,40 @@ describe("bias audit routes tenant isolation", () => {
     );
     expect(dl.status).toBe(200);
     expect(dl.headers["x-content-sha256"]).toBe(first.body.data.sha256);
+  });
+
+  it("numbers scope determinations across re-attestations of the project", async () => {
+    const { owner, project, stanceRoute } = await ownerWithOutOfScopeProfile();
+    const first = await owner.request.post(stanceRoute);
+    expect(first.status).toBe(201);
+    expect(first.body.data.version).toBe(1);
+
+    // Re-attest: the edit opens a new draft version, attesting it supersedes the first.
+    const put = await owner.request.put(`/api/bias-audit/profiles/${project}/${LL144}`).send({
+      answers: OUT_OF_SCOPE_ANSWERS.map((a) =>
+        a.questionKey === "data.held" ? { ...a, notes: "We still hold none." } : a,
+      ),
+    });
+    expect(put.status).toBe(200);
+    expect(
+      (await owner.request.post(`/api/bias-audit/profiles/${project}/${LL144}/attest`)).status,
+    ).toBe(200);
+
+    const second = await owner.request.post(stanceRoute);
+    expect(second.status).toBe(201);
+    expect(second.body.data.version).toBe(2);
+
+    const [rows] = (await sequelize.query(
+      `SELECT s.version, s.profile_id, ap.status
+         FROM bias_audit_stances s JOIN aedt_profiles ap ON ap.id = s.profile_id
+        WHERE s.project_id = :project ORDER BY s.version`,
+      { replacements: { project } },
+    )) as [Array<{ version: number; profile_id: number; status: string }>, unknown];
+    expect(rows.map((r) => [r.version, r.status])).toEqual([
+      [1, "superseded"],
+      [2, "attested"],
+    ]);
+    expect(rows[0].profile_id).not.toBe(rows[1].profile_id);
   });
 
   it("refuses a scope determination for an in-scope profile with 422, pointing at a run", async () => {

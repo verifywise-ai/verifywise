@@ -572,14 +572,15 @@ describe("persistStance from an attested profile", () => {
 
   beforeEach(() => {
     uploadFile.mockResolvedValue({ id: 501 });
-    utils.getProfileByIdQuery.mockResolvedValue({ id: 5, project_id: 7, status: "attested" });
     utils.getNextProfileStanceVersionQuery.mockResolvedValue(1);
     utils.createProfileStanceQuery.mockResolvedValue({ id: 30, version: 1 });
   });
 
   it("files the PDF as a stance file under the profile's project and links it to the profile", async () => {
     const out = await persistStance(base);
-    expect(utils.getProfileByIdQuery).toHaveBeenCalledWith(5, 42);
+    // No re-read of the profile: the service loaded the attested profile, and
+    // the insert refuses one that is no longer attested or not the project's.
+    expect(utils.getProfileByIdQuery).not.toHaveBeenCalled();
     expect(utils.getNextProfileStanceVersionQuery).toHaveBeenCalledWith(5, 42);
     const [file, userId, projectId, source, orgId, transaction] = uploadFile.mock.calls[0];
     expect(file.originalname).toBe("bias-audit-scope-determination-profile-5-v1.pdf");
@@ -594,6 +595,7 @@ describe("persistStance from an attested profile", () => {
     const [row, createOrg, createTx] = utils.createProfileStanceQuery.mock.calls[0];
     expect(row).toEqual({
       profileId: 5,
+      projectId: 7,
       version: 1,
       pdfSha256: out.sha256,
       pdfFileId: 501,
@@ -624,23 +626,38 @@ describe("persistStance from an attested profile", () => {
     });
   });
 
-  it("refuses anything but an out-of-scope document, writing nothing", async () => {
+  it("refuses an in-scope or undetermined document without evidence, writing nothing", async () => {
+    // The service answers the scope rule first (422, "comes from a run"); this
+    // is the one evidence check that remains here.
     for (const m of [model, { ...model, scope: "undetermined" }]) {
-      await expect(persistStance({ ...base, model: m, evidence })).rejects.toMatchObject({
+      await expect(persistStance({ ...base, model: m })).rejects.toMatchObject({
         statusCode: 422,
+        message: "A stance PDF cannot be rendered without the run's evidence.",
       });
     }
     expect(getSharedBrowser).not.toHaveBeenCalled();
     expect(uploadFile).not.toHaveBeenCalled();
   });
 
-  it("refuses a profile outside the organization, and a project that does not match it", async () => {
-    utils.getProfileByIdQuery.mockResolvedValue(null);
+  it("passes the insert's not-found and re-attestation conflict through unchanged", async () => {
+    const { ConflictException, NotFoundException } = jest.requireActual(
+      "../../../domain.layer/exceptions/custom.exception",
+    );
+    utils.createProfileStanceQuery.mockRejectedValueOnce(
+      new NotFoundException("Profile 5 was not found in this organization", "Profile"),
+    );
     await expect(persistStance(base)).rejects.toMatchObject({ statusCode: 404 });
-    utils.getProfileByIdQuery.mockResolvedValue({ id: 5, project_id: 8 });
-    await expect(persistStance(base)).rejects.toMatchObject({ name: "ValidationException" });
-    expect(uploadFile).not.toHaveBeenCalled();
-    expect(utils.createProfileStanceQuery).not.toHaveBeenCalled();
+    utils.createProfileStanceQuery.mockRejectedValueOnce(
+      new ConflictException(
+        "The profile was re-attested while the document was being generated. Reload and retry.",
+        "AedtProfile",
+        "status",
+      ),
+    );
+    await expect(persistStance(base)).rejects.toMatchObject({
+      statusCode: 409,
+      message: expect.stringMatching(/re-attested/),
+    });
   });
 
   it("keeps a run stance fail-closed without evidence, even for an out-of-scope model", async () => {

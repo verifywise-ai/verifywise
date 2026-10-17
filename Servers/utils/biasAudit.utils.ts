@@ -489,6 +489,8 @@ export async function createStanceQuery(
 
 export interface CreateProfileStanceArgs {
   profileId: number;
+  /** The project the PDF is filed under. A filter only: the row takes the profile's. */
+  projectId: number;
   version: number;
   pdfSha256: string | null;
   pdfFileId: number | null;
@@ -500,8 +502,15 @@ export interface CreateProfileStanceArgs {
  * A stance generated from an attested profile: the out-of-scope "Scope
  * determination", which has no run. The project and both versions are taken
  * from the profile row, as createStanceQuery takes them from the run, and
- * only an attested profile of this organization (and of a project in it) is
- * accepted. No readiness score is stored, because none was computed.
+ * only an attested profile of this organization, of the caller's project (and
+ * of a project in the organization) is accepted. No readiness score is
+ * stored, because none was computed.
+ *
+ * An insert that matches no row is told apart, in the same transaction: a
+ * profile of this organization and project that is now superseded was
+ * re-attested while the document was being generated, which is a conflict
+ * the caller can retry (409). Anything else, missing, a draft, another
+ * project's or another organization's, is not found (404).
  */
 export async function createProfileStanceQuery(
   args: CreateProfileStanceArgs,
@@ -520,11 +529,12 @@ export async function createProfileStanceQuery(
        JOIN projects pr ON pr.id = ap.project_id
                        AND pr.organization_id = :organization_id
       WHERE ap.id = :profile_id AND ap.organization_id = :organization_id
-        AND ap.status = 'attested'
+        AND ap.project_id = :project_id AND ap.status = 'attested'
      RETURNING *`,
     {
       replacements: {
         profile_id: args.profileId,
+        project_id: args.projectId,
         version: args.version,
         pdf_sha256: args.pdfSha256,
         pdf_file_id: args.pdfFileId,
@@ -536,22 +546,62 @@ export async function createProfileStanceQuery(
     },
   );
   const row = firstRow<BiasAuditStance>(result);
-  if (!row) refuseCrossOrg("Profile", args.profileId);
-  return row;
+  if (row) return row;
+
+  const probe = (await sequelize.query(
+    `SELECT ap.status
+       FROM aedt_profiles ap
+       JOIN projects pr ON pr.id = ap.project_id
+                       AND pr.organization_id = :organization_id
+      WHERE ap.id = :profile_id AND ap.organization_id = :organization_id
+        AND ap.project_id = :project_id`,
+    {
+      replacements: {
+        profile_id: args.profileId,
+        project_id: args.projectId,
+        organization_id: organizationId,
+      },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  )) as Array<{ status: string }>;
+  if (probe[0]?.status === "superseded") {
+    throw new ConflictException(
+      "The profile was re-attested while the document was being generated. Reload and retry.",
+      "AedtProfile",
+      "status",
+    );
+  }
+  refuseCrossOrg("Profile", args.profileId);
 }
 
 /**
- * Next stance version for a profile. Like getNextStanceVersionQuery, this
- * read is not the uniqueness guarantee: the partial unique index on
- * (profile_id, version) is, and a lost race surfaces as a 23505.
+ * Next scope-determination version for the project and framework of the
+ * cited profile. A re-attestation creates a new aedt_profiles row, so the
+ * numbering spans every profile row of that project and framework (v1 on
+ * profile A, then v2 on profile B), not the one row.
+ *
+ * Like getNextStanceVersionQuery, this read is not the uniqueness guarantee.
+ * The partial unique index on (profile_id, version) is, and a lost race
+ * surfaces as a 23505. That index is enough: only one profile of a project
+ * and framework is attested at a time, and createProfileStanceQuery inserts
+ * only for the attested one, so two concurrent generates that read the same
+ * number cite the same profile and collide on it. A generate that cites a
+ * profile superseded meanwhile is refused as a conflict instead.
  */
 export async function getNextProfileStanceVersionQuery(
   profileId: number,
   organizationId: number,
 ): Promise<number> {
   const rows = (await sequelize.query(
-    `SELECT MAX(version) AS max FROM bias_audit_stances
-      WHERE profile_id = :profile_id AND organization_id = :organization_id`,
+    `SELECT MAX(s.version) AS max
+       FROM aedt_profiles cur
+       JOIN aedt_profiles ap ON ap.project_id = cur.project_id
+                            AND ap.framework_id = cur.framework_id
+                            AND ap.organization_id = :organization_id
+       JOIN bias_audit_stances s ON s.profile_id = ap.id
+                                AND s.organization_id = :organization_id
+      WHERE cur.id = :profile_id AND cur.organization_id = :organization_id`,
     {
       replacements: { profile_id: profileId, organization_id: organizationId },
       type: QueryTypes.SELECT,

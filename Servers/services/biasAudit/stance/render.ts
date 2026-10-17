@@ -30,7 +30,6 @@ import { sequelize } from "../../../database/db";
 import {
   BusinessLogicException,
   ConflictException,
-  NotFoundException,
   ValidationException,
 } from "../../../domain.layer/exceptions/custom.exception";
 import {
@@ -38,7 +37,6 @@ import {
   createStanceQuery,
   getNextProfileStanceVersionQuery,
   getNextStanceVersionQuery,
-  getProfileByIdQuery,
   getRunProjectIdQuery,
 } from "../../../utils/biasAudit.utils";
 import { BIAS_AUDIT_STANCE_SOURCE, uploadFile } from "../../../utils/fileUpload.utils";
@@ -209,17 +207,20 @@ export function findForbiddenWords(html: string): string[] {
 }
 
 /**
- * The export gate. Fails closed: no evidence, or evidence that withholds export,
- * refuses. The one exception is a scope determination, which has no run and so
- * no dataset to gate: an out-of-scope document may pass with no evidence. Every
- * refusal here and in renderStancePdf is a BusinessLogicException (422), so a
- * caller maps it to a client error rather than a server fault.
+ * The export gate, and the one place the evidence rule lives. Fails closed: no
+ * evidence, or evidence that withholds export, refuses. The one exception is a
+ * scope determination, which has no run and so no dataset to gate: an
+ * out-of-scope document may pass with no evidence, unless it is a run stance
+ * (`fromRun`), which never renders without its run's evidence. Every refusal
+ * here and in renderStancePdf is a BusinessLogicException (422), so a caller
+ * maps it to a client error rather than a server fault.
  */
 function assertMayExport(
   evidence: StanceEvidence | null | undefined,
   scope: StanceModel["scope"],
+  fromRun = false,
 ): void {
-  if (!evidence && scope === "out_of_scope") return;
+  if (!evidence && scope === "out_of_scope" && !fromRun) return;
   if (!evidence) {
     throw new BusinessLogicException(
       "A stance PDF cannot be rendered without the run's evidence.",
@@ -311,36 +312,26 @@ async function resolveParent(args: PersistStanceArgs): Promise<StanceParent> {
   const common = { scopeAtGeneration: model.scope, generatedBy: userId };
 
   if (args.profileId !== undefined) {
-    // Only an out-of-scope determination is generated from a profile. An
-    // in-scope stance needs figures, so it comes from a run.
-    if (model.scope !== "out_of_scope") {
-      throw new BusinessLogicException(
-        "Only a scope determination is generated from a profile. A stance for an in-scope or undetermined profile comes from a run.",
-        "stance_profile_scope",
-      );
-    }
-    const profileId = args.profileId;
-    const profile = await getProfileByIdQuery(profileId, organizationId);
-    if (!profile) {
-      throw new NotFoundException(`Profile ${profileId} was not found`, "AedtProfile", profileId);
-    }
+    // The service decides that only an out-of-scope profile gets a scope
+    // determination (422 otherwise), and assertMayExport refuses any other
+    // scope without evidence. The profile is not re-read here: the insert
+    // accepts only the attested profile of this organization and of this
+    // project, as createStanceQuery accepts only the organization's run.
+    const { profileId, projectId } = args;
     return {
-      projectId: profile.project_id,
+      projectId,
       label: "profile",
       nextVersion: () => getNextProfileStanceVersionQuery(profileId, organizationId),
       filename: (v) => `bias-audit-scope-determination-profile-${profileId}-v${v}.pdf`,
       insert: (row, transaction) =>
-        createProfileStanceQuery({ ...row, ...common, profileId }, organizationId, transaction),
+        createProfileStanceQuery(
+          { ...row, ...common, profileId, projectId },
+          organizationId,
+          transaction,
+        ),
     };
   }
 
-  // A run stance is never rendered without the run's evidence, whatever its scope.
-  if (!args.evidence) {
-    throw new BusinessLogicException(
-      "A stance PDF cannot be rendered without the run's evidence.",
-      "stance_evidence",
-    );
-  }
   const runId = args.runId;
   return {
     projectId: await getRunProjectIdQuery(runId, organizationId),
@@ -368,10 +359,12 @@ export async function persistStance(
   args: PersistStanceArgs,
 ): Promise<{ stanceId: number; version: number; sha256: string }> {
   const { projectId, organizationId, userId, model, evidence } = args;
-  assertMayExport(evidence, model.scope);
+  // Checked before any read, so a refusal launches no browser and writes nothing.
+  assertMayExport(evidence, model.scope, args.runId !== undefined);
   const parent = await resolveParent(args);
   // The parent decides the project. A caller-supplied id that disagrees is a
   // bug or an attempt to file the PDF under another project, so it is refused.
+  // A profile parent takes the caller's project and the insert enforces it.
   if (parent.projectId !== projectId) {
     throw new ValidationException(
       `The project does not match the ${parent.label}'s project`,

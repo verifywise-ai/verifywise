@@ -376,6 +376,7 @@ describe("stance versioning", () => {
 describe("profile stances (scope determinations)", () => {
   const ARGS = {
     profileId: 5,
+    projectId: 7,
     version: 1,
     pdfSha256: "c".repeat(64),
     pdfFileId: 501,
@@ -394,21 +395,23 @@ describe("profile stances (scope determinations)", () => {
     expect(String(sql)).toMatch(/ap\.status = 'attested'/);
     // The project must be the organization's too.
     expect(String(sql)).toMatch(/pr\.organization_id = :organization_id/);
-    expect(opts.replacements).toMatchObject({ profile_id: 5, organization_id: 42 });
+    // The PDF is filed under the caller's project, so the profile must be its.
+    expect(String(sql)).toMatch(/ap\.project_id = :project_id/);
+    expect(opts.replacements).toMatchObject({ profile_id: 5, organization_id: 42, project_id: 7 });
   });
 
   it("takes the project and both versions from the profile row, never from the caller", async () => {
     mockQuery.mockResolvedValueOnce([[{ id: 3 }]]);
     await createProfileStanceQuery(
-      { ...ARGS, projectId: 99, profileVersion: 7, questionSetVersion: 7 } as any,
+      { ...ARGS, profileVersion: 7, questionSetVersion: 7 } as any,
       42,
       tx,
     );
     const [sql, opts] = mockQuery.mock.calls[0];
-    expect(String(sql)).toMatch(/ap\.project_id/);
+    // The caller's project only filters; the inserted value is the profile's.
+    expect(String(sql)).toMatch(/SELECT ap\.organization_id, ap\.project_id/);
     expect(String(sql)).toMatch(/ap\.version/);
     expect(String(sql)).toMatch(/ap\.question_set_version/);
-    expect(opts.replacements).not.toHaveProperty("project_id");
     expect(opts.replacements).not.toHaveProperty("profile_version");
     expect(opts.replacements).not.toHaveProperty("question_set_version");
   });
@@ -423,21 +426,50 @@ describe("profile stances (scope determinations)", () => {
     expect(opts.transaction).toBe(tx);
   });
 
-  it("refuses a draft, superseded or other organization's profile as not found", async () => {
-    mockQuery.mockResolvedValueOnce([[]]);
-    await expect(createProfileStanceQuery(ARGS, 42, tx)).rejects.toThrow(
-      /not found in this organization/i,
-    );
+  it("refuses a missing, draft, other-project or other organization's profile as not found", async () => {
+    for (const probe of [[], [{ status: "draft" }]]) {
+      mockQuery.mockResolvedValueOnce([[]]).mockResolvedValueOnce(probe);
+      await expect(createProfileStanceQuery(ARGS, 42, tx)).rejects.toMatchObject({
+        statusCode: 404,
+        message: expect.stringMatching(/not found in this organization/i),
+      });
+    }
   });
 
-  it("versions per profile, in the organization", async () => {
+  it("answers 409 when the profile was superseded between load and insert", async () => {
+    // The insert matched nothing; the profile is still this organization's
+    // and this project's, but a re-attestation superseded it.
+    mockQuery.mockResolvedValueOnce([[]]).mockResolvedValueOnce([{ status: "superseded" }]);
+    await expect(createProfileStanceQuery(ARGS, 42, tx)).rejects.toMatchObject({
+      name: "ConflictException",
+      statusCode: 409,
+      message: expect.stringMatching(/re-attested while the document was being generated/),
+    });
+    const [sql, opts] = mockQuery.mock.calls[1];
+    expect(String(sql)).toMatch(/ap\.id = :profile_id/);
+    expect(String(sql)).toMatch(/ap\.organization_id = :organization_id/);
+    expect(String(sql)).toMatch(/ap\.project_id = :project_id/);
+    expect(String(sql)).toMatch(/pr\.organization_id = :organization_id/);
+    expect(opts).toMatchObject({
+      replacements: { profile_id: 5, organization_id: 42, project_id: 7 },
+      transaction: tx,
+    });
+  });
+
+  it("numbers versions across every profile of the project and framework, in the organization", async () => {
     mockQuery.mockResolvedValueOnce([{ max: null }]);
     expect(await getNextProfileStanceVersionQuery(5, 42)).toBe(1);
     mockQuery.mockResolvedValueOnce([{ max: 2 }]);
     expect(await getNextProfileStanceVersionQuery(5, 42)).toBe(3);
     const [sql, opts] = mockQuery.mock.calls[0];
-    expect(String(sql)).toMatch(/profile_id = :profile_id/);
-    expect(String(sql)).toContain("organization_id = :organization_id");
+    // The re-attested profile is a new row: numbering follows the project
+    // and framework of the cited profile, not that one row.
+    expect(String(sql)).toMatch(/cur\.id = :profile_id/);
+    expect(String(sql)).toMatch(/ap\.project_id = cur\.project_id/);
+    expect(String(sql)).toMatch(/ap\.framework_id = cur\.framework_id/);
+    expect(String(sql)).toContain("cur.organization_id = :organization_id");
+    expect(String(sql)).toContain("ap.organization_id = :organization_id");
+    expect(String(sql)).toContain("s.organization_id = :organization_id");
     expect(opts.replacements).toEqual({ profile_id: 5, organization_id: 42 });
   });
 
