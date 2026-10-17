@@ -45,7 +45,8 @@ async def authenticate_agent_key(bearer_token: str) -> dict:
         result = await db.execute(
             text("""
                 SELECT id, organization_id, name, allowed_tools, blocked_tools,
-                       rate_limit_rpm, is_active, revoked_at, expires_at
+                       rate_limit_rpm, is_active, revoked_at, expires_at,
+                       enforcement_mode, apply_tool_lists_to_hook
                 FROM ai_gateway_mcp_agent_keys
                 WHERE key_hash = :key_hash
             """),
@@ -80,18 +81,30 @@ async def extract_agent_key(request: Request) -> dict:
 from utils.acl import matches_acl
 
 
+def tool_acl_violation(agent_key: dict, tool_name: str) -> Optional[str]:
+    """
+    Check allowed_tools/blocked_tools on the agent key.
+    Returns why the tool is not permitted, or None when it is.
+    """
+    allowed_tools = agent_key.get("allowed_tools") or []
+    if allowed_tools and not matches_acl(tool_name, allowed_tools):
+        return f"Agent key does not allow tool: {tool_name}"
+
+    blocked_tools = agent_key.get("blocked_tools") or []
+    if blocked_tools and matches_acl(tool_name, blocked_tools):
+        return f"Agent key blocks tool: {tool_name}"
+
+    return None
+
+
 def enforce_tool_acls(agent_key: dict, tool_name: str) -> None:
     """
     Check allowed_tools/blocked_tools on the agent key.
     Raises ValueError if the tool is not permitted.
     """
-    allowed_tools = agent_key.get("allowed_tools") or []
-    if allowed_tools and not matches_acl(tool_name, allowed_tools):
-        raise ValueError(f"Agent key does not allow tool: {tool_name}")
-
-    blocked_tools = agent_key.get("blocked_tools") or []
-    if blocked_tools and matches_acl(tool_name, blocked_tools):
-        raise ValueError(f"Agent key blocks tool: {tool_name}")
+    violation = tool_acl_violation(agent_key, tool_name)
+    if violation:
+        raise ValueError(violation)
 
 
 # ─── Rate Limiting ──────────────────────────────────────────────────────────

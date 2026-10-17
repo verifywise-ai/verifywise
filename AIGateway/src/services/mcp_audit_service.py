@@ -31,7 +31,9 @@ async def log_tool_call(
     server_id: Optional[int],
     tool_name: str,
     arguments: Optional[dict],
-    result_status: str,  # "success", "error", "blocked", "rate_limited", "approval_required"
+    # "success", "error", "blocked", "rate_limited", "approval_required", and for
+    # monitor-only agent keys (allowed through) "would_block" / "would_need_approval"
+    result_status: str,
     result_summary: Optional[str],  # truncated to 500 chars
     is_error: bool,
     latency_ms: int,
@@ -102,7 +104,8 @@ async def update_tool_result(
     outcome_event: dict,  # {"type": "...", "at": "...", "detail"?: "..."}
 ) -> str:
     """Update the audit row for (org, session_id, tool_use_id) with the tool result.
-    Flips approval_required -> success, stores result_response, appends outcome_event.
+    Flips approval_required -> success (would_block / would_need_approval are kept),
+    stores result_response, appends outcome_event.
     Returns: "ok" | "no_match" | "forbidden" | "error". Fire-and-forget safe."""
     try:
         async with get_db() as db:

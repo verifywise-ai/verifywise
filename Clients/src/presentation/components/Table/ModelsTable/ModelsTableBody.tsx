@@ -219,7 +219,7 @@ const ModelsTableBody: React.FC<ModelsTableBodyProps> = ({
               sx={{
                 ...singleTheme.tableStyles.primary.body.cell,
                 textTransform: "none",
-                textAlign: "center",
+                textAlign: "left",
               }}
             >
               <Box

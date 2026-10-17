@@ -51,7 +51,7 @@ export const createNewProjectQuery = async (project: {
   users: string;
   start_date: Date;
   ai_risk_classification: string;
-  type_of_high_risk_role: string;
+  high_risk_roles: string[];
   goal: string;
   last_updated?: Date;
   last_updated_by?: number;
@@ -106,7 +106,7 @@ interface Project {
   users: string;
   start_date: Date;
   ai_risk_classification: string;
-  type_of_high_risk_role: string;
+  high_risk_roles: string[];
   goal: string;
   last_updated?: Date;
   last_updated_by?: number;

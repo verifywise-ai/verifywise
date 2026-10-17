@@ -217,8 +217,8 @@ async def update_mcp_guardrail(org_id: int, rule_id: int, data: dict) -> Optiona
     return None
 
 
-async def delete_mcp_guardrail(org_id: int, rule_id: int) -> bool:
-    """Delete an MCP guardrail rule. Returns True if a row was deleted."""
+async def delete_mcp_guardrail(org_id: int, rule_id: int) -> Optional[dict]:
+    """Delete an MCP guardrail rule. Returns the deleted row's id and name, or None."""
     async with get_db() as db:
         result = await db.execute(
             # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
@@ -226,11 +226,11 @@ async def delete_mcp_guardrail(org_id: int, rule_id: int) -> bool:
                 DELETE FROM ai_gateway_mcp_guardrail_rules
                 WHERE organization_id = :org_id
                   AND id = :rule_id
-                RETURNING id
+                RETURNING id, name
             """),
             {"org_id": org_id, "rule_id": rule_id},
         )
         await db.commit()
         row = result.first()
-        return row is not None
+        return dict(row._mapping) if row is not None else None
     return False

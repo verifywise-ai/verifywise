@@ -19,6 +19,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # On a release, this action also attaches the SBOM to the release itself
+      # as verifywise-sbom.cyclonedx.json (its upload-release-assets default),
+      # so no separate attach step is needed.
       - name: Generate repository SBOM (CycloneDX)
         uses: anchore/sbom-action@v0
         with:
@@ -32,9 +35,3 @@ jobs:
           name: sbom
           path: sbom-repository.json
           retention-days: 90
-
-      - name: Attach SBOM to release
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v3
-        with:
-          files: sbom-repository.json

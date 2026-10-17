@@ -94,6 +94,34 @@ describe("generateReportsV2 (async)", () => {
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: { runId: 77 } }));
   });
 
+  it("stores 0 for the framework ids when a use case with no framework omits them", async () => {
+    // The wizard leaves both out for a use case carrying no pairing. parseInt
+    // gives NaN for an absent field, which would land in config_snapshot as
+    // null; 0 is the value the collector reads as "no pairing".
+    mockUser.mockResolvedValue({ id: 3, organization_id: 5 } as any);
+    mockOrg.mockResolvedValue({ name: "Acme" } as any);
+    mockCreateRun.mockResolvedValue({ id: 78 } as any);
+
+    const req = createMockReq({
+      projectId: "7",
+      reportType: "project",
+      format: "pdf",
+    });
+    const res = createMockRes();
+
+    await generateReportsV2(req as Request, res as Response);
+
+    expect(mockCreateRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config_snapshot: expect.objectContaining({
+          project_id: 7,
+          request: expect.objectContaining({ frameworkId: 0, projectFrameworkId: 0 }),
+        }),
+      }),
+    );
+    expect(res.status).toHaveBeenCalledWith(202);
+  });
+
   it("returns 404 when the user does not exist", async () => {
     mockUser.mockResolvedValue(null as any);
     const req = createMockReq({

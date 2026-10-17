@@ -101,6 +101,7 @@ import { developersOverviewContent } from './developers/overview';
 import { agentControlOverviewContent } from './developers/agent-control-overview';
 import { connectYourAgentContent } from './developers/connect-your-agent';
 import { connectAnyAgentContent } from './developers/connect-any-agent';
+import { connectPythonAgentsContent } from './developers/connect-python-agents';
 import { governingToolCallsContent } from './developers/governing-tool-calls';
 import { agentControlApiContent } from './developers/agent-control-api';
 import { platformRestApiContent } from './developers/platform-rest-api';
@@ -234,6 +235,7 @@ export const articleContentMap: Record<string, ArticleContent> = {
   'developers/agent-control-overview': agentControlOverviewContent,
   'developers/connect-your-agent': connectYourAgentContent,
   'developers/connect-any-agent': connectAnyAgentContent,
+  'developers/connect-python-agents': connectPythonAgentsContent,
   'developers/governing-tool-calls': governingToolCallsContent,
   'developers/agent-control-api': agentControlApiContent,
   'developers/platform-rest-api': platformRestApiContent,

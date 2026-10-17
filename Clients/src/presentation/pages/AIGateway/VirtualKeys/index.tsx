@@ -361,28 +361,28 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
                       )}
                       {key.allowed_models?.length > 0 && (
                         <Chip
-                          label={`models: ${key.allowed_models.join(", ")}`}
+                          label={`Only models: ${key.allowed_models.join(", ")}`}
                           size="small"
                           uppercase={false}
                         />
                       )}
                       {key.blocked_models?.length > 0 && (
                         <Chip
-                          label={`blocked: ${key.blocked_models.join(", ")}`}
+                          label={`Blocked models: ${key.blocked_models.join(", ")}`}
                           size="small"
                           uppercase={false}
                         />
                       )}
                       {key.allowed_providers?.length > 0 && (
                         <Chip
-                          label={`providers: ${key.allowed_providers.join(", ")}`}
+                          label={`Only providers: ${key.allowed_providers.join(", ")}`}
                           size="small"
                           uppercase={false}
                         />
                       )}
                       {key.blocked_providers?.length > 0 && (
                         <Chip
-                          label={`blocked providers: ${key.blocked_providers.join(", ")}`}
+                          label={`Blocked providers: ${key.blocked_providers.join(", ")}`}
                           size="small"
                           uppercase={false}
                         />

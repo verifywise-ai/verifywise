@@ -90,7 +90,12 @@ describe("MCPRuns", () => {
   });
 
   it("renders run rows with formatted cells", async () => {
-    const run = makeRun({ agent_key_name: null, denied_count: 5 });
+    const run = makeRun({
+      agent_key_name: null,
+      denied_count: 5,
+      would_block_count: 7,
+      would_need_approval_count: 4,
+    });
     mockGet.mockResolvedValue({ data: { data: [run] } });
     renderWithProviders(<MCPRuns />, { route: "/ai-gateway/mcp/runs" });
 
@@ -101,6 +106,12 @@ describe("MCPRuns", () => {
     // agent_key_name null falls back to em dash
     expect(screen.getByText("—")).toBeInTheDocument();
     expect(screen.getByText("5")).toBeInTheDocument();
+    // Would block column, next to Denied
+    expect(screen.getByText("Would block")).toBeInTheDocument();
+    expect(screen.getByText("7")).toBeInTheDocument();
+    // and Would need approval next to it
+    expect(screen.getByText("Would need approval")).toBeInTheDocument();
+    expect(screen.getByText("4")).toBeInTheDocument();
   });
 
   it("shows an em dash for denied_count when it is zero", async () => {

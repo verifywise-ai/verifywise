@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Request
 from typing import Any, Optional
 
 from utils.auth import get_org_id, get_user_id, get_role_id, require_admin
-from utils.notifications import notify_config_change
+from utils.notifications import config_event, notify_config_change
 from utils.change_history import record_endpoint_change
 import crud.endpoints as endpoints_crud
 
@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/endpoints", tags=["endpoints"])
 
-FRONTEND_URL = "http://localhost:5173"
 
 SLUG_PATTERN = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
@@ -55,6 +54,7 @@ async def create_endpoint(request: Request) -> Any:
     require_admin(request)
 
     org_id = get_org_id(request)
+    user_id = get_user_id(request)
 
     body: dict = await request.json()
 
@@ -77,9 +77,9 @@ async def create_endpoint(request: Request) -> Any:
         raise HTTPException(status_code=500, detail="Failed to create endpoint")
 
     await notify_config_change(
-        org_id=org_id,
-        event="endpoint_created",
-        payload={"endpoint_id": endpoint["id"], "slug": endpoint["slug"]},
+        org_id,
+        user_id,
+        config_event("endpoint", "created", endpoint.get("display_name"), endpoint["id"]),
     )
 
     return {"endpoint": endpoint}
@@ -119,9 +119,9 @@ async def update_endpoint(endpoint_id: int, request: Request) -> Any:
         )
 
     await notify_config_change(
-        org_id=org_id,
-        event="endpoint_updated",
-        payload={"endpoint_id": endpoint_id, "slug": updated.get("slug")},
+        org_id,
+        user_id,
+        config_event("endpoint", "updated", updated.get("display_name"), endpoint_id),
     )
 
     return {"endpoint": updated}
@@ -132,6 +132,7 @@ async def delete_endpoint(endpoint_id: int, request: Request) -> Any:
     require_admin(request)
 
     org_id = get_org_id(request)
+    user_id = get_user_id(request)
 
     existing = await endpoints_crud.get_endpoint_by_id(org_id, endpoint_id)
     if not existing:
@@ -142,9 +143,9 @@ async def delete_endpoint(endpoint_id: int, request: Request) -> Any:
         raise HTTPException(status_code=500, detail="Failed to delete endpoint")
 
     await notify_config_change(
-        org_id=org_id,
-        event="endpoint_deleted",
-        payload={"endpoint_id": endpoint_id, "slug": existing.get("slug")},
+        org_id,
+        user_id,
+        config_event("endpoint", "deleted", existing.get("display_name"), endpoint_id),
     )
 
     return {"deleted": True, "endpoint_id": endpoint_id}

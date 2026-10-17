@@ -31,12 +31,85 @@ export const MCP_STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   pending: { bg: "#FFFBEB", text: "#92400E" },
   rate_limited: { bg: "#FFFBEB", text: "#92400E" },
   approval_required: { bg: "#F5F3FF", text: "#5B21B6" },
+  // Monitor-only keys: the call went through, so these use softer tones than
+  // the blocked / denied / approval colours above.
+  would_block: { bg: palette.status.warning.bg, text: palette.status.warning.text },
+  would_need_approval: { bg: palette.status.default.bg, text: palette.status.default.text },
 } as const;
 
 export const MCP_STATUS_FALLBACK = { bg: "#F3F4F6", text: "#374151" } as const;
 
+const MCP_STATUS_LABELS: Record<string, string> = {
+  would_block: "Would block",
+  would_need_approval: "Would need approval",
+};
+
 /** A stored tool-call status ("approval_required") as screen text ("approval required"). */
-export const formatMcpStatus = (status: string) => status.replace(/_/g, " ");
+export const formatMcpStatus = (status: string) =>
+  MCP_STATUS_LABELS[status] ?? status.replace(/_/g, " ");
+
+/**
+ * An events-timeline entry type as screen text: the monitor only outcomes use
+ * the same labels as the status chip; other types are shown as stored.
+ */
+export const formatMcpEventType = (type: string) => MCP_STATUS_LABELS[type] ?? type;
+
+/**
+ * Which check produced a monitor only outcome, as recorded by the gateway on
+ * each would_* event: a guardrail, a require_approval rule (native hook), the
+ * key's tool lists (MCP proxy, and native calls when the key opts in) or a
+ * tool's requires-approval flag (MCP proxy only).
+ */
+export type MonitorOutcomeSource =
+  "guardrail" | "approval_rule" | "tool_acl" | "tool_requires_approval";
+
+/**
+ * The decision-provenance line for an invocation: which rule blocked, paused,
+ * or (for a monitor-only key) would have blocked or paused the call. Returns
+ * an English template for `t()` plus the values to `fill()` it with, or null
+ * when there is nothing to show. A monitor row without a rule names the tool
+ * list or the tool's approval flag only when the gateway recorded that source.
+ */
+export function describeMcpDecision(
+  status: string,
+  ruleName: string | null | undefined,
+  source?: string | null,
+): { heading: string; template: string; values: Record<string, string> } | null {
+  const monitor = (template: string, values: Record<string, string> = {}) => ({
+    heading: "Monitor only",
+    template,
+    values,
+  });
+  if (status === "would_block") {
+    if (ruleName) return monitor("Would have been blocked by {rule}", { rule: ruleName });
+    return source === "tool_acl"
+      ? monitor("Would have been blocked by this key's tool list")
+      : monitor("Would have been blocked by a guardrail");
+  }
+  if (status === "would_need_approval") {
+    if (ruleName) return monitor("Would have needed approval: {rule}", { rule: ruleName });
+    return source === "tool_requires_approval"
+      ? monitor("Would have needed approval (tool requires approval)")
+      : monitor("Would have needed approval");
+  }
+  if (!ruleName) return null;
+  return {
+    heading: status === "approval_required" ? "Approval required by rule" : "Blocked by rule",
+    template: "{rule}",
+    values: { rule: ruleName },
+  };
+}
+
+/** How an agent key applies policy: "enforce" blocks and pauses, "monitor" only records. */
+export type EnforcementMode = "enforce" | "monitor";
+
+export const ENFORCEMENT_MODE_ITEMS: { _id: EnforcementMode; name: string }[] = [
+  { _id: "enforce", name: "Enforce" },
+  { _id: "monitor", name: "Monitor only" },
+];
+
+export const MONITOR_MODE_HELPER =
+  "Rules are checked and logged but never block or pause calls. Rate limits still apply.";
 
 export function useCardSx() {
   const theme = useTheme();

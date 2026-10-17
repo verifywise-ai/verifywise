@@ -26,7 +26,7 @@ export interface ModelsTableProps {
 }
 
 const columns: StandardColumn[] = [
-  { id: "modelName", label: "MODEL", sortable: true, align: "center", width: "18%" },
+  { id: "modelName", label: "MODEL", sortable: true, align: "left", width: "18%" },
   { id: "modelProvider", label: "PROVIDER", sortable: true, align: "center", width: "24%" },
   { id: "updatedAt", label: "DATE ADDED", sortable: true, align: "center", width: "26%" },
   { id: "actions", label: "ACTION", sortable: false, align: "center", width: "12%" },

@@ -73,6 +73,33 @@ const mockGetAssessment = getAssessmentReportQuery as jest.MockedFunction<
   typeof getAssessmentReportQuery
 >;
 
+/**
+ * The legacy single-target path verifies its (project, framework) pairing
+ * against projects_frameworks before collecting any framework section, so a
+ * test that expects one has to answer that lookup. `rest` answers every other
+ * sequelize.query the collector makes.
+ */
+const PAIRING_ROW = {
+  project_framework_id: 100,
+  framework_id: 1,
+  project_id: 1,
+  project_title: "Test Project",
+  is_organizational: false,
+  framework_name: "EU AI Act",
+};
+
+const isPairingLookup = (sql: unknown) => String(sql).includes("FROM projects_frameworks");
+
+function mockQueryWithPairing(rest: unknown[] = []): void {
+  mockQuery.mockImplementation((async (sql: unknown) =>
+    isPairingLookup(sql) ? [PAIRING_ROW] : rest) as any);
+}
+
+/** The collector's own queries — everything but the pairing lookup. */
+function nonPairingCalls(): [string, any][] {
+  return mockQuery.mock.calls.filter(([sql]) => !isPairingLookup(sql)) as [string, any][];
+}
+
 describe("dataCollector", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -312,13 +339,13 @@ describe("dataCollector", () => {
           ],
         },
       ] as any);
-      mockQuery.mockResolvedValue([{ id: 42, name: "John", surname: "Doe" }] as any);
+      mockQueryWithPairing([{ id: 42, name: "John", surname: "Doe" }]);
 
       const collector = createDataCollector(10, 1, 1, 100, 5);
       const result = await collector.collectAllData(["compliance"]);
 
       const controls = result.sections.compliance!.controls;
-      expect((mockQuery.mock.calls[0] as any)[1].replacements.ids).toEqual([42]);
+      expect(nonPairingCalls()[0][1].replacements.ids).toEqual([42]);
       expect(controls[0].owner).toBe("John Doe");
       expect(controls[0].category).toBe("Human oversight");
       expect(controls[0].dueDate).toBe("2026-09-30");
@@ -340,7 +367,7 @@ describe("dataCollector", () => {
           controls: [{ id: 7, title: "Train staff", status: "Done", owner: null }],
         },
       ] as any);
-      mockQuery.mockResolvedValue([] as any);
+      mockQueryWithPairing();
 
       const collector = createDataCollector(10, 1, 1, 100, 5);
       const result = await collector.collectAllData(["compliance"]);
@@ -421,7 +448,7 @@ describe("dataCollector", () => {
         },
       ] as any);
       // The scoped query returns only the in-org row; 99 simply has no match.
-      mockQuery.mockResolvedValue([{ id: 42, name: "John", surname: "Doe" }] as any);
+      mockQueryWithPairing([{ id: 42, name: "John", surname: "Doe" }]);
 
       const collector = createDataCollector(10, 1, 1, 100, 5);
       const result = await collector.collectAllData(["compliance"]);
@@ -431,8 +458,8 @@ describe("dataCollector", () => {
       expect(controls[1].owner).toBeUndefined();
 
       // One round-trip for both ids, filtered on the caller's organization.
-      expect(mockQuery).toHaveBeenCalledTimes(1);
-      const [sql, options] = mockQuery.mock.calls[0] as [string, any];
+      expect(nonPairingCalls()).toHaveLength(1);
+      const [sql, options] = nonPairingCalls()[0];
       expect(sql).toContain("organization_id = :organizationId");
       expect(options.replacements).toEqual({ organizationId: 10, ids: [42, 99] });
       // The unscoped per-id helper is no longer used for control owners.
@@ -471,6 +498,48 @@ describe("dataCollector", () => {
 
       expect(result.sections.projectRisks!.risksByLevel[0].level).toBe("Unknown");
       expect(result.sections.projectRisks!.risksByLevel[0].color).toBe("#667085");
+    });
+  });
+  describe("a use case with no framework", () => {
+    // The wizard used to submit a hardcoded (framework 1,
+    // projects_frameworks 1) for a use case carrying no framework. Where that
+    // row existed it belonged to an unrelated project, and compliance
+    // collected ITS requirements under this use case's name; where it did not,
+    // getVisibleEuCategoryIdsForProject dereferenced the missing row. Both are
+    // prevented by resolving the named pairing instead of trusting it.
+    it("collects no framework sections when the named pairing does not exist", async () => {
+      // mockQuery answers the pairing lookup with no rows (the beforeEach
+      // default), i.e. this project has no such projects_frameworks row.
+      const collector = createDataCollector(10, 7, 1, 1, 5);
+      const result = await collector.collectAllData(["compliance", "assessment"]);
+
+      expect(result.sections.compliance).toBeUndefined();
+      expect(result.sections.assessment).toBeUndefined();
+      expect(mockGetCompliance).not.toHaveBeenCalled();
+      expect(mockGetAssessment).not.toHaveBeenCalled();
+    });
+
+    it("resolves the pairing from the database rather than the submitted id", async () => {
+      mockQueryWithPairing();
+      mockGetCompliance.mockResolvedValue([]);
+
+      // Submitted projectFrameworkId is 1; the resolved pairing is 100.
+      const collector = createDataCollector(10, 1, 1, 1, 5);
+      await collector.collectAllData(["compliance"]);
+
+      expect(mockGetCompliance).toHaveBeenCalledWith(100, 10);
+    });
+
+    it("still collects the sections that do not depend on a framework", async () => {
+      mockGetProjectRisks.mockResolvedValue([
+        { id: 1, risk_name: "R", risk_level_autocalculated: "High risk" },
+      ] as never);
+
+      const collector = createDataCollector(10, 7, 1, 1, 5);
+      const result = await collector.collectAllData(["projectRisks", "compliance"]);
+
+      expect(result.sections.compliance).toBeUndefined();
+      expect(result.sections.projectRisks!.risks).toHaveLength(1);
     });
   });
 });

@@ -363,4 +363,63 @@ describe("scoreV2", () => {
     );
     expect(result.obligations.map((o) => o.article)).not.toContain("Article 49(2)");
   });
+
+  describe("a use case with both roles", () => {
+    const articles = (r: { obligations: { article: string }[] }) =>
+      r.obligations.map((o) => o.article);
+    const keys = (r: { obligations: { article: string; text: string }[] }) =>
+      r.obligations.map((o) => `${o.article}|${o.text}`);
+
+    it("returns both roles, Provider first, and Provider as the single role", () => {
+      const result = score({ role: ["deployer", "provider"] });
+      expect(result.roles).toEqual(["Provider", "Deployer"]);
+      expect(result.role).toBe("Provider");
+    });
+
+    it("lists the high-risk obligations of both roles once each, Provider first", () => {
+      const provider = score({
+        role: ["provider"],
+        annex_iii_areas: ["employment"],
+        employment_use: ["recruitment"],
+      });
+      const deployer = score({
+        role: ["deployer"],
+        annex_iii_areas: ["employment"],
+        employment_use: ["recruitment"],
+      });
+      const both = score({
+        role: ["provider", "deployer"],
+        annex_iii_areas: ["employment"],
+        employment_use: ["recruitment"],
+      });
+      expect(both.level).toBe("High risk");
+      expect(new Set(keys(both)).size).toBe(keys(both).length);
+      expect(keys(both)).toEqual(expect.arrayContaining([...keys(provider), ...keys(deployer)]));
+      expect(articles(both).indexOf("Article 9")).toBeLessThan(
+        articles(both).indexOf("Article 26(1)"),
+      );
+    });
+
+    it("lists a duty the roles share only once (Annex I Section B)", () => {
+      const result = score({ role: ["provider", "deployer"], safety_function: "section_b" });
+      expect(result.obligations.filter((o) => o.article !== "Article 4")).toHaveLength(1);
+    });
+
+    it("keeps the transparency obligations of both roles", () => {
+      const result = score({
+        role: ["provider", "deployer"],
+        transparency: ["interacts", "deepfake"],
+      });
+      expect(articles(result)).toEqual(expect.arrayContaining(["Article 50(1)", "Article 50(4)"]));
+    });
+  });
+
+  it("scores a saved single-role string exactly like the one-item list", () => {
+    expect(score({ role: "deployer", safety_function: "section_a" })).toEqual(
+      score({ role: ["deployer"], safety_function: "section_a" }),
+    );
+    expect(score({ role: "provider", transparency: ["interacts", "deepfake"] }).roles).toEqual([
+      "Provider",
+    ]);
+  });
 });

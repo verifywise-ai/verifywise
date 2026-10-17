@@ -111,12 +111,15 @@ async def stream_chat_completion(
 
     async for chunk in response:
         last_chunk = chunk
-        if (
-            chunk.choices
-            and chunk.choices[0].delta
-            and chunk.choices[0].delta.content
-        ):
-            accumulated_text += chunk.choices[0].delta.content
+        delta = chunk.choices[0].delta if chunk.choices else None
+        if delta and delta.content:
+            accumulated_text += delta.content
+        # A tool-call answer has no content; its name and arguments are the
+        # completion tokens, so they must count when the provider sends no usage.
+        for tc in (getattr(delta, "tool_calls", None) or []):
+            fn = getattr(tc, "function", None)
+            if fn is not None:
+                accumulated_text += (fn.name or "") + (fn.arguments or "")
         yield f"data: {json.dumps(chunk.model_dump())}\n\n"
 
     # Calculate cost: try from usage first, fall back to token counting
@@ -137,7 +140,10 @@ async def stream_chat_completion(
             pass
 
     if cost == 0.0 and accumulated_text:
-        cost, usage = calculate_stream_cost(model, messages, accumulated_text)
+        cost, usage = calculate_stream_cost(
+            model, messages, accumulated_text,
+            tools=kwargs.get("tools") or kwargs.get("functions"),
+        )
 
     yield f"data: {json.dumps({'cost_usd': cost, 'usage': usage})}\n\n"
     yield "data: [DONE]\n\n"

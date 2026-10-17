@@ -44,6 +44,13 @@ const optionalProjectBodyFields = [
     .withMessage(
       `type_of_high_risk_role must be one of: ${Object.values(HighRiskRole).join(", ")}`,
     ),
+  body("high_risk_roles")
+    .optional({ nullable: true })
+    .isArray()
+    .withMessage("high_risk_roles must be an array of high-risk roles"),
+  body("high_risk_roles.*")
+    .isIn(Object.values(HighRiskRole))
+    .withMessage(`each high-risk role must be one of: ${Object.values(HighRiskRole).join(", ")}`),
   body("status")
     .optional({ nullable: true })
     .isIn(Object.values(ProjectStatus))

@@ -48,7 +48,7 @@ export const test = base.extend<{
         start_date: new Date().toISOString(),
         goal: "E2E test goal",
         ai_risk_classification: "Minimal risk",
-        type_of_high_risk_role: "Deployer",
+        high_risk_roles: ["Deployer"],
         members: [admin.userId],
       });
       await adminCtx.request.dispose();

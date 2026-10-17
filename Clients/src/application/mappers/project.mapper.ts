@@ -10,6 +10,7 @@ import { Project } from "../../domain/types/Project";
 import { ProjectResponseDTO, CreateProjectDTO } from "../dtos/project.dto";
 import { AiRiskClassification } from "../../domain/enums/aiRiskClassification.enum";
 import { HighRiskRole } from "../../domain/enums/highRiskRole.enum";
+import { normalizeHighRiskRoles } from "../utils/highRiskRoles";
 import { CreateProjectFormUserModel } from "../../domain/models/Common/user/user.model";
 
 /**
@@ -43,21 +44,11 @@ export function mapRiskClassification(
 }
 
 /**
- * Converts API high risk role to domain enum
+ * Converts the API roles (a list, or a legacy single value) to domain roles.
+ * Unknown values are dropped rather than defaulted to Provider.
  */
-export function mapHighRiskRole(value: number | string | null | undefined): HighRiskRole | null {
-  if (value === null || value === undefined || value === "") {
-    return null;
-  }
-  if (typeof value === "number") {
-    return value === 1 ? HighRiskRole.PROVIDER : HighRiskRole.DEPLOYER;
-  }
-  // Legacy values (Distributor, Importer, Product manufacturer,
-  // Authorized representative) collapse onto Provider; not_applicable onto
-  // Deployer — matches the DB migration's remap.
-  const v = value.toLowerCase();
-  if (v === "deployer" || v === "not_applicable") return HighRiskRole.DEPLOYER;
-  return HighRiskRole.PROVIDER;
+export function mapHighRiskRoles(value: unknown): HighRiskRole[] {
+  return normalizeHighRiskRoles(value);
 }
 
 /**
@@ -77,9 +68,9 @@ export function mapProjectResponseDTOToProject(dto: ProjectResponseDTO): Project
     ai_risk_classification: mapRiskClassification(
       dto.ai_risk_classification,
     ) as unknown as Project["ai_risk_classification"],
-    type_of_high_risk_role: mapHighRiskRole(
-      dto.type_of_high_risk_role,
-    ) as unknown as Project["type_of_high_risk_role"],
+    high_risk_roles: mapHighRiskRoles(dto.high_risk_roles ?? dto.type_of_high_risk_role),
+    type_of_high_risk_role:
+      mapHighRiskRoles(dto.high_risk_roles ?? dto.type_of_high_risk_role)[0] ?? null,
     goal: dto.goal,
     last_updated: new Date(dto.last_updated),
     last_updated_by: dto.last_updated_by,
@@ -117,9 +108,9 @@ export function mapProjectResponseDTOToModel(dto: ProjectResponseDTO): ProjectMo
     ai_risk_classification: mapRiskClassification(
       dto.ai_risk_classification,
     ) as unknown as ProjectModel["ai_risk_classification"],
-    type_of_high_risk_role: mapHighRiskRole(
-      dto.type_of_high_risk_role,
-    ) as unknown as ProjectModel["type_of_high_risk_role"],
+    high_risk_roles: mapHighRiskRoles(dto.high_risk_roles ?? dto.type_of_high_risk_role),
+    type_of_high_risk_role:
+      mapHighRiskRoles(dto.high_risk_roles ?? dto.type_of_high_risk_role)[0] ?? null,
     goal: dto.goal,
     last_updated: new Date(dto.last_updated),
     last_updated_by: dto.last_updated_by,
@@ -167,7 +158,7 @@ export function mapCreateProjectFormToDTO(formValues: {
   members: CreateProjectFormUserModel[];
   start_date: string;
   ai_risk_classification?: number | null;
-  type_of_high_risk_role?: number | null;
+  high_risk_roles?: HighRiskRole[];
   goal: string;
   use_case_category?: string | null;
   use_case_purpose?: string | null;
@@ -185,7 +176,7 @@ export function mapCreateProjectFormToDTO(formValues: {
     })),
     start_date: formValues.start_date,
     ai_risk_classification: formValues.ai_risk_classification,
-    type_of_high_risk_role: formValues.type_of_high_risk_role,
+    high_risk_roles: normalizeHighRiskRoles(formValues.high_risk_roles),
     goal: formValues.goal,
     use_case_category: formValues.use_case_category,
     use_case_purpose: formValues.use_case_purpose,

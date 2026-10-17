@@ -25,6 +25,58 @@ export type Lang = "en" | "de" | "fr" | "es";
 
 export const translations: Record<string, Record<string, string>> = {
   de: {
+    // Agent Control monitor only mode
+    "Enforce": "Durchsetzen",
+    "Monitor only": "Nur überwachen",
+    "Rules are checked and logged but never block or pause calls. Rate limits still apply.":
+      "Regeln werden geprüft und protokolliert, blockieren oder pausieren Aufrufe aber nie. Ratenlimits gelten weiterhin.",
+    'Choose how policies apply to calls made with "{name}".':
+      "Legen Sie fest, wie Richtlinien auf Aufrufe mit „{name}“ angewendet werden.",
+    "Use monitor only mode?": "Modus „Nur überwachen“ verwenden?",
+    "Use monitor only": "Nur überwachen verwenden",
+    "Calls made with this key will no longer be blocked or paused for approval.":
+      "Aufrufe mit diesem Schlüssel werden nicht mehr blockiert oder zur Genehmigung pausiert.",
+    'Guardrails and approval rules are still checked, and so are the key\'s tool lists for calls through the MCP proxy, and for native tool calls when the key\'s "Also apply tool lists to native tool calls" setting is on. Every match is logged in Activity as "Would block" or "Would need approval". No approval requests are created. Rate limits still apply.':
+      "Guardrails und Genehmigungsregeln werden weiterhin geprüft, bei Aufrufen über den MCP-Proxy auch die Tool-Listen des Schlüssels, und bei nativen Tool-Aufrufen ebenfalls, wenn die Einstellung „Tool-Listen auch auf native Tool-Aufrufe anwenden“ des Schlüssels aktiviert ist. Jeder Treffer wird unter „Aktivität“ als „Würde blockieren“ oder „Würde Genehmigung erfordern“ protokolliert. Es werden keine Genehmigungsanfragen erstellt. Ratenlimits gelten weiterhin.",
+    "Monitor only since {date} · by {name}": "Nur überwachen seit {date} · von {name}",
+    "Monitor only since {date}": "Nur überwachen seit {date}",
+    "Would block": "Würde blockieren",
+    "Would need approval": "Würde Genehmigung erfordern",
+    "{count} would block": "{count} würden blockiert",
+    "{count} would need approval": "{count} würden Genehmigung erfordern",
+    "Would have been blocked by {rule}": "Wäre blockiert worden durch {rule}",
+    "Would have been blocked by this key's tool list":
+      "Wäre durch die Tool-Liste dieses Schlüssels blockiert worden",
+    "Would have needed approval: {rule}": "Hätte eine Genehmigung erfordert: {rule}",
+    "Would have needed approval (tool requires approval)":
+      "Hätte eine Genehmigung erfordert (Tool erfordert Genehmigung)",
+    "Would have been blocked by a guardrail": "Wäre durch einen Guardrail blockiert worden",
+    "Would have needed approval": "Hätte eine Genehmigung erfordert",
+    "Enforcement settings": "Durchsetzungseinstellungen",
+    "Failed to save the key settings":
+      "Die Schlüsseleinstellungen konnten nicht gespeichert werden",
+    "Also apply tool lists to native tool calls (hooks and SDK)":
+      "Tool-Listen auch auf native Tool-Aufrufe anwenden (Hooks und SDK)",
+    "Off: the allowed and blocked tool lists apply only to MCP server tools called through the proxy. On: they also apply to the agent's own tool calls checked by the hook script or the Python SDK, such as Bash, Edit or your Python functions. Leave it off for keys used by Claude Code or Cursor unless the lists name those tools.":
+      "Aus: Die Listen erlaubter und blockierter Tools gelten nur für MCP-Server-Tools, die über den Proxy aufgerufen werden. An: Sie gelten auch für die eigenen Tool-Aufrufe des Agenten, die vom Hook-Skript oder vom Python SDK geprüft werden, etwa Bash, Edit oder Ihre Python-Funktionen. Lassen Sie die Einstellung für Schlüssel, die Claude Code oder Cursor verwenden, aus, sofern die Listen diese Tools nicht nennen.",
+    "MCP proxy only": "Nur MCP-Proxy",
+    "MCP proxy and native calls": "MCP-Proxy und native Aufrufe",
+    "Allowlist for MCP server tools called through the proxy: if set, this key may call only these tools. Comma-separated; leave empty to allow all. Applies to native tool calls (Bash, Edit, SDK functions) only when the setting below is on.":
+      "Zulassungsliste für MCP-Server-Tools, die über den Proxy aufgerufen werden: Wenn gesetzt, darf dieser Schlüssel nur diese Tools aufrufen. Kommagetrennt; leer lassen, um alle zuzulassen. Gilt für native Tool-Aufrufe (Bash, Edit, SDK-Funktionen) nur, wenn die Einstellung unten aktiviert ist.",
+    "Denylist for MCP server tools called through the proxy: these are always denied, even if also in the allowlist. Comma-separated; leave empty to block none. Applies to native tool calls only when the setting below is on.":
+      "Sperrliste für MCP-Server-Tools, die über den Proxy aufgerufen werden: Diese werden immer abgelehnt, auch wenn sie in der Zulassungsliste stehen. Kommagetrennt; leer lassen, um keine zu blockieren. Gilt für native Tool-Aufrufe nur, wenn die Einstellung unten aktiviert ist.",
+    // High-risk roles (several EU AI Act roles per use case)
+    "High-risk roles": "Hochrisiko-Rollen",
+    "High-risk roles *": "Hochrisiko-Rollen *",
+    "Select roles": "Rollen auswählen",
+    "Select at least one high-risk role when EU AI Act is selected.":
+      "Wählen Sie mindestens eine Hochrisiko-Rolle aus, wenn der EU AI Act ausgewählt ist.",
+    "Not a high-risk role:": "Keine Hochrisiko-Rolle:",
+    "Roles:": "Rollen:",
+    "Provider, Deployer or both": "Anbieter, Betreiber oder beides",
+    "Provider, Deployer": "Anbieter, Betreiber",
+    "What is your role for this AI system? Select all that apply.":
+      "Welche Rolle haben Sie für dieses KI-System? Wählen Sie alle zutreffenden aus.",
     "Server saved": "Server gespeichert",
     "Server switched on": "Server eingeschaltet",
     "The server offered no tools": "Der Server hat keine Tools angeboten",
@@ -1020,6 +1072,8 @@ export const translations: Record<string, Record<string, string>> = {
     "EVIDENCE NAME": "NACHWEISNAME",
     "Evidence type": "Nachweistyp",
     "Evidence coverage": "Nachweisabdeckung",
+    "controls adequate": "Kontrollen angemessen",
+    "without evidence": "ohne Nachweis",
     "Report name": "Berichtsname",
     "Report type": "Berichtstyp",
     "Type of report": "Art des Berichts",
@@ -1325,6 +1379,10 @@ export const translations: Record<string, Record<string, string>> = {
     // Use cases
     "Use case": "Anwendungsfall",
     "Use case report": "Anwendungsfall-Bericht",
+    "This use case has no framework assigned":
+      "Diesem Anwendungsfall ist kein Rahmenwerk zugeordnet",
+    "Requirements, assessment tracker, clauses and annexes, and NIST subcategories need a framework, so they are left out. The report still covers risks, models, vendors, training, policies and incidents. Assign a framework to the use case to include compliance sections.":
+      "Anforderungen, Bewertungs-Tracker, Klauseln und Anhänge sowie NIST-Unterkategorien benötigen ein Rahmenwerk und entfallen daher. Der Bericht umfasst weiterhin Risiken, Modelle, Anbieter, Schulungen, Richtlinien und Vorfälle. Ordnen Sie dem Anwendungsfall ein Rahmenwerk zu, um Compliance-Abschnitte aufzunehmen.",
     "AI project": "KI-Projekt",
     "AI Project": "KI-Projekt",
     "AI PROJECT": "KI-PROJEKT",
@@ -1705,8 +1763,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Team & Compliance": "Team und Compliance",
     "Templates are grouped by framework (EU AI Act, ISO 42001, etc.). Use the search bar to find templates relevant to your compliance needs.":
       "Vorlagen sind nach Rahmenwerk gruppiert (EU-KI-Verordnung, ISO 42001 usw.). Nutzen Sie die Suchleiste, um Vorlagen passend zu Ihren Compliance-Anforderungen zu finden.",
-    "The gateway periodically checks server health and can discover available tools automatically. Unhealthy servers are temporarily bypassed to keep agents running.":
-      "Die Passerelle prüft regelmäßig den Zustand der Server und kann verfügbare Tools automatisch erkennen. Nicht erreichbare Server werden vorübergehend umgangen, damit die Agenten weiterlaufen.",
     "The marketplace tab above lists available plugins for frameworks (SOC 2, GDPR, HIPAA), integrations (Slack, Jira), and more.":
       "Der Marktplatz-Tab oben listet verfügbare Plugins für Rahmenwerke (SOC 2, DSGVO, HIPAA), Integrationen (Slack, Jira) und mehr auf.",
     "This registry manages all AI/LLM models and their associated risks within your organization. You can view, add, and manage model details and track model-specific risks and mitigation plans.":
@@ -3498,8 +3554,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Das KI-System, seinen Zweck, die verarbeiteten Daten und die betroffenen Personen definieren. Dies bildet die Grundlage für Risiko- und Compliance-Verfolgung.",
     "Document risks related to bias, data quality, security, transparency, and model drift. Cover both technical and organizational risks.":
       "Risiken in Bezug auf Verzerrungen, Datenqualität, Sicherheit, Transparenz und Modellabweichungen dokumentieren. Sowohl technische als auch organisatorische Risiken abdecken.",
-    "Each agent key can restrict which MCP tools the agent is allowed or blocked from calling. Combine with rate limits for fine-grained governance.":
-      "Jeder Agentenschlüssel kann einschränken, welche MCP-Tools der Agent aufrufen darf oder nicht. Mit Ratenlimits kombinieren für feingranulare Governance.",
+    "Each agent key can list the MCP server tools it may or may not call through the proxy, and can apply the same lists to native tool calls from the hook script or the Python SDK. Combine with rate limits for fine-grained governance.":
+      "Jeder Agentenschlüssel kann die MCP-Server-Tools auflisten, die er über den Proxy aufrufen darf oder nicht, und dieselben Listen auf native Tool-Aufrufe aus dem Hook-Skript oder dem Python SDK anwenden. Mit Ratenlimits kombinieren für feingranulare Governance.",
     "Each dataset should have a clear prompt column and an expected output column. Add metadata columns for filtering results later.":
       "Jeder Datensatz sollte eine klare Prompt-Spalte und eine Spalte für die erwartete Ausgabe haben. Fügen Sie Metadaten-Spalten hinzu, um Ergebnisse später zu filtern.",
     "Each experiment run is saved here with scores and metadata. Run the same dataset across different models or configs to track progress.":
@@ -4169,8 +4225,8 @@ export const translations: Record<string, Record<string, string>> = {
       'Wenn Prüfer fragen „Wann haben Sie diese Kontrolle eingeführt?" oder „Wie haben Sie auf diesen Vorfall reagiert?", liefern Ereignisprotokolle klare Antworten. Ein detaillierter Ereignisverlauf macht Erinnerungsabhängigkeit überflüssig und erzeugt objektive Nachweise.',
     "Filter events to find relevant information quickly.":
       "Filtern Sie Ereignisse, um relevante Informationen schnell zu finden.",
-    "With many events logged over time, filters help you find what you need. Filter by date range, event type, or related entity to quickly locate specific governance activities. Export filtered events for reports or documentation.":
-      "Bei vielen protokollierten Ereignissen helfen Filter, das Gesuchte zu finden. Filtern Sie nach Zeitraum, Ereignistyp oder verknüpfter Entität, um Governance-Aktivitäten schnell zu lokalisieren. Exportieren Sie gefilterte Ereignisse für Berichte oder Dokumentation.",
+    "With many events logged over time, filters help you find what you need. Filter by date range, event type, or related entity to quickly locate specific governance activities.":
+      "Bei vielen protokollierten Ereignissen helfen Filter, das Gesuchte zu finden. Filtern Sie nach Zeitraum, Ereignistyp oder verknüpfter Entität, um Governance-Aktivitäten schnell zu lokalisieren.",
 
     "Settings customize VerifyWise to your organization's needs.":
       "Einstellungen passen VerifyWise an die Anforderungen Ihrer Organisation an.",
@@ -10510,9 +10566,78 @@ export const translations: Record<string, Record<string, string>> = {
       "Abschnitt 5-301(a) ist der einzige Auslöser für eine erneute Prüfung in der Regel: Ein Tool darf nicht verwendet werden, wenn seit seiner letzten Verzerrungsprüfung mehr als ein Jahr vergangen ist. Davon getrennt endet eine Testdatengrundlage nach 5-302(b) unter ihrer eigenen Bedingung, die lange vor einem Jahr eintreten kann.",
     "The rule contains no trigger for a change of role, configuration, weighting or model. A report that cites 5-301(a) for re-audit triggers it does not contain has to have the claim withdrawn. Your test-data basis expires on a condition rather than a date: if it rests on race not being recorded, it ends when race begins to be captured, and collecting more records of other characteristics does not end it.":
       "Die Regel enthält keinen Auslöser für eine Änderung von Stelle, Konfiguration, Gewichtung oder Modell. Ein Bericht, der 5-301(a) für Auslöser einer erneuten Prüfung nennt, die darin nicht enthalten sind, muss die Aussage zurückziehen. Ihre Testdatengrundlage läuft an einer Bedingung statt an einem Datum aus: Beruht sie darauf, dass die ethnische Herkunft nicht erfasst wird, endet sie, sobald deren Erfassung beginnt, und das Sammeln weiterer Datensätze zu anderen Merkmalen beendet sie nicht.",
+    "No evidence": "Keine Nachweise",
+    "This use case is waiting for approval. You can read this overview, but the other tabs stay disabled until the request is approved or rejected, and the frameworks picked at creation are added only once it is approved. Follow the request under Approval requests in the header.":
+      "Dieser Anwendungsfall wartet auf Genehmigung. Sie können diese Übersicht lesen, aber die übrigen Tabs bleiben deaktiviert, bis die Anfrage genehmigt oder abgelehnt wird, und die bei der Erstellung gewählten Rahmenwerke werden erst nach der Genehmigung hinzugefügt. Verfolgen Sie die Anfrage unter Genehmigungsanfragen in der Kopfzeile.",
+    "This use case was rejected, so it can no longer be used. The tabs stay disabled and the frameworks picked at creation were never added. See the rejection comment under Approval requests in the header.":
+      "Dieser Anwendungsfall wurde abgelehnt und kann nicht mehr verwendet werden. Die Tabs bleiben deaktiviert und die bei der Erstellung gewählten Rahmenwerke wurden nie hinzugefügt. Den Ablehnungskommentar finden Sie unter Genehmigungsanfragen in der Kopfzeile.",
+    "Adequate evidence": "Ausreichende Nachweise",
+    "Low-quality evidence": "Nachweise von geringer Qualität",
+    "Loading evidence coverage": "Nachweisabdeckung wird geladen",
+    "Show all {count}": "Alle {count} anzeigen",
+    "Show fewer": "Weniger anzeigen",
+    "Controls needing attention": "Kontrollen, die Aufmerksamkeit brauchen",
+    "file": "Datei",
+    "files": "Dateien",
+    "none adequate": "keine ausreichend",
+    "Evidence graded": "Mit",
+    "counts as low quality. Files with no AI analysis are not counted as adequate.":
+      "bewertete Nachweise gelten als von geringer Qualität. Dateien ohne KI-Analyse zählen nicht als ausreichend.",
   },
 
   fr: {
+    // Agent Control monitor only mode
+    "Enforce": "Appliquer",
+    "Monitor only": "Surveillance uniquement",
+    "Rules are checked and logged but never block or pause calls. Rate limits still apply.":
+      "Les règles sont vérifiées et journalisées, mais ne bloquent ni ne suspendent jamais les appels. Les limites de débit s'appliquent toujours.",
+    'Choose how policies apply to calls made with "{name}".':
+      "Choisissez comment les politiques s'appliquent aux appels effectués avec « {name} ».",
+    "Use monitor only mode?": "Utiliser le mode surveillance uniquement ?",
+    "Use monitor only": "Utiliser la surveillance uniquement",
+    "Calls made with this key will no longer be blocked or paused for approval.":
+      "Les appels effectués avec cette clé ne seront plus bloqués ni suspendus pour approbation.",
+    'Guardrails and approval rules are still checked, and so are the key\'s tool lists for calls through the MCP proxy, and for native tool calls when the key\'s "Also apply tool lists to native tool calls" setting is on. Every match is logged in Activity as "Would block" or "Would need approval". No approval requests are created. Rate limits still apply.':
+      "Les garde-fous et les règles d'approbation sont toujours vérifiés, ainsi que les listes d'outils de la clé pour les appels passant par le proxy MCP, et pour les appels d'outils natifs lorsque le paramètre « Appliquer aussi les listes d'outils aux appels d'outils natifs » de la clé est activé. Chaque correspondance est journalisée dans Activité comme « Bloquerait » ou « Nécessiterait une approbation ». Aucune demande d'approbation n'est créée. Les limites de débit s'appliquent toujours.",
+    "Monitor only since {date} · by {name}":
+      "Surveillance uniquement depuis le {date} · par {name}",
+    "Monitor only since {date}": "Surveillance uniquement depuis le {date}",
+    "Would block": "Bloquerait",
+    "Would need approval": "Nécessiterait une approbation",
+    "{count} would block": "{count} bloqueraient",
+    "{count} would need approval": "{count} nécessiteraient une approbation",
+    "Would have been blocked by {rule}": "Aurait été bloqué par {rule}",
+    "Would have been blocked by this key's tool list":
+      "Aurait été bloqué par la liste d'outils de cette clé",
+    "Would have needed approval: {rule}": "Aurait nécessité une approbation : {rule}",
+    "Would have needed approval (tool requires approval)":
+      "Aurait nécessité une approbation (l'outil exige une approbation)",
+    "Would have been blocked by a guardrail": "Aurait été bloqué par un garde-fou",
+    "Would have needed approval": "Aurait nécessité une approbation",
+    "Enforcement settings": "Paramètres d'application",
+    "Failed to save the key settings": "Impossible d'enregistrer les paramètres de la clé",
+    "Also apply tool lists to native tool calls (hooks and SDK)":
+      "Appliquer aussi les listes d'outils aux appels d'outils natifs (hooks et SDK)",
+    "Off: the allowed and blocked tool lists apply only to MCP server tools called through the proxy. On: they also apply to the agent's own tool calls checked by the hook script or the Python SDK, such as Bash, Edit or your Python functions. Leave it off for keys used by Claude Code or Cursor unless the lists name those tools.":
+      "Désactivé : les listes d'outils autorisés et bloqués ne s'appliquent qu'aux outils de serveur MCP appelés via le proxy. Activé : elles s'appliquent aussi aux appels d'outils propres de l'agent vérifiés par le script de hook ou le SDK Python, comme Bash, Edit ou vos fonctions Python. Laissez-le désactivé pour les clés utilisées par Claude Code ou Cursor, sauf si les listes nomment ces outils.",
+    "MCP proxy only": "Proxy MCP uniquement",
+    "MCP proxy and native calls": "Proxy MCP et appels natifs",
+    "Allowlist for MCP server tools called through the proxy: if set, this key may call only these tools. Comma-separated; leave empty to allow all. Applies to native tool calls (Bash, Edit, SDK functions) only when the setting below is on.":
+      "Liste d'autorisation des outils de serveur MCP appelés via le proxy : si elle est définie, cette clé ne peut appeler que ces outils. Séparés par des virgules ; laissez vide pour tout autoriser. S'applique aux appels d'outils natifs (Bash, Edit, fonctions du SDK) uniquement lorsque le paramètre ci-dessous est activé.",
+    "Denylist for MCP server tools called through the proxy: these are always denied, even if also in the allowlist. Comma-separated; leave empty to block none. Applies to native tool calls only when the setting below is on.":
+      "Liste de blocage des outils de serveur MCP appelés via le proxy : ils sont toujours refusés, même s'ils figurent aussi dans la liste d'autorisation. Séparés par des virgules ; laissez vide pour n'en bloquer aucun. S'applique aux appels d'outils natifs uniquement lorsque le paramètre ci-dessous est activé.",
+    // High-risk roles (several EU AI Act roles per use case)
+    "High-risk roles": "Rôles à haut risque",
+    "High-risk roles *": "Rôles à haut risque *",
+    "Select roles": "Sélectionner des rôles",
+    "Select at least one high-risk role when EU AI Act is selected.":
+      "Sélectionnez au moins un rôle à haut risque lorsque l'EU AI Act est sélectionné.",
+    "Not a high-risk role:": "Pas un rôle à haut risque :",
+    "Roles:": "Rôles :",
+    "Provider, Deployer or both": "Fournisseur, déployeur ou les deux",
+    "Provider, Deployer": "Fournisseur, Déployeur",
+    "What is your role for this AI system? Select all that apply.":
+      "Quel est votre rôle pour ce système d'IA ? Sélectionnez tout ce qui s'applique.",
     "Server saved": "Serveur enregistré",
     "Server switched on": "Serveur activé",
     "The server offered no tools": "Le serveur n'a proposé aucun outil",
@@ -11556,6 +11681,9 @@ export const translations: Record<string, Record<string, string>> = {
     // Use cases
     "Use case": "Cas d'usage",
     "Use case report": "Rapport de cas d'usage",
+    "This use case has no framework assigned": "Aucun référentiel n'est associé à ce cas d'usage",
+    "Requirements, assessment tracker, clauses and annexes, and NIST subcategories need a framework, so they are left out. The report still covers risks, models, vendors, training, policies and incidents. Assign a framework to the use case to include compliance sections.":
+      "Les exigences, le suivi des évaluations, les clauses et annexes ainsi que les sous-catégories NIST nécessitent un référentiel et sont donc exclus. Le rapport couvre toujours les risques, les modèles, les fournisseurs, les formations, les politiques et les incidents. Associez un référentiel au cas d'usage pour inclure les sections de conformité.",
     "AI project": "Projet IA",
     "AI Project": "Projet IA",
     "Project": "Projet",
@@ -11859,6 +11987,8 @@ export const translations: Record<string, Record<string, string>> = {
     "EVIDENCE NAME": "NOM DE LA PREUVE",
     "Evidence type": "Type de preuve",
     "Evidence coverage": "Couverture des preuves",
+    "controls adequate": "contrôles adéquats",
+    "without evidence": "sans preuve",
     "Report name": "Nom du rapport",
     "Report type": "Type de rapport",
     "Type of report": "Type de rapport",
@@ -12337,8 +12467,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Team & Compliance": "Équipe et conformité",
     "Templates are grouped by framework (EU AI Act, ISO 42001, etc.). Use the search bar to find templates relevant to your compliance needs.":
       "Les modèles sont groupés par référentiel (règlement IA de l'UE, ISO 42001, etc.). Utilisez la barre de recherche pour trouver des modèles correspondant à vos besoins de conformité.",
-    "The gateway periodically checks server health and can discover available tools automatically. Unhealthy servers are temporarily bypassed to keep agents running.":
-      "La passerelle vérifie périodiquement l'état des serveurs et peut découvrir automatiquement les outils disponibles. Les serveurs en mauvais état sont temporairement contournés pour que les agents continuent de fonctionner.",
     "The marketplace tab above lists available plugins for frameworks (SOC 2, GDPR, HIPAA), integrations (Slack, Jira), and more.":
       "L'onglet Place de marché ci-dessus liste les plugins disponibles pour les référentiels (SOC 2, RGPD, HIPAA), les intégrations (Slack, Jira) et plus encore.",
     "This registry manages all AI/LLM models and their associated risks within your organization. You can view, add, and manage model details and track model-specific risks and mitigation plans.":
@@ -14102,8 +14230,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Définissez le système IA, son objet, les données qu'il traite et les personnes qu'il affecte. Cela constitue la base du suivi des risques et de la conformité.",
     "Document risks related to bias, data quality, security, transparency, and model drift. Cover both technical and organizational risks.":
       "Documentez les risques liés aux biais, à la qualité des données, à la sécurité, à la transparence et à la dérive des modèles. Couvrez à la fois les risques techniques et organisationnels.",
-    "Each agent key can restrict which MCP tools the agent is allowed or blocked from calling. Combine with rate limits for fine-grained governance.":
-      "Chaque clé d'agent peut restreindre les outils MCP que l'agent est autorisé ou non à appeler. Associez-la à des limites de débit pour une gouvernance fine.",
+    "Each agent key can list the MCP server tools it may or may not call through the proxy, and can apply the same lists to native tool calls from the hook script or the Python SDK. Combine with rate limits for fine-grained governance.":
+      "Chaque clé d'agent peut lister les outils de serveur MCP qu'elle peut ou non appeler via le proxy, et appliquer les mêmes listes aux appels d'outils natifs du script de hook ou du SDK Python. Associez-la à des limites de débit pour une gouvernance fine.",
     "Each dataset should have a clear prompt column and an expected output column. Add metadata columns for filtering results later.":
       "Chaque jeu de données doit avoir une colonne de prompt claire et une colonne de sortie attendue. Ajoutez des colonnes de métadonnées pour filtrer les résultats ultérieurement.",
     "Each experiment run is saved here with scores and metadata. Run the same dataset across different models or configs to track progress.":
@@ -14718,8 +14846,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Lorsque les auditeurs demandent « Quand avez-vous mis en œuvre ce contrôle ? » ou « Comment avez-vous répondu à cet incident ? », les journaux d'événements fournissent des réponses précises. Un historique détaillé élimine la dépendance à la mémoire et constitue une preuve objective.",
     "Filter events to find relevant information quickly.":
       "Filtrer les événements pour trouver rapidement les informations pertinentes.",
-    "With many events logged over time, filters help you find what you need. Filter by date range, event type, or related entity to quickly locate specific governance activities. Export filtered events for reports or documentation.":
-      "Avec de nombreux événements journalisés dans le temps, les filtres vous aident à trouver ce dont vous avez besoin. Filtrez par plage de dates, type d'événement ou entité liée pour localiser rapidement des activités de gouvernance. Exportez les événements filtrés pour les rapports ou la documentation.",
+    "With many events logged over time, filters help you find what you need. Filter by date range, event type, or related entity to quickly locate specific governance activities.":
+      "Avec de nombreux événements journalisés dans le temps, les filtres vous aident à trouver ce dont vous avez besoin. Filtrez par plage de dates, type d'événement ou entité liée pour localiser rapidement des activités de gouvernance.",
     "Settings customize VerifyWise to your organization's needs.":
       "Les paramètres adaptent VerifyWise aux besoins de votre organisation.",
     "Configure user roles and system defaults to match your governance workflows. Taking time to properly configure settings upfront saves time and reduces confusion later. Review settings periodically as your organization grows.":
@@ -20939,8 +21067,76 @@ export const translations: Record<string, Record<string, string>> = {
       "La section 5-301(a) est le seul déclencheur de nouvel audit dans la règle : un outil ne peut pas être utilisé si plus d'un an s'est écoulé depuis son dernier audit de biais. Par ailleurs, une base de données de test au titre de 5-302(b) prend fin selon sa propre condition, qui peut survenir bien avant un an.",
     "The rule contains no trigger for a change of role, configuration, weighting or model. A report that cites 5-301(a) for re-audit triggers it does not contain has to have the claim withdrawn. Your test-data basis expires on a condition rather than a date: if it rests on race not being recorded, it ends when race begins to be captured, and collecting more records of other characteristics does not end it.":
       "La règle ne contient aucun déclencheur pour un changement de poste, de configuration, de pondération ou de modèle. Un rapport qui cite 5-301(a) pour des déclencheurs de nouvel audit qu'elle ne contient pas doit retirer l'affirmation. Votre base de données de test expire selon une condition et non une date : si elle repose sur le fait que l'origine raciale n'est pas enregistrée, elle prend fin lorsque celle-ci commence à être recueillie, et collecter davantage d'enregistrements sur d'autres caractéristiques n'y met pas fin.",
+    "No evidence": "Aucune preuve",
+    "This use case is waiting for approval. You can read this overview, but the other tabs stay disabled until the request is approved or rejected, and the frameworks picked at creation are added only once it is approved. Follow the request under Approval requests in the header.":
+      "Ce cas d'usage est en attente d'approbation. Vous pouvez consulter cette vue d'ensemble, mais les autres onglets restent désactivés tant que la demande n'est pas approuvée ou rejetée, et les référentiels choisis à la création ne sont ajoutés qu'une fois l'approbation obtenue. Suivez la demande sous Demandes d'approbation dans l'en-tête.",
+    "This use case was rejected, so it can no longer be used. The tabs stay disabled and the frameworks picked at creation were never added. See the rejection comment under Approval requests in the header.":
+      "Ce cas d'usage a été rejeté : il ne peut plus être utilisé. Les onglets restent désactivés et les référentiels choisis à la création n'ont jamais été ajoutés. Consultez le commentaire de rejet sous Demandes d'approbation dans l'en-tête.",
+    "Adequate evidence": "Preuves suffisantes",
+    "Low-quality evidence": "Preuves de faible qualité",
+    "Loading evidence coverage": "Chargement de la couverture des preuves",
+    "Show all {count}": "Afficher les {count}",
+    "Show fewer": "Afficher moins",
+    "Controls needing attention": "Contrôles nécessitant une attention",
+    "file": "fichier",
+    "files": "fichiers",
+    "none adequate": "aucun suffisant",
+    "Evidence graded": "Les preuves notées",
+    "counts as low quality. Files with no AI analysis are not counted as adequate.":
+      "sont considérées comme de faible qualité. Les fichiers sans analyse IA ne comptent pas comme suffisants.",
   },
   es: {
+    // Agent Control monitor only mode
+    "Enforce": "Aplicar",
+    "Monitor only": "Solo supervisión",
+    "Rules are checked and logged but never block or pause calls. Rate limits still apply.":
+      "Las reglas se comprueban y registran, pero nunca bloquean ni pausan las llamadas. Los límites de frecuencia siguen aplicándose.",
+    'Choose how policies apply to calls made with "{name}".':
+      "Elija cómo se aplican las políticas a las llamadas realizadas con «{name}».",
+    "Use monitor only mode?": "¿Usar el modo solo supervisión?",
+    "Use monitor only": "Usar solo supervisión",
+    "Calls made with this key will no longer be blocked or paused for approval.":
+      "Las llamadas realizadas con esta clave ya no se bloquearán ni se pausarán para aprobación.",
+    'Guardrails and approval rules are still checked, and so are the key\'s tool lists for calls through the MCP proxy, and for native tool calls when the key\'s "Also apply tool lists to native tool calls" setting is on. Every match is logged in Activity as "Would block" or "Would need approval". No approval requests are created. Rate limits still apply.':
+      "Las barreras de protección y las reglas de aprobación se siguen comprobando, y también las listas de herramientas de la clave en las llamadas a través del proxy MCP, y en las llamadas a herramientas nativas cuando la opción «Aplicar también las listas de herramientas a las llamadas nativas» de la clave está activada. Cada coincidencia se registra en Actividad como «Bloquearía» o «Requeriría aprobación». No se crean solicitudes de aprobación. Los límites de frecuencia siguen aplicándose.",
+    "Monitor only since {date} · by {name}": "Solo supervisión desde {date} · por {name}",
+    "Monitor only since {date}": "Solo supervisión desde {date}",
+    "Would block": "Bloquearía",
+    "Would need approval": "Requeriría aprobación",
+    "{count} would block": "{count} se bloquearían",
+    "{count} would need approval": "{count} requerirían aprobación",
+    "Would have been blocked by {rule}": "Habría sido bloqueado por {rule}",
+    "Would have been blocked by this key's tool list":
+      "Habría sido bloqueado por la lista de herramientas de esta clave",
+    "Would have needed approval: {rule}": "Habría requerido aprobación: {rule}",
+    "Would have needed approval (tool requires approval)":
+      "Habría requerido aprobación (la herramienta requiere aprobación)",
+    "Would have been blocked by a guardrail": "Habría sido bloqueado por una barrera de protección",
+    "Would have needed approval": "Habría requerido aprobación",
+    "Enforcement settings": "Configuración de aplicación",
+    "Failed to save the key settings": "No se pudo guardar la configuración de la clave",
+    "Also apply tool lists to native tool calls (hooks and SDK)":
+      "Aplicar también las listas de herramientas a las llamadas nativas (hooks y SDK)",
+    "Off: the allowed and blocked tool lists apply only to MCP server tools called through the proxy. On: they also apply to the agent's own tool calls checked by the hook script or the Python SDK, such as Bash, Edit or your Python functions. Leave it off for keys used by Claude Code or Cursor unless the lists name those tools.":
+      "Desactivado: las listas de herramientas permitidas y bloqueadas solo se aplican a las herramientas de servidor MCP invocadas a través del proxy. Activado: también se aplican a las llamadas a herramientas propias del agente que comprueban el script de hook o el SDK de Python, como Bash, Edit o sus funciones de Python. Déjelo desactivado en las claves que usan Claude Code o Cursor, salvo que las listas nombren esas herramientas.",
+    "MCP proxy only": "Solo proxy MCP",
+    "MCP proxy and native calls": "Proxy MCP y llamadas nativas",
+    "Allowlist for MCP server tools called through the proxy: if set, this key may call only these tools. Comma-separated; leave empty to allow all. Applies to native tool calls (Bash, Edit, SDK functions) only when the setting below is on.":
+      "Lista de permitidas para las herramientas de servidor MCP invocadas a través del proxy: si se define, esta clave solo puede invocar estas herramientas. Separadas por comas; déjela vacía para permitir todas. Se aplica a las llamadas a herramientas nativas (Bash, Edit, funciones del SDK) solo cuando la opción de abajo está activada.",
+    "Denylist for MCP server tools called through the proxy: these are always denied, even if also in the allowlist. Comma-separated; leave empty to block none. Applies to native tool calls only when the setting below is on.":
+      "Lista de bloqueadas para las herramientas de servidor MCP invocadas a través del proxy: siempre se deniegan, aunque también estén en la lista de permitidas. Separadas por comas; déjela vacía para no bloquear ninguna. Se aplica a las llamadas a herramientas nativas solo cuando la opción de abajo está activada.",
+    // High-risk roles (several EU AI Act roles per use case)
+    "High-risk roles": "Roles de alto riesgo",
+    "High-risk roles *": "Roles de alto riesgo *",
+    "Select roles": "Seleccionar roles",
+    "Select at least one high-risk role when EU AI Act is selected.":
+      "Seleccione al menos un rol de alto riesgo cuando la EU AI Act esté seleccionada.",
+    "Not a high-risk role:": "No es un rol de alto riesgo:",
+    "Roles:": "Roles:",
+    "Provider, Deployer or both": "Proveedor, responsable del despliegue o ambos",
+    "Provider, Deployer": "Proveedor, Responsable del despliegue",
+    "What is your role for this AI system? Select all that apply.":
+      "¿Cuál es su rol para este sistema de IA? Seleccione todos los que correspondan.",
     "Server saved": "Servidor guardado",
     "Server switched on": "Servidor activado",
     "The server offered no tools": "El servidor no ofreció herramientas",
@@ -21706,6 +21902,8 @@ export const translations: Record<string, Record<string, string>> = {
     "EVIDENCE NAME": "NOMBRE DE LA EVIDENCIA",
     "Evidence type": "Tipo de evidencia",
     "Evidence coverage": "Cobertura de evidencias",
+    "controls adequate": "controles adecuados",
+    "without evidence": "sin evidencia",
     "Report name": "Nombre del informe",
     "Report type": "Tipo de informe",
     "Type of report": "Tipo de informe",
@@ -21968,6 +22166,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Analytics": "Analíticas",
     "Use case": "Caso de uso",
     "Use case report": "Informe de caso de uso",
+    "This use case has no framework assigned": "Este caso de uso no tiene ningún marco asignado",
+    "Requirements, assessment tracker, clauses and annexes, and NIST subcategories need a framework, so they are left out. The report still covers risks, models, vendors, training, policies and incidents. Assign a framework to the use case to include compliance sections.":
+      "Los requisitos, el seguimiento de evaluaciones, las cláusulas y anexos y las subcategorías de NIST necesitan un marco, por lo que se omiten. El informe sigue cubriendo riesgos, modelos, proveedores, formación, políticas e incidentes. Asigne un marco al caso de uso para incluir las secciones de cumplimiento.",
     "AI project": "Proyecto de IA",
     "AI Project": "Proyecto de IA",
     "AI PROJECT": "PROYECTO DE IA",
@@ -26461,8 +26662,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Los eventos del sistema, las llamadas a la API y los resultados de los trabajos en segundo plano se registran automáticamente. Los registros aparecen a medida que su espacio de trabajo genera actividad.",
     "Templates are grouped by framework (EU AI Act, ISO 42001, etc.). Use the search bar to find templates relevant to your compliance needs.":
       "Las plantillas se agrupan por marco (EU AI Act, ISO 42001, etc.). Utilice la barra de búsqueda para encontrar plantillas relevantes para sus necesidades de cumplimiento.",
-    "The gateway periodically checks server health and can discover available tools automatically. Unhealthy servers are temporarily bypassed to keep agents running.":
-      "El gateway comprueba periódicamente el estado de los servidores y puede descubrir automáticamente las herramientas disponibles. Los servidores en mal estado se omiten temporalmente para mantener los agentes en funcionamiento.",
     "The marketplace tab above lists available plugins for frameworks (SOC 2, GDPR, HIPAA), integrations (Slack, Jira), and more.":
       "La pestaña de marketplace de arriba muestra los plugins disponibles para marcos (SOC 2, GDPR, HIPAA), integraciones (Slack, Jira) y más.",
     "This registry manages all AI/LLM models and their associated risks within your organization. You can view, add, and manage model details and track model-specific risks and mitigation plans.":
@@ -26909,8 +27108,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Defina el sistema de IA, su finalidad, los datos que procesa y las personas a las que afecta. Esto constituye la base para el seguimiento del riesgo y el cumplimiento.",
     "Document risks related to bias, data quality, security, transparency, and model drift. Cover both technical and organizational risks.":
       "Documente los riesgos relacionados con el sesgo, la calidad de los datos, la seguridad, la transparencia y la deriva del modelo. Cubra tanto los riesgos técnicos como los organizativos.",
-    "Each agent key can restrict which MCP tools the agent is allowed or blocked from calling. Combine with rate limits for fine-grained governance.":
-      "Cada clave de agente puede restringir qué herramientas MCP puede o no puede invocar el agente. Combínela con límites de frecuencia para una gobernanza más detallada.",
+    "Each agent key can list the MCP server tools it may or may not call through the proxy, and can apply the same lists to native tool calls from the hook script or the Python SDK. Combine with rate limits for fine-grained governance.":
+      "Cada clave de agente puede enumerar las herramientas de servidor MCP que puede o no invocar a través del proxy, y aplicar las mismas listas a las llamadas a herramientas nativas del script de hook o del SDK de Python. Combínela con límites de frecuencia para una gobernanza más detallada.",
     "Each dataset should have a clear prompt column and an expected output column. Add metadata columns for filtering results later.":
       "Cada conjunto de datos debe tener una columna de prompt clara y una columna de salida esperada. Añada columnas de metadatos para filtrar los resultados posteriormente.",
     "Each experiment run is saved here with scores and metadata. Run the same dataset across different models or configs to track progress.":
@@ -27270,8 +27469,8 @@ export const translations: Record<string, Record<string, string>> = {
       'Cuando los auditores preguntan "¿Cuándo implementaron este control?" o "¿Cómo respondieron a ese incidente?", los registros de eventos proporcionan respuestas definitivas. Un historial de eventos detallado elimina la dependencia de la memoria y crea evidencia objetiva.',
     "Filter events to find relevant information quickly.":
       "Filtre los eventos para encontrar rápidamente la información relevante.",
-    "With many events logged over time, filters help you find what you need. Filter by date range, event type, or related entity to quickly locate specific governance activities. Export filtered events for reports or documentation.":
-      "Con muchos eventos registrados a lo largo del tiempo, los filtros le ayudan a encontrar lo que necesita. Filtre por intervalo de fechas, tipo de evento o entidad relacionada para localizar rápidamente actividades de gobernanza específicas. Exporte los eventos filtrados para informes o documentación.",
+    "With many events logged over time, filters help you find what you need. Filter by date range, event type, or related entity to quickly locate specific governance activities.":
+      "Con muchos eventos registrados a lo largo del tiempo, los filtros le ayudan a encontrar lo que necesita. Filtre por intervalo de fechas, tipo de evento o entidad relacionada para localizar rápidamente actividades de gobernanza específicas.",
     "Settings customize VerifyWise to your organization's needs.":
       "La configuración adapta VerifyWise a las necesidades de su organización.",
     "Configure user roles and system defaults to match your governance workflows. Taking time to properly configure settings upfront saves time and reduces confusion later. Review settings periodically as your organization grows.":
@@ -31285,5 +31484,22 @@ export const translations: Record<string, Record<string, string>> = {
       "La sección 5-301(a) es el único desencadenante de nueva auditoría en la norma: una herramienta no puede usarse si ha transcurrido más de un año desde su auditoría de sesgo más reciente. Aparte, una base de datos de prueba conforme a 5-302(b) termina por su propia condición, que puede cumplirse mucho antes de un año.",
     "The rule contains no trigger for a change of role, configuration, weighting or model. A report that cites 5-301(a) for re-audit triggers it does not contain has to have the claim withdrawn. Your test-data basis expires on a condition rather than a date: if it rests on race not being recorded, it ends when race begins to be captured, and collecting more records of other characteristics does not end it.":
       "La norma no contiene ningún desencadenante por cambio de puesto, configuración, ponderación o modelo. Un informe que cita 5-301(a) por desencadenantes de nueva auditoría que no contiene tiene que retirar la afirmación. Su base de datos de prueba caduca por una condición y no por una fecha: si se apoya en que no se registra la raza, termina cuando empieza a recogerse, y reunir más registros de otras características no la termina.",
+    "No evidence": "Sin evidencia",
+    "This use case is waiting for approval. You can read this overview, but the other tabs stay disabled until the request is approved or rejected, and the frameworks picked at creation are added only once it is approved. Follow the request under Approval requests in the header.":
+      "Este caso de uso está esperando aprobación. Puede leer esta vista general, pero las demás pestañas permanecen deshabilitadas hasta que la solicitud se apruebe o se rechace, y los marcos elegidos al crearlo solo se añaden una vez aprobado. Siga la solicitud en Solicitudes de aprobación en la cabecera.",
+    "This use case was rejected, so it can no longer be used. The tabs stay disabled and the frameworks picked at creation were never added. See the rejection comment under Approval requests in the header.":
+      "Este caso de uso fue rechazado, por lo que ya no se puede usar. Las pestañas permanecen deshabilitadas y los marcos elegidos al crearlo nunca se añadieron. Consulte el comentario de rechazo en Solicitudes de aprobación en la cabecera.",
+    "Adequate evidence": "Evidencia suficiente",
+    "Low-quality evidence": "Evidencia de baja calidad",
+    "Loading evidence coverage": "Cargando la cobertura de evidencia",
+    "Show all {count}": "Mostrar los {count}",
+    "Show fewer": "Mostrar menos",
+    "Controls needing attention": "Controles que requieren atención",
+    "file": "archivo",
+    "files": "archivos",
+    "none adequate": "ninguno suficiente",
+    "Evidence graded": "La evidencia calificada",
+    "counts as low quality. Files with no AI analysis are not counted as adequate.":
+      "se considera de baja calidad. Los archivos sin análisis de IA no cuentan como suficientes.",
   },
 };

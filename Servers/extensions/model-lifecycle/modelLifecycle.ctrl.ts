@@ -109,7 +109,12 @@ export async function createItemCtrl(req: Request, res: Response): Promise<any> 
 
 export async function updateItemCtrl(req: Request, res: Response): Promise<any> {
   try {
-    const item = await svc.updateItem(orgId(req), intParam(req, "id"), req.body ?? {});
+    const item = await svc.updateItem(
+      orgId(req),
+      intParam(req, "id"),
+      req.body ?? {},
+      req.userId ?? null,
+    );
     if (item === null) {
       return res.status(400).json(STATUS_CODE[400](req.t!("No fields to update")));
     }

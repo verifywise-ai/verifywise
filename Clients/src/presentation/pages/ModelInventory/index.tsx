@@ -59,6 +59,7 @@ import { EvidenceHubModel } from "../../../domain/models/Common/evidenceHub/evid
 import NewEvidenceHub from "../../components/Modals/EvidenceHub";
 import { createEvidenceHub } from "../../../application/repository/evidenceHub.repository";
 import EvidenceHubTable from "./evidenceHubTable";
+import EvidenceCoveragePanel from "./EvidenceCoveragePanel";
 import FilePreviewPanel from "../FileManager/components/FilePreviewPanel";
 import { FileMetadata } from "../../../application/repository/file.repository";
 import { earliestFileExpiry } from "../../../application/utils/fileExpiry";
@@ -2453,6 +2454,11 @@ const ModelInventory: React.FC = () => {
 
         {activeTab === "evidence-hub" && (
           <>
+            {/* Mounted once at the tab level (the table below is reused per
+                group and in modals), and above the empty state so coverage
+                shows even when there is no evidence yet (#4911). */}
+            <EvidenceCoveragePanel />
+
             <Stack
               direction="row"
               justifyContent="space-between"

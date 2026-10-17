@@ -22,6 +22,10 @@ import CustomizableSkeleton from "../Skeletons";
 
 import { projectWrapperStyle, noProjectsTextStyle, vwhomeBodyProjectsGrid } from "./style";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import {
+  formatHighRiskRoles,
+  projectHighRiskRoles,
+} from "../../../application/utils/highRiskRoles";
 
 const ProjectList = ({
   projects,
@@ -206,10 +210,10 @@ const ProjectList = ({
     switch (field) {
       case "risk_level":
         return project.ai_risk_classification || "Unknown";
-      case "role":
-        return project.type_of_high_risk_role
-          ? project.type_of_high_risk_role.replace(/_/g, " ")
-          : "Unknown";
+      case "role": {
+        const roles = projectHighRiskRoles(project);
+        return roles.length > 0 ? roles : "Unknown";
+      }
       case "owner":
         if (project.owner) {
           return getUserNameById(project.owner.toString());
@@ -302,7 +306,7 @@ const ProjectList = ({
       { id: "uc_id", label: "Use Case ID" },
       { id: "project_title", label: "Use Case Title" },
       { id: "ai_risk_classification", label: "AI Risk Level" },
-      { id: "type_of_high_risk_role", label: "Role" },
+      { id: "high_risk_roles", label: "High-risk roles" },
       { id: "start_date", label: "Start Date" },
       { id: "last_updated", label: "Last Updated" },
       { id: "owner", label: "Owner" },
@@ -318,7 +322,7 @@ const ProjectList = ({
         uc_id: project.uc_id || project.id?.toString() || "-",
         project_title: project.project_title || "-",
         ai_risk_classification: project.ai_risk_classification || "-",
-        type_of_high_risk_role: project.type_of_high_risk_role?.replace(/_/g, " ") || "-",
+        high_risk_roles: formatHighRiskRoles(projectHighRiskRoles(project)) || "-",
         start_date: project.start_date ? formatDate(project.start_date) : "-",
         last_updated: project.last_updated ? formatDate(project.last_updated) : "-",
         owner: ownerName,

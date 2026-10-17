@@ -16,9 +16,9 @@ import { createTestOrganization, createTestUser, cleanupDatabase } from "./helpe
 async function seedProject(orgId: number, ownerId: number, name: string): Promise<number> {
   const rows = (await sequelize.query(
     `INSERT INTO projects
-       (project_title, owner, start_date, ai_risk_classification, type_of_high_risk_role,
+       (project_title, owner, start_date, ai_risk_classification, high_risk_roles,
         goal, last_updated, last_updated_by, organization_id)
-     VALUES (:name, :ownerId, NOW(), 'High risk', 'Deployer', 'goal', NOW(), :ownerId, :orgId)
+     VALUES (:name, :ownerId, NOW(), 'High risk', '{Deployer}', 'goal', NOW(), :ownerId, :orgId)
      RETURNING id`,
     { replacements: { name, ownerId, orgId }, type: QueryTypes.SELECT },
   )) as Array<{ id: number }>;

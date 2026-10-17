@@ -48,6 +48,14 @@ import {
 import { useAuth } from "../../../../application/hooks/useAuth";
 import { AiRiskClassification } from "../../../../domain/enums/aiRiskClassification.enum";
 import { HighRiskRole } from "../../../../domain/enums/highRiskRole.enum";
+import HighRiskRolesField from "../../../components/Inputs/HighRiskRolesField";
+import {
+  classificationRoles,
+  formatHighRiskRoles,
+  highRiskRolesError,
+  highRiskRolesPayload,
+  projectHighRiskRoles,
+} from "../../../../application/utils/highRiskRoles";
 import RiskAnalysisModal from "../RiskAnalysisModal";
 import type { ClassificationResult } from "../../../../domain/types/euAiActClassification";
 import { getAutocompleteStyles } from "../../../utils/inputStyles";
@@ -68,11 +76,6 @@ const geographyItems = [
   { _id: 4, name: "South America" },
   { _id: 5, name: "Asia" },
   { _id: 6, name: "Africa" },
-];
-
-const highRiskRoleItems = [
-  { _id: 1, name: HighRiskRole.DEPLOYER },
-  { _id: 2, name: HighRiskRole.PROVIDER },
 ];
 
 const useCaseCategoryItems = [
@@ -137,7 +140,7 @@ interface FormValues {
   members: number[];
   startDate: string;
   riskClassification: number | null;
-  typeOfHighRiskRole: number | null;
+  highRiskRoles: HighRiskRole[];
   geography: number;
   targetIndustry: string;
   description: string;
@@ -161,7 +164,7 @@ interface FormErrors {
   startDate?: string;
   members?: string;
   riskClassification?: string;
-  typeOfHighRiskRole?: string;
+  highRiskRoles?: string;
   monitoredRegulationsAndStandards?: string;
   geography?: string;
   targetIndustry?: string;
@@ -180,7 +183,7 @@ const initialState: FormValues = {
   members: [],
   startDate: "",
   riskClassification: null,
-  typeOfHighRiskRole: null,
+  highRiskRoles: [],
   geography: 1,
   targetIndustry: "",
   description: "",
@@ -246,7 +249,8 @@ const ProjectSettings = React.memo(
         JSON.stringify(values.members) !== JSON.stringify(initialValuesRef.current.members) ||
         values.startDate !== initialValuesRef.current.startDate ||
         values.riskClassification !== initialValuesRef.current.riskClassification ||
-        values.typeOfHighRiskRole !== initialValuesRef.current.typeOfHighRiskRole ||
+        formatHighRiskRoles(values.highRiskRoles) !==
+          formatHighRiskRoles(initialValuesRef.current.highRiskRoles) ||
         values.geography !== initialValuesRef.current.geography ||
         values.targetIndustry !== initialValuesRef.current.targetIndustry ||
         values.description !== initialValuesRef.current.description ||
@@ -341,11 +345,7 @@ const ProjectSettings = React.memo(
               (item) =>
                 item.name.toLowerCase() === (project.ai_risk_classification || "").toLowerCase(),
             )?._id || null,
-          typeOfHighRiskRole:
-            highRiskRoleItems.find(
-              (item) =>
-                item.name.toLowerCase() === (project.type_of_high_risk_role || "").toLowerCase(),
-            )?._id || null,
+          highRiskRoles: projectHighRiskRoles(project),
           geography: project.geography ?? 1,
           targetIndustry: project.target_industry ?? "",
           description: project.description ?? "",
@@ -653,9 +653,9 @@ const ProjectSettings = React.memo(
           newErrors.riskClassification =
             "AI risk classification is required when EU AI Act is selected.";
         }
-        if (!values.typeOfHighRiskRole) {
-          newErrors.typeOfHighRiskRole =
-            "Type of high risk role is required when EU AI Act is selected.";
+        const rolesError = highRiskRolesError(values.highRiskRoles, hasEuAiAct);
+        if (rolesError) {
+          newErrors.highRiskRoles = rolesError;
         }
       }
 
@@ -735,9 +735,6 @@ const ProjectSettings = React.memo(
         ? riskClassificationItems.find((item) => item._id === values.riskClassification)?.name ||
           null
         : null;
-      const selectedHighRiskRole = hasEuAiAct
-        ? highRiskRoleItems.find((item) => item._id === values.typeOfHighRiskRole)?.name || null
-        : null;
       const selectedStatus =
         projectStatusItems.find((item) => item._id === values.status)?.name || "";
       const selectedRegulations = values.monitoredRegulationsAndStandards.map((reg) => reg.name);
@@ -754,7 +751,7 @@ const ProjectSettings = React.memo(
           members: values.members.map(String),
           start_date: values.startDate,
           ai_risk_classification: selectedRiskClass,
-          type_of_high_risk_role: selectedHighRiskRole,
+          high_risk_roles: highRiskRolesPayload(values.highRiskRoles, hasEuAiAct),
           goal: values.goal,
           geography: selectedGeography,
           target_industry: values.targetIndustry,
@@ -1447,10 +1444,10 @@ const ProjectSettings = React.memo(
                         />
                       </Stack>
 
-                      {/* Type of high risk role Row */}
+                      {/* High-risk roles Row */}
                       <Box>
                         <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                          Type of high risk role *
+                          High-risk roles *
                         </Typography>
                         <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
                           If you are not sure about the high risk role,&nbsp;
@@ -1462,17 +1459,16 @@ const ProjectSettings = React.memo(
                           </VWLink>
                         </Typography>
                       </Box>
-                      <Select
-                        id="risk-classification-input"
+                      <HighRiskRolesField
+                        id="high-risk-roles-input"
                         label=""
-                        value={values?.typeOfHighRiskRole || ""}
-                        onChange={handleOnSelectChange("typeOfHighRiskRole")}
-                        items={highRiskRoleItems}
-                        sx={{
-                          width: 400,
-                          backgroundColor: theme.palette.background.main,
+                        value={values.highRiskRoles}
+                        onChange={(roles) => {
+                          setValues((prev) => ({ ...prev, highRiskRoles: roles }));
+                          setErrors((prev) => ({ ...prev, highRiskRoles: "" }));
                         }}
-                        error={errors.typeOfHighRiskRole}
+                        error={errors.highRiskRoles}
+                        sx={{ width: 400 }}
                       />
                     </>
                   )}
@@ -1691,25 +1687,25 @@ const ProjectSettings = React.memo(
               console.error(`Unknown classification: ${result.level}`);
               return;
             }
-            // The server stored the level, and the role unless the result has
+            // The server stored the level, and the roles unless the result has
             // none, so both become the saved baseline and the form stays clean.
-            const role = highRiskRoleItems.find((item) => item.name === result.role);
+            const roles = classificationRoles(result);
             const saved = {
               riskClassification: level._id,
-              typeOfHighRiskRole: role?._id ?? initialValuesRef.current.typeOfHighRiskRole,
+              highRiskRoles: roles.length > 0 ? roles : initialValuesRef.current.highRiskRoles,
             };
             initialValuesRef.current = { ...initialValuesRef.current, ...saved };
-            // Same as picking them from the dropdowns: set the values and clear any
+            // Same as picking them in the form: set the values and clear any
             // earlier "required" error on those fields.
             setValues((prev) => ({
               ...prev,
               riskClassification: saved.riskClassification,
-              ...(role ? { typeOfHighRiskRole: role._id } : {}),
+              ...(roles.length > 0 ? { highRiskRoles: roles } : {}),
             }));
             setErrors((prevErrors) => ({
               ...prevErrors,
               riskClassification: "",
-              ...(role ? { typeOfHighRiskRole: "" } : {}),
+              ...(roles.length > 0 ? { highRiskRoles: "" } : {}),
             }));
             // Refresh the rest of the use case view (header, overview), as a normal Save does.
             triggerRefresh(true);

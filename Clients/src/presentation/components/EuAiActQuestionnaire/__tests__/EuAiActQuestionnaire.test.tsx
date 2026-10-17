@@ -155,4 +155,18 @@ describe("EuAiActQuestionnaire", () => {
     fireEvent.click(screen.getByLabelText("Scoring"));
     expect(onChange).toHaveBeenLastCalledWith({ practices: ["manipulation"] });
   });
+
+  it("pre-fills a saved single answer to a multi-select question as a one-item selection", () => {
+    const onChange = vi.fn();
+    renderWithProviders(
+      <Harness
+        questionnaire={MULTI}
+        initial={{ practices: "manipulation" }}
+        onComplete={vi.fn()}
+        onChange={onChange}
+      />,
+    );
+    fireEvent.click(screen.getByLabelText("Scoring"));
+    expect(onChange).toHaveBeenLastCalledWith({ practices: ["manipulation", "scoring"] });
+  });
 });

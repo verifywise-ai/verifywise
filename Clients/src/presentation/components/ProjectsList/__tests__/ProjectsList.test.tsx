@@ -1,5 +1,9 @@
 import { vi } from "vitest";
 
+const { useTableGroupingMock } = vi.hoisted(() => ({
+  useTableGroupingMock: vi.fn(() => ({ groups: new Map() })),
+}));
+
 vi.mock("../../Cards/ProjectCard", () => ({
   ProjectCard: () => <div data-testid="project-card" />,
 }));
@@ -25,7 +29,7 @@ vi.mock("../../Table/GroupBy", () => ({
   GroupBy: () => <div data-testid="group-by" />,
 }));
 vi.mock("../../../../application/hooks/useTableGrouping", () => ({
-  useTableGrouping: () => ({ groups: new Map() }),
+  useTableGrouping: useTableGroupingMock,
   useGroupByState: () => ({
     groupBy: null,
     groupSortOrder: "asc",
@@ -66,5 +70,14 @@ describe("ProjectsList", () => {
   it("renders without crashing with empty projects", () => {
     renderWithProviders(<ProjectList projects={[]} />);
     expect(document.body).toBeTruthy();
+  });
+
+  it("groups a use case under each of its high-risk roles", () => {
+    renderWithProviders(<ProjectList projects={[]} />);
+    const options = (useTableGroupingMock.mock.calls as any[][])[0][0];
+    const key = (roles: string[]) => options.getGroupKey({ high_risk_roles: roles }, "role");
+    expect(key(["Provider", "Deployer"])).toEqual(["Provider", "Deployer"]);
+    expect(key(["Deployer"])).toEqual(["Deployer"]);
+    expect(key([])).toBe("Unknown");
   });
 });

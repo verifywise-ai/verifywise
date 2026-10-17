@@ -2,7 +2,6 @@
 - name: Update VerifyWise on all servers (images + compose + env)
   hosts: verifywise
   become: true
-  serial: 1  # one server at a time; remove for parallel
 
   tasks:
     - name: Detect available Compose command (v2 plugin or legacy binary)

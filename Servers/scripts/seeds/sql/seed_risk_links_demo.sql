@@ -23,14 +23,14 @@ DELETE FROM projects                              WHERE id BETWEEN 9000 AND 9099
 
 -- ------------------------------------------------------------------- projects
 INSERT INTO projects (id, organization_id, uc_id, project_title, owner, start_date,
-                      ai_risk_classification, type_of_high_risk_role, goal, status,
+                      ai_risk_classification, high_risk_roles, goal, status,
                       last_updated, last_updated_by, is_demo)
 VALUES
- (9001,1,'UC-DEMO-001','Loan Approval Copilot',      1, NOW()-INTERVAL '210 days','High risk','Deployer','Assist underwriters with consumer credit decisions.','In progress',   NOW(),1,true),
- (9002,1,'UC-DEMO-002','Customer Support Chatbot',   1, NOW()-INTERVAL '160 days','Limited risk','Deployer','Answer tier-1 support questions without a human.','In progress',    NOW(),1,true),
- (9003,1,'UC-DEMO-003','Fraud Detection Engine',     1, NOW()-INTERVAL '300 days','High risk','Provider','Score card transactions for fraud in real time.','Under review',       NOW(),1,true),
- (9004,1,'UC-DEMO-004','HR Resume Screener',         1, NOW()-INTERVAL '120 days','High risk','Deployer','Rank inbound applications for recruiters.','In progress',             NOW(),1,true),
- (9005,1,'UC-DEMO-005','Clinical Triage Assistant',  1, NOW()-INTERVAL '75 days', 'High risk','Provider','Suggest triage priority from intake notes.','Not started',            NOW(),1,true);
+ (9001,1,'UC-DEMO-001','Loan Approval Copilot',      1, NOW()-INTERVAL '210 days','High risk','{Deployer}','Assist underwriters with consumer credit decisions.','In progress',   NOW(),1,true),
+ (9002,1,'UC-DEMO-002','Customer Support Chatbot',   1, NOW()-INTERVAL '160 days','Limited risk','{Deployer}','Answer tier-1 support questions without a human.','In progress',    NOW(),1,true),
+ (9003,1,'UC-DEMO-003','Fraud Detection Engine',     1, NOW()-INTERVAL '300 days','High risk','{Provider}','Score card transactions for fraud in real time.','Under review',       NOW(),1,true),
+ (9004,1,'UC-DEMO-004','HR Resume Screener',         1, NOW()-INTERVAL '120 days','High risk','{Deployer}','Rank inbound applications for recruiters.','In progress',             NOW(),1,true),
+ (9005,1,'UC-DEMO-005','Clinical Triage Assistant',  1, NOW()-INTERVAL '75 days', 'High risk','{Provider}','Suggest triage priority from intake notes.','Not started',            NOW(),1,true);
 
 INSERT INTO projects_members (organization_id, project_id, user_id, is_demo)
 SELECT 1, id, 1, true FROM projects WHERE id BETWEEN 9000 AND 9099;

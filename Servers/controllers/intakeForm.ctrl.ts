@@ -77,6 +77,12 @@ import { generateSuggestedQuestions, generateFieldGuidance } from "../services/i
 import { getCompanyLogoQuery } from "../utils/aiTrustCentre.utils";
 
 import { translateError } from "../utils/i18n.utils";
+import {
+  HIGH_RISK_ROLE_MAPPING,
+  highRiskRolesFromEntityData,
+  resolveMappedHighRiskRoles,
+  sameHighRiskRoles,
+} from "../utils/highRiskRoles.utils";
 import { toId } from "../utils/validations/validation.utils";
 import { isEmail } from "../utils/validations/email.utils";
 /** Safely extract a single string from req.params (which may be string | string[]). */
@@ -238,7 +244,7 @@ async function persistIntakeRiskRun(
       useCaseId: null,
       intakeSubmissionId: submissionId,
       questionnaireVersion: prepared.questionnaireVersion,
-      role: prepared.result.role,
+      roles: prepared.result.roles,
       answers: prepared.answers,
       result: prepared.result,
       reviewerLevel: null,
@@ -471,9 +477,19 @@ function buildEntityDataFromSubmission(
 ): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const field of formSchema.fields) {
-    if (field.entityFieldMapping && submissionData[field.id] !== undefined) {
-      result[field.entityFieldMapping] = submissionData[field.id];
+    if (!field.entityFieldMapping || submissionData[field.id] === undefined) continue;
+    if (field.entityFieldMapping === HIGH_RISK_ROLE_MAPPING) {
+      // A select stores option values; match each option by label or value.
+      // Options that name no role are kept by label for the review dialog.
+      const { roles, unmatched } = resolveMappedHighRiskRoles(
+        submissionData[field.id],
+        field.options,
+      );
+      result.high_risk_roles = roles;
+      result.high_risk_roles_unmatched = unmatched;
+      continue;
     }
+    result[field.entityFieldMapping] = submissionData[field.id];
   }
   return result;
 }
@@ -1123,10 +1139,15 @@ export async function getSubmissionPreview(req: Request, res: Response) {
           questionnaire: rescored.questionnaire,
           answers: rescored.run.answers,
           role: rescored.result.role,
+          roles: rescored.result.roles,
           current: rescored.result,
           changedSinceSubmission:
             rescored.result.level !== rescored.run.result.level ||
-            (rescored.result.role ?? null) !== (rescored.run.result.role ?? null),
+            !sameHighRiskRoles(
+              rescored.result.roles,
+              rescored.run.result.roles ??
+                (rescored.run.result.role ? [rescored.run.result.role] : []),
+            ),
           submittedAt: rescored.run.createdAt,
         }
       : null;
@@ -1350,7 +1371,7 @@ export async function approveSubmission(req: Request, res: Response) {
 
     // The EU AI Act step owns the use case's level: score the stored answers
     // again and apply a justified reviewer change; the dialog's level is
-    // ignored. The computed role replaces the dialog's role, which stays only
+    // ignored. The computed roles replace the dialog's roles, which stay only
     // when the result has no role (Out of scope). A run that can no longer be
     // scored is treated as no run.
     const storedRun =
@@ -1409,7 +1430,7 @@ export async function approveSubmission(req: Request, res: Response) {
       entityData = {
         ...entityData,
         ai_risk_classification: finalLevel,
-        ...(computed.role ? { type_of_high_risk_role: computed.role } : {}),
+        ...(computed.roles.length > 0 ? { high_risk_roles: computed.roles } : {}),
       };
     }
 
@@ -1469,7 +1490,7 @@ export async function approveSubmission(req: Request, res: Response) {
           goal: (entityData.goal as string) || (entityData.description as string) || "",
           owner: req.userId!,
           ai_risk_classification: aiRiskClassification as any,
-          type_of_high_risk_role: (entityData.type_of_high_risk_role as string as any) || undefined,
+          high_risk_roles: highRiskRolesFromEntityData(entityData),
           geography: entityData.geography ? Number(entityData.geography) : 1,
           status: ProjectStatus.UNDER_REVIEW,
         },
@@ -1490,7 +1511,7 @@ export async function approveSubmission(req: Request, res: Response) {
             useCaseId: entityId,
             intakeSubmissionId: null,
             questionnaireVersion: classification.questionnaireVersion,
-            role: classification.computed.role,
+            roles: classification.computed.roles,
             answers: classification.answers,
             result: classification.computed,
             reviewerLevel: classification.justification ? classification.finalLevel : null,

@@ -9,6 +9,7 @@
 import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import logger from "../utils/logger/fileLogger";
+import { formatHighRiskRoles } from "../utils/highRiskRoles.utils";
 
 /**
  * User query result type for formatters
@@ -36,15 +37,12 @@ export type EntityType =
   | "model_inventory"
   | "vendor"
   | "use_case"
-  | "project"
-  | "framework"
   | "evidence_hub"
   | "risk"
   | "vendor_risk"
   | "policy"
   | "incident"
   | "file"
-  | "model_lifecycle"
   | "task"
   | "training"
   | "model_risk"
@@ -424,7 +422,7 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       "start_date",
       "geography",
       "ai_risk_classification",
-      "type_of_high_risk_role",
+      "high_risk_roles",
       "goal",
       "target_industry",
       "description",
@@ -439,7 +437,7 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       start_date: "Start date",
       geography: "Geography",
       ai_risk_classification: "AI risk classification",
-      type_of_high_risk_role: "Type of high-risk role",
+      high_risk_roles: "High-risk roles",
       goal: "Goal",
       target_industry: "Target industry",
       description: "Description",
@@ -451,38 +449,21 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       owner: GENERIC_FORMATTERS.user,
       members: GENERIC_FORMATTERS.userArray,
       start_date: GENERIC_FORMATTERS.date,
+      // Compared as a set: the formatter sorts Provider first, so a reorder
+      // formats the same and records nothing.
+      high_risk_roles: async (value: unknown): Promise<string> => formatHighRiskRoles(value) || "-",
       framework: GENERIC_FORMATTERS.frameworkArray,
       monitored_regulations_and_standards: GENERIC_FORMATTERS.array,
-    },
-  },
-
-  project: {
-    tableName: "project_change_history",
-    foreignKeyField: "project_id",
-    fieldsToTrack: ["name", "description"],
-    fieldLabels: {
-      name: "Name",
-      description: "Description",
-    },
-  },
-
-  framework: {
-    tableName: "framework_change_history",
-    foreignKeyField: "framework_id",
-    fieldsToTrack: ["name", "description"],
-    fieldLabels: {
-      name: "Name",
-      description: "Description",
     },
   },
 
   evidence_hub: {
     tableName: "evidence_hub_change_history",
     foreignKeyField: "evidence_hub_id",
-    fieldsToTrack: ["name", "type", "description"],
+    fieldsToTrack: ["evidence_name", "evidence_type", "description"],
     fieldLabels: {
-      name: "Name",
-      type: "Type",
+      evidence_name: "Name",
+      evidence_type: "Type",
       description: "Description",
     },
   },
@@ -688,19 +669,6 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
     fieldFormatters: {
       tags: GENERIC_FORMATTERS.array,
       expiry_date: GENERIC_FORMATTERS.date,
-    },
-  },
-
-  model_lifecycle: {
-    tableName: "model_lifecycle_change_history",
-    foreignKeyField: "model_lifecycle_value_id",
-    fieldsToTrack: ["value_text", "value_json"],
-    fieldLabels: {
-      value_text: "Value",
-      value_json: "Value (structured)",
-    },
-    fieldFormatters: {
-      value_json: GENERIC_FORMATTERS.text,
     },
   },
 

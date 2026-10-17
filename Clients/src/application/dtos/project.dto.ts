@@ -1,3 +1,4 @@
+import { HighRiskRole } from "../../domain/enums/highRiskRole.enum";
 /**
  * Data Transfer Objects (DTOs) for Project entity
  *
@@ -27,6 +28,8 @@ export interface ProjectResponseDTO {
   members: string[] | number[]; // Can be IDs or names depending on API
   start_date: string; // ISO date string from API
   ai_risk_classification: number | string | null; // Can be number, enum string, or null
+  high_risk_roles?: string[]; // EU AI Act roles, Provider first
+  /** @deprecated derived single role; use high_risk_roles */
   type_of_high_risk_role: number | string | null; // Can be number, enum string, or null
   goal: string;
   last_updated: string; // ISO date string from API
@@ -74,7 +77,7 @@ export interface CreateProjectDTO {
   members: ProjectMemberDTO[];
   start_date: string; // ISO date string
   ai_risk_classification?: number | null;
-  type_of_high_risk_role?: number | null;
+  high_risk_roles?: HighRiskRole[];
   goal: string;
   framework_type?: string;
   geography?: number;
@@ -100,7 +103,7 @@ export interface UpdateProjectDTO {
   members?: ProjectMemberDTO[];
   start_date?: string;
   ai_risk_classification?: number | null;
-  type_of_high_risk_role?: number | null;
+  high_risk_roles?: HighRiskRole[];
   goal?: string;
   framework_type?: string;
   geography?: number;

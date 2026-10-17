@@ -22,6 +22,7 @@ import {
 } from "../sync-engine/errors";
 import { parseIntervalHours, saveSchedule } from "../sync-engine/schedule";
 import { sqlLastFinishedRun } from "../sync-engine/sql";
+import { legacyHighRiskRole, normalizeHighRiskRoles } from "../../utils/highRiskRoles.utils";
 import { getRunStatus, listRuns, type RunListRow, type RunView } from "../sync-engine/status";
 import { ABANDONED_RUN_MESSAGE, SKIPPED_RUN_MESSAGE } from "../sync-engine/types";
 import type { Readiness, RunContext, RunResult, RunStatus } from "../sync-engine/types";
@@ -1408,7 +1409,9 @@ export async function getUseCaseByProjectId(
     members: [],
     start_date: nativeProject.start_date ?? data?.created ?? uc.created_at,
     ai_risk_classification: nativeProject.ai_risk_classification ?? null,
-    type_of_high_risk_role: nativeProject.type_of_high_risk_role ?? null,
+    high_risk_roles: normalizeHighRiskRoles(nativeProject.high_risk_roles),
+    // Deprecated single role, kept for existing Jira Assets mappings.
+    type_of_high_risk_role: legacyHighRiskRole(nativeProject.high_risk_roles),
     goal: nativeProject.goal ?? data?.attributes?.Description ?? data?.attributes?.Purpose ?? "",
     last_updated: nativeProject.last_updated ?? data?.updated ?? uc.updated_at,
     last_updated_by: nativeProject.last_updated_by ?? null,

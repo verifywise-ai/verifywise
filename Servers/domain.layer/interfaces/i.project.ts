@@ -11,6 +11,12 @@ export interface IProjectAttributes {
   start_date: Date;
   geography: number;
   ai_risk_classification?: AiRiskClassification | null;
+  /** EU AI Act roles, normalised: no duplicates, Provider first. */
+  high_risk_roles?: HighRiskRole[];
+  /**
+   * Deprecated, derived from high_risk_roles (Provider when present, else
+   * Deployer, else null). Never stored.
+   */
   type_of_high_risk_role?: HighRiskRole | null;
   goal: string;
   target_industry: string;

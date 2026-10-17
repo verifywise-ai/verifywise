@@ -51,7 +51,9 @@ WORKDIR /app/MCPServer
 # --include=dev is required because NODE_ENV=production is set above: tsc and
 # @types/node are devDependencies and the build below needs both.
 RUN npm ci --include=dev --no-audit --no-fund
-COPY ./MCPServer/ ./MCPServer/
+# Absolute destination: WORKDIR is /app/MCPServer here, so a relative
+# ./MCPServer/ would land in /app/MCPServer/MCPServer/ and tsc would find nothing.
+COPY ./MCPServer/ /app/MCPServer/
 RUN npm run build && npm prune --omit=dev
 WORKDIR /app
 

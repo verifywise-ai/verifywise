@@ -23,7 +23,11 @@ async def test_guardrails(request: Request, body: GuardrailTestRequest):
         guardrail_rules=body.guardrail_rules,
         settings=body.settings,
     )
+    return test_preview(result)
 
+
+def test_preview(result) -> dict:
+    """What a guardrail test shows: would it block, what was found, the masked text."""
     return {
         "would_block": result.blocked,
         "block_reason": result.block_reason,

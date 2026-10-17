@@ -238,7 +238,7 @@ async def update_virtual_key(org_id: int, key_id: int, data: dict) -> Optional[d
     return None
 
 
-async def revoke_virtual_key(org_id: int, key_id: int) -> bool:
+async def revoke_virtual_key(org_id: int, key_id: int) -> Optional[dict]:
     async with get_db() as db:
         result = await db.execute(
             # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
@@ -248,17 +248,17 @@ async def revoke_virtual_key(org_id: int, key_id: int) -> bool:
                 WHERE organization_id = :org_id
                   AND id = :key_id
                   AND is_active = true
-                RETURNING id
+                RETURNING id, name
             """),
             {"org_id": org_id, "key_id": key_id},
         )
         await db.commit()
         row = result.first()
-        return row is not None
+        return dict(row._mapping) if row is not None else None
     return False
 
 
-async def delete_virtual_key(org_id: int, key_id: int) -> bool:
+async def delete_virtual_key(org_id: int, key_id: int) -> Optional[dict]:
     async with get_db() as db:
         result = await db.execute(
             # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
@@ -267,11 +267,11 @@ async def delete_virtual_key(org_id: int, key_id: int) -> bool:
                 WHERE organization_id = :org_id
                   AND id = :key_id
                   AND is_active = false
-                RETURNING id
+                RETURNING id, name
             """),
             {"org_id": org_id, "key_id": key_id},
         )
         await db.commit()
         row = result.first()
-        return row is not None
+        return dict(row._mapping) if row is not None else None
     return False

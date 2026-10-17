@@ -173,7 +173,7 @@ CREATE TABLE projects (
   start_date DATE,
   geography INTEGER,
   ai_risk_classification ai_risk_classification_enum,
-  type_of_high_risk_role high_risk_role_enum,
+  high_risk_roles TEXT[] NOT NULL DEFAULT '{}', -- 'Provider', 'Deployer' (CHECK)
   goal TEXT,
   target_industry VARCHAR(255),
   description TEXT,

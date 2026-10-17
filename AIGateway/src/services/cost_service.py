@@ -1,3 +1,4 @@
+import json
 import math
 
 import litellm
@@ -19,17 +20,34 @@ def _safe_cost(value: float) -> float:
     return value
 
 
+def _count_prompt_tokens(model: str, messages: list[dict], tools: Optional[list[dict]]) -> int:
+    """Prompt tokens including tool definitions. `tools` comes from the caller,
+    so a value the counter cannot handle must not zero the estimate (that would
+    let the request through the budget check as free): count the messages
+    alone and add roughly one token per four characters of the tools' JSON."""
+    if not tools:
+        return litellm.token_counter(model=model, messages=messages)
+    try:
+        return litellm.token_counter(model=model, messages=messages, tools=tools)
+    except Exception:
+        return litellm.token_counter(model=model, messages=messages) + len(json.dumps(tools, default=str)) // 4
+
+
 def estimate_prompt_cost(
-    model: str, messages: list[dict], max_tokens: int = 4096
+    model: str, messages: list[dict], max_tokens: int = 4096,
+    tools: Optional[list[dict]] = None,
 ) -> float:
     """
     Estimate the maximum cost of a request BEFORE sending it.
     Used by Express for budget pre-reservation.
 
+    Tool definitions count as prompt tokens; a request with many large tool
+    schemas costs far more than its messages alone.
+
     Returns estimated max cost in USD (prompt cost + max possible completion cost).
     """
     try:
-        prompt_tokens = litellm.token_counter(model=model, messages=messages)
+        prompt_tokens = _count_prompt_tokens(model, messages, tools)
         prompt_cost, completion_cost = litellm.cost_per_token(
             model=model,
             prompt_tokens=prompt_tokens,
@@ -44,6 +62,7 @@ def calculate_stream_cost(
     model: str,
     prompt_messages: list[dict],
     accumulated_text: str,
+    tools: Optional[list[dict]] = None,
 ) -> tuple[float, dict]:
     """
     Calculate cost after streaming completes, for providers that don't
@@ -52,7 +71,7 @@ def calculate_stream_cost(
     Returns (cost_usd, usage_dict).
     """
     try:
-        prompt_tokens = litellm.token_counter(model=model, messages=prompt_messages)
+        prompt_tokens = _count_prompt_tokens(model, prompt_messages, tools)
         completion_tokens = litellm.token_counter(model=model, text=accumulated_text)
         prompt_cost, completion_cost = litellm.cost_per_token(
             model=model,

@@ -273,7 +273,7 @@ export const ENTITY_TIPS: EntityTips = {
     {
       header: "Filter events to find relevant information quickly.",
       content:
-        "With many events logged over time, filters help you find what you need. Filter by date range, event type, or related entity to quickly locate specific governance activities. Export filtered events for reports or documentation.",
+        "With many events logged over time, filters help you find what you need. Filter by date range, event type, or related entity to quickly locate specific governance activities.",
     },
   ],
   "settings": [

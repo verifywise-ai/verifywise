@@ -11,9 +11,8 @@ from crud import prompts as crud
 from services.llm_service import stream_chat_completion
 from services.proxy_service import resolve_endpoint_for_key
 from utils.auth import get_org_id, get_user_id, require_admin
-from utils.notifications import notify_config_change
+from utils.notifications import config_event, notify_config_change
 
-FRONTEND_URL = "http://localhost:5173"
 
 router = APIRouter(prefix="/prompts")
 
@@ -150,10 +149,9 @@ async def create_prompt(request: Request, body: CreatePromptRequest):
     )
 
     await notify_config_change(
-        org_id=org_id,
-        event="prompt.created",
-        payload={"prompt_id": prompt.get("id"), "slug": body.slug, "name": body.name},
-        frontend_url=FRONTEND_URL,
+        org_id,
+        user_id,
+        config_event("prompt", "created", body.name, prompt.get("id")),
     )
 
     return {"prompt": prompt}
@@ -183,6 +181,7 @@ async def update_prompt(request: Request, prompt_id: int, body: UpdatePromptRequ
 async def delete_prompt(request: Request, prompt_id: int):
     """Delete a prompt and all its versions (admin only, CASCADE)."""
     org_id = get_org_id(request)
+    user_id = get_user_id(request)
     require_admin(request)
 
     deleted = await crud.delete_prompt(org_id, prompt_id)
@@ -190,10 +189,9 @@ async def delete_prompt(request: Request, prompt_id: int):
         raise HTTPException(status_code=404, detail="Prompt not found")
 
     await notify_config_change(
-        org_id=org_id,
-        event="prompt.deleted",
-        payload={"prompt_id": prompt_id},
-        frontend_url=FRONTEND_URL,
+        org_id,
+        user_id,
+        config_event("prompt", "deleted", deleted["name"], prompt_id),
     )
 
     return {"deleted": True}
@@ -245,12 +243,18 @@ async def publish_version(request: Request, prompt_id: int, v: int):
     )
     if published is None:
         raise HTTPException(status_code=404, detail=f"Version {v} not found for this prompt")
+    prompt = await crud.get_prompt_by_id(org_id, prompt_id)
 
     await notify_config_change(
-        org_id=org_id,
-        event="prompt.version.published",
-        payload={"prompt_id": prompt_id, "version": v},
-        frontend_url=FRONTEND_URL,
+        org_id,
+        user_id,
+        config_event(
+            "prompt",
+            "published",
+            prompt.get("name") if prompt else None,
+            prompt_id,
+            detail=f"Version {v}",
+        ),
     )
 
     return {"version": published}

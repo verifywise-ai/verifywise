@@ -114,7 +114,7 @@ describe("euAiActClassification.ctrl", () => {
     (getProjectByIdQuery as jest.Mock<any>).mockResolvedValue({
       id: 3,
       ai_risk_classification: "Minimal risk",
-      type_of_high_risk_role: "Deployer",
+      high_risk_roles: ["Deployer"],
       dataValues: { framework: EU_FRAMEWORK },
     });
     (insertClassificationRunQuery as jest.Mock<any>).mockResolvedValue({ id: 12 });
@@ -127,20 +127,54 @@ describe("euAiActClassification.ctrl", () => {
       useCaseId: 3,
       intakeSubmissionId: null,
       source: "wizard",
-      role: "Provider",
+      roles: ["Provider"],
     });
     expect(setUseCaseClassificationQuery).toHaveBeenCalledWith(
       3,
       "High risk",
-      "Provider",
+      ["Provider"],
       7,
       5,
       expect.anything(),
     );
     expect((recordMultipleFieldChanges as jest.Mock<any>).mock.calls[0][3]).toEqual([
       { fieldName: "AI risk classification", oldValue: "Minimal risk", newValue: "High risk" },
-      { fieldName: "Type of high-risk role", oldValue: "Deployer", newValue: "Provider" },
+      { fieldName: "High-risk roles", oldValue: "Deployer", newValue: "Provider" },
     ]);
+  });
+
+  it("records no roles change when the questionnaire gives the stored roles", async () => {
+    (getProjectByIdQuery as jest.Mock<any>).mockResolvedValue({
+      id: 3,
+      ai_risk_classification: "High risk",
+      high_risk_roles: ["Provider"],
+      dataValues: { framework: EU_FRAMEWORK },
+    });
+    (insertClassificationRunQuery as jest.Mock<any>).mockResolvedValue({ id: 12 });
+    (setUseCaseClassificationQuery as jest.Mock<any>).mockResolvedValue(true);
+    await classifyUseCase(req({ params: { id: "3" }, body: { answers: MINIMAL } }) as any, res());
+    expect(recordMultipleFieldChanges).not.toHaveBeenCalled();
+  });
+
+  it("sets both roles from a two-role answer", async () => {
+    (getProjectByIdQuery as jest.Mock<any>).mockResolvedValue({
+      id: 3,
+      high_risk_roles: ["Deployer"],
+      dataValues: { framework: EU_FRAMEWORK },
+    });
+    (insertClassificationRunQuery as jest.Mock<any>).mockResolvedValue({ id: 12 });
+    (setUseCaseClassificationQuery as jest.Mock<any>).mockResolvedValue(true);
+    const answers = { ...MINIMAL, role: ["provider", "deployer"] };
+    await classifyUseCase(req({ params: { id: "3" }, body: { answers } }) as any, res());
+    expect((setUseCaseClassificationQuery as jest.Mock<any>).mock.calls[0][2]).toEqual([
+      "Provider",
+      "Deployer",
+    ]);
+    expect((recordMultipleFieldChanges as jest.Mock<any>).mock.calls[0][3]).toContainEqual({
+      fieldName: "High-risk roles",
+      oldValue: "Deployer",
+      newValue: "Provider, Deployer",
+    });
   });
 
   it("rolls back and returns 404 when the use case vanished before the update", async () => {

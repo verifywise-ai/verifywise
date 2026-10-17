@@ -671,6 +671,8 @@
   "The note must be text": "La note doit être du texte",
   "The invitation was changed by someone else. Try again.": "L’invitation a été modifiée par quelqu’un d’autre. Réessayez.",
   "The organization must keep at least one Admin": "L’organisation doit conserver au moins un Admin",
+  "The selected approval workflow is no longer active": "Le workflow d'approbation sélectionné n'est plus actif",
+  "The selected approval workflow is not a use case workflow": "Le workflow d'approbation sélectionné n'est pas un workflow de cas d'usage",
   "These risks are already linked. If the link was dismissed, use \"Show dismissed\" to restore it.": "Ces risques sont déjà liés. Si le lien a été rejeté, utilisez « Afficher les rejetés » pour le restaurer.",
   "This API key is already configured. Please use a different API key or edit the existing entry.": "Cette clé API est déjà configurée. Veuillez utiliser une autre clé API ou modifier l'entrée existante.",
   "This API key is already configured. Please use a different API key.": "Cette clé API est déjà configurée. Veuillez utiliser une autre clé API.",

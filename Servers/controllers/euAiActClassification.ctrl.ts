@@ -5,6 +5,7 @@ import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper
 import { translateError } from "../utils/i18n.utils";
 import { getProjectByIdQuery } from "../utils/project.utils";
 import { recordMultipleFieldChanges } from "../utils/useCaseChangeHistory.utils";
+import { formatHighRiskRoles, sameHighRiskRoles } from "../utils/highRiskRoles.utils";
 import {
   aiRiskClassificationIneligibility,
   extractFrameworkIds,
@@ -125,7 +126,7 @@ export async function classifyUseCase(req: Request, res: Response) {
         useCaseId,
         intakeSubmissionId: null,
         questionnaireVersion: CURRENT_QUESTIONNAIRE_VERSION,
-        role: result.role,
+        roles: result.roles,
         answers,
         result,
         reviewerLevel: null,
@@ -141,7 +142,7 @@ export async function classifyUseCase(req: Request, res: Response) {
     const updated = await setUseCaseClassificationQuery(
       useCaseId,
       result.level,
-      result.role,
+      result.roles,
       req.userId!,
       req.organizationId!,
       transaction,
@@ -159,11 +160,11 @@ export async function classifyUseCase(req: Request, res: Response) {
         newValue: result.level,
       });
     }
-    if (result.role && (project.type_of_high_risk_role ?? "-") !== result.role) {
+    if (result.roles.length > 0 && !sameHighRiskRoles(project.high_risk_roles, result.roles)) {
       changes.push({
-        fieldName: "Type of high-risk role",
-        oldValue: String(project.type_of_high_risk_role ?? "-"),
-        newValue: result.role,
+        fieldName: "High-risk roles",
+        oldValue: formatHighRiskRoles(project.high_risk_roles) || "-",
+        newValue: formatHighRiskRoles(result.roles),
       });
     }
     if (changes.length > 0) {

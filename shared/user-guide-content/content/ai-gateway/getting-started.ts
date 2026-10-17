@@ -145,6 +145,10 @@ response = client.chat.completions.create(
 print(response.choices[0].message.content)`,
     },
     {
+      type: 'paragraph',
+      text: 'Agents that use tool calling work the same way: pass `tools`, `tool_choice` and `parallel_tool_calls` as you would to OpenAI, and send tool results back as `tool` messages. Guardrails scan those tool results before they reach the model, so customer data a tool returns is masked or blocked by the same rules as user messages.',
+    },
+    {
       type: 'heading',
       id: 'option-b-playground',
       level: 3,

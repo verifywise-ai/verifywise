@@ -6,6 +6,7 @@ import {
   getPublicConfig,
   getSyncHistory,
   getSyncStatus,
+  getUseCaseByProjectId,
   importObjects,
   JiraConfigValidationError,
   JiraImportInterruptedError,
@@ -1614,5 +1615,20 @@ describe("removal skip reasons", () => {
       expect(swagger).toContain(reason);
       expect(docs).toContain(`\`${reason}\``);
     }
+  });
+});
+
+describe("getUseCaseByProjectId", () => {
+  it("returns the native use case's roles and the derived single role", async () => {
+    mockQuery.mockImplementation(async (sql: string) => {
+      if (String(sql).includes("FROM jira_assets_use_cases"))
+        return [{ id: 4, project_id: 50, uc_id: "UC-50", data: "{}" }];
+      if (String(sql).includes("SELECT * FROM projects"))
+        return [{ id: 50, project_title: "P", high_risk_roles: ["Deployer", "Provider"] }];
+      return [];
+    });
+    const useCase = await getUseCaseByProjectId(50, 1);
+    expect(useCase?.high_risk_roles).toEqual(["Provider", "Deployer"]);
+    expect(useCase?.type_of_high_risk_role).toBe("Provider");
   });
 });

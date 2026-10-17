@@ -5,6 +5,8 @@
  * tenant-to-shared-schema data migration.
  */
 
+import { normalizeHighRiskRoles } from "../utils/highRiskRoles.utils";
+
 /**
  * Tables ordered by dependency level for migration.
  * Level 0 tables have no FK dependencies on other tenant tables.
@@ -510,6 +512,26 @@ export const FK_MAPPINGS: Record<string, Record<string, string>> = {
 export const EXCLUDED_COLUMNS: Record<string, string[]> = {
   "*": ["id"], // 'id' is excluded for all tables (will be auto-generated)
 };
+
+/** Role names a tenant schema may still hold; the 2026-04 migration folded them into two roles. */
+const LEGACY_HIGH_RISK_ROLE_NAMES: Record<string, string> = {
+  "Product manufacturer": "Provider",
+  "Authorized representative": "Provider",
+  Importer: "Provider",
+  Distributor: "Provider",
+  not_applicable: "Deployer",
+};
+
+/**
+ * Tenant projects carry the single type_of_high_risk_role column, which the
+ * shared schema replaced with high_risk_roles (text[]). Returns the list to
+ * write for one legacy value; unknown values give an empty list.
+ */
+export function legacyProjectHighRiskRoles(legacyRole: unknown): string[] {
+  const name =
+    typeof legacyRole === "string" ? (LEGACY_HIGH_RISK_ROLE_NAMES[legacyRole] ?? legacyRole) : null;
+  return normalizeHighRiskRoles(name);
+}
 
 /**
  * Tables that reference struct tables (meta_id columns).

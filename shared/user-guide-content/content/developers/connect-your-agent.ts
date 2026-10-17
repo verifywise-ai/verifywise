@@ -24,6 +24,7 @@ export const connectYourAgentContent: ArticleContent = {
     { type: 'callout', variant: 'tip', title: 'Fail-open by default', text: 'If the gateway is unreachable, the hook lets the call run so your workflow is never blocked by an outage. Set VW_FAIL_MODE=closed to block instead.' },
     { type: 'article-links', title: 'Next steps', items: [
       { collectionId: 'developers', articleId: 'connect-any-agent', title: 'Connect any agent', description: 'The generic contract for agents other than Claude Code and Cursor.' },
+      { collectionId: 'developers', articleId: 'connect-python-agents', title: 'Connect Python agents', description: 'One-line setup for LangChain, CrewAI and Microsoft Agent Framework agents.' },
       { collectionId: 'developers', articleId: 'governing-tool-calls', title: 'Governing tool calls', description: 'What the gateway sends back and how to handle each case.' },
       { collectionId: 'ai-gateway', articleId: 'mcp-agent-keys', title: 'Agent keys', description: 'Managing the keys that identify your agents.' },
     ]},

@@ -1,0 +1,52 @@
+name: Python SDK Checks
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    branches: ['master', 'develop']
+    paths:
+      - 'sdks/python/**'
+      - '.github/workflows/python-sdk-checks.yml'
+  push:
+    branches: ['master', 'develop']
+    paths:
+      - 'sdks/python/**'
+      - '.github/workflows/python-sdk-checks.yml'
+
+jobs:
+  agent-control-sdk:
+    name: Agent Control Python SDK (ruff + pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: sdks/python/verifywise-agent-control
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: sdks/python/verifywise-agent-control/pyproject.toml
+
+      - name: Install the SDK with every framework extra
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[all,dev]"
+
+      - name: Lint (ruff)
+        run: |
+          python -m ruff check .
+          python -m ruff format --check .
+
+      - name: Test (pytest)
+        run: python -m pytest -v

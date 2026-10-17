@@ -42,7 +42,7 @@ async function seedReportDataIfEmpty(admin: SeedOutput) {
       start_date: startDate,
       goal: "Risk inheritance report seed",
       ai_risk_classification: "Minimal risk",
-      type_of_high_risk_role: "Deployer",
+      high_risk_roles: ["Deployer"],
       framework: [1],
       enable_ai_data_insertion: false,
     });

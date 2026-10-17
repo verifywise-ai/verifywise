@@ -178,22 +178,22 @@ async def update_guardrail(org_id: int, rule_id: int, data: dict) -> Optional[di
     return None
 
 
-async def delete_guardrail(org_id: int, rule_id: int) -> bool:
-    """DELETE RETURNING, returns bool."""
+async def delete_guardrail(org_id: int, rule_id: int) -> Optional[dict]:
+    """Delete a guardrail rule. Returns the deleted row's id and name, or None."""
     async with get_db() as db:
         result = await db.execute(
             text(
                 """
                 DELETE FROM ai_gateway_guardrails
                 WHERE organization_id = :org_id AND id = :rule_id
-                RETURNING id
+                RETURNING id, name
                 """
             ),
             {"org_id": org_id, "rule_id": rule_id},
         )
         await db.commit()
         row = result.first()
-        return row is not None
+        return dict(row._mapping) if row is not None else None
     return False
 
 

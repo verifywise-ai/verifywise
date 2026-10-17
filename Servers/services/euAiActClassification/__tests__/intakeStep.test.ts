@@ -13,6 +13,12 @@ const ANSWERS = {
 };
 
 describe("prepareIntakeRiskStep", () => {
+  it("accepts a single-role answer from a form opened before the role became a list", () => {
+    const outcome = prepareIntakeRiskStep(true, ANSWERS); // role: "deployer"
+    expect(outcome.ok && outcome.prepared?.answers.role).toEqual(["deployer"]);
+    expect(outcome.ok && outcome.prepared?.result.roles).toEqual(["Deployer"]);
+  });
+
   it("does nothing when the step is off, even if answers are sent", () => {
     expect(prepareIntakeRiskStep(false, ANSWERS)).toEqual({ ok: true, prepared: null });
   });

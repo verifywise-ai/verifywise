@@ -23,6 +23,10 @@ import {
   AlertTriangle,
   Wrench,
 } from "lucide-react";
+import {
+  formatHighRiskRoles,
+  projectHighRiskRoles,
+} from "../../../../application/utils/highRiskRoles";
 // Supported entity types
 export type EntityTypeKey =
   | "use_case"
@@ -81,7 +85,7 @@ export const ENTITY_TYPE_CONFIGS: Record<EntityTypeKey, EntityTypeConfig> = {
         label: "AI Risk Classification",
         icon: <Briefcase size={14} />,
       },
-      { key: "typeOfHighRiskRole", label: "High Risk Role", icon: <PackageOpen size={14} /> },
+      { key: "highRiskRoles", label: "High-risk roles", icon: <PackageOpen size={14} /> },
       { key: "goal", label: "Goal", icon: <Target size={14} /> },
       { key: "targetIndustry", label: "Target Industry", icon: <Briefcase size={14} /> },
       {
@@ -349,7 +353,7 @@ export function extractEntityDetails(requestData: any): Record<string, any> {
         goal: requestData.goal,
         targetIndustry: requestData.target_industry,
         aiRiskClassification: requestData.ai_risk_classification,
-        typeOfHighRiskRole: requestData.type_of_high_risk_role,
+        highRiskRoles: formatHighRiskRoles(projectHighRiskRoles(requestData)) || undefined,
         startDate: requestData.start_date,
         geography: requestData.geography,
       };

@@ -1,34 +1,55 @@
 ## VerifyWise Licensing FAQ
 
+This FAQ explains the VerifyWise Community & Evaluation License (VCEL) 1.0 in plain language. It is not legal advice and it is not part of the license. Where they differ, [`LICENSE.md`](LICENSE.md) governs. Section numbers below refer to it.
+
 ### What license does VerifyWise use?
-VerifyWise uses the Business Source License 1.1 (BSL 1.1) with an Internal-Only Additional Use Grant.
 
-### Can my company run VerifyWise internally in production?
-Yes. Internal use is permitted. You can deploy, modify, and run VerifyWise for your own operations.
+The VerifyWise Community & Evaluation License (VCEL) 1.0. It is a source-available license, not an OSI-approved open-source license (Section 1). The copyright holder and Licensor is VerifyWise Ltd.
 
-### Can we host VerifyWise for our customers?
-Not under BSL. Any third-party hosting, whether single-tenant or multi-tenant, requires a VerifyWise Enterprise License.
+### Who can use VerifyWise for free?
 
-### Can we sell VerifyWise as part of our products or services?
-Not under BSL. That is an external use and requires the Enterprise License.
+- Individuals, for personal and noncommercial use (Section 4.1)
+- Eligible educational institutions, including production use for their own activities (Section 4.2)
+- Eligible public institutions, including production use for their own purposes (Section 4.3)
+- Eligible research organizations and independent researchers, for noncommercial research (Section 4.5)
+- Anyone giving paid training or demonstrations about VerifyWise, within the limits of Section 4.7
 
-### What happens on the Change Date?
-Each version automatically converts to Apache-2.0 on its Change Date. The Change Date is the earlier of twenty four months after that version’s first public release or a sooner date that BlueWave Labs may set. After conversion, that version is governed by Apache-2.0.
+### Can my company run VerifyWise internally?
 
-### Can our contractors help us run it internally?
-Yes. Contractors may use it on your behalf for your internal use.
+Only for evaluation, unless you have a commercial license. Internal business use by a commercial organization is Commercial Use, even when it is self-hosted, used only by employees and generates no revenue (Section 5). That use needs a separate written commercial license.
 
-### Can our affiliates use it?
-Yes. Affiliates under common control may use it internally if they follow the same terms.
+### Can my company evaluate VerifyWise first?
 
-### How do we get the Enterprise License?
-Contact [VerifyWise](https://verifywise.ai/contact) to discuss terms and pricing. The Enterprise License grants rights for customer-facing and hosted use, both single-tenant and multi-tenant.
+Yes. A commercial organization may evaluate it for up to 60 consecutive calendar days, once per organization and its affiliates for each major version (Section 4.6). Evaluation must not replace an operational governance or compliance system, or be relied on for real regulatory, audit or contractual obligations.
 
-### Do we need to keep notices?
-Yes. Preserve copyright, license, and attribution notices in any copies or forks.
+### Can we host VerifyWise for our customers or sell it?
+
+Not under VCEL. SaaS, hosting, managed services, white-label platforms, resale and customer-facing governance or compliance services all need a commercial license (Sections 5 and 6).
+
+### Can a contractor run it for a university or a government body?
+
+Yes. An authorized contractor may install, configure, maintain and administer it solely for that eligible institution, and may be paid for that work. This does not give the contractor a license for its own commercial use (Section 4.4).
+
+### Can I fork or modify VerifyWise?
+
+Yes, for permitted uses. Public forks are allowed for noncommercial development, experimentation, research, bug fixing and contributions. Forks and redistributions must keep the license and copyright notices, and must not be commercially hosted, sold or rebranded without authorization (Section 7).
+
+### Does a version ever convert to an open-source license?
+
+No. VCEL has no automatic conversion to an open-source license (Section 19).
+
+### We already use an earlier VerifyWise release under the Business Source License. What changes?
+
+Rights validly granted under earlier licensing arrangements, including the Business Source License, stay governed by those arrangements (Section 19). VCEL applies to versions released under it.
+
+### Do contributors need to sign anything?
+
+The Licensor may require a Contributor License Agreement before merging a contribution (Section 8).
 
 ### What about trademarks?
-The code license does not grant trademark rights. Use the “VerifyWise” name only to describe compatibility or attribution. Do not brand your service as VerifyWise without written permission.
 
-### Where can I find the legal texts?
-See `LICENSE.md` for BSL 1.1 with the Internal-Only Additional Use Grant.
+VCEL grants no trademark rights. You may say truthfully that a product is compatible with or integrates with VerifyWise, but you may not claim endorsement or use the marks in a confusing way (Section 10).
+
+### How do we get a commercial license?
+
+Contact [VerifyWise](https://verifywise.ai/contact). Commercial rights come only from a signed written agreement. Asking for pricing does not grant them (Section 12).

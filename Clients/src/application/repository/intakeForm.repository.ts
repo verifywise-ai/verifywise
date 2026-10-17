@@ -24,6 +24,7 @@ export interface EuAiActClassificationPreview {
   questionnaire: Questionnaire;
   answers: Answers;
   role: ClassificationRole | null;
+  roles?: ClassificationRole[];
   current: ClassificationResult;
   changedSinceSubmission: boolean;
   submittedAt: string;

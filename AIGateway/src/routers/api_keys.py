@@ -16,13 +16,12 @@ from crud.api_keys import (
     delete_api_key,
 )
 from utils.auth import get_org_id, get_user_id, require_admin, require_admin_or_editor
-from utils.notifications import notify_config_change
+from utils.notifications import config_event, notify_config_change
 
 logger = logging.getLogger("uvicorn")
 
 router = APIRouter(prefix="/keys", tags=["API Keys"])
 
-FRONTEND_URL = "http://localhost:5173"  # overridable via env if needed
 
 # Providers that LiteLLM can call with a single API key. Keep in sync with
 # API_KEY_PROVIDERS in Clients/src/presentation/pages/AIGateway/shared.ts.
@@ -144,14 +143,11 @@ async def create_key(request: Request):
     key = await create_api_key(org_id, provider, key_name, api_key)
 
     # Fire-and-forget notification
-    await notify_config_change(org_id, user_id, {
-        "entityType": "API key",
-        "entityName": key_name,
-        "action": "created",
-        "detail": f"Provider: {provider}",
-        "actionUrl": f"{FRONTEND_URL}/ai-gateway/settings",
-        "actionLabel": "View settings",
-    })
+    await notify_config_change(
+        org_id,
+        user_id,
+        config_event("api_key", "created", key_name, detail=f"Provider: {provider}"),
+    )
 
     return {"data": _safe_key(key)}
 
@@ -190,12 +186,10 @@ async def delete_key(key_id: int, request: Request):
     if not deleted:
         raise HTTPException(status_code=404, detail="API key not found")
 
-    await notify_config_change(org_id, user_id, {
-        "entityType": "API key",
-        "entityName": f"Key #{key_id}",
-        "action": "deleted",
-        "actionUrl": f"{FRONTEND_URL}/ai-gateway/settings",
-        "actionLabel": "View settings",
-    })
+    await notify_config_change(
+        org_id,
+        user_id,
+        config_event("api_key", "deleted", deleted["name"], key_id),
+    )
 
     return {"data": {"deleted": True}}

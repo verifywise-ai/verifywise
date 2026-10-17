@@ -265,9 +265,9 @@ export const ENTITY_FIELD_MAPPINGS: Record<IntakeEntityType, EntityFieldMapping[
     },
     {
       field: "type_of_high_risk_role",
-      label: "High risk role type",
-      description: "Type of high-risk role",
-      requiredFieldType: ["select"],
+      label: "High-risk roles",
+      description: "Provider, Deployer or both",
+      requiredFieldType: ["multiselect", "select"],
     },
     {
       field: "geography",

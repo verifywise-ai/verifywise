@@ -57,7 +57,7 @@ export const connectAnyAgentContent: ArticleContent = {
     { type: 'heading', id: 'byo', level: 2, text: 'Agents without a hook' },
     {
       type: 'paragraph',
-      text: 'Some terminal agents (for example Codex CLI, Aider and Gemini CLI) do not yet have a built-in way to run a script before each tool call. You have two choices.',
+      text: 'Some terminal agents (for example Codex CLI, Aider and Gemini CLI) do not yet have a built-in way to run a script before each tool call. Agents written in Python don\'t need one: the Python package governs LangChain, CrewAI and Microsoft Agent Framework agents, and plain Python functions, from inside the agent. See Connect Python agents. For other agents you have two choices.',
     },
     {
       type: 'bullet-list',
@@ -77,6 +77,7 @@ export const connectAnyAgentContent: ArticleContent = {
       title: 'Related articles',
       items: [
         { collectionId: 'developers', articleId: 'connect-your-agent', title: 'Connect your agent', description: 'Ready-made wiring for Claude Code and Cursor.' },
+        { collectionId: 'developers', articleId: 'connect-python-agents', title: 'Connect Python agents', description: 'The Python package for LangChain, CrewAI, Microsoft Agent Framework and plain Python.' },
         { collectionId: 'developers', articleId: 'agent-control-api', title: 'API reference', description: 'Every endpoint, header and error code.' },
         { collectionId: 'developers', articleId: 'governing-tool-calls', title: 'Governing tool calls', description: 'How to handle each decision.' },
       ],

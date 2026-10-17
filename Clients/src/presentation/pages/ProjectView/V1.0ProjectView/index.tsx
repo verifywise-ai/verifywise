@@ -10,7 +10,7 @@ import VWProjectRisks from "./ProjectRisks";
 import LinkedModels from "./LinkedModels";
 import ProjectSettings from "../ProjectSettings";
 import useProjectData from "../../../../application/hooks/useProjectData";
-import ProjectFrameworks from "../ProjectFrameworks";
+import ProjectFrameworks, { FRAMEWORK_IDS } from "../ProjectFrameworks";
 import CustomizableToast from "../../../components/Toast";
 import CEMarking from "../CEMarking";
 import Activity from "../Activity";
@@ -300,15 +300,12 @@ const VWProjectView = () => {
               <ProjectFrameworks
                 project={project}
                 triggerRefresh={handleRefresh}
-                initialFrameworkId={
-                  framework === "iso-42001"
-                    ? 2
-                    : framework === "eu-ai-act"
-                      ? 1
-                      : project.framework && project.framework.length > 0
-                        ? project.framework[0].framework_id
-                        : 1
-                }
+                // Only the deep link. With no override ProjectFrameworks
+                // selects its own first framework, against the project's
+                // pairings intersected with the loaded framework list — a
+                // better list than project.framework, so picking one here too
+                // would be a second answer that can disagree with it.
+                initialFrameworkId={framework === "eu-ai-act" ? FRAMEWORK_IDS.EU_AI_ACT : undefined}
               />
             ) : (
               <CustomizableSkeleton variant="rectangular" width="100%" height={400} />

@@ -185,7 +185,8 @@ async def get_audit_stats_by_agent(org_id: int, days: int = 7) -> list[dict]:
 
 async def get_agent_activity(org_id: int, agent_key_id: int, days: int = 30) -> dict:
     """Everything one agent has been doing over the last N days: a summary
-    (calls, runs, denials, approvals, errors, avg latency, last active) plus the tools
+    (calls, runs, denials, approvals, monitor-only would-block / would-need-approval
+    counts, errors, avg latency, last active) plus the tools
     it used and its most recent tool calls. Powers the per-agent activity view."""
     params = {
         "org_id": org_id,
@@ -204,6 +205,12 @@ async def get_agent_activity(org_id: int, agent_key_id: int, days: int = 30) -> 
                           AND result_summary IS DISTINCT FROM :circuit_breaker
                     ) AS denied,
                     COUNT(*) FILTER (WHERE result_status = 'approval_required') AS approvals,
+                    -- Monitor-only keys: what would have been denied / held for
+                    -- approval. Kept apart from denied and approvals above.
+                    COUNT(*) FILTER (WHERE result_status = 'would_block') AS would_block_count,
+                    COUNT(*) FILTER (
+                        WHERE result_status = 'would_need_approval'
+                    ) AS would_need_approval_count,
                     COUNT(*) FILTER (WHERE is_error) AS errors,
                     COUNT(DISTINCT agent_run_id) AS runs,
                     COALESCE(AVG(latency_ms), 0) AS avg_latency_ms,
@@ -221,7 +228,10 @@ async def get_agent_activity(org_id: int, agent_key_id: int, days: int = 30) -> 
                        COUNT(*) FILTER (
                         WHERE result_status = 'blocked'
                           AND result_summary IS DISTINCT FROM :circuit_breaker
-                    ) AS denied
+                    ) AS denied,
+                       COUNT(*) FILTER (WHERE result_status = 'would_block') AS would_block_count,
+                       COUNT(*) FILTER (
+                        WHERE result_status = 'would_need_approval') AS would_need_approval_count
                 FROM ai_gateway_mcp_audit_logs
                 WHERE organization_id = :org_id AND agent_key_id = :akid
                   AND created_at >= NOW() - INTERVAL '1 day' * :days
@@ -248,6 +258,8 @@ async def get_agent_activity(org_id: int, agent_key_id: int, days: int = 30) -> 
             "total_calls": s.get("total_calls", 0),
             "denied": s.get("denied", 0),
             "approvals": s.get("approvals", 0),
+            "would_block_count": s.get("would_block_count", 0),
+            "would_need_approval_count": s.get("would_need_approval_count", 0),
             "errors": s.get("errors", 0),
             "runs": s.get("runs", 0),
             "avg_latency_ms": round(float(s.get("avg_latency_ms", 0) or 0), 2),

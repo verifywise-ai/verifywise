@@ -18,6 +18,7 @@ jest.mock("../../utils/evidenceAi.utils", () => ({
   getAnalysisByFileIdQuery: jest.fn(),
   getQualityScoresQuery: jest.fn(),
   getEvidenceGapsQuery: jest.fn(),
+  getAdoptedEvidenceFrameworksQuery: jest.fn(),
   getSuggestionsQuery: jest.fn(),
   applySuggestionsQuery: jest.fn(),
 }));
@@ -40,10 +41,15 @@ jest.mock("../../utils/llmKey.utils", () => ({
   getLLMProviderUrl: jest.fn(),
 }));
 
-import { analyzeFile, applySuggestions } from "../evidenceAi.ctrl";
+import { analyzeFile, applySuggestions, getGaps } from "../evidenceAi.ctrl";
 import { sequelize } from "../../database/db";
 import { getLLMKeysWithKeyQuery } from "../../utils/llmKey.utils";
-import { applySuggestionsQuery, upsertAnalysisQuery } from "../../utils/evidenceAi.utils";
+import {
+  applySuggestionsQuery,
+  getAdoptedEvidenceFrameworksQuery,
+  getEvidenceGapsQuery,
+  upsertAnalysisQuery,
+} from "../../utils/evidenceAi.utils";
 import { parseDocument } from "../../advisor/parsers";
 import {
   analyzeEvidence,
@@ -269,5 +275,31 @@ describe("applySuggestions", () => {
 
     expect(applySuggestionsQuery).toHaveBeenCalledWith(42, 1, suggestions, 1);
     expect(res.status).toHaveBeenCalledWith(200);
+  });
+});
+
+describe("getGaps", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("limits an unfiltered request to the frameworks the organization uses", async () => {
+    (getAdoptedEvidenceFrameworksQuery as jest.Mock).mockResolvedValue(["iso_42001"] as never);
+    (getEvidenceGapsQuery as jest.Mock).mockResolvedValue([] as never);
+    const res = createRes();
+    await getGaps(createReq({ query: {} } as any), res);
+    expect(getAdoptedEvidenceFrameworksQuery).toHaveBeenCalledWith(1);
+    expect(getEvidenceGapsQuery).toHaveBeenCalledWith(1, undefined, undefined, undefined, [
+      "iso_42001",
+    ]);
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  it("honours an explicit framework without looking up adoption", async () => {
+    (getEvidenceGapsQuery as jest.Mock).mockResolvedValue([] as never);
+    const res = createRes();
+    await getGaps(createReq({ query: { framework_type: "eu_ai_act" } } as any), res);
+    expect(getAdoptedEvidenceFrameworksQuery).not.toHaveBeenCalled();
+    expect(getEvidenceGapsQuery).toHaveBeenCalledWith(1, "eu_ai_act", undefined);
   });
 });

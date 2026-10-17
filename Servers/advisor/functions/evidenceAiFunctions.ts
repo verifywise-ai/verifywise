@@ -1,9 +1,15 @@
 import { sequelize } from "../../database/db";
 import logger from "../../utils/logger/fileLogger";
+import { getEvidenceGapsQuery, upsertAnalysisQuery } from "../../utils/evidenceAi.utils";
+import { parseDocument, isSupportedMimeType } from "../parsers";
+import { analyzeEvidence } from "../evidenceAnalyzer/analyzer.service";
+import { getLLMKeysWithKeyQuery, getLLMProviderUrl } from "../../utils/llmKey.utils";
+import type { LLMProvider } from "../../domain.layer/interfaces/i.llmKey";
 
 export interface AnalyzeDocumentParams {
   file_id: number;
-  document_text: string;
+  /** Optional: when omitted, the analyzer reads the file's stored content. */
+  document_text?: string;
 }
 
 export interface ScoreQualityParams {
@@ -22,77 +28,141 @@ export interface MatchControlsParams {
 export interface DetectGapsParams {
   framework_type?: string;
   project_id?: number;
-  quality_threshold?: number;
 }
 
 /**
- * Analyze a document: extract summary, key findings, compliance areas.
- * In a full implementation this would call generateObject() via AI SDK,
- * but here we provide the structured extraction that the agent can use.
+ * Analyze a document with the real evidence analyzer (#4913) — the same
+ * LLM-backed analyzer the "Analyze with AI" endpoint runs.
+ *
+ * The file's STORED content is always what gets graded: binary types go
+ * through parseDocument, exactly like the endpoint, so a PDF/DOCX is parsed
+ * rather than sent as bytes. The caller-supplied document_text is used only
+ * when the stored row has no content — it can never replace real file
+ * content, so invented text cannot be graded as a file. The result is
+ * persisted through upsertAnalysisQuery, so it feeds the same gaps and
+ * quality views as the endpoint's analysis, except when it was graded from
+ * caller text or would replace a private analysis; `persisted` and
+ * `not_persisted_reason` say which. Requires an LLM key.
  */
 const analyzeDocument = async (
   params: AnalyzeDocumentParams,
-  _organizationId: number,
+  organizationId: number,
 ): Promise<any> => {
   try {
     const { file_id, document_text } = params;
-    const textLength = document_text.length;
-    const wordCount = document_text.split(/\s+/).length;
 
-    // Extract basic compliance keywords from text
-    const complianceKeywords = [
-      "risk",
-      "audit",
-      "compliance",
-      "control",
-      "policy",
-      "regulation",
-      "GDPR",
-      "ISO",
-      "NIST",
-      "EU AI Act",
-      "security",
-      "privacy",
-      "assessment",
-      "monitoring",
-      "incident",
-      "training",
-      "transparency",
-      "accountability",
-      "fairness",
-      "robustness",
-      "data protection",
-    ];
-
-    const foundAreas = complianceKeywords.filter((kw) =>
-      document_text.toLowerCase().includes(kw.toLowerCase()),
+    const [fileRows] = await sequelize.query(
+      `SELECT id, filename, type, content, uploaded_time
+         FROM files
+        WHERE id = :fileId AND organization_id = :organizationId`,
+      { replacements: { fileId: file_id, organizationId } },
     );
+    const file = (fileRows as any[])[0];
+    if (!file) {
+      throw new Error(`File ${file_id} not found in this organization`);
+    }
 
-    // Create a summary from the first ~500 chars
-    const summary =
-      document_text.length > 500
-        ? document_text.substring(0, 500).trim() + "..."
-        : document_text.trim();
+    // Stored content wins; caller text is only a fallback for content-less
+    // rows.
+    let text = "";
+    let fromStoredContent = false;
+    if (file.content) {
+      const buffer = Buffer.isBuffer(file.content) ? file.content : Buffer.from(file.content);
+      if (isSupportedMimeType(file.type)) {
+        text = (await parseDocument(buffer, file.type)).text;
+      } else {
+        text = buffer.toString("utf-8");
+      }
+    }
+    fromStoredContent = text.trim() !== "";
+    if (!fromStoredContent) {
+      text = document_text || "";
+    }
+    if (!text.trim()) {
+      throw new Error(`File ${file_id} has no extractable text content`);
+    }
 
-    // Extract sentences that seem like findings (contain key verbs)
-    const sentences = document_text.split(/[.!?]+/).filter((s) => s.trim().length > 20);
-    const findingPatterns =
-      /\b(must|shall|should|require|recommend|ensure|implement|maintain|document|verify)\b/i;
-    const keyFindings = sentences
-      .filter((s) => findingPatterns.test(s))
-      .slice(0, 10)
-      .map((s) => s.trim());
+    const clients = await getLLMKeysWithKeyQuery(organizationId);
+    if (clients.length === 0) {
+      throw new Error("No LLM keys configured for this organization");
+    }
+    const llmKey = clients[0];
+
+    const result = await analyzeEvidence({
+      documentText: text,
+      filename: file.filename,
+      fileType: file.type,
+      uploadDate: file.uploaded_time ?? null,
+      expiryDate: null,
+      llmKey: {
+        apiKey: llmKey.key || "",
+        baseURL: llmKey.url || getLLMProviderUrl(llmKey.name as LLMProvider),
+        model: llmKey.model,
+        provider: llmKey.name as "Anthropic" | "OpenAI" | "OpenRouter" | "Custom",
+        headers: llmKey.custom_headers || undefined,
+      },
+    });
+
+    // Persist so the analysis feeds the gaps and quality views like the
+    // endpoint's does, but only when that is safe to do:
+    //  - the text was the file's own stored content. Text the model supplied
+    //    is not the file, and storing a grade for it would let the gaps view
+    //    count a control as covered by text the file never contained;
+    //  - no private analysis exists. A private analysis is visible only to
+    //    its author, and the advisor has no author to keep it private for.
+    // Never fails the call.
+    let persisted = false;
+    let notPersistedReason: string | undefined;
+    let existingAuthor: number | null = null;
+    try {
+      if (!fromStoredContent) {
+        notPersistedReason =
+          "Not stored: the file has no stored content, so this was graded from text supplied in the conversation.";
+      } else {
+        const [existingRows] = await sequelize.query(
+          `SELECT visibility, analyzed_by
+             FROM evidence_ai_analysis
+            WHERE file_id = :fileId AND organization_id = :organizationId
+            LIMIT 1`,
+          { replacements: { fileId: file_id, organizationId } },
+        );
+        const existing = (existingRows as any[])[0];
+        existingAuthor = existing?.analyzed_by ?? null;
+        if (existing?.visibility === "private") {
+          notPersistedReason =
+            "Not stored: this file already has a private analysis, which is left as it is.";
+        }
+      }
+    } catch (lookupError) {
+      logger.error("Failed to check for an existing document analysis:", lookupError);
+      notPersistedReason = "Not stored: the existing analysis could not be checked.";
+    }
+    if (!notPersistedReason) {
+      try {
+        await upsertAnalysisQuery(file_id, organizationId, {
+          summary: result.summary,
+          key_findings: result.key_findings,
+          compliance_areas: result.compliance_areas,
+          quality_score: result.quality_score,
+          overall_quality_grade: result.overall_quality_grade,
+          suggested_control_links: result.suggested_control_links,
+          analysis_model: result.analysis_model,
+          // Keep the author of a public analysis this replaces.
+          analyzed_by: existingAuthor,
+          audit_metadata: result.audit,
+        });
+        persisted = true;
+      } catch (persistError) {
+        logger.error("Failed to persist advisor document analysis:", persistError);
+        notPersistedReason = "Not stored: saving the analysis failed.";
+      }
+    }
 
     return {
       file_id,
-      summary,
-      key_findings: keyFindings,
-      compliance_areas: foundAreas,
-      document_stats: {
-        text_length: textLength,
-        word_count: wordCount,
-        sentence_count: sentences.length,
-      },
+      ...result,
+      persisted,
+      ...(notPersistedReason ? { not_persisted_reason: notPersistedReason } : {}),
     };
   } catch (error) {
     logger.error("Error analyzing document:", error);
@@ -239,64 +309,37 @@ const matchControls = async (
 
 /**
  * Detect controls that lack evidence or have low-quality evidence.
+ * Reuses the fixed /api/evidence-ai/gaps logic (#4911): honours
+ * framework_type (eu_ai_act / iso_42001 / both) and project_id, covers both
+ * frameworks, and is not capped — the response states the totals so a caller
+ * can see nothing was truncated.
  */
 const detectEvidenceGaps = async (
   params: DetectGapsParams,
   organizationId: number,
 ): Promise<any> => {
   try {
-    const {
-      framework_type: _framework_type,
-      project_id: _project_id,
-      quality_threshold = 50,
-    } = params;
+    const { framework_type, project_id } = params;
 
-    // Get controls with their evidence counts and quality scores
-    const [gaps] = await sequelize.query(
-      `SELECT
-         'eu_ai_act' as framework_type,
-         cs.id as control_id,
-         cs.title as control_title,
-         COALESCE(ea.evidence_count, 0) as evidence_count,
-         COALESCE(ea.avg_quality, 0) as avg_quality
-       FROM controls_struct_eu cs
-       LEFT JOIN (
-         SELECT
-           fel.entity_id,
-           COUNT(DISTINCT fel.file_id) as evidence_count,
-           COALESCE(AVG(CASE eaa.overall_quality_grade
-             WHEN 'A' THEN 95 WHEN 'B' THEN 80 WHEN 'C' THEN 65
-             WHEN 'D' THEN 45 WHEN 'F' THEN 20 END), 0) as avg_quality
-         FROM file_entity_links fel
-         LEFT JOIN evidence_ai_analysis eaa
-           ON eaa.file_id = fel.file_id AND eaa.organization_id = :organizationId
-         WHERE fel.organization_id = :organizationId
-           AND fel.framework_type = 'eu_ai_act'
-         GROUP BY fel.entity_id
-       ) ea ON ea.entity_id = cs.id
-       WHERE cs.title IS NOT NULL
-       ORDER BY COALESCE(ea.avg_quality, 0) ASC, COALESCE(ea.evidence_count, 0) ASC
-       LIMIT 20`,
-      { replacements: { organizationId } },
-    );
+    const fwType =
+      framework_type && ["eu_ai_act", "iso_42001"].includes(framework_type)
+        ? framework_type
+        : undefined;
 
-    const gapResults = (gaps as any[]).map((g) => ({
+    const gaps = await getEvidenceGapsQuery(organizationId, fwType, ["D", "F"], project_id);
+
+    const gapResults = gaps.map((g: any) => ({
       framework_type: g.framework_type,
       control_id: g.control_id,
       control_title: g.control_title,
-      evidence_count: parseInt(g.evidence_count, 10),
-      avg_quality: Math.round(parseFloat(g.avg_quality)),
-      gap_type:
-        parseInt(g.evidence_count, 10) === 0
-          ? "no_evidence"
-          : parseFloat(g.avg_quality) < quality_threshold
-            ? "low_quality"
-            : "adequate",
+      evidence_count: g.evidence_count,
+      adequate_count: g.adequate_count,
+      gap_type: g.gap_type,
       recommendation:
-        parseInt(g.evidence_count, 10) === 0
+        g.gap_type === "no_evidence"
           ? `Upload evidence documents for "${g.control_title}"`
-          : parseFloat(g.avg_quality) < quality_threshold
-            ? `Improve evidence quality for "${g.control_title}" (current avg: ${Math.round(parseFloat(g.avg_quality))})`
+          : g.gap_type === "low_quality"
+            ? `Improve evidence quality for "${g.control_title}" (no adequate-grade evidence yet)`
             : null,
     }));
 
@@ -308,7 +351,9 @@ const detectEvidenceGaps = async (
       controls_without_evidence: noEvidence.length,
       controls_with_low_quality: lowQuality.length,
       controls_adequate: gapResults.length - noEvidence.length - lowQuality.length,
-      quality_threshold,
+      framework_type: fwType ?? "all",
+      project_id: project_id ?? null,
+      truncated: false,
       gaps: gapResults.filter((g) => g.gap_type !== "adequate"),
     };
   } catch (error) {

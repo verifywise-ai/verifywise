@@ -14,6 +14,7 @@ import CustomException from "../../../infrastructure/exceptions/customeException
 import Field from "../../components/Inputs/Field";
 import Select from "../../components/Inputs/Select";
 import Chip from "../../components/Chip";
+import HighRiskRolesField from "../../components/Inputs/HighRiskRolesField";
 import {
   getSubmissionPreview,
   approveSubmission,
@@ -24,9 +25,16 @@ import {
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { formatAnswer } from "../../../application/utils/intakeAnswerFormat";
 import { isEmptyAnswer, sortFields } from "../../../application/utils/intakeFormLogic";
+import {
+  classificationRoles,
+  normalizeHighRiskRoles,
+} from "../../../application/utils/highRiskRoles";
 import EuAiActClassificationPanel, {
   type EuAiActClassificationData,
 } from "./EuAiActClassificationPanel";
+
+/** The entity mapping for the use case's high-risk roles (the key saved forms use). */
+const ROLE_MAPPING = "type_of_high_risk_role";
 
 // ============================================================================
 // Types
@@ -429,7 +437,11 @@ function SubmissionPreviewModal({
     previewData?.formSchema?.fields?.filter((field) => {
       if (!field.entityFieldMapping) return false;
       if (euAiAct && field.entityFieldMapping === "ai_risk_classification") return false;
-      if (euAiAct?.current.role && field.entityFieldMapping === "type_of_high_risk_role") {
+      if (
+        euAiAct &&
+        classificationRoles(euAiAct.current).length > 0 &&
+        field.entityFieldMapping === ROLE_MAPPING
+      ) {
         return false;
       }
       return true;
@@ -600,6 +612,34 @@ function SubmissionPreviewModal({
                 <Box sx={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                   {mappedFields.map((field) => {
                     const fieldKey = field.entityFieldMapping as string;
+                    if (fieldKey === ROLE_MAPPING) {
+                      // The server matched the answer to roles; options that are
+                      // not roles are listed so the reviewer can fix them.
+                      const unmatched = previewData?.entityPreview?.high_risk_roles_unmatched;
+                      return (
+                        <Box
+                          key={field.id}
+                          sx={{ display: "flex", flexDirection: "column", gap: "4px" }}
+                        >
+                          <HighRiskRolesField
+                            id={`entity-${field.id}`}
+                            value={normalizeHighRiskRoles(editedEntityData.high_risk_roles)}
+                            onChange={(roles) =>
+                              setEditedEntityData((prev) => ({ ...prev, high_risk_roles: roles }))
+                            }
+                          />
+                          {Array.isArray(unmatched) &&
+                            unmatched.map((label) => (
+                              <Typography
+                                key={String(label)}
+                                sx={{ fontSize: "12px", color: theme.palette.text.tertiary }}
+                              >
+                                <span>Not a high-risk role:</span> <span>{String(label)}</span>
+                              </Typography>
+                            ))}
+                        </Box>
+                      );
+                    }
                     const currentValue = String(editedEntityData[fieldKey] ?? "");
 
                     return (

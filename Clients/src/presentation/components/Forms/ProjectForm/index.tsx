@@ -51,8 +51,14 @@ import {
 } from "../../../../application/repository/project.repository";
 import { getAllApprovalWorkflows } from "../../../../application/repository/approvalWorkflow.repository";
 import { AiRiskClassification } from "../../../../domain/enums/aiRiskClassification.enum";
-import { HighRiskRole } from "../../../../domain/enums/highRiskRole.enum";
+import HighRiskRolesField from "../../Inputs/HighRiskRolesField";
+import {
+  highRiskRolesError,
+  highRiskRolesPayload,
+  projectHighRiskRoles,
+} from "../../../../application/utils/highRiskRoles";
 import CustomException from "../../../../infrastructure/exceptions/customeException";
+import { applyApprovalWorkflowSelection } from "./approvalWorkflowField";
 
 const PROJECT_STATUS_ITEMS = [
   { _id: 1, name: "Not started" },
@@ -92,7 +98,7 @@ export const ProjectForm = ({
         start_date: projectToEdit.start_date || "",
         ai_risk_classification: projectToEdit.ai_risk_classification || null,
         status: getStatusIdFromName(projectToEdit.status),
-        type_of_high_risk_role: projectToEdit.type_of_high_risk_role || null,
+        high_risk_roles: projectHighRiskRoles(projectToEdit),
         goal: projectToEdit.goal || "",
         enable_ai_data_insertion: projectToEdit.enable_ai_data_insertion || false,
         monitored_regulations_and_standards:
@@ -158,15 +164,11 @@ export const ProjectForm = ({
         const r = selectValidation("AI risk classification", v as number);
         return r.accepted ? "" : r.message;
       },
-      type_of_high_risk_role: (v: unknown, vals: FormValues) => {
-        const hasEuAiAct = vals.monitored_regulations_and_standards.some((fw) => fw._id === 1);
-        if (!hasEuAiAct) return "";
-        if (v === null || v === undefined || v === 0) {
-          return "Type of high risk role is required when EU AI Act is selected.";
-        }
-        const r = selectValidation("Type of high risk role", v as number);
-        return r.accepted ? "" : r.message;
-      },
+      high_risk_roles: (v: unknown, vals: FormValues) =>
+        highRiskRolesError(
+          v,
+          vals.monitored_regulations_and_standards.some((fw) => fw._id === 1),
+        ),
       monitored_regulations_and_standards: () => {
         // Framework selection is optional for use cases
         return "";
@@ -305,14 +307,6 @@ export const ProjectForm = ({
       { _id: 3, name: AiRiskClassification.LIMITED_RISK },
       { _id: 4, name: AiRiskClassification.MINIMAL_RISK },
       { _id: 5, name: AiRiskClassification.OUT_OF_SCOPE },
-    ],
-    [],
-  );
-
-  const highRiskRoleItems = useMemo(
-    () => [
-      { _id: 1, name: HighRiskRole.DEPLOYER },
-      { _id: 2, name: HighRiskRole.PROVIDER },
     ],
     [],
   );
@@ -459,17 +453,10 @@ export const ProjectForm = ({
 
         // Add AI-specific fields only when EU AI Act is selected
         const hasEuAiAct = values.monitored_regulations_and_standards.some((fw) => fw._id === 1);
-        if (hasEuAiAct) {
-          body.type_of_high_risk_role = highRiskRoleItems.find(
-            (item) => item._id === values.type_of_high_risk_role,
-          )?.name;
-          body.ai_risk_classification = riskClassificationItems.find(
-            (item) => item._id === values.ai_risk_classification,
-          )?.name;
-        } else {
-          body.type_of_high_risk_role = null;
-          body.ai_risk_classification = null;
-        }
+        body.high_risk_roles = highRiskRolesPayload(values.high_risk_roles, hasEuAiAct);
+        body.ai_risk_classification = hasEuAiAct
+          ? riskClassificationItems.find((item) => item._id === values.ai_risk_classification)?.name
+          : null;
 
         if (values.framework_type === FrameworkTypeEnum.OrganizationWide) {
           body.is_organizational = true;
@@ -491,11 +478,8 @@ export const ProjectForm = ({
           deploymentContextItems.find((item) => item._id === values.deployment_context)?.name ||
           null;
 
-        // Approval workflow is optional; a value of 0 means "not selected" and
-        // should not be sent to the backend as a foreign-key value.
-        if (body.approval_workflow_id === 0) {
-          delete body.approval_workflow_id;
-        }
+        // Approval workflow is optional; "none" is never sent as a foreign key.
+        applyApprovalWorkflowSelection(body, { isEdit: Boolean(projectToEdit) });
 
         let res;
         if (projectToEdit) {
@@ -593,7 +577,6 @@ export const ProjectForm = ({
     getFirstInvalidField,
     projectStatusItems,
     riskClassificationItems,
-    highRiskRoleItems,
     setProjects,
     onClose,
   ]);
@@ -981,20 +964,17 @@ export const ProjectForm = ({
                   error={errors.ai_risk_classification}
                   isRequired
                 />
-                <Select
-                  id="type-of-high-risk-role-input"
-                  label="Type of high risk role"
-                  placeholder="Select an option"
-                  value={values.type_of_high_risk_role || ""}
-                  onChange={handleOnSelectChange("type_of_high_risk_role")}
-                  onBlur={handleFieldBlur("type_of_high_risk_role")}
-                  items={highRiskRoleItems}
-                  sx={{
-                    flex: 1,
-                    backgroundColor: theme.palette.background.main,
+                <HighRiskRolesField
+                  id="high-risk-roles-input"
+                  value={values.high_risk_roles}
+                  onChange={(roles) => {
+                    setValues((prev) => ({ ...prev, high_risk_roles: roles }));
+                    clearFieldError("high_risk_roles");
                   }}
+                  onBlur={handleFieldBlur("high_risk_roles")}
                   isRequired
-                  error={errors.type_of_high_risk_role}
+                  error={errors.high_risk_roles}
+                  sx={{ flex: 1 }}
                 />
               </Stack>
             )}

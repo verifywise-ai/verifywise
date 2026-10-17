@@ -46,6 +46,20 @@ describe("analyzeMappingCoverage type checks with the EU AI Act risk step on", (
     });
     expect(typeMismatches.map((m) => m.entityMapping.field)).toEqual([mapping]);
   });
+
+  it.each(["select", "multiselect"] as const)(
+    "accepts a %s question mapped to the roles",
+    (type) => {
+      const field: FormField = {
+        id: "f1",
+        type,
+        label: "Your role",
+        entityFieldMapping: ROLE,
+        order: 0,
+      };
+      expect(analyzeMappingCoverage([field], IntakeEntityType.USE_CASE).typeMismatches).toEqual([]);
+    },
+  );
 });
 
 describe("usedEntityMappingsFor", () => {

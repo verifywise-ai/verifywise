@@ -138,10 +138,10 @@ describe("AIGateway - VirtualKeys", () => {
     expect(screen.getByText("vk_abc123")).toBeInTheDocument();
     expect(screen.getByText("$12.5000 / $50.00")).toBeInTheDocument();
     expect(screen.getByText("60 RPM")).toBeInTheDocument();
-    expect(screen.getByText("models: gpt-4o-mini")).toBeInTheDocument();
-    expect(screen.getByText("blocked: gpt-4o")).toBeInTheDocument();
-    expect(screen.getByText("providers: openai")).toBeInTheDocument();
-    expect(screen.getByText("blocked providers: openrouter")).toBeInTheDocument();
+    expect(screen.getByText("Only models: gpt-4o-mini")).toBeInTheDocument();
+    expect(screen.getByText("Blocked models: gpt-4o")).toBeInTheDocument();
+    expect(screen.getByText("Only providers: openai")).toBeInTheDocument();
+    expect(screen.getByText("Blocked providers: openrouter")).toBeInTheDocument();
   });
 
   it("shows a Revoked status for revoked keys and a Delete action for inactive keys", async () => {
