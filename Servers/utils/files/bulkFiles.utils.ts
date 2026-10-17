@@ -3,8 +3,9 @@
  *
  * `files.tags` is stored as a JSONB array of strings. These helpers run
  * tenant-scoped UPDATEs that replace, union, or subtract a tag list against
- * the existing column. The caller must validate org ownership beforehand
- * (e.g. via `assertOrgOwnsIds`).
+ * the existing column. The caller must check beforehand that every id is a
+ * visible file in the organization (`allFilesVisibleQuery` in
+ * utils/files/visibleFiles), which also refuses bias audit stance PDFs.
  *
  * @module utils/files/bulkFiles.utils
  */

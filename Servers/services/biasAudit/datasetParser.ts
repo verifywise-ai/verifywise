@@ -116,12 +116,12 @@ export function parseDataset(csv: string, mapping: Record<string, string>): Pars
   let blankOutcomeCount = 0;
   let wrongWidthRowCount = 0;
   const records: AuditRecord[] = dataRows.map((cells) => {
-    // Blank cells past the last column (a trailing comma from a spreadsheet
-    // export) do not move any value, so only short rows or filled extras count.
-    const extras = cells.slice(headers.length);
-    if (cells.length < headers.length || extras.some((c) => c.trim() !== "")) {
-      wrongWidthRowCount++;
-    }
+    // Blank cells past the last column, or missing cells under blank header
+    // names (a trailing comma from a spreadsheet export, in a data row or in
+    // the header), do not move any value, so they do not count.
+    const missingNamed = headers.slice(cells.length).some((h) => h !== "");
+    const filledExtra = cells.slice(headers.length).some((c) => c.trim() !== "");
+    if (missingNamed || filledExtra) wrongWidthRowCount++;
     const record: AuditRecord = {};
     for (const [key, at] of index) {
       const raw = (cells[at] ?? "").trim();

@@ -8,7 +8,7 @@ jest.mock("../dataCollector", () => ({
   // analysis path — every assertion below would pass or fail for the wrong reason.
   isoDate: (v: unknown) => (v ? new Date(v as any).toISOString().slice(0, 10) : undefined),
 }));
-jest.mock("../pdfGenerator", () => ({ generatePDF: jest.fn(), closeBrowser: jest.fn() }));
+jest.mock("../pdfGenerator", () => ({ generatePDF: jest.fn() }));
 jest.mock("../docxGenerator", () => ({ generateDOCX: jest.fn() }));
 jest.mock("../analyzers/runAnalyzers", () => ({
   runAnalyzers: (...a: any[]) => mockRunAnalyzers(...a),

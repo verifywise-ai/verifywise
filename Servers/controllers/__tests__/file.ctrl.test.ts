@@ -55,7 +55,6 @@ jest.mock("../../repositories/file.repository", () => ({
 }));
 jest.mock("../../utils/bulkAction.utils", () => ({
   parseBulkIds: jest.fn((ids: number[]) => ids),
-  assertOrgOwnsIds: jest.fn().mockResolvedValue(undefined),
   withBulkTransaction: jest.fn().mockImplementation(async (_opts: any, fn: any) => {
     const transaction = { commit: jest.fn(), rollback: jest.fn() };
     await fn(transaction);

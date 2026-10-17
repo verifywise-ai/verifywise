@@ -1028,9 +1028,8 @@ export async function linkFriaEvidence(req: Request, res: Response): Promise<Res
 
     return res.status(201).json(STATUS_CODE[201]({ linked: true }));
   } catch (error) {
-    if (error instanceof NotFoundException) {
-      return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
-    }
+    // Logged before the 404 too: a missing, cross-org or stance file id is
+    // worth a failure record when someone probes for one.
     await logFailure({
       eventType: "Create",
       description: "Failed to link FRIA evidence",
@@ -1040,6 +1039,9 @@ export async function linkFriaEvidence(req: Request, res: Response): Promise<Res
       userId,
       organizationId,
     });
+    if (error instanceof NotFoundException) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
+    }
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

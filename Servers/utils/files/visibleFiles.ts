@@ -77,7 +77,7 @@ export async function isStanceFile(fileId: number, organizationId: number): Prom
       WHERE id = :fileId AND organization_id = :organizationId AND source = :stanceSource
       LIMIT 1`,
     {
-      replacements: { fileId, organizationId, ...VISIBLE_FILE_REPLACEMENTS },
+      replacements: { fileId, organizationId, stanceSource: BIAS_AUDIT_STANCE_SOURCE },
       type: QueryTypes.SELECT,
     },
   );
