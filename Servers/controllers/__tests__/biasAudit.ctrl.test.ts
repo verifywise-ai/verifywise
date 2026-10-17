@@ -628,18 +628,21 @@ describe.each([
   it("still answers a generic 500 when the event log or the tenant log fails", async () => {
     service().mockRejectedValue(new Error("chromium crashed at /srv/secret/path"));
     logEvent.mockRejectedValueOnce(new Error("log store down at /var/log/secret"));
-    jest.spyOn(console, "error").mockImplementationOnce(() => undefined);
-    let { status, body } = await call(handler(), req);
-    expect(status).toBe(500);
-    expect(JSON.stringify(body)).not.toMatch(/secret/);
-
-    logStructured.mockImplementation((state: unknown) => {
-      if (state === "error") throw new Error("tenant log dir gone at /var/log/secret");
-    });
+    const stderr = jest.spyOn(console, "error").mockImplementation(() => undefined);
+    let status: number;
+    let body: any;
     try {
+      ({ status, body } = await call(handler(), req));
+      expect(status).toBe(500);
+      expect(JSON.stringify(body)).not.toMatch(/secret/);
+
+      logStructured.mockImplementation((state: unknown) => {
+        if (state === "error") throw new Error("tenant log dir gone at /var/log/secret");
+      });
       ({ status, body } = await call(handler(), req));
     } finally {
       logStructured.mockReset();
+      stderr.mockRestore();
     }
     expect(status).toBe(500);
     expect(body.error).toBe("Internal server error");

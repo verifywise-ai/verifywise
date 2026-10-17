@@ -130,9 +130,11 @@ export async function logRollbackFailure({
   const organizationId = req.organizationId;
   const path = req.originalUrl || req.url || "unknown";
 
-  logger.error(
-    `[rollback] original error in ${functionName} (path=${path}, org=${organizationId ?? "n/a"}):`,
-    originalErr,
+  guarded(() =>
+    logger.error(
+      `[rollback] original error in ${functionName} (path=${path}, org=${organizationId ?? "n/a"}):`,
+      originalErr,
+    ),
   );
 
   await logFailure({
