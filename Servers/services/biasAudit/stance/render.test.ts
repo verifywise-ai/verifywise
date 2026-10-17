@@ -2,6 +2,9 @@ const utils = {
   getRunProjectIdQuery: jest.fn(),
   createStanceQuery: jest.fn(),
   getNextStanceVersionQuery: jest.fn(),
+  getProfileByIdQuery: jest.fn(),
+  createProfileStanceQuery: jest.fn(),
+  getNextProfileStanceVersionQuery: jest.fn(),
 };
 jest.mock("../../../utils/biasAudit.utils", () => utils);
 
@@ -30,6 +33,9 @@ import { renderStanceHtml, renderStancePdf, persistStance, findForbiddenWords } 
 import type { StanceEvidence } from "./render";
 import { REQUIRED_SECTIONS } from "./compose";
 import * as renderModule from "./render";
+import { composeStance } from "./compose";
+import { runAnswerGates } from "../answerGates";
+import { computeReadiness } from "../readinessScore";
 
 const model: any = {
   heading: "Bias testing result",
@@ -499,5 +505,222 @@ describe("customer-visible labels", () => {
     });
     expect(html).toContain("Some preset");
     expect(html).toContain("Odd rate");
+  });
+});
+
+/** An out-of-scope model with only the four sections the document carries. */
+const oosModel: any = {
+  ...model,
+  heading: "Scope determination",
+  scope: "out_of_scope",
+  sections: model.sections.filter((s: any) =>
+    ["scope", "party", "open_items", "expiry"].includes(s.key),
+  ),
+  blankFields: [],
+  openItems: [],
+  expiry: { date: null, trigger: "" },
+};
+
+describe("a scope determination has no dataset", () => {
+  it("renders an out-of-scope document without run evidence", async () => {
+    await expect(renderStancePdf(oosModel, null)).resolves.toMatchObject({
+      sha256: expect.stringMatching(/^[0-9a-f]{64}$/),
+    });
+  });
+
+  it("still refuses an in-scope or undetermined document without evidence", async () => {
+    for (const scope of ["in_scope", "undetermined"]) {
+      await expect(renderStancePdf({ ...model, scope }, null)).rejects.toMatchObject({
+        name: "BusinessLogicException",
+        statusCode: 422,
+      });
+    }
+    expect(getSharedBrowser).not.toHaveBeenCalled();
+  });
+
+  it("does not claim figures were computed from a file", () => {
+    const html = renderStanceHtml(oosModel, null);
+    expect(html).not.toMatch(/figures computed/i);
+    expect(html).toContain("This document is not a Local Law 144 bias audit.");
+    expect(html).toContain("The scope determination belongs to the party that answered.");
+  });
+});
+
+describe("persistStance from an attested profile", () => {
+  const base = {
+    profileId: 5,
+    projectId: 7,
+    organizationId: 42,
+    userId: 9,
+    model: oosModel,
+    evidence: null,
+    scoreAtGeneration: null,
+  };
+
+  beforeEach(() => {
+    uploadFile.mockResolvedValue({ id: 501 });
+    utils.getProfileByIdQuery.mockResolvedValue({ id: 5, project_id: 7, status: "attested" });
+    utils.getNextProfileStanceVersionQuery.mockResolvedValue(1);
+    utils.createProfileStanceQuery.mockResolvedValue({ id: 30, version: 1 });
+  });
+
+  it("files the PDF as a stance file under the profile's project and links it to the profile", async () => {
+    const out = await persistStance(base);
+    expect(utils.getProfileByIdQuery).toHaveBeenCalledWith(5, 42);
+    expect(utils.getNextProfileStanceVersionQuery).toHaveBeenCalledWith(5, 42);
+    const [file, userId, projectId, source, orgId, transaction] = uploadFile.mock.calls[0];
+    expect(file.originalname).toBe("bias-audit-scope-determination-profile-5-v1.pdf");
+    expect(file.mimetype).toBe("application/pdf");
+    expect([userId, projectId, source, orgId, transaction]).toEqual([
+      9,
+      7,
+      "Bias audit stance report",
+      42,
+      tx,
+    ]);
+    const [row, createOrg, createTx] = utils.createProfileStanceQuery.mock.calls[0];
+    expect(row).toEqual({
+      profileId: 5,
+      version: 1,
+      pdfSha256: out.sha256,
+      pdfFileId: 501,
+      scopeAtGeneration: "out_of_scope",
+      generatedBy: 9,
+    });
+    expect([createOrg, createTx]).toEqual([42, tx]);
+    expect(utils.createStanceQuery).not.toHaveBeenCalled();
+    expect(utils.getRunProjectIdQuery).not.toHaveBeenCalled();
+    expect(utils.getNextStanceVersionQuery).not.toHaveBeenCalled();
+    expect(out).toEqual({ stanceId: 30, version: 1, sha256: expect.any(String) });
+  });
+
+  it("names the next version in the file", async () => {
+    utils.getNextProfileStanceVersionQuery.mockResolvedValue(2);
+    utils.createProfileStanceQuery.mockResolvedValue({ id: 31, version: 2 });
+    expect(await persistStance(base)).toMatchObject({ stanceId: 31, version: 2 });
+    expect(uploadFile.mock.calls[0][0].originalname).toBe(
+      "bias-audit-scope-determination-profile-5-v2.pdf",
+    );
+  });
+
+  it("maps a lost version race to a conflict that names the profile", async () => {
+    utils.createProfileStanceQuery.mockRejectedValue({ original: { code: "23505" } });
+    await expect(persistStance(base)).rejects.toMatchObject({
+      name: "ConflictException",
+      message: expect.stringMatching(/profile/i),
+    });
+  });
+
+  it("refuses anything but an out-of-scope document, writing nothing", async () => {
+    for (const m of [model, { ...model, scope: "undetermined" }]) {
+      await expect(persistStance({ ...base, model: m, evidence })).rejects.toMatchObject({
+        statusCode: 422,
+      });
+    }
+    expect(getSharedBrowser).not.toHaveBeenCalled();
+    expect(uploadFile).not.toHaveBeenCalled();
+  });
+
+  it("refuses a profile outside the organization, and a project that does not match it", async () => {
+    utils.getProfileByIdQuery.mockResolvedValue(null);
+    await expect(persistStance(base)).rejects.toMatchObject({ statusCode: 404 });
+    utils.getProfileByIdQuery.mockResolvedValue({ id: 5, project_id: 8 });
+    await expect(persistStance(base)).rejects.toMatchObject({ name: "ValidationException" });
+    expect(uploadFile).not.toHaveBeenCalled();
+    expect(utils.createProfileStanceQuery).not.toHaveBeenCalled();
+  });
+
+  it("keeps a run stance fail-closed without evidence, even for an out-of-scope model", async () => {
+    await expect(
+      persistStance({ ...base, profileId: undefined, runId: 11, model: oosModel } as any),
+    ).rejects.toThrow(/evidence/i);
+    expect(uploadFile).not.toHaveBeenCalled();
+  });
+});
+
+describe("the rendered scope determination", () => {
+  // Built the way the service builds it: real answers through the real gates,
+  // readiness and composition, then rendered.
+  const answers = {
+    "role.party": { value: "employer", notes: "We hire with it.", dontKnow: false },
+    "scope.weighting": {
+      value: "one_of_several",
+      notes: "Recruiters read the score beside the interview notes.",
+      dontKnow: false,
+    },
+    "independence.auditor": { value: "self", notes: "Our HR team.", dontKnow: false },
+    "data.held": { value: "none", notes: "We hold none.", dontKnow: false },
+  };
+  const answerAuthors = Object.fromEntries(
+    Object.keys(answers).map((k) => [k, { user: "Ada Admin", date: "2026-10-01" }]),
+  );
+  const readiness = computeReadiness(answers);
+  const doc = composeStance({
+    projectName: "Screener",
+    readiness,
+    gates: runAnswerGates(answers),
+    answers,
+    answerAuthors,
+    result: null,
+    gateFindings: [],
+    order: [],
+    expiry: { date: null, trigger: "" },
+    derivedBasis: null,
+    attestation: { user: "Grace Admin", date: "2026-10-02" },
+    jobDescriptionKey: null,
+  });
+  const html = renderStanceHtml(doc, null);
+  const text = html
+    .replace(/<style[\s\S]*?<\/style>/g, "")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&#34;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&");
+
+  it("is an out-of-scope determination with no score", () => {
+    expect(readiness.scope).toBe("out_of_scope");
+    expect(readiness.score).toBeNull();
+  });
+
+  it("is headed Scope determination", () => {
+    expect(html).toMatch(/<h1>Scope determination<\/h1>/);
+    expect(text).not.toMatch(/\bResult\b/);
+  });
+
+  it("quotes the customer's determination with who answered and when", () => {
+    expect(text).toContain(
+      'In your words: "Recruiters read the score beside the interview notes."',
+    );
+    expect(text).toContain("Answered by Ada Admin on 2026-10-01.");
+  });
+
+  it("names the attesting user and the date", () => {
+    expect(text).toContain("Attested by Grace Admin on 2026-10-02.");
+  });
+
+  it("names the 5-300 limb relied on", () => {
+    expect(text).toMatch(/falls outside the 5-300 definition/);
+  });
+
+  it("says VerifyWise did not verify it and does not determine AEDT status", () => {
+    expect(text).toContain("VerifyWise did not verify this");
+    expect(text).toMatch(
+      /does not determine whether any deployment is an automated employment decision tool/,
+    );
+  });
+
+  it("says a change in use may bring the tool into scope", () => {
+    expect(text).toContain("A change in how the output is used may bring the tool into scope.");
+  });
+
+  it("carries no ratio, rate, score, dataset or figures text", () => {
+    expect(text).not.toMatch(
+      /impact ratio|selection rate|scoring rate|readiness score|0\.80|four-fifths|SHA-256|figures computed|individuals/i,
+    );
+  });
+
+  it("passes the vocabulary lint and carries the four required sections", () => {
+    expect(findForbiddenWords(html)).toEqual([]);
+    expect(checkSections(html, ["scope", "party", "open_items", "expiry"]).ok).toBe(true);
   });
 });

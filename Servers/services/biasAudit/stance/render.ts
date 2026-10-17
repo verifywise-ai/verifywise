@@ -5,8 +5,14 @@
  * `files` and `bias_audit_stances` rows. Composition stays pure in compose.ts.
  *
  * Immutability: a stance is never updated. A regenerate inserts the next
- * version for the run and the earlier one stays readable. The utils module
- * exports no update function for stances, and a test asserts that.
+ * version for the run (or, for a scope determination, the profile) and the
+ * earlier one stays readable. The utils module exports no update function
+ * for stances, and a test asserts that.
+ *
+ * Two parents: a stance is generated from a run, or, when the attested
+ * profile places the tool out of scope, from that profile. A scope
+ * determination has no dataset, so it is the one document rendered without
+ * run evidence; every other document still refuses without it.
  *
  * Versioning caveat: the unique index `bias_audit_stances_run_version_uq`
  * constrains (run_id, version) only while run_id is set. Once a run is
@@ -19,15 +25,20 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import * as ejs from "ejs";
+import type { Transaction } from "sequelize";
 import { sequelize } from "../../../database/db";
 import {
   BusinessLogicException,
   ConflictException,
+  NotFoundException,
   ValidationException,
 } from "../../../domain.layer/exceptions/custom.exception";
 import {
+  createProfileStanceQuery,
   createStanceQuery,
+  getNextProfileStanceVersionQuery,
   getNextStanceVersionQuery,
+  getProfileByIdQuery,
   getRunProjectIdQuery,
 } from "../../../utils/biasAudit.utils";
 import { BIAS_AUDIT_STANCE_SOURCE, uploadFile } from "../../../utils/fileUpload.utils";
@@ -199,12 +210,16 @@ export function findForbiddenWords(html: string): string[] {
 
 /**
  * The export gate. Fails closed: no evidence, or evidence that withholds export,
- * refuses. Every refusal here and in renderStancePdf is a BusinessLogicException
- * (422), so a caller maps it to a client error rather than a server fault.
+ * refuses. The one exception is a scope determination, which has no run and so
+ * no dataset to gate: an out-of-scope document may pass with no evidence. Every
+ * refusal here and in renderStancePdf is a BusinessLogicException (422), so a
+ * caller maps it to a client error rather than a server fault.
  */
 function assertMayExport(
   evidence: StanceEvidence | null | undefined,
-): asserts evidence is StanceEvidence {
+  scope: StanceModel["scope"],
+): void {
+  if (!evidence && scope === "out_of_scope") return;
   if (!evidence) {
     throw new BusinessLogicException(
       "A stance PDF cannot be rendered without the run's evidence.",
@@ -219,11 +234,12 @@ function assertMayExport(
   }
 }
 
+/** `evidence` is null only for a scope determination; see assertMayExport. */
 export async function renderStancePdf(
   model: StanceModel,
-  evidence: StanceEvidence,
+  evidence: StanceEvidence | null,
 ): Promise<{ pdf: Buffer; sha256: string }> {
-  assertMayExport(evidence);
+  assertMayExport(evidence, model.scope);
   const html = renderStanceHtml(model, evidence);
 
   const { missing } = checkSections(html, REQUIRED_BY_SCOPE[model.scope]);
@@ -260,33 +276,105 @@ export async function renderStancePdf(
   }
 }
 
-export interface PersistStanceArgs {
-  runId: number;
+interface PersistStanceCommon {
   projectId: number;
   organizationId: number;
   userId: number;
   model: StanceModel;
-  evidence: StanceEvidence;
   scoreAtGeneration: number | null;
 }
 
 /**
+ * A run stance needs the run's evidence. A profile stance is a scope
+ * determination: no run, no dataset, so no evidence and no score.
+ */
+export type PersistStanceArgs = PersistStanceCommon &
+  (
+    | { runId: number; profileId?: never; evidence: StanceEvidence }
+    | { profileId: number; runId?: never; evidence: null }
+  );
+
+/** What differs between the two parents, resolved before anything is rendered. */
+interface StanceParent {
+  projectId: number;
+  label: "run" | "profile";
+  nextVersion: () => Promise<number>;
+  filename: (version: number) => string;
+  insert: (
+    row: { version: number; pdfSha256: string; pdfFileId: number },
+    transaction: Transaction,
+  ) => Promise<{ id?: number; version: number }>;
+}
+
+async function resolveParent(args: PersistStanceArgs): Promise<StanceParent> {
+  const { organizationId, userId, model } = args;
+  const common = { scopeAtGeneration: model.scope, generatedBy: userId };
+
+  if (args.profileId !== undefined) {
+    // Only an out-of-scope determination is generated from a profile. An
+    // in-scope stance needs figures, so it comes from a run.
+    if (model.scope !== "out_of_scope") {
+      throw new BusinessLogicException(
+        "Only a scope determination is generated from a profile. A stance for an in-scope or undetermined profile comes from a run.",
+        "stance_profile_scope",
+      );
+    }
+    const profileId = args.profileId;
+    const profile = await getProfileByIdQuery(profileId, organizationId);
+    if (!profile) {
+      throw new NotFoundException(`Profile ${profileId} was not found`, "AedtProfile", profileId);
+    }
+    return {
+      projectId: profile.project_id,
+      label: "profile",
+      nextVersion: () => getNextProfileStanceVersionQuery(profileId, organizationId),
+      filename: (v) => `bias-audit-scope-determination-profile-${profileId}-v${v}.pdf`,
+      insert: (row, transaction) =>
+        createProfileStanceQuery({ ...row, ...common, profileId }, organizationId, transaction),
+    };
+  }
+
+  // A run stance is never rendered without the run's evidence, whatever its scope.
+  if (!args.evidence) {
+    throw new BusinessLogicException(
+      "A stance PDF cannot be rendered without the run's evidence.",
+      "stance_evidence",
+    );
+  }
+  const runId = args.runId;
+  return {
+    projectId: await getRunProjectIdQuery(runId, organizationId),
+    label: "run",
+    nextVersion: () => getNextStanceVersionQuery(runId, organizationId),
+    filename: (v) => `bias-audit-stance-run-${runId}-v${v}.pdf`,
+    insert: (row, transaction) =>
+      createStanceQuery(
+        { ...row, ...common, runId, scoreAtGeneration: args.scoreAtGeneration },
+        organizationId,
+        transaction,
+      ),
+  };
+}
+
+/**
  * Insert the next stance version with its PDF. The profile and question-set
- * versions come from the run inside createStanceQuery. The PDF row is created
- * with the caller's organization id and linked only by the id just returned,
- * so a stance never points at another organization's file.
+ * versions come from the run, or from the attested profile, inside the insert
+ * query. The PDF row is created with the caller's organization id and linked
+ * only by the id just returned, so a stance never points at another
+ * organization's file. Run and profile stances share the files source, so
+ * every stance-file protection applies to both.
  */
 export async function persistStance(
   args: PersistStanceArgs,
 ): Promise<{ stanceId: number; version: number; sha256: string }> {
-  const { runId, projectId, organizationId, userId, model, evidence, scoreAtGeneration } = args;
-  assertMayExport(evidence);
-  // The run decides the project. A caller-supplied id that disagrees is a bug
-  // or an attempt to file the PDF under another project, so it is refused.
-  const runProjectId = await getRunProjectIdQuery(runId, organizationId);
-  if (runProjectId !== projectId) {
+  const { projectId, organizationId, userId, model, evidence } = args;
+  assertMayExport(evidence, model.scope);
+  const parent = await resolveParent(args);
+  // The parent decides the project. A caller-supplied id that disagrees is a
+  // bug or an attempt to file the PDF under another project, so it is refused.
+  if (parent.projectId !== projectId) {
     throw new ValidationException(
-      "The project does not match the run's project",
+      `The project does not match the ${parent.label}'s project`,
       "projectId",
       projectId,
     );
@@ -297,34 +385,25 @@ export async function persistStance(
     return await sequelize.transaction(async (transaction) => {
       // This lookup runs on its own connection, outside the transaction, so
       // two concurrent regenerates can read the same number. The unique index
-      // on (run_id, version) rejects the second insert, and that 23505 is
-      // mapped to a conflict below.
-      const version = await getNextStanceVersionQuery(runId, organizationId);
+      // on (run_id, version), or the partial one on (profile_id, version),
+      // rejects the second insert, and that 23505 is mapped to a conflict below.
+      const version = await parent.nextVersion();
       const file = await uploadFile(
         {
           fieldname: "file",
-          originalname: `bias-audit-stance-run-${runId}-v${version}.pdf`,
+          originalname: parent.filename(version),
           mimetype: "application/pdf",
           buffer: pdf,
           size: pdf.length,
         },
         userId,
-        runProjectId,
+        parent.projectId,
         BIAS_AUDIT_STANCE_SOURCE,
         organizationId,
         transaction,
       );
-      const row = await createStanceQuery(
-        {
-          runId,
-          version,
-          pdfSha256: sha256,
-          pdfFileId: file.id!,
-          scoreAtGeneration,
-          scopeAtGeneration: model.scope,
-          generatedBy: userId,
-        },
-        organizationId,
+      const row = await parent.insert(
+        { version, pdfSha256: sha256, pdfFileId: file.id! },
         transaction,
       );
       return { stanceId: row.id!, version: row.version, sha256 };
@@ -332,7 +411,7 @@ export async function persistStance(
   } catch (error: unknown) {
     if (isUniqueViolation(error)) {
       throw new ConflictException(
-        "Another stance was generated for this run first. Reload and retry.",
+        `Another stance was generated for this ${parent.label} first. Reload and retry.`,
         "AedtStance",
         "version",
       );

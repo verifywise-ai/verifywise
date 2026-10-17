@@ -58,7 +58,7 @@
 <% } %>
 
 <div class="footer">
-  This document is not a Local Law 144 bias audit. It records the answers given and the figures computed from the file supplied, as given. The scope determination belongs to the party that answered.
+  <% if (model.scope === 'out_of_scope') { %>This document is not a Local Law 144 bias audit. It records the answers given, as given. No file was supplied and no figures were computed. The scope determination belongs to the party that answered.<% } else { %>This document is not a Local Law 144 bias audit. It records the answers given and the figures computed from the file supplied, as given. The scope determination belongs to the party that answered.<% } %>
 </div>
 </body>
 </html>
