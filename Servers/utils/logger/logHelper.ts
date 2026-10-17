@@ -29,14 +29,29 @@ interface LogFailureParams extends LogProcessingParams {
   serverLog?: boolean;
 }
 
+/**
+ * Runs one log write. A failure (the central log exporter, or the default
+ * logger's transport) goes to stderr instead of being thrown: no log line
+ * may reject a caller, hang a request, or stop the writes after it, the
+ * event-log write in particular. Each line is guarded on its own so one
+ * failing does not drop the other.
+ */
+function guarded(write: () => void): void {
+  try {
+    write();
+  } catch (error) {
+    console.error("Failed to write a log line:", error);
+  }
+}
+
 export function logProcessing({
   logState = "processing",
   description,
   functionName,
   fileName,
 }: LogProcessingParams): void {
-  logStructured(logState, description, functionName, fileName);
-  logger.debug(`🔄 ${description}`);
+  guarded(() => logStructured(logState, description, functionName, fileName));
+  guarded(() => logger.debug(`🔄 ${description}`));
 }
 
 export async function logSuccess({
@@ -48,8 +63,8 @@ export async function logSuccess({
   userId,
   organizationId,
 }: LogSuccessParams): Promise<void> {
-  logStructured(logState, description, functionName, fileName);
-  logger.debug(`✅ ${description}`);
+  guarded(() => logStructured(logState, description, functionName, fileName));
+  guarded(() => logger.debug(`✅ ${description}`));
   if (eventType != "Read") {
     try {
       await logEvent(eventType, description, userId, organizationId ?? 0);
@@ -70,8 +85,8 @@ export async function logFailure({
   organizationId,
   serverLog = true,
 }: LogFailureParams): Promise<void> {
-  logStructured(logState, description, functionName, fileName);
-  if (serverLog) logger.error(`❌ ${description}:`, error);
+  guarded(() => logStructured(logState, description, functionName, fileName));
+  if (serverLog) guarded(() => logger.error(`❌ ${description}:`, error));
   if (eventType != "Read") {
     try {
       await logEvent("Error", `${description}: ${error.message}`, userId, organizationId ?? 0);

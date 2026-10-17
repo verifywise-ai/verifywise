@@ -86,6 +86,13 @@ describe("an unwritable tenant file log", () => {
       expect(emitOtlpLog.mock.calls[1][2]).toMatchObject({ "tenant.hash": "broken" });
       expect(stderr).toHaveBeenCalledTimes(1);
       expect(String(stderr.mock.calls[0][0])).toContain("broken");
+
+      // A different kind of failure for the same tenant is reported again.
+      ensureTenantLogDirectory.mockImplementationOnce(() => {
+        throw Object.assign(new Error("too many open files"), { code: "EMFILE" });
+      });
+      logStructured("processing", "starting", "fnName", "file.ts");
+      expect(stderr).toHaveBeenCalledTimes(2);
     } finally {
       stderr.mockRestore();
       getTenantIdForLogging.mockReturnValue("42");

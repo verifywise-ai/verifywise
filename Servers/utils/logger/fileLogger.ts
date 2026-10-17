@@ -127,21 +127,27 @@ export function logCentralOnly(
   });
 }
 
-/** Tenants whose file log could not be written, so each is reported once. */
-const failedTenantLogs = new Set<string>();
+/**
+ * File-log failures already reported, keyed by tenant and error code (or
+ * message), so a lasting failure is reported once and a new kind is still
+ * reported.
+ */
+const reportedTenantLogFailures = new Set<string>();
 
 /**
  * Writes one line to the tenant's file log. A failure (the tenant log
- * directory cannot be created, say) goes to stderr once per tenant and is
- * never thrown: it must not reject a log call, hang a request, or stop the
- * central line and the event-log write that follow it.
+ * directory cannot be created, say) goes to stderr once per tenant and kind
+ * of failure and is never thrown: it must not reject a log call, hang a
+ * request, or stop the central line and the event-log write that follow it.
  */
 function writeTenantLine(tenant: string, line: string): void {
   try {
     getTenantLogger(tenant).info(line);
   } catch (error) {
-    if (failedTenantLogs.has(tenant)) return;
-    failedTenantLogs.add(tenant);
+    const kind = (error as NodeJS.ErrnoException)?.code ?? String((error as Error)?.message);
+    const key = `${tenant}:${kind}`;
+    if (reportedTenantLogFailures.has(key)) return;
+    reportedTenantLogFailures.add(key);
     console.error(`Failed to write the file log for tenant ${tenant}:`, error);
   }
 }

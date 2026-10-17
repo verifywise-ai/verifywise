@@ -646,23 +646,50 @@ describe.each([
     expect(JSON.stringify(body)).not.toMatch(/secret/);
   });
 
-  it("answers 201 with the stance when the success log throws, logging no failure", async () => {
+  it("answers 201 and still writes the Create event when every log line throws", async () => {
     const created = { stanceId: 3, version: 1, sha256: "a" };
     service().mockResolvedValue(created);
-    logStructured.mockImplementation((state: unknown) => {
-      if (state === "successful") throw new Error("tenant log dir gone at /var/log/secret");
+    logStructured.mockImplementation(() => {
+      throw new Error("exporter down at /var/log/secret");
     });
+    serverLogger.debug.mockImplementation(() => {
+      throw new Error("console gone");
+    });
+    const stderr = jest.spyOn(console, "error").mockImplementation(() => undefined);
     let answer: Awaited<ReturnType<typeof call>>;
     try {
       answer = await call(handler(), req);
     } finally {
       logStructured.mockReset();
+      serverLogger.debug.mockReset();
+      stderr.mockRestore();
     }
     expect(answer.status).toBe(201);
     expect(answer.body.data).toEqual(created);
-    expect(errorLines()).toEqual([]);
+    expect(logEvent.mock.calls.filter((c) => c[0] === "Create")).toHaveLength(1);
     expect(errorEvents()).toEqual([]);
     expect(logCentralOnly).not.toHaveBeenCalled();
+  });
+
+  it("still writes a refusal's Error event when every log line throws", async () => {
+    service().mockRejectedValue(new ConflictException("raced"));
+    logStructured.mockImplementation(() => {
+      throw new Error("exporter down");
+    });
+    serverLogger.error.mockImplementation(() => {
+      throw new Error("console gone");
+    });
+    const stderr = jest.spyOn(console, "error").mockImplementation(() => undefined);
+    let answer: Awaited<ReturnType<typeof call>>;
+    try {
+      answer = await call(handler(), req);
+    } finally {
+      logStructured.mockReset();
+      serverLogger.error.mockReset();
+      stderr.mockRestore();
+    }
+    expect(answer.status).toBe(409);
+    expect(errorEvents()).toEqual([["Error", `${name} failed: raced`, 9, 42]]);
   });
 
   it("answers 201 with the stance when the success event write rejects", async () => {
@@ -779,6 +806,28 @@ describe("downloadStance", () => {
     expect(status).toBe(404);
     expect(logCentralOnly).not.toHaveBeenCalled();
     expect(logStructured.mock.calls.filter((c) => c[0] === "error")).toHaveLength(1);
+  });
+
+  it("sends the PDF when every log line throws", async () => {
+    const pdf = Buffer.from("%PDF-1.4");
+    svc(stanceService.getStanceDownload).mockResolvedValue({
+      filename: "s.pdf",
+      content: pdf,
+      sha256: "f".repeat(64),
+    });
+    logStructured.mockImplementation(() => {
+      throw new Error("exporter down");
+    });
+    const stderr = jest.spyOn(console, "error").mockImplementation(() => undefined);
+    let answer: Awaited<ReturnType<typeof call>>;
+    try {
+      answer = await call(ctrl.downloadStance, mockReq({ params: { id: "3" } }));
+    } finally {
+      logStructured.mockReset();
+      stderr.mockRestore();
+    }
+    expect(answer.res.status).toHaveBeenCalledWith(200);
+    expect(answer.res.send).toHaveBeenCalledWith(pdf);
   });
 
   it("sends the PDF when the success log throws", async () => {
