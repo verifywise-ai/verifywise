@@ -18,6 +18,7 @@ import {
   getAttestedProfileQuery,
   getCurrentProfileQuery,
   getProfileAnswersQuery,
+  listProfileStancesQuery,
   upsertAnswerQuery,
 } from "../../utils/biasAudit.utils";
 import {
@@ -30,6 +31,7 @@ import { answerMapFromRows, assertProject, isUniqueViolation } from "./serviceHe
 import { applicableQuestions, type AnswerWithNotes } from "./applicability";
 import { computeReadiness, type ReadinessResult } from "./readinessScore";
 import type { IntakeQuestion } from "../../structures/NYC-Local-Law-144/intake.types";
+import type { BiasAuditStance } from "../../domain.layer/models/biasAudit/biasAuditStance.model";
 
 export type AnswerInput = {
   questionKey: string;
@@ -286,6 +288,12 @@ export interface ProfileView {
   } | null;
   answers: ProfileAnswerView[];
   readiness: ReadinessResult;
+  /**
+   * Scope determinations generated from this project's attested profiles,
+   * newest first. They have no run, so no run's stance list carries them;
+   * each downloads through GET /stances/:id/download like any stance.
+   */
+  scopeDeterminations: BiasAuditStance[];
 }
 
 export async function getProfileView(
@@ -322,5 +330,10 @@ export async function getProfileView(
       answeredAt: r.answered_at ?? null,
     })),
     readiness: computeReadiness(answers),
+    scopeDeterminations: await listProfileStancesQuery(
+      scope.projectId,
+      scope.frameworkId,
+      scope.organizationId,
+    ),
   };
 }

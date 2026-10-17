@@ -7,6 +7,7 @@ const utils = {
   getProjectQuery: jest.fn(),
   getAttestedProfileQuery: jest.fn(),
   userCanAccessProjectQuery: jest.fn(),
+  listProfileStancesQuery: jest.fn(),
 };
 jest.mock("../../utils/biasAudit.utils", () => utils);
 const mockTx = { id: "tx" };
@@ -392,6 +393,36 @@ describe("getProfileView", () => {
       answeredByUserId: 9,
     });
     expect(utils.getProfileAnswersQuery).toHaveBeenCalledWith(4, 42);
+  });
+
+  it("lists the project's scope determinations, which no run's stance list carries", async () => {
+    utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
+    utils.getCurrentProfileQuery.mockResolvedValue(null);
+    utils.getAttestedProfileQuery.mockResolvedValue(null);
+    const stance = {
+      id: 30,
+      profile_id: 3,
+      version: 2,
+      pdf_sha256: "c".repeat(64),
+      scope_at_generation: "out_of_scope",
+      score_at_generation: null,
+      profile_version: 1,
+      question_set_version: 1,
+      generated_by: 9,
+      generated_at: "2026-10-17T10:00:00Z",
+    };
+    utils.listProfileStancesQuery.mockResolvedValue([stance]);
+    const out = await getProfileView(scope);
+    expect(utils.listProfileStancesQuery).toHaveBeenCalledWith(7, 12, 42);
+    expect(out.scopeDeterminations).toEqual([stance]);
+  });
+
+  it("reads no scope determinations for a viewer the member rule refuses", async () => {
+    utils.userCanAccessProjectQuery.mockResolvedValue(false);
+    await expect(getProfileView({ ...scope, role: "Editor" })).rejects.toMatchObject({
+      statusCode: 404,
+    });
+    expect(utils.listProfileStancesQuery).not.toHaveBeenCalled();
   });
 });
 
