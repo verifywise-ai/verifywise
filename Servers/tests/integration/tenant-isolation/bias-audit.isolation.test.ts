@@ -24,9 +24,11 @@ import { createTestApp, testRequest } from "../setup";
 import { createTestUser } from "../helpers";
 import { createTestProject } from "../../factories";
 import {
+  assertProfileAttestedQuery,
   attestProfileQuery,
   createProfileVersionQuery,
   createProfileStanceQuery,
+  getNextProfileStanceVersionQuery,
   createRunQuery,
   createStanceQuery,
   getCurrentProfileQuery,
@@ -557,6 +559,56 @@ describe("bias audit query layer against the database", () => {
     );
     expect((counts as any[])[0].n).toBe(1);
   });
+  it("holds a re-attestation until the scope determination being written commits", async () => {
+    // Two connections: the persist transaction locks profile A FOR SHARE;
+    // a concurrent attestation of B must wait to supersede A until it commits.
+    const { owner } = await seedTwoTenantContexts();
+    const project = await createTestProject(owner.orgId, owner.userId);
+    const a = await insertProfile(owner.orgId, project, owner.userId);
+    await sequelize.transaction((t) => attestProfileQuery(a, owner.userId, owner.orgId, t));
+    const [bRows] = await sequelize.query(
+      `INSERT INTO aedt_profiles
+         (organization_id, project_id, framework_id, version, question_set_version, created_by)
+       VALUES (:orgId, :project, 1, 2, 1, :userId) RETURNING id`,
+      { replacements: { orgId: owner.orgId, project, userId: owner.userId } },
+    );
+    const b = (bRows as any[])[0].id as number;
+
+    let attestCommitted = false;
+    let attest: Promise<void> | undefined;
+    const written = await sequelize.transaction(async (t) => {
+      await assertProfileAttestedQuery(a, project, owner.orgId, t);
+      attest = sequelize
+        .transaction((t2) => attestProfileQuery(b, owner.userId, owner.orgId, t2))
+        .then(() => {
+          attestCommitted = true;
+        });
+      await new Promise((resolve) => setTimeout(resolve, 750));
+      const blocked = !attestCommitted;
+      const version = await getNextProfileStanceVersionQuery(a, owner.orgId, t);
+      const row = await createProfileStanceQuery(
+        profileStance(a, project, owner.userId, version),
+        owner.orgId,
+        t,
+      );
+      return { blocked, row };
+    });
+    await attest;
+
+    expect(written.blocked).toBe(true);
+    expect(written.row).toMatchObject({ profile_id: a, version: 1 });
+    expect(attestCommitted).toBe(true);
+    // The next generate cites B and continues the numbering; A is now refused.
+    const next = await sequelize.transaction(async (t) => {
+      await assertProfileAttestedQuery(b, project, owner.orgId, t);
+      return getNextProfileStanceVersionQuery(b, owner.orgId, t);
+    });
+    expect(next).toBe(2);
+    await expect(assertProfileAttestedQuery(a, project, owner.orgId)).rejects.toMatchObject({
+      statusCode: 409,
+    });
+  });
+
   it("answers 409 for a profile superseded before the insert, and 404 for another project", async () => {
     const { owner } = await seedTwoTenantContexts();
     const project = await createTestProject(owner.orgId, owner.userId);

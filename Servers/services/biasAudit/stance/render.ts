@@ -38,6 +38,7 @@ import {
   getNextProfileStanceVersionQuery,
   getNextStanceVersionQuery,
   getRunProjectIdQuery,
+  assertProfileAttestedQuery,
 } from "../../../utils/biasAudit.utils";
 import { BIAS_AUDIT_STANCE_SOURCE, uploadFile } from "../../../utils/fileUpload.utils";
 import { getSharedBrowser } from "../../../utils/pdfBrowser.utils";
@@ -209,21 +210,25 @@ export function findForbiddenWords(html: string): string[] {
   return findForbidden(html.replace(/<span data-customer-text>[^<]*<\/span>/g, ""));
 }
 
+/** What a stance is generated from. Every render entry point must name it. */
+export type StanceParentKind = "run" | "profile";
+
 /**
  * The export gate, and the one place the evidence rule lives. Fails closed: no
  * evidence, or evidence that withholds export, refuses. The one exception is a
- * scope determination, which has no run and so no dataset to gate: an
- * out-of-scope document may pass with no evidence, unless it is a run stance
- * (`fromRun`), which never renders without its run's evidence. Every refusal
- * here and in renderStancePdf is a BusinessLogicException (422), so a caller
- * maps it to a client error rather than a server fault.
+ * scope determination: a document generated from a profile has no run and so
+ * no dataset to gate, and an out-of-scope one may pass with no evidence. A run
+ * stance never renders without its run's evidence, whatever its scope. The
+ * parent is a required argument so no caller can skip that distinction. Every
+ * refusal here and in renderStancePdf is a BusinessLogicException (422), so a
+ * caller maps it to a client error rather than a server fault.
  */
 function assertMayExport(
   evidence: StanceEvidence | null | undefined,
   scope: StanceModel["scope"],
-  fromRun = false,
+  parent: StanceParentKind,
 ): void {
-  if (!evidence && scope === "out_of_scope" && !fromRun) return;
+  if (!evidence && scope === "out_of_scope" && parent === "profile") return;
   if (!evidence) {
     throw new BusinessLogicException(
       "A stance PDF cannot be rendered without the run's evidence.",
@@ -238,12 +243,16 @@ function assertMayExport(
   }
 }
 
-/** `evidence` is null only for a scope determination; see assertMayExport. */
+/**
+ * `evidence` may be null only for an out-of-scope document generated from a
+ * profile (a scope determination); `parent` says which, see assertMayExport.
+ */
 export async function renderStancePdf(
   model: StanceModel,
   evidence: StanceEvidence | null,
+  parent: StanceParentKind,
 ): Promise<{ pdf: Buffer; sha256: string }> {
-  assertMayExport(evidence, model.scope);
+  assertMayExport(evidence, model.scope, parent);
   const html = renderStanceHtml(model, evidence);
 
   const { missing } = checkSections(html, REQUIRED_BY_SCOPE[model.scope]);
@@ -298,11 +307,14 @@ export type PersistStanceArgs = PersistStanceCommon &
     | { profileId: number; runId?: never; evidence: null }
   );
 
-/** What differs between the two parents, resolved before anything is rendered. */
+/**
+ * What differs between the two parents, resolved and checked before anything
+ * is rendered. `nextVersion` runs inside the persist transaction.
+ */
 interface StanceParent {
   projectId: number;
-  label: "run" | "profile";
-  nextVersion: () => Promise<number>;
+  label: StanceParentKind;
+  nextVersion: (transaction: Transaction) => Promise<number>;
   filename: (version: number) => string;
   insert: (
     row: { version: number; pdfSha256: string; pdfFileId: number },
@@ -316,15 +328,21 @@ async function resolveParent(args: PersistStanceArgs): Promise<StanceParent> {
 
   if (args.profileId !== undefined) {
     // The service decides that only an out-of-scope profile gets a scope
-    // determination (422 otherwise), and assertMayExport refuses any other
-    // scope without evidence. The profile is not re-read here: the insert
-    // accepts only the attested profile of this organization and of this
-    // project, as createStanceQuery accepts only the organization's run.
+    // determination (422 otherwise); that rule is not repeated here. This
+    // cheap check only refuses a profile that is missing, another project's
+    // or no longer attested (404/409) before the browser renders. The lock
+    // taken in nextVersion, and the insert, stay the authority.
     const { profileId, projectId } = args;
+    await assertProfileAttestedQuery(profileId, projectId, organizationId);
     return {
       projectId,
       label: "profile",
-      nextVersion: () => getNextProfileStanceVersionQuery(profileId, organizationId),
+      // Lock the profile FOR SHARE first, so no re-attestation commits
+      // between this version read and the insert (see the query's comment).
+      nextVersion: async (transaction) => {
+        await assertProfileAttestedQuery(profileId, projectId, organizationId, transaction);
+        return getNextProfileStanceVersionQuery(profileId, organizationId, transaction);
+      },
       filename: (v) => `bias-audit-scope-determination-profile-${profileId}-v${v}.pdf`,
       insert: (row, transaction) =>
         createProfileStanceQuery(
@@ -336,9 +354,22 @@ async function resolveParent(args: PersistStanceArgs): Promise<StanceParent> {
   }
 
   const runId = args.runId;
+  // The run decides the project. A caller-supplied id that disagrees is a bug
+  // or an attempt to file the PDF under another project, so it is refused.
+  const runProjectId = await getRunProjectIdQuery(runId, organizationId);
+  if (runProjectId !== args.projectId) {
+    throw new ValidationException(
+      "The project does not match the run's project",
+      "projectId",
+      args.projectId,
+    );
+  }
   return {
-    projectId: await getRunProjectIdQuery(runId, organizationId),
+    projectId: runProjectId,
     label: "run",
+    // Read on its own connection, outside the transaction, so two concurrent
+    // regenerates can read the same number; the unique index on
+    // (run_id, version) rejects the second insert (23505, mapped below).
     nextVersion: () => getNextStanceVersionQuery(runId, organizationId),
     filename: (v) => `bias-audit-stance-run-${runId}-v${v}.pdf`,
     insert: (row, transaction) =>
@@ -361,29 +392,20 @@ async function resolveParent(args: PersistStanceArgs): Promise<StanceParent> {
 export async function persistStance(
   args: PersistStanceArgs,
 ): Promise<{ stanceId: number; version: number; sha256: string }> {
-  const { projectId, organizationId, userId, model, evidence } = args;
-  // Checked before any read, so a refusal launches no browser and writes nothing.
-  assertMayExport(evidence, model.scope, args.runId !== undefined);
+  const { organizationId, userId, model, evidence } = args;
+  const kind: StanceParentKind = args.runId !== undefined ? "run" : "profile";
+  // Checked before any read, and resolveParent checks the parent, so a
+  // refusal launches no browser and writes nothing.
+  assertMayExport(evidence, model.scope, kind);
   const parent = await resolveParent(args);
-  // The parent decides the project. A caller-supplied id that disagrees is a
-  // bug or an attempt to file the PDF under another project, so it is refused.
-  // A profile parent takes the caller's project and the insert enforces it.
-  if (parent.projectId !== projectId) {
-    throw new ValidationException(
-      `The project does not match the ${parent.label}'s project`,
-      "projectId",
-      projectId,
-    );
-  }
-  const { pdf, sha256 } = await renderStancePdf(model, evidence);
+  const { pdf, sha256 } = await renderStancePdf(model, evidence, kind);
 
   try {
     return await sequelize.transaction(async (transaction) => {
-      // This lookup runs on its own connection, outside the transaction, so
-      // two concurrent regenerates can read the same number. The unique index
-      // on (run_id, version), or the partial one on (profile_id, version),
-      // rejects the second insert, and that 23505 is mapped to a conflict below.
-      const version = await parent.nextVersion();
+      // A lost version race is rejected by the unique index on
+      // (run_id, version) or the partial one on (profile_id, version), and
+      // that 23505 is mapped to a conflict below.
+      const version = await parent.nextVersion(transaction);
       const file = await uploadFile(
         {
           fieldname: "file",

@@ -13,6 +13,7 @@ import {
   createRunQuery,
   createStanceQuery,
   createProfileStanceQuery,
+  assertProfileAttestedQuery,
   getNextProfileStanceVersionQuery,
   listProfileStancesQuery,
   getAttestedProfileQuery,
@@ -454,6 +455,52 @@ describe("profile stances (scope determinations)", () => {
       replacements: { profile_id: 5, organization_id: 42, project_id: 7 },
       transaction: tx,
     });
+  });
+
+  describe("assertProfileAttestedQuery", () => {
+    const lockTx = { id: "persist-tx" } as any;
+
+    it("accepts the attested profile of this organization and project", async () => {
+      mockQuery.mockResolvedValueOnce([{ status: "attested" }]);
+      await expect(assertProfileAttestedQuery(5, 7, 42)).resolves.toBeUndefined();
+      const [sql, opts] = mockQuery.mock.calls[0];
+      expect(String(sql)).toMatch(/ap\.id = :profile_id/);
+      expect(String(sql)).toMatch(/ap\.organization_id = :organization_id/);
+      expect(String(sql)).toMatch(/ap\.project_id = :project_id/);
+      expect(String(sql)).toMatch(/pr\.organization_id = :organization_id/);
+      // Outside a transaction the share lock ends with the statement.
+      expect(opts.replacements).toEqual({ profile_id: 5, project_id: 7, organization_id: 42 });
+      expect(opts.transaction).toBeUndefined();
+    });
+
+    it("reads the row FOR SHARE, inside the given transaction when there is one", async () => {
+      mockQuery.mockResolvedValueOnce([{ status: "attested" }]);
+      await assertProfileAttestedQuery(5, 7, 42, lockTx);
+      const [sql, opts] = mockQuery.mock.calls[0];
+      expect(String(sql)).toMatch(/FOR SHARE OF ap/);
+      expect(opts.transaction).toBe(lockTx);
+    });
+
+    it("answers 409 for a superseded profile and 404 for anything else", async () => {
+      mockQuery.mockResolvedValueOnce([{ status: "superseded" }]);
+      await expect(assertProfileAttestedQuery(5, 7, 42)).rejects.toMatchObject({
+        statusCode: 409,
+        message: expect.stringMatching(/re-attested while the document was being generated/),
+      });
+      for (const rows of [[], [{ status: "draft" }]]) {
+        mockQuery.mockResolvedValueOnce(rows);
+        await expect(assertProfileAttestedQuery(5, 7, 42)).rejects.toMatchObject({
+          statusCode: 404,
+        });
+      }
+    });
+  });
+
+  it("reads the next version inside the persist transaction", async () => {
+    const lockTx = { id: "persist-tx" } as any;
+    mockQuery.mockResolvedValueOnce([{ max: 2 }]);
+    expect(await getNextProfileStanceVersionQuery(5, 42, lockTx)).toBe(3);
+    expect(mockQuery.mock.calls[0][1].transaction).toBe(lockTx);
   });
 
   it("numbers versions across every profile of the project and framework, in the organization", async () => {

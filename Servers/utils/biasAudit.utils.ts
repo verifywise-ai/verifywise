@@ -499,6 +499,57 @@ export interface CreateProfileStanceArgs {
 }
 
 /**
+ * Refuses unless the profile is the attested one of this organization and
+ * project: superseded answers 409 (re-attested while the document was being
+ * generated, so the caller can reload and retry), anything else, missing, a
+ * draft, another project's or another organization's, answers 404.
+ *
+ * The row is read FOR SHARE. Without a transaction that lock ends with the
+ * statement: it is the cheap check run before the PDF is rendered, so a stale
+ * profile launches no browser. Inside the persist transaction the lock is
+ * held to commit. A re-attestation supersedes this row with an UPDATE, whose
+ * row lock conflicts with FOR SHARE, so it waits until the stance is
+ * committed; one that committed first is seen here as superseded (READ
+ * COMMITTED reads the latest row version after the wait). That keeps the
+ * version read and the insert that follow on one attested profile.
+ */
+export async function assertProfileAttestedQuery(
+  profileId: number,
+  projectId: number,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<void> {
+  const rows = (await sequelize.query(
+    `SELECT ap.status
+       FROM aedt_profiles ap
+       JOIN projects pr ON pr.id = ap.project_id
+                       AND pr.organization_id = :organization_id
+      WHERE ap.id = :profile_id AND ap.organization_id = :organization_id
+        AND ap.project_id = :project_id
+        FOR SHARE OF ap`,
+    {
+      replacements: {
+        profile_id: profileId,
+        project_id: projectId,
+        organization_id: organizationId,
+      },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  )) as Array<{ status: string }>;
+  const status = rows[0]?.status;
+  if (status === "attested") return;
+  if (status === "superseded") {
+    throw new ConflictException(
+      "The profile was re-attested while the document was being generated. Reload and retry.",
+      "AedtProfile",
+      "status",
+    );
+  }
+  refuseCrossOrg("Profile", profileId);
+}
+
+/**
  * A stance generated from an attested profile: the out-of-scope "Scope
  * determination", which has no run. The project and both versions are taken
  * from the profile row, as createStanceQuery takes them from the run, and
@@ -506,11 +557,10 @@ export interface CreateProfileStanceArgs {
  * of a project in the organization) is accepted. No readiness score is
  * stored, because none was computed.
  *
- * An insert that matches no row is told apart, in the same transaction: a
- * profile of this organization and project that is now superseded was
- * re-attested while the document was being generated, which is a conflict
- * the caller can retry (409). Anything else, missing, a draft, another
- * project's or another organization's, is not found (404).
+ * The caller locks the profile first (assertProfileAttestedQuery in the same
+ * transaction), so the WHERE below is a second guard. An insert that still
+ * matches no row is told apart by the same check: superseded is 409,
+ * anything else 404.
  */
 export async function createProfileStanceQuery(
   args: CreateProfileStanceArgs,
@@ -547,31 +597,7 @@ export async function createProfileStanceQuery(
   );
   const row = firstRow<BiasAuditStance>(result);
   if (row) return row;
-
-  const probe = (await sequelize.query(
-    `SELECT ap.status
-       FROM aedt_profiles ap
-       JOIN projects pr ON pr.id = ap.project_id
-                       AND pr.organization_id = :organization_id
-      WHERE ap.id = :profile_id AND ap.organization_id = :organization_id
-        AND ap.project_id = :project_id`,
-    {
-      replacements: {
-        profile_id: args.profileId,
-        project_id: args.projectId,
-        organization_id: organizationId,
-      },
-      type: QueryTypes.SELECT,
-      transaction,
-    },
-  )) as Array<{ status: string }>;
-  if (probe[0]?.status === "superseded") {
-    throw new ConflictException(
-      "The profile was re-attested while the document was being generated. Reload and retry.",
-      "AedtProfile",
-      "status",
-    );
-  }
+  await assertProfileAttestedQuery(args.profileId, args.projectId, organizationId, transaction);
   refuseCrossOrg("Profile", args.profileId);
 }
 
@@ -581,17 +607,18 @@ export async function createProfileStanceQuery(
  * numbering spans every profile row of that project and framework (v1 on
  * profile A, then v2 on profile B), not the one row.
  *
- * Like getNextStanceVersionQuery, this read is not the uniqueness guarantee.
- * The partial unique index on (profile_id, version) is, and a lost race
- * surfaces as a 23505. That index is enough: only one profile of a project
- * and framework is attested at a time, and createProfileStanceQuery inserts
- * only for the attested one, so two concurrent generates that read the same
- * number cite the same profile and collide on it. A generate that cites a
- * profile superseded meanwhile is refused as a conflict instead.
+ * Read it inside the persist transaction, after the cited profile is locked
+ * FOR SHARE (assertProfileAttestedQuery). The lock means no re-attestation
+ * can commit between this read and the insert, so every generate that reads
+ * a number cites the one attested profile; two that read the same number
+ * collide on the partial unique index (profile_id, version), a 23505 the
+ * caller maps to a conflict. Without the lock a re-attestation committing
+ * mid-generate could let two profiles of the project file the same version.
  */
 export async function getNextProfileStanceVersionQuery(
   profileId: number,
   organizationId: number,
+  transaction?: Transaction,
 ): Promise<number> {
   const rows = (await sequelize.query(
     `SELECT MAX(s.version) AS max
@@ -605,6 +632,7 @@ export async function getNextProfileStanceVersionQuery(
     {
       replacements: { profile_id: profileId, organization_id: organizationId },
       type: QueryTypes.SELECT,
+      transaction,
     },
   )) as Array<{ max: number | null }>;
   return (rows[0]?.max ?? 0) + 1;
