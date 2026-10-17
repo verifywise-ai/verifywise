@@ -1008,7 +1008,7 @@ export async function linkFriaEvidence(req: Request, res: Response): Promise<Res
         : typeof file_id === "string" && /^\d+$/.test(file_id)
           ? Number(file_id)
           : NaN;
-    if (!Number.isInteger(fileId) || fileId <= 0) {
+    if (!Number.isSafeInteger(fileId) || fileId <= 0) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
     }
 

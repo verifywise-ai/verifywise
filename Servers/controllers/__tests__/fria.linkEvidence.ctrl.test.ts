@@ -45,7 +45,7 @@ function createRes(): any {
 describe("linkFriaEvidence", () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it.each([true, [7], "1e2", "0x1F", 0, -1, 1.5])(
+  it.each([true, [7], "1e2", "0x1F", " 12", 0, -1, 1.5, 2 ** 53])(
     "answers 400 and links nothing for file_id %p",
     async (fileId) => {
       const res = createRes();
