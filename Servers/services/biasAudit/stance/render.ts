@@ -5,8 +5,8 @@
  * `files` and `bias_audit_stances` rows. Composition stays pure in compose.ts.
  *
  * Immutability: a stance is never updated. A regenerate inserts the next
- * version for the run (or, for a scope determination, the profile) and the
- * earlier one stays readable. The utils module exports no update function
+ * version for the run (or, for a scope determination, for the project and
+ * framework) and the earlier one stays readable. The utils module exports no update function
  * for stances, and a test asserts that.
  *
  * Two parents: a stance is generated from a run, or, when the attested

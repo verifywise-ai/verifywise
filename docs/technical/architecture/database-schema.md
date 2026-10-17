@@ -592,7 +592,7 @@ Immutable stance documents: insert-only, a regenerate adds the next `version`. A
 | `project_id` | INTEGER NOT NULL | FK `projects(id)` ON DELETE CASCADE |
 | `run_id` | INTEGER NULL | FK `bias_audit_runs(id)` ON DELETE SET NULL: the stance outlives its run |
 | `profile_id` | INTEGER NULL | FK `aedt_profiles(id)` ON DELETE SET NULL; set only on a profile stance |
-| `version` | INTEGER NOT NULL | per run, or per profile |
+| `version` | INTEGER NOT NULL | per run; for scope determinations, per project and framework across every attested profile row, so a re-attestation continues the numbering |
 | `pdf_sha256` | VARCHAR(64) NULL | hash of the stored PDF |
 | `pdf_file_id` | INTEGER NULL | `files.id`, no FK; source `Bias audit stance report` |
 | `score_at_generation` | INTEGER NULL | readiness score; NULL for a scope determination |
@@ -601,7 +601,7 @@ Immutable stance documents: insert-only, a regenerate adds the next `version`. A
 | `generated_by` | INTEGER NULL | FK `users(id)` ON DELETE SET NULL |
 | `generated_at` | TIMESTAMPTZ | default `now()` |
 
-CHECK `bias_audit_stances_run_or_profile_ck (run_id IS NULL OR profile_id IS NULL)`. Unique `bias_audit_stances_run_version_uq (run_id, version)` and partial unique `bias_audit_stances_profile_version_uq (profile_id, version) WHERE profile_id IS NOT NULL`. The partial index is keyed on `profile_id`, not on `run_id IS NULL`, because a run stance's `run_id` becomes NULL when its run is deleted; run stances never carry a `profile_id`, so they stay outside it.
+CHECK `bias_audit_stances_run_or_profile_ck (run_id IS NULL OR profile_id IS NULL)`. Unique `bias_audit_stances_run_version_uq (run_id, version)` and partial unique `bias_audit_stances_profile_version_uq (profile_id, version) WHERE profile_id IS NOT NULL`. The partial index is keyed on `profile_id`, not on `run_id IS NULL`, because a run stance's `run_id` becomes NULL when its run is deleted; run stances never carry a `profile_id`, so they stay outside it. Scope-determination numbering spans profile rows, but the per-profile index is enough as a guard: only one profile of a project and framework is attested at a time and the insert accepts only that one, so concurrent generates that read the same number collide on it; one that cites a profile superseded meanwhile is refused with a 409.
 
 ---
 
