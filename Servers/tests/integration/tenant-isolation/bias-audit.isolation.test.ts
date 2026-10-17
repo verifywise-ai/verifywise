@@ -575,17 +575,46 @@ describe("bias audit query layer against the database", () => {
     );
     const b = (bRows as any[])[0].id as number;
 
+    const backendPid = async (t: any): Promise<number> => {
+      const [r] = await sequelize.query(`SELECT pg_backend_pid() AS pid`, { transaction: t });
+      return (r as any[])[0].pid as number;
+    };
     let attestCommitted = false;
+    let attestPid: number | undefined;
     let attest: Promise<void> | undefined;
     const written = await sequelize.transaction(async (t) => {
+      const stancePid = await backendPid(t);
       await assertProfileAttestedQuery(a, project, owner.orgId, t);
       attest = sequelize
-        .transaction((t2) => attestProfileQuery(b, owner.userId, owner.orgId, t2))
+        .transaction(async (t2) => {
+          attestPid = await backendPid(t2);
+          await attestProfileQuery(b, owner.userId, owner.orgId, t2);
+        })
         .then(() => {
           attestCommitted = true;
         });
-      await new Promise((resolve) => setTimeout(resolve, 750));
-      const blocked = !attestCommitted;
+      // Poll, on a third connection, until the attestation's backend is
+      // waiting on a lock held by this transaction (or it got through, which
+      // means the lock is missing). Bounded, so a regression fails, not hangs.
+      let blocked = false;
+      const deadline = Date.now() + 10_000;
+      while (!attestCommitted && Date.now() < deadline) {
+        if (attestPid !== undefined) {
+          const [w] = await sequelize.query(
+            `SELECT a.wait_event_type = 'Lock' AS waiting,
+                    :stance_pid = ANY (pg_blocking_pids(a.pid)) AS by_stance
+               FROM pg_stat_activity a
+              WHERE a.pid = :pid`,
+            { replacements: { pid: attestPid, stance_pid: stancePid } },
+          );
+          const row = (w as any[])[0];
+          if (row?.waiting && row?.by_stance) {
+            blocked = true;
+            break;
+          }
+        }
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
       const version = await getNextProfileStanceVersionQuery(a, owner.orgId, t);
       const row = await createProfileStanceQuery(
         profileStance(a, project, owner.userId, version),
