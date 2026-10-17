@@ -4,6 +4,7 @@ const utils = {
   getRunQuery: jest.fn(),
   getProfileByIdQuery: jest.fn(),
   getCurrentProfileQuery: jest.fn(),
+  getAttestedProfileQuery: jest.fn(),
   getProfileAnswersQuery: jest.fn(),
   getUserNamesQuery: jest.fn(),
   getProjectQuery: jest.fn(),
@@ -17,7 +18,8 @@ jest.mock("./stance/render", () => ({
   evidenceFromRun: jest.requireActual("./stance/render").evidenceFromRun,
 }));
 
-import { generateStance, getStanceDownload } from "./stanceService";
+import * as answerGatesModule from "./answerGates";
+import { generateProfileStance, generateStance, getStanceDownload } from "./stanceService";
 
 const answer = (k: string, v: string | null, notes: string | null = null, by = 9) => ({
   question_key: k,
@@ -193,6 +195,169 @@ describe("generateStance project-member access", () => {
   it("does not ask the database for an organization Admin", async () => {
     await generateStance(args);
     expect(utils.userCanAccessProjectQuery).not.toHaveBeenCalled();
+  });
+});
+
+describe("generateProfileStance", () => {
+  const OOS_ANSWERS = [
+    answer("role.party", "employer", "We hire with it."),
+    answer("scope.weighting", "one_of_several", "Recruiters read it beside interviews."),
+    answer("independence.auditor", "self", "Our HR team."),
+    answer("data.held", "none", "We hold none."),
+  ];
+  const ATTESTED = {
+    id: 21,
+    project_id: 7,
+    framework_id: 12,
+    version: 3,
+    status: "attested",
+    attested_by_user_id: 9,
+    attested_at: new Date("2026-10-02T09:00:00Z"),
+  };
+  const input = { projectId: 7, frameworkId: 12, organizationId: 42, userId: 9, role: "Admin" };
+
+  beforeEach(() => {
+    utils.getAttestedProfileQuery.mockResolvedValue(ATTESTED);
+    utils.getProfileAnswersQuery.mockResolvedValue(OOS_ANSWERS);
+    persistStance.mockResolvedValue({ stanceId: 30, version: 1, sha256: "c".repeat(64) });
+  });
+
+  it("persists an out-of-scope scope determination from the attested profile", async () => {
+    await expect(generateProfileStance(input)).resolves.toEqual({
+      stanceId: 30,
+      version: 1,
+      sha256: "c".repeat(64),
+    });
+    expect(utils.getAttestedProfileQuery).toHaveBeenCalledWith(7, 12, 42);
+    expect(utils.getProfileAnswersQuery).toHaveBeenCalledWith(21, 42);
+    expect(utils.getCurrentProfileQuery).not.toHaveBeenCalled();
+    expect(utils.getRunQuery).not.toHaveBeenCalled();
+    const call = persistStance.mock.calls[0][0];
+    expect(call).toMatchObject({
+      profileId: 21,
+      projectId: 7,
+      organizationId: 42,
+      userId: 9,
+      evidence: null,
+      scoreAtGeneration: null,
+    });
+    expect(call).not.toHaveProperty("runId");
+  });
+
+  it("composes the out-of-scope document: no result, no figures, the attestation", async () => {
+    await generateProfileStance(input);
+    const { model } = persistStance.mock.calls[0][0];
+    expect(model.scope).toBe("out_of_scope");
+    expect(model.heading).toBe("Scope determination");
+    expect(model.sections.map((s: any) => s.key)).toEqual([
+      "scope",
+      "party",
+      "open_items",
+      "expiry",
+    ]);
+    expect(model.expiry).toEqual({ date: null, trigger: "" });
+    expect(model.derivedBasis).toBeNull();
+    expect(model.attestation).toEqual({ user: "Ada Admin", date: "2026-10-02" });
+    const text = model.sections.map((s: any) => s.body).join("\n");
+    expect(text).toContain('In your words: "Recruiters read it beside interviews."');
+    expect(text).toContain("Answered by Ada Admin on 2026-10-01.");
+    expect(text).not.toMatch(/ratio|readiness score/i);
+  });
+
+  it.each([
+    ["in scope", [answer("scope.weighting", "biggest", "It ranks applicants.")]],
+    ["undetermined", [answer("scope.weighting", null)]],
+  ])("refuses a profile that is %s with 422, pointing at a run", async (_label, override) => {
+    const byKey = new Map(OOS_ANSWERS.map((a) => [a.question_key, a]));
+    for (const a of override) byKey.set(a.question_key, a);
+    utils.getProfileAnswersQuery.mockResolvedValue([...byKey.values()]);
+    await expect(generateProfileStance(input)).rejects.toMatchObject({
+      statusCode: 422,
+      message: expect.stringMatching(/comes from a run/),
+    });
+    expect(persistStance).not.toHaveBeenCalled();
+  });
+
+  it("answers 404 when the project has no attested profile", async () => {
+    utils.getAttestedProfileQuery.mockResolvedValue(null);
+    await expect(generateProfileStance(input)).rejects.toMatchObject({ statusCode: 404 });
+    expect(persistStance).not.toHaveBeenCalled();
+  });
+
+  it("answers 404 for a project outside the organization", async () => {
+    utils.getProjectQuery.mockResolvedValue(null);
+    await expect(generateProfileStance(input)).rejects.toMatchObject({ statusCode: 404 });
+    expect(utils.getAttestedProfileQuery).not.toHaveBeenCalled();
+    expect(persistStance).not.toHaveBeenCalled();
+  });
+
+  it.each(["Editor", "Reviewer", "Auditor", "SuperAdmin"])(
+    "answers 404 to a %s who is not on the project, before reading the profile",
+    async (role) => {
+      utils.userCanAccessProjectQuery.mockResolvedValue(false);
+      await expect(generateProfileStance({ ...input, role })).rejects.toMatchObject({
+        statusCode: 404,
+        message: "Project 7 was not found",
+      });
+      expect(utils.userCanAccessProjectQuery).toHaveBeenCalledWith(7, 9, 42);
+      expect(utils.getAttestedProfileQuery).not.toHaveBeenCalled();
+      expect(persistStance).not.toHaveBeenCalled();
+    },
+  );
+
+  it("lets a project member generate", async () => {
+    utils.userCanAccessProjectQuery.mockResolvedValue(true);
+    await expect(generateProfileStance({ ...input, role: "Editor" })).resolves.toMatchObject({
+      stanceId: 30,
+    });
+  });
+
+  it("refuses a profile whose every answer is I don't know, writing nothing", async () => {
+    utils.getProfileAnswersQuery.mockResolvedValue(
+      OOS_ANSWERS.map((a) => answer(a.question_key, null)),
+    );
+    await expect(generateProfileStance(input)).rejects.toMatchObject({ statusCode: 422 });
+    expect(persistStance).not.toHaveBeenCalled();
+  });
+
+  it("applies the answer gate to an out-of-scope profile too", async () => {
+    // No real answer set reaches this: an attested out-of-scope profile has
+    // every veto answered and no applicable non-veto question. The gate is
+    // still applied, so a later question-set change cannot skip it.
+    const real = answerGatesModule.runAnswerGates;
+    const spy = jest.spyOn(answerGatesModule, "runAnswerGates").mockImplementation((a) => {
+      const r = real(a);
+      return {
+        ...r,
+        mayProduceStance: false,
+        blocked: { ...r.blocked, stance: ["a gate refused it"] },
+      };
+    });
+    try {
+      await expect(generateProfileStance(input)).rejects.toMatchObject({
+        statusCode: 422,
+        message: expect.stringContaining("a gate refused it"),
+      });
+      expect(persistStance).not.toHaveBeenCalled();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("passes the stored version through, so a regenerate gets the next one", async () => {
+    persistStance
+      .mockResolvedValueOnce({ stanceId: 30, version: 1, sha256: "c".repeat(64) })
+      .mockResolvedValueOnce({ stanceId: 31, version: 2, sha256: "d".repeat(64) });
+    expect((await generateProfileStance(input)).version).toBe(1);
+    expect((await generateProfileStance(input)).version).toBe(2);
+  });
+
+  it("passes a lost version race through as a 409", async () => {
+    const { ConflictException } = jest.requireActual(
+      "../../domain.layer/exceptions/custom.exception",
+    );
+    persistStance.mockRejectedValue(new ConflictException("raced", "AedtStance", "version"));
+    await expect(generateProfileStance(input)).rejects.toMatchObject({ statusCode: 409 });
   });
 });
 

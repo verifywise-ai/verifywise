@@ -1,5 +1,6 @@
 /**
- * Generates a stance from a stored run, and serves a stored stance PDF.
+ * Generates a stance from a stored run, or a scope determination from an
+ * attested out-of-scope profile, and serves a stored stance PDF.
  *
  * I/O layer: reads the run, its profile and answers, and user and project
  * names through utils, then hands the composed model to render.persistStance.
@@ -8,6 +9,10 @@
  * (`run.profile_id`), never from the current profile. A run describes the
  * profile it ran against; mixing a later answer into its figures would print
  * a sentence the customer never gave beside numbers computed under another.
+ *
+ * A scope determination has no run: a profile outside the rule has no figures
+ * to compute, so runService refuses it. Its document is composed from the
+ * attested profile alone (spec open question 1).
  */
 import { createHash } from "node:crypto";
 import {
@@ -17,6 +22,7 @@ import {
   NotFoundException,
 } from "../../domain.layer/exceptions/custom.exception";
 import {
+  getAttestedProfileQuery,
   getProfileAnswersQuery,
   getProfileByIdQuery,
   getProjectQuery,
@@ -25,13 +31,16 @@ import {
   getUserNamesQuery,
 } from "../../utils/biasAudit.utils";
 import { assertProjectAccess, runNotFound } from "./projectAccess";
-import { answerMapFromRows } from "./serviceHelpers";
+import { answerMapFromRows, assertProject } from "./serviceHelpers";
 import { runAnswerGates } from "./answerGates";
 import { computeReadiness } from "./readinessScore";
 import { composeStance } from "./stance/compose";
 import { evidenceFromRun, persistStance } from "./stance/render";
 import { LL144_CONFIG, mayExportStoredRun } from "./runService";
 import type { DerivedBasis } from "./deriveBasis";
+import type { AnswerWithNotes } from "./applicability";
+import type { AedtProfile } from "../../domain.layer/models/biasAudit/aedtProfile.model";
+import type { AedtProfileAnswer } from "../../domain.layer/models/biasAudit/aedtProfileAnswer.model";
 import type { BiasAuditResult, GateFinding, OrderFinding } from "./index";
 
 export interface GenerateStanceInput {
@@ -60,6 +69,62 @@ function testedCategories(): string[] {
   return LL144_CONFIG.intersectional?.required ? [...labels, "Intersectional categories"] : labels;
 }
 
+/**
+ * Spec Review Focus 3: a profile whose every applicable answer is "I don't
+ * know" describes nothing, so no stance is produced at all rather than one
+ * that reads as a 0% result.
+ */
+function assertMayProduceStance(answers: AnswerWithNotes) {
+  const answerGates = runAnswerGates(answers);
+  if (!answerGates.mayProduceStance) {
+    throw new BusinessLogicException(
+      `A stance cannot be generated: ${answerGates.blocked.stance.join("; ")}.`,
+      "stance_answer_gate",
+    );
+  }
+  return answerGates;
+}
+
+/**
+ * Who answered each question and who attested the profile, by name. An author
+ * no longer in the organization is left unattributed rather than given a
+ * placeholder name; compose then says the author is not recorded.
+ */
+async function attributionFor(
+  rows: AedtProfileAnswer[],
+  profile: Pick<AedtProfile, "attested_by_user_id" | "attested_at">,
+  organizationId: number,
+): Promise<{
+  answerAuthors: Record<string, { user: string; date: string }>;
+  attestation: { user: string; date: string } | null;
+}> {
+  const userIds = [
+    ...new Set(
+      [...rows.map((r) => r.answered_by_user_id), profile.attested_by_user_id].filter(
+        (id): id is number => typeof id === "number",
+      ),
+    ),
+  ];
+  const names = new Map(
+    (await getUserNamesQuery(userIds, organizationId)).map((u) => [
+      u.id,
+      `${u.name} ${u.surname}`.trim(),
+    ]),
+  );
+
+  const answerAuthors: Record<string, { user: string; date: string }> = {};
+  for (const r of rows) {
+    const user = r.answered_by_user_id != null ? names.get(r.answered_by_user_id) : undefined;
+    const date = isoDate(r.answered_at);
+    if (user && date) answerAuthors[r.question_key] = { user, date };
+  }
+  const attester =
+    profile.attested_by_user_id != null ? names.get(profile.attested_by_user_id) : undefined;
+  const attestedOn = isoDate(profile.attested_at);
+  const attestation = attester && attestedOn ? { user: attester, date: attestedOn } : null;
+  return { answerAuthors, attestation };
+}
+
 export async function generateStance(input: GenerateStanceInput): Promise<GenerateStanceResult> {
   const { runId, organizationId, userId, role } = input;
 
@@ -78,43 +143,8 @@ export async function generateStance(input: GenerateStanceInput): Promise<Genera
   const rows = await getProfileAnswersQuery(profile.id!, organizationId);
   const answers = answerMapFromRows(rows, "with_notes");
 
-  // Spec Review Focus 3: a profile whose every applicable answer is
-  // "I don't know" describes nothing, so no stance is produced at all
-  // rather than one that reads as a 0% result.
-  const answerGates = runAnswerGates(answers);
-  if (!answerGates.mayProduceStance) {
-    throw new BusinessLogicException(
-      `A stance cannot be generated: ${answerGates.blocked.stance.join("; ")}.`,
-      "stance_answer_gate",
-    );
-  }
-
-  const userIds = [
-    ...new Set(
-      [...rows.map((r) => r.answered_by_user_id), profile.attested_by_user_id].filter(
-        (id): id is number => typeof id === "number",
-      ),
-    ),
-  ];
-  const names = new Map(
-    (await getUserNamesQuery(userIds, organizationId)).map((u) => [
-      u.id,
-      `${u.name} ${u.surname}`.trim(),
-    ]),
-  );
-
-  // An author no longer in the organization is left unattributed rather than
-  // given a placeholder name; compose then says the author is not recorded.
-  const answerAuthors: Record<string, { user: string; date: string }> = {};
-  for (const r of rows) {
-    const user = r.answered_by_user_id != null ? names.get(r.answered_by_user_id) : undefined;
-    const date = isoDate(r.answered_at);
-    if (user && date) answerAuthors[r.question_key] = { user, date };
-  }
-  const attester =
-    profile.attested_by_user_id != null ? names.get(profile.attested_by_user_id) : undefined;
-  const attestedOn = isoDate(profile.attested_at);
-  const attestation = attester && attestedOn ? { user: attester, date: attestedOn } : null;
+  const answerGates = assertMayProduceStance(answers);
+  const { answerAuthors, attestation } = await attributionFor(rows, profile, organizationId);
 
   const project = await getProjectQuery(run.project_id, organizationId);
   if (!project) {
@@ -155,6 +185,79 @@ export async function generateStance(input: GenerateStanceInput): Promise<Genera
     model,
     evidence,
     scoreAtGeneration: readiness.score,
+  });
+}
+
+export interface GenerateProfileStanceInput {
+  projectId: number;
+  frameworkId: number;
+  organizationId: number;
+  userId: number;
+  /** The caller's role, for the project-member rule (projectAccess.ts). */
+  role: string;
+}
+
+/**
+ * The "Scope determination" document for a project whose attested profile
+ * places the tool out of scope (spec 704-716, open question 1). It quotes the
+ * customer's determination with the attesting user and date and carries no
+ * ratios and no readiness score, because neither was computed. A profile in
+ * scope, or one whose scope is not established, gets its stance from a run.
+ */
+export async function generateProfileStance(
+  input: GenerateProfileStanceInput,
+): Promise<GenerateStanceResult> {
+  const { projectId, frameworkId, organizationId, userId, role } = input;
+  const project = await assertProject(projectId, organizationId, { userId, role });
+
+  const profile = await getAttestedProfileQuery(projectId, frameworkId, organizationId);
+  if (!profile) {
+    throw new NotFoundException(
+      "No attested profile exists for this project. Attest the profile before generating a scope determination.",
+      "AedtProfile",
+    );
+  }
+  const rows = await getProfileAnswersQuery(profile.id!, organizationId);
+  const answers = answerMapFromRows(rows, "with_notes");
+
+  const readiness = computeReadiness(answers);
+  if (readiness.scope !== "out_of_scope") {
+    throw new BusinessLogicException(
+      readiness.scope === "in_scope"
+        ? "The attested profile places this tool in scope. A stance for an in-scope profile comes from a run: record a run and generate the stance from it."
+        : "The attested profile does not establish scope. A stance for an undetermined profile comes from a run once scope is established.",
+      "stance_profile_scope",
+    );
+  }
+  const answerGates = assertMayProduceStance(answers);
+  const { answerAuthors, attestation } = await attributionFor(rows, profile, organizationId);
+
+  // No run: no result, no data findings, no derived basis. compose prints the
+  // out-of-scope expiry wording ("revisit it if the use changes") and takes
+  // no date from here, so none is invented.
+  const model = composeStance({
+    projectName: project.project_title,
+    readiness,
+    gates: answerGates,
+    answers,
+    answerAuthors,
+    result: null,
+    gateFindings: [],
+    order: [],
+    expiry: { date: null, trigger: "" },
+    derivedBasis: null,
+    attestation,
+    jobDescriptionKey: null,
+  });
+
+  return persistStance({
+    profileId: profile.id!,
+    projectId,
+    organizationId,
+    userId,
+    model,
+    evidence: null,
+    scoreAtGeneration: null,
   });
 }
 
