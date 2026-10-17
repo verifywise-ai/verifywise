@@ -394,12 +394,11 @@ export async function persistStance(
   args: PersistStanceArgs,
 ): Promise<{ stanceId: number; version: number; sha256: string }> {
   const { organizationId, userId, model, evidence } = args;
-  const kind: StanceParentKind = args.runId !== undefined ? "run" : "profile";
-  // Checked before any read, and resolveParent checks the parent, so a
-  // refusal launches no browser and writes nothing.
-  assertMayExport(evidence, model.scope, kind);
+  // resolveParent checks the parent, and renderStancePdf applies the export
+  // gate before it launches a browser; both run before the transaction, so a
+  // refusal from either writes nothing.
   const parent = await resolveParent(args);
-  const { pdf, sha256 } = await renderStancePdf(model, evidence, kind);
+  const { pdf, sha256 } = await renderStancePdf(model, evidence, parent.label);
 
   try {
     return await sequelize.transaction(async (transaction) => {
