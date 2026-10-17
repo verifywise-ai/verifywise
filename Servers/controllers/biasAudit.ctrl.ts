@@ -454,7 +454,11 @@ export async function downloadStance(req: Request, res: Response): Promise<Respo
   try {
     const stanceId = positiveInt(req.params.id, "id");
     const pdf = await getStanceDownload(stanceId, req.organizationId!, viewerOf(req));
-    await logSuccess({ ...log, eventType: "Read", description: `Downloaded stance ${stanceId}` });
+    await logSafely(logSuccess, {
+      ...log,
+      eventType: "Read",
+      description: `Downloaded stance ${stanceId}`,
+    });
     const safeName = pdf.filename.replace(/[^\w.-]/g, "_");
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${safeName}"`);
@@ -467,12 +471,16 @@ export async function downloadStance(req: Request, res: Response): Promise<Respo
       description: "downloadStance failed",
       error: error as Error,
     });
-    if (isCustomException(error)) {
+    // Only a client refusal keeps its own status and message: a 5xx
+    // CustomException (database, configuration) can carry internal detail.
+    if (isCustomException(error) && error.statusCode >= 400 && error.statusCode < 500) {
       const status = error.statusCode as 400 | 404 | 409 | 410 | 422;
       return res.status(status).json(STATUS_CODE[status](error.message));
     }
     // The detail is in the failure log above; the client gets a generic answer.
-    return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
+    return res
+      .status(500)
+      .json(STATUS_CODE[500](req.t?.("Internal server error") ?? "Internal server error"));
   }
 }
 

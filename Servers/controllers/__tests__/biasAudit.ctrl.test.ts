@@ -746,6 +746,38 @@ describe("downloadStance", () => {
     expect(t).toHaveBeenCalledWith("Internal server error");
     expect(logFailure).toHaveBeenCalledWith(expect.objectContaining({ error: internal }));
   });
+
+  it("answers a 5xx CustomException with the generic 500, not its message", async () => {
+    svc(stanceService.getStanceDownload).mockRejectedValue(
+      new CustomException("pool exhausted at db.internal:5432", {
+        code: "DATABASE_ERROR",
+        statusCode: 500,
+      }),
+    );
+    const { status, body } = await call(ctrl.downloadStance, mockReq({ params: { id: "3" } }));
+    expect(status).toBe(500);
+    expect(JSON.stringify(body)).not.toMatch(/db\.internal/);
+  });
+
+  it("sends the PDF when the success log throws", async () => {
+    const pdf = Buffer.from("%PDF-1.4");
+    svc(stanceService.getStanceDownload).mockResolvedValue({
+      filename: "s.pdf",
+      content: pdf,
+      sha256: "f".repeat(64),
+    });
+    logStructured.mockImplementation((state: unknown) => {
+      if (state === "successful") throw new Error("tenant log dir gone");
+    });
+    let answer: Awaited<ReturnType<typeof call>>;
+    try {
+      answer = await call(ctrl.downloadStance, mockReq({ params: { id: "3" } }));
+    } finally {
+      logStructured.mockReset();
+    }
+    expect(answer.res.status).toHaveBeenCalledWith(200);
+    expect(answer.res.send).toHaveBeenCalledWith(pdf);
+  });
 });
 
 describe("handleDatasetUploadError", () => {
