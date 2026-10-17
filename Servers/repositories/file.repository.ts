@@ -583,7 +583,7 @@ export async function getOrganizationFiles(
     FROM files f
     JOIN users u ON f.uploaded_by = u.id${FILE_LINK_GROUPS_JOIN_SQL}
     WHERE f.organization_id = :organizationId
-      AND (f.source IS NULL OR f.source NOT IN ('policy_editor'))
+      AND (f.source IS NULL OR f.source != 'policy_editor')
       AND ${VISIBLE_FILE_SQL("f")}
     ORDER BY f.uploaded_time DESC, f.id DESC
     LIMIT :limit`;
@@ -604,7 +604,7 @@ export async function getOrganizationFiles(
     SELECT COUNT(*) as count
     FROM files
     WHERE organization_id = :organizationId
-      AND (source IS NULL OR source NOT IN ('policy_editor'))
+      AND (source IS NULL OR source != 'policy_editor')
       AND ${VISIBLE_FILE_SQL("files")}`;
 
   const countResult = await sequelize.query(countQuery, {
@@ -758,7 +758,7 @@ export async function searchFilesByContent(
     WHERE
       f.organization_id = :organizationId
       AND f.project_id IS NULL
-      AND (f.source IS NULL OR f.source NOT IN ('policy_editor'))
+      AND (f.source IS NULL OR f.source != 'policy_editor')
       AND ${VISIBLE_FILE_SQL("f")}
       AND f.content_search IS NOT NULL
       AND f.content_search @@ plainto_tsquery('english', :q)
@@ -992,7 +992,7 @@ export async function getOrganizationFilesWithMetadata(
     LEFT JOIN users m ON f.last_modified_by = m.id
     LEFT JOIN approval_workflows aw ON aw.organization_id = f.organization_id AND f.approval_workflow_id = aw.id${FILE_LINK_GROUPS_JOIN_SQL}
     WHERE f.organization_id = :organizationId
-      AND (f.source IS NULL OR f.source NOT IN ('policy_editor'))
+      AND (f.source IS NULL OR f.source != 'policy_editor')
       AND ${VISIBLE_FILE_SQL("f")}
     ORDER BY f.uploaded_time DESC, f.id DESC
     LIMIT :limit`;
@@ -1015,7 +1015,7 @@ export async function getOrganizationFilesWithMetadata(
     SELECT COUNT(*) as count
     FROM files
     WHERE organization_id = :organizationId
-      AND (source IS NULL OR source NOT IN ('policy_editor'))
+      AND (source IS NULL OR source != 'policy_editor')
       AND ${VISIBLE_FILE_SQL("files")}`;
 
   const countResult = await sequelize.query(countQuery, {

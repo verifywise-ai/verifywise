@@ -10,24 +10,8 @@
  */
 
 import { Request, Response, NextFunction } from "express";
-import { QueryTypes } from "sequelize";
-import { sequelize } from "../database/db";
 import { STATUS_CODE } from "../utils/statusCode.utils";
-import { BIAS_AUDIT_STANCE_SOURCE } from "../utils/fileUpload.utils";
-
-/** Whether this file id is a stance PDF in the organization. */
-export async function isStanceFile(fileId: number, organizationId: number): Promise<boolean> {
-  const rows = await sequelize.query(
-    `SELECT 1 FROM files
-      WHERE id = :fileId AND organization_id = :organizationId AND source = :stanceSource
-      LIMIT 1`,
-    {
-      replacements: { fileId, organizationId, stanceSource: BIAS_AUDIT_STANCE_SOURCE },
-      type: QueryTypes.SELECT,
-    },
-  );
-  return rows.length > 0;
-}
+import { isStanceFile } from "../utils/files/visibleFiles";
 
 /** For file-manager routes taking `:id`; place after authenticateJWT and the id validator. */
 export async function refuseStanceFile(req: Request, res: Response, next: NextFunction) {

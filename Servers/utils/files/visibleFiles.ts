@@ -69,3 +69,17 @@ export async function allFilesVisibleQuery(
   );
   return Number(rows[0]?.count ?? 0) === unique.length;
 }
+
+/** Whether this file id is a stance PDF in the organization. */
+export async function isStanceFile(fileId: number, organizationId: number): Promise<boolean> {
+  const rows = await sequelize.query(
+    `SELECT 1 FROM files
+      WHERE id = :fileId AND organization_id = :organizationId AND source = :stanceSource
+      LIMIT 1`,
+    {
+      replacements: { fileId, organizationId, ...VISIBLE_FILE_REPLACEMENTS },
+      type: QueryTypes.SELECT,
+    },
+  );
+  return rows.length > 0;
+}

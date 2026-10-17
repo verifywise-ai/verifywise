@@ -1,7 +1,11 @@
 import { Request, Response } from "express";
 import { sequelize } from "../database/db";
 import { STATUS_CODE } from "../utils/statusCode.utils";
-import { VISIBLE_FILE_REPLACEMENTS, VISIBLE_FILE_SQL } from "../utils/files/visibleFiles";
+import {
+  allFilesVisibleQuery,
+  VISIBLE_FILE_REPLACEMENTS,
+  VISIBLE_FILE_SQL,
+} from "../utils/files/visibleFiles";
 import logger, { logStructured } from "../utils/logger/fileLogger";
 import {
   upsertAnalysisQuery,
@@ -511,6 +515,10 @@ export async function applySuggestions(req: Request, res: Response) {
 
     if (!suggestions || !Array.isArray(suggestions) || suggestions.length === 0) {
       return res.status(400).json(STATUS_CODE[400]("Suggestions array is required"));
+    }
+
+    if (!(await allFilesVisibleQuery([fileId], req.organizationId!))) {
+      return res.status(404).json(STATUS_CODE[404]("File not found"));
     }
 
     const userId = req.userId ? Number(req.userId) : undefined;

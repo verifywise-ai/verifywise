@@ -40,10 +40,10 @@ jest.mock("../../utils/llmKey.utils", () => ({
   getLLMProviderUrl: jest.fn(),
 }));
 
-import { analyzeFile } from "../evidenceAi.ctrl";
+import { analyzeFile, applySuggestions } from "../evidenceAi.ctrl";
 import { sequelize } from "../../database/db";
 import { getLLMKeysWithKeyQuery } from "../../utils/llmKey.utils";
-import { upsertAnalysisQuery } from "../../utils/evidenceAi.utils";
+import { applySuggestionsQuery, upsertAnalysisQuery } from "../../utils/evidenceAi.utils";
 import { parseDocument } from "../../advisor/parsers";
 import {
   analyzeEvidence,
@@ -242,5 +242,32 @@ describe("analyzeFile", () => {
     const payload = res.json.mock.calls[0][0].data;
     expect(payload.message).toContain("No object generated");
     expect(payload.message).not.toContain("no LLM key");
+  });
+});
+
+describe("applySuggestions", () => {
+  const suggestions = [{ control_id: 7, framework_type: "eu_ai_act" }];
+
+  beforeEach(() => jest.clearAllMocks());
+
+  it("answers 404 and links nothing for a file that is not visible in the organization", async () => {
+    (sequelize.query as jest.Mock).mockResolvedValueOnce([{ count: "0" }]);
+
+    const res = createRes();
+    await applySuggestions(createReq({ body: { suggestions } }), res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(applySuggestionsQuery).not.toHaveBeenCalled();
+  });
+
+  it("applies the suggestions for a visible file", async () => {
+    (sequelize.query as jest.Mock).mockResolvedValueOnce([{ count: "1" }]);
+    (applySuggestionsQuery as jest.Mock).mockResolvedValue({ applied_count: 1, links: [] });
+
+    const res = createRes();
+    await applySuggestions(createReq({ body: { suggestions } }), res);
+
+    expect(applySuggestionsQuery).toHaveBeenCalledWith(42, 1, suggestions, 1);
+    expect(res.status).toHaveBeenCalledWith(200);
   });
 });

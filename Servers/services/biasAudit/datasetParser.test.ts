@@ -63,6 +63,13 @@ describe("parseDataset", () => {
     expect(out.wrongWidthRowCount).toBe(2);
   });
 
+  it("does not count blank cells after the last column as a wrong-width row", () => {
+    const csv = "gender,race,outcome\nMale,White,1,\nFemale,Asian,0, ,\n";
+    const out = parseDataset(csv, { sex: "gender", race_ethnicity: "race", selected: "outcome" });
+    expect(out.records).toHaveLength(2);
+    expect(out.wrongWidthRowCount).toBe(0);
+  });
+
   it("does not count a trailing empty line, or a quoted newline, as a short row", () => {
     const out = parseDataset('gender,note,outcome\nMale,"a\nb",1\nFemale,x,0\n\n', {
       sex: "gender",

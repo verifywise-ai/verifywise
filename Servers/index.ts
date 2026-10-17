@@ -134,9 +134,9 @@ try {
 
       try {
         await closeSharedBrowser();
-        console.log("PDF browser closed");
+        logger.info("PDF browser closed");
       } catch (err: unknown) {
-        console.error("Error closing PDF browser:", err);
+        logger.error("Error closing PDF browser:", err);
       }
 
       try {

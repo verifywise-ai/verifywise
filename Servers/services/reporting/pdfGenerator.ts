@@ -13,15 +13,7 @@ import {
   ReportGenerationResult,
 } from "../../domain.layer/interfaces/i.reportGeneration";
 import { ANALYSIS_LABELS } from "./analyzers/mapToSummaries";
-import { closeSharedBrowser, getSharedBrowser } from "../../utils/pdfBrowser.utils";
-
-/**
- * Close the shared browser (utils/pdfBrowser.utils), on server shutdown.
- * The bias audit stance PDF renders on the same browser.
- */
-export async function closeBrowser(): Promise<void> {
-  await closeSharedBrowser();
-}
+import { getSharedBrowser } from "../../utils/pdfBrowser.utils";
 
 /**
  * Render EJS template to HTML string

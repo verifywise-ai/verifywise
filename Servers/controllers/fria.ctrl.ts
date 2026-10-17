@@ -6,6 +6,7 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import { appendToAuditLedger } from "../utils/auditLedger.utils";
 import { translateError } from "../utils/i18n.utils";
+import { NotFoundException } from "../domain.layer/exceptions/custom.exception";
 import {
   getEvidenceFilesForEntity,
   getEvidenceFilesForEntityTypes,
@@ -1027,6 +1028,9 @@ export async function linkFriaEvidence(req: Request, res: Response): Promise<Res
 
     return res.status(201).json(STATUS_CODE[201]({ linked: true }));
   } catch (error) {
+    if (error instanceof NotFoundException) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
+    }
     await logFailure({
       eventType: "Create",
       description: "Failed to link FRIA evidence",

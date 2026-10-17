@@ -7,7 +7,6 @@ jest.mock("../../utils/files/bulkFiles.utils", () => ({
 
 jest.mock("../../utils/bulkAction.utils", () => ({
   parseBulkIds: jest.fn<any>(),
-  assertOrgOwnsIds: jest.fn<any>().mockResolvedValue(undefined),
   withBulkTransaction: jest.fn<any>(),
 }));
 
@@ -58,15 +57,11 @@ jest.mock("../../utils/files/visibleFiles", () => ({
 
 import { bulkUpdateFileTags } from "../file.ctrl";
 import { bulkUpdateFileTagsQuery } from "../../utils/files/bulkFiles.utils";
-import { parseBulkIds, assertOrgOwnsIds, withBulkTransaction } from "../../utils/bulkAction.utils";
+import { parseBulkIds, withBulkTransaction } from "../../utils/bulkAction.utils";
 import { allFilesVisibleQuery } from "../../utils/files/visibleFiles";
-import {
-  ForbiddenException,
-  ValidationException,
-} from "../../domain.layer/exceptions/custom.exception";
+import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
 
 const mockParseBulkIds = parseBulkIds as jest.MockedFunction<typeof parseBulkIds>;
-const mockAssertOrgOwnsIds = assertOrgOwnsIds as jest.MockedFunction<typeof assertOrgOwnsIds>;
 const mockAllFilesVisible = allFilesVisibleQuery as jest.MockedFunction<
   typeof allFilesVisibleQuery
 >;
@@ -113,9 +108,7 @@ describe("bulkUpdateFileTags", () => {
 
     await bulkUpdateFileTags(req as Request, res as Response);
 
-    expect(mockAssertOrgOwnsIds).toHaveBeenCalledWith(
-      expect.objectContaining({ table: "files", ids: [1, 2], organizationId: 4 }),
-    );
+    expect(mockAllFilesVisible).toHaveBeenCalledWith([1, 2], 4, expect.anything());
     expect(mockBulkUpdateFileTagsQuery).toHaveBeenCalledWith(
       expect.objectContaining({ ids: [1, 2], tags: ["audit"], mode: "set" }),
     );
@@ -189,21 +182,7 @@ describe("bulkUpdateFileTags", () => {
     expect(res.status).toHaveBeenCalledWith(400);
   });
 
-  it("returns 403 when the tenant guard rejects (cross-org access)", async () => {
-    mockAssertOrgOwnsIds.mockRejectedValueOnce(
-      new ForbiddenException("Cross-tenant access", "files", "bulk_action"),
-    );
-
-    const req = createReq({ ids: [99], tags: ["a"], mode: "add" });
-    const res = createRes();
-
-    await bulkUpdateFileTags(req as Request, res as Response);
-
-    expect(res.status).toHaveBeenCalledWith(403);
-    expect(mockBulkUpdateFileTagsQuery).not.toHaveBeenCalled();
-  });
-
-  it("returns 403 when an id is a stance PDF, as for a cross-org id", async () => {
+  it("returns 403 when an id is cross-org, missing or a stance PDF", async () => {
     mockAllFilesVisible.mockResolvedValueOnce(false);
 
     const req = createReq({ ids: [1, 2], tags: ["a"], mode: "add" });

@@ -24,7 +24,7 @@ import {
   EntityType,
   LinkType,
 } from "../repositories/file.repository";
-import { parseBulkIds, assertOrgOwnsIds, withBulkTransaction } from "../utils/bulkAction.utils";
+import { parseBulkIds, withBulkTransaction } from "../utils/bulkAction.utils";
 import {
   ForbiddenException,
   NotFoundException,
@@ -721,13 +721,7 @@ export async function bulkUpdateFileTags(req: Request, res: Response): Promise<a
         },
       },
       async (transaction) => {
-        await assertOrgOwnsIds({
-          table: "files",
-          ids,
-          organizationId: req.organizationId!,
-          transaction,
-        });
-        // A stance PDF is refused exactly as an id outside the organization is.
+        // Refuses an id outside the organization, a missing id and a stance PDF alike.
         if (!(await allFilesVisibleQuery(ids, req.organizationId!, transaction))) {
           throw new ForbiddenException(
             "One or more ids are not accessible in this organization",

@@ -32,7 +32,7 @@ jest.mock("fs", () => ({
   readFileSync: jest.fn().mockReturnValue("mock content"),
 }));
 
-import { generatePDF, closeBrowser, generatePDFWithOptions } from "../pdfGenerator";
+import { generatePDF, generatePDFWithOptions } from "../pdfGenerator";
 import { ReportData } from "../../../domain.layer/interfaces/i.reportGeneration";
 
 describe("PDF Generator", () => {
@@ -147,17 +147,6 @@ describe("PDF Generator", () => {
           scale: 0.8,
         }),
       );
-    });
-  });
-
-  describe("closeBrowser", () => {
-    it("should close browser instance", async () => {
-      // First generate a PDF to ensure browser is created
-      await generatePDF(mockReportData);
-
-      await closeBrowser();
-
-      expect(mockBrowser.close).toHaveBeenCalled();
     });
   });
 });

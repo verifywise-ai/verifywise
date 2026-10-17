@@ -10,16 +10,15 @@ jest.mock("../dataCollector", () => ({
 
 jest.mock("../pdfGenerator", () => ({
   generatePDF: jest.fn(),
-  closeBrowser: jest.fn(),
 }));
 
 jest.mock("../docxGenerator", () => ({
   generateDOCX: jest.fn(),
 }));
 
-import { generateReport, getReportData, cleanup } from "../index";
+import { generateReport, getReportData } from "../index";
 import { createDataCollector } from "../dataCollector";
-import { generatePDF, closeBrowser } from "../pdfGenerator";
+import { generatePDF } from "../pdfGenerator";
 import { generateDOCX } from "../docxGenerator";
 import {
   ReportGenerationRequest,
@@ -223,14 +222,6 @@ describe("Report Generation Service", () => {
       const result = await getReportData(request, 1, 1);
 
       expect(result.branding.organizationName).toBe("Custom Org");
-    });
-  });
-
-  describe("cleanup", () => {
-    it("should call closeBrowser", async () => {
-      await cleanup();
-
-      expect(closeBrowser).toHaveBeenCalled();
     });
   });
 });
