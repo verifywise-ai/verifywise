@@ -11,10 +11,9 @@
 import { NextFunction, Request, Response } from "express";
 import multer from "multer";
 import { STATUS_CODE } from "../utils/statusCode.utils";
-import { controllerWrapper } from "../utils/controllerWrapper.utils";
+import { controllerWrapper, type HttpStatusCode } from "../utils/controllerWrapper.utils";
 import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper";
 import {
-  CustomException,
   isCustomException,
   NotFoundException,
   ValidationException,
@@ -282,53 +281,73 @@ export const confirmDerivedBasis = controllerWrapper(
 // --------------------------------------------------------------- stances
 
 /**
- * Stance generation drives a headless browser, whose failures carry paths and
- * internals. Expected refusals pass through with their own status; anything
- * else keeps its detail in the failure log and reaches the client as a generic
- * 500, never as the raw error text.
+ * A failure log that cannot itself fail the response. The client's answer
+ * must not depend on the log store being up, and a logging error's text must
+ * not reach the client in place of the generic 500.
  */
-async function withGenericServerError<T>(
-  req: Request,
-  functionName: string,
-  work: () => Promise<T>,
-): Promise<T> {
+async function logFailureSafely(params: Parameters<typeof logFailure>[0]): Promise<void> {
   try {
-    return await work();
-  } catch (error) {
-    if (isCustomException(error)) throw error;
-    await logFailure({
+    await logFailure(params);
+  } catch {
+    // Nothing further to do: the response below does not depend on the log.
+  }
+}
+
+/**
+ * The handler for the two stance-generation routes. Generation drives a
+ * headless browser, whose failures carry paths and internals, so this does
+ * not use controllerWrapper: its fallback sends the raw error text with the
+ * 500, and wrapping it would log the failure twice (once here with the real
+ * error, once there with the replacement). Here every failure is logged
+ * exactly once with the error as thrown, through logFailureSafely; an
+ * expected refusal answers with its own status and message, and anything
+ * else answers a generic "Internal server error". The logging and response
+ * shape otherwise mirror controllerWrapper.
+ */
+function stanceGenerationHandler(
+  functionName: string,
+  successDescription: (r: { stanceId: number; version: number }) => string,
+  work: (req: Request) => Promise<{ stanceId: number; version: number; sha256: string }>,
+): (req: Request, res: Response) => Promise<Response> {
+  return async (req, res) => {
+    const log = {
       functionName,
       fileName: FILE_NAME,
       userId: req.userId!,
       organizationId: req.organizationId!,
-      eventType: "Create",
-      description: `${functionName} failed unexpectedly`,
-      error: error as Error,
-    });
-    throw new CustomException(req.t?.("Internal server error") ?? "Internal server error", {
-      code: "INTERNAL_ERROR",
-      statusCode: 500,
-    });
-  }
+    };
+    logProcessing({ ...log, description: `starting ${functionName}` });
+    try {
+      const data = await work(req);
+      await logSuccess({ ...log, eventType: "Create", description: successDescription(data) });
+      return res.status(201).json(STATUS_CODE[201](data));
+    } catch (error) {
+      await logFailureSafely({
+        ...log,
+        eventType: "Create",
+        description: `${functionName} failed`,
+        error: error as Error,
+      });
+      if (isCustomException(error)) {
+        const status = error.statusCode as HttpStatusCode;
+        return res.status(status).json(STATUS_CODE[status](error.message));
+      }
+      return res
+        .status(500)
+        .json(STATUS_CODE[500](req.t?.("Internal server error") ?? "Internal server error"));
+    }
+  };
 }
 
-export const generateStance = controllerWrapper(
-  async (req) => ({
-    status: 201,
-    data: await withGenericServerError(req, "generateStance", () =>
-      generateStanceService({
-        runId: positiveInt(req.params.id, "id"),
-        organizationId: req.organizationId!,
-        ...viewerOf(req),
-      }),
-    ),
-  }),
-  {
-    functionName: "generateStance",
-    fileName: FILE_NAME,
-    eventType: "Create",
-    successDescription: (r) => `Generated bias audit stance ${r?.stanceId} (version ${r?.version})`,
-  },
+export const generateStance = stanceGenerationHandler(
+  "generateStance",
+  (r) => `Generated bias audit stance ${r.stanceId} (version ${r.version})`,
+  (req) =>
+    generateStanceService({
+      runId: positiveInt(req.params.id, "id"),
+      organizationId: req.organizationId!,
+      ...viewerOf(req),
+    }),
 );
 
 /**
@@ -336,23 +355,11 @@ export const generateStance = controllerWrapper(
  * tool out of scope. It has no run, so it is addressed by project and
  * framework; the response is the run-stance route's.
  */
-export const generateProfileStance = controllerWrapper(
-  async (req) => {
-    const scope = memberScope(req.params.projectId, req.params.frameworkId, req);
-    return {
-      status: 201,
-      data: await withGenericServerError(req, "generateProfileStance", () =>
-        generateProfileStanceService(scope),
-      ),
-    };
-  },
-  {
-    functionName: "generateProfileStance",
-    fileName: FILE_NAME,
-    eventType: "Create",
-    successDescription: (r) =>
-      `Generated bias audit scope determination ${r?.stanceId} (version ${r?.version})`,
-  },
+export const generateProfileStance = stanceGenerationHandler(
+  "generateProfileStance",
+  (r) => `Generated bias audit scope determination ${r.stanceId} (version ${r.version})`,
+  (req) =>
+    generateProfileStanceService(memberScope(req.params.projectId, req.params.frameworkId, req)),
 );
 
 /** Sends bytes, so it cannot use controllerWrapper's JSON response. */
@@ -375,7 +382,7 @@ export async function downloadStance(req: Request, res: Response): Promise<Respo
     res.setHeader("X-Content-SHA256", pdf.sha256);
     return res.status(200).send(pdf.content);
   } catch (error) {
-    await logFailure({
+    await logFailureSafely({
       ...log,
       eventType: "Read",
       description: "downloadStance failed",

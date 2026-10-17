@@ -29,6 +29,7 @@ import * as ctrl from "../biasAudit.ctrl";
 import * as profileService from "../../services/biasAudit/profileService";
 import * as runService from "../../services/biasAudit/runService";
 import * as stanceService from "../../services/biasAudit/stanceService";
+import { logFailure } from "../../utils/logger/logHelper";
 import {
   BusinessLogicException,
   ConflictException,
@@ -480,6 +481,50 @@ describe("generateProfileStance", () => {
     const { status, body } = await call(ctrl.generateProfileStance, req());
     expect(status).toBe(500);
     expect(JSON.stringify(body)).not.toContain("/srv/secret/path");
+  });
+});
+
+describe.each([
+  ["generateStance", () => ctrl.generateStance, mockReq({ params: { id: "11" } })],
+  [
+    "generateProfileStance",
+    () => ctrl.generateProfileStance,
+    mockReq({ params: { projectId: "7", frameworkId: LL144 } }),
+  ],
+] as const)("%s failure logging", (name, handler, req) => {
+  const service = () =>
+    svc(
+      name === "generateStance"
+        ? stanceService.generateStance
+        : stanceService.generateProfileStance,
+    );
+
+  it("logs the real error exactly once and answers a generic 500", async () => {
+    const raw = new Error("chromium crashed at /srv/secret/path");
+    service().mockRejectedValue(raw);
+    const { status, body } = await call(handler(), req);
+    expect(status).toBe(500);
+    expect(body.error).toBe("Internal server error");
+    expect(JSON.stringify(body)).not.toContain("/srv/secret/path");
+    expect(logFailure).toHaveBeenCalledTimes(1);
+    expect(svc(logFailure).mock.calls[0][0]).toMatchObject({ functionName: name, error: raw });
+  });
+
+  it("still answers a generic 500 when logging the failure fails", async () => {
+    service().mockRejectedValue(new Error("chromium crashed at /srv/secret/path"));
+    svc(logFailure).mockRejectedValueOnce(new Error("log store down at /var/log/secret"));
+    const { status, body } = await call(handler(), req);
+    expect(status).toBe(500);
+    expect(body.error).toBe("Internal server error");
+    expect(JSON.stringify(body)).not.toMatch(/secret/);
+  });
+
+  it("logs an expected refusal once and answers with its own status and message", async () => {
+    service().mockRejectedValue(new ConflictException("raced"));
+    const { status, body } = await call(handler(), req);
+    expect(status).toBe(409);
+    expect(body.data).toBe("raced");
+    expect(logFailure).toHaveBeenCalledTimes(1);
   });
 });
 
