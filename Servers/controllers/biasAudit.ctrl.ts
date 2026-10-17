@@ -296,19 +296,6 @@ async function logSafely<P>(log: (params: P) => Promise<void>, params: P): Promi
 }
 
 /**
- * logSafely for the synchronous processing log, which runs before a
- * handler's try: a throw there (the tenant log directory cannot be created,
- * say) would reject the handler and leave the request hanging in Express 4.
- */
-function logProcessingSafely(params: Parameters<typeof logProcessing>[0]): void {
-  try {
-    logProcessing(params);
-  } catch {
-    // Nothing further to do: the response does not depend on the log.
-  }
-}
-
-/**
  * The local server record of an unexpected cause: one line on the server
  * process's own output, which org users cannot read. Where the default logger
  * has a transport (its console transport, in development), it writes there.
@@ -431,17 +418,17 @@ function stanceGenerationHandler(
 ): (req: Request, res: Response) => Promise<Response> {
   return async (req, res) => {
     const log = stanceLog(functionName, req);
-    logProcessingSafely({ ...log, description: `starting ${functionName}` });
+    logProcessing({ ...log, description: `starting ${functionName}` });
     try {
       const data = await work(req);
       // The stance is committed: from here the answer is 201 with its data,
-      // whatever the success log does. A 500 here would make the client
-      // retry and file a second version.
-      await logSafely(logSuccess, {
-        ...log,
-        eventType: "Create",
-        description: successDescription(data),
-      });
+      // whatever the success log does, building its description included.
+      // A 500 here would make the client retry and file a second version.
+      await logSafely(
+        (d: typeof data) =>
+          logSuccess({ ...log, eventType: "Create", description: successDescription(d) }),
+        data,
+      );
       return res.status(201).json(STATUS_CODE[201](data));
     } catch (error) {
       return answerStanceFailure(
@@ -485,21 +472,33 @@ export const generateProfileStance = stanceGenerationHandler(
  */
 export async function downloadStance(req: Request, res: Response): Promise<Response> {
   const log = stanceLog("downloadStance", req);
-  logProcessingSafely({ ...log, description: "starting downloadStance" });
+  logProcessing({ ...log, description: "starting downloadStance" });
   try {
     const stanceId = positiveInt(req.params.id, "id");
     const pdf = await getStanceDownload(stanceId, req.organizationId!, viewerOf(req));
+    const safeName = pdf.filename.replace(/[^\w.-]/g, "_");
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${safeName}"`);
+    res.setHeader("X-Content-SHA256", pdf.sha256);
+    res.status(200).send(pdf.content);
+    // Logged only once the PDF has gone out, so a failed send is not also
+    // recorded as a download.
     await logSafely(logSuccess, {
       ...log,
       eventType: "Read",
       description: `Downloaded stance ${stanceId}`,
     });
-    const safeName = pdf.filename.replace(/[^\w.-]/g, "_");
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${safeName}"`);
-    res.setHeader("X-Content-SHA256", pdf.sha256);
-    return res.status(200).send(pdf.content);
+    return res;
   } catch (error) {
+    // Once the PDF headers are out there is no second answer to give.
+    if (res.headersSent) {
+      recordUnexpectedCause(log.functionName, error);
+      return res;
+    }
+    // A JSON error must not go out labelled as the PDF attachment.
+    for (const header of ["Content-Type", "Content-Disposition", "X-Content-SHA256"]) {
+      res.removeHeader(header);
+    }
     return answerStanceFailure(req, res, log, "Read", "stance download failed unexpectedly", error);
   }
 }

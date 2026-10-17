@@ -29,14 +29,30 @@ interface LogFailureParams extends LogProcessingParams {
   serverLog?: boolean;
 }
 
+/**
+ * Writes the file-log side of one log call. A failure here (the tenant log
+ * directory cannot be created, say) goes to stderr instead of being thrown,
+ * so it cannot reject the caller, hang a request, or stop the event-log write
+ * that follows it.
+ */
+function writeFileLog(write: () => void): void {
+  try {
+    write();
+  } catch (error) {
+    console.error("Failed to write to the file log:", error);
+  }
+}
+
 export function logProcessing({
   logState = "processing",
   description,
   functionName,
   fileName,
 }: LogProcessingParams): void {
-  logStructured(logState, description, functionName, fileName);
-  logger.debug(`🔄 ${description}`);
+  writeFileLog(() => {
+    logStructured(logState, description, functionName, fileName);
+    logger.debug(`🔄 ${description}`);
+  });
 }
 
 export async function logSuccess({
@@ -48,8 +64,10 @@ export async function logSuccess({
   userId,
   organizationId,
 }: LogSuccessParams): Promise<void> {
-  logStructured(logState, description, functionName, fileName);
-  logger.debug(`✅ ${description}`);
+  writeFileLog(() => {
+    logStructured(logState, description, functionName, fileName);
+    logger.debug(`✅ ${description}`);
+  });
   if (eventType != "Read") {
     try {
       await logEvent(eventType, description, userId, organizationId ?? 0);
@@ -70,8 +88,10 @@ export async function logFailure({
   organizationId,
   serverLog = true,
 }: LogFailureParams): Promise<void> {
-  logStructured(logState, description, functionName, fileName);
-  if (serverLog) logger.error(`❌ ${description}:`, error);
+  writeFileLog(() => {
+    logStructured(logState, description, functionName, fileName);
+    if (serverLog) logger.error(`❌ ${description}:`, error);
+  });
   if (eventType != "Read") {
     try {
       await logEvent("Error", `${description}: ${error.message}`, userId, organizationId ?? 0);
