@@ -25,6 +25,7 @@ import { createTestUser } from "../helpers";
 import { createTestProject } from "../../factories";
 import {
   assertProfileAttestedQuery,
+  checkProfileAttestedQuery,
   attestProfileQuery,
   createProfileVersionQuery,
   createProfileStanceQuery,
@@ -604,7 +605,7 @@ describe("bias audit query layer against the database", () => {
       return getNextProfileStanceVersionQuery(b, owner.orgId, t);
     });
     expect(next).toBe(2);
-    await expect(assertProfileAttestedQuery(a, project, owner.orgId)).rejects.toMatchObject({
+    await expect(checkProfileAttestedQuery(a, project, owner.orgId)).rejects.toMatchObject({
       statusCode: 409,
     });
   });

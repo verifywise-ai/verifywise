@@ -499,14 +499,61 @@ export interface CreateProfileStanceArgs {
 }
 
 /**
- * Refuses unless the profile is the attested one of this organization and
- * project: superseded answers 409 (re-attested while the document was being
+ * The shared verdict of the two attested-profile checks below, from the
+ * status their query read (undefined when no row matched): attested passes,
+ * superseded answers 409 (re-attested while the document was being
  * generated, so the caller can reload and retry), anything else, missing, a
  * draft, another project's or another organization's, answers 404.
+ */
+function refuseUnlessAttested(status: string | undefined, profileId: number): void {
+  if (status === "attested") return;
+  if (status === "superseded") {
+    throw new ConflictException(
+      "The profile was re-attested while the document was being generated. Reload and retry.",
+      "AedtProfile",
+      "status",
+    );
+  }
+  refuseCrossOrg("Profile", profileId);
+}
+
+/**
+ * The cheap check run before a scope determination's PDF is rendered, so a
+ * profile that is missing, another project's or no longer attested launches
+ * no browser. A plain read with no lock: it runs outside any transaction,
+ * where a lock would end with the statement anyway. The authority is the
+ * locked check inside the persist transaction (assertProfileAttestedQuery).
+ */
+export async function checkProfileAttestedQuery(
+  profileId: number,
+  projectId: number,
+  organizationId: number,
+): Promise<void> {
+  const rows = (await sequelize.query(
+    `SELECT ap.status
+       FROM aedt_profiles ap
+       JOIN projects pr ON pr.id = ap.project_id
+                       AND pr.organization_id = :organization_id
+      WHERE ap.id = :profile_id AND ap.organization_id = :organization_id
+        AND ap.project_id = :project_id`,
+    {
+      replacements: {
+        profile_id: profileId,
+        project_id: projectId,
+        organization_id: organizationId,
+      },
+      type: QueryTypes.SELECT,
+    },
+  )) as Array<{ status: string }>;
+  refuseUnlessAttested(rows[0]?.status, profileId);
+}
+
+/**
+ * Refuses unless the profile is the attested one of this organization and
+ * project (see refuseUnlessAttested), and holds it while the transaction
+ * runs.
  *
- * The row is read FOR SHARE. Without a transaction that lock ends with the
- * statement: it is the cheap check run before the PDF is rendered, so a stale
- * profile launches no browser. Inside the persist transaction the lock is
+ * The row is read FOR SHARE inside the persist transaction, and the lock is
  * held to commit. A re-attestation supersedes this row with an UPDATE, whose
  * row lock conflicts with FOR SHARE, so it waits until the stance is
  * committed; one that committed first is seen here as superseded (READ
@@ -517,7 +564,7 @@ export async function assertProfileAttestedQuery(
   profileId: number,
   projectId: number,
   organizationId: number,
-  transaction?: Transaction,
+  transaction: Transaction,
 ): Promise<void> {
   const rows = (await sequelize.query(
     `SELECT ap.status
@@ -537,16 +584,7 @@ export async function assertProfileAttestedQuery(
       transaction,
     },
   )) as Array<{ status: string }>;
-  const status = rows[0]?.status;
-  if (status === "attested") return;
-  if (status === "superseded") {
-    throw new ConflictException(
-      "The profile was re-attested while the document was being generated. Reload and retry.",
-      "AedtProfile",
-      "status",
-    );
-  }
-  refuseCrossOrg("Profile", profileId);
+  refuseUnlessAttested(rows[0]?.status, profileId);
 }
 
 /**

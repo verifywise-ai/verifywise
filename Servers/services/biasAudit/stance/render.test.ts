@@ -6,6 +6,7 @@ const utils = {
   createProfileStanceQuery: jest.fn(),
   getNextProfileStanceVersionQuery: jest.fn(),
   assertProfileAttestedQuery: jest.fn(),
+  checkProfileAttestedQuery: jest.fn(),
 };
 jest.mock("../../../utils/biasAudit.utils", () => utils);
 
@@ -616,6 +617,7 @@ describe("persistStance from an attested profile", () => {
 
   beforeEach(() => {
     uploadFile.mockResolvedValue({ id: 501 });
+    utils.checkProfileAttestedQuery.mockResolvedValue(undefined);
     utils.assertProfileAttestedQuery.mockResolvedValue(undefined);
     utils.getNextProfileStanceVersionQuery.mockResolvedValue(1);
     utils.createProfileStanceQuery.mockResolvedValue({ id: 30, version: 1 });
@@ -654,13 +656,19 @@ describe("persistStance from an attested profile", () => {
     expect(out).toEqual({ stanceId: 30, version: 1, sha256: expect.any(String) });
   });
 
-  it("checks the cited profile before rendering, and refuses without launching a browser", async () => {
+  it("checks the cited profile with an unlocked read before rendering, and refuses without launching a browser", async () => {
     const { ConflictException, NotFoundException } = jest.requireActual(
       "../../../domain.layer/exceptions/custom.exception",
     );
     await persistStance(base);
-    expect(utils.assertProfileAttestedQuery.mock.calls[0]).toEqual([5, 7, 42]);
-    expect(utils.assertProfileAttestedQuery.mock.invocationCallOrder[0]).toBeLessThan(
+    // The pre-render check is the plain read, outside any transaction; the
+    // FOR SHARE check runs only once, inside it.
+    expect(utils.checkProfileAttestedQuery.mock.calls).toEqual([[5, 7, 42]]);
+    expect(utils.checkProfileAttestedQuery.mock.invocationCallOrder[0]).toBeLessThan(
+      getSharedBrowser.mock.invocationCallOrder[0],
+    );
+    expect(utils.assertProfileAttestedQuery.mock.calls).toEqual([[5, 7, 42, tx]]);
+    expect(utils.assertProfileAttestedQuery.mock.invocationCallOrder[0]).toBeGreaterThan(
       getSharedBrowser.mock.invocationCallOrder[0],
     );
 
@@ -669,20 +677,20 @@ describe("persistStance from an attested profile", () => {
       new NotFoundException("Profile 5 was not found in this organization", "Profile"),
       new ConflictException("The profile was re-attested while the document was being generated."),
     ]) {
-      utils.assertProfileAttestedQuery.mockRejectedValueOnce(refusal);
+      utils.checkProfileAttestedQuery.mockRejectedValueOnce(refusal);
       await expect(persistStance(base)).rejects.toBe(refusal);
     }
     expect(getSharedBrowser).not.toHaveBeenCalled();
+    expect(utils.assertProfileAttestedQuery).not.toHaveBeenCalled();
     expect(uploadFile).not.toHaveBeenCalled();
     expect(utils.createProfileStanceQuery).not.toHaveBeenCalled();
   });
 
   it("locks the profile, then reads the version, then writes, all in one transaction", async () => {
     await persistStance(base);
-    // calls[0] is the pre-render check; calls[1] is the lock inside the transaction.
-    expect(utils.assertProfileAttestedQuery.mock.calls[1]).toEqual([5, 7, 42, tx]);
+    expect(utils.assertProfileAttestedQuery.mock.calls[0]).toEqual([5, 7, 42, tx]);
     const order = [
-      utils.assertProfileAttestedQuery.mock.invocationCallOrder[1],
+      utils.assertProfileAttestedQuery.mock.invocationCallOrder[0],
       utils.getNextProfileStanceVersionQuery.mock.invocationCallOrder[0],
       uploadFile.mock.invocationCallOrder[0],
       utils.createProfileStanceQuery.mock.invocationCallOrder[0],

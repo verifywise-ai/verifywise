@@ -14,6 +14,7 @@ import {
   createStanceQuery,
   createProfileStanceQuery,
   assertProfileAttestedQuery,
+  checkProfileAttestedQuery,
   getNextProfileStanceVersionQuery,
   listProfileStancesQuery,
   getAttestedProfileQuery,
@@ -457,43 +458,57 @@ describe("profile stances (scope determinations)", () => {
     });
   });
 
-  describe("assertProfileAttestedQuery", () => {
-    const lockTx = { id: "persist-tx" } as any;
-
+  describe.each([
+    [
+      "checkProfileAttestedQuery",
+      (p: number, pr: number, o: number) => checkProfileAttestedQuery(p, pr, o),
+    ],
+    [
+      "assertProfileAttestedQuery",
+      (p: number, pr: number, o: number) =>
+        assertProfileAttestedQuery(p, pr, o, { id: "persist-tx" } as any),
+    ],
+  ] as const)("%s", (_name, check) => {
     it("accepts the attested profile of this organization and project", async () => {
       mockQuery.mockResolvedValueOnce([{ status: "attested" }]);
-      await expect(assertProfileAttestedQuery(5, 7, 42)).resolves.toBeUndefined();
+      await expect(check(5, 7, 42)).resolves.toBeUndefined();
       const [sql, opts] = mockQuery.mock.calls[0];
       expect(String(sql)).toMatch(/ap\.id = :profile_id/);
       expect(String(sql)).toMatch(/ap\.organization_id = :organization_id/);
       expect(String(sql)).toMatch(/ap\.project_id = :project_id/);
       expect(String(sql)).toMatch(/pr\.organization_id = :organization_id/);
-      // Outside a transaction the share lock ends with the statement.
       expect(opts.replacements).toEqual({ profile_id: 5, project_id: 7, organization_id: 42 });
-      expect(opts.transaction).toBeUndefined();
-    });
-
-    it("reads the row FOR SHARE, inside the given transaction when there is one", async () => {
-      mockQuery.mockResolvedValueOnce([{ status: "attested" }]);
-      await assertProfileAttestedQuery(5, 7, 42, lockTx);
-      const [sql, opts] = mockQuery.mock.calls[0];
-      expect(String(sql)).toMatch(/FOR SHARE OF ap/);
-      expect(opts.transaction).toBe(lockTx);
     });
 
     it("answers 409 for a superseded profile and 404 for anything else", async () => {
       mockQuery.mockResolvedValueOnce([{ status: "superseded" }]);
-      await expect(assertProfileAttestedQuery(5, 7, 42)).rejects.toMatchObject({
+      await expect(check(5, 7, 42)).rejects.toMatchObject({
         statusCode: 409,
-        message: expect.stringMatching(/re-attested while the document was being generated/),
+        message:
+          "The profile was re-attested while the document was being generated. Reload and retry.",
       });
       for (const rows of [[], [{ status: "draft" }]]) {
         mockQuery.mockResolvedValueOnce(rows);
-        await expect(assertProfileAttestedQuery(5, 7, 42)).rejects.toMatchObject({
-          statusCode: 404,
-        });
+        await expect(check(5, 7, 42)).rejects.toMatchObject({ statusCode: 404 });
       }
     });
+  });
+
+  it("checkProfileAttestedQuery is a plain read: no lock and no transaction", async () => {
+    mockQuery.mockResolvedValueOnce([{ status: "attested" }]);
+    await checkProfileAttestedQuery(5, 7, 42);
+    const [sql, opts] = mockQuery.mock.calls[0];
+    expect(String(sql)).not.toMatch(/FOR\s+(SHARE|UPDATE|NO KEY|KEY)/i);
+    expect(opts.transaction).toBeUndefined();
+  });
+
+  it("assertProfileAttestedQuery reads the row FOR SHARE inside the given transaction", async () => {
+    const lockTx = { id: "persist-tx" } as any;
+    mockQuery.mockResolvedValueOnce([{ status: "attested" }]);
+    await assertProfileAttestedQuery(5, 7, 42, lockTx);
+    const [sql, opts] = mockQuery.mock.calls[0];
+    expect(String(sql)).toMatch(/FOR SHARE OF ap/);
+    expect(opts.transaction).toBe(lockTx);
   });
 
   it("reads the next version inside the persist transaction", async () => {

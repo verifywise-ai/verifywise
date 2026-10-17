@@ -39,6 +39,7 @@ import {
   getNextStanceVersionQuery,
   getRunProjectIdQuery,
   assertProfileAttestedQuery,
+  checkProfileAttestedQuery,
 } from "../../../utils/biasAudit.utils";
 import { BIAS_AUDIT_STANCE_SOURCE, uploadFile } from "../../../utils/fileUpload.utils";
 import { getSharedBrowser } from "../../../utils/pdfBrowser.utils";
@@ -329,11 +330,11 @@ async function resolveParent(args: PersistStanceArgs): Promise<StanceParent> {
   if (args.profileId !== undefined) {
     // The service decides that only an out-of-scope profile gets a scope
     // determination (422 otherwise); that rule is not repeated here. This
-    // cheap check only refuses a profile that is missing, another project's
-    // or no longer attested (404/409) before the browser renders. The lock
-    // taken in nextVersion, and the insert, stay the authority.
+    // cheap, unlocked check only refuses a profile that is missing, another
+    // project's or no longer attested (404/409) before the browser renders.
+    // The lock taken in nextVersion, and the insert, stay the authority.
     const { profileId, projectId } = args;
-    await assertProfileAttestedQuery(profileId, projectId, organizationId);
+    await checkProfileAttestedQuery(profileId, projectId, organizationId);
     return {
       projectId,
       label: "profile",
