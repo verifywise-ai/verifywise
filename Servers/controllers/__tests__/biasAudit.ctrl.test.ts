@@ -12,16 +12,16 @@ jest.mock("../../utils/logger/logHelper", () => {
 });
 const serverLogger = { error: jest.fn(), info: jest.fn(), warn: jest.fn(), debug: jest.fn() };
 const logStructured = jest.fn();
+const logCentralOnly = jest.fn();
 jest.mock("../../utils/logger/fileLogger", () => ({
   __esModule: true,
   default: serverLogger,
   logStructured,
+  logCentralOnly,
   redactSensitiveInfo: (s: string) => s.replace(/password=\S+/g, "password=[REDACTED]"),
 }));
 const logEvent = jest.fn<any>().mockResolvedValue(undefined);
 jest.mock("../../utils/logger/dbLogger", () => ({ logEvent }));
-const emitOtlpLog = jest.fn();
-jest.mock("../../observability/otel", () => ({ emitOtlpLog }));
 jest.mock("../../services/biasAudit/profileService", () => ({
   getApplicableQuestions: jest.fn(),
   getProfileView: jest.fn(),
@@ -529,13 +529,12 @@ describe.each([
     expect(JSON.stringify(body)).not.toContain("/srv/secret/path");
 
     // Central stack: exactly one error record, with message and stack, redacted.
-    expect(emitOtlpLog).toHaveBeenCalledTimes(1);
-    const [level, text, attributes] = emitOtlpLog.mock.calls[0] as [string, string, any];
-    expect(level).toBe("error");
+    expect(logCentralOnly).toHaveBeenCalledTimes(1);
+    const [state, text, functionName, fileName] = logCentralOnly.mock.calls[0] as string[];
+    expect([state, functionName, fileName]).toEqual(["error", name, "biasAudit.ctrl.ts"]);
     expect(text).toContain("chromium crashed at /srv/secret/path");
     expect(text).toContain(raw.stack!.split("\n")[1].trim());
     expect(text).not.toContain("hunter2");
-    expect(attributes).toMatchObject({ "log.function": name, "tenant.hash": "42" });
 
     // Development console: the same text, once; nothing else logs an error there.
     expect(serverLogger.error).toHaveBeenCalledTimes(1);
@@ -564,8 +563,8 @@ describe.each([
     expect(status).toBe(500);
     expect(body.error).toBe("Internal server error");
     expect(JSON.stringify(body)).not.toMatch(/secret_table/);
-    expect(emitOtlpLog).toHaveBeenCalledTimes(1);
-    expect(emitOtlpLog.mock.calls[0][1]).toContain("secret_table");
+    expect(logCentralOnly).toHaveBeenCalledTimes(1);
+    expect(logCentralOnly.mock.calls[0][1]).toContain("secret_table");
     expect(errorEvents()).toEqual([
       ["Error", `${name} failed: stance generation failed unexpectedly`, 9, 42],
     ]);
@@ -580,13 +579,13 @@ describe.each([
     const { status, body } = await call(handler(), req);
     expect(status).toBe(500);
     expect(body.error).toBe("Internal server error");
-    expect(emitOtlpLog).toHaveBeenCalledTimes(1);
+    expect(logCentralOnly).toHaveBeenCalledTimes(1);
     expect(logEvent).toHaveBeenCalledTimes(1);
   });
 
   it("still answers a generic 500 when the central log throws", async () => {
     service().mockRejectedValue(new Error("chromium crashed at /srv/secret/path"));
-    emitOtlpLog.mockImplementationOnce(() => {
+    logCentralOnly.mockImplementationOnce(() => {
       throw new Error("exporter down at /var/log/secret");
     });
     const { status, body } = await call(handler(), req);
@@ -621,7 +620,7 @@ describe.each([
     const { status, body } = await call(handler(), req);
     expect(status).toBe(409);
     expect(body.data).toBe("raced");
-    expect(emitOtlpLog).not.toHaveBeenCalled();
+    expect(logCentralOnly).not.toHaveBeenCalled();
     expect(serverLogger.error).toHaveBeenCalledTimes(1);
     expect(errorLines()).toHaveLength(1);
     expect(errorEvents()).toEqual([["Error", `${name} failed: raced`, 9, 42]]);

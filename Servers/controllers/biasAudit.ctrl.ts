@@ -13,8 +13,7 @@ import multer from "multer";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { controllerWrapper, type HttpStatusCode } from "../utils/controllerWrapper.utils";
 import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper";
-import logger, { redactSensitiveInfo } from "../utils/logger/fileLogger";
-import { emitOtlpLog } from "../observability/otel";
+import logger, { logCentralOnly, redactSensitiveInfo } from "../utils/logger/fileLogger";
 import {
   isCustomException,
   NotFoundException,
@@ -303,23 +302,13 @@ async function logFailureSafely(params: Parameters<typeof logFailure>[0]): Promi
  * kept out of the tenant file log and the event log, both of which org users
  * can read (GET /api/logger/logs and /api/logger/events). Cannot throw.
  */
-function recordUnexpectedCause(
-  functionName: string,
-  organizationId: number | undefined,
-  error: unknown,
-): void {
+function recordUnexpectedCause(functionName: string, error: unknown): void {
   try {
     const detail =
       error instanceof Error ? (error.stack ?? `${error.name}: ${error.message}`) : String(error);
     const text = redactSensitiveInfo(`${functionName} failed unexpectedly: ${detail}`);
     try {
-      emitOtlpLog("error", text, {
-        "tenant.hash": String(organizationId ?? "default"),
-        "log.state": "error",
-        "log.function": functionName,
-        "log.file": FILE_NAME,
-        "service.name": "verifywise-backend",
-      });
+      logCentralOnly("error", text, functionName, FILE_NAME);
     } catch {
       // The response below does not depend on the central log.
     }
@@ -389,7 +378,7 @@ function stanceGenerationHandler(
         const status = refusal.statusCode as HttpStatusCode;
         return res.status(status).json(STATUS_CODE[status](refusal.message));
       }
-      recordUnexpectedCause(functionName, req.organizationId, error);
+      recordUnexpectedCause(functionName, error);
       await logFailureSafely({
         ...log,
         eventType: "Create",

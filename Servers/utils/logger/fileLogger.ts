@@ -101,8 +101,32 @@ export default logger;
 
 let logId = 1;
 
+type LogState = "processing" | "successful" | "error";
+
+/**
+ * Ship one line to the central log stack (OTLP) only, with the attributes
+ * every structured line carries; the deployment name is added by
+ * emitOtlpLog. No-op when observability is disabled. Writes nothing to the
+ * tenant file log, so a line sent only here is not readable by org users.
+ * logStructured sends its own line through this.
+ */
+export function logCentralOnly(
+  state: LogState,
+  text: string,
+  functionName: string,
+  fileName: string,
+): void {
+  emitOtlpLog(state === "error" ? "error" : "info", text, {
+    "tenant.hash": getTenantIdForLogging(),
+    "log.state": state,
+    "log.function": functionName,
+    "log.file": fileName,
+    "service.name": "verifywise-backend",
+  });
+}
+
 export function logStructured(
-  state: "processing" | "successful" | "error",
+  state: LogState,
   description: string,
   functionName: string,
   fileName: string,
@@ -118,15 +142,8 @@ export function logStructured(
 
   tenantLogger.info(line);
 
-  // Ship the same line to the central stack (deployment name is added by
-  // emitOtlpLog). No-op when observability is disabled. File format unchanged.
-  emitOtlpLog(state === "error" ? "error" : "info", line, {
-    "tenant.hash": tenant,
-    "log.state": state,
-    "log.function": functionName,
-    "log.file": fileName,
-    "service.name": "verifywise-backend",
-  });
+  // Ship the same line to the central stack. File format unchanged.
+  logCentralOnly(state, line, functionName, fileName);
 }
 
 /**
