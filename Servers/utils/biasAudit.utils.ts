@@ -1193,6 +1193,8 @@ export interface UpdateCorpusStatusArgs {
   manifestSha256?: string;
   corpusSha256?: string;
   releaseFindings?: unknown;
+  /** measureIdOrder on the released manifest; replaces the plan's check. */
+  idOrderCheck?: unknown;
   failureCode?: string;
   /** The runner's lease token; when given, only the lease holder moves the corpus. */
   ownerToken?: string;
@@ -1222,6 +1224,7 @@ export async function updateCorpusStatusQuery(
             manifest_sha256 = COALESCE(:manifest_sha256, manifest_sha256),
             corpus_sha256 = COALESCE(:corpus_sha256, corpus_sha256),
             release_findings_json = COALESCE(CAST(:release_findings_json AS JSONB), release_findings_json),
+            id_order_check_json = COALESCE(CAST(:id_order_check_json AS JSONB), id_order_check_json),
             failure_code = COALESCE(:failure_code, failure_code),
             heartbeat_at = NOW(),
             completed_at = NOW(),
@@ -1242,6 +1245,7 @@ export async function updateCorpusStatusQuery(
         manifest_sha256: args.manifestSha256 ?? null,
         corpus_sha256: args.corpusSha256 ?? null,
         release_findings_json: json(args.releaseFindings),
+        id_order_check_json: json(args.idOrderCheck),
         failure_code: args.failureCode ?? null,
         owner_token: args.ownerToken ?? null,
         organization_id: organizationId,

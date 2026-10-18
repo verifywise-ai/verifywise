@@ -12,6 +12,7 @@ import {
 import {
   appendCorpusRecordQuery,
   claimCorpusLeaseQuery,
+  countValidCorpusRecordsQuery,
   createCorpusQuery,
   getCorpusQuery,
   listCorpusLogQuery,
@@ -23,10 +24,11 @@ import {
 } from "../../../utils/biasAudit.utils";
 import { isUniqueViolation } from "../serviceHelpers";
 import { LL144_CONFIG } from "../runService";
-import { buildAllocation, cellKey, LL144_CELLS, MIN_PER_CELL } from "./allocation";
+import { buildAllocation } from "./allocation";
 import {
   assignCandidateIds,
   MAX_SEED_ATTEMPTS,
+  measureIdOrder,
   verifyIdOrder,
   type OrderAttribute,
 } from "./assignCandidateIds";
@@ -40,6 +42,7 @@ import {
 } from "./manifest";
 import { NAME_METHOD, nameFor } from "./names";
 import { ARTIFACT_KINDS, buildPrompt, validateRecord, type ArtifactKind } from "./prompt";
+import { runReleaseGates } from "./releaseGates";
 import { getGatewaySettings } from "./settings";
 
 export type Knockout = "yes" | "no" | "dont_know";
@@ -224,6 +227,12 @@ const toEntry = (r: CorpusLogRow): GenerationLogEntry => ({
   promptHash: r.prompt_hash,
 });
 
+/** Reads the verdict of the stored comparison; anything unrecognised is "not_supplied". */
+function criteriaVerdictOf(stored: unknown): "close" | "divergent" | "not_supplied" {
+  const verdict = (stored as { verdict?: unknown } | null)?.verdict;
+  return verdict === "close" || verdict === "divergent" ? verdict : "not_supplied";
+}
+
 /** The stored outcome of a finished corpus, for an idempotent retry. */
 function summaryOf(corpus: {
   status: "complete" | "blocked";
@@ -246,8 +255,8 @@ function summaryOf(corpus: {
  * BullMQ retries it, and the retry resumes from the log with the same plan,
  * names and prompts once the lease is free.
  *
- * The corpus completes as 'complete' only when every cell holds at least
- * MIN_PER_CELL valid records; otherwise it is 'blocked' (cells_below_floor).
+ * The corpus completes as 'complete' unless a release gate stops it; then it is 'blocked', with the first stop
+ * finding's code as the failure code and every finding stored.
  */
 export async function runCorpusGeneration(args: {
   corpusId: number;
@@ -465,10 +474,27 @@ export async function runCorpusGeneration(args: {
     }
     const corpusSha256 = await hashDownload(corpusId, organizationId, kind, manifest.rows);
     const manifestSha256 = sha256(canonicalManifest(manifest.rows));
-    const belowFloor = LL144_CELLS.some(
-      (c) => (manifest.cellSizes[cellKey(c)] ?? 0) < MIN_PER_CELL,
+    // Measured on the manifest that ships, not the plan: records that never
+    // validated drop out of it.
+    const idOrderChecks = measureIdOrder(
+      manifest.rows.map((r) => ({
+        candidateId: r.candidateId,
+        demographics: { sex: r.sex, raceEthnicity: r.raceEthnicity },
+        tierKey: r.tierKey,
+      })),
+      ["sex", "raceEthnicity"],
     );
-    const status = belowFloor ? "blocked" : "complete";
+    const findings = runReleaseGates({
+      jobDescriptionKey: corpus.job_description_key,
+      recordCount: await countValidCorpusRecordsQuery(corpusId, organizationId),
+      manifestRowCount: manifest.rows.length,
+      idOrderChecks,
+      cellSizes: manifest.cellSizes,
+      modelsObserved,
+      criteriaVerdict: criteriaVerdictOf(corpus.criteria_comparison_json),
+    });
+    const firstStop = findings.find((f) => f.severity === "stop");
+    const status = firstStop ? "blocked" : "complete";
 
     assertHeld();
     const moved = await updateCorpusStatusQuery(
@@ -481,7 +507,9 @@ export async function runCorpusGeneration(args: {
         manifest: manifest.rows,
         manifestSha256,
         corpusSha256,
-        failureCode: belowFloor ? "cells_below_floor" : undefined,
+        releaseFindings: findings,
+        idOrderCheck: idOrderChecks,
+        failureCode: firstStop?.code,
         ownerToken,
       },
       organizationId,

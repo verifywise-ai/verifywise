@@ -34,7 +34,12 @@ import { JOB_DESCRIPTIONS } from "../../../structures/NYC-Local-Law-144/job-desc
 import { complete } from "./gatewayClient";
 import * as settings from "./settings";
 import { GatewayNotConfiguredError } from "./settings";
-import { assignCandidateIds, IdOrderError, verifyIdOrder } from "./assignCandidateIds";
+import {
+  assignCandidateIds,
+  IdOrderError,
+  measureIdOrder,
+  verifyIdOrder,
+} from "./assignCandidateIds";
 import { buildAllocation } from "./allocation";
 import { NAME_METHOD } from "./names";
 import { canonicalManifest } from "./manifest";
@@ -125,6 +130,16 @@ const logFor = (n: number, model = "m1"): StoredRecord[] =>
     prompt_hash: H,
     text: RESUME,
   }));
+// The last candidate never validated: it used every attempt on invalid text.
+const logForAllButOneInvalid = (n: number): StoredRecord[] => [
+  ...logFor(n - 1),
+  ...[...Array(MAX_ATTEMPTS)].map((_, i) => ({
+    ...logFor(n)[n - 1],
+    attempt: i + 1,
+    validation_status: "invalid" as const,
+    text: "",
+  })),
+];
 const pageOf = (n: number) =>
   [...Array(n)].map((_, i) => ({ candidate_id: id(i + 1), text: RESUME }));
 
@@ -183,6 +198,7 @@ beforeEach(() => {
     });
     return { id: store.length };
   });
+  mockUtils.countValidCorpusRecordsQuery.mockImplementation(async () => latestValid().length);
   mockUtils.listLatestValidRecordsPageQuery.mockImplementation(
     async (_c: number, _o: number, after: string, limit: number) =>
       latestValid()
@@ -373,8 +389,63 @@ describe("runCorpusGeneration", () => {
       })),
     ]);
     await expect(run()).resolves.toMatchObject({ status: "blocked", recordCount: 699 });
-    expect(done()).toMatchObject({ status: "blocked", failureCode: "cells_below_floor" });
+    expect(done()).toMatchObject({ status: "blocked", failureCode: "cell_too_small" });
     expect(mockComplete).not.toHaveBeenCalled();
+  });
+
+  it("stores the findings and blocks when a gate stops, naming the first stop as the failure code", async () => {
+    seedLog(logForAllButOneInvalid(700));
+    await run();
+    expect(done().status).toBe("blocked");
+    expect(done().releaseFindings.map((f: any) => f.code)).toContain("cell_too_small");
+    expect(done().failureCode).toBe(done().releaseFindings[0].code);
+  });
+
+  it("measures ID order on the manifest it releases, not on the plan", async () => {
+    seedLog(logFor(700));
+    await run();
+    const expected = measureIdOrder(
+      done().manifest.map((r: any) => ({
+        candidateId: r.candidateId,
+        demographics: { sex: r.sex, raceEthnicity: r.raceEthnicity },
+        tierKey: r.tierKey,
+      })),
+      ["sex", "raceEthnicity"],
+    );
+    expect(done().idOrderCheck).toEqual(expected);
+    expect(done().status).toBe("complete");
+    expect(done().releaseFindings).toEqual([]);
+    expect(done().failureCode).toBeUndefined();
+  });
+
+  it("stops when the valid-record count disagrees with the manifest", async () => {
+    seedLog(logFor(700));
+    mockUtils.countValidCorpusRecordsQuery.mockResolvedValue(340);
+    await run();
+    expect(done()).toMatchObject({ status: "blocked", failureCode: "manifest_count_mismatch" });
+  });
+
+  it("warns, without blocking, on a divergent comparison and on several models", async () => {
+    mockUtils.getCorpusQuery.mockResolvedValue(
+      corpusRow({ criteria_comparison_json: { verdict: "divergent" } }),
+    );
+    seedLog([...logFor(350, "m1"), ...logFor(700, "m2").slice(350)]);
+    await run();
+    expect(done().status).toBe("complete");
+    expect(
+      done()
+        .releaseFindings.map((f: any) => f.code)
+        .sort(),
+    ).toEqual(["criteria_divergent", "multiple_models"]);
+  });
+
+  it("reads an unrecognised stored verdict as not supplied", async () => {
+    mockUtils.getCorpusQuery.mockResolvedValue(
+      corpusRow({ criteria_comparison_json: { verdict: "nonsense" } }),
+    );
+    seedLog(logFor(700));
+    await run();
+    expect(done().releaseFindings).toEqual([]);
   });
 
   it("never completes a corpus with no valid records", async () => {

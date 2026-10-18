@@ -779,12 +779,17 @@ describe("corpora and the record log", () => {
           manifest: [{ candidateId: "C0001" }],
           manifestSha256: "b".repeat(64),
           corpusSha256: "c".repeat(64),
+          idOrderCheck: { sex: { observed: 1, expected: 1, fraction: 1 } },
         },
         42,
       ),
     ).resolves.toBe(true);
     const [sql, opts] = mockQuery.mock.calls[0];
     expect(sql).toMatch(/status = 'running'/);
+    expect(sql).toMatch(/id_order_check_json = COALESCE\(CAST\(:id_order_check_json AS JSONB\)/);
+    expect(opts.replacements.id_order_check_json).toBe(
+      JSON.stringify({ sex: { observed: 1, expected: 1, fraction: 1 } }),
+    );
     expect(opts.replacements).toMatchObject({
       status: "complete",
       record_count: 700,
