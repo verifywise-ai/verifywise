@@ -57,12 +57,18 @@ export const attestAedtProfile = (projectId: number) =>
 export const generateAedtScopeDetermination = (projectId: number) =>
   aedtBiasAuditService.generateScopeDetermination(projectId, LL144_FRAMEWORK_ID);
 
-export const createAedtRun = (projectId: number, file: File, mapping: Record<string, string>) =>
+export const createAedtRun = (
+  projectId: number,
+  file: File,
+  mapping: Record<string, string>,
+  jobDescription: string,
+) =>
   aedtBiasAuditService.createRun({
     projectId,
     frameworkId: LL144_FRAMEWORK_ID,
     file,
     mapping,
+    jobDescription,
   });
 
 export const listAedtRuns = (projectId: number) =>

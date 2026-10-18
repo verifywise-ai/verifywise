@@ -298,6 +298,30 @@ describe("createRun", () => {
     expect(runService.createRun).not.toHaveBeenCalled();
   });
 
+  it("hands the service the job description as a key, and null when absent or blank", async () => {
+    svc(runService.createRun).mockResolvedValue({ runId: 11, readiness: {}, outcome: {} });
+    await call(
+      ctrl.createRun,
+      mockReq({ file, body: { ...body, jobDescription: "  Senior  Engineer " } }),
+    );
+    await call(ctrl.createRun, mockReq({ file, body }));
+    await call(ctrl.createRun, mockReq({ file, body: { ...body, jobDescription: "   " } }));
+    const keys = svc(runService.createRun).mock.calls.map((c: any[]) => c[0].jobDescriptionKey);
+    expect(keys).toEqual(["senior-engineer", null, null]);
+  });
+
+  it("400s a job description that is not text, too long, or has no letter or digit", async () => {
+    for (const jobDescription of [["a"], "x".repeat(201), "—!?"]) {
+      const { status, body: out } = await call(
+        ctrl.createRun,
+        mockReq({ file, body: { ...body, jobDescription } }),
+      );
+      expect(status).toBe(400);
+      expect(out.data).toMatch(/job ?description/i);
+    }
+    expect(runService.createRun).not.toHaveBeenCalled();
+  });
+
   it("hands the service trimmed column names", async () => {
     svc(runService.createRun).mockResolvedValue({ runId: 11, readiness: {}, outcome: {} });
     await call(

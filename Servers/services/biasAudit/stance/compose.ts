@@ -18,6 +18,7 @@ import type { AnswerGateResult } from "../answerGates";
 import type { DerivedBasis } from "../deriveBasis";
 import type { ReadinessResult } from "../readinessScore";
 import { FORBIDDEN_WORDS } from "./vocabulary";
+import { jobDescriptionText } from "../jobDescription";
 import type { BiasAuditResult, GateFinding, OrderFinding } from "../index";
 
 export interface StanceSection {
@@ -26,7 +27,8 @@ export interface StanceSection {
   body: string;
   /**
    * Customer-authored strings that appear verbatim in `body`: answer notes,
-   * the tool name and the names of the people who answered. The renderer
+   * the tool name, the job title tested and the names of the people who
+   * answered. The renderer
    * puts each in one structural marker that the vocabulary lint skips, so
    * the customer's words are never altered and everything else is linted.
    */
@@ -319,7 +321,7 @@ function readinessBody(args: ComposeStanceArgs): string {
 
 function testedBody(args: ComposeStanceArgs): string {
   const role = args.jobDescriptionKey
-    ? `Job description tested: ${args.jobDescriptionKey.replace(/-/g, " ")}.`
+    ? `Job description tested: ${jobDescriptionText(args.jobDescriptionKey)}.`
     : "Job description tested: not recorded.";
   const lines = [
     role,
@@ -381,6 +383,14 @@ function withCustomerText(args: ComposeStanceArgs, section: StanceSection): Stan
     }
   }
   if (args.projectName) candidates.push({ lead: "Tool: ", text: args.projectName, tail: "." });
+  // The customer's job title, which may hold any word.
+  if (args.jobDescriptionKey) {
+    candidates.push({
+      lead: "Job description tested: ",
+      text: jobDescriptionText(args.jobDescriptionKey),
+      tail: ".",
+    });
+  }
 
   const seen = new Set<string>();
   const found = candidates.filter((c) => {

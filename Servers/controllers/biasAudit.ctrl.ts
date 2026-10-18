@@ -38,6 +38,7 @@ import {
   generateStance as generateStanceService,
   getStanceDownload,
 } from "../services/biasAudit/stanceService";
+import { JOB_DESCRIPTION_INPUT_MAX, jobDescriptionKey } from "../services/biasAudit/jobDescription";
 import { nycLocalLaw144Structure } from "../structures/NYC-Local-Law-144/nyc-local-law-144.structure";
 
 const FILE_NAME = "biasAudit.ctrl.ts";
@@ -166,6 +167,33 @@ function parseMapping(raw: unknown): Record<string, string> {
   return mapping;
 }
 
+/**
+ * The optional job title the run tested, reduced to the key the run stores.
+ * Absent or blank means not recorded; a title with no letter or digit, or
+ * longer than the limit, is refused rather than stored as something else.
+ */
+function parseJobDescription(raw: unknown): string | null {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw !== "string") {
+    throw new ValidationException("jobDescription must be text", "jobDescription");
+  }
+  if (raw.trim() === "") return null;
+  if (raw.length > JOB_DESCRIPTION_INPUT_MAX) {
+    throw new ValidationException(
+      `The job description must be at most ${JOB_DESCRIPTION_INPUT_MAX} characters`,
+      "jobDescription",
+    );
+  }
+  const key = jobDescriptionKey(raw);
+  if (key === null) {
+    throw new ValidationException(
+      "The job description must contain at least one letter or digit",
+      "jobDescription",
+    );
+  }
+  return key;
+}
+
 // ---------------------------------------------------------------- intake
 
 export const getQuestions = controllerWrapper(
@@ -221,10 +249,12 @@ export const createRun = controllerWrapper(
       throw new ValidationException("Attach the dataset as a CSV file in the field 'file'", "file");
     }
     const mapping = parseMapping(req.body?.mapping);
+    const jobDescriptionKey = parseJobDescription(req.body?.jobDescription);
     const result = await createRunService({
       ...scope,
       data: file.buffer,
       mapping,
+      jobDescriptionKey,
     });
     return { status: 201, data: result };
   },

@@ -255,6 +255,18 @@ describe("the role tested is named", () => {
     const s = composeStance({ ...base, jobDescriptionKey: null });
     expect(s.blankFields.map((b) => b.field)).toContain("job_description");
   });
+
+  it("marks the job title as the customer's words, so a forbidden word in it is quoted", () => {
+    const s = composeStance({ ...base, jobDescriptionKey: "certified-nurse" });
+    const tested = section(s, "what_was_tested");
+    expect(tested.body).toContain("Job description tested: certified nurse.");
+    expect(tested.customerText).toContainEqual({
+      lead: "Job description tested: ",
+      text: "certified nurse",
+      tail: ".",
+    });
+    expect(s.blankFields.map((b) => b.field)).not.toContain("job_description");
+  });
 });
 
 describe("derived basis", () => {

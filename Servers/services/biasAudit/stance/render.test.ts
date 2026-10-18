@@ -202,6 +202,26 @@ describe("customer quotes and the vocabulary lint", () => {
     expect(findForbiddenWords(html)).toEqual([]);
   });
 
+  it("quotes a job title with a forbidden word rather than refusing the document", () => {
+    const tested = {
+      ...model,
+      sections: model.sections.map((s: any) =>
+        s.key === "what_was_tested"
+          ? {
+              ...s,
+              body: "Job description tested: certified nurse.",
+              customerText: [
+                { lead: "Job description tested: ", text: "certified nurse", tail: "." },
+              ],
+            }
+          : s,
+      ),
+    };
+    const html = renderStanceHtml(tested, evidence);
+    expect(html).toMatch(/<span data-customer-text>certified nurse<\/span>/);
+    expect(findForbiddenWords(html)).toEqual([]);
+  });
+
   it("still catches a forbidden word in our own text", () => {
     const own = {
       ...quoted,

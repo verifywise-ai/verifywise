@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { Alert, Box, Stack, Typography } from "@mui/material";
 import { Upload } from "lucide-react";
 import Select from "../../components/Inputs/Select";
+import Field from "../../components/Inputs/Field";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { palette } from "../../themes/palette";
 import { useCreateAedtRun } from "../../../application/hooks/useAedtBiasAudit";
@@ -15,6 +16,8 @@ import { cardSx, titleSx, twoColumnSx } from "./styles";
 
 /** The server's upload limit (`DATASET_MAX_BYTES`, 30 MB). */
 const MAX_BYTES = 30 * 1024 * 1024;
+/** The server's limit on the job title (`JOB_DESCRIPTION_INPUT_MAX`). */
+const JOB_DESCRIPTION_MAX = 200;
 const UNMAPPED = "";
 
 interface RunUploadProps {
@@ -43,6 +46,7 @@ const RunUpload = ({ projectId, metric, canEdit, blockedReason, onCreated }: Run
   const [headers, setHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [fileError, setFileError] = useState<string | null>(null);
+  const [jobDescription, setJobDescription] = useState("");
   // Each pick bumps this, so a slow header read for an earlier file cannot
   // overwrite the state of a later one.
   const pickRef = useRef(0);
@@ -98,13 +102,22 @@ const RunUpload = ({ projectId, metric, canEdit, blockedReason, onCreated }: Run
       : metric === null
         ? "The attested profile does not say who applies the cutoff. Answer it, save and attest again, so the module knows whether to compute selection rates or scoring rates."
         : null);
-  const runDisabled = runReason !== null || !file || !mapping[outcomeKey] || createRun.isPending;
+  const jobDescriptionTooLong = jobDescription.length > JOB_DESCRIPTION_MAX;
+  const runDisabled =
+    runReason !== null ||
+    !file ||
+    !mapping[outcomeKey] ||
+    jobDescriptionTooLong ||
+    createRun.isPending;
 
   const handleRun = () => {
     if (runDisabled || !file) return;
     const sent: Record<string, string> = {};
     for (const f of fields) if (mapping[f.key]) sent[f.key] = mapping[f.key];
-    createRun.mutate({ file, mapping: sent }, { onSuccess: (r) => onCreated(r.runId) });
+    createRun.mutate(
+      { file, mapping: sent, jobDescription },
+      { onSuccess: (r) => onCreated(r.runId) },
+    );
   };
 
   const items = [
@@ -179,6 +192,17 @@ const RunUpload = ({ projectId, metric, canEdit, blockedReason, onCreated }: Run
                   sx={{ width: "100%", maxWidth: "420px" }}
                 />
               ))}
+              <Field
+                id="aedt-job-description"
+                label="Job description tested"
+                isOptional
+                placeholder="For example, Account executive"
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
+                error={jobDescriptionTooLong ? "Use at most 200 characters." : undefined}
+                helperText="The stance names it. Runs on different job descriptions are not joined in the trend."
+                sx={{ width: "100%", maxWidth: "420px" }}
+              />
             </Stack>
           )}
 

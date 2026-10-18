@@ -2,12 +2,12 @@ import { act, fireEvent, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
-const { readHeaders } = vi.hoisted(() => ({ readHeaders: vi.fn() }));
+const { readHeaders, mutate } = vi.hoisted(() => ({ readHeaders: vi.fn(), mutate: vi.fn() }));
 
 vi.mock("../csvHeaders", () => ({ readCsvHeaders: readHeaders }));
 
 vi.mock("../../../../application/hooks/useAedtBiasAudit", () => ({
-  useCreateAedtRun: () => ({ mutate: vi.fn(), reset: vi.fn(), isPending: false, error: null }),
+  useCreateAedtRun: () => ({ mutate, reset: vi.fn(), isPending: false, error: null }),
 }));
 
 import RunUpload from "../RunUpload";
@@ -29,7 +29,48 @@ function renderUpload(metric: "selection_rate" | "scoring_rate" | null = "select
 }
 
 describe("RunUpload", () => {
-  beforeEach(() => readHeaders.mockReset());
+  beforeEach(() => {
+    readHeaders.mockReset();
+    mutate.mockReset();
+  });
+
+  async function pickAndMapOutcome() {
+    readHeaders.mockResolvedValueOnce(["gender", "outcome"]);
+    fireEvent.change(screen.getByTestId("aedt-dataset-input"), {
+      target: { files: [csv("d.csv")] },
+    });
+    await screen.findByText("d.csv");
+    // MUI Select opens on mouse down; the outcome select is the last of the mapping selects.
+    const selects = screen.getAllByRole("combobox");
+    fireEvent.mouseDown(selects[selects.length - 1]);
+    fireEvent.click(await screen.findByRole("option", { name: "outcome" }));
+  }
+
+  it("sends the job description tested with the run", async () => {
+    renderUpload();
+    await pickAndMapOutcome();
+    fireEvent.change(screen.getByLabelText(/job description tested/i), {
+      target: { value: "Account executive" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /run measures/i }));
+    expect(mutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mapping: { selected: "outcome" },
+        jobDescription: "Account executive",
+      }),
+      expect.anything(),
+    );
+  });
+
+  it("withholds the run while the job description is over the server's limit", async () => {
+    renderUpload();
+    await pickAndMapOutcome();
+    fireEvent.change(screen.getByLabelText(/job description tested/i), {
+      target: { value: "x".repeat(201) },
+    });
+    expect(screen.getByText("Use at most 200 characters.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /run measures/i })).toBeDisabled();
+  });
 
   it("keeps the later file when an earlier file's header read finishes last", async () => {
     const slow = deferred<string[]>();

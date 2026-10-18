@@ -52,7 +52,11 @@ describe("useAedtBiasAudit invalidation", () => {
     const { wrapper, invalidateSpy } = createWrapper();
     const { result } = renderHook(() => useCreateAedtRun(7), { wrapper });
     await act(async () => {
-      await result.current.mutateAsync({ file: new File(["a"], "a.csv"), mapping: {} });
+      await result.current.mutateAsync({
+        file: new File(["a"], "a.csv"),
+        mapping: {},
+        jobDescription: "",
+      });
     });
     expect(invalidateSpy).toHaveBeenCalledTimes(1);
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: aedtQueryKeys.runs(7) });
@@ -74,7 +78,11 @@ describe("useAedtBiasAudit invalidation", () => {
     await waitFor(() => expect(result.current.trend.isSuccess).toBe(true));
     expect(getTrend).toHaveBeenCalledTimes(1);
     await act(async () => {
-      await result.current.create.mutateAsync({ file: new File(["a"], "a.csv"), mapping: {} });
+      await result.current.create.mutateAsync({
+        file: new File(["a"], "a.csv"),
+        mapping: {},
+        jobDescription: "",
+      });
     });
     await waitFor(() => expect(getTrend).toHaveBeenCalledTimes(2));
     expect(getTrend).toHaveBeenLastCalledWith(7);
@@ -102,7 +110,7 @@ describe("useAedtBiasAudit invalidation", () => {
       const { result } = renderHook(() => useCreateAedtRun(7), { wrapper });
       await act(async () => {
         await result.current
-          .mutateAsync({ file: new File(["a"], "a.csv"), mapping: {} })
+          .mutateAsync({ file: new File(["a"], "a.csv"), mapping: {}, jobDescription: "" })
           .catch(() => undefined);
       });
       expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: aedtQueryKeys.profile(7) });
@@ -118,7 +126,7 @@ describe("useAedtBiasAudit invalidation", () => {
       const { result } = renderHook(() => useCreateAedtRun(7), { wrapper });
       await act(async () => {
         await result.current
-          .mutateAsync({ file: new File(["a"], "a.csv"), mapping: {} })
+          .mutateAsync({ file: new File(["a"], "a.csv"), mapping: {}, jobDescription: "" })
           .catch(() => undefined);
       });
       expect(invalidateSpy).not.toHaveBeenCalled();
@@ -162,7 +170,7 @@ describe("useAedtBiasAudit invalidation", () => {
     const { result } = renderHook(() => useCreateAedtRun(7), { wrapper });
     await act(async () => {
       await result.current
-        .mutateAsync({ file: new File(["a"], "a.csv"), mapping: {} })
+        .mutateAsync({ file: new File(["a"], "a.csv"), mapping: {}, jobDescription: "" })
         .catch(() => undefined);
     });
     expect(invalidateSpy).not.toHaveBeenCalled();

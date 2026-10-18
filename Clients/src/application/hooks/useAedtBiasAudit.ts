@@ -139,8 +139,8 @@ const PROFILE_REFUSALS = new Set([400, 404, 409]);
 export function useCreateAedtRun(projectId: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (args: { file: File; mapping: Record<string, string> }) =>
-      createAedtRun(projectId, args.file, args.mapping),
+    mutationFn: (args: { file: File; mapping: Record<string, string>; jobDescription: string }) =>
+      createAedtRun(projectId, args.file, args.mapping, args.jobDescription),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: aedtQueryKeys.runs(projectId) });
     },

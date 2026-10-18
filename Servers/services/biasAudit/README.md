@@ -4,15 +4,15 @@ Self-service LL 144 module. It has two layers:
 
 - **The pure core**: `engine/`, `index.ts`, `dataGates.ts`, `idOrderCheck.ts`,
   `datasetParser.ts`, `applicability.ts`, `answerGates.ts`, `readinessScore.ts`,
-  `deriveBasis.ts`, `profileDecision.ts`, `trendSeries.ts`, and in `stance/`, `compose.ts`,
-  `sectionChecker.ts`, `vocabulary.ts` and `labels.ts`. It imports nothing from outside this
-  directory and `structures/NYC-Local-Law-144/`, and performs no I/O.
+  `deriveBasis.ts`, `profileDecision.ts`, `trendSeries.ts`, `jobDescription.ts`, and in
+  `stance/`, `compose.ts`, `sectionChecker.ts`, `vocabulary.ts` and `labels.ts`. It imports
+  nothing from outside this directory and `structures/NYC-Local-Law-144/`, and performs no I/O.
 - **The I/O layer**: `profileService.ts`, `runService.ts`, `stanceService.ts`,
   `serviceHelpers.ts`, `projectAccess.ts` and `stance/render.ts`. These read and write the
   module's own tables, read `projects`, `projects_members` and `users` (project access and
   attribution names), render the stance PDF, store it as a `files` row and read that row back
-  to serve the download (410 when it is gone). Each is listed by
-  exact path, with its reason, in `__tests__/moduleIndependence.test.ts`.
+  to serve the download (410 when it is gone). Each is listed by exact path, with its reason,
+  in `__tests__/moduleIndependence.test.ts`.
 
 Neither layer imports from EvalServer, AIGateway or another VerifyWise module's services
 (`__tests__/moduleRules.test.ts`, `__tests__/moduleIndependence.test.ts`).
@@ -62,6 +62,7 @@ result must carry, such as the § 5-301(c) count of records in an unknown catego
 | `deriveBasis.ts`              | The per-category § 5-302(b) basis and its expiry triggers            |
 | `profileDecision.ts`          | Readiness and metric from the attested answers                       |
 | `trendSeries.ts`              | Lowest ratio per run, segmented at configuration changes             |
+| `jobDescription.ts`           | The job title tested, as the key a run stores                        |
 | `stance/compose.ts`           | The stance document model and its section lists                      |
 | `stance/render.ts`            | HTML and PDF rendering behind the export gate                        |
 | `stance/sectionChecker.ts`    | Required sections, read from the rendered HTML                       |
@@ -117,6 +118,12 @@ cutoff answer does not establish the metric. When the answers withhold ratios or
 rate, the run is stored with a `stop` finding and no result. The upload is hashed (SHA-256)
 and not retained.
 
+The upload may name the job description tested (`jobDescription`, at most 200 characters).
+`jobDescription.ts` reduces it to `job_description_key`: lower case, words joined by hyphens,
+at most 64 characters, so titles that differ only in case, spacing or punctuation are one job.
+A title with no letter or digit is refused (400); a blank one stores null. The stance prints
+the key with spaces as the customer's words, and leaves a field to complete when it is null.
+
 `deriveBasis` combines `data.held` (per characteristic) with `data.basis` (for the run) into a
 basis for sex, for race and ethnicity, and for the intersectional categories; the intersection
 is historical only when both halves are. Each test-data basis carries an expiry trigger that
@@ -164,9 +171,8 @@ non-excluded group, the category holding it, and whether any non-excluded group 
 - **A caveat point:** a run whose stored findings would not allow export. Its ratio is shown
   with that caveat.
 - **A break**, labelled with every reason, between consecutive plotted runs whose profile
-  version, question-set version, job description or metric differ. The job-description reason
-  does not fire today: `createRun` never sets `job_description_key`, so every run stores null
-  and a change of job description alone opens no new segment.
+  version, question-set version, job description (`job_description_key`, null counting as
+  one value) or metric differ.
 
 `GET /runs/trend` returns only the series, not the stored results. `GET /runs/:id` does return
 the whole run row, `result_json` included.

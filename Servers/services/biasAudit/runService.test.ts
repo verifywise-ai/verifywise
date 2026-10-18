@@ -57,7 +57,13 @@ const MAPPING = { sex: "gender", race_ethnicity: "race", selected: "outcome" };
 // Tests write the file as text; the service receives the raw upload bytes.
 const run = (over: Record<string, unknown> = {}) => {
   const { csv = CSV(), ...rest } = over;
-  return createRun({ ...base, data: Buffer.from(csv as string), mapping: MAPPING, ...rest });
+  return createRun({
+    ...base,
+    data: Buffer.from(csv as string),
+    mapping: MAPPING,
+    jobDescriptionKey: null,
+    ...rest,
+  });
 };
 const stored = () => utils.createRunQuery.mock.calls[0][0];
 
@@ -78,6 +84,14 @@ describe("createRun", () => {
     expect(out.runId).toBe(11);
     expect(out.outcome.result).not.toBeNull();
     expect(out.readiness.scope).toBe("in_scope");
+  });
+
+  it("stores the job description key it is given, and null when none is", async () => {
+    await run({ jobDescriptionKey: "senior-engineer" });
+    expect(stored().jobDescriptionKey).toBe("senior-engineer");
+    utils.createRunQuery.mockClear();
+    await run();
+    expect(stored().jobDescriptionKey).toBeNull();
   });
 
   it("filters the attested-profile and answers reads by organization", async () => {

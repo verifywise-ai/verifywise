@@ -89,6 +89,8 @@ export interface CreateRunInput {
   data: Buffer;
   /** Canonical key (a category key, `selected` or `score`) to the file's column header. */
   mapping: Record<string, string>;
+  /** The job description tested, as a key (jobDescription.ts); null when not given. */
+  jobDescriptionKey: string | null;
 }
 
 export interface CreateRunResult {
@@ -118,7 +120,8 @@ function oneYearFromToday(): string {
 }
 
 export async function createRun(input: CreateRunInput): Promise<CreateRunResult> {
-  const { projectId, frameworkId, organizationId, userId, role, data, mapping } = input;
+  const { projectId, frameworkId, organizationId, userId, role, data, mapping, jobDescriptionKey } =
+    input;
   await assertProjectAccess(projectId, organizationId, { userId, role });
 
   const profile = await getAttestedProfileQuery(projectId, frameworkId, organizationId);
@@ -281,6 +284,7 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
         projectId,
         profileId: profile.id!,
         presetId: config.presetId,
+        jobDescriptionKey,
         metric,
         threshold: config.threshold,
         thresholdSource: LL144_THRESHOLD_SOURCE,

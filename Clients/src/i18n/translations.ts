@@ -9279,6 +9279,11 @@ export const translations: Record<string, Record<string, string>> = {
       "Ein Einstellungstool gegen das New Yorker Local Law 144 testen und Ihre Position festhalten",
     "This is our reading of your answers about the data you hold, not your statement.":
       "Dies ist unsere Auslegung Ihrer Antworten zu den Daten, über die Sie verfügen, nicht Ihre Aussage.",
+    "Job description tested": "Getestete Stellenbeschreibung",
+    "For example, Account executive": "Zum Beispiel Account Executive",
+    "The stance names it. Runs on different job descriptions are not joined in the trend.":
+      "Die Stellungnahme nennt sie. Läufe mit unterschiedlichen Stellenbeschreibungen werden im Verlauf nicht verbunden.",
+    "Use at most 200 characters.": "Verwenden Sie höchstens 200 Zeichen.",
     "Browse independently assessed AI applications and track the ones that matter to your organization.":
       "Unabhängig bewertete KI-Anwendungen durchsuchen und die für Ihre Organisation relevanten verfolgen.",
     "Choose who receives a notification when a tracked app's assessment changes materially. If no recipients are set, organization admins are notified by default.":
@@ -20015,6 +20020,11 @@ export const translations: Record<string, Record<string, string>> = {
       "Tester un outil de recrutement au regard de la Local Law 144 de New York et consigner votre position",
     "This is our reading of your answers about the data you hold, not your statement.":
       "Ceci est notre lecture de vos réponses sur les données que vous détenez, et non votre déclaration.",
+    "Job description tested": "Description de poste testée",
+    "For example, Account executive": "Par exemple, chargé de clientèle",
+    "The stance names it. Runs on different job descriptions are not joined in the trend.":
+      "La prise de position la mentionne. Les exécutions portant sur des descriptions de poste différentes ne sont pas reliées dans la tendance.",
+    "Use at most 200 characters.": "Utilisez au maximum 200 caractères.",
     "Browse independently assessed AI applications and track the ones that matter to your organization.":
       "Parcourir les applications IA évaluées indépendamment et suivre celles qui comptent pour votre organisation.",
     "Choose who receives a notification when a tracked app's assessment changes materially. If no recipients are set, organization admins are notified by default.":
@@ -30660,6 +30670,11 @@ export const translations: Record<string, Record<string, string>> = {
       "Probar una herramienta de contratación frente a la Local Law 144 de Nueva York y registrar su posición",
     "This is our reading of your answers about the data you hold, not your statement.":
       "Esta es nuestra interpretación de sus respuestas sobre los datos que tiene, no su declaración.",
+    "Job description tested": "Descripción del puesto evaluada",
+    "For example, Account executive": "Por ejemplo, ejecutivo de cuentas",
+    "The stance names it. Runs on different job descriptions are not joined in the trend.":
+      "La posición la menciona. Las ejecuciones con descripciones de puesto distintas no se unen en la tendencia.",
+    "Use at most 200 characters.": "Use como máximo 200 caracteres.",
     "Browse independently assessed AI applications and track the ones that matter to your organization.":
       "Explorar aplicaciones de IA evaluadas de forma independiente y seguir las que importan a su organización.",
     "Choose who receives a notification when a tracked app's assessment changes materially. If no recipients are set, organization admins are notified by default.":
