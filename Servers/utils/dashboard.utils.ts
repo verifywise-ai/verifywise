@@ -1,6 +1,7 @@
 import { sequelize } from "../database/db";
 import { IDashboard } from "../domain.layer/interfaces/i.Dashboard";
 import { getAllProjectsQuery } from "./project.utils";
+import { VISIBLE_FILE_REPLACEMENTS, VISIBLE_FILE_SQL } from "./files/visibleFiles";
 
 export const getDashboardDataQuery = async (
   organizationId: number,
@@ -38,9 +39,12 @@ export const getDashboardDataQuery = async (
   )) as [{ count: string }[], number];
   dashboard.models = parseInt(models[0][0].count);
 
+  // "Bias audit stance report" matches '%report%', but a stance PDF is served
+  // only by the stance endpoint and is not counted, as if it were missing.
   const reports = (await sequelize.query(
-    `SELECT COUNT(*) FROM files AS f WHERE f.source::TEXT ILIKE '%report%' AND f.organization_id = :organizationId`,
-    { replacements: { organizationId } },
+    `SELECT COUNT(*) FROM files AS f WHERE f.source::TEXT ILIKE '%report%' AND f.organization_id = :organizationId
+      AND ${VISIBLE_FILE_SQL("f")}`,
+    { replacements: { organizationId, ...VISIBLE_FILE_REPLACEMENTS } },
   )) as [{ count: string }[], number];
   dashboard.reports = parseInt(reports[0][0].count);
 
