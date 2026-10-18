@@ -70,6 +70,8 @@ const EvalsDashboard = lazyRoute(
   () => import("../../presentation/pages/EvalsDashboard/EvalsDashboard"),
 );
 const OrgSettings = lazyRoute(() => import("../../presentation/pages/EvalsDashboard/OrgSettings"));
+// NYC Local Law 144 bias audit module. Separate from the Evals dashboard's bias audit.
+const BiasAudit = lazyRoute(() => import("../../presentation/pages/BiasAudit"));
 const DatasetEditorPage = lazyRoute(
   () => import("../../presentation/pages/EvalsDashboard/DatasetEditorPage"),
 );
@@ -222,7 +224,7 @@ const isDev = import.meta.env.DEV;
 
 export const createRoutes = (
   triggerSidebar: boolean,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   _triggerSidebarReload: () => void,
 ) => [
   // ReactFlow Demo - Development only (must be before dashboard route)
@@ -496,6 +498,22 @@ export const createRoutes = (
       element={
         <Suspense fallback={<LazyFallback />}>
           <OrgSettings />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/bias-audit"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <BiasAudit />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/bias-audit/:projectId"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <BiasAudit />
         </Suspense>
       }
     />

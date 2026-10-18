@@ -10583,6 +10583,168 @@ export const translations: Record<string, Record<string, string>> = {
     "Evidence graded": "Mit",
     "counts as low quality. Files with no AI analysis are not counted as adequate.":
       "bewertete Nachweise gelten als von geringer Qualität. Dateien ohne KI-Analyse zählen nicht als ausreichend.",
+    // LL 144 bias audit module pages
+    "LL 144 bias audit": "LL-144-Verzerrungsprüfung",
+    "Test your hiring tool against the calculations NYC Local Law 144 requires, record your position, and generate a stance document. A self-administered test is not a bias audit under the law, which requires an independent auditor.":
+      "Prüfen Sie Ihr Einstellungstool anhand der Berechnungen, die NYC Local Law 144 verlangt, halten Sie Ihre Position fest und erstellen Sie eine Stellungnahme. Ein selbst durchgeführter Test ist keine Verzerrungsprüfung im Sinne des Gesetzes, das einen unabhängigen Prüfer verlangt.",
+    "No use case has the NYC Local Law 144 framework. Add the framework to a use case to start.":
+      "Kein Anwendungsfall hat das Framework NYC Local Law 144. Fügen Sie das Framework einem Anwendungsfall hinzu, um zu beginnen.",
+    "A use case you are not a member of is reported as not found. Ask its owner or an Admin to add you.":
+      "Ein Anwendungsfall, dem Sie nicht angehören, wird als nicht gefunden gemeldet. Bitten Sie den Verantwortlichen oder einen Admin, Sie hinzuzufügen.",
+    "Scope determination": "Feststellung zum Anwendungsbereich",
+    "Scope determinations": "Feststellungen zum Anwendungsbereich",
+    "Attest the profile before recording a run. A run records the attested answers it was measured against.":
+      "Attestieren Sie das Profil, bevor Sie einen Lauf erfassen. Ein Lauf hält die attestierten Antworten fest, an denen er gemessen wurde.",
+    "On your scope answer the module does not run its measures. Generate a scope determination instead.":
+      "Nach Ihrer Antwort zum Anwendungsbereich führt das Modul seine Messungen nicht durch. Erstellen Sie stattdessen eine Feststellung zum Anwendungsbereich.",
+    "Only an Admin or Editor can generate a scope determination.":
+      "Nur ein Admin oder Editor kann eine Feststellung zum Anwendungsbereich erstellen.",
+    "Attest the profile first. A scope determination cites the attested answers.":
+      "Attestieren Sie zuerst das Profil. Eine Feststellung zum Anwendungsbereich zitiert die attestierten Antworten.",
+    "A scope determination is available only when your answers place the tool out of scope. Otherwise the stance comes from a run.":
+      "Eine Feststellung zum Anwendungsbereich ist nur verfügbar, wenn Ihre Antworten das Tool außerhalb des Anwendungsbereichs einordnen. Andernfalls ergibt sich die Stellungnahme aus einem Lauf.",
+    "No answers saved yet": "Noch keine Antworten gespeichert",
+    "Attested": "Attestiert",
+    "Attested by": "Attestiert von",
+    "Runs use the attested version until you attest this draft.":
+      "Läufe verwenden die attestierte Version, bis Sie diesen Entwurf attestieren.",
+    "Readiness": "Bereitschaft",
+    "On your answer, the tool's output is one input among several with no extra weight. No score is shown; you can generate a scope determination instead of a run.":
+      "Nach Ihrer Antwort ist die Ausgabe des Tools eine Eingabe unter mehreren ohne zusätzliches Gewicht. Es wird kein Wert angezeigt; Sie können statt eines Laufs eine Feststellung zum Anwendungsbereich erstellen.",
+    "No score yet.": "Noch kein Wert.",
+    "The readiness score is VerifyWise's own measure of how close you are to commissioning an independent audit. No regulator recognises it.":
+      "Der Bereitschaftswert ist das eigene Maß von VerifyWise dafür, wie nah Sie daran sind, eine unabhängige Prüfung in Auftrag zu geben. Keine Aufsichtsbehörde erkennt ihn an.",
+    "Open items": "Offene Punkte",
+    "Recorded": "Erfasst",
+    "Rate computed": "Berechnete Rate",
+    "Rows": "Zeilen",
+    "Profile version": "Profilversion",
+    "Figures": "Kennzahlen",
+    "Computed": "Berechnet",
+    "Withheld": "Zurückgehalten",
+    "No runs recorded for this use case yet.":
+      "Für diesen Anwendungsfall wurden noch keine Läufe erfasst.",
+    "Scoring rate": "Bewertungsrate",
+    "Save answers": "Antworten speichern",
+    "Attest profile": "Profil attestieren",
+    "Only an Admin or Editor can change answers.":
+      "Nur ein Admin oder Editor kann Antworten ändern.",
+    "Notes are required before these answers can be saved:":
+      "Bevor diese Antworten gespeichert werden können, sind Notizen erforderlich:",
+    "Only an Admin can attest the profile.": "Nur ein Admin kann das Profil attestieren.",
+    "Save your answers before attesting.": "Speichern Sie Ihre Antworten vor dem Attestieren.",
+    "This version is attested. Change an answer to start a new version.":
+      "Diese Version ist attestiert. Ändern Sie eine Antwort, um eine neue Version zu beginnen.",
+    "These deciding questions need a saved answer before you can attest:":
+      "Diese entscheidenden Fragen benötigen eine gespeicherte Antwort, bevor Sie attestieren können:",
+    '(answered "I don\'t know")': "(beantwortet mit „Ich weiß es nicht“)",
+    "Attesting records these answers as your own statement of your position.":
+      "Mit der Attestierung werden diese Antworten als Ihre eigene Erklärung Ihrer Position festgehalten.",
+    "Deciding question": "Entscheidende Frage",
+    "I don't know": "Ich weiß es nicht",
+    "This is a deciding question. The profile cannot be attested while it is answered this way.":
+      "Dies ist eine entscheidende Frage. Das Profil kann nicht attestiert werden, solange sie so beantwortet ist.",
+    "Recorded as an open item in your readiness score.":
+      "Wird als offener Punkt in Ihrem Bereitschaftswert erfasst.",
+    "Describe the answer in your own words.": "Beschreiben Sie die Antwort mit eigenen Worten.",
+    "Your role": "Ihre Rolle",
+    "How much the result matters": "Wie viel das Ergebnis zählt",
+    "Who is performing this test": "Wer diesen Test durchführt",
+    "Demographic data you hold": "Demografische Daten, die Sie haben",
+    "Who applies the cutoff": "Wer den Schwellenwert anwendet",
+    "Planned automation": "Geplante Automatisierung",
+    "The cutoff your process uses": "Der Schwellenwert Ihres Prozesses",
+    "What the tool takes as input": "Was das Tool als Eingabe erhält",
+    "Changes before scoring": "Änderungen vor der Bewertung",
+    "Knockout criteria": "K.-o.-Kriterien",
+    "Earlier bias audits": "Frühere Verzerrungsprüfungen",
+    "Historical or test data": "Historische Daten oder Testdaten",
+    "Categories the data covers": "Abgedeckte Kategorien",
+    "Independence": "Unabhängigkeit",
+    "Data you hold": "Ihre Daten",
+    "How decisions are made": "Wie Entscheidungen getroffen werden",
+    "What the tool scores": "Was das Tool bewertet",
+    "About this page": "Zu dieser Seite",
+    "What this page decides": "Was diese Seite entscheidet",
+    "Why the law cares": "Warum das Gesetz dies regelt",
+    "What goes wrong": "Was schiefgeht",
+    "Stances": "Stellungnahmen",
+    "Generate stance": "Stellungnahme erstellen",
+    "Generate scope determination": "Feststellung zum Anwendungsbereich erstellen",
+    "Generate it again": "Erneut erstellen",
+    "No stance has been generated for this run yet.":
+      "Für diesen Lauf wurde noch keine Stellungnahme erstellt.",
+    "No scope determination has been generated yet.":
+      "Es wurde noch keine Feststellung zum Anwendungsbereich erstellt.",
+    "SHA-256": "SHA-256",
+    "Superseded by a later attestation": "Durch eine spätere Attestierung ersetzt",
+    "New run": "Neuer Lauf",
+    "Upload one CSV file with a row per candidate, then say which column holds each value.":
+      "Laden Sie eine CSV-Datei mit einer Zeile pro Kandidat hoch und geben Sie dann an, welche Spalte welchen Wert enthält.",
+    "Your cutoff answer means this run computes scoring rates under 5-301(c).":
+      "Nach Ihrer Antwort zum Schwellenwert berechnet dieser Lauf Bewertungsraten nach 5-301(c).",
+    "Your cutoff answer means this run computes selection rates under 5-301(b).":
+      "Nach Ihrer Antwort zum Schwellenwert berechnet dieser Lauf Auswahlraten nach 5-301(b).",
+    "Choose CSV file": "CSV-Datei auswählen",
+    "Sex column": "Spalte Geschlecht",
+    "Race or ethnicity column": "Spalte ethnische Herkunft",
+    "Selected column (1, 0, yes, no, true, false)":
+      "Spalte Ausgewählt (1, 0, yes, no, true, false)",
+    "Not in this file": "Nicht in dieser Datei",
+    "Run measures": "Messungen ausführen",
+    "Only an Admin or Editor can record a run.":
+      "Nur ein Admin oder Editor kann einen Lauf erfassen.",
+    "Answer who applies the cutoff, save and attest the profile, so the module knows whether to compute selection rates or scoring rates.":
+      "Beantworten Sie, wer den Schwellenwert anwendet, speichern und attestieren Sie das Profil, damit das Modul weiß, ob Auswahlraten oder Bewertungsraten zu berechnen sind.",
+    "Upload the dataset as a .csv file.": "Laden Sie den Datensatz als .csv-Datei hoch.",
+    "The dataset is larger than the 30 MB upload limit.":
+      "Der Datensatz überschreitet die Upload-Grenze von 30 MB.",
+    "The file has no header row. Put the column names on the first line.":
+      "Die Datei hat keine Kopfzeile. Schreiben Sie die Spaltennamen in die erste Zeile.",
+    "The file could not be read. Choose it again.":
+      "Die Datei konnte nicht gelesen werden. Wählen Sie sie erneut aus.",
+    "All runs": "Alle Läufe",
+    "Recorded by": "Erfasst von",
+    "Dataset SHA-256": "SHA-256 des Datensatzes",
+    "Data checks": "Datenprüfungen",
+    "The data checks raised nothing for this run.":
+      "Die Datenprüfungen haben für diesen Lauf nichts ergeben.",
+    "Withholds results": "Hält Ergebnisse zurück",
+    "Individuals assessed:": "Bewertete Personen:",
+    "In an unknown category:": "In einer unbekannten Kategorie:",
+    "Median score of the full sample:": "Medianwert der gesamten Stichprobe:",
+    "Impact ratios below 0.80 are marked. 0.80 is the EEOC four-fifths convention, which Local Law 144 does not adopt; a marked ratio is a number to report and investigate.":
+      "Auswirkungsverhältnisse unter 0,80 sind markiert. 0,80 ist die Vier-Fünftel-Konvention der EEOC, die Local Law 144 nicht übernimmt; ein markiertes Verhältnis ist eine Zahl, die zu berichten und zu untersuchen ist.",
+    "Scored above the median": "Über dem Median bewertet",
+    "Excluded: under 2% of the data (5-301(d))": "Ausgeschlossen: unter 2 % der Daten (5-301(d))",
+    "Below 0.80": "Unter 0,80",
+    "Data basis by category": "Datengrundlage nach Kategorie",
+    "Confirmed by": "Bestätigt von",
+    "This reading was derived from your answers and is listed as an open item until you confirm it. If it is wrong, change your answers instead.":
+      "Diese Lesart wurde aus Ihren Antworten abgeleitet und wird als offener Punkt geführt, bis Sie sie bestätigen. Ist sie falsch, ändern Sie stattdessen Ihre Antworten.",
+    "Confirm this reading": "Diese Lesart bestätigen",
+    "Only an Admin can confirm the data basis.":
+      "Nur ein Admin kann die Datengrundlage bestätigen.",
+    "Historical applicant data": "Historische Bewerberdaten",
+    "Test data: too few historical records": "Testdaten: zu wenige historische Datensätze",
+    "Test data: the characteristics are not recorded":
+      "Testdaten: die Merkmale werden nicht erfasst",
+    "Test data: the records exist but are not ours":
+      "Testdaten: die Datensätze existieren, gehören aber nicht uns",
+    "Sex": "Geschlecht",
+    "Race or ethnicity": "Ethnische Herkunft",
+    "Sex by race or ethnicity": "Geschlecht nach ethnischer Herkunft",
+    "No figures were computed for this run. The data checks above say why.":
+      "Für diesen Lauf wurden keine Kennzahlen berechnet. Die Datenprüfungen oben nennen den Grund.",
+    "When this result stops applying": "Wann dieses Ergebnis nicht mehr gilt",
+    "One year after this run": "Ein Jahr nach diesem Lauf",
+    "Or earlier, when": "Oder früher, wenn",
+    "Only an Admin or Editor can generate a stance.":
+      "Nur ein Admin oder Editor kann eine Stellungnahme erstellen.",
+    "The data checks withhold export for this run, so no stance can be generated from it.":
+      "Die Datenprüfungen halten den Export für diesen Lauf zurück, daher kann daraus keine Stellungnahme erstellt werden.",
+    "Something went wrong. Please try again later.":
+      "Etwas ist schiefgelaufen. Bitte versuchen Sie es später erneut.",
   },
 
   fr: {
@@ -21084,6 +21246,169 @@ export const translations: Record<string, Record<string, string>> = {
     "Evidence graded": "Les preuves notées",
     "counts as low quality. Files with no AI analysis are not counted as adequate.":
       "sont considérées comme de faible qualité. Les fichiers sans analyse IA ne comptent pas comme suffisants.",
+    // LL 144 bias audit module pages
+    "LL 144 bias audit": "Audit de biais LL 144",
+    "Test your hiring tool against the calculations NYC Local Law 144 requires, record your position, and generate a stance document. A self-administered test is not a bias audit under the law, which requires an independent auditor.":
+      "Testez votre outil de recrutement au regard des calculs exigés par la NYC Local Law 144, consignez votre position et générez une prise de position. Un test effectué par vous-même n’est pas un audit de biais au sens de la loi, qui exige un auditeur indépendant.",
+    "No use case has the NYC Local Law 144 framework. Add the framework to a use case to start.":
+      "Aucun cas d’usage n’a le référentiel NYC Local Law 144. Ajoutez le référentiel à un cas d’usage pour commencer.",
+    "A use case you are not a member of is reported as not found. Ask its owner or an Admin to add you.":
+      "Un cas d’usage dont vous n’êtes pas membre est signalé comme introuvable. Demandez à son propriétaire ou à un Admin de vous ajouter.",
+    "Scope determination": "Détermination du champ d’application",
+    "Scope determinations": "Déterminations du champ d’application",
+    "Attest the profile before recording a run. A run records the attested answers it was measured against.":
+      "Attestez le profil avant d’enregistrer une exécution. Une exécution consigne les réponses attestées au regard desquelles elle a été mesurée.",
+    "On your scope answer the module does not run its measures. Generate a scope determination instead.":
+      "Selon votre réponse sur le champ d’application, le module n’exécute pas ses mesures. Générez plutôt une détermination du champ d’application.",
+    "Only an Admin or Editor can generate a scope determination.":
+      "Seul un Admin ou un Éditeur peut générer une détermination du champ d’application.",
+    "Attest the profile first. A scope determination cites the attested answers.":
+      "Attestez d’abord le profil. Une détermination du champ d’application cite les réponses attestées.",
+    "A scope determination is available only when your answers place the tool out of scope. Otherwise the stance comes from a run.":
+      "Une détermination du champ d’application n’est disponible que si vos réponses placent l’outil hors du champ. Sinon, la prise de position provient d’une exécution.",
+    "No answers saved yet": "Aucune réponse enregistrée",
+    "Attested": "Attesté",
+    "Attested by": "Attesté par",
+    "Runs use the attested version until you attest this draft.":
+      "Les exécutions utilisent la version attestée jusqu’à ce que vous attestiez ce brouillon.",
+    "Readiness": "Préparation",
+    "On your answer, the tool's output is one input among several with no extra weight. No score is shown; you can generate a scope determination instead of a run.":
+      "Selon votre réponse, le résultat de l’outil est une donnée parmi d’autres, sans poids supplémentaire. Aucun score n’est affiché ; vous pouvez générer une détermination du champ d’application au lieu d’une exécution.",
+    "No score yet.": "Pas encore de score.",
+    "The readiness score is VerifyWise's own measure of how close you are to commissioning an independent audit. No regulator recognises it.":
+      "Le score de préparation est la mesure propre à VerifyWise de votre proximité avec la commande d’un audit indépendant. Aucun régulateur ne le reconnaît.",
+    "Open items": "Points ouverts",
+    "Recorded": "Enregistrée",
+    "Rate computed": "Taux calculé",
+    "Rows": "Lignes",
+    "Profile version": "Version du profil",
+    "Figures": "Chiffres",
+    "Computed": "Calculés",
+    "Withheld": "Retenus",
+    "No runs recorded for this use case yet.":
+      "Aucune exécution n’a encore été enregistrée pour ce cas d’usage.",
+    "Scoring rate": "Taux de notation",
+    "Save answers": "Enregistrer les réponses",
+    "Attest profile": "Attester le profil",
+    "Only an Admin or Editor can change answers.":
+      "Seul un Admin ou un Éditeur peut modifier les réponses.",
+    "Notes are required before these answers can be saved:":
+      "Des notes sont requises avant de pouvoir enregistrer ces réponses :",
+    "Only an Admin can attest the profile.": "Seul un Admin peut attester le profil.",
+    "Save your answers before attesting.": "Enregistrez vos réponses avant d’attester.",
+    "This version is attested. Change an answer to start a new version.":
+      "Cette version est attestée. Modifiez une réponse pour commencer une nouvelle version.",
+    "These deciding questions need a saved answer before you can attest:":
+      "Ces questions déterminantes doivent avoir une réponse enregistrée avant que vous puissiez attester :",
+    '(answered "I don\'t know")': "(réponse « Je ne sais pas »)",
+    "Attesting records these answers as your own statement of your position.":
+      "L’attestation consigne ces réponses comme votre propre déclaration de votre position.",
+    "Deciding question": "Question déterminante",
+    "I don't know": "Je ne sais pas",
+    "This is a deciding question. The profile cannot be attested while it is answered this way.":
+      "Il s’agit d’une question déterminante. Le profil ne peut pas être attesté tant qu’elle reçoit cette réponse.",
+    "Recorded as an open item in your readiness score.":
+      "Consigné comme point ouvert dans votre score de préparation.",
+    "Describe the answer in your own words.": "Décrivez la réponse avec vos propres mots.",
+    "Your role": "Votre rôle",
+    "How much the result matters": "Le poids du résultat",
+    "Who is performing this test": "Qui réalise ce test",
+    "Demographic data you hold": "Données démographiques que vous détenez",
+    "Who applies the cutoff": "Qui applique le seuil",
+    "Planned automation": "Automatisation prévue",
+    "The cutoff your process uses": "Le seuil utilisé par votre processus",
+    "What the tool takes as input": "Ce que l’outil reçoit en entrée",
+    "Changes before scoring": "Modifications avant la notation",
+    "Knockout criteria": "Critères éliminatoires",
+    "Earlier bias audits": "Audits de biais antérieurs",
+    "Historical or test data": "Données historiques ou de test",
+    "Categories the data covers": "Catégories couvertes par les données",
+    "Independence": "Indépendance",
+    "Data you hold": "Données que vous détenez",
+    "How decisions are made": "Comment les décisions sont prises",
+    "What the tool scores": "Ce que l’outil note",
+    "About this page": "À propos de cette page",
+    "What this page decides": "Ce que cette page décide",
+    "Why the law cares": "Pourquoi la loi s’y intéresse",
+    "What goes wrong": "Ce qui tourne mal",
+    "Stances": "Prises de position",
+    "Generate stance": "Générer la prise de position",
+    "Generate scope determination": "Générer la détermination du champ d’application",
+    "Generate it again": "La générer à nouveau",
+    "No stance has been generated for this run yet.":
+      "Aucune prise de position n’a encore été générée pour cette exécution.",
+    "No scope determination has been generated yet.":
+      "Aucune détermination du champ d’application n’a encore été générée.",
+    "SHA-256": "SHA-256",
+    "Superseded by a later attestation": "Remplacée par une attestation ultérieure",
+    "New run": "Nouvelle exécution",
+    "Upload one CSV file with a row per candidate, then say which column holds each value.":
+      "Téléversez un fichier CSV avec une ligne par candidat, puis indiquez quelle colonne contient chaque valeur.",
+    "Your cutoff answer means this run computes scoring rates under 5-301(c).":
+      "Selon votre réponse sur le seuil, cette exécution calcule des taux de notation au titre de 5-301(c).",
+    "Your cutoff answer means this run computes selection rates under 5-301(b).":
+      "Selon votre réponse sur le seuil, cette exécution calcule des taux de sélection au titre de 5-301(b).",
+    "Choose CSV file": "Choisir un fichier CSV",
+    "Sex column": "Colonne sexe",
+    "Race or ethnicity column": "Colonne race ou origine ethnique",
+    "Selected column (1, 0, yes, no, true, false)":
+      "Colonne sélectionné (1, 0, yes, no, true, false)",
+    "Not in this file": "Absente de ce fichier",
+    "Run measures": "Exécuter les mesures",
+    "Only an Admin or Editor can record a run.":
+      "Seul un Admin ou un Éditeur peut enregistrer une exécution.",
+    "Answer who applies the cutoff, save and attest the profile, so the module knows whether to compute selection rates or scoring rates.":
+      "Indiquez qui applique le seuil, enregistrez et attestez le profil, afin que le module sache s’il doit calculer des taux de sélection ou des taux de notation.",
+    "Upload the dataset as a .csv file.":
+      "Téléversez le jeu de données sous forme de fichier .csv.",
+    "The dataset is larger than the 30 MB upload limit.":
+      "Le jeu de données dépasse la limite de téléversement de 30 Mo.",
+    "The file has no header row. Put the column names on the first line.":
+      "Le fichier n’a pas de ligne d’en-tête. Placez les noms de colonnes sur la première ligne.",
+    "The file could not be read. Choose it again.":
+      "Le fichier n’a pas pu être lu. Choisissez-le à nouveau.",
+    "All runs": "Toutes les exécutions",
+    "Recorded by": "Enregistrée par",
+    "Dataset SHA-256": "SHA-256 du jeu de données",
+    "Data checks": "Contrôles des données",
+    "The data checks raised nothing for this run.":
+      "Les contrôles des données n’ont rien signalé pour cette exécution.",
+    "Withholds results": "Retient les résultats",
+    "Individuals assessed:": "Personnes évaluées :",
+    "In an unknown category:": "Dans une catégorie inconnue :",
+    "Median score of the full sample:": "Score médian de l’échantillon complet :",
+    "Impact ratios below 0.80 are marked. 0.80 is the EEOC four-fifths convention, which Local Law 144 does not adopt; a marked ratio is a number to report and investigate.":
+      "Les ratios d’impact inférieurs à 0,80 sont signalés. 0,80 est la convention des quatre cinquièmes de l’EEOC, que la Local Law 144 n’adopte pas ; un ratio signalé est un chiffre à déclarer et à examiner.",
+    "Scored above the median": "Notés au-dessus de la médiane",
+    "Excluded: under 2% of the data (5-301(d))": "Exclue : moins de 2 % des données (5-301(d))",
+    "Below 0.80": "Inférieur à 0,80",
+    "Data basis by category": "Base de données par catégorie",
+    "Confirmed by": "Confirmée par",
+    "This reading was derived from your answers and is listed as an open item until you confirm it. If it is wrong, change your answers instead.":
+      "Cette lecture a été déduite de vos réponses et figure comme point ouvert jusqu’à ce que vous la confirmiez. Si elle est erronée, modifiez plutôt vos réponses.",
+    "Confirm this reading": "Confirmer cette lecture",
+    "Only an Admin can confirm the data basis.": "Seul un Admin peut confirmer la base de données.",
+    "Historical applicant data": "Données historiques des candidats",
+    "Test data: too few historical records":
+      "Données de test : trop peu d’enregistrements historiques",
+    "Test data: the characteristics are not recorded":
+      "Données de test : les caractéristiques ne sont pas enregistrées",
+    "Test data: the records exist but are not ours":
+      "Données de test : les enregistrements existent mais ne sont pas les nôtres",
+    "Sex": "Sexe",
+    "Race or ethnicity": "Race ou origine ethnique",
+    "Sex by race or ethnicity": "Sexe par race ou origine ethnique",
+    "No figures were computed for this run. The data checks above say why.":
+      "Aucun chiffre n’a été calculé pour cette exécution. Les contrôles des données ci-dessus en donnent la raison.",
+    "When this result stops applying": "Quand ce résultat cesse de s’appliquer",
+    "One year after this run": "Un an après cette exécution",
+    "Or earlier, when": "Ou plus tôt, lorsque",
+    "Only an Admin or Editor can generate a stance.":
+      "Seul un Admin ou un Éditeur peut générer une prise de position.",
+    "The data checks withhold export for this run, so no stance can be generated from it.":
+      "Les contrôles des données bloquent l’export de cette exécution, aucune prise de position ne peut donc en être générée.",
+    "Something went wrong. Please try again later.":
+      "Une erreur s’est produite. Veuillez réessayer plus tard.",
   },
   es: {
     // Agent Control monitor only mode
@@ -31501,5 +31826,165 @@ export const translations: Record<string, Record<string, string>> = {
     "Evidence graded": "La evidencia calificada",
     "counts as low quality. Files with no AI analysis are not counted as adequate.":
       "se considera de baja calidad. Los archivos sin análisis de IA no cuentan como suficientes.",
+    // LL 144 bias audit module pages
+    "LL 144 bias audit": "Auditoría de sesgo LL 144",
+    "Test your hiring tool against the calculations NYC Local Law 144 requires, record your position, and generate a stance document. A self-administered test is not a bias audit under the law, which requires an independent auditor.":
+      "Pruebe su herramienta de contratación con los cálculos que exige la NYC Local Law 144, registre su posición y genere un documento de posición. Una prueba realizada por usted mismo no es una auditoría de sesgo según la ley, que exige un auditor independiente.",
+    "No use case has the NYC Local Law 144 framework. Add the framework to a use case to start.":
+      "Ningún caso de uso tiene el marco NYC Local Law 144. Añada el marco a un caso de uso para empezar.",
+    "A use case you are not a member of is reported as not found. Ask its owner or an Admin to add you.":
+      "Un caso de uso del que no es miembro se indica como no encontrado. Pida a su propietario o a un Admin que le añada.",
+    "Scope determination": "Determinación del ámbito",
+    "Scope determinations": "Determinaciones del ámbito",
+    "Attest the profile before recording a run. A run records the attested answers it was measured against.":
+      "Atestigüe el perfil antes de registrar una ejecución. Una ejecución registra las respuestas atestiguadas con las que se midió.",
+    "On your scope answer the module does not run its measures. Generate a scope determination instead.":
+      "Según su respuesta sobre el ámbito, el módulo no ejecuta sus mediciones. Genere en su lugar una determinación del ámbito.",
+    "Only an Admin or Editor can generate a scope determination.":
+      "Solo un Admin o un Editor puede generar una determinación del ámbito.",
+    "Attest the profile first. A scope determination cites the attested answers.":
+      "Atestigüe primero el perfil. Una determinación del ámbito cita las respuestas atestiguadas.",
+    "A scope determination is available only when your answers place the tool out of scope. Otherwise the stance comes from a run.":
+      "Una determinación del ámbito solo está disponible cuando sus respuestas sitúan la herramienta fuera del ámbito. En caso contrario, la posición proviene de una ejecución.",
+    "No answers saved yet": "Aún no hay respuestas guardadas",
+    "Attested": "Atestiguado",
+    "Attested by": "Atestiguado por",
+    "Runs use the attested version until you attest this draft.":
+      "Las ejecuciones usan la versión atestiguada hasta que atestigüe este borrador.",
+    "Readiness": "Preparación",
+    "On your answer, the tool's output is one input among several with no extra weight. No score is shown; you can generate a scope determination instead of a run.":
+      "Según su respuesta, el resultado de la herramienta es un dato entre varios sin peso adicional. No se muestra ninguna puntuación; puede generar una determinación del ámbito en lugar de una ejecución.",
+    "No score yet.": "Aún no hay puntuación.",
+    "The readiness score is VerifyWise's own measure of how close you are to commissioning an independent audit. No regulator recognises it.":
+      "La puntuación de preparación es la medida propia de VerifyWise de lo cerca que está de encargar una auditoría independiente. Ningún regulador la reconoce.",
+    "Open items": "Puntos abiertos",
+    "Recorded": "Registrada",
+    "Rate computed": "Tasa calculada",
+    "Rows": "Filas",
+    "Profile version": "Versión del perfil",
+    "Figures": "Cifras",
+    "Computed": "Calculadas",
+    "Withheld": "Retenidas",
+    "No runs recorded for this use case yet.":
+      "Aún no se han registrado ejecuciones para este caso de uso.",
+    "Scoring rate": "Tasa de puntuación",
+    "Save answers": "Guardar respuestas",
+    "Attest profile": "Atestiguar perfil",
+    "Only an Admin or Editor can change answers.":
+      "Solo un Admin o un Editor puede cambiar las respuestas.",
+    "Notes are required before these answers can be saved:":
+      "Se requieren notas antes de poder guardar estas respuestas:",
+    "Only an Admin can attest the profile.": "Solo un Admin puede atestiguar el perfil.",
+    "Save your answers before attesting.": "Guarde sus respuestas antes de atestiguar.",
+    "This version is attested. Change an answer to start a new version.":
+      "Esta versión está atestiguada. Cambie una respuesta para iniciar una nueva versión.",
+    "These deciding questions need a saved answer before you can attest:":
+      "Estas preguntas decisivas necesitan una respuesta guardada antes de que pueda atestiguar:",
+    '(answered "I don\'t know")': "(respondida «No lo sé»)",
+    "Attesting records these answers as your own statement of your position.":
+      "Atestiguar registra estas respuestas como su propia declaración de su posición.",
+    "Deciding question": "Pregunta decisiva",
+    "I don't know": "No lo sé",
+    "This is a deciding question. The profile cannot be attested while it is answered this way.":
+      "Esta es una pregunta decisiva. El perfil no se puede atestiguar mientras se responda así.",
+    "Recorded as an open item in your readiness score.":
+      "Se registra como punto abierto en su puntuación de preparación.",
+    "Describe the answer in your own words.": "Describa la respuesta con sus propias palabras.",
+    "Your role": "Su función",
+    "How much the result matters": "Cuánto importa el resultado",
+    "Who is performing this test": "Quién realiza esta prueba",
+    "Demographic data you hold": "Datos demográficos que tiene",
+    "Who applies the cutoff": "Quién aplica el umbral",
+    "Planned automation": "Automatización prevista",
+    "The cutoff your process uses": "El umbral que usa su proceso",
+    "What the tool takes as input": "Lo que la herramienta recibe como entrada",
+    "Changes before scoring": "Cambios antes de la puntuación",
+    "Knockout criteria": "Criterios eliminatorios",
+    "Earlier bias audits": "Auditorías de sesgo anteriores",
+    "Historical or test data": "Datos históricos o de prueba",
+    "Categories the data covers": "Categorías que cubren los datos",
+    "Independence": "Independencia",
+    "Data you hold": "Datos que tiene",
+    "How decisions are made": "Cómo se toman las decisiones",
+    "What the tool scores": "Lo que la herramienta puntúa",
+    "About this page": "Acerca de esta página",
+    "What this page decides": "Lo que decide esta página",
+    "Why the law cares": "Por qué le importa a la ley",
+    "What goes wrong": "Qué sale mal",
+    "Stances": "Posiciones",
+    "Generate stance": "Generar posición",
+    "Generate scope determination": "Generar determinación del ámbito",
+    "Generate it again": "Generarla de nuevo",
+    "No stance has been generated for this run yet.":
+      "Aún no se ha generado ninguna posición para esta ejecución.",
+    "No scope determination has been generated yet.":
+      "Aún no se ha generado ninguna determinación del ámbito.",
+    "SHA-256": "SHA-256",
+    "Superseded by a later attestation": "Sustituida por una atestación posterior",
+    "New run": "Nueva ejecución",
+    "Upload one CSV file with a row per candidate, then say which column holds each value.":
+      "Suba un archivo CSV con una fila por candidato y luego indique qué columna contiene cada valor.",
+    "Your cutoff answer means this run computes scoring rates under 5-301(c).":
+      "Según su respuesta sobre el umbral, esta ejecución calcula tasas de puntuación conforme a 5-301(c).",
+    "Your cutoff answer means this run computes selection rates under 5-301(b).":
+      "Según su respuesta sobre el umbral, esta ejecución calcula tasas de selección conforme a 5-301(b).",
+    "Choose CSV file": "Elegir archivo CSV",
+    "Sex column": "Columna de sexo",
+    "Race or ethnicity column": "Columna de raza o etnia",
+    "Selected column (1, 0, yes, no, true, false)":
+      "Columna seleccionado (1, 0, yes, no, true, false)",
+    "Not in this file": "No está en este archivo",
+    "Run measures": "Ejecutar mediciones",
+    "Only an Admin or Editor can record a run.":
+      "Solo un Admin o un Editor puede registrar una ejecución.",
+    "Answer who applies the cutoff, save and attest the profile, so the module knows whether to compute selection rates or scoring rates.":
+      "Responda quién aplica el umbral, guarde y atestigüe el perfil, para que el módulo sepa si debe calcular tasas de selección o tasas de puntuación.",
+    "Upload the dataset as a .csv file.": "Suba el conjunto de datos como archivo .csv.",
+    "The dataset is larger than the 30 MB upload limit.":
+      "El conjunto de datos supera el límite de carga de 30 MB.",
+    "The file has no header row. Put the column names on the first line.":
+      "El archivo no tiene fila de encabezado. Ponga los nombres de las columnas en la primera línea.",
+    "The file could not be read. Choose it again.": "No se pudo leer el archivo. Elíjalo de nuevo.",
+    "All runs": "Todas las ejecuciones",
+    "Recorded by": "Registrada por",
+    "Dataset SHA-256": "SHA-256 del conjunto de datos",
+    "Data checks": "Comprobaciones de datos",
+    "The data checks raised nothing for this run.":
+      "Las comprobaciones de datos no señalaron nada para esta ejecución.",
+    "Withholds results": "Retiene los resultados",
+    "Individuals assessed:": "Personas evaluadas:",
+    "In an unknown category:": "En una categoría desconocida:",
+    "Median score of the full sample:": "Puntuación mediana de la muestra completa:",
+    "Impact ratios below 0.80 are marked. 0.80 is the EEOC four-fifths convention, which Local Law 144 does not adopt; a marked ratio is a number to report and investigate.":
+      "Los ratios de impacto inferiores a 0,80 se marcan. 0,80 es la convención de los cuatro quintos de la EEOC, que la Local Law 144 no adopta; un ratio marcado es una cifra que hay que comunicar e investigar.",
+    "Scored above the median": "Puntuados por encima de la mediana",
+    "Excluded: under 2% of the data (5-301(d))": "Excluida: menos del 2 % de los datos (5-301(d))",
+    "Below 0.80": "Inferior a 0,80",
+    "Data basis by category": "Base de datos por categoría",
+    "Confirmed by": "Confirmada por",
+    "This reading was derived from your answers and is listed as an open item until you confirm it. If it is wrong, change your answers instead.":
+      "Esta lectura se dedujo de sus respuestas y figura como punto abierto hasta que la confirme. Si es incorrecta, cambie sus respuestas.",
+    "Confirm this reading": "Confirmar esta lectura",
+    "Only an Admin can confirm the data basis.": "Solo un Admin puede confirmar la base de datos.",
+    "Historical applicant data": "Datos históricos de candidatos",
+    "Test data: too few historical records": "Datos de prueba: muy pocos registros históricos",
+    "Test data: the characteristics are not recorded":
+      "Datos de prueba: las características no se registran",
+    "Test data: the records exist but are not ours":
+      "Datos de prueba: los registros existen pero no son nuestros",
+    "Sex": "Sexo",
+    "Race or ethnicity": "Raza o etnia",
+    "Sex by race or ethnicity": "Sexo por raza o etnia",
+    "No figures were computed for this run. The data checks above say why.":
+      "No se calcularon cifras para esta ejecución. Las comprobaciones de datos de arriba indican por qué.",
+    "When this result stops applying": "Cuándo deja de aplicarse este resultado",
+    "One year after this run": "Un año después de esta ejecución",
+    "Or earlier, when": "O antes, cuando",
+    "Only an Admin or Editor can generate a stance.":
+      "Solo un Admin o un Editor puede generar una posición.",
+    "The data checks withhold export for this run, so no stance can be generated from it.":
+      "Las comprobaciones de datos retienen la exportación de esta ejecución, por lo que no se puede generar una posición a partir de ella.",
+    "Something went wrong. Please try again later.":
+      "Algo salió mal. Inténtelo de nuevo más tarde.",
   },
 };
