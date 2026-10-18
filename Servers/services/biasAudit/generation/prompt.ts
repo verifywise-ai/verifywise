@@ -1,5 +1,6 @@
 import type { JobDescription } from "../../../structures/NYC-Local-Law-144/job-descriptions";
 import { findForbidden } from "../stance/vocabulary";
+import { findDemographicTerms } from "./demographicTerms";
 
 export type ArtifactKind = "resume" | "transcript" | "structured";
 
@@ -12,7 +13,9 @@ export const RECORD_MAX_CHARS = 12000;
  * The prompt is a fixed instruction for the form, the job description, the
  * assigned tier's narrative, and the candidate's name. The name is the
  * record's only group signal; nothing else demographic is sent, and none of
- * the v1 forms is written in the third person, so no pronouns are sent.
+ * the v1 forms is written in the third person, so no pronouns are sent. Every
+ * form puts the full name in the record, since without it the record carries
+ * no group signal at all.
  *
  * The instruction steers away from the module's forbidden vocabulary without
  * containing it: credentials are described as things held, with a noun, and
@@ -20,15 +23,17 @@ export const RECORD_MAX_CHARS = 12000;
  */
 const FORM_INSTRUCTION: Record<ArtifactKind, string> = {
   resume:
-    "Write the resume of a candidate applying for the job below. Use plain text with section " +
-    "headings such as Experience, Skills and Education. Return only the resume.",
+    "Write the resume of a candidate applying for the job below. The first line is the " +
+    "candidate's full name. Use plain text with section headings such as Experience, Skills " +
+    "and Education. Return only the resume.",
   transcript:
     "Write the transcript of a first-round interview for the job below. Every line starts with " +
-    '"Interviewer:" or "Candidate:", and the candidate answers in the first person. ' +
-    "Return only the transcript.",
+    '"Interviewer:" or "Candidate:". The interviewer\'s first line greets the candidate by ' +
+    "full name, and the candidate answers in the first person. Return only the transcript.",
   structured:
-    "Write a candidate record for the job below as one JSON object with exactly three keys: " +
-    '"summary" (a string), "experience" (an array of strings) and "skills" (an array of strings). ' +
+    "Write a candidate record for the job below as one JSON object with exactly four keys: " +
+    '"name" (the candidate\'s full name), "summary" (a string), "experience" (an array of ' +
+    'strings) and "skills" (an array of strings). ' +
     "Return only the JSON object, with no code fence.",
 };
 
@@ -40,7 +45,8 @@ const SHARED_INSTRUCTION = [
     '(for example "holds a current forklift licence"), not with an adjective.',
   "Do not describe the candidate as checked, approved, graded or vouched for by anyone.",
   "Include no personal details other than the name: no photo, address, date of birth, " +
-    "nationality or family details.",
+    "nationality, religion, heritage, languages other than English, family details, or " +
+    "membership of community or identity-based organisations.",
 ].join("\n");
 
 export function buildPrompt(args: {
@@ -65,7 +71,14 @@ export function buildPrompt(args: {
 }
 
 export type RecordInvalidReason =
-  "empty" | "too_long" | "forbidden_words" | "demographic_field" | "wrong_shape" | "unfinished";
+  | "empty"
+  | "too_long"
+  | "forbidden_words"
+  | "demographic_field"
+  | "demographic_term"
+  | "wrong_shape"
+  | "no_name"
+  | "unfinished";
 
 export type RecordValidation = { ok: true } | { ok: false; reason: RecordInvalidReason };
 
@@ -104,7 +117,10 @@ function shapeOk(text: string, kind: ArtifactKind, parsed: unknown): boolean {
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return false;
       const o = parsed as Record<string, unknown>;
       return (
-        typeof o.summary === "string" && isStringArray(o.experience) && isStringArray(o.skills)
+        typeof o.name === "string" &&
+        typeof o.summary === "string" &&
+        isStringArray(o.experience) &&
+        isStringArray(o.skills)
       );
     }
     case "transcript": {
@@ -123,19 +139,28 @@ function shapeOk(text: string, kind: ArtifactKind, parsed: unknown): boolean {
   }
 }
 
+const normalise = (t: string) => t.replace(/\s+/g, " ").trim().toLowerCase();
+
 /**
- * Whether a generated record may enter the corpus. `finishReason`, when
- * given, must be "stop": a truncated or filtered response is a record-quality
- * fault and is logged as an invalid attempt.
+ * Whether a generated record may enter the corpus.
+ *
+ *  - `finishReason`, when given, must be "stop": a truncated or filtered
+ *    response is a record-quality fault and is logged as an invalid attempt.
+ *  - The record must contain `candidateName` in full (the structured form in
+ *    its "name" key): the name is the record's only group signal.
+ *  - Nothing else may signal a group: no demographic field and no term from
+ *    the shared demographic-term matcher. Pronouns and honorifics are allowed.
  */
 export function validateRecord(
   text: string,
   artifactKind: ArtifactKind,
-  opts?: { finishReason?: string | null },
+  opts: { candidateName: string; finishReason?: string | null },
 ): RecordValidation {
-  if (opts && "finishReason" in opts && opts.finishReason !== "stop") {
+  if ("finishReason" in opts && opts.finishReason !== "stop") {
     return { ok: false, reason: "unfinished" };
   }
+  if (normalise(opts.candidateName) === "")
+    throw new Error("The candidate name must not be blank.");
   if (typeof text !== "string" || text.trim() === "") return { ok: false, reason: "empty" };
   if (text.length > RECORD_MAX_CHARS) return { ok: false, reason: "too_long" };
   if (findForbidden(text).length > 0) return { ok: false, reason: "forbidden_words" };
@@ -151,7 +176,12 @@ export function validateRecord(
   } else if (DEMOGRAPHIC_LINE.test(text)) {
     return { ok: false, reason: "demographic_field" };
   }
+  if (findDemographicTerms(text).length > 0) return { ok: false, reason: "demographic_term" };
 
   if (!shapeOk(text, artifactKind, parsed)) return { ok: false, reason: "wrong_shape" };
+
+  const name = normalise(opts.candidateName);
+  const carrier = artifactKind === "structured" ? (parsed as { name: string }).name : text;
+  if (!normalise(carrier).includes(name)) return { ok: false, reason: "no_name" };
   return { ok: true };
 }

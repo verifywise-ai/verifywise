@@ -1,4 +1,4 @@
-import { buildManifest } from "./manifest";
+import { buildManifest, canonicalManifest } from "./manifest";
 
 const assigned = [...Array(100)].map((_, i) => ({
   candidateId: `C${String(i + 1).padStart(4, "0")}`,
@@ -79,5 +79,30 @@ describe("buildManifest", () => {
     expect(keys).toContain("candidateId");
     expect(keys).toContain("sex");
     expect(rows.map((r) => r.candidateId)).toEqual(assigned.map((a) => a.candidateId));
+  });
+});
+
+describe("canonicalManifest", () => {
+  const { rows } = buildManifest({
+    assigned,
+    log: assigned.map((a) => entry(a.candidateId)),
+  });
+
+  it("serialises a JSONB round trip (keys reordered) to the same text", () => {
+    // JSONB stores object keys shortest first, then by bytes; reversing the
+    // key order and the row order stands in for that round trip.
+    const reordered = [...rows]
+      .reverse()
+      .map((r) => Object.fromEntries(Object.entries(r).reverse())) as typeof rows;
+    expect(Object.keys(reordered[0])).not.toEqual(Object.keys(rows[0]));
+    expect(canonicalManifest(reordered)).toBe(canonicalManifest(rows));
+  });
+
+  it("is sorted-key JSON with no whitespace, rows in candidate-ID order", () => {
+    const text = canonicalManifest(rows.slice(0, 1));
+    expect(text).toBe(
+      '[{"candidateId":"C0001","modelName":"m1","promptHash":"h","raceEthnicity":"R0",' +
+        '"sex":"Female","tierKey":"t1"}]',
+    );
   });
 });

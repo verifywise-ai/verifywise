@@ -22,9 +22,14 @@ function json(value: unknown): string | null {
   return value === undefined || value === null ? JSONB_NULL : JSON.stringify(value);
 }
 
-function firstRow<T>(result: unknown): T | undefined {
+/** The rows of a raw INSERT/UPDATE ... RETURNING, which the driver returns as [rows, meta]. */
+function allRows<T>(result: unknown): T[] {
   const rows = Array.isArray(result) ? (result[0] as unknown) : undefined;
-  return Array.isArray(rows) ? (rows[0] as T | undefined) : undefined;
+  return Array.isArray(rows) ? (rows as T[]) : [];
+}
+
+function firstRow<T>(result: unknown): T | undefined {
+  return allRows<T>(result)[0];
 }
 
 function refuseCrossOrg(what: string, id: number): never {
@@ -1032,9 +1037,11 @@ export async function confirmRunDerivedBasisQuery(
 
 // ---------------------------------------------------------------- corpora
 
-function allRows<T>(result: unknown): T[] {
-  const rows = Array.isArray(result) ? (result[0] as unknown) : undefined;
-  return Array.isArray(rows) ? (rows as T[]) : [];
+function wholeSeconds(name: string, value: number): number {
+  if (!Number.isInteger(value) || value < 1) {
+    throw new Error(`The ${name} must be a whole number of seconds, at least 1.`);
+  }
+  return value;
 }
 
 export type CorpusStatus = "running" | "complete" | "blocked" | "failed";
@@ -1071,6 +1078,8 @@ export interface CorpusRow {
   generated_by: number | null;
   generated_at: Date;
   completed_at: Date | null;
+  owner_token: string | null;
+  lease_expires_at: Date | null;
 }
 
 export interface InsertCorpusArgs {
@@ -1178,13 +1187,16 @@ export interface UpdateCorpusStatusArgs {
   corpusSha256?: string;
   releaseFindings?: unknown;
   failureCode?: string;
+  /** The runner's lease token; when given, only the lease holder moves the corpus. */
+  ownerToken?: string;
 }
 
 /**
  * Moves a running corpus to a final status in one write, with whatever
  * completion fields are given (others keep their value). Only a running
  * corpus moves, so a completion never overwrites a corpus the stale sweep
- * already failed. Returns whether a row moved.
+ * already failed, and with `ownerToken` only the lease holder moves it. The
+ * lease is released. Returns whether a row moved.
  */
 export async function updateCorpusStatusQuery(
   args: UpdateCorpusStatusArgs,
@@ -1205,9 +1217,12 @@ export async function updateCorpusStatusQuery(
             release_findings_json = COALESCE(CAST(:release_findings_json AS JSONB), release_findings_json),
             failure_code = COALESCE(:failure_code, failure_code),
             heartbeat_at = NOW(),
-            completed_at = NOW()
+            completed_at = NOW(),
+            owner_token = NULL,
+            lease_expires_at = NULL
       WHERE id = :corpus_id AND organization_id = :organization_id
         AND status = 'running'
+        AND (CAST(:owner_token AS TEXT) IS NULL OR owner_token = :owner_token)
       RETURNING id`,
     {
       replacements: {
@@ -1221,6 +1236,7 @@ export async function updateCorpusStatusQuery(
         corpus_sha256: args.corpusSha256 ?? null,
         release_findings_json: json(args.releaseFindings),
         failure_code: args.failureCode ?? null,
+        owner_token: args.ownerToken ?? null,
         organization_id: organizationId,
       },
     },
@@ -1228,17 +1244,90 @@ export async function updateCorpusStatusQuery(
   return firstRow(result) !== undefined;
 }
 
-/** Marks a running corpus alive. False when it is not running (or not in the organization). */
+/**
+ * Claims the lease on a running corpus for `ownerToken`, when it is unowned or
+ * its lease has expired. A corpus has one runner at a time; a second claim
+ * while the lease is live gets false.
+ */
+export async function claimCorpusLeaseQuery(
+  corpusId: number,
+  organizationId: number,
+  ownerToken: string,
+  leaseSeconds: number,
+): Promise<boolean> {
+  const result = await sequelize.query(
+    `UPDATE bias_audit_corpora
+        SET owner_token = :owner_token,
+            lease_expires_at = NOW() + make_interval(secs => :lease_seconds),
+            heartbeat_at = NOW()
+      WHERE id = :corpus_id AND organization_id = :organization_id
+        AND status = 'running'
+        AND (owner_token IS NULL OR lease_expires_at IS NULL OR lease_expires_at < NOW())
+      RETURNING id`,
+    {
+      replacements: {
+        corpus_id: corpusId,
+        owner_token: ownerToken,
+        lease_seconds: wholeSeconds("lease", leaseSeconds),
+        organization_id: organizationId,
+      },
+    },
+  );
+  return firstRow(result) !== undefined;
+}
+
+/**
+ * Gives up the lease, for the holder only, so a retry after a failed run can
+ * claim the corpus at once instead of waiting for the lease to expire.
+ */
+export async function releaseCorpusLeaseQuery(
+  corpusId: number,
+  organizationId: number,
+  ownerToken: string,
+): Promise<boolean> {
+  const result = await sequelize.query(
+    `UPDATE bias_audit_corpora
+        SET owner_token = NULL, lease_expires_at = NULL
+      WHERE id = :corpus_id AND organization_id = :organization_id
+        AND owner_token = :owner_token
+      RETURNING id`,
+    {
+      replacements: {
+        corpus_id: corpusId,
+        owner_token: ownerToken,
+        organization_id: organizationId,
+      },
+    },
+  );
+  return firstRow(result) !== undefined;
+}
+
+/**
+ * Marks a running corpus alive and extends its lease, for the lease holder
+ * only. False when the corpus stopped running or another runner holds it.
+ */
 export async function touchCorpusHeartbeatQuery(
   corpusId: number,
   organizationId: number,
+  ownerToken: string,
+  leaseSeconds: number,
 ): Promise<boolean> {
   const result = await sequelize.query(
-    `UPDATE bias_audit_corpora SET heartbeat_at = NOW()
+    `UPDATE bias_audit_corpora
+        SET heartbeat_at = NOW(),
+            lease_expires_at = NOW() + make_interval(secs => :lease_seconds)
       WHERE id = :corpus_id AND organization_id = :organization_id
         AND status = 'running'
+        AND owner_token = :owner_token
       RETURNING id`,
-    { replacements: { corpus_id: corpusId, organization_id: organizationId } },
+    {
+      replacements: {
+        corpus_id: corpusId,
+        owner_token: ownerToken,
+        lease_seconds: wholeSeconds("lease", leaseSeconds),
+        organization_id: organizationId,
+      },
+    },
   );
   return firstRow(result) !== undefined;
 }
@@ -1252,9 +1341,7 @@ export async function markStaleCorporaFailedQuery(
   organizationId: number,
   staleAfterSeconds: number,
 ): Promise<number[]> {
-  if (!Number.isInteger(staleAfterSeconds) || staleAfterSeconds < 1) {
-    throw new Error("The stale limit must be a whole number of seconds, at least 1.");
-  }
+  wholeSeconds("stale limit", staleAfterSeconds);
   const result = await sequelize.query(
     `UPDATE bias_audit_corpora
         SET status = 'failed', failure_code = 'heartbeat_stale', completed_at = NOW()
@@ -1278,17 +1365,20 @@ export interface AppendCorpusRecordArgs {
   promptHash: string;
   validationStatus: "valid" | "invalid";
   invalidReason: string | null;
+  /** The runner's lease token; only the lease holder appends. */
+  ownerToken: string;
 }
 
 /**
  * Appends one generation attempt. The log is append-only: nothing here or
  * anywhere updates or deletes a record. Only a running corpus in this
- * organization takes a record; anything else inserts nothing and is refused.
+ * organization, held by `ownerToken`, takes a record; anything else inserts
+ * nothing and returns null (the caller has lost the lease).
  */
 export async function appendCorpusRecordQuery(
   args: AppendCorpusRecordArgs,
   organizationId: number,
-): Promise<{ id: number | string }> {
+): Promise<{ id: number | string } | null> {
   const result = await sequelize.query(
     `INSERT INTO bias_audit_corpus_records
        (organization_id, corpus_id, candidate_id, attempt, text, model_name,
@@ -1298,6 +1388,7 @@ export async function appendCorpusRecordQuery(
        FROM bias_audit_corpora c
       WHERE c.id = :corpus_id AND c.organization_id = :organization_id
         AND c.status = 'running'
+        AND c.owner_token = :owner_token
      RETURNING id`,
     {
       replacements: {
@@ -1309,18 +1400,12 @@ export async function appendCorpusRecordQuery(
         prompt_hash: args.promptHash,
         validation_status: args.validationStatus,
         invalid_reason: args.invalidReason,
+        owner_token: args.ownerToken,
         organization_id: organizationId,
       },
     },
   );
-  const row = firstRow<{ id: number | string }>(result);
-  if (!row) {
-    throw new ConflictException(
-      `Corpus ${args.corpusId} is not running in this organization`,
-      "Corpus",
-    );
-  }
-  return row;
+  return firstRow<{ id: number | string }>(result) ?? null;
 }
 
 /** One logged attempt, without its text. */

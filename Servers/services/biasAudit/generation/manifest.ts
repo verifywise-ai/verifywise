@@ -1,4 +1,5 @@
 import { cellKey } from "./allocation";
+import { compareCandidateIds } from "./assignCandidateIds";
 
 export interface AssignedRow {
   candidateId: string;
@@ -83,7 +84,27 @@ export function buildManifest(args: {
     bump(counts, `raceEthnicity:${a.demographics.raceEthnicity}`);
     bump(cellSizes, cellKey(a.demographics));
   }
-  // Code-unit order, the order the download pages in; IDs are fixed width.
-  rows.sort((x, y) => (x.candidateId < y.candidateId ? -1 : x.candidateId > y.candidateId ? 1 : 0));
+  rows.sort((x, y) => compareCandidateIds(x.candidateId, y.candidateId));
   return { rows, counts, cellSizes, unknownCandidateIds };
+}
+
+/** JSON with object keys sorted at every level and no whitespace. */
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    const keys = Object.keys(value).sort();
+    const obj = value as Record<string, unknown>;
+    return `{${keys.map((k) => `${JSON.stringify(k)}:${canonicalJson(obj[k])}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+/**
+ * The manifest as hashed: rows in candidate-ID order, keys sorted, no
+ * whitespace. The manifest is stored as JSONB, which reorders keys, so a hash
+ * over insertion-order JSON could not be reproduced from the stored copy.
+ */
+export function canonicalManifest(rows: ManifestRow[]): string {
+  const ordered = [...rows].sort((x, y) => compareCandidateIds(x.candidateId, y.candidateId));
+  return canonicalJson(ordered);
 }

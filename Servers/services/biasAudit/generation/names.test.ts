@@ -1,6 +1,7 @@
 import { LL144_RACE, LL144_SEX } from "./allocation";
 import { NAME_METHOD, nameFor } from "./names";
 import { findForbidden } from "../stance/vocabulary";
+import { findDemographicTerms } from "./demographicTerms";
 
 const ids = (n: number) => [...Array(n)].map((_, i) => `C${String(i + 1).padStart(4, "0")}`);
 
@@ -35,7 +36,78 @@ describe("nameFor", () => {
   });
 });
 
+/** First names and surnames a cell produces over many candidates. */
+function namesOf(sex: string, raceEthnicity: string, n = 3000) {
+  const first = new Set<string>();
+  const last = new Set<string>();
+  for (const id of ids(n)) {
+    const [f, l] = nameFor({ sex, raceEthnicity }, id, 5).split(" ");
+    first.add(f);
+    last.add(l);
+  }
+  return { first, last };
+}
+
+describe("name lists", () => {
+  // Ruling: given names commonly used for both sexes carry no sex signal.
+  const AMBIGUOUS = [
+    "Wei",
+    "Li",
+    "Jin",
+    "Yan",
+    "Ming",
+    "Yu",
+    "Min",
+    "Yi",
+    "Kyung",
+    "Jung",
+    "Hui",
+    "Wai",
+    "Tam",
+    "Xiao",
+    "Anh",
+    "Dung",
+    "Linh",
+    "Hoa",
+    "Phuong",
+    "Keola",
+    "Fetu",
+  ];
+
+  it("hold no sex-ambiguous first name in any cell", () => {
+    for (const sex of LL144_SEX)
+      for (const raceEthnicity of LL144_RACE) {
+        const { first } = namesOf(sex, raceEthnicity);
+        expect(AMBIGUOUS.filter((n) => first.has(n))).toEqual([]);
+      }
+  });
+
+  it("give Native American or Alaska Native first names that belong to no other group's list", () => {
+    for (const sex of LL144_SEX) {
+      const naan = namesOf(sex, "Native American or Alaska Native").first;
+      for (const other of LL144_RACE.filter(
+        (r) => r !== "Native American or Alaska Native" && r !== "Two or more races",
+      )) {
+        const theirs = namesOf(sex, other).first;
+        expect([...naan].filter((n) => theirs.has(n))).toEqual([]);
+      }
+    }
+  });
+
+  it("never trip the demographic-term matcher", () => {
+    for (const sex of LL144_SEX)
+      for (const raceEthnicity of LL144_RACE) {
+        const { first, last } = namesOf(sex, raceEthnicity);
+        expect([...first, ...last].filter((n) => findDemographicTerms(n).length > 0)).toEqual([]);
+      }
+  });
+});
+
 describe("NAME_METHOD", () => {
+  it("says the surname carries the signal where the first name cannot", () => {
+    expect(NAME_METHOD).toMatch(/surname carries the race\/ethnicity signal/);
+  });
+
   it("states the method in plain words the stance can print", () => {
     expect(NAME_METHOD).toMatch(/name/i);
     expect(findForbidden(NAME_METHOD)).toEqual([]);

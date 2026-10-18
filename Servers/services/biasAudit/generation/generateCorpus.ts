@@ -1,4 +1,4 @@
-import { createHash, randomInt } from "node:crypto";
+import { createHash, randomInt, randomUUID } from "node:crypto";
 import {
   JOB_DESCRIPTIONS,
   type JobDescription,
@@ -11,17 +11,19 @@ import {
 } from "../../../domain.layer/exceptions/custom.exception";
 import {
   appendCorpusRecordQuery,
+  claimCorpusLeaseQuery,
   createCorpusQuery,
   getCorpusQuery,
   listCorpusLogQuery,
   listLatestValidRecordsPageQuery,
+  releaseCorpusLeaseQuery,
   touchCorpusHeartbeatQuery,
   updateCorpusStatusQuery,
   type CorpusLogRow,
 } from "../../../utils/biasAudit.utils";
 import { isUniqueViolation } from "../serviceHelpers";
 import { LL144_CONFIG } from "../runService";
-import { buildAllocation } from "./allocation";
+import { buildAllocation, cellKey, LL144_RACE, LL144_SEX, MIN_PER_CELL } from "./allocation";
 import {
   assignCandidateIds,
   MAX_SEED_ATTEMPTS,
@@ -30,7 +32,12 @@ import {
 } from "./assignCandidateIds";
 import { corpusCsvHeaderLine, corpusCsvRow } from "./corpusCsv";
 import { complete } from "./gatewayClient";
-import { buildManifest, latestAttempts, type GenerationLogEntry } from "./manifest";
+import {
+  buildManifest,
+  canonicalManifest,
+  latestAttempts,
+  type GenerationLogEntry,
+} from "./manifest";
 import { NAME_METHOD, nameFor } from "./names";
 import { ARTIFACT_KINDS, buildPrompt, validateRecord, type ArtifactKind } from "./prompt";
 import { getGatewaySettings } from "./settings";
@@ -58,12 +65,44 @@ const KNOCKOUTS: readonly Knockout[] = ["yes", "no", "dont_know"];
 const ORDER_ATTRIBUTES: OrderAttribute[] = ["sex", "raceEthnicity", "tierKey"];
 /** Attempts per record, across every pass, before it is left out. */
 const MAX_ATTEMPTS = 3;
-const HEARTBEAT_EVERY = 25;
+/** The runner renews its lease this often while it runs. */
+export const HEARTBEAT_INTERVAL_MS = 30_000;
+/** A lease not renewed for this long may be claimed by another runner. */
+export const LEASE_SECONDS = 120;
+/** A running corpus with no heartbeat for this long is failed by the stale sweep. */
+export const STALE_AFTER_SECONDS = 600;
 const PAGE_SIZE = 500;
 const GATEWAY_RETRIES = 3;
 // The gate may redraw up to seed + MAX_SEED_ATTEMPTS - 1, and the stored seed
 // is an INTEGER column, so the draw stays that far under 2^31 - 1.
 const SEED_LIMIT = 2 ** 31 - MAX_SEED_ATTEMPTS;
+
+/** This runner no longer holds the corpus: another runner claimed it, or it stopped running. */
+export class LeaseLostError extends Error {
+  readonly code = "corpus_lease_lost" as const;
+  constructor(corpusId: number) {
+    super(
+      `Corpus ${corpusId} is held by another runner or is no longer running; generation stopped.`,
+    );
+    this.name = "LeaseLostError";
+  }
+}
+
+/** The deployment's model is not the one the corpus was pinned to. A corpus is one configuration. */
+export class CorpusModelChangedError extends Error {
+  readonly code = "corpus_model_changed" as const;
+  constructor(
+    corpusId: number,
+    readonly pinned: string,
+    readonly configured: string,
+  ) {
+    super(
+      `Corpus ${corpusId} was pinned to model "${pinned}" but "${configured}" is configured; ` +
+        "restore the model or start a new corpus.",
+    );
+    this.name = "CorpusModelChangedError";
+  }
+}
 
 const sha256 = (text: string) => createHash("sha256").update(text, "utf8").digest("hex");
 
@@ -169,26 +208,38 @@ const toEntry = (r: CorpusLogRow): GenerationLogEntry => ({
   promptHash: r.prompt_hash,
 });
 
-const notRunning = (corpusId: number) =>
-  new ConflictException(`Corpus ${corpusId} is no longer running; generation stopped.`, "Corpus");
+/** Every LL 144 cell: the floor applies to each. */
+const CELLS = LL144_SEX.flatMap((sex) =>
+  LL144_RACE.map((raceEthnicity) => cellKey({ sex, raceEthnicity })),
+);
 
 /**
  * Generates every record still missing, appending each attempt to the log,
- * then completes the corpus from the whole log. Gateway errors are not
- * caught: the job fails, BullMQ retries it, and the retry resumes from the
- * log with the same plan, names and prompts.
+ * then completes the corpus from the whole log. One runner at a time: it
+ * claims the corpus lease, renews it every HEARTBEAT_INTERVAL_MS, and every
+ * append and the completion name its token, so a runner that lost the lease
+ * stops with LeaseLostError. Gateway errors are not caught: the job fails,
+ * BullMQ retries it, and the retry resumes from the log with the same plan,
+ * names and prompts once the lease is free.
+ *
+ * The corpus completes as 'complete' only when every cell holds at least
+ * MIN_PER_CELL valid records; otherwise it is 'blocked' (cells_below_floor).
  */
 export async function runCorpusGeneration(args: {
   corpusId: number;
   organizationId: number;
-}): Promise<{ status: "complete"; recordCount: number; modelsObserved: Record<string, number> }> {
+}): Promise<{
+  status: "complete" | "blocked";
+  recordCount: number;
+  modelsObserved: Record<string, number>;
+}> {
   const { corpusId, organizationId } = args;
   const corpus = await getCorpusQuery(corpusId, organizationId);
   if (!corpus) throw new NotFoundException(`Corpus ${corpusId} was not found`, "Corpus", corpusId);
-  if (corpus.status === "complete") {
+  if (corpus.status === "complete" || corpus.status === "blocked") {
     // A retry after the completion write: nothing left to do.
     return {
-      status: "complete",
+      status: corpus.status,
       recordCount: corpus.record_count ?? 0,
       modelsObserved: corpus.models_observed_json ?? {},
     };
@@ -207,91 +258,151 @@ export async function runCorpusGeneration(args: {
   const kind = corpus.artifact_kind;
   assertArtifactKind(kind);
   const settings = getGatewaySettings();
+  if (settings.model !== corpus.model_pinned) {
+    throw new CorpusModelChangedError(corpusId, corpus.model_pinned, settings.model);
+  }
   const { assigned, seedUsed } = planFor(jd, corpus.planned_count, corpus.seed);
   if (seedUsed !== corpus.seed) {
     throw new Error(`The stored seed no longer reproduces the plan of corpus ${corpusId}.`);
   }
 
-  const heartbeat = async () => {
-    if (!(await touchCorpusHeartbeatQuery(corpusId, organizationId))) throw notRunning(corpusId);
+  const ownerToken = randomUUID();
+  if (!(await claimCorpusLeaseQuery(corpusId, organizationId, ownerToken, LEASE_SECONDS))) {
+    throw new LeaseLostError(corpusId);
+  }
+  const beat = async () => {
+    const held = await touchCorpusHeartbeatQuery(
+      corpusId,
+      organizationId,
+      ownerToken,
+      LEASE_SECONDS,
+    );
+    if (!held) throw new LeaseLostError(corpusId);
   };
-  await heartbeat();
+  // Time-based heartbeat. A failed beat is kept and thrown by the loop before
+  // its next gateway call, so a runner that lost the lease stops spending.
+  let beatError: unknown = null;
+  let beating = false;
+  const timer = setInterval(() => {
+    if (beating || beatError) return;
+    beating = true;
+    beat()
+      .catch((e) => {
+        beatError = e;
+      })
+      .finally(() => {
+        beating = false;
+      });
+  }, HEARTBEAT_INTERVAL_MS);
+  timer.unref?.();
+  let finished = false;
+  const assertHeld = () => {
+    if (beatError) throw beatError;
+  };
 
-  const latest = latestAttempts((await listCorpusLogQuery(corpusId, organizationId)).map(toEntry));
-  let sinceHeartbeat = 0;
-  for (const a of assigned) {
-    const seen = latest.get(a.candidateId);
-    if (seen?.validationStatus === "valid") continue;
-    const prompt = buildPrompt({
-      jobDescription: jd,
-      tierKey: a.tierKey,
-      artifactKind: kind,
-      candidateName: nameFor(a.demographics, a.candidateId, corpus.seed),
-    });
-    for (let attempt = (seen?.attempt ?? 0) + 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      const res = await complete(settings, prompt, { retries: GATEWAY_RETRIES });
-      const check = validateRecord(res.text, kind, { finishReason: res.finishReason });
-      await appendCorpusRecordQuery(
-        {
-          corpusId,
-          candidateId: a.candidateId,
-          attempt,
-          text: res.text,
-          modelName: res.modelObserved,
-          promptHash: res.promptHash,
-          validationStatus: check.ok ? "valid" : "invalid",
-          invalidReason: check.ok ? null : check.reason,
-        },
-        organizationId,
-      );
-      if (++sinceHeartbeat >= HEARTBEAT_EVERY) {
-        sinceHeartbeat = 0;
-        await heartbeat();
+  try {
+    const latest = latestAttempts(
+      (await listCorpusLogQuery(corpusId, organizationId)).map(toEntry),
+    );
+    for (const a of assigned) {
+      const seen = latest.get(a.candidateId);
+      if (seen?.validationStatus === "valid") continue;
+      const candidateName = nameFor(a.demographics, a.candidateId, corpus.seed);
+      const prompt = buildPrompt({
+        jobDescription: jd,
+        tierKey: a.tierKey,
+        artifactKind: kind,
+        candidateName,
+      });
+      for (let attempt = (seen?.attempt ?? 0) + 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        assertHeld();
+        const res = await complete(settings, prompt, { retries: GATEWAY_RETRIES });
+        const check = validateRecord(res.text, kind, {
+          candidateName,
+          finishReason: res.finishReason,
+        });
+        let appended: { id: number | string } | null;
+        try {
+          appended = await appendCorpusRecordQuery(
+            {
+              corpusId,
+              candidateId: a.candidateId,
+              attempt,
+              text: res.text,
+              modelName: res.modelObserved,
+              promptHash: res.promptHash,
+              validationStatus: check.ok ? "valid" : "invalid",
+              invalidReason: check.ok ? null : check.reason,
+              ownerToken,
+            },
+            organizationId,
+          );
+        } catch (e) {
+          // Another runner wrote this attempt: two runners on one corpus.
+          if (isUniqueViolation(e)) throw new LeaseLostError(corpusId);
+          throw e;
+        }
+        if (!appended) throw new LeaseLostError(corpusId);
+        if (check.ok) break;
       }
-      if (check.ok) break;
+    }
+
+    assertHeld();
+    await beat();
+
+    // The manifest comes from the whole log, re-read, never from this pass.
+    const log = (await listCorpusLogQuery(corpusId, organizationId)).map(toEntry);
+    const manifest = buildManifest({ assigned, log });
+    if (manifest.unknownCandidateIds.length > 0) {
+      throw new Error(
+        `The log of corpus ${corpusId} names candidates outside its plan: ` +
+          manifest.unknownCandidateIds.slice(0, 5).join(", "),
+      );
+    }
+    const finalLatest = latestAttempts(log);
+    const unfinished = assigned.filter((a) => {
+      const e = finalLatest.get(a.candidateId);
+      return !e || (e.validationStatus !== "valid" && e.attempt < MAX_ATTEMPTS);
+    });
+    if (unfinished.length > 0) {
+      throw new Error(`Corpus ${corpusId} still has ${unfinished.length} records to generate.`);
+    }
+
+    const modelsObserved: Record<string, number> = {};
+    for (const r of manifest.rows) {
+      modelsObserved[r.modelName] = (modelsObserved[r.modelName] ?? 0) + 1;
+    }
+    const corpusSha256 = await hashDownload(corpusId, organizationId, kind, manifest.rows);
+    const manifestSha256 = sha256(canonicalManifest(manifest.rows));
+    const belowFloor = CELLS.some((c) => (manifest.cellSizes[c] ?? 0) < MIN_PER_CELL);
+    const status = belowFloor ? "blocked" : "complete";
+
+    assertHeld();
+    const moved = await updateCorpusStatusQuery(
+      {
+        corpusId,
+        status,
+        recordCount: manifest.rows.length,
+        modelsObserved,
+        cellSizes: manifest.cellSizes,
+        manifest: manifest.rows,
+        manifestSha256,
+        corpusSha256,
+        failureCode: belowFloor ? "cells_below_floor" : undefined,
+        ownerToken,
+      },
+      organizationId,
+    );
+    if (!moved) throw new LeaseLostError(corpusId);
+    finished = true;
+    return { status, recordCount: manifest.rows.length, modelsObserved };
+  } finally {
+    clearInterval(timer);
+    if (!finished) {
+      // Free the corpus for the retry; a failed release only delays it to lease expiry.
+      await releaseCorpusLeaseQuery(corpusId, organizationId, ownerToken).catch(() => false);
     }
   }
-
-  // The manifest comes from the whole log, re-read, never from this pass.
-  const log = (await listCorpusLogQuery(corpusId, organizationId)).map(toEntry);
-  const manifest = buildManifest({ assigned, log });
-  if (manifest.unknownCandidateIds.length > 0) {
-    throw new Error(
-      `The log of corpus ${corpusId} names candidates outside its plan: ` +
-        manifest.unknownCandidateIds.slice(0, 5).join(", "),
-    );
-  }
-  const finalLatest = latestAttempts(log);
-  const unfinished = assigned.filter((a) => {
-    const e = finalLatest.get(a.candidateId);
-    return !e || (e.validationStatus !== "valid" && e.attempt < MAX_ATTEMPTS);
-  });
-  if (unfinished.length > 0) {
-    throw new Error(`Corpus ${corpusId} still has ${unfinished.length} records to generate.`);
-  }
-
-  const modelsObserved: Record<string, number> = {};
-  for (const r of manifest.rows)
-    modelsObserved[r.modelName] = (modelsObserved[r.modelName] ?? 0) + 1;
-
-  const corpusSha256 = await hashDownload(corpusId, organizationId, kind, manifest.rows);
-  const manifestSha256 = sha256(JSON.stringify(manifest.rows));
-
-  const moved = await updateCorpusStatusQuery(
-    {
-      corpusId,
-      status: "complete",
-      recordCount: manifest.rows.length,
-      modelsObserved,
-      cellSizes: manifest.cellSizes,
-      manifest: manifest.rows,
-      manifestSha256,
-      corpusSha256,
-    },
-    organizationId,
-  );
-  if (!moved) throw notRunning(corpusId);
-  return { status: "complete", recordCount: manifest.rows.length, modelsObserved };
 }
 
 /**

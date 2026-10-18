@@ -94,21 +94,27 @@ describe("buildPrompt", () => {
 });
 
 describe("validateRecord", () => {
+  const NAME = { candidateName: "Sam Lee" };
   const resume = "Sam Lee\nExperience\nAccount Executive, 2019-2024\nSkills\nNegotiation";
   const transcript =
-    "Interviewer: Tell me about a deal.\nCandidate: I ran it.\n" +
+    "Interviewer: Good morning, Sam Lee. Tell me about a deal.\nCandidate: I ran it.\n" +
     "Interviewer: How long?\nCandidate: Six months.";
-  const structured = JSON.stringify({ summary: "x", experience: ["y"], skills: ["z"] });
+  const structured = JSON.stringify({
+    name: "Sam Lee",
+    summary: "x",
+    experience: ["y"],
+    skills: ["z"],
+  });
 
   it("accepts a well-formed record of each kind", () => {
-    expect(validateRecord(resume, "resume")).toEqual({ ok: true });
-    expect(validateRecord(transcript, "transcript")).toEqual({ ok: true });
-    expect(validateRecord(structured, "structured")).toEqual({ ok: true });
+    expect(validateRecord(resume, "resume", NAME)).toEqual({ ok: true });
+    expect(validateRecord(transcript, "transcript", NAME)).toEqual({ ok: true });
+    expect(validateRecord(structured, "structured", NAME)).toEqual({ ok: true });
   });
 
   it("refuses empty and over-long text", () => {
-    expect(validateRecord("  ", "resume")).toEqual({ ok: false, reason: "empty" });
-    expect(validateRecord("x\n".repeat(RECORD_MAX_CHARS), "resume")).toEqual({
+    expect(validateRecord("  ", "resume", NAME)).toEqual({ ok: false, reason: "empty" });
+    expect(validateRecord("x\n".repeat(RECORD_MAX_CHARS), "resume", NAME)).toEqual({
       ok: false,
       reason: "too_long",
     });
@@ -116,60 +122,168 @@ describe("validateRecord", () => {
 
   it("refuses forbidden vocabulary, by the module's matcher", () => {
     const word = ["pas", "sed"].join(""); // kept out of this source file as one token
-    expect(validateRecord(`${resume}\nI ${word} the exam`, "resume")).toEqual({
+    expect(validateRecord(`${resume}\nI ${word} the exam`, "resume", NAME)).toEqual({
       ok: false,
       reason: "forbidden_words",
     });
   });
 
   it("refuses a demographic field in any form", () => {
-    expect(validateRecord(`${resume}\nGender: F`, "resume")).toEqual({
+    expect(validateRecord(`${resume}\nGender: F`, "resume", NAME)).toEqual({
       ok: false,
       reason: "demographic_field",
     });
-    expect(validateRecord(`${transcript}\nCandidate: Date of birth: 1990`, "transcript")).toEqual({
-      ok: false,
-      reason: "demographic_field",
-    });
-    expect(validateRecord(`${resume}\nSexton Ltd: 2019`, "resume")).toEqual({ ok: true });
-    expect(validateRecord(`Nationality: X\n${transcript}`, "transcript")).toEqual({
-      ok: false,
-      reason: "demographic_field",
-    });
-    expect(validateRecord(JSON.stringify({ summary: "x", ethnicity: "y" }), "structured")).toEqual({
+    expect(
+      validateRecord(`${transcript}\nCandidate: Date of birth: 1990`, "transcript", NAME),
+    ).toEqual({ ok: false, reason: "demographic_field" });
+    expect(validateRecord(`${resume}\nSexton Ltd: 2019`, "resume", NAME)).toEqual({ ok: true });
+    expect(validateRecord(`Nationality: X\n${transcript}`, "transcript", NAME)).toEqual({
       ok: false,
       reason: "demographic_field",
     });
     expect(
       validateRecord(
-        JSON.stringify({ summary: "x", experience: [], skills: [], profile: { Age: 30 } }),
+        JSON.stringify({ name: "Sam Lee", summary: "x", ethnicity: "y" }),
         "structured",
+        NAME,
+      ),
+    ).toEqual({ ok: false, reason: "demographic_field" });
+    expect(
+      validateRecord(
+        JSON.stringify({
+          name: "Sam Lee",
+          summary: "x",
+          experience: [],
+          skills: [],
+          profile: { Age: 30 },
+        }),
+        "structured",
+        NAME,
       ),
     ).toEqual({ ok: false, reason: "demographic_field" });
   });
 
+  it("refuses any other group signal: affiliation, heritage language, nationality, religion", () => {
+    for (const line of [
+      "Member, Society of Hispanic Professional Engineers",
+      "Fluent in Tongan",
+      "Mexican citizen with a US work permit",
+      "Volunteer at my church food bank",
+      "Board member, Women in Sales network",
+      "Treasurer, Alpha Kappa Alpha",
+    ]) {
+      expect(validateRecord(`${resume}\n${line}`, "resume", NAME)).toEqual({
+        ok: false,
+        reason: "demographic_term",
+      });
+    }
+    const withLanguage = JSON.stringify({
+      name: "Sam Lee",
+      summary: "x",
+      experience: ["y"],
+      skills: ["Spanish"],
+    });
+    expect(validateRecord(withLanguage, "structured", NAME)).toEqual({
+      ok: false,
+      reason: "demographic_term",
+    });
+  });
+
+  it("allows pronouns and honorifics consistent with the name", () => {
+    expect(
+      validateRecord(
+        "Interviewer: Good morning, Ms. Sam Lee.\nCandidate: She asked me to lead it, so I did.\n" +
+          "Interviewer: Thank you, Ms. Lee.\nCandidate: Thank you.",
+        "transcript",
+        NAME,
+      ),
+    ).toEqual({ ok: true });
+  });
+
+  it("refuses a record that does not carry the candidate's full name", () => {
+    expect(validateRecord(resume.replace("Sam Lee", "Sam"), "resume", NAME)).toEqual({
+      ok: false,
+      reason: "no_name",
+    });
+    expect(validateRecord(transcript.replace("Sam Lee", "there"), "transcript", NAME)).toEqual({
+      ok: false,
+      reason: "no_name",
+    });
+    expect(
+      validateRecord(structured.replace('"Sam Lee"', '"Candidate"'), "structured", NAME),
+    ).toEqual({ ok: false, reason: "no_name" });
+    // The name in a structured record's text but not its name key does not count.
+    expect(
+      validateRecord(
+        JSON.stringify({ name: "S. L.", summary: "Sam Lee sells", experience: [], skills: [] }),
+        "structured",
+        NAME,
+      ),
+    ).toEqual({ ok: false, reason: "no_name" });
+    // Case and spacing do not matter.
+    expect(validateRecord(resume.replace("Sam Lee", "SAM   LEE"), "resume", NAME)).toEqual({
+      ok: true,
+    });
+  });
+
   it("refuses a record whose shape does not match its form", () => {
-    expect(validateRecord(resume, "transcript")).toEqual({ ok: false, reason: "wrong_shape" });
-    expect(validateRecord("not json", "structured")).toEqual({ ok: false, reason: "wrong_shape" });
-    expect(validateRecord(JSON.stringify({ summary: "x" }), "structured")).toEqual({
+    expect(validateRecord(resume, "transcript", NAME)).toEqual({
       ok: false,
       reason: "wrong_shape",
     });
-    expect(validateRecord(JSON.stringify([1]), "structured")).toEqual({
+    expect(validateRecord("not json", "structured", NAME)).toEqual({
+      ok: false,
+      reason: "wrong_shape",
+    });
+    expect(
+      validateRecord(JSON.stringify({ name: "Sam Lee", summary: "x" }), "structured", NAME),
+    ).toEqual({
+      ok: false,
+      reason: "wrong_shape",
+    });
+    expect(validateRecord(JSON.stringify([1]), "structured", NAME)).toEqual({
       ok: false,
       reason: "wrong_shape",
     });
   });
 
   it("refuses a response the model did not finish (ruling: only 'stop' is clean)", () => {
-    expect(validateRecord(resume, "resume", { finishReason: "length" })).toEqual({
+    expect(validateRecord(resume, "resume", { ...NAME, finishReason: "length" })).toEqual({
       ok: false,
       reason: "unfinished",
     });
-    expect(validateRecord(resume, "resume", { finishReason: null })).toEqual({
+    expect(validateRecord(resume, "resume", { ...NAME, finishReason: null })).toEqual({
       ok: false,
       reason: "unfinished",
     });
-    expect(validateRecord(resume, "resume", { finishReason: "stop" })).toEqual({ ok: true });
+    expect(validateRecord(resume, "resume", { ...NAME, finishReason: "stop" })).toEqual({
+      ok: true,
+    });
+  });
+});
+
+describe("the prompt asks for the name in the record", () => {
+  it("names where the full name goes, for every form", () => {
+    const p = (artifactKind: ArtifactKind) =>
+      buildPrompt({
+        jobDescription: jd,
+        tierKey: "t4_qualified",
+        artifactKind,
+        candidateName: "Sam Lee",
+      });
+    expect(p("resume")).toMatch(/first line is the candidate's full name/);
+    expect(p("transcript")).toMatch(/greets the candidate by full name/);
+    expect(p("structured")).toMatch(/"name" \(the candidate's full name\)/);
+  });
+
+  it("forbids every other background signal", () => {
+    const p = buildPrompt({
+      jobDescription: jd,
+      tierKey: "t4_qualified",
+      artifactKind: "resume",
+      candidateName: "Sam Lee",
+    });
+    expect(p).toMatch(/religion, heritage, languages other than English/);
+    expect(p).toMatch(/identity-based organisations/);
   });
 });

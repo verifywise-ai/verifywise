@@ -42,6 +42,8 @@ import {
   listCorpusLogQuery,
   countValidCorpusRecordsQuery,
   listLatestValidRecordsPageQuery,
+  claimCorpusLeaseQuery,
+  releaseCorpusLeaseQuery,
   InsertCorpusArgs,
 } from "./biasAudit.utils";
 import { ConflictException, NotFoundException } from "../domain.layer/exceptions/custom.exception";
@@ -702,6 +704,7 @@ describe("corpora and the record log", () => {
     promptHash: "h".repeat(64),
     validationStatus: "valid" as const,
     invalidReason: null,
+    ownerToken: "tok",
   };
 
   const calls: Array<[string, () => Promise<unknown>, unknown]> = [
@@ -712,8 +715,10 @@ describe("corpora and the record log", () => {
       () => updateCorpusStatusQuery({ corpusId: 3, status: "failed", failureCode: "x" }, 42),
       [[]],
     ],
-    ["heartbeat", () => touchCorpusHeartbeatQuery(3, 42), [[]]],
+    ["heartbeat", () => touchCorpusHeartbeatQuery(3, 42, "tok", 120), [[]]],
     ["stale sweep", () => markStaleCorporaFailedQuery(42, 900), [[]]],
+    ["lease claim", () => claimCorpusLeaseQuery(3, 42, "tok", 120), [[]]],
+    ["lease release", () => releaseCorpusLeaseQuery(3, 42, "tok"), [[]]],
     ["append", () => appendCorpusRecordQuery(RECORD, 42), [[{ id: 1 }]]],
     ["log", () => listCorpusLogQuery(3, 42), []],
     ["valid count", () => countValidCorpusRecordsQuery(3, 42), [{ count: 0 }]],
@@ -787,10 +792,47 @@ describe("corpora and the record log", () => {
       manifest_sha256: "b".repeat(64),
       corpus_sha256: "c".repeat(64),
     });
+    // Without a token any caller (the stale sweep, an operator) may move it.
+    expect(opts.replacements.owner_token).toBeNull();
+    expect(sql).toMatch(/CAST\(:owner_token AS TEXT\) IS NULL OR owner_token = :owner_token/);
+    // Completion releases the lease.
+    expect(sql).toMatch(/owner_token = NULL/);
+    expect(sql).toMatch(/lease_expires_at = NULL/);
     mockQuery.mockResolvedValueOnce([[]]);
     await expect(updateCorpusStatusQuery({ corpusId: 3, status: "failed" }, 42)).resolves.toBe(
       false,
     );
+  });
+
+  it("moves a corpus only for the lease holder when a token is given", async () => {
+    mockQuery.mockResolvedValueOnce([[]]);
+    await expect(
+      updateCorpusStatusQuery({ corpusId: 3, status: "complete", ownerToken: "tok" }, 42),
+    ).resolves.toBe(false);
+    expect(mockQuery.mock.calls[0][1].replacements.owner_token).toBe("tok");
+  });
+
+  it("releases the lease for its holder only", async () => {
+    mockQuery.mockResolvedValueOnce([[{ id: 3 }]]);
+    await expect(releaseCorpusLeaseQuery(3, 42, "tok")).resolves.toBe(true);
+    const [sql, opts] = mockQuery.mock.calls[0];
+    expect(sql).toMatch(/owner_token = :owner_token/);
+    expect(sql).toMatch(/SET owner_token = NULL, lease_expires_at = NULL/);
+    expect(opts.replacements.owner_token).toBe("tok");
+  });
+
+  it("claims the lease only when it is unowned or expired, on a running corpus", async () => {
+    mockQuery.mockResolvedValueOnce([[{ id: 3 }]]);
+    await expect(claimCorpusLeaseQuery(3, 42, "tok", 120)).resolves.toBe(true);
+    const [sql, opts] = mockQuery.mock.calls[0];
+    expect(sql).toMatch(/status = 'running'/);
+    expect(sql).toMatch(
+      /owner_token IS NULL OR lease_expires_at IS NULL OR lease_expires_at < NOW\(\)/,
+    );
+    expect(opts.replacements).toMatchObject({ owner_token: "tok", lease_seconds: 120 });
+    mockQuery.mockResolvedValueOnce([[]]);
+    await expect(claimCorpusLeaseQuery(3, 42, "other", 120)).resolves.toBe(false);
+    await expect(claimCorpusLeaseQuery(3, 42, "tok", 0)).rejects.toThrow(/seconds/);
   });
 
   it("refuses to move a corpus back to running", async () => {
@@ -800,12 +842,16 @@ describe("corpora and the record log", () => {
     expect(mockQuery).not.toHaveBeenCalled();
   });
 
-  it("touches the heartbeat of a running corpus only", async () => {
+  it("touches the heartbeat of a running corpus, for the lease holder only", async () => {
     mockQuery.mockResolvedValueOnce([[{ id: 3 }]]);
-    await expect(touchCorpusHeartbeatQuery(3, 42)).resolves.toBe(true);
-    expect(mockQuery.mock.calls[0][0]).toMatch(/status = 'running'/);
+    await expect(touchCorpusHeartbeatQuery(3, 42, "tok", 120)).resolves.toBe(true);
+    const [sql, opts] = mockQuery.mock.calls[0];
+    expect(sql).toMatch(/status = 'running'/);
+    expect(sql).toMatch(/owner_token = :owner_token/);
+    expect(sql).toMatch(/lease_expires_at = NOW\(\) \+ make_interval/);
+    expect(opts.replacements).toMatchObject({ owner_token: "tok", lease_seconds: 120 });
     mockQuery.mockResolvedValueOnce([[]]);
-    await expect(touchCorpusHeartbeatQuery(3, 42)).resolves.toBe(false);
+    await expect(touchCorpusHeartbeatQuery(3, 42, "tok", 120)).resolves.toBe(false);
   });
 
   it("fails running corpora whose heartbeat is older than the limit, and returns their ids", async () => {
@@ -818,12 +864,13 @@ describe("corpora and the record log", () => {
     await expect(markStaleCorporaFailedQuery(42, 0)).rejects.toThrow(/seconds/);
   });
 
-  it("appends a record only to a running corpus in the organization, never updating one", async () => {
+  it("appends a record only to a running corpus in the organization held by the token, never updating one", async () => {
     mockQuery.mockResolvedValueOnce([[{ id: 1 }]]);
     await appendCorpusRecordQuery(RECORD, 42);
     const [sql, opts] = mockQuery.mock.calls[0];
     expect(sql).toMatch(/INSERT INTO bias_audit_corpus_records/);
     expect(sql).toMatch(/c\.status = 'running'/);
+    expect(sql).toMatch(/c\.owner_token = :owner_token/);
     expect(sql).not.toMatch(/UPDATE|ON CONFLICT/i);
     expect(opts.replacements).toMatchObject({
       corpus_id: 3,
@@ -831,9 +878,11 @@ describe("corpora and the record log", () => {
       attempt: 1,
       validation_status: "valid",
       invalid_reason: null,
+      owner_token: "tok",
     });
+    // Not running, another runner's lease, or another organization: nothing inserted.
     mockQuery.mockResolvedValueOnce([[]]);
-    await expect(appendCorpusRecordQuery(RECORD, 42)).rejects.toThrow(ConflictException);
+    await expect(appendCorpusRecordQuery(RECORD, 42)).resolves.toBeNull();
   });
 
   it("reads the log as metadata only, never the text", async () => {

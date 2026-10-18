@@ -14,6 +14,8 @@ jest.mock("../../../utils/biasAudit.utils", () => ({
   listCorpusLogQuery: jest.fn(),
   countValidCorpusRecordsQuery: jest.fn(),
   listLatestValidRecordsPageQuery: jest.fn(),
+  claimCorpusLeaseQuery: jest.fn(),
+  releaseCorpusLeaseQuery: jest.fn(),
   getProjectQuery: jest.fn(),
 }));
 jest.mock("./gatewayClient", () => ({ complete: jest.fn() }));
@@ -35,8 +37,17 @@ import { GatewayNotConfiguredError } from "./settings";
 import { assignCandidateIds, IdOrderError, verifyIdOrder } from "./assignCandidateIds";
 import { buildAllocation } from "./allocation";
 import { NAME_METHOD } from "./names";
+import { canonicalManifest } from "./manifest";
 import { corpusCsvHeaderLine, corpusCsvRow } from "./corpusCsv";
-import { createCorpus, jobDescriptionSha256, runCorpusGeneration } from "./generateCorpus";
+import {
+  CorpusModelChangedError,
+  createCorpus,
+  HEARTBEAT_INTERVAL_MS,
+  jobDescriptionSha256,
+  LEASE_SECONDS,
+  LeaseLostError,
+  runCorpusGeneration,
+} from "./generateCorpus";
 
 const mockUtils = utils as unknown as Record<string, jest.Mock>;
 const mockComplete = complete as jest.Mock;
@@ -46,6 +57,16 @@ const SETTINGS = { baseUrl: "https://gateway.example", apiKey: "k", model: "pinn
 const JD = JOB_DESCRIPTIONS["commercial-ae"];
 const RESUME = "Sam Lee\nExperience\nAccount Executive, 2019-2024\nSkills\nNegotiation";
 const H = "h".repeat(64);
+// A valid reply carries the candidate's full name, read back from the prompt.
+const nameIn = (prompt: string) => /The candidate's name is (.+)\.$/m.exec(prompt)![1];
+const reply =
+  (modelObserved = "m1") =>
+  async (_settings: unknown, prompt: string) => ({
+    text: `${nameIn(prompt)}\nExperience\nAccount Executive, 2019-2024\nSkills\nNegotiation`,
+    modelObserved,
+    promptHash: H,
+    finishReason: "stop",
+  });
 const ok = (modelObserved = "m1", text = RESUME) => ({
   text,
   modelObserved,
@@ -143,6 +164,8 @@ beforeEach(() => {
   mockUtils.createCorpusQuery.mockResolvedValue({ id: 3 });
   mockUtils.getCorpusQuery.mockResolvedValue(corpusRow());
   mockUtils.touchCorpusHeartbeatQuery.mockResolvedValue(true);
+  mockUtils.claimCorpusLeaseQuery.mockResolvedValue(true);
+  mockUtils.releaseCorpusLeaseQuery.mockResolvedValue(true);
   mockUtils.updateCorpusStatusQuery.mockResolvedValue(true);
   mockUtils.listCorpusLogQuery.mockImplementation(async () =>
     store.map(({ text: _text, ...meta }) => meta),
@@ -238,10 +261,15 @@ describe("createCorpus", () => {
 });
 
 describe("runCorpusGeneration", () => {
+  afterEach(() => jest.useRealTimers());
+
+  const run = () => runCorpusGeneration({ corpusId: 3, organizationId: 1 });
+  const done = () => mockUtils.updateCorpusStatusQuery.mock.calls.at(-1)![0];
+  const claimToken = () => mockUtils.claimCorpusLeaseQuery.mock.calls[0][2];
+
   it("records every model observed, not the pinned one", async () => {
-    mockComplete.mockResolvedValueOnce(ok("m1")).mockResolvedValue(ok("m2"));
-    const out = await runCorpusGeneration({ corpusId: 3, organizationId: 1 });
-    expect(out).toEqual({
+    mockComplete.mockImplementationOnce(reply("m1")).mockImplementation(reply("m2"));
+    await expect(run()).resolves.toEqual({
       status: "complete",
       recordCount: 700,
       modelsObserved: { m1: 1, m2: 699 },
@@ -251,21 +279,20 @@ describe("runCorpusGeneration", () => {
   // Review Focus 1
   it("resumes from the log: generates only what is missing and builds the manifest from all of it", async () => {
     seedLog(logFor(300));
-    mockComplete.mockResolvedValue(ok());
-    await runCorpusGeneration({ corpusId: 3, organizationId: 1 });
+    mockComplete.mockImplementation(reply());
+    await run();
     expect(mockComplete).toHaveBeenCalledTimes(400);
-    const done = mockUtils.updateCorpusStatusQuery.mock.calls.at(-1)![0];
-    expect(done.manifest).toHaveLength(700);
-    expect(done.recordCount).toBe(700);
+    expect(done().manifest).toHaveLength(700);
+    expect(done().recordCount).toBe(700);
   });
 
   it("leaves the corpus running after a mid-run failure, with every finished record logged", async () => {
     let calls = 0;
-    mockComplete.mockImplementation(async () => {
+    mockComplete.mockImplementation(async (s: unknown, p: string) => {
       if (++calls > 100) throw new Error("gateway request failed (status 500)");
-      return ok();
+      return reply()(s, p);
     });
-    await expect(runCorpusGeneration({ corpusId: 3, organizationId: 1 })).rejects.toThrow();
+    await expect(run()).rejects.toThrow();
     expect(mockUtils.appendCorpusRecordQuery).toHaveBeenCalledTimes(100);
     expect(mockUtils.updateCorpusStatusQuery).not.toHaveBeenCalled();
     // BullMQ retries the job (Task 8); the next attempt resumes from these 100.
@@ -273,8 +300,8 @@ describe("runCorpusGeneration", () => {
 
   it("retries an invalid record as a new attempt, never overwriting the first", async () => {
     seedLog(logFor(699));
-    mockComplete.mockResolvedValueOnce(ok("m1", "  ")).mockResolvedValueOnce(ok());
-    await runCorpusGeneration({ corpusId: 3, organizationId: 1 });
+    mockComplete.mockResolvedValueOnce(ok("m1", "  ")).mockImplementationOnce(reply());
+    await run();
     const appended = mockUtils.appendCorpusRecordQuery.mock.calls.map((c) => c[0]);
     expect(
       appended.map((r) => [r.candidateId, r.attempt, r.validationStatus, r.invalidReason]),
@@ -284,12 +311,23 @@ describe("runCorpusGeneration", () => {
     ]);
   });
 
+  it("logs a reply without the candidate's name as an invalid attempt", async () => {
+    seedLog(logFor(699));
+    mockComplete.mockResolvedValueOnce(ok("m1", RESUME)).mockImplementationOnce(reply());
+    await run();
+    const appended = mockUtils.appendCorpusRecordQuery.mock.calls.map((c) => c[0]);
+    expect(appended.map((r) => r.invalidReason)).toEqual(["no_name", null]);
+  });
+
   it("logs an unfinished response as an invalid attempt (ruling: only 'stop' is clean)", async () => {
     seedLog(logFor(699));
     mockComplete
-      .mockResolvedValueOnce({ ...ok(), finishReason: "length" })
-      .mockResolvedValueOnce(ok());
-    await runCorpusGeneration({ corpusId: 3, organizationId: 1 });
+      .mockImplementationOnce(async (s: unknown, p: string) => ({
+        ...(await reply()(s, p)),
+        finishReason: "length",
+      }))
+      .mockImplementationOnce(reply());
+    await run();
     const appended = mockUtils.appendCorpusRecordQuery.mock.calls.map((c) => c[0]);
     expect(appended.map((r) => [r.attempt, r.validationStatus, r.invalidReason])).toEqual([
       [1, "invalid", "unfinished"],
@@ -304,29 +342,161 @@ describe("runCorpusGeneration", () => {
       { ...logFor(700)[699], attempt: 2, validation_status: "invalid", text: "" },
     ]);
     mockComplete.mockResolvedValue(ok("m1", "  "));
-    const out = await runCorpusGeneration({ corpusId: 3, organizationId: 1 });
+    const out = await run();
     expect(mockComplete).toHaveBeenCalledTimes(1);
     expect(mockUtils.appendCorpusRecordQuery.mock.calls[0][0].attempt).toBe(3);
     expect(out.recordCount).toBe(699);
-    const done = mockUtils.updateCorpusStatusQuery.mock.calls.at(-1)![0];
-    expect(done.manifest.map((r: any) => r.candidateId)).not.toContain("C0700");
+    expect(done().manifest.map((r: any) => r.candidateId)).not.toContain("C0700");
   });
 
-  it("touches the heartbeat at least every 25 records", async () => {
-    mockComplete.mockResolvedValue(ok());
-    await runCorpusGeneration({ corpusId: 3, organizationId: 1 });
-    expect(mockUtils.touchCorpusHeartbeatQuery.mock.calls.length).toBeGreaterThanOrEqual(700 / 25);
-    expect(mockUtils.touchCorpusHeartbeatQuery).toHaveBeenCalledWith(3, 1);
+  it("blocks a corpus whose cells fall under the floor, with the reason (ruling)", async () => {
+    // One record out of 700 leaves its cell at 49, under MIN_PER_CELL = 50.
+    seedLog([
+      ...logFor(699),
+      ...[1, 2, 3].map((attempt) => ({
+        ...logFor(700)[699],
+        attempt,
+        validation_status: "invalid" as const,
+        text: "",
+      })),
+    ]);
+    await expect(run()).resolves.toMatchObject({ status: "blocked", recordCount: 699 });
+    expect(done()).toMatchObject({ status: "blocked", failureCode: "cells_below_floor" });
+    expect(mockComplete).not.toHaveBeenCalled();
   });
 
-  it("stops spending once the corpus is no longer running", async () => {
-    mockComplete.mockResolvedValue(ok());
-    mockUtils.touchCorpusHeartbeatQuery.mockResolvedValueOnce(true).mockResolvedValue(false);
-    await expect(runCorpusGeneration({ corpusId: 3, organizationId: 1 })).rejects.toThrow(
-      /no longer running/i,
+  it("never completes a corpus with no valid records", async () => {
+    seedLog(
+      logFor(700).flatMap((r) =>
+        [1, 2, 3].map((attempt) => ({ ...r, attempt, validation_status: "invalid" as const })),
+      ),
     );
-    expect(mockComplete.mock.calls.length).toBeLessThanOrEqual(25);
-    expect(mockUtils.updateCorpusStatusQuery).not.toHaveBeenCalled();
+    await expect(run()).resolves.toMatchObject({ status: "blocked", recordCount: 0 });
+    expect(done()).toMatchObject({ status: "blocked", recordCount: 0 });
+  });
+
+  it("returns a blocked corpus as is on a retry", async () => {
+    mockUtils.getCorpusQuery.mockResolvedValueOnce(
+      corpusRow({ status: "blocked", record_count: 699, models_observed_json: { m1: 699 } }),
+    );
+    await expect(run()).resolves.toEqual({
+      status: "blocked",
+      recordCount: 699,
+      modelsObserved: { m1: 699 },
+    });
+    expect(mockUtils.claimCorpusLeaseQuery).not.toHaveBeenCalled();
+  });
+
+  describe("the lease", () => {
+    it("claims the corpus before generating, and names its token on every write", async () => {
+      seedLog(logFor(690));
+      mockComplete.mockImplementation(reply());
+      await run();
+      const token = claimToken();
+      expect(token).toMatch(/^[0-9a-f-]{36}$/);
+      expect(mockUtils.claimCorpusLeaseQuery).toHaveBeenCalledWith(3, 1, token, LEASE_SECONDS);
+      expect(mockUtils.claimCorpusLeaseQuery.mock.invocationCallOrder[0]).toBeLessThan(
+        mockComplete.mock.invocationCallOrder[0],
+      );
+      for (const [r] of mockUtils.appendCorpusRecordQuery.mock.calls)
+        expect(r.ownerToken).toBe(token);
+      expect(done().ownerToken).toBe(token);
+    });
+
+    it("releases its lease when the run fails, so a retry can claim at once", async () => {
+      mockComplete.mockRejectedValue(new Error("gateway request failed (status 500)"));
+      await expect(run()).rejects.toThrow(/status 500/);
+      expect(mockUtils.releaseCorpusLeaseQuery).toHaveBeenCalledWith(3, 1, claimToken());
+    });
+
+    it("keeps the original error when the release itself fails", async () => {
+      mockComplete.mockRejectedValue(new Error("gateway request failed (status 500)"));
+      mockUtils.releaseCorpusLeaseQuery.mockRejectedValueOnce(new Error("db down"));
+      await expect(run()).rejects.toThrow(/status 500/);
+    });
+
+    it("does not release after completing (the completion write already did)", async () => {
+      seedLog(logFor(700));
+      await run();
+      expect(mockUtils.releaseCorpusLeaseQuery).not.toHaveBeenCalled();
+    });
+
+    it("refuses to run while another runner holds the lease", async () => {
+      mockUtils.claimCorpusLeaseQuery.mockResolvedValueOnce(false);
+      await expect(run()).rejects.toThrow(LeaseLostError);
+      expect(mockComplete).not.toHaveBeenCalled();
+      expect(mockUtils.appendCorpusRecordQuery).not.toHaveBeenCalled();
+    });
+
+    it("stops when an append finds the lease gone", async () => {
+      mockComplete.mockImplementation(reply());
+      mockUtils.appendCorpusRecordQuery.mockResolvedValueOnce(null);
+      await expect(run()).rejects.toThrow(LeaseLostError);
+      expect(mockComplete).toHaveBeenCalledTimes(1);
+    });
+
+    it("maps a second runner's duplicate attempt to LeaseLostError, not a raw constraint error", async () => {
+      mockComplete.mockImplementation(reply());
+      const dup: any = new Error("duplicate key value");
+      dup.name = "SequelizeUniqueConstraintError";
+      dup.original = { code: "23505", constraint: "bias_audit_corpus_records_attempt_uq" };
+      mockUtils.appendCorpusRecordQuery.mockRejectedValueOnce(dup);
+      await expect(run()).rejects.toThrow(LeaseLostError);
+    });
+
+    it("stops when the completion write finds the lease gone", async () => {
+      seedLog(logFor(700));
+      mockUtils.updateCorpusStatusQuery.mockResolvedValueOnce(false);
+      await expect(run()).rejects.toThrow(LeaseLostError);
+    });
+  });
+
+  describe("the heartbeat", () => {
+    it(`renews the lease every ${HEARTBEAT_INTERVAL_MS / 1000}s by the clock, not by record count`, async () => {
+      jest.useFakeTimers();
+      // Each gateway call takes 10 seconds.
+      mockComplete.mockImplementation(async (s: unknown, p: string) => {
+        jest.advanceTimersByTime(10_000);
+        return reply()(s, p);
+      });
+      await run();
+      const beats = mockUtils.touchCorpusHeartbeatQuery.mock.calls;
+      // 700 calls x 10 s = 7,000 s: one beat per 30 s, plus the one before completion.
+      expect(beats.length).toBeGreaterThanOrEqual(Math.floor(7000 / 30));
+      expect(beats.length).toBeLessThanOrEqual(Math.floor(7000 / 30) + 1);
+      for (const b of beats) expect(b).toEqual([3, 1, claimToken(), LEASE_SECONDS]);
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it("stops spending once a beat finds the lease gone, and clears its timer", async () => {
+      jest.useFakeTimers();
+      mockUtils.touchCorpusHeartbeatQuery.mockResolvedValue(false);
+      mockComplete.mockImplementation(async (s: unknown, p: string) => {
+        jest.advanceTimersByTime(HEARTBEAT_INTERVAL_MS + 1000);
+        return reply()(s, p);
+      });
+      await expect(run()).rejects.toThrow(LeaseLostError);
+      expect(mockComplete.mock.calls.length).toBeLessThanOrEqual(2);
+      expect(mockUtils.updateCorpusStatusQuery).not.toHaveBeenCalled();
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
+    it("beats once more before the final re-read and hash", async () => {
+      seedLog(logFor(700));
+      await run();
+      const [beat] = mockUtils.touchCorpusHeartbeatQuery.mock.invocationCallOrder;
+      const [, finalRead] = mockUtils.listCorpusLogQuery.mock.invocationCallOrder;
+      const [firstPage] = mockUtils.listLatestValidRecordsPageQuery.mock.invocationCallOrder;
+      expect(beat).toBeLessThan(finalRead);
+      expect(beat).toBeLessThan(firstPage);
+    });
+  });
+
+  it("refuses to resume under a model other than the pinned one", async () => {
+    mockUtils.getCorpusQuery.mockResolvedValue(corpusRow({ model_pinned: "another-model" }));
+    await expect(run()).rejects.toThrow(CorpusModelChangedError);
+    expect(mockUtils.claimCorpusLeaseQuery).not.toHaveBeenCalled();
+    expect(mockComplete).not.toHaveBeenCalled();
   });
 
   it("stores separate manifest and corpus hashes on the completion write", async () => {
@@ -334,21 +504,28 @@ describe("runCorpusGeneration", () => {
     mockUtils.listLatestValidRecordsPageQuery
       .mockResolvedValueOnce(pageOf(500))
       .mockResolvedValueOnce(pageOf(700).slice(500));
-    await runCorpusGeneration({ corpusId: 3, organizationId: 1 });
-    const done = mockUtils.updateCorpusStatusQuery.mock.calls.at(-1)![0];
-    expect(done.status).toBe("complete");
-    expect(done.manifestSha256).toMatch(/^[0-9a-f]{64}$/);
-    expect(done.corpusSha256).toMatch(/^[0-9a-f]{64}$/);
-    expect(done.manifestSha256).not.toBe(done.corpusSha256);
-    expect(done.manifestSha256).toBe(
-      createHash("sha256").update(JSON.stringify(done.manifest)).digest("hex"),
-    );
+    await run();
+    expect(done().status).toBe("complete");
+    expect(done().manifestSha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(done().corpusSha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(done().manifestSha256).not.toBe(done().corpusSha256);
     expect(mockComplete).not.toHaveBeenCalled();
+  });
+
+  it("hashes the canonical manifest, so the stored JSONB copy reproduces it", async () => {
+    seedLog(logFor(700));
+    await run();
+    const stored = done().manifest.map((r: Record<string, unknown>) =>
+      Object.fromEntries(Object.entries(r).reverse()),
+    );
+    expect(done().manifestSha256).toBe(
+      createHash("sha256").update(canonicalManifest(stored), "utf8").digest("hex"),
+    );
   });
 
   it("hashes exactly the bytes the download serves, paging 500 rows after the last ID", async () => {
     seedLog(logFor(700));
-    await runCorpusGeneration({ corpusId: 3, organizationId: 1 });
+    await run();
     const pages = mockUtils.listLatestValidRecordsPageQuery.mock.calls;
     expect(pages.map((c) => [c[2], c[3]])).toEqual([
       ["", 500],
@@ -361,8 +538,7 @@ describe("runCorpusGeneration", () => {
           corpusCsvRow({ candidateId: r.candidate_id, artifactKind: "resume", text: r.text }),
         )
         .join("");
-    const done = mockUtils.updateCorpusStatusQuery.mock.calls.at(-1)![0];
-    expect(done.corpusSha256).toBe(createHash("sha256").update(bytes, "utf8").digest("hex"));
+    expect(done().corpusSha256).toBe(createHash("sha256").update(bytes, "utf8").digest("hex"));
   });
 
   it("refuses to complete when the downloadable rows differ from the manifest", async () => {
@@ -370,15 +546,13 @@ describe("runCorpusGeneration", () => {
     mockUtils.listLatestValidRecordsPageQuery
       .mockResolvedValueOnce(pageOf(699))
       .mockResolvedValueOnce([]);
-    await expect(runCorpusGeneration({ corpusId: 3, organizationId: 1 })).rejects.toThrow(
-      /manifest/i,
-    );
+    await expect(run()).rejects.toThrow(/manifest/i);
     expect(mockUtils.updateCorpusStatusQuery).not.toHaveBeenCalled();
   });
 
   it("refuses a log that names candidates outside the plan", async () => {
     seedLog([...logFor(700), { ...logFor(1)[0], candidate_id: "C9999" }]);
-    await expect(runCorpusGeneration({ corpusId: 3, organizationId: 1 })).rejects.toThrow(/C9999/);
+    await expect(run()).rejects.toThrow(/C9999/);
     expect(mockUtils.updateCorpusStatusQuery).not.toHaveBeenCalled();
   });
 
@@ -386,25 +560,19 @@ describe("runCorpusGeneration", () => {
     mockUtils.getCorpusQuery.mockResolvedValue(
       corpusRow({ job_description_sha256: "0".repeat(64) }),
     );
-    await expect(runCorpusGeneration({ corpusId: 3, organizationId: 1 })).rejects.toThrow(
-      /job description/i,
-    );
+    await expect(run()).rejects.toThrow(/job description/i);
     expect(mockComplete).not.toHaveBeenCalled();
   });
 
   it("refuses a corpus that is missing or no longer running, and returns a complete one as is", async () => {
     mockUtils.getCorpusQuery.mockResolvedValueOnce(null);
-    await expect(runCorpusGeneration({ corpusId: 3, organizationId: 1 })).rejects.toThrow(
-      /not found/i,
-    );
+    await expect(run()).rejects.toThrow(/not found/i);
     mockUtils.getCorpusQuery.mockResolvedValueOnce(corpusRow({ status: "failed" }));
-    await expect(runCorpusGeneration({ corpusId: 3, organizationId: 1 })).rejects.toThrow(
-      /not running/i,
-    );
+    await expect(run()).rejects.toThrow(/not running/i);
     mockUtils.getCorpusQuery.mockResolvedValueOnce(
       corpusRow({ status: "complete", record_count: 700, models_observed_json: { m1: 700 } }),
     );
-    await expect(runCorpusGeneration({ corpusId: 3, organizationId: 1 })).resolves.toEqual({
+    await expect(run()).resolves.toEqual({
       status: "complete",
       recordCount: 700,
       modelsObserved: { m1: 700 },
@@ -412,18 +580,10 @@ describe("runCorpusGeneration", () => {
     expect(mockComplete).not.toHaveBeenCalled();
   });
 
-  it("refuses to write completion over a corpus that stopped running meanwhile", async () => {
-    seedLog(logFor(700));
-    mockUtils.updateCorpusStatusQuery.mockResolvedValueOnce(false);
-    await expect(runCorpusGeneration({ corpusId: 3, organizationId: 1 })).rejects.toThrow(
-      /no longer running/i,
-    );
-  });
-
   it("never sends the assigned group to the gateway", async () => {
     seedLog(logFor(560));
-    mockComplete.mockResolvedValue(ok());
-    await runCorpusGeneration({ corpusId: 3, organizationId: 1 });
+    mockComplete.mockImplementation(reply());
+    await run();
     expect(mockComplete).toHaveBeenCalledTimes(140);
     for (const [s, prompt, opts] of mockComplete.mock.calls) {
       expect(s).toBe(SETTINGS);

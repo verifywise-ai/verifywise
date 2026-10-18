@@ -16,6 +16,11 @@
  *    new row and nothing updates or deletes one. The manifest is rebuilt from
  *    the whole log, never from the records of the current pass.
  *
+ *  - One runner owns a corpus at a time, through a lease: owner_token and
+ *    lease_expires_at. A runner claims only an unowned or expired lease, and
+ *    its heartbeat, appends and completion all name its token, so a
+ *    redelivered job or a manual retry cannot write beside a live runner.
+ *
  *  - profile_id is NO ACTION, as on bias_audit_runs: a project delete cascades
  *    to both corpora and profiles, and NO ACTION is checked at statement end.
  *
@@ -69,6 +74,8 @@ module.exports = {
             CHECK (status IN ('running', 'complete', 'blocked', 'failed')),
           failure_code VARCHAR(64),
           heartbeat_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+          owner_token VARCHAR(64),
+          lease_expires_at TIMESTAMP WITH TIME ZONE,
           generated_by INTEGER
             REFERENCES verifywise.users(id) ON DELETE SET NULL,
           generated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),

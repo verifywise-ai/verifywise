@@ -28,12 +28,15 @@ import { LL144_RACE, LL144_SEX, type Demographics } from "./allocation";
  *    mortgage records behind the source under-represent younger Black names,
  *    and the 1990 sex files list only 1,219 male names.
  *  - Asian male first names: 4 qualify.
- *  - Asian female first names include several given names used for both sexes
- *    (Wei, Jin, Yu, Min, Jung): the 1990 male file is truncated, so absence
- *    there is weak evidence.
+ *  - Asian female first names: the 1990 male file is truncated, so absence
+ *    there is weak evidence of sex. Given names used for both sexes (Wei, Li,
+ *    Jin, Yan, Ming, Yu, Min, Yi, Kyung, Jung, Hui, Wai, Tam, Xiao, Anh, Dung,
+ *    Linh, Hoa, Phuong and similar) are REMOVED by hand, leaving 19.
  *  - Native American or Alaska Native: no first name reaches even 7% in the
- *    source, so first names come from every group's list for the sex (sex
- *    signal only), and 7 surnames qualify.
+ *    source, and 7 surnames qualify. First names come from a separate list of
+ *    common names with low race concentration (Tzioumis: at least 300
+ *    occurrences, no category above 65%; names with a religious signal left
+ *    out), so the surname carries the race/ethnicity signal in that cell.
  *  - Native Hawaiian or Pacific Islander: both sources merge the group with
  *    Asian. The names below are HAND-SELECTED as specific to Hawaiian, Samoan
  *    and Tongan naming; each surname is present in the 2010 file with at
@@ -44,7 +47,7 @@ import { LL144_RACE, LL144_SEX, type Demographics } from "./allocation";
 
 export const NAME_METHOD =
   "Each generated record signals its sex and race/ethnicity only through the candidate's name: a first name typical of the cell (Tzioumis 2018, with sex from the US Census 1990 first-name files) and a surname typical of the race/ethnicity (US Census 2010), drawn deterministically per candidate. " +
-  "Native Hawaiian or Pacific Islander names are hand-selected because both sources merge that group with Asian; Native American or Alaska Native first names and every Two or more races name are drawn from all groups combined, so those names carry a sex signal and, for Native American or Alaska Native, a surname signal only.";
+  "Native Hawaiian or Pacific Islander names are hand-selected because both sources merge that group with Asian. Native American or Alaska Native first names are common names with no strong race/ethnicity association, so the surname carries the race/ethnicity signal in that cell; Two or more races names are drawn from all groups combined and carry a sex signal only.";
 
 type FirstNames = { Male: readonly string[]; Female: readonly string[] };
 
@@ -86,10 +89,26 @@ const BLACK_FIRST: FirstNames = {
 // prettier-ignore
 const ASIAN_FIRST: FirstNames = {
   Male: ["Hung", "Tuan", "Hai", "Long"],
+  // Sex-ambiguous names removed by hand (see the header).
   Female: [
-    "Wei", "Li", "Jin", "Yan", "Ming", "Yu", "Min", "Phuong",
-    "Dung", "Thuy", "Yi", "Ying", "Mei", "Anh", "Mai", "Kyung",
-    "Jung", "Hui", "Lan", "Hoa", "Linh", "Tam", "Wai", "Xiao",
+    "Thuy", "Ying", "Mei", "Mai", "Lan", "Erlinda", "Huong", "Trang",
+    "Thao", "Thu", "Ling", "Yen", "Nga", "Hang", "Hanh", "Loan",
+    "Lien", "Hue", "Nenita",
+  ],
+};
+
+// Low race concentration (see the header); the surname carries the signal.
+// prettier-ignore
+const NAAN_FIRST: FirstNames = {
+  Male: [
+    "Victor", "Antonio", "Mario", "Tony", "Alex", "Johnny", "Gabriel", "Edgar",
+    "Gilbert", "Calvin", "Ivan", "Nelson", "Marco", "Andre", "Derrick", "Alvin",
+    "Andy", "Maurice", "Milton", "Felix", "Reginald", "Julian", "Omar", "Isaac",
+  ],
+  Female: [
+    "Maria", "Gloria", "Claudia", "Veronica", "Norma", "Sylvia", "Grace", "Vanessa",
+    "Yolanda", "Esther", "Sonia", "Olga", "Vivian", "Cecilia", "Miriam", "Annie",
+    "Juanita", "Gwendolyn", "Alma", "Cristina", "Emma", "Ramona", "Ruby", "Adriana",
   ],
 };
 
@@ -99,12 +118,12 @@ const NHPI_FIRST: FirstNames = {
   Male: [
     "Sione", "Tevita", "Viliami", "Semisi", "Siosaia", "Sitani", "Tomasi", "Iosefa",
     "Tavita", "Malakai", "Keoni", "Kekoa", "Kainoa", "Makoa", "Ikaika", "Kawika",
-    "Kanoa", "Keola", "Koa", "Mosese",
+    "Kanoa", "Pita", "Koa", "Mosese",
   ],
   Female: [
     "Leilani", "Noelani", "Malia", "Healani", "Mahina", "Lokelani", "Pualani", "Haunani",
     "Iolana", "Kehaulani", "Kanani", "Mele", "Seini", "Losana", "Salote", "Lesieli",
-    "Sela", "Fetu", "Lupe", "Sina",
+    "Sela", "Moana", "Lupe", "Sina",
   ],
 };
 
@@ -152,11 +171,11 @@ const NHPI_SURNAMES = [
 const ALL_FIRST: FirstNames = {
   Male: [
     ...HISPANIC_FIRST.Male, ...WHITE_FIRST.Male, ...BLACK_FIRST.Male,
-    ...ASIAN_FIRST.Male, ...NHPI_FIRST.Male,
+    ...ASIAN_FIRST.Male, ...NHPI_FIRST.Male, ...NAAN_FIRST.Male,
   ],
   Female: [
     ...HISPANIC_FIRST.Female, ...WHITE_FIRST.Female, ...BLACK_FIRST.Female,
-    ...ASIAN_FIRST.Female, ...NHPI_FIRST.Female,
+    ...ASIAN_FIRST.Female, ...NHPI_FIRST.Female, ...NAAN_FIRST.Female,
   ],
 };
 
@@ -173,7 +192,7 @@ const BY_RACE: Record<string, { first: FirstNames; surnames: readonly string[] }
   "Black or African American": { first: BLACK_FIRST, surnames: BLACK_SURNAMES },
   "Native Hawaiian or Pacific Islander": { first: NHPI_FIRST, surnames: NHPI_SURNAMES },
   Asian: { first: ASIAN_FIRST, surnames: ASIAN_SURNAMES },
-  "Native American or Alaska Native": { first: ALL_FIRST, surnames: NAAN_SURNAMES },
+  "Native American or Alaska Native": { first: NAAN_FIRST, surnames: NAAN_SURNAMES },
   "Two or more races": { first: ALL_FIRST, surnames: ALL_SURNAMES },
 };
 

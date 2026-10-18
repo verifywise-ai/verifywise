@@ -60,10 +60,16 @@ function measureOrdered(ordered: Assigned[], attributes: OrderAttribute[]): IdOr
   return checks;
 }
 
+/**
+ * Candidate-ID order: code-unit comparison, the order the corpus download
+ * pages in (COLLATE "C"). IDs are fixed width, so this is numeric order too.
+ */
+export function compareCandidateIds(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
 function sortById(assigned: Assigned[]): Assigned[] {
-  return [...assigned].sort((a, b) =>
-    a.candidateId < b.candidateId ? -1 : a.candidateId > b.candidateId ? 1 : 0,
-  );
+  return [...assigned].sort((a, b) => compareCandidateIds(a.candidateId, b.candidateId));
 }
 
 function enforce(
