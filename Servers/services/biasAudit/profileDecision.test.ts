@@ -43,6 +43,24 @@ describe("decideProfile", () => {
     expect(d.readiness.scope).toBe("out_of_scope");
   });
 
+  it("withholds generation for audio input, naming the question", () => {
+    const d = decideProfile(a({ ...VETOES_IN_SCOPE, "pipeline.input_form": "audio" }));
+    expect(d.mayGenerate).toBe(false);
+    expect(d.generationBlocked.some((m) => m.includes("pipeline.input_form"))).toBe(true);
+  });
+
+  it("allows generation for resume input once every veto is answered", () => {
+    const d = decideProfile(a({ ...VETOES_IN_SCOPE, "pipeline.input_form": "resume" }));
+    expect(d.mayGenerate).toBe(true);
+    expect(d.generationBlocked).toEqual([]);
+  });
+
+  it("withholds generation while a veto is open", () => {
+    const d = decideProfile(a({ "role.party": "vendor", "pipeline.input_form": "resume" }));
+    expect(d.mayGenerate).toBe(false);
+    expect(d.generationBlocked.length).toBeGreaterThan(0);
+  });
+
   it("leaves scope undetermined while a veto is open", () => {
     const d = decideProfile(a({ "role.party": "vendor" }));
     expect(d.readiness.scope).toBe("undetermined");

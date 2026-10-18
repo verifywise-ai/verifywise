@@ -2352,6 +2352,83 @@ export const biasAuditEndpoints: Endpoint[] = [
     ],
     tag: "Bias Audit",
   },
+  {
+    method: 'GET',
+    path: '/bias-audit/job-descriptions',
+    summary: "Get Job Descriptions",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/bias-audit/criteria-comparison',
+    summary: "Compare Criteria",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/bias-audit/corpora',
+    summary: "List Corpora",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/bias-audit/corpora',
+    summary: "Create Corpus",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/bias-audit/corpora/{id}',
+    summary: "Get Corpus",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'GET',
+    path: '/bias-audit/corpora/{id}/download',
+    summary: "Download Corpus",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
+  {
+    method: 'POST',
+    path: '/bias-audit/corpora/{id}/resume',
+    summary: "Resume Corpus",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Bias Audit",
+  },
 ];
 
 // CE Marking endpoints

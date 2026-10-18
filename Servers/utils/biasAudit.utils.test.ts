@@ -44,6 +44,8 @@ import {
   listLatestValidRecordsPageQuery,
   claimCorpusLeaseQuery,
   releaseCorpusLeaseQuery,
+  resumeCorpusQuery,
+  listCorporaQuery,
   InsertCorpusArgs,
 } from "./biasAudit.utils";
 import { ConflictException, NotFoundException } from "../domain.layer/exceptions/custom.exception";
@@ -723,6 +725,8 @@ describe("corpora and the record log", () => {
     ["log", () => listCorpusLogQuery(3, 42), []],
     ["valid count", () => countValidCorpusRecordsQuery(3, 42), [{ count: 0 }]],
     ["page", () => listLatestValidRecordsPageQuery(3, 42, "", 500), []],
+    ["resume", () => resumeCorpusQuery(3, 42, 600), [[]]],
+    ["list", () => listCorporaQuery(7, 42), []],
   ];
 
   it.each(calls)("scopes the corpus %s statement to the organization", async (_n, call, result) => {
@@ -864,6 +868,30 @@ describe("corpora and the record log", () => {
     expect(opts.replacements).toMatchObject({ owner_token: "tok", lease_seconds: 120 });
     mockQuery.mockResolvedValueOnce([[]]);
     await expect(touchCorpusHeartbeatQuery(3, 42, "tok", 120)).resolves.toBe(false);
+  });
+
+  it("resumes only a failed corpus, or a running one with a stale heartbeat and no live lease", async () => {
+    mockQuery.mockResolvedValueOnce([[{ id: 3 }]]);
+    await expect(resumeCorpusQuery(3, 42, 600)).resolves.toBe(true);
+    const [sql, opts] = mockQuery.mock.calls[0];
+    expect(sql).toMatch(/SET status = 'running', failure_code = NULL, completed_at = NULL/);
+    expect(sql).toMatch(/owner_token = NULL, lease_expires_at = NULL/);
+    expect(sql).toMatch(/status = 'failed'/);
+    expect(sql).toMatch(/heartbeat_at < NOW\(\) - make_interval\(secs => :stale_after_seconds\)/);
+    expect(sql).toMatch(/lease_expires_at IS NULL OR lease_expires_at <= NOW\(\)/);
+    expect(opts.replacements).toMatchObject({ corpus_id: 3, stale_after_seconds: 600 });
+    mockQuery.mockResolvedValueOnce([[]]);
+    await expect(resumeCorpusQuery(3, 42, 600)).resolves.toBe(false);
+    await expect(resumeCorpusQuery(3, 42, 0)).rejects.toThrow(/seconds/);
+  });
+
+  it("lists a project's corpora without the manifest, the lease token or record text", async () => {
+    mockQuery.mockResolvedValueOnce([{ id: 3 }]);
+    await expect(listCorporaQuery(7, 42)).resolves.toEqual([{ id: 3 }]);
+    const [sql, opts] = mockQuery.mock.calls[0];
+    expect(sql).toMatch(/project_id = :project_id/);
+    expect(sql).not.toMatch(/manifest_json|owner_token|SELECT \*|bias_audit_corpus_records/);
+    expect(opts.replacements.project_id).toBe(7);
   });
 
   it("fails running corpora whose heartbeat is older than the limit, and returns their ids", async () => {

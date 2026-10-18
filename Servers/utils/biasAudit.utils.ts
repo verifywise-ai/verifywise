@@ -1368,6 +1368,83 @@ export async function markStaleCorporaFailedQuery(
   return allRows<{ id: number }>(result).map((r) => r.id);
 }
 
+/**
+ * Sets a corpus running again for a resume: a failed corpus, or a running one
+ * with no heartbeat for `staleAfterSeconds` and no live lease (its runner
+ * died). Judged on the database clock. The lease and failure code are
+ * cleared, so the next runner claims it as runCorpusGeneration expects.
+ * Returns whether a row moved; another corpus already running in the project
+ * fails on bias_audit_corpora_one_running_uq, which the caller maps.
+ */
+export async function resumeCorpusQuery(
+  corpusId: number,
+  organizationId: number,
+  staleAfterSeconds: number,
+): Promise<boolean> {
+  const result = await sequelize.query(
+    `UPDATE bias_audit_corpora
+        SET status = 'running', failure_code = NULL, completed_at = NULL,
+            heartbeat_at = NOW(), owner_token = NULL, lease_expires_at = NULL
+      WHERE id = :corpus_id AND organization_id = :organization_id
+        AND (status = 'failed'
+             OR (status = 'running'
+                 AND heartbeat_at < NOW() - make_interval(secs => :stale_after_seconds)
+                 AND (lease_expires_at IS NULL OR lease_expires_at <= NOW())))
+      RETURNING id`,
+    {
+      replacements: {
+        corpus_id: corpusId,
+        stale_after_seconds: wholeSeconds("stale limit", staleAfterSeconds),
+        organization_id: organizationId,
+      },
+    },
+  );
+  return firstRow(result) !== undefined;
+}
+
+/** A corpus as the list shows it: no manifest, no lease token, no record text. */
+export interface CorpusSummaryRow {
+  id: number;
+  project_id: number;
+  profile_id: number;
+  profile_version: number;
+  job_description_key: string;
+  artifact_kind: string;
+  knockout: string;
+  requested_count: number;
+  planned_count: number;
+  record_count: number | null;
+  model_pinned: string;
+  status: CorpusStatus;
+  failure_code: string | null;
+  corpus_sha256: string | null;
+  manifest_sha256: string | null;
+  heartbeat_at: Date;
+  generated_by: number | null;
+  generated_at: Date;
+  completed_at: Date | null;
+}
+
+/** A project's corpora in this organization, newest first. */
+export async function listCorporaQuery(
+  projectId: number,
+  organizationId: number,
+): Promise<CorpusSummaryRow[]> {
+  return (await sequelize.query(
+    `SELECT id, project_id, profile_id, profile_version, job_description_key,
+            artifact_kind, knockout, requested_count, planned_count, record_count,
+            model_pinned, status, failure_code, corpus_sha256, manifest_sha256,
+            heartbeat_at, generated_by, generated_at, completed_at
+       FROM bias_audit_corpora
+      WHERE project_id = :project_id AND organization_id = :organization_id
+      ORDER BY generated_at DESC, id DESC`,
+    {
+      replacements: { project_id: projectId, organization_id: organizationId },
+      type: QueryTypes.SELECT,
+    },
+  )) as CorpusSummaryRow[];
+}
+
 export interface AppendCorpusRecordArgs {
   corpusId: number;
   candidateId: string;

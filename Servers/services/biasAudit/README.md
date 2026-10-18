@@ -201,6 +201,23 @@ access once the user leaves the project.
 | `POST /runs/:id/derived-basis/confirm`          | `biasAudit.attest` |
 | `POST /runs/:id/stance`                         | `biasAudit.edit`   |
 | `GET /stances/:id/download`                     | `biasAudit.read`   |
+| `GET /job-descriptions`                         | `biasAudit.read`   |
+| `POST /criteria-comparison` (preview only)      | `biasAudit.edit`   |
+| `POST /corpora`                                 | `biasAudit.edit`   |
+| `GET /corpora?projectId=&frameworkId=`          | `biasAudit.read`   |
+| `GET /corpora/:id`                              | `biasAudit.read`   |
+| `GET /corpora/:id/download` (CSV)               | `biasAudit.read`   |
+| `POST /corpora/:id/resume`                      | `biasAudit.edit`   |
+
+Corpus routes (`corpusService.ts`) load the corpus by id and organization, then apply the
+project-member rule with the corpus's own not-found, so another organization and a non-member
+get the same 404. `POST /corpora` answers 503 when the `BIAS_AUDIT_LLM_*` variables are unset or
+unusable. Generation runs on the `bias-audit-corpus-generation` BullMQ queue
+(`generation/generationJob.ts`, registered in `jobs/worker.ts`), one job per corpus, resuming
+from the record log on every retry. Before create, list, view and resume, the caller's
+organization is swept for corpora with no heartbeat for 10 minutes, which fails them; a failed
+corpus can be resumed. Only a `complete` corpus downloads, as `candidate_id,artifact_kind,artifact`
+with no demographic or tier column.
 
 ## The oracle
 

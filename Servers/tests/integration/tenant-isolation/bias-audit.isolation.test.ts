@@ -811,6 +811,52 @@ describe("bias audit routes tenant isolation", () => {
   });
 
   /** A user in the owner's organization with the given role, not on the project. */
+  /** A failed corpus on the owner's attested profile, inserted directly. */
+  async function seedCorpus(project: number): Promise<number> {
+    const [rows] = await sequelize.query(
+      `INSERT INTO bias_audit_corpora
+         (organization_id, project_id, profile_id, profile_version, job_description_key,
+          job_description_sha256, artifact_kind, knockout, requested_count, planned_count,
+          seed, model_pinned, name_method, criteria_comparison_json, status, failure_code)
+       SELECT organization_id, project_id, id, version, 'commercial-ae',
+              repeat('a', 64), 'resume', 'no', 700, 700,
+              1, 'test/model', 'test names', '{"verdict":"not_supplied"}'::jsonb,
+              'failed', 'generation_error'
+         FROM aedt_profiles
+        WHERE project_id = :project AND status = 'attested'
+       RETURNING id`,
+      { replacements: { project } },
+    );
+    return (rows as any[])[0].id as number;
+  }
+
+  it("answers 404 to another organization for a corpus view, download, list and resume", async () => {
+    const { owner, attacker, project } = await ownerWithRun();
+    const corpusId = await seedCorpus(project);
+    const view = `/api/bias-audit/corpora/${corpusId}`;
+    const list = `/api/bias-audit/corpora?projectId=${project}&frameworkId=${LL144}`;
+    // Owner positive controls: the routes exist and serve the owner.
+    expect((await owner.request.get(view)).status).toBe(200);
+    expect((await owner.request.get(list)).status).toBe(200);
+    // A failed corpus is not downloadable, so the owner gets 409, not 404.
+    expect((await owner.request.get(`${view}/download`)).status).toBe(409);
+
+    for (const res of [
+      await attacker.request.get(view),
+      await attacker.request.get(`${view}/download`),
+      await attacker.request.get(list),
+      await attacker.request.post(`${view}/resume`),
+    ]) {
+      expect(res.status).toBe(404);
+      expect(JSON.stringify(res.body)).not.toContain("test/model");
+    }
+    const [rows] = await sequelize.query(
+      `SELECT status, failure_code FROM bias_audit_corpora WHERE id = :corpusId`,
+      { replacements: { corpusId } },
+    );
+    expect((rows as any[])[0]).toEqual({ status: "failed", failure_code: "generation_error" });
+  });
+
   async function sameOrgUser(orgId: number, roleId: number, role: string) {
     const userId = await createTestUser(
       orgId,
@@ -892,6 +938,28 @@ describe("bias audit routes tenant isolation", () => {
       .send({ answers: IN_SCOPE_ANSWERS });
     expect(put.status).toBe(200);
     expect((await snapshot(project)).profiles).toBeGreaterThan(before.profiles);
+  });
+
+  it("answers 404 to a non-member in the organization for a corpus, as for a missing one", async () => {
+    const { owner, project } = await ownerWithRun();
+    const corpusId = await seedCorpus(project);
+    const editor = await sameOrgUser(owner.orgId, 3, "Editor");
+    const missing = corpusId + 100000;
+    for (const id of [corpusId, missing]) {
+      const view = `/api/bias-audit/corpora/${id}`;
+      for (const res of [
+        await editor.request.get(view),
+        await editor.request.get(`${view}/download`),
+        await editor.request.post(`${view}/resume`),
+      ]) {
+        expect(res.status).toBe(404);
+      }
+    }
+    const a = await editor.request.get(`/api/bias-audit/corpora/${corpusId}`);
+    const b = await editor.request.get(`/api/bias-audit/corpora/${missing}`);
+    expect(JSON.stringify(a.body).split(String(corpusId)).join("ID")).toBe(
+      JSON.stringify(b.body).split(String(missing)).join("ID"),
+    );
   });
 
   it("lets a non-Admin project owner in without a member row", async () => {

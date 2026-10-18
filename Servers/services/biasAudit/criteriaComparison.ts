@@ -161,7 +161,8 @@ function parseSupplied(text: string): string[] {
 }
 
 function jobDescriptionFor(key: string): JobDescription {
-  const jd = Object.hasOwn(JOB_DESCRIPTIONS, key)
+  // Object.hasOwn is ES2022; the server compiles against an older lib.
+  const jd = Object.prototype.hasOwnProperty.call(JOB_DESCRIPTIONS, key)
     ? (JOB_DESCRIPTIONS as Record<string, JobDescription>)[key]
     : undefined;
   if (!jd) throw new Error(`Unknown job description "${key}".`);

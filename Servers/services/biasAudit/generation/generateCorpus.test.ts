@@ -170,7 +170,13 @@ const args = {
   artifactKind: "resume" as const,
   knockout: "no" as const,
   criteriaSupplied: null,
-  criteriaComparison: { outcome: "not_supplied" },
+  criteriaComparison: {
+    supplied: [],
+    matched: [],
+    unmatchedExpected: [],
+    unmatchedSupplied: [],
+    verdict: "not_supplied" as const,
+  },
   count: 700,
 };
 

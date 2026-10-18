@@ -1,0 +1,131 @@
+/**
+ * Corpus generation as a BullMQ job.
+ *
+ * One job per corpus (jobId "corpus-<id>"). Every attempt calls
+ * runCorpusGeneration, which resumes from the record log, so a retry after a
+ * gateway error or a crash redoes only what is missing. A corpus another
+ * runner holds is delayed until its lease expires and spends no attempt. A
+ * corpus that is no longer running is not retried. After the last attempt
+ * the corpus is marked failed, which frees the one-running-per-project index
+ * and lets the customer resume it.
+ */
+import { DelayedError, Queue, UnrecoverableError, Worker, type Job } from "bullmq";
+import { REDIS_URL } from "../../../database/redis";
+import {
+  ConflictException,
+  NotFoundException,
+} from "../../../domain.layer/exceptions/custom.exception";
+import { updateCorpusStatusQuery } from "../../../utils/biasAudit.utils";
+import logger from "../../../utils/logger/fileLogger";
+import {
+  CorpusBusyError,
+  LEASE_SECONDS,
+  LeaseLostError,
+  runCorpusGeneration,
+} from "./generateCorpus";
+
+export const CORPUS_QUEUE = "bias-audit-corpus-generation";
+const JOB_NAME = "generate";
+const ATTEMPTS = 3;
+const BACKOFF_MS = 60_000;
+
+export interface CorpusJobData {
+  corpusId: number;
+  organizationId: number;
+}
+
+let queue: Queue<CorpusJobData> | null = null;
+
+/** Opened on first use, so importing this file connects to nothing. */
+function corpusQueue(): Queue<CorpusJobData> {
+  queue ??= new Queue<CorpusJobData>(CORPUS_QUEUE, { connection: { url: REDIS_URL } });
+  return queue;
+}
+
+/**
+ * Queues generation for a corpus. Finished jobs are removed, so a corpus
+ * resumed after its job failed can be queued again under the same id; while
+ * a job for it is still waiting or active, the add is a no-op and that job
+ * does the work.
+ */
+export async function enqueueCorpusGeneration(
+  corpusId: number,
+  organizationId: number,
+): Promise<void> {
+  await corpusQueue().add(
+    JOB_NAME,
+    { corpusId, organizationId },
+    {
+      jobId: `corpus-${corpusId}`,
+      attempts: ATTEMPTS,
+      backoff: { type: "exponential", delay: BACKOFF_MS },
+      removeOnComplete: true,
+      removeOnFail: true,
+    },
+  );
+}
+
+export async function processCorpusJob(
+  job: Job<CorpusJobData>,
+  token?: string,
+): Promise<{ status: "complete" | "blocked"; recordCount: number }> {
+  const { corpusId, organizationId } = job.data;
+  try {
+    const result = await runCorpusGeneration({ corpusId, organizationId });
+    return { status: result.status, recordCount: result.recordCount };
+  } catch (error) {
+    if (error instanceof CorpusBusyError) {
+      const until = error.leaseExpiresAt?.getTime() ?? Date.now() + LEASE_SECONDS * 1000;
+      await job.moveToDelayed(until + 1000, token);
+      throw new DelayedError();
+    }
+    // Not running or gone: a retry would find the same.
+    if (error instanceof ConflictException || error instanceof NotFoundException) {
+      throw new UnrecoverableError(error.message);
+    }
+    throw error;
+  }
+}
+
+/** A typed error's own code, else a generic one. Never the message. */
+function failureCodeOf(error: unknown): string {
+  const code = (error as { code?: unknown } | null)?.code;
+  return typeof code === "string" && /^[a-z][a-z0-9_]{0,63}$/.test(code)
+    ? code
+    : "generation_error";
+}
+
+/**
+ * Marks the corpus failed once BullMQ has no attempt left. Before that it does
+ * nothing: the retry resumes from the log. A lost lease means another runner
+ * holds the corpus, so it is left alone. Cannot throw.
+ */
+export async function onCorpusJobFailed(
+  job: Job<CorpusJobData> | undefined,
+  error: Error,
+): Promise<void> {
+  if (!job) return;
+  const attempts = job.opts?.attempts ?? 1;
+  if (job.attemptsMade < attempts) return;
+  if (error instanceof LeaseLostError) return;
+  const { corpusId, organizationId } = job.data;
+  const failureCode = failureCodeOf(error);
+  try {
+    await updateCorpusStatusQuery({ corpusId, status: "failed", failureCode }, organizationId);
+    logger.error(
+      `Corpus ${corpusId} generation failed after ${job.attemptsMade} attempts: ${failureCode}`,
+    );
+  } catch {
+    // The stale sweep fails the corpus later if this write did not land.
+  }
+}
+
+export function createCorpusGenerationWorker(): Worker<CorpusJobData> {
+  const worker = new Worker<CorpusJobData>(
+    CORPUS_QUEUE,
+    (job, token) => processCorpusJob(job, token),
+    { connection: { url: REDIS_URL }, concurrency: 1, lockDuration: 10 * 60_000 },
+  );
+  worker.on("failed", onCorpusJobFailed);
+  return worker;
+}

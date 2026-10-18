@@ -25,6 +25,13 @@ jest.mock("../../controllers/biasAudit.ctrl", () => ({
   generateStance: jest.fn(),
   generateProfileStance: jest.fn(),
   downloadStance: jest.fn(),
+  getJobDescriptions: jest.fn(),
+  compareCriteria: jest.fn(),
+  createCorpus: jest.fn(),
+  listCorpora: jest.fn(),
+  getCorpus: jest.fn(),
+  downloadCorpus: jest.fn(),
+  resumeCorpus: jest.fn(),
   // The real upload error mapper and limit, so the upload layer is exercised.
   handleDatasetUploadError: jest.requireActual<any>("../../controllers/biasAudit.ctrl")
     .handleDatasetUploadError,
@@ -67,6 +74,13 @@ const ROUTES: Array<[string, string, string, unknown]> = [
   ["post", "/runs/:id/derived-basis/confirm", "biasAudit.attest", ctrl.confirmDerivedBasis],
   ["post", "/runs/:id/stance", "biasAudit.edit", ctrl.generateStance],
   ["get", "/stances/:id/download", "biasAudit.read", ctrl.downloadStance],
+  ["get", "/job-descriptions", "biasAudit.read", ctrl.getJobDescriptions],
+  ["post", "/criteria-comparison", "biasAudit.edit", ctrl.compareCriteria],
+  ["post", "/corpora", "biasAudit.edit", ctrl.createCorpus],
+  ["get", "/corpora", "biasAudit.read", ctrl.listCorpora],
+  ["get", "/corpora/:id", "biasAudit.read", ctrl.getCorpus],
+  ["get", "/corpora/:id/download", "biasAudit.read", ctrl.downloadCorpus],
+  ["post", "/corpora/:id/resume", "biasAudit.edit", ctrl.resumeCorpus],
 ];
 
 describe("biasAudit routes", () => {
@@ -93,6 +107,11 @@ describe("biasAudit routes", () => {
   it("declares /runs/trend before /runs/:id so the literal path is reachable", () => {
     const paths = (router as any).stack.filter((l: any) => l.route).map((l: any) => l.route.path);
     expect(paths.indexOf("/runs/trend")).toBeLessThan(paths.indexOf("/runs/:id"));
+  });
+
+  it("declares /corpora before /corpora/:id", () => {
+    const paths = (router as any).stack.filter((l: any) => l.route).map((l: any) => l.route.path);
+    expect(paths.indexOf("/corpora")).toBeLessThan(paths.indexOf("/corpora/:id"));
   });
 
   it("parses the dataset upload after the permission check and before the handler", () => {

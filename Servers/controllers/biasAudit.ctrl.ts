@@ -20,6 +20,24 @@ import {
   ValidationException,
 } from "../domain.layer/exceptions/custom.exception";
 import {
+  getCorpusView,
+  getJobDescriptionsView,
+  listCorpora as listCorporaService,
+  resumeCorpus as resumeCorpusService,
+  startCorpusGeneration,
+  streamCorpusDownload,
+} from "../services/biasAudit/corpusService";
+import { compareCriteria as compareCriteriaText } from "../services/biasAudit/criteriaComparison";
+import { DEFAULT_COUNT, MAX_COUNT, MIN_COUNT } from "../services/biasAudit/generation/allocation";
+import {
+  GatewayConfigError,
+  GatewayNotConfiguredError,
+} from "../services/biasAudit/generation/settings";
+import {
+  JOB_DESCRIPTION_KEYS,
+  type JobDescriptionKey,
+} from "../structures/NYC-Local-Law-144/job-descriptions";
+import {
   attestProfile as attestProfileService,
   getQuestionSet,
   getProfileView,
@@ -187,6 +205,65 @@ function parseJobDescription(raw: unknown): string | null {
   );
 }
 
+/** The framework a corpus is generated for; anything but LL 144 is invalid input. */
+function corpusFrameworkId(raw: unknown): number {
+  const id = positiveInt(raw, "frameworkId");
+  if (id !== LL144_FRAMEWORK_ID) {
+    throw new ValidationException(
+      `Corpora are generated for NYC Local Law 144 (framework ${LL144_FRAMEWORK_ID}) only`,
+      "frameworkId",
+      id,
+    );
+  }
+  return id;
+}
+
+/** The record count: DEFAULT_COUNT when absent, else a whole number in range. */
+function parseCount(raw: unknown): number {
+  if (raw === undefined) return DEFAULT_COUNT;
+  const n =
+    typeof raw === "number"
+      ? raw
+      : typeof raw === "string" && /^\d+$/.test(raw)
+        ? Number(raw)
+        : NaN;
+  if (!Number.isInteger(n) || n < MIN_COUNT || n > MAX_COUNT) {
+    throw new ValidationException(
+      `count must be a whole number from ${MIN_COUNT} to ${MAX_COUNT}`,
+      "count",
+      raw,
+    );
+  }
+  return n;
+}
+
+function parseJobDescriptionKey(raw: unknown): JobDescriptionKey {
+  if (typeof raw === "string" && (JOB_DESCRIPTION_KEYS as readonly string[]).includes(raw)) {
+    return raw as JobDescriptionKey;
+  }
+  throw new ValidationException(
+    `jobDescriptionKey must be one of ${JOB_DESCRIPTION_KEYS.join(", ")}`,
+    "jobDescriptionKey",
+  );
+}
+
+export const CRITERIA_SUPPLIED_MAX = 10_000;
+
+/** The customer's own criteria, as typed. Absent or blank means not supplied. */
+function parseCriteriaSupplied(raw: unknown): string | null {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw !== "string") {
+    throw new ValidationException("criteriaSupplied must be text", "criteriaSupplied");
+  }
+  if (raw.length > CRITERIA_SUPPLIED_MAX) {
+    throw new ValidationException(
+      `criteriaSupplied must be at most ${CRITERIA_SUPPLIED_MAX} characters`,
+      "criteriaSupplied",
+    );
+  }
+  return raw.trim() === "" ? null : raw;
+}
+
 // ---------------------------------------------------------------- intake
 
 export const getQuestions = controllerWrapper(
@@ -300,7 +377,7 @@ export const confirmDerivedBasis = controllerWrapper(
   },
 );
 
-// --------------------------------------------------------------- stances
+// ------------------------------------------- stances and corpus writes
 
 /**
  * A success or failure log that cannot itself fail or change the response.
@@ -361,8 +438,8 @@ function recordUnexpectedCause(functionName: string, error: unknown): void {
   }
 }
 
-/** The fields every stance handler's log entries share. */
-interface StanceLog {
+/** The fields every stance and corpus handler's log entries share. */
+interface HandlerLog {
   functionName: string;
   fileName: string;
   userId: number;
@@ -370,10 +447,16 @@ interface StanceLog {
 }
 
 /**
- * The failure answer for the stance handlers, which do not use
- * controllerWrapper: generation drives a headless browser and a download
- * reads stored files, and both failures can carry paths and internals, while
+ * The failure answer for the stance and corpus handlers, which do not use
+ * controllerWrapper: stance generation drives a headless browser, a download
+ * reads stored files, corpus writes reach Redis and the gateway settings, and
+ * all of these failures can carry paths and internals, while
  * controllerWrapper's fallback sends the raw error text with the 500.
+ *
+ * Generation that is not configured on this deployment (the gateway
+ * variables unset or unusable) answers 503 with fixed text. The error names
+ * the variable, never its value; it is recorded like an unexpected cause, off
+ * the org-visible logs, which get the fixed text.
  *
  * A client refusal (a CustomException with a 4xx status) answers with its own
  * status and message and is logged through logFailure as thrown: its message
@@ -390,15 +473,27 @@ interface StanceLog {
  * tenant file log only. The client gets a generic "Internal server error".
  * No log can fail or change the response.
  */
-async function answerStanceFailure(
+async function answerFailure(
   req: Request,
   res: Response,
-  log: StanceLog,
-  eventType: "Create" | "Read",
+  log: HandlerLog,
+  eventType: "Create" | "Update" | "Read",
   unexpectedMessage: string,
   error: unknown,
 ): Promise<Response> {
   const description = `${log.functionName} failed`;
+  if (error instanceof GatewayNotConfiguredError || error instanceof GatewayConfigError) {
+    recordUnexpectedCause(log.functionName, error);
+    const message = "Corpus generation is not available on this deployment.";
+    await logSafely(logFailure, {
+      ...log,
+      eventType,
+      description,
+      error: new Error(message),
+      serverLog: false,
+    });
+    return res.status(503).json(STATUS_CODE[503](message));
+  }
   if (isCustomException(error) && error.statusCode >= 400 && error.statusCode < 500) {
     await logSafely(logFailure, { ...log, eventType, description, error });
     const status = error.statusCode as HttpStatusCode;
@@ -417,7 +512,7 @@ async function answerStanceFailure(
     .json(STATUS_CODE[500](req.t?.("Internal server error") ?? "Internal server error"));
 }
 
-function stanceLog(functionName: string, req: Request): StanceLog {
+function handlerLog(functionName: string, req: Request): HandlerLog {
   return {
     functionName,
     fileName: FILE_NAME,
@@ -427,41 +522,54 @@ function stanceLog(functionName: string, req: Request): StanceLog {
 }
 
 /**
- * The handler for the two stance-generation routes. Failures are answered by
- * answerStanceFailure; the logging and response shape otherwise mirror
- * controllerWrapper, which is not used because it would log the failure
- * twice (once here with the real error, once there with the replacement).
+ * The handler for the stance-generation and corpus-write routes. Failures
+ * are answered by answerFailure; the logging and response shape otherwise
+ * mirror controllerWrapper, which is not used because it would log the
+ * failure twice (once here with the real error, once there with the
+ * replacement).
  */
+function safeWriteHandler<T>(options: {
+  functionName: string;
+  eventType: "Create" | "Update";
+  status: 201 | 202;
+  unexpectedMessage: string;
+  successDescription: (r: T) => string;
+  work: (req: Request) => Promise<T>;
+}): (req: Request, res: Response) => Promise<Response> {
+  const { functionName, eventType, status, unexpectedMessage, successDescription, work } = options;
+  return async (req, res) => {
+    const log = handlerLog(functionName, req);
+    logProcessing({ ...log, description: `starting ${functionName}` });
+    try {
+      const data = await work(req);
+      // The write is committed: from here the answer is the success status
+      // with its data, whatever the success log does, building its
+      // description included. A 500 here would make the client retry and
+      // file a second version or a second corpus.
+      await logSafely(
+        (d: T) => logSuccess({ ...log, eventType, description: successDescription(d) }),
+        data,
+      );
+      return res.status(status).json(STATUS_CODE[status](data));
+    } catch (error) {
+      return answerFailure(req, res, log, eventType, unexpectedMessage, error);
+    }
+  };
+}
+
 function stanceGenerationHandler(
   functionName: string,
   successDescription: (r: { stanceId: number; version: number }) => string,
   work: (req: Request) => Promise<{ stanceId: number; version: number; sha256: string }>,
 ): (req: Request, res: Response) => Promise<Response> {
-  return async (req, res) => {
-    const log = stanceLog(functionName, req);
-    logProcessing({ ...log, description: `starting ${functionName}` });
-    try {
-      const data = await work(req);
-      // The stance is committed: from here the answer is 201 with its data,
-      // whatever the success log does, building its description included.
-      // A 500 here would make the client retry and file a second version.
-      await logSafely(
-        (d: typeof data) =>
-          logSuccess({ ...log, eventType: "Create", description: successDescription(d) }),
-        data,
-      );
-      return res.status(201).json(STATUS_CODE[201](data));
-    } catch (error) {
-      return answerStanceFailure(
-        req,
-        res,
-        log,
-        "Create",
-        "stance generation failed unexpectedly",
-        error,
-      );
-    }
-  };
+  return safeWriteHandler({
+    functionName,
+    eventType: "Create",
+    status: 201,
+    unexpectedMessage: "stance generation failed unexpectedly",
+    successDescription,
+    work,
+  });
 }
 
 export const generateStance = stanceGenerationHandler(
@@ -489,10 +597,10 @@ export const generateProfileStance = stanceGenerationHandler(
 
 /**
  * Sends bytes, so it cannot use controllerWrapper's JSON response. Failures
- * are answered by answerStanceFailure, as for generation.
+ * are answered by answerFailure, as for generation.
  */
 export async function downloadStance(req: Request, res: Response): Promise<Response> {
-  const log = stanceLog("downloadStance", req);
+  const log = handlerLog("downloadStance", req);
   logProcessing({ ...log, description: "starting downloadStance" });
   try {
     const stanceId = positiveInt(req.params.id, "id");
@@ -508,7 +616,136 @@ export async function downloadStance(req: Request, res: Response): Promise<Respo
     res.setHeader("X-Content-SHA256", pdf.sha256);
     return res.status(200).send(pdf.content);
   } catch (error) {
-    return answerStanceFailure(req, res, log, "Read", "stance download failed unexpectedly", error);
+    return answerFailure(req, res, log, "Read", "stance download failed unexpectedly", error);
+  }
+}
+
+// --------------------------------------------------------------- corpora
+
+/** The two fixed job descriptions, without the tier narratives. */
+export const getJobDescriptions = controllerWrapper(
+  async () => ({ status: 200, data: getJobDescriptionsView() }),
+  { functionName: "getJobDescriptions", fileName: FILE_NAME, eventType: "Read" },
+);
+
+/** A preview of how the customer's criteria compare with the fixed ones. Stores nothing. */
+export const compareCriteria = controllerWrapper(
+  async (req) => ({
+    status: 200,
+    data: compareCriteriaText(
+      parseJobDescriptionKey(req.body?.jobDescriptionKey),
+      parseCriteriaSupplied(req.body?.criteriaSupplied),
+    ),
+  }),
+  { functionName: "compareCriteria", fileName: FILE_NAME, eventType: "Read" },
+);
+
+export const createCorpus = safeWriteHandler({
+  functionName: "createCorpus",
+  eventType: "Create",
+  status: 201,
+  unexpectedMessage: "corpus creation failed unexpectedly",
+  successDescription: (r: { corpusId: number }) => `Started bias audit corpus ${r.corpusId}`,
+  work: (req) => {
+    const body = req.body ?? {};
+    return startCorpusGeneration({
+      projectId: positiveInt(body.projectId, "projectId"),
+      frameworkId: corpusFrameworkId(body.frameworkId),
+      organizationId: req.organizationId!,
+      ...viewerOf(req),
+      jobDescriptionKey: parseJobDescriptionKey(body.jobDescriptionKey),
+      criteriaSupplied: parseCriteriaSupplied(body.criteriaSupplied),
+      count: parseCount(body.count),
+    });
+  },
+});
+
+export const listCorpora = controllerWrapper(
+  async (req) => ({
+    status: 200,
+    data: await listCorporaService(memberScope(req.query.projectId, req.query.frameworkId, req)),
+  }),
+  { functionName: "listCorpora", fileName: FILE_NAME, eventType: "Read" },
+);
+
+export const getCorpus = controllerWrapper(
+  async (req) => ({
+    status: 200,
+    data: await getCorpusView(positiveInt(req.params.id, "id"), req.organizationId!, viewerOf(req)),
+  }),
+  { functionName: "getCorpus", fileName: FILE_NAME, eventType: "Read" },
+);
+
+export const resumeCorpus = safeWriteHandler({
+  functionName: "resumeCorpus",
+  eventType: "Update",
+  status: 202,
+  unexpectedMessage: "corpus resume failed unexpectedly",
+  successDescription: (r: { corpusId: number }) => `Resumed bias audit corpus ${r.corpusId}`,
+  work: (req) =>
+    resumeCorpusService(positiveInt(req.params.id, "id"), req.organizationId!, viewerOf(req)),
+});
+
+/** Writes one chunk, waiting for the socket to drain when its buffer is full. */
+function writeChunk(res: Response, chunk: string): Promise<void> {
+  if (res.write(chunk)) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const onDrain = () => {
+      res.off("close", onClose);
+      resolve();
+    };
+    const onClose = () => {
+      res.off("drain", onDrain);
+      reject(new Error("The client closed the corpus download."));
+    };
+    res.once("drain", onDrain);
+    res.once("close", onClose);
+  });
+}
+
+/**
+ * Streams a complete corpus as CSV. Headers go out with the first chunk, so
+ * a refusal before it (not found, not complete) is answered as JSON by
+ * answerFailure. A failure after it cannot change the status, so the
+ * response is aborted rather than ended: the client sees a broken download,
+ * never a short file that looks whole.
+ */
+export async function downloadCorpus(req: Request, res: Response): Promise<Response> {
+  const log = handlerLog("downloadCorpus", req);
+  logProcessing({ ...log, description: "starting downloadCorpus" });
+  let started = false;
+  try {
+    const corpusId = positiveInt(req.params.id, "id");
+    await streamCorpusDownload(corpusId, req.organizationId!, viewerOf(req), (chunk) => {
+      if (!started) {
+        res.setHeader("Content-Type", "text/csv; charset=utf-8");
+        res.setHeader("Content-Disposition", `attachment; filename="corpus-${corpusId}.csv"`);
+        res.status(200);
+        started = true;
+      }
+      return writeChunk(res, chunk);
+    });
+    res.end();
+    await logSafely(logSuccess, {
+      ...log,
+      eventType: "Read",
+      description: `Downloaded bias audit corpus ${corpusId}`,
+    });
+    return res;
+  } catch (error) {
+    if (!started) {
+      return answerFailure(req, res, log, "Read", "corpus download failed unexpectedly", error);
+    }
+    recordUnexpectedCause(log.functionName, error);
+    await logSafely(logFailure, {
+      ...log,
+      eventType: "Read",
+      description: "downloadCorpus failed",
+      error: new Error("corpus download failed part way"),
+      serverLog: false,
+    });
+    res.destroy();
+    return res;
   }
 }
 

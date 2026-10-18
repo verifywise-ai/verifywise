@@ -1,6 +1,7 @@
 /**
  * What a profile's answers decide for the steps after it: the readiness
- * result (and with it the scope) and the rate a run computes.
+ * result (and with it the scope), the rate a run computes, and whether a
+ * corpus may be generated.
  *
  * A run takes its metric from here and a scope determination its scope, both
  * from the attested profile's answers. The profile view reports the same
@@ -24,11 +25,18 @@ export interface ProfileDecision {
   readiness: ReadinessResult;
   /** Null when no applicable answer forces a rate (out of scope, or the cutoff is open). */
   metric: RunMetric | null;
+  /** Whether the answers allow corpus generation. */
+  mayGenerate: boolean;
+  /** Why generation is withheld, each naming the question; empty when it may run. */
+  generationBlocked: string[];
 }
 
 export function decideProfile(answers: AnswerMap): ProfileDecision {
+  const gates = runAnswerGates(answers);
   return {
     readiness: computeReadiness(answers),
-    metric: runMetricOf(runAnswerGates(answers)),
+    metric: runMetricOf(gates),
+    mayGenerate: gates.mayGenerate,
+    generationBlocked: [...gates.blocked.generation],
   };
 }

@@ -1,9 +1,9 @@
 /**
  * Bias audit (NYC Local Law 144) routes.
  *
- * Read: every built-in role. Draft answers, record runs and generate stances
- * (from a run, or a scope determination from the attested profile): Admin
- * and Editor. Attest a profile and confirm the derived data basis:
+ * Read: every built-in role. Draft answers, record runs, generate stances
+ * (from a run, or a scope determination from the attested profile), and
+ * start, resume or preview corpus generation: Admin and Editor. Attest a profile and confirm the derived data basis:
  * Admin only, since both record the customer's own legal position. The
  * platform's Auditor role is unrelated to the § 5-300 independent auditor and
  * confers nothing about independence.
@@ -15,18 +15,25 @@ import authenticateJWT from "../middleware/auth.middleware";
 import authorize from "../middleware/accessControl.middleware";
 import {
   attestProfile,
+  compareCriteria,
   confirmDerivedBasis,
+  createCorpus,
   createRun,
   DATASET_MAX_BYTES,
+  downloadCorpus,
   downloadStance,
   generateProfileStance,
   generateStance,
+  getCorpus,
+  getJobDescriptions,
   getProfile,
   getQuestions,
   getRun,
   getRunTrend,
   handleDatasetUploadError,
+  listCorpora,
   listRuns,
+  resumeCorpus,
   saveProfileAnswers,
 } from "../controllers/biasAudit.ctrl";
 
@@ -96,5 +103,17 @@ router.post("/runs/:id/derived-basis/confirm", authorize("biasAudit.attest"), co
 router.post("/runs/:id/stance", authorize("biasAudit.edit"), generateStance);
 
 router.get("/stances/:id/download", authorize("biasAudit.read"), downloadStance);
+
+// Corpus generation. Every corpus route checks project membership in the
+// service, so another organization and a non-member both get 404.
+router.get("/job-descriptions", authorize("biasAudit.read"), getJobDescriptions);
+// A preview that stores nothing; edit, since it is a step of starting a corpus.
+router.post("/criteria-comparison", authorize("biasAudit.edit"), compareCriteria);
+router.post("/corpora", authorize("biasAudit.edit"), createCorpus);
+// Declared before /corpora/:id.
+router.get("/corpora", authorize("biasAudit.read"), listCorpora);
+router.get("/corpora/:id", authorize("biasAudit.read"), getCorpus);
+router.get("/corpora/:id/download", authorize("biasAudit.read"), downloadCorpus);
+router.post("/corpora/:id/resume", authorize("biasAudit.edit"), resumeCorpus);
 
 export default router;

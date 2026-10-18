@@ -49,11 +49,25 @@ jest.mock("../../services/biasAudit/stanceService", () => ({
   getStanceDownload: jest.fn(),
 }));
 
+jest.mock("../../services/biasAudit/corpusService", () => ({
+  startCorpusGeneration: jest.fn(),
+  listCorpora: jest.fn(),
+  getCorpusView: jest.fn(),
+  streamCorpusDownload: jest.fn(),
+  resumeCorpus: jest.fn(),
+  getJobDescriptionsView: jest.fn(),
+}));
+
 const multer = require("multer");
 import * as ctrl from "../biasAudit.ctrl";
 import * as profileService from "../../services/biasAudit/profileService";
 import * as runService from "../../services/biasAudit/runService";
 import * as stanceService from "../../services/biasAudit/stanceService";
+import * as corpusService from "../../services/biasAudit/corpusService";
+import {
+  GatewayConfigError,
+  GatewayNotConfiguredError,
+} from "../../services/biasAudit/generation/settings";
 import {
   BusinessLogicException,
   ConflictException,
@@ -990,5 +1004,303 @@ describe("the caller's role reaches every project endpoint", () => {
       mockReq({ ...as, params, body: { answers: [] } }),
     );
     expect(status).toBe(404);
+  });
+});
+
+// --------------------------------------------------------------- corpora
+
+describe("createCorpus", () => {
+  const body = (over: Record<string, unknown> = {}) => ({
+    projectId: 7,
+    frameworkId: 12,
+    jobDescriptionKey: "commercial-ae",
+    ...over,
+  });
+  const started = () => svc(corpusService.startCorpusGeneration).mock.calls[0][0];
+
+  it("defaults the count to 5000 and passes the caller's organization and role", async () => {
+    svc(corpusService.startCorpusGeneration).mockResolvedValue({ corpusId: 3 });
+    const { status, body: res } = await call(
+      ctrl.createCorpus,
+      mockReq({ role: "Editor", body: body({ organizationId: 999, role: "Admin" }) }),
+    );
+    expect(status).toBe(201);
+    expect(res.data).toEqual({ corpusId: 3 });
+    expect(started()).toEqual({
+      projectId: 7,
+      frameworkId: 12,
+      organizationId: 42,
+      userId: 9,
+      role: "Editor",
+      jobDescriptionKey: "commercial-ae",
+      criteriaSupplied: null,
+      count: 5000,
+    });
+  });
+
+  it.each([[699], [10001], ["abc"], [700.5], [0], [-700], [null], [true]])(
+    "400s a count of %p without calling the service",
+    async (count) => {
+      const { status } = await call(ctrl.createCorpus, mockReq({ body: body({ count }) }));
+      expect(status).toBe(400);
+      expect(corpusService.startCorpusGeneration).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([[700], [10000], ["2500"]])("accepts a count of %p", async (count) => {
+    svc(corpusService.startCorpusGeneration).mockResolvedValue({ corpusId: 3 });
+    const { status } = await call(ctrl.createCorpus, mockReq({ body: body({ count }) }));
+    expect(status).toBe(201);
+    expect(started().count).toBe(Number(count));
+  });
+
+  it("400s a job description outside the two keys and a framework other than LL 144", async () => {
+    for (const over of [
+      { jobDescriptionKey: "nurse" },
+      { jobDescriptionKey: undefined },
+      { frameworkId: 15 },
+      { frameworkId: "abc" },
+    ]) {
+      const { status } = await call(ctrl.createCorpus, mockReq({ body: body(over) }));
+      expect(status).toBe(400);
+    }
+    expect(corpusService.startCorpusGeneration).not.toHaveBeenCalled();
+  });
+
+  it("passes criteria text through, treats blank as not supplied, and 400s over 10,000 characters", async () => {
+    svc(corpusService.startCorpusGeneration).mockResolvedValue({ corpusId: 3 });
+    await call(ctrl.createCorpus, mockReq({ body: body({ criteriaSupplied: "Quota\nClosing" }) }));
+    expect(started().criteriaSupplied).toBe("Quota\nClosing");
+    svc(corpusService.startCorpusGeneration).mockClear();
+    await call(ctrl.createCorpus, mockReq({ body: body({ criteriaSupplied: "   " }) }));
+    expect(started().criteriaSupplied).toBeNull();
+    svc(corpusService.startCorpusGeneration).mockClear();
+
+    for (const criteriaSupplied of ["x".repeat(10001), 42, ["a"]]) {
+      const { status } = await call(
+        ctrl.createCorpus,
+        mockReq({ body: body({ criteriaSupplied }) }),
+      );
+      expect(status).toBe(400);
+    }
+    expect(corpusService.startCorpusGeneration).not.toHaveBeenCalled();
+    const { status } = await call(
+      ctrl.createCorpus,
+      mockReq({ body: body({ criteriaSupplied: "x".repeat(10000) }) }),
+    );
+    expect(status).toBe(201);
+  });
+
+  describe("when the gateway is not configured", () => {
+    const prior = process.env.BIAS_AUDIT_LLM_API_KEY;
+    afterEach(() => {
+      if (prior === undefined) delete process.env.BIAS_AUDIT_LLM_API_KEY;
+      else process.env.BIAS_AUDIT_LLM_API_KEY = prior;
+    });
+
+    it.each([
+      ["missing", () => new GatewayNotConfiguredError(["BIAS_AUDIT_LLM_BASE_URL"])],
+      ["invalid", () => new GatewayConfigError("BIAS_AUDIT_LLM_BASE_URL", "must use https")],
+    ])("answers 503 when the configuration is %s, with no key in the body", async (_l, make) => {
+      process.env.BIAS_AUDIT_LLM_API_KEY = "sk-ctrl-secret"; // gitleaks:allow
+      svc(corpusService.startCorpusGeneration).mockRejectedValue(make());
+      const { status, body: res } = await call(ctrl.createCorpus, mockReq({ body: body() }));
+      expect(status).toBe(503);
+      expect(JSON.stringify(res)).toMatch(/not available on this deployment/);
+      expect(JSON.stringify(res)).not.toContain("sk-ctrl-secret");
+      expect(JSON.stringify(res)).not.toContain("BIAS_AUDIT_LLM");
+      const logged = JSON.stringify([
+        logStructured.mock.calls,
+        logCentralOnly.mock.calls,
+        serverLogger.error.mock.calls,
+        logEvent.mock.calls,
+      ]);
+      expect(logged).not.toContain("sk-ctrl-secret");
+    });
+  });
+
+  it("passes the generation gate's 409 through with its message", async () => {
+    svc(corpusService.startCorpusGeneration).mockRejectedValue(
+      new ConflictException("pipeline.input_form is audio", "AedtProfile", "pipeline.input_form"),
+    );
+    const { status, body: res } = await call(ctrl.createCorpus, mockReq({ body: body() }));
+    expect(status).toBe(409);
+    expect(res.data).toMatch(/pipeline\.input_form is audio/);
+  });
+
+  it("answers an unexpected failure with a generic 500, keeping the raw text out", async () => {
+    svc(corpusService.startCorpusGeneration).mockRejectedValue(
+      new Error("connect ECONNREFUSED 10.0.0.5:5432"),
+    );
+    const { status, body: res } = await call(ctrl.createCorpus, mockReq({ body: body() }));
+    expect(status).toBe(500);
+    expect(JSON.stringify(res)).not.toContain("ECONNREFUSED");
+  });
+});
+
+describe("compareCriteria", () => {
+  it("returns the comparison for the job description and stores nothing", async () => {
+    const { status, body } = await call(
+      ctrl.compareCriteria,
+      mockReq({ body: { jobDescriptionKey: "operational-hourly", criteriaSupplied: null } }),
+    );
+    expect(status).toBe(200);
+    expect(body.data.verdict).toBe("not_supplied");
+    expect(corpusService.startCorpusGeneration).not.toHaveBeenCalled();
+  });
+
+  it("400s an unknown job description", async () => {
+    const { status } = await call(
+      ctrl.compareCriteria,
+      mockReq({ body: { jobDescriptionKey: "nurse", criteriaSupplied: "x" } }),
+    );
+    expect(status).toBe(400);
+  });
+});
+
+describe("corpus reads and resume", () => {
+  it("lists corpora for a project as the caller, 404ing another framework", async () => {
+    svc(corpusService.listCorpora).mockResolvedValue({ corpora: [] });
+    const q = { projectId: "7", frameworkId: LL144 };
+    const { status } = await call(ctrl.listCorpora, mockReq({ role: "Editor", query: q }));
+    expect(status).toBe(200);
+    expect(svc(corpusService.listCorpora).mock.calls[0][0]).toEqual({
+      projectId: 7,
+      frameworkId: 12,
+      organizationId: 42,
+      userId: 9,
+      role: "Editor",
+    });
+    const other = await call(ctrl.listCorpora, mockReq({ query: { ...q, frameworkId: "15" } }));
+    expect(other.status).toBe(404);
+  });
+
+  it("views a corpus by id in the caller's organization, 400ing a bad id", async () => {
+    svc(corpusService.getCorpusView).mockResolvedValue({ id: 3 });
+    const { status } = await call(ctrl.getCorpus, mockReq({ role: "Editor", params: { id: "3" } }));
+    expect(status).toBe(200);
+    expect(svc(corpusService.getCorpusView).mock.calls[0]).toEqual([
+      3,
+      42,
+      { userId: 9, role: "Editor" },
+    ]);
+    expect((await call(ctrl.getCorpus, mockReq({ params: { id: "x" } }))).status).toBe(400);
+  });
+
+  it("resumes as the caller and passes a 409 through", async () => {
+    svc(corpusService.resumeCorpus).mockResolvedValue({ corpusId: 3, status: "running" });
+    const ok = await call(ctrl.resumeCorpus, mockReq({ params: { id: "3" } }));
+    expect(ok.status).toBe(202);
+    expect(svc(corpusService.resumeCorpus).mock.calls[0]).toEqual([
+      3,
+      42,
+      { userId: 9, role: "Admin" },
+    ]);
+    svc(corpusService.resumeCorpus).mockRejectedValue(
+      new ConflictException("Corpus 3 is already running.", "Corpus"),
+    );
+    const busy = await call(ctrl.resumeCorpus, mockReq({ params: { id: "3" } }));
+    expect(busy.status).toBe(409);
+    expect(busy.body.data).toMatch(/already running/);
+  });
+
+  it("maps a corpus the caller cannot see to 404", async () => {
+    svc(corpusService.getCorpusView).mockRejectedValue(
+      new NotFoundException("Corpus 3 was not found", "Corpus", 3),
+    );
+    expect((await call(ctrl.getCorpus, mockReq({ params: { id: "3" } }))).status).toBe(404);
+  });
+
+  it("answers the job descriptions view, and no corpus handler sends apiKey", async () => {
+    svc(corpusService.getJobDescriptionsView).mockReturnValue({
+      jobDescriptions: [{ key: "commercial-ae" }],
+      generationAvailable: true,
+      count: { default: 5000, min: 700, max: 10000 },
+    });
+    svc(corpusService.listCorpora).mockResolvedValue({ corpora: [{ id: 3 }] });
+    svc(corpusService.getCorpusView).mockResolvedValue({ id: 3 });
+    svc(corpusService.resumeCorpus).mockResolvedValue({ corpusId: 3, status: "running" });
+    svc(corpusService.startCorpusGeneration).mockResolvedValue({ corpusId: 3 });
+
+    const jd = await call(ctrl.getJobDescriptions, mockReq());
+    expect(jd.status).toBe(200);
+    expect(jd.body.data.generationAvailable).toBe(true);
+    const bodies = [
+      jd.body,
+      (await call(ctrl.listCorpora, mockReq({ query: { projectId: "7", frameworkId: LL144 } })))
+        .body,
+      (await call(ctrl.getCorpus, mockReq({ params: { id: "3" } }))).body,
+      (await call(ctrl.resumeCorpus, mockReq({ params: { id: "3" } }))).body,
+      (
+        await call(
+          ctrl.createCorpus,
+          mockReq({ body: { projectId: 7, frameworkId: 12, jobDescriptionKey: "commercial-ae" } }),
+        )
+      ).body,
+    ];
+    for (const b of bodies) expect(JSON.stringify(b)).not.toContain("apiKey");
+  });
+});
+
+describe("downloadCorpus", () => {
+  function streamRes() {
+    const res = mockRes();
+    res.write = jest.fn(() => true);
+    res.end = jest.fn(() => res);
+    res.destroy = jest.fn();
+    res.once = jest.fn();
+    res.off = jest.fn();
+    res.headersSent = false;
+    return res;
+  }
+
+  it("sends the CSV the service streams, as an attachment", async () => {
+    svc(corpusService.streamCorpusDownload).mockImplementation(
+      async (_id: number, _org: number, _v: unknown, write: (c: string) => unknown) => {
+        await write("candidate_id,artifact_kind,artifact\r\n");
+        await write("C0001,resume,text\r\n");
+      },
+    );
+    const res = streamRes();
+    await ctrl.downloadCorpus(mockReq({ params: { id: "3" } }), res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.setHeader).toHaveBeenCalledWith("Content-Type", "text/csv; charset=utf-8");
+    expect(res.setHeader).toHaveBeenCalledWith(
+      "Content-Disposition",
+      'attachment; filename="corpus-3.csv"',
+    );
+    expect(res.write.mock.calls.map((c: unknown[]) => c[0]).join("")).toBe(
+      "candidate_id,artifact_kind,artifact\r\nC0001,resume,text\r\n",
+    );
+    expect(res.end).toHaveBeenCalled();
+    expect(svc(corpusService.streamCorpusDownload).mock.calls[0].slice(0, 3)).toEqual([
+      3,
+      42,
+      { userId: 9, role: "Admin" },
+    ]);
+  });
+
+  it("answers a refusal before any byte with its own status and JSON", async () => {
+    svc(corpusService.streamCorpusDownload).mockRejectedValue(
+      new ConflictException("Only a complete corpus can be downloaded.", "Corpus"),
+    );
+    const res = streamRes();
+    await ctrl.downloadCorpus(mockReq({ params: { id: "3" } }), res);
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.write).not.toHaveBeenCalled();
+  });
+
+  it("aborts the response, rather than ending it, when the stream fails part way", async () => {
+    svc(corpusService.streamCorpusDownload).mockImplementation(
+      async (_id: number, _org: number, _v: unknown, write: (c: string) => unknown) => {
+        await write("candidate_id,artifact_kind,artifact\r\n");
+        throw new Error("The downloadable records do not match");
+      },
+    );
+    const res = streamRes();
+    await ctrl.downloadCorpus(mockReq({ params: { id: "3" } }), res);
+    expect(res.destroy).toHaveBeenCalled();
+    expect(res.end).not.toHaveBeenCalled();
+    expect(res.json).not.toHaveBeenCalled();
   });
 });

@@ -44,6 +44,10 @@ export const LL144_CELLS: readonly Demographics[] = Object.freeze(
 
 /** Largest corpus a single generation may ask for. */
 export const MAX_COUNT = 10000;
+/** Smallest: MIN_PER_CELL in each of the 14 cells. */
+export const MIN_COUNT = MIN_PER_CELL * LL144_CELLS.length;
+/** What a generation asks for when the caller names no count. */
+export const DEFAULT_COUNT = 5000;
 
 /**
  * Balances the sample across every sex by race/ethnicity cell, with the
@@ -77,7 +81,7 @@ export function buildAllocation(args: {
 
   const cells = LL144_CELLS;
 
-  const minCount = MIN_PER_CELL * cells.length;
+  const minCount = MIN_COUNT;
   const perTier = Math.floor(count / (cells.length * tiers.length));
   const achieved = perTier * cells.length * tiers.length;
   if (achieved < minCount) {

@@ -8,6 +8,7 @@ const MODULE = path.resolve(__dirname, "..");
 const QUESTION_SET = path.resolve(__dirname, "../../../structures/NYC-Local-Law-144");
 const TEMPLATES = path.resolve(__dirname, "../../../templates/biasAudit");
 const ROOTS = [MODULE, QUESTION_SET, TEMPLATES];
+const UTILS_FILE = path.resolve(__dirname, "../../../utils/biasAudit.utils.ts");
 
 // The one file that must spell the forbidden list out.
 const VOCABULARY = path.join(MODULE, "stance", "vocabulary.ts");
@@ -30,6 +31,17 @@ function files(): string[] {
     }
   };
   ROOTS.filter(fs.existsSync).forEach(walk);
+  return out;
+}
+
+/** Non-test .ts files under `dir`, recursively. */
+function sourceFilesUnder(dir: string): string[] {
+  const out: string[] = [];
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) out.push(...sourceFilesUnder(p));
+    else if (e.name.endsWith(".ts") && !e.name.endsWith(".test.ts")) out.push(p);
+  }
   return out;
 }
 
@@ -120,13 +132,58 @@ describe("module rules", () => {
   });
 
   it("filters every raw query on organization_id", () => {
-    const utilsFile = path.resolve(__dirname, "../../../utils/biasAudit.utils.ts");
-    const src = fs.readFileSync(utilsFile, "utf8");
+    const src = fs.readFileSync(UTILS_FILE, "utf8");
     const statements = src.match(/sequelize\.query\(\s*`[^`]+`/g) ?? [];
     expect(statements.length).toBeGreaterThan(4);
     // Every call is a template-literal statement, so none escapes the check.
     expect(statements.length).toBe((src.match(/sequelize\.query\(/g) ?? []).length);
     const missing = statements.filter((s) => !/organization_id/.test(s));
     expect(missing).toEqual([]);
+  });
+
+  it("never logs the gateway key or the settings object", () => {
+    const offenders: string[] = [];
+    const scanned = sourceFilesUnder(path.join(MODULE, "generation")).concat(
+      path.join(MODULE, "corpusService.ts"),
+    );
+    for (const f of scanned) {
+      const src = fs.readFileSync(f, "utf8");
+      if (
+        /(console\.(log|error|warn|info)|logger\.\w+|log(Processing|Success|Failure))\([^)]*\b(apiKey|settings|(BIAS_AUDIT_)?LLM_API_KEY)\b/.test(
+          src,
+        )
+      ) {
+        offenders.push(path.relative(MODULE, f));
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it("the log rule catches the gateway key under its deployment name", () => {
+    const rule =
+      /(console\.(log|error|warn|info)|logger\.\w+|log(Processing|Success|Failure))\([^)]*\b(apiKey|settings|(BIAS_AUDIT_)?LLM_API_KEY)\b/;
+    expect(rule.test("logger.error(process.env.BIAS_AUDIT_LLM_API_KEY)")).toBe(true);
+    expect(rule.test("console.log(settings)")).toBe(true);
+    expect(rule.test("logger.info(`corpus ${id} failed`)")).toBe(false);
+  });
+
+  it("never maps allocation rows onto candidate ids by zip or index", () => {
+    const offenders: string[] = [];
+    for (const f of sourceFilesUnder(path.join(MODULE, "generation"))) {
+      if (f.endsWith("assignCandidateIds.ts")) continue;
+      const src = fs.readFileSync(f, "utf8");
+      if (
+        /rows\s*\.\s*map\s*\(\s*\(?\s*\w+\s*,\s*i\w*\s*\)?\s*=>[\s\S]{0,120}candidateId/.test(src)
+      ) {
+        offenders.push(path.relative(MODULE, f));
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it("keeps the corpus record log append-only", () => {
+    const src = fs.readFileSync(UTILS_FILE, "utf8");
+    expect(src).not.toMatch(/UPDATE\s+(verifywise\.)?bias_audit_corpus_records/i);
+    expect(src).not.toMatch(/DELETE\s+FROM\s+(verifywise\.)?bias_audit_corpus_records/i);
   });
 });

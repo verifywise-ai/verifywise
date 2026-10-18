@@ -27,6 +27,10 @@ const IO_LAYER: Record<string, string> = {
     "calls the Vercel AI Gateway with fetch and hashes each prompt with node:crypto",
   [path.join(MODULE, "generation", "generateCorpus.ts")]:
     "plans and runs a corpus: reads and appends records through utils/biasAudit.utils, calls the gateway client, hashes with node:crypto",
+  [path.join(MODULE, "generation", "generationJob.ts")]:
+    "runs corpus generation under BullMQ and marks a corpus failed through utils/biasAudit.utils after its last retry",
+  [path.join(MODULE, "corpusService.ts")]:
+    "reads and writes corpora through utils/biasAudit.utils, checks project access, and enqueues the generation job",
   [path.join(MODULE, "generation", "settings.ts")]:
     "reads the gateway's three deployment variables from process.env",
   [path.join(MODULE, "stance", "render.ts")]:

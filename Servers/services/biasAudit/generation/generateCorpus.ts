@@ -22,6 +22,7 @@ import {
   updateCorpusStatusQuery,
   type CorpusLogRow,
 } from "../../../utils/biasAudit.utils";
+import type { CriteriaComparison } from "../criteriaComparison";
 import { isUniqueViolation } from "../serviceHelpers";
 import { LL144_CONFIG } from "../runService";
 import { buildAllocation } from "./allocation";
@@ -59,8 +60,8 @@ export interface CreateCorpusArgs {
   /** From knockout.exists; recorded, does not change generation in v1. */
   knockout: Knockout;
   criteriaSupplied: string | null;
-  /** Task 6's CriteriaComparison, stored as JSON. */
-  criteriaComparison: unknown;
+  /** compareCriteria(jobDescriptionKey, criteriaSupplied), stored as JSON. */
+  criteriaComparison: CriteriaComparison;
   count: number;
 }
 
@@ -234,13 +235,15 @@ function criteriaVerdictOf(stored: unknown): "close" | "divergent" | "not_suppli
 }
 
 /** The stored outcome of a finished corpus, for an idempotent retry. */
-function summaryOf(corpus: {
-  status: "complete" | "blocked";
-  record_count: number | null;
-  models_observed_json: Record<string, number> | null;
-}) {
+function summaryOf(
+  status: "complete" | "blocked",
+  corpus: {
+    record_count: number | null;
+    models_observed_json: Record<string, number> | null;
+  },
+) {
   return {
-    status: corpus.status,
+    status,
     recordCount: corpus.record_count ?? 0,
     modelsObserved: corpus.models_observed_json ?? {},
   };
@@ -270,7 +273,9 @@ export async function runCorpusGeneration(args: {
   const corpus = await getCorpusQuery(corpusId, organizationId);
   if (!corpus) throw new NotFoundException(`Corpus ${corpusId} was not found`, "Corpus", corpusId);
   // A retry after the completion write: nothing left to do.
-  if (corpus.status === "complete" || corpus.status === "blocked") return summaryOf(corpus);
+  if (corpus.status === "complete" || corpus.status === "blocked") {
+    return summaryOf(corpus.status, corpus);
+  }
   if (corpus.status !== "running") {
     throw new ConflictException(`Corpus ${corpusId} is not running (${corpus.status}).`, "Corpus");
   }
@@ -293,7 +298,9 @@ export async function runCorpusGeneration(args: {
       if (!claimed) lease = await getCorpusQuery(corpusId, organizationId);
     }
     if (!claimed) {
-      if (lease?.status === "complete" || lease?.status === "blocked") return summaryOf(lease);
+      if (lease?.status === "complete" || lease?.status === "blocked") {
+        return summaryOf(lease.status, lease);
+      }
       if (lease?.status === "running") {
         throw new CorpusBusyError(
           corpusId,

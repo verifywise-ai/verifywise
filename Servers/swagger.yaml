@@ -24637,6 +24637,103 @@ paths:
       security:
         -
           bearerAuth: []
+  /bias-audit/job-descriptions:
+    get:
+      summary: 'Get Job Descriptions'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: getJobDescriptions
+      security:
+        -
+          bearerAuth: []
+  /bias-audit/criteria-comparison:
+    post:
+      summary: 'Compare Criteria'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: compareCriteria
+      security:
+        -
+          bearerAuth: []
+  /bias-audit/corpora:
+    post:
+      summary: 'Create Corpus'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: createCorpus
+      security:
+        -
+          bearerAuth: []
+    get:
+      summary: 'List Corpora'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: listCorpora
+      security:
+        -
+          bearerAuth: []
+  '/bias-audit/corpora/{id}':
+    get:
+      summary: 'Get Corpus'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: getCorpus
+      security:
+        -
+          bearerAuth: []
+  '/bias-audit/corpora/{id}/download':
+    get:
+      summary: 'Download Corpus'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: downloadCorpus
+      security:
+        -
+          bearerAuth: []
+  '/bias-audit/corpora/{id}/resume':
+    post:
+      summary: 'Resume Corpus'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Bias Audit'
+      operationId: resumeCorpus
+      security:
+        -
+          bearerAuth: []
   /feature-settings:
     get:
       tags:
