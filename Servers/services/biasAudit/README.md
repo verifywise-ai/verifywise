@@ -2,13 +2,16 @@
 
 Self-service LL 144 module. It has two layers:
 
-- **The pure core**: the engine, the data and answer gates, readiness, the derived basis, the
-  stance model and the trend series. It imports nothing from outside this directory and
-  `structures/NYC-Local-Law-144/`, and performs no I/O.
+- **The pure core**: `engine/`, `index.ts`, `dataGates.ts`, `idOrderCheck.ts`,
+  `datasetParser.ts`, `applicability.ts`, `answerGates.ts`, `readinessScore.ts`,
+  `deriveBasis.ts`, `profileDecision.ts`, `trendSeries.ts`, and in `stance/`, `compose.ts`,
+  `sectionChecker.ts`, `vocabulary.ts` and `labels.ts`. It imports nothing from outside this
+  directory and `structures/NYC-Local-Law-144/`, and performs no I/O.
 - **The I/O layer**: `profileService.ts`, `runService.ts`, `stanceService.ts`,
   `serviceHelpers.ts`, `projectAccess.ts` and `stance/render.ts`. These read and write the
-  module's own tables and render the stance PDF. Each is listed by exact path, with its reason,
-  in `__tests__/moduleIndependence.test.ts`.
+  module's own tables, read `projects`, `projects_members` and `users` (project access and
+  attribution names), render the stance PDF and store it as a `files` row. Each is listed by
+  exact path, with its reason, in `__tests__/moduleIndependence.test.ts`.
 
 Neither layer imports from EvalServer, AIGateway or another VerifyWise module's services
 (`__tests__/moduleRules.test.ts`, `__tests__/moduleIndependence.test.ts`).
@@ -62,6 +65,7 @@ result must carry, such as the § 5-301(c) count of records in an unknown catego
 | `stance/render.ts`            | HTML and PDF rendering behind the export gate                        |
 | `stance/sectionChecker.ts`    | Required sections, read from the rendered HTML                       |
 | `stance/vocabulary.ts`        | The forbidden-word list and its matcher                              |
+| `stance/labels.ts`            | Readable labels for presets, metrics and blank fields                |
 
 The question set is `Servers/structures/NYC-Local-Law-144/intake.questions.ts`
 (`LL144_QUESTION_SET_VERSION`); the stance template is `Servers/templates/biasAudit/stance.ejs`.
@@ -76,9 +80,10 @@ Thirteen questions, each with a `scope` (`profile` or `run`) and a `weight`.
 - **Tier 2, asked with the consequence stated in advance.** An option may carry a
   `consequence`, shown before the customer answers, and `emits`, the text the stance carries
   (`limitation`, `scope_note`, `blank_field`, `metric_forced`). Weights are `high` (2),
-  `standard` (1) and `low` (0.5). Every tier-2 question applies only while the tool is in scope
-  (`scope.weighting` is not `one_of_several`); `cutoff.planned` and `threshold.operational`
-  apply only when `cutoff.applied_by` is `person`.
+  `standard` (1) and `low` (0.5). Every tier-2 question applies unless the tool is out of
+  scope: it applies while `scope.weighting` is unanswered or answered with anything other than
+  `one_of_several`. `cutoff.planned` and `threshold.operational` also need
+  `cutoff.applied_by` to be `person`.
 
 A "don't know" is not a usable answer. For four questions it emits a "not established"
 limitation in place of an option's text.
@@ -114,12 +119,14 @@ and not retained.
 `deriveBasis` combines `data.held` (per characteristic) with `data.basis` (for the run) into a
 basis for sex, for race and ethnicity, and for the intersectional categories; the intersection
 is historical only when both halves are. Each test-data basis carries an expiry trigger that
-names only its own category; a historical or not-applicable basis carries none. The derived
-basis is our reading of the answers, so it is stored with `confirmed: false` until confirmed
-through `POST /runs/:id/derived-basis/confirm`, which records who confirmed it and when.
+names only its own category; a historical or not-applicable basis carries none. A basis is
+derived only when `data.held` and `data.basis` both have usable answers; otherwise the run
+stores no basis and no expiry trigger, and confirming it answers 409. The derived basis is our
+reading of the answers, so it is stored with `confirmed: false` until confirmed through
+`POST /runs/:id/derived-basis/confirm`, which records who confirmed it and when.
 
 Each run stores `expiry_date`, one year from the day it was recorded (UTC, § 5-301(a)), and
-`expiry_trigger`, the distinct non-empty triggers joined.
+`expiry_trigger`, the distinct non-empty triggers joined, or null when there are none.
 
 ## The stance
 
@@ -130,8 +137,9 @@ gate before any database read. Each generation stores a new immutable version wi
 SHA-256. Customer-authored text is quoted verbatim inside a marker the vocabulary lint skips;
 every other rendered word is linted.
 
-The section list is fixed by scope and checked against the rendered HTML before the PDF is
-filed:
+The section list is fixed by scope, and `compose.ts` builds the sections in this order. Before
+the PDF is filed, `sectionChecker.ts` checks that every required section is present in the
+rendered HTML; it does not check their order.
 
 | Scope        | Sections, in order                                                                                         |
 | ------------ | ---------------------------------------------------------------------------------------------------------- |
@@ -155,14 +163,18 @@ non-excluded group, the category holding it, and whether any non-excluded group 
 - **A caveat point:** a run whose stored findings would not allow export. Its ratio is shown
   with that caveat.
 - **A break**, labelled with every reason, between consecutive plotted runs whose profile
-  version, question-set version, job description or metric differ.
+  version, question-set version, job description or metric differ. The job-description reason
+  does not fire today: `createRun` never sets `job_description_key`, so every run stores null
+  and runs on different job descriptions plot as one line.
 
-Raw results stay on the server; `GET /runs/trend` returns only the series.
+`GET /runs/trend` returns only the series, not the stored results. `GET /runs/:id` does return
+the whole run row, `result_json` included.
 
 ## Endpoints
 
 Mounted at `/api/bias-audit`, all behind `authenticateJWT`. Project-scoped calls check project
-membership (`projectAccess.ts`) and answer 404 to a non-member.
+membership (`projectAccess.ts`) and answer 404 to a non-member. An organization Admin skips
+the membership check and reaches every project in the organization, as with project files.
 
 | Method and path                                 | Permission         |
 | ----------------------------------------------- | ------------------ |
@@ -220,8 +232,9 @@ npm run typecheck && npm run lint && npm run i18n:audit:strict && npm run format
 ```
 
 `npm run lint` must report no errors; existing warnings are not counted.
-`__tests__/moduleRules.test.ts`, in the first command, also checks that every `sequelize.query`
-in `utils/biasAudit.utils.ts` filters on `organization_id`. The database-backed tenant checks
+`__tests__/moduleRules.test.ts`, in the first command, also checks that the SQL text of every
+`sequelize.query` in `utils/biasAudit.utils.ts` mentions `organization_id`. It is a substring
+test: it does not prove the column is used in a `WHERE` filter. The database-backed tenant checks
 (`tests/integration/tenant-isolation/` under `npm run test:integration`, and
 `scripts/auditTenantIsolationCoverage.ts`) need a database and are not in this list.
 
