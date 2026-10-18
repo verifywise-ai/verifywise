@@ -6,7 +6,6 @@ import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
 import { withLegacyHighRiskRole } from "../../utils/highRiskRoles.utils";
-import { VISIBLE_FILE_REPLACEMENTS, VISIBLE_FILE_SQL } from "../../utils/files/visibleFiles";
 
 export interface FetchUseCasesParams {
   status?: string;
@@ -370,16 +369,13 @@ const agentDeleteUseCase = createWriteToolFn({
         `DELETE FROM projects_members WHERE organization_id = :organizationId AND project_id = :id`,
         { replacements: { organizationId, id: params.use_case_id }, transaction },
       );
-      // A bias audit stance PDF is never deleted; it stays like any file the
-      // normal project delete leaves behind.
+      // Every file of the project goes, bias audit stance PDFs included, as on
+      // the normal project delete (deleteHelper in project.utils). The stances
+      // citing them cascade with the project, so a kept PDF would be an
+      // orphan nothing could show or delete.
       await sequelize.query(
-        `DELETE FROM files
-          WHERE organization_id = :organizationId AND project_id = :id
-            AND ${VISIBLE_FILE_SQL("files")}`,
-        {
-          replacements: { organizationId, id: params.use_case_id, ...VISIBLE_FILE_REPLACEMENTS },
-          transaction,
-        },
+        `DELETE FROM files WHERE organization_id = :organizationId AND project_id = :id`,
+        { replacements: { organizationId, id: params.use_case_id }, transaction },
       );
       await sequelize.query(
         `DELETE FROM projects_risks WHERE organization_id = :organizationId AND project_id = :id`,

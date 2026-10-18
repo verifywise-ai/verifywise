@@ -2,8 +2,9 @@
  * A stand-in for sequelize.query over a small files table, for unit tests
  * that check a bias audit stance PDF answers exactly as a missing file does.
  *
- * It applies the organization, the file id replacements and the visible-file
- * predicate (VISIBLE_FILE_SQL), and nothing else. The predicate counts only
+ * It applies the organization, `id = :x` and `project_id = :x` comparisons
+ * (and `:fileIds` lists), and the visible-file predicate (VISIBLE_FILE_SQL),
+ * and nothing else. The predicate counts only
  * when it appears at least once per reference to the files table, so a
  * UNION or subquery that leaves one branch unfiltered is treated as
  * unfiltered. A tool's answer over a table holding only a stance PDF
@@ -64,6 +65,11 @@ export function everyFilesReferenceFiltered(sql: string): boolean {
   return predicates >= references;
 }
 
+/** Whether the statement has `[alias.]column = :key`. */
+function comparesColumn(sql: string, column: string, key: string): boolean {
+  return new RegExp(`(?<![\\w.])(?:\\w+\\.)?${column}\\s*=\\s*:${key}\\b`).test(sql);
+}
+
 export function fakeFilesQuery(table: FakeFileRow[]) {
   return async (sql: string, options: any = {}): Promise<any> => {
     const r = options.replacements ?? {};
@@ -72,8 +78,15 @@ export function fakeFilesQuery(table: FakeFileRow[]) {
     if (sql.match(VISIBLE_PREDICATE) && everyFilesReferenceFiltered(sql)) {
       rows = rows.filter((row) => row.source !== r.stanceSource);
     }
-    const id = r.id ?? r.fileId ?? r.file_id;
-    if (id !== undefined) rows = rows.filter((row) => row.id === Number(id));
+    // A replacement filters by file id only when the statement compares an
+    // id column to it; `project_id = :x` filters by project.
+    const idKey = ["id", "fileId", "file_id"].find(
+      (key) => r[key] !== undefined && comparesColumn(sql, "id", key),
+    );
+    if (idKey) rows = rows.filter((row) => row.id === Number(r[idKey]));
+    for (const key of Object.keys(r).filter((k) => comparesColumn(sql, "project_id", k))) {
+      rows = rows.filter((row) => row.project_id === Number(r[key]));
+    }
     if (Array.isArray(r.fileIds)) rows = rows.filter((row) => r.fileIds.includes(row.id));
 
     if (/^\s*UPDATE\b/i.test(sql)) {
