@@ -24,11 +24,19 @@ import {
 // ============================================================================
 
 /**
- * The organization's visible file ids, for scoping folder mappings. A stale
- * mapping to a bias audit stance PDF is never counted or shown.
+ * Folder mappings joined to their visible files, for counting. A stale
+ * mapping to a bias audit stance PDF is never counted.
  */
-const VISIBLE_FILE_IDS_SQL = `SELECT files.id FROM files
-  WHERE files.organization_id = :organizationId AND ${VISIBLE_FILE_SQL("files")}`;
+const VISIBLE_MAPPINGS_JOIN_SQL = `LEFT JOIN (
+      file_folder_mappings ffm
+      JOIN files f ON f.id = ffm.file_id AND f.organization_id = :organizationId
+        AND ${VISIBLE_FILE_SQL("f")}
+    ) ON vf.id = ffm.folder_id AND ffm.organization_id = :organizationId`;
+
+/** `:fileId` when it names a visible file of the organization, else nothing. */
+const VISIBLE_FILE_ID_SQL = `SELECT files.id FROM files
+  WHERE files.organization_id = :organizationId AND files.id = :fileId
+    AND ${VISIBLE_FILE_SQL("files")}`;
 
 /**
  * Get all folders for an organization (flat list)
@@ -39,8 +47,7 @@ export const getAllFoldersQuery = async (organizationId: number): Promise<IFolde
       vf.*,
       COALESCE(COUNT(ffm.id), 0)::INTEGER as file_count
     FROM virtual_folders vf
-    LEFT JOIN file_folder_mappings ffm ON vf.id = ffm.folder_id AND ffm.organization_id = :organizationId
-      AND ffm.file_id IN (${VISIBLE_FILE_IDS_SQL})
+    ${VISIBLE_MAPPINGS_JOIN_SQL}
     WHERE vf.organization_id = :organizationId
     GROUP BY vf.id
     ORDER BY vf.name ASC`,
@@ -109,8 +116,7 @@ export const getFolderByIdQuery = async (
       vf.*,
       COALESCE(COUNT(ffm.id), 0)::INTEGER as file_count
     FROM virtual_folders vf
-    LEFT JOIN file_folder_mappings ffm ON vf.id = ffm.folder_id AND ffm.organization_id = :organizationId
-      AND ffm.file_id IN (${VISIBLE_FILE_IDS_SQL})
+    ${VISIBLE_MAPPINGS_JOIN_SQL}
     WHERE vf.organization_id = :organizationId AND vf.id = :id
     GROUP BY vf.id`,
     {
@@ -483,10 +489,7 @@ export const removeFileFromFolderQuery = async (
   const result = await sequelize.query<{ id: number }>(
     `DELETE FROM file_folder_mappings
      WHERE organization_id = :organizationId AND folder_id = :folderId AND file_id = :fileId
-       AND file_id IN (
-         SELECT id FROM files
-          WHERE organization_id = :organizationId AND id = :fileId AND ${VISIBLE_FILE_SQL("files")}
-       )
+       AND file_id IN (${VISIBLE_FILE_ID_SQL})
      RETURNING id`,
     {
       replacements: { organizationId, folderId, fileId, ...VISIBLE_FILE_REPLACEMENTS },
@@ -500,7 +503,8 @@ export const removeFileFromFolderQuery = async (
 /**
  * Bulk update file folder assignments (replace all folder assignments for a
  * file). Only a visible file is touched: for a missing id or a bias audit
- * stance PDF nothing is deleted or inserted.
+ * stance PDF nothing is deleted or inserted. Only the organization's own
+ * folders are assigned; other ids are skipped.
  */
 export const bulkUpdateFileFoldersQuery = async (
   organizationId: number,
@@ -510,14 +514,11 @@ export const bulkUpdateFileFoldersQuery = async (
   transaction?: Transaction,
 ): Promise<void> => {
   const replacements = { organizationId, fileId, userId, folderIds, ...VISIBLE_FILE_REPLACEMENTS };
-  const visibleFile = `SELECT files.id FROM files
-      WHERE files.organization_id = :organizationId AND files.id = :fileId
-        AND ${VISIBLE_FILE_SQL("files")}`;
 
   // Delete existing assignments
   await sequelize.query(
     `DELETE FROM file_folder_mappings
-      WHERE organization_id = :organizationId AND file_id IN (${visibleFile})`,
+      WHERE organization_id = :organizationId AND file_id IN (${VISIBLE_FILE_ID_SQL})`,
     { replacements, transaction },
   );
 
@@ -525,9 +526,9 @@ export const bulkUpdateFileFoldersQuery = async (
   if (folderIds.length > 0) {
     await sequelize.query(
       `INSERT INTO file_folder_mappings (organization_id, file_id, folder_id, assigned_by, assigned_at)
-       SELECT :organizationId, v.file_id, f.folder_id, :userId, NOW()
-         FROM (${visibleFile}) AS v(file_id)
-        CROSS JOIN unnest(ARRAY[:folderIds]::int[]) AS f(folder_id)`,
+       SELECT :organizationId, v.id, vf.id, :userId, NOW()
+         FROM (${VISIBLE_FILE_ID_SQL}) AS v
+         JOIN virtual_folders vf ON vf.organization_id = :organizationId AND vf.id IN (:folderIds)`,
       { replacements, transaction },
     );
   }
