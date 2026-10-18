@@ -31,11 +31,13 @@ export const aedtQueryKeys = {
 
 const NO_RETRY = { retry: false } as const;
 
+/** The question set is static for the module's lifetime, so it is never refetched as stale. */
 export function useAedtQuestions(projectId: number | null) {
   return useQuery({
     queryKey: aedtQueryKeys.questions(projectId ?? 0),
     queryFn: () => getAedtQuestions(projectId as number),
     enabled: projectId !== null,
+    staleTime: Infinity,
     ...NO_RETRY,
   });
 }
@@ -67,14 +69,18 @@ export function useAedtRun(runId: number | null) {
   });
 }
 
-/** Saving or attesting changes the profile view and the runs' gating, so the project is refetched. */
-function useInvalidateProject(projectId: number) {
+/**
+ * Saving or attesting changes only the profile view (answers, readiness and
+ * the attested decision that gates runs). The run list and the static
+ * question set stay as they were.
+ */
+function useInvalidateProfile(projectId: number) {
   const queryClient = useQueryClient();
-  return () => queryClient.invalidateQueries({ queryKey: aedtQueryKeys.project(projectId) });
+  return () => queryClient.invalidateQueries({ queryKey: aedtQueryKeys.profile(projectId) });
 }
 
 export function useSaveAedtAnswers(projectId: number) {
-  const invalidate = useInvalidateProject(projectId);
+  const invalidate = useInvalidateProfile(projectId);
   return useMutation({
     mutationFn: (answers: AedtAnswerInput[]) => saveAedtAnswers(projectId, answers),
     onSettled: invalidate,
@@ -82,7 +88,7 @@ export function useSaveAedtAnswers(projectId: number) {
 }
 
 export function useAttestAedtProfile(projectId: number) {
-  const invalidate = useInvalidateProject(projectId);
+  const invalidate = useInvalidateProfile(projectId);
   return useMutation({
     mutationFn: () => attestAedtProfile(projectId),
     onSettled: invalidate,
@@ -91,16 +97,19 @@ export function useAttestAedtProfile(projectId: number) {
 
 /** A scope determination is listed in the profile view and changes nothing else. */
 export function useGenerateAedtScopeDetermination(projectId: number) {
-  const queryClient = useQueryClient();
+  const invalidate = useInvalidateProfile(projectId);
   return useMutation({
     mutationFn: () => generateAedtScopeDetermination(projectId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: aedtQueryKeys.profile(projectId) }),
+    onSuccess: invalidate,
   });
 }
 
 /**
  * A new run changes only the run list; the profile and questions stay as they
  * were. The refetch is not awaited, so the caller opens the new run at once.
+ * A refusal (for example a 422 because someone re-attested the profile out of
+ * scope) means the attested decision the page gated on is stale, so the
+ * profile view is refetched.
  */
 export function useCreateAedtRun(projectId: number) {
   const queryClient = useQueryClient();
@@ -109,6 +118,9 @@ export function useCreateAedtRun(projectId: number) {
       createAedtRun(projectId, args.file, args.mapping),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: aedtQueryKeys.runs(projectId) });
+    },
+    onError: () => {
+      void queryClient.invalidateQueries({ queryKey: aedtQueryKeys.profile(projectId) });
     },
   });
 }
