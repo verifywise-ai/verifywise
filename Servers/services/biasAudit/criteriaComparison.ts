@@ -1,0 +1,180 @@
+import { JOB_DESCRIPTIONS } from "../../structures/NYC-Local-Law-144/job-descriptions";
+import type {
+  ExpectedCriterion,
+  JobDescription,
+} from "../../structures/NYC-Local-Law-144/job-descriptions";
+
+/**
+ * Compares the criteria a customer's platform generated from the fixed job
+ * description against the criteria the corpus was built against. Pure: no I/O,
+ * deterministic, safe to run server-side at corpus creation.
+ */
+export interface CriteriaComparison {
+  supplied: string[];
+  matched: Array<{ expected: string; supplied: string; score: number }>;
+  /** Keys of expected criteria no supplied item matched. */
+  unmatchedExpected: string[];
+  /** Supplied items that matched no expected criterion. */
+  unmatchedSupplied: string[];
+  verdict: "close" | "divergent" | "not_supplied";
+}
+
+const MATCH_THRESHOLD = 0.4;
+const MAX_UNMATCHED_FOR_CLOSE = 1;
+
+const STOPWORDS = new Set([
+  "a",
+  "an",
+  "and",
+  "as",
+  "at",
+  "by",
+  "for",
+  "from",
+  "has",
+  "have",
+  "in",
+  "is",
+  "of",
+  "on",
+  "or",
+  "rather",
+  "than",
+  "the",
+  "this",
+  "through",
+  "to",
+  "with",
+  "only",
+  "role",
+  "runs",
+  "handled",
+  "typical",
+  "experience",
+  "evidence",
+]);
+
+/** Different wordings of the same idea, folded onto the job description's own terms. */
+const SYNONYMS: Record<string, string> = {
+  revenue: "quota",
+  target: "quota",
+  contract: "deal",
+  value: "size",
+  industry: "sector",
+  comparable: "sector",
+  pipeline: "outbound",
+  prospect: "outbound",
+  duration: "length",
+  own: "ownership",
+  owner: "ownership",
+  end: "full",
+};
+
+function stem(word: string): string {
+  for (const suffix of ["ing", "ed", "es", "s"]) {
+    if (word.length > suffix.length + 3 && word.endsWith(suffix)) {
+      return word.slice(0, -suffix.length);
+    }
+  }
+  return word;
+}
+
+function tokens(text: string): Set<string> {
+  const out = new Set<string>();
+  for (const raw of text.toLowerCase().split(/[^a-z0-9]+/)) {
+    if (!raw || STOPWORDS.has(raw)) continue;
+    const s = stem(raw);
+    out.add(SYNONYMS[s] ?? s);
+  }
+  return out;
+}
+
+function overlap(a: Set<string>, b: Set<string>): number {
+  let n = 0;
+  for (const t of a) if (b.has(t)) n += 1;
+  return n;
+}
+
+/** Share of the criterion's label terms found, plus a smaller credit for its description terms. */
+function score(
+  item: Set<string>,
+  criterion: { label: Set<string>; description: Set<string> },
+): number {
+  if (item.size === 0 || criterion.label.size === 0) return 0;
+  const labelHits = overlap(item, criterion.label) / criterion.label.size;
+  const descHits =
+    criterion.description.size === 0
+      ? 0
+      : overlap(item, criterion.description) / criterion.description.size;
+  return Math.min(1, labelHits + 0.5 * descHits);
+}
+
+function parseSupplied(text: string): string[] {
+  return text
+    .split(/[\n,;]+/)
+    .map((line) => line.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, "").trim())
+    .filter((line) => line.length > 0);
+}
+
+function jobDescriptionFor(key: string): JobDescription {
+  const jd = (JOB_DESCRIPTIONS as Record<string, JobDescription | undefined>)[key];
+  if (!jd) throw new Error(`Unknown job description "${key}".`);
+  return jd;
+}
+
+export function compareCriteria(
+  jobDescriptionKey: string,
+  suppliedText: string | null,
+): CriteriaComparison {
+  const jd = jobDescriptionFor(jobDescriptionKey);
+  const supplied = suppliedText ? parseSupplied(suppliedText) : [];
+  if (supplied.length === 0) {
+    return {
+      supplied: [],
+      matched: [],
+      unmatchedExpected: [],
+      unmatchedSupplied: [],
+      verdict: "not_supplied",
+    };
+  }
+
+  const expected = jd.expectedCriteria.map((c: ExpectedCriterion) => ({
+    key: c.key,
+    label: tokens(c.label),
+    description: tokens(c.description),
+  }));
+  const itemTokens = supplied.map(tokens);
+
+  const pairs: Array<{ e: number; s: number; score: number }> = [];
+  expected.forEach((c, e) =>
+    itemTokens.forEach((t, s) => {
+      const sc = score(t, c);
+      if (sc >= MATCH_THRESHOLD) pairs.push({ e, s, score: sc });
+    }),
+  );
+  // Greedy by best score; each side is used at most once.
+  pairs.sort((a, b) => b.score - a.score || a.e - b.e || a.s - b.s);
+  const usedE = new Set<number>();
+  const usedS = new Set<number>();
+  const matched: CriteriaComparison["matched"] = [];
+  for (const p of pairs) {
+    if (usedE.has(p.e) || usedS.has(p.s)) continue;
+    usedE.add(p.e);
+    usedS.add(p.s);
+    matched.push({
+      expected: expected[p.e].key,
+      supplied: supplied[p.s],
+      score: Math.round(p.score * 100) / 100,
+    });
+  }
+
+  const unmatchedExpected = expected.filter((_, i) => !usedE.has(i)).map((c) => c.key);
+  const unmatchedSupplied = supplied.filter((_, i) => !usedS.has(i));
+  return {
+    supplied,
+    matched,
+    unmatchedExpected,
+    unmatchedSupplied,
+    verdict: unmatchedExpected.length <= MAX_UNMATCHED_FOR_CLOSE ? "close" : "divergent",
+  };
+}
