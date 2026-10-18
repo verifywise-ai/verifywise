@@ -61,6 +61,12 @@ jest.mock("../../../repositories/file.repository", () => ({
   getFileById: (...args: unknown[]) => mockGetFileById(...args),
 }));
 
+// The real module opens the database client, which the jsdom environment
+// cannot load; the exporter only needs the stance source constant.
+jest.mock("../../../utils/files/visibleFiles", () => ({
+  BIAS_AUDIT_STANCE_SOURCE: "Bias audit stance report",
+}));
+
 import { TextEncoder, TextDecoder } from "util";
 import JSZip from "jszip";
 import { generateFilename, generatePolicyPDF, generatePolicyDOCX } from "../policyExporter";
@@ -291,6 +297,23 @@ describe("policyExporter", () => {
       expect(html).toContain('src="/api/file-manager/42"');
     });
 
+    it("treats a bias audit stance PDF exactly as a missing file", async () => {
+      mockGetFileById.mockResolvedValue(null);
+      await generatePolicyPDF("Security Policy", '<img src="/api/file-manager/42">', 1);
+      const [missingHtml] = mockPage.setContent.mock.calls[0];
+
+      mockGetFileById.mockResolvedValue({
+        content: Buffer.from("stancepdfbytes"),
+        type: "application/pdf",
+        source: "Bias audit stance report",
+      });
+      await generatePolicyPDF("Security Policy", '<img src="/api/file-manager/42">', 1);
+      const [stanceHtml] = mockPage.setContent.mock.calls[1];
+
+      expect(stanceHtml).toBe(missingHtml);
+      expect(stanceHtml).not.toContain(Buffer.from("stancepdfbytes").toString("base64"));
+    });
+
     it("leaves the image tag untouched when the file lookup throws", async () => {
       const consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
       mockGetFileById.mockRejectedValue(new Error("db down"));
@@ -474,6 +497,19 @@ describe("policyExporter", () => {
 
     it("skips images the file lookup cannot resolve", async () => {
       mockGetFileById.mockResolvedValue(null);
+
+      const buffer = await generatePolicyDOCX("Doc", '<img src="/api/file-manager/42">', 1);
+      const zip = await JSZip.loadAsync(buffer);
+
+      expect(Object.keys(zip.files).some((name) => name.startsWith("word/media/"))).toBe(false);
+    });
+
+    it("does not embed a bias audit stance PDF", async () => {
+      mockGetFileById.mockResolvedValue({
+        content: pngBuffer(120, 60),
+        type: "image/png",
+        source: "Bias audit stance report",
+      });
 
       const buffer = await generatePolicyDOCX("Doc", '<img src="/api/file-manager/42">', 1);
       const zip = await JSZip.loadAsync(buffer);
