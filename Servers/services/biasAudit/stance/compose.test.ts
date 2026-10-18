@@ -2,6 +2,7 @@ import { composeStance, REQUIRED_SECTIONS } from "./compose";
 import type { ComposeStanceArgs } from "./compose";
 import { FORBIDDEN_WORDS, findForbidden } from "./vocabulary";
 import type { BiasAuditResult } from "../index";
+import { LL144_QUESTIONS } from "../../../structures/NYC-Local-Law-144/intake.questions";
 
 const result = {
   metric: "selection_rate",
@@ -92,7 +93,7 @@ const base: ComposeStanceArgs = {
       },
       {
         kind: "blank_field",
-        text: "Distribution date: to be completed by the deploying employer or employment agency.",
+        text: "To be completed by the deploying employer or employment agency.",
         payload: { field: "distribution_date" },
       },
     ],
@@ -269,6 +270,21 @@ describe("derived basis", () => {
     expect(s.openItems.join(" ")).not.toMatch(/confirm the split|confirm how we read/i);
   });
 
+  it("does not ask for a confirmation it then says was given, or print the reading twice", () => {
+    const summary =
+      "We read your answers as follows: sex: test data. Please confirm it or correct it.";
+    const body = section(
+      composeStance({
+        ...base,
+        derivedBasis: { ...base.derivedBasis!, summary, confirmed: true },
+      }),
+      "basis",
+    ).body;
+    expect(body).toContain("You have confirmed this reading.");
+    expect(body).not.toMatch(/please confirm/i);
+    expect(body).not.toContain(summary);
+  });
+
   it("speaks to each category's own trigger", () => {
     const body = section(composeStance(base), "expiry").body;
     expect(body).toContain("Sex trigger text.");
@@ -290,8 +306,30 @@ describe("gate findings", () => {
         { attribute: "sex", observedRuns: 10, expectedRuns: 200, ratio: 0.05, blocked: true },
       ],
     });
-    expect(section(s, "data_relied_on").body).toContain("sex");
+    expect(section(s, "data_relied_on").body).toContain(
+      "- Sex: 10 runs observed against 200.0 expected",
+    );
     expect(s.openItems.join(" ")).toMatch(/row-order/i);
+  });
+
+  it("names the order check's attribute by its label and rounds the expected count", () => {
+    const s = composeStance({
+      ...base,
+      order: [
+        {
+          attribute: "race_ethnicity",
+          observedRuns: 2045,
+          expectedRuns: 2057.003333333333,
+          ratio: 0.99,
+          blocked: true,
+        },
+      ],
+    });
+    const body = section(s, "data_relied_on").body;
+    expect(body).toContain("- Race and ethnicity: 2045 runs observed against 2057.0 expected");
+    expect(body).not.toContain("race_ethnicity");
+    expect(body).not.toContain("2057.0033");
+    expect(s.openItems.join(" ")).toContain("Row-order check for Race and ethnicity");
   });
 });
 
@@ -440,6 +478,9 @@ describe("fix round 1", () => {
     const body = section(s, "scope").body;
     expect(body).toContain("does not determine whether any deployment");
     expect(body).toContain("5-300 definition");
+    // The intake's own guidance is not repeated in the document.
+    expect(body).not.toMatch(/you receive a scope determination/i);
+    expect(body).not.toMatch(/remaining questions/i);
   });
 
   it("rewords an open item whose question text carries a forbidden word", () => {
@@ -528,6 +569,26 @@ describe("blank fields", () => {
     const s = composeStance(base);
     expect(s.blankFields).toEqual([expect.objectContaining({ field: "distribution_date" })]);
     expect(s.blankFields[0].instruction).toContain("deploying employer");
+  });
+
+  it("gives instructions without the field's name, which the renderer prints once as the label", () => {
+    // Every blank field the question set emits, plus the one compose adds.
+    const emitted = LL144_QUESTIONS.flatMap((q) => q.options).flatMap((o) =>
+      (o.emits ?? []).filter((e) => e.kind === "blank_field").map((e) => e.text),
+    );
+    expect(emitted.length).toBeGreaterThan(0);
+    const added = composeStance({ ...base, jobDescriptionKey: null }).blankFields.map(
+      (f) => f.instruction,
+    );
+    for (const text of [...emitted, ...added]) {
+      expect(text).toMatch(/^To be completed by /);
+    }
+  });
+});
+
+describe("heading", () => {
+  it("names what the in-scope document is", () => {
+    expect(composeStance(base).heading).toBe("Local Law 144 self-administered bias test");
   });
 });
 

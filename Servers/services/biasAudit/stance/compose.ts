@@ -111,6 +111,18 @@ const CATEGORY_LABEL: Record<string, string> = {
   intersectional: "Intersectional categories",
 };
 
+/**
+ * The rule's limb for the only answer that places a tool out of scope
+ * ("one of several"). The option's own consequence text also tells the
+ * customer what the intake does next, which a document should not repeat.
+ */
+const OUT_OF_SCOPE_LIMB =
+  "A score that is one input among several with no extra weight falls outside the 5-300 " +
+  "definition, so Local Law 144 may not attach to this use.";
+
+/** A category key as the document names it. */
+const categoryText = (key: string) => CATEGORY_LABEL[key] ?? key;
+
 const BASIS_LABEL: Record<string, string> = {
   historical: "historical data",
   test_volume: "test data, because historical volume is too low",
@@ -139,12 +151,6 @@ function openItemText(key: string, prompt: string): string {
   return FORBIDDEN_WORDS.some((w) => lower.includes(w))
     ? `Answer the question recorded as ${key}.`
     : text;
-}
-
-/** What the customer was told the chosen option means, which names the rule's limb. */
-function chosenConsequence(key: string, value: string | null | undefined): string {
-  const option = LL144_QUESTIONS.find((q) => q.key === key)?.options.find((o) => o.value === value);
-  return option?.consequence ?? "";
 }
 
 function questionPrompt(key: string): string {
@@ -234,12 +240,12 @@ function basisBody(args: ComposeStanceArgs): string {
   const parts = [vetoBlock(args, "data.held")];
   const d = args.derivedBasis;
   if (d) {
+    // Not `d.summary`: it asks the reader to confirm, which a confirmed reading contradicts.
     parts.push(
       [
-        d.summary,
+        "How we read your answers about the data you hold:",
         ...d.perCategory.map(
-          (c) =>
-            `- ${CATEGORY_LABEL[c.category] ?? c.category}: ${BASIS_LABEL[c.basis] ?? c.basis}`,
+          (c) => `- ${categoryText(c.category)}: ${BASIS_LABEL[c.basis] ?? c.basis}`,
         ),
         d.confirmed
           ? "You have confirmed this reading."
@@ -267,8 +273,8 @@ function dataBody(args: ComposeStanceArgs): string {
     lines.push("", "Row-order check by attribute:");
     for (const o of args.order) {
       lines.push(
-        `- ${o.attribute}: ${o.observedRuns} runs observed against ${o.expectedRuns} expected` +
-          `${o.blocked ? ", which withholds the export" : ""}`,
+        `- ${categoryText(o.attribute)}: ${o.observedRuns} runs observed against ` +
+          `${o.expectedRuns.toFixed(1)} expected${o.blocked ? ", which withholds the export" : ""}`,
       );
     }
   }
@@ -352,7 +358,9 @@ function openItemsOf(args: ComposeStanceArgs, scope: StanceModel["scope"]): stri
     for (const f of args.gateFindings.filter((x) => x.severity === "stop")) items.push(f.message);
   }
   for (const o of args.order.filter((x) => x.blocked)) {
-    items.push(`Row-order check for ${o.attribute} withholds the export until it is resolved.`);
+    items.push(
+      `Row-order check for ${categoryText(o.attribute)} withholds the export until it is resolved.`,
+    );
   }
   return items;
 }
@@ -401,13 +409,11 @@ function composeSections(args: ComposeStanceArgs): StanceModel {
       body: [
         `Tool: ${args.projectName}.`,
         vetoBlock(args, "scope.weighting"),
-        chosenConsequence("scope.weighting", args.answers["scope.weighting"]?.value),
+        OUT_OF_SCOPE_LIMB,
         ...notesFrom(args, isScopeKey),
         NOT_VERIFIED,
         "A change in how the output is used may bring the tool into scope. Revisit this determination if the use changes.",
-      ]
-        .filter((p) => p !== "")
-        .join("\n\n"),
+      ].join("\n\n"),
     });
     sections.push({
       key: "party",
@@ -479,12 +485,12 @@ function composeSections(args: ComposeStanceArgs): StanceModel {
   if (args.jobDescriptionKey === null) {
     blankFields.push({
       field: "job_description",
-      instruction: "Job description tested: to be completed by the party that ran the test.",
+      instruction: "To be completed by the party that ran the test.",
     });
   }
 
   return {
-    heading: "Result",
+    heading: "Local Law 144 self-administered bias test",
     scope,
     sections,
     blankFields,

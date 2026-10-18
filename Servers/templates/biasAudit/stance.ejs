@@ -15,7 +15,7 @@
   dt { color: #475467; }
   dd { margin: 0; word-break: break-all; }
   .blank { border: 1px solid #d0d5dd; border-radius: 4px; min-height: 28px; padding: 6px 8px; margin: 4px 0 10px; }
-  .blank .label { color: #475467; font-size: 11px; }
+  .blank .label { color: #475467; font-size: 11px; font-weight: 600; }
   .footer { margin-top: 16px; padding-top: 8px; border-top: 1px solid #d0d5dd; color: #475467; font-size: 11px; }
 </style>
 </head>
@@ -52,13 +52,13 @@
 <section data-key="blank_fields">
   <h2>Fields to complete</h2>
   <% model.blankFields.forEach(function (f) { %>
-  <div class="blank"><span class="label"><%= blankFieldLabel(f.field) %>: <%= f.instruction %></span></div>
+  <div class="blank"><div class="label"><%= blankFieldLabel(f.field) %></div><div><%= f.instruction %></div></div>
   <% }) %>
 </section>
 <% } %>
 
 <div class="footer">
-  <% if (!hasEvidence) { %>This document is not a Local Law 144 bias audit. It records the answers given, as given. No file was supplied and no figures were computed. The scope determination belongs to the party that answered.<% } else { %>This document is not a Local Law 144 bias audit. It records the answers given and the figures computed from the file supplied, as given. The scope determination belongs to the party that answered.<% } %>
+  <% if (!hasEvidence) { %>This document is not a Local Law 144 bias audit. It records the answers given, as given. No file was supplied and no figures were computed. The scope determination belongs to the party that answered.<% } else { %>This document is not a Local Law 144 bias audit. It records the answers given and the figures computed from the file supplied, as given.<% } %>
 </div>
 </body>
 </html>

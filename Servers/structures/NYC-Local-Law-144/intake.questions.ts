@@ -52,7 +52,7 @@ export const LL144_QUESTIONS: IntakeQuestion[] = [
           {
             kind: "blank_field",
             text:
-              "Distribution date: to be completed by the deploying employer or employment " +
+              "To be completed by the deploying employer or employment " +
               "agency. Under 5-303(a)(2) this is the date a given employer began using the " +
               "tool, which is not within a supplier's knowledge.",
             payload: { field: "distribution_date" },

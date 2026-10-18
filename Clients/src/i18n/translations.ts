@@ -9277,6 +9277,8 @@ export const translations: Record<string, Record<string, string>> = {
       "KI-App-Risikobewertungen durchsuchen und genutzte Apps verfolgen",
     "Test a hiring tool against NYC Local Law 144 and record your position":
       "Ein Einstellungstool gegen das New Yorker Local Law 144 testen und Ihre Position festhalten",
+    "This is our reading of your answers about the data you hold, not your statement.":
+      "Dies ist unsere Auslegung Ihrer Antworten zu den Daten, über die Sie verfügen, nicht Ihre Aussage.",
     "Browse independently assessed AI applications and track the ones that matter to your organization.":
       "Unabhängig bewertete KI-Anwendungen durchsuchen und die für Ihre Organisation relevanten verfolgen.",
     "Choose who receives a notification when a tracked app's assessment changes materially. If no recipients are set, organization admins are notified by default.":
@@ -20011,6 +20013,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Parcourir les scores de risque des applications IA et suivre les applications utilisées",
     "Test a hiring tool against NYC Local Law 144 and record your position":
       "Tester un outil de recrutement au regard de la Local Law 144 de New York et consigner votre position",
+    "This is our reading of your answers about the data you hold, not your statement.":
+      "Ceci est notre lecture de vos réponses sur les données que vous détenez, et non votre déclaration.",
     "Browse independently assessed AI applications and track the ones that matter to your organization.":
       "Parcourir les applications IA évaluées indépendamment et suivre celles qui comptent pour votre organisation.",
     "Choose who receives a notification when a tracked app's assessment changes materially. If no recipients are set, organization admins are notified by default.":
@@ -30654,6 +30658,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Explorar las puntuaciones de riesgo de las aplicaciones de IA y seguir las que utiliza",
     "Test a hiring tool against NYC Local Law 144 and record your position":
       "Probar una herramienta de contratación frente a la Local Law 144 de Nueva York y registrar su posición",
+    "This is our reading of your answers about the data you hold, not your statement.":
+      "Esta es nuestra interpretación de sus respuestas sobre los datos que tiene, no su declaración.",
     "Browse independently assessed AI applications and track the ones that matter to your organization.":
       "Explorar aplicaciones de IA evaluadas de forma independiente y seguir las que importan a su organización.",
     "Choose who receives a notification when a tracked app's assessment changes materially. If no recipients are set, organization admins are notified by default.":

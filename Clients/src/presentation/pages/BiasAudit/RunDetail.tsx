@@ -210,8 +210,9 @@ const DerivedBasis = ({ runId, basis, canAttest }: BasisProps) => {
   return (
     <Box sx={cardSx}>
       <Typography sx={{ ...titleSx, mb: "8px" }}>Data basis by category</Typography>
+      {/* Not basis.summary: it asks for a confirmation even once the reading is confirmed. */}
       <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mb: "12px" }}>
-        {basis.summary}
+        This is our reading of your answers about the data you hold, not your statement.
       </Typography>
       <Stack gap="8px" sx={{ mb: "12px" }}>
         {basis.perCategory.map((c) => (

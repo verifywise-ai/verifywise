@@ -142,9 +142,13 @@ describe("renderStanceHtml", () => {
     expect(html).toContain("Distribution date");
     expect(html).not.toContain("distribution_date");
     expect(html).toContain("To be completed by the deploying employer.");
+    // The label is printed once, above its instruction.
+    expect(html.match(/Distribution date/g)).toHaveLength(1);
     expect(html).toContain(
-      "This document is not a Local Law 144 bias audit. It records the answers given and the figures computed from the file supplied, as given. The scope determination belongs to the party that answered.",
+      "This document is not a Local Law 144 bias audit. It records the answers given and the figures computed from the file supplied, as given.",
     );
+    // A result from a file is not a scope determination.
+    expect(html).not.toContain("The scope determination belongs to the party that answered.");
   });
 
   it("shows the dataset hash and what was tested", () => {
