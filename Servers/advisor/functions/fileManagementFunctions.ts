@@ -1,6 +1,7 @@
 import { getVisibleFileById, getFileMetadataByProjectId } from "../../utils/fileUpload.utils";
 import {
   allFilesVisibleQuery,
+  BIAS_AUDIT_STANCE_SOURCE,
   VISIBLE_FILE_REPLACEMENTS,
   VISIBLE_FILE_SQL,
 } from "../../utils/files/visibleFiles";
@@ -298,6 +299,23 @@ const getFileExecutiveSummary = async (
 // Write Tools (Human Confirmation Flow)
 // ============================================================================
 
+/**
+ * The entity types agent_attach_file_to_entity may write into files.source:
+ * the three it links through a column (project, organization, model) and
+ * the examples its tool schema names. The value is model-supplied, so
+ * anything else is refused; above all the bias audit stance source, which
+ * would hide a normal file everywhere and make it undeletable.
+ */
+export const ATTACHABLE_ENTITY_TYPES = [
+  "project",
+  "organization",
+  "model",
+  "risk",
+  "vendor",
+  "control",
+  "evidence",
+] as const;
+
 const agentAttachFileToEntity = createWriteToolFn({
   toolName: "agent_attach_file_to_entity",
   warningLevel: "warning",
@@ -307,6 +325,15 @@ const agentAttachFileToEntity = createWriteToolFn({
     const fileId = params.file_id as number;
     const entityType = params.entity_type as string;
     const entityId = params.entity_id as number;
+
+    if (
+      entityType === BIAS_AUDIT_STANCE_SOURCE ||
+      !(ATTACHABLE_ENTITY_TYPES as readonly string[]).includes(entityType)
+    ) {
+      throw new Error(
+        `Unsupported entity_type "${entityType}". Use one of: ${ATTACHABLE_ENTITY_TYPES.join(", ")}.`,
+      );
+    }
 
     // Update the file's source and associated entity reference
     await sequelize.query(

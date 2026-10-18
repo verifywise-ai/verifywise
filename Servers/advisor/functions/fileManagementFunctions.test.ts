@@ -105,6 +105,26 @@ describe("advisor file tools and bias audit stance PDFs", () => {
     },
   );
 
+  it.each(["Bias audit stance report", "File Manager", "anything"])(
+    "agent_attach_file_to_entity refuses entity_type %s and writes nothing",
+    async (entityType) => {
+      const execute = writeToolExecutors.get("agent_attach_file_to_entity")!;
+      table = [visibleRow()];
+      await expect(
+        execute({ file_id: 1, entity_type: entityType, entity_id: 9 }, ORG),
+      ).rejects.toThrow(/Unsupported entity_type/);
+      expect(table[0].updated).toBeUndefined();
+      expect(table[0].source).toBe("File Manager");
+    },
+  );
+
+  it("agent_attach_file_to_entity still attaches with an allowed entity_type", async () => {
+    const execute = writeToolExecutors.get("agent_attach_file_to_entity")!;
+    table = [visibleRow()];
+    await execute({ file_id: 1, entity_type: "project", entity_id: 9 }, ORG);
+    expect(table[0].updated).toBe(1);
+  });
+
   it("agent_assign_file_to_folder refuses a stance PDF as it refuses a missing file", async () => {
     const execute = writeToolExecutors.get("agent_assign_file_to_folder")!;
     const { stance, missing } = await stanceAndMissing(() =>

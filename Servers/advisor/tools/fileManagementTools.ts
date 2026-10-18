@@ -128,8 +128,8 @@ export const toolsDefinition: any[] = [
           },
           entity_type: {
             type: "string",
-            description:
-              "The type of entity to attach the file to (e.g., 'risk', 'vendor', 'control', 'evidence').",
+            enum: ["project", "organization", "model", "risk", "vendor", "control", "evidence"],
+            description: "The type of entity to attach the file to.",
           },
           entity_id: {
             type: "number",
