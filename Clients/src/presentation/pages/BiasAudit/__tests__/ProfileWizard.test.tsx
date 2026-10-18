@@ -321,6 +321,24 @@ describe("ProfileWizard: attest", () => {
 });
 
 describe("ProfileWizard: edits that cannot be saved", () => {
+  // An edit put back to the saved answer is no change: saving it would file
+  // a new version with the same answers and re-attribute the answer.
+  it("treats an answer changed and then changed back as unchanged", () => {
+    const { onAttest } = renderWizard({
+      answers: [...ALL_VETOES, answer("cutoff.applied_by", "person")],
+      profileStatus: "draft",
+    });
+    const cutoff = question("cutoff.applied_by");
+    fireEvent.click(within(cutoff).getByRole("radio", { name: /The platform/ }));
+    expect(screen.getByRole("button", { name: /save answers/i })).toBeEnabled();
+    fireEvent.click(within(cutoff).getByRole("radio", { name: /A person/ }));
+    expect(screen.getByRole("button", { name: /save answers/i })).toBeDisabled();
+    const attest = screen.getByRole("button", { name: /attest/i });
+    expect(attest).toBeEnabled();
+    fireEvent.click(attest);
+    expect(onAttest).toHaveBeenCalledTimes(1);
+  });
+
   // Attest records the saved profile and the wizard restarts afterwards, so
   // an edit Save cannot send would be lost without a word.
   it("blocks attest over notes typed on an unanswered question, and names it", () => {
@@ -389,7 +407,10 @@ describe("ProfileWizard: edits that cannot be saved", () => {
   });
 });
 
-describe("ProfileWizard: deciding questions with a condition", () => {
+describe("ProfileWizard: deciding questions match the server's attest rule", () => {
+  // The server's attest check counts every deciding question, with no
+  // applicability (VETO_KEYS in profileService.attestProfile). The wizard
+  // must hold attest on exactly the same set.
   const CONDITIONAL_VETO: AedtQuestion = {
     key: "agency.notice",
     scope: "profile",
@@ -401,21 +422,12 @@ describe("ProfileWizard: deciding questions with a condition", () => {
     options: [{ value: "yes", label: "Yes", consequence: "Recorded." }],
   };
 
-  it("does not hold attest on a deciding question that does not apply to the saved answers", () => {
+  it("holds attest on an unanswered deciding question even where its condition does not hold", () => {
     renderWizard({
       questions: [...QUESTIONS, CONDITIONAL_VETO],
       answers: ALL_VETOES.map((a) =>
         a.questionKey === "role.party" ? answer("role.party", "vendor") : a,
       ),
-      profileStatus: "draft",
-    });
-    expect(screen.getByRole("button", { name: /attest/i })).toBeEnabled();
-  });
-
-  it("holds attest on it, by name, when the saved answers make it apply", () => {
-    renderWizard({
-      questions: [...QUESTIONS, CONDITIONAL_VETO],
-      answers: ALL_VETOES,
       profileStatus: "draft",
     });
     expect(screen.getByRole("button", { name: /attest/i })).toBeDisabled();

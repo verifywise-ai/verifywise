@@ -107,8 +107,13 @@ const ProfileWizard = ({
 
   // ---- save
 
-  // Only these changes can be saved: visible questions with an answer.
-  const pending = visible.filter((q) => dirty.has(q.key) && isAnswered(draft[q.key]));
+  // Only these changes can be saved: visible questions with an answer that
+  // differs from the saved one. An edit put back to the saved answer is no
+  // change; saving it would file an identical version and re-attribute it.
+  const changed = (k: string) => !sameAnswer(draft[k], savedDraft[k] ?? EMPTY_ANSWER);
+  const pending = visible.filter(
+    (q) => dirty.has(q.key) && isAnswered(draft[q.key]) && changed(q.key),
+  );
 
   // Edits Save cannot send: notes on a question with no answer, or an answer
   // to a question a later answer has hidden. They would be lost when the
@@ -117,7 +122,7 @@ const ProfileWizard = ({
   const visibleKeys = new Set(visible.map((q) => q.key));
   const pendingKeys = new Set(pending.map((q) => q.key));
   const unsaveable = [...dirty]
-    .filter((k) => !pendingKeys.has(k) && !sameAnswer(draft[k], savedDraft[k] ?? EMPTY_ANSWER))
+    .filter((k) => !pendingKeys.has(k) && changed(k))
     .map((k) => ({ key: k, hidden: !visibleKeys.has(k) }));
 
   const discardUnsaveable = () => {
@@ -158,12 +163,14 @@ const ProfileWizard = ({
   };
 
   // ---- attest: read from the saved answers, since attest records those.
-  // A deciding question counts only where it applies to them, the same
-  // predicate the visible questions use.
+  // Every deciding question counts, with no applicability, exactly as the
+  // server's attest check does (VETO_KEYS in profileService.attestProfile).
+  // The server is the authority: if a conditional deciding question is ever
+  // added, change both sides together.
 
   const saved = useMemo(() => new Map(answers.map((a) => [a.questionKey, a])), [answers]);
   const openVetoes = questions
-    .filter((q) => q.weight === "veto" && evaluatePredicate(q.appliesWhen, savedDraft))
+    .filter((q) => q.weight === "veto")
     .filter((q) => !hasUsableAnswer(saved.get(q.key)))
     .map((q) => ({ key: q.key, dontKnow: saved.get(q.key)?.dontKnow ?? false }));
 
