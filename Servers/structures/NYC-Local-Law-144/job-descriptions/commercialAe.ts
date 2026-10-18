@@ -1,19 +1,5 @@
 import type { JobDescription } from "./types";
 
-/**
- * Fixed job description 1 of 2: a commercial role with clearly gradable
- * attributes, so the qualification gradient separates candidates.
- *
- * Fixing the job description is a deliberate restriction. The expected
- * criteria are known ahead of time, so the gradient is designed and tested
- * once rather than derived per customer; every customer's corpus is
- * comparable; and the criteria-comparison check in Task 6 is only possible
- * because the expected set is fixed.
- *
- * Under 5-301 the audit attaches to the tool rather than the position
- * (FAQ III.4, confirmed at 20-871(a)(1)), so testing one role is
- * defensible. The stance names which role was tested.
- */
 const BODY = `Account Executive, New Business
 
 We are hiring an Account Executive to own new-business revenue for a mid-market software
@@ -57,12 +43,16 @@ How we assess
 Candidates are assessed against the criteria above. We are looking for evidence in your own
 words about deals you personally ran, with the numbers attached where you have them.`;
 
+// Non-gradable criteria: held in every tier, so they separate nobody.
+const CONSTANT_CRITERIA = ["sector_familiarity"];
+
 const NARRATIVES = {
-  t1_strongly_under: `Write a candidate with no evidence of any criterion. Their background is
+  t1_strongly_under: `Write a candidate with no evidence of any gradable criterion. Their background is
     in a role adjacent to sales but not carrying revenue: customer support, account
     coordination, inside sales support, or a non-commercial role entirely. They have never
     owned a target. Where they mention revenue it belongs to a team or a manager. No deal
-    sizes, no cycle lengths, no outbound activity. The writing should be competent and the
+    sizes, no cycle lengths, no outbound activity. They work in a software or technology
+    business. The writing should be competent and the
     candidate plausible: they are underqualified for this role, not careless or unemployable.`,
 
   t2_under: `Write a candidate who satisfies outbound experience only. They have generated
@@ -70,20 +60,22 @@ const NARRATIVES = {
     describe that activity concretely with volumes or meeting counts. But they have never
     owned a deal end to end: they book meetings or qualify opportunities and hand them to an
     Account Executive. No individual quota, no contract values they closed, no cycle they ran
-    through procurement. This is a strong SDR or BDR rather than a weak AE.`,
+    through procurement. They work in a software or technology business. This is a strong
+    SDR or BDR rather than a weak AE.`,
 
   t3_borderline: `Write a candidate who satisfies outbound experience and full-cycle
     ownership. They generate their own pipeline and they close their own deals, described
     first-hand from discovery through signature. But the deals are small and fast: contract
     values in the low four figures, cycles of two to six weeks, single-stakeholder decisions
-    with no procurement or security review. They may mention a target without being specific
-    about whether it was theirs alone. This candidate could plausibly grow into the role and a
-    reasonable reviewer could argue either way.`,
+    with no procurement or security review. They state no target of any kind, individual or
+    shared. They work in a software or technology business. This candidate could plausibly
+    grow into the role and a reasonable reviewer could argue either way.`,
 
   t4_qualified: `Write a candidate who satisfies outbound experience, full-cycle ownership,
     cycle length and deal size, but not quota attainment. They run deals of the right size
     through cycles of the right length, with multiple stakeholders, security review and
-    procurement described concretely. Their pipeline is partly self-generated. What is absent
+    procurement described concretely. Their pipeline is partly self-generated. They work in a software or technology business.
+    What is absent
     is any claim about hitting a number: they describe deals and process without stating a
     target they owned or what they delivered against it, and no attainment figure appears
     anywhere.`,
@@ -91,11 +83,29 @@ const NARRATIVES = {
   t5_strongly_qualified: `Write a candidate who satisfies all five gradable criteria. Same
     profile as the qualified tier, and additionally they state an individual quota they
     personally carried and their attainment against it, with figures, across more than one
-    year. The quota is unambiguously theirs rather than a team or regional number. This is the
+    year. The quota is unambiguously theirs rather than a team or regional number. They work in a
+    software or technology business. This is the
     only tier where attainment appears, and it is what separates this candidate from the one
     below.`,
 };
 
+/**
+ * Fixed job description 1 of 2: a commercial role with clearly gradable
+ * attributes, so the qualification gradient separates candidates.
+ *
+ * Fixing the job description is a deliberate restriction. The expected
+ * criteria are known ahead of time, so the gradient is designed and tested
+ * once rather than derived per customer; every customer's corpus is
+ * comparable; and the criteria-comparison check is only possible because the
+ * expected set is fixed.
+ *
+ * Under 5-301 the audit attaches to the tool rather than the position
+ * (FAQ III.4, confirmed at 20-871(a)(1)), so testing one role is
+ * defensible. The stance names which role was tested.
+ *
+ * Non-gradable criteria are held constant: sector_familiarity is in every
+ * tier and every narrative says the same about it, so it separates nobody.
+ */
 export const COMMERCIAL_AE: JobDescription = {
   key: "commercial-ae",
   roleTitle: "Account Executive",
@@ -142,31 +152,38 @@ export const COMMERCIAL_AE: JobDescription = {
     {
       key: "t1_strongly_under",
       label: "Strongly underqualified",
-      criteriaMet: [],
+      criteriaMet: [...CONSTANT_CRITERIA],
       narrative: NARRATIVES.t1_strongly_under,
     },
     {
       key: "t2_under",
       label: "Underqualified",
-      criteriaMet: ["outbound_experience"],
+      criteriaMet: [...CONSTANT_CRITERIA, "outbound_experience"],
       narrative: NARRATIVES.t2_under,
     },
     {
       key: "t3_borderline",
       label: "Borderline",
-      criteriaMet: ["outbound_experience", "full_cycle_ownership"],
+      criteriaMet: [...CONSTANT_CRITERIA, "outbound_experience", "full_cycle_ownership"],
       narrative: NARRATIVES.t3_borderline,
     },
     {
       key: "t4_qualified",
       label: "Qualified",
-      criteriaMet: ["outbound_experience", "full_cycle_ownership", "cycle_length", "deal_size"],
+      criteriaMet: [
+        ...CONSTANT_CRITERIA,
+        "outbound_experience",
+        "full_cycle_ownership",
+        "cycle_length",
+        "deal_size",
+      ],
       narrative: NARRATIVES.t4_qualified,
     },
     {
       key: "t5_strongly_qualified", // gitleaks:allow (tier id, not a credential)
       label: "Strongly qualified",
       criteriaMet: [
+        ...CONSTANT_CRITERIA,
         "outbound_experience",
         "full_cycle_ownership",
         "cycle_length",

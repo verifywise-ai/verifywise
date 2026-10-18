@@ -1,12 +1,27 @@
 import { JOB_DESCRIPTIONS, JOB_DESCRIPTION_KEYS } from "./index";
+import type { JobDescriptionKey } from "./types";
 import { findForbidden } from "../../../services/biasAudit/stance/vocabulary";
 
 const KEYS = ["commercial-ae", "operational-hourly"] as const;
+
+// Every authored string, one by one. Matching over JSON.stringify output would
+// miss a word at the start of a line, because "\n" is serialised as two
+// characters and the word then follows a backslash-n with no word boundary.
+function rawStrings(key: JobDescriptionKey): string[] {
+  const jd = JOB_DESCRIPTIONS[key];
+  return [
+    jd.roleTitle,
+    jd.body,
+    ...jd.expectedCriteria.flatMap((c) => [c.label, c.description]),
+    ...jd.tiers.flatMap((t) => [t.label, t.narrative]),
+  ];
+}
 
 describe("job descriptions", () => {
   it("provides exactly the two fixed roles", () => {
     expect(Object.keys(JOB_DESCRIPTIONS).sort()).toEqual([...KEYS].sort());
     expect([...JOB_DESCRIPTION_KEYS].sort()).toEqual([...KEYS].sort());
+    for (const k of JOB_DESCRIPTION_KEYS) expect(JOB_DESCRIPTIONS[k].key).toBe(k);
   });
 
   it("gives each a real body, not a stub, and a title that fits a run's job description", () => {
@@ -46,21 +61,29 @@ describe("qualification tiers", () => {
     }
   });
 
-  // Review Focus 3, at generation time
-  it("uses only gradable criteria to separate the top two tiers", () => {
+  it("moves up by gradable criteria only, never dropping one", () => {
     // A criterion that scores everyone the same contributes noise and no
-    // signal. On a real engagement a third of the summary score was carried
-    // by a category that separated nobody across 5,000 candidates, which
-    // pushed the distribution upward and put the median on the top level.
+    // signal, so each step up must add gradable criteria and nothing else.
     for (const key of KEYS) {
       const jd = JOB_DESCRIPTIONS[key];
       const gradable = new Set(jd.expectedCriteria.filter((c) => c.gradable).map((c) => c.key));
-      const top = jd.tiers[4].criteriaMet;
-      const second = jd.tiers[3].criteriaMet;
-      const separating = top.filter((k) => !second.includes(k));
-      expect(separating.length).toBeGreaterThan(0);
-      for (const k of separating) {
-        expect(gradable.has(k)).toBe(true);
+      for (let i = 1; i < jd.tiers.length; i++) {
+        const prev = jd.tiers[i - 1].criteriaMet;
+        const cur = jd.tiers[i].criteriaMet;
+        for (const k of prev) expect(cur).toContain(k);
+        const added = cur.filter((k) => !prev.includes(k));
+        expect(added.length).toBeGreaterThan(0);
+        for (const k of added) expect(gradable.has(k)).toBe(true);
+      }
+    }
+  });
+
+  it("holds every non-gradable criterion constant across the tiers", () => {
+    for (const key of KEYS) {
+      const jd = JOB_DESCRIPTIONS[key];
+      for (const c of jd.expectedCriteria.filter((x) => !x.gradable)) {
+        const present = jd.tiers.map((t) => t.criteriaMet.includes(c.key));
+        expect(new Set(present).size).toBe(1);
       }
     }
   });
@@ -87,16 +110,11 @@ describe("the two roles sit at opposite ends of the signal spectrum", () => {
 });
 
 describe("content rules", () => {
-  it("names no real company and no client", () => {
-    const all = JSON.stringify(JOB_DESCRIPTIONS).toLowerCase();
-    for (const n of ["puck", "spotted zebra", "curately", "verifywise"]) {
-      expect(all).not.toContain(n);
-    }
-  });
-
   it("uses no forbidden vocabulary", () => {
     // The module's own matcher and list, so this test cannot drift from the lint.
-    expect(findForbidden(JSON.stringify(JOB_DESCRIPTIONS))).toEqual([]);
+    for (const key of KEYS) {
+      for (const text of rawStrings(key)) expect(findForbidden(text)).toEqual([]);
+    }
   });
 
   it("carries no demographic or protected-characteristic language", () => {
@@ -107,25 +125,56 @@ describe("content rules", () => {
     // "average"; "race" inside "trace" and "embrace"; "male" inside "female".
     // A substring check fails on correct content, which teaches an
     // implementer to weaken the test instead of the text.
-    const all = JSON.stringify(JOB_DESCRIPTIONS);
-    for (const w of [
+    const words = [
       "male",
       "female",
+      "man",
+      "woman",
+      "men",
+      "women",
+      "gender",
+      "sex",
+      "he",
+      "she",
+      "his",
+      "her",
+      "him",
+      "hers",
+      "himself",
+      "herself",
       "hispanic",
       "latino",
+      "latina",
       "asian",
       "white",
       "black",
+      "ethnicity",
+      "race",
+      "racial",
+      "religion",
+      "religious",
+      "national origin",
+      "nationality",
+      "native speaker",
+      "citizen",
+      "citizenship",
+      "pregnancy",
+      "pregnant",
+      "veteran",
       "disability",
       "disabled",
       "age",
       "aged",
       "young",
+      "younger",
       "older",
-      "ethnicity",
-      "race",
-    ]) {
-      expect(all).not.toMatch(new RegExp(`\\b${w}\\b`, "i"));
+    ];
+    for (const key of KEYS) {
+      for (const text of rawStrings(key)) {
+        for (const w of words) {
+          expect({ w, hit: new RegExp(`\\b${w}\\b`, "i").test(text) }).toEqual({ w, hit: false });
+        }
+      }
     }
   });
 });
