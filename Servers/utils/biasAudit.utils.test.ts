@@ -601,7 +601,8 @@ describe("route reads and the basis confirmation", () => {
     mockQuery.mockResolvedValueOnce([]);
     await getStanceDownloadQuery(3, 42, 9);
     const [sql, opts] = mockQuery.mock.calls[0];
-    expect(sql).toMatch(/s\.generated_by = :viewer_user_id/);
+    // Generating a stance grants no access of its own once the viewer leaves the project.
+    expect(sql).not.toMatch(/generated_by/);
     expect(sql).toMatch(/p\.owner = :viewer_user_id OR pm\.user_id = :viewer_user_id/);
     expect(sql).toMatch(/p\.organization_id = :organization_id/);
     expect(sql).toMatch(/pm\.organization_id = :organization_id/);

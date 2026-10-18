@@ -176,9 +176,9 @@ the whole run row, `result_json` included.
 Mounted at `/api/bias-audit`, all behind `authenticateJWT`. Project-scoped calls check project
 membership (`projectAccess.ts`) and answer 404 to a non-member. An organization Admin skips
 the membership check and reaches every project in the organization. SuperAdmin gets no such
-bypass, unlike project files (`canUserAccessFile`). `GET /stances/:id/download` does not use
-`projectAccess.ts`: it also serves the PDF to the user who generated the stance, even after
-they leave the project.
+bypass, unlike project files (`canUserAccessFile`). `GET /stances/:id/download` applies the
+same rule in its own query (`getStanceDownloadQuery`), so having generated a stance gives no
+access once the user leaves the project.
 
 | Method and path                                 | Permission         |
 | ----------------------------------------------- | ------------------ |

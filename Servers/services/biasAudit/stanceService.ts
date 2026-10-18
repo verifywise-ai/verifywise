@@ -301,9 +301,10 @@ export async function getStanceDownload(
   viewer: StanceViewer,
 ): Promise<StanceDownload> {
   const row = await getStanceDownloadQuery(stanceId, organizationId, viewer.userId);
-  // Project files are readable by the organization's Admins and by the
-  // project's owner and members (canUserAccessFile); a stance PDF follows the
-  // same rule. SuperAdmin is cross-tenant administration, not an in-org
+  // The rule of every other bias audit path (projectAccess.ts): the
+  // organization's Admins and the project's owner and members. Whoever
+  // generated the stance has no access of their own once they leave the
+  // project. SuperAdmin is cross-tenant administration, not an in-org
   // Admin, so it gets no bypass here. A viewer without access gets the same
   // not-found as a stance in another organization, so its existence is not
   // disclosed.
