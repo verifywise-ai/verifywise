@@ -150,6 +150,21 @@ export const getFileById = async (id: number, organizationId: number) => {
 };
 
 /**
+ * getFileById for the generic readers (the AI advisor's file tools): a bias
+ * audit stance PDF answers exactly as a missing file does.
+ */
+export const getVisibleFileById = async (id: number, organizationId: number) => {
+  const query = `SELECT * FROM files
+    WHERE organization_id = :organizationId AND id = :id AND ${VISIBLE_FILE_SQL("files")}`;
+  const result = await sequelize.query(query, {
+    replacements: { organizationId, id, ...VISIBLE_FILE_REPLACEMENTS },
+    mapToModel: true,
+    model: FileModel,
+  });
+  return result[0];
+};
+
+/**
  * Check if a user has access to a file.
  * Access is granted if:
  * - User is Admin

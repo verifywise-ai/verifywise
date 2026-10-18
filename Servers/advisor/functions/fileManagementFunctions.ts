@@ -1,4 +1,9 @@
-import { getFileById, getFileMetadataByProjectId } from "../../utils/fileUpload.utils";
+import { getVisibleFileById, getFileMetadataByProjectId } from "../../utils/fileUpload.utils";
+import {
+  allFilesVisibleQuery,
+  VISIBLE_FILE_REPLACEMENTS,
+  VISIBLE_FILE_SQL,
+} from "../../utils/files/visibleFiles";
 import {
   createFolderQuery,
   assignFilesToFolderQuery,
@@ -7,6 +12,11 @@ import {
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
 import logger from "../../utils/logger/fileLogger";
+
+// A bias audit stance PDF is served only by the bias audit stance endpoint.
+// Every tool here applies VISIBLE_FILE_SQL (or getVisibleFileById), so a
+// stance PDF answers exactly as a missing file does: never listed, described,
+// counted, attached or filed.
 
 // ============================================================================
 // Read Tools
@@ -30,9 +40,9 @@ const fetchFiles = async (
         FROM files f
         LEFT JOIN users u ON f.uploaded_by = u.id
         LEFT JOIN projects p ON f.project_id = p.id AND p.organization_id = :organizationId
-        WHERE f.organization_id = :organizationId
+        WHERE f.organization_id = :organizationId AND ${VISIBLE_FILE_SQL("f")}
         ORDER BY f.uploaded_time DESC`,
-        { replacements: { organizationId } },
+        { replacements: { organizationId, ...VISIBLE_FILE_REPLACEMENTS } },
       )) as [any[], number];
       files = result || [];
     }
@@ -45,8 +55,15 @@ const fetchFiles = async (
         FROM files f
         LEFT JOIN users u ON f.uploaded_by = u.id
         WHERE f.organization_id = :organizationId AND f.source = :entity_type
+          AND ${VISIBLE_FILE_SQL("f")}
         ORDER BY f.uploaded_time DESC`,
-        { replacements: { organizationId, entity_type: params.entity_type } },
+        {
+          replacements: {
+            organizationId,
+            entity_type: params.entity_type,
+            ...VISIBLE_FILE_REPLACEMENTS,
+          },
+        },
       )) as [any[], number];
       files = entityFiles || [];
     }
@@ -69,7 +86,7 @@ const fetchFiles = async (
 
 const getFileDetail = async (params: { file_id: number }, organizationId: number) => {
   try {
-    const file = await getFileById(params.file_id, organizationId);
+    const file = await getVisibleFileById(params.file_id, organizationId);
     if (!file) {
       return { message: "File not found.", file_id: params.file_id };
     }
@@ -106,12 +123,14 @@ const getFilesByEntity = async (
       LEFT JOIN users u ON f.uploaded_by = u.id
       WHERE f.organization_id = :organizationId AND f.source = :entity_type
         AND (f.project_id = :entity_id OR f.org_id = :entity_id OR f.model_id = :entity_id)
+        AND ${VISIBLE_FILE_SQL("f")}
       ORDER BY f.uploaded_time DESC`,
       {
         replacements: {
           organizationId,
           entity_type: params.entity_type,
           entity_id: params.entity_id,
+          ...VISIBLE_FILE_REPLACEMENTS,
         },
       },
     )) as [any[], number];
@@ -132,7 +151,7 @@ const getFilesByEntity = async (
 
 const getFileChangeHistory = async (params: { file_id: number }, organizationId: number) => {
   try {
-    const file = await getFileById(params.file_id, organizationId);
+    const file = await getVisibleFileById(params.file_id, organizationId);
     if (!file) {
       return { message: "File not found.", file_id: params.file_id };
     }
@@ -171,8 +190,8 @@ const getFileAnalytics = async (_params: Record<string, unknown>, organizationId
         COUNT(*)::INTEGER as total_files,
         COALESCE(SUM(size), 0)::BIGINT as total_size_bytes
       FROM files
-      WHERE organization_id = :organizationId`,
-      { replacements: { organizationId } },
+      WHERE organization_id = :organizationId AND ${VISIBLE_FILE_SQL("files")}`,
+      { replacements: { organizationId, ...VISIBLE_FILE_REPLACEMENTS } },
     )) as [any[], number];
 
     const [byProject] = (await sequelize.query(
@@ -180,37 +199,38 @@ const getFileAnalytics = async (_params: Record<string, unknown>, organizationId
       FROM files f
       LEFT JOIN projects p ON f.project_id = p.id AND p.organization_id = :organizationId
       WHERE f.organization_id = :organizationId AND f.project_id IS NOT NULL
+        AND ${VISIBLE_FILE_SQL("f")}
       GROUP BY p.project_title
       ORDER BY file_count DESC`,
-      { replacements: { organizationId } },
+      { replacements: { organizationId, ...VISIBLE_FILE_REPLACEMENTS } },
     )) as [any[], number];
 
     const [byType] = (await sequelize.query(
       `SELECT type, COUNT(*)::INTEGER as count
       FROM files
-      WHERE organization_id = :organizationId
+      WHERE organization_id = :organizationId AND ${VISIBLE_FILE_SQL("files")}
       GROUP BY type
       ORDER BY count DESC`,
-      { replacements: { organizationId } },
+      { replacements: { organizationId, ...VISIBLE_FILE_REPLACEMENTS } },
     )) as [any[], number];
 
     const [bySource] = (await sequelize.query(
       `SELECT source, COUNT(*)::INTEGER as count
       FROM files
-      WHERE organization_id = :organizationId
+      WHERE organization_id = :organizationId AND ${VISIBLE_FILE_SQL("files")}
       GROUP BY source
       ORDER BY count DESC`,
-      { replacements: { organizationId } },
+      { replacements: { organizationId, ...VISIBLE_FILE_REPLACEMENTS } },
     )) as [any[], number];
 
     const [uncategorizedResult] = (await sequelize.query(
       `SELECT COUNT(*)::INTEGER as uncategorized_count
       FROM files f
-      WHERE f.organization_id = :organizationId AND NOT EXISTS (
+      WHERE f.organization_id = :organizationId AND ${VISIBLE_FILE_SQL("f")} AND NOT EXISTS (
         SELECT 1 FROM file_folder_mappings ffm
         WHERE ffm.organization_id = :organizationId AND ffm.file_id = f.id
       )`,
-      { replacements: { organizationId } },
+      { replacements: { organizationId, ...VISIBLE_FILE_REPLACEMENTS } },
     )) as [any[], number];
 
     return {
@@ -235,25 +255,25 @@ const getFileExecutiveSummary = async (
   try {
     const [summary] = (await sequelize.query(
       `SELECT
-        (SELECT COUNT(*)::INTEGER FROM files WHERE organization_id = :organizationId) as total_files,
-        (SELECT COALESCE(SUM(size), 0)::BIGINT FROM files WHERE organization_id = :organizationId) as total_storage_bytes,
-        (SELECT COUNT(*)::INTEGER FROM files f WHERE f.organization_id = :organizationId AND NOT EXISTS (
+        (SELECT COUNT(*)::INTEGER FROM files WHERE organization_id = :organizationId AND ${VISIBLE_FILE_SQL("files")}) as total_files,
+        (SELECT COALESCE(SUM(size), 0)::BIGINT FROM files WHERE organization_id = :organizationId AND ${VISIBLE_FILE_SQL("files")}) as total_storage_bytes,
+        (SELECT COUNT(*)::INTEGER FROM files f WHERE f.organization_id = :organizationId AND ${VISIBLE_FILE_SQL("f")} AND NOT EXISTS (
           SELECT 1 FROM file_folder_mappings ffm WHERE ffm.organization_id = :organizationId AND ffm.file_id = f.id
         )) as uncategorized_files,
-        (SELECT COUNT(*)::INTEGER FROM files WHERE organization_id = :organizationId AND uploaded_time >= NOW() - INTERVAL '7 days') as recent_uploads_7d,
+        (SELECT COUNT(*)::INTEGER FROM files WHERE organization_id = :organizationId AND ${VISIBLE_FILE_SQL("files")} AND uploaded_time >= NOW() - INTERVAL '7 days') as recent_uploads_7d,
         (SELECT COUNT(*)::INTEGER FROM virtual_folders WHERE organization_id = :organizationId) as total_folders`,
-      { replacements: { organizationId } },
+      { replacements: { organizationId, ...VISIBLE_FILE_REPLACEMENTS } },
     )) as [any[], number];
 
     const [topUploaders] = (await sequelize.query(
       `SELECT u.name, u.surname, COUNT(f.id)::INTEGER as upload_count
       FROM files f
       JOIN users u ON f.uploaded_by = u.id
-      WHERE f.organization_id = :organizationId
+      WHERE f.organization_id = :organizationId AND ${VISIBLE_FILE_SQL("f")}
       GROUP BY u.name, u.surname
       ORDER BY upload_count DESC
       LIMIT 5`,
-      { replacements: { organizationId } },
+      { replacements: { organizationId, ...VISIBLE_FILE_REPLACEMENTS } },
     )) as [any[], number];
 
     return {
@@ -293,13 +313,14 @@ const agentAttachFileToEntity = createWriteToolFn({
       `UPDATE files SET source = :entity_type, project_id = CASE WHEN :entity_type = 'project' THEN :entity_id ELSE project_id END,
        org_id = CASE WHEN :entity_type = 'organization' THEN :entity_id ELSE org_id END,
        model_id = CASE WHEN :entity_type = 'model' THEN :entity_id ELSE model_id END
-       WHERE organization_id = :organizationId AND id = :file_id`,
+       WHERE organization_id = :organizationId AND id = :file_id AND ${VISIBLE_FILE_SQL("files")}`,
       {
         replacements: {
           organizationId,
           file_id: fileId,
           entity_type: entityType,
           entity_id: entityId,
+          ...VISIBLE_FILE_REPLACEMENTS,
         },
       },
     );
@@ -328,13 +349,14 @@ const agentDetachFileFromEntity = createWriteToolFn({
        project_id = CASE WHEN :entity_type = 'project' AND project_id = :entity_id THEN NULL ELSE project_id END,
        org_id = CASE WHEN :entity_type = 'organization' AND org_id = :entity_id THEN NULL ELSE org_id END,
        model_id = CASE WHEN :entity_type = 'model' AND model_id = :entity_id THEN NULL ELSE model_id END
-       WHERE organization_id = :organizationId AND id = :file_id`,
+       WHERE organization_id = :organizationId AND id = :file_id AND ${VISIBLE_FILE_SQL("files")}`,
       {
         replacements: {
           organizationId,
           file_id: fileId,
           entity_type: entityType,
           entity_id: entityId,
+          ...VISIBLE_FILE_REPLACEMENTS,
         },
       },
     );
@@ -372,6 +394,10 @@ const agentAssignFileToFolder = createWriteToolFn({
   executeFn: async (params, organizationId) => {
     const fileId = params.file_id as number;
     const folderId = params.folder_id as number;
+
+    if (!(await allFilesVisibleQuery([fileId], organizationId))) {
+      throw new Error(`File #${fileId} not found.`);
+    }
 
     const count = await assignFilesToFolderQuery(
       organizationId,
