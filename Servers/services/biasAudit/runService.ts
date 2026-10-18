@@ -25,7 +25,6 @@ import {
   listStancesForRunQuery,
   listTrendRunsQuery,
   type RunSummaryRow,
-  type TrendRunRow,
 } from "../../utils/biasAudit.utils";
 import type { BiasAuditRun } from "../../domain.layer/models/biasAudit/biasAuditRun.model";
 import type { BiasAuditStance } from "../../domain.layer/models/biasAudit/biasAuditStance.model";
@@ -40,6 +39,7 @@ import { DatasetParseError, parseDataset, type ParsedDataset } from "./datasetPa
 import { runAudit, RECORD_KEYS } from "./index";
 import type { AuditOutcome, BiasAuditConfig } from "./index";
 import type { GateFinding } from "./dataGates";
+import { buildTrendSeries, type TrendSeries } from "./trendSeries";
 
 /** The 0.8 figure is a convention the rule's guidance uses, not a statutory value. */
 export const LL144_THRESHOLD_SOURCE = "convention";
@@ -331,12 +331,15 @@ export async function listRuns(scope: ProjectScope): Promise<{ runs: RunSummaryR
   };
 }
 
-/** Runs oldest first in the shape the trend series reads. */
-export async function getTrendRows(scope: ProjectScope): Promise<{ runs: TrendRunRow[] }> {
+/**
+ * The lowest impact ratio per run, segmented at configuration changes. Built
+ * here so a run's raw result never leaves the server through this endpoint.
+ */
+export async function getTrendSeries(scope: ProjectScope): Promise<TrendSeries> {
   await assertProject(scope.projectId, scope.organizationId, scope);
-  return {
-    runs: await listTrendRunsQuery(scope.projectId, scope.frameworkId, scope.organizationId),
-  };
+  return buildTrendSeries(
+    await listTrendRunsQuery(scope.projectId, scope.frameworkId, scope.organizationId),
+  );
 }
 
 export interface RunView {

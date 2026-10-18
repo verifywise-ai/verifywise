@@ -20,7 +20,7 @@ import {
   confirmDerivedBasis,
   createRun,
   getRunView,
-  getTrendRows,
+  getTrendSeries,
   listRuns,
   mayExportStoredRun,
 } from "./runService";
@@ -381,11 +381,72 @@ describe("run reads", () => {
     expect(utils.listRunsQuery).toHaveBeenCalledWith(7, 12, 42);
   });
 
-  it("returns trend rows oldest first, as the query orders them", async () => {
+  it("returns the built trend series, never the raw run rows", async () => {
     utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
-    utils.listTrendRunsQuery.mockResolvedValue([{ id: 1 }, { id: 2 }]);
-    await expect(getTrendRows(scope)).resolves.toEqual({ runs: [{ id: 1 }, { id: 2 }] });
+    const row = (id: number, profileVersion: number, ratio: number) => ({
+      id,
+      created_at: new Date(`2026-0${id}-10T00:00:00Z`),
+      profile_version: profileVersion,
+      question_set_version: 1,
+      job_description_key: null,
+      metric: "selection_rate",
+      result_json: {
+        tables: [
+          {
+            categoryKey: "sex",
+            rows: [
+              { categoryName: "Male", impactRatio: 1, flagged: false, applicantCount: 40 },
+              { categoryName: "Female", impactRatio: ratio, flagged: false, applicantCount: 35 },
+            ],
+          },
+        ],
+      },
+    });
+    utils.listTrendRunsQuery.mockResolvedValue([row(1, 1, 0.9), row(2, 2, 0.85)]);
+
+    const out = await getTrendSeries(scope);
+
     expect(utils.listTrendRunsQuery).toHaveBeenCalledWith(7, 12, 42);
+    expect(out).toEqual({
+      segments: [
+        {
+          profileVersion: 1,
+          questionSetVersion: 1,
+          jobDescriptionKey: null,
+          metric: "selection_rate",
+          points: [
+            {
+              runId: 1,
+              date: "2026-01-10T00:00:00.000Z",
+              category: "sex",
+              lowestRatio: 0.9,
+              flagged: false,
+            },
+          ],
+        },
+        {
+          profileVersion: 2,
+          questionSetVersion: 1,
+          jobDescriptionKey: null,
+          metric: "selection_rate",
+          points: [
+            {
+              runId: 2,
+              date: "2026-02-10T00:00:00.000Z",
+              category: "sex",
+              lowestRatio: 0.85,
+              flagged: false,
+            },
+          ],
+        },
+      ],
+      breaks: [{ afterRunId: 1, reasons: ["the AEDT profile was changed"] }],
+    });
+    // Nothing of the stored result (group names, counts) survives.
+    const text = JSON.stringify(out);
+    expect(text).not.toContain("result_json");
+    expect(text).not.toContain("Female");
+    expect(text).not.toContain("applicantCount");
   });
 
   it("returns a run with its stances and whether it may be exported", async () => {
@@ -460,7 +521,7 @@ describe("project-member access", () => {
       const who = { ...scope, userId: 9, role };
       await expect(run({ role })).rejects.toMatchObject({ statusCode: 404 });
       await expect(listRuns(who)).rejects.toMatchObject({ statusCode: 404 });
-      await expect(getTrendRows(who)).rejects.toMatchObject({ statusCode: 404 });
+      await expect(getTrendSeries(who)).rejects.toMatchObject({ statusCode: 404 });
       expect(utils.createRunQuery).not.toHaveBeenCalled();
       expect(utils.getAttestedProfileQuery).not.toHaveBeenCalled();
       expect(utils.listRunsQuery).not.toHaveBeenCalled();

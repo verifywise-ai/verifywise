@@ -30,7 +30,7 @@ import {
   confirmDerivedBasis as confirmDerivedBasisService,
   createRun as createRunService,
   getRunView,
-  getTrendRows,
+  getTrendSeries,
   listRuns as listRunsService,
 } from "../services/biasAudit/runService";
 import {
@@ -247,7 +247,7 @@ export const listRuns = controllerWrapper(
 export const getRunTrend = controllerWrapper(
   async (req) => ({
     status: 200,
-    data: await getTrendRows(memberScope(req.query.projectId, req.query.frameworkId, req)),
+    data: await getTrendSeries(memberScope(req.query.projectId, req.query.frameworkId, req)),
   }),
   { functionName: "getRunTrend", fileName: FILE_NAME, eventType: "Read" },
 );

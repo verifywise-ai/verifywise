@@ -2294,9 +2294,16 @@ export const biasAuditEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/bias-audit/runs/trend',
     summary: "Get Run Trend",
+    description: "The lowest impact ratio of each run of a project for one framework, oldest first, segmented wherever the profile version, question set, job description or metric changed. Each break names what changed. A run with no result, or a fairness_metrics run (which computes no impact ratio), contributes no point and does not break the series. Raw run results are not returned.",
     requiresAuth: true,
+    parameters: [
+      { name: 'projectId', in: 'query', type: 'integer', required: true, description: "The projectId" },
+      { name: 'frameworkId', in: 'query', type: 'integer', required: true, description: "The frameworkId" },
+    ],
     responses: [
       { status: 200, description: "Success" },
+      { status: 400, description: "projectId or frameworkId is missing or not a positive integer" },
+      { status: 404, description: "Project not found, or the caller is not a member of it" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Bias Audit",

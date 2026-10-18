@@ -39,7 +39,7 @@ jest.mock("../../services/biasAudit/profileService", () => ({
 jest.mock("../../services/biasAudit/runService", () => ({
   createRun: jest.fn(),
   listRuns: jest.fn(),
-  getTrendRows: jest.fn(),
+  getTrendSeries: jest.fn(),
   getRunView: jest.fn(),
   confirmDerivedBasis: jest.fn(),
 }));
@@ -378,6 +378,31 @@ describe("runs", () => {
       const { status } = await call(h, mockReq({ query: { frameworkId: LL144 } }));
       expect(status).toBe(400);
     }
+  });
+
+  it("answers the trend with the series the service built", async () => {
+    const series = {
+      segments: [
+        {
+          profileVersion: 1,
+          questionSetVersion: 1,
+          jobDescriptionKey: null,
+          metric: "selection_rate",
+          points: [
+            { runId: 1, date: "2026-01-10", category: "sex", lowestRatio: 0.9, flagged: false },
+          ],
+        },
+      ],
+      breaks: [],
+    };
+    svc(runService.getTrendSeries).mockResolvedValue(series);
+    const { status, body } = await call(
+      ctrl.getRunTrend,
+      mockReq({ query: { projectId: "7", frameworkId: LL144 } }),
+    );
+    expect(status).toBe(200);
+    expect(body.data).toEqual(series);
+    expect(body.data).not.toHaveProperty("runs");
   });
 
   it("400s a non-numeric run id and 404s an unknown one", async () => {
@@ -908,7 +933,7 @@ describe("the caller's role reaches every project endpoint", () => {
     svc(profileService.getProfileView).mockResolvedValue({});
     svc(profileService.attestProfile).mockResolvedValue({ profileId: 1, version: 1 });
     svc(runService.listRuns).mockResolvedValue({ runs: [] });
-    svc(runService.getTrendRows).mockResolvedValue({ runs: [] });
+    svc(runService.getTrendSeries).mockResolvedValue({ segments: [], breaks: [] });
     svc(runService.getRunView).mockResolvedValue({});
     svc(runService.confirmDerivedBasis).mockResolvedValue({ runId: 5, derivedBasis: {} });
     svc(stanceService.generateStance).mockResolvedValue({ stanceId: 3, version: 1, sha256: "a" });
@@ -926,7 +951,7 @@ describe("the caller's role reaches every project endpoint", () => {
     expect(seen(profileService.getProfileView)[0]).toMatchObject({ role: "Editor", userId: 9 });
     expect(seen(profileService.attestProfile)[0]).toMatchObject({ role: "Editor", userId: 9 });
     expect(seen(runService.listRuns)[0]).toMatchObject({ role: "Editor", userId: 9 });
-    expect(seen(runService.getTrendRows)[0]).toMatchObject({ role: "Editor", userId: 9 });
+    expect(seen(runService.getTrendSeries)[0]).toMatchObject({ role: "Editor", userId: 9 });
     expect(seen(runService.getRunView)[2]).toEqual({ userId: 9, role: "Editor" });
     expect(seen(runService.confirmDerivedBasis)[2]).toEqual({ userId: 9, role: "Editor" });
     expect(seen(stanceService.generateStance)[0]).toMatchObject({ role: "Editor", userId: 9 });
