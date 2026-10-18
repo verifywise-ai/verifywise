@@ -1,7 +1,6 @@
 import { getFileById, getFileMetadataByProjectId } from "../../utils/fileUpload.utils";
 import {
   allFilesVisibleQuery,
-  BIAS_AUDIT_STANCE_SOURCE,
   VISIBLE_FILE_REPLACEMENTS,
   VISIBLE_FILE_SQL,
 } from "../../utils/files/visibleFiles";
@@ -12,6 +11,8 @@ import {
 } from "../../utils/virtualFolder.utils";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
+import { QueryTypes } from "sequelize";
+import { ATTACHABLE_ENTITY_TYPES } from "../tools/fileManagementTools";
 import logger from "../../utils/logger/fileLogger";
 
 // A bias audit stance PDF is served only by the bias audit stance endpoint.
@@ -299,48 +300,34 @@ const getFileExecutiveSummary = async (
 // Write Tools (Human Confirmation Flow)
 // ============================================================================
 
-/**
- * The entity types agent_attach_file_to_entity may write into files.source:
- * the three it links through a column (project, organization, model) and
- * the examples its tool schema names. The value is model-supplied, so
- * anything else is refused; above all the bias audit stance source, which
- * would hide a normal file everywhere and make it undeletable.
- */
-export const ATTACHABLE_ENTITY_TYPES = [
-  "project",
-  "organization",
-  "model",
-  "risk",
-  "vendor",
-  "control",
-  "evidence",
-] as const;
+/** Refuses an entity_type outside the allowlist, before any approval is queued. */
+const validateAttachableEntityType = (params: Record<string, unknown>) => {
+  const entityType = params.entity_type;
+  if (!(ATTACHABLE_ENTITY_TYPES as readonly unknown[]).includes(entityType)) {
+    throw new Error(
+      `Unsupported entity_type "${String(entityType)}". Use one of: ${ATTACHABLE_ENTITY_TYPES.join(", ")}.`,
+    );
+  }
+};
 
 const agentAttachFileToEntity = createWriteToolFn({
   toolName: "agent_attach_file_to_entity",
   warningLevel: "warning",
   descriptionFn: (params) =>
     `Attach file #${params.file_id} to ${params.entity_type} #${params.entity_id}`,
+  validateFn: validateAttachableEntityType,
   executeFn: async (params, organizationId) => {
     const fileId = params.file_id as number;
     const entityType = params.entity_type as string;
     const entityId = params.entity_id as number;
 
-    if (
-      entityType === BIAS_AUDIT_STANCE_SOURCE ||
-      !(ATTACHABLE_ENTITY_TYPES as readonly string[]).includes(entityType)
-    ) {
-      throw new Error(
-        `Unsupported entity_type "${entityType}". Use one of: ${ATTACHABLE_ENTITY_TYPES.join(", ")}.`,
-      );
-    }
-
     // Update the file's source and associated entity reference
-    await sequelize.query(
+    const updated = await sequelize.query(
       `UPDATE files SET source = :entity_type, project_id = CASE WHEN :entity_type = 'project' THEN :entity_id ELSE project_id END,
        org_id = CASE WHEN :entity_type = 'organization' THEN :entity_id ELSE org_id END,
        model_id = CASE WHEN :entity_type = 'model' THEN :entity_id ELSE model_id END
-       WHERE organization_id = :organizationId AND id = :file_id AND ${VISIBLE_FILE_SQL("files")}`,
+       WHERE organization_id = :organizationId AND id = :file_id AND ${VISIBLE_FILE_SQL("files")}
+       RETURNING id`,
       {
         replacements: {
           organizationId,
@@ -349,8 +336,10 @@ const agentAttachFileToEntity = createWriteToolFn({
           entity_id: entityId,
           ...VISIBLE_FILE_REPLACEMENTS,
         },
+        type: QueryTypes.SELECT,
       },
     );
+    if (updated.length === 0) throw new Error(`File #${fileId} not found.`);
     return {
       file_id: fileId,
       entity_type: entityType,
@@ -371,12 +360,13 @@ const agentDetachFileFromEntity = createWriteToolFn({
     const entityId = params.entity_id as number;
 
     // Clear the entity association based on type
-    await sequelize.query(
+    const updated = await sequelize.query(
       `UPDATE files SET
        project_id = CASE WHEN :entity_type = 'project' AND project_id = :entity_id THEN NULL ELSE project_id END,
        org_id = CASE WHEN :entity_type = 'organization' AND org_id = :entity_id THEN NULL ELSE org_id END,
        model_id = CASE WHEN :entity_type = 'model' AND model_id = :entity_id THEN NULL ELSE model_id END
-       WHERE organization_id = :organizationId AND id = :file_id AND ${VISIBLE_FILE_SQL("files")}`,
+       WHERE organization_id = :organizationId AND id = :file_id AND ${VISIBLE_FILE_SQL("files")}
+       RETURNING id`,
       {
         replacements: {
           organizationId,
@@ -385,8 +375,10 @@ const agentDetachFileFromEntity = createWriteToolFn({
           entity_id: entityId,
           ...VISIBLE_FILE_REPLACEMENTS,
         },
+        type: QueryTypes.SELECT,
       },
     );
+    if (updated.length === 0) throw new Error(`File #${fileId} not found.`);
     return {
       file_id: fileId,
       entity_type: entityType,

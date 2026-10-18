@@ -25,17 +25,22 @@ jest.mock("../../utils/logger/fileLogger", () => ({
   default: { error: jest.fn(), info: jest.fn(), debug: jest.fn(), warn: jest.fn() },
 }));
 
-jest.mock("../approval/approvalGateway", () => ({ submitForApproval: jest.fn() }));
+const mockSubmit = jest.fn<any>().mockResolvedValue({ outcome: "pending", confirmationResult: {} });
+jest.mock("../approval/approvalGateway", () => ({
+  submitForApproval: (...args: any[]) => mockSubmit(...args),
+}));
 
+// removeFileFromFolderQuery runs for real over the fake files table.
 const mockAssign = jest.fn<any>().mockResolvedValue(1);
 jest.mock("../../utils/virtualFolder.utils", () => ({
+  ...(jest.requireActual("../../utils/virtualFolder.utils") as object),
   createFolderQuery: jest.fn(),
   assignFilesToFolderQuery: (...args: any[]) => mockAssign(...args),
-  removeFileFromFolderQuery: jest.fn(),
 }));
 
 import { availableFileManagementTools as tools } from "./fileManagementFunctions";
 import { writeToolExecutors } from "../confirmation/createWriteTool";
+import { ATTACHABLE_ENTITY_TYPES, toolsDefinition } from "../tools/fileManagementTools";
 
 const ORG = 1;
 const STANCE_ID = 2;
@@ -91,32 +96,65 @@ describe("advisor file tools and bias audit stance PDFs", () => {
   });
 
   it.each(["agent_attach_file_to_entity", "agent_detach_file_from_entity"])(
-    "%s leaves a stance PDF untouched and answers as for a missing file",
+    "%s answers a stance PDF as a missing file, File #id not found, and leaves it untouched",
     async (toolName) => {
       const execute = writeToolExecutors.get(toolName)!;
       const params = { file_id: STANCE_ID, entity_type: "project", entity_id: 9 };
-      table = [stanceRow()];
-      const row = table[0];
-      const stance = await execute(params, ORG);
-      expect(row.updated).toBeUndefined();
-      expect(row.source).toBe("Bias audit stance report");
-      table = [];
-      expect(stance).toEqual(await execute(params, ORG));
+      const { stance, missing } = await stanceAndMissing(async () => {
+        const row = table[0];
+        const result = await execute(params, ORG).catch((e: Error) => ({ thrown: e.message }));
+        if (row) {
+          expect(row.updated).toBeUndefined();
+          expect(row.source).toBe("Bias audit stance report");
+        }
+        return result;
+      });
+      expect(stance).toEqual(missing);
+      expect(stance).toEqual({ thrown: `File #${STANCE_ID} not found.` });
     },
   );
 
-  it.each(["Bias audit stance report", "File Manager", "anything"])(
-    "agent_attach_file_to_entity refuses entity_type %s and writes nothing",
+  it.each(["Bias audit stance report", "File Manager", "anything", undefined])(
+    "agent_attach_file_to_entity refuses entity_type %s before queueing an approval",
     async (entityType) => {
-      const execute = writeToolExecutors.get("agent_attach_file_to_entity")!;
       table = [visibleRow()];
+      const params = { file_id: 1, entity_type: entityType, entity_id: 9 };
+      await expect(tools.agent_attach_file_to_entity(params, ORG)).rejects.toThrow(
+        /Unsupported entity_type/,
+      );
+      expect(mockSubmit).not.toHaveBeenCalled();
+      // The executor refuses too, should a stored request carry it.
       await expect(
-        execute({ file_id: 1, entity_type: entityType, entity_id: 9 }, ORG),
+        writeToolExecutors.get("agent_attach_file_to_entity")!(params, ORG),
       ).rejects.toThrow(/Unsupported entity_type/);
       expect(table[0].updated).toBeUndefined();
       expect(table[0].source).toBe("File Manager");
     },
   );
+
+  it("agent_attach_file_to_entity queues an approval for an allowed entity_type", async () => {
+    await tools.agent_attach_file_to_entity(
+      { file_id: 1, entity_type: "project", entity_id: 9 },
+      ORG,
+    );
+    expect(mockSubmit).toHaveBeenCalledTimes(1);
+  });
+
+  it("the attach schema enum is the allowlist", () => {
+    const attach = toolsDefinition.find((t) => t.function.name === "agent_attach_file_to_entity");
+    expect(attach.function.parameters.properties.entity_type.enum).toEqual([
+      ...ATTACHABLE_ENTITY_TYPES,
+    ]);
+  });
+
+  it("agent_remove_file_from_folder answers a stance PDF as a missing file", async () => {
+    const execute = writeToolExecutors.get("agent_remove_file_from_folder")!;
+    const { stance, missing } = await stanceAndMissing(() =>
+      execute({ file_id: STANCE_ID, folder_id: 3 }, ORG),
+    );
+    expect(stance).toEqual(missing);
+    expect(stance).toMatchObject({ removed: false });
+  });
 
   it("agent_attach_file_to_entity still attaches with an allowed entity_type", async () => {
     const execute = writeToolExecutors.get("agent_attach_file_to_entity")!;
