@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
   Alert,
@@ -12,16 +12,14 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
-import TabContext from "@mui/lab/TabContext";
 import { FolderTree, ListChecks } from "lucide-react";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
-import TabBar from "../../components/TabBar";
-import type { TabItem } from "../../components/TabBar";
 import Select from "../../components/Inputs/Select";
 import { EmptyState } from "../../components/EmptyState";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { useProjects } from "../../../application/hooks/useProjects";
 import { useAuth } from "../../../application/hooks/useAuth";
+import { useBiasAuditSidebarContextSafe } from "../../../application/contexts/BiasAuditSidebar.context";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -50,20 +48,25 @@ import PersonLabel from "./PersonLabel";
 import OpenVetoList from "./OpenVetoList";
 import { questionTitle } from "./intakeLayout";
 import { cardSx, cellSx, headSx } from "./styles";
+import { parseSection, sectionPath, type BiasAuditSection } from "./sections";
 
 /**
  * NYC Local Law 144 bias audit module: the profile intake, runs against an
  * uploaded dataset, and the stance documents generated from them. It is a
  * self-administered test, and every page says what it can and cannot stand
  * for. Independent of the Evals dashboard's bias audit, which keeps its own
- * entry.
+ * entry. The section comes from the URL; the module sidebar links to it.
  */
 const BiasAuditPage = () => {
-  const { projectId: projectParam } = useParams<{ projectId?: string }>();
+  const { projectId: projectParam, section: sectionParam } = useParams<{
+    projectId?: string;
+    section?: string;
+  }>();
   const navigate = useNavigate();
   const { userRoleName } = useAuth();
   const { approvedProjects, isLoading: projectsLoading } = useProjects();
-  const [activeTab, setActiveTab] = useState("profile");
+  const sidebar = useBiasAuditSidebarContextSafe();
+  const activeSection = parseSection(sectionParam);
 
   const projects = useMemo(
     () =>
@@ -79,6 +82,12 @@ const BiasAuditPage = () => {
   // The server is the authority on both; these only explain a disabled button.
   const canEdit = userRoleName === "Admin" || userRoleName === "Editor";
   const canAttest = userRoleName === "Admin";
+
+  // With a use case, ProjectWorkspace publishes it with its counts.
+  const setSidebarSummary = sidebar?.setSummary;
+  useEffect(() => {
+    if (projectId === null) setSidebarSummary?.({ projectId: null, runsCount: 0, scopeCount: 0 });
+  }, [projectId, setSidebarSummary]);
 
   return (
     <PageHeaderExtended
@@ -103,10 +112,7 @@ const BiasAuditPage = () => {
               label="Use case"
               value={projectId ?? ""}
               items={projects.map((p) => ({ _id: p.id, name: p.project_title }))}
-              onChange={(e) => {
-                setActiveTab("profile");
-                navigate(`/bias-audit/${e.target.value}`);
-              }}
+              onChange={(e) => navigate(sectionPath(Number(e.target.value), "profile"))}
               sx={{ width: "100%", maxWidth: "420px" }}
             />
           )}
@@ -116,8 +122,7 @@ const BiasAuditPage = () => {
               projectId={projectId}
               canEdit={canEdit}
               canAttest={canAttest}
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
+              activeSection={activeSection}
             />
           )}
         </Stack>
@@ -130,17 +135,10 @@ interface WorkspaceProps {
   projectId: number;
   canEdit: boolean;
   canAttest: boolean;
-  activeTab: string;
-  onTabChange: (tab: string) => void;
+  activeSection: BiasAuditSection;
 }
 
-const ProjectWorkspace = ({
-  projectId,
-  canEdit,
-  canAttest,
-  activeTab,
-  onTabChange,
-}: WorkspaceProps) => {
+const ProjectWorkspace = ({ projectId, canEdit, canAttest, activeSection }: WorkspaceProps) => {
   const profileQuery = useAedtProfile(projectId);
   const questionsQuery = useAedtQuestions(projectId);
   const runsQuery = useAedtRuns(projectId);
@@ -154,20 +152,22 @@ const ProjectWorkspace = ({
   if (reloadRequired && profileQuery.status === "success") setReloadRequired(null);
   const queryClient = useQueryClient();
   const [selectedRun, setSelectedRun] = useState<number | null>(null);
+  // Opening a section from the sidebar starts it at its list, as the tabs did.
+  const [shownSection, setShownSection] = useState(activeSection);
+  if (shownSection !== activeSection) {
+    setShownSection(activeSection);
+    setSelectedRun(null);
+  }
 
   const profile = profileQuery.data;
   const runs = runsQuery.data ?? [];
+  const runsCount = runs.length;
+  const scopeCount = profile?.scopeDeterminations.length ?? 0;
 
-  const tabs: TabItem[] = [
-    { label: "Profile", value: "profile", icon: "ClipboardList" },
-    { label: "Runs", value: "runs", icon: "Play", count: runs.length },
-    {
-      label: "Scope determination",
-      value: "scope",
-      icon: "FileText",
-      count: profile?.scopeDeterminations.length ?? 0,
-    },
-  ];
+  const setSidebarSummary = useBiasAuditSidebarContextSafe()?.setSummary;
+  useEffect(() => {
+    setSidebarSummary?.({ projectId, runsCount, scopeCount });
+  }, [projectId, runsCount, scopeCount, setSidebarSummary]);
 
   if (profileQuery.isLoading || questionsQuery.isLoading) {
     return (
@@ -285,19 +285,7 @@ const ProjectWorkspace = ({
       )}
       <ProfileSummary profile={profile} />
 
-      {/* TabList needs a TabContext ancestor — see style guide § Tabs. */}
-      <TabContext value={activeTab}>
-        <TabBar
-          tabs={tabs}
-          activeTab={activeTab}
-          onChange={(_, value) => {
-            setSelectedRun(null);
-            onTabChange(value);
-          }}
-        />
-      </TabContext>
-
-      {activeTab === "profile" && !reloadRequired && (
+      {activeSection === "profile" && !reloadRequired && (
         // No key: the wizard overlays its edits on whatever answers the
         // profile query holds, so a new version or a refetch updates them in
         // place and never drops an unsaved edit.
@@ -315,7 +303,7 @@ const ProjectWorkspace = ({
         />
       )}
 
-      {activeTab === "runs" &&
+      {activeSection === "runs" &&
         (selectedRun !== null ? (
           <RunDetail
             runId={selectedRun}
@@ -341,7 +329,7 @@ const ProjectWorkspace = ({
           </Stack>
         ))}
 
-      {activeTab === "scope" && (
+      {activeSection === "scope" && (
         <StancePanel
           kind="scope"
           stances={profile.scopeDeterminations}

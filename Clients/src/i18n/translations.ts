@@ -9275,6 +9275,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Browse": "Durchsuchen",
     "Browse AI app risk scores and track the apps you use":
       "KI-App-Risikobewertungen durchsuchen und genutzte Apps verfolgen",
+    "Test a hiring tool against NYC Local Law 144 and record your position":
+      "Ein Einstellungstool gegen das New Yorker Local Law 144 testen und Ihre Position festhalten",
     "Browse independently assessed AI applications and track the ones that matter to your organization.":
       "Unabhängig bewertete KI-Anwendungen durchsuchen und die für Ihre Organisation relevanten verfolgen.",
     "Choose who receives a notification when a tracked app's assessment changes materially. If no recipients are set, organization admins are notified by default.":
@@ -20007,6 +20009,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Browse": "Parcourir",
     "Browse AI app risk scores and track the apps you use":
       "Parcourir les scores de risque des applications IA et suivre les applications utilisées",
+    "Test a hiring tool against NYC Local Law 144 and record your position":
+      "Tester un outil de recrutement au regard de la Local Law 144 de New York et consigner votre position",
     "Browse independently assessed AI applications and track the ones that matter to your organization.":
       "Parcourir les applications IA évaluées indépendamment et suivre celles qui comptent pour votre organisation.",
     "Choose who receives a notification when a tracked app's assessment changes materially. If no recipients are set, organization admins are notified by default.":
@@ -30648,6 +30652,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Browse": "Explorar",
     "Browse AI app risk scores and track the apps you use":
       "Explorar las puntuaciones de riesgo de las aplicaciones de IA y seguir las que utiliza",
+    "Test a hiring tool against NYC Local Law 144 and record your position":
+      "Probar una herramienta de contratación frente a la Local Law 144 de Nueva York y registrar su posición",
     "Browse independently assessed AI applications and track the ones that matter to your organization.":
       "Explorar aplicaciones de IA evaluadas de forma independiente y seguir las que importan a su organización.",
     "Choose who receives a notification when a tracked app's assessment changes materially. If no recipients are set, organization admins are notified by default.":

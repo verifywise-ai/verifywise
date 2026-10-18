@@ -1,7 +1,6 @@
-import { fireEvent, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AxiosError, AxiosHeaders } from "axios";
-import { renderWithProviders } from "../../../../test/renderWithProviders";
 import type {
   AedtProfileView,
   AedtReadiness,
@@ -53,7 +52,7 @@ vi.mock("../../../../application/hooks/useAedtBiasAudit", () => ({
   useGenerateAedtRunStance: mutation,
 }));
 
-import BiasAuditPage from "..";
+import { openSection, renderBiasAuditPage } from "./biasAuditPageHarness";
 
 const OUT_OF_SCOPE: AedtReadiness = {
   score: null,
@@ -131,7 +130,7 @@ describe("BiasAuditPage", () => {
   });
 
   it("offers only use cases with the LL 144 framework, and shows the education panel", () => {
-    renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
+    renderBiasAuditPage();
     expect(screen.getByText("LL 144 bias audit")).toBeInTheDocument();
     expect(screen.getByText("Screening tool")).toBeInTheDocument();
     expect(screen.queryByText("Other use case")).not.toBeInTheDocument();
@@ -139,8 +138,8 @@ describe("BiasAuditPage", () => {
   });
 
   it("labels a scope determination superseded by a later attestation", () => {
-    renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
-    fireEvent.click(screen.getByRole("tab", { name: /scope determination/i }));
+    renderBiasAuditPage();
+    openSection("scope");
     expect(screen.getByTestId("stance-row-21")).not.toHaveTextContent(/superseded/i);
     expect(screen.getByTestId("stance-row-20")).toHaveTextContent(
       "Superseded by a later attestation",
@@ -151,14 +150,31 @@ describe("BiasAuditPage", () => {
   it("shows the server's 404 message and explains that non-members get not found", () => {
     state.profile = undefined;
     state.profileError = notFound("Project not found");
-    renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
+    renderBiasAuditPage();
     expect(screen.getByText("Project not found")).toBeInTheDocument();
     expect(screen.getByText(/not a member of is reported as not found/)).toBeInTheDocument();
   });
 
+  it("opens the section the URL names, for the use case it names", () => {
+    renderBiasAuditPage("/bias-audit/7/scope");
+    expect(
+      screen.getByRole("button", { name: /generate scope determination/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("question-role.party")).not.toBeInTheDocument();
+  });
+
+  it("opens the profile for an unknown section", () => {
+    renderBiasAuditPage("/bias-audit/7/nonsense");
+    expect(screen.getByTestId("aedt-save-answers")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /run measures/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /generate scope determination/i }),
+    ).not.toBeInTheDocument();
+  });
+
   it("explains why the runs tab cannot record a run for an out-of-scope profile", () => {
-    renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
-    fireEvent.click(screen.getByRole("tab", { name: /runs/i }));
+    renderBiasAuditPage();
+    openSection("runs");
     expect(screen.getByText(/does not run its measures/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /run measures/i })).toBeDisabled();
     expect(screen.getByTestId("education-run.upload")).toBeInTheDocument();
@@ -174,14 +190,14 @@ describe("BiasAuditPage", () => {
 
     it("lets a run go ahead on an in-scope attested profile while the draft is out of scope", () => {
       state.profile = draftAhead(OUT_OF_SCOPE, { readiness: IN_SCOPE, metric: "scoring_rate" });
-      renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
+      renderBiasAuditPage();
       expect(screen.getByTestId("aedt-draft-differs")).toHaveTextContent(
         /draft answers place the tool out of scope\. Runs and scope determinations follow the attested version/,
       );
       // The summary shows the attested score, which runs act on.
       expect(screen.getByText("60%")).toBeInTheDocument();
 
-      fireEvent.click(screen.getByRole("tab", { name: /runs/i }));
+      openSection("runs");
       expect(screen.queryByText(/does not run its measures/)).not.toBeInTheDocument();
       expect(
         screen.getByText(/attested cutoff answer means this run computes scoring rates/),
@@ -191,8 +207,8 @@ describe("BiasAuditPage", () => {
 
     it("refuses a scope determination while only the draft is out of scope", () => {
       state.profile = draftAhead(OUT_OF_SCOPE, { readiness: IN_SCOPE, metric: "selection_rate" });
-      renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
-      fireEvent.click(screen.getByRole("tab", { name: /scope determination/i }));
+      renderBiasAuditPage();
+      openSection("scope");
       expect(
         screen.getByText(/only when the attested answers place the tool out of scope/),
       ).toBeInTheDocument();
@@ -201,15 +217,15 @@ describe("BiasAuditPage", () => {
 
     it("offers a scope determination on an out-of-scope attested profile while the draft is in scope", () => {
       state.profile = draftAhead(IN_SCOPE, { readiness: OUT_OF_SCOPE, metric: null });
-      renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
+      renderBiasAuditPage();
       expect(screen.getByTestId("aedt-draft-differs")).toHaveTextContent(
         /draft answers place the tool in scope/,
       );
-      fireEvent.click(screen.getByRole("tab", { name: /scope determination/i }));
+      openSection("scope");
       expect(
         screen.getByRole("button", { name: /generate scope determination/i }),
       ).not.toBeDisabled();
-      fireEvent.click(screen.getByRole("tab", { name: /runs/i }));
+      openSection("runs");
       expect(screen.getByText(/attested profile places the tool out of scope/)).toBeInTheDocument();
     });
 
@@ -218,7 +234,7 @@ describe("BiasAuditPage", () => {
         { ...IN_SCOPE, score: 80 },
         { readiness: IN_SCOPE, metric: "selection_rate" },
       );
-      renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
+      renderBiasAuditPage();
       expect(screen.getByTestId("aedt-draft-differs")).toHaveTextContent(
         "Draft readiness 80%. Runs and scope determinations follow the attested version",
       );
@@ -256,7 +272,7 @@ describe("BiasAuditPage", () => {
       },
       attestedDecision: { readiness: IN_SCOPE, metric: "selection_rate" },
     };
-    renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
+    renderBiasAuditPage();
     const note = screen.getByTestId("aedt-draft-differs");
     expect(note).toHaveTextContent("Your draft answers leave scope undetermined.");
     // The server's blocked reason quotes raw keys; only the titled list shows.
@@ -286,7 +302,7 @@ describe("BiasAuditPage", () => {
         possible: 0,
       },
     };
-    renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
+    renderBiasAuditPage();
     const summary = screen.getByTestId("aedt-profile-summary");
     expect(summary).toHaveTextContent("Who is performing this test");
     expect(summary).toHaveTextContent("Demographic data you hold");
@@ -299,7 +315,7 @@ describe("BiasAuditPage", () => {
     "keeps the page and the wizard when a refetch fails with %i",
     (status) => {
       state.profileError = notFound("Server error", status);
-      renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
+      renderBiasAuditPage();
       expect(screen.queryByTestId("aedt-load-error")).not.toBeInTheDocument();
       expect(screen.getByRole("button", { name: /save answers/i })).toBeInTheDocument();
       expect(screen.getByTestId("aedt-refetch-error")).toHaveTextContent(/could not be refreshed/i);
@@ -310,7 +326,7 @@ describe("BiasAuditPage", () => {
   // caller's; keeping a stale, editable page would hide that.
   it.each([404, 403, 401])("replaces the page when a refetch answers %i", (status) => {
     state.profileError = notFound("Project not found", status);
-    renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
+    renderBiasAuditPage();
     expect(screen.getByTestId("aedt-load-error")).toHaveTextContent("Project not found");
     expect(screen.queryByRole("button", { name: /save answers/i })).not.toBeInTheDocument();
     // The not-a-member explanation belongs to the 404 the member rule sends.
@@ -324,7 +340,7 @@ describe("BiasAuditPage", () => {
       ...PROFILE,
       attestedDecision: { readiness: { ...IN_SCOPE, score: null }, metric: "selection_rate" },
     };
-    renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
+    renderBiasAuditPage();
     const summary = screen.getByTestId("aedt-profile-summary");
     expect(summary).toHaveTextContent("No score yet.");
     expect(summary).not.toHaveTextContent("null%");
@@ -338,9 +354,9 @@ describe("BiasAuditPage", () => {
       attestedDecision: null,
       scopeDeterminations: [],
     };
-    renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
+    renderBiasAuditPage();
     expect(screen.getByText(/nothing is attested yet/i)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("tab", { name: /scope determination/i }));
+    openSection("scope");
     expect(screen.getByRole("button", { name: /generate scope determination/i })).toBeDisabled();
   });
 });

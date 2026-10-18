@@ -18,7 +18,6 @@ import {
   Network,
   Database,
   Rocket,
-  Scale,
 } from "lucide-react";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import useMultipleOnScreen from "../../../application/hooks/useMultipleOnScreen";
@@ -176,12 +175,6 @@ const Sidebar: React.FC<SidebarProps> = ({
           label: "Reporting",
           icon: <BarChart3 size={16} strokeWidth={1.5} />,
           path: "/reporting",
-        },
-        {
-          id: "bias-audit",
-          label: "LL 144 bias audit",
-          icon: <Scale size={16} strokeWidth={1.5} />,
-          path: "/bias-audit",
         },
         {
           id: "ai-trust-center",

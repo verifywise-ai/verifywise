@@ -7,7 +7,6 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AxiosError, AxiosHeaders } from "axios";
-import { renderWithProviders } from "../../../../test/renderWithProviders";
 import type {
   AedtProfileView,
   AedtQuestion,
@@ -46,7 +45,7 @@ vi.mock("../../../../application/hooks/useProjects", () => ({
   }),
 }));
 
-import BiasAuditPage from "..";
+import { openSection, renderBiasAuditPage } from "./biasAuditPageHarness";
 
 const ROLE: AedtQuestion = {
   key: "role.party",
@@ -109,7 +108,7 @@ const employerRadio = () => screen.getByRole("radio", { name: /We hire our own s
 const saveButton = () => screen.getByRole("button", { name: /save answers/i });
 
 async function renderPage() {
-  renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
+  renderBiasAuditPage();
   await screen.findByTestId("question-role.party");
 }
 
@@ -212,7 +211,7 @@ describe("BiasAuditPage save and attest", () => {
     );
     expect(screen.queryByTestId("question-role.party")).not.toBeInTheDocument();
     // Page level: still there on another tab.
-    fireEvent.click(screen.getByRole("tab", { name: /runs/i }));
+    openSection("runs");
     expect(screen.getByTestId("aedt-reload-required")).toBeInTheDocument();
   });
 });
@@ -289,7 +288,7 @@ describe("BiasAuditPage run detail", () => {
 
   it("shows the ratio trend for the use case beneath the run's stance panel", async () => {
     await renderPage();
-    fireEvent.click(screen.getByRole("tab", { name: /runs/i }));
+    openSection("runs");
     fireEvent.click(await screen.findByTestId("aedt-open-run-11"));
 
     const trend = await screen.findByTestId("aedt-ratio-trend");

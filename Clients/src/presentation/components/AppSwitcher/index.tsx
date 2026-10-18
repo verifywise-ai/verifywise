@@ -1,6 +1,6 @@
 import { FC, memo } from "react";
 import { Stack, Tooltip, Box, Typography, useTheme } from "@mui/material";
-import { Shield, FlaskConical, ScanSearch, Eye, Router, Crown, Gauge } from "lucide-react";
+import { Shield, FlaskConical, ScanSearch, Eye, Router, Crown, Gauge, Scale } from "lucide-react";
 import { AppModule } from "../../../application/redux/ui/uiSlice";
 import "./index.css";
 
@@ -55,6 +55,12 @@ const modules: ModuleItem[] = [
     icon: <ScanSearch size={16} strokeWidth={1.5} />,
     label: "AI Detection",
     description: "Scan repositories to detect AI/ML libraries and frameworks",
+  },
+  {
+    id: "bias-audit",
+    icon: <Scale size={16} strokeWidth={1.5} />,
+    label: "LL 144 bias audit",
+    description: "Test a hiring tool against NYC Local Law 144 and record your position",
   },
 ];
 

@@ -497,16 +497,9 @@ export const createRoutes = (triggerSidebar: boolean, _triggerSidebarReload: () 
         </Suspense>
       }
     />
+    {/* One route, so moving between sections keeps the page mounted. */}
     <Route
-      path="/bias-audit"
-      element={
-        <Suspense fallback={<LazyFallback />}>
-          <BiasAudit />
-        </Suspense>
-      }
-    />
-    <Route
-      path="/bias-audit/:projectId"
+      path="/bias-audit/:projectId?/:section?"
       element={
         <Suspense fallback={<LazyFallback />}>
           <BiasAudit />
