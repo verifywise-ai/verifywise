@@ -170,7 +170,12 @@ const ProjectWorkspace = ({
     );
   }
 
-  const loadError = profileQuery.error ?? questionsQuery.error;
+  // Only a query with no data blocks the page. A failed background refetch
+  // keeps the data it had; replacing the page would unmount the wizard and
+  // lose an unsaved draft, so that case gets a small notice instead.
+  const loadError =
+    (profile ? null : profileQuery.error) ?? (questionsQuery.data ? null : questionsQuery.error);
+  const refetchFailed = !loadError && Boolean(profileQuery.error ?? questionsQuery.error);
   if (loadError || !profile) {
     const { status, message } = describeAedtError(loadError);
     return (
@@ -218,6 +223,13 @@ const ProjectWorkspace = ({
 
   return (
     <Stack gap="16px">
+      {refetchFailed && (
+        <Alert severity="warning" sx={{ borderRadius: "4px" }} data-testid="aedt-refetch-error">
+          <Typography sx={{ fontSize: 13 }}>
+            The latest data could not be refreshed. The page shows what was loaded before.
+          </Typography>
+        </Alert>
+      )}
       <ProfileSummary profile={profile} />
 
       {/* TabList needs a TabContext ancestor — see style guide § Tabs. */}

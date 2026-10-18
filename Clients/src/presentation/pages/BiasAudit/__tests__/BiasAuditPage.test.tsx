@@ -262,6 +262,16 @@ describe("BiasAuditPage", () => {
     expect(note).toHaveTextContent('Demographic data you hold (answered "I don\'t know")');
   });
 
+  // A failed background refetch keeps the data it had. Swapping the page for
+  // the load error would unmount the wizard and lose an unsaved draft.
+  it("keeps the page and the wizard when a refetch fails after data loaded", () => {
+    state.profileError = notFound("Project not found");
+    renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
+    expect(screen.queryByTestId("aedt-load-error")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /save answers/i })).toBeInTheDocument();
+    expect(screen.getByTestId("aedt-refetch-error")).toHaveTextContent(/could not be refreshed/i);
+  });
+
   it("asks for an attestation when the saved answers are not attested", () => {
     state.profile = {
       ...PROFILE,
