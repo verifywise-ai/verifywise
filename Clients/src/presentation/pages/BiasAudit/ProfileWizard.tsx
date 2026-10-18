@@ -10,6 +10,7 @@ import type {
   AedtQuestion,
 } from "../../../application/repository/aedtBiasAudit.repository";
 import EducationPanel from "./EducationPanel";
+import OpenVetoList from "./OpenVetoList";
 import { evaluatePredicate, groupQuestions, hasUsableAnswer, questionTitle } from "./intakeLayout";
 import { cardSx, titleSx } from "./styles";
 
@@ -311,18 +312,7 @@ const ProfileWizard = ({
                   <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
                     These deciding questions need a saved answer before you can attest:
                   </Typography>
-                  <Box component="ul" sx={{ m: 0, pl: "18px" }}>
-                    {openVetoes.map((v) => (
-                      <Typography
-                        component="li"
-                        key={v.key}
-                        sx={{ fontSize: 12, color: palette.text.tertiary }}
-                      >
-                        <span>{questionTitle(v.key)}</span>
-                        {v.dontKnow && <span> (answered &quot;I don&apos;t know&quot;)</span>}
-                      </Typography>
-                    ))}
-                  </Box>
+                  <OpenVetoList vetoes={openVetoes} color={palette.text.tertiary} />
                 </>
               )}
               <Typography sx={{ fontSize: 12, color: palette.text.tertiary, mt: "4px" }}>

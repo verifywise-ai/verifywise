@@ -45,6 +45,7 @@ import RunUpload from "./RunUpload";
 import RunDetail from "./RunDetail";
 import StancePanel from "./StancePanel";
 import PersonLabel from "./PersonLabel";
+import OpenVetoList from "./OpenVetoList";
 import { questionTitle } from "./intakeLayout";
 import { cardSx, cellSx, headSx } from "./styles";
 
@@ -388,29 +389,20 @@ const ProfileSummary = ({ profile }: { profile: AedtProfileView }) => {
             <span>
               Runs and scope determinations follow the attested version until you attest the draft.
             </span>
-            {/* An undetermined draft names what leaves it open, as the summary did before attestation. */}
+            {/* An undetermined draft names the deciding questions that leave it open, by title. */}
             {draftScopeDiffers && draft.scope === "undetermined" && (
               <>
-                {draft.blockedReason && (
-                  <Box component="p" sx={{ m: 0, mt: "4px" }}>
-                    {draft.blockedReason}
-                  </Box>
-                )}
                 {draft.missingVetoes.length > 0 && (
                   <>
                     <Box component="p" sx={{ m: 0, mt: "4px" }}>
                       Deciding questions still open in the draft:
                     </Box>
-                    <Box component="ul" sx={{ m: 0, pl: "18px" }}>
-                      {draft.missingVetoes.map((key) => (
-                        <li key={key}>
-                          <span>{questionTitle(key)}</span>
-                          {draftAnswers.get(key)?.dontKnow && (
-                            <span> (answered &quot;I don&apos;t know&quot;)</span>
-                          )}
-                        </li>
-                      ))}
-                    </Box>
+                    <OpenVetoList
+                      vetoes={draft.missingVetoes.map((key) => ({
+                        key,
+                        dontKnow: draftAnswers.get(key)?.dontKnow ?? false,
+                      }))}
+                    />
                   </>
                 )}
               </>

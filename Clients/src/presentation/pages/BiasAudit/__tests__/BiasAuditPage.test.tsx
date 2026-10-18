@@ -257,7 +257,8 @@ describe("BiasAuditPage", () => {
     renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
     const note = screen.getByTestId("aedt-draft-differs");
     expect(note).toHaveTextContent("Your draft answers leave scope undetermined.");
-    expect(note).toHaveTextContent(/answer data\.held before a score can be shown/);
+    // The server's blocked reason quotes raw keys; only the titled list shows.
+    expect(note).not.toHaveTextContent(/data\.held/);
     expect(note).toHaveTextContent('Demographic data you hold (answered "I don\'t know")');
   });
 
