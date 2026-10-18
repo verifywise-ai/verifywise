@@ -23,7 +23,9 @@ import { CustomizableButton } from "../../components/button/customizable-button"
 import { useProjects } from "../../../application/hooks/useProjects";
 import { useAuth } from "../../../application/hooks/useAuth";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import { useQueryClient } from "@tanstack/react-query";
 import {
+  aedtQueryKeys,
   useAedtProfile,
   useAedtQuestions,
   useAedtRuns,
@@ -145,8 +147,11 @@ const ProjectWorkspace = ({
   const save = useSaveAedtAnswers(projectId);
   const attest = useAttestAedtProfile(projectId);
   const scope = useGenerateAedtScopeDetermination(projectId);
-  // Bumped after an attest, so the wizard restarts from the attested answers.
-  const [attestCount, setAttestCount] = useState(0);
+  // Set when a save or attest succeeded but the profile could not be
+  // reloaded after it: the page no longer knows what is saved, so editing
+  // stops until a reload.
+  const [reloadRequired, setReloadRequired] = useState<"saved" | "attested" | null>(null);
+  const queryClient = useQueryClient();
   const [selectedRun, setSelectedRun] = useState<number | null>(null);
 
   const profile = profileQuery.data;
@@ -201,16 +206,28 @@ const ProjectWorkspace = ({
     );
   }
 
-  // A save does not restart the wizard: it takes what it sent as its saved
-  // baseline (onSaved), so a failed reload cannot show the save as unsaved.
-  const handleSave = (answers: AedtAnswerInput[], onSaved: () => void) => {
+  // The hooks refetch the profile on settle, and React Query runs that (and
+  // awaits it) before a per-call onSuccess, so the profile query's state
+  // here says whether the reload after the write worked.
+  const reloadFailed = () =>
+    queryClient.getQueryState(aedtQueryKeys.profile(projectId))?.status === "error";
+
+  const handleSave = (answers: AedtAnswerInput[]) => {
     attest.reset();
-    save.mutate(answers, { onSuccess: onSaved });
+    save.mutate(answers, {
+      onSuccess: () => {
+        if (reloadFailed()) setReloadRequired("saved");
+      },
+    });
   };
 
   const handleAttest = () => {
     save.reset();
-    attest.mutate(undefined, { onSuccess: () => setAttestCount((n) => n + 1) });
+    attest.mutate(undefined, {
+      onSuccess: () => {
+        if (reloadFailed()) setReloadRequired("attested");
+      },
+    });
   };
 
   const actionError = save.error ?? attest.error;
@@ -256,11 +273,36 @@ const ProjectWorkspace = ({
         />
       </TabContext>
 
-      {activeTab === "profile" && (
+      {activeTab === "profile" && reloadRequired && (
+        <Alert
+          severity="info"
+          sx={{ borderRadius: "4px" }}
+          data-testid="aedt-reload-required"
+          action={
+            <CustomizableButton
+              variant="outlined"
+              size="small"
+              text="Reload the page"
+              testId="aedt-reload-page"
+              onClick={() => window.location.reload()}
+            />
+          }
+        >
+          <Typography sx={{ fontSize: 13 }}>
+            {reloadRequired === "saved"
+              ? "Your answers were saved. Reload the page to continue."
+              : "The profile was attested. Reload the page to continue."}
+          </Typography>
+        </Alert>
+      )}
+
+      {activeTab === "profile" && !reloadRequired && (
         <ProfileWizard
-          // Restart only for another profile row (a new version created by a
-          // save, or none yet) or after an attest; a refetch never remounts it.
-          key={`${profile.profile?.id ?? 0}-${attestCount}`}
+          // Remounts only when the loaded profile's version changes (a save
+          // after an attestation files a new version). Inputs are locked
+          // while a write is pending and unsaveable edits block Save, so
+          // nothing unsaved is on screen when that happens.
+          key={`${projectId}:${LL144_FRAMEWORK_ID}:${profile.profile?.version ?? 0}`}
           questions={questionsQuery.data ?? []}
           answers={profile.answers}
           profileStatus={profile.profile?.status ?? null}

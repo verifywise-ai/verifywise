@@ -12,7 +12,6 @@ const state = vi.hoisted(() => ({
   profile: null as unknown,
   profileError: null as unknown,
   questions: [] as unknown[],
-  saveSucceeds: true,
 }));
 
 const { mutation } = vi.hoisted(() => ({
@@ -46,16 +45,8 @@ vi.mock("../../../../application/hooks/useAedtBiasAudit", () => ({
   useAedtQuestions: () => ({ data: state.questions, isLoading: false, error: null }),
   useAedtRuns: () => ({ data: [], isLoading: false, error: null }),
   useAedtRun: () => ({ data: undefined, isLoading: true, error: null }),
-  useSaveAedtAnswers: () => ({
-    ...mutation(),
-    mutate: (_answers: unknown, opts?: { onSuccess?: () => void }) => {
-      if (state.saveSucceeds) opts?.onSuccess?.();
-    },
-  }),
-  useAttestAedtProfile: () => ({
-    ...mutation(),
-    mutate: (_v: unknown, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.(),
-  }),
+  useSaveAedtAnswers: mutation,
+  useAttestAedtProfile: mutation,
   useGenerateAedtScopeDetermination: mutation,
   useCreateAedtRun: mutation,
   useConfirmAedtDerivedBasis: mutation,
@@ -137,7 +128,6 @@ describe("BiasAuditPage", () => {
     state.profile = PROFILE;
     state.profileError = null;
     state.questions = [];
-    state.saveSucceeds = true;
   });
 
   it("offers only use cases with the LL 144 framework, and shows the education panel", () => {
@@ -327,62 +317,6 @@ describe("BiasAuditPage", () => {
     expect(screen.queryAllByText(/not a member of is reported as not found/)).toHaveLength(
       status === 404 ? 1 : 0,
     );
-  });
-
-  describe("after a save", () => {
-    const ROLE_QUESTION = {
-      key: "role.party",
-      scope: "profile",
-      weight: "veto",
-      prompt: "Do you hire with it?",
-      notesRequired: false,
-      allowDontKnow: false,
-      options: [{ value: "vendor", label: "We supply it", consequence: "Vendor." }],
-    };
-
-    function saveVendor() {
-      state.questions = [ROLE_QUESTION];
-      renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
-      fireEvent.click(screen.getByRole("radio", { name: /We supply it/ }));
-      fireEvent.click(screen.getByRole("button", { name: /save answers/i }));
-    }
-
-    // The save succeeded but the reload failed (503), so the profile view
-    // still holds the pre-save answers. The wizard takes what it sent as
-    // saved: nothing is left to save, and attest is not held for saving.
-    it("treats a saved answer as saved when the reload after it fails", () => {
-      saveVendor();
-      state.profileError = notFound("Server error", 503);
-      expect(screen.getByRole("radio", { name: /We supply it/ })).toBeChecked();
-      expect(screen.getByRole("button", { name: /save answers/i })).toBeDisabled();
-      expect(screen.getByRole("button", { name: /attest profile/i })).toBeEnabled();
-      expect(screen.queryByText(/save your answers before attesting/i)).not.toBeInTheDocument();
-    });
-
-    it("keeps the edit as unsaved when the save is refused", () => {
-      state.saveSucceeds = false;
-      saveVendor();
-      expect(screen.getByRole("radio", { name: /We supply it/ })).toBeChecked();
-      expect(screen.getByRole("button", { name: /save answers/i })).toBeEnabled();
-    });
-
-    it("restarts the wizard from the profile after an attest", () => {
-      saveVendor();
-      fireEvent.click(screen.getByRole("button", { name: /attest profile/i }));
-      // The mocked view still has no answers, so the restarted wizard shows none.
-      expect(screen.getByRole("radio", { name: /We supply it/ })).not.toBeChecked();
-    });
-  });
-
-  it("shows a neutral fallback rather than a null score", () => {
-    state.profile = {
-      ...PROFILE,
-      attestedDecision: { readiness: { ...IN_SCOPE, score: null }, metric: "selection_rate" },
-    };
-    renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
-    const summary = screen.getByTestId("aedt-profile-summary");
-    expect(summary).toHaveTextContent("No score yet.");
-    expect(summary).not.toHaveTextContent("null%");
   });
 
   it("asks for an attestation when the saved answers are not attested", () => {

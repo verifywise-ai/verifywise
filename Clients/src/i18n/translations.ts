@@ -10677,6 +10677,13 @@ export const translations: Record<string, Record<string, string>> = {
       "Es wurde noch keine Feststellung zum Anwendungsbereich erstellt.",
     "SHA-256": "SHA-256",
     "Superseded by a later attestation": "Durch eine spätere Attestierung ersetzt",
+    "These edits cannot be saved. Answer those questions or discard the edits before saving or attesting:":
+      "Diese Änderungen können nicht gespeichert werden. Beantworten Sie diese Fragen oder verwerfen Sie die Änderungen vor dem Speichern oder Attestieren:",
+    "Your answers were saved. Reload the page to continue.":
+      "Ihre Antworten wurden gespeichert. Laden Sie die Seite neu, um fortzufahren.",
+    "The profile was attested. Reload the page to continue.":
+      "Das Profil wurde attestiert. Laden Sie die Seite neu, um fortzufahren.",
+    "Reload the page": "Seite neu laden",
     "No score yet.": "Noch kein Wert.",
     "Scope is not established. Answer these deciding questions before a score can be shown:":
       "Der Anwendungsbereich ist nicht festgestellt. Beantworten Sie diese entscheidenden Fragen, bevor ein Wert angezeigt werden kann:",
@@ -10692,8 +10699,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Runs and scope determinations follow the attested version until you attest the draft.":
       "Läufe und Feststellungen zum Anwendungsbereich folgen der attestierten Version, bis Sie den Entwurf attestieren.",
     "Deciding questions still open in the draft:": "Im Entwurf noch offene entscheidende Fragen:",
-    "These edits cannot be saved, so saving or attesting would lose them:":
-      "Diese Änderungen können nicht gespeichert werden; beim Speichern oder Attestieren gingen sie verloren:",
     "(no longer applies)": "(trifft nicht mehr zu)",
     "(notes without an answer)": "(Notizen ohne Antwort)",
     "Discard these edits": "Diese Änderungen verwerfen",
@@ -21369,6 +21374,13 @@ export const translations: Record<string, Record<string, string>> = {
       "Aucune détermination du champ d’application n’a encore été générée.",
     "SHA-256": "SHA-256",
     "Superseded by a later attestation": "Remplacée par une attestation ultérieure",
+    "These edits cannot be saved. Answer those questions or discard the edits before saving or attesting:":
+      "Ces modifications ne peuvent pas être enregistrées. Répondez à ces questions ou abandonnez les modifications avant d’enregistrer ou d’attester :",
+    "Your answers were saved. Reload the page to continue.":
+      "Vos réponses ont été enregistrées. Rechargez la page pour continuer.",
+    "The profile was attested. Reload the page to continue.":
+      "Le profil a été attesté. Rechargez la page pour continuer.",
+    "Reload the page": "Recharger la page",
     "No score yet.": "Pas encore de score.",
     "Scope is not established. Answer these deciding questions before a score can be shown:":
       "Le champ d’application n’est pas établi. Répondez à ces questions décisives avant qu’un score puisse être affiché :",
@@ -21385,8 +21397,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Les exécutions et les déterminations du champ d’application suivent la version attestée jusqu’à ce que vous attestiez le brouillon.",
     "Deciding questions still open in the draft:":
       "Questions décisives encore ouvertes dans le brouillon :",
-    "These edits cannot be saved, so saving or attesting would lose them:":
-      "Ces modifications ne peuvent pas être enregistrées ; elles seraient perdues à l’enregistrement ou à l’attestation :",
     "(no longer applies)": "(ne s’applique plus)",
     "(notes without an answer)": "(notes sans réponse)",
     "Discard these edits": "Abandonner ces modifications",
@@ -31979,6 +31989,13 @@ export const translations: Record<string, Record<string, string>> = {
       "Aún no se ha generado ninguna determinación del ámbito.",
     "SHA-256": "SHA-256",
     "Superseded by a later attestation": "Sustituida por una atestación posterior",
+    "These edits cannot be saved. Answer those questions or discard the edits before saving or attesting:":
+      "Estos cambios no se pueden guardar. Responda esas preguntas o descarte los cambios antes de guardar o atestiguar:",
+    "Your answers were saved. Reload the page to continue.":
+      "Sus respuestas se guardaron. Vuelva a cargar la página para continuar.",
+    "The profile was attested. Reload the page to continue.":
+      "El perfil fue atestiguado. Vuelva a cargar la página para continuar.",
+    "Reload the page": "Volver a cargar la página",
     "No score yet.": "Aún no hay puntuación.",
     "Scope is not established. Answer these deciding questions before a score can be shown:":
       "El ámbito no está establecido. Responda estas preguntas decisivas antes de que se pueda mostrar una puntuación:",
@@ -31995,8 +32012,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Las ejecuciones y las determinaciones del ámbito siguen la versión atestiguada hasta que atestigüe el borrador.",
     "Deciding questions still open in the draft:":
       "Preguntas decisivas aún abiertas en el borrador:",
-    "These edits cannot be saved, so saving or attesting would lose them:":
-      "Estos cambios no se pueden guardar; se perderían al guardar o atestiguar:",
     "(no longer applies)": "(ya no aplica)",
     "(notes without an answer)": "(notas sin respuesta)",
     "Discard these edits": "Descartar estos cambios",

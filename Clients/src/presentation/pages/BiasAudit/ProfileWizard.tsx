@@ -38,12 +38,7 @@ export interface ProfileWizardProps {
   profileStatus: string | null;
   canEdit: boolean;
   canAttest: boolean;
-  /**
-   * Saves the answers; the page calls `onSaved` once the server accepted
-   * them. The wizard then takes them as its saved baseline, whether or not
-   * the profile view reloads.
-   */
-  onSave: (answers: AedtAnswerInput[], onSaved: () => void) => void;
+  onSave: (answers: AedtAnswerInput[]) => void;
   onAttest: () => void;
   isSaving?: boolean;
   isAttesting?: boolean;
@@ -79,10 +74,9 @@ function dontKnowConsequence(q: AedtQuestion): string {
  * with the reason named, while a deciding question is open or answers are
  * unsaved, rather than failing on submit.
  *
- * It follows the saved answers it is given without remounting: untouched
- * questions take the new saved values and edits in progress are kept. Mount
- * it with a new `key` only when it must restart (another profile version,
- * or after an attest).
+ * Saved answers come from the `answers` prop; the wizard keeps only the edits
+ * on top of them. Inputs, Save and Attest are locked while a save or attest
+ * is pending.
  */
 const ProfileWizard = ({
   questions,
@@ -96,31 +90,15 @@ const ProfileWizard = ({
   isAttesting = false,
   errorMessage = null,
 }: ProfileWizardProps) => {
-  // The saved baseline: the server's answers, plus what this wizard saved
-  // since they were last loaded (the reload after a save can fail).
-  const [savedDraft, setSavedDraft] = useState(() => draftFrom(answers));
-  const [draft, setDraft] = useState<Record<string, DraftAnswer>>(() => draftFrom(answers));
-  const [dirty, setDirty] = useState<Set<string>>(() => new Set());
-  // Set once this wizard saves, since the server then holds a draft even if
-  // the profile view still says "attested".
-  const [savedHere, setSavedHere] = useState(false);
-
-  // New answers from the server rebase the baseline; untouched questions
-  // follow them, edits in progress stay (React's "adjust state on a prop
-  // change" pattern, no effect).
-  const [answersSeen, setAnswersSeen] = useState(answers);
-  if (answers !== answersSeen) {
-    const server = draftFrom(answers);
-    setAnswersSeen(answers);
-    setSavedDraft(server);
-    setSavedHere(false);
-    setDraft((prev) => {
-      const next = { ...server };
-      for (const k of dirty) if (prev[k]) next[k] = prev[k];
-      return next;
-    });
-  }
-  const status = savedHere ? "draft" : profileStatus;
+  // Saved answers are whatever the profile query holds. Local state is only
+  // the edits on top of them, so a refetch shows the server's answers for
+  // every question the user has not touched.
+  const savedDraft = useMemo(() => draftFrom(answers), [answers]);
+  const [edits, setEdits] = useState<Record<string, DraftAnswer>>({});
+  const draft = useMemo(() => ({ ...savedDraft, ...edits }), [savedDraft, edits]);
+  // While a save or attest is in flight nothing can change, so nothing on
+  // screen can be lost when the result loads.
+  const locked = isSaving || isAttesting;
 
   const visible = useMemo(
     () => questions.filter((q) => evaluatePredicate(q.appliesWhen, draft)),
@@ -130,79 +108,55 @@ const ProfileWizard = ({
   const groups = useMemo(() => groupQuestions(visible), [visible]);
 
   const update = (key: string, patch: Partial<DraftAnswer>) => {
-    setDraft((prev) => ({
-      ...prev,
-      [key]: { ...(prev[key] ?? EMPTY_ANSWER), ...patch },
-    }));
-    setDirty((prev) => new Set(prev).add(key));
+    setEdits((prev) => ({ ...prev, [key]: { ...(draft[key] ?? EMPTY_ANSWER), ...patch } }));
   };
 
   // ---- save
 
   // Only these changes can be saved: visible questions with an answer that
-  // differs from the saved one. An edit put back to the saved answer is no
-  // change; saving it would file an identical version and re-attribute it.
+  // differs from the saved one. An edit put back to the saved answer, or one
+  // the server now holds, is no change.
   const changed = (k: string) => !sameAnswer(draft[k], savedDraft[k] ?? EMPTY_ANSWER);
-  const pending = visible.filter(
-    (q) => dirty.has(q.key) && isAnswered(draft[q.key]) && changed(q.key),
-  );
+  const edited = Object.keys(edits).filter(changed);
+  const pending = visible.filter((q) => edited.includes(q.key) && isAnswered(draft[q.key]));
 
   // Edits Save cannot send: notes on a question with no answer, or an answer
-  // to a question a later answer has hidden. They would be lost when the
-  // wizard restarts after a save or attest, so they are named, can be
-  // discarded, and hold attest back. Typing and then undoing is no edit.
+  // to a question a later answer has hidden. They are named, can be
+  // discarded, and hold Save and Attest back, so a save that restarts the
+  // wizard (a new version) cannot drop them.
   const visibleKeys = new Set(visible.map((q) => q.key));
   const pendingKeys = new Set(pending.map((q) => q.key));
-  const unsaveable = [...dirty]
-    .filter((k) => !pendingKeys.has(k) && changed(k))
+  const unsaveable = edited
+    .filter((k) => !pendingKeys.has(k))
     .map((k) => ({ key: k, hidden: !visibleKeys.has(k) }));
 
   const discardUnsaveable = () => {
-    const keys = unsaveable.map((u) => u.key);
-    setDraft((prev) => {
+    setEdits((prev) => {
       const next = { ...prev };
-      for (const k of keys) {
-        if (savedDraft[k]) next[k] = savedDraft[k];
-        else delete next[k];
-      }
-      return next;
-    });
-    setDirty((prev) => {
-      const next = new Set(prev);
-      for (const k of keys) next.delete(k);
+      for (const u of unsaveable) delete next[u.key];
       return next;
     });
   };
   const missingNotes = pending.filter(
     (q) => q.notesRequired && !draft[q.key].dontKnow && draft[q.key].notes.trim() === "",
   );
-  const saveDisabled = !canEdit || isSaving || pending.length === 0 || missingNotes.length > 0;
+  const saveDisabled =
+    !canEdit || locked || pending.length === 0 || missingNotes.length > 0 || unsaveable.length > 0;
 
   const handleSave = () => {
     if (saveDisabled) return;
-    const sent = pending.map((q) => {
-      const a = draft[q.key];
-      const notes = a.notes.trim();
-      return {
-        questionKey: q.key,
-        value: a.dontKnow ? null : a.value,
-        notes: notes === "" ? null : notes,
-        dontKnow: a.dontKnow,
-      };
-    });
-    onSave(sent, () => {
-      // What the server accepted is now the saved baseline: those keys are
-      // no longer unsaved, and Save will not send (and re-attribute) them.
-      const accepted = draftFrom(sent);
-      setSavedDraft((prev) => ({ ...prev, ...accepted }));
-      setDraft((prev) => ({ ...prev, ...accepted }));
-      setDirty((prev) => {
-        const next = new Set(prev);
-        for (const a of sent) next.delete(a.questionKey);
-        return next;
-      });
-      setSavedHere(true);
-    });
+    onSave(
+      pending.map((q) => {
+        const a = draft[q.key];
+        const notes = a.notes.trim();
+        return {
+          questionKey: q.key,
+          value: a.dontKnow ? null : a.value,
+          notes: notes === "" ? null : notes,
+          dontKnow: a.dontKnow,
+        };
+      }),
+    );
   };
 
   // ---- attest: read from the saved answers, since attest records those.
@@ -218,14 +172,14 @@ const ProfileWizard = ({
 
   let attestReason: string | null = null;
   if (!canAttest) attestReason = "Only an Admin can attest the profile.";
-  else if (pending.length > 0 || status === null)
+  else if (pending.length > 0 || profileStatus === null)
     attestReason = "Save your answers before attesting.";
   else if (unsaveable.length > 0)
     attestReason =
       "Some edits cannot be saved. Answer those questions or discard the edits before attesting.";
-  else if (status === "attested")
+  else if (profileStatus === "attested")
     attestReason = "This version is attested. Change an answer to start a new version.";
-  const attestDisabled = isAttesting || attestReason !== null || openVetoes.length > 0;
+  const attestDisabled = locked || attestReason !== null || openVetoes.length > 0;
 
   return (
     <Stack gap="16px">
@@ -246,7 +200,7 @@ const ProfileWizard = ({
                   key={q.key}
                   question={q}
                   answer={draft[q.key]}
-                  disabled={!canEdit}
+                  disabled={!canEdit || locked}
                   onChange={(patch) => update(q.key, patch)}
                 />
               ))}
@@ -287,7 +241,8 @@ const ProfileWizard = ({
           {unsaveable.length > 0 && (
             <Box data-testid="unsaveable-edits">
               <Typography sx={{ fontSize: 12, color: palette.status.warning.text }}>
-                These edits cannot be saved, so saving or attesting would lose them:
+                These edits cannot be saved. Answer those questions or discard the edits before
+                saving or attesting:
               </Typography>
               <Box component="ul" sx={{ m: 0, pl: "18px", mb: "8px" }}>
                 {unsaveable.map((u) => (
@@ -307,6 +262,7 @@ const ProfileWizard = ({
                 text="Discard these edits"
                 testId="aedt-discard-unsaveable"
                 onClick={discardUnsaveable}
+                isDisabled={locked}
               />
             </Box>
           )}
