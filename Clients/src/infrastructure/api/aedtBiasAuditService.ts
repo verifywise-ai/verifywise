@@ -380,7 +380,15 @@ class AedtBiasAuditService {
       `${BASE}/runs/trend`,
       options({ params: { projectId, frameworkId } }),
     );
-    return unwrap<AedtTrendSeries>(res.data);
+    const series = unwrap<AedtTrendSeries>(res.data);
+    // Fail closed: only an explicit false clears a point of the caveat.
+    return {
+      ...series,
+      segments: series.segments.map((segment) => ({
+        ...segment,
+        points: segment.points.map((p) => ({ ...p, caveat: p.caveat !== false })),
+      })),
+    };
   }
 
   async getRun(runId: number): Promise<AedtRunView> {

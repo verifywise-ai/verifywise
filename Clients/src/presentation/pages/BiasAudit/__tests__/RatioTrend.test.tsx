@@ -1,3 +1,4 @@
+import type React from "react";
 import type { ReactNode } from "react";
 import { screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -14,28 +15,55 @@ vi.mock("../../../../application/repository/aedtBiasAudit.repository", async (im
 
 // jsdom has no layout, so recharts would draw nothing. These stand-ins
 // expose what the chart was asked to draw.
-vi.mock("recharts", () => ({
-  ResponsiveContainer: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  LineChart: ({ children, data }: { children: ReactNode; data: unknown[] }) => (
-    <div data-testid="line-chart" data-rows={JSON.stringify(data)}>
-      {children}
-    </div>
-  ),
-  Line: ({ dataKey, connectNulls }: { dataKey: string; connectNulls?: boolean }) => (
-    <div data-testid="line" data-key={dataKey} data-connect-nulls={String(connectNulls)} />
-  ),
-  ReferenceLine: ({ x, y }: { x?: number; y?: number }) => (
-    <div data-testid="reference-line" data-x={x ?? ""} data-y={y ?? ""} />
-  ),
-  CartesianGrid: () => null,
-  XAxis: ({ ticks, tickFormatter }: { ticks: number[]; tickFormatter: (x: number) => string }) => (
-    <div data-testid="x-ticks">{ticks.map((t) => tickFormatter(t)).join("|")}</div>
-  ),
-  YAxis: () => null,
-  Tooltip: () => null,
-}));
+vi.mock("recharts", async () => {
+  const { cloneElement, isValidElement } = await import("react");
+  return {
+    ResponsiveContainer: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+    LineChart: ({ children, data }: { children: ReactNode; data: unknown[] }) => (
+      <div data-testid="line-chart" data-rows={JSON.stringify(data)}>
+        {children}
+      </div>
+    ),
+    Line: ({
+      dataKey,
+      connectNulls,
+      activeDot,
+    }: {
+      dataKey: string;
+      connectNulls?: boolean;
+      activeDot?: unknown;
+    }) => (
+      <div data-testid="line" data-key={dataKey} data-connect-nulls={String(connectNulls)}>
+        {/* The hovered point, drawn as recharts would for a caveated run. */}
+        {isValidElement(activeDot) && (
+          <svg data-testid={`active-dot-${dataKey}`}>
+            {cloneElement(activeDot as React.ReactElement<Record<string, unknown>>, {
+              cx: 1,
+              cy: 1,
+              payload: { caveat: true, flagged: false },
+            })}
+          </svg>
+        )}
+      </div>
+    ),
+    ReferenceLine: ({ x, y }: { x?: number; y?: number }) => (
+      <div data-testid="reference-line" data-x={x ?? ""} data-y={y ?? ""} />
+    ),
+    CartesianGrid: () => null,
+    XAxis: ({
+      ticks,
+      tickFormatter,
+    }: {
+      ticks: number[];
+      tickFormatter: (x: number) => string;
+    }) => <div data-testid="x-ticks">{ticks.map((t) => tickFormatter(t)).join("|")}</div>,
+    YAxis: () => null,
+    Tooltip: () => null,
+  };
+});
 
 import RatioTrend, { RatioTrendSection } from "../RatioTrend";
+import { palette } from "../../../themes/palette";
 
 const oneSegment: AedtTrendSeries = {
   segments: [
@@ -356,5 +384,42 @@ describe("RatioTrend review fixes", () => {
     expect(screen.getByTestId("aedt-trend-segment-0")).toHaveTextContent(
       "Job description commercial ae",
     );
+  });
+});
+
+describe("RatioTrend caveat edges", () => {
+  const segment = oneSegment.segments[0];
+  const nullCaveated = {
+    runId: 5,
+    date: "2026-06-10",
+    category: null,
+    lowestRatio: null,
+    flagged: false,
+    caveat: true,
+  };
+
+  it("does not claim a ratio is shown for a caveated run with no ratio", () => {
+    render({
+      segments: [{ ...segment, points: [...segment.points, nullCaveated] }],
+      breaks: [],
+    });
+    const row = screen.getByTestId("aedt-trend-point-5");
+    expect(row).toHaveTextContent("No impact ratio was computed for this run.");
+    expect(row).not.toHaveTextContent("shown with that caveat");
+  });
+
+  it("explains hollow points only when one is drawn", () => {
+    render({
+      segments: [{ ...segment, points: [...segment.points, nullCaveated] }],
+      breaks: [],
+    });
+    expect(screen.queryByTestId("aedt-trend-caveat")).not.toBeInTheDocument();
+  });
+
+  it("keeps a caveated point hollow when it is hovered", () => {
+    render(oneSegment);
+    const circle = screen.getByTestId("active-dot-s0").querySelector("circle")!;
+    expect(circle).toHaveAttribute("fill", palette.background.main);
+    expect(circle).toHaveAttribute("r", "5");
   });
 });

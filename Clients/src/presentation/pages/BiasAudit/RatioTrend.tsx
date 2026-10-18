@@ -58,7 +58,10 @@ const METRIC_LABEL: Record<string, string> = {
 
 type FormatDate = ReturnType<typeof useFormattedDate>;
 
-/** What a caveated run's note says, in the table and the tooltip. */
+/**
+ * What a caveated run's note says, in the table and the tooltip; only where
+ * a ratio is shown, since the note claims one.
+ */
 const CAVEAT_NOTE =
   "The data checks did not clear this run for export, so its ratio is shown with that caveat.";
 
@@ -136,7 +139,7 @@ const TrendTooltip = ({ active, payload, formatDate }: TooltipProps) => {
           {categoryLabel(row.category)}
         </Typography>
       )}
-      {row.caveat && (
+      {row.caveat && row.lowestRatio !== null && (
         <Typography sx={{ fontSize: 12, color: palette.text.secondary, maxWidth: "240px" }}>
           {CAVEAT_NOTE}
         </Typography>
@@ -149,19 +152,28 @@ interface DotProps {
   cx?: number;
   cy?: number;
   payload?: ChartRow;
+  /** Radius; the hovered point is drawn larger in the same style. */
+  size?: number;
 }
 
 /**
  * A flagged run's point in the warning colour, every other point in the
  * line's. A run the data checks did not clear is hollow.
  */
-const TrendDot = ({ cx, cy, payload }: DotProps) => {
+const TrendDot = ({ cx, cy, payload, size = 4 }: DotProps) => {
   if (cx == null || cy == null || !payload) return <g />;
   const color = payload.flagged ? palette.status.warning.text : palette.brand.primary;
   return payload.caveat ? (
-    <circle cx={cx} cy={cy} r={4} fill={palette.background.main} stroke={color} strokeWidth={2} />
+    <circle
+      cx={cx}
+      cy={cy}
+      r={size}
+      fill={palette.background.main}
+      stroke={color}
+      strokeWidth={2}
+    />
   ) : (
-    <circle cx={cx} cy={cy} r={4} fill={color} stroke={color} />
+    <circle cx={cx} cy={cy} r={size} fill={color} stroke={color} />
   );
 };
 
@@ -224,7 +236,7 @@ const PointsTable = ({
                 ) : p.flagged ? (
                   <span>Below 0.80</span>
                 ) : null}
-                {p.caveat && <span>{CAVEAT_NOTE}</span>}
+                {p.caveat && p.lowestRatio !== null && <span>{CAVEAT_NOTE}</span>}
               </Stack>
             </TableCell>
           </TableRow>
@@ -295,7 +307,8 @@ const RatioTrend = ({ series }: RatioTrendProps) => {
     const at = rows.findIndex((r) => r.runId === b.afterRunId);
     return { number: i + 1, x: at === -1 ? null : at + 0.5, afterRunId: b.afterRunId };
   });
-  const hasCaveat = rows.some((r) => r.caveat);
+  // The hollow-point caption only when a hollow point is drawn.
+  const hasCaveat = rows.some((r) => r.caveat && r.lowestRatio !== null);
   // Short ticks; the run id keeps two runs on one day apart.
   const tickLabel = (x: number) => {
     const row = rows[x];
@@ -358,7 +371,7 @@ const RatioTrend = ({ series }: RatioTrendProps) => {
                   strokeWidth={2}
                   connectNulls={false}
                   dot={<TrendDot />}
-                  activeDot={{ r: 5 }}
+                  activeDot={<TrendDot size={5} />}
                   isAnimationActive={false}
                 />
               ))}
