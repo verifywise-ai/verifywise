@@ -16,6 +16,7 @@ import {
   getAedtProfile,
   getAedtQuestions,
   getAedtRun,
+  getAedtRunTrend,
   listAedtRuns,
   saveAedtAnswers,
   type AedtAnswerInput,
@@ -27,6 +28,8 @@ export const aedtQueryKeys = {
   questions: (projectId: number) => [...aedtQueryKeys.project(projectId), "questions"] as const,
   profile: (projectId: number) => [...aedtQueryKeys.project(projectId), "profile"] as const,
   runs: (projectId: number) => [...aedtQueryKeys.project(projectId), "runs"] as const,
+  /** Under `runs`, so a new run, which invalidates the run list, refreshes the trend too. */
+  trend: (projectId: number) => [...aedtQueryKeys.runs(projectId), "trend"] as const,
   run: (runId: number) => [...aedtQueryKeys.all, "run", runId] as const,
 };
 
@@ -62,6 +65,15 @@ export function useAedtRuns(projectId: number | null) {
   return useQuery({
     queryKey: aedtQueryKeys.runs(projectId ?? 0),
     queryFn: () => listAedtRuns(projectId as number),
+    enabled: projectId !== null,
+    ...NO_RETRY,
+  });
+}
+
+export function useAedtRunTrend(projectId: number | null) {
+  return useQuery({
+    queryKey: aedtQueryKeys.trend(projectId ?? 0),
+    queryFn: () => getAedtRunTrend(projectId as number),
     enabled: projectId !== null,
     ...NO_RETRY,
   });

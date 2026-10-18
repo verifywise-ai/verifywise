@@ -28,6 +28,8 @@ import { palette } from "../../themes/palette";
 import EducationPanel from "./EducationPanel";
 import StancePanel from "./StancePanel";
 import PersonLabel from "./PersonLabel";
+import { RatioTrendSection } from "./RatioTrend";
+import { categoryLabel } from "./categoryLabels";
 import { cardSx, cellSx, headSx, titleSx, twoColumnSx } from "./styles";
 
 interface RunDetailProps {
@@ -58,12 +60,6 @@ const BASIS_LABEL: Record<string, string> = {
   test_attribute: "Test data: the characteristics are not recorded",
   test_availability: "Test data: the records exist but are not ours",
   not_applicable: "Not applicable",
-};
-
-const CATEGORY_LABEL: Record<string, string> = {
-  sex: "Sex",
-  race_ethnicity: "Race or ethnicity",
-  intersectional: "Sex by race or ethnicity",
 };
 
 const pct = (n: number) => `${(n * 100).toFixed(1)}%`;
@@ -221,7 +217,7 @@ const DerivedBasis = ({ runId, basis, canAttest }: BasisProps) => {
         {basis.perCategory.map((c) => (
           <Box key={c.category}>
             <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary }}>
-              {CATEGORY_LABEL[c.category] ?? c.category}
+              {categoryLabel(c.category)}
             </Typography>
             <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
               {BASIS_LABEL[c.basis] ?? c.basis}
@@ -383,6 +379,8 @@ const RunDetail = ({ runId, canEdit, canAttest, onBack }: RunDetailProps) => {
         isGenerating={generate.isPending}
         generateError={generate.error ? describeAedtError(generate.error).message : null}
       />
+
+      <RatioTrendSection projectId={run.project_id} />
     </Stack>
   );
 };

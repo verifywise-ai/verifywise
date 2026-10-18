@@ -10779,6 +10779,28 @@ export const translations: Record<string, Record<string, string>> = {
       "Die Datenprüfungen halten den Export für diesen Lauf zurück, daher kann daraus keine Stellungnahme erstellt werden.",
     "Something went wrong. Please try again later.":
       "Etwas ist schiefgelaufen. Bitte versuchen Sie es später erneut.",
+    // LL 144 ratio trend
+    "Lowest impact ratio across runs": "Niedrigstes Auswirkungsverhältnis über die Läufe",
+    "Each point is the lowest impact ratio of any group in one run. The line breaks wherever the profile, question set, job description or measure changed, and each break says what changed.":
+      "Jeder Punkt ist das niedrigste Auswirkungsverhältnis einer Gruppe in einem Lauf. Die Linie bricht überall dort ab, wo sich Profil, Fragenkatalog, Stellenbeschreibung oder Kennzahl geändert haben, und jede Unterbrechung nennt, was sich geändert hat.",
+    "The dashed line at 0.80 marks the EEOC four-fifths convention. Local Law 144 does not adopt it: a ratio below it is a number to report and investigate, and a ratio above it is not a clearance.":
+      "Die gestrichelte Linie bei 0,80 markiert die Vier-Fünftel-Konvention der EEOC. Local Law 144 übernimmt sie nicht: Ein Verhältnis darunter ist eine Zahl, die zu berichten und zu untersuchen ist, und ein Verhältnis darüber ist keine Entlastung.",
+    "Not enough runs to show a trend yet. A trend needs two or more runs that computed impact ratios.":
+      "Noch nicht genügend Läufe für einen Verlauf. Ein Verlauf braucht zwei oder mehr Läufe, die Auswirkungsverhältnisse berechnet haben.",
+    "Lowest impact ratio": "Niedrigstes Auswirkungsverhältnis",
+    "No impact ratio was computed for this run.":
+      "Für diesen Lauf wurde kein Auswirkungsverhältnis berechnet.",
+    "Question set": "Fragenkatalog",
+    "Job description": "Stellenbeschreibung",
+    "Break": "Unterbrechung",
+    "The line stops here because:": "Die Linie endet hier, weil:",
+    "Runs either side of a break are not comparable, so they are not joined by a line.":
+      "Läufe auf beiden Seiten einer Unterbrechung sind nicht vergleichbar und werden daher nicht durch eine Linie verbunden.",
+    "the AEDT profile was changed": "das AEDT-Profil geändert wurde",
+    "the question set was revised": "der Fragenkatalog überarbeitet wurde",
+    "a different job description was tested": "eine andere Stellenbeschreibung getestet wurde",
+    "the measure changed between a selection rate and a scoring rate":
+      "die Kennzahl zwischen einer Auswahlrate und einer Bewertungsrate gewechselt hat",
   },
 
   fr: {
@@ -21478,6 +21500,28 @@ export const translations: Record<string, Record<string, string>> = {
       "Les contrôles des données bloquent l’export de cette exécution, aucune prise de position ne peut donc en être générée.",
     "Something went wrong. Please try again later.":
       "Une erreur s’est produite. Veuillez réessayer plus tard.",
+    // LL 144 ratio trend
+    "Lowest impact ratio across runs": "Ratio d’impact le plus bas d’une exécution à l’autre",
+    "Each point is the lowest impact ratio of any group in one run. The line breaks wherever the profile, question set, job description or measure changed, and each break says what changed.":
+      "Chaque point est le ratio d’impact le plus bas d’un groupe dans une exécution. La ligne s’interrompt partout où le profil, le jeu de questions, la description de poste ou la mesure a changé, et chaque interruption indique ce qui a changé.",
+    "The dashed line at 0.80 marks the EEOC four-fifths convention. Local Law 144 does not adopt it: a ratio below it is a number to report and investigate, and a ratio above it is not a clearance.":
+      "La ligne pointillée à 0,80 marque la convention des quatre cinquièmes de l’EEOC. La Local Law 144 ne l’adopte pas : un ratio inférieur est un chiffre à déclarer et à examiner, et un ratio supérieur ne vaut pas quitus.",
+    "Not enough runs to show a trend yet. A trend needs two or more runs that computed impact ratios.":
+      "Pas encore assez d’exécutions pour afficher une tendance. Une tendance nécessite au moins deux exécutions ayant calculé des ratios d’impact.",
+    "Lowest impact ratio": "Ratio d’impact le plus bas",
+    "No impact ratio was computed for this run.":
+      "Aucun ratio d’impact n’a été calculé pour cette exécution.",
+    "Question set": "Jeu de questions",
+    "Job description": "Description de poste",
+    "Break": "Interruption",
+    "The line stops here because:": "La ligne s’arrête ici parce que :",
+    "Runs either side of a break are not comparable, so they are not joined by a line.":
+      "Les exécutions de part et d’autre d’une interruption ne sont pas comparables ; elles ne sont donc pas reliées par une ligne.",
+    "the AEDT profile was changed": "le profil AEDT a été modifié",
+    "the question set was revised": "le jeu de questions a été révisé",
+    "a different job description was tested": "une autre description de poste a été testée",
+    "the measure changed between a selection rate and a scoring rate":
+      "la mesure est passée d’un taux de sélection à un taux de notation, ou l’inverse",
   },
   es: {
     // Agent Control monitor only mode
@@ -32090,5 +32134,27 @@ export const translations: Record<string, Record<string, string>> = {
       "Las comprobaciones de datos retienen la exportación de esta ejecución, por lo que no se puede generar una posición a partir de ella.",
     "Something went wrong. Please try again later.":
       "Algo salió mal. Inténtelo de nuevo más tarde.",
+    // LL 144 ratio trend
+    "Lowest impact ratio across runs": "Ratio de impacto más bajo entre ejecuciones",
+    "Each point is the lowest impact ratio of any group in one run. The line breaks wherever the profile, question set, job description or measure changed, and each break says what changed.":
+      "Cada punto es el ratio de impacto más bajo de cualquier grupo en una ejecución. La línea se interrumpe allí donde cambió el perfil, el conjunto de preguntas, la descripción del puesto o la medida, y cada interrupción indica qué cambió.",
+    "The dashed line at 0.80 marks the EEOC four-fifths convention. Local Law 144 does not adopt it: a ratio below it is a number to report and investigate, and a ratio above it is not a clearance.":
+      "La línea discontinua en 0,80 marca la convención de los cuatro quintos de la EEOC. La Local Law 144 no la adopta: un ratio inferior es una cifra que hay que comunicar e investigar, y un ratio superior no es una autorización.",
+    "Not enough runs to show a trend yet. A trend needs two or more runs that computed impact ratios.":
+      "Todavía no hay suficientes ejecuciones para mostrar una tendencia. Una tendencia necesita dos o más ejecuciones que hayan calculado ratios de impacto.",
+    "Lowest impact ratio": "Ratio de impacto más bajo",
+    "No impact ratio was computed for this run.":
+      "No se calculó ningún ratio de impacto para esta ejecución.",
+    "Question set": "Conjunto de preguntas",
+    "Job description": "Descripción del puesto",
+    "Break": "Interrupción",
+    "The line stops here because:": "La línea se detiene aquí porque:",
+    "Runs either side of a break are not comparable, so they are not joined by a line.":
+      "Las ejecuciones a ambos lados de una interrupción no son comparables, por lo que no se unen con una línea.",
+    "the AEDT profile was changed": "se modificó el perfil AEDT",
+    "the question set was revised": "se revisó el conjunto de preguntas",
+    "a different job description was tested": "se probó otra descripción del puesto",
+    "the measure changed between a selection rate and a scoring rate":
+      "la medida cambió entre una tasa de selección y una tasa de puntuación",
   },
 };

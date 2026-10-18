@@ -33,6 +33,10 @@ export type {
   AedtScopeDetermination,
   AedtStanceCreated,
   AedtStanceRow,
+  AedtTrendBreak,
+  AedtTrendPoint,
+  AedtTrendSegment,
+  AedtTrendSeries,
 } from "../../infrastructure/api/aedtBiasAuditService";
 
 /** The one framework this module serves (NYC Local Law 144, `Servers/structures`). */
@@ -63,6 +67,9 @@ export const createAedtRun = (projectId: number, file: File, mapping: Record<str
 
 export const listAedtRuns = (projectId: number) =>
   aedtBiasAuditService.listRuns(projectId, LL144_FRAMEWORK_ID);
+
+export const getAedtRunTrend = (projectId: number) =>
+  aedtBiasAuditService.getRunTrend(projectId, LL144_FRAMEWORK_ID);
 
 export const getAedtRun = (runId: number) => aedtBiasAuditService.getRun(runId);
 

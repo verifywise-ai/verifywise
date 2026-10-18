@@ -233,6 +233,37 @@ export interface AedtStanceCreated {
   sha256: string;
 }
 
+/** One run on the trend: the lowest impact ratio of any non-excluded group. */
+export interface AedtTrendPoint {
+  runId: number;
+  date: string;
+  /** The table holding the lowest ratio; null when the run produced no ratio. */
+  category: string | null;
+  lowestRatio: number | null;
+  /** Whether any non-excluded group in the run was flagged. */
+  flagged: boolean;
+}
+
+/** Runs measured under one configuration, which may be compared with each other. */
+export interface AedtTrendSegment {
+  profileVersion: number;
+  questionSetVersion: number;
+  jobDescriptionKey: string | null;
+  metric: string;
+  points: AedtTrendPoint[];
+}
+
+/** Where the configuration changed, and in plain words what changed. */
+export interface AedtTrendBreak {
+  afterRunId: number;
+  reasons: string[];
+}
+
+export interface AedtTrendSeries {
+  segments: AedtTrendSegment[];
+  breaks: AedtTrendBreak[];
+}
+
 export interface AedtStanceDownload {
   blob: Blob;
   /** The raw Content-Disposition header, when the browser exposes it. */
@@ -339,6 +370,15 @@ class AedtBiasAuditService {
       options({ params: { projectId, frameworkId } }),
     );
     return unwrap<{ runs: AedtRunSummary[] }>(res.data).runs;
+  }
+
+  /** The ratio trend, built on the server; raw run results are not returned. */
+  async getRunTrend(projectId: number, frameworkId: number): Promise<AedtTrendSeries> {
+    const res = await CustomAxios.get(
+      `${BASE}/runs/trend`,
+      options({ params: { projectId, frameworkId } }),
+    );
+    return unwrap<AedtTrendSeries>(res.data);
   }
 
   async getRun(runId: number): Promise<AedtRunView> {

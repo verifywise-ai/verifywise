@@ -20,6 +20,8 @@ const repo = vi.hoisted(() => ({
   listAedtRuns: vi.fn(),
   saveAedtAnswers: vi.fn(),
   attestAedtProfile: vi.fn(),
+  getAedtRun: vi.fn(),
+  getAedtRunTrend: vi.fn(),
 }));
 
 vi.mock("../../../../application/repository/aedtBiasAudit.repository", async (importOriginal) => ({
@@ -212,5 +214,74 @@ describe("BiasAuditPage save and attest", () => {
     // Page level: still there on another tab.
     fireEvent.click(screen.getByRole("tab", { name: /runs/i }));
     expect(screen.getByTestId("aedt-reload-required")).toBeInTheDocument();
+  });
+});
+
+describe("BiasAuditPage run detail", () => {
+  beforeEach(() => {
+    Object.values(repo).forEach((f) => f.mockReset());
+    repo.getAedtQuestions.mockResolvedValue([ROLE]);
+    repo.getAedtProfile.mockResolvedValue(view(1, "attested", "employer"));
+    repo.listAedtRuns.mockResolvedValue([
+      {
+        id: 11,
+        profile_id: 1,
+        profile_version: 1,
+        question_set_version: 1,
+        job_description_key: null,
+        metric: "selection_rate",
+        readiness_score: 100,
+        readiness_blocked_reason: null,
+        expiry_date: "2027-10-17",
+        row_count: 120,
+        dataset_sha256: "abc",
+        has_result: true,
+        created_by: 1,
+        created_at: "2026-10-17T10:00:00.000Z",
+      },
+    ]);
+    repo.getAedtRun.mockResolvedValue({
+      run: {
+        id: 11,
+        project_id: 7,
+        profile_id: 1,
+        profile_version: 1,
+        question_set_version: 1,
+        metric: "selection_rate",
+        result_json: null,
+        gate_findings_json: [],
+        created_by: 1,
+        created_at: "2026-10-17T10:00:00.000Z",
+      },
+      stances: [],
+      mayExportPdf: true,
+    });
+    repo.getAedtRunTrend.mockResolvedValue({
+      segments: [
+        {
+          profileVersion: 1,
+          questionSetVersion: 1,
+          jobDescriptionKey: null,
+          metric: "selection_rate",
+          points: [
+            { runId: 10, date: "2026-07-10", category: "sex", lowestRatio: 0.93, flagged: false },
+            { runId: 11, date: "2026-10-17", category: "sex", lowestRatio: 0.86, flagged: false },
+          ],
+        },
+      ],
+      breaks: [],
+    });
+  });
+
+  it("shows the ratio trend for the use case beneath the run's stance panel", async () => {
+    await renderPage();
+    fireEvent.click(screen.getByRole("tab", { name: /runs/i }));
+    fireEvent.click(await screen.findByTestId("aedt-open-run-11"));
+
+    const trend = await screen.findByTestId("aedt-ratio-trend");
+    expect(repo.getAedtRunTrend).toHaveBeenCalledWith(7);
+    expect(trend).toHaveTextContent("0.860");
+    const stance = screen.getByTestId("education-stance");
+    expect(stance.compareDocumentPosition(trend) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
