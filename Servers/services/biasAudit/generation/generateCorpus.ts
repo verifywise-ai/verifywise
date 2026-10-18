@@ -64,7 +64,7 @@ export interface CreateCorpusArgs {
 const KNOCKOUTS: readonly Knockout[] = ["yes", "no", "dont_know"];
 const ORDER_ATTRIBUTES: OrderAttribute[] = ["sex", "raceEthnicity", "tierKey"];
 /** Attempts per record, across every pass, before it is left out. */
-const MAX_ATTEMPTS = 3;
+export const MAX_ATTEMPTS = 5;
 /** The runner renews its lease this often while it runs. */
 export const HEARTBEAT_INTERVAL_MS = 30_000;
 /** A lease not renewed for this long may be claimed by another runner. */

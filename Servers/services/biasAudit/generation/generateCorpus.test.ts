@@ -46,6 +46,7 @@ import {
   jobDescriptionSha256,
   LEASE_SECONDS,
   LeaseLostError,
+  MAX_ATTEMPTS,
   runCorpusGeneration,
 } from "./generateCorpus";
 
@@ -335,16 +336,26 @@ describe("runCorpusGeneration", () => {
     ]);
   });
 
-  it("gives up on a record after 3 attempts, counting attempts from earlier passes", async () => {
+  const attempts = (n: number) => [...Array(n)].map((_, i) => i + 1);
+
+  it("allows five attempts per record (ruling)", () => {
+    expect(MAX_ATTEMPTS).toBe(5);
+  });
+
+  it("gives up on a record after MAX_ATTEMPTS, counting attempts from earlier passes", async () => {
     seedLog([
       ...logFor(699),
-      { ...logFor(700)[699], attempt: 1, validation_status: "invalid", text: "" },
-      { ...logFor(700)[699], attempt: 2, validation_status: "invalid", text: "" },
+      ...attempts(MAX_ATTEMPTS - 1).map((attempt) => ({
+        ...logFor(700)[699],
+        attempt,
+        validation_status: "invalid" as const,
+        text: "",
+      })),
     ]);
     mockComplete.mockResolvedValue(ok("m1", "  "));
     const out = await run();
     expect(mockComplete).toHaveBeenCalledTimes(1);
-    expect(mockUtils.appendCorpusRecordQuery.mock.calls[0][0].attempt).toBe(3);
+    expect(mockUtils.appendCorpusRecordQuery.mock.calls[0][0].attempt).toBe(MAX_ATTEMPTS);
     expect(out.recordCount).toBe(699);
     expect(done().manifest.map((r: any) => r.candidateId)).not.toContain("C0700");
   });
@@ -353,7 +364,7 @@ describe("runCorpusGeneration", () => {
     // One record out of 700 leaves its cell at 49, under MIN_PER_CELL = 50.
     seedLog([
       ...logFor(699),
-      ...[1, 2, 3].map((attempt) => ({
+      ...attempts(MAX_ATTEMPTS).map((attempt) => ({
         ...logFor(700)[699],
         attempt,
         validation_status: "invalid" as const,
@@ -368,7 +379,11 @@ describe("runCorpusGeneration", () => {
   it("never completes a corpus with no valid records", async () => {
     seedLog(
       logFor(700).flatMap((r) =>
-        [1, 2, 3].map((attempt) => ({ ...r, attempt, validation_status: "invalid" as const })),
+        attempts(MAX_ATTEMPTS).map((attempt) => ({
+          ...r,
+          attempt,
+          validation_status: "invalid" as const,
+        })),
       ),
     );
     await expect(run()).resolves.toMatchObject({ status: "blocked", recordCount: 0 });
