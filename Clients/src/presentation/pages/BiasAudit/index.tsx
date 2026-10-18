@@ -36,6 +36,7 @@ import {
   LL144_FRAMEWORK_ID,
   type AedtAnswerInput,
   type AedtProfileView,
+  type AedtReadiness,
   type AedtRunSummary,
 } from "../../../application/repository/aedtBiasAudit.repository";
 import { palette } from "../../themes/palette";
@@ -45,16 +46,7 @@ import RunDetail from "./RunDetail";
 import StancePanel from "./StancePanel";
 import PersonLabel from "./PersonLabel";
 import { questionTitle } from "./intakeLayout";
-
-const cardSx = {
-  border: `1px solid ${palette.border.dark}`,
-  borderRadius: "4px",
-  backgroundColor: palette.background.main,
-  p: "16px",
-} as const;
-
-const cellSx = { fontSize: 13, color: palette.text.secondary, py: "8px" } as const;
-const headSx = { fontSize: 12, fontWeight: 600, color: palette.text.tertiary, py: "8px" } as const;
+import { cardSx, cellSx, headSx } from "./styles";
 
 /**
  * NYC Local Law 144 bias audit module: the profile intake, runs against an
@@ -204,12 +196,15 @@ const ProjectWorkspace = ({
   };
 
   const actionError = save.error ?? attest.error;
-  const outOfScope = profile.readiness.scope === "out_of_scope";
+  // Runs and scope determinations act on the attested profile, never on a
+  // draft ahead of it, so both are gated on what the attested answers decide.
+  const decision = profile.attestedDecision;
+  const outOfScope = decision?.readiness.scope === "out_of_scope";
 
   const runBlockedReason = !profile.attested
     ? "Attest the profile before recording a run. A run records the attested answers it was measured against."
     : outOfScope
-      ? "On your scope answer the module does not run its measures. Generate a scope determination instead."
+      ? "The attested profile places the tool out of scope, so the module does not run its measures. Generate a scope determination instead."
       : null;
 
   const scopeBlockedReason = !canEdit
@@ -217,7 +212,7 @@ const ProjectWorkspace = ({
     : !profile.attested
       ? "Attest the profile first. A scope determination cites the attested answers."
       : !outOfScope
-        ? "A scope determination is available only when your answers place the tool out of scope. Otherwise the stance comes from a run."
+        ? "A scope determination is available only when the attested answers place the tool out of scope. Otherwise the stance comes from a run."
         : null;
 
   return (
@@ -264,8 +259,7 @@ const ProjectWorkspace = ({
           <Stack gap="16px">
             <RunUpload
               projectId={projectId}
-              questions={questionsQuery.data ?? []}
-              answers={profile.answers}
+              metric={decision?.metric ?? null}
               canEdit={canEdit}
               blockedReason={runBlockedReason}
               onCreated={setSelectedRun}
@@ -293,12 +287,29 @@ const ProjectWorkspace = ({
   );
 };
 
+/** What a draft's scope is, said against the attested version it differs from. */
+const DRAFT_SCOPE_NOTE: Record<AedtReadiness["scope"], string> = {
+  out_of_scope:
+    "Your draft answers place the tool out of scope, unlike the attested version. Runs and scope determinations follow the attested version until you attest the draft.",
+  in_scope:
+    "Your draft answers place the tool in scope, unlike the attested version. Runs and scope determinations follow the attested version until you attest the draft.",
+  undetermined:
+    "Your draft answers leave scope undetermined, unlike the attested version. Runs and scope determinations follow the attested version until you attest the draft.",
+};
+
 const ProfileSummary = ({ profile }: { profile: AedtProfileView }) => {
   const formatDate = useFormattedDate();
-  const { readiness, attested } = profile;
+  const { attested, attestedDecision } = profile;
   const current = profile.profile;
   const draftAhead =
     current && attested && current.status === "draft" && current.id !== attested.id;
+  // The attested readiness is what runs and scope determinations act on; the
+  // saved answers' readiness stands in only while nothing is attested.
+  const readiness = attestedDecision?.readiness ?? profile.readiness;
+  const draft = profile.readiness;
+  const draftScopeDiffers = draftAhead && attestedDecision && draft.scope !== readiness.scope;
+  const draftScoreDiffers =
+    draftAhead && !draftScopeDiffers && draft.score !== null && draft.score !== readiness.score;
 
   return (
     <Box
@@ -332,7 +343,7 @@ const ProfileSummary = ({ profile }: { profile: AedtProfileView }) => {
             </Typography>
           </Stack>
         )}
-        {draftAhead && (
+        {draftAhead && !draftScopeDiffers && (
           <Typography sx={{ fontSize: 12, color: palette.status.warning.text }}>
             Runs use the attested version until you attest this draft.
           </Typography>
@@ -341,10 +352,17 @@ const ProfileSummary = ({ profile }: { profile: AedtProfileView }) => {
 
       <Stack gap="8px">
         <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>Readiness</Typography>
+        {!attestedDecision && current && (
+          <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+            From your saved answers. Nothing is attested yet, so no run or scope determination can
+            be recorded.
+          </Typography>
+        )}
         {readiness.scope === "out_of_scope" ? (
           <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
-            On your answer, the tool&apos;s output is one input among several with no extra weight.
-            No score is shown; you can generate a scope determination instead of a run.
+            {attestedDecision
+              ? "On the attested answers, the tool's output is one input among several with no extra weight. No score is shown; you can generate a scope determination instead of a run."
+              : "On your saved answers, the tool's output is one input among several with no extra weight. No score is shown. Attest the profile to generate a scope determination."}
           </Typography>
         ) : readiness.score === null ? (
           <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
@@ -355,20 +373,37 @@ const ProfileSummary = ({ profile }: { profile: AedtProfileView }) => {
             {`${readiness.score}%`}
           </Typography>
         )}
+        {draftScopeDiffers && (
+          <Typography
+            sx={{ fontSize: 12, color: palette.status.warning.text }}
+            data-testid="aedt-draft-differs"
+          >
+            {DRAFT_SCOPE_NOTE[draft.scope]}
+          </Typography>
+        )}
+        {draftScoreDiffers && (
+          <Typography
+            sx={{ fontSize: 12, color: palette.status.warning.text }}
+            data-testid="aedt-draft-differs"
+          >
+            <span>Draft readiness</span> <span>{`${draft.score}%`}</span>
+          </Typography>
+        )}
         <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
           The readiness score is VerifyWise&apos;s own measure of how close you are to commissioning
           an independent audit. No regulator recognises it.
         </Typography>
-        {readiness.openItems.length > 0 && (
+        {/* Open items are work for the wizard, so they follow the answers being edited. */}
+        {draft.openItems.length > 0 && (
           <Box>
             <Stack direction="row" alignItems="center" gap="6px">
               <ListChecks size={14} strokeWidth={1.5} color={palette.text.tertiary} />
               <Typography sx={{ fontSize: 12, fontWeight: 600, color: palette.text.tertiary }}>
-                Open items
+                {draftAhead ? "Open items in your draft" : "Open items"}
               </Typography>
             </Stack>
             <Box component="ul" sx={{ m: 0, pl: "18px" }}>
-              {readiness.openItems.map((item) => (
+              {draft.openItems.map((item) => (
                 <Typography
                   component="li"
                   key={item.key}

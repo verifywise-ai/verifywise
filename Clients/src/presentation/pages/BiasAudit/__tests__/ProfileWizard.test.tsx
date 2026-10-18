@@ -311,6 +311,20 @@ describe("ProfileWizard: attest", () => {
     ).toBeInTheDocument();
   });
 
+  // Notes on a question with no answer cannot be saved, so they must not
+  // leave Save and Attest both disabled.
+  it("is not held back by notes typed on an unanswered question", () => {
+    const { onAttest } = renderWizard({ answers: ALL_VETOES, profileStatus: "draft" });
+    fireEvent.change(within(question("cutoff.applied_by")).getByRole("textbox"), {
+      target: { value: "Still checking with the vendor." },
+    });
+    expect(screen.getByRole("button", { name: /save answers/i })).toBeDisabled();
+    const attest = screen.getByRole("button", { name: /attest/i });
+    expect(attest).toBeEnabled();
+    fireEvent.click(attest);
+    expect(onAttest).toHaveBeenCalledTimes(1);
+  });
+
   it("explains why when the caller may not attest", () => {
     renderWizard({ answers: ALL_VETOES, profileStatus: "draft", canAttest: false });
     expect(screen.getByRole("button", { name: /attest/i })).toBeDisabled();

@@ -11,6 +11,7 @@ import type {
 } from "../../../application/repository/aedtBiasAudit.repository";
 import EducationPanel from "./EducationPanel";
 import { evaluatePredicate, groupQuestions, hasUsableAnswer, questionTitle } from "./intakeLayout";
+import { cardSx, titleSx } from "./styles";
 
 const DONT_KNOW = "__dont_know__";
 /** Held in a constant: the i18n audit's attribute scan stops at a straight apostrophe. */
@@ -25,7 +26,10 @@ interface DraftAnswer {
 }
 
 export interface ProfileWizardProps {
-  /** The questions the server says apply to the saved answers. */
+  /**
+   * The whole question set with each question's `appliesWhen`. The wizard
+   * shows those that apply to the answers on screen, saved or not.
+   */
   questions: AedtQuestion[];
   /** The saved answers of the profile being edited. */
   answers: AedtProfileAnswer[];
@@ -99,6 +103,8 @@ const ProfileWizard = ({
 
   // ---- save
 
+  // Only these changes can be saved. An edit that cannot (notes typed on an
+  // unanswered question, or a question hidden by a later answer) is not one.
   const pending = visible.filter((q) => dirty.has(q.key) && isAnswered(draft[q.key]));
   const missingNotes = pending.filter(
     (q) => q.notesRequired && !draft[q.key].dontKnow && draft[q.key].notes.trim() === "",
@@ -131,7 +137,7 @@ const ProfileWizard = ({
 
   let attestReason: string | null = null;
   if (!canAttest) attestReason = "Only an Admin can attest the profile.";
-  else if (dirty.size > 0 || profileStatus === null)
+  else if (pending.length > 0 || profileStatus === null)
     attestReason = "Save your answers before attesting.";
   else if (profileStatus === "attested")
     attestReason = "This version is attested. Change an answer to start a new version.";
@@ -140,22 +146,8 @@ const ProfileWizard = ({
   return (
     <Stack gap="16px">
       {groups.map(({ section, questions: sectionQuestions }) => (
-        <Box
-          key={section.id}
-          component="section"
-          data-testid={`section-${section.id}`}
-          sx={{
-            border: `1px solid ${palette.border.dark}`,
-            borderRadius: "4px",
-            backgroundColor: palette.background.main,
-            p: "16px",
-          }}
-        >
-          <Typography
-            sx={{ fontSize: 15, fontWeight: 600, color: palette.text.primary, mb: "12px" }}
-          >
-            {section.title}
-          </Typography>
+        <Box key={section.id} component="section" data-testid={`section-${section.id}`} sx={cardSx}>
+          <Typography sx={{ ...titleSx, mb: "12px" }}>{section.title}</Typography>
           <Box
             sx={{
               display: "grid",
@@ -188,10 +180,7 @@ const ProfileWizard = ({
 
       <Box
         sx={{
-          border: `1px solid ${palette.border.dark}`,
-          borderRadius: "4px",
-          backgroundColor: palette.background.main,
-          p: "16px",
+          ...cardSx,
           display: "grid",
           gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
           gap: "16px",

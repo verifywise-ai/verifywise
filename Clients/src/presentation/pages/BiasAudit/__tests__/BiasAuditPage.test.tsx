@@ -2,7 +2,10 @@ import { fireEvent, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AxiosError, AxiosHeaders } from "axios";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
-import type { AedtProfileView } from "../../../../infrastructure/api/aedtBiasAuditService";
+import type {
+  AedtProfileView,
+  AedtReadiness,
+} from "../../../../infrastructure/api/aedtBiasAuditService";
 
 const state = vi.hoisted(() => ({
   role: "Admin",
@@ -51,20 +54,33 @@ vi.mock("../../../../application/hooks/useAedtBiasAudit", () => ({
 
 import BiasAuditPage from "..";
 
+const OUT_OF_SCOPE: AedtReadiness = {
+  score: null,
+  blockedReason: null,
+  missingVetoes: [],
+  openItems: [],
+  scope: "out_of_scope",
+  earned: 0,
+  possible: 0,
+};
+
+const IN_SCOPE: AedtReadiness = {
+  score: 60,
+  blockedReason: null,
+  missingVetoes: [],
+  openItems: [],
+  scope: "in_scope",
+  earned: 3,
+  possible: 5,
+};
+
 const PROFILE: AedtProfileView = {
   project: { id: 7, title: "Screening tool" },
   profile: { id: 3, version: 2, status: "attested" },
   attested: { id: 3, version: 2, attestedByUserId: 1, attestedAt: "2026-10-01T10:00:00.000Z" },
   answers: [],
-  readiness: {
-    score: null,
-    blockedReason: null,
-    missingVetoes: [],
-    openItems: [],
-    scope: "out_of_scope",
-    earned: 0,
-    possible: 0,
-  },
+  readiness: OUT_OF_SCOPE,
+  attestedDecision: { readiness: OUT_OF_SCOPE, metric: null },
   scopeDeterminations: [
     {
       id: 21,
@@ -144,5 +160,81 @@ describe("BiasAuditPage", () => {
     expect(screen.getByText(/does not run its measures/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /run measures/i })).toBeDisabled();
     expect(screen.getByTestId("education-run.upload")).toBeInTheDocument();
+  });
+
+  describe("a draft ahead of the attested version", () => {
+    const draftAhead = (draft: AedtReadiness, attested: AedtProfileView["attestedDecision"]) => ({
+      ...PROFILE,
+      profile: { id: 4, version: 3, status: "draft" },
+      readiness: draft,
+      attestedDecision: attested,
+    });
+
+    it("lets a run go ahead on an in-scope attested profile while the draft is out of scope", () => {
+      state.profile = draftAhead(OUT_OF_SCOPE, { readiness: IN_SCOPE, metric: "scoring_rate" });
+      renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
+      expect(screen.getByTestId("aedt-draft-differs")).toHaveTextContent(
+        /draft answers place the tool out of scope, unlike the attested version/,
+      );
+      // The summary shows the attested score, which runs act on.
+      expect(screen.getByText("60%")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("tab", { name: /runs/i }));
+      expect(screen.queryByText(/does not run its measures/)).not.toBeInTheDocument();
+      expect(
+        screen.getByText(/attested cutoff answer means this run computes scoring rates/),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /choose csv file/i })).not.toBeDisabled();
+    });
+
+    it("refuses a scope determination while only the draft is out of scope", () => {
+      state.profile = draftAhead(OUT_OF_SCOPE, { readiness: IN_SCOPE, metric: "selection_rate" });
+      renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
+      fireEvent.click(screen.getByRole("tab", { name: /scope determination/i }));
+      expect(
+        screen.getByText(/only when the attested answers place the tool out of scope/),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /generate scope determination/i })).toBeDisabled();
+    });
+
+    it("offers a scope determination on an out-of-scope attested profile while the draft is in scope", () => {
+      state.profile = draftAhead(IN_SCOPE, { readiness: OUT_OF_SCOPE, metric: null });
+      renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
+      expect(screen.getByTestId("aedt-draft-differs")).toHaveTextContent(
+        /draft answers place the tool in scope/,
+      );
+      fireEvent.click(screen.getByRole("tab", { name: /scope determination/i }));
+      expect(
+        screen.getByRole("button", { name: /generate scope determination/i }),
+      ).not.toBeDisabled();
+      fireEvent.click(screen.getByRole("tab", { name: /runs/i }));
+      expect(screen.getByText(/attested profile places the tool out of scope/)).toBeInTheDocument();
+    });
+
+    it("names the draft's score when only the score differs", () => {
+      state.profile = draftAhead(
+        { ...IN_SCOPE, score: 80 },
+        { readiness: IN_SCOPE, metric: "selection_rate" },
+      );
+      renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
+      expect(screen.getByTestId("aedt-draft-differs")).toHaveTextContent("Draft readiness 80%");
+      expect(
+        screen.getByText(/runs use the attested version until you attest/i),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("asks for an attestation when the saved answers are not attested", () => {
+    state.profile = {
+      ...PROFILE,
+      attested: null,
+      profile: { id: 4, version: 1, status: "draft" },
+      attestedDecision: null,
+      scopeDeterminations: [],
+    };
+    renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
+    expect(screen.getByText(/nothing is attested yet/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: /scope determination/i }));
+    expect(screen.getByRole("button", { name: /generate scope determination/i })).toBeDisabled();
   });
 });

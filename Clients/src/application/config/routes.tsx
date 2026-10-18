@@ -222,11 +222,7 @@ const WizardShowcase = lazyRoute(() => import("../../presentation/pages/WizardSh
 // Check if we're in development mode
 const isDev = import.meta.env.DEV;
 
-export const createRoutes = (
-  triggerSidebar: boolean,
-
-  _triggerSidebarReload: () => void,
-) => [
+export const createRoutes = (triggerSidebar: boolean, _triggerSidebarReload: () => void) => [
   // ReactFlow Demo - Development only (must be before dashboard route)
   ...(isDev
     ? [

@@ -7,42 +7,28 @@ import { palette } from "../../themes/palette";
 import { useCreateAedtRun } from "../../../application/hooks/useAedtBiasAudit";
 import {
   describeAedtError,
-  type AedtProfileAnswer,
-  type AedtQuestion,
+  type AedtRunMetric,
 } from "../../../application/repository/aedtBiasAudit.repository";
 import EducationPanel from "./EducationPanel";
 import { readCsvHeaders } from "./csvHeaders";
+import { cardSx, titleSx, twoColumnSx } from "./styles";
 
 /** The server's upload limit (`DATASET_MAX_BYTES`, 30 MB). */
 const MAX_BYTES = 30 * 1024 * 1024;
 const UNMAPPED = "";
 
-type Metric = "selection_rate" | "scoring_rate";
-
 interface RunUploadProps {
   projectId: number;
-  /** Questions and answers of the profile, to tell which rate the run computes. */
-  questions: AedtQuestion[];
-  answers: AedtProfileAnswer[];
+  /**
+   * The rate the ATTESTED profile forces (the profile view's
+   * `attestedDecision.metric`), which is what the server computes. Null when
+   * it forces none.
+   */
+  metric: AedtRunMetric | null;
   canEdit: boolean;
   /** Null when a run may be recorded; otherwise why not. */
   blockedReason: string | null;
   onCreated: (runId: number) => void;
-}
-
-/**
- * The rate the cutoff answer forces, read from the option's own
- * `metric_forced` consequence as the server reads it. Null until answered.
- */
-function forcedMetric(questions: AedtQuestion[], answers: AedtProfileAnswer[]): Metric | null {
-  const q = questions.find((x) => x.key === "cutoff.applied_by");
-  const a = answers.find((x) => x.questionKey === "cutoff.applied_by");
-  if (!q || !a || a.dontKnow || a.value === null) return null;
-  const emit = q.options
-    .find((o) => o.value === a.value)
-    ?.emits?.find((e) => e.kind === "metric_forced");
-  const metric = emit?.payload?.metric ?? emit?.text;
-  return metric === "selection_rate" || metric === "scoring_rate" ? metric : null;
 }
 
 /**
@@ -51,22 +37,16 @@ function forcedMetric(questions: AedtQuestion[], answers: AedtProfileAnswer[]): 
  * it. A mapped column the file lacks is reported by the server as a fault in
  * the mapping, not in the data.
  */
-const RunUpload = ({
-  projectId,
-  questions,
-  answers,
-  canEdit,
-  blockedReason,
-  onCreated,
-}: RunUploadProps) => {
+const RunUpload = ({ projectId, metric, canEdit, blockedReason, onCreated }: RunUploadProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [headers, setHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [fileError, setFileError] = useState<string | null>(null);
+  // Each pick bumps this, so a slow header read for an earlier file cannot
+  // overwrite the state of a later one.
+  const pickRef = useRef(0);
   const createRun = useCreateAedtRun(projectId);
-
-  const metric = useMemo(() => forcedMetric(questions, answers), [questions, answers]);
 
   const fields = useMemo(
     () => [
@@ -80,6 +60,7 @@ const RunUpload = ({
   );
 
   const handleFile = async (picked: File | undefined) => {
+    const pick = ++pickRef.current;
     setFileError(null);
     setFile(null);
     setHeaders([]);
@@ -96,6 +77,7 @@ const RunUpload = ({
     }
     try {
       const found = await readCsvHeaders(picked);
+      if (pick !== pickRef.current) return;
       if (found.length === 0) {
         setFileError("The file has no header row. Put the column names on the first line.");
         return;
@@ -103,6 +85,7 @@ const RunUpload = ({
       setFile(picked);
       setHeaders(found);
     } catch {
+      if (pick !== pickRef.current) return;
       setFileError("The file could not be read. Choose it again.");
     }
   };
@@ -113,7 +96,7 @@ const RunUpload = ({
     (!canEdit
       ? "Only an Admin or Editor can record a run."
       : metric === null
-        ? "Answer who applies the cutoff, save and attest the profile, so the module knows whether to compute selection rates or scoring rates."
+        ? "The attested profile does not say who applies the cutoff. Answer it, save and attest again, so the module knows whether to compute selection rates or scoring rates."
         : null);
   const runDisabled = runReason !== null || !file || !mapping[outcomeKey] || createRun.isPending;
 
@@ -131,35 +114,19 @@ const RunUpload = ({
   const runError = createRun.error ? describeAedtError(createRun.error).message : null;
 
   return (
-    <Box
-      sx={{
-        display: "grid",
-        gridTemplateColumns: { xs: "1fr", lg: "3fr 2fr" },
-        gap: "16px",
-        alignItems: "start",
-      }}
-    >
-      <Box
-        sx={{
-          border: `1px solid ${palette.border.dark}`,
-          borderRadius: "4px",
-          backgroundColor: palette.background.main,
-          p: "16px",
-        }}
-      >
+    <Box sx={twoColumnSx}>
+      <Box sx={cardSx}>
         <Stack gap="16px">
           <Box>
-            <Typography sx={{ fontSize: 15, fontWeight: 600, color: palette.text.primary }}>
-              New run
-            </Typography>
+            <Typography sx={titleSx}>New run</Typography>
             <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "4px" }}>
               Upload one CSV file with a row per candidate, then say which column holds each value.
             </Typography>
             {metric && (
               <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "4px" }}>
                 {metric === "scoring_rate"
-                  ? "Your cutoff answer means this run computes scoring rates under 5-301(c)."
-                  : "Your cutoff answer means this run computes selection rates under 5-301(b)."}
+                  ? "The attested cutoff answer means this run computes scoring rates under 5-301(c)."
+                  : "The attested cutoff answer means this run computes selection rates under 5-301(b)."}
               </Typography>
             )}
           </Box>

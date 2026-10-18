@@ -20,8 +20,10 @@ import {
   type AedtStanceRow,
 } from "../../../application/repository/aedtBiasAudit.repository";
 import { palette } from "../../themes/palette";
+import { triggerBrowserDownload } from "../../utils/browserDownload.utils";
 import EducationPanel from "./EducationPanel";
 import PersonLabel from "./PersonLabel";
+import { cellSx, headSx, tableFrameSx, titleSx, twoColumnSx } from "./styles";
 
 export interface StancePanelProps {
   /** "run" for a run's stances; "scope" for scope determinations from the profile. */
@@ -35,18 +37,11 @@ export interface StancePanelProps {
   generateError: string | null;
 }
 
-const cellSx = { fontSize: 13, color: palette.text.secondary, py: "8px" } as const;
-const headSx = { fontSize: 12, fontWeight: 600, color: palette.text.tertiary, py: "8px" } as const;
-
-function saveBlob(blob: Blob, filename: string) {
-  const url = window.URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  window.URL.revokeObjectURL(url);
+interface DownloadError {
+  status: number | null;
+  message: string;
+  /** Whether generating again files a new version of the same document. */
+  canRegenerate: boolean;
 }
 
 /**
@@ -64,19 +59,22 @@ const StancePanel = ({
 }: StancePanelProps) => {
   const formatDate = useFormattedDate();
   const [downloading, setDownloading] = useState<number | null>(null);
-  const [downloadError, setDownloadError] = useState<{
-    status: number | null;
-    message: string;
-  } | null>(null);
+  const [downloadError, setDownloadError] = useState<DownloadError | null>(null);
 
-  const handleDownload = async (stanceId: number) => {
-    setDownloading(stanceId);
+  const handleDownload = async (stance: StancePanelProps["stances"][number]) => {
+    setDownloading(stance.id);
     setDownloadError(null);
     try {
-      const { blob, filename } = await downloadAedtStance(stanceId);
-      saveBlob(blob, filename);
+      const { blob, filename } = await downloadAedtStance(stance.id);
+      triggerBrowserDownload(blob, filename);
     } catch (error) {
-      setDownloadError(describeAedtError(error));
+      // A run's stance is generated again from the same run. A scope
+      // determination is generated from the CURRENT attested profile, so only
+      // the current one can be regenerated; a superseded one cannot.
+      setDownloadError({
+        ...describeAedtError(error),
+        canRegenerate: kind === "run" || stance.isCurrent === true,
+      });
     } finally {
       setDownloading(null);
     }
@@ -87,17 +85,10 @@ const StancePanel = ({
 
   return (
     <Stack gap="16px">
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr", lg: "3fr 2fr" },
-          gap: "16px",
-          alignItems: "start",
-        }}
-      >
+      <Box sx={twoColumnSx}>
         <Stack gap="12px">
           <Stack direction="row" alignItems="center" justifyContent="space-between" gap="8px">
-            <Typography sx={{ fontSize: 15, fontWeight: 600, color: palette.text.primary }}>
+            <Typography sx={titleSx}>
               {kind === "run" ? "Stances" : "Scope determinations"}
             </Typography>
             <CustomizableButton
@@ -126,7 +117,13 @@ const StancePanel = ({
               sx={{ borderRadius: "4px" }}
             >
               <Typography sx={{ fontSize: 13 }}>{downloadError.message}</Typography>
-              {downloadError.status === 410 && canGenerate && (
+              {downloadError.status === 410 && !downloadError.canRegenerate && (
+                <Typography sx={{ fontSize: 13, mt: "4px" }} data-testid="stance-not-regenerable">
+                  This scope determination cites an earlier attestation, so generating it again
+                  would cite the current one instead. Its file is no longer stored.
+                </Typography>
+              )}
+              {downloadError.status === 410 && downloadError.canRegenerate && canGenerate && (
                 <Box sx={{ mt: "8px" }}>
                   <CustomizableButton
                     variant="outlined"
@@ -152,13 +149,7 @@ const StancePanel = ({
               showBorder
             />
           ) : (
-            <Box
-              sx={{
-                border: `1px solid ${palette.border.dark}`,
-                borderRadius: "4px",
-                overflowX: "auto",
-              }}
-            >
+            <Box sx={tableFrameSx}>
               <Table size="small">
                 <TableHead>
                   <TableRow>
@@ -202,7 +193,7 @@ const StancePanel = ({
                           text="Download"
                           testId={`aedt-download-stance-${s.id}`}
                           startIcon={<Download size={14} strokeWidth={1.5} />}
-                          onClick={() => void handleDownload(s.id)}
+                          onClick={() => void handleDownload(s)}
                           isDisabled={downloading !== null}
                           loading={downloading === s.id}
                         />

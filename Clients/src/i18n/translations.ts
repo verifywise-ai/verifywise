@@ -10595,22 +10595,22 @@ export const translations: Record<string, Record<string, string>> = {
     "Scope determinations": "Feststellungen zum Anwendungsbereich",
     "Attest the profile before recording a run. A run records the attested answers it was measured against.":
       "Attestieren Sie das Profil, bevor Sie einen Lauf erfassen. Ein Lauf hält die attestierten Antworten fest, an denen er gemessen wurde.",
-    "On your scope answer the module does not run its measures. Generate a scope determination instead.":
-      "Nach Ihrer Antwort zum Anwendungsbereich führt das Modul seine Messungen nicht durch. Erstellen Sie stattdessen eine Feststellung zum Anwendungsbereich.",
+    "The attested profile places the tool out of scope, so the module does not run its measures. Generate a scope determination instead.":
+      "Das attestierte Profil ordnet das Tool außerhalb des Anwendungsbereichs ein, daher führt das Modul seine Messungen nicht durch. Erstellen Sie stattdessen eine Feststellung zum Anwendungsbereich.",
     "Only an Admin or Editor can generate a scope determination.":
       "Nur ein Admin oder Editor kann eine Feststellung zum Anwendungsbereich erstellen.",
     "Attest the profile first. A scope determination cites the attested answers.":
       "Attestieren Sie zuerst das Profil. Eine Feststellung zum Anwendungsbereich zitiert die attestierten Antworten.",
-    "A scope determination is available only when your answers place the tool out of scope. Otherwise the stance comes from a run.":
-      "Eine Feststellung zum Anwendungsbereich ist nur verfügbar, wenn Ihre Antworten das Tool außerhalb des Anwendungsbereichs einordnen. Andernfalls ergibt sich die Stellungnahme aus einem Lauf.",
+    "A scope determination is available only when the attested answers place the tool out of scope. Otherwise the stance comes from a run.":
+      "Eine Feststellung zum Anwendungsbereich ist nur verfügbar, wenn die attestierten Antworten das Tool außerhalb des Anwendungsbereichs einordnen. Andernfalls ergibt sich die Stellungnahme aus einem Lauf.",
     "No answers saved yet": "Noch keine Antworten gespeichert",
     "Attested": "Attestiert",
     "Attested by": "Attestiert von",
     "Runs use the attested version until you attest this draft.":
       "Läufe verwenden die attestierte Version, bis Sie diesen Entwurf attestieren.",
     "Readiness": "Bereitschaft",
-    "On your answer, the tool's output is one input among several with no extra weight. No score is shown; you can generate a scope determination instead of a run.":
-      "Nach Ihrer Antwort ist die Ausgabe des Tools eine Eingabe unter mehreren ohne zusätzliches Gewicht. Es wird kein Wert angezeigt; Sie können statt eines Laufs eine Feststellung zum Anwendungsbereich erstellen.",
+    "On the attested answers, the tool's output is one input among several with no extra weight. No score is shown; you can generate a scope determination instead of a run.":
+      "Nach den attestierten Antworten ist die Ausgabe des Tools eine Eingabe unter mehreren ohne zusätzliches Gewicht. Es wird kein Wert angezeigt; Sie können statt eines Laufs eine Feststellung zum Anwendungsbereich erstellen.",
     "No score yet.": "Noch kein Wert.",
     "The readiness score is VerifyWise's own measure of how close you are to commissioning an independent audit. No regulator recognises it.":
       "Der Bereitschaftswert ist das eigene Maß von VerifyWise dafür, wie nah Sie daran sind, eine unabhängige Prüfung in Auftrag zu geben. Keine Aufsichtsbehörde erkennt ihn an.",
@@ -10678,13 +10678,27 @@ export const translations: Record<string, Record<string, string>> = {
       "Es wurde noch keine Feststellung zum Anwendungsbereich erstellt.",
     "SHA-256": "SHA-256",
     "Superseded by a later attestation": "Durch eine spätere Attestierung ersetzt",
+    "On your saved answers, the tool's output is one input among several with no extra weight. No score is shown. Attest the profile to generate a scope determination.":
+      "Nach Ihren gespeicherten Antworten ist die Ausgabe des Tools eine Eingabe unter mehreren ohne zusätzliches Gewicht. Es wird kein Wert angezeigt. Attestieren Sie das Profil, um eine Feststellung zum Anwendungsbereich zu erstellen.",
+    "From your saved answers. Nothing is attested yet, so no run or scope determination can be recorded.":
+      "Aus Ihren gespeicherten Antworten. Noch ist nichts attestiert, daher kann weder ein Lauf noch eine Feststellung zum Anwendungsbereich erfasst werden.",
+    "Your draft answers place the tool out of scope, unlike the attested version. Runs and scope determinations follow the attested version until you attest the draft.":
+      "Ihre Entwurfsantworten ordnen das Tool außerhalb des Anwendungsbereichs ein, anders als die attestierte Version. Läufe und Feststellungen zum Anwendungsbereich folgen der attestierten Version, bis Sie den Entwurf attestieren.",
+    "Your draft answers place the tool in scope, unlike the attested version. Runs and scope determinations follow the attested version until you attest the draft.":
+      "Ihre Entwurfsantworten ordnen das Tool innerhalb des Anwendungsbereichs ein, anders als die attestierte Version. Läufe und Feststellungen zum Anwendungsbereich folgen der attestierten Version, bis Sie den Entwurf attestieren.",
+    "Your draft answers leave scope undetermined, unlike the attested version. Runs and scope determinations follow the attested version until you attest the draft.":
+      "Ihre Entwurfsantworten lassen den Anwendungsbereich offen, anders als die attestierte Version. Läufe und Feststellungen zum Anwendungsbereich folgen der attestierten Version, bis Sie den Entwurf attestieren.",
+    "Draft readiness": "Bereitschaft des Entwurfs",
+    "Open items in your draft": "Offene Punkte in Ihrem Entwurf",
+    "This scope determination cites an earlier attestation, so generating it again would cite the current one instead. Its file is no longer stored.":
+      "Diese Feststellung zum Anwendungsbereich zitiert eine frühere Attestierung; eine Neuerstellung würde stattdessen die aktuelle zitieren. Ihre Datei wird nicht mehr gespeichert.",
     "New run": "Neuer Lauf",
     "Upload one CSV file with a row per candidate, then say which column holds each value.":
       "Laden Sie eine CSV-Datei mit einer Zeile pro Kandidat hoch und geben Sie dann an, welche Spalte welchen Wert enthält.",
-    "Your cutoff answer means this run computes scoring rates under 5-301(c).":
-      "Nach Ihrer Antwort zum Schwellenwert berechnet dieser Lauf Bewertungsraten nach 5-301(c).",
-    "Your cutoff answer means this run computes selection rates under 5-301(b).":
-      "Nach Ihrer Antwort zum Schwellenwert berechnet dieser Lauf Auswahlraten nach 5-301(b).",
+    "The attested cutoff answer means this run computes scoring rates under 5-301(c).":
+      "Nach der attestierten Antwort zum Schwellenwert berechnet dieser Lauf Bewertungsraten nach 5-301(c).",
+    "The attested cutoff answer means this run computes selection rates under 5-301(b).":
+      "Nach der attestierten Antwort zum Schwellenwert berechnet dieser Lauf Auswahlraten nach 5-301(b).",
     "Choose CSV file": "CSV-Datei auswählen",
     "Sex column": "Spalte Geschlecht",
     "Race or ethnicity column": "Spalte ethnische Herkunft",
@@ -10694,8 +10708,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Run measures": "Messungen ausführen",
     "Only an Admin or Editor can record a run.":
       "Nur ein Admin oder Editor kann einen Lauf erfassen.",
-    "Answer who applies the cutoff, save and attest the profile, so the module knows whether to compute selection rates or scoring rates.":
-      "Beantworten Sie, wer den Schwellenwert anwendet, speichern und attestieren Sie das Profil, damit das Modul weiß, ob Auswahlraten oder Bewertungsraten zu berechnen sind.",
+    "The attested profile does not say who applies the cutoff. Answer it, save and attest again, so the module knows whether to compute selection rates or scoring rates.":
+      "Das attestierte Profil gibt nicht an, wer den Schwellenwert anwendet. Beantworten Sie dies, speichern und attestieren Sie erneut, damit das Modul weiß, ob Auswahlraten oder Bewertungsraten zu berechnen sind.",
     "Upload the dataset as a .csv file.": "Laden Sie den Datensatz als .csv-Datei hoch.",
     "The dataset is larger than the 30 MB upload limit.":
       "Der Datensatz überschreitet die Upload-Grenze von 30 MB.",
@@ -21258,22 +21272,22 @@ export const translations: Record<string, Record<string, string>> = {
     "Scope determinations": "Déterminations du champ d’application",
     "Attest the profile before recording a run. A run records the attested answers it was measured against.":
       "Attestez le profil avant d’enregistrer une exécution. Une exécution consigne les réponses attestées au regard desquelles elle a été mesurée.",
-    "On your scope answer the module does not run its measures. Generate a scope determination instead.":
-      "Selon votre réponse sur le champ d’application, le module n’exécute pas ses mesures. Générez plutôt une détermination du champ d’application.",
+    "The attested profile places the tool out of scope, so the module does not run its measures. Generate a scope determination instead.":
+      "Le profil attesté place l’outil hors du champ d’application, le module n’exécute donc pas ses mesures. Générez plutôt une détermination du champ d’application.",
     "Only an Admin or Editor can generate a scope determination.":
       "Seul un Admin ou un Éditeur peut générer une détermination du champ d’application.",
     "Attest the profile first. A scope determination cites the attested answers.":
       "Attestez d’abord le profil. Une détermination du champ d’application cite les réponses attestées.",
-    "A scope determination is available only when your answers place the tool out of scope. Otherwise the stance comes from a run.":
-      "Une détermination du champ d’application n’est disponible que si vos réponses placent l’outil hors du champ. Sinon, la prise de position provient d’une exécution.",
+    "A scope determination is available only when the attested answers place the tool out of scope. Otherwise the stance comes from a run.":
+      "Une détermination du champ d’application n’est disponible que si les réponses attestées placent l’outil hors du champ. Sinon, la prise de position provient d’une exécution.",
     "No answers saved yet": "Aucune réponse enregistrée",
     "Attested": "Attesté",
     "Attested by": "Attesté par",
     "Runs use the attested version until you attest this draft.":
       "Les exécutions utilisent la version attestée jusqu’à ce que vous attestiez ce brouillon.",
     "Readiness": "Préparation",
-    "On your answer, the tool's output is one input among several with no extra weight. No score is shown; you can generate a scope determination instead of a run.":
-      "Selon votre réponse, le résultat de l’outil est une donnée parmi d’autres, sans poids supplémentaire. Aucun score n’est affiché ; vous pouvez générer une détermination du champ d’application au lieu d’une exécution.",
+    "On the attested answers, the tool's output is one input among several with no extra weight. No score is shown; you can generate a scope determination instead of a run.":
+      "Selon les réponses attestées, le résultat de l’outil est un élément parmi d’autres, sans poids supplémentaire. Aucun score n’est affiché ; vous pouvez générer une détermination du champ d’application au lieu d’une exécution.",
     "No score yet.": "Pas encore de score.",
     "The readiness score is VerifyWise's own measure of how close you are to commissioning an independent audit. No regulator recognises it.":
       "Le score de préparation est la mesure propre à VerifyWise de votre proximité avec la commande d’un audit indépendant. Aucun régulateur ne le reconnaît.",
@@ -21341,13 +21355,27 @@ export const translations: Record<string, Record<string, string>> = {
       "Aucune détermination du champ d’application n’a encore été générée.",
     "SHA-256": "SHA-256",
     "Superseded by a later attestation": "Remplacée par une attestation ultérieure",
+    "On your saved answers, the tool's output is one input among several with no extra weight. No score is shown. Attest the profile to generate a scope determination.":
+      "Selon vos réponses enregistrées, le résultat de l’outil est un élément parmi d’autres, sans poids supplémentaire. Aucun score n’est affiché. Attestez le profil pour générer une détermination du champ d’application.",
+    "From your saved answers. Nothing is attested yet, so no run or scope determination can be recorded.":
+      "D’après vos réponses enregistrées. Rien n’est encore attesté, donc aucune exécution ni détermination du champ d’application ne peut être enregistrée.",
+    "Your draft answers place the tool out of scope, unlike the attested version. Runs and scope determinations follow the attested version until you attest the draft.":
+      "Les réponses de votre brouillon placent l’outil hors du champ d’application, contrairement à la version attestée. Les exécutions et les déterminations du champ d’application suivent la version attestée jusqu’à ce que vous attestiez le brouillon.",
+    "Your draft answers place the tool in scope, unlike the attested version. Runs and scope determinations follow the attested version until you attest the draft.":
+      "Les réponses de votre brouillon placent l’outil dans le champ d’application, contrairement à la version attestée. Les exécutions et les déterminations du champ d’application suivent la version attestée jusqu’à ce que vous attestiez le brouillon.",
+    "Your draft answers leave scope undetermined, unlike the attested version. Runs and scope determinations follow the attested version until you attest the draft.":
+      "Les réponses de votre brouillon laissent le champ d’application indéterminé, contrairement à la version attestée. Les exécutions et les déterminations du champ d’application suivent la version attestée jusqu’à ce que vous attestiez le brouillon.",
+    "Draft readiness": "Préparation du brouillon",
+    "Open items in your draft": "Points ouverts dans votre brouillon",
+    "This scope determination cites an earlier attestation, so generating it again would cite the current one instead. Its file is no longer stored.":
+      "Cette détermination du champ d’application cite une attestation antérieure ; la générer à nouveau citerait l’attestation actuelle à la place. Son fichier n’est plus conservé.",
     "New run": "Nouvelle exécution",
     "Upload one CSV file with a row per candidate, then say which column holds each value.":
       "Téléversez un fichier CSV avec une ligne par candidat, puis indiquez quelle colonne contient chaque valeur.",
-    "Your cutoff answer means this run computes scoring rates under 5-301(c).":
-      "Selon votre réponse sur le seuil, cette exécution calcule des taux de notation au titre de 5-301(c).",
-    "Your cutoff answer means this run computes selection rates under 5-301(b).":
-      "Selon votre réponse sur le seuil, cette exécution calcule des taux de sélection au titre de 5-301(b).",
+    "The attested cutoff answer means this run computes scoring rates under 5-301(c).":
+      "Selon la réponse attestée sur le seuil, cette exécution calcule des taux de notation au titre de 5-301(c).",
+    "The attested cutoff answer means this run computes selection rates under 5-301(b).":
+      "Selon la réponse attestée sur le seuil, cette exécution calcule des taux de sélection au titre de 5-301(b).",
     "Choose CSV file": "Choisir un fichier CSV",
     "Sex column": "Colonne sexe",
     "Race or ethnicity column": "Colonne race ou origine ethnique",
@@ -21357,8 +21385,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Run measures": "Exécuter les mesures",
     "Only an Admin or Editor can record a run.":
       "Seul un Admin ou un Éditeur peut enregistrer une exécution.",
-    "Answer who applies the cutoff, save and attest the profile, so the module knows whether to compute selection rates or scoring rates.":
-      "Indiquez qui applique le seuil, enregistrez et attestez le profil, afin que le module sache s’il doit calculer des taux de sélection ou des taux de notation.",
+    "The attested profile does not say who applies the cutoff. Answer it, save and attest again, so the module knows whether to compute selection rates or scoring rates.":
+      "Le profil attesté n’indique pas qui applique le seuil. Répondez à cette question, enregistrez et attestez à nouveau, afin que le module sache s’il doit calculer des taux de sélection ou des taux de notation.",
     "Upload the dataset as a .csv file.":
       "Téléversez le jeu de données sous forme de fichier .csv.",
     "The dataset is larger than the 30 MB upload limit.":
@@ -31838,22 +31866,22 @@ export const translations: Record<string, Record<string, string>> = {
     "Scope determinations": "Determinaciones del ámbito",
     "Attest the profile before recording a run. A run records the attested answers it was measured against.":
       "Atestigüe el perfil antes de registrar una ejecución. Una ejecución registra las respuestas atestiguadas con las que se midió.",
-    "On your scope answer the module does not run its measures. Generate a scope determination instead.":
-      "Según su respuesta sobre el ámbito, el módulo no ejecuta sus mediciones. Genere en su lugar una determinación del ámbito.",
+    "The attested profile places the tool out of scope, so the module does not run its measures. Generate a scope determination instead.":
+      "El perfil atestiguado sitúa la herramienta fuera del ámbito, por lo que el módulo no ejecuta sus mediciones. Genere en su lugar una determinación del ámbito.",
     "Only an Admin or Editor can generate a scope determination.":
       "Solo un Admin o un Editor puede generar una determinación del ámbito.",
     "Attest the profile first. A scope determination cites the attested answers.":
       "Atestigüe primero el perfil. Una determinación del ámbito cita las respuestas atestiguadas.",
-    "A scope determination is available only when your answers place the tool out of scope. Otherwise the stance comes from a run.":
-      "Una determinación del ámbito solo está disponible cuando sus respuestas sitúan la herramienta fuera del ámbito. En caso contrario, la posición proviene de una ejecución.",
+    "A scope determination is available only when the attested answers place the tool out of scope. Otherwise the stance comes from a run.":
+      "Una determinación del ámbito solo está disponible cuando las respuestas atestiguadas sitúan la herramienta fuera del ámbito. En caso contrario, la posición proviene de una ejecución.",
     "No answers saved yet": "Aún no hay respuestas guardadas",
     "Attested": "Atestiguado",
     "Attested by": "Atestiguado por",
     "Runs use the attested version until you attest this draft.":
       "Las ejecuciones usan la versión atestiguada hasta que atestigüe este borrador.",
     "Readiness": "Preparación",
-    "On your answer, the tool's output is one input among several with no extra weight. No score is shown; you can generate a scope determination instead of a run.":
-      "Según su respuesta, el resultado de la herramienta es un dato entre varios sin peso adicional. No se muestra ninguna puntuación; puede generar una determinación del ámbito en lugar de una ejecución.",
+    "On the attested answers, the tool's output is one input among several with no extra weight. No score is shown; you can generate a scope determination instead of a run.":
+      "Según las respuestas atestiguadas, el resultado de la herramienta es un elemento entre varios, sin peso adicional. No se muestra ninguna puntuación; puede generar una determinación del ámbito en lugar de una ejecución.",
     "No score yet.": "Aún no hay puntuación.",
     "The readiness score is VerifyWise's own measure of how close you are to commissioning an independent audit. No regulator recognises it.":
       "La puntuación de preparación es la medida propia de VerifyWise de lo cerca que está de encargar una auditoría independiente. Ningún regulador la reconoce.",
@@ -31921,13 +31949,27 @@ export const translations: Record<string, Record<string, string>> = {
       "Aún no se ha generado ninguna determinación del ámbito.",
     "SHA-256": "SHA-256",
     "Superseded by a later attestation": "Sustituida por una atestación posterior",
+    "On your saved answers, the tool's output is one input among several with no extra weight. No score is shown. Attest the profile to generate a scope determination.":
+      "Según sus respuestas guardadas, el resultado de la herramienta es un elemento entre varios, sin peso adicional. No se muestra ninguna puntuación. Atestigüe el perfil para generar una determinación del ámbito.",
+    "From your saved answers. Nothing is attested yet, so no run or scope determination can be recorded.":
+      "Según sus respuestas guardadas. Aún no hay nada atestiguado, por lo que no se puede registrar ninguna ejecución ni determinación del ámbito.",
+    "Your draft answers place the tool out of scope, unlike the attested version. Runs and scope determinations follow the attested version until you attest the draft.":
+      "Las respuestas de su borrador sitúan la herramienta fuera del ámbito, a diferencia de la versión atestiguada. Las ejecuciones y las determinaciones del ámbito siguen la versión atestiguada hasta que atestigüe el borrador.",
+    "Your draft answers place the tool in scope, unlike the attested version. Runs and scope determinations follow the attested version until you attest the draft.":
+      "Las respuestas de su borrador sitúan la herramienta dentro del ámbito, a diferencia de la versión atestiguada. Las ejecuciones y las determinaciones del ámbito siguen la versión atestiguada hasta que atestigüe el borrador.",
+    "Your draft answers leave scope undetermined, unlike the attested version. Runs and scope determinations follow the attested version until you attest the draft.":
+      "Las respuestas de su borrador dejan el ámbito sin determinar, a diferencia de la versión atestiguada. Las ejecuciones y las determinaciones del ámbito siguen la versión atestiguada hasta que atestigüe el borrador.",
+    "Draft readiness": "Preparación del borrador",
+    "Open items in your draft": "Puntos abiertos en su borrador",
+    "This scope determination cites an earlier attestation, so generating it again would cite the current one instead. Its file is no longer stored.":
+      "Esta determinación del ámbito cita una atestiguación anterior; generarla de nuevo citaría la actual en su lugar. Su archivo ya no se conserva.",
     "New run": "Nueva ejecución",
     "Upload one CSV file with a row per candidate, then say which column holds each value.":
       "Suba un archivo CSV con una fila por candidato y luego indique qué columna contiene cada valor.",
-    "Your cutoff answer means this run computes scoring rates under 5-301(c).":
-      "Según su respuesta sobre el umbral, esta ejecución calcula tasas de puntuación conforme a 5-301(c).",
-    "Your cutoff answer means this run computes selection rates under 5-301(b).":
-      "Según su respuesta sobre el umbral, esta ejecución calcula tasas de selección conforme a 5-301(b).",
+    "The attested cutoff answer means this run computes scoring rates under 5-301(c).":
+      "Según la respuesta atestiguada sobre el umbral, esta ejecución calcula tasas de puntuación conforme a 5-301(c).",
+    "The attested cutoff answer means this run computes selection rates under 5-301(b).":
+      "Según la respuesta atestiguada sobre el umbral, esta ejecución calcula tasas de selección conforme a 5-301(b).",
     "Choose CSV file": "Elegir archivo CSV",
     "Sex column": "Columna de sexo",
     "Race or ethnicity column": "Columna de raza o etnia",
@@ -31937,8 +31979,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Run measures": "Ejecutar mediciones",
     "Only an Admin or Editor can record a run.":
       "Solo un Admin o un Editor puede registrar una ejecución.",
-    "Answer who applies the cutoff, save and attest the profile, so the module knows whether to compute selection rates or scoring rates.":
-      "Responda quién aplica el umbral, guarde y atestigüe el perfil, para que el módulo sepa si debe calcular tasas de selección o tasas de puntuación.",
+    "The attested profile does not say who applies the cutoff. Answer it, save and attest again, so the module knows whether to compute selection rates or scoring rates.":
+      "El perfil atestiguado no indica quién aplica el umbral. Respóndalo, guarde y atestigüe de nuevo, para que el módulo sepa si debe calcular tasas de selección o tasas de puntuación.",
     "Upload the dataset as a .csv file.": "Suba el conjunto de datos como archivo .csv.",
     "The dataset is larger than the 30 MB upload limit.":
       "El conjunto de datos supera el límite de carga de 30 MB.",

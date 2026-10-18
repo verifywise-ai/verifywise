@@ -28,6 +28,7 @@ import { palette } from "../../themes/palette";
 import EducationPanel from "./EducationPanel";
 import StancePanel from "./StancePanel";
 import PersonLabel from "./PersonLabel";
+import { cardSx, cellSx, headSx, titleSx, twoColumnSx } from "./styles";
 
 interface RunDetailProps {
   runId: number;
@@ -35,24 +36,6 @@ interface RunDetailProps {
   canAttest: boolean;
   onBack: () => void;
 }
-
-const cardSx = {
-  border: `1px solid ${palette.border.dark}`,
-  borderRadius: "4px",
-  backgroundColor: palette.background.main,
-  p: "16px",
-} as const;
-
-const twoColumnSx = {
-  display: "grid",
-  gridTemplateColumns: { xs: "1fr", lg: "3fr 2fr" },
-  gap: "16px",
-  alignItems: "start",
-} as const;
-
-const titleSx = { fontSize: 15, fontWeight: 600, color: palette.text.primary } as const;
-const cellSx = { fontSize: 13, color: palette.text.secondary, py: "8px" } as const;
-const headSx = { fontSize: 12, fontWeight: 600, color: palette.text.tertiary, py: "8px" } as const;
 
 const SEVERITY_STYLE: Record<
   AedtGateFinding["severity"],
