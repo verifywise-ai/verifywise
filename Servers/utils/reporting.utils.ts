@@ -4,6 +4,7 @@ import { FileModel } from "../domain.layer/models/file/file.model";
 import { QueryTypes, Transaction } from "sequelize";
 import { getVisibleEuCategoryIdsForProject } from "./eu.utils";
 import { assertFileDeletable } from "./fileUpload.utils";
+import { VISIBLE_FILE_REPLACEMENTS, VISIBLE_FILE_SQL } from "./files/visibleFiles";
 import { AnnexStructISOModel } from "../domain.layer/frameworks/ISO-42001/annexStructISO.model";
 import { ClauseStructISOModel } from "../domain.layer/frameworks/ISO-42001/clauseStructISO.model";
 import { ISO27001AnnexStructModel } from "../domain.layer/frameworks/ISO-27001/ISO27001AnnexStruct.model";
@@ -151,11 +152,15 @@ export const deleteReportByIdQuery = async (
   return result.length > 0;
 };
 
+// The report delete route looks up any file id. A bias audit stance PDF
+// answers here exactly as a missing file does (404), so the route discloses
+// neither its existence nor that it is a stance record.
 export const getReportByIdQuery = async (id: number, organizationId: number) => {
   const result = await sequelize.query(
-    `SELECT * FROM files WHERE organization_id = :organizationId AND id = :id`,
+    `SELECT * FROM files
+      WHERE organization_id = :organizationId AND id = :id AND ${VISIBLE_FILE_SQL("files")}`,
     {
-      replacements: { id, organizationId },
+      replacements: { id, organizationId, ...VISIBLE_FILE_REPLACEMENTS },
       mapToModel: true,
       model: FileModel,
     },
