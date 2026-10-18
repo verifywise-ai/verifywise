@@ -10,7 +10,8 @@ Self-service LL 144 module. It has two layers:
 - **The I/O layer**: `profileService.ts`, `runService.ts`, `stanceService.ts`,
   `serviceHelpers.ts`, `projectAccess.ts` and `stance/render.ts`. These read and write the
   module's own tables, read `projects`, `projects_members` and `users` (project access and
-  attribution names), render the stance PDF and store it as a `files` row. Each is listed by
+  attribution names), render the stance PDF, store it as a `files` row and read that row back
+  to serve the download (410 when it is gone). Each is listed by
   exact path, with its reason, in `__tests__/moduleIndependence.test.ts`.
 
 Neither layer imports from EvalServer, AIGateway or another VerifyWise module's services
@@ -165,7 +166,7 @@ non-excluded group, the category holding it, and whether any non-excluded group 
 - **A break**, labelled with every reason, between consecutive plotted runs whose profile
   version, question-set version, job description or metric differ. The job-description reason
   does not fire today: `createRun` never sets `job_description_key`, so every run stores null
-  and runs on different job descriptions plot as one line.
+  and a change of job description alone opens no new segment.
 
 `GET /runs/trend` returns only the series, not the stored results. `GET /runs/:id` does return
 the whole run row, `result_json` included.
@@ -174,7 +175,10 @@ the whole run row, `result_json` included.
 
 Mounted at `/api/bias-audit`, all behind `authenticateJWT`. Project-scoped calls check project
 membership (`projectAccess.ts`) and answer 404 to a non-member. An organization Admin skips
-the membership check and reaches every project in the organization, as with project files.
+the membership check and reaches every project in the organization. SuperAdmin gets no such
+bypass, unlike project files (`canUserAccessFile`). `GET /stances/:id/download` does not use
+`projectAccess.ts`: it also serves the PDF to the user who generated the stance, even after
+they leave the project.
 
 | Method and path                                 | Permission         |
 | ----------------------------------------------- | ------------------ |
@@ -232,9 +236,11 @@ npm run typecheck && npm run lint && npm run i18n:audit:strict && npm run format
 ```
 
 `npm run lint` must report no errors; existing warnings are not counted.
-`__tests__/moduleRules.test.ts`, in the first command, also checks that the SQL text of every
-`sequelize.query` in `utils/biasAudit.utils.ts` mentions `organization_id`. It is a substring
-test: it does not prove the column is used in a `WHERE` filter. The database-backed tenant checks
+`__tests__/moduleRules.test.ts`, in the first command, also checks that the template literal
+of every `sequelize.query` in `utils/biasAudit.utils.ts`, as written in the source, contains
+`organization_id`. It is a substring test on unexpanded source: interpolated fragments such as
+`${CITED_PROFILE_SQL}` count by name, not by the SQL they expand to, and a mention outside a
+`WHERE` clause passes. The database-backed tenant checks
 (`tests/integration/tenant-isolation/` under `npm run test:integration`, and
 `scripts/auditTenantIsolationCoverage.ts`) need a database and are not in this list.
 
