@@ -78,8 +78,8 @@ export function useAedtRun(runId: number | null) {
 
 /**
  * Saving or attesting changes only the profile view (answers, readiness and
- * the attested decision that gates runs). The run list and the static
- * question set stay as they were.
+ * the attested decision that gates runs). The run list and the question set
+ * stay as they were.
  */
 function useInvalidateProfile(projectId: number) {
   const queryClient = useQueryClient();
@@ -112,11 +112,19 @@ export function useGenerateAedtScopeDetermination(projectId: number) {
 }
 
 /**
+ * Run refusals that may mean the profile changed under the page. runService
+ * answers 400 when the attested profile is out of scope or leaves the cutoff
+ * open (ValidationException) and 404 when nothing is attested; 409 and 422
+ * cover conflicts and business-rule refusals. A 413 or 415 (the file), a
+ * network failure or a 5xx says nothing about the profile.
+ */
+const STALE_PROFILE_STATUSES = new Set([400, 404, 409, 422]);
+
+/**
  * A new run changes only the run list; the profile and questions stay as they
  * were. The refetch is not awaited, so the caller opens the new run at once.
- * A refusal (for example a 422 because someone re-attested the profile out of
- * scope) means the attested decision the page gated on is stale, so the
- * profile view is refetched.
+ * A refusal that may mean the attested decision the page gated on is stale
+ * (see STALE_PROFILE_STATUSES) refetches the profile view.
  */
 export function useCreateAedtRun(projectId: number) {
   const queryClient = useQueryClient();
@@ -127,10 +135,8 @@ export function useCreateAedtRun(projectId: number) {
       void queryClient.invalidateQueries({ queryKey: aedtQueryKeys.runs(projectId) });
     },
     onError: (error) => {
-      // Only a 409 or 422 means the attested profile changed under the page;
-      // a bad file, a mapping fault or a 5xx says nothing about it.
       const { status } = describeAedtError(error);
-      if (status === 409 || status === 422) {
+      if (status !== null && STALE_PROFILE_STATUSES.has(status)) {
         void queryClient.invalidateQueries({ queryKey: aedtQueryKeys.profile(projectId) });
       }
     },

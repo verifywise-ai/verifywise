@@ -68,7 +68,9 @@ describe("useAedtBiasAudit invalidation", () => {
 
   // A refusal such as a 422 "out of scope" means the attested profile changed
   // under the page, so its gate and metric label are refetched.
-  it.each([409, 422])(
+  // runService: out of scope and an undetermined cutoff are 400s, no
+  // attested profile is a 404; 409 and 422 are kept for later refusals.
+  it.each([400, 404, 409, 422])(
     "refetches the profile view when the server refuses a run with %i, a stale profile",
     async (status) => {
       createRun.mockRejectedValueOnce(httpError(status));
@@ -84,7 +86,7 @@ describe("useAedtBiasAudit invalidation", () => {
     },
   );
 
-  it.each([400, 413, 500])(
+  it.each([413, 415, 500])(
     "refetches nothing on a %i, which says nothing about the profile",
     async (status) => {
       createRun.mockRejectedValueOnce(httpError(status));
@@ -128,5 +130,17 @@ describe("useAedtBiasAudit invalidation", () => {
     const query = queryClient.getQueryCache().find({ queryKey: aedtQueryKeys.questions(7) });
     expect(query?.isStale()).toBe(false);
     expect((query?.options as { staleTime?: unknown })?.staleTime).toBe(10 * 60 * 1000);
+  });
+
+  it("refetches nothing on a network failure", async () => {
+    createRun.mockRejectedValueOnce(new Error("Network Error"));
+    const { wrapper, invalidateSpy } = createWrapper();
+    const { result } = renderHook(() => useCreateAedtRun(7), { wrapper });
+    await act(async () => {
+      await result.current
+        .mutateAsync({ file: new File(["a"], "a.csv"), mapping: {} })
+        .catch(() => undefined);
+    });
+    expect(invalidateSpy).not.toHaveBeenCalled();
   });
 });
