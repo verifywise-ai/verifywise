@@ -13,14 +13,40 @@ describe("findDemographicTerms", () => {
   });
 
   it("catches national origin and language through explicit phrases (ruling)", () => {
-    expect(findDemographicTerms("A colleague of Italian descent")).toEqual(["of … descent"]);
+    expect(findDemographicTerms("A colleague of Italian descent")).toContain("of … descent");
     expect(findDemographicTerms("I am a native French speaker")).toContain("native … speaker");
-    expect(findDemographicTerms("Mexican-born and raised")).toEqual(["-born"]);
-    expect(findDemographicTerms("Fluent in Korean")).toEqual(["speaks a language"]);
-    expect(findDemographicTerms("Served French-speaking customers")).toEqual(["-speaking"]);
+    expect(findDemographicTerms("Mexican-born and raised")).toContain("-born");
+    expect(findDemographicTerms("Fluent in Korean")).toContain("speaks a language");
+    expect(findDemographicTerms("Served French-speaking customers")).toContain("-speaking");
     expect(findDemographicTerms("Bilingual in English and Mandarin")).toContain(
       "speaks a language",
     );
+  });
+
+  // The review's probes (round 3).
+  it.each([
+    "Mexican citizen with a US work permit",
+    "Volunteer at the Korean Community Center",
+    "Chinese-American Association member",
+    "Indian Students Association",
+    "Hawaiian Civic Club",
+    "Grew up in a Catholic parish",
+    "mexican-born",
+    "Languages: English, Mandarin",
+    "Korean-American",
+    "Latin American markets",
+  ])("refuses national origin, religion or language: %s", (text) => {
+    expect(findDemographicTerms(text)).not.toEqual([]);
+  });
+
+  it.each([
+    "Led the data extraction of pipeline reports",
+    "a history of oil extraction",
+    "the value of data extraction",
+    "a sense of brand heritage",
+    "a first-born child",
+  ])("does not read a non-origin phrase as origin: %s", (text) => {
+    expect(findDemographicTerms(text)).toEqual([]);
   });
 
   it("leaves common job vocabulary alone (ruling)", () => {

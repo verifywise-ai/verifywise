@@ -5,14 +5,16 @@
  * phrase here is an invalid attempt.
  *
  * Terms match as whole words or phrases, case-insensitive; a space in a term
- * matches any run of spaces or hyphens. Words that are also common job
- * vocabulary are left out as bare words ("polish floors", "Apache Kafka",
- * "Sioux Falls", "French fries", "church" as an address, "kosher" kitchens,
- * "black belt", "race to close"); national origin and language are caught by
- * explicit phrases instead ("Italian-born", "of Italian descent", "native
- * French speaker", "fluent in Korean"). Some bare national-origin adjectives
- * therefore slip; every rejection is logged with its reason, so the rate can
- * be measured. The list is finite by design; extend it when review finds a gap.
+ * matches any run of spaces or hyphens. Only the words that are also common
+ * job vocabulary are left out as bare words: polish, apache, cherokee, sioux,
+ * church, heritage, dominican, kosher, ladies, french and italian ("polish
+ * floors", "Apache Kafka", "Sioux Falls", "French fries", "kosher kitchen").
+ * Those are still caught in explicit phrases ("Italian-born", "of Italian
+ * descent", "native French speaker", "fluent in French", "my church"). Bare
+ * words with a common non-demographic sense ("black", "white", "race",
+ * "faith", "reservation") are listed only in identity phrases. Every
+ * rejection is logged with its reason, so the false-rejection rate can be
+ * measured. The list is finite by design; extend it when review finds a gap.
  */
 
 // prettier-ignore
@@ -29,28 +31,30 @@ const ETHNICITY_AND_RACE = [
 
 // prettier-ignore
 const NATIONALITY = [
-  "puerto rican", "salvadoran", "guatemalan", "honduran", "venezuelan", "peruvian",
-  "ecuadorian", "taiwanese", "vietnamese", "filipino", "filipina", "pakistani",
-  "bangladeshi", "nigerian", "ghanaian", "ethiopian", "somali", "kenyan", "haitian",
-  "jamaican", "trinidadian", "samoan", "tongan", "fijian", "chamorro", "navajo nation",
-  "lakota", "ojibwe", "hopi", "ukrainian", "armenian", "arab", "iranian", "lebanese",
-  "african", "immigrant", "immigrated", "citizenship", "nationality", "tribal college",
+  "mexican", "puerto rican", "cuban", "salvadoran", "guatemalan", "honduran",
+  "colombian", "venezuelan", "peruvian", "ecuadorian", "brazilian", "chinese",
+  "taiwanese", "vietnamese", "korean", "japanese", "filipino", "filipina", "indian",
+  "pakistani", "bangladeshi", "nigerian", "ghanaian", "ethiopian", "somali", "kenyan",
+  "haitian", "jamaican", "trinidadian", "samoan", "tongan", "fijian", "chamorro",
+  "hawaiian", "navajo", "navajo nation", "lakota", "ojibwe", "hopi", "irish", "german",
+  "russian", "ukrainian", "greek", "armenian", "arab", "persian", "iranian", "lebanese",
+  "egyptian", "african", "european", "latin american", "caribbean", "immigrant",
+  "immigrated", "citizenship", "nationality", "tribal college",
   "tribal council", "tribal nation", "tribal member",
 ];
 
-// Language names that are not also common job vocabulary.
 // prettier-ignore
 const LANGUAGES = [
-  "spanish", "cantonese", "tagalog", "hindi", "urdu", "punjabi", "bengali", "gujarati",
-  "tamil", "telugu", "arabic", "portuguese", "swahili", "amharic", "yoruba", "igbo",
-  "hebrew", "yiddish", "farsi", "bilingual",
+  "spanish", "mandarin", "cantonese", "tagalog", "hindi", "urdu", "punjabi", "bengali",
+  "gujarati", "tamil", "telugu", "arabic", "portuguese", "creole", "swahili", "amharic",
+  "yoruba", "igbo", "hebrew", "yiddish", "farsi", "bilingual",
 ];
 
 // prettier-ignore
 const RELIGION = [
-  "christian", "protestant", "evangelical", "mormon", "latter day saints", "muslim",
+  "christian", "catholic", "protestant", "baptist", "methodist", "evangelical", "mormon", "latter day saints", "muslim",
   "islam", "islamic", "jewish", "judaism", "hindu", "buddhist", "sikh", "mosque",
-  "synagogue", "gurdwara", "bible", "quran", "ramadan", "religious", "faith based",
+  "synagogue", "gurdwara", "bible", "quran", "ramadan", "halal", "religious", "faith based",
   "my church", "our church", "church choir", "church volunteer", "church youth",
 ];
 
@@ -78,23 +82,28 @@ export const DEMOGRAPHIC_TERMS: readonly string[] = [
   ...IDENTITY_ORGANISATIONS,
 ];
 
-// Every language a phrase can name, the ambiguous ones included: "French" is
-// a fry, but "fluent in French" is a language.
+// Every language a phrase can name, the job-vocabulary ones included: "French"
+// is a fry, but "fluent in French" is a language.
 // prettier-ignore
 const LANGUAGE_NAMES = [
-  ...LANGUAGES.filter((l) => l !== "bilingual"), "french", "italian", "german",
-  "russian", "polish", "greek", "mandarin", "chinese", "korean", "japanese",
-  "vietnamese", "creole", "hawaiian", "navajo", "cherokee", "samoan", "tongan",
-  "somali", "ukrainian", "armenian", "persian",
+  ...LANGUAGES.filter((l) => l !== "bilingual"), "french", "italian", "polish",
+  "cherokee", "german", "russian", "greek", "chinese", "korean", "japanese",
+  "vietnamese", "hawaiian", "navajo", "samoan", "tongan", "somali", "ukrainian",
+  "armenian", "persian",
 ].join("|");
 
 /** Explicit national-origin and language phrases, with the label reported. */
 const PHRASES: Array<{ term: string; re: RegExp }> = [
-  // "Mexican-born", "Puerto Rico-born"; capitalised so "first-born" is not one.
-  { term: "-born", re: /\b[A-Z][a-z]+(?:\s[A-Z][a-z]+)?-born\b/ },
+  // "Italian-born", "mexican-born", "Puerto Rico-born"; not "first-born".
+  {
+    term: "-born",
+    re: /\b(?!(?:first|new|free|later|early|still)-born)[a-z]+-born\b/i,
+  },
+  // "of Italian descent", "of Korean-American ancestry": a capitalised word only,
+  // so "a history of oil extraction" and "of brand heritage" are not one.
   {
     term: "of … descent",
-    re: /\bof\s+(?:[a-z-]+\s+){1,3}(?:descent|ancestry|extraction|heritage)\b/i,
+    re: /\bof\s+[A-Z][\p{L}]*(?:[\s-][A-Z][\p{L}]*)?\s+(?:descent|ancestry)\b/u,
   },
   { term: "native … speaker", re: /\bnative\s+(?:[a-z-]+\s+)?speakers?\b/i },
   {

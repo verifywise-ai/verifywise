@@ -438,7 +438,7 @@ describe("runCorpusGeneration", () => {
     });
 
     it("refuses with CorpusBusyError, carrying the lease expiry, while another runner holds it", async () => {
-      const until = new Date("2026-10-18T12:00:00Z");
+      const until = new Date(Date.now() + 60_000);
       mockUtils.getCorpusQuery
         .mockResolvedValueOnce(corpusRow())
         .mockResolvedValueOnce(corpusRow({ lease_expires_at: until }));
@@ -446,11 +446,35 @@ describe("runCorpusGeneration", () => {
       const err = await run().catch((e) => e);
       expect(err).toBeInstanceOf(CorpusBusyError);
       expect(err).not.toBeInstanceOf(LeaseLostError);
-      expect(err.leaseExpiresAt).toBe(until);
+      expect(err.leaseExpiresAt).toEqual(until);
       expect(mockComplete).not.toHaveBeenCalled();
       expect(mockUtils.appendCorpusRecordQuery).not.toHaveBeenCalled();
       // Not this runner's lease, so nothing to release.
       expect(mockUtils.releaseCorpusLeaseQuery).not.toHaveBeenCalled();
+    });
+
+    it("is not busy once the other lease has expired: a conflict, not CorpusBusyError", async () => {
+      mockUtils.getCorpusQuery
+        .mockResolvedValueOnce(corpusRow())
+        .mockResolvedValueOnce(corpusRow({ lease_expires_at: new Date(Date.now() - 1000) }));
+      mockUtils.claimCorpusLeaseQuery.mockResolvedValueOnce(false);
+      const err = await run().catch((e) => e);
+      expect(err).not.toBeInstanceOf(CorpusBusyError);
+      expect(err.message).toMatch(/not running/);
+    });
+
+    it("returns the stored result when the corpus completed between the read and the claim", async () => {
+      mockUtils.getCorpusQuery
+        .mockResolvedValueOnce(corpusRow())
+        .mockResolvedValueOnce(
+          corpusRow({ status: "complete", record_count: 700, models_observed_json: { m1: 700 } }),
+        );
+      mockUtils.claimCorpusLeaseQuery.mockResolvedValueOnce(false);
+      await expect(run()).resolves.toEqual({
+        status: "complete",
+        recordCount: 700,
+        modelsObserved: { m1: 700 },
+      });
     });
 
     it("stops when an append finds the lease gone", async () => {
@@ -546,12 +570,15 @@ describe("runCorpusGeneration", () => {
   it("refuses to resume under a model other than the pinned one, and fails the corpus", async () => {
     mockUtils.getCorpusQuery.mockResolvedValue(corpusRow({ model_pinned: "another-model" }));
     await expect(run()).rejects.toThrow(CorpusModelChangedError);
-    // Failed (which clears the lease), so the one-running index frees the project.
+    // Failed under this runner's lease (which clears it), so the one-running
+    // index frees the project; checked only after the claim.
     expect(mockUtils.updateCorpusStatusQuery).toHaveBeenCalledWith(
-      { corpusId: 3, status: "failed", failureCode: "model_changed" },
+      { corpusId: 3, status: "failed", failureCode: "model_changed", ownerToken: claimToken() },
       1,
     );
-    expect(mockUtils.claimCorpusLeaseQuery).not.toHaveBeenCalled();
+    expect(mockUtils.claimCorpusLeaseQuery.mock.invocationCallOrder[0]).toBeLessThan(
+      mockUtils.updateCorpusStatusQuery.mock.invocationCallOrder[0],
+    );
     expect(mockComplete).not.toHaveBeenCalled();
   });
 
@@ -619,7 +646,31 @@ describe("runCorpusGeneration", () => {
     await expect(run()).rejects.toThrow(/job description/i);
     expect(mockComplete).not.toHaveBeenCalled();
     expect(mockUtils.updateCorpusStatusQuery).toHaveBeenCalledWith(
-      { corpusId: 3, status: "failed", failureCode: "job_description_changed" },
+      {
+        corpusId: 3,
+        status: "failed",
+        failureCode: "job_description_changed",
+        ownerToken: claimToken(),
+      },
+      1,
+    );
+  });
+
+  it("fails the corpus as plan_changed when its seed no longer reproduces the plan", async () => {
+    // A seed whose first draw fails the ID-order gate: assignCandidateIds redraws,
+    // so the plan it returns is not the one the stored seed names.
+    const rows = buildAllocation({
+      count: 700,
+      tiers: JD.tiers.map((t) => t.key),
+      smallSampleExclusion: 0.02,
+    }).rows;
+    let tail = 0;
+    while (assignCandidateIds({ rows, seed: tail }).seedUsed === tail) tail++;
+    mockUtils.getCorpusQuery.mockResolvedValue(corpusRow({ seed: tail }));
+    await expect(run()).rejects.toThrow(/no longer reproduces the plan/);
+    expect(mockComplete).not.toHaveBeenCalled();
+    expect(mockUtils.updateCorpusStatusQuery).toHaveBeenCalledWith(
+      { corpusId: 3, status: "failed", failureCode: "plan_changed", ownerToken: claimToken() },
       1,
     );
   });

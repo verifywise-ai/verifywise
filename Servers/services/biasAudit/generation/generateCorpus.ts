@@ -20,6 +20,7 @@ import {
   touchCorpusHeartbeatQuery,
   updateCorpusStatusQuery,
   type CorpusLogRow,
+  type CorpusRow,
 } from "../../../utils/biasAudit.utils";
 import { isUniqueViolation } from "../serviceHelpers";
 import { LL144_CONFIG } from "../runService";
@@ -224,6 +225,15 @@ const toEntry = (r: CorpusLogRow): GenerationLogEntry => ({
   promptHash: r.prompt_hash,
 });
 
+/** The stored outcome of a finished corpus, for an idempotent retry. */
+function summaryOf(corpus: CorpusRow & { status: "complete" | "blocked" }) {
+  return {
+    status: corpus.status,
+    recordCount: corpus.record_count ?? 0,
+    modelsObserved: corpus.models_observed_json ?? {},
+  };
+}
+
 /**
  * Generates every record still missing, appending each attempt to the log,
  * then completes the corpus from the whole log. One runner at a time: it
@@ -247,94 +257,107 @@ export async function runCorpusGeneration(args: {
   const { corpusId, organizationId } = args;
   const corpus = await getCorpusQuery(corpusId, organizationId);
   if (!corpus) throw new NotFoundException(`Corpus ${corpusId} was not found`, "Corpus", corpusId);
-  if (corpus.status === "complete" || corpus.status === "blocked") {
-    // A retry after the completion write: nothing left to do.
-    return {
-      status: corpus.status,
-      recordCount: corpus.record_count ?? 0,
-      modelsObserved: corpus.models_observed_json ?? {},
-    };
-  }
+  // A retry after the completion write: nothing left to do.
+  if (corpus.status === "complete" || corpus.status === "blocked") return summaryOf(corpus);
   if (corpus.status !== "running") {
     throw new ConflictException(`Corpus ${corpusId} is not running (${corpus.status}).`, "Corpus");
   }
 
-  // A corpus that can never resume is failed (which also clears its lease), so
-  // the one-running-per-project index does not hold the project forever.
-  const failAndThrow = async (failureCode: string, error: Error): Promise<never> => {
-    await updateCorpusStatusQuery({ corpusId, status: "failed", failureCode }, organizationId);
-    throw error;
-  };
-  const jd = jobDescriptionFor(corpus.job_description_key);
-  if (jobDescriptionSha256(jd) !== corpus.job_description_sha256) {
-    await failAndThrow(
-      "job_description_changed",
-      new ConflictException(
-        `The job description text changed after corpus ${corpusId} began, so it cannot be resumed.`,
-        "Corpus",
-      ),
-    );
-  }
-  const kind = corpus.artifact_kind;
-  assertArtifactKind(kind);
   const settings = getGatewaySettings();
-  if (settings.model !== corpus.model_pinned) {
-    await failAndThrow(
-      "model_changed",
-      new CorpusModelChangedError(corpusId, corpus.model_pinned, settings.model),
-    );
-  }
-  const { assigned, seedUsed } = planFor(jd, corpus.planned_count, corpus.seed);
-  if (seedUsed !== corpus.seed) {
-    throw new Error(`The stored seed no longer reproduces the plan of corpus ${corpusId}.`);
-  }
-
   const ownerToken = randomUUID();
   const claimedAt = Date.now();
   if (!(await claimCorpusLeaseQuery(corpusId, organizationId, ownerToken, LEASE_SECONDS))) {
+    // Busy only while another runner's lease is live; otherwise the corpus
+    // moved on between the read and the claim.
     const current = await getCorpusQuery(corpusId, organizationId);
-    throw new CorpusBusyError(corpusId, current?.lease_expires_at ?? null);
-  }
-  // When the lease runs out by this runner's clock. Measured from when each
-  // renewal was sent, so it never runs past the database's own expiry.
-  let leaseUntil = claimedAt + LEASE_SECONDS * 1000;
-  const beat = async () => {
-    const sentAt = Date.now();
-    let held: boolean;
-    try {
-      held = await touchCorpusHeartbeatQuery(corpusId, organizationId, ownerToken, LEASE_SECONDS);
-    } catch {
-      // A transient error is retried on the next beat; it is fatal only once
-      // the lease has run out.
-      if (Date.now() > leaseUntil) throw new LeaseLostError(corpusId);
-      return;
+    const expiry = current?.lease_expires_at ? new Date(current.lease_expires_at) : null;
+    if (current?.status === "running" && expiry && expiry.getTime() > Date.now()) {
+      throw new CorpusBusyError(corpusId, expiry);
     }
-    if (!held) throw new LeaseLostError(corpusId);
-    leaseUntil = sentAt + LEASE_SECONDS * 1000;
-  };
-  // Time-based heartbeat. A lost lease is kept and thrown by the loop before
-  // its next gateway call, so a runner that lost the lease stops spending.
-  let beatError: unknown = null;
-  let beating = false;
-  const timer = setInterval(() => {
-    if (beating || beatError) return;
-    beating = true;
-    beat()
-      .catch((e) => {
-        beatError = e;
-      })
-      .finally(() => {
-        beating = false;
-      });
-  }, HEARTBEAT_INTERVAL_MS);
-  timer.unref?.();
-  let finished = false;
-  const assertHeld = () => {
-    if (beatError) throw beatError;
-    if (Date.now() > leaseUntil) throw new LeaseLostError(corpusId);
-  };
+    if (current?.status === "complete" || current?.status === "blocked") return summaryOf(current);
+    throw new ConflictException(
+      `Corpus ${corpusId} is not running (${current?.status ?? "not found"}).`,
+      "Corpus",
+    );
+  }
 
+  let finished = false;
+  let timer: ReturnType<typeof setInterval> | undefined;
   try {
+    // Checked only once this runner holds the lease. A corpus that can never
+    // resume is failed under the token (which clears the lease), so the
+    // one-running-per-project index does not hold the project forever.
+    const failAndThrow = async (failureCode: string, error: Error): Promise<never> => {
+      await updateCorpusStatusQuery(
+        { corpusId, status: "failed", failureCode, ownerToken },
+        organizationId,
+      );
+      throw error;
+    };
+    const jd = jobDescriptionFor(corpus.job_description_key);
+    if (jobDescriptionSha256(jd) !== corpus.job_description_sha256) {
+      await failAndThrow(
+        "job_description_changed",
+        new ConflictException(
+          `The job description text changed after corpus ${corpusId} began, so it cannot be resumed.`,
+          "Corpus",
+        ),
+      );
+    }
+    const kind = corpus.artifact_kind;
+    assertArtifactKind(kind);
+    if (settings.model !== corpus.model_pinned) {
+      await failAndThrow(
+        "model_changed",
+        new CorpusModelChangedError(corpusId, corpus.model_pinned, settings.model),
+      );
+    }
+    const { assigned, seedUsed } = planFor(jd, corpus.planned_count, corpus.seed);
+    if (seedUsed !== corpus.seed) {
+      await failAndThrow(
+        "plan_changed",
+        new Error(`The stored seed no longer reproduces the plan of corpus ${corpusId}.`),
+      );
+    }
+
+    // When the lease runs out by this runner's clock. Measured from when each
+    // renewal was sent, so it never runs past the database's own expiry.
+    let leaseUntil = claimedAt + LEASE_SECONDS * 1000;
+    const beat = async () => {
+      const sentAt = Date.now();
+      let held: boolean;
+      try {
+        held = await touchCorpusHeartbeatQuery(corpusId, organizationId, ownerToken, LEASE_SECONDS);
+      } catch {
+        // A transient error is retried on the next beat; it is fatal only once
+        // the lease has run out.
+        if (Date.now() > leaseUntil) throw new LeaseLostError(corpusId);
+        return;
+      }
+      if (!held) throw new LeaseLostError(corpusId);
+      leaseUntil = sentAt + LEASE_SECONDS * 1000;
+    };
+    // Time-based heartbeat. A lost lease is kept and thrown by the loop before
+    // its next gateway call, so a runner that lost the lease stops spending.
+    let beatError: unknown = null;
+    let beating = false;
+    timer = setInterval(() => {
+      if (beating || beatError) return;
+      beating = true;
+      beat()
+        .catch((e) => {
+          beatError = e;
+        })
+        .finally(() => {
+          beating = false;
+        });
+    }, HEARTBEAT_INTERVAL_MS);
+    timer.unref?.();
+    const assertHeld = () => {
+      if (beatError) throw beatError;
+      if (Date.now() > leaseUntil) throw new LeaseLostError(corpusId);
+    };
+
     const latest = latestAttempts(
       (await listCorpusLogQuery(corpusId, organizationId)).map(toEntry),
     );
@@ -433,7 +456,7 @@ export async function runCorpusGeneration(args: {
     finished = true;
     return { status, recordCount: manifest.rows.length, modelsObserved };
   } finally {
-    clearInterval(timer);
+    if (timer) clearInterval(timer);
     if (!finished) {
       // Free the corpus for the retry; a failed release only delays it to lease expiry.
       await releaseCorpusLeaseQuery(corpusId, organizationId, ownerToken).catch(() => false);

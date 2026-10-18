@@ -1,7 +1,7 @@
 import type { JobDescription } from "../../../structures/NYC-Local-Law-144/job-descriptions";
 import { findForbidden } from "../stance/vocabulary";
 import { findDemographicTerms } from "./demographicTerms";
-import { THIRD_PARTY_FIRST_NAMES } from "./names";
+import { TABLE_SURNAMES, THIRD_PARTY_FIRST_NAMES } from "./names";
 
 export type ArtifactKind = "resume" | "transcript" | "structured";
 
@@ -145,31 +145,41 @@ function shapeOk(text: string, kind: ArtifactKind, parsed: unknown): boolean {
 
 const escapeRegExp = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-/** `word` as a whole word (letters on neither side), case-insensitive. */
-const wholeWord = (word: string) => new RegExp(`(?<!\\p{L})${escapeRegExp(word)}(?!\\p{L})`, "iu");
+/** Accents off: NFD, then combining marks dropped, so "José García" reads "Jose Garcia". */
+const foldAccents = (t: string) => t.normalize("NFD").replace(/\p{M}/gu, "");
 
-/** Every part of the name (first name and surname) as a whole word, in any order. */
+/** `word` as a whole word (letters on neither side), in exactly this case. */
+const wholeWord = (word: string) => new RegExp(`(?<!\\p{L})${escapeRegExp(word)}(?!\\p{L})`, "u");
+
+/**
+ * Every part of the name, as a whole word, in any order: capitalised as given
+ * (or in capitals, as a resume header may set it). Case-sensitive, so "a line
+ * cook" is not the surname Cook and "le" is not Le; accent-insensitive on both
+ * sides, so "José García" carries "Jose Garcia" and Hispanic names cost no
+ * extra attempts.
+ */
 function carriesName(text: string, candidateName: string): boolean {
-  return candidateName
+  const folded = foldAccents(text);
+  return foldAccents(candidateName)
     .split(/\s+/)
-    .filter((p) => p !== "")
-    .every((part) => wholeWord(part).test(text));
+    .filter((part) => part !== "")
+    .every((part) => wholeWord(part).test(folded) || wholeWord(part.toUpperCase()).test(folded));
 }
 
+const alternation = (names: Iterable<string>) =>
+  [...names].map((n) => escapeRegExp(foldAccents(n))).join("|");
+// A table first name directly followed by a table surname: a person.
 const THIRD_PARTY_NAME = new RegExp(
-  `(?<!\\p{L})(${[...THIRD_PARTY_FIRST_NAMES].map(escapeRegExp).join("|")})(?!\\p{L})`,
+  `(?<!\\p{L})(${alternation(THIRD_PARTY_FIRST_NAMES)})\\s+(${alternation(TABLE_SURNAMES)})(?!\\p{L})`,
   "gu",
 );
-// Place names built on a first name ("San Jose", "St. Paul", "Fort Gilbert").
-const PLACE_PREFIXED =
-  /\b(?:San|Santa|Santo|Saint|St\.?|Ste\.?|Fort|Ft\.?|Lake|Port|Mount|Mt\.?|Cape|Los|Las|El)\s+\p{Lu}\p{L}*/gu;
 
-/** A table first name, capitalised and whole, that is not part of the candidate's own name. */
+/** Someone other than the candidate, named as table first name + table surname. */
 function namesSomeoneElse(text: string, candidateName: string): boolean {
-  const own = new Set(candidateName.split(/\s+/));
-  const scrubbed = text.replace(PLACE_PREFIXED, " ");
-  for (const m of scrubbed.matchAll(THIRD_PARTY_NAME)) {
-    if (!own.has(m[1])) return true;
+  const [ownFirst, ...rest] = foldAccents(candidateName).trim().split(/\s+/);
+  const ownSurname = rest.join(" ");
+  for (const m of foldAccents(text).matchAll(THIRD_PARTY_NAME)) {
+    if (m[1] !== ownFirst || m[2] !== ownSurname) return true;
   }
   return false;
 }
@@ -180,11 +190,10 @@ function namesSomeoneElse(text: string, candidateName: string): boolean {
  *  - `finishReason`, when given, must be "stop": a truncated or filtered
  *    response is a record-quality fault and is logged as an invalid attempt.
  *  - The record must contain the candidate's first name and surname, each as
- *    a whole word, in any order (the structured form in its "name" key): the
- *    name is the record's only group signal.
- *  - It may name no one else: a table first name other than the candidate's
- *    own, capitalised and whole, is refused (place names such as "San Jose"
- *    and table names that are common words are not counted).
+ *    a capitalised whole word, in any order, accents ignored (the structured
+ *    form in its "name" key): the name is the record's only group signal.
+ *  - It may name no one else: a table first name directly followed by a
+ *    table surname, other than the candidate's own, is refused.
  *  - Nothing else may signal a group: no demographic field and no term from
  *    the shared demographic-term matcher. Pronouns and honorifics are allowed.
  */

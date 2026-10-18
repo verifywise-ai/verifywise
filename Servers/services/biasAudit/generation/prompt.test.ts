@@ -167,6 +167,7 @@ describe("validateRecord", () => {
     for (const line of [
       "Member, Society of Hispanic Professional Engineers",
       "Fluent in Tongan",
+      "Mexican citizen with a US work permit",
       "Mexican-born, with a US work permit",
       "A native Spanish speaker",
       "Of Korean descent",
@@ -240,37 +241,65 @@ describe("validateRecord", () => {
     expect(validateRecord(`Tran${body}`, "resume", lan)).toEqual({ ok: false, reason: "no_name" });
   });
 
-  it("refuses a record that names someone else from the name tables (ruling)", () => {
+  // The review's probes (round 3).
+  const body = (head: string, extra: string) =>
+    `${head}\nExperience\nWarehouse associate, 2019-2024\n${extra}\nSkills\nForklift`;
+
+  it("matches the name case-sensitively, so common words are not the name", () => {
     expect(
-      validateRecord(`${resume}\nReported to Patricia, the regional lead`, "resume", NAME),
+      validateRecord(body("Kevin", "Worked as a line cook"), "resume", {
+        candidateName: "Kevin Cook",
+      }),
+    ).toEqual({ ok: false, reason: "no_name" });
+    expect(
+      validateRecord(body("Shift lead", "Worked long shifts; le"), "resume", {
+        candidateName: "Long Le",
+      }),
+    ).toEqual({ ok: false, reason: "no_name" });
+    expect(
+      validateRecord(body("KEVIN COOK", "Worked as a line cook"), "resume", {
+        candidateName: "Kevin Cook",
+      }),
+    ).toEqual({ ok: true });
+  });
+
+  it("ignores accents on both sides of the name check (ruling)", () => {
+    expect(
+      validateRecord(body("José García", ""), "resume", { candidateName: "Jose Garcia" }),
+    ).toEqual({ ok: true });
+    expect(
+      validateRecord(body("Jose Garcia", ""), "resume", { candidateName: "José García" }),
+    ).toEqual({ ok: true });
+  });
+
+  it.each([
+    "Warehouse in Gary, IN",
+    "Managed the Kimberly-Clark account",
+    "Delivery driver, Papa John's",
+    "Graduated from Roosevelt High School",
+    "Reported to Patricia, the regional lead",
+  ])("does not read a lone first name as a person: %s", (extra) => {
+    expect(
+      validateRecord(body("Kevin Miller", extra), "resume", { candidateName: "Kevin Miller" }),
+    ).toEqual({ ok: true });
+  });
+
+  it("refuses a record that names someone else: a table first name and surname (ruling)", () => {
+    const kevin = { candidateName: "Kevin Miller" };
+    expect(validateRecord(body("Kevin Miller", "References: Wei Zhang"), "resume", kevin)).toEqual({
+      ok: false,
+      reason: "third_party_name",
+    });
+    expect(
+      validateRecord(body("Kevin Miller", "Reported to Patricia Nguyen"), "resume", kevin),
     ).toEqual({ ok: false, reason: "third_party_name" });
     expect(
       validateRecord(
-        "Interviewer: Hello, Sam Lee.\nCandidate: Hi. My lead, Jose, trained me.",
+        "Interviewer: Hello, Sam Lee.\nCandidate: Hi. My lead, José Garcia, trained me.",
         "transcript",
         NAME,
       ),
     ).toEqual({ ok: false, reason: "third_party_name" });
-  });
-
-  it("allows the candidate's own names, roles, place names and table names that are common words", () => {
-    const victor = { candidateName: "Victor Nelson" };
-    for (const extra of [
-      "Reported to my manager",
-      "Covered accounts in San Jose and St. Paul",
-      "Worked a long shift; set up the LAN; built tools in Ruby",
-      "Mark the pallets before loading",
-    ]) {
-      expect(
-        validateRecord(
-          `Victor Nelson\nExperience\nAccount Executive, 2019-2024\n${extra}`,
-          "resume",
-          victor,
-        ),
-      ).toEqual({ ok: true });
-    }
-    // Lowercase use of a table name is not a name.
-    expect(validateRecord(`${resume}\nthe grace period`, "resume", NAME)).toEqual({ ok: true });
   });
 
   it("refuses a record whose shape does not match its form", () => {

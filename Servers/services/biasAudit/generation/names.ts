@@ -185,23 +185,28 @@ const ALL_SURNAMES = [
   ...ASIAN_SURNAMES, ...NAAN_SURNAMES, ...NHPI_SURNAMES,
 ];
 
-// Table first names that are also common English words, abbreviations or
-// brands, which a record can use without naming anyone ("a long shift",
-// "LAN", "Thu", "yen", "a loan", "pita bread", "Ruby on Rails").
+// Given names removed from the sex-specific lists as sex-ambiguous (see the
+// header). They are not drawn for candidates, but they are still names, so a
+// record that names someone with one ("Wei Zhang") names a third party.
 // prettier-ignore
-const COMMON_WORD_NAMES = [
-  "Long", "Grace", "Ruby", "Mark", "Hang", "Hue", "Thu", "Lan", "Pita", "Yen",
-  "Loan", "Lien", "Hung", "Ebony", "Derrick", "Alma", "Koa", "Moana",
+const REMOVED_AMBIGUOUS_FIRST = [
+  "Wei", "Li", "Jin", "Yan", "Ming", "Yu", "Min", "Yi", "Kyung", "Jung", "Hui",
+  "Wai", "Tam", "Xiao", "Anh", "Dung", "Linh", "Hoa", "Phuong", "Keola", "Fetu",
 ];
 
 /**
- * First names from the tables that a record may not contain except as the
- * candidate's own: a record names no one but the candidate. Names that are
- * also common words are left out of the check.
+ * First names and surnames from the tables. A record names no one but the
+ * candidate: a first name here followed directly by a surname here
+ * ("Wei Zhang", "Patricia Miller") is a third party, unless it is the
+ * candidate's own name. A first name alone is not, so places, brands and
+ * schools built on one ("Gary, IN", "Papa John's", "Roosevelt High") pass.
  */
-export const THIRD_PARTY_FIRST_NAMES: ReadonlySet<string> = new Set(
-  [...ALL_FIRST.Male, ...ALL_FIRST.Female].filter((n) => !COMMON_WORD_NAMES.includes(n)),
-);
+export const THIRD_PARTY_FIRST_NAMES: ReadonlySet<string> = new Set([
+  ...ALL_FIRST.Male,
+  ...ALL_FIRST.Female,
+  ...REMOVED_AMBIGUOUS_FIRST,
+]);
+export const TABLE_SURNAMES: ReadonlySet<string> = new Set(ALL_SURNAMES);
 
 /** Keyed by the LL144_RACE labels in allocation.ts. */
 const BY_RACE: Record<string, { first: FirstNames; surnames: readonly string[] }> = {
