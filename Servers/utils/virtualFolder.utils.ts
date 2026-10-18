@@ -24,6 +24,13 @@ import {
 // ============================================================================
 
 /**
+ * The organization's visible file ids, for scoping folder mappings. A stale
+ * mapping to a bias audit stance PDF is never counted or shown.
+ */
+const VISIBLE_FILE_IDS_SQL = `SELECT files.id FROM files
+  WHERE files.organization_id = :organizationId AND ${VISIBLE_FILE_SQL("files")}`;
+
+/**
  * Get all folders for an organization (flat list)
  */
 export const getAllFoldersQuery = async (organizationId: number): Promise<IFolderWithCount[]> => {
@@ -33,11 +40,12 @@ export const getAllFoldersQuery = async (organizationId: number): Promise<IFolde
       COALESCE(COUNT(ffm.id), 0)::INTEGER as file_count
     FROM virtual_folders vf
     LEFT JOIN file_folder_mappings ffm ON vf.id = ffm.folder_id AND ffm.organization_id = :organizationId
+      AND ffm.file_id IN (${VISIBLE_FILE_IDS_SQL})
     WHERE vf.organization_id = :organizationId
     GROUP BY vf.id
     ORDER BY vf.name ASC`,
     {
-      replacements: { organizationId },
+      replacements: { organizationId, ...VISIBLE_FILE_REPLACEMENTS },
       type: QueryTypes.SELECT,
     },
   );
@@ -102,10 +110,11 @@ export const getFolderByIdQuery = async (
       COALESCE(COUNT(ffm.id), 0)::INTEGER as file_count
     FROM virtual_folders vf
     LEFT JOIN file_folder_mappings ffm ON vf.id = ffm.folder_id AND ffm.organization_id = :organizationId
+      AND ffm.file_id IN (${VISIBLE_FILE_IDS_SQL})
     WHERE vf.organization_id = :organizationId AND vf.id = :id
     GROUP BY vf.id`,
     {
-      replacements: { organizationId, id },
+      replacements: { organizationId, id, ...VISIBLE_FILE_REPLACEMENTS },
       type: QueryTypes.SELECT,
     },
   );
@@ -489,7 +498,9 @@ export const removeFileFromFolderQuery = async (
 };
 
 /**
- * Bulk update file folder assignments (replace all folder assignments for a file)
+ * Bulk update file folder assignments (replace all folder assignments for a
+ * file). Only a visible file is touched: for a missing id or a bias audit
+ * stance PDF nothing is deleted or inserted.
  */
 export const bulkUpdateFileFoldersQuery = async (
   organizationId: number,
@@ -498,37 +509,26 @@ export const bulkUpdateFileFoldersQuery = async (
   userId: number,
   transaction?: Transaction,
 ): Promise<void> => {
+  const replacements = { organizationId, fileId, userId, folderIds, ...VISIBLE_FILE_REPLACEMENTS };
+  const visibleFile = `SELECT files.id FROM files
+      WHERE files.organization_id = :organizationId AND files.id = :fileId
+        AND ${VISIBLE_FILE_SQL("files")}`;
+
   // Delete existing assignments
   await sequelize.query(
-    `DELETE FROM file_folder_mappings WHERE organization_id = :organizationId AND file_id = :fileId`,
-    {
-      replacements: { organizationId, fileId },
-      transaction,
-    },
+    `DELETE FROM file_folder_mappings
+      WHERE organization_id = :organizationId AND file_id IN (${visibleFile})`,
+    { replacements, transaction },
   );
 
   // Add new assignments
   if (folderIds.length > 0) {
-    const values = folderIds
-      .map((_, i) => `(:organizationId, :fileId, :folder_id_${i}, :userId, NOW())`)
-      .join(", ");
-
-    const replacements: Record<string, unknown> = {
-      organizationId,
-      fileId,
-      userId,
-    };
-    folderIds.forEach((folderId, i) => {
-      replacements[`folder_id_${i}`] = folderId;
-    });
-
     await sequelize.query(
       `INSERT INTO file_folder_mappings (organization_id, file_id, folder_id, assigned_by, assigned_at)
-       VALUES ${values}`,
-      {
-        replacements,
-        transaction,
-      },
+       SELECT :organizationId, v.file_id, f.folder_id, :userId, NOW()
+         FROM (${visibleFile}) AS v(file_id)
+        CROSS JOIN unnest(ARRAY[:folderIds]::int[]) AS f(folder_id)`,
+      { replacements, transaction },
     );
   }
 };

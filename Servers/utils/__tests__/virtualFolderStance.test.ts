@@ -23,7 +23,14 @@ jest.mock("../../database/db", () => ({
   },
 }));
 
-import { assignFilesToFolderQuery, removeFileFromFolderQuery } from "../virtualFolder.utils";
+import {
+  assignFilesToFolderQuery,
+  bulkUpdateFileFoldersQuery,
+  getAllFoldersQuery,
+  getFolderByIdQuery,
+  getFolderTreeQuery,
+  removeFileFromFolderQuery,
+} from "../virtualFolder.utils";
 
 const ORG = 1;
 
@@ -67,5 +74,31 @@ describe("folder writers and bias audit stance PDFs", () => {
       expect(sql).toMatch(/\bFROM\s+files\b/);
       expect(everyFilesReferenceFiltered(sql)).toBe(true);
     }
+  });
+
+  /** Every statement that reads or writes folder mappings is scoped to visible files. */
+  const expectMappingsScoped = () => {
+    const mappingStatements = statements.filter((sql) => /file_folder_mappings/.test(sql));
+    expect(mappingStatements.length).toBeGreaterThan(0);
+    for (const sql of mappingStatements) {
+      expect(sql).toMatch(/\bFROM\s+files\b/);
+      expect(everyFilesReferenceFiltered(sql)).toBe(true);
+    }
+  };
+
+  it.each([
+    ["getAllFoldersQuery", () => getAllFoldersQuery(ORG)],
+    ["getFolderByIdQuery", () => getFolderByIdQuery(ORG, 3)],
+    ["getFolderTreeQuery", () => getFolderTreeQuery(ORG)],
+  ])("%s counts only mappings of visible files", async (_name, run) => {
+    await (run as () => Promise<unknown>)();
+    expectMappingsScoped();
+  });
+
+  it("bulkUpdateFileFoldersQuery deletes and inserts mappings only for a visible file", async () => {
+    table = [stanceRow()];
+    await bulkUpdateFileFoldersQuery(ORG, 2, [3, 4], 9);
+    expect(statements.filter((sql) => /file_folder_mappings/.test(sql))).toHaveLength(2);
+    expectMappingsScoped();
   });
 });
