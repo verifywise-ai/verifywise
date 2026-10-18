@@ -1,36 +1,55 @@
-import { JOB_DESCRIPTION_KEY_MAX, jobDescriptionKey, jobDescriptionText } from "./jobDescription";
+import { JOB_DESCRIPTION_MAX, normaliseJobDescription, sameJobDescription } from "./jobDescription";
 
-describe("jobDescriptionKey", () => {
-  it("makes one key of titles that differ only in case, spacing and punctuation", () => {
-    const keys = [
-      "Senior Engineer",
-      "  senior   engineer ",
-      "SENIOR-ENGINEER",
-      "Senior, Engineer.",
-    ].map(jobDescriptionKey);
-    expect(new Set(keys)).toEqual(new Set(["senior-engineer"]));
+describe("normaliseJobDescription", () => {
+  it("keeps the title as typed, apart from surrounding and repeated whitespace", () => {
+    expect(normaliseJobDescription("  Sr. Engineer   (L5) ")).toEqual({
+      ok: true,
+      value: "Sr. Engineer (L5)",
+    });
   });
 
-  it("keeps letters outside ASCII", () => {
-    expect(jobDescriptionKey("Ingénieur Données")).toBe("ingénieur-données");
-  });
-
-  it("is null for a title with no letter or digit", () => {
-    expect(jobDescriptionKey("")).toBeNull();
-    expect(jobDescriptionKey(" — !? ")).toBeNull();
-  });
-
-  it("fits the column and never ends on a hyphen", () => {
-    const key = jobDescriptionKey(`${"a".repeat(63)} b`)!;
-    expect(key).toBe("a".repeat(63));
-    expect(Array.from(jobDescriptionKey("word ".repeat(40))!).length).toBeLessThanOrEqual(
-      JOB_DESCRIPTION_KEY_MAX,
+  it("keeps titles that differ only in punctuation apart", () => {
+    const values = ["C++ developer", "C# developer", "C developer"].map(
+      (t) => (normaliseJobDescription(t) as { value: string }).value,
     );
+    expect(new Set(values).size).toBe(3);
+  });
+
+  it("stores one form of a title whether it was typed composed or decomposed", () => {
+    const composed = normaliseJobDescription("Café manager");
+    const decomposed = normaliseJobDescription("Café manager");
+    expect(decomposed).toEqual(composed);
+  });
+
+  it("keeps combining marks, so non-Latin titles stay whole", () => {
+    expect(normaliseJobDescription("इंजीनियर")).toEqual({ ok: true, value: "इंजीनियर" });
+  });
+
+  it("stores null for a blank title", () => {
+    expect(normaliseJobDescription("   ")).toEqual({ ok: true, value: null });
+  });
+
+  it("refuses a title longer than the column rather than cutting it", () => {
+    expect(normaliseJobDescription("a".repeat(JOB_DESCRIPTION_MAX))).toMatchObject({ ok: true });
+    expect(normaliseJobDescription("a".repeat(JOB_DESCRIPTION_MAX + 1))).toEqual({
+      ok: false,
+      reason: "too_long",
+    });
+  });
+
+  it("refuses a title with no letter or digit", () => {
+    expect(normaliseJobDescription(" — !? ")).toEqual({
+      ok: false,
+      reason: "no_letter_or_digit",
+    });
   });
 });
 
-describe("jobDescriptionText", () => {
-  it("prints a key as words", () => {
-    expect(jobDescriptionText("senior-engineer")).toBe("senior engineer");
+describe("sameJobDescription", () => {
+  it("ignores case, and matches null only with null", () => {
+    expect(sameJobDescription("Account executive", "account Executive")).toBe(true);
+    expect(sameJobDescription("C++ developer", "C# developer")).toBe(false);
+    expect(sameJobDescription(null, null)).toBe(true);
+    expect(sameJobDescription(null, "Account executive")).toBe(false);
   });
 });

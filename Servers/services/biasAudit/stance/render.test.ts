@@ -661,12 +661,15 @@ describe("the footer follows the run evidence, not the scope", () => {
     const html = renderStanceHtml(oosModel, evidence);
     expect(html).toContain(RUN_FOOTER);
     expect(html).not.toContain(NO_FILE_FOOTER);
+    // The scope sentence follows the scope, not the evidence.
+    expect(html).toContain("The scope determination belongs to the party that answered.");
   });
 
   it("a document rendered without evidence says no file was supplied, whatever its scope", () => {
     const html = renderStanceHtml(model, null);
     expect(html).toContain(NO_FILE_FOOTER);
     expect(html).not.toContain(RUN_FOOTER);
+    expect(html).not.toContain("The scope determination belongs to the party that answered.");
   });
 });
 

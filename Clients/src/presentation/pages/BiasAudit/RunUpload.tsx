@@ -16,8 +16,8 @@ import { cardSx, titleSx, twoColumnSx } from "./styles";
 
 /** The server's upload limit (`DATASET_MAX_BYTES`, 30 MB). */
 const MAX_BYTES = 30 * 1024 * 1024;
-/** The server's limit on the job title (`JOB_DESCRIPTION_INPUT_MAX`). */
-const JOB_DESCRIPTION_MAX = 200;
+/** The server's limit on the job title (`JOB_DESCRIPTION_MAX`, the column's width). */
+const JOB_DESCRIPTION_MAX = 64;
 const UNMAPPED = "";
 
 interface RunUploadProps {
@@ -102,12 +102,19 @@ const RunUpload = ({ projectId, metric, canEdit, blockedReason, onCreated }: Run
       : metric === null
         ? "The attested profile does not say who applies the cutoff. Answer it, save and attest again, so the module knows whether to compute selection rates or scoring rates."
         : null);
-  const jobDescriptionTooLong = jobDescription.length > JOB_DESCRIPTION_MAX;
+  // The server's checks, made here so a refused title never costs an upload.
+  const trimmedJobDescription = jobDescription.normalize("NFC").trim().replace(/\s+/g, " ");
+  const jobDescriptionError =
+    Array.from(trimmedJobDescription).length > JOB_DESCRIPTION_MAX
+      ? "Use at most 64 characters."
+      : trimmedJobDescription !== "" && !/[\p{L}\p{N}]/u.test(trimmedJobDescription)
+        ? "Include at least one letter or digit."
+        : undefined;
   const runDisabled =
     runReason !== null ||
     !file ||
     !mapping[outcomeKey] ||
-    jobDescriptionTooLong ||
+    jobDescriptionError !== undefined ||
     createRun.isPending;
 
   const handleRun = () => {
@@ -199,7 +206,7 @@ const RunUpload = ({ projectId, metric, canEdit, blockedReason, onCreated }: Run
                 placeholder="For example, Account executive"
                 value={jobDescription}
                 onChange={(e) => setJobDescription(e.target.value)}
-                error={jobDescriptionTooLong ? "Use at most 200 characters." : undefined}
+                error={jobDescriptionError}
                 helperText="The stance names it. Runs on different job descriptions are not joined in the trend."
                 sx={{ width: "100%", maxWidth: "420px" }}
               />

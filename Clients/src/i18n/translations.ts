@@ -9283,7 +9283,10 @@ export const translations: Record<string, Record<string, string>> = {
     "For example, Account executive": "Zum Beispiel Account Executive",
     "The stance names it. Runs on different job descriptions are not joined in the trend.":
       "Die Stellungnahme nennt sie. Läufe mit unterschiedlichen Stellenbeschreibungen werden im Verlauf nicht verbunden.",
-    "Use at most 200 characters.": "Verwenden Sie höchstens 200 Zeichen.",
+    "Use at most 64 characters.": "Verwenden Sie höchstens 64 Zeichen.",
+    "Include at least one letter or digit.":
+      "Geben Sie mindestens einen Buchstaben oder eine Ziffer an.",
+    "Not recorded": "Nicht erfasst",
     "Browse independently assessed AI applications and track the ones that matter to your organization.":
       "Unabhängig bewertete KI-Anwendungen durchsuchen und die für Ihre Organisation relevanten verfolgen.",
     "Choose who receives a notification when a tracked app's assessment changes materially. If no recipients are set, organization admins are notified by default.":
@@ -20024,7 +20027,9 @@ export const translations: Record<string, Record<string, string>> = {
     "For example, Account executive": "Par exemple, chargé de clientèle",
     "The stance names it. Runs on different job descriptions are not joined in the trend.":
       "La prise de position la mentionne. Les exécutions portant sur des descriptions de poste différentes ne sont pas reliées dans la tendance.",
-    "Use at most 200 characters.": "Utilisez au maximum 200 caractères.",
+    "Use at most 64 characters.": "Utilisez au maximum 64 caractères.",
+    "Include at least one letter or digit.": "Incluez au moins une lettre ou un chiffre.",
+    "Not recorded": "Non enregistré",
     "Browse independently assessed AI applications and track the ones that matter to your organization.":
       "Parcourir les applications IA évaluées indépendamment et suivre celles qui comptent pour votre organisation.",
     "Choose who receives a notification when a tracked app's assessment changes materially. If no recipients are set, organization admins are notified by default.":
@@ -30674,7 +30679,9 @@ export const translations: Record<string, Record<string, string>> = {
     "For example, Account executive": "Por ejemplo, ejecutivo de cuentas",
     "The stance names it. Runs on different job descriptions are not joined in the trend.":
       "La posición la menciona. Las ejecuciones con descripciones de puesto distintas no se unen en la tendencia.",
-    "Use at most 200 characters.": "Use como máximo 200 caracteres.",
+    "Use at most 64 characters.": "Use como máximo 64 caracteres.",
+    "Include at least one letter or digit.": "Incluya al menos una letra o un dígito.",
+    "Not recorded": "No registrado",
     "Browse independently assessed AI applications and track the ones that matter to your organization.":
       "Explorar aplicaciones de IA evaluadas de forma independiente y seguir las que importan a su organización.",
     "Choose who receives a notification when a tracked app's assessment changes materially. If no recipients are set, organization admins are notified by default.":

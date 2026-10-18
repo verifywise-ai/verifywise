@@ -118,11 +118,11 @@ cutoff answer does not establish the metric. When the answers withhold ratios or
 rate, the run is stored with a `stop` finding and no result. The upload is hashed (SHA-256)
 and not retained.
 
-The upload may name the job description tested (`jobDescription`, at most 200 characters).
-`jobDescription.ts` reduces it to `job_description_key`: lower case, words joined by hyphens,
-at most 64 characters, so titles that differ only in case, spacing or punctuation are one job.
-A title with no letter or digit is refused (400); a blank one stores null. The stance prints
-the key with spaces as the customer's words, and leaves a field to complete when it is null.
+The upload may name the job description tested (`jobDescription`). `jobDescription.ts` stores
+it in `job_description_key` as typed, apart from Unicode normalisation (NFC) and runs of
+whitespace. A title over 64 characters (the column's width) or with no letter or digit is
+refused (400), never cut; a blank one stores null. The stance prints it verbatim as the
+customer's words, and leaves a field to complete when it is null.
 
 `deriveBasis` combines `data.held` (per characteristic) with `data.basis` (for the run) into a
 basis for sex, for race and ethnicity, and for the intersectional categories; the intersection
@@ -171,8 +171,8 @@ non-excluded group, the category holding it, and whether any non-excluded group 
 - **A caveat point:** a run whose stored findings would not allow export. Its ratio is shown
   with that caveat.
 - **A break**, labelled with every reason, between consecutive plotted runs whose profile
-  version, question-set version, job description (`job_description_key`, null counting as
-  one value) or metric differ.
+  version, question-set version, job description (`job_description_key`, compared ignoring
+  case, null counting as one value) or metric differ.
 
 `GET /runs/trend` returns only the series, not the stored results. `GET /runs/:id` does return
 the whole run row, `result_json` included.

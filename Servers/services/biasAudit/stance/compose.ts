@@ -18,7 +18,6 @@ import type { AnswerGateResult } from "../answerGates";
 import type { DerivedBasis } from "../deriveBasis";
 import type { ReadinessResult } from "../readinessScore";
 import { FORBIDDEN_WORDS } from "./vocabulary";
-import { jobDescriptionText } from "../jobDescription";
 import type { BiasAuditResult, GateFinding, OrderFinding } from "../index";
 
 export interface StanceSection {
@@ -321,7 +320,7 @@ function readinessBody(args: ComposeStanceArgs): string {
 
 function testedBody(args: ComposeStanceArgs): string {
   const role = args.jobDescriptionKey
-    ? `Job description tested: ${jobDescriptionText(args.jobDescriptionKey)}.`
+    ? `Job description tested: ${args.jobDescriptionKey}.`
     : "Job description tested: not recorded.";
   const lines = [
     role,
@@ -387,7 +386,7 @@ function withCustomerText(args: ComposeStanceArgs, section: StanceSection): Stan
   if (args.jobDescriptionKey) {
     candidates.push({
       lead: "Job description tested: ",
-      text: jobDescriptionText(args.jobDescriptionKey),
+      text: args.jobDescriptionKey,
       tail: ".",
     });
   }

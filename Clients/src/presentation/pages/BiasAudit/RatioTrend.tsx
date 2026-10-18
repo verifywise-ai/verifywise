@@ -32,7 +32,7 @@ import {
   type AedtTrendSeries,
 } from "../../../application/repository/aedtBiasAudit.repository";
 import { palette } from "../../themes/palette";
-import { categoryLabel, formatRatio, jobDescriptionLabel } from "./display";
+import { categoryLabel, formatRatio } from "./display";
 import { cardSx, cellSx, headSx, titleSx } from "./styles";
 
 /**
@@ -187,7 +187,7 @@ const SegmentHeading = ({ segment }: { segment: AedtTrendSegment }) => (
     {segment.jobDescriptionKey && (
       <>
         <span>{" · "}</span>
-        <span>Job description</span> <span>{jobDescriptionLabel(segment.jobDescriptionKey)}</span>
+        <span>Job description</span> <span>{segment.jobDescriptionKey}</span>
       </>
     )}
   </Typography>

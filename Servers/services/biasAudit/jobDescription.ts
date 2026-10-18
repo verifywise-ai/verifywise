@@ -1,30 +1,30 @@
 /**
- * The job description a run tested, as the key the run stores.
+ * The job description a run tested, as the run stores it.
  *
- * The customer types a job title. It is stored as a key (lower case, words
- * joined by hyphens, at most `JOB_DESCRIPTION_KEY_MAX` characters, the
- * column's width) so that "Senior Engineer" and "senior  engineer" are one
- * job and do not break the trend. The key is printed with spaces for hyphens.
+ * The customer's title is kept as typed, apart from Unicode normalisation
+ * (NFC) and runs of whitespace, so the stance can print it as their words.
+ * It must fit `bias_audit_runs.job_description_key` (VARCHAR(64)); a longer
+ * title is refused, never cut. The trend compares titles ignoring case.
  * Pure: no I/O.
  */
 
 /** `bias_audit_runs.job_description_key` is VARCHAR(64). */
-export const JOB_DESCRIPTION_KEY_MAX = 64;
+export const JOB_DESCRIPTION_MAX = 64;
 
-/** The longest title accepted, before it is reduced to a key. */
-export const JOB_DESCRIPTION_INPUT_MAX = 200;
+export type JobDescriptionResult =
+  { ok: true; value: string | null } | { ok: false; reason: "too_long" | "no_letter_or_digit" };
 
-/** The key for a title, or null when it has no letter or digit. */
-export function jobDescriptionKey(title: string): string | null {
-  const key = title
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}]+/gu, "-")
-    .replace(/^-+|-+$/g, "");
-  const capped = Array.from(key).slice(0, JOB_DESCRIPTION_KEY_MAX).join("").replace(/-+$/, "");
-  return capped === "" ? null : capped;
+/** The title to store; null for a blank one. */
+export function normaliseJobDescription(raw: string): JobDescriptionResult {
+  const value = raw.normalize("NFC").trim().replace(/\s+/g, " ");
+  if (value === "") return { ok: true, value: null };
+  if (Array.from(value).length > JOB_DESCRIPTION_MAX) return { ok: false, reason: "too_long" };
+  if (!/[\p{L}\p{N}]/u.test(value)) return { ok: false, reason: "no_letter_or_digit" };
+  return { ok: true, value };
 }
 
-/** A stored key as words. */
-export function jobDescriptionText(key: string): string {
-  return key.replace(/-/g, " ");
+/** Whether two stored titles name the same job: equal ignoring case; null only matches null. */
+export function sameJobDescription(a: string | null, b: string | null): boolean {
+  if (a === null || b === null) return a === b;
+  return a.toLocaleLowerCase("en") === b.toLocaleLowerCase("en");
 }

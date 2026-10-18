@@ -379,10 +379,10 @@ describe("RatioTrend review fixes", () => {
     expect(screen.queryByTestId("aedt-trend-caveat")).not.toBeInTheDocument();
   });
 
-  it("shows the job description as the stance document does", () => {
+  it("shows the job description as recorded, as the stance document does", () => {
     render(oneSegment);
     expect(screen.getByTestId("aedt-trend-segment-0")).toHaveTextContent(
-      "Job description commercial ae",
+      "Job description commercial-ae",
     );
   });
 });

@@ -66,9 +66,19 @@ describe("RunUpload", () => {
     renderUpload();
     await pickAndMapOutcome();
     fireEvent.change(screen.getByLabelText(/job description tested/i), {
-      target: { value: "x".repeat(201) },
+      target: { value: "x".repeat(65) },
     });
-    expect(screen.getByText("Use at most 200 characters.")).toBeInTheDocument();
+    expect(screen.getByText("Use at most 64 characters.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /run measures/i })).toBeDisabled();
+  });
+
+  it("withholds the run for a job description with no letter or digit, before any upload", async () => {
+    renderUpload();
+    await pickAndMapOutcome();
+    fireEvent.change(screen.getByLabelText(/job description tested/i), {
+      target: { value: "— ?!" },
+    });
+    expect(screen.getByText("Include at least one letter or digit.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /run measures/i })).toBeDisabled();
   });
 

@@ -257,12 +257,12 @@ describe("the role tested is named", () => {
   });
 
   it("marks the job title as the customer's words, so a forbidden word in it is quoted", () => {
-    const s = composeStance({ ...base, jobDescriptionKey: "certified-nurse" });
+    const s = composeStance({ ...base, jobDescriptionKey: "Certified nurse" });
     const tested = section(s, "what_was_tested");
-    expect(tested.body).toContain("Job description tested: certified nurse.");
+    expect(tested.body).toContain("Job description tested: Certified nurse.");
     expect(tested.customerText).toContainEqual({
       lead: "Job description tested: ",
-      text: "certified nurse",
+      text: "Certified nurse",
       tail: ".",
     });
     expect(s.blankFields.map((b) => b.field)).not.toContain("job_description");

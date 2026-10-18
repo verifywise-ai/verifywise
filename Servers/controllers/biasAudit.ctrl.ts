@@ -38,7 +38,7 @@ import {
   generateStance as generateStanceService,
   getStanceDownload,
 } from "../services/biasAudit/stanceService";
-import { JOB_DESCRIPTION_INPUT_MAX, jobDescriptionKey } from "../services/biasAudit/jobDescription";
+import { JOB_DESCRIPTION_MAX, normaliseJobDescription } from "../services/biasAudit/jobDescription";
 import { nycLocalLaw144Structure } from "../structures/NYC-Local-Law-144/nyc-local-law-144.structure";
 
 const FILE_NAME = "biasAudit.ctrl.ts";
@@ -168,30 +168,23 @@ function parseMapping(raw: unknown): Record<string, string> {
 }
 
 /**
- * The optional job title the run tested, reduced to the key the run stores.
- * Absent or blank means not recorded; a title with no letter or digit, or
- * longer than the limit, is refused rather than stored as something else.
+ * The optional job title the run tested, as the run stores it. Absent or
+ * blank means not recorded; a title that is too long or has no letter or
+ * digit is refused rather than stored as something else.
  */
 function parseJobDescription(raw: unknown): string | null {
   if (raw === undefined || raw === null) return null;
   if (typeof raw !== "string") {
     throw new ValidationException("jobDescription must be text", "jobDescription");
   }
-  if (raw.trim() === "") return null;
-  if (raw.length > JOB_DESCRIPTION_INPUT_MAX) {
-    throw new ValidationException(
-      `The job description must be at most ${JOB_DESCRIPTION_INPUT_MAX} characters`,
-      "jobDescription",
-    );
-  }
-  const key = jobDescriptionKey(raw);
-  if (key === null) {
-    throw new ValidationException(
-      "The job description must contain at least one letter or digit",
-      "jobDescription",
-    );
-  }
-  return key;
+  const parsed = normaliseJobDescription(raw);
+  if (parsed.ok) return parsed.value;
+  throw new ValidationException(
+    parsed.reason === "too_long"
+      ? `The job description must be at most ${JOB_DESCRIPTION_MAX} characters`
+      : "The job description must contain at least one letter or digit",
+    "jobDescription",
+  );
 }
 
 // ---------------------------------------------------------------- intake

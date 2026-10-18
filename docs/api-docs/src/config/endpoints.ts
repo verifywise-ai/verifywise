@@ -2279,7 +2279,7 @@ export const biasAuditEndpoints: Endpoint[] = [
     requiresAuth: true,
     responses: [
       { status: 201, description: "Run recorded (with its gate findings, whether or not a result was computed)" },
-      { status: 400, description: "The upload, mapping or job description is invalid: no file, a CSV that cannot be read, a mapped key the run does not read, or a job description over 200 characters or with no letter or digit" },
+      { status: 400, description: "The upload, mapping or job description is invalid: no file, a CSV that cannot be read, a mapped key the run does not read, or a job description over 64 characters or with no letter or digit" },
       { status: 401, description: "Not authenticated" },
       { status: 403, description: "The caller's role may not record a run (biasAudit.edit)" },
       { status: 404, description: "Project not found or not available to the caller, or no attested profile to run against" },

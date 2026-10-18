@@ -14,6 +14,7 @@
  */
 
 import { mayExportStoredRun } from "./dataGates";
+import { sameJobDescription } from "./jobDescription";
 
 /**
  * The fields of a run the series reads. `utils/biasAudit.utils` `TrendRunRow`
@@ -177,7 +178,7 @@ function reasonsBetween(segment: TrendSegment, run: TrendRun): string[] {
   if (segment.questionSetVersion !== run.question_set_version) {
     reasons.push(BREAK_REASONS.questionSetVersion);
   }
-  if ((segment.jobDescriptionKey ?? null) !== (run.job_description_key ?? null)) {
+  if (!sameJobDescription(segment.jobDescriptionKey ?? null, run.job_description_key ?? null)) {
     reasons.push(BREAK_REASONS.jobDescriptionKey);
   }
   if (segment.metric !== run.metric) reasons.push(metricChangeReason(segment.metric, run.metric));

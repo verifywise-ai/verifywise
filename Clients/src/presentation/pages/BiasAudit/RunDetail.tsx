@@ -211,9 +211,11 @@ const DerivedBasis = ({ runId, basis, canAttest }: BasisProps) => {
     <Box sx={cardSx}>
       <Typography sx={{ ...titleSx, mb: "8px" }}>Data basis by category</Typography>
       {/* Not basis.summary: it asks for a confirmation even once the reading is confirmed. */}
-      <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mb: "12px" }}>
-        This is our reading of your answers about the data you hold, not your statement.
-      </Typography>
+      {!basis.confirmed && (
+        <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mb: "12px" }}>
+          This is our reading of your answers about the data you hold, not your statement.
+        </Typography>
+      )}
       <Stack gap="8px" sx={{ mb: "12px" }}>
         {basis.perCategory.map((c) => (
           <Box key={c.category}>
@@ -339,6 +341,7 @@ const RunDetail = ({ runId, canEdit, canAttest, onBack }: RunDetailProps) => {
             value={run.metric === "scoring_rate" ? "Scoring rate" : "Selection rate"}
           />
           <Meta label="Profile version" value={String(run.profile_version)} />
+          <Meta label="Job description tested" value={run.job_description_key ?? "Not recorded"} />
           <Meta label="Rows" value={run.row_count == null ? "—" : String(run.row_count)} />
           <Meta label="Dataset SHA-256" value={run.dataset_sha256 ?? "—"} breakAll />
         </Box>

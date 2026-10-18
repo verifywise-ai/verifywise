@@ -72,6 +72,15 @@ describe("a break is drawn rather than a line", () => {
     expect(series.breaks[0].reasons).toContain("a different job description was tested");
   });
 
+  it("does not segment on a job description that differs only in case", () => {
+    const series = buildTrendSeries([
+      run(1, "2026-01-10", 1, 0.95, { jobDescriptionKey: "Account executive" }),
+      run(2, "2026-04-10", 1, 0.93, { jobDescriptionKey: "account Executive" }),
+    ]);
+    expect(series.segments).toHaveLength(1);
+    expect(series.breaks).toEqual([]);
+  });
+
   it("segments on a question set change", () => {
     const series = buildTrendSeries([
       run(1, "2026-01-10", 1, 0.95),

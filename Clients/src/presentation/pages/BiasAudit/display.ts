@@ -21,10 +21,3 @@ export function formatRatio(ratio: number | null): string {
   const [whole, fraction = ""] = ratio.toFixed(6).split(".");
   return `${whole}.${fraction.slice(0, 3)}`;
 }
-
-/**
- * A job description key as the stance document prints it
- * (Servers/services/biasAudit/stance/compose.ts, testedBody): hyphens read
- * as spaces.
- */
-export const jobDescriptionLabel = (key: string) => key.replace(/-/g, " ");
