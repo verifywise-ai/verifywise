@@ -36,6 +36,7 @@ import { runMetricOf } from "./profileDecision";
 import { deriveBasis } from "./deriveBasis";
 import { computeReadiness, type ReadinessResult } from "./readinessScore";
 import { DatasetParseError, parseDataset, type ParsedDataset } from "./datasetParser";
+import { LL144_RACE, LL144_SEX } from "./generation/allocation";
 import { runAudit, RECORD_KEYS } from "./index";
 import type { AuditOutcome, BiasAuditConfig } from "./index";
 import { mayExportStoredRun, type GateFinding } from "./dataGates";
@@ -51,18 +52,10 @@ export const LL144_CONFIG: BiasAuditConfig = {
   presetId: "nyc_ll144",
   metric: "selection_rate",
   categories: {
-    sex: { label: "Sex", groups: ["Male", "Female"] },
+    sex: { label: "Sex", groups: [...LL144_SEX] },
     race_ethnicity: {
       label: "Race/Ethnicity",
-      groups: [
-        "Hispanic or Latino",
-        "White",
-        "Black or African American",
-        "Native Hawaiian or Pacific Islander",
-        "Asian",
-        "Native American or Alaska Native",
-        "Two or more races",
-      ],
+      groups: [...LL144_RACE],
     },
   },
   intersectional: { required: true, cross: ["sex", "race_ethnicity"] },

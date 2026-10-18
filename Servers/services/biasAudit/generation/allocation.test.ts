@@ -1,4 +1,11 @@
-import { buildAllocation, cellKey, LL144_RACE, LL144_SEX, MIN_PER_CELL } from "./allocation";
+import {
+  buildAllocation,
+  cellKey,
+  MAX_COUNT,
+  LL144_RACE,
+  LL144_SEX,
+  MIN_PER_CELL,
+} from "./allocation";
 
 describe("categories", () => {
   it("uses the two sexes and seven race categories LL 144 requires", () => {
@@ -14,10 +21,43 @@ describe("categories", () => {
 describe("buildAllocation", () => {
   const tiers = ["t1", "t2", "t3", "t4", "t5"];
 
-  it("produces exactly the requested count", () => {
-    expect(buildAllocation({ count: 5000, tiers, smallSampleExclusion: 0.02 }).rows).toHaveLength(
-      5000,
-    );
+  it("gives every cell the same tier mix and reports the achieved count", () => {
+    const r = buildAllocation({ count: 5000, tiers, smallSampleExclusion: 0.02 });
+    expect(r.rows).toHaveLength(4970);
+    expect(r.count).toBe(4970);
+    expect(Object.values(r.cellSizes).every((n) => n === 355)).toBe(true);
+    const perCellTier = new Map<string, number>();
+    for (const row of r.rows) {
+      const k = `${cellKey(row.demographics)}#${row.tierKey}`;
+      perCellTier.set(k, (perCellTier.get(k) ?? 0) + 1);
+    }
+    expect(perCellTier.size).toBe(70);
+    expect([...perCellTier.values()].every((n) => n === 71)).toBe(true);
+  });
+
+  it("rounds a request down to a whole number per tier per cell", () => {
+    expect(buildAllocation({ count: 700, tiers, smallSampleExclusion: 0.02 }).count).toBe(700);
+    expect(buildAllocation({ count: 769, tiers, smallSampleExclusion: 0.02 }).count).toBe(700);
+  });
+
+  it("shares one frozen demographics object per cell", () => {
+    const { rows } = buildAllocation({ count: 700, tiers, smallSampleExclusion: 0.02 });
+    expect(Object.isFrozen(rows[0].demographics)).toBe(true);
+    expect(rows[0].demographics).toBe(rows[1].demographics);
+  });
+
+  it("rejects bad inputs with their own errors", () => {
+    const ok = { count: 1400, tiers, smallSampleExclusion: 0.02 };
+    expect(() => buildAllocation({ ...ok, count: 1400.5 })).toThrow(/whole number/);
+    expect(() => buildAllocation({ ...ok, count: NaN })).toThrow(/whole number/);
+    expect(() => buildAllocation({ ...ok, count: MAX_COUNT + 1 })).toThrow(/exceed/);
+    expect(() => buildAllocation({ ...ok, tiers: [] })).toThrow(/At least one tier/);
+    expect(() => buildAllocation({ ...ok, tiers: ["a", " "] })).toThrow(/blank/);
+    expect(() => buildAllocation({ ...ok, tiers: ["a", "a"] })).toThrow(/unique/);
+    expect(() => buildAllocation({ ...ok, smallSampleExclusion: 0 })).toThrow(/between 0 and 1/);
+    expect(() => buildAllocation({ ...ok, smallSampleExclusion: 1 })).toThrow(/between 0 and 1/);
+    expect(() => buildAllocation({ ...ok, smallSampleExclusion: NaN })).toThrow(/between 0 and 1/);
+    expect(() => buildAllocation({ ...ok, count: MAX_COUNT })).not.toThrow();
   });
 
   it("balances across all 14 intersectional cells, keyed sex|race", () => {
@@ -85,9 +125,13 @@ describe("buildAllocation", () => {
     // them in order puts every category in a contiguous ID range, and
     // generation runs in ID order. Task 3 is what prevents that.
     const { rows } = buildAllocation({ count: 1400, tiers, smallSampleExclusion: 0.02 });
-    const races = rows.map((r) => r.demographics.raceEthnicity);
-    let changes = 0;
-    for (let i = 1; i < races.length; i++) if (races[i] !== races[i - 1]) changes++;
-    expect(changes).toBeLessThan(50); // grouped, not interleaved
+    const expected: string[] = [];
+    for (const sex of LL144_SEX) for (const race of LL144_RACE) expected.push(`${sex}|${race}`);
+    const blocks: string[] = [];
+    for (const r of rows) {
+      const k = cellKey(r.demographics);
+      if (blocks[blocks.length - 1] !== k) blocks.push(k);
+    }
+    expect(blocks).toEqual(expected);
   });
 });
