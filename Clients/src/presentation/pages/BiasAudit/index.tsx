@@ -171,14 +171,14 @@ const ProjectWorkspace = ({
     );
   }
 
-  // A failed background refetch keeps the data it had. When the failure is
-  // transient (network, 5xx) the page stays, with a small notice, so the
-  // wizard and an unsaved draft survive. A refusal (404: deleted or no longer
-  // a member; 403) or a query with no data replaces the page.
+  // A failed background refetch keeps the data it had. Only an explicit
+  // refusal (401, 403, or 404: deleted or no longer a member) or a query with
+  // no data replaces the page; anything else (network, 408, 429, 5xx) keeps
+  // the wizard and an unsaved draft, with a small notice.
   const blocks = (error: unknown, hasData: boolean) => {
     if (!error) return false;
     const { status } = describeAedtError(error);
-    return !hasData || (status !== null && status < 500);
+    return !hasData || status === 401 || status === 403 || status === 404;
   };
   const loadError = blocks(profileQuery.error, Boolean(profile))
     ? profileQuery.error
@@ -403,9 +403,13 @@ const ProfileSummary = ({ profile }: { profile: AedtProfileView }) => {
               }))}
             />
           </Box>
+        ) : readiness.score === null ? (
+          // Not expected (the server scores whenever scope is in), but never
+          // render "null%".
+          <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
+            No score yet.
+          </Typography>
         ) : (
-          // computeReadiness returns a null score only out of scope or with a
-          // deciding question missing, both handled above, so a score is here.
           <Typography sx={{ fontSize: 20, fontWeight: 600, color: palette.text.primary }}>
             {`${readiness.score}%`}
           </Typography>

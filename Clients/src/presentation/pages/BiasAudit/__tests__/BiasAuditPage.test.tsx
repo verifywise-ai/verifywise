@@ -305,17 +305,20 @@ describe("BiasAuditPage", () => {
 
   // A failed background refetch keeps the data it had. Swapping the page for
   // the load error would unmount the wizard and lose an unsaved draft.
-  it("keeps the page and the wizard when a refetch fails after data loaded", () => {
-    state.profileError = notFound("Server error", 503);
-    renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
-    expect(screen.queryByTestId("aedt-load-error")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /save answers/i })).toBeInTheDocument();
-    expect(screen.getByTestId("aedt-refetch-error")).toHaveTextContent(/could not be refreshed/i);
-  });
+  it.each([503, 429, 408])(
+    "keeps the page and the wizard when a refetch fails with %i",
+    (status) => {
+      state.profileError = notFound("Server error", status);
+      renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
+      expect(screen.queryByTestId("aedt-load-error")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /save answers/i })).toBeInTheDocument();
+      expect(screen.getByTestId("aedt-refetch-error")).toHaveTextContent(/could not be refreshed/i);
+    },
+  );
 
   // A 404 or 403 on refetch means the use case is gone or no longer the
   // caller's; keeping a stale, editable page would hide that.
-  it.each([404, 403])("replaces the page when a refetch answers %i", (status) => {
+  it.each([404, 403, 401])("replaces the page when a refetch answers %i", (status) => {
     state.profileError = notFound("Project not found", status);
     renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
     expect(screen.getByTestId("aedt-load-error")).toHaveTextContent("Project not found");
@@ -369,6 +372,17 @@ describe("BiasAuditPage", () => {
       // The mocked view still has no answers, so the restarted wizard shows none.
       expect(screen.getByRole("radio", { name: /We supply it/ })).not.toBeChecked();
     });
+  });
+
+  it("shows a neutral fallback rather than a null score", () => {
+    state.profile = {
+      ...PROFILE,
+      attestedDecision: { readiness: { ...IN_SCOPE, score: null }, metric: "selection_rate" },
+    };
+    renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
+    const summary = screen.getByTestId("aedt-profile-summary");
+    expect(summary).toHaveTextContent("No score yet.");
+    expect(summary).not.toHaveTextContent("null%");
   });
 
   it("asks for an attestation when the saved answers are not attested", () => {
