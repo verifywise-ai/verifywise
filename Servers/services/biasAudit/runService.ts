@@ -33,6 +33,7 @@ import { applicableQuestions } from "./applicability";
 import { assertProjectAccess, runNotFound, type Viewer } from "./projectAccess";
 import { answerMapFromRows, assertProject } from "./serviceHelpers";
 import { runAnswerGates } from "./answerGates";
+import { runMetricOf } from "./profileDecision";
 import { deriveBasis } from "./deriveBasis";
 import { computeReadiness, type ReadinessResult } from "./readinessScore";
 import { DatasetParseError, parseDataset, type ParsedDataset } from "./datasetParser";
@@ -94,13 +95,6 @@ export interface CreateRunResult {
   outcome: AuditOutcome;
 }
 
-const METRICS = ["selection_rate", "scoring_rate"] as const;
-type RunMetric = (typeof METRICS)[number];
-
-function isRunMetric(m: string | null): m is RunMetric {
-  return m !== null && (METRICS as readonly string[]).includes(m);
-}
-
 function stop(code: string, message: string, detail: Record<string, unknown> = {}): GateFinding {
   return { code, severity: "stop", message, detail };
 }
@@ -140,8 +134,10 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
   );
   const readiness = computeReadiness(answers);
   const answerGates = runAnswerGates(answers);
+  // The same reading the profile view reports as the attested decision.
+  const metric = runMetricOf(answerGates);
 
-  if (!isRunMetric(answerGates.forcedMetric)) {
+  if (metric === null) {
     const cutoffShown = applicableQuestions(answers).some((q) => q.key === "cutoff.applied_by");
     if (!cutoffShown) {
       throw new ValidationException(
@@ -157,7 +153,6 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
       "cutoff.applied_by",
     );
   }
-  const metric = answerGates.forcedMetric;
 
   // Only keys the engine reads may be mapped.
   const allowed = new Set<string>([

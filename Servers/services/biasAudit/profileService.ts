@@ -31,6 +31,7 @@ import { assertProjectAccess, type Viewer } from "./projectAccess";
 import { answerMapFromRows, assertProject, isUniqueViolation } from "./serviceHelpers";
 import { applicableQuestions, type AnswerWithNotes } from "./applicability";
 import { computeReadiness, type ReadinessResult } from "./readinessScore";
+import { decideProfile, type ProfileDecision } from "./profileDecision";
 import type { IntakeQuestion } from "../../structures/NYC-Local-Law-144/intake.types";
 
 export type AnswerInput = {
@@ -256,13 +257,18 @@ async function currentAnswers(scope: ReadScope) {
   return { current, rows, answers: answerMapFromRows(rows, "with_notes") };
 }
 
-/** The questions that apply given the answers saved so far. */
-export async function getApplicableQuestions(
+/**
+ * The whole question set, each question with its `appliesWhen` predicate.
+ * It is not filtered by the saved answers: the wizard applies the predicates
+ * to the answers on screen, so a follow-up an unsaved answer makes applicable
+ * appears at once. The server still decides applicability on every save.
+ * Asked per project so the member rule refuses a non-member as on every read.
+ */
+export async function getQuestionSet(
   scope: ReadScope & Viewer,
 ): Promise<{ questions: IntakeQuestion[] }> {
   await assertProject(scope.projectId, scope.organizationId, scope);
-  const { answers } = await currentAnswers(scope);
-  return { questions: applicableQuestions(answers) };
+  return { questions: LL144_QUESTIONS };
 }
 
 export interface ProfileAnswerView {
@@ -287,7 +293,14 @@ export interface ProfileView {
     attestedAt: Date | null;
   } | null;
   answers: ProfileAnswerView[];
+  /** Readiness of the version being edited, which may be a draft ahead of the attested one. */
   readiness: ReadinessResult;
+  /**
+   * What the attested profile decides: its readiness (and so its scope) and
+   * the rate a run computes. Runs and scope determinations act on this, not
+   * on a draft. Null when no version is attested.
+   */
+  attestedDecision: ProfileDecision | null;
   /**
    * Scope determinations generated from this project's attested profiles,
    * newest first. They have no run, so no run's stance list carries them;
@@ -311,6 +324,15 @@ export async function getProfileView(
     getAttestedProfileQuery(scope.projectId, scope.frameworkId, scope.organizationId),
     listProfileStancesQuery(scope.projectId, scope.frameworkId, scope.organizationId),
   ]);
+  // The edited version is often the attested one; its answers are then read once.
+  let attestedDecision: ProfileDecision | null = null;
+  if (attested) {
+    const attestedRows =
+      current?.id === attested.id
+        ? rows
+        : await getProfileAnswersQuery(attested.id!, scope.organizationId);
+    attestedDecision = decideProfile(answerMapFromRows(attestedRows, "without_notes"));
+  }
   return {
     project: { id: project.id, title: project.project_title },
     profile: current ? { id: current.id!, version: current.version, status: current.status } : null,
@@ -332,6 +354,7 @@ export async function getProfileView(
       answeredAt: r.answered_at ?? null,
     })),
     readiness: computeReadiness(answers),
+    attestedDecision,
     scopeDeterminations: stances.map((s) => ({
       ...s,
       isCurrent: attested?.id != null && s.profile_id === attested.id,

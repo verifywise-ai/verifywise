@@ -21,7 +21,7 @@ import {
 } from "../domain.layer/exceptions/custom.exception";
 import {
   attestProfile as attestProfileService,
-  getApplicableQuestions,
+  getQuestionSet,
   getProfileView,
   saveAnswers,
   type AnswerInput,
@@ -171,9 +171,7 @@ function parseMapping(raw: unknown): Record<string, string> {
 export const getQuestions = controllerWrapper(
   async (req) => ({
     status: 200,
-    data: await getApplicableQuestions(
-      memberScope(req.query.projectId, req.params.frameworkId, req),
-    ),
+    data: await getQuestionSet(memberScope(req.query.projectId, req.params.frameworkId, req)),
   }),
   { functionName: "getQuestions", fileName: FILE_NAME, eventType: "Read" },
 );

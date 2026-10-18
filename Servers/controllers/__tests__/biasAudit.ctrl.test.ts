@@ -31,7 +31,7 @@ jest.mock("../../utils/logger/fileLogger", () => ({
 const logEvent = jest.fn<any>().mockResolvedValue(undefined);
 jest.mock("../../utils/logger/dbLogger", () => ({ logEvent }));
 jest.mock("../../services/biasAudit/profileService", () => ({
-  getApplicableQuestions: jest.fn(),
+  getQuestionSet: jest.fn(),
   getProfileView: jest.fn(),
   saveAnswers: jest.fn(),
   attestProfile: jest.fn(),
@@ -94,7 +94,7 @@ describe("getQuestions", () => {
       mockReq({ params: { frameworkId: LL144 }, query: {} }),
     );
     expect(status).toBe(400);
-    expect(profileService.getApplicableQuestions).not.toHaveBeenCalled();
+    expect(profileService.getQuestionSet).not.toHaveBeenCalled();
   });
 
   it("404s a framework other than NYC Local Law 144", async () => {
@@ -106,8 +106,8 @@ describe("getQuestions", () => {
     expect(JSON.stringify(body)).toMatch(/Local Law 144/);
   });
 
-  it("scopes to the caller's organization and returns the applicable questions", async () => {
-    svc(profileService.getApplicableQuestions).mockResolvedValue({
+  it("scopes to the caller's organization and returns the question set", async () => {
+    svc(profileService.getQuestionSet).mockResolvedValue({
       questions: [{ key: "role.party" }],
     });
     const { status, body } = await call(
@@ -116,7 +116,7 @@ describe("getQuestions", () => {
     );
     expect(status).toBe(200);
     expect(body.data.questions[0].key).toBe("role.party");
-    expect(profileService.getApplicableQuestions).toHaveBeenCalledWith({
+    expect(profileService.getQuestionSet).toHaveBeenCalledWith({
       projectId: 7,
       frameworkId: 12,
       organizationId: 42,
@@ -126,7 +126,7 @@ describe("getQuestions", () => {
   });
 
   it("maps a project outside the organization to 404", async () => {
-    svc(profileService.getApplicableQuestions).mockRejectedValue(
+    svc(profileService.getQuestionSet).mockRejectedValue(
       new NotFoundException("Project 999999 was not found", "Project"),
     );
     const { status } = await call(

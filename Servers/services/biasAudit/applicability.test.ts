@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
+import * as path from "node:path";
 import { LL144_QUESTIONS } from "../../structures/NYC-Local-Law-144/intake.questions";
-import type { IntakeQuestion } from "../../structures/NYC-Local-Law-144/intake.types";
+import type { IntakeQuestion, Predicate } from "../../structures/NYC-Local-Law-144/intake.types";
 import { applicableQuestions, evaluatePredicate, type AnswerMap } from "./applicability";
 
 const ans = (m: Record<string, string>): AnswerMap =>
@@ -139,5 +141,31 @@ describe("question reachability", () => {
         reached: true,
       });
     }
+  });
+});
+
+/**
+ * The wizard applies its own copy of this predicate to the answers on
+ * screen (Clients/.../BiasAudit/intakeLayout.ts). Both are tested against the
+ * same cases, so a question appears on the page exactly when the server
+ * would apply it.
+ */
+describe("evaluatePredicate against the cases shared with the client", () => {
+  const file = path.resolve(__dirname, "../../../shared/bias-audit/predicateCases.json");
+  const { cases } = JSON.parse(readFileSync(file, "utf8")) as {
+    cases: Array<{
+      name: string;
+      predicate: Predicate | null;
+      answers: AnswerMap;
+      expected: boolean;
+    }>;
+  };
+
+  it("has cases to run", () => {
+    expect(cases.length).toBeGreaterThan(10);
+  });
+
+  it.each(cases.map((c) => [c.name, c] as const))("%s", (_name, c) => {
+    expect(evaluatePredicate(c.predicate ?? undefined, c.answers)).toBe(c.expected);
   });
 });

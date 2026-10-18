@@ -15,12 +15,8 @@ jest.mock("../../database/db", () => ({
   sequelize: { transaction: (fn: (t: object) => unknown) => fn(mockTx) },
 }));
 
-import {
-  attestProfile,
-  getApplicableQuestions,
-  getProfileView,
-  saveAnswers,
-} from "./profileService";
+import { attestProfile, getQuestionSet, getProfileView, saveAnswers } from "./profileService";
+import { LL144_QUESTIONS } from "../../structures/NYC-Local-Law-144/intake.questions";
 
 const base = { projectId: 7, frameworkId: 15, userId: 9, organizationId: 42, role: "Admin" };
 const row = (k: string, v: string | null, extra: Record<string, unknown> = {}) => ({
@@ -325,32 +321,30 @@ describe("attestProfile", () => {
   });
 });
 
-describe("getApplicableQuestions", () => {
+describe("getQuestionSet", () => {
   const scope = { projectId: 7, frameworkId: 12, organizationId: 42, userId: 9, role: "Admin" };
 
   it("refuses a project outside the organization with a not-found", async () => {
     utils.getProjectQuery.mockResolvedValue(null);
-    await expect(getApplicableQuestions(scope)).rejects.toMatchObject({ statusCode: 404 });
+    await expect(getQuestionSet(scope)).rejects.toMatchObject({ statusCode: 404 });
     expect(utils.getProjectQuery).toHaveBeenCalledWith(7, 42);
+  });
+
+  // The wizard filters on the answers on screen, so a follow-up that an
+  // unsaved answer makes applicable must already be in the set it holds.
+  it("returns every question, follow-ups included, each with its predicate", async () => {
+    utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
+    const out = await getQuestionSet(scope);
+    expect(out.questions.map((q) => q.key)).toEqual(LL144_QUESTIONS.map((q) => q.key));
+    const planned = out.questions.find((q) => q.key === "cutoff.planned");
+    expect(planned?.appliesWhen).toBeDefined();
+  });
+
+  it("reads no answers, since the set does not depend on them", async () => {
+    utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
+    await getQuestionSet(scope);
     expect(utils.getCurrentProfileQuery).not.toHaveBeenCalled();
-  });
-
-  it("offers only what applies to the answers so far", async () => {
-    utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
-    utils.getCurrentProfileQuery.mockResolvedValue(null);
-    const out = await getApplicableQuestions(scope);
-    const keys = out.questions.map((q) => q.key);
-    expect(keys).toContain("role.party");
-    expect(keys).not.toContain("cutoff.planned");
-  });
-
-  it("reads the current profile's answers in the organization", async () => {
-    utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
-    utils.getCurrentProfileQuery.mockResolvedValue({ id: 3, version: 1, status: "draft" });
-    utils.getProfileAnswersQuery.mockResolvedValue([row("role.party", "vendor")]);
-    await getApplicableQuestions(scope);
-    expect(utils.getCurrentProfileQuery).toHaveBeenCalledWith(7, 12, 42);
-    expect(utils.getProfileAnswersQuery).toHaveBeenCalledWith(3, 42);
+    expect(utils.getProfileAnswersQuery).not.toHaveBeenCalled();
   });
 });
 
@@ -399,6 +393,58 @@ describe("getProfileView", () => {
     expect(utils.getProfileAnswersQuery).toHaveBeenCalledWith(4, 42);
   });
 
+  it("reports no attested decision before any profile is attested", async () => {
+    utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
+    utils.getCurrentProfileQuery.mockResolvedValue({ id: 4, version: 1, status: "draft" });
+    utils.getAttestedProfileQuery.mockResolvedValue(null);
+    utils.getProfileAnswersQuery.mockResolvedValue([row("role.party", "vendor")]);
+    const out = await getProfileView(scope);
+    expect(out.attestedDecision).toBeNull();
+  });
+
+  // Runs and scope determinations act on the attested answers, so the view
+  // reports their decision apart from the draft's readiness.
+  it("decides from the attested answers while a draft says otherwise", async () => {
+    const vetoes = [
+      row("role.party", "vendor"),
+      row("independence.auditor", "self"),
+      row("data.held", "none"),
+    ];
+    utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
+    utils.getCurrentProfileQuery.mockResolvedValue({ id: 4, version: 2, status: "draft" });
+    utils.getAttestedProfileQuery.mockResolvedValue({ id: 3, version: 1, status: "attested" });
+    utils.getProfileAnswersQuery.mockImplementation(async (profileId: number) =>
+      profileId === 3
+        ? [...vetoes, row("scope.weighting", "biggest"), row("cutoff.applied_by", "person")]
+        : [...vetoes, row("scope.weighting", "one_of_several")],
+    );
+    const out = await getProfileView(scope);
+    expect(out.readiness.scope).toBe("out_of_scope");
+    expect(out.attestedDecision).toMatchObject({
+      readiness: { scope: "in_scope" },
+      metric: "scoring_rate",
+    });
+    expect(utils.getProfileAnswersQuery).toHaveBeenCalledWith(3, 42);
+  });
+
+  it("reads the answers once when the edited version is the attested one", async () => {
+    utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
+    utils.getCurrentProfileQuery.mockResolvedValue({ id: 3, version: 1, status: "attested" });
+    utils.getAttestedProfileQuery.mockResolvedValue({ id: 3, version: 1, status: "attested" });
+    utils.getProfileAnswersQuery.mockResolvedValue([
+      row("role.party", "vendor"),
+      row("scope.weighting", "one_of_several"),
+      row("independence.auditor", "self"),
+      row("data.held", "none"),
+    ]);
+    const out = await getProfileView(scope);
+    expect(out.attestedDecision).toMatchObject({
+      readiness: { scope: "out_of_scope" },
+      metric: null,
+    });
+    expect(utils.getProfileAnswersQuery).toHaveBeenCalledTimes(1);
+  });
+
   it("lists the project's scope determinations, which no run's stance list carries", async () => {
     utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
     utils.getCurrentProfileQuery.mockResolvedValue(null);
@@ -426,6 +472,7 @@ describe("getProfileView", () => {
     utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
     utils.getCurrentProfileQuery.mockResolvedValue(null);
     utils.getAttestedProfileQuery.mockResolvedValue({ id: 3, version: 2, status: "attested" });
+    utils.getProfileAnswersQuery.mockResolvedValue([]);
     utils.listProfileStancesQuery.mockResolvedValue([
       { id: 31, profile_id: 3, version: 2 },
       { id: 30, profile_id: 2, version: 1 },
@@ -526,19 +573,17 @@ describe("project-member access", () => {
     expect(utils.userCanAccessProjectQuery).not.toHaveBeenCalled();
   });
 
-  it("answers 404 on the question set to a non-member, since it is filtered by the project's answers", async () => {
+  it("answers 404 on the question set to a non-member, as on every project-scoped read", async () => {
     utils.userCanAccessProjectQuery.mockResolvedValue(false);
     utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
-    await expect(getApplicableQuestions(viewScope)).rejects.toMatchObject({ statusCode: 404 });
-    expect(utils.getCurrentProfileQuery).not.toHaveBeenCalled();
-    expect(utils.getProfileAnswersQuery).not.toHaveBeenCalled();
+    await expect(getQuestionSet(viewScope)).rejects.toMatchObject({ statusCode: 404 });
+    expect(utils.getProjectQuery).not.toHaveBeenCalled();
   });
 
   it("gives a member the question set", async () => {
     utils.userCanAccessProjectQuery.mockResolvedValue(true);
     utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
-    utils.getCurrentProfileQuery.mockResolvedValue(null);
-    await expect(getApplicableQuestions(viewScope)).resolves.toHaveProperty("questions");
+    await expect(getQuestionSet(viewScope)).resolves.toHaveProperty("questions");
     expect(utils.userCanAccessProjectQuery).toHaveBeenCalledWith(7, 9, 42);
   });
 });
