@@ -501,6 +501,75 @@ describe("ProfileWizard: new saved answers without a remount", () => {
     ).toBeChecked();
     expect(screen.getByRole("button", { name: /save answers/i })).toBeEnabled();
   });
+
+  // A whitespace-only edit is no change, so it must not hide a colleague's
+  // newer answer or be saved over it.
+  describe("after a whitespace-only edit", () => {
+    const props = {
+      questions: QUESTIONS,
+      profileStatus: "draft",
+      canEdit: true,
+      canAttest: true,
+      onAttest: vi.fn(),
+    };
+
+    it("shows a colleague's newer answer and does not offer to save over it", () => {
+      const onSave = vi.fn();
+      const { rerender } = renderWithProviders(
+        <ProfileWizard {...props} onSave={onSave} answers={ALL_VETOES} />,
+      );
+      fireEvent.change(within(question("role.party")).getByRole("textbox"), {
+        target: { value: "Our own words. " },
+      });
+      rerender(
+        <ProfileWizard
+          {...props}
+          onSave={onSave}
+          answers={ALL_VETOES.map((a) =>
+            a.questionKey === "role.party"
+              ? answer("role.party", "vendor", { notes: "Their words." })
+              : a,
+          )}
+        />,
+      );
+      expect(
+        within(question("role.party")).getByRole("radio", { name: /We supply it to employers/ }),
+      ).toBeChecked();
+      expect(within(question("role.party")).getByRole("textbox")).toHaveValue("Their words.");
+      expect(screen.getByRole("button", { name: /save answers/i })).toBeDisabled();
+    });
+
+    it("shows a colleague's answer to a question that had only whitespace typed", () => {
+      const { rerender } = renderWithProviders(
+        <ProfileWizard {...props} onSave={vi.fn()} answers={ALL_VETOES} />,
+      );
+      fireEvent.change(within(question("cutoff.applied_by")).getByRole("textbox"), {
+        target: { value: " " },
+      });
+      rerender(
+        <ProfileWizard
+          {...props}
+          onSave={vi.fn()}
+          answers={[...ALL_VETOES, answer("cutoff.applied_by", "person")]}
+        />,
+      );
+      expect(
+        within(question("cutoff.applied_by")).getByRole("radio", { name: /A person/ }),
+      ).toBeChecked();
+      expect(screen.queryByText(/notes without an answer/i)).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /attest/i })).toBeEnabled();
+    });
+
+    it("keeps the typed whitespace when a refetch leaves that question alone", () => {
+      const { rerender } = renderWithProviders(
+        <ProfileWizard {...props} onSave={vi.fn()} answers={ALL_VETOES} />,
+      );
+      const notes = within(question("role.party")).getByRole("textbox");
+      fireEvent.change(notes, { target: { value: "Our own words. " } });
+      rerender(<ProfileWizard {...props} onSave={vi.fn()} answers={[...ALL_VETOES]} />);
+      expect(within(question("role.party")).getByRole("textbox")).toHaveValue("Our own words. ");
+    });
+  });
 });
 
 describe("ProfileWizard: Save blocked by an edit it cannot send", () => {

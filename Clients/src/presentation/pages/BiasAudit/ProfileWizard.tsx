@@ -62,19 +62,32 @@ const isAnswered = (a: DraftAnswer | undefined) => a !== undefined && (a.dontKno
 const sameAnswer = (a: DraftAnswer, b: DraftAnswer) =>
   a.value === b.value && a.dontKnow === b.dontKnow && a.notes.trim() === b.notes.trim();
 
+const exactAnswer = (a: DraftAnswer, b: DraftAnswer) =>
+  a.value === b.value && a.dontKnow === b.dontKnow && a.notes === b.notes;
+
 /**
  * The edits that still differ from the saved answers. Compared exactly, not
  * trimmed: dropping an edit must never change the text on screen, or a typed
  * space or newline would vanish mid-typing.
+ *
+ * Given the saved answers from before a refetch, an edit that was no change
+ * against them (whitespace only) is also dropped where the server's answer
+ * has since changed, so it cannot hide that newer answer or be saved over it.
  */
 function withoutSaved(
   edits: Record<string, DraftAnswer>,
   saved: Record<string, DraftAnswer>,
+  savedBefore?: Record<string, DraftAnswer>,
 ): Record<string, DraftAnswer> {
   const next: Record<string, DraftAnswer> = {};
   for (const [k, a] of Object.entries(edits)) {
     const s = saved[k] ?? EMPTY_ANSWER;
-    if (a.value !== s.value || a.dontKnow !== s.dontKnow || a.notes !== s.notes) next[k] = a;
+    if (exactAnswer(a, s)) continue;
+    if (savedBefore) {
+      const before = savedBefore[k] ?? EMPTY_ANSWER;
+      if (!exactAnswer(before, s) && sameAnswer(a, before)) continue;
+    }
+    next[k] = a;
   }
   return next;
 }
@@ -118,8 +131,9 @@ const ProfileWizard = ({
   // hidden under it. Render-time state adjustment, no effect.
   const [answersSeen, setAnswersSeen] = useState(answers);
   if (answers !== answersSeen) {
+    const savedBefore = draftFrom(answersSeen);
     setAnswersSeen(answers);
-    setEdits((prev) => withoutSaved(prev, savedDraft));
+    setEdits((prev) => withoutSaved(prev, savedDraft, savedBefore));
   }
   const draft = useMemo(() => ({ ...savedDraft, ...edits }), [savedDraft, edits]);
   // While a save or attest is in flight nothing can change, so nothing on
