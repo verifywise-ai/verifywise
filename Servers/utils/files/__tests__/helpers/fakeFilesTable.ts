@@ -3,9 +3,12 @@
  * that check a bias audit stance PDF answers exactly as a missing file does.
  *
  * It applies the organization, the file id replacements and the visible-file
- * predicate (VISIBLE_FILE_SQL), and nothing else. A tool's answer over a
- * table holding only a stance PDF therefore equals its answer over an empty
- * table only when every query the tool sends applies the predicate.
+ * predicate (VISIBLE_FILE_SQL), and nothing else. The predicate counts only
+ * when it appears at least once per reference to the files table, so a
+ * UNION or subquery that leaves one branch unfiltered is treated as
+ * unfiltered. A tool's answer over a table holding only a stance PDF
+ * therefore equals its answer over an empty table only when every branch of
+ * every query the tool sends applies the predicate.
  *
  * UPDATE marks the matched rows (`updated`) and DELETE removes them, so a
  * test can also check a write left the stance row alone.
@@ -47,12 +50,26 @@ export const visibleRow = (overrides: Partial<FakeFileRow> = {}): FakeFileRow =>
   ...overrides,
 });
 
+const FILES_REFERENCE = /\b(?:FROM|JOIN|UPDATE|INTO)\s+files\b/gi;
+const VISIBLE_PREDICATE = /\bIS DISTINCT FROM :stanceSource\b/g;
+
+/**
+ * Whether every reference to the files table in the statement carries the
+ * visible-file predicate. A statement with no files reference counts as
+ * filtered (it cannot return a files row).
+ */
+export function everyFilesReferenceFiltered(sql: string): boolean {
+  const references = sql.match(FILES_REFERENCE)?.length ?? 0;
+  const predicates = sql.match(VISIBLE_PREDICATE)?.length ?? 0;
+  return predicates >= references;
+}
+
 export function fakeFilesQuery(table: FakeFileRow[]) {
   return async (sql: string, options: any = {}): Promise<any> => {
     const r = options.replacements ?? {};
     const organizationId = r.organizationId ?? r.organization_id;
     let rows = table.filter((row) => row.organization_id === organizationId);
-    if (sql.includes("IS DISTINCT FROM :stanceSource")) {
+    if (sql.match(VISIBLE_PREDICATE) && everyFilesReferenceFiltered(sql)) {
       rows = rows.filter((row) => row.source !== r.stanceSource);
     }
     const id = r.id ?? r.fileId ?? r.file_id;
