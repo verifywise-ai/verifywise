@@ -149,7 +149,8 @@ function shapeOk(text: string, kind: ArtifactKind, parsed: unknown): boolean {
 const escapeRegExp = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /**
- * For name matching: accents, ʻokina, apostrophes and hyphens out, so
+ * For name matching: accents, ʻokina (U+02BB), modifier apostrophe (U+02BC),
+ * typographic and ASCII apostrophes, backtick, acute (U+00B4) and hyphens out, so
  * "José García" reads "Jose Garcia", "Kaʻawa" and "Ka'awa" read "Kaawa", and
  * "Jean-Baptiste" reads "JeanBaptiste". Applied to both sides.
  */
@@ -157,7 +158,7 @@ const foldName = (t: string) =>
   t
     .normalize("NFD")
     .replace(/\p{M}/gu, "")
-    .replace(/[ʻ‘’'‐‑-]/g, "");
+    .replace(/[\u02BB\u02BC\u2018\u2019'`\u00B4\u2010\u2011-]/g, "");
 
 const startsUpper = (w: string) => /^\p{Lu}/u.test(w);
 
@@ -185,7 +186,27 @@ const THIRD_PARTY_NAME = new RegExp(
   "giu",
 );
 // Institutions named after a person are not people.
-const INSTITUTION_AFTER = /^\s+(?:university|college|school|hospital|community)\b/i;
+// Up to two more capitalised words may sit between the name and the noun
+// ("Mary Washington Memorial Hospital", "John Marshall High School").
+const INSTITUTION_NOUNS = [
+  "University",
+  "College",
+  "School",
+  "Hospital",
+  "Community",
+  "Memorial",
+  "High",
+  "Middle",
+  "Elementary",
+  "Medical",
+  "Academy",
+  "Institute",
+  "Center",
+].flatMap((n) => [n, n.toUpperCase()]);
+const INSTITUTION_AFTER = new RegExp(
+  `^(?:\\s+\\p{Lu}\\p{L}*){0,2}?\\s+(?:${INSTITUTION_NOUNS.join("|")})(?!\\p{L})`,
+  "u",
+);
 const INSTITUTION_BEFORE = /\buniversity\s+of\s+$/i;
 
 /**
@@ -212,10 +233,14 @@ function namesSomeoneElse(text: string, candidateName: string): boolean {
 }
 
 /**
- * The text a structured record's content checks read: its string values,
- * not the raw JSON (escapes such as é would hide a name or a term), with
+ * The text a structured record's content checks read: its string values and
+ * any key beyond the four the form asks for, not the raw JSON (escapes such as é would hide a name or a term), with
  * a "languages" list restated as a Languages line.
  */
+const STRUCTURED_KEYS = new Set(["name", "summary", "experience", "skills"]);
+// Joins the scanned items so no whitespace run crosses from one into the next.
+const ITEM_SEPARATOR = "\n|\n";
+
 function structuredText(value: unknown): string {
   const out: string[] = [];
   const walk = (v: unknown) => {
@@ -223,6 +248,8 @@ function structuredText(value: unknown): string {
     else if (Array.isArray(v)) v.forEach(walk);
     else if (v && typeof v === "object") {
       for (const [k, child] of Object.entries(v)) {
+        // Any key beyond the form's four is content too ({"spanish": "fluent"}).
+        if (!STRUCTURED_KEYS.has(k)) out.push(k);
         if (/^languages?(?:[\s_]spoken)?$/i.test(k.trim())) {
           const listed = Array.isArray(child) ? child : [child];
           out.push(`Languages: ${listed.filter((x) => typeof x === "string").join(", ")}`);
@@ -232,7 +259,7 @@ function structuredText(value: unknown): string {
     }
   };
   walk(value);
-  return out.join("\n");
+  return out.join(ITEM_SEPARATOR);
 }
 
 /**

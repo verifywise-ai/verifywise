@@ -85,16 +85,23 @@ export const DEMOGRAPHIC_TERMS: readonly string[] = [
 // Every language a phrase can name, the job-vocabulary ones included: "French"
 // is a fry, but "fluent in French" is a language.
 // prettier-ignore
-const LANGUAGE_NAMES = [
+const LANGUAGE_NAME_LIST = [
   ...LANGUAGES.filter((l) => l !== "bilingual"), "french", "italian", "polish",
   "cherokee", "german", "russian", "greek", "chinese", "korean", "japanese",
   "vietnamese", "hawaiian", "navajo", "samoan", "tongan", "somali", "ukrainian",
   "armenian", "persian",
-].join("|");
+];
+const LANGUAGE_NAMES = LANGUAGE_NAME_LIST.join("|");
+const LANGUAGE_NAME_SET: ReadonlySet<string> = new Set(LANGUAGE_NAME_LIST);
 
-/** "of Italian descent": of/descent any case, the inner word(s) capitalised. */
+/**
+ * "of Italian descent": of/descent in lowercase, capitalised or capitals, the
+ * inner word(s) capitalised. No /i flag: under /i, \p{Lu} also matches
+ * lowercase, and "rate of controlled descent" would read as origin.
+ */
 function ofDescent(text: string): boolean {
-  const re = /\bof\s+(\p{Lu}[\p{L}'-]*(?:\s+\p{Lu}[\p{L}'-]*)?)\s+(descent|ancestry)\b/giu;
+  const re =
+    /\b(?:of|Of|OF)\s+(\p{Lu}[\p{L}'-]*(?:\s+\p{Lu}[\p{L}'-]*)?)\s+(descent|Descent|DESCENT|ancestry|Ancestry|ANCESTRY)\b/gu;
   for (const m of text.matchAll(re)) {
     // A lowercase "descent", or a phrase set in capitals ("OF POLISH DESCENT").
     // A title-case heading ("Rate of Emergency Descent") is not a statement of origin.
@@ -103,16 +110,17 @@ function ofDescent(text: string): boolean {
   return false;
 }
 
-/** A "Languages:" line listing any language other than English. */
+/**
+ * A "Language:" or "Languages:" line that names a language other than English.
+ * Only words that name a language count, so qualifiers ("English only",
+ * "Fluent in English", "English – native") and non-languages ("Python, SQL")
+ * pass.
+ */
 function languagesLine(text: string): boolean {
-  const re = /^[\s\-*#•]*languages?(?:\s+spoken)?\s*[:–—-]\s*(.+)$/gim;
+  const re = /^[\s\-*#\u2022]*languages?\s*:\s*(.+)$/gim;
   for (const m of text.matchAll(re)) {
-    const listed = m[1]
-      .replace(/\([^)]*\)/g, " ")
-      .split(/[,;/|]|\band\b/i)
-      .map((l) => l.trim().toLowerCase())
-      .filter((l) => l !== "");
-    if (listed.some((l) => l !== "english")) return true;
+    const words = m[1].toLowerCase().match(/\p{L}+/gu) ?? [];
+    if (words.some((w) => LANGUAGE_NAME_SET.has(w))) return true;
   }
   return false;
 }
@@ -125,7 +133,7 @@ const PHRASES: Array<{ term: string; test: (text: string) => boolean }> = [
   {
     term: "-born",
     test: matches(
-      /(?<![\p{L}.])(?!(?:first|new|free|later|early|still)-born)(?:\p{L}+|(?:\p{L}\.){2,})-born\b/iu,
+      /(?<![\p{L}\p{N}.])(?!(?:first|new|free|later|early|still)-born)(?:\p{L}+|(?:\p{L}\.){2,})-born\b/iu,
     ),
   },
   { term: "of … descent", test: ofDescent },

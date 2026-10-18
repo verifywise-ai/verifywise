@@ -44,7 +44,6 @@ import {
   listLatestValidRecordsPageQuery,
   claimCorpusLeaseQuery,
   releaseCorpusLeaseQuery,
-  getCorpusLeaseQuery,
   InsertCorpusArgs,
 } from "./biasAudit.utils";
 import { ConflictException, NotFoundException } from "../domain.layer/exceptions/custom.exception";
@@ -720,7 +719,6 @@ describe("corpora and the record log", () => {
     ["stale sweep", () => markStaleCorporaFailedQuery(42, 900), [[]]],
     ["lease claim", () => claimCorpusLeaseQuery(3, 42, "tok", 120), [[]]],
     ["lease release", () => releaseCorpusLeaseQuery(3, 42, "tok"), [[]]],
-    ["lease read", () => getCorpusLeaseQuery(3, 42), []],
     ["append", () => appendCorpusRecordQuery(RECORD, 42), [[{ id: 1 }]]],
     ["log", () => listCorpusLogQuery(3, 42), []],
     ["valid count", () => countValidCorpusRecordsQuery(3, 42), [{ count: 0 }]],
@@ -814,13 +812,11 @@ describe("corpora and the record log", () => {
     expect(mockQuery.mock.calls[0][1].replacements.owner_token).toBe("tok");
   });
 
-  it("judges lease liveness on the database clock", async () => {
-    mockQuery.mockResolvedValueOnce([{ status: "running", lease_live: false }]);
-    await expect(getCorpusLeaseQuery(3, 42)).resolves.toMatchObject({ lease_live: false });
+  it("reads a corpus with its lease liveness judged on the database clock", async () => {
+    mockQuery.mockResolvedValueOnce([{ id: 3, status: "running", lease_live: false }]);
+    await expect(getCorpusQuery(3, 42)).resolves.toMatchObject({ lease_live: false });
     const [sql] = mockQuery.mock.calls[0];
     expect(sql).toMatch(/lease_expires_at > NOW\(\)\) AS lease_live/);
-    mockQuery.mockResolvedValueOnce([]);
-    await expect(getCorpusLeaseQuery(3, 42)).resolves.toBeNull();
   });
 
   it("releases the lease for its holder only", async () => {

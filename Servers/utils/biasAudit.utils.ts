@@ -1080,6 +1080,8 @@ export interface CorpusRow {
   completed_at: Date | null;
   owner_token: string | null;
   lease_expires_at: Date | null;
+  /** Computed on read: lease_expires_at is after the database's NOW(). */
+  lease_live: boolean;
 }
 
 export interface InsertCorpusArgs {
@@ -1160,13 +1162,18 @@ export async function createCorpusQuery(
   return row;
 }
 
-/** A corpus by id, in this organization, or null. */
+/**
+ * A corpus by id, in this organization, or null. lease_live judges the lease
+ * on the database clock, not the caller's.
+ */
 export async function getCorpusQuery(
   corpusId: number,
   organizationId: number,
 ): Promise<CorpusRow | null> {
   const rows = (await sequelize.query(
-    `SELECT * FROM bias_audit_corpora
+    `SELECT *,
+            (lease_expires_at IS NOT NULL AND lease_expires_at > NOW()) AS lease_live
+       FROM bias_audit_corpora
       WHERE id = :corpus_id AND organization_id = :organization_id`,
     {
       replacements: { corpus_id: corpusId, organization_id: organizationId },
@@ -1274,38 +1281,6 @@ export async function claimCorpusLeaseQuery(
     },
   );
   return firstRow(result) !== undefined;
-}
-
-/** A corpus's status and lease, with liveness judged on the database clock. */
-export interface CorpusLeaseRow {
-  status: CorpusStatus;
-  lease_expires_at: Date | null;
-  lease_live: boolean;
-  record_count: number | null;
-  models_observed_json: Record<string, number> | null;
-}
-
-/**
- * The lease as the database sees it: lease_live compares lease_expires_at
- * with the database's NOW(), not the caller's clock. Null outside the
- * organization.
- */
-export async function getCorpusLeaseQuery(
-  corpusId: number,
-  organizationId: number,
-): Promise<CorpusLeaseRow | null> {
-  const rows = (await sequelize.query(
-    `SELECT status, lease_expires_at,
-            (lease_expires_at IS NOT NULL AND lease_expires_at > NOW()) AS lease_live,
-            record_count, models_observed_json
-       FROM bias_audit_corpora
-      WHERE id = :corpus_id AND organization_id = :organization_id`,
-    {
-      replacements: { corpus_id: corpusId, organization_id: organizationId },
-      type: QueryTypes.SELECT,
-    },
-  )) as CorpusLeaseRow[];
-  return rows[0] ?? null;
 }
 
 /**

@@ -12,7 +12,6 @@ import {
 import {
   appendCorpusRecordQuery,
   claimCorpusLeaseQuery,
-  getCorpusLeaseQuery,
   createCorpusQuery,
   getCorpusQuery,
   listCorpusLogQuery,
@@ -278,11 +277,11 @@ export async function runCorpusGeneration(args: {
     // Liveness is judged on the database clock. A running corpus with no live
     // lease (it expired between the claim and the read) gets one more claim;
     // only then is it busy.
-    let lease = await getCorpusLeaseQuery(corpusId, organizationId);
+    let lease = await getCorpusQuery(corpusId, organizationId);
     let claimed = false;
     if (lease?.status === "running" && !lease.lease_live) {
       claimed = await claim();
-      if (!claimed) lease = await getCorpusLeaseQuery(corpusId, organizationId);
+      if (!claimed) lease = await getCorpusQuery(corpusId, organizationId);
     }
     if (!claimed) {
       if (lease?.status === "complete" || lease?.status === "blocked") return summaryOf(lease);
@@ -313,9 +312,9 @@ export async function runCorpusGeneration(args: {
       throw error;
     };
     /** `fn`'s value, or the corpus failed with `failureCode` and `fn`'s error rethrown. */
-    const orFail = async <T>(failureCode: string, fn: () => T): Promise<T> => {
+    const orFail = async <T>(failureCode: string, fn: () => T | Promise<T>): Promise<T> => {
       try {
-        return fn();
+        return await fn();
       } catch (e) {
         return failAndThrow(failureCode, e);
       }

@@ -39,6 +39,28 @@ describe("findDemographicTerms", () => {
     expect(findDemographicTerms(text)).not.toEqual([]);
   });
 
+  // The review's probes (round 5).
+  it.each([
+    "Maintained the rate of controlled descent on the lift",
+    "angle of steep descent",
+    "Languages: English only",
+    "Languages: Fluent in English",
+    "Languages: English.",
+    "Languages: English \u2013 native",
+    "Languages: Python, SQL",
+    "Language-access program coordinator",
+    "Worked 2nd-born shift",
+  ])("passes (round 5): %s", (text) => {
+    expect(findDemographicTerms(text)).toEqual([]);
+  });
+
+  it.each(["Candidate: Languages: Spanish", "Languages: English, Italian", "Of Italian descent"])(
+    "still refuses (round 5): %s",
+    (text) => {
+      expect(findDemographicTerms(text)).not.toEqual([]);
+    },
+  );
+
   // The review's probes (round 4).
   it.each([
     "Of Italian descent, raised in Ohio",

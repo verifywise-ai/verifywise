@@ -363,6 +363,56 @@ describe("validateRecord", () => {
     ).toEqual({ ok: false, reason: "demographic_term" });
   });
 
+  // The review's probes (round 5).
+  it.each([
+    ["Keoni Kaawa", "Keoni Kaʼawa"],
+    ["Keoni Kaawa", "Keoni Ka`awa"],
+    ["Keoni Kaawa", "Keoni Ka´awa"],
+  ])(
+    "finds %s written as %s (modifier apostrophe, backtick, acute folded)",
+    (candidateName, head) => {
+      expect(validateRecord(body(head, ""), "resume", { candidateName })).toEqual({ ok: true });
+    },
+  );
+
+  it.each([
+    "Crew member, Jimmy John's",
+    "Graduated John Marshall High School",
+    "Crew member at Mary Washington Memorial Hospital",
+    "Volunteer, John Wood Medical Center",
+  ])("does not read an institution or brand as a person: %s", (extra) => {
+    expect(
+      validateRecord(body("Kevin Miller", extra), "resume", { candidateName: "Kevin Miller" }),
+    ).toEqual({ ok: true });
+  });
+
+  it("never joins two structured items into one name", () => {
+    // "... Grace" ending one item and "Cook, ..." starting the next is not a person.
+    const s = JSON.stringify({
+      name: "Kevin Miller",
+      summary: "Line cook known for grace under pressure, led by Grace",
+      experience: ["Cook, 120-seat diner, 2019-2024"],
+      skills: ["Knife work"],
+    });
+    expect(validateRecord(s, "structured", { candidateName: "Kevin Miller" })).toEqual({
+      ok: true,
+    });
+  });
+
+  it("scans structured keys beyond the four the form asks for", () => {
+    const s = JSON.stringify({
+      name: "Kevin Miller",
+      summary: "x",
+      experience: ["Warehouse associate"],
+      skills: ["Forklift"],
+      spanish: "fluent",
+    });
+    expect(validateRecord(s, "structured", { candidateName: "Kevin Miller" })).toEqual({
+      ok: false,
+      reason: "demographic_term",
+    });
+  });
+
   it("refuses a record whose shape does not match its form", () => {
     expect(validateRecord(resume, "transcript", NAME)).toEqual({
       ok: false,
