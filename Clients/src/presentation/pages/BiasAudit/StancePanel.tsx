@@ -122,10 +122,15 @@ const StancePanel = ({
               severity={downloadError.status === 410 ? "warning" : "error"}
               sx={{ borderRadius: "4px" }}
             >
-              {/* The server's 410 text says to generate the stance again. Where that
-                  is not offered, the panel's own message replaces it. */}
-              {!(downloadError.status === 410 && !canRegenerate) && (
+              {/* The server's 410 text says to generate the stance again. It shows
+                  only with the button; otherwise the panel's own message replaces it. */}
+              {!(downloadError.status === 410 && !(canRegenerate && canGenerate)) && (
                 <Typography sx={{ fontSize: 13 }}>{downloadError.message}</Typography>
+              )}
+              {downloadError.status === 410 && canRegenerate && !canGenerate && (
+                <Typography sx={{ fontSize: 13 }} data-testid="stance-cannot-regenerate">
+                  <span>The file is no longer stored.</span> <span>{generateBlockedReason}</span>
+                </Typography>
               )}
               {downloadError.status === 410 && failedStanceGone && (
                 <Typography sx={{ fontSize: 13 }} data-testid="stance-file-gone">

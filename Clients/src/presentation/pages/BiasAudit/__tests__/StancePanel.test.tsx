@@ -145,4 +145,27 @@ describe("StancePanel downloads", () => {
     expect(screen.queryByText(SERVER_GONE)).not.toBeInTheDocument();
     expect(screen.getAllByText(/no longer stored/)).toHaveLength(1);
   });
+
+  // Regeneration would apply, but this viewer cannot generate (a Reviewer,
+  // say). The server's "generate again" text would point at a missing button.
+  it("explains why it cannot be generated again when the viewer may not generate", async () => {
+    download.mockRejectedValue(gone());
+    const reason = "Only an Admin or Editor can generate a scope determination.";
+    renderWithProviders(
+      <StancePanel
+        kind="scope"
+        stances={[row(2, true)]}
+        generateBlockedReason={reason}
+        onGenerate={vi.fn()}
+        isGenerating={false}
+        generateError={null}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /download/i }));
+    const note = await screen.findByTestId("stance-cannot-regenerate");
+    expect(note).toHaveTextContent("The file is no longer stored.");
+    expect(note).toHaveTextContent(reason);
+    expect(screen.queryByText(SERVER_GONE)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /generate it again/i })).not.toBeInTheDocument();
+  });
 });
