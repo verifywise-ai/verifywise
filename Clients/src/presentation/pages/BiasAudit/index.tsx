@@ -30,7 +30,6 @@ import {
   useAttestAedtProfile,
   useGenerateAedtScopeDetermination,
   useSaveAedtAnswers,
-  type AedtProfileWrite,
 } from "../../../application/hooks/useAedtBiasAudit";
 import {
   describeAedtError,
@@ -146,7 +145,8 @@ const ProjectWorkspace = ({
   const save = useSaveAedtAnswers(projectId);
   const attest = useAttestAedtProfile(projectId);
   const scope = useGenerateAedtScopeDetermination(projectId);
-  const [savedCount, setSavedCount] = useState(0);
+  // Bumped after an attest, so the wizard restarts from the attested answers.
+  const [attestCount, setAttestCount] = useState(0);
   const [selectedRun, setSelectedRun] = useState<number | null>(null);
 
   const profile = profileQuery.data;
@@ -201,21 +201,16 @@ const ProjectWorkspace = ({
     );
   }
 
-  // Restart the wizard only once the profile view shows what was written.
-  // If the reload failed it still holds the old answers, so the wizard keeps
-  // what is on screen and the refresh notice says why.
-  const restartIfReloaded = (write: AedtProfileWrite) => {
-    if (write.reloaded) setSavedCount((n) => n + 1);
-  };
-
-  const handleSave = (answers: AedtAnswerInput[]) => {
+  // A save does not restart the wizard: it takes what it sent as its saved
+  // baseline (onSaved), so a failed reload cannot show the save as unsaved.
+  const handleSave = (answers: AedtAnswerInput[], onSaved: () => void) => {
     attest.reset();
-    save.mutate(answers, { onSuccess: restartIfReloaded });
+    save.mutate(answers, { onSuccess: onSaved });
   };
 
   const handleAttest = () => {
     save.reset();
-    attest.mutate(undefined, { onSuccess: restartIfReloaded });
+    attest.mutate(undefined, { onSuccess: () => setAttestCount((n) => n + 1) });
   };
 
   const actionError = save.error ?? attest.error;
@@ -263,7 +258,9 @@ const ProjectWorkspace = ({
 
       {activeTab === "profile" && (
         <ProfileWizard
-          key={`${profile.profile?.id ?? 0}-${profile.profile?.version ?? 0}-${savedCount}`}
+          // Restart only for another profile row (a new version created by a
+          // save, or none yet) or after an attest; a refetch never remounts it.
+          key={`${profile.profile?.id ?? 0}-${attestCount}`}
           questions={questionsQuery.data ?? []}
           answers={profile.answers}
           profileStatus={profile.profile?.status ?? null}

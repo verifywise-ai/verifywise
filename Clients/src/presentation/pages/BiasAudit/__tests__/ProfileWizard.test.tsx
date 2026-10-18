@@ -204,23 +204,27 @@ describe("ProfileWizard: notes on veto questions", () => {
     const save = screen.getByRole("button", { name: /save answers/i });
     expect(save).toBeEnabled();
     fireEvent.click(save);
-    expect(onSave).toHaveBeenCalledWith([
-      {
-        questionKey: "role.party",
-        value: "employer",
-        notes: "We hire our own sales staff with it.",
-        dontKnow: false,
-      },
-    ]);
+    expect(onSave).toHaveBeenCalledWith(
+      [
+        {
+          questionKey: "role.party",
+          value: "employer",
+          notes: "We hire our own sales staff with it.",
+          dontKnow: false,
+        },
+      ],
+      expect.any(Function),
+    );
   });
 
   it('does not require notes for an "I don\'t know" answer', () => {
     const { onSave } = renderWizard();
     fireEvent.click(within(question("role.party")).getByRole("radio", { name: /I don't know/ }));
     fireEvent.click(screen.getByRole("button", { name: /save answers/i }));
-    expect(onSave).toHaveBeenCalledWith([
-      { questionKey: "role.party", value: null, notes: null, dontKnow: true },
-    ]);
+    expect(onSave).toHaveBeenCalledWith(
+      [{ questionKey: "role.party", value: null, notes: null, dontKnow: true }],
+      expect.any(Function),
+    );
   });
 });
 
@@ -406,14 +410,17 @@ describe("ProfileWizard: edits that cannot be saved", () => {
     expect(screen.queryByTestId("unsaveable-edits")).not.toBeInTheDocument();
     // The visible change is untouched and still saves.
     fireEvent.click(screen.getByRole("button", { name: /save answers/i }));
-    expect(onSave).toHaveBeenCalledWith([
-      {
-        questionKey: "cutoff.applied_by",
-        value: "platform",
-        notes: "Our own words.",
-        dontKnow: false,
-      },
-    ]);
+    expect(onSave).toHaveBeenCalledWith(
+      [
+        {
+          questionKey: "cutoff.applied_by",
+          value: "platform",
+          notes: "Our own words.",
+          dontKnow: false,
+        },
+      ],
+      expect.any(Function),
+    );
   });
 });
 
@@ -444,5 +451,37 @@ describe("ProfileWizard: deciding questions match the server's attest rule", () 
     expect(
       within(screen.getByTestId("attest-blocked-reason")).getByText("agency.notice"),
     ).toBeInTheDocument();
+  });
+});
+
+describe("ProfileWizard: new saved answers without a remount", () => {
+  // A refetch passes new answers in place; untouched questions follow them,
+  // and an edit in progress stays.
+  it("takes new saved answers for untouched questions and keeps edits in progress", () => {
+    const props = {
+      questions: QUESTIONS,
+      profileStatus: "draft",
+      canEdit: true,
+      canAttest: true,
+      onSave: vi.fn(),
+      onAttest: vi.fn(),
+    };
+    const { rerender } = renderWithProviders(<ProfileWizard {...props} answers={ALL_VETOES} />);
+    fireEvent.click(within(question("cutoff.applied_by")).getByRole("radio", { name: /A person/ }));
+    rerender(
+      <ProfileWizard
+        {...props}
+        answers={ALL_VETOES.map((a) =>
+          a.questionKey === "role.party" ? answer("role.party", "vendor") : a,
+        )}
+      />,
+    );
+    expect(
+      within(question("role.party")).getByRole("radio", { name: /We supply it to employers/ }),
+    ).toBeChecked();
+    expect(
+      within(question("cutoff.applied_by")).getByRole("radio", { name: /A person/ }),
+    ).toBeChecked();
+    expect(screen.getByRole("button", { name: /save answers/i })).toBeEnabled();
   });
 });

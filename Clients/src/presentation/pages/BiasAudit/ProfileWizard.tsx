@@ -38,7 +38,12 @@ export interface ProfileWizardProps {
   profileStatus: string | null;
   canEdit: boolean;
   canAttest: boolean;
-  onSave: (answers: AedtAnswerInput[]) => void;
+  /**
+   * Saves the answers; the page calls `onSaved` once the server accepted
+   * them. The wizard then takes them as its saved baseline, whether or not
+   * the profile view reloads.
+   */
+  onSave: (answers: AedtAnswerInput[], onSaved: () => void) => void;
   onAttest: () => void;
   isSaving?: boolean;
   isAttesting?: boolean;
@@ -46,7 +51,8 @@ export interface ProfileWizardProps {
   errorMessage?: string | null;
 }
 
-function draftFrom(answers: AedtProfileAnswer[]): Record<string, DraftAnswer> {
+/** Saved answers (from the server, or as just sent to it) in the draft's shape. */
+function draftFrom(answers: AedtAnswerInput[]): Record<string, DraftAnswer> {
   const out: Record<string, DraftAnswer> = {};
   for (const a of answers) {
     out[a.questionKey] = { value: a.value, notes: a.notes ?? "", dontKnow: a.dontKnow };
@@ -73,8 +79,10 @@ function dontKnowConsequence(q: AedtQuestion): string {
  * with the reason named, while a deciding question is open or answers are
  * unsaved, rather than failing on submit.
  *
- * Mount it with a `key` that changes when the saved profile changes, so the
- * draft restarts from what the server holds.
+ * It follows the saved answers it is given without remounting: untouched
+ * questions take the new saved values and edits in progress are kept. Mount
+ * it with a new `key` only when it must restart (another profile version,
+ * or after an attest).
  */
 const ProfileWizard = ({
   questions,
@@ -88,9 +96,31 @@ const ProfileWizard = ({
   isAttesting = false,
   errorMessage = null,
 }: ProfileWizardProps) => {
-  const savedDraft = useMemo(() => draftFrom(answers), [answers]);
+  // The saved baseline: the server's answers, plus what this wizard saved
+  // since they were last loaded (the reload after a save can fail).
+  const [savedDraft, setSavedDraft] = useState(() => draftFrom(answers));
   const [draft, setDraft] = useState<Record<string, DraftAnswer>>(() => draftFrom(answers));
   const [dirty, setDirty] = useState<Set<string>>(() => new Set());
+  // Set once this wizard saves, since the server then holds a draft even if
+  // the profile view still says "attested".
+  const [savedHere, setSavedHere] = useState(false);
+
+  // New answers from the server rebase the baseline; untouched questions
+  // follow them, edits in progress stay (React's "adjust state on a prop
+  // change" pattern, no effect).
+  const [answersSeen, setAnswersSeen] = useState(answers);
+  if (answers !== answersSeen) {
+    const server = draftFrom(answers);
+    setAnswersSeen(answers);
+    setSavedDraft(server);
+    setSavedHere(false);
+    setDraft((prev) => {
+      const next = { ...server };
+      for (const k of dirty) if (prev[k]) next[k] = prev[k];
+      return next;
+    });
+  }
+  const status = savedHere ? "draft" : profileStatus;
 
   const visible = useMemo(
     () => questions.filter((q) => evaluatePredicate(q.appliesWhen, draft)),
@@ -150,18 +180,29 @@ const ProfileWizard = ({
 
   const handleSave = () => {
     if (saveDisabled) return;
-    onSave(
-      pending.map((q) => {
-        const a = draft[q.key];
-        const notes = a.notes.trim();
-        return {
-          questionKey: q.key,
-          value: a.dontKnow ? null : a.value,
-          notes: notes === "" ? null : notes,
-          dontKnow: a.dontKnow,
-        };
-      }),
-    );
+    const sent = pending.map((q) => {
+      const a = draft[q.key];
+      const notes = a.notes.trim();
+      return {
+        questionKey: q.key,
+        value: a.dontKnow ? null : a.value,
+        notes: notes === "" ? null : notes,
+        dontKnow: a.dontKnow,
+      };
+    });
+    onSave(sent, () => {
+      // What the server accepted is now the saved baseline: those keys are
+      // no longer unsaved, and Save will not send (and re-attribute) them.
+      const accepted = draftFrom(sent);
+      setSavedDraft((prev) => ({ ...prev, ...accepted }));
+      setDraft((prev) => ({ ...prev, ...accepted }));
+      setDirty((prev) => {
+        const next = new Set(prev);
+        for (const a of sent) next.delete(a.questionKey);
+        return next;
+      });
+      setSavedHere(true);
+    });
   };
 
   // ---- attest: read from the saved answers, since attest records those.
@@ -170,20 +211,19 @@ const ProfileWizard = ({
   // The server is the authority: if a conditional deciding question is ever
   // added, change both sides together.
 
-  const saved = useMemo(() => new Map(answers.map((a) => [a.questionKey, a])), [answers]);
   const openVetoes = questions
     .filter((q) => q.weight === "veto")
-    .filter((q) => !hasUsableAnswer(saved.get(q.key)))
-    .map((q) => ({ key: q.key, dontKnow: saved.get(q.key)?.dontKnow ?? false }));
+    .filter((q) => !hasUsableAnswer(savedDraft[q.key]))
+    .map((q) => ({ key: q.key, dontKnow: savedDraft[q.key]?.dontKnow ?? false }));
 
   let attestReason: string | null = null;
   if (!canAttest) attestReason = "Only an Admin can attest the profile.";
-  else if (pending.length > 0 || profileStatus === null)
+  else if (pending.length > 0 || status === null)
     attestReason = "Save your answers before attesting.";
   else if (unsaveable.length > 0)
     attestReason =
       "Some edits cannot be saved. Answer those questions or discard the edits before attesting.";
-  else if (profileStatus === "attested")
+  else if (status === "attested")
     attestReason = "This version is attested. Change an answer to start a new version.";
   const attestDisabled = isAttesting || attestReason !== null || openVetoes.length > 0;
 

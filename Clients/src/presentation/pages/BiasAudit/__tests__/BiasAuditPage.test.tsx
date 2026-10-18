@@ -12,7 +12,7 @@ const state = vi.hoisted(() => ({
   profile: null as unknown,
   profileError: null as unknown,
   questions: [] as unknown[],
-  saveResult: { profileId: 3, version: 2, reloaded: true },
+  saveSucceeds: true,
 }));
 
 const { mutation } = vi.hoisted(() => ({
@@ -48,10 +48,14 @@ vi.mock("../../../../application/hooks/useAedtBiasAudit", () => ({
   useAedtRun: () => ({ data: undefined, isLoading: true, error: null }),
   useSaveAedtAnswers: () => ({
     ...mutation(),
-    mutate: (_answers: unknown, opts?: { onSuccess?: (r: unknown) => void }) =>
-      opts?.onSuccess?.(state.saveResult),
+    mutate: (_answers: unknown, opts?: { onSuccess?: () => void }) => {
+      if (state.saveSucceeds) opts?.onSuccess?.();
+    },
   }),
-  useAttestAedtProfile: mutation,
+  useAttestAedtProfile: () => ({
+    ...mutation(),
+    mutate: (_v: unknown, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.(),
+  }),
   useGenerateAedtScopeDetermination: mutation,
   useCreateAedtRun: mutation,
   useConfirmAedtDerivedBasis: mutation,
@@ -133,7 +137,7 @@ describe("BiasAuditPage", () => {
     state.profile = PROFILE;
     state.profileError = null;
     state.questions = [];
-    state.saveResult = { profileId: 3, version: 2, reloaded: true };
+    state.saveSucceeds = true;
   });
 
   it("offers only use cases with the LL 144 framework, and shows the education panel", () => {
@@ -340,16 +344,29 @@ describe("BiasAuditPage", () => {
       fireEvent.click(screen.getByRole("button", { name: /save answers/i }));
     }
 
-    // The profile view still holds the pre-save answers; restarting the
-    // wizard from them would show the old answers as if saved.
-    it("keeps the wizard's state when the profile did not reload", () => {
-      state.saveResult = { profileId: 3, version: 2, reloaded: false };
+    // The save succeeded but the reload failed (503), so the profile view
+    // still holds the pre-save answers. The wizard takes what it sent as
+    // saved: nothing is left to save, and attest is not held for saving.
+    it("treats a saved answer as saved when the reload after it fails", () => {
       saveVendor();
+      state.profileError = notFound("Server error", 503);
       expect(screen.getByRole("radio", { name: /We supply it/ })).toBeChecked();
+      expect(screen.getByRole("button", { name: /save answers/i })).toBeDisabled();
+      expect(screen.getByRole("button", { name: /attest profile/i })).toBeEnabled();
+      expect(screen.queryByText(/save your answers before attesting/i)).not.toBeInTheDocument();
     });
 
-    it("restarts the wizard from the reloaded profile when it did", () => {
+    it("keeps the edit as unsaved when the save is refused", () => {
+      state.saveSucceeds = false;
       saveVendor();
+      expect(screen.getByRole("radio", { name: /We supply it/ })).toBeChecked();
+      expect(screen.getByRole("button", { name: /save answers/i })).toBeEnabled();
+    });
+
+    it("restarts the wizard from the profile after an attest", () => {
+      saveVendor();
+      fireEvent.click(screen.getByRole("button", { name: /attest profile/i }));
+      // The mocked view still has no answers, so the restarted wizard shows none.
       expect(screen.getByRole("radio", { name: /We supply it/ })).not.toBeChecked();
     });
   });
