@@ -10677,13 +10677,13 @@ export const translations: Record<string, Record<string, string>> = {
       "Es wurde noch keine Feststellung zum Anwendungsbereich erstellt.",
     "SHA-256": "SHA-256",
     "Superseded by a later attestation": "Durch eine spätere Attestierung ersetzt",
-    "These edits cannot be saved. Answer those questions or discard the edits before saving or attesting:":
-      "Diese Änderungen können nicht gespeichert werden. Beantworten Sie diese Fragen oder verwerfen Sie die Änderungen vor dem Speichern oder Attestieren:",
-    "Your answers were saved. Reload the page to continue.":
-      "Ihre Antworten wurden gespeichert. Laden Sie die Seite neu, um fortzufahren.",
-    "The profile was attested. Reload the page to continue.":
-      "Das Profil wurde attestiert. Laden Sie die Seite neu, um fortzufahren.",
-    "Reload the page": "Seite neu laden",
+    "Answer or discard the edits below before saving.":
+      "Beantworten oder verwerfen Sie die unten stehenden Änderungen vor dem Speichern.",
+    "These edits cannot be saved:": "Diese Änderungen können nicht gespeichert werden:",
+    "Your answers were saved, but the profile could not be reloaded.":
+      "Ihre Antworten wurden gespeichert, aber das Profil konnte nicht neu geladen werden.",
+    "The profile was attested, but it could not be reloaded.":
+      "Das Profil wurde attestiert, konnte aber nicht neu geladen werden.",
     "No score yet.": "Noch kein Wert.",
     "Scope is not established. Answer these deciding questions before a score can be shown:":
       "Der Anwendungsbereich ist nicht festgestellt. Beantworten Sie diese entscheidenden Fragen, bevor ein Wert angezeigt werden kann:",
@@ -21374,13 +21374,13 @@ export const translations: Record<string, Record<string, string>> = {
       "Aucune détermination du champ d’application n’a encore été générée.",
     "SHA-256": "SHA-256",
     "Superseded by a later attestation": "Remplacée par une attestation ultérieure",
-    "These edits cannot be saved. Answer those questions or discard the edits before saving or attesting:":
-      "Ces modifications ne peuvent pas être enregistrées. Répondez à ces questions ou abandonnez les modifications avant d’enregistrer ou d’attester :",
-    "Your answers were saved. Reload the page to continue.":
-      "Vos réponses ont été enregistrées. Rechargez la page pour continuer.",
-    "The profile was attested. Reload the page to continue.":
-      "Le profil a été attesté. Rechargez la page pour continuer.",
-    "Reload the page": "Recharger la page",
+    "Answer or discard the edits below before saving.":
+      "Répondez aux modifications ci-dessous ou abandonnez-les avant d’enregistrer.",
+    "These edits cannot be saved:": "Ces modifications ne peuvent pas être enregistrées :",
+    "Your answers were saved, but the profile could not be reloaded.":
+      "Vos réponses ont été enregistrées, mais le profil n’a pas pu être rechargé.",
+    "The profile was attested, but it could not be reloaded.":
+      "Le profil a été attesté, mais il n’a pas pu être rechargé.",
     "No score yet.": "Pas encore de score.",
     "Scope is not established. Answer these deciding questions before a score can be shown:":
       "Le champ d’application n’est pas établi. Répondez à ces questions décisives avant qu’un score puisse être affiché :",
@@ -31989,13 +31989,13 @@ export const translations: Record<string, Record<string, string>> = {
       "Aún no se ha generado ninguna determinación del ámbito.",
     "SHA-256": "SHA-256",
     "Superseded by a later attestation": "Sustituida por una atestación posterior",
-    "These edits cannot be saved. Answer those questions or discard the edits before saving or attesting:":
-      "Estos cambios no se pueden guardar. Responda esas preguntas o descarte los cambios antes de guardar o atestiguar:",
-    "Your answers were saved. Reload the page to continue.":
-      "Sus respuestas se guardaron. Vuelva a cargar la página para continuar.",
-    "The profile was attested. Reload the page to continue.":
-      "El perfil fue atestiguado. Vuelva a cargar la página para continuar.",
-    "Reload the page": "Volver a cargar la página",
+    "Answer or discard the edits below before saving.":
+      "Responda o descarte los cambios de abajo antes de guardar.",
+    "These edits cannot be saved:": "Estos cambios no se pueden guardar:",
+    "Your answers were saved, but the profile could not be reloaded.":
+      "Sus respuestas se guardaron, pero el perfil no se pudo volver a cargar.",
+    "The profile was attested, but it could not be reloaded.":
+      "El perfil fue atestiguado, pero no se pudo volver a cargar.",
     "No score yet.": "Aún no hay puntuación.",
     "Scope is not established. Answer these deciding questions before a score can be shown:":
       "El ámbito no está establecido. Responda estas preguntas decisivas antes de que se pueda mostrar una puntuación:",

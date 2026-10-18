@@ -319,6 +319,17 @@ describe("BiasAuditPage", () => {
     );
   });
 
+  it("shows a neutral fallback rather than a null score", () => {
+    state.profile = {
+      ...PROFILE,
+      attestedDecision: { readiness: { ...IN_SCOPE, score: null }, metric: "selection_rate" },
+    };
+    renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
+    const summary = screen.getByTestId("aedt-profile-summary");
+    expect(summary).toHaveTextContent("No score yet.");
+    expect(summary).not.toHaveTextContent("null%");
+  });
+
   it("asks for an attestation when the saved answers are not attested", () => {
     state.profile = {
       ...PROFILE,

@@ -38,7 +38,8 @@ export interface ProfileWizardProps {
   profileStatus: string | null;
   canEdit: boolean;
   canAttest: boolean;
-  onSave: (answers: AedtAnswerInput[]) => void;
+  /** Saves the answers; the page calls `onSaved` once the server accepted them. */
+  onSave: (answers: AedtAnswerInput[], onSaved: () => void) => void;
   onAttest: () => void;
   isSaving?: boolean;
   isAttesting?: boolean;
@@ -60,6 +61,18 @@ const isAnswered = (a: DraftAnswer | undefined) => a !== undefined && (a.dontKno
 /** Notes are compared trimmed, as Save sends them. */
 const sameAnswer = (a: DraftAnswer, b: DraftAnswer) =>
   a.value === b.value && a.dontKnow === b.dontKnow && a.notes.trim() === b.notes.trim();
+
+/** The edits that still differ from the saved answers. */
+function withoutSaved(
+  edits: Record<string, DraftAnswer>,
+  saved: Record<string, DraftAnswer>,
+): Record<string, DraftAnswer> {
+  const next: Record<string, DraftAnswer> = {};
+  for (const [k, a] of Object.entries(edits)) {
+    if (!sameAnswer(a, saved[k] ?? EMPTY_ANSWER)) next[k] = a;
+  }
+  return next;
+}
 
 /** Shown beside "I don't know": what that answer does, before it is given. */
 function dontKnowConsequence(q: AedtQuestion): string {
@@ -95,6 +108,14 @@ const ProfileWizard = ({
   // every question the user has not touched.
   const savedDraft = useMemo(() => draftFrom(answers), [answers]);
   const [edits, setEdits] = useState<Record<string, DraftAnswer>>({});
+  // When the saved answers change (a refetch, another version), an edit the
+  // server now holds is dropped, so a later change by someone else is not
+  // hidden under it. Render-time state adjustment, no effect.
+  const [answersSeen, setAnswersSeen] = useState(answers);
+  if (answers !== answersSeen) {
+    setAnswersSeen(answers);
+    setEdits((prev) => withoutSaved(prev, savedDraft));
+  }
   const draft = useMemo(() => ({ ...savedDraft, ...edits }), [savedDraft, edits]);
   // While a save or attest is in flight nothing can change, so nothing on
   // screen can be lost when the result loads.
@@ -108,22 +129,24 @@ const ProfileWizard = ({
   const groups = useMemo(() => groupQuestions(visible), [visible]);
 
   const update = (key: string, patch: Partial<DraftAnswer>) => {
-    setEdits((prev) => ({ ...prev, [key]: { ...(draft[key] ?? EMPTY_ANSWER), ...patch } }));
+    setEdits((prev) =>
+      withoutSaved(
+        { ...prev, [key]: { ...(prev[key] ?? savedDraft[key] ?? EMPTY_ANSWER), ...patch } },
+        savedDraft,
+      ),
+    );
   };
 
   // ---- save
 
-  // Only these changes can be saved: visible questions with an answer that
-  // differs from the saved one. An edit put back to the saved answer, or one
-  // the server now holds, is no change.
-  const changed = (k: string) => !sameAnswer(draft[k], savedDraft[k] ?? EMPTY_ANSWER);
-  const edited = Object.keys(edits).filter(changed);
+  // Edits hold only answers that differ from the saved ones (withoutSaved).
+  // Of those, Save sends the visible questions with an answer.
+  const edited = Object.keys(edits);
   const pending = visible.filter((q) => edited.includes(q.key) && isAnswered(draft[q.key]));
 
   // Edits Save cannot send: notes on a question with no answer, or an answer
   // to a question a later answer has hidden. They are named, can be
-  // discarded, and hold Save and Attest back, so a save that restarts the
-  // wizard (a new version) cannot drop them.
+  // discarded, and hold Save and Attest back until answered or discarded.
   const visibleKeys = new Set(visible.map((q) => q.key));
   const pendingKeys = new Set(pending.map((q) => q.key));
   const unsaveable = edited
@@ -145,16 +168,23 @@ const ProfileWizard = ({
 
   const handleSave = () => {
     if (saveDisabled) return;
-    onSave(
-      pending.map((q) => {
-        const a = draft[q.key];
-        const notes = a.notes.trim();
-        return {
-          questionKey: q.key,
-          value: a.dontKnow ? null : a.value,
-          notes: notes === "" ? null : notes,
-          dontKnow: a.dontKnow,
-        };
+    const sent = pending.map((q) => {
+      const a = draft[q.key];
+      const notes = a.notes.trim();
+      return {
+        questionKey: q.key,
+        value: a.dontKnow ? null : a.value,
+        notes: notes === "" ? null : notes,
+        dontKnow: a.dontKnow,
+      };
+    });
+    // Once saved, the server holds these; whatever it now says for them
+    // (someone else's later answer included) is what shows.
+    onSave(sent, () =>
+      setEdits((prev) => {
+        const next = { ...prev };
+        for (const a of sent) delete next[a.questionKey];
+        return next;
       }),
     );
   };
@@ -238,11 +268,18 @@ const ProfileWizard = ({
               Only an Admin or Editor can change answers.
             </Typography>
           )}
+          {canEdit && unsaveable.length > 0 && (
+            <Typography
+              sx={{ fontSize: 12, color: palette.status.error.text }}
+              data-testid="save-blocked-unsaveable"
+            >
+              Answer or discard the edits below before saving.
+            </Typography>
+          )}
           {unsaveable.length > 0 && (
             <Box data-testid="unsaveable-edits">
               <Typography sx={{ fontSize: 12, color: palette.status.warning.text }}>
-                These edits cannot be saved. Answer those questions or discard the edits before
-                saving or attesting:
+                These edits cannot be saved:
               </Typography>
               <Box component="ul" sx={{ m: 0, pl: "18px", mb: "8px" }}>
                 {unsaveable.map((u) => (

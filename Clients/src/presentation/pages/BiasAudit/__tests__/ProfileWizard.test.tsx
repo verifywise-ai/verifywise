@@ -204,23 +204,27 @@ describe("ProfileWizard: notes on veto questions", () => {
     const save = screen.getByRole("button", { name: /save answers/i });
     expect(save).toBeEnabled();
     fireEvent.click(save);
-    expect(onSave).toHaveBeenCalledWith([
-      {
-        questionKey: "role.party",
-        value: "employer",
-        notes: "We hire our own sales staff with it.",
-        dontKnow: false,
-      },
-    ]);
+    expect(onSave).toHaveBeenCalledWith(
+      [
+        {
+          questionKey: "role.party",
+          value: "employer",
+          notes: "We hire our own sales staff with it.",
+          dontKnow: false,
+        },
+      ],
+      expect.any(Function),
+    );
   });
 
   it('does not require notes for an "I don\'t know" answer', () => {
     const { onSave } = renderWizard();
     fireEvent.click(within(question("role.party")).getByRole("radio", { name: /I don't know/ }));
     fireEvent.click(screen.getByRole("button", { name: /save answers/i }));
-    expect(onSave).toHaveBeenCalledWith([
-      { questionKey: "role.party", value: null, notes: null, dontKnow: true },
-    ]);
+    expect(onSave).toHaveBeenCalledWith(
+      [{ questionKey: "role.party", value: null, notes: null, dontKnow: true }],
+      expect.any(Function),
+    );
   });
 });
 
@@ -409,14 +413,17 @@ describe("ProfileWizard: edits that cannot be saved", () => {
     expect(screen.queryByTestId("unsaveable-edits")).not.toBeInTheDocument();
     // The visible change is untouched and still saves.
     fireEvent.click(screen.getByRole("button", { name: /save answers/i }));
-    expect(onSave).toHaveBeenCalledWith([
-      {
-        questionKey: "cutoff.applied_by",
-        value: "platform",
-        notes: "Our own words.",
-        dontKnow: false,
-      },
-    ]);
+    expect(onSave).toHaveBeenCalledWith(
+      [
+        {
+          questionKey: "cutoff.applied_by",
+          value: "platform",
+          notes: "Our own words.",
+          dontKnow: false,
+        },
+      ],
+      expect.any(Function),
+    );
   });
 });
 
@@ -479,6 +486,18 @@ describe("ProfileWizard: new saved answers without a remount", () => {
       within(question("cutoff.applied_by")).getByRole("radio", { name: /A person/ }),
     ).toBeChecked();
     expect(screen.getByRole("button", { name: /save answers/i })).toBeEnabled();
+  });
+});
+
+describe("ProfileWizard: Save blocked by an edit it cannot send", () => {
+  it("says why under the Save button", () => {
+    renderWizard({ answers: ALL_VETOES, profileStatus: "draft" });
+    fireEvent.change(within(question("cutoff.applied_by")).getByRole("textbox"), {
+      target: { value: "Still checking." },
+    });
+    expect(screen.getByTestId("save-blocked-unsaveable")).toHaveTextContent(
+      "Answer or discard the edits below before saving.",
+    );
   });
 });
 

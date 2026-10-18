@@ -53,7 +53,10 @@ const ROLE: AedtQuestion = {
   prompt: "Do you hire with it?",
   notesRequired: false,
   allowDontKnow: false,
-  options: [{ value: "vendor", label: "We supply it", consequence: "Vendor." }],
+  options: [
+    { value: "vendor", label: "We supply it", consequence: "Vendor." },
+    { value: "employer", label: "We hire our own staff", consequence: "Employer." },
+  ],
 };
 
 const READINESS: AedtReadiness = {
@@ -66,15 +69,16 @@ const READINESS: AedtReadiness = {
   possible: 1,
 };
 
-const view = (version: number, status: string, answered: boolean): AedtProfileView => ({
+/** The profile view; `answer` is the saved role.party value, if any. */
+const view = (version: number, status: string, answer: string | null): AedtProfileView => ({
   project: { id: 7, title: "Screening tool" },
   profile: { id: version, version, status },
   attested: null,
-  answers: answered
+  answers: answer
     ? [
         {
           questionKey: "role.party",
-          value: "vendor",
+          value: answer,
           notes: null,
           dontKnow: false,
           notApplicable: false,
@@ -88,17 +92,18 @@ const view = (version: number, status: string, answered: boolean): AedtProfileVi
   scopeDeterminations: [],
 });
 
-function serverDown() {
+function httpError(status: number, message = "Refused.") {
   return new AxiosError("Request failed", "ERR_BAD_RESPONSE", undefined, undefined, {
-    status: 503,
-    statusText: "Service Unavailable",
-    data: {},
+    status,
+    statusText: String(status),
+    data: { data: message },
     headers: {},
     config: { headers: new AxiosHeaders() },
   });
 }
 
 const vendorRadio = () => screen.getByRole("radio", { name: /We supply it/ });
+const employerRadio = () => screen.getByRole("radio", { name: /We hire our own staff/ });
 const saveButton = () => screen.getByRole("button", { name: /save answers/i });
 
 async function renderPage() {
@@ -114,7 +119,7 @@ describe("BiasAuditPage save and attest", () => {
   });
 
   it("locks the inputs while a save is pending", async () => {
-    repo.getAedtProfile.mockResolvedValue(view(1, "draft", false));
+    repo.getAedtProfile.mockResolvedValue(view(1, "draft", null));
     repo.saveAedtAnswers.mockReturnValue(new Promise(() => {}));
     await renderPage();
     fireEvent.click(vendorRadio());
@@ -124,11 +129,11 @@ describe("BiasAuditPage save and attest", () => {
     expect(screen.getByRole("button", { name: /attest profile/i })).toBeDisabled();
   });
 
-  it("restarts the wizard from the server's answers after a normal save, losing nothing", async () => {
-    // Version 1 is attested, so the save files version 2: a new row.
+  it("shows the server's answers after a save that files a new version, losing nothing", async () => {
+    // Version 1 is attested, so the save files version 2.
     repo.getAedtProfile
-      .mockResolvedValueOnce(view(1, "attested", false))
-      .mockResolvedValue(view(2, "draft", true));
+      .mockResolvedValueOnce(view(1, "attested", null))
+      .mockResolvedValue(view(2, "draft", "vendor"));
     repo.saveAedtAnswers.mockResolvedValue({ profileId: 2, version: 2 });
     await renderPage();
     fireEvent.click(vendorRadio());
@@ -140,31 +145,72 @@ describe("BiasAuditPage save and attest", () => {
     expect(screen.queryByTestId("aedt-reload-required")).not.toBeInTheDocument();
   });
 
-  it("asks for a page reload when the save worked but the reload after it failed", async () => {
+  // Someone else saved version 2 first; the refetch loads it, and the user's
+  // unsaved edit must survive to be saved again.
+  it("keeps the user's edits when a save is refused (409)", async () => {
     repo.getAedtProfile
-      .mockResolvedValueOnce(view(1, "draft", false))
-      .mockRejectedValue(serverDown());
+      .mockResolvedValueOnce(view(1, "attested", null))
+      .mockResolvedValue(view(2, "draft", null));
+    repo.saveAedtAnswers.mockRejectedValue(
+      httpError(409, "Another save created this profile version first. Reload and retry."),
+    );
+    await renderPage();
+    fireEvent.click(vendorRadio());
+    fireEvent.click(saveButton());
+    expect(
+      await screen.findByText(/Another save created this profile version first/),
+    ).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("2")).toBeInTheDocument());
+    expect(vendorRadio()).toBeChecked();
+    expect(saveButton()).toBeEnabled();
+  });
+
+  it("shows a colleague's newer answer after my save and does not overwrite it", async () => {
+    repo.getAedtProfile
+      .mockResolvedValueOnce(view(1, "draft", null))
+      .mockResolvedValue(view(1, "draft", "employer"));
+    repo.saveAedtAnswers.mockResolvedValue({ profileId: 1, version: 1 });
+    await renderPage();
+    fireEvent.click(vendorRadio());
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(employerRadio()).toBeChecked());
+    expect(vendorRadio()).not.toBeChecked();
+    expect(saveButton()).toBeDisabled();
+    expect(repo.saveAedtAnswers).toHaveBeenCalledTimes(1);
+  });
+
+  it("says the save worked but the reload failed, and Try again brings the wizard back", async () => {
+    repo.getAedtProfile
+      .mockResolvedValueOnce(view(1, "draft", null))
+      .mockRejectedValueOnce(httpError(503))
+      .mockResolvedValue(view(1, "draft", "vendor"));
     repo.saveAedtAnswers.mockResolvedValue({ profileId: 1, version: 1 });
     await renderPage();
     fireEvent.click(vendorRadio());
     fireEvent.click(saveButton());
     expect(await screen.findByTestId("aedt-reload-required")).toHaveTextContent(
-      "Your answers were saved. Reload the page to continue.",
+      "Your answers were saved, but the profile could not be reloaded.",
     );
     expect(screen.queryByTestId("question-role.party")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /reload the page/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /try again/i }));
+    await screen.findByTestId("question-role.party");
+    expect(screen.queryByTestId("aedt-reload-required")).not.toBeInTheDocument();
+    expect(vendorRadio()).toBeChecked();
   });
 
-  it("asks for a page reload when the attest worked but the reload after it failed", async () => {
+  it("says the attest worked but the reload failed, above the tabs", async () => {
     repo.getAedtProfile
-      .mockResolvedValueOnce(view(1, "draft", true))
-      .mockRejectedValue(serverDown());
+      .mockResolvedValueOnce(view(1, "draft", "vendor"))
+      .mockRejectedValue(httpError(503));
     repo.attestAedtProfile.mockResolvedValue({ profileId: 1, version: 1 });
     await renderPage();
     fireEvent.click(screen.getByRole("button", { name: /attest profile/i }));
     expect(await screen.findByTestId("aedt-reload-required")).toHaveTextContent(
-      "The profile was attested. Reload the page to continue.",
+      "The profile was attested, but it could not be reloaded.",
     );
     expect(screen.queryByTestId("question-role.party")).not.toBeInTheDocument();
+    // Page level: still there on another tab.
+    fireEvent.click(screen.getByRole("tab", { name: /runs/i }));
+    expect(screen.getByTestId("aedt-reload-required")).toBeInTheDocument();
   });
 });

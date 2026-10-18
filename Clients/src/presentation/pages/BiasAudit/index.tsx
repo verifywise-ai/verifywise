@@ -148,9 +148,10 @@ const ProjectWorkspace = ({
   const attest = useAttestAedtProfile(projectId);
   const scope = useGenerateAedtScopeDetermination(projectId);
   // Set when a save or attest succeeded but the profile could not be
-  // reloaded after it: the page no longer knows what is saved, so editing
-  // stops until a reload.
+  // reloaded after it: the page does not know what is saved, so the wizard
+  // is hidden until the profile loads again, which clears it.
   const [reloadRequired, setReloadRequired] = useState<"saved" | "attested" | null>(null);
+  if (reloadRequired && profileQuery.status === "success") setReloadRequired(null);
   const queryClient = useQueryClient();
   const [selectedRun, setSelectedRun] = useState<number | null>(null);
 
@@ -212,10 +213,11 @@ const ProjectWorkspace = ({
   const reloadFailed = () =>
     queryClient.getQueryState(aedtQueryKeys.profile(projectId))?.status === "error";
 
-  const handleSave = (answers: AedtAnswerInput[]) => {
+  const handleSave = (answers: AedtAnswerInput[], onSaved: () => void) => {
     attest.reset();
     save.mutate(answers, {
       onSuccess: () => {
+        onSaved();
         if (reloadFailed()) setReloadRequired("saved");
       },
     });
@@ -252,7 +254,29 @@ const ProjectWorkspace = ({
 
   return (
     <Stack gap="16px">
-      {refetchFailed && (
+      {reloadRequired && (
+        <Alert
+          severity="warning"
+          sx={{ borderRadius: "4px" }}
+          data-testid="aedt-reload-required"
+          action={
+            <CustomizableButton
+              variant="outlined"
+              size="small"
+              text="Try again"
+              testId="aedt-reload-profile"
+              onClick={() => void profileQuery.refetch()}
+            />
+          }
+        >
+          <Typography sx={{ fontSize: 13 }}>
+            {reloadRequired === "saved"
+              ? "Your answers were saved, but the profile could not be reloaded."
+              : "The profile was attested, but it could not be reloaded."}
+          </Typography>
+        </Alert>
+      )}
+      {refetchFailed && !reloadRequired && (
         <Alert severity="warning" sx={{ borderRadius: "4px" }} data-testid="aedt-refetch-error">
           <Typography sx={{ fontSize: 13 }}>
             The latest data could not be refreshed. The page shows what was loaded before.
@@ -273,36 +297,11 @@ const ProjectWorkspace = ({
         />
       </TabContext>
 
-      {activeTab === "profile" && reloadRequired && (
-        <Alert
-          severity="info"
-          sx={{ borderRadius: "4px" }}
-          data-testid="aedt-reload-required"
-          action={
-            <CustomizableButton
-              variant="outlined"
-              size="small"
-              text="Reload the page"
-              testId="aedt-reload-page"
-              onClick={() => window.location.reload()}
-            />
-          }
-        >
-          <Typography sx={{ fontSize: 13 }}>
-            {reloadRequired === "saved"
-              ? "Your answers were saved. Reload the page to continue."
-              : "The profile was attested. Reload the page to continue."}
-          </Typography>
-        </Alert>
-      )}
-
       {activeTab === "profile" && !reloadRequired && (
+        // No key: the wizard overlays its edits on whatever answers the
+        // profile query holds, so a new version or a refetch updates them in
+        // place and never drops an unsaved edit.
         <ProfileWizard
-          // Remounts only when the loaded profile's version changes (a save
-          // after an attestation files a new version). Inputs are locked
-          // while a write is pending and unsaveable edits block Save, so
-          // nothing unsaved is on screen when that happens.
-          key={`${projectId}:${LL144_FRAMEWORK_ID}:${profile.profile?.version ?? 0}`}
           questions={questionsQuery.data ?? []}
           answers={profile.answers}
           profileStatus={profile.profile?.status ?? null}
