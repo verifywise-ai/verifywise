@@ -10678,6 +10678,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Es wurde noch keine Feststellung zum Anwendungsbereich erstellt.",
     "SHA-256": "SHA-256",
     "Superseded by a later attestation": "Durch eine spätere Attestierung ersetzt",
+    "Scope is not established. Answer these deciding questions before a score can be shown:":
+      "Der Anwendungsbereich ist nicht festgestellt. Beantworten Sie diese entscheidenden Fragen, bevor ein Wert angezeigt werden kann:",
     "The latest data could not be refreshed. The page shows what was loaded before.":
       "Die neuesten Daten konnten nicht aktualisiert werden. Die Seite zeigt den zuvor geladenen Stand.",
     "The file is no longer stored.": "Die Datei wird nicht mehr gespeichert.",
@@ -21368,6 +21370,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Aucune détermination du champ d’application n’a encore été générée.",
     "SHA-256": "SHA-256",
     "Superseded by a later attestation": "Remplacée par une attestation ultérieure",
+    "Scope is not established. Answer these deciding questions before a score can be shown:":
+      "Le champ d’application n’est pas établi. Répondez à ces questions décisives avant qu’un score puisse être affiché :",
     "The latest data could not be refreshed. The page shows what was loaded before.":
       "Les dernières données n’ont pas pu être actualisées. La page affiche ce qui avait été chargé auparavant.",
     "The file is no longer stored.": "Le fichier n’est plus conservé.",
@@ -31976,6 +31980,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Aún no se ha generado ninguna determinación del ámbito.",
     "SHA-256": "SHA-256",
     "Superseded by a later attestation": "Sustituida por una atestación posterior",
+    "Scope is not established. Answer these deciding questions before a score can be shown:":
+      "El ámbito no está establecido. Responda estas preguntas decisivas antes de que se pueda mostrar una puntuación:",
     "The latest data could not be refreshed. The page shows what was loaded before.":
       "No se pudieron actualizar los datos más recientes. La página muestra lo que se cargó antes.",
     "The file is no longer stored.": "El archivo ya no se conserva.",

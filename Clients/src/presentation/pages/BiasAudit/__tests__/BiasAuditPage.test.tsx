@@ -260,6 +260,35 @@ describe("BiasAuditPage", () => {
     // The server's blocked reason quotes raw keys; only the titled list shows.
     expect(note).not.toHaveTextContent(/data\.held/);
     expect(note).toHaveTextContent('Demographic data you hold (answered "I don\'t know")');
+    expect(screen.getByTestId("aedt-profile-summary")).not.toHaveTextContent(/[a-z]\.[a-z]/);
+  });
+
+  // Before any attestation the readiness block reads the saved answers; an
+  // open deciding question is named by title, never by the server's raw key.
+  it("names open deciding questions by title in the readiness block", () => {
+    state.profile = {
+      ...PROFILE,
+      attested: null,
+      attestedDecision: null,
+      profile: { id: 4, version: 1, status: "draft" },
+      scopeDeterminations: [],
+      answers: [],
+      readiness: {
+        score: null,
+        blockedReason:
+          "Scope is not established: answer independence.auditor, data.held before a score can be shown.",
+        missingVetoes: ["independence.auditor", "data.held"],
+        openItems: [],
+        scope: "undetermined",
+        earned: 0,
+        possible: 0,
+      },
+    };
+    renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
+    const summary = screen.getByTestId("aedt-profile-summary");
+    expect(summary).toHaveTextContent("Who is performing this test");
+    expect(summary).toHaveTextContent("Demographic data you hold");
+    expect(summary).not.toHaveTextContent(/[a-z]\.[a-z]/);
   });
 
   // A failed background refetch keeps the data it had. Swapping the page for

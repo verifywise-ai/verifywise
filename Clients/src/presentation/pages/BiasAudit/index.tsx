@@ -376,9 +376,22 @@ const ProfileSummary = ({ profile }: { profile: AedtProfileView }) => {
               ? "On the attested answers, the tool's output is one input among several with no extra weight. No score is shown; you can generate a scope determination instead of a run."
               : "On your saved answers, the tool's output is one input among several with no extra weight. No score is shown. Attest the profile to generate a scope determination."}
           </Typography>
+        ) : readiness.missingVetoes.length > 0 ? (
+          // The server's blockedReason quotes raw question keys; name them by title.
+          <Box sx={{ color: palette.text.secondary }}>
+            <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
+              Scope is not established. Answer these deciding questions before a score can be shown:
+            </Typography>
+            <OpenVetoList
+              vetoes={readiness.missingVetoes.map((key) => ({
+                key,
+                dontKnow: draftAnswers.get(key)?.dontKnow ?? false,
+              }))}
+            />
+          </Box>
         ) : readiness.score === null ? (
           <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
-            {readiness.blockedReason ?? "No score yet."}
+            No score yet.
           </Typography>
         ) : (
           <Typography sx={{ fontSize: 20, fontWeight: 600, color: palette.text.primary }}>
