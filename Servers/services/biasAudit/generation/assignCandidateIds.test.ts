@@ -9,6 +9,8 @@ import {
 import { countRuns, expectedRuns } from "../idOrderCheck";
 
 const tiers = ["t1", "t2", "t3", "t4", "t5"];
+const seq = (a: { demographics: { sex: string; raceEthnicity: string }; tierKey: string }[]) =>
+  a.map((x) => `${x.demographics.sex}|${x.demographics.raceEthnicity}|${x.tierKey}`);
 const alloc = (count = 1400) => buildAllocation({ count, tiers, smallSampleExclusion: 0.02 }).rows;
 // Simulates the defect: ids assigned by walking the grouped rows.
 const byIndex = (count = 1400) =>
@@ -65,14 +67,57 @@ describe("assignCandidateIds", () => {
   });
 
   it("rejects a digit width too narrow for the population", () => {
-    expect(() => assignCandidateIds({ rows: alloc(1400), seed: 7, digits: 2 })).toThrow(
-      /digits|too narrow/i,
-    );
+    expect(() => assignCandidateIds({ rows: alloc(1400), seed: 7, digits: 2 })).toThrow(/digit/i);
+  });
+});
+
+describe("seed redraw", () => {
+  it("redraws a seed that lands on the tail, and replays with seedUsed", () => {
+    const rows = alloc(700);
+    let found: { seed: number; seedUsed: number; ids: string[] } | undefined;
+    for (let seed = 0; seed < 20000 && !found; seed++) {
+      const r = assignCandidateIds({ rows, seed });
+      if (r.seedUsed > seed) {
+        found = { seed, seedUsed: r.seedUsed, ids: seq(r.assigned) };
+      }
+    }
+    expect(found).toBeDefined();
+    const again = assignCandidateIds({ rows, seed: found!.seedUsed });
+    expect(again.seedUsed).toBe(found!.seedUsed);
+    expect(seq(again.assigned)).toEqual(found!.ids);
+  });
+});
+
+describe("input validation and gate scope", () => {
+  const rows = () => alloc(700);
+  it("rejects bad seeds and digits", () => {
+    expect(() => assignCandidateIds({ rows: rows(), seed: NaN })).toThrow(/seed/);
+    expect(() => assignCandidateIds({ rows: rows(), seed: 1.5 })).toThrow(/seed/);
+    expect(() => assignCandidateIds({ rows: rows(), seed: -1 })).toThrow(/seed/);
+    expect(() => assignCandidateIds({ rows: rows(), seed: 1, digits: 4.5 })).toThrow(/digit/);
+    expect(() => assignCandidateIds({ rows: rows(), seed: 1, digits: 10 })).toThrow(/digit/);
+  });
+  it("fails tier-blocked IDs too", () => {
+    const blocked = byIndex(700);
+    expect(() => verifyIdOrder(blocked, ["tierKey"])).not.toThrow(/missing/);
+    const tierSorted = [...blocked].sort((a, b) => (a.tierKey < b.tierKey ? -1 : 1));
+    const reId = tierSorted.map((r, i) => ({
+      ...r,
+      candidateId: `C${String(i + 1).padStart(4, "0")}`,
+    }));
+    expect(() => verifyIdOrder(reId, ["tierKey"])).toThrow(IdOrderError);
+  });
+  it("throws when an attribute is absent from the records", () => {
+    const noTier = byIndex(700).map(({ tierKey: _t, ...r }) => r) as never;
+    expect(() => measureIdOrder(noTier, ["tierKey"])).toThrow(/missing/);
+  });
+  it("reports every failing attribute in one error", () => {
+    expect(() => verifyIdOrder(byIndex(), ["sex", "raceEthnicity"])).toThrow(/sex.*raceEthnicity/s);
   });
 });
 
 describe("the measured properties of the real defect", () => {
-  it("would have measured 14 runs against about 4,286 expected", () => {
+  it("would have measured 14 runs against about 4,285 expected", () => {
     const races = ["W", "B", "H", "A", "NH", "AI", "TM"];
     const values: string[] = [];
     for (const _sex of ["M", "F"]) {
