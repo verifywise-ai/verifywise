@@ -36,7 +36,7 @@ const NATIONALITY = [
   "taiwanese", "vietnamese", "korean", "japanese", "filipino", "filipina", "indian",
   "pakistani", "bangladeshi", "nigerian", "ghanaian", "ethiopian", "somali", "kenyan",
   "haitian", "jamaican", "trinidadian", "samoan", "tongan", "fijian", "chamorro",
-  "hawaiian", "navajo", "navajo nation", "lakota", "ojibwe", "hopi", "irish", "german",
+  "hawaiian", "navajo", "navajo nation", "cherokee nation", "lakota", "ojibwe", "hopi", "irish", "german",
   "russian", "ukrainian", "greek", "armenian", "arab", "persian", "iranian", "lebanese",
   "egyptian", "african", "european", "latin american", "caribbean", "immigrant",
   "immigrated", "citizenship", "nationality", "tribal college",
@@ -92,43 +92,70 @@ const LANGUAGE_NAMES = [
   "armenian", "persian",
 ].join("|");
 
+/** "of Italian descent": of/descent any case, the inner word(s) capitalised. */
+function ofDescent(text: string): boolean {
+  const re = /\bof\s+(\p{Lu}[\p{L}'-]*(?:\s+\p{Lu}[\p{L}'-]*)?)\s+(descent|ancestry)\b/giu;
+  for (const m of text.matchAll(re)) {
+    // A lowercase "descent", or a phrase set in capitals ("OF POLISH DESCENT").
+    // A title-case heading ("Rate of Emergency Descent") is not a statement of origin.
+    if (m[2] === m[2].toLowerCase() || m[0] === m[0].toUpperCase()) return true;
+  }
+  return false;
+}
+
+/** A "Languages:" line listing any language other than English. */
+function languagesLine(text: string): boolean {
+  const re = /^[\s\-*#•]*languages?(?:\s+spoken)?\s*[:–—-]\s*(.+)$/gim;
+  for (const m of text.matchAll(re)) {
+    const listed = m[1]
+      .replace(/\([^)]*\)/g, " ")
+      .split(/[,;/|]|\band\b/i)
+      .map((l) => l.trim().toLowerCase())
+      .filter((l) => l !== "");
+    if (listed.some((l) => l !== "english")) return true;
+  }
+  return false;
+}
+
+const matches = (pattern: RegExp) => (text: string) => pattern.test(text);
+
 /** Explicit national-origin and language phrases, with the label reported. */
-const PHRASES: Array<{ term: string; re: RegExp }> = [
-  // "Italian-born", "mexican-born", "Puerto Rico-born"; not "first-born".
+const PHRASES: Array<{ term: string; test: (text: string) => boolean }> = [
+  // "Italian-born", "mexican-born", "U.S.-born"; not "first-born".
   {
     term: "-born",
-    re: /\b(?!(?:first|new|free|later|early|still)-born)[a-z]+-born\b/i,
+    test: matches(
+      /(?<![\p{L}.])(?!(?:first|new|free|later|early|still)-born)(?:\p{L}+|(?:\p{L}\.){2,})-born\b/iu,
+    ),
   },
-  // "of Italian descent", "of Korean-American ancestry": a capitalised word only,
-  // so "a history of oil extraction" and "of brand heritage" are not one.
-  {
-    term: "of … descent",
-    re: /\bof\s+[A-Z][\p{L}]*(?:[\s-][A-Z][\p{L}]*)?\s+(?:descent|ancestry)\b/u,
-  },
-  { term: "native … speaker", re: /\bnative\s+(?:[a-z-]+\s+)?speakers?\b/i },
+  { term: "of … descent", test: ofDescent },
+  { term: "Languages: line", test: languagesLine },
+  { term: "native … speaker", test: matches(/\bnative\s+(?:[a-z-]+\s+)?speakers?\b/i) },
   {
     term: "speaks a language",
-    re: new RegExp(
-      `\\b(?:fluent|fluency|proficient|proficiency|conversational|speaks?|speaking|bilingual)` +
-        `\\s+(?:in\\s+)?(?:english\\s+and\\s+)?(?:${LANGUAGE_NAMES})\\b`,
-      "i",
+    test: matches(
+      new RegExp(
+        `\\b(?:fluent|fluency|proficient|proficiency|conversational|speaks?|speaking|bilingual)` +
+          `\\s+(?:in\\s+)?(?:english\\s+and\\s+)?(?:${LANGUAGE_NAMES})\\b`,
+        "i",
+      ),
     ),
   },
   {
     term: "-speaking",
-    re: new RegExp(`\\b(?:${LANGUAGE_NAMES})[\\s-]speak(?:ing|er|ers)\\b`, "i"),
+    test: matches(new RegExp(`\\b(?:${LANGUAGE_NAMES})[\\s-]speak(?:ing|er|ers)\\b`, "i")),
   },
 ];
 
 const MATCHERS = [
   ...DEMOGRAPHIC_TERMS.map((term) => ({
     term,
-    re: new RegExp(`(?<![a-z0-9])${term.split(" ").join("[\\s-]+")}(?![a-z0-9])`, "i"),
+    test: matches(new RegExp(`(?<![a-z0-9])${term.split(" ").join("[\\s-]+")}(?![a-z0-9])`, "i")),
   })),
   ...PHRASES,
 ];
 
 /** The demographic terms and phrases found in `text`. */
 export function findDemographicTerms(text: string): string[] {
-  return MATCHERS.filter((m) => m.re.test(text)).map((m) => m.term);
+  return MATCHERS.filter((m) => m.test(text)).map((m) => m.term);
 }

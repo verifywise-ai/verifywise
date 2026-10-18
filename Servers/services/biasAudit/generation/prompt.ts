@@ -47,6 +47,9 @@ const SHARED_INSTRUCTION = [
   "Do not describe the candidate as checked, approved, graded or vouched for by anyone.",
   "Name no person other than the candidate: refer to anyone else by role only " +
     '(for example "my manager" or "a customer").',
+  "Do not name an employer, school, restaurant or organisation whose name states a " +
+    "nationality, a cuisine, a religion or a cultural or ancestral group; describe it " +
+    'generically instead (for example "a regional airline" or "a family restaurant").',
   "Include no personal details other than the name: no photo, address, date of birth, " +
     "nationality, religion, heritage, languages other than English, family details, or " +
     "membership of community or identity-based organisations.",
@@ -145,43 +148,91 @@ function shapeOk(text: string, kind: ArtifactKind, parsed: unknown): boolean {
 
 const escapeRegExp = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-/** Accents off: NFD, then combining marks dropped, so "José García" reads "Jose Garcia". */
-const foldAccents = (t: string) => t.normalize("NFD").replace(/\p{M}/gu, "");
+/**
+ * For name matching: accents, ʻokina, apostrophes and hyphens out, so
+ * "José García" reads "Jose Garcia", "Kaʻawa" and "Ka'awa" read "Kaawa", and
+ * "Jean-Baptiste" reads "JeanBaptiste". Applied to both sides.
+ */
+const foldName = (t: string) =>
+  t
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[ʻ‘’'‐‑-]/g, "");
 
-/** `word` as a whole word (letters on neither side), in exactly this case. */
-const wholeWord = (word: string) => new RegExp(`(?<!\\p{L})${escapeRegExp(word)}(?!\\p{L})`, "u");
+const startsUpper = (w: string) => /^\p{Lu}/u.test(w);
 
 /**
- * Every part of the name, as a whole word, in any order: capitalised as given
- * (or in capitals, as a resume header may set it). Case-sensitive, so "a line
- * cook" is not the surname Cook and "le" is not Le; accent-insensitive on both
- * sides, so "José García" carries "Jose Garcia" and Hispanic names cost no
- * extra attempts.
+ * Every part of the name as a whole word, in any order, accents and
+ * punctuation folded. The word must start with a capital, so "a line cook" is
+ * not the surname Cook and "le" is not Le; any further case is allowed, so a
+ * header in capitals carries the name.
  */
 function carriesName(text: string, candidateName: string): boolean {
-  const folded = foldAccents(text);
-  return foldAccents(candidateName)
+  const words = new Set(
+    (foldName(text).match(/\p{L}+/gu) ?? []).filter(startsUpper).map((w) => w.toLowerCase()),
+  );
+  return foldName(candidateName)
     .split(/\s+/)
     .filter((part) => part !== "")
-    .every((part) => wholeWord(part).test(folded) || wholeWord(part.toUpperCase()).test(folded));
+    .every((part) => words.has(part.toLowerCase()));
 }
 
 const alternation = (names: Iterable<string>) =>
-  [...names].map((n) => escapeRegExp(foldAccents(n))).join("|");
+  [...names].map((n) => escapeRegExp(foldName(n))).join("|");
 // A table first name directly followed by a table surname: a person.
 const THIRD_PARTY_NAME = new RegExp(
   `(?<!\\p{L})(${alternation(THIRD_PARTY_FIRST_NAMES)})\\s+(${alternation(TABLE_SURNAMES)})(?!\\p{L})`,
-  "gu",
+  "giu",
 );
+// Institutions named after a person are not people.
+const INSTITUTION_AFTER = /^\s+(?:university|college|school|hospital|community)\b/i;
+const INSTITUTION_BEFORE = /\buniversity\s+of\s+$/i;
 
-/** Someone other than the candidate, named as table first name + table surname. */
+/**
+ * Someone other than the candidate, named as a table first name directly
+ * followed by a table surname, both capitalised ("Wei Zhang", "PATRICIA
+ * NGUYEN"). A lone first name ("Gary, IN") and an institution named after a
+ * person ("Thomas Nelson Community College", "University of Mary
+ * Washington") are not.
+ */
 function namesSomeoneElse(text: string, candidateName: string): boolean {
-  const [ownFirst, ...rest] = foldAccents(candidateName).trim().split(/\s+/);
+  const [ownFirst, ...rest] = foldName(candidateName).trim().toLowerCase().split(/\s+/);
   const ownSurname = rest.join(" ");
-  for (const m of foldAccents(text).matchAll(THIRD_PARTY_NAME)) {
-    if (m[1] !== ownFirst || m[2] !== ownSurname) return true;
+  const folded = foldName(text);
+  for (const m of folded.matchAll(THIRD_PARTY_NAME)) {
+    const [whole, first, surname] = m;
+    if (!startsUpper(first) || !startsUpper(surname)) continue;
+    if (first.toLowerCase() === ownFirst && surname.toLowerCase() === ownSurname) continue;
+    const at = m.index ?? 0;
+    if (INSTITUTION_AFTER.test(folded.slice(at + whole.length))) continue;
+    if (INSTITUTION_BEFORE.test(folded.slice(0, at))) continue;
+    return true;
   }
   return false;
+}
+
+/**
+ * The text a structured record's content checks read: its string values,
+ * not the raw JSON (escapes such as é would hide a name or a term), with
+ * a "languages" list restated as a Languages line.
+ */
+function structuredText(value: unknown): string {
+  const out: string[] = [];
+  const walk = (v: unknown) => {
+    if (typeof v === "string") out.push(v);
+    else if (Array.isArray(v)) v.forEach(walk);
+    else if (v && typeof v === "object") {
+      for (const [k, child] of Object.entries(v)) {
+        if (/^languages?(?:[\s_]spoken)?$/i.test(k.trim())) {
+          const listed = Array.isArray(child) ? child : [child];
+          out.push(`Languages: ${listed.filter((x) => typeof x === "string").join(", ")}`);
+        }
+        walk(child);
+      }
+    }
+  };
+  walk(value);
+  return out.join("\n");
 }
 
 /**
@@ -190,12 +241,17 @@ function namesSomeoneElse(text: string, candidateName: string): boolean {
  *  - `finishReason`, when given, must be "stop": a truncated or filtered
  *    response is a record-quality fault and is logged as an invalid attempt.
  *  - The record must contain the candidate's first name and surname, each as
- *    a capitalised whole word, in any order, accents ignored (the structured
- *    form in its "name" key): the name is the record's only group signal.
+ *    a capitalised whole word, in any order, accents and punctuation folded
+ *    (the structured form in its "name" key): the name is the record's only
+ *    group signal.
  *  - It may name no one else: a table first name directly followed by a
  *    table surname, other than the candidate's own, is refused.
  *  - Nothing else may signal a group: no demographic field and no term from
  *    the shared demographic-term matcher. Pronouns and honorifics are allowed.
+ *  - The prompt steers away from all of this first; only unambiguous cases
+ *    are rejected, because a false rejection that falls more on one cell is
+ *    worse than a missed extra signal.
+ *  - A structured record's content checks read its parsed string values.
  */
 export function validateRecord(
   text: string,
@@ -208,7 +264,6 @@ export function validateRecord(
   if (opts.candidateName.trim() === "") throw new Error("The candidate name must not be blank.");
   if (typeof text !== "string" || text.trim() === "") return { ok: false, reason: "empty" };
   if (text.length > RECORD_MAX_CHARS) return { ok: false, reason: "too_long" };
-  if (findForbidden(text).length > 0) return { ok: false, reason: "forbidden_words" };
 
   let parsed: unknown;
   if (artifactKind === "structured") {
@@ -217,16 +272,22 @@ export function validateRecord(
     } catch {
       return { ok: false, reason: "wrong_shape" };
     }
-    if (hasDemographicField(parsed)) return { ok: false, reason: "demographic_field" };
-  } else if (DEMOGRAPHIC_LINE.test(text)) {
+  }
+  const content = artifactKind === "structured" ? structuredText(parsed) : text;
+  if (findForbidden(content).length > 0 || findForbidden(text).length > 0) {
+    return { ok: false, reason: "forbidden_words" };
+  }
+  if (artifactKind === "structured" ? hasDemographicField(parsed) : DEMOGRAPHIC_LINE.test(text)) {
     return { ok: false, reason: "demographic_field" };
   }
-  if (findDemographicTerms(text).length > 0) return { ok: false, reason: "demographic_term" };
+  if (findDemographicTerms(content).length > 0) return { ok: false, reason: "demographic_term" };
 
   if (!shapeOk(text, artifactKind, parsed)) return { ok: false, reason: "wrong_shape" };
 
   const carrier = artifactKind === "structured" ? (parsed as { name: string }).name : text;
   if (!carriesName(carrier, opts.candidateName)) return { ok: false, reason: "no_name" };
-  if (namesSomeoneElse(text, opts.candidateName)) return { ok: false, reason: "third_party_name" };
+  if (namesSomeoneElse(content, opts.candidateName)) {
+    return { ok: false, reason: "third_party_name" };
+  }
   return { ok: true };
 }

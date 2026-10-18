@@ -106,6 +106,9 @@ describe("name lists", () => {
 describe("NAME_METHOD", () => {
   it("says the surname carries the signal where the first name cannot", () => {
     expect(NAME_METHOD).toMatch(/surname carries the race\/ethnicity signal/);
+    // Truthful about what is steered and what is rejected (round 4 principle).
+    expect(NAME_METHOD).toMatch(/instructed to state no other group detail/);
+    expect(NAME_METHOD).toMatch(/unambiguous terms are rejected/);
   });
 
   it("states the method in plain words the stance can print", () => {

@@ -16,6 +16,7 @@ jest.mock("../../../utils/biasAudit.utils", () => ({
   listLatestValidRecordsPageQuery: jest.fn(),
   claimCorpusLeaseQuery: jest.fn(),
   releaseCorpusLeaseQuery: jest.fn(),
+  getCorpusLeaseQuery: jest.fn(),
   getProjectQuery: jest.fn(),
 }));
 jest.mock("./gatewayClient", () => ({ complete: jest.fn() }));
@@ -437,44 +438,68 @@ describe("runCorpusGeneration", () => {
       expect(mockUtils.releaseCorpusLeaseQuery).not.toHaveBeenCalled();
     });
 
+    const lease = (o: Record<string, unknown>) => ({
+      status: "running",
+      lease_expires_at: null,
+      lease_live: false,
+      record_count: null,
+      models_observed_json: null,
+      ...o,
+    });
+
     it("refuses with CorpusBusyError, carrying the lease expiry, while another runner holds it", async () => {
-      const until = new Date(Date.now() + 60_000);
-      mockUtils.getCorpusQuery
-        .mockResolvedValueOnce(corpusRow())
-        .mockResolvedValueOnce(corpusRow({ lease_expires_at: until }));
+      const until = new Date("2030-01-01T00:00:00Z");
       mockUtils.claimCorpusLeaseQuery.mockResolvedValueOnce(false);
+      mockUtils.getCorpusLeaseQuery.mockResolvedValueOnce(
+        lease({ lease_expires_at: until, lease_live: true }),
+      );
       const err = await run().catch((e) => e);
       expect(err).toBeInstanceOf(CorpusBusyError);
       expect(err).not.toBeInstanceOf(LeaseLostError);
       expect(err.leaseExpiresAt).toEqual(until);
+      // Liveness came from the database, and a live lease is not claimed twice.
+      expect(mockUtils.claimCorpusLeaseQuery).toHaveBeenCalledTimes(1);
       expect(mockComplete).not.toHaveBeenCalled();
       expect(mockUtils.appendCorpusRecordQuery).not.toHaveBeenCalled();
-      // Not this runner's lease, so nothing to release.
       expect(mockUtils.releaseCorpusLeaseQuery).not.toHaveBeenCalled();
     });
 
-    it("is not busy once the other lease has expired: a conflict, not CorpusBusyError", async () => {
-      mockUtils.getCorpusQuery
-        .mockResolvedValueOnce(corpusRow())
-        .mockResolvedValueOnce(corpusRow({ lease_expires_at: new Date(Date.now() - 1000) }));
-      mockUtils.claimCorpusLeaseQuery.mockResolvedValueOnce(false);
+    it("claims once more when the database shows the other lease expired, and runs", async () => {
+      seedLog(logFor(700));
+      mockUtils.claimCorpusLeaseQuery.mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+      mockUtils.getCorpusLeaseQuery.mockResolvedValueOnce(lease({ lease_live: false }));
+      await expect(run()).resolves.toMatchObject({ status: "complete" });
+      expect(mockUtils.claimCorpusLeaseQuery).toHaveBeenCalledTimes(2);
+    });
+
+    it("is busy, not a contradictory conflict, when the retried claim also fails", async () => {
+      const until = new Date("2030-01-01T00:00:00Z");
+      mockUtils.claimCorpusLeaseQuery.mockResolvedValue(false);
+      mockUtils.getCorpusLeaseQuery
+        .mockResolvedValueOnce(lease({ lease_live: false }))
+        .mockResolvedValueOnce(lease({ lease_expires_at: until, lease_live: true }));
       const err = await run().catch((e) => e);
-      expect(err).not.toBeInstanceOf(CorpusBusyError);
-      expect(err.message).toMatch(/not running/);
+      expect(err).toBeInstanceOf(CorpusBusyError);
+      expect(err.leaseExpiresAt).toEqual(until);
+      expect(mockUtils.claimCorpusLeaseQuery).toHaveBeenCalledTimes(2);
     });
 
     it("returns the stored result when the corpus completed between the read and the claim", async () => {
-      mockUtils.getCorpusQuery
-        .mockResolvedValueOnce(corpusRow())
-        .mockResolvedValueOnce(
-          corpusRow({ status: "complete", record_count: 700, models_observed_json: { m1: 700 } }),
-        );
       mockUtils.claimCorpusLeaseQuery.mockResolvedValueOnce(false);
+      mockUtils.getCorpusLeaseQuery.mockResolvedValueOnce(
+        lease({ status: "complete", record_count: 700, models_observed_json: { m1: 700 } }),
+      );
       await expect(run()).resolves.toEqual({
         status: "complete",
         recordCount: 700,
         modelsObserved: { m1: 700 },
       });
+    });
+
+    it("gives the not-running conflict when the corpus failed between the read and the claim", async () => {
+      mockUtils.claimCorpusLeaseQuery.mockResolvedValueOnce(false);
+      mockUtils.getCorpusLeaseQuery.mockResolvedValueOnce(lease({ status: "failed" }));
+      await expect(run()).rejects.toThrow(/not running \(failed\)/);
     });
 
     it("stops when an append finds the lease gone", async () => {
@@ -652,6 +677,31 @@ describe("runCorpusGeneration", () => {
         failureCode: "job_description_changed",
         ownerToken: claimToken(),
       },
+      1,
+    );
+  });
+
+  it.each([
+    ["unknown_job_description", { job_description_key: "retired-jd" }],
+    ["unknown_artifact_kind", { artifact_kind: "audio" }],
+    ["plan_failed", { planned_count: 650 }],
+  ])("fails the corpus as %s under its token when it cannot be resumed", async (failureCode, o) => {
+    mockUtils.getCorpusQuery.mockResolvedValue(corpusRow(o));
+    await expect(run()).rejects.toThrow();
+    expect(mockComplete).not.toHaveBeenCalled();
+    expect(mockUtils.updateCorpusStatusQuery).toHaveBeenCalledWith(
+      { corpusId: 3, status: "failed", failureCode, ownerToken: claimToken() },
+      1,
+    );
+  });
+
+  it("fails the corpus as plan_failed when the stored plan no longer clears the ID gate", async () => {
+    (verifyIdOrder as jest.Mock).mockImplementationOnce(() => {
+      throw new IdOrderError("sex: observed 2, expected 351");
+    });
+    await expect(run()).rejects.toThrow(IdOrderError);
+    expect(mockUtils.updateCorpusStatusQuery).toHaveBeenCalledWith(
+      { corpusId: 3, status: "failed", failureCode: "plan_failed", ownerToken: claimToken() },
       1,
     );
   });

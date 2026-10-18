@@ -12,6 +12,7 @@ import {
 import {
   appendCorpusRecordQuery,
   claimCorpusLeaseQuery,
+  getCorpusLeaseQuery,
   createCorpusQuery,
   getCorpusQuery,
   listCorpusLogQuery,
@@ -20,7 +21,6 @@ import {
   touchCorpusHeartbeatQuery,
   updateCorpusStatusQuery,
   type CorpusLogRow,
-  type CorpusRow,
 } from "../../../utils/biasAudit.utils";
 import { isUniqueViolation } from "../serviceHelpers";
 import { LL144_CONFIG } from "../runService";
@@ -226,7 +226,11 @@ const toEntry = (r: CorpusLogRow): GenerationLogEntry => ({
 });
 
 /** The stored outcome of a finished corpus, for an idempotent retry. */
-function summaryOf(corpus: CorpusRow & { status: "complete" | "blocked" }) {
+function summaryOf(corpus: {
+  status: "complete" | "blocked";
+  record_count: number | null;
+  models_observed_json: Record<string, number> | null;
+}) {
   return {
     status: corpus.status,
     recordCount: corpus.record_count ?? 0,
@@ -265,20 +269,34 @@ export async function runCorpusGeneration(args: {
 
   const settings = getGatewaySettings();
   const ownerToken = randomUUID();
-  const claimedAt = Date.now();
-  if (!(await claimCorpusLeaseQuery(corpusId, organizationId, ownerToken, LEASE_SECONDS))) {
-    // Busy only while another runner's lease is live; otherwise the corpus
-    // moved on between the read and the claim.
-    const current = await getCorpusQuery(corpusId, organizationId);
-    const expiry = current?.lease_expires_at ? new Date(current.lease_expires_at) : null;
-    if (current?.status === "running" && expiry && expiry.getTime() > Date.now()) {
-      throw new CorpusBusyError(corpusId, expiry);
+  let claimedAt = Date.now();
+  const claim = () => {
+    claimedAt = Date.now();
+    return claimCorpusLeaseQuery(corpusId, organizationId, ownerToken, LEASE_SECONDS);
+  };
+  if (!(await claim())) {
+    // Liveness is judged on the database clock. A running corpus with no live
+    // lease (it expired between the claim and the read) gets one more claim;
+    // only then is it busy.
+    let lease = await getCorpusLeaseQuery(corpusId, organizationId);
+    let claimed = false;
+    if (lease?.status === "running" && !lease.lease_live) {
+      claimed = await claim();
+      if (!claimed) lease = await getCorpusLeaseQuery(corpusId, organizationId);
     }
-    if (current?.status === "complete" || current?.status === "blocked") return summaryOf(current);
-    throw new ConflictException(
-      `Corpus ${corpusId} is not running (${current?.status ?? "not found"}).`,
-      "Corpus",
-    );
+    if (!claimed) {
+      if (lease?.status === "complete" || lease?.status === "blocked") return summaryOf(lease);
+      if (lease?.status === "running") {
+        throw new CorpusBusyError(
+          corpusId,
+          lease.lease_expires_at ? new Date(lease.lease_expires_at) : null,
+        );
+      }
+      throw new ConflictException(
+        `Corpus ${corpusId} is not running (${lease?.status ?? "not found"}).`,
+        "Corpus",
+      );
+    }
   }
 
   let finished = false;
@@ -287,14 +305,25 @@ export async function runCorpusGeneration(args: {
     // Checked only once this runner holds the lease. A corpus that can never
     // resume is failed under the token (which clears the lease), so the
     // one-running-per-project index does not hold the project forever.
-    const failAndThrow = async (failureCode: string, error: Error): Promise<never> => {
+    const failAndThrow = async (failureCode: string, error: unknown): Promise<never> => {
       await updateCorpusStatusQuery(
         { corpusId, status: "failed", failureCode, ownerToken },
         organizationId,
       );
       throw error;
     };
-    const jd = jobDescriptionFor(corpus.job_description_key);
+    /** `fn`'s value, or the corpus failed with `failureCode` and `fn`'s error rethrown. */
+    const orFail = async <T>(failureCode: string, fn: () => T): Promise<T> => {
+      try {
+        return fn();
+      } catch (e) {
+        return failAndThrow(failureCode, e);
+      }
+    };
+
+    const jd = await orFail("unknown_job_description", () =>
+      jobDescriptionFor(corpus.job_description_key),
+    );
     if (jobDescriptionSha256(jd) !== corpus.job_description_sha256) {
       await failAndThrow(
         "job_description_changed",
@@ -304,15 +333,21 @@ export async function runCorpusGeneration(args: {
         ),
       );
     }
-    const kind = corpus.artifact_kind;
-    assertArtifactKind(kind);
+    const kind = await orFail("unknown_artifact_kind", () => {
+      const k = corpus.artifact_kind;
+      assertArtifactKind(k);
+      return k;
+    });
     if (settings.model !== corpus.model_pinned) {
       await failAndThrow(
         "model_changed",
         new CorpusModelChangedError(corpusId, corpus.model_pinned, settings.model),
       );
     }
-    const { assigned, seedUsed } = planFor(jd, corpus.planned_count, corpus.seed);
+    // Includes an IdOrderError: a stored plan that no longer clears the gate.
+    const { assigned, seedUsed } = await orFail("plan_failed", () =>
+      planFor(jd, corpus.planned_count, corpus.seed),
+    );
     if (seedUsed !== corpus.seed) {
       await failAndThrow(
         "plan_changed",

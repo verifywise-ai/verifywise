@@ -302,6 +302,67 @@ describe("validateRecord", () => {
     ).toEqual({ ok: false, reason: "third_party_name" });
   });
 
+  // The review's probes (round 4).
+  it.each([
+    ["Keoni Kaawa", "Keoni Ka'awa"],
+    ["Keoni Kaawa", "Keoni Kaʻawa"],
+    ["Sina Mataafa", "Sina Mataʻafa"],
+    ["Malia Faamausili", "Malia Fa'amausili"],
+    ["Thuy Le", "Thúy Lê"],
+    ["Thuy Le", "THUY LE"],
+    ["Ana Jeanbaptiste", "Ana Jean-Baptiste"],
+  ])(
+    "finds %s written as %s (accents, ʻokina, apostrophes, hyphens folded)",
+    (candidateName, head) => {
+      expect(validateRecord(body(head, ""), "resume", { candidateName })).toEqual({ ok: true });
+    },
+  );
+
+  it.each([
+    "B.A., University of Mary Washington",
+    "A.A.S., Thomas Nelson Community College",
+    "A.A., John Wood Community College",
+    "Shift lead, Mary Washington Hospital",
+    "Covered accounts in San Jose and St. Paul",
+  ])("does not read an institution or place named after a person as a person: %s", (extra) => {
+    expect(
+      validateRecord(body("Kevin Miller", extra), "resume", { candidateName: "Kevin Miller" }),
+    ).toEqual({ ok: true });
+  });
+
+  it("reads a person in capitals as a person", () => {
+    expect(
+      validateRecord(body("Kevin Miller", "Reported to PATRICIA NGUYEN"), "resume", {
+        candidateName: "Kevin Miller",
+      }),
+    ).toEqual({ ok: false, reason: "third_party_name" });
+  });
+
+  it("checks a structured record's parsed values, not its raw JSON", () => {
+    const kevin = { candidateName: "Kevin Miller" };
+    expect(
+      validateRecord(
+        '{"name":"Kevin Miller","summary":"Trained by Jos\\u00e9 Garcia","experience":[],"skills":[]}',
+        "structured",
+        kevin,
+      ),
+    ).toEqual({ ok: false, reason: "third_party_name" });
+    expect(
+      validateRecord(
+        '{"name":"Kevin Miller","summary":"x","experience":[],"skills":[],"languages":["English","Italian"]}',
+        "structured",
+        kevin,
+      ),
+    ).toEqual({ ok: false, reason: "demographic_term" });
+    expect(
+      validateRecord(
+        '{"name":"Kevin Miller","summary":"Ramp agent, Hawaiian Airlines","experience":[],"skills":[]}',
+        "structured",
+        kevin,
+      ),
+    ).toEqual({ ok: false, reason: "demographic_term" });
+  });
+
   it("refuses a record whose shape does not match its form", () => {
     expect(validateRecord(resume, "transcript", NAME)).toEqual({
       ok: false,
@@ -362,5 +423,9 @@ describe("the prompt asks for the name in the record", () => {
     expect(p).toMatch(/religion, heritage, languages other than English/);
     expect(p).toMatch(/identity-based organisations/);
     expect(p).toMatch(/Name no person other than the candidate/);
+    // Ruling (round 4): steer settings away from group-named employers first.
+    expect(p).toMatch(
+      /Do not name an employer, school, restaurant or organisation whose name states a nationality, a cuisine, a religion or a cultural or ancestral group/,
+    );
   });
 });

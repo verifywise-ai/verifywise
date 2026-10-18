@@ -47,7 +47,8 @@ import { LL144_RACE, LL144_SEX, type Demographics } from "./allocation";
 
 export const NAME_METHOD =
   "Each generated record signals its sex and race/ethnicity only through the candidate's name: a first name typical of the cell (Tzioumis 2018, with sex from the US Census 1990 first-name files) and a surname typical of the race/ethnicity (US Census 2010), drawn deterministically per candidate. " +
-  "Native Hawaiian or Pacific Islander names are hand-selected because both sources merge that group with Asian. Native American or Alaska Native first names are common names with no strong race/ethnicity association, so the surname carries the race/ethnicity signal in that cell; Two or more races names are drawn from all groups combined and carry a sex signal only.";
+  "Native Hawaiian or Pacific Islander names are hand-selected because both sources merge that group with Asian. Native American or Alaska Native first names are common names with no strong race/ethnicity association, so the surname carries the race/ethnicity signal in that cell; Two or more races names are drawn from all groups combined and carry a sex signal only. " +
+  "The generator is instructed to state no other group detail and to name no one else; records that do so in unambiguous terms are rejected and generated again.";
 
 type FirstNames = { Male: readonly string[]; Female: readonly string[] };
 
