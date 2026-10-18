@@ -10678,6 +10678,13 @@ export const translations: Record<string, Record<string, string>> = {
       "Es wurde noch keine Feststellung zum Anwendungsbereich erstellt.",
     "SHA-256": "SHA-256",
     "Superseded by a later attestation": "Durch eine spätere Attestierung ersetzt",
+    "These edits cannot be saved, so saving or attesting would lose them:":
+      "Diese Änderungen können nicht gespeichert werden; beim Speichern oder Attestieren gingen sie verloren:",
+    "(no longer applies)": "(trifft nicht mehr zu)",
+    "(notes without an answer)": "(Notizen ohne Antwort)",
+    "Discard these edits": "Diese Änderungen verwerfen",
+    "Some edits cannot be saved. Answer those questions or discard the edits before attesting.":
+      "Einige Änderungen können nicht gespeichert werden. Beantworten Sie diese Fragen oder verwerfen Sie die Änderungen vor dem Attestieren.",
     "On your saved answers, the tool's output is one input among several with no extra weight. No score is shown. Attest the profile to generate a scope determination.":
       "Nach Ihren gespeicherten Antworten ist die Ausgabe des Tools eine Eingabe unter mehreren ohne zusätzliches Gewicht. Es wird kein Wert angezeigt. Attestieren Sie das Profil, um eine Feststellung zum Anwendungsbereich zu erstellen.",
     "From your saved answers. Nothing is attested yet, so no run or scope determination can be recorded.":
@@ -21355,6 +21362,13 @@ export const translations: Record<string, Record<string, string>> = {
       "Aucune détermination du champ d’application n’a encore été générée.",
     "SHA-256": "SHA-256",
     "Superseded by a later attestation": "Remplacée par une attestation ultérieure",
+    "These edits cannot be saved, so saving or attesting would lose them:":
+      "Ces modifications ne peuvent pas être enregistrées ; elles seraient perdues à l’enregistrement ou à l’attestation :",
+    "(no longer applies)": "(ne s’applique plus)",
+    "(notes without an answer)": "(notes sans réponse)",
+    "Discard these edits": "Abandonner ces modifications",
+    "Some edits cannot be saved. Answer those questions or discard the edits before attesting.":
+      "Certaines modifications ne peuvent pas être enregistrées. Répondez à ces questions ou abandonnez les modifications avant d’attester.",
     "On your saved answers, the tool's output is one input among several with no extra weight. No score is shown. Attest the profile to generate a scope determination.":
       "Selon vos réponses enregistrées, le résultat de l’outil est un élément parmi d’autres, sans poids supplémentaire. Aucun score n’est affiché. Attestez le profil pour générer une détermination du champ d’application.",
     "From your saved answers. Nothing is attested yet, so no run or scope determination can be recorded.":
@@ -31949,6 +31963,13 @@ export const translations: Record<string, Record<string, string>> = {
       "Aún no se ha generado ninguna determinación del ámbito.",
     "SHA-256": "SHA-256",
     "Superseded by a later attestation": "Sustituida por una atestación posterior",
+    "These edits cannot be saved, so saving or attesting would lose them:":
+      "Estos cambios no se pueden guardar; se perderían al guardar o atestiguar:",
+    "(no longer applies)": "(ya no aplica)",
+    "(notes without an answer)": "(notas sin respuesta)",
+    "Discard these edits": "Descartar estos cambios",
+    "Some edits cannot be saved. Answer those questions or discard the edits before attesting.":
+      "Algunos cambios no se pueden guardar. Responda esas preguntas o descarte los cambios antes de atestiguar.",
     "On your saved answers, the tool's output is one input among several with no extra weight. No score is shown. Attest the profile to generate a scope determination.":
       "Según sus respuestas guardadas, el resultado de la herramienta es un elemento entre varios, sin peso adicional. No se muestra ninguna puntuación. Atestigüe el perfil para generar una determinación del ámbito.",
     "From your saved answers. Nothing is attested yet, so no run or scope determination can be recorded.":

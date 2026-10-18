@@ -55,6 +55,9 @@ function draftFrom(answers: AedtProfileAnswer[]): Record<string, DraftAnswer> {
 
 const isAnswered = (a: DraftAnswer | undefined) => a !== undefined && (a.dontKnow || !!a.value);
 
+const sameAnswer = (a: DraftAnswer, b: DraftAnswer) =>
+  a.value === b.value && a.dontKnow === b.dontKnow && a.notes === b.notes;
+
 /** Shown beside "I don't know": what that answer does, before it is given. */
 function dontKnowConsequence(q: AedtQuestion): string {
   return q.weight === "veto"
@@ -83,6 +86,7 @@ const ProfileWizard = ({
   isAttesting = false,
   errorMessage = null,
 }: ProfileWizardProps) => {
+  const savedDraft = useMemo(() => draftFrom(answers), [answers]);
   const [draft, setDraft] = useState<Record<string, DraftAnswer>>(() => draftFrom(answers));
   const [dirty, setDirty] = useState<Set<string>>(() => new Set());
 
@@ -103,9 +107,35 @@ const ProfileWizard = ({
 
   // ---- save
 
-  // Only these changes can be saved. An edit that cannot (notes typed on an
-  // unanswered question, or a question hidden by a later answer) is not one.
+  // Only these changes can be saved: visible questions with an answer.
   const pending = visible.filter((q) => dirty.has(q.key) && isAnswered(draft[q.key]));
+
+  // Edits Save cannot send: notes on a question with no answer, or an answer
+  // to a question a later answer has hidden. They would be lost when the
+  // wizard restarts after a save or attest, so they are named, can be
+  // discarded, and hold attest back. Typing and then undoing is no edit.
+  const visibleKeys = new Set(visible.map((q) => q.key));
+  const pendingKeys = new Set(pending.map((q) => q.key));
+  const unsaveable = [...dirty]
+    .filter((k) => !pendingKeys.has(k) && !sameAnswer(draft[k], savedDraft[k] ?? EMPTY_ANSWER))
+    .map((k) => ({ key: k, hidden: !visibleKeys.has(k) }));
+
+  const discardUnsaveable = () => {
+    const keys = unsaveable.map((u) => u.key);
+    setDraft((prev) => {
+      const next = { ...prev };
+      for (const k of keys) {
+        if (savedDraft[k]) next[k] = savedDraft[k];
+        else delete next[k];
+      }
+      return next;
+    });
+    setDirty((prev) => {
+      const next = new Set(prev);
+      for (const k of keys) next.delete(k);
+      return next;
+    });
+  };
   const missingNotes = pending.filter(
     (q) => q.notesRequired && !draft[q.key].dontKnow && draft[q.key].notes.trim() === "",
   );
@@ -127,11 +157,13 @@ const ProfileWizard = ({
     );
   };
 
-  // ---- attest: read from the saved answers, since attest records those
+  // ---- attest: read from the saved answers, since attest records those.
+  // A deciding question counts only where it applies to them, the same
+  // predicate the visible questions use.
 
   const saved = useMemo(() => new Map(answers.map((a) => [a.questionKey, a])), [answers]);
   const openVetoes = questions
-    .filter((q) => q.weight === "veto")
+    .filter((q) => q.weight === "veto" && evaluatePredicate(q.appliesWhen, savedDraft))
     .filter((q) => !hasUsableAnswer(saved.get(q.key)))
     .map((q) => ({ key: q.key, dontKnow: saved.get(q.key)?.dontKnow ?? false }));
 
@@ -139,6 +171,9 @@ const ProfileWizard = ({
   if (!canAttest) attestReason = "Only an Admin can attest the profile.";
   else if (pending.length > 0 || profileStatus === null)
     attestReason = "Save your answers before attesting.";
+  else if (unsaveable.length > 0)
+    attestReason =
+      "Some edits cannot be saved. Answer those questions or discard the edits before attesting.";
   else if (profileStatus === "attested")
     attestReason = "This version is attested. Change an answer to start a new version.";
   const attestDisabled = isAttesting || attestReason !== null || openVetoes.length > 0;
@@ -199,6 +234,32 @@ const ProfileWizard = ({
             <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
               Only an Admin or Editor can change answers.
             </Typography>
+          )}
+          {unsaveable.length > 0 && (
+            <Box data-testid="unsaveable-edits">
+              <Typography sx={{ fontSize: 12, color: palette.status.warning.text }}>
+                These edits cannot be saved, so saving or attesting would lose them:
+              </Typography>
+              <Box component="ul" sx={{ m: 0, pl: "18px", mb: "8px" }}>
+                {unsaveable.map((u) => (
+                  <Typography
+                    component="li"
+                    key={u.key}
+                    sx={{ fontSize: 12, color: palette.status.warning.text }}
+                  >
+                    <span>{questionTitle(u.key)}</span>{" "}
+                    <span>{u.hidden ? "(no longer applies)" : "(notes without an answer)"}</span>
+                  </Typography>
+                ))}
+              </Box>
+              <CustomizableButton
+                variant="outlined"
+                size="small"
+                text="Discard these edits"
+                testId="aedt-discard-unsaveable"
+                onClick={discardUnsaveable}
+              />
+            </Box>
           )}
           {canEdit && missingNotes.length > 0 && (
             <Box data-testid="save-blocked-reason">

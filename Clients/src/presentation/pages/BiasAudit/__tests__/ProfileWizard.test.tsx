@@ -311,25 +311,116 @@ describe("ProfileWizard: attest", () => {
     ).toBeInTheDocument();
   });
 
-  // Notes on a question with no answer cannot be saved, so they must not
-  // leave Save and Attest both disabled.
-  it("is not held back by notes typed on an unanswered question", () => {
-    const { onAttest } = renderWizard({ answers: ALL_VETOES, profileStatus: "draft" });
+  it("explains why when the caller may not attest", () => {
+    renderWizard({ answers: ALL_VETOES, profileStatus: "draft", canAttest: false });
+    expect(screen.getByRole("button", { name: /attest/i })).toBeDisabled();
+    expect(
+      within(screen.getByTestId("attest-blocked-reason")).getByText(/only an admin/i),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("ProfileWizard: edits that cannot be saved", () => {
+  // Attest records the saved profile and the wizard restarts afterwards, so
+  // an edit Save cannot send would be lost without a word.
+  it("blocks attest over notes typed on an unanswered question, and names it", () => {
+    renderWizard({ answers: ALL_VETOES, profileStatus: "draft" });
     fireEvent.change(within(question("cutoff.applied_by")).getByRole("textbox"), {
       target: { value: "Still checking with the vendor." },
     });
     expect(screen.getByRole("button", { name: /save answers/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /attest/i })).toBeDisabled();
+    expect(
+      within(screen.getByTestId("attest-blocked-reason")).getByText(/some edits cannot be saved/i),
+    ).toBeInTheDocument();
+    const list = screen.getByTestId("unsaveable-edits");
+    expect(list).toHaveTextContent("Who applies the cutoff");
+    expect(list).toHaveTextContent("(notes without an answer)");
+  });
+
+  it("lets the edits be discarded, which clears the block", () => {
+    const { onAttest } = renderWizard({ answers: ALL_VETOES, profileStatus: "draft" });
+    const notes = within(question("cutoff.applied_by")).getByRole("textbox");
+    fireEvent.change(notes, { target: { value: "Still checking." } });
+    fireEvent.click(screen.getByRole("button", { name: /discard these edits/i }));
+    expect(notes).toHaveValue("");
+    expect(screen.queryByTestId("unsaveable-edits")).not.toBeInTheDocument();
     const attest = screen.getByRole("button", { name: /attest/i });
     expect(attest).toBeEnabled();
     fireEvent.click(attest);
     expect(onAttest).toHaveBeenCalledTimes(1);
   });
 
-  it("explains why when the caller may not attest", () => {
-    renderWizard({ answers: ALL_VETOES, profileStatus: "draft", canAttest: false });
+  it("does not count notes typed and then removed again", () => {
+    renderWizard({ answers: ALL_VETOES, profileStatus: "draft" });
+    const notes = within(question("cutoff.applied_by")).getByRole("textbox");
+    fireEvent.change(notes, { target: { value: "x" } });
+    fireEvent.change(notes, { target: { value: "" } });
+    expect(screen.queryByTestId("unsaveable-edits")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /attest/i })).toBeEnabled();
+  });
+
+  it("names an answer to a question a later answer has hidden, and discards only that", () => {
+    const { onSave } = renderWizard({
+      answers: [...ALL_VETOES, answer("cutoff.applied_by", "person")],
+      profileStatus: "draft",
+    });
+    fireEvent.click(within(question("cutoff.planned")).getByRole("radio", { name: /Planned/ }));
+    fireEvent.click(
+      within(question("cutoff.applied_by")).getByRole("radio", { name: /The platform/ }),
+    );
+    expect(queryQuestion("cutoff.planned")).not.toBeInTheDocument();
+    const list = screen.getByTestId("unsaveable-edits");
+    expect(list).toHaveTextContent("Planned automation");
+    expect(list).toHaveTextContent("(no longer applies)");
+
+    fireEvent.click(screen.getByRole("button", { name: /discard these edits/i }));
+    expect(screen.queryByTestId("unsaveable-edits")).not.toBeInTheDocument();
+    // The visible change is untouched and still saves.
+    fireEvent.click(screen.getByRole("button", { name: /save answers/i }));
+    expect(onSave).toHaveBeenCalledWith([
+      {
+        questionKey: "cutoff.applied_by",
+        value: "platform",
+        notes: "Our own words.",
+        dontKnow: false,
+      },
+    ]);
+  });
+});
+
+describe("ProfileWizard: deciding questions with a condition", () => {
+  const CONDITIONAL_VETO: AedtQuestion = {
+    key: "agency.notice",
+    scope: "profile",
+    weight: "veto",
+    prompt: "Do you give candidates the notice?",
+    notesRequired: false,
+    allowDontKnow: true,
+    appliesWhen: { equals: { key: "role.party", value: "employer" } },
+    options: [{ value: "yes", label: "Yes", consequence: "Recorded." }],
+  };
+
+  it("does not hold attest on a deciding question that does not apply to the saved answers", () => {
+    renderWizard({
+      questions: [...QUESTIONS, CONDITIONAL_VETO],
+      answers: ALL_VETOES.map((a) =>
+        a.questionKey === "role.party" ? answer("role.party", "vendor") : a,
+      ),
+      profileStatus: "draft",
+    });
+    expect(screen.getByRole("button", { name: /attest/i })).toBeEnabled();
+  });
+
+  it("holds attest on it, by name, when the saved answers make it apply", () => {
+    renderWizard({
+      questions: [...QUESTIONS, CONDITIONAL_VETO],
+      answers: ALL_VETOES,
+      profileStatus: "draft",
+    });
     expect(screen.getByRole("button", { name: /attest/i })).toBeDisabled();
     expect(
-      within(screen.getByTestId("attest-blocked-reason")).getByText(/only an admin/i),
+      within(screen.getByTestId("attest-blocked-reason")).getByText("agency.notice"),
     ).toBeInTheDocument();
   });
 });
