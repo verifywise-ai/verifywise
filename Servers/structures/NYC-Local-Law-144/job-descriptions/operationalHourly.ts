@@ -53,8 +53,7 @@ const NARRATIVES = {
   t2_under: `Write a candidate who satisfies the environment criterion only. They have worked
     in a warehouse, stockroom or production setting and can describe it concretely: the goods,
     the layout, what a shift involved. But no certification of any kind, no rate or throughput
-    figure they can state. They may mention a
-    scanner in passing without it being part of their daily work. They state availability for both shifts including the weekend rotation, and describe
+    figure they can state. No mention of scanning systems. They state availability for both shifts including the weekend rotation, and describe
     a reliable attendance record in general terms, with no figures.`,
 
   t3_borderline: `Write a candidate who satisfies the environment and the systems criteria.

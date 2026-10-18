@@ -14,4 +14,4 @@ export const JOB_DESCRIPTIONS: Record<JobDescriptionKey, JobDescription> = {
   "operational-hourly": OPERATIONAL_HOURLY,
 };
 
-export const JOB_DESCRIPTION_KEYS = Object.keys(JOB_DESCRIPTIONS) as JobDescriptionKey[];
+export const JOB_DESCRIPTION_KEYS = Object.keys(JOB_DESCRIPTIONS) as readonly JobDescriptionKey[];
