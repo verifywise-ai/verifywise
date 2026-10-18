@@ -46,9 +46,8 @@ function gone() {
   });
 }
 
-function renderPanel(kind: "run" | "scope", stances: AedtScopeDetermination[]) {
-  const onGenerate = vi.fn();
-  renderWithProviders(
+function panel(kind: "run" | "scope", stances: AedtScopeDetermination[], onGenerate = vi.fn()) {
+  return (
     <StancePanel
       kind={kind}
       stances={stances}
@@ -56,9 +55,14 @@ function renderPanel(kind: "run" | "scope", stances: AedtScopeDetermination[]) {
       onGenerate={onGenerate}
       isGenerating={false}
       generateError={null}
-    />,
+    />
   );
-  return { onGenerate };
+}
+
+function renderPanel(kind: "run" | "scope", stances: AedtScopeDetermination[]) {
+  const onGenerate = vi.fn();
+  const view = renderWithProviders(panel(kind, stances, onGenerate));
+  return { onGenerate, rerender: view.rerender };
 }
 
 describe("StancePanel downloads", () => {
@@ -101,5 +105,17 @@ describe("StancePanel downloads", () => {
     );
     expect(screen.getByText("The stance file is no longer stored.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /generate it again/i })).not.toBeInTheDocument();
+  });
+
+  // A re-attestation after the failed download supersedes the determination,
+  // so the offer must follow the current isCurrent, not the one at failure.
+  it("withdraws the regenerate offer once a later attestation supersedes the determination", async () => {
+    download.mockRejectedValue(gone());
+    const { rerender } = renderPanel("scope", [row(2, true)]);
+    fireEvent.click(screen.getByRole("button", { name: /download/i }));
+    expect(await screen.findByRole("button", { name: /generate it again/i })).toBeInTheDocument();
+    rerender(panel("scope", [row(2, false)]));
+    expect(screen.queryByRole("button", { name: /generate it again/i })).not.toBeInTheDocument();
+    expect(screen.getByTestId("stance-not-regenerable")).toBeInTheDocument();
   });
 });

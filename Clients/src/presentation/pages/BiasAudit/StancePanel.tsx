@@ -40,8 +40,8 @@ export interface StancePanelProps {
 interface DownloadError {
   status: number | null;
   message: string;
-  /** Whether generating again files a new version of the same document. */
-  canRegenerate: boolean;
+  /** The stance whose download failed. */
+  stanceId: number;
 }
 
 /**
@@ -61,24 +61,27 @@ const StancePanel = ({
   const [downloading, setDownloading] = useState<number | null>(null);
   const [downloadError, setDownloadError] = useState<DownloadError | null>(null);
 
-  const handleDownload = async (stance: StancePanelProps["stances"][number]) => {
-    setDownloading(stance.id);
+  const handleDownload = async (stanceId: number) => {
+    setDownloading(stanceId);
     setDownloadError(null);
     try {
-      const { blob, filename } = await downloadAedtStance(stance.id);
+      const { blob, filename } = await downloadAedtStance(stanceId);
       triggerBrowserDownload(blob, filename);
     } catch (error) {
-      // A run's stance is generated again from the same run. A scope
-      // determination is generated from the CURRENT attested profile, so only
-      // the current one can be regenerated; a superseded one cannot.
-      setDownloadError({
-        ...describeAedtError(error),
-        canRegenerate: kind === "run" || stance.isCurrent === true,
-      });
+      setDownloadError({ ...describeAedtError(error), stanceId });
     } finally {
       setDownloading(null);
     }
   };
+
+  // A run's stance is generated again from the same run. A scope
+  // determination is generated from the CURRENT attested profile, so only the
+  // current one can be regenerated. Read from the stances as they are now, so
+  // a re-attestation after the failure withdraws the offer.
+  const failedStance = downloadError
+    ? stances.find((s) => s.id === downloadError.stanceId)
+    : undefined;
+  const canRegenerate = kind === "run" || failedStance?.isCurrent === true;
 
   const generateText = kind === "run" ? "Generate stance" : "Generate scope determination";
   const canGenerate = generateBlockedReason === null;
@@ -117,13 +120,13 @@ const StancePanel = ({
               sx={{ borderRadius: "4px" }}
             >
               <Typography sx={{ fontSize: 13 }}>{downloadError.message}</Typography>
-              {downloadError.status === 410 && !downloadError.canRegenerate && (
+              {downloadError.status === 410 && !canRegenerate && (
                 <Typography sx={{ fontSize: 13, mt: "4px" }} data-testid="stance-not-regenerable">
                   This scope determination cites an earlier attestation, so generating it again
                   would cite the current one instead. Its file is no longer stored.
                 </Typography>
               )}
-              {downloadError.status === 410 && downloadError.canRegenerate && canGenerate && (
+              {downloadError.status === 410 && canRegenerate && canGenerate && (
                 <Box sx={{ mt: "8px" }}>
                   <CustomizableButton
                     variant="outlined"
@@ -193,7 +196,7 @@ const StancePanel = ({
                           text="Download"
                           testId={`aedt-download-stance-${s.id}`}
                           startIcon={<Download size={14} strokeWidth={1.5} />}
-                          onClick={() => void handleDownload(s)}
+                          onClick={() => void handleDownload(s.id)}
                           isDisabled={downloading !== null}
                           loading={downloading === s.id}
                         />
