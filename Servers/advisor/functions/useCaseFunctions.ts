@@ -1,5 +1,6 @@
 import { getUserProjects } from "../../utils/project.utils";
-import { calculateProjectRisks } from "../../utils/project.utils";
+import { calculateProjectRisks, lockProjectForDelete } from "../../utils/project.utils";
+import { deleteProjectWithSideEffects } from "../../utils/projectDeletion.utils";
 import { findUsersNotInOrganization } from "../../utils/user.utils";
 import logger from "../../utils/logger/fileLogger";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
@@ -362,33 +363,29 @@ const agentDeleteUseCase = createWriteToolFn({
   descriptionFn: (params) =>
     `Permanently delete use case #${params.use_case_id} and all associated data`,
   executeFn: async (params, organizationId) => {
+    const id = params.use_case_id as number;
     const transaction = await sequelize.transaction();
     try {
-      // Delete dependent records first
-      await sequelize.query(
-        `DELETE FROM projects_members WHERE organization_id = :organizationId AND project_id = :id`,
-        { replacements: { organizationId, id: params.use_case_id }, transaction },
+      // The app's own "Delete use case" path, which locks the project row
+      // first. A bias audit stance being generated for the project then
+      // either commits before the delete (and its PDF goes with the project's
+      // files) or waits and fails on the deleted project, rolling its PDF
+      // back. A PDF never outlives the stance that cites it.
+      if (!(await lockProjectForDelete(id, organizationId, transaction))) {
+        await transaction.commit();
+        return { success: true, deleted_use_case: null };
+      }
+      const [deletedUseCase] = await sequelize.query(
+        `SELECT id, project_title FROM projects WHERE organization_id = :organizationId AND id = :id`,
+        { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
       );
-      // Every file of the project goes, bias audit stance PDFs included, as on
-      // the normal project delete (deleteHelper in project.utils). The stances
-      // citing them cascade with the project, so a kept PDF would be an
-      // orphan nothing could show or delete.
-      await sequelize.query(
-        `DELETE FROM files WHERE organization_id = :organizationId AND project_id = :id`,
-        { replacements: { organizationId, id: params.use_case_id }, transaction },
-      );
-      await sequelize.query(
-        `DELETE FROM projects_risks WHERE organization_id = :organizationId AND project_id = :id`,
-        { replacements: { organizationId, id: params.use_case_id }, transaction },
-      );
-
-      const result = await sequelize.query(
-        `DELETE FROM projects WHERE organization_id = :organizationId AND id = :id RETURNING id, project_title`,
-        { replacements: { organizationId, id: params.use_case_id }, transaction },
-      );
+      await deleteProjectWithSideEffects(id, organizationId, transaction, {
+        userId: (params._userId as number) || null,
+        alreadyLocked: true,
+        enqueueAutomationAfterCommit: true,
+      });
       await transaction.commit();
-      const deleted = (result as any)[0]?.[0] || (result as any)[0];
-      return { success: true, deleted_use_case: deleted };
+      return { success: true, deleted_use_case: deletedUseCase };
     } catch (error) {
       await transaction.rollback();
       throw error;

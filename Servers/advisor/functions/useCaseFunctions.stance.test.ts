@@ -1,24 +1,38 @@
 /**
- * agent_delete_use_case deletes every file of the use case, bias audit stance
- * PDFs included, as the normal project delete does: the stances citing them
- * cascade with the project, so a kept PDF would be an orphan. Files of other
- * projects and organizations are untouched.
+ * agent_delete_use_case deletes through the app's project delete path, which
+ * locks the project row first: a stance generated concurrently either commits
+ * before the delete (and its PDF is deleted with the project's files) or
+ * waits and fails, so no stance PDF outlives its stance.
  */
 
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
-import {
-  fakeFilesQuery,
-  stanceRow,
-  visibleRow,
-  type FakeFileRow,
-} from "../../utils/files/__tests__/helpers/fakeFilesTable";
 
-let table: FakeFileRow[] = [];
+const order: string[] = [];
+const tx = { commit: jest.fn(), rollback: jest.fn() };
+const queries: string[] = [];
 jest.mock("../../database/db", () => ({
   sequelize: {
-    transaction: jest.fn<any>().mockResolvedValue({ commit: jest.fn(), rollback: jest.fn() }),
-    query: (sql: string, options: any) =>
-      /\bFROM\s+files\b/.test(sql) ? fakeFilesQuery(table)(sql, options) : [[], 0],
+    transaction: jest.fn(async () => tx),
+    query: jest.fn(async (sql: string) => {
+      queries.push(sql);
+      return [{ id: 7, project_title: "Hiring screen" }];
+    }),
+  },
+}));
+const mockLock = jest.fn<any>();
+jest.mock("../../utils/project.utils", () => ({
+  getUserProjects: jest.fn(),
+  calculateProjectRisks: jest.fn(),
+  lockProjectForDelete: (...args: unknown[]) => {
+    order.push("lock");
+    return mockLock(...args);
+  },
+}));
+const mockDelete = jest.fn<any>();
+jest.mock("../../utils/projectDeletion.utils", () => ({
+  deleteProjectWithSideEffects: (...args: unknown[]) => {
+    order.push("delete");
+    return mockDelete(...args);
   },
 }));
 jest.mock("../approval/approvalGateway", () => ({ submitForApproval: jest.fn() }));
@@ -26,29 +40,55 @@ jest.mock("../../utils/logger/fileLogger", () => ({
   __esModule: true,
   default: { error: jest.fn(), info: jest.fn(), debug: jest.fn(), warn: jest.fn() },
 }));
-jest.mock("../../utils/project.utils", () => ({}));
 jest.mock("../../utils/user.utils", () => ({}));
 
 import "./useCaseFunctions";
 import { writeToolExecutors } from "../confirmation/createWriteTool";
 
-describe("agent_delete_use_case and the use case's files", () => {
+const run = (params: Record<string, unknown>) =>
+  writeToolExecutors.get("agent_delete_use_case")!(params, 1);
+
+describe("agent_delete_use_case", () => {
   beforeEach(() => {
-    table = [];
+    jest.clearAllMocks();
+    order.length = 0;
+    queries.length = 0;
+    mockDelete.mockResolvedValue({ deleted: true, withdrawnApprovalId: null });
   });
 
-  it("deletes all of the use case's files, stance PDFs included, and nothing else", async () => {
-    const otherProject = visibleRow({ id: 3, project_id: 8 });
-    const otherProjectStance = stanceRow({ id: 4, project_id: 8 });
-    const otherOrg = visibleRow({ id: 5, project_id: 7, organization_id: 2 });
-    table = [
-      visibleRow({ id: 1, project_id: 7 }),
-      stanceRow({ id: 2, project_id: 7 }),
-      otherProject,
-      otherProjectStance,
-      otherOrg,
-    ];
-    await writeToolExecutors.get("agent_delete_use_case")!({ use_case_id: 7 }, 1);
-    expect(table).toEqual([otherProject, otherProjectStance, otherOrg]);
+  it("locks the project, then deletes it through the project delete path", async () => {
+    mockLock.mockResolvedValue(true);
+    const result = await run({ use_case_id: 7, _userId: 3 });
+
+    expect(order).toEqual(["lock", "delete"]);
+    expect(mockLock).toHaveBeenCalledWith(7, 1, tx);
+    expect(mockDelete).toHaveBeenCalledWith(7, 1, tx, {
+      userId: 3,
+      alreadyLocked: true,
+      enqueueAutomationAfterCommit: true,
+    });
+    // No hand-written deletes of its own.
+    expect(queries.filter((sql) => /\bDELETE\b/i.test(sql))).toEqual([]);
+    expect(tx.commit).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({
+      success: true,
+      deleted_use_case: { id: 7, project_title: "Hiring screen" },
+    });
+  });
+
+  it("touches nothing else for a use case outside the organization", async () => {
+    mockLock.mockResolvedValue(false);
+    const result = await run({ use_case_id: 7 });
+    expect(mockDelete).not.toHaveBeenCalled();
+    expect(queries).toEqual([]);
+    expect(result).toEqual({ success: true, deleted_use_case: null });
+  });
+
+  it("rolls back when the delete fails", async () => {
+    mockLock.mockResolvedValue(true);
+    mockDelete.mockRejectedValue(new Error("boom"));
+    await expect(run({ use_case_id: 7 })).rejects.toThrow("boom");
+    expect(tx.rollback).toHaveBeenCalledTimes(1);
+    expect(tx.commit).not.toHaveBeenCalled();
   });
 });
