@@ -185,6 +185,17 @@ function fixed(n: number | null): string {
   return n === null ? "not computed" : n.toFixed(2);
 }
 
+/**
+ * An impact ratio to two decimals, truncated rather than rounded, so a ratio
+ * flagged below the 0.80 convention (say 0.7996) never reads "0.80". Ratios
+ * are stored at six decimals, so `toFixed(6)` reproduces them before the cut.
+ */
+function ratioText(n: number | null): string {
+  if (n === null) return "not computed";
+  const [whole, fraction = ""] = n.toFixed(6).split(".");
+  return `${whole}.${fraction.slice(0, 2)}`;
+}
+
 function resultsBody(args: ComposeStanceArgs): string {
   const { result, gateFindings } = args;
   if (result === null) {
@@ -206,7 +217,7 @@ function resultsBody(args: ComposeStanceArgs): string {
           : "";
       lines.push(
         `- ${r.categoryName}: ${r.applicantCount} individuals, ${rateName} ${fixed(r.selectionRate)}, ` +
-          `impact ratio ${fixed(r.impactRatio)}${note}`,
+          `impact ratio ${ratioText(r.impactRatio)}${note}`,
       );
     }
     lines.push("");

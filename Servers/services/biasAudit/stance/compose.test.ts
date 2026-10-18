@@ -558,3 +558,20 @@ describe("vocabulary", () => {
     expect(all).not.toMatch(/\b\d+\s+(intersectional|cells|categories)/i);
   });
 });
+
+describe("impact ratios in the results", () => {
+  it("never prints a flagged ratio as 0.80", () => {
+    const close = {
+      ...result,
+      tables: [
+        {
+          ...result.tables[0],
+          rows: [result.tables[0].rows[0], { ...result.tables[0].rows[1], impactRatio: 0.7996 }],
+        },
+      ],
+    } as BiasAuditResult;
+    const body = section(composeStance({ ...base, result: close }), "results").body;
+    expect(body).toContain("impact ratio 0.79 (below the 0.80 convention)");
+    expect(body).not.toContain("impact ratio 0.80");
+  });
+});
