@@ -162,7 +162,7 @@ describe("StancePanel downloads", () => {
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: /download/i }));
-    const note = await screen.findByTestId("stance-cannot-regenerate");
+    const note = await screen.findByTestId("stance-file-gone");
     expect(note).toHaveTextContent("The file is no longer stored.");
     // The reason shows once, under the disabled generate button, not again here.
     expect(note).not.toHaveTextContent(reason);

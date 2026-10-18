@@ -124,13 +124,9 @@ const StancePanel = ({
             </Box>
           </>
         );
-      // Why generating is blocked already shows under the disabled button.
+      // Blocked: why generating is blocked already shows under the disabled
+      // button. Gone: the stance is no longer listed, so nothing is claimed.
       case "blocked":
-        return (
-          <Typography sx={{ fontSize: 13 }} data-testid="stance-cannot-regenerate">
-            The file is no longer stored.
-          </Typography>
-        );
       case "gone":
         return (
           <Typography sx={{ fontSize: 13 }} data-testid="stance-file-gone">

@@ -112,12 +112,17 @@ export function useGenerateAedtScopeDetermination(projectId: number) {
 }
 
 /**
+ * POST /runs refusals that can reflect the attested profile: 404 nothing
+ * attested, 409 out of scope or cutoff open, and 400, whose mapping check
+ * uses the attested metric. Others (401, 403, 413, 415, 429, network, 5xx)
+ * say nothing about it.
+ */
+const PROFILE_REFUSALS = new Set([400, 404, 409]);
+
+/**
  * A new run changes only the run list; the profile and questions stay as they
  * were. The refetch is not awaited, so the caller opens the new run at once.
- * Any 4xx refusal except 413 and 415 (the file itself) may come from the
- * attested profile: 404 nothing attested, 409 out of scope or cutoff open,
- * and a 400 mapping refusal is checked against the attested metric. So all
- * of them refetch the profile view; a network failure or a 5xx does not.
+ * A refusal in PROFILE_REFUSALS refetches the profile view.
  */
 export function useCreateAedtRun(projectId: number) {
   const queryClient = useQueryClient();
@@ -129,7 +134,7 @@ export function useCreateAedtRun(projectId: number) {
     },
     onError: (error) => {
       const { status } = describeAedtError(error);
-      if (status !== null && status >= 400 && status < 500 && status !== 413 && status !== 415) {
+      if (status !== null && PROFILE_REFUSALS.has(status)) {
         void queryClient.invalidateQueries({ queryKey: aedtQueryKeys.profile(projectId) });
       }
     },

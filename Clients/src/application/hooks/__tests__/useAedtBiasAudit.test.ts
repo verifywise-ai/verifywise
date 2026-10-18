@@ -70,7 +70,7 @@ describe("useAedtBiasAudit invalidation", () => {
   // under the page, so its gate and metric label are refetched.
   // POST /runs: 404 nothing attested, 409 out of scope or cutoff open, and a
   // 400 mapping refusal checked against the attested metric.
-  it.each([400, 404, 409, 422])(
+  it.each([400, 404, 409])(
     "refetches the profile view when the server refuses a run with %i, a stale profile",
     async (status) => {
       createRun.mockRejectedValueOnce(httpError(status));
@@ -86,7 +86,7 @@ describe("useAedtBiasAudit invalidation", () => {
     },
   );
 
-  it.each([413, 415, 500])(
+  it.each([401, 413, 415, 422, 429, 500])(
     "refetches nothing on a %i, which says nothing about the profile",
     async (status) => {
       createRun.mockRejectedValueOnce(httpError(status));
