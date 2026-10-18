@@ -27,12 +27,10 @@ jest.mock("../../database/db", () => ({
 
 import {
   deleteFileById,
-  deleteProjectFileById,
   getFileById,
   getFilePreview,
   getFileVersionHistory,
   getFileWithMetadata,
-  getProjectFileById,
   updateFileMetadata,
   updateFileReviewStatus,
 } from "../file.repository";
@@ -66,7 +64,6 @@ describe("file.repository by-id functions and bias audit stance PDFs", () => {
 
   it.each([
     ["getFileById", () => getFileById(STANCE_ID, ORG)],
-    ["getProjectFileById", () => getProjectFileById(STANCE_ID, ORG)],
     ["getFileWithMetadata", () => getFileWithMetadata(STANCE_ID, ORG)],
     ["getFilePreview", () => getFilePreview(STANCE_ID, ORG)],
     ["getFileVersionHistory", () => getFileVersionHistory(GROUP, ORG)],
@@ -76,7 +73,6 @@ describe("file.repository by-id functions and bias audit stance PDFs", () => {
     ],
     ["updateFileReviewStatus", () => updateFileReviewStatus(STANCE_ID, "approved", ORG)],
     ["deleteFileById", () => deleteFileById(STANCE_ID, ORG, tx)],
-    ["deleteProjectFileById", () => deleteProjectFileById(STANCE_ID, ORG, tx)],
   ])("%s answers a stance PDF as a missing file and leaves it alone", async (_name, run) => {
     const { stance, missing, stanceRowAfter } = await stanceAndMissing(
       run as () => Promise<unknown>,
@@ -85,16 +81,16 @@ describe("file.repository by-id functions and bias audit stance PDFs", () => {
     expect(stanceRowAfter).toEqual(stanceRow({ file_group_id: GROUP }));
   });
 
-  it.each([
-    ["deleteFileById", () => deleteFileById(STANCE_ID, ORG, tx)],
-    ["deleteProjectFileById", () => deleteProjectFileById(STANCE_ID, ORG, tx)],
-  ])("%s runs one filtered DELETE FROM files; mappings and links cascade", async (_n, run) => {
-    table = [stanceRow()];
-    await (run as () => Promise<unknown>)();
-    expect(statements).toHaveLength(1);
-    expect(statements[0]).toMatch(/^\s*DELETE FROM files\b/);
-    expect(everyFilesReferenceFiltered(statements[0])).toBe(true);
-  });
+  it.each([["deleteFileById", () => deleteFileById(STANCE_ID, ORG, tx)]])(
+    "%s runs one filtered DELETE FROM files; mappings and links cascade",
+    async (_n, run) => {
+      table = [stanceRow()];
+      await (run as () => Promise<unknown>)();
+      expect(statements).toHaveLength(1);
+      expect(statements[0]).toMatch(/^\s*DELETE FROM files\b/);
+      expect(everyFilesReferenceFiltered(statements[0])).toBe(true);
+    },
+  );
 
   it("deleteFileById still deletes a visible file", async () => {
     table = [visibleRow()];

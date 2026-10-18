@@ -279,47 +279,6 @@ export async function uploadProjectFile(
   return Array.isArray(result[0]) && result[0].length > 0 ? result[0][0] : (result[0] as FileModel);
 }
 
-/**
- * Gets a project file by ID
- *
- * @param id - The file ID to retrieve
- * @param organizationId - Organization ID for tenant isolation
- * @returns The file record or null if not found
- */
-export async function getProjectFileById(
-  id: number,
-  organizationId: number,
-): Promise<FileModel | null> {
-  validateOrganizationId(organizationId);
-
-  const query = `SELECT * FROM files
-    WHERE organization_id = :organizationId AND id = :id AND ${VISIBLE_FILE_SQL("files")}`;
-  const result = await sequelize.query(query, {
-    replacements: { organizationId, id, ...VISIBLE_FILE_REPLACEMENTS },
-    mapToModel: true,
-    model: FileModel,
-  });
-
-  return result[0] || null;
-}
-
-/**
- * Deletes a project file by ID
- *
- * @param id - The file ID to delete
- * @param organizationId - Organization ID for tenant isolation
- * @param transaction - Database transaction for atomicity
- * @returns True if file was deleted, false otherwise
- */
-export async function deleteProjectFileById(
-  id: number,
-  organizationId: number,
-  transaction: Transaction,
-): Promise<boolean> {
-  validateOrganizationId(organizationId);
-  return deleteVisibleFileQuery(id, organizationId, transaction);
-}
-
 // ============================================================================
 // Organization Files Repository (org-level files in files table)
 // ============================================================================
