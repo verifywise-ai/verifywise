@@ -84,7 +84,37 @@ describe("compareCriteria", () => {
     expect(out.matched[0].expected).toBe("quota_attainment");
   });
 
-  it("rejects an unknown job description key", () => {
-    expect(() => compareCriteria("nope", "x")).toThrow(/unknown job description/i);
+  it("tolerates different wording for the operational-hourly criteria", () => {
+    const supplied = [
+      "Warehouse experience",
+      "Forklift certified",
+      "Pick rate",
+      "Handheld scanner use",
+      "Weekend availability",
+      "Attendance",
+    ].join("\n");
+    const out = compareCriteria("operational-hourly", supplied);
+    expect(out.verdict).toBe("close");
+    expect(out.unmatchedExpected).toEqual([]);
   });
+
+  it("does not let a vague list of single words report close", () => {
+    const supplied = [
+      "Experience",
+      "Certification",
+      "Systems",
+      "Availability",
+      "Record",
+      "Rate",
+    ].join("\n");
+    const out = compareCriteria("operational-hourly", supplied);
+    expect(out.verdict).toBe("divergent");
+  });
+
+  it.each(["nope", "constructor", "toString", "__proto__"])(
+    "rejects %s as a job description key",
+    (key) => {
+      expect(() => compareCriteria(key, "x")).toThrow(/unknown job description/i);
+    },
+  );
 });
