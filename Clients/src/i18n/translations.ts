@@ -10801,6 +10801,10 @@ export const translations: Record<string, Record<string, string>> = {
     "a different job description was tested": "eine andere Stellenbeschreibung getestet wurde",
     "the measure changed between a selection rate and a scoring rate":
       "die Kennzahl zwischen einer Auswahlrate und einer Bewertungsrate gewechselt hat",
+    "The data checks did not clear this run for export, so its ratio is shown with that caveat.":
+      "Die Datenprüfungen haben diesen Lauf nicht für den Export freigegeben; sein Verhältnis wird daher mit diesem Vorbehalt angezeigt.",
+    "A hollow point marks a run the data checks did not clear for export. Its ratio is shown with that caveat.":
+      "Ein hohler Punkt markiert einen Lauf, den die Datenprüfungen nicht für den Export freigegeben haben. Sein Verhältnis wird mit diesem Vorbehalt angezeigt.",
   },
 
   fr: {
@@ -21522,6 +21526,10 @@ export const translations: Record<string, Record<string, string>> = {
     "a different job description was tested": "une autre description de poste a été testée",
     "the measure changed between a selection rate and a scoring rate":
       "la mesure est passée d’un taux de sélection à un taux de notation, ou l’inverse",
+    "The data checks did not clear this run for export, so its ratio is shown with that caveat.":
+      "Les contrôles des données n’ont pas validé l’export de cette exécution ; son ratio est donc affiché avec cette réserve.",
+    "A hollow point marks a run the data checks did not clear for export. Its ratio is shown with that caveat.":
+      "Un point creux signale une exécution dont les contrôles des données n’ont pas validé l’export. Son ratio est affiché avec cette réserve.",
   },
   es: {
     // Agent Control monitor only mode
@@ -32156,5 +32164,9 @@ export const translations: Record<string, Record<string, string>> = {
     "a different job description was tested": "se probó otra descripción del puesto",
     "the measure changed between a selection rate and a scoring rate":
       "la medida cambió entre una tasa de selección y una tasa de puntuación",
+    "The data checks did not clear this run for export, so its ratio is shown with that caveat.":
+      "Las comprobaciones de datos no autorizaron la exportación de esta ejecución, por lo que su ratio se muestra con esa salvedad.",
+    "A hollow point marks a run the data checks did not clear for export. Its ratio is shown with that caveat.":
+      "Un punto hueco marca una ejecución cuya exportación no autorizaron las comprobaciones de datos. Su ratio se muestra con esa salvedad.",
   },
 };

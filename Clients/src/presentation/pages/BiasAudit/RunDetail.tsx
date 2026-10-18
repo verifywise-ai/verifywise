@@ -29,7 +29,7 @@ import EducationPanel from "./EducationPanel";
 import StancePanel from "./StancePanel";
 import PersonLabel from "./PersonLabel";
 import { RatioTrendSection } from "./RatioTrend";
-import { categoryLabel } from "./categoryLabels";
+import { categoryLabel, formatRatio } from "./display";
 import { cardSx, cellSx, headSx, titleSx, twoColumnSx } from "./styles";
 
 interface RunDetailProps {
@@ -176,7 +176,7 @@ const Figures = ({ result }: { result: AedtAuditResult }) => {
                         }}
                         align="right"
                       >
-                        {row.impactRatio === null ? "—" : row.impactRatio.toFixed(3)}
+                        {formatRatio(row.impactRatio)}
                       </TableCell>
                       <TableCell sx={cellSx}>
                         {row.excluded ? (

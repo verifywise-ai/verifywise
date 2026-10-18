@@ -242,6 +242,8 @@ export interface AedtTrendPoint {
   lowestRatio: number | null;
   /** Whether any non-excluded group in the run was flagged. */
   flagged: boolean;
+  /** True when the run's data checks did not clear it for export. */
+  caveat: boolean;
 }
 
 /** Runs measured under one configuration, which may be compared with each other. */

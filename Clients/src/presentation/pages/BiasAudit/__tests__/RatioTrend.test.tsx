@@ -24,11 +24,13 @@ vi.mock("recharts", () => ({
   Line: ({ dataKey, connectNulls }: { dataKey: string; connectNulls?: boolean }) => (
     <div data-testid="line" data-key={dataKey} data-connect-nulls={String(connectNulls)} />
   ),
-  ReferenceLine: ({ x, y }: { x?: string; y?: number }) => (
+  ReferenceLine: ({ x, y }: { x?: number; y?: number }) => (
     <div data-testid="reference-line" data-x={x ?? ""} data-y={y ?? ""} />
   ),
   CartesianGrid: () => null,
-  XAxis: () => null,
+  XAxis: ({ ticks, tickFormatter }: { ticks: number[]; tickFormatter: (x: number) => string }) => (
+    <div data-testid="x-ticks">{ticks.map((t) => tickFormatter(t)).join("|")}</div>
+  ),
   YAxis: () => null,
   Tooltip: () => null,
 }));
@@ -43,8 +45,22 @@ const oneSegment: AedtTrendSeries = {
       jobDescriptionKey: "commercial-ae",
       metric: "selection_rate",
       points: [
-        { runId: 1, date: "2026-01-10", category: "sex", lowestRatio: 0.95, flagged: false },
-        { runId: 2, date: "2026-04-10", category: "sex", lowestRatio: 0.88, flagged: false },
+        {
+          runId: 1,
+          date: "2026-01-10",
+          category: "sex",
+          lowestRatio: 0.95,
+          flagged: false,
+          caveat: false,
+        },
+        {
+          runId: 2,
+          date: "2026-04-10",
+          category: "sex",
+          lowestRatio: 0.88,
+          flagged: false,
+          caveat: false,
+        },
       ],
     },
   ],
@@ -59,7 +75,16 @@ const twoSegments: AedtTrendSeries = {
       questionSetVersion: 1,
       jobDescriptionKey: "commercial-ae",
       metric: "selection_rate",
-      points: [{ runId: 3, date: "2026-07-10", category: "sex", lowestRatio: 0.72, flagged: true }],
+      points: [
+        {
+          runId: 3,
+          date: "2026-07-10",
+          category: "sex",
+          lowestRatio: 0.72,
+          flagged: true,
+          caveat: false,
+        },
+      ],
     },
   ],
   breaks: [{ afterRunId: 2, reasons: ["the AEDT profile was changed"] }],
@@ -104,7 +129,8 @@ describe("RatioTrend", () => {
   it("uses no forbidden vocabulary", () => {
     render(twoSegments);
     const text = document.body.textContent!.toLowerCase();
-    for (const w of ["compliant", "certified", "bias-free", "passed"]) {
+    // Mirrors FORBIDDEN_WORDS in Servers/services/biasAudit/stance/vocabulary.ts.
+    for (const w of ["compliant", "certified", "passed", "bias-free", "audited"]) {
       expect(text).not.toContain(w);
     }
   });
@@ -130,13 +156,18 @@ describe("RatioTrend never draws a line across a break", () => {
     ]);
   });
 
-  it("marks the break at the first run after it, and the 0.80 convention line", () => {
+  it("marks the break between the last run before it and the first after, and the 0.80 line", () => {
     render(twoSegments);
     const refs = screen.getAllByTestId("reference-line");
+    // Runs sit at x = 0, 1, 2; the break after run 2 (x = 1) sits at 1.5, on no run's dot.
     expect(refs.map((r) => [r.getAttribute("data-x"), r.getAttribute("data-y")])).toEqual([
       ["", "0.8"],
-      ["3", ""],
+      ["1.5", ""],
     ]);
+    const rows = JSON.parse(screen.getByTestId("line-chart").getAttribute("data-rows")!) as Array<
+      Record<string, unknown>
+    >;
+    expect(rows.map((r) => r.x)).toEqual([0, 1, 2]);
   });
 
   it("lists every reason of a break and numbers it", () => {
@@ -168,8 +199,22 @@ describe("RatioTrend never draws a line across a break", () => {
           ...oneSegment.segments[0],
           points: [
             oneSegment.segments[0].points[0],
-            { runId: 2, date: "2026-04-10", category: null, lowestRatio: null, flagged: false },
-            { runId: 4, date: "2026-05-10", category: "sex", lowestRatio: 0.9, flagged: false },
+            {
+              runId: 2,
+              date: "2026-04-10",
+              category: null,
+              lowestRatio: null,
+              flagged: false,
+              caveat: false,
+            },
+            {
+              runId: 4,
+              date: "2026-05-10",
+              category: "sex",
+              lowestRatio: 0.9,
+              flagged: false,
+              caveat: false,
+            },
           ],
         },
       ],
@@ -230,5 +275,86 @@ describe("RatioTrendSection", () => {
     renderWithProviders(<RatioTrendSection projectId={7} />);
     expect(await screen.findByTestId("aedt-ratio-trend")).toBeInTheDocument();
     expect(screen.getByText(/the AEDT profile was changed/i)).toBeInTheDocument();
+  });
+});
+
+describe("RatioTrend review fixes", () => {
+  const segment = oneSegment.segments[0];
+
+  it("never prints a flagged ratio as 0.80 or above", () => {
+    render({
+      segments: [
+        {
+          ...segment,
+          points: [
+            segment.points[0],
+            {
+              runId: 2,
+              date: "2026-04-10",
+              category: "sex",
+              lowestRatio: 0.7996,
+              flagged: true,
+              caveat: false,
+            },
+          ],
+        },
+      ],
+      breaks: [],
+    });
+    const row = screen.getByTestId("aedt-trend-point-2");
+    expect(row).toHaveTextContent("0.799");
+    expect(row).not.toHaveTextContent("0.800");
+    expect(row).toHaveTextContent("Below 0.80");
+  });
+
+  it("tells two runs on one day apart, in the table and on the axis", () => {
+    render({
+      segments: [
+        {
+          ...segment,
+          points: [
+            { ...segment.points[0], runId: 1, date: "2026-04-10T09:15:00.000Z" },
+            { ...segment.points[1], runId: 2, date: "2026-04-10T16:45:00.000Z" },
+          ],
+        },
+      ],
+      breaks: [],
+    });
+    const cell = (id: number) => screen.getByTestId(`aedt-trend-point-${id}`).firstElementChild!;
+    expect(cell(1).textContent).not.toEqual(cell(2).textContent);
+    expect(cell(1).textContent).toMatch(/\d{1,2}:\d{2}/);
+    const ticks = screen.getByTestId("x-ticks").textContent!.split("|");
+    expect(ticks).toHaveLength(2);
+    expect(new Set(ticks).size).toBe(2);
+    expect(ticks[0]).toContain("#1");
+  });
+
+  it("marks a run the data checks did not clear, in the table and beneath the chart", () => {
+    render({
+      segments: [
+        {
+          ...segment,
+          points: [segment.points[0], { ...segment.points[1], caveat: true }],
+        },
+      ],
+      breaks: [],
+    });
+    expect(screen.getByTestId("aedt-trend-point-2")).toHaveTextContent(
+      "The data checks did not clear this run for export, so its ratio is shown with that caveat.",
+    );
+    expect(screen.getByTestId("aedt-trend-point-1")).not.toHaveTextContent("data checks");
+    expect(screen.getByTestId("aedt-trend-caveat")).toHaveTextContent(/hollow point/);
+  });
+
+  it("says nothing about the data checks when every run was cleared", () => {
+    render(oneSegment);
+    expect(screen.queryByTestId("aedt-trend-caveat")).not.toBeInTheDocument();
+  });
+
+  it("shows the job description as the stance document does", () => {
+    render(oneSegment);
+    expect(screen.getByTestId("aedt-trend-segment-0")).toHaveTextContent(
+      "Job description commercial ae",
+    );
   });
 });

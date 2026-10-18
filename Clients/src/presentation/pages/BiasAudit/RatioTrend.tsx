@@ -32,7 +32,7 @@ import {
   type AedtTrendSeries,
 } from "../../../application/repository/aedtBiasAudit.repository";
 import { palette } from "../../themes/palette";
-import { categoryLabel } from "./categoryLabels";
+import { categoryLabel, formatRatio, jobDescriptionLabel } from "./display";
 import { cardSx, cellSx, headSx, titleSx } from "./styles";
 
 /**
@@ -42,8 +42,9 @@ import { cardSx, cellSx, headSx, titleSx } from "./styles";
  * Each segment is its own `Line`, never one series with a gap, so nothing is
  * interpolated across a break: a line across a configuration change would
  * assert that the runs either side measured the same thing, and nobody
- * established that. Each break is marked on the chart by number and listed
- * below with what changed. The server builds the series; raw results never
+ * established that. Each break is marked on the chart by number, halfway
+ * between the last run before it and the first after, and listed below with
+ * what changed. The server builds the series; raw results never
  * reach this page.
  */
 
@@ -55,28 +56,36 @@ const METRIC_LABEL: Record<string, string> = {
   scoring_rate: "Scoring rate",
 };
 
-const ratioText = (r: number | null) => (r === null ? "—" : r.toFixed(3));
+type FormatDate = ReturnType<typeof useFormattedDate>;
+
+/** What a caveated run's note says, in the table and the tooltip. */
+const CAVEAT_NOTE =
+  "The data checks did not clear this run for export, so its ratio is shown with that caveat.";
 
 interface ChartRow {
-  key: string;
+  /** The run's position on the x axis, oldest first, so a break can sit between two runs. */
+  x: number;
   runId: number;
   date: string;
   category: string | null;
   flagged: boolean;
+  caveat: boolean;
   lowestRatio: number | null;
   /** `s0`, `s1`, … hold the ratio for the segment the run belongs to only. */
   [segment: `s${number}`]: number | null | undefined;
 }
 
 function chartRows(segments: AedtTrendSegment[]): ChartRow[] {
+  let x = 0;
   return segments.flatMap((segment, i) =>
     segment.points.map((p) => {
       const row: ChartRow = {
-        key: String(p.runId),
+        x: x++,
         runId: p.runId,
         date: p.date,
         category: p.category,
         flagged: p.flagged,
+        caveat: p.caveat,
         lowestRatio: p.lowestRatio,
       };
       row[`s${i}`] = p.lowestRatio;
@@ -99,7 +108,7 @@ const Frame = ({ children, testId }: { children: ReactNode; testId: string }) =>
 interface TooltipProps {
   active?: boolean;
   payload?: Array<{ payload?: ChartRow }>;
-  formatDate: (d: string) => string;
+  formatDate: FormatDate;
 }
 
 const TrendTooltip = ({ active, payload, formatDate }: TooltipProps) => {
@@ -115,14 +124,21 @@ const TrendTooltip = ({ active, payload, formatDate }: TooltipProps) => {
       }}
     >
       <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-        {formatDate(row.date)}
+        <span>{formatDate(row.date, { includeTime: true })}</span>
+        <span>{" · "}</span>
+        <span>Run</span> <span>{row.runId}</span>
       </Typography>
       <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.primary }}>
-        {ratioText(row.lowestRatio)}
+        {formatRatio(row.lowestRatio)}
       </Typography>
       {row.category && (
         <Typography sx={{ fontSize: 12, color: palette.text.secondary }}>
           {categoryLabel(row.category)}
+        </Typography>
+      )}
+      {row.caveat && (
+        <Typography sx={{ fontSize: 12, color: palette.text.secondary, maxWidth: "240px" }}>
+          {CAVEAT_NOTE}
         </Typography>
       )}
     </Box>
@@ -135,11 +151,18 @@ interface DotProps {
   payload?: ChartRow;
 }
 
-/** A flagged run's point in the warning colour, every other point in the line's. */
+/**
+ * A flagged run's point in the warning colour, every other point in the
+ * line's. A run the data checks did not clear is hollow.
+ */
 const TrendDot = ({ cx, cy, payload }: DotProps) => {
   if (cx == null || cy == null || !payload) return <g />;
   const color = payload.flagged ? palette.status.warning.text : palette.brand.primary;
-  return <circle cx={cx} cy={cy} r={4} fill={color} stroke={color} />;
+  return payload.caveat ? (
+    <circle cx={cx} cy={cy} r={4} fill={palette.background.main} stroke={color} strokeWidth={2} />
+  ) : (
+    <circle cx={cx} cy={cy} r={4} fill={color} stroke={color} />
+  );
 };
 
 const SegmentHeading = ({ segment }: { segment: AedtTrendSegment }) => (
@@ -152,7 +175,7 @@ const SegmentHeading = ({ segment }: { segment: AedtTrendSegment }) => (
     {segment.jobDescriptionKey && (
       <>
         <span>{" · "}</span>
-        <span>Job description</span> <span>{segment.jobDescriptionKey}</span>
+        <span>Job description</span> <span>{jobDescriptionLabel(segment.jobDescriptionKey)}</span>
       </>
     )}
   </Typography>
@@ -163,7 +186,7 @@ const PointsTable = ({
   formatDate,
 }: {
   points: AedtTrendPoint[];
-  formatDate: (d: string) => string;
+  formatDate: FormatDate;
 }) => (
   <Box sx={{ overflowX: "auto" }}>
     <Table size="small">
@@ -181,7 +204,7 @@ const PointsTable = ({
       <TableBody>
         {points.map((p) => (
           <TableRow key={p.runId} data-testid={`aedt-trend-point-${p.runId}`}>
-            <TableCell sx={cellSx}>{formatDate(p.date)}</TableCell>
+            <TableCell sx={cellSx}>{formatDate(p.date, { includeTime: true })}</TableCell>
             <TableCell sx={cellSx}>{p.runId}</TableCell>
             <TableCell
               sx={{
@@ -191,15 +214,18 @@ const PointsTable = ({
               }}
               align="right"
             >
-              {ratioText(p.lowestRatio)}
+              {formatRatio(p.lowestRatio)}
             </TableCell>
             <TableCell sx={cellSx}>{p.category ? categoryLabel(p.category) : "—"}</TableCell>
             <TableCell sx={cellSx}>
-              {p.lowestRatio === null ? (
-                <span>No impact ratio was computed for this run.</span>
-              ) : p.flagged ? (
-                <span>Below 0.80</span>
-              ) : null}
+              <Stack gap="4px">
+                {p.lowestRatio === null ? (
+                  <span>No impact ratio was computed for this run.</span>
+                ) : p.flagged ? (
+                  <span>Below 0.80</span>
+                ) : null}
+                {p.caveat && <span>{CAVEAT_NOTE}</span>}
+              </Stack>
             </TableCell>
           </TableRow>
         ))}
@@ -264,12 +290,17 @@ const RatioTrend = ({ series }: RatioTrendProps) => {
     );
   }
 
-  const dateOf = new Map(rows.map((r) => [r.key, r.date]));
-  // A break is drawn at the first run after it.
+  // A break is drawn halfway between the last run before it and the first after.
   const breakMarks = series.breaks.map((b, i) => {
     const at = rows.findIndex((r) => r.runId === b.afterRunId);
-    return { number: i + 1, x: rows[at + 1]?.key, afterRunId: b.afterRunId };
+    return { number: i + 1, x: at === -1 ? null : at + 0.5, afterRunId: b.afterRunId };
   });
+  const hasCaveat = rows.some((r) => r.caveat);
+  // Short ticks; the run id keeps two runs on one day apart.
+  const tickLabel = (x: number) => {
+    const row = rows[x];
+    return row ? `${formatDate(row.date)} #${row.runId}` : "";
+  };
 
   return (
     <Frame testId="aedt-ratio-trend">
@@ -279,8 +310,12 @@ const RatioTrend = ({ series }: RatioTrendProps) => {
             <LineChart data={rows} margin={{ top: 16, right: 16, bottom: 0, left: 0 }}>
               <CartesianGrid stroke={palette.border.light} strokeDasharray="3 3" />
               <XAxis
-                dataKey="key"
-                tickFormatter={(key: string) => formatDate(dateOf.get(key) ?? "")}
+                type="number"
+                dataKey="x"
+                domain={[-0.5, rows.length - 0.5]}
+                ticks={rows.map((r) => r.x)}
+                allowDecimals={false}
+                tickFormatter={tickLabel}
                 tick={{ fontSize: 11, fill: palette.text.tertiary }}
                 stroke={palette.border.dark}
               />
@@ -299,7 +334,7 @@ const RatioTrend = ({ series }: RatioTrendProps) => {
                 ifOverflow="extendDomain"
               />
               {breakMarks.map((m) =>
-                m.x ? (
+                m.x !== null ? (
                   <ReferenceLine
                     key={m.afterRunId}
                     x={m.x}
@@ -335,6 +370,15 @@ const RatioTrend = ({ series }: RatioTrendProps) => {
           adopt it: a ratio below it is a number to report and investigate, and a ratio above it is
           not a clearance.
         </Typography>
+        {hasCaveat && (
+          <Typography
+            sx={{ fontSize: 12, color: palette.text.tertiary }}
+            data-testid="aedt-trend-caveat"
+          >
+            A hollow point marks a run the data checks did not clear for export. Its ratio is shown
+            with that caveat.
+          </Typography>
+        )}
 
         {series.segments.map((segment, i) => {
           const last = segment.points[segment.points.length - 1];

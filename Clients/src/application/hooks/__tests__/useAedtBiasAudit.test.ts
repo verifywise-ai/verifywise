@@ -1,5 +1,5 @@
 import React from "react";
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import { AxiosError, AxiosHeaders } from "axios";
@@ -14,11 +14,12 @@ function httpError(status: number) {
   });
 }
 
-const { createRun } = vi.hoisted(() => ({ createRun: vi.fn() }));
+const { createRun, getTrend } = vi.hoisted(() => ({ createRun: vi.fn(), getTrend: vi.fn() }));
 
 vi.mock("../../repository/aedtBiasAudit.repository", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   createAedtRun: createRun,
+  getAedtRunTrend: getTrend,
   generateAedtScopeDetermination: vi.fn().mockResolvedValue({ stanceId: 9 }),
   saveAedtAnswers: vi.fn().mockResolvedValue({ profileId: 3, version: 2 }),
   attestAedtProfile: vi.fn().mockResolvedValue({ profileId: 3, version: 2 }),
@@ -28,6 +29,7 @@ vi.mock("../../repository/aedtBiasAudit.repository", async (importOriginal) => (
 import {
   aedtQueryKeys,
   useAedtQuestions,
+  useAedtRunTrend,
   useAttestAedtProfile,
   useCreateAedtRun,
   useGenerateAedtScopeDetermination,
@@ -54,6 +56,28 @@ describe("useAedtBiasAudit invalidation", () => {
     });
     expect(invalidateSpy).toHaveBeenCalledTimes(1);
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: aedtQueryKeys.runs(7) });
+  });
+
+  it("refreshes the ratio trend when a run is recorded", async () => {
+    // Holds while the trend's key sits under the run list's: moving it out
+    // from under aedtQueryKeys.runs(projectId) leaves the trend stale.
+    getTrend.mockReset();
+    getTrend.mockResolvedValue({ segments: [], breaks: [] });
+    createRun.mockResolvedValueOnce({ runId: 5 });
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(
+      () => ({ trend: useAedtRunTrend(7), create: useCreateAedtRun(7) }),
+      {
+        wrapper,
+      },
+    );
+    await waitFor(() => expect(result.current.trend.isSuccess).toBe(true));
+    expect(getTrend).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      await result.current.create.mutateAsync({ file: new File(["a"], "a.csv"), mapping: {} });
+    });
+    await waitFor(() => expect(getTrend).toHaveBeenCalledTimes(2));
+    expect(getTrend).toHaveBeenLastCalledWith(7);
   });
 
   it("refetches only the profile view after a scope determination", async () => {
