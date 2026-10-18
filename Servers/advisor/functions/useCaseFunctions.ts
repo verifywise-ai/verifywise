@@ -6,6 +6,7 @@ import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
 import { withLegacyHighRiskRole } from "../../utils/highRiskRoles.utils";
+import { VISIBLE_FILE_REPLACEMENTS, VISIBLE_FILE_SQL } from "../../utils/files/visibleFiles";
 
 export interface FetchUseCasesParams {
   status?: string;
@@ -369,9 +370,16 @@ const agentDeleteUseCase = createWriteToolFn({
         `DELETE FROM projects_members WHERE organization_id = :organizationId AND project_id = :id`,
         { replacements: { organizationId, id: params.use_case_id }, transaction },
       );
+      // A bias audit stance PDF is never deleted; it stays like any file the
+      // normal project delete leaves behind.
       await sequelize.query(
-        `DELETE FROM files WHERE organization_id = :organizationId AND project_id = :id`,
-        { replacements: { organizationId, id: params.use_case_id }, transaction },
+        `DELETE FROM files
+          WHERE organization_id = :organizationId AND project_id = :id
+            AND ${VISIBLE_FILE_SQL("files")}`,
+        {
+          replacements: { organizationId, id: params.use_case_id, ...VISIBLE_FILE_REPLACEMENTS },
+          transaction,
+        },
       );
       await sequelize.query(
         `DELETE FROM projects_risks WHERE organization_id = :organizationId AND project_id = :id`,
