@@ -406,11 +406,9 @@ const ProfileSummary = ({ profile }: { profile: AedtProfileView }) => {
               }))}
             />
           </Box>
-        ) : readiness.score === null ? (
-          <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
-            No score yet.
-          </Typography>
         ) : (
+          // computeReadiness returns a null score only out of scope or with a
+          // deciding question missing, both handled above, so a score is here.
           <Typography sx={{ fontSize: 20, fontWeight: 600, color: palette.text.primary }}>
             {`${readiness.score}%`}
           </Typography>

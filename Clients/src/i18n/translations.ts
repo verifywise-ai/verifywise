@@ -10611,7 +10611,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Readiness": "Bereitschaft",
     "On the attested answers, the tool's output is one input among several with no extra weight. No score is shown; you can generate a scope determination instead of a run.":
       "Nach den attestierten Antworten ist die Ausgabe des Tools eine Eingabe unter mehreren ohne zusätzliches Gewicht. Es wird kein Wert angezeigt; Sie können statt eines Laufs eine Feststellung zum Anwendungsbereich erstellen.",
-    "No score yet.": "Noch kein Wert.",
     "The readiness score is VerifyWise's own measure of how close you are to commissioning an independent audit. No regulator recognises it.":
       "Der Bereitschaftswert ist das eigene Maß von VerifyWise dafür, wie nah Sie daran sind, eine unabhängige Prüfung in Auftrag zu geben. Keine Aufsichtsbehörde erkennt ihn an.",
     "Open items": "Offene Punkte",
@@ -21303,7 +21302,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Readiness": "Préparation",
     "On the attested answers, the tool's output is one input among several with no extra weight. No score is shown; you can generate a scope determination instead of a run.":
       "Selon les réponses attestées, le résultat de l’outil est un élément parmi d’autres, sans poids supplémentaire. Aucun score n’est affiché ; vous pouvez générer une détermination du champ d’application au lieu d’une exécution.",
-    "No score yet.": "Pas encore de score.",
     "The readiness score is VerifyWise's own measure of how close you are to commissioning an independent audit. No regulator recognises it.":
       "Le score de préparation est la mesure propre à VerifyWise de votre proximité avec la commande d’un audit indépendant. Aucun régulateur ne le reconnaît.",
     "Open items": "Points ouverts",
@@ -31913,7 +31911,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Readiness": "Preparación",
     "On the attested answers, the tool's output is one input among several with no extra weight. No score is shown; you can generate a scope determination instead of a run.":
       "Según las respuestas atestiguadas, el resultado de la herramienta es un elemento entre varios, sin peso adicional. No se muestra ninguna puntuación; puede generar una determinación del ámbito en lugar de una ejecución.",
-    "No score yet.": "Aún no hay puntuación.",
     "The readiness score is VerifyWise's own measure of how close you are to commissioning an independent audit. No regulator recognises it.":
       "La puntuación de preparación es la medida propia de VerifyWise de lo cerca que está de encargar una auditoría independiente. Ningún regulador la reconoce.",
     "Open items": "Puntos abiertos",
