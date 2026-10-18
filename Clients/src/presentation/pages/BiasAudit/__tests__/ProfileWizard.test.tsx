@@ -323,6 +323,16 @@ describe("ProfileWizard: attest", () => {
 describe("ProfileWizard: edits that cannot be saved", () => {
   // An edit put back to the saved answer is no change: saving it would file
   // a new version with the same answers and re-attribute the answer.
+  // Save trims notes, so whitespace alone would file an identical version.
+  it("treats notes that differ only in surrounding whitespace as unchanged", () => {
+    renderWizard({ answers: ALL_VETOES, profileStatus: "draft" });
+    fireEvent.change(within(question("role.party")).getByRole("textbox"), {
+      target: { value: "  Our own words.  " },
+    });
+    expect(screen.getByRole("button", { name: /save answers/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /attest/i })).toBeEnabled();
+  });
+
   it("treats an answer changed and then changed back as unchanged", () => {
     const { onAttest } = renderWizard({
       answers: [...ALL_VETOES, answer("cutoff.applied_by", "person")],

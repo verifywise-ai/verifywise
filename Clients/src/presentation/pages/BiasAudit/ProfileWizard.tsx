@@ -56,8 +56,9 @@ function draftFrom(answers: AedtProfileAnswer[]): Record<string, DraftAnswer> {
 
 const isAnswered = (a: DraftAnswer | undefined) => a !== undefined && (a.dontKnow || !!a.value);
 
+/** Notes are compared trimmed, as Save sends them. */
 const sameAnswer = (a: DraftAnswer, b: DraftAnswer) =>
-  a.value === b.value && a.dontKnow === b.dontKnow && a.notes === b.notes;
+  a.value === b.value && a.dontKnow === b.dontKnow && a.notes.trim() === b.notes.trim();
 
 /** Shown beside "I don't know": what that answer does, before it is given. */
 function dontKnowConsequence(q: AedtQuestion): string {
