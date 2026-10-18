@@ -14,7 +14,7 @@ scoring rates, confusion-matrix fairness metrics, intersectional analysis and im
 and renders a PDF. The intake wizard collects four metadata fields: AEDT name, description,
 distribution date, data source description.
 
-Across three completed LL 144 engagements (Puck, Spotted Zebra, Curately AI), the questions
+Across three completed LL 144 engagements (Client C, Client A, Client B), the questions
 that caused every expensive failure were not statistical. They were about scope, party status,
 what the tool ingests, and what the data can support. None of them has a home in the current
 module.
@@ -77,20 +77,20 @@ these plans.
 Each item below is a design constraint with a documented cost. They are the reason this module
 is shaped the way it is.
 
-**1. The auditor must not determine AEDT status.** Puck's report asserted both tools in scope on
+**1. The auditor must not determine AEDT status.** Client C's report asserted both tools in scope on
 a client confirmation the client later denied; the determination was withdrawn entirely from the
-final version. Curately declined to determine it from the outset, citing that withdrawal. The
+final version. Client B declined to determine it from the outset, citing that withdrawal. The
 rule carried forward: "Do not determine AEDT status for a client's customers. That had to be
-withdrawn from a signed Puck report after counsel objected twice."
+withdrawn from a signed Client C report after counsel objected twice."
 
-**2. Vendor-versus-deployer status, unasked, was the most expensive recurring error.** Puck:
-assumed employer throughout, three signed documents reissued. Spotted Zebra: asked on 2026-09-25
+**2. Vendor-versus-deployer status, unasked, was the most expensive recurring error.** Client C:
+assumed employer throughout, three signed documents reissued. Client A: asked on 2026-09-25
 only, after a published summary had already told them to post it on their own website; summary
 reissued, publish instruction retracted. The record states plainly: "it is the error that cost
-the Puck reissue. It did NOT need to be inferred."
+the Client C reissue. It did NOT need to be inferred."
 
 A vendor has no single distribution date (§ 5-303(a)(2) is the date a given employer began
-using the tool) and carries no § 5-303 duty. "Spotted Zebra's live applicant population" was
+using the tool) and carries no § 5-303 duty. "Client A's live applicant population" was
 wrong in two documents: a vendor has no applicant population, its customers do.
 
 **3. The test-data basis differs in kind, and the kinds have different expiry triggers.** Four
@@ -98,22 +98,22 @@ distinct bases arose:
 
 | Engagement | Basis | Expires when |
 | --- | --- | --- |
-| Puck | Categorical — holds no demographic data at all | They begin collecting self-identification |
-| Spotted Zebra AI Interview | Volume — 281 sex, 50 ethnicity disclosures | Disclosure volumes become sufficient |
-| Spotted Zebra AI Shortlist | Attribute — race/ethnicity not collected at all | Customers begin capturing race and ethnicity |
-| Curately AI Match | Availability — historical data sits with the deploying agency | The vendor gains access to it |
+| Client C | Categorical — holds no demographic data at all | They begin collecting self-identification |
+| Client A interview tool | Volume — 281 sex, 50 ethnicity disclosures | Disclosure volumes become sufficient |
+| Client A shortlist tool | Attribute — race/ethnicity not collected at all | Customers begin capturing race and ethnicity |
+| Client B match tool | Availability — historical data sits with the deploying agency | The vendor gains access to it |
 
 "Sex-only records do not end it however far their volume grows." A date-based renewal reminder
 would be wrong in both directions.
 
-**4. Questions deferred as non-blocking became the late crises.** The 2026-08-29 Spotted Zebra
+**4. Questions deferred as non-blocking became the late crises.** The 2026-08-29 Client A
 ask deliberately deferred four items as "none of which block the build": redaction scope,
-knockout automation, applicant volume, cohort-relativity. Three became blocking. The Puck
+knockout automation, applicant volume, cohort-relativity. Three became blocking. The Client C
 retrospective: "Three were parked as non-blocking; each became a blocker, a chase, or a caveat."
 
 **5. Questions asked repeatedly were often never answered.** Shortlist criteria: 4 asks. Pre/post
 redaction JSON: 3–4. What the tool ingests: 3 asks over 11 days, finally answered by an artifact
-rather than a reply. Knockout: 2–3 at Spotted Zebra, 3 at Curately, 4 at Puck — "We asked four
+rather than a reply. Knockout: 2–3 at Client A, 3 at Client B, 4 at Client C — "We asked four
 times and got the answer after shipping." Sourcing fields: 3 asks, answered "Not sure if i
 understand the question."
 
@@ -121,13 +121,13 @@ A question a consultant asked four times is a question a form gets zero answers 
 central design fact: the module asks less and detects more.
 
 **6. The corpus is derived from the intake answers.** Each client answer changed the corpus
-design. Curately's AI Screening ingests a speaker-labelled ASR transcript with scored clarifying
-follow-ups, not written answers — the v1 design was superseded outright. Spotted Zebra's five
+design. Client B's screening tool ingests a speaker-labelled ASR transcript with scored clarifying
+follow-ups, not written answers — the v1 design was superseded outright. Client A's five
 generated criteria differed from our reconstructed eight, forcing a remap with "66 hits across
 three files". Knockout configuration set the qualification gradient: "safe for a knockout on 1,
 survivable on 2 or 3, and unusable on 4 or 5."
 
-**7. Clean ratios from a badly built corpus are more dangerous than flagged ones.** Curately's
+**7. Clean ratios from a badly built corpus are more dangerous than flagged ones.** Client B's
 screening corpus assigned demographics in 14 contiguous ID blocks while generation ran in ID
 order. Balance checks passed. Blueprint independence passed. Sex returned 0.9770 *because* it
 was the most perfectly blocked attribute — a two-block split averages position effects over half
@@ -137,11 +137,11 @@ mechanism and must not be read as such."
 The defect shipped twice before a `count_runs` gate existed.
 
 **8. Our inference written back as the client's statement is a named, recurring failure.** Four
-instances: Puck's "Puck confirmed" sentence (false as written), the Spotted Zebra knockout, "no
+instances: Client C's "Client C confirmed" sentence (false as written), the Client A knockout, "no
 rubric exists", and reading "no breakdowns" as "not held". Any text the module generates from an
 answer must be traceable to that answer, and should quote rather than characterise.
 
-**9. Three levels of output make the standard calculation produce nothing.** Puck's phone screen
+**9. Three levels of output make the standard calculation produce nothing.** Client C's phone screen
 returned stoplight levels; 3,739 of 5,000 were green, so the median summary level was itself
 green. Counting strictly above the median gave every group a rate of zero. The rate had to be
 "at or above", disclosed explicitly. Score granularity must be detected before a run, not
@@ -196,7 +196,7 @@ portable; its housing is not.
 The module's value is a per-project stance tracked across a year, which requires reading project
 state, respecting `organization_id`, and hooking the existing notification system. All of that
 lives in Node. A process boundary between the audit and the project it describes is where
-provenance questions went wrong on Curately.
+provenance questions went wrong on Client B.
 
 **Port discipline:** every ported function is validated against the Python as a differential
 oracle on a shared fixture set, and must reproduce its table output before it ships. The
@@ -267,7 +267,7 @@ Changing an answer writes version N+1 and supersedes N. A run records the profil
 against, which makes cross-version trend comparison detectable in a query rather than by
 convention.
 
-**One profile per tool, not per company.** The Puck retrospective: ask the tool questions "once
+**One profile per tool, not per company.** The Client C retrospective: ask the tool questions "once
 per tool, not once for the company. On one engagement the same question gave opposite answers for
 two products — one had no usable candidate data, the other had thirty thousand records, which
 changed that piece from a document review into a full audit. Nobody found out until week four."
@@ -294,7 +294,7 @@ Three states that must stay distinct: answered, "I don't know", and not-applicab
 fourth — never asked. A blank field cannot be told from an unasked question a year later, and in
 all three engagements the unanswerable questions were the ones that mattered.
 
-`answer_notes` captures verbatim text because paraphrases did not hold up. Curately's
+`answer_notes` captures verbatim text because paraphrases did not hold up. Client B's
 "Nothing happens automatically. A person, a recruiter, reviews and they are the ones who make a
 decision" became a load-bearing citation in a signed report. Required for the four veto
 questions.
@@ -470,16 +470,16 @@ scope is unknown.
 
 | Key | Prompt | Options | Source |
 | --- | --- | --- | --- |
-| `role.party` | Do you use this tool to hire your own staff, place candidates with other companies, or supply it to employers who use it themselves? | employer / employment agency / vendor / both | Puck: 3 documents reissued. SZ: summary reissued |
-| `scope.weighting` | When someone is assessed, how much does the result matter — the only thing looked at, the biggest single factor, or one of several? | only / biggest / one of several / don't know | Puck Q3: "Decides whether the law applies at all" |
+| `role.party` | Do you use this tool to hire your own staff, place candidates with other companies, or supply it to employers who use it themselves? | employer / employment agency / vendor / both | Client C: 3 documents reissued. Client A: summary reissued |
+| `scope.weighting` | When someone is assessed, how much does the result matter — the only thing looked at, the biggest single factor, or one of several? | only / biggest / one of several / don't know | Client C Q3: "Decides whether the law applies at all" |
 | `independence.auditor` | Who is performing this test? | self / internal team / third party | § 5-300 |
-| `data.held` | Do you hold anything on candidates' sex, race or ethnicity — not whether you can report on it, whether it exists anywhere? | per-category matrix | Puck Q6: "We took it the wrong way and never resolved it before signing" |
+| `data.held` | Do you hold anything on candidates' sex, race or ethnicity — not whether you can report on it, whether it exists anywhere? | per-category matrix | Client C Q6: "We took it the wrong way and never resolved it before signing" |
 
 `data.held` is a matrix rather than a single answer, because sex-held-but-not-race is the common
 case and it produces a split basis.
 
 **Tier 2 — asked, with the consequence stated in the question (5).** The strongest pattern in the
-record. Spotted Zebra's Q2 told the client the consequence before they answered: "Platform means
+record. Client A's Q2 told the client the consequence before they answered: "Platform means
 we report a selection rate, which is the stronger LL 144 figure. A person means we report a
 scoring rate and say the decision sat with a human. Either is fine." A customer who can see the
 consequence answers more carefully.
@@ -504,7 +504,7 @@ outright and the stance says why.
 `threshold.operational` is weighted `low` and gates only the scoring-rate output, not the stance.
 A missing cutoff blocks one deliverable; it does not make the other answers uninterpretable.
 
-`cutoff.planned` exists because the real Spotted Zebra answer was neither platform nor person:
+`cutoff.planned` exists because the real Client A answer was neither platform nor person:
 "Currently, none of the tools automatically progress or reject candidates. Psychometrics may
 begin to do this from next week… is it best to conduct the audit as if this feature exists
 today?" A tool in transition is a likely state and the schema must hold it.
@@ -514,14 +514,14 @@ were asked repeatedly and not answered.
 
 | Check | What it detects | Source |
 | --- | --- | --- |
-| Score granularity | Distinct values in the score column. Fewer than ~5 → warn that the median may coincide with a modal value and the rate becomes degenerate | Puck: 3 levels, median landed on green, strict-above gave every group zero |
-| Outcome column populated | All-blank `selection_outcome` → metric is scoring rate regardless of what was selected | Puck returned 5,000 blank decision rows |
-| Protected-attribute ordering | Run-count test on input row order | Curately: 14 contiguous blocks produced a false race finding |
+| Score granularity | Distinct values in the score column. Fewer than ~5 → warn that the median may coincide with a modal value and the rate becomes degenerate | Client C: 3 levels, median landed on green, strict-above gave every group zero |
+| Outcome column populated | All-blank `selection_outcome` → metric is scoring rate regardless of what was selected | Client C returned 5,000 blank decision rows |
+| Protected-attribute ordering | Run-count test on input row order | Client B: 14 contiguous blocks produced a false race finding |
 | Cell sizes | Intersectional cells against the § 5-301(d) 2% threshold | § 5-301(d) |
 
 **Tier 4 — permanent disclosures, not asked.** Things the record shows never get resolved. The
 stance states them as limitations. Chiefly: the scored input may not be the submitted input
-unless the customer attests they have verified the intermediate form. On Curately this was
+unless the customer attests they have verified the intermediate form. On Client B this was
 drafted twice, never sent, and became "the most significant open gap in the audit".
 
 ### Scoring
@@ -562,7 +562,7 @@ compliance.
 The vendor case produces a stance, a different one: the tool was tested, and a vendor's test
 cannot discharge the publication duty of the employers deploying it. The distribution date
 appears as a **visibly blank field with an instruction** — "to be completed by the deploying
-employer or employment agency" — which is the pattern a delivered Curately summary already uses.
+employer or employment agency" — which is the pattern a delivered Client B summary already uses.
 
 **Data gates.** This layer does not exist today; `dataset_parser.py` is 166 lines of parsing with
 no validation.
@@ -611,7 +611,7 @@ The customer chooses one. They do not supply their own.
 | Key | Role | Why |
 | --- | --- | --- |
 | `commercial-ae` | Account Executive, commercial/sales | Clear gradable attributes (quota attainment, cycle length, deal size) so the qualification gradient separates candidates |
-| `operational-hourly` | Operational/hourly | Fewer gradable attributes, the harder case; Puck's "entrepreneurial motivation" separated nobody across 5,000 candidates and carried a third of the summary score |
+| `operational-hourly` | Operational/hourly | Fewer gradable attributes, the harder case; Client C's "entrepreneurial motivation" separated nobody across 5,000 candidates and carried a third of the summary score |
 
 Fixing the JD is a deliberate restriction with three benefits. The expected criteria are known
 ahead of time, so the qualification gradient is designed and tested once rather than derived per
@@ -629,7 +629,7 @@ but it must be named.
 After choosing a JD, the customer runs it through their own platform and pastes back the criteria
 it generates. The module compares them against the expected set for that JD.
 
-This is a single text field, and it catches the failure that cost Spotted Zebra a full remap:
+This is a single text field, and it catches the failure that cost Client A a full remap:
 five generated criteria against eight we had reconstructed, "66 hits across three files", with the
 gradient losing its top rung because the only criterion separating solid from strong was dropped.
 
@@ -645,7 +645,7 @@ Outcomes:
 
 Driven by the profile answers:
 
-- `artifact_kind` from `pipeline.input_form` — resume or transcript. Curately's v1 transcript
+- `artifact_kind` from `pipeline.input_form` — resume or transcript. Client B's v1 transcript
   design was superseded entirely because the tool ingests a speaker-labelled ASR transcript with
   scored clarifying follow-ups rather than written answers. Getting this wrong invalidates the
   whole corpus.
@@ -739,7 +739,7 @@ specified here and ships with the page.
 
 The reason is in the record. Every expensive failure across three engagements came from a
 customer not knowing what a question decided. The ones who were told the consequence in advance
-answered well: Spotted Zebra's cutoff question stated "Platform means we report a selection rate,
+answered well: Client A's cutoff question stated "Platform means we report a selection rate,
 which is the stronger LL 144 figure. A person means we report a scoring rate", and the answer
 came back usable first time. The ones left to infer produced determinations that had to be
 withdrawn from signed documents.

@@ -172,7 +172,7 @@ describe("the two roles sit at opposite ends of the signal spectrum", () => {
 describe("content rules", () => {
   it("names no real company and no client", () => {
     const all = JSON.stringify(JOB_DESCRIPTIONS).toLowerCase();
-    for (const n of ["puck", "spotted zebra", "curately", "verifywise"]) {
+    for (const n of ["client-c", "client-a", "client-b", "verifywise"]) {
       expect(all).not.toContain(n);
     }
   });

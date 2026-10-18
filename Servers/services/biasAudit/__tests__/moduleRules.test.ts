@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { findForbidden, FORBIDDEN_WORDS } from "../stance/vocabulary";
@@ -30,6 +31,25 @@ function files(): string[] {
   };
   ROOTS.filter(fs.existsSync).forEach(walk);
   return out;
+}
+
+const digest = (s: string) => createHash("sha256").update(s).digest("hex");
+// SHA-256 of lowercase engagement organisation names, so the guard needs no plaintext.
+const NAME_DIGESTS = new Set([
+  "635bce98abdb7be2e126652003c4d0fd1a56bfa524eed7276ccf5ae05ba5dd2b",
+  "c1745d67bc2d23e80a65b2bd3e55aea35622454478828308eeb7539f9b6e8294",
+  "76b9995cdef3c2234c3ca53cdc41880e7331e53e13b09ca9daa70a8c823a164d",
+]);
+// Digest of a neutral word, used to prove the matcher works.
+const EXAMPLE_DIGEST = "53410ed29282959d64b9cc36e0b47a955e01132d1c52e7c53bae381877453cc2";
+// Whole words and adjacent word pairs, so "accurately" is never read as a name.
+function hashedMatches(text: string, digests: Set<string>): string[] {
+  const words = text
+    .toLowerCase()
+    .split(/[^a-z]+/)
+    .filter(Boolean);
+  const tokens = [...words, ...words.slice(1).map((w, i) => `${words[i]} ${w}`)];
+  return tokens.map(digest).filter((d) => digests.has(d));
 }
 
 describe("module rules", () => {
@@ -85,12 +105,10 @@ describe("module rules", () => {
   });
 
   it("names no client anywhere", () => {
-    // Whole words, so "accurately" is not read as a client name.
-    const names = ["puck", "spotted zebra", "curately"];
-    const named = (src: string) =>
-      names.filter((n) => new RegExp(`(?<![a-z0-9])${n}(?![a-z0-9])`).test(src.toLowerCase()));
-    expect(named("We ran it for Curately.")).toEqual(["curately"]);
-    expect(named("Scored accurately.")).toEqual([]);
+    const own = new Set([EXAMPLE_DIGEST]);
+    expect(hashedMatches("We ran it for ExampleCorp.", own)).toEqual([EXAMPLE_DIGEST]);
+    expect(hashedMatches("Scored exemplarily, examplecorporate.", own)).toEqual([]);
+    const named = (src: string) => hashedMatches(src, NAME_DIGESTS);
 
     const offenders: string[] = [];
     for (const f of all) {

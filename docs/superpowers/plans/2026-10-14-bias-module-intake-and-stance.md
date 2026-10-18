@@ -2189,7 +2189,7 @@ describe("citations resolve", () => {
 describe("anonymity", () => {
   it("names no client", () => {
     const all = JSON.stringify(EDUCATION).toLowerCase();
-    for (const name of ["puck", "spotted zebra", "curately", "manish", "tali", "brad",
+    for (const name of ["client-c", "client-a", "client-b", "manish", "tali", "brad",
                         "ollie", "oliver", "josh", "tina", "dan adeline"]) {
       expect(all).not.toContain(name);
     }
@@ -3596,7 +3596,7 @@ describe("module rules", () => {
     const offenders: string[] = [];
     for (const f of all) {
       const src = fs.readFileSync(f, "utf8").toLowerCase();
-      for (const n of ["puck", "spotted zebra", "curately"]) {
+      for (const n of ["client-c", "client-a", "client-b"]) {
         if (src.includes(n)) offenders.push(`${path.basename(f)}: ${n}`);
       }
     }
