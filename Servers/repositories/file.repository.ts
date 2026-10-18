@@ -24,9 +24,9 @@ import {
   ValidationException,
 } from "../domain.layer/exceptions/custom.exception";
 import { FILE_GROUP_LABEL_CASE_SQL } from "../utils/files/fileGroupLabel.sql";
-import { assertFileDeletable } from "../utils/fileUpload.utils";
 import {
   allFilesVisibleQuery,
+  deleteVisibleFileQuery,
   VISIBLE_FILE_REPLACEMENTS,
   VISIBLE_FILE_SQL,
 } from "../utils/files/visibleFiles";
@@ -292,9 +292,10 @@ export async function getProjectFileById(
 ): Promise<FileModel | null> {
   validateOrganizationId(organizationId);
 
-  const query = `SELECT * FROM files WHERE organization_id = :organizationId AND id = :id`;
+  const query = `SELECT * FROM files
+    WHERE organization_id = :organizationId AND id = :id AND ${VISIBLE_FILE_SQL("files")}`;
   const result = await sequelize.query(query, {
-    replacements: { organizationId, id },
+    replacements: { organizationId, id, ...VISIBLE_FILE_REPLACEMENTS },
     mapToModel: true,
     model: FileModel,
   });
@@ -316,25 +317,7 @@ export async function deleteProjectFileById(
   transaction: Transaction,
 ): Promise<boolean> {
   validateOrganizationId(organizationId);
-
-  // Clean up any virtual folder mappings for this file
-  await sequelize.query(
-    `DELETE FROM file_folder_mappings WHERE organization_id = :organizationId AND file_id = :id`,
-    {
-      replacements: { organizationId, id },
-      transaction,
-    },
-  );
-
-  const query = `DELETE FROM files WHERE organization_id = :organizationId AND id = :id RETURNING id`;
-  const result = await sequelize.query(query, {
-    replacements: { organizationId, id },
-    mapToModel: true,
-    model: FileModel,
-    transaction,
-  });
-
-  return result.length > 0;
+  return deleteVisibleFileQuery(id, organizationId, transaction);
 }
 
 // ============================================================================
@@ -470,10 +453,11 @@ export async function getFileById(
 ): Promise<FileModel | null> {
   validateOrganizationId(organizationId);
 
-  const query = `SELECT * FROM files WHERE organization_id = :organizationId AND id = :fileId`;
+  const query = `SELECT * FROM files
+    WHERE organization_id = :organizationId AND id = :fileId AND ${VISIBLE_FILE_SQL("files")}`;
 
   const result = await sequelize.query(query, {
-    replacements: { organizationId, fileId },
+    replacements: { organizationId, fileId, ...VISIBLE_FILE_REPLACEMENTS },
     type: QueryTypes.SELECT,
   });
 
@@ -500,35 +484,7 @@ export async function deleteFileById(
   const txn = transaction || (await sequelize.transaction());
 
   try {
-    await assertFileDeletable(fileId, organizationId, txn);
-
-    // Clean up any virtual folder mappings for this file
-    await sequelize.query(
-      `DELETE FROM file_folder_mappings WHERE organization_id = :organizationId AND file_id = :fileId`,
-      {
-        replacements: { organizationId, fileId },
-        transaction: txn,
-      },
-    );
-
-    // Clean up file entity links (evidence/attachment associations)
-    await sequelize.query(
-      `DELETE FROM file_entity_links WHERE organization_id = :organizationId AND file_id = :fileId`,
-      {
-        replacements: { organizationId, fileId },
-        transaction: txn,
-      },
-    );
-
-    const query = `DELETE FROM files WHERE organization_id = :organizationId AND id = :fileId RETURNING id`;
-
-    const result = await sequelize.query(query, {
-      replacements: { organizationId, fileId },
-      type: QueryTypes.SELECT,
-      transaction: txn,
-    });
-
-    const deleted = Array.isArray(result) && result.length > 0;
+    const deleted = await deleteVisibleFileQuery(fileId, organizationId, txn);
 
     // Only commit if we created the transaction ourselves
     if (!useProvidedTransaction) {
@@ -806,7 +762,11 @@ export async function updateFileMetadata(
   validateOrganizationId(organizationId);
 
   const setClauses: string[] = [];
-  const replacements: Record<string, unknown> = { organizationId, fileId };
+  const replacements: Record<string, unknown> = {
+    organizationId,
+    fileId,
+    ...VISIBLE_FILE_REPLACEMENTS,
+  };
 
   // Build dynamic SET clause
   if (updates.tags !== undefined) {
@@ -857,7 +817,7 @@ export async function updateFileMetadata(
   const query = `
     UPDATE files
     SET ${setClauses.join(", ")}
-    WHERE organization_id = :organizationId AND id = :fileId
+    WHERE organization_id = :organizationId AND id = :fileId AND ${VISIBLE_FILE_SQL("files")}
     RETURNING *`;
 
   const result = await sequelize.query(query, {
@@ -912,10 +872,10 @@ export async function getFileWithMetadata(
     JOIN users u ON f.uploaded_by = u.id
     LEFT JOIN users m ON f.last_modified_by = m.id
     LEFT JOIN approval_workflows aw ON aw.organization_id = f.organization_id AND f.approval_workflow_id = aw.id${FILE_LINK_GROUPS_JOIN_SQL}
-    WHERE f.organization_id = :organizationId AND f.id = :fileId`;
+    WHERE f.organization_id = :organizationId AND f.id = :fileId AND ${VISIBLE_FILE_SQL("f")}`;
 
   const result = await sequelize.query(query, {
-    replacements: { organizationId, fileId },
+    replacements: { organizationId, fileId, ...VISIBLE_FILE_REPLACEMENTS },
     type: QueryTypes.SELECT,
   });
 
@@ -1062,10 +1022,10 @@ export async function getFilePreview(
       size,
       content
     FROM files
-    WHERE organization_id = :organizationId AND id = :fileId`;
+    WHERE organization_id = :organizationId AND id = :fileId AND ${VISIBLE_FILE_SQL("files")}`;
 
   const result = await sequelize.query(query, {
-    replacements: { organizationId, fileId },
+    replacements: { organizationId, fileId, ...VISIBLE_FILE_REPLACEMENTS },
     type: QueryTypes.SELECT,
   });
 
@@ -1135,6 +1095,7 @@ export async function getFileVersionHistory(
     organizationId,
     fileGroupId,
     limit: clampListLimit(limit),
+    ...VISIBLE_FILE_REPLACEMENTS,
   };
   let query = `
     SELECT
@@ -1159,6 +1120,7 @@ export async function getFileVersionHistory(
     FROM files f
     JOIN users u ON f.uploaded_by = u.id
     WHERE f.organization_id = :organizationId AND f.file_group_id = :fileGroupId
+      AND ${VISIBLE_FILE_SQL("f")}
     ORDER BY f.uploaded_time DESC, f.id DESC
     LIMIT :limit`;
 
@@ -1172,8 +1134,12 @@ export async function getFileVersionHistory(
     sequelize.query(
       `SELECT COUNT(*) as count
        FROM files
-       WHERE organization_id = :organizationId AND file_group_id = :fileGroupId`,
-      { replacements: { organizationId, fileGroupId }, type: QueryTypes.SELECT },
+       WHERE organization_id = :organizationId AND file_group_id = :fileGroupId
+         AND ${VISIBLE_FILE_SQL("files")}`,
+      {
+        replacements: { organizationId, fileGroupId, ...VISIBLE_FILE_REPLACEMENTS },
+        type: QueryTypes.SELECT,
+      },
     ),
   ]);
 
@@ -1207,11 +1173,11 @@ export async function updateFileReviewStatus(
   const query = `
     UPDATE files
     SET review_status = :reviewStatus, updated_at = NOW()
-    WHERE organization_id = :organizationId AND id = :fileId
+    WHERE organization_id = :organizationId AND id = :fileId AND ${VISIBLE_FILE_SQL("files")}
     RETURNING id`;
 
   const result = await sequelize.query(query, {
-    replacements: { organizationId, fileId, reviewStatus },
+    replacements: { organizationId, fileId, reviewStatus, ...VISIBLE_FILE_REPLACEMENTS },
     type: QueryTypes.SELECT,
     ...(transaction && { transaction }),
   });

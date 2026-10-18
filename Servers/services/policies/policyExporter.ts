@@ -23,7 +23,6 @@ import {
   convertInchesToTwip,
 } from "docx";
 import { getFileById } from "../../repositories/file.repository";
-import { BIAS_AUDIT_STANCE_SOURCE } from "../../utils/files/visibleFiles";
 import { getSharedBrowser } from "../../utils/pdfBrowser.utils";
 import { JSDOM } from "jsdom";
 
@@ -48,9 +47,7 @@ async function fetchImageAsBase64(
     if (isNaN(fileIdNum)) return null;
 
     const file = await getFileById(fileIdNum, organizationId);
-    // A stance PDF is served only by the bias audit stance endpoint, so here
-    // it answers exactly as a missing file does.
-    if (!file || file.source === BIAS_AUDIT_STANCE_SOURCE || !file.content) return null;
+    if (!file || !file.content) return null;
 
     const base64 = file.content.toString("base64");
     const mimeType = file.type || "image/png";

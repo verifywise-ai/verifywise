@@ -4,9 +4,9 @@ import { FileModel, FileSource } from "../domain.layer/models/file/file.model";
 import { Transaction, QueryTypes } from "sequelize";
 import { ProjectModel } from "../domain.layer/models/project/project.model";
 import { resolveFileExpiryOnCreate } from "./retention.utils";
-import { ConflictException } from "../domain.layer/exceptions/custom.exception";
 import {
   BIAS_AUDIT_STANCE_SOURCE,
+  deleteVisibleFileQuery,
   VISIBLE_FILE_REPLACEMENTS,
   VISIBLE_FILE_SQL,
 } from "./files/visibleFiles";
@@ -85,75 +85,17 @@ export const uploadFile = async (
 export { BIAS_AUDIT_STANCE_SOURCE };
 
 /**
- * A stance is an immutable record that cites its PDF by id and hash. Every
- * delete path calls this first so none of them (file manager, question
- * evidence, bulk) can orphan a stance.
+ * Delete a file, its folder mappings and its entity links. A stance PDF is never
+ * deleted: like a missing id it is a silent no-op and the answer is false.
  */
-export const assertFileDeletable = async (
-  id: number,
-  organizationId: number,
-  transaction?: Transaction | null,
-): Promise<void> => {
-  const [target] = (await sequelize.query(
-    `SELECT source FROM files WHERE organization_id = :organizationId AND id = :id`,
-    {
-      replacements: { organizationId, id },
-      type: QueryTypes.SELECT,
-      ...(transaction && { transaction }),
-    },
-  )) as Array<{ source: string | null }>;
-  if (target?.source === BIAS_AUDIT_STANCE_SOURCE) {
-    throw new ConflictException(
-      "This file is a bias audit stance record and cannot be deleted",
-      "File",
-      "source",
-    );
-  }
-};
-
 export const deleteFileById = async (
   id: number,
   organizationId: number,
   transaction: Transaction,
-) => {
-  await assertFileDeletable(id, organizationId, transaction);
+): Promise<boolean> => deleteVisibleFileQuery(id, organizationId, transaction);
 
-  // Clean up any virtual folder mappings for this file
-  await sequelize.query(
-    `DELETE FROM file_folder_mappings WHERE organization_id = :organizationId AND file_id = :id`,
-    {
-      replacements: { organizationId, id },
-      transaction,
-    },
-  );
-
-  const query = `DELETE FROM files WHERE organization_id = :organizationId AND id = :id returning id`;
-  console.log(`Executing query: ${query} with id: ${id}`);
-  const result = await sequelize.query(query, {
-    replacements: { organizationId, id },
-    mapToModel: true,
-    model: FileModel,
-    transaction,
-  });
-  console.log(`Delete result: ${result}`);
-  return result.length > 0;
-};
-
+/** A file by id. A bias audit stance PDF answers exactly as a missing file does. */
 export const getFileById = async (id: number, organizationId: number) => {
-  const query = `SELECT * FROM files WHERE organization_id = :organizationId AND id = :id`;
-  const result = await sequelize.query(query, {
-    replacements: { organizationId, id },
-    mapToModel: true,
-    model: FileModel,
-  });
-  return result[0];
-};
-
-/**
- * getFileById for the generic readers (the AI advisor's file tools): a bias
- * audit stance PDF answers exactly as a missing file does.
- */
-export const getVisibleFileById = async (id: number, organizationId: number) => {
   const query = `SELECT * FROM files
     WHERE organization_id = :organizationId AND id = :id AND ${VISIBLE_FILE_SQL("files")}`;
   const result = await sequelize.query(query, {

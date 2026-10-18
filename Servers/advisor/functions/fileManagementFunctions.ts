@@ -1,4 +1,4 @@
-import { getVisibleFileById, getFileMetadataByProjectId } from "../../utils/fileUpload.utils";
+import { getFileById, getFileMetadataByProjectId } from "../../utils/fileUpload.utils";
 import {
   allFilesVisibleQuery,
   BIAS_AUDIT_STANCE_SOURCE,
@@ -15,7 +15,7 @@ import { sequelize } from "../../database/db";
 import logger from "../../utils/logger/fileLogger";
 
 // A bias audit stance PDF is served only by the bias audit stance endpoint.
-// Every tool here applies VISIBLE_FILE_SQL (or getVisibleFileById), so a
+// Every tool here applies VISIBLE_FILE_SQL (getFileById applies it too), so a
 // stance PDF answers exactly as a missing file does: never listed, described,
 // counted, attached or filed.
 
@@ -87,7 +87,7 @@ const fetchFiles = async (
 
 const getFileDetail = async (params: { file_id: number }, organizationId: number) => {
   try {
-    const file = await getVisibleFileById(params.file_id, organizationId);
+    const file = await getFileById(params.file_id, organizationId);
     if (!file) {
       return { message: "File not found.", file_id: params.file_id };
     }
@@ -152,7 +152,7 @@ const getFilesByEntity = async (
 
 const getFileChangeHistory = async (params: { file_id: number }, organizationId: number) => {
   try {
-    const file = await getVisibleFileById(params.file_id, organizationId);
+    const file = await getFileById(params.file_id, organizationId);
     if (!file) {
       return { message: "File not found.", file_id: params.file_id };
     }

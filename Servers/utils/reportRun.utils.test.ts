@@ -182,6 +182,7 @@ describe("deleteRunQuery", () => {
   it("runs every statement inside one transaction", async () => {
     mockQuery.mockResolvedValueOnce([{ id: 1, file_id: 42 }]); // fetch
     mockQuery.mockResolvedValueOnce([]); // delete folder mappings
+    mockQuery.mockResolvedValueOnce([]); // delete entity links
     mockQuery.mockResolvedValueOnce([]); // delete file
     mockQuery.mockResolvedValueOnce([]); // delete run
 
@@ -197,21 +198,23 @@ describe("deleteRunQuery", () => {
 
   it("deletes the run's file and then the run, both org-scoped", async () => {
     mockQuery.mockResolvedValueOnce([{ id: 1, file_id: 42 }]); // fetch
-    mockQuery.mockResolvedValueOnce([{ source: "Reporting" }]); // stance-file guard
     mockQuery.mockResolvedValueOnce([]); // delete folder mappings
+    mockQuery.mockResolvedValueOnce([]); // delete entity links
     mockQuery.mockResolvedValueOnce([]); // delete file
     mockQuery.mockResolvedValueOnce([]); // delete run
 
     expect(await deleteRunQuery(1, 5)).toBe(true);
 
     const sql = mockQuery.mock.calls.map((c) => c[0] as string);
-    // deleteFileById checks the file is not a stance PDF, then clears the
-    // file's folder mappings — a bare DELETE FROM files leaves them orphaned.
-    expect(sql[1]).toContain("SELECT source FROM files");
-    expect(sql[2]).toContain("DELETE FROM file_folder_mappings");
-    expect(sql[2]).toContain("organization_id = :organizationId");
+    // deleteFileById clears the file's folder mappings and links, then the
+    // file, each scoped to a visible (non-stance) file in the organization.
+    expect(sql[1]).toContain("DELETE FROM file_folder_mappings");
+    expect(sql[2]).toContain("DELETE FROM file_entity_links");
     expect(sql[3]).toContain("DELETE FROM files");
-    expect(sql[3]).toContain("organization_id = :organizationId");
+    for (const s of sql.slice(1, 4)) {
+      expect(s).toContain("organization_id = :organizationId");
+      expect(s).toContain("IS DISTINCT FROM :stanceSource");
+    }
     expect(sql[4]).toContain("DELETE FROM report_runs");
     expect(sql[4]).toContain("organization_id = :organization_id");
   });

@@ -423,7 +423,9 @@ export const getFileFoldersQuery = async (
 };
 
 /**
- * Assign files to a folder
+ * Assign files to a folder. Only visible files are assigned: a missing id,
+ * another organization's file and a bias audit stance PDF are skipped alike.
+ * Returns the number of new mappings.
  */
 export const assignFilesToFolderQuery = async (
   organizationId: number,
@@ -434,27 +436,23 @@ export const assignFilesToFolderQuery = async (
 ): Promise<number> => {
   if (fileIds.length === 0) return 0;
 
-  // Use INSERT ... ON CONFLICT DO NOTHING to handle duplicates gracefully
-  const values = fileIds
-    .map((_, i) => `(:organizationId, :file_id_${i}, :folderId, :userId, NOW())`)
-    .join(", ");
-
-  const replacements: Record<string, unknown> = {
-    organizationId,
-    folderId,
-    userId,
-  };
-  fileIds.forEach((fileId, i) => {
-    replacements[`file_id_${i}`] = fileId;
-  });
-
+  // ON CONFLICT DO NOTHING handles duplicates gracefully
   const result = await sequelize.query<{ id: number }>(
     `INSERT INTO file_folder_mappings (organization_id, file_id, folder_id, assigned_by, assigned_at)
-     VALUES ${values}
+     SELECT files.organization_id, files.id, :folderId, :userId, NOW()
+       FROM files
+      WHERE files.organization_id = :organizationId AND files.id IN (:fileIds)
+        AND ${VISIBLE_FILE_SQL("files")}
      ON CONFLICT (file_id, folder_id) DO NOTHING
      RETURNING id`,
     {
-      replacements,
+      replacements: {
+        organizationId,
+        folderId,
+        userId,
+        fileIds: [...new Set(fileIds)],
+        ...VISIBLE_FILE_REPLACEMENTS,
+      },
       type: QueryTypes.SELECT,
       transaction,
     },
@@ -464,7 +462,8 @@ export const assignFilesToFolderQuery = async (
 };
 
 /**
- * Remove a file from a folder
+ * Remove a file from a folder. A bias audit stance PDF answers as a missing
+ * file: no mapping is removed and the answer is false.
  */
 export const removeFileFromFolderQuery = async (
   organizationId: number,
@@ -475,9 +474,13 @@ export const removeFileFromFolderQuery = async (
   const result = await sequelize.query<{ id: number }>(
     `DELETE FROM file_folder_mappings
      WHERE organization_id = :organizationId AND folder_id = :folderId AND file_id = :fileId
+       AND file_id IN (
+         SELECT id FROM files
+          WHERE organization_id = :organizationId AND id = :fileId AND ${VISIBLE_FILE_SQL("files")}
+       )
      RETURNING id`,
     {
-      replacements: { organizationId, folderId, fileId },
+      replacements: { organizationId, folderId, fileId, ...VISIBLE_FILE_REPLACEMENTS },
       type: QueryTypes.SELECT,
       transaction,
     },

@@ -1,44 +1,81 @@
-const mockQuery = jest.fn();
+/**
+ * The shared file reader and deleter in fileUpload.utils hide bias audit
+ * stance PDFs themselves: a stance id answers exactly as a missing id, and
+ * the stance row is never deleted.
+ */
+
+import {
+  everyFilesReferenceFiltered,
+  fakeFilesQuery,
+  stanceRow,
+  visibleRow,
+  type FakeFileRow,
+} from "./files/__tests__/helpers/fakeFilesTable";
+
+let table: FakeFileRow[] = [];
+const calls: Array<{ sql: string; options: any }> = [];
 jest.mock("../database/db", () => ({
-  sequelize: { query: (...args: any[]) => mockQuery(...args) },
+  sequelize: {
+    query: (sql: string, options: any) => {
+      calls.push({ sql, options });
+      return fakeFilesQuery(table)(sql, options);
+    },
+  },
 }));
 
-import { ConflictException } from "../domain.layer/exceptions/custom.exception";
-import { BIAS_AUDIT_STANCE_SOURCE, deleteFileById } from "./fileUpload.utils";
+import { deleteFileById, getFileById } from "./fileUpload.utils";
 
 const tx = {} as any;
+const ORG = 1;
+
+beforeEach(() => {
+  table = [];
+  calls.length = 0;
+});
 
 describe("deleteFileById", () => {
-  beforeEach(() => jest.clearAllMocks());
-
-  it("refuses a bias audit stance PDF and deletes nothing", async () => {
-    mockQuery.mockResolvedValueOnce([{ source: BIAS_AUDIT_STANCE_SOURCE }]);
-
-    await expect(deleteFileById(42, 5, tx)).rejects.toBeInstanceOf(ConflictException);
-
-    const sql = mockQuery.mock.calls.map((c) => c[0] as string);
-    expect(sql).toHaveLength(1);
-    expect(sql[0]).toContain("organization_id = :organizationId");
-    expect(sql.some((s) => s.includes("DELETE"))).toBe(false);
+  it("is a silent no-op for a stance PDF, exactly as for a missing id", async () => {
+    table = [stanceRow()];
+    const stance = await deleteFileById(2, ORG, tx);
+    expect(table).toEqual([stanceRow()]);
+    table = [];
+    const missing = await deleteFileById(2, ORG, tx);
+    expect(stance).toBe(false);
+    expect(stance).toEqual(missing);
   });
 
-  it("deletes any other file, mappings first, org-scoped", async () => {
-    mockQuery
-      .mockResolvedValueOnce([{ source: "File manager" }])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([{ id: 42 }]);
-
-    expect(await deleteFileById(42, 5, tx)).toBe(true);
-
-    const sql = mockQuery.mock.calls.map((c) => c[0] as string);
-    expect(sql[1]).toContain("DELETE FROM file_folder_mappings");
-    expect(sql[2]).toContain("DELETE FROM files");
-    expect(mockQuery.mock.calls[2][1].replacements).toEqual({ organizationId: 5, id: 42 });
+  it("scopes the mapping, link and file deletes to a visible file, in the transaction", async () => {
+    table = [stanceRow()];
+    await deleteFileById(2, ORG, tx);
+    expect(calls.map((c) => c.sql.match(/DELETE FROM (\w+)/)?.[1])).toEqual([
+      "file_folder_mappings",
+      "file_entity_links",
+      "files",
+    ]);
+    for (const { sql, options } of calls) {
+      expect(sql).toMatch(/\bFROM\s+files\b/);
+      expect(everyFilesReferenceFiltered(sql)).toBe(true);
+      expect(options.transaction).toBe(tx);
+    }
   });
 
-  it("passes the transaction to the guard read", async () => {
-    mockQuery.mockResolvedValueOnce([]).mockResolvedValueOnce([]).mockResolvedValueOnce([]);
-    await deleteFileById(7, 5, tx);
-    expect(mockQuery.mock.calls[0][1].transaction).toBe(tx);
+  it("deletes any other file", async () => {
+    table = [visibleRow()];
+    expect(await deleteFileById(1, ORG, tx)).toBe(true);
+    expect(table).toEqual([]);
+  });
+});
+
+describe("getFileById", () => {
+  it("answers a stance PDF exactly as a missing file", async () => {
+    table = [stanceRow()];
+    const stance = await getFileById(2, ORG);
+    table = [];
+    expect(stance).toEqual(await getFileById(2, ORG));
+  });
+
+  it("still returns a visible file", async () => {
+    table = [visibleRow()];
+    expect(await getFileById(1, ORG)).toMatchObject({ id: 1 });
   });
 });

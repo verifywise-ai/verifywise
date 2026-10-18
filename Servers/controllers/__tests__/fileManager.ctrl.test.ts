@@ -601,17 +601,6 @@ describe("fileManager.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(404);
     });
 
-    it("refuses to delete a bias audit stance PDF with 409 and deletes nothing", async () => {
-      // A stance is an immutable record that cites its PDF by id and hash.
-      mockGetFileById.mockResolvedValue(makeDbFile({ source: "Bias audit stance report" }) as any);
-      const req = createReq({ params: { id: "1" } });
-      const res = createRes();
-      await removeFile(req, res);
-      expect(res.status).toHaveBeenCalledWith(409);
-      expect(JSON.stringify(res.json.mock.calls[0][0])).toMatch(/stance/i);
-      expect(deleteFileById).not.toHaveBeenCalled();
-    });
-
     it("should return 403 when org_id does not match", async () => {
       mockGetFileById.mockResolvedValue(makeDbFile({ organization_id: 2 }) as any);
       const req = createReq({ params: { id: "1" } });

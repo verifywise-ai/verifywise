@@ -835,6 +835,5 @@
   "Invalid EU AI Act classification level": "Niveau de classification selon l'AI Act de l'UE non valide",
   "Only admins can change retention periods": "Seuls les administrateurs peuvent modifier les durées de conservation",
   "Invalid retention period": "Durée de conservation non valide",
-  "This file is a bias audit stance record and cannot be deleted": "Ce fichier est un document de position d'audit de biais et ne peut pas être supprimé",
   "This file source is reserved": "Cette source de fichier est réservée"
 }
