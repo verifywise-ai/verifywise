@@ -89,6 +89,66 @@ const StancePanel = ({
   const generateText = kind === "run" ? "Generate stance" : "Generate scope determination";
   const canGenerate = generateBlockedReason === null;
 
+  // What a failed download shows. The server's 410 text says to generate the
+  // stance again, so it appears only where the button does.
+  type DownloadVariant = "error" | "regenerate" | "blocked" | "gone" | "superseded";
+  const variant: DownloadVariant | null = !downloadError
+    ? null
+    : downloadError.status !== 410
+      ? "error"
+      : failedStanceGone
+        ? "gone"
+        : !canRegenerate
+          ? "superseded"
+          : canGenerate
+            ? "regenerate"
+            : "blocked";
+
+  const renderDownloadError = () => {
+    switch (variant) {
+      case "error":
+        return <Typography sx={{ fontSize: 13 }}>{downloadError?.message}</Typography>;
+      case "regenerate":
+        return (
+          <>
+            <Typography sx={{ fontSize: 13 }}>{downloadError?.message}</Typography>
+            <Box sx={{ mt: "8px" }}>
+              <CustomizableButton
+                variant="outlined"
+                size="small"
+                text="Generate it again"
+                testId="aedt-regenerate-stance"
+                onClick={onGenerate}
+                isDisabled={isGenerating}
+              />
+            </Box>
+          </>
+        );
+      // Why generating is blocked already shows under the disabled button.
+      case "blocked":
+        return (
+          <Typography sx={{ fontSize: 13 }} data-testid="stance-cannot-regenerate">
+            The file is no longer stored.
+          </Typography>
+        );
+      case "gone":
+        return (
+          <Typography sx={{ fontSize: 13 }} data-testid="stance-file-gone">
+            The file is no longer stored.
+          </Typography>
+        );
+      case "superseded":
+        return (
+          <Typography sx={{ fontSize: 13 }} data-testid="stance-not-regenerable">
+            This scope determination cites an earlier attestation, so generating it again would cite
+            the current one instead. Its file is no longer stored.
+          </Typography>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <Stack gap="16px">
       <Box sx={twoColumnSx}>
@@ -122,39 +182,7 @@ const StancePanel = ({
               severity={downloadError.status === 410 ? "warning" : "error"}
               sx={{ borderRadius: "4px" }}
             >
-              {/* The server's 410 text says to generate the stance again. It shows
-                  only with the button; otherwise the panel's own message replaces it. */}
-              {!(downloadError.status === 410 && !(canRegenerate && canGenerate)) && (
-                <Typography sx={{ fontSize: 13 }}>{downloadError.message}</Typography>
-              )}
-              {downloadError.status === 410 && canRegenerate && !canGenerate && (
-                <Typography sx={{ fontSize: 13 }} data-testid="stance-cannot-regenerate">
-                  <span>The file is no longer stored.</span> <span>{generateBlockedReason}</span>
-                </Typography>
-              )}
-              {downloadError.status === 410 && failedStanceGone && (
-                <Typography sx={{ fontSize: 13 }} data-testid="stance-file-gone">
-                  The file is no longer stored.
-                </Typography>
-              )}
-              {downloadError.status === 410 && !failedStanceGone && !canRegenerate && (
-                <Typography sx={{ fontSize: 13 }} data-testid="stance-not-regenerable">
-                  This scope determination cites an earlier attestation, so generating it again
-                  would cite the current one instead. Its file is no longer stored.
-                </Typography>
-              )}
-              {downloadError.status === 410 && canRegenerate && canGenerate && (
-                <Box sx={{ mt: "8px" }}>
-                  <CustomizableButton
-                    variant="outlined"
-                    size="small"
-                    text="Generate it again"
-                    testId="aedt-regenerate-stance"
-                    onClick={onGenerate}
-                    isDisabled={isGenerating}
-                  />
-                </Box>
-              )}
+              {renderDownloadError()}
             </Alert>
           )}
 
