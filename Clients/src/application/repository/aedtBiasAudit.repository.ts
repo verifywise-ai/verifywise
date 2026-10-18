@@ -16,16 +16,22 @@ export type {
   AedtAttestedDecision,
   AedtAuditResult,
   AedtCategoryTable,
+  AedtCorpus,
+  AedtCorpusStatus,
   AedtCreateRunResult,
+  AedtCriteriaComparison,
   AedtDerivedBasis,
   AedtGateFinding,
   AedtGroupResult,
+  AedtJobDescription,
+  AedtJobDescriptions,
   AedtOption,
   AedtPredicate,
   AedtProfileAnswer,
   AedtProfileView,
   AedtQuestion,
   AedtReadiness,
+  AedtReleaseFinding,
   AedtRun,
   AedtRunMetric,
   AedtRunSummary,
@@ -93,6 +99,32 @@ export async function downloadAedtStance(
   return {
     blob,
     filename: filenameFromContentDisposition(disposition, `stance-${stanceId}.pdf`),
+  };
+}
+
+export const getAedtJobDescriptions = () => aedtBiasAuditService.getJobDescriptions();
+
+export const compareAedtCriteria = (jobDescriptionKey: string, criteriaSupplied: string | null) =>
+  aedtBiasAuditService.compareCriteria({ jobDescriptionKey, criteriaSupplied });
+
+export const createAedtCorpus = (
+  projectId: number,
+  args: { jobDescriptionKey: string; criteriaSupplied: string | null; count: number },
+) => aedtBiasAuditService.createCorpus({ projectId, frameworkId: LL144_FRAMEWORK_ID, ...args });
+
+export const listAedtCorpora = (projectId: number) =>
+  aedtBiasAuditService.listCorpora(projectId, LL144_FRAMEWORK_ID);
+
+export const resumeAedtCorpus = (corpusId: number) => aedtBiasAuditService.resumeCorpus(corpusId);
+
+/** The corpus CSV and the name to save it as. */
+export async function downloadAedtCorpus(
+  corpusId: number,
+): Promise<{ blob: Blob; filename: string }> {
+  const { blob, disposition } = await aedtBiasAuditService.downloadCorpus(corpusId);
+  return {
+    blob,
+    filename: filenameFromContentDisposition(disposition, `corpus-${corpusId}.csv`),
   };
 }
 

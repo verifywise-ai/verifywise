@@ -23,7 +23,7 @@ vi.mock("../../../components/UserGuide/UserGuideSidebarContext", () => ({
 import BiasAuditSidebar from "../BiasAuditSidebar";
 
 describe("BiasAuditSidebar", () => {
-  it("lists the three sections with the runs and scope determination counts", () => {
+  it("lists the four sections with the runs and scope determination counts", () => {
     render(
       <BiasAuditSidebar
         activeSection="runs"
@@ -35,6 +35,7 @@ describe("BiasAuditSidebar", () => {
     const items = shell.props!.flatItems;
     expect(items.map((i) => [i.label, i.count])).toEqual([
       ["Profile", undefined],
+      ["Generate", undefined],
       ["Runs", 4],
       ["Scope determination", 2],
     ]);
@@ -44,8 +45,20 @@ describe("BiasAuditSidebar", () => {
   it("reports the clicked section", () => {
     const onSectionChange = vi.fn();
     render(<BiasAuditSidebar activeSection="profile" onSectionChange={onSectionChange} />);
-    shell.props!.onItemClick(shell.props!.flatItems[2]);
+    shell.props!.onItemClick(shell.props!.flatItems[3]);
     expect(onSectionChange).toHaveBeenCalledWith("scope");
+  });
+
+  it("offers corpus generation between the profile and runs", () => {
+    const onSectionChange = vi.fn();
+    render(<BiasAuditSidebar activeSection="generate" onSectionChange={onSectionChange} />);
+    const items = shell.props!.flatItems;
+    expect(items.map((i) => i.value)).toEqual(["profile", "generate", "runs", "scope"]);
+    expect(items.filter((i) => shell.props!.isItemActive(i)).map((i) => i.value)).toEqual([
+      "generate",
+    ]);
+    shell.props!.onItemClick(items[1]);
+    expect(onSectionChange).toHaveBeenCalledWith("generate");
   });
 
   it("disables every section when there is no use case to open", () => {

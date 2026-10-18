@@ -77,6 +77,10 @@ export interface AedtAttestedDecision {
   readiness: AedtReadiness;
   /** The rate a run computes; null when out of scope or the cutoff answer is open. */
   metric: AedtRunMetric | null;
+  /** Whether the attested answers allow a corpus to be generated. */
+  mayGenerate: boolean;
+  /** Why generation is blocked, one entry per reason; empty when it is not. */
+  generationBlocked: string[];
 }
 
 /** A stance row as the server returns it, from a run or a scope determination. */
@@ -272,6 +276,70 @@ export interface AedtStanceDownload {
   disposition: unknown;
 }
 
+/** One of the two fixed job descriptions; the tier narratives stay on the server. */
+export interface AedtJobDescription {
+  key: string;
+  roleTitle: string;
+  body: string;
+  expectedCriteria: Array<{ key: string; label: string; description: string }>;
+}
+
+export interface AedtJobDescriptions {
+  jobDescriptions: AedtJobDescription[];
+  /** False when the deployment has no generation gateway configured. */
+  generationAvailable: boolean;
+  count: { default: number; min: number; max: number };
+}
+
+export interface AedtCriteriaComparison {
+  supplied: string[];
+  matched: Array<{ expected: string; supplied: string; score: number }>;
+  /** Keys of the expected criteria nothing supplied matched. */
+  unmatchedExpected: string[];
+  unmatchedSupplied: string[];
+  verdict: "close" | "divergent" | "not_supplied";
+}
+
+export type AedtCorpusStatus = "running" | "complete" | "blocked" | "failed";
+
+export interface AedtReleaseFinding {
+  code: string;
+  severity: "stop" | "warn";
+  message: string;
+}
+
+/** A corpus as the list returns it: never the manifest, the lease token or record text. */
+export interface AedtCorpus {
+  id: number;
+  project_id: number;
+  profile_version: number;
+  job_description_key: string;
+  artifact_kind: string;
+  requested_count: number;
+  planned_count: number;
+  record_count: number | null;
+  model_pinned: string;
+  models_observed_json: Record<string, number> | null;
+  cell_sizes_json: Record<string, number> | null;
+  release_findings_json: AedtReleaseFinding[] | null;
+  status: AedtCorpusStatus;
+  failure_code: string | null;
+  corpus_sha256: string | null;
+  manifest_sha256: string | null;
+  generated_by: number | null;
+  generated_at: string;
+  completed_at: string | null;
+}
+
+export interface AedtCreateCorpusInput {
+  projectId: number;
+  frameworkId: number;
+  jobDescriptionKey: string;
+  /** Null when the customer did not paste their platform's criteria. */
+  criteriaSupplied: string | null;
+  count: number;
+}
+
 // ==================== SERVICE ====================
 
 const BASE = "/bias-audit";
@@ -421,6 +489,46 @@ class AedtBiasAuditService {
       options({ responseType: "blob" }),
     );
     return { blob: res.data as Blob, disposition: res.headers?.["content-disposition"] };
+  }
+
+  async getJobDescriptions(): Promise<AedtJobDescriptions> {
+    const res = await CustomAxios.get(`${BASE}/job-descriptions`, options());
+    return unwrap<AedtJobDescriptions>(res.data);
+  }
+
+  /** A preview; the server stores nothing. */
+  async compareCriteria(args: {
+    jobDescriptionKey: string;
+    criteriaSupplied: string | null;
+  }): Promise<AedtCriteriaComparison> {
+    const res = await CustomAxios.post(`${BASE}/criteria-comparison`, args, options());
+    return unwrap<AedtCriteriaComparison>(res.data);
+  }
+
+  async createCorpus(args: AedtCreateCorpusInput): Promise<{ corpusId: number }> {
+    const res = await CustomAxios.post(`${BASE}/corpora`, args, options());
+    return unwrap(res.data);
+  }
+
+  async listCorpora(projectId: number, frameworkId: number): Promise<AedtCorpus[]> {
+    const res = await CustomAxios.get(
+      `${BASE}/corpora`,
+      options({ params: { projectId, frameworkId } }),
+    );
+    return unwrap<{ corpora: AedtCorpus[] }>(res.data).corpora;
+  }
+
+  async downloadCorpus(corpusId: number): Promise<AedtStanceDownload> {
+    const res = await CustomAxios.get(
+      `${BASE}/corpora/${corpusId}/download`,
+      options({ responseType: "blob" }),
+    );
+    return { blob: res.data as Blob, disposition: res.headers?.["content-disposition"] };
+  }
+
+  async resumeCorpus(corpusId: number): Promise<{ corpusId: number; status: AedtCorpusStatus }> {
+    const res = await CustomAxios.post(`${BASE}/corpora/${corpusId}/resume`, {}, options());
+    return unwrap(res.data);
   }
 }
 

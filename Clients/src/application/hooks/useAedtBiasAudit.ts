@@ -8,18 +8,24 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   attestAedtProfile,
+  compareAedtCriteria,
   confirmAedtDerivedBasis,
+  createAedtCorpus,
   createAedtRun,
   describeAedtError,
   generateAedtRunStance,
   generateAedtScopeDetermination,
+  getAedtJobDescriptions,
   getAedtProfile,
   getAedtQuestions,
   getAedtRun,
   getAedtRunTrend,
+  listAedtCorpora,
   listAedtRuns,
+  resumeAedtCorpus,
   saveAedtAnswers,
   type AedtAnswerInput,
+  type AedtCorpus,
 } from "../repository/aedtBiasAudit.repository";
 
 export const aedtQueryKeys = {
@@ -31,6 +37,8 @@ export const aedtQueryKeys = {
   /** Under `runs`, so a new run, which invalidates the run list, refreshes the trend too. */
   trend: (projectId: number) => [...aedtQueryKeys.runs(projectId), "trend"] as const,
   run: (runId: number) => [...aedtQueryKeys.all, "run", runId] as const,
+  corpora: (projectId: number) => [...aedtQueryKeys.project(projectId), "corpora"] as const,
+  jobDescriptions: () => [...aedtQueryKeys.all, "job-descriptions"] as const,
 };
 
 const NO_RETRY = { retry: false } as const;
@@ -166,5 +174,68 @@ export function useGenerateAedtRunStance(runId: number) {
   return useMutation({
     mutationFn: () => generateAedtRunStance(runId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: aedtQueryKeys.run(runId) }),
+  });
+}
+
+/** The fixed job descriptions change only with a deploy, like the question set. */
+export function useAedtJobDescriptions() {
+  return useQuery({
+    queryKey: aedtQueryKeys.jobDescriptions(),
+    queryFn: getAedtJobDescriptions,
+    staleTime: QUESTIONS_STALE_MS,
+    ...NO_RETRY,
+  });
+}
+
+/** How often the corpus list is refetched while a corpus is still generating. */
+export const CORPUS_POLL_MS = 5000;
+
+export function useAedtCorpora(projectId: number | null) {
+  return useQuery({
+    queryKey: aedtQueryKeys.corpora(projectId ?? 0),
+    queryFn: () => listAedtCorpora(projectId as number),
+    enabled: projectId !== null,
+    refetchInterval: (query) =>
+      (query.state.data as AedtCorpus[] | undefined)?.some((c) => c.status === "running")
+        ? CORPUS_POLL_MS
+        : false,
+    ...NO_RETRY,
+  });
+}
+
+/** A preview; it changes nothing on the server, so nothing is invalidated. */
+export function useCompareAedtCriteria() {
+  return useMutation({
+    mutationFn: (args: { jobDescriptionKey: string; criteriaSupplied: string | null }) =>
+      compareAedtCriteria(args.jobDescriptionKey, args.criteriaSupplied),
+  });
+}
+
+/**
+ * A new corpus changes the corpus list. A 409 can mean the attested profile
+ * now blocks generation, so it refetches the profile view too.
+ */
+export function useCreateAedtCorpus(projectId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (args: {
+      jobDescriptionKey: string;
+      criteriaSupplied: string | null;
+      count: number;
+    }) => createAedtCorpus(projectId, args),
+    onSettled: (_data, error) => {
+      void queryClient.invalidateQueries({ queryKey: aedtQueryKeys.corpora(projectId) });
+      if (error && describeAedtError(error).status === 409) {
+        void queryClient.invalidateQueries({ queryKey: aedtQueryKeys.profile(projectId) });
+      }
+    },
+  });
+}
+
+export function useResumeAedtCorpus(projectId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (corpusId: number) => resumeAedtCorpus(corpusId),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: aedtQueryKeys.corpora(projectId) }),
   });
 }

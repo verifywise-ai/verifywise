@@ -42,6 +42,7 @@ import {
 import { palette } from "../../themes/palette";
 import ProfileWizard from "./ProfileWizard";
 import RunUpload from "./RunUpload";
+import GenerateCorpus from "./GenerateCorpus";
 import RunDetail from "./RunDetail";
 import StancePanel from "./StancePanel";
 import PersonLabel from "./PersonLabel";
@@ -244,6 +245,12 @@ const ProjectWorkspace = ({ projectId, canEdit, canAttest, activeSection }: Work
       ? "The attested profile places the tool out of scope, so the module does not run its measures. Generate a scope determination instead."
       : null;
 
+  const generateBlockedReason = !decision
+    ? "Attest the profile first."
+    : decision.mayGenerate
+      ? null
+      : decision.generationBlocked.join("; ");
+
   const scopeBlockedReason = !canEdit
     ? "Only an Admin or Editor can generate a scope determination."
     : !profile.attested
@@ -300,6 +307,15 @@ const ProjectWorkspace = ({ projectId, canEdit, canAttest, activeSection }: Work
           isSaving={save.isPending}
           isAttesting={attest.isPending}
           errorMessage={actionError ? describeAedtError(actionError).message : null}
+        />
+      )}
+
+      {activeSection === "generate" && (
+        <GenerateCorpus
+          projectId={projectId}
+          canEdit={canEdit}
+          mayGenerate={decision?.mayGenerate ?? false}
+          blockedReason={generateBlockedReason}
         />
       )}
 

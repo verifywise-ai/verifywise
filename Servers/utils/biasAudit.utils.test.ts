@@ -891,6 +891,7 @@ describe("corpora and the record log", () => {
     const [sql, opts] = mockQuery.mock.calls[0];
     expect(sql).toMatch(/project_id = :project_id/);
     expect(sql).not.toMatch(/manifest_json|owner_token|SELECT \*|bias_audit_corpus_records/);
+    expect(sql).toMatch(/models_observed_json, cell_sizes_json, release_findings_json/);
     expect(opts.replacements.project_id).toBe(7);
   });
 

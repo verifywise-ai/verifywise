@@ -50,9 +50,19 @@ vi.mock("../../../../application/hooks/useAedtBiasAudit", () => ({
   useCreateAedtRun: mutation,
   useConfirmAedtDerivedBasis: mutation,
   useGenerateAedtRunStance: mutation,
+  useAedtJobDescriptions: () => ({
+    data: { jobDescriptions: [], generationAvailable: true },
+    isLoading: false,
+    error: null,
+  }),
+  useAedtCorpora: () => ({ data: [], isLoading: false, error: null }),
+  useCompareAedtCriteria: mutation,
+  useCreateAedtCorpus: mutation,
+  useResumeAedtCorpus: mutation,
 }));
 
 import { openSection, renderBiasAuditPage } from "./biasAuditPageHarness";
+import { parseSection, sectionPath } from "../sections";
 
 const OUT_OF_SCOPE: AedtReadiness = {
   score: null,
@@ -80,7 +90,12 @@ const PROFILE: AedtProfileView = {
   attested: { id: 3, version: 2, attestedByUserId: 1, attestedAt: "2026-10-01T10:00:00.000Z" },
   answers: [],
   readiness: OUT_OF_SCOPE,
-  attestedDecision: { readiness: OUT_OF_SCOPE, metric: null },
+  attestedDecision: {
+    readiness: OUT_OF_SCOPE,
+    metric: null,
+    mayGenerate: true,
+    generationBlocked: [],
+  },
   scopeDeterminations: [
     {
       id: 21,
@@ -163,6 +178,34 @@ describe("BiasAuditPage", () => {
     expect(screen.queryByTestId("question-role.party")).not.toBeInTheDocument();
   });
 
+  it("opens corpus generation at its own URL, with the attested profile's block", () => {
+    state.profile = {
+      ...PROFILE,
+      attestedDecision: {
+        readiness: IN_SCOPE,
+        metric: "selection_rate",
+        mayGenerate: false,
+        generationBlocked: ["pipeline.input_form is audio, which this module cannot generate"],
+      },
+    };
+    renderBiasAuditPage("/bias-audit/7/generate");
+    expect(screen.getByTestId("aedt-generate-role-statement")).toBeInTheDocument();
+    expect(screen.getByTestId("aedt-generate-corpus")).toBeDisabled();
+    expect(screen.getByText(/pipeline\.input_form is audio/)).toBeInTheDocument();
+  });
+
+  it("asks for an attested profile before generation", () => {
+    state.profile = { ...PROFILE, attested: null, attestedDecision: null };
+    renderBiasAuditPage("/bias-audit/7/generate");
+    expect(screen.getByText("Attest the profile first.")).toBeInTheDocument();
+    expect(screen.getByTestId("aedt-generate-corpus")).toBeDisabled();
+  });
+
+  it("parses the generate section", () => {
+    expect(parseSection("generate")).toBe("generate");
+    expect(sectionPath(7, "generate")).toBe("/bias-audit/7/generate");
+  });
+
   it("opens the profile for an unknown section", () => {
     renderBiasAuditPage("/bias-audit/7/nonsense");
     expect(screen.getByTestId("aedt-save-answers")).toBeInTheDocument();
@@ -189,7 +232,12 @@ describe("BiasAuditPage", () => {
     });
 
     it("lets a run go ahead on an in-scope attested profile while the draft is out of scope", () => {
-      state.profile = draftAhead(OUT_OF_SCOPE, { readiness: IN_SCOPE, metric: "scoring_rate" });
+      state.profile = draftAhead(OUT_OF_SCOPE, {
+        readiness: IN_SCOPE,
+        metric: "scoring_rate",
+        mayGenerate: true,
+        generationBlocked: [],
+      });
       renderBiasAuditPage();
       expect(screen.getByTestId("aedt-draft-differs")).toHaveTextContent(
         /draft answers place the tool out of scope\. Runs and scope determinations follow the attested version/,
@@ -206,7 +254,12 @@ describe("BiasAuditPage", () => {
     });
 
     it("refuses a scope determination while only the draft is out of scope", () => {
-      state.profile = draftAhead(OUT_OF_SCOPE, { readiness: IN_SCOPE, metric: "selection_rate" });
+      state.profile = draftAhead(OUT_OF_SCOPE, {
+        readiness: IN_SCOPE,
+        metric: "selection_rate",
+        mayGenerate: true,
+        generationBlocked: [],
+      });
       renderBiasAuditPage();
       openSection("scope");
       expect(
@@ -216,7 +269,12 @@ describe("BiasAuditPage", () => {
     });
 
     it("offers a scope determination on an out-of-scope attested profile while the draft is in scope", () => {
-      state.profile = draftAhead(IN_SCOPE, { readiness: OUT_OF_SCOPE, metric: null });
+      state.profile = draftAhead(IN_SCOPE, {
+        readiness: OUT_OF_SCOPE,
+        metric: null,
+        mayGenerate: true,
+        generationBlocked: [],
+      });
       renderBiasAuditPage();
       expect(screen.getByTestId("aedt-draft-differs")).toHaveTextContent(
         /draft answers place the tool in scope/,
@@ -232,7 +290,7 @@ describe("BiasAuditPage", () => {
     it("names the draft's score when only the score differs", () => {
       state.profile = draftAhead(
         { ...IN_SCOPE, score: 80 },
-        { readiness: IN_SCOPE, metric: "selection_rate" },
+        { readiness: IN_SCOPE, metric: "selection_rate", mayGenerate: true, generationBlocked: [] },
       );
       renderBiasAuditPage();
       expect(screen.getByTestId("aedt-draft-differs")).toHaveTextContent(
@@ -270,7 +328,12 @@ describe("BiasAuditPage", () => {
         earned: 0,
         possible: 0,
       },
-      attestedDecision: { readiness: IN_SCOPE, metric: "selection_rate" },
+      attestedDecision: {
+        readiness: IN_SCOPE,
+        metric: "selection_rate",
+        mayGenerate: true,
+        generationBlocked: [],
+      },
     };
     renderBiasAuditPage();
     const note = screen.getByTestId("aedt-draft-differs");
@@ -338,7 +401,12 @@ describe("BiasAuditPage", () => {
   it("shows a neutral fallback rather than a null score", () => {
     state.profile = {
       ...PROFILE,
-      attestedDecision: { readiness: { ...IN_SCOPE, score: null }, metric: "selection_rate" },
+      attestedDecision: {
+        readiness: { ...IN_SCOPE, score: null },
+        metric: "selection_rate",
+        mayGenerate: true,
+        generationBlocked: [],
+      },
     };
     renderBiasAuditPage();
     const summary = screen.getByTestId("aedt-profile-summary");

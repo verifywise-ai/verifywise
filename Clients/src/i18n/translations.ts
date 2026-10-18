@@ -9284,6 +9284,49 @@ export const translations: Record<string, Record<string, string>> = {
     "The stance names it. Runs on different job descriptions are not joined in the trend.":
       "Die Stellungnahme nennt sie. Läufe mit unterschiedlichen Stellenbeschreibungen werden im Verlauf nicht verbunden.",
     "Use at most 64 characters.": "Verwenden Sie höchstens 64 Zeichen.",
+    "Between 700 and 10,000. Rounded down so every cell holds the same mix.":
+      "Zwischen 700 und 10.000. Abgerundet, damit jede Zelle dieselbe Mischung enthält.",
+    "Choose the role to test. Run the same job description through your own platform.":
+      "Wählen Sie die zu testende Rolle. Geben Sie dieselbe Stellenbeschreibung in Ihre eigene Plattform ein.",
+    "Compare criteria": "Kriterien vergleichen",
+    "Corpora": "Korpora",
+    "Criteria comparison": "Kriterienvergleich",
+    "Criteria your platform generated": "Von Ihrer Plattform erzeugte Kriterien",
+    "Generate corpus": "Korpus erzeugen",
+    "Models observed": "Beobachtete Modelle",
+    "No corpus has been generated yet.": "Es wurde noch kein Korpus erzeugt.",
+    "No criteria were found in the text. Put one criterion on each line.":
+      "Im Text wurden keine Kriterien gefunden. Schreiben Sie jedes Kriterium in eine eigene Zeile.",
+    "Number of records": "Anzahl der Datensätze",
+    "One criterion per line": "Ein Kriterium pro Zeile",
+    "Paste the criteria your platform produced from this job description. Optional.":
+      "Fügen Sie die Kriterien ein, die Ihre Plattform aus dieser Stellenbeschreibung erzeugt hat. Optional.",
+    "Release findings": "Freigabebefunde",
+    "Resume": "Fortsetzen",
+    "The result describes your tool on that role, not across all of your hiring.":
+      "Das Ergebnis beschreibt Ihr Tool für diese Rolle, nicht für Ihre gesamte Personalauswahl.",
+    "Generating": "Wird erzeugt",
+    "Complete": "Abgeschlossen",
+    "Copy job description": "Stellenbeschreibung kopieren",
+    "Choose a job description first.": "Wählen Sie zuerst eine Stellenbeschreibung.",
+    "Attest the profile first.": "Bestätigen Sie zuerst das Profil.",
+    "Only an Admin or Editor can generate a corpus.":
+      "Nur ein Admin oder Editor kann einen Korpus erzeugen.",
+    "Enter a whole number of records.": "Geben Sie eine ganze Zahl von Datensätzen ein.",
+    "Use at least 700 records, 50 per cell.":
+      "Verwenden Sie mindestens 700 Datensätze, 50 pro Zelle.",
+    "Use at most 10,000 records.": "Verwenden Sie höchstens 10.000 Datensätze.",
+    "Use at most 10,000 characters.": "Verwenden Sie höchstens 10.000 Zeichen.",
+    "The attested profile does not allow generation.":
+      "Das bestätigte Profil erlaubt keine Erzeugung.",
+    "Generation is not available on this deployment. Contact VerifyWise.":
+      "Die Erzeugung ist in dieser Bereitstellung nicht verfügbar. Wenden Sie sich an VerifyWise.",
+    "The corpus may not exercise your configuration well":
+      "Der Korpus prüft Ihre Konfiguration möglicherweise nicht gut",
+    "Your platform's criteria are close to the ones the corpus is built against":
+      "Die Kriterien Ihrer Plattform liegen nahe an denen, auf denen der Korpus beruht",
+    "Expected criteria not found:": "Erwartete Kriterien nicht gefunden:",
+    "Your criteria the corpus does not cover:": "Ihre Kriterien, die der Korpus nicht abdeckt:",
     "Include at least one letter or digit.":
       "Geben Sie mindestens einen Buchstaben oder eine Ziffer an.",
     "Not recorded": "Nicht erfasst",
@@ -20028,6 +20071,49 @@ export const translations: Record<string, Record<string, string>> = {
     "The stance names it. Runs on different job descriptions are not joined in the trend.":
       "La prise de position la mentionne. Les exécutions portant sur des descriptions de poste différentes ne sont pas reliées dans la tendance.",
     "Use at most 64 characters.": "Utilisez au maximum 64 caractères.",
+    "Between 700 and 10,000. Rounded down so every cell holds the same mix.":
+      "Entre 700 et 10 000. Arrondi à l'inférieur pour que chaque cellule ait la même répartition.",
+    "Choose the role to test. Run the same job description through your own platform.":
+      "Choisissez le poste à tester. Passez la même description de poste dans votre propre plateforme.",
+    "Compare criteria": "Comparer les critères",
+    "Corpora": "Corpus",
+    "Criteria comparison": "Comparaison des critères",
+    "Criteria your platform generated": "Critères générés par votre plateforme",
+    "Generate corpus": "Générer le corpus",
+    "Models observed": "Modèles observés",
+    "No corpus has been generated yet.": "Aucun corpus n'a encore été généré.",
+    "No criteria were found in the text. Put one criterion on each line.":
+      "Aucun critère n'a été trouvé dans le texte. Mettez un critère par ligne.",
+    "Number of records": "Nombre d'enregistrements",
+    "One criterion per line": "Un critère par ligne",
+    "Paste the criteria your platform produced from this job description. Optional.":
+      "Collez les critères que votre plateforme a produits à partir de cette description de poste. Facultatif.",
+    "Release findings": "Constats de publication",
+    "Resume": "Reprendre",
+    "The result describes your tool on that role, not across all of your hiring.":
+      "Le résultat décrit votre outil pour ce poste, et non pour l'ensemble de vos recrutements.",
+    "Generating": "Génération en cours",
+    "Complete": "Terminé",
+    "Copy job description": "Copier la description de poste",
+    "Choose a job description first.": "Choisissez d'abord une description de poste.",
+    "Attest the profile first.": "Attestez d'abord le profil.",
+    "Only an Admin or Editor can generate a corpus.":
+      "Seul un Admin ou un Editor peut générer un corpus.",
+    "Enter a whole number of records.": "Saisissez un nombre entier d'enregistrements.",
+    "Use at least 700 records, 50 per cell.":
+      "Utilisez au moins 700 enregistrements, 50 par cellule.",
+    "Use at most 10,000 records.": "Utilisez au plus 10 000 enregistrements.",
+    "Use at most 10,000 characters.": "Utilisez au plus 10 000 caractères.",
+    "The attested profile does not allow generation.":
+      "Le profil attesté ne permet pas la génération.",
+    "Generation is not available on this deployment. Contact VerifyWise.":
+      "La génération n'est pas disponible sur ce déploiement. Contactez VerifyWise.",
+    "The corpus may not exercise your configuration well":
+      "Le corpus risque de mal mettre à l'épreuve votre configuration",
+    "Your platform's criteria are close to the ones the corpus is built against":
+      "Les critères de votre plateforme sont proches de ceux sur lesquels le corpus est construit",
+    "Expected criteria not found:": "Critères attendus introuvables :",
+    "Your criteria the corpus does not cover:": "Vos critères que le corpus ne couvre pas :",
     "Include at least one letter or digit.": "Incluez au moins une lettre ou un chiffre.",
     "Not recorded": "Non enregistré",
     "Browse independently assessed AI applications and track the ones that matter to your organization.":
@@ -30680,6 +30766,48 @@ export const translations: Record<string, Record<string, string>> = {
     "The stance names it. Runs on different job descriptions are not joined in the trend.":
       "La posición la menciona. Las ejecuciones con descripciones de puesto distintas no se unen en la tendencia.",
     "Use at most 64 characters.": "Use como máximo 64 caracteres.",
+    "Between 700 and 10,000. Rounded down so every cell holds the same mix.":
+      "Entre 700 y 10.000. Se redondea hacia abajo para que cada celda tenga la misma mezcla.",
+    "Choose the role to test. Run the same job description through your own platform.":
+      "Elija el puesto que va a probar. Pase la misma descripción del puesto por su propia plataforma.",
+    "Compare criteria": "Comparar criterios",
+    "Corpora": "Corpus",
+    "Criteria comparison": "Comparación de criterios",
+    "Criteria your platform generated": "Criterios generados por su plataforma",
+    "Generate corpus": "Generar corpus",
+    "Models observed": "Modelos observados",
+    "No corpus has been generated yet.": "Todavía no se ha generado ningún corpus.",
+    "No criteria were found in the text. Put one criterion on each line.":
+      "No se encontraron criterios en el texto. Ponga un criterio en cada línea.",
+    "Number of records": "Número de registros",
+    "One criterion per line": "Un criterio por línea",
+    "Paste the criteria your platform produced from this job description. Optional.":
+      "Pegue los criterios que su plataforma produjo a partir de esta descripción del puesto. Opcional.",
+    "Release findings": "Hallazgos de publicación",
+    "Resume": "Reanudar",
+    "The result describes your tool on that role, not across all of your hiring.":
+      "El resultado describe su herramienta en ese puesto, no en toda su contratación.",
+    "Generating": "Generando",
+    "Complete": "Completado",
+    "Copy job description": "Copiar descripción del puesto",
+    "Choose a job description first.": "Elija primero una descripción del puesto.",
+    "Attest the profile first.": "Atestigüe primero el perfil.",
+    "Only an Admin or Editor can generate a corpus.":
+      "Solo un Admin o Editor puede generar un corpus.",
+    "Enter a whole number of records.": "Introduzca un número entero de registros.",
+    "Use at least 700 records, 50 per cell.": "Use al menos 700 registros, 50 por celda.",
+    "Use at most 10,000 records.": "Use como máximo 10.000 registros.",
+    "Use at most 10,000 characters.": "Use como máximo 10.000 caracteres.",
+    "The attested profile does not allow generation.":
+      "El perfil atestiguado no permite la generación.",
+    "Generation is not available on this deployment. Contact VerifyWise.":
+      "La generación no está disponible en esta implementación. Póngase en contacto con VerifyWise.",
+    "The corpus may not exercise your configuration well":
+      "Es posible que el corpus no ponga bien a prueba su configuración",
+    "Your platform's criteria are close to the ones the corpus is built against":
+      "Los criterios de su plataforma son cercanos a aquellos con los que se construyó el corpus",
+    "Expected criteria not found:": "Criterios esperados no encontrados:",
+    "Your criteria the corpus does not cover:": "Sus criterios que el corpus no cubre:",
     "Include at least one letter or digit.": "Incluya al menos una letra o un dígito.",
     "Not recorded": "No registrado",
     "Browse independently assessed AI applications and track the ones that matter to your organization.":

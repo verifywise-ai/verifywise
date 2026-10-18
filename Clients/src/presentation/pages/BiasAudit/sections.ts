@@ -3,7 +3,7 @@
  * `/bias-audit/:projectId/:section`, so the module sidebar and the page read
  * the same URL.
  */
-export const BIAS_AUDIT_SECTIONS = ["profile", "runs", "scope"] as const;
+export const BIAS_AUDIT_SECTIONS = ["profile", "generate", "runs", "scope"] as const;
 
 export type BiasAuditSection = (typeof BIAS_AUDIT_SECTIONS)[number];
 

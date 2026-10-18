@@ -13,7 +13,12 @@ import { renderWithProviders } from "../../../../test/renderWithProviders";
 import BiasAuditPage from "..";
 import { BIAS_AUDIT_SECTIONS, sectionPath } from "../sections";
 
-const LABELS = { profile: "Profile", runs: "Runs", scope: "Scope determination" } as const;
+const LABELS = {
+  profile: "Profile",
+  generate: "Generate",
+  runs: "Runs",
+  scope: "Scope determination",
+} as const;
 
 const SectionLinks = () => {
   const navigate = useNavigate();

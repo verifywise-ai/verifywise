@@ -1,15 +1,15 @@
 /**
  * @fileoverview LL 144 Bias Audit Sidebar Component
  *
- * Sidebar navigation for the LL 144 bias audit module: the profile, runs and
- * scope determinations of the use case the page shows.
+ * Sidebar navigation for the LL 144 bias audit module: the profile, corpus
+ * generation, runs and scope determinations of the use case the page shows.
  * Follows the SidebarShell pattern established by AIDetectionSidebar.
  *
  * @module pages/BiasAudit/BiasAuditSidebar
  */
 
 import { useCallback } from "react";
-import { ClipboardList, Play, FileText } from "lucide-react";
+import { ClipboardList, Database, Play, FileText } from "lucide-react";
 import SidebarShell, { SidebarMenuItem } from "../../components/Sidebar/SidebarShell";
 import { useUserGuideSidebarContext } from "../../components/UserGuide/UserGuideSidebarContext";
 import type { BiasAuditSection } from "./sections";
@@ -39,6 +39,13 @@ export default function BiasAuditSidebar({
       label: "Profile",
       value: "profile",
       icon: <ClipboardList size={16} strokeWidth={1.5} />,
+      disabled,
+    },
+    {
+      id: "generate",
+      label: "Generate",
+      value: "generate",
+      icon: <Database size={16} strokeWidth={1.5} />,
       disabled,
     },
     {

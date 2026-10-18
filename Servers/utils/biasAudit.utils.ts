@@ -1415,6 +1415,9 @@ export interface CorpusSummaryRow {
   planned_count: number;
   record_count: number | null;
   model_pinned: string;
+  models_observed_json: Record<string, number> | null;
+  cell_sizes_json: Record<string, number> | null;
+  release_findings_json: unknown;
   status: CorpusStatus;
   failure_code: string | null;
   corpus_sha256: string | null;
@@ -1433,7 +1436,8 @@ export async function listCorporaQuery(
   return (await sequelize.query(
     `SELECT id, project_id, profile_id, profile_version, job_description_key,
             artifact_kind, knockout, requested_count, planned_count, record_count,
-            model_pinned, status, failure_code, corpus_sha256, manifest_sha256,
+            model_pinned, models_observed_json, cell_sizes_json, release_findings_json,
+            status, failure_code, corpus_sha256, manifest_sha256,
             heartbeat_at, generated_by, generated_at, completed_at
        FROM bias_audit_corpora
       WHERE project_id = :project_id AND organization_id = :organization_id
