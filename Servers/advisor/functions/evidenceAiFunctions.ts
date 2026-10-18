@@ -4,6 +4,7 @@ import { getEvidenceGapsQuery, upsertAnalysisQuery } from "../../utils/evidenceA
 import { parseDocument, isSupportedMimeType } from "../parsers";
 import { analyzeEvidence } from "../evidenceAnalyzer/analyzer.service";
 import { getLLMKeysWithKeyQuery, getLLMProviderUrl } from "../../utils/llmKey.utils";
+import { VISIBLE_FILE_REPLACEMENTS, VISIBLE_FILE_SQL } from "../../utils/files/visibleFiles";
 import type { LLMProvider } from "../../domain.layer/interfaces/i.llmKey";
 
 export interface AnalyzeDocumentParams {
@@ -51,11 +52,14 @@ const analyzeDocument = async (
   try {
     const { file_id, document_text } = params;
 
+    // A bias audit stance PDF is served only by the stance endpoint, so here
+    // it answers exactly as a missing file does.
     const [fileRows] = await sequelize.query(
       `SELECT id, filename, type, content, uploaded_time
          FROM files
-        WHERE id = :fileId AND organization_id = :organizationId`,
-      { replacements: { fileId: file_id, organizationId } },
+        WHERE id = :fileId AND organization_id = :organizationId
+          AND ${VISIBLE_FILE_SQL("files")}`,
+      { replacements: { fileId: file_id, organizationId, ...VISIBLE_FILE_REPLACEMENTS } },
     );
     const file = (fileRows as any[])[0];
     if (!file) {

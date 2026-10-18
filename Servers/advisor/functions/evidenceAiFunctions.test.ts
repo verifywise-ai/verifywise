@@ -38,6 +38,11 @@ jest.mock("../../utils/llmKey.utils", () => ({
 }));
 
 import { availableEvidenceAiTools } from "./evidenceAiFunctions";
+import {
+  fakeFilesQuery,
+  stanceRow,
+  type FakeFileRow,
+} from "../../utils/files/__tests__/helpers/fakeFilesTable";
 import { getEvidenceGapsQuery, upsertAnalysisQuery } from "../../utils/evidenceAi.utils";
 import { analyzeEvidence } from "../evidenceAnalyzer/analyzer.service";
 import { parseDocument } from "../parsers";
@@ -199,5 +204,21 @@ describe("analyze_document (#4913)", () => {
 
     await expect(analyzeDocument({ file_id: 99 }, 1)).rejects.toThrow(/not found/);
     expect(analyzeEvidence).not.toHaveBeenCalled();
+  });
+
+  it("answers a bias audit stance PDF exactly as a missing file", async () => {
+    const run = async (table: FakeFileRow[]) => {
+      mockQuery.mockImplementation(fakeFilesQuery(table) as any);
+      return analyzeDocument({ file_id: 2 }, 1).catch((e: Error) => e.message);
+    };
+
+    const stance = await run([stanceRow()]);
+    const missing = await run([]);
+
+    expect(stance).toBe(missing);
+    expect(stance).toMatch(/not found/);
+    expect(parseDocument).not.toHaveBeenCalled();
+    expect(analyzeEvidence).not.toHaveBeenCalled();
+    expect(upsertAnalysisQuery).not.toHaveBeenCalled();
   });
 });
