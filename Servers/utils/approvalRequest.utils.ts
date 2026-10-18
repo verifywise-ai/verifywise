@@ -13,6 +13,7 @@ import {
 } from "../domain.layer/enums/approval-workflow.enum";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 import { logStructured } from "./logger/fileLogger";
+import { VISIBLE_FILE_REPLACEMENTS, VISIBLE_FILE_SQL } from "./files/visibleFiles";
 import { withLegacyHighRiskRole } from "./highRiskRoles.utils";
 import { executeAiAction } from "../advisor/aiActions";
 
@@ -536,6 +537,7 @@ export const getApprovalRequestByIdQuery = async (
      FROM approval_requests ar
      LEFT JOIN projects p ON ar.entity_id = p.id AND ar.entity_type = 'use_case' AND ar.organization_id = p.organization_id
      LEFT JOIN files f ON ar.entity_id = f.id AND ar.entity_type = 'file' AND ar.organization_id = f.organization_id
+                       AND ${VISIBLE_FILE_SQL("f")}
      LEFT JOIN ai_action_approvals aia ON (ar.entity_data->>'ai_approval_id')::uuid = aia.id AND ar.entity_type = 'ai_action'
      LEFT JOIN risks r ON ar.entity_id = r.id AND ar.entity_type = 'risk' AND ar.organization_id = r.organization_id
      LEFT JOIN vendors v ON ar.entity_id = v.id AND ar.entity_type = 'vendor' AND ar.organization_id = v.organization_id
@@ -548,7 +550,7 @@ export const getApprovalRequestByIdQuery = async (
      WHERE ar.organization_id = :organizationId
        AND ar.id = :requestId`,
     {
-      replacements: { organizationId, requestId },
+      replacements: { organizationId, requestId, ...VISIBLE_FILE_REPLACEMENTS },
       type: "SELECT",
       ...(transaction && { transaction }),
     },
@@ -765,9 +767,9 @@ export const processApprovalQuery = async (
       await sequelize.query(
         `UPDATE files
          SET review_status = 'rejected', updated_at = NOW()
-         WHERE organization_id = :organizationId AND id = :entityId`,
+         WHERE organization_id = :organizationId AND id = :fileId AND ${VISIBLE_FILE_SQL("files")}`,
         {
-          replacements: { organizationId, entityId },
+          replacements: { organizationId, fileId: entityId, ...VISIBLE_FILE_REPLACEMENTS },
           transaction,
         },
       );
@@ -898,9 +900,9 @@ export const processApprovalQuery = async (
         await sequelize.query(
           `UPDATE files
            SET review_status = 'approved', updated_at = NOW()
-           WHERE organization_id = :organizationId AND id = :entityId`,
+           WHERE organization_id = :organizationId AND id = :fileId AND ${VISIBLE_FILE_SQL("files")}`,
           {
-            replacements: { organizationId, entityId },
+            replacements: { organizationId, fileId: entityId, ...VISIBLE_FILE_REPLACEMENTS },
             transaction,
           },
         );
