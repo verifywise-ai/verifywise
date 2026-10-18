@@ -9,6 +9,7 @@ const utils = {
   listStancesForRunQuery: jest.fn(),
   confirmRunDerivedBasisQuery: jest.fn(),
   userCanAccessProjectQuery: jest.fn(),
+  getCorpusQuery: jest.fn(),
 };
 jest.mock("../../utils/biasAudit.utils", () => utils);
 jest.mock("../../database/db", () => ({
@@ -22,8 +23,16 @@ import {
   getRunView,
   getTrendSeries,
   listRuns,
+  LL144_CONFIG,
   mayExportStoredRun,
 } from "./runService";
+import { LL144_RACE, LL144_SEX } from "./generation/allocation";
+import { JOB_DESCRIPTIONS } from "../../structures/NYC-Local-Law-144/job-descriptions";
+import {
+  ConflictException,
+  NotFoundException,
+  ValidationException,
+} from "../../domain.layer/exceptions/custom.exception";
 
 const ans = (k: string, v: string | null, extra: Record<string, unknown> = {}) => ({
   question_key: k,
@@ -428,6 +437,8 @@ describe("run reads", () => {
           questionSetVersion: 1,
           jobDescriptionKey: null,
           metric: "selection_rate",
+          corpusId: null,
+          corpusJobDescriptionSha256: null,
           points: [
             {
               runId: 1,
@@ -444,6 +455,8 @@ describe("run reads", () => {
           questionSetVersion: 1,
           jobDescriptionKey: null,
           metric: "selection_rate",
+          corpusId: null,
+          corpusJobDescriptionSha256: null,
           points: [
             {
               runId: 2,
@@ -581,5 +594,138 @@ describe("project-member access", () => {
     utils.getRunQuery.mockResolvedValue(null);
     await expect(getRunView(11, 42, editor)).rejects.toMatchObject({ statusCode: 404 });
     expect(utils.userCanAccessProjectQuery).not.toHaveBeenCalled();
+  });
+});
+
+describe("createRun from a generated corpus", () => {
+  const JD = JOB_DESCRIPTIONS["commercial-ae"];
+  const TIERS = JD.tiers.map((t) => t.key);
+  // Every sex and race/ethnicity cell, every tier, so the engine sees all groups.
+  const MANIFEST = LL144_SEX.flatMap((sex) =>
+    LL144_RACE.flatMap((raceEthnicity) =>
+      TIERS.flatMap((tierKey) => [0, 1].map((k) => ({ sex, raceEthnicity, tierKey, k }))),
+    ),
+  ).map((m, i) => ({
+    candidateId: `C${String(i + 1).padStart(5, "0")}`,
+    sex: m.sex,
+    raceEthnicity: m.raceEthnicity,
+    tierKey: m.tierKey,
+    modelName: "m1",
+    promptHash: "h",
+  }));
+  const corpusRow = (over: Record<string, unknown> = {}) => ({
+    id: 3,
+    project_id: 7,
+    organization_id: 42,
+    status: "complete",
+    job_description_key: "commercial-ae",
+    manifest_json: MANIFEST,
+    ...over,
+  });
+  // Selection rises with the tier, so the tiers separate.
+  const scored = (ids = MANIFEST.map((m) => m.candidateId), pick?: (tier: string) => boolean) => {
+    const rows = ["id,outcome"];
+    for (const id of ids) {
+      const m = MANIFEST.find((x) => x.candidateId === id);
+      const tierIndex = m ? TIERS.indexOf(m.tierKey) : 0;
+      const selected = pick && m ? pick(m.tierKey) : tierIndex >= 2;
+      rows.push(`${id},${selected ? 1 : 0}`);
+    }
+    return rows.join("\n") + "\n";
+  };
+  const corpusRun = (over: Record<string, unknown> = {}) =>
+    run({
+      corpusId: 3,
+      mapping: { candidate_id: "id", selected: "outcome" },
+      csv: scored(),
+      ...over,
+    });
+
+  beforeEach(() => utils.getCorpusQuery.mockResolvedValue(corpusRow()));
+
+  it("uses the allocation's categories as the run configuration's groups", () => {
+    expect(LL144_CONFIG.categories.sex.groups).toEqual([...LL144_SEX]);
+    expect(LL144_CONFIG.categories.race_ethnicity.groups).toEqual([...LL144_RACE]);
+  });
+
+  it("joins the scored file to the manifest, stores the corpus and the fixed role title", async () => {
+    const out = await corpusRun();
+    expect(utils.getCorpusQuery).toHaveBeenCalledWith(3, 42);
+    expect(stored().corpusId).toBe(3);
+    expect(stored().jobDescriptionKey).toBe(JD.roleTitle);
+    expect(stored().rowCount).toBe(MANIFEST.length);
+    expect(out.outcome.result).not.toBeNull();
+    const sexTable = out.outcome.result!.tables.find((t) => t.categoryKey === "sex")!;
+    expect(sexTable.rows.map((r) => r.categoryName).sort()).toEqual([...LL144_SEX].sort());
+  });
+
+  it("refuses a category key in a corpus run's mapping", async () => {
+    await expect(
+      corpusRun({ mapping: { candidate_id: "id", selected: "outcome", sex: "id" } }),
+    ).rejects.toThrow(/corpus supplies sex and race\/ethnicity/);
+    expect(utils.createRunQuery).not.toHaveBeenCalled();
+  });
+
+  it("asks for the candidate ID column", async () => {
+    await expect(corpusRun({ mapping: { selected: "outcome" } })).rejects.toBeInstanceOf(
+      ValidationException,
+    );
+  });
+
+  it("refuses a typed title for a different job, and accepts a null or collated-equal one", async () => {
+    await expect(corpusRun({ jobDescriptionKey: "Warehouse picker" })).rejects.toBeInstanceOf(
+      ValidationException,
+    );
+    await corpusRun({ jobDescriptionKey: JD.roleTitle.toUpperCase() });
+    expect(stored().jobDescriptionKey).toBe(JD.roleTitle);
+    utils.createRunQuery.mockClear();
+    await corpusRun({ jobDescriptionKey: null });
+    expect(stored().jobDescriptionKey).toBe(JD.roleTitle);
+  });
+
+  it("reports another project's or organization's corpus as not found", async () => {
+    utils.getCorpusQuery.mockResolvedValue(corpusRow({ project_id: 8 }));
+    await expect(corpusRun()).rejects.toBeInstanceOf(NotFoundException);
+    utils.getCorpusQuery.mockResolvedValue(null);
+    await expect(corpusRun()).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it.each(["running", "blocked", "failed"])("refuses a %s corpus", async (status) => {
+    utils.getCorpusQuery.mockResolvedValue(corpusRow({ status }));
+    await expect(corpusRun()).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it.each([
+    [
+      "unknown",
+      () => scored([...MANIFEST.map((m) => m.candidateId), "C99999"]),
+      /not in this corpus/,
+    ],
+    [
+      "duplicate",
+      () => scored([...MANIFEST.map((m) => m.candidateId), MANIFEST[0].candidateId]),
+      /more than once/,
+    ],
+    ["missing", () => scored(MANIFEST.slice(2).map((m) => m.candidateId)), /no row in the file/],
+    ["blank", () => scored(["", ...MANIFEST.map((m) => m.candidateId)]), /blank candidate_id/],
+  ])("refuses a file with a %s id and stores no run", async (_n, csv, message) => {
+    await expect(corpusRun({ csv: csv() })).rejects.toThrow(message);
+    expect(utils.createRunQuery).not.toHaveBeenCalled();
+  });
+
+  it("stores a note when adjacent tiers do not separate", async () => {
+    await corpusRun({ csv: scored(undefined, () => true) });
+    const codes = stored().gateFindingsJson.map((f: { code: string }) => f.code);
+    expect(codes).toContain("tier_does_not_separate");
+    const note = stored().gateFindingsJson.find(
+      (f: { code: string }) => f.code === "tier_does_not_separate",
+    );
+    expect(note.severity).toBe("note");
+  });
+
+  it("leaves an uploaded run without a corpus", async () => {
+    await run();
+    expect(utils.getCorpusQuery).not.toHaveBeenCalled();
+    expect(stored().corpusId).toBeNull();
   });
 });

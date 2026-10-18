@@ -68,6 +68,7 @@ export const createAedtRun = (
   file: File,
   mapping: Record<string, string>,
   jobDescription: string,
+  corpusId: number | null = null,
 ) =>
   aedtBiasAuditService.createRun({
     projectId,
@@ -75,6 +76,7 @@ export const createAedtRun = (
     file,
     mapping,
     jobDescription,
+    corpusId,
   });
 
 export const listAedtRuns = (projectId: number) =>

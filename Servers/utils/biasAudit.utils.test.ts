@@ -960,3 +960,15 @@ describe("corpora and the record log", () => {
     await expect(listLatestValidRecordsPageQuery(3, 42, "", 5001)).rejects.toThrow(/limit/);
   });
 });
+
+describe("trend rows and their corpus", () => {
+  it("joins each run's corpus within the organization for its job description hash", async () => {
+    mockQuery.mockResolvedValueOnce([]);
+    await listTrendRunsQuery(7, 12, 42);
+    const [sql] = mockQuery.mock.calls[0];
+    expect(sql).toMatch(/r\.corpus_id, c\.job_description_sha256 AS corpus_job_description_sha256/);
+    expect(sql).toMatch(
+      /LEFT JOIN bias_audit_corpora c ON c\.id = r\.corpus_id\s+AND c\.organization_id = :organization_id/,
+    );
+  });
+});

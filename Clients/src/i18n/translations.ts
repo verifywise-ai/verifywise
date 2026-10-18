@@ -9340,6 +9340,9 @@ export const translations: Record<string, Record<string, string>> = {
       "Die Stellenbeschreibung oder der Plan hat sich geändert, daher kann dieser Korpus nicht fertiggestellt werden. Erzeugen Sie einen neuen.",
     "This corpus cannot be finished. Generate a new one.":
       "Dieser Korpus kann nicht fertiggestellt werden. Erzeugen Sie einen neuen.",
+    "Candidate ID column": "Spalte mit der Kandidaten-ID",
+    "Data source": "Datenquelle",
+    "Your own data": "Ihre eigenen Daten",
     "Include at least one letter or digit.":
       "Geben Sie mindestens einen Buchstaben oder eine Ziffer an.",
     "Not recorded": "Nicht erfasst",
@@ -20140,6 +20143,9 @@ export const translations: Record<string, Record<string, string>> = {
       "La description de poste ou le plan a changé, ce corpus ne peut donc pas être terminé. Générez-en un nouveau.",
     "This corpus cannot be finished. Generate a new one.":
       "Ce corpus ne peut pas être terminé. Générez-en un nouveau.",
+    "Candidate ID column": "Colonne de l'identifiant du candidat",
+    "Data source": "Source des données",
+    "Your own data": "Vos propres données",
     "Include at least one letter or digit.": "Incluez au moins une lettre ou un chiffre.",
     "Not recorded": "Non enregistré",
     "Browse independently assessed AI applications and track the ones that matter to your organization.":
@@ -30847,6 +30853,9 @@ export const translations: Record<string, Record<string, string>> = {
       "La descripción del puesto o el plan cambió, así que este corpus no se puede terminar. Genere uno nuevo.",
     "This corpus cannot be finished. Generate a new one.":
       "Este corpus no se puede terminar. Genere uno nuevo.",
+    "Candidate ID column": "Columna del ID del candidato",
+    "Data source": "Origen de los datos",
+    "Your own data": "Sus propios datos",
     "Include at least one letter or digit.": "Incluya al menos una letra o un dígito.",
     "Not recorded": "No registrado",
     "Browse independently assessed AI applications and track the ones that matter to your organization.":

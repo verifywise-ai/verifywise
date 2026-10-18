@@ -1,11 +1,15 @@
-import { useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Alert, Box, Stack, Typography } from "@mui/material";
 import { Upload } from "lucide-react";
 import Select from "../../components/Inputs/Select";
 import Field from "../../components/Inputs/Field";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { palette } from "../../themes/palette";
-import { useCreateAedtRun } from "../../../application/hooks/useAedtBiasAudit";
+import {
+  useAedtCorpora,
+  useAedtJobDescriptions,
+  useCreateAedtRun,
+} from "../../../application/hooks/useAedtBiasAudit";
 import {
   describeAedtError,
   type AedtRunMetric,
@@ -19,6 +23,8 @@ const MAX_BYTES = 30 * 1024 * 1024;
 /** The server's limit on the job title (`JOB_DESCRIPTION_MAX`, the column's width). */
 const JOB_DESCRIPTION_MAX = 64;
 const UNMAPPED = "";
+/** The data-source value for a file of the customer's own data. */
+const UPLOADED = "uploaded";
 
 interface RunUploadProps {
   projectId: number;
@@ -47,21 +53,35 @@ const RunUpload = ({ projectId, metric, canEdit, blockedReason, onCreated }: Run
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [fileError, setFileError] = useState<string | null>(null);
   const [jobDescription, setJobDescription] = useState("");
+  const [source, setSource] = useState(UPLOADED);
   // Each pick bumps this, so a slow header read for an earlier file cannot
   // overwrite the state of a later one.
   const pickRef = useRef(0);
   const createRun = useCreateAedtRun(projectId);
+  const corporaQuery = useAedtCorpora(projectId);
+  const jdQuery = useAedtJobDescriptions();
+  // Only a complete corpus has a manifest to join a scored file to.
+  const completeCorpora = (corporaQuery.data ?? []).filter((c) => c.status === "complete");
+  const corpus = completeCorpora.find((c) => String(c.id) === source) ?? null;
+  const corpusRoleTitle = corpus
+    ? (jdQuery.data?.jobDescriptions.find((jd) => jd.key === corpus.job_description_key)
+        ?.roleTitle ?? corpus.job_description_key)
+    : null;
 
-  const fields = useMemo(
-    () => [
-      { key: "sex", label: "Sex column" },
-      { key: "race_ethnicity", label: "Race or ethnicity column" },
+  const fields = (() => {
+    const outcome =
       metric === "scoring_rate"
         ? { key: "score", label: "Score column" }
-        : { key: "selected", label: "Selected column (1, 0, yes, no, true, false)" },
-    ],
-    [metric],
-  );
+        : { key: "selected", label: "Selected column (1, 0, yes, no, true, false)" };
+    // A scored corpus carries no demographics: the corpus manifest supplies them.
+    return corpus
+      ? [{ key: "candidate_id", label: "Candidate ID column" }, outcome]
+      : [
+          { key: "sex", label: "Sex column" },
+          { key: "race_ethnicity", label: "Race or ethnicity column" },
+          outcome,
+        ];
+  })();
 
   const handleFile = async (picked: File | undefined) => {
     const pick = ++pickRef.current;
@@ -114,7 +134,8 @@ const RunUpload = ({ projectId, metric, canEdit, blockedReason, onCreated }: Run
     runReason !== null ||
     !file ||
     !mapping[outcomeKey] ||
-    jobDescriptionError !== undefined ||
+    (corpus !== null && !mapping.candidate_id) ||
+    (corpus === null && jobDescriptionError !== undefined) ||
     createRun.isPending;
 
   const handleRun = () => {
@@ -122,8 +143,11 @@ const RunUpload = ({ projectId, metric, canEdit, blockedReason, onCreated }: Run
     const sent: Record<string, string> = {};
     for (const f of fields) if (mapping[f.key]) sent[f.key] = mapping[f.key];
     createRun.mutate(
-      // The checked form, so the server receives exactly what passed here.
-      { file, mapping: sent, jobDescription: trimmedJobDescription },
+      // The checked form, so the server receives exactly what passed here. A
+      // corpus run sends no title: the corpus's fixed job description is it.
+      corpus
+        ? { file, mapping: sent, jobDescription: "", corpusId: corpus.id }
+        : { file, mapping: sent, jobDescription: trimmedJobDescription },
       { onSuccess: (r) => onCreated(r.runId) },
     );
   };
@@ -151,6 +175,28 @@ const RunUpload = ({ projectId, metric, canEdit, blockedReason, onCreated }: Run
               </Typography>
             )}
           </Box>
+
+          {completeCorpora.length > 0 && (
+            <Select
+              id="aedt-run-corpus"
+              dataTestId="aedt-run-corpus"
+              label="Data source"
+              value={source}
+              items={[
+                { _id: UPLOADED, name: "Your own data" },
+                ...completeCorpora.map((c) => ({
+                  _id: String(c.id),
+                  name: `Scored from generated corpus #${c.id}`,
+                })),
+              ]}
+              onChange={(e) => {
+                setSource(String(e.target.value));
+                setMapping({});
+                createRun.reset();
+              }}
+              sx={{ width: "100%", maxWidth: "420px" }}
+            />
+          )}
 
           <Stack direction="row" alignItems="center" gap="12px" flexWrap="wrap">
             <input
@@ -200,17 +246,26 @@ const RunUpload = ({ projectId, metric, canEdit, blockedReason, onCreated }: Run
                   sx={{ width: "100%", maxWidth: "420px" }}
                 />
               ))}
-              <Field
-                id="aedt-job-description"
-                label="Job description tested"
-                isOptional
-                placeholder="For example, Account executive"
-                value={jobDescription}
-                onChange={(e) => setJobDescription(e.target.value)}
-                error={jobDescriptionError}
-                helperText="The stance names it. Runs on different job descriptions are not joined in the trend."
-                sx={{ width: "100%", maxWidth: "420px" }}
-              />
+              {corpus ? (
+                <Typography
+                  sx={{ fontSize: 13, color: palette.text.secondary }}
+                  data-testid="aedt-run-corpus-job-description"
+                >
+                  {`Job description: ${corpusRoleTitle} (fixed)`}
+                </Typography>
+              ) : (
+                <Field
+                  id="aedt-job-description"
+                  label="Job description tested"
+                  isOptional
+                  placeholder="For example, Account executive"
+                  value={jobDescription}
+                  onChange={(e) => setJobDescription(e.target.value)}
+                  error={jobDescriptionError}
+                  helperText="The stance names it. Runs on different job descriptions are not joined in the trend."
+                  sx={{ width: "100%", maxWidth: "420px" }}
+                />
+              )}
             </Stack>
           )}
 

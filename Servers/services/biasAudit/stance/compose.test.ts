@@ -144,6 +144,7 @@ const base: ComposeStanceArgs = {
   },
   attestation: { user: "A. Admin", date: "2026-10-14" },
   jobDescriptionKey: "commercial-ae",
+  corpus: null,
 };
 
 const section = (s: ReturnType<typeof composeStance>, key: string) =>
@@ -646,5 +647,87 @@ describe("impact ratios in the results", () => {
     const body = section(composeStance({ ...base, result: close }), "results").body;
     expect(body).toContain("impact ratio 0.79 (below the 0.80 convention)");
     expect(body).not.toContain("impact ratio 0.80");
+  });
+});
+
+describe("a stance scored from a generated corpus", () => {
+  const corpus = {
+    corpusId: 3,
+    roleTitle: "Account Executive",
+    recordCount: 700,
+    modelPinned: "pinned-model-1",
+    modelsObserved: { "pinned-model-1": 700 },
+    cellSizes: { "Male|White": 50, "Female|Asian": 50 },
+    criteria: { verdict: "close" as const, unmatchedExpected: [] },
+    knockout: "no" as const,
+    nameMethod: "Names come from the documented name tables.",
+  };
+  const tested = (over: Partial<typeof corpus> = {}) =>
+    section(
+      composeStance({
+        ...base,
+        jobDescriptionKey: "Account Executive",
+        corpus: { ...corpus, ...over },
+      }),
+      "what_was_tested",
+    );
+
+  it("names the VerifyWise fixed job description, not a customer title", () => {
+    const s = tested();
+    expect(s.body).toContain(
+      "Job description tested: the VerifyWise fixed job description for Account Executive.",
+    );
+    expect(s.body).not.toContain("Job description tested: Account Executive.");
+    expect(s.customerText ?? []).toEqual([]);
+  });
+
+  it("adds no blank job description field", () => {
+    const fields = composeStance({ ...base, jobDescriptionKey: null, corpus }).blankFields.map(
+      (f) => f.field,
+    );
+    expect(fields).not.toContain("job_description");
+  });
+
+  it("states the criteria outcome for each verdict", () => {
+    expect(tested().body).toMatch(/matched the expected set/);
+    const divergent = tested({
+      criteria: { verdict: "divergent", unmatchedExpected: ["Sales cycle length", "Deal size"] },
+    }).body;
+    expect(divergent).toContain("Expected criteria not matched: Sales cycle length, Deal size.");
+    expect(tested({ criteria: { verdict: "not_supplied", unmatchedExpected: [] } }).body).toContain(
+      "built against expected criteria that were not confirmed against the platform's own output",
+    );
+  });
+
+  it("states the knockout record", () => {
+    expect(tested({ knockout: "yes" }).body).toMatch(
+      /knocked-out candidates are pooled with low scorers in these rates/i,
+    );
+    expect(tested({ knockout: "dont_know" }).body).toMatch(/not established/);
+  });
+
+  it("prints how candidate names were chosen", () => {
+    expect(tested().body).toContain(
+      "How candidate names were chosen: Names come from the documented name tables.",
+    );
+  });
+
+  it("says a corpus from more than one model is not one configuration", () => {
+    expect(tested().body).not.toMatch(/not one configuration/);
+    expect(tested({ modelsObserved: { m1: 690, m2: 10 } }).body).toMatch(/not one configuration/);
+  });
+
+  it("uses no forbidden vocabulary anywhere in the composed stance", () => {
+    const s = composeStance({
+      ...base,
+      corpus: {
+        ...corpus,
+        knockout: "yes",
+        modelsObserved: { m1: 1, m2: 1 },
+        criteria: { verdict: "divergent", unmatchedExpected: ["Deal size"] },
+      },
+    });
+    const text = s.sections.map((x) => x.body).join("\n");
+    expect(findForbidden(text)).toEqual([]);
   });
 });

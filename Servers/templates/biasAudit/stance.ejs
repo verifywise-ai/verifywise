@@ -37,6 +37,12 @@
     <dt>Small-sample exclusion</dt><dd><%= tested.smallSampleExclusion %></dd>
     <dt>Categories tested</dt><dd><%= tested.categories %></dd>
     <dt>Rows in the file</dt><dd><%= tested.rowCount %></dd>
+    <% if (tested.corpus) { %>
+    <dt data-fact="corpus">Generated corpus</dt><dd><%= tested.corpus.corpus %></dd>
+    <dt data-fact="models">Models that produced it</dt><dd><%= tested.corpus.models %></dd>
+    <dt data-fact="cell_sizes">Cell sizes</dt><dd><%= tested.corpus.cellSizes %></dd>
+    <dt data-fact="criteria">Criteria comparison</dt><dd><%= tested.corpus.criteria %></dd>
+    <% } %>
   </dl>
   <% } %>
   <% if (s.key === 'data_relied_on') { %>

@@ -312,6 +312,23 @@ describe("createRun", () => {
     expect(runService.createRun).not.toHaveBeenCalled();
   });
 
+  it("hands the service the corpus id, and null when absent or blank", async () => {
+    svc(runService.createRun).mockResolvedValue({ runId: 11, readiness: {}, outcome: {} });
+    await call(ctrl.createRun, mockReq({ file, body: { ...body, corpusId: "3" } }));
+    expect(svc(runService.createRun).mock.calls[0][0].corpusId).toBe(3);
+    for (const corpusId of [undefined, ""]) {
+      svc(runService.createRun).mockClear();
+      await call(ctrl.createRun, mockReq({ file, body: { ...body, corpusId } }));
+      expect(svc(runService.createRun).mock.calls[0][0].corpusId).toBeNull();
+    }
+  });
+
+  it.each(["0", "-1", "abc", "3.5"])("400s a corpus id of %s", async (corpusId) => {
+    const { status } = await call(ctrl.createRun, mockReq({ file, body: { ...body, corpusId } }));
+    expect(status).toBe(400);
+    expect(runService.createRun).not.toHaveBeenCalled();
+  });
+
   it("hands the service the job description as typed, and null when absent or blank", async () => {
     svc(runService.createRun).mockResolvedValue({ runId: 11, readiness: {}, outcome: {} });
     await call(

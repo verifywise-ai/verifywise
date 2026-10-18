@@ -858,6 +858,7 @@ describe("the rendered scope determination", () => {
     derivedBasis: null,
     attestation: { user: "Grace Admin", date: "2026-10-02" },
     jobDescriptionKey: null,
+    corpus: null,
   });
   const html = renderStanceHtml(doc, null);
   const text = html
@@ -912,5 +913,74 @@ describe("the rendered scope determination", () => {
   it("passes the vocabulary lint and carries the four required sections", () => {
     expect(findForbiddenWords(html)).toEqual([]);
     expect(checkSections(html, ["scope", "party", "open_items", "expiry"]).ok).toBe(true);
+  });
+});
+
+describe("the corpus facts of a corpus stance", () => {
+  const corpusFacts = {
+    corpusId: 3,
+    roleTitle: "Account Executive",
+    recordCount: 700,
+    modelPinned: "m1",
+    modelsObserved: { m1: 700 },
+    cellSizes: { "Male|White": 49, "Female|Asian": 51 },
+    criteria: { verdict: "divergent" as const, unmatchedExpected: ["Deal size"] },
+    knockout: "no" as const,
+    nameMethod: "Documented name tables.",
+  };
+  const withCorpus: StanceEvidence = { ...evidence, corpus: corpusFacts };
+  const testedHtml = (html: string) =>
+    html.slice(
+      html.indexOf('data-key="what_was_tested"'),
+      html.indexOf("</section>", html.indexOf('data-key="what_was_tested"')),
+    );
+
+  it("prints each fact inside What was tested", () => {
+    const html = renderStanceHtml(model, withCorpus);
+    const tested = testedHtml(html);
+    for (const fact of ["corpus", "models", "cell_sizes", "criteria"]) {
+      expect(tested).toContain(`data-fact="${fact}"`);
+    }
+    expect(tested).toContain("#3, 700 synthetic records");
+    expect(tested).toContain("m1 (700)");
+    expect(tested).toContain("smallest 49, largest 51 across 2 cells");
+    expect(tested).toContain("differed from the expected set; not matched: Deal size");
+    expect(checkSections(html, [...REQUIRED_SECTIONS, "readiness"], { corpus: true })).toEqual({
+      missing: [],
+      ok: true,
+    });
+  });
+
+  it("lists the four facts as missing when the corpus rows are absent", () => {
+    const html = renderStanceHtml(model, evidence);
+    expect(html).not.toContain("data-fact=");
+    expect(
+      checkSections(html, [...REQUIRED_SECTIONS, "readiness"], { corpus: true }).missing,
+    ).toEqual([
+      "what_was_tested.corpus.corpus",
+      "what_was_tested.corpus.models",
+      "what_was_tested.corpus.cell_sizes",
+      "what_was_tested.corpus.criteria",
+    ]);
+  });
+
+  it("does not ask an uploaded-data stance for corpus facts", () => {
+    expect(
+      checkSections(renderStanceHtml(model, evidence), [...REQUIRED_SECTIONS, "readiness"]).ok,
+    ).toBe(true);
+  });
+
+  it("carries the corpus through evidenceFromRun", () => {
+    const ev = renderModule.evidenceFromRun(
+      { preset_id: "nyc_ll144", metric: "selection_rate" },
+      ["Sex"],
+      true,
+      corpusFacts,
+    );
+    expect(ev.corpus).toBe(corpusFacts);
+    expect(
+      renderModule.evidenceFromRun({ preset_id: "nyc_ll144", metric: "selection_rate" }, [], true)
+        .corpus,
+    ).toBeNull();
   });
 });

@@ -10,6 +10,7 @@ const utils = {
   getProjectQuery: jest.fn(),
   getStanceDownloadQuery: jest.fn(),
   userCanAccessProjectQuery: jest.fn(),
+  getCorpusQuery: jest.fn(),
 };
 jest.mock("../../utils/biasAudit.utils", () => utils);
 const persistStance = jest.fn();
@@ -519,5 +520,50 @@ describe("getStanceDownload", () => {
     expect(out.content.equals(pdf)).toBe(true);
     expect(out.sha256).toBe(sha);
     expect(out.filename).toBe("bias-audit-stance-run-11-v2.pdf");
+  });
+});
+
+describe("a stance for a run scored from a corpus", () => {
+  const CORPUS = {
+    id: 3,
+    job_description_key: "commercial-ae",
+    record_count: 700,
+    model_pinned: "m1",
+    models_observed_json: { m1: 700 },
+    cell_sizes_json: { "Male|White": 50 },
+    criteria_comparison_json: { verdict: "divergent", unmatchedExpected: ["cycle_length"] },
+    knockout: "yes",
+    name_method: "Documented name tables.",
+  };
+
+  it("loads the corpus and passes its facts to the stance and the evidence", async () => {
+    utils.getRunQuery.mockResolvedValue({
+      ...RUN,
+      corpus_id: 3,
+      job_description_key: "Account Executive",
+    });
+    utils.getCorpusQuery.mockResolvedValue(CORPUS);
+    await generateStance(args);
+    expect(utils.getCorpusQuery).toHaveBeenCalledWith(3, 42);
+    const { model, evidence } = persistStance.mock.calls[0][0];
+    expect(evidence.corpus).toMatchObject({
+      corpusId: 3,
+      recordCount: 700,
+      modelPinned: "m1",
+      knockout: "yes",
+      nameMethod: "Documented name tables.",
+      criteria: { verdict: "divergent" },
+    });
+    // Unmatched criteria are named by their labels, not their keys.
+    expect(evidence.corpus.criteria.unmatchedExpected).not.toContain("cycle_length");
+    expect(evidence.corpus.criteria.unmatchedExpected).toHaveLength(1);
+    const tested = model.sections.find((x: { key: string }) => x.key === "what_was_tested");
+    expect(tested.body).toContain("the VerifyWise fixed job description for");
+  });
+
+  it("passes no corpus for a run without one", async () => {
+    await generateStance(args);
+    expect(utils.getCorpusQuery).not.toHaveBeenCalled();
+    expect(persistStance.mock.calls[0][0].evidence.corpus).toBeNull();
   });
 });

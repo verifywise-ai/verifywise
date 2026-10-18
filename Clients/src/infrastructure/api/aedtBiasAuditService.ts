@@ -421,12 +421,18 @@ class AedtBiasAuditService {
     mapping: Record<string, string>;
     /** The job title tested; omitted when blank, which the server records as not given. */
     jobDescription: string;
+    /**
+     * The generated corpus the file was scored from; null for uploaded data. A
+     * corpus run sends no job title: the corpus's fixed job description is it.
+     */
+    corpusId?: number | null;
   }): Promise<AedtCreateRunResult> {
     const form = new FormData();
     form.append("projectId", String(args.projectId));
     form.append("frameworkId", String(args.frameworkId));
     form.append("mapping", JSON.stringify(args.mapping));
-    if (args.jobDescription.trim() !== "") form.append("jobDescription", args.jobDescription);
+    if (args.corpusId != null) form.append("corpusId", String(args.corpusId));
+    else if (args.jobDescription.trim() !== "") form.append("jobDescription", args.jobDescription);
     form.append("file", args.file);
     // The instance defaults to JSON; this lets the browser set the boundary.
     const res = await CustomAxios.post(

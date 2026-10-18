@@ -356,3 +356,46 @@ describe("dates and ordering", () => {
     expect(series.segments[0].jobDescriptionKey).toBeNull();
   });
 });
+
+describe("the data source", () => {
+  const corpusRun = (id: number, date: string, corpusId: number, sha: string): TrendRun => ({
+    ...run(id, date, 1, 0.9),
+    corpus_id: corpusId,
+    corpus_job_description_sha256: sha,
+  });
+
+  it("breaks between uploaded and generated data with the same job description", () => {
+    const series = buildTrendSeries([
+      run(1, "2026-01-10", 1, 0.95),
+      corpusRun(2, "2026-04-10", 3, "a".repeat(64)),
+    ]);
+    expect(series.segments).toHaveLength(2);
+    expect(series.breaks[0].reasons).toEqual([
+      "the data source changed between uploaded and generated data",
+    ]);
+    expect(series.segments[1]).toMatchObject({
+      corpusId: 3,
+      corpusJobDescriptionSha256: "a".repeat(64),
+    });
+    expect(series.segments[0]).toMatchObject({ corpusId: null, corpusJobDescriptionSha256: null });
+  });
+
+  it("joins corpus runs whose corpora share the fixed job description text", () => {
+    const series = buildTrendSeries([
+      corpusRun(1, "2026-01-10", 3, "a".repeat(64)),
+      corpusRun(2, "2026-04-10", 4, "a".repeat(64)),
+    ]);
+    expect(series.segments).toHaveLength(1);
+    expect(series.breaks).toEqual([]);
+  });
+
+  it("breaks where the fixed job description text differs between corpora", () => {
+    const series = buildTrendSeries([
+      corpusRun(1, "2026-01-10", 3, "a".repeat(64)),
+      corpusRun(2, "2026-04-10", 4, "b".repeat(64)),
+    ]);
+    expect(series.breaks[0].reasons).toEqual([
+      "the fixed job description text changed between corpora",
+    ]);
+  });
+});

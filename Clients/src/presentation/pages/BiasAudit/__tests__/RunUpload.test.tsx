@@ -2,12 +2,27 @@ import { act, fireEvent, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
-const { readHeaders, mutate } = vi.hoisted(() => ({ readHeaders: vi.fn(), mutate: vi.fn() }));
+const { readHeaders, mutate, corpora } = vi.hoisted(() => ({
+  readHeaders: vi.fn(),
+  mutate: vi.fn(),
+  corpora: { list: [] as unknown[] },
+}));
 
 vi.mock("../csvHeaders", () => ({ readCsvHeaders: readHeaders }));
 
 vi.mock("../../../../application/hooks/useAedtBiasAudit", () => ({
   useCreateAedtRun: () => ({ mutate, reset: vi.fn(), isPending: false, error: null }),
+  useAedtCorpora: () => ({ data: corpora.list, isLoading: false, error: null }),
+  useAedtJobDescriptions: () => ({
+    data: {
+      generationAvailable: true,
+      jobDescriptions: [
+        { key: "commercial-ae", roleTitle: "Account Executive", body: "", expectedCriteria: [] },
+      ],
+    },
+    isLoading: false,
+    error: null,
+  }),
 }));
 
 import RunUpload from "../RunUpload";
@@ -32,6 +47,7 @@ describe("RunUpload", () => {
   beforeEach(() => {
     readHeaders.mockReset();
     mutate.mockReset();
+    corpora.list = [];
   });
 
   async function pickAndMapOutcome() {
@@ -109,5 +125,63 @@ describe("RunUpload", () => {
     renderUpload(null);
     expect(screen.getByText(/does not say who applies the cutoff/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /choose csv file/i })).toBeDisabled();
+  });
+
+  describe("a file scored from a generated corpus", () => {
+    const complete = { id: 3, status: "complete", job_description_key: "commercial-ae" };
+
+    async function chooseCorpusAndMap() {
+      corpora.list = [complete, { id: 4, status: "running", job_description_key: "commercial-ae" }];
+      renderUpload();
+      fireEvent.mouseDown(
+        screen.getByTestId("aedt-run-corpus").querySelector('[role="combobox"]')!,
+      );
+      fireEvent.click(
+        await screen.findByRole("option", { name: "Scored from generated corpus #3" }),
+      );
+      expect(screen.queryByRole("option", { name: /corpus #4/ })).toBeNull();
+      readHeaders.mockResolvedValueOnce(["id", "outcome"]);
+      fireEvent.change(screen.getByTestId("aedt-dataset-input"), {
+        target: { files: [csv("scored.csv")] },
+      });
+      await screen.findByText("scored.csv");
+    }
+
+    it("maps only the candidate ID and the outcome, and shows the fixed job description", async () => {
+      await chooseCorpusAndMap();
+      expect(screen.getByLabelText(/candidate id column/i)).toBeInTheDocument();
+      expect(screen.queryByLabelText(/^sex column/i)).toBeNull();
+      expect(screen.queryByLabelText(/race or ethnicity column/i)).toBeNull();
+      expect(screen.queryByLabelText(/job description tested/i)).toBeNull();
+      expect(screen.getByTestId("aedt-run-corpus-job-description")).toHaveTextContent(
+        "Job description: Account Executive (fixed)",
+      );
+    });
+
+    it("sends the corpus id and the two mapped columns, and no job description", async () => {
+      await chooseCorpusAndMap();
+      const selects = screen.getAllByRole("combobox");
+      fireEvent.mouseDown(selects[selects.length - 2]);
+      fireEvent.click(await screen.findByRole("option", { name: "id" }));
+      expect(screen.getByRole("button", { name: /run measures/i })).toBeDisabled();
+      fireEvent.mouseDown(selects[selects.length - 1]);
+      fireEvent.click(await screen.findByRole("option", { name: "outcome" }));
+      fireEvent.click(screen.getByRole("button", { name: /run measures/i }));
+      expect(mutate).toHaveBeenCalledWith(
+        {
+          file: expect.any(File),
+          mapping: { candidate_id: "id", selected: "outcome" },
+          jobDescription: "",
+          corpusId: 3,
+        },
+        expect.anything(),
+      );
+    });
+
+    it("offers no data source choice without a complete corpus", () => {
+      corpora.list = [{ id: 4, status: "running", job_description_key: "commercial-ae" }];
+      renderUpload();
+      expect(screen.queryByTestId("aedt-run-corpus")).toBeNull();
+    });
   });
 });

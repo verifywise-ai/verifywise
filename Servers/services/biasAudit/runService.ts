@@ -19,13 +19,17 @@ import {
   confirmRunDerivedBasisQuery,
   createRunQuery,
   getAttestedProfileQuery,
+  getCorpusQuery,
   getProfileAnswersQuery,
   getRunQuery,
   listRunsQuery,
   listStancesForRunQuery,
   listTrendRunsQuery,
+  type CorpusRow,
   type RunSummaryRow,
 } from "../../utils/biasAudit.utils";
+import { JOB_DESCRIPTIONS } from "../../structures/NYC-Local-Law-144/job-descriptions";
+import type { JobDescription } from "../../structures/NYC-Local-Law-144/job-descriptions/types";
 import type { BiasAuditRun } from "../../domain.layer/models/biasAudit/biasAuditRun.model";
 import type { BiasAuditStance } from "../../domain.layer/models/biasAudit/biasAuditStance.model";
 import { applicableQuestions } from "./applicability";
@@ -40,6 +44,9 @@ import { LL144_RACE, LL144_SEX } from "./generation/allocation";
 import { runAudit, RECORD_KEYS } from "./index";
 import type { AuditOutcome, BiasAuditConfig } from "./index";
 import { mayExportStoredRun, type GateFinding } from "./dataGates";
+import { CORPUS_ID_KEY, joinScoresToManifest, tierSeparationFindings } from "./corpusJoin";
+import { sameJobDescription } from "./jobDescription";
+import type { ManifestRow } from "./generation/manifest";
 import { buildTrendSeries, type TrendSeries } from "./trendSeries";
 
 export { mayExportStoredRun };
@@ -84,6 +91,12 @@ export interface CreateRunInput {
   mapping: Record<string, string>;
   /** The job description tested, as a key (jobDescription.ts); null when not given. */
   jobDescriptionKey: string | null;
+  /**
+   * The generated corpus the file was scored from; null or absent for
+   * uploaded data. A corpus run maps only the candidate ID and the outcome:
+   * sex and race/ethnicity come from the corpus manifest.
+   */
+  corpusId?: number | null;
 }
 
 export interface CreateRunResult {
@@ -105,6 +118,43 @@ function blockedOutcome(findings: GateFinding[]): AuditOutcome {
   };
 }
 
+/**
+ * The corpus a scored file came from: in this organization and project, and
+ * complete. Another project's corpus is reported as not found, like another
+ * organization's.
+ */
+async function loadRunCorpus(
+  corpusId: number,
+  projectId: number,
+  organizationId: number,
+): Promise<{ corpus: CorpusRow; jobDescription: JobDescription; manifest: ManifestRow[] }> {
+  const corpus = await getCorpusQuery(corpusId, organizationId);
+  if (!corpus || corpus.project_id !== projectId) {
+    throw new NotFoundException(`Corpus ${corpusId} was not found.`, "AedtCorpus", corpusId);
+  }
+  if (corpus.status !== "complete" || !Array.isArray(corpus.manifest_json)) {
+    throw new ConflictException(
+      `Corpus ${corpusId} is not complete, so a scored file cannot be joined to it.`,
+      "AedtCorpus",
+      String(corpusId),
+    );
+  }
+  const jobDescription = Object.prototype.hasOwnProperty.call(
+    JOB_DESCRIPTIONS,
+    corpus.job_description_key,
+  )
+    ? (JOB_DESCRIPTIONS as Record<string, JobDescription>)[corpus.job_description_key]
+    : undefined;
+  if (!jobDescription) {
+    throw new ConflictException(
+      `Corpus ${corpusId} names a job description this deployment does not hold.`,
+      "AedtCorpus",
+      String(corpusId),
+    );
+  }
+  return { corpus, jobDescription, manifest: corpus.manifest_json as ManifestRow[] };
+}
+
 /** The rule's expiry is one year from the audit date (5-301(a)). */
 function oneYearFromToday(): string {
   const d = new Date();
@@ -115,6 +165,7 @@ function oneYearFromToday(): string {
 export async function createRun(input: CreateRunInput): Promise<CreateRunResult> {
   const { projectId, frameworkId, organizationId, userId, role, data, mapping, jobDescriptionKey } =
     input;
+  const corpusId = input.corpusId ?? null;
   await assertProjectAccess(projectId, organizationId, { userId, role });
 
   const profile = await getAttestedProfileQuery(projectId, frameworkId, organizationId);
@@ -157,19 +208,51 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
     );
   }
 
-  // Only keys the engine reads may be mapped.
-  const allowed = new Set<string>([
-    ...Object.keys(LL144_CONFIG.categories),
-    metric === "scoring_rate" ? RECORD_KEYS.score : RECORD_KEYS.selected,
-  ]);
+  const corpusSource =
+    corpusId === null ? null : await loadRunCorpus(corpusId, projectId, organizationId);
+  // A corpus run takes the fixed role title as its job description; a typed
+  // title that names a different job is refused rather than overridden.
+  let runJobDescription = jobDescriptionKey;
+  if (corpusSource) {
+    const roleTitle = corpusSource.jobDescription.roleTitle;
+    if (jobDescriptionKey !== null && !sameJobDescription(jobDescriptionKey, roleTitle)) {
+      throw new ValidationException(
+        `The corpus was built from the fixed job description for ${roleTitle}, so the run ` +
+          `cannot name a different job description.`,
+        "jobDescription",
+        jobDescriptionKey,
+      );
+    }
+    runJobDescription = roleTitle;
+  }
+
+  // Only keys the engine reads may be mapped. A corpus run maps the candidate
+  // ID instead of the categories, which the corpus manifest supplies.
+  const outcomeKey = metric === "scoring_rate" ? RECORD_KEYS.score : RECORD_KEYS.selected;
+  const allowed = new Set<string>(
+    corpusSource
+      ? [CORPUS_ID_KEY, outcomeKey]
+      : [...Object.keys(LL144_CONFIG.categories), outcomeKey],
+  );
   for (const key of Object.keys(mapping)) {
     if (!allowed.has(key)) {
+      const reason =
+        corpusSource && key in LL144_CONFIG.categories
+          ? `"${key}" cannot be mapped for a corpus run: the corpus supplies sex and race/ethnicity.`
+          : `"${key}" is not a column the module reads for this run.`;
       throw new ValidationException(
-        `"${key}" is not a column the module reads for this run. Mappable keys: ${[...allowed].join(", ")}.`,
+        `${reason} Mappable keys: ${[...allowed].join(", ")}.`,
         "mapping",
         key,
       );
     }
+  }
+  if (corpusSource && !(CORPUS_ID_KEY in mapping)) {
+    throw new ValidationException(
+      `Map "${CORPUS_ID_KEY}" to the column holding each record's candidate ID.`,
+      "mapping",
+      CORPUS_ID_KEY,
+    );
   }
 
   let parsed: ParsedDataset;
@@ -184,7 +267,6 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
   const config: BiasAuditConfig = { ...LL144_CONFIG, metric };
 
   const blockers: GateFinding[] = [];
-  const outcomeKey = metric === "scoring_rate" ? RECORD_KEYS.score : RECORD_KEYS.selected;
   if (!(outcomeKey in mapping)) {
     blockers.push(
       stop(
@@ -264,7 +346,37 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
     );
   }
 
-  const outcome = blockers.length > 0 ? blockedOutcome(blockers) : runAudit(parsed.records, config);
+  // A scored corpus is joined to its manifest before anything is computed;
+  // a refused join stores no run, since the rates would describe other
+  // candidates than the corpus holds.
+  let records = parsed.records;
+  let tierFindings: GateFinding[] = [];
+  if (corpusSource && parsed.mappingErrors.length === 0) {
+    const joined = joinScoresToManifest(parsed.records, corpusSource.manifest);
+    if (!joined.ok) {
+      throw new ValidationException(
+        joined.findings.map((f) => f.message).join(" "),
+        "csv",
+        joined.findings.map((f) => f.code),
+      );
+    }
+    tierFindings = tierSeparationFindings(
+      parsed.records,
+      corpusSource.manifest,
+      metric,
+      corpusSource.jobDescription.tiers.map((t) => t.key),
+    );
+    records = joined.records;
+  }
+
+  const computed = blockers.length > 0 ? blockedOutcome(blockers) : runAudit(records, config);
+  const outcome: AuditOutcome =
+    blockers.length > 0 || tierFindings.length === 0
+      ? computed
+      : {
+          ...computed,
+          gates: { ...computed.gates, findings: [...computed.gates.findings, ...tierFindings] },
+        };
 
   const derived = deriveBasis(answers);
   const triggers = derived
@@ -277,7 +389,7 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
         projectId,
         profileId: profile.id!,
         presetId: config.presetId,
-        jobDescriptionKey,
+        jobDescriptionKey: runJobDescription,
         metric,
         threshold: config.threshold,
         thresholdSource: LL144_THRESHOLD_SOURCE,
@@ -293,6 +405,7 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
         datasetSha256: createHash("sha256").update(data).digest("hex"),
         datasetRetained: false,
         rowCount: parsed.records.length,
+        corpusId,
         createdBy: userId,
       },
       organizationId,

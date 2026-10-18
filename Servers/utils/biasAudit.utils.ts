@@ -884,6 +884,10 @@ export interface TrendRunRow {
   /** `result_json->>'metric'`; null when no result was stored. */
   result_metric: string | null;
   gate_findings_json: unknown;
+  /** The generated corpus the run was scored from; null for uploaded data. */
+  corpus_id: number | null;
+  /** That corpus's fixed job description hash; null for uploaded data. */
+  corpus_job_description_sha256: string | null;
 }
 
 /**
@@ -900,10 +904,13 @@ export async function listTrendRunsQuery(
             r.job_description_key, r.metric,
             r.result_json->'tables' AS tables,
             r.result_json->>'metric' AS result_metric,
-            r.gate_findings_json
+            r.gate_findings_json,
+            r.corpus_id, c.job_description_sha256 AS corpus_job_description_sha256
        FROM bias_audit_runs r
        JOIN aedt_profiles ap ON ap.id = r.profile_id
                             AND ap.organization_id = :organization_id
+       LEFT JOIN bias_audit_corpora c ON c.id = r.corpus_id
+                                     AND c.organization_id = :organization_id
       WHERE r.project_id = :project_id AND ap.framework_id = :framework_id
         AND r.organization_id = :organization_id
       ORDER BY r.created_at ASC, r.id ASC`,

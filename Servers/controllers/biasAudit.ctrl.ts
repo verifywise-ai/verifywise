@@ -320,11 +320,18 @@ export const createRun = controllerWrapper(
     }
     const mapping = parseMapping(req.body?.mapping);
     const jobDescriptionKey = parseJobDescription(req.body?.jobDescription);
+    // Absent or blank for uploaded data; a generated corpus the file was scored from.
+    const rawCorpusId = req.body?.corpusId;
+    const corpusId =
+      rawCorpusId === undefined || rawCorpusId === null || rawCorpusId === ""
+        ? null
+        : positiveInt(rawCorpusId, "corpusId");
     const result = await createRunService({
       ...scope,
       data: file.buffer,
       mapping,
       jobDescriptionKey,
+      corpusId,
     });
     return { status: 201, data: result };
   },

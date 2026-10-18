@@ -1,8 +1,8 @@
 /**
  * Ratios across runs, segmented wherever a comparison is not supported.
  *
- * A line drawn across a changed profile, job description, question set or
- * metric asserts that the runs on either side measured the same thing, and
+ * A line drawn across a changed profile, job description, question set,
+ * metric or data source asserts that the runs on either side measured the same thing, and
  * nobody established that. So the series breaks there, and the break is
  * labelled with what changed. A gap the customer has to explain is preferable
  * to a line they will misread.
@@ -33,6 +33,10 @@ export interface TrendRun {
   /** The stored result's `metric`; null when no result was stored. */
   result_metric: string | null;
   gate_findings_json: unknown;
+  /** The generated corpus the run was scored from; null or absent for uploaded data. */
+  corpus_id?: number | null;
+  /** That corpus's fixed job description hash; null or absent for uploaded data. */
+  corpus_job_description_sha256?: string | null;
 }
 
 export interface TrendPoint {
@@ -60,6 +64,10 @@ export interface TrendSegment {
   questionSetVersion: number;
   jobDescriptionKey: string | null;
   metric: string;
+  /** The first corpus in the segment; null when its runs used uploaded data. */
+  corpusId: number | null;
+  /** The fixed job description hash every corpus in the segment shares. */
+  corpusJobDescriptionSha256: string | null;
   points: TrendPoint[];
 }
 
@@ -78,6 +86,8 @@ const BREAK_REASONS = {
   profileVersion: "the AEDT profile was changed",
   questionSetVersion: "the question set was revised",
   jobDescriptionKey: "a different job description was tested",
+  dataSource: "the data source changed between uploaded and generated data",
+  corpusJobDescription: "the fixed job description text changed between corpora",
 } as const;
 
 /** Each measure in plain words, in the order a metric reason names them. */
@@ -182,6 +192,16 @@ function reasonsBetween(segment: TrendSegment, run: TrendRun): string[] {
     reasons.push(BREAK_REASONS.jobDescriptionKey);
   }
   if (segment.metric !== run.metric) reasons.push(metricChangeReason(segment.metric, run.metric));
+  // Corpora built from the same fixed text are comparable whatever their ids.
+  const runCorpus = run.corpus_id ?? null;
+  if ((segment.corpusId === null) !== (runCorpus === null)) {
+    reasons.push(BREAK_REASONS.dataSource);
+  } else if (
+    runCorpus !== null &&
+    segment.corpusJobDescriptionSha256 !== (run.corpus_job_description_sha256 ?? null)
+  ) {
+    reasons.push(BREAK_REASONS.corpusJobDescription);
+  }
   return reasons;
 }
 
@@ -210,6 +230,8 @@ export function buildTrendSeries(runs: readonly TrendRun[]): TrendSeries {
       questionSetVersion: run.question_set_version,
       jobDescriptionKey: run.job_description_key ?? null,
       metric: run.metric,
+      corpusId: run.corpus_id ?? null,
+      corpusJobDescriptionSha256: run.corpus_job_description_sha256 ?? null,
       points: [point],
     });
   }
