@@ -71,6 +71,14 @@ export interface AedtReadiness {
   possible: number;
 }
 
+export type AedtRunMetric = "selection_rate" | "scoring_rate";
+
+export interface AedtAttestedDecision {
+  readiness: AedtReadiness;
+  /** The rate a run computes; null when out of scope or the cutoff answer is open. */
+  metric: AedtRunMetric | null;
+}
+
 /** A stance row as the server returns it, from a run or a scope determination. */
 export interface AedtStanceRow {
   id: number;
@@ -100,7 +108,13 @@ export interface AedtProfileView {
     attestedAt: string | null;
   } | null;
   answers: AedtProfileAnswer[];
+  /** Readiness of the edited version, which may be a draft ahead of the attested one. */
   readiness: AedtReadiness;
+  /**
+   * What the attested profile decides, which runs and scope determinations
+   * act on. Null when no version is attested.
+   */
+  attestedDecision: AedtAttestedDecision | null;
   scopeDeterminations: AedtScopeDetermination[];
 }
 
@@ -221,7 +235,8 @@ export interface AedtStanceCreated {
 
 export interface AedtStanceDownload {
   blob: Blob;
-  filename: string;
+  /** The raw Content-Disposition header, when the browser exposes it. */
+  disposition: unknown;
 }
 
 // ==================== SERVICE ====================
@@ -246,14 +261,8 @@ function unwrap<T>(body: unknown): T {
   return (body as { data: T }).data;
 }
 
-/** The file name from `Content-Disposition: attachment; filename="..."`. */
-function filenameFrom(disposition: unknown, fallback: string): string {
-  if (typeof disposition !== "string") return fallback;
-  const match = /filename="?([^";]+)"?/i.exec(disposition);
-  return match?.[1] ?? fallback;
-}
-
 class AedtBiasAuditService {
+  /** The whole question set, each with its `appliesWhen`; the page filters on its answers. */
   async getQuestions(projectId: number, frameworkId: number): Promise<AedtQuestion[]> {
     const res = await CustomAxios.get(
       `${BASE}/questions/${frameworkId}`,
@@ -358,10 +367,7 @@ class AedtBiasAuditService {
       `${BASE}/stances/${stanceId}/download`,
       options({ responseType: "blob" }),
     );
-    return {
-      blob: res.data as Blob,
-      filename: filenameFrom(res.headers?.["content-disposition"], `stance-${stanceId}.pdf`),
-    };
+    return { blob: res.data as Blob, disposition: res.headers?.["content-disposition"] };
   }
 }
 

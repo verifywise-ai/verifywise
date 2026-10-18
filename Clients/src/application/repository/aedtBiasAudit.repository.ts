@@ -9,9 +9,11 @@ import {
   aedtBiasAuditService,
   type AedtAnswerInput,
 } from "../../infrastructure/api/aedtBiasAuditService";
+import { filenameFromContentDisposition } from "../../presentation/utils/browserDownload.utils";
 
 export type {
   AedtAnswerInput,
+  AedtAttestedDecision,
   AedtAuditResult,
   AedtCategoryTable,
   AedtCreateRunResult,
@@ -25,6 +27,7 @@ export type {
   AedtQuestion,
   AedtReadiness,
   AedtRun,
+  AedtRunMetric,
   AedtRunSummary,
   AedtRunView,
   AedtScopeDetermination,
@@ -69,8 +72,16 @@ export const confirmAedtDerivedBasis = (runId: number) =>
 export const generateAedtRunStance = (runId: number) =>
   aedtBiasAuditService.generateRunStance(runId);
 
-export const downloadAedtStance = (stanceId: number) =>
-  aedtBiasAuditService.downloadStance(stanceId);
+/** The stance PDF and the name to save it as (RFC 5987 `filename*=` included). */
+export async function downloadAedtStance(
+  stanceId: number,
+): Promise<{ blob: Blob; filename: string }> {
+  const { blob, disposition } = await aedtBiasAuditService.downloadStance(stanceId);
+  return {
+    blob,
+    filename: filenameFromContentDisposition(disposition, `stance-${stanceId}.pdf`),
+  };
+}
 
 // ------------------------------------------------------------------ errors
 

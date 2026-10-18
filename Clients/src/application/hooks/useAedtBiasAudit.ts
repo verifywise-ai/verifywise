@@ -67,7 +67,7 @@ export function useAedtRun(runId: number | null) {
   });
 }
 
-/** Everything a project shows depends on its saved answers, so all of it is refetched. */
+/** Saving or attesting changes the profile view and the runs' gating, so the project is refetched. */
 function useInvalidateProject(projectId: number) {
   const queryClient = useQueryClient();
   return () => queryClient.invalidateQueries({ queryKey: aedtQueryKeys.project(projectId) });
@@ -89,20 +89,27 @@ export function useAttestAedtProfile(projectId: number) {
   });
 }
 
+/** A scope determination is listed in the profile view and changes nothing else. */
 export function useGenerateAedtScopeDetermination(projectId: number) {
-  const invalidate = useInvalidateProject(projectId);
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => generateAedtScopeDetermination(projectId),
-    onSuccess: invalidate,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: aedtQueryKeys.profile(projectId) }),
   });
 }
 
+/**
+ * A new run changes only the run list; the profile and questions stay as they
+ * were. The refetch is not awaited, so the caller opens the new run at once.
+ */
 export function useCreateAedtRun(projectId: number) {
-  const invalidate = useInvalidateProject(projectId);
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (args: { file: File; mapping: Record<string, string> }) =>
       createAedtRun(projectId, args.file, args.mapping),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: aedtQueryKeys.runs(projectId) });
+    },
   });
 }
 
