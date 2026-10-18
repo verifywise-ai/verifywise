@@ -2,10 +2,22 @@ import React from "react";
 import { act, renderHook } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
+import { AxiosError, AxiosHeaders } from "axios";
+
+function httpError(status: number) {
+  return new AxiosError("Request failed", "ERR_BAD_REQUEST", undefined, undefined, {
+    status,
+    statusText: String(status),
+    data: { data: "Refused." },
+    headers: {},
+    config: { headers: new AxiosHeaders() },
+  });
+}
 
 const { createRun } = vi.hoisted(() => ({ createRun: vi.fn() }));
 
-vi.mock("../../repository/aedtBiasAudit.repository", () => ({
+vi.mock("../../repository/aedtBiasAudit.repository", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   createAedtRun: createRun,
   generateAedtScopeDetermination: vi.fn().mockResolvedValue({ stanceId: 9 }),
   saveAedtAnswers: vi.fn().mockResolvedValue({ profileId: 3, version: 2 }),
@@ -56,18 +68,36 @@ describe("useAedtBiasAudit invalidation", () => {
 
   // A refusal such as a 422 "out of scope" means the attested profile changed
   // under the page, so its gate and metric label are refetched.
-  it("refetches the profile view when the server refuses a run", async () => {
-    createRun.mockRejectedValueOnce(new Error("422"));
-    const { wrapper, invalidateSpy } = createWrapper();
-    const { result } = renderHook(() => useCreateAedtRun(7), { wrapper });
-    await act(async () => {
-      await result.current
-        .mutateAsync({ file: new File(["a"], "a.csv"), mapping: {} })
-        .catch(() => undefined);
-    });
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: aedtQueryKeys.profile(7) });
-    expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: aedtQueryKeys.project(7) });
-  });
+  it.each([409, 422])(
+    "refetches the profile view when the server refuses a run with %i, a stale profile",
+    async (status) => {
+      createRun.mockRejectedValueOnce(httpError(status));
+      const { wrapper, invalidateSpy } = createWrapper();
+      const { result } = renderHook(() => useCreateAedtRun(7), { wrapper });
+      await act(async () => {
+        await result.current
+          .mutateAsync({ file: new File(["a"], "a.csv"), mapping: {} })
+          .catch(() => undefined);
+      });
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: aedtQueryKeys.profile(7) });
+      expect(invalidateSpy).not.toHaveBeenCalledWith({ queryKey: aedtQueryKeys.project(7) });
+    },
+  );
+
+  it.each([400, 413, 500])(
+    "refetches nothing on a %i, which says nothing about the profile",
+    async (status) => {
+      createRun.mockRejectedValueOnce(httpError(status));
+      const { wrapper, invalidateSpy } = createWrapper();
+      const { result } = renderHook(() => useCreateAedtRun(7), { wrapper });
+      await act(async () => {
+        await result.current
+          .mutateAsync({ file: new File(["a"], "a.csv"), mapping: {} })
+          .catch(() => undefined);
+      });
+      expect(invalidateSpy).not.toHaveBeenCalled();
+    },
+  );
 
   it.each([
     ["save", () => useSaveAedtAnswers(7), [] as unknown[]],
@@ -90,22 +120,13 @@ describe("useAedtBiasAudit invalidation", () => {
     },
   );
 
-  it("never treats the question set as stale", async () => {
+  // Finite, so a deploy that changes the question set reaches an open page.
+  it("keeps the question set fresh for ten minutes", async () => {
     const { wrapper, queryClient } = createWrapper();
     renderHook(() => useAedtQuestions(7), { wrapper });
     await act(async () => {});
-    expect(
-      queryClient
-        .getQueryCache()
-        .find({ queryKey: aedtQueryKeys.questions(7) })
-        ?.isStale(),
-    ).toBe(false);
-    expect(
-      (
-        queryClient.getQueryCache().find({ queryKey: aedtQueryKeys.questions(7) })?.options as {
-          staleTime?: unknown;
-        }
-      )?.staleTime,
-    ).toBe(Infinity);
+    const query = queryClient.getQueryCache().find({ queryKey: aedtQueryKeys.questions(7) });
+    expect(query?.isStale()).toBe(false);
+    expect((query?.options as { staleTime?: unknown })?.staleTime).toBe(10 * 60 * 1000);
   });
 });

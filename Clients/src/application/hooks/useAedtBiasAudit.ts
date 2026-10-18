@@ -10,6 +10,7 @@ import {
   attestAedtProfile,
   confirmAedtDerivedBasis,
   createAedtRun,
+  describeAedtError,
   generateAedtRunStance,
   generateAedtScopeDetermination,
   getAedtProfile,
@@ -31,13 +32,19 @@ export const aedtQueryKeys = {
 
 const NO_RETRY = { retry: false } as const;
 
-/** The question set is static for the module's lifetime, so it is never refetched as stale. */
+/**
+ * The question set changes only with a deploy, so it is kept for ten
+ * minutes rather than refetched on every mount; a finite time lets a new set
+ * reach a page left open across a deploy.
+ */
+const QUESTIONS_STALE_MS = 10 * 60 * 1000;
+
 export function useAedtQuestions(projectId: number | null) {
   return useQuery({
     queryKey: aedtQueryKeys.questions(projectId ?? 0),
     queryFn: () => getAedtQuestions(projectId as number),
     enabled: projectId !== null,
-    staleTime: Infinity,
+    staleTime: QUESTIONS_STALE_MS,
     ...NO_RETRY,
   });
 }
@@ -119,8 +126,13 @@ export function useCreateAedtRun(projectId: number) {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: aedtQueryKeys.runs(projectId) });
     },
-    onError: () => {
-      void queryClient.invalidateQueries({ queryKey: aedtQueryKeys.profile(projectId) });
+    onError: (error) => {
+      // Only a 409 or 422 means the attested profile changed under the page;
+      // a bad file, a mapping fault or a 5xx says nothing about it.
+      const { status } = describeAedtError(error);
+      if (status === 409 || status === 422) {
+        void queryClient.invalidateQueries({ queryKey: aedtQueryKeys.profile(projectId) });
+      }
     },
   });
 }
