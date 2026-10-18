@@ -81,7 +81,10 @@ const StancePanel = ({
   const failedStance = downloadError
     ? stances.find((s) => s.id === downloadError.stanceId)
     : undefined;
-  const canRegenerate = kind === "run" || failedStance?.isCurrent === true;
+  // A stance no longer listed says nothing about what it cited: no offer,
+  // and no claim about attestation.
+  const failedStanceGone = downloadError !== null && failedStance === undefined;
+  const canRegenerate = !failedStanceGone && (kind === "run" || failedStance?.isCurrent === true);
 
   const generateText = kind === "run" ? "Generate stance" : "Generate scope determination";
   const canGenerate = generateBlockedReason === null;
@@ -120,7 +123,12 @@ const StancePanel = ({
               sx={{ borderRadius: "4px" }}
             >
               <Typography sx={{ fontSize: 13 }}>{downloadError.message}</Typography>
-              {downloadError.status === 410 && !canRegenerate && (
+              {downloadError.status === 410 && failedStanceGone && (
+                <Typography sx={{ fontSize: 13, mt: "4px" }} data-testid="stance-file-gone">
+                  The file is no longer stored.
+                </Typography>
+              )}
+              {downloadError.status === 410 && !failedStanceGone && !canRegenerate && (
                 <Typography sx={{ fontSize: 13, mt: "4px" }} data-testid="stance-not-regenerable">
                   This scope determination cites an earlier attestation, so generating it again
                   would cite the current one instead. Its file is no longer stored.

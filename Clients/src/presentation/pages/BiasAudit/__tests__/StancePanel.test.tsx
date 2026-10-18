@@ -118,4 +118,20 @@ describe("StancePanel downloads", () => {
     expect(screen.queryByRole("button", { name: /generate it again/i })).not.toBeInTheDocument();
     expect(screen.getByTestId("stance-not-regenerable")).toBeInTheDocument();
   });
+
+  // A stance no longer listed tells us nothing about which attestation it
+  // cited, so the note claims nothing and offers no regeneration.
+  it("says only that the file is gone when the failed stance is no longer listed", async () => {
+    download.mockRejectedValue(gone());
+    const { rerender } = renderPanel("scope", [row(2, true)]);
+    fireEvent.click(screen.getByRole("button", { name: /download/i }));
+    await screen.findByRole("button", { name: /generate it again/i });
+    rerender(panel("scope", [row(3, true)]));
+    expect(screen.queryByRole("button", { name: /generate it again/i })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("stance-not-regenerable")).not.toBeInTheDocument();
+    expect(screen.getByTestId("stance-file-gone")).toHaveTextContent(
+      "The file is no longer stored.",
+    );
+    expect(screen.getByTestId("stance-file-gone")).not.toHaveTextContent(/attestation/);
+  });
 });

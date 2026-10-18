@@ -10678,6 +10678,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Es wurde noch keine Feststellung zum Anwendungsbereich erstellt.",
     "SHA-256": "SHA-256",
     "Superseded by a later attestation": "Durch eine spätere Attestierung ersetzt",
+    "The file is no longer stored.": "Die Datei wird nicht mehr gespeichert.",
     "Your draft answers place the tool out of scope.":
       "Ihre Entwurfsantworten ordnen das Tool außerhalb des Anwendungsbereichs ein.",
     "Your draft answers place the tool in scope.":
@@ -21365,6 +21366,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Aucune détermination du champ d’application n’a encore été générée.",
     "SHA-256": "SHA-256",
     "Superseded by a later attestation": "Remplacée par une attestation ultérieure",
+    "The file is no longer stored.": "Le fichier n’est plus conservé.",
     "Your draft answers place the tool out of scope.":
       "Les réponses de votre brouillon placent l’outil hors du champ d’application.",
     "Your draft answers place the tool in scope.":
@@ -31970,6 +31972,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Aún no se ha generado ninguna determinación del ámbito.",
     "SHA-256": "SHA-256",
     "Superseded by a later attestation": "Sustituida por una atestación posterior",
+    "The file is no longer stored.": "El archivo ya no se conserva.",
     "Your draft answers place the tool out of scope.":
       "Las respuestas de su borrador sitúan la herramienta fuera del ámbito.",
     "Your draft answers place the tool in scope.":
