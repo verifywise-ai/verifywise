@@ -122,14 +122,18 @@ const StancePanel = ({
               severity={downloadError.status === 410 ? "warning" : "error"}
               sx={{ borderRadius: "4px" }}
             >
-              <Typography sx={{ fontSize: 13 }}>{downloadError.message}</Typography>
+              {/* The server's 410 text says to generate the stance again. Where that
+                  is not offered, the panel's own message replaces it. */}
+              {!(downloadError.status === 410 && !canRegenerate) && (
+                <Typography sx={{ fontSize: 13 }}>{downloadError.message}</Typography>
+              )}
               {downloadError.status === 410 && failedStanceGone && (
-                <Typography sx={{ fontSize: 13, mt: "4px" }} data-testid="stance-file-gone">
+                <Typography sx={{ fontSize: 13 }} data-testid="stance-file-gone">
                   The file is no longer stored.
                 </Typography>
               )}
               {downloadError.status === 410 && !failedStanceGone && !canRegenerate && (
-                <Typography sx={{ fontSize: 13, mt: "4px" }} data-testid="stance-not-regenerable">
+                <Typography sx={{ fontSize: 13 }} data-testid="stance-not-regenerable">
                   This scope determination cites an earlier attestation, so generating it again
                   would cite the current one instead. Its file is no longer stored.
                 </Typography>

@@ -36,11 +36,15 @@ const row = (id: number, isCurrent: boolean): AedtScopeDetermination => ({
   isCurrent,
 });
 
+/** The server's 410 text (stanceService.downloadStance). */
+const SERVER_GONE =
+  "The PDF for stance 2 is no longer stored. Generate the stance again to obtain a new version.";
+
 function gone() {
   return new AxiosError("Request failed", "ERR_BAD_REQUEST", undefined, undefined, {
     status: 410,
     statusText: "Gone",
-    data: { message: "Gone", data: "The stance file is no longer stored." },
+    data: { message: "Gone", data: SERVER_GONE },
     headers: {},
     config: { headers: new AxiosHeaders() },
   });
@@ -85,6 +89,8 @@ describe("StancePanel downloads", () => {
     fireEvent.click(screen.getByRole("button", { name: /download/i }));
     fireEvent.click(await screen.findByRole("button", { name: /generate it again/i }));
     expect(onGenerate).toHaveBeenCalledTimes(1);
+    // Where regeneration is offered, the server's own message stays.
+    expect(screen.getByText(SERVER_GONE)).toBeInTheDocument();
   });
 
   it("offers to generate the current scope determination again when its file is gone", async () => {
@@ -103,7 +109,10 @@ describe("StancePanel downloads", () => {
     expect(await screen.findByTestId("stance-not-regenerable")).toHaveTextContent(
       /no longer stored/,
     );
-    expect(screen.getByText("The stance file is no longer stored.")).toBeInTheDocument();
+    // The server's text says to generate again, which is not offered here, so
+    // the panel's own message replaces it and "no longer stored" is said once.
+    expect(screen.queryByText(SERVER_GONE)).not.toBeInTheDocument();
+    expect(screen.getAllByText(/no longer stored/)).toHaveLength(1);
     expect(screen.queryByRole("button", { name: /generate it again/i })).not.toBeInTheDocument();
   });
 
@@ -133,5 +142,7 @@ describe("StancePanel downloads", () => {
       "The file is no longer stored.",
     );
     expect(screen.getByTestId("stance-file-gone")).not.toHaveTextContent(/attestation/);
+    expect(screen.queryByText(SERVER_GONE)).not.toBeInTheDocument();
+    expect(screen.getAllByText(/no longer stored/)).toHaveLength(1);
   });
 });
