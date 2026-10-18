@@ -9,7 +9,7 @@ import {
   aedtBiasAuditService,
   type AedtAnswerInput,
 } from "../../infrastructure/api/aedtBiasAuditService";
-import { filenameFromContentDisposition } from "../../presentation/utils/browserDownload.utils";
+import { filenameFromContentDisposition } from "../utils/contentDisposition";
 
 export type {
   AedtAnswerInput,
