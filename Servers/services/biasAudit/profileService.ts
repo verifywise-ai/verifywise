@@ -246,17 +246,6 @@ interface ReadScope {
   organizationId: number;
 }
 
-/** The current profile's answers, or none, in the service's working shape. */
-async function currentAnswers(scope: ReadScope) {
-  const current = await getCurrentProfileQuery(
-    scope.projectId,
-    scope.frameworkId,
-    scope.organizationId,
-  );
-  const rows = current ? await getProfileAnswersQuery(current.id!, scope.organizationId) : [];
-  return { current, rows, answers: answerMapFromRows(rows, "with_notes") };
-}
-
 /**
  * The whole question set, each question with its `appliesWhen` predicate.
  * It is not filtered by the saved answers: the wizard applies the predicates
@@ -318,21 +307,28 @@ export async function getProfileView(
     userId: scope.userId,
     role: scope.role,
   });
-  // The member check above stays first; these reads are independent of each other.
-  const [{ current, rows, answers }, attested, stances] = await Promise.all([
-    currentAnswers(scope),
-    getAttestedProfileQuery(scope.projectId, scope.frameworkId, scope.organizationId),
-    listProfileStancesQuery(scope.projectId, scope.frameworkId, scope.organizationId),
+  const { projectId, frameworkId, organizationId } = scope;
+  // The member check above stays first. Two concurrent rounds follow: the
+  // versions and stances, then the answers of the edited and the attested
+  // version together. The edited version is often the attested one; its
+  // answers are then read once.
+  const [current, attested, stances] = await Promise.all([
+    getCurrentProfileQuery(projectId, frameworkId, organizationId),
+    getAttestedProfileQuery(projectId, frameworkId, organizationId),
+    listProfileStancesQuery(projectId, frameworkId, organizationId),
   ]);
-  // The edited version is often the attested one; its answers are then read once.
-  let attestedDecision: ProfileDecision | null = null;
-  if (attested) {
-    const attestedRows =
-      current?.id === attested.id
-        ? rows
-        : await getProfileAnswersQuery(attested.id!, scope.organizationId);
-    attestedDecision = decideProfile(answerMapFromRows(attestedRows, "without_notes"));
-  }
+  const attestedIsCurrent = attested != null && current?.id === attested.id;
+  const [rows, separateAttestedRows] = await Promise.all([
+    current ? getProfileAnswersQuery(current.id!, organizationId) : Promise.resolve([]),
+    attested && !attestedIsCurrent
+      ? getProfileAnswersQuery(attested.id!, organizationId)
+      : Promise.resolve(null),
+  ]);
+  const answers = answerMapFromRows(rows, "with_notes");
+  const attestedRows = attestedIsCurrent ? rows : separateAttestedRows;
+  const attestedDecision: ProfileDecision | null = attestedRows
+    ? decideProfile(answerMapFromRows(attestedRows, "without_notes"))
+    : null;
   return {
     project: { id: project.id, title: project.project_title },
     profile: current ? { id: current.id!, version: current.version, status: current.status } : null,

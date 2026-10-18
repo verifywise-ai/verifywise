@@ -427,6 +427,22 @@ describe("getProfileView", () => {
     expect(utils.getProfileAnswersQuery).toHaveBeenCalledWith(3, 42);
   });
 
+  it("reads the draft's and the attested version's answers concurrently", async () => {
+    const order: string[] = [];
+    utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
+    utils.getCurrentProfileQuery.mockResolvedValue({ id: 4, version: 2, status: "draft" });
+    utils.getAttestedProfileQuery.mockResolvedValue({ id: 3, version: 1, status: "attested" });
+    utils.getProfileAnswersQuery.mockImplementation(async (profileId: number) => {
+      order.push(`${profileId}:start`);
+      await new Promise((r) => setImmediate(r));
+      order.push(`${profileId}:end`);
+      return [];
+    });
+    await getProfileView(scope);
+    expect(order.indexOf("3:start")).toBeLessThan(order.indexOf("4:end"));
+    expect(order.indexOf("4:start")).toBeLessThan(order.indexOf("3:end"));
+  });
+
   it("reads the answers once when the edited version is the attested one", async () => {
     utils.getProjectQuery.mockResolvedValue({ id: 7, project_title: "Screener" });
     utils.getCurrentProfileQuery.mockResolvedValue({ id: 3, version: 1, status: "attested" });
