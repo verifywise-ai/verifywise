@@ -187,7 +187,8 @@ const SegmentHeading = ({ segment }: { segment: AedtTrendSegment }) => (
     {segment.jobDescriptionKey && (
       <>
         <span>{" · "}</span>
-        <span>Job description</span> <span>{segment.jobDescriptionKey}</span>
+        <span>Job description</span>{" "}
+        <span data-vw-no-translate="true">{segment.jobDescriptionKey}</span>
       </>
     )}
   </Typography>

@@ -384,6 +384,8 @@ describe("RatioTrend review fixes", () => {
     expect(screen.getByTestId("aedt-trend-segment-0")).toHaveTextContent(
       "Job description commercial-ae",
     );
+    // The customer's words are excluded from the runtime translator.
+    expect(screen.getByText("commercial-ae")).toHaveAttribute("data-vw-no-translate", "true");
   });
 });
 

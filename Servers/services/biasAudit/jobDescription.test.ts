@@ -52,4 +52,20 @@ describe("sameJobDescription", () => {
     expect(sameJobDescription(null, null)).toBe(true);
     expect(sameJobDescription(null, "Account executive")).toBe(false);
   });
+
+  it("folds case where lowercasing alone does not", () => {
+    expect(sameJobDescription("İnşaat mühendisi", "inşaat mühendisi")).toBe(true);
+    expect(sameJobDescription("STRASSENBAUER", "Straßenbauer")).toBe(true);
+  });
+});
+
+describe("normaliseJobDescription input bound", () => {
+  it("refuses an oversized field before normalising it", () => {
+    expect(normaliseJobDescription(" ".repeat(1001))).toEqual({ ok: false, reason: "too_long" });
+    // Under the bound, whitespace collapses before the 64-character check.
+    expect(normaliseJobDescription(`Engineer${" ".repeat(300)}`)).toEqual({
+      ok: true,
+      value: "Engineer",
+    });
+  });
 });

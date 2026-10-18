@@ -341,7 +341,17 @@ const RunDetail = ({ runId, canEdit, canAttest, onBack }: RunDetailProps) => {
             value={run.metric === "scoring_rate" ? "Scoring rate" : "Selection rate"}
           />
           <Meta label="Profile version" value={String(run.profile_version)} />
-          <Meta label="Job description tested" value={run.job_description_key ?? "Not recorded"} />
+          <Meta
+            label="Job description tested"
+            value={
+              run.job_description_key == null ? (
+                "Not recorded"
+              ) : (
+                // The customer's words: never swapped for a dictionary match.
+                <span data-vw-no-translate="true">{run.job_description_key}</span>
+              )
+            }
+          />
           <Meta label="Rows" value={run.row_count == null ? "—" : String(run.row_count)} />
           <Meta label="Dataset SHA-256" value={run.dataset_sha256 ?? "—"} breakAll />
         </Box>

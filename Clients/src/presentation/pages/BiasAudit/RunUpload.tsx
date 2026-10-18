@@ -122,7 +122,8 @@ const RunUpload = ({ projectId, metric, canEdit, blockedReason, onCreated }: Run
     const sent: Record<string, string> = {};
     for (const f of fields) if (mapping[f.key]) sent[f.key] = mapping[f.key];
     createRun.mutate(
-      { file, mapping: sent, jobDescription },
+      // The checked form, so the server receives exactly what passed here.
+      { file, mapping: sent, jobDescription: trimmedJobDescription },
       { onSuccess: (r) => onCreated(r.runId) },
     );
   };

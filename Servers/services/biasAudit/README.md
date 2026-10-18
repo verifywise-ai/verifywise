@@ -171,8 +171,9 @@ non-excluded group, the category holding it, and whether any non-excluded group 
 - **A caveat point:** a run whose stored findings would not allow export. Its ratio is shown
   with that caveat.
 - **A break**, labelled with every reason, between consecutive plotted runs whose profile
-  version, question-set version, job description (`job_description_key`, compared ignoring
-  case, null counting as one value) or metric differ.
+  version, question-set version, job description (`job_description_key`, compared by
+  base-strength collation, which ignores case, accents and similar letter variants but not
+  every pairing, such as Turkish "ı"; null counts as one value) or metric differ.
 
 `GET /runs/trend` returns only the series, not the stored results. `GET /runs/:id` does return
 the whole run row, `result_json` included.
