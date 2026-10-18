@@ -91,7 +91,7 @@ const StancePanel = ({
 
   // What a failed download shows. The server's 410 text says to generate the
   // stance again, so it appears only where the button does.
-  type DownloadVariant = "error" | "regenerate" | "blocked" | "gone" | "superseded";
+  type DownloadVariant = "error" | "regenerate" | "gone" | "superseded";
   const variant: DownloadVariant | null = !downloadError
     ? null
     : downloadError.status !== 410
@@ -102,7 +102,7 @@ const StancePanel = ({
           ? "superseded"
           : canGenerate
             ? "regenerate"
-            : "blocked";
+            : "gone";
 
   const renderDownloadError = () => {
     switch (variant) {
@@ -124,9 +124,8 @@ const StancePanel = ({
             </Box>
           </>
         );
-      // Blocked: why generating is blocked already shows under the disabled
-      // button. Gone: the stance is no longer listed, so nothing is claimed.
-      case "blocked":
+      // The stance is no longer listed, or this viewer cannot generate (the
+      // reason already shows under the disabled button): nothing more to say.
       case "gone":
         return (
           <Typography sx={{ fontSize: 13 }} data-testid="stance-file-gone">
