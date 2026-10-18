@@ -18,17 +18,17 @@ const run = (
   job_description_key:
     opts.jobDescriptionKey === undefined ? "commercial-ae" : opts.jobDescriptionKey,
   metric: opts.metric ?? "selection_rate",
-  result_json: {
-    tables: [
-      {
-        categoryKey: "sex",
-        rows: [
-          { categoryName: "Male", impactRatio: 1, flagged: false },
-          { categoryName: "Female", impactRatio: lowest, flagged: lowest < 0.8 },
-        ],
-      },
-    ],
-  },
+  result_metric: opts.metric ?? "selection_rate",
+  gate_findings_json: [],
+  tables: [
+    {
+      categoryKey: "sex",
+      rows: [
+        { categoryName: "Male", impactRatio: 1, flagged: false },
+        { categoryName: "Female", impactRatio: lowest, flagged: lowest < 0.8 },
+      ],
+    },
+  ],
 });
 
 describe("one unbroken series", () => {
@@ -104,7 +104,7 @@ describe("a break is drawn rather than a line", () => {
 
 describe("runs that cannot contribute a point", () => {
   it("skips a run with no result, without breaking the series", () => {
-    const blocked = { ...run(2, "2026-04-10", 1, 0.9), result_json: null };
+    const blocked = { ...run(2, "2026-04-10", 1, 0.9), tables: null, result_metric: null };
     const series = buildTrendSeries([
       run(1, "2026-01-10", 1, 0.95),
       blocked,
@@ -117,17 +117,15 @@ describe("runs that cannot contribute a point", () => {
   it("carries a null ratio where every ratio in a table was null", () => {
     const degenerate = {
       ...run(2, "2026-04-10", 1, 0.9),
-      result_json: {
-        tables: [
-          {
-            categoryKey: "sex",
-            rows: [
-              { categoryName: "Male", impactRatio: null, flagged: false },
-              { categoryName: "Female", impactRatio: null, flagged: false },
-            ],
-          },
-        ],
-      },
+      tables: [
+        {
+          categoryKey: "sex",
+          rows: [
+            { categoryName: "Male", impactRatio: null, flagged: false },
+            { categoryName: "Female", impactRatio: null, flagged: false },
+          ],
+        },
+      ],
     };
     const series = buildTrendSeries([run(1, "2026-01-10", 1, 0.95), degenerate]);
     const pts = series.segments[0].points;
@@ -149,18 +147,16 @@ describe("excluded groups never become the lowest point", () => {
   it("ignores a row excluded under 5-301(d)", () => {
     const withExcluded = {
       ...run(1, "2026-01-10", 1, 0.95),
-      result_json: {
-        tables: [
-          {
-            categoryKey: "sex",
-            rows: [
-              { categoryName: "Male", impactRatio: 1, flagged: false },
-              { categoryName: "Female", impactRatio: 0.95, flagged: false },
-              { categoryName: "Unknown", impactRatio: null, flagged: false, excluded: true },
-            ],
-          },
-        ],
-      },
+      tables: [
+        {
+          categoryKey: "sex",
+          rows: [
+            { categoryName: "Male", impactRatio: 1, flagged: false },
+            { categoryName: "Female", impactRatio: 0.95, flagged: false },
+            { categoryName: "Unknown", impactRatio: null, flagged: false, excluded: true },
+          ],
+        },
+      ],
     };
     const series = buildTrendSeries([withExcluded]);
     expect(series.segments[0].points[0].lowestRatio).toBe(0.95);
@@ -169,18 +165,16 @@ describe("excluded groups never become the lowest point", () => {
   it("ignores an excluded row even when it carries a lower ratio and a flag", () => {
     const withExcluded = {
       ...run(1, "2026-01-10", 1, 0.95),
-      result_json: {
-        tables: [
-          {
-            categoryKey: "sex",
-            rows: [
-              { categoryName: "Male", impactRatio: 1, flagged: false },
-              { categoryName: "Female", impactRatio: 0.95, flagged: false },
-              { categoryName: "Other", impactRatio: 0.2, flagged: true, excluded: true },
-            ],
-          },
-        ],
-      },
+      tables: [
+        {
+          categoryKey: "sex",
+          rows: [
+            { categoryName: "Male", impactRatio: 1, flagged: false },
+            { categoryName: "Female", impactRatio: 0.95, flagged: false },
+            { categoryName: "Other", impactRatio: 0.2, flagged: true, excluded: true },
+          ],
+        },
+      ],
     };
     const point = buildTrendSeries([withExcluded]).segments[0].points[0];
     expect(point.lowestRatio).toBe(0.95);
@@ -190,15 +184,12 @@ describe("excluded groups never become the lowest point", () => {
 
 describe("fairness_metrics runs draw no ratio", () => {
   // The engine leaves `tables` empty in this mode: its per-group figures are
-  // confusion-matrix rates, not impact ratios.
+  // confusion-matrix rates (`fairnessMetricsTables`), not impact ratios.
   const fairness = (id: number, date: string): TrendRun => ({
     ...run(id, date, 1, 0.5),
     metric: "fairness_metrics",
-    result_json: {
-      metric: "fairness_metrics",
-      tables: [],
-      fairnessMetricsTables: [{ categoryKey: "sex", groups: [{ truePositiveRate: 0.4 }] }],
-    },
+    result_metric: "fairness_metrics",
+    tables: [],
   });
 
   it("contributes no point", () => {
@@ -221,6 +212,34 @@ describe("fairness_metrics runs draw no ratio", () => {
     const odd = { ...fairness(2, "2026-02-10"), metric: "selection_rate" };
     const series = buildTrendSeries([run(1, "2026-01-10", 1, 0.95), odd]);
     expect(series.segments[0].points.map((p) => p.runId)).toEqual([1]);
+  });
+});
+
+describe("a run its data checks did not clear for export", () => {
+  it("carries the caveat on a warning, a stop, or no findings record", () => {
+    const series = buildTrendSeries([
+      run(1, "2026-01-10", 1, 0.95),
+      { ...run(2, "2026-02-10", 1, 0.9), gate_findings_json: [{ severity: "note" }] },
+      { ...run(3, "2026-03-10", 1, 0.9), gate_findings_json: [{ severity: "warn" }] },
+      { ...run(4, "2026-04-10", 1, 0.9), gate_findings_json: [{ severity: "stop" }] },
+      { ...run(5, "2026-05-10", 1, 0.9), gate_findings_json: null },
+    ]);
+    expect(series.segments[0].points.map((p) => [p.runId, p.caveat])).toEqual([
+      [1, false],
+      [2, false],
+      [3, true],
+      [4, true],
+      [5, true],
+    ]);
+  });
+
+  it("still plots the ratio, in the same segment", () => {
+    const series = buildTrendSeries([
+      run(1, "2026-01-10", 1, 0.95),
+      { ...run(2, "2026-02-10", 1, 0.9), gate_findings_json: [{ severity: "warn" }] },
+    ]);
+    expect(series.segments).toHaveLength(1);
+    expect(series.segments[0].points[1]).toMatchObject({ lowestRatio: 0.9, caveat: true });
   });
 });
 
@@ -247,24 +266,22 @@ describe("the metric reason names the actual change", () => {
 describe("category and flag of a point", () => {
   const twoTables = (femaleRatio: number, blackRatio: number, blackFlagged: boolean): TrendRun => ({
     ...run(1, "2026-01-10", 1, 0.95),
-    result_json: {
-      tables: [
-        {
-          categoryKey: "sex",
-          rows: [
-            { categoryName: "Male", impactRatio: 1, flagged: false },
-            { categoryName: "Female", impactRatio: femaleRatio, flagged: false },
-          ],
-        },
-        {
-          categoryKey: "race_ethnicity",
-          rows: [
-            { categoryName: "White", impactRatio: 1, flagged: false },
-            { categoryName: "Black", impactRatio: blackRatio, flagged: blackFlagged },
-          ],
-        },
-      ],
-    },
+    tables: [
+      {
+        categoryKey: "sex",
+        rows: [
+          { categoryName: "Male", impactRatio: 1, flagged: false },
+          { categoryName: "Female", impactRatio: femaleRatio, flagged: false },
+        ],
+      },
+      {
+        categoryKey: "race_ethnicity",
+        rows: [
+          { categoryName: "White", impactRatio: 1, flagged: false },
+          { categoryName: "Black", impactRatio: blackRatio, flagged: blackFlagged },
+        ],
+      },
+    ],
   });
 
   it("names the table that holds the lowest ratio", () => {
@@ -288,7 +305,7 @@ describe("category and flag of a point", () => {
   });
 
   it("has a null category when the run produced no ratio", () => {
-    const empty = { ...run(1, "2026-01-10", 1, 0.95), result_json: { tables: [] } };
+    const empty = { ...run(1, "2026-01-10", 1, 0.95), tables: [] };
     const point = buildTrendSeries([empty]).segments[0].points[0];
     expect(point).toMatchObject({ category: null, lowestRatio: null, flagged: false });
   });
@@ -302,20 +319,31 @@ describe("dates and ordering", () => {
     expect(series.segments[0].points[0].date).toBe("2026-01-10T12:00:00.000Z");
   });
 
-  it("orders by date then id whatever order the runs arrive in", () => {
+  it("keeps the order it is given, which the query sets (created_at, then id)", () => {
+    // Runs recorded within one millisecond keep the database's microsecond
+    // order: buildTrendSeries does not re-sort them.
     const series = buildTrendSeries([
-      run(3, "2026-07-10", 1, 0.88),
-      run(2, "2026-01-10", 1, 0.91),
-      run(1, "2026-01-10", 1, 0.95),
+      run(2, "2026-01-10T10:00:00.000Z", 1, 0.91),
+      run(1, "2026-01-10T10:00:00.000Z", 1, 0.95),
+      run(3, "not a date", 1, 0.88),
     ]);
-    expect(series.segments[0].points.map((p) => p.runId)).toEqual([1, 2, 3]);
+    expect(series.segments[0].points.map((p) => p.runId)).toEqual([2, 1, 3]);
   });
 
   it("treats a missing job description the same as null", () => {
+    // The row type says string | null; a row read without the column must not
+    // read as a change, in either position.
+    const omitted = (id: number, date: string): TrendRun => {
+      const r = run(id, date, 1, 0.9, { jobDescriptionKey: null }) as Partial<TrendRun>;
+      delete r.job_description_key;
+      return r as TrendRun;
+    };
     const series = buildTrendSeries([
-      run(1, "2026-01-10", 1, 0.95, { jobDescriptionKey: null }),
+      omitted(1, "2026-01-10"),
       run(2, "2026-04-10", 1, 0.9, { jobDescriptionKey: null }),
+      omitted(3, "2026-07-10"),
     ]);
     expect(series.breaks).toEqual([]);
+    expect(series.segments[0].jobDescriptionKey).toBeNull();
   });
 });

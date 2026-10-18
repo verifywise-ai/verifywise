@@ -2294,7 +2294,7 @@ export const biasAuditEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/bias-audit/runs/trend',
     summary: "Get Run Trend",
-    description: "The lowest impact ratio of each run of a project for one framework, oldest first, segmented wherever the profile version, question set, job description or metric changed. Each break names what changed. A run with no result, or a fairness_metrics run (which computes no impact ratio), contributes no point and does not break the series. Raw run results are not returned.",
+    description: "The lowest impact ratio of each run of a project for one framework, oldest first, segmented wherever the profile version, question set, job description or metric changed. Each break names what changed. A run with no result, or a fairness_metrics run (which computes no impact ratio), contributes no point and does not break the series. A run its data checks did not clear for export is plotted with caveat true. Raw run results are not returned.",
     requiresAuth: true,
     parameters: [
       { name: 'projectId', in: 'query', type: 'integer', required: true, description: "The projectId" },

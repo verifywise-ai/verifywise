@@ -33,6 +33,16 @@ export interface GateFinding {
   detail?: Record<string, unknown>;
 }
 
+/**
+ * Whether a stored run may be exported, by the rule runAudit applies to its
+ * gates: only notes withhold nothing. A run that stored no findings record is
+ * not known to be clean, so it fails closed.
+ */
+export function mayExportStoredRun(gateFindings: unknown): boolean {
+  if (!Array.isArray(gateFindings)) return false;
+  return (gateFindings as Array<GateFinding | null>).every((f) => f?.severity === "note");
+}
+
 export interface GateResult {
   findings: GateFinding[];
   mayComputeRatios: boolean;

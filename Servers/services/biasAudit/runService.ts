@@ -38,8 +38,10 @@ import { computeReadiness, type ReadinessResult } from "./readinessScore";
 import { DatasetParseError, parseDataset, type ParsedDataset } from "./datasetParser";
 import { runAudit, RECORD_KEYS } from "./index";
 import type { AuditOutcome, BiasAuditConfig } from "./index";
-import type { GateFinding } from "./dataGates";
+import { mayExportStoredRun, type GateFinding } from "./dataGates";
 import { buildTrendSeries, type TrendSeries } from "./trendSeries";
+
+export { mayExportStoredRun };
 
 /** The 0.8 figure is a convention the rule's guidance uses, not a statutory value. */
 export const LL144_THRESHOLD_SOURCE = "convention";
@@ -312,16 +314,6 @@ interface ProjectScope {
   organizationId: number;
   userId: number;
   role: string;
-}
-
-/**
- * Whether a stored run may be exported, by the rule runAudit applies to its
- * gates: only notes withhold nothing. A run that stored no findings record is
- * not known to be clean, so it fails closed.
- */
-export function mayExportStoredRun(gateFindings: unknown): boolean {
-  if (!Array.isArray(gateFindings)) return false;
-  return (gateFindings as Array<GateFinding | null>).every((f) => f?.severity === "note");
 }
 
 export async function listRuns(scope: ProjectScope): Promise<{ runs: RunSummaryRow[] }> {

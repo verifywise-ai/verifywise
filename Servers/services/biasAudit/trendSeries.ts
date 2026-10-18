@@ -7,9 +7,13 @@
  * labelled with what changed. A gap the customer has to explain is preferable
  * to a line they will misread.
  *
- * Pure: the caller supplies the runs, oldest first, as the trend query reads
- * them. Raw results never leave the server; only the series built here does.
+ * Pure: the caller supplies the runs oldest first (listTrendRunsQuery orders
+ * by created_at, then id, at the database's precision) and the order is kept
+ * as given. Raw results never leave the server; only the series built here
+ * does.
  */
+
+import { mayExportStoredRun } from "./dataGates";
 
 /**
  * The fields of a run the series reads. `utils/biasAudit.utils` `TrendRunRow`
@@ -23,7 +27,11 @@ export interface TrendRun {
   question_set_version: number;
   job_description_key: string | null;
   metric: string;
-  result_json: unknown;
+  /** The stored result's `tables`; null when no result was stored. */
+  tables: unknown;
+  /** The stored result's `metric`; null when no result was stored. */
+  result_metric: string | null;
+  gate_findings_json: unknown;
 }
 
 export interface TrendPoint {
@@ -39,6 +47,11 @@ export interface TrendPoint {
   lowestRatio: number | null;
   /** Whether any non-excluded group in any table was flagged. */
   flagged: boolean;
+  /**
+   * True when the run's data checks did not clear it for export (the rule
+   * stances use, `mayExportStoredRun`): its ratio is shown with that caveat.
+   */
+  caveat: boolean;
 }
 
 export interface TrendSegment {
@@ -121,16 +134,13 @@ interface TableShape {
  * gap within its segment.
  */
 function pointOf(run: TrendRun): TrendPoint | null {
-  if (run.metric === "fairness_metrics") return null;
-  const result = run.result_json as { metric?: unknown; tables?: unknown } | null;
-  if (!result || typeof result !== "object") return null;
-  if (result.metric === "fairness_metrics") return null;
-  if (!Array.isArray(result.tables)) return null;
+  if (run.metric === "fairness_metrics" || run.result_metric === "fairness_metrics") return null;
+  if (!Array.isArray(run.tables)) return null;
 
   let lowestRatio: number | null = null;
   let category: string | null = null;
   let flagged = false;
-  for (const table of result.tables as TableShape[]) {
+  for (const table of run.tables as TableShape[]) {
     if (!table || !Array.isArray(table.rows)) continue;
     for (const row of table.rows as RowShape[]) {
       // An excluded group (5-301(d)) has no ratio, so it is never the lowest
@@ -146,17 +156,19 @@ function pointOf(run: TrendRun): TrendPoint | null {
     }
   }
 
-  return { runId: run.id, date: dateOf(run.created_at), category, lowestRatio, flagged };
+  return {
+    runId: run.id,
+    date: dateOf(run.created_at),
+    category,
+    lowestRatio,
+    flagged,
+    caveat: !mayExportStoredRun(run.gate_findings_json),
+  };
 }
 
 function dateOf(value: Date | string): string {
   if (value instanceof Date) return value.toISOString();
   return String(value);
-}
-
-function timeOf(value: Date | string): number {
-  const t = value instanceof Date ? value.getTime() : Date.parse(String(value));
-  return Number.isNaN(t) ? 0 : t;
 }
 
 function reasonsBetween(segment: TrendSegment, run: TrendRun): string[] {
@@ -172,16 +184,15 @@ function reasonsBetween(segment: TrendSegment, run: TrendRun): string[] {
   return reasons;
 }
 
+/**
+ * Expects `runs` oldest first, as listTrendRunsQuery returns them. It does not
+ * sort: the database orders by the full timestamp, then id, and a re-sort here
+ * at millisecond precision could reverse runs recorded within a millisecond.
+ */
 export function buildTrendSeries(runs: readonly TrendRun[]): TrendSeries {
-  // The query already orders oldest first; sorting again keeps the series
-  // right for any caller, with the id breaking a tie in the timestamp.
-  const ordered = [...runs].sort(
-    (a, b) => timeOf(a.created_at) - timeOf(b.created_at) || a.id - b.id,
-  );
-
   const segments: TrendSegment[] = [];
   const breaks: TrendBreak[] = [];
-  for (const run of ordered) {
+  for (const run of runs) {
     const point = pointOf(run);
     if (!point) continue;
     const current = segments[segments.length - 1];

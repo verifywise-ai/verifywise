@@ -24545,7 +24545,7 @@ paths:
   /bias-audit/runs/trend:
     get:
       summary: 'Get Run Trend'
-      description: 'The lowest impact ratio of each run of a project for one framework, oldest first, segmented wherever the profile version, question set, job description or metric changed. Each break names what changed. A run with no result, or a fairness_metrics run (which computes no impact ratio), contributes no point and does not break the series. Raw run results are not returned.'
+      description: 'The lowest impact ratio of each run of a project for one framework, oldest first, segmented wherever the profile version, question set, job description or metric changed. Each break names what changed. A run with no result, or a fairness_metrics run (which computes no impact ratio), contributes no point and does not break the series. A run its data checks did not clear for export is plotted with caveat true. Raw run results are not returned.'
       parameters:
         -
           name: projectId
@@ -24568,7 +24568,7 @@ paths:
                 type: object
                 properties:
                   message: {type: string}
-                  data: {type: object, properties: {segments: {type: array, items: {type: object, properties: {profileVersion: {type: integer}, questionSetVersion: {type: integer}, jobDescriptionKey: {type: string, nullable: true}, metric: {type: string, enum: [selection_rate, scoring_rate]}, points: {type: array, items: {type: object, properties: {runId: {type: integer}, date: {type: string}, category: {type: string, nullable: true, description: 'categoryKey of the table holding the lowest ratio; null when the run produced no ratio'}, lowestRatio: {type: number, nullable: true}, flagged: {type: boolean, description: 'Whether any non-excluded group in the run was flagged'}}}}}}}, breaks: {type: array, items: {type: object, properties: {afterRunId: {type: integer}, reasons: {type: array, items: {type: string}}}}}}}
+                  data: {type: object, properties: {segments: {type: array, items: {type: object, properties: {profileVersion: {type: integer}, questionSetVersion: {type: integer}, jobDescriptionKey: {type: string, nullable: true}, metric: {type: string, description: 'The run''s stored metric. fairness_metrics runs contribute no point, so in practice selection_rate or scoring_rate'}, points: {type: array, items: {type: object, properties: {runId: {type: integer}, date: {type: string}, category: {type: string, nullable: true, description: 'categoryKey of the table holding the lowest ratio; null when the run produced no ratio'}, lowestRatio: {type: number, nullable: true}, flagged: {type: boolean, description: 'Whether any non-excluded group in the run was flagged'}, caveat: {type: boolean, description: 'True when the run''s data checks did not clear it for export (any finding other than a note, or no findings record)'}}}}}}}, breaks: {type: array, items: {type: object, properties: {afterRunId: {type: integer}, reasons: {type: array, items: {type: string}}}}}}}
         '400':
           description: 'projectId or frameworkId is missing or not a positive integer'
         '404':

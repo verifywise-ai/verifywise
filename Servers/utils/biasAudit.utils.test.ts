@@ -648,3 +648,17 @@ describe("the project-member expression", () => {
     expect(() => PROJECT_MEMBER_SQL("project_id" as never)).toThrow(/project-member expression/);
   });
 });
+
+describe("listTrendRunsQuery", () => {
+  it("reads only the result's tables and metric and the gate findings, oldest first", async () => {
+    mockQuery.mockResolvedValueOnce([]);
+    await listTrendRunsQuery(7, 12, 42);
+    const [sql] = mockQuery.mock.calls[0];
+    expect(sql).toMatch(/r\.result_json->'tables' AS tables/);
+    expect(sql).toMatch(/r\.result_json->>'metric' AS result_metric/);
+    expect(sql).toMatch(/r\.gate_findings_json/);
+    // The whole stored result is never selected.
+    expect(sql).not.toMatch(/r\.result_json\s*(,|\n\s*FROM)/);
+    expect(sql).toMatch(/ORDER BY r\.created_at ASC, r\.id ASC/);
+  });
+});

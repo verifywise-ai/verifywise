@@ -390,17 +390,17 @@ describe("run reads", () => {
       question_set_version: 1,
       job_description_key: null,
       metric: "selection_rate",
-      result_json: {
-        tables: [
-          {
-            categoryKey: "sex",
-            rows: [
-              { categoryName: "Male", impactRatio: 1, flagged: false, applicantCount: 40 },
-              { categoryName: "Female", impactRatio: ratio, flagged: false, applicantCount: 35 },
-            ],
-          },
-        ],
-      },
+      result_metric: "selection_rate",
+      gate_findings_json: id === 2 ? [{ severity: "warn", message: "Few rows in a group." }] : [],
+      tables: [
+        {
+          categoryKey: "sex",
+          rows: [
+            { categoryName: "Male", impactRatio: 1, flagged: false, applicantCount: 40 },
+            { categoryName: "Female", impactRatio: ratio, flagged: false, applicantCount: 35 },
+          ],
+        },
+      ],
     });
     utils.listTrendRunsQuery.mockResolvedValue([row(1, 1, 0.9), row(2, 2, 0.85)]);
 
@@ -421,6 +421,7 @@ describe("run reads", () => {
               category: "sex",
               lowestRatio: 0.9,
               flagged: false,
+              caveat: false,
             },
           ],
         },
@@ -436,6 +437,7 @@ describe("run reads", () => {
               category: "sex",
               lowestRatio: 0.85,
               flagged: false,
+              caveat: true,
             },
           ],
         },
@@ -444,9 +446,10 @@ describe("run reads", () => {
     });
     // Nothing of the stored result (group names, counts) survives.
     const text = JSON.stringify(out);
-    expect(text).not.toContain("result_json");
+    expect(text).not.toContain("tables");
     expect(text).not.toContain("Female");
     expect(text).not.toContain("applicantCount");
+    expect(text).not.toContain("Few rows");
   });
 
   it("returns a run with its stances and whether it may be exported", async () => {

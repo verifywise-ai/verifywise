@@ -862,7 +862,11 @@ export async function listRunsQuery(
   )) as RunSummaryRow[];
 }
 
-/** The fields a trend series reads from a run. */
+/**
+ * The fields a trend series reads from a run: of the stored result, only its
+ * tables and metric; of the gate findings, the whole list (export is decided
+ * on it). Nothing else of the result is read.
+ */
 export interface TrendRunRow {
   id: number;
   created_at: Date | string;
@@ -870,10 +874,17 @@ export interface TrendRunRow {
   question_set_version: number;
   job_description_key: string | null;
   metric: string;
-  result_json: unknown;
+  /** `result_json->'tables'`; null when no result was stored. */
+  tables: unknown;
+  /** `result_json->>'metric'`; null when no result was stored. */
+  result_metric: string | null;
+  gate_findings_json: unknown;
 }
 
-/** Runs of a project for one framework, oldest first, for the trend view. */
+/**
+ * Runs of a project for one framework, oldest first, for the trend view.
+ * buildTrendSeries relies on this order (created_at, then id).
+ */
 export async function listTrendRunsQuery(
   projectId: number,
   frameworkId: number,
@@ -881,7 +892,10 @@ export async function listTrendRunsQuery(
 ): Promise<TrendRunRow[]> {
   return (await sequelize.query(
     `SELECT r.id, r.created_at, r.profile_version, r.question_set_version,
-            r.job_description_key, r.metric, r.result_json
+            r.job_description_key, r.metric,
+            r.result_json->'tables' AS tables,
+            r.result_json->>'metric' AS result_metric,
+            r.gate_findings_json
        FROM bias_audit_runs r
        JOIN aedt_profiles ap ON ap.id = r.profile_id
                             AND ap.organization_id = :organization_id
