@@ -23,7 +23,15 @@ jest.mock("../database/db", () => ({
   },
 }));
 
-import { canUserAccessFile, deleteFileById, getFileById } from "./fileUpload.utils";
+jest.mock("./retention.utils", () => ({
+  ...jest.requireActual("./retention.utils"),
+  resolveFileExpiryOnCreate: jest.fn(async () => ({
+    expiry_date: "2027-10-18",
+    retention_policy: "1_year",
+  })),
+}));
+
+import { canUserAccessFile, deleteFileById, getFileById, uploadFile } from "./fileUpload.utils";
 
 const tx = {} as any;
 const ORG = 1;
@@ -93,5 +101,26 @@ describe("canUserAccessFile", () => {
   it("still grants a visible file", async () => {
     table = [visibleRow({ uploaded_by: 3 })];
     expect(await canUserAccessFile(1, 3, "Editor", ORG, ORG)).toBe(true);
+  });
+});
+
+describe("uploadFile", () => {
+  const pdf = {
+    originalname: "a.pdf",
+    mimetype: "application/pdf",
+    buffer: Buffer.from("x"),
+    size: 1,
+  };
+  const inserted = () =>
+    calls.find((c) => c.sql.includes("INSERT INTO files"))!.options.replacements;
+
+  it("gives a bias audit stance PDF no expiry date or retention policy", async () => {
+    await uploadFile(pdf as any, 3, null, "Bias audit stance report", ORG, tx);
+    expect(inserted()).toMatchObject({ expiry_date: null, retention_policy: null });
+  });
+
+  it("still applies the organization default to other files", async () => {
+    await uploadFile(pdf as any, 3, null, "File Manager", ORG, tx);
+    expect(inserted()).toMatchObject({ expiry_date: "2027-10-18", retention_policy: "1_year" });
   });
 });

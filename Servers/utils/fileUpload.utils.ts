@@ -41,12 +41,14 @@ export const uploadFile = async (
   }
   // Apply org-level default retention (if configured). Explicit expiry /
   // retention overrides come later via updateFileMetadata — this upload path
-  // takes no per-file values from the caller.
-  const { expiry_date, retention_policy } = await resolveFileExpiryOnCreate(
-    organizationId,
-    null,
-    null,
-  );
+  // takes no per-file values from the caller. A bias audit stance PDF gets
+  // none: it is an immutable record cited by hash, never updated or
+  // replaced, so an expiry date would only prompt an update that cannot
+  // happen (and put a hidden file in expiry notifications).
+  const { expiry_date, retention_policy } =
+    source === BIAS_AUDIT_STANCE_SOURCE
+      ? { expiry_date: null, retention_policy: null }
+      : await resolveFileExpiryOnCreate(organizationId, null, null);
 
   const query = `INSERT INTO files
     (
