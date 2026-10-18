@@ -1029,3 +1029,381 @@ export async function confirmRunDerivedBasisQuery(
   );
   return firstRow<BiasAuditRun>(result) ?? null;
 }
+
+// ---------------------------------------------------------------- corpora
+
+function allRows<T>(result: unknown): T[] {
+  const rows = Array.isArray(result) ? (result[0] as unknown) : undefined;
+  return Array.isArray(rows) ? (rows as T[]) : [];
+}
+
+export type CorpusStatus = "running" | "complete" | "blocked" | "failed";
+
+/** A bias_audit_corpora row as the driver returns it. */
+export interface CorpusRow {
+  id: number;
+  organization_id: number;
+  project_id: number;
+  profile_id: number;
+  profile_version: number;
+  job_description_key: string;
+  job_description_sha256: string;
+  artifact_kind: string;
+  knockout: string;
+  requested_count: number;
+  planned_count: number;
+  record_count: number | null;
+  seed: number;
+  model_pinned: string;
+  name_method: string;
+  criteria_supplied: string | null;
+  criteria_comparison_json: unknown;
+  models_observed_json: Record<string, number> | null;
+  cell_sizes_json: Record<string, number> | null;
+  id_order_check_json: unknown;
+  release_findings_json: unknown;
+  manifest_json: unknown;
+  manifest_sha256: string | null;
+  corpus_sha256: string | null;
+  status: CorpusStatus;
+  failure_code: string | null;
+  heartbeat_at: Date;
+  generated_by: number | null;
+  generated_at: Date;
+  completed_at: Date | null;
+}
+
+export interface InsertCorpusArgs {
+  projectId: number;
+  profileId: number;
+  profileVersion: number;
+  jobDescriptionKey: string;
+  jobDescriptionSha256: string;
+  artifactKind: string;
+  knockout: string;
+  requestedCount: number;
+  plannedCount: number;
+  /** The seed that cleared the ID-order gate; the plan is re-derived from it. */
+  seed: number;
+  modelPinned: string;
+  nameMethod: string;
+  criteriaSupplied: string | null;
+  criteriaComparison: unknown;
+  idOrderCheck: unknown;
+  generatedBy: number;
+}
+
+/**
+ * Inserts a running corpus, selecting from the attested profile version of
+ * the named project in this organization, so a cross-org or stale reference
+ * inserts nothing and is refused. A second running corpus for the project
+ * fails on bias_audit_corpora_one_running_uq; the caller maps that.
+ */
+export async function createCorpusQuery(
+  args: InsertCorpusArgs,
+  organizationId: number,
+): Promise<CorpusRow> {
+  const result = await sequelize.query(
+    `INSERT INTO bias_audit_corpora
+       (organization_id, project_id, profile_id, profile_version,
+        job_description_key, job_description_sha256, artifact_kind, knockout,
+        requested_count, planned_count, seed, model_pinned, name_method,
+        criteria_supplied, criteria_comparison_json, id_order_check_json,
+        generated_by)
+     SELECT pr.organization_id, pr.id, ap.id, ap.version,
+            :job_description_key, :job_description_sha256, :artifact_kind, :knockout,
+            :requested_count, :planned_count, :seed, :model_pinned, :name_method,
+            :criteria_supplied, CAST(:criteria_comparison_json AS JSONB),
+            CAST(:id_order_check_json AS JSONB), :generated_by
+       FROM aedt_profiles ap
+       JOIN projects pr ON pr.id = ap.project_id
+                       AND pr.organization_id = :organization_id
+      WHERE ap.id = :profile_id AND ap.project_id = :project_id
+        AND ap.organization_id = :organization_id
+        AND ap.version = :profile_version
+        AND ap.status = 'attested'
+     RETURNING *`,
+    {
+      replacements: {
+        project_id: args.projectId,
+        profile_id: args.profileId,
+        profile_version: args.profileVersion,
+        job_description_key: args.jobDescriptionKey,
+        job_description_sha256: args.jobDescriptionSha256,
+        artifact_kind: args.artifactKind,
+        knockout: args.knockout,
+        requested_count: args.requestedCount,
+        planned_count: args.plannedCount,
+        seed: args.seed,
+        model_pinned: args.modelPinned,
+        name_method: args.nameMethod,
+        criteria_supplied: args.criteriaSupplied,
+        // NOT NULL column: an absent comparison is stored as JSON null.
+        criteria_comparison_json: JSON.stringify(args.criteriaComparison ?? null),
+        id_order_check_json: json(args.idOrderCheck),
+        generated_by: args.generatedBy,
+        organization_id: organizationId,
+      },
+    },
+  );
+  const row = firstRow<CorpusRow>(result);
+  if (!row) refuseCrossOrg("Profile", args.profileId);
+  return row;
+}
+
+/** A corpus by id, in this organization, or null. */
+export async function getCorpusQuery(
+  corpusId: number,
+  organizationId: number,
+): Promise<CorpusRow | null> {
+  const rows = (await sequelize.query(
+    `SELECT * FROM bias_audit_corpora
+      WHERE id = :corpus_id AND organization_id = :organization_id`,
+    {
+      replacements: { corpus_id: corpusId, organization_id: organizationId },
+      type: QueryTypes.SELECT,
+    },
+  )) as CorpusRow[];
+  return rows[0] ?? null;
+}
+
+export interface UpdateCorpusStatusArgs {
+  corpusId: number;
+  status: Exclude<CorpusStatus, "running">;
+  recordCount?: number;
+  modelsObserved?: Record<string, number>;
+  cellSizes?: Record<string, number>;
+  manifest?: unknown;
+  manifestSha256?: string;
+  corpusSha256?: string;
+  releaseFindings?: unknown;
+  failureCode?: string;
+}
+
+/**
+ * Moves a running corpus to a final status in one write, with whatever
+ * completion fields are given (others keep their value). Only a running
+ * corpus moves, so a completion never overwrites a corpus the stale sweep
+ * already failed. Returns whether a row moved.
+ */
+export async function updateCorpusStatusQuery(
+  args: UpdateCorpusStatusArgs,
+  organizationId: number,
+): Promise<boolean> {
+  if (!["complete", "blocked", "failed"].includes(args.status)) {
+    throw new Error(`A corpus cannot be moved to status "${args.status}".`);
+  }
+  const result = await sequelize.query(
+    `UPDATE bias_audit_corpora
+        SET status = :status,
+            record_count = COALESCE(:record_count, record_count),
+            models_observed_json = COALESCE(CAST(:models_observed_json AS JSONB), models_observed_json),
+            cell_sizes_json = COALESCE(CAST(:cell_sizes_json AS JSONB), cell_sizes_json),
+            manifest_json = COALESCE(CAST(:manifest_json AS JSONB), manifest_json),
+            manifest_sha256 = COALESCE(:manifest_sha256, manifest_sha256),
+            corpus_sha256 = COALESCE(:corpus_sha256, corpus_sha256),
+            release_findings_json = COALESCE(CAST(:release_findings_json AS JSONB), release_findings_json),
+            failure_code = COALESCE(:failure_code, failure_code),
+            heartbeat_at = NOW(),
+            completed_at = NOW()
+      WHERE id = :corpus_id AND organization_id = :organization_id
+        AND status = 'running'
+      RETURNING id`,
+    {
+      replacements: {
+        corpus_id: args.corpusId,
+        status: args.status,
+        record_count: args.recordCount ?? null,
+        models_observed_json: json(args.modelsObserved),
+        cell_sizes_json: json(args.cellSizes),
+        manifest_json: json(args.manifest),
+        manifest_sha256: args.manifestSha256 ?? null,
+        corpus_sha256: args.corpusSha256 ?? null,
+        release_findings_json: json(args.releaseFindings),
+        failure_code: args.failureCode ?? null,
+        organization_id: organizationId,
+      },
+    },
+  );
+  return firstRow(result) !== undefined;
+}
+
+/** Marks a running corpus alive. False when it is not running (or not in the organization). */
+export async function touchCorpusHeartbeatQuery(
+  corpusId: number,
+  organizationId: number,
+): Promise<boolean> {
+  const result = await sequelize.query(
+    `UPDATE bias_audit_corpora SET heartbeat_at = NOW()
+      WHERE id = :corpus_id AND organization_id = :organization_id
+        AND status = 'running'
+      RETURNING id`,
+    { replacements: { corpus_id: corpusId, organization_id: organizationId } },
+  );
+  return firstRow(result) !== undefined;
+}
+
+/**
+ * Fails this organization's running corpora whose heartbeat is older than
+ * `staleAfterSeconds`, freeing the one-running-per-project slot after a
+ * worker died. Returns the ids it failed.
+ */
+export async function markStaleCorporaFailedQuery(
+  organizationId: number,
+  staleAfterSeconds: number,
+): Promise<number[]> {
+  if (!Number.isInteger(staleAfterSeconds) || staleAfterSeconds < 1) {
+    throw new Error("The stale limit must be a whole number of seconds, at least 1.");
+  }
+  const result = await sequelize.query(
+    `UPDATE bias_audit_corpora
+        SET status = 'failed', failure_code = 'heartbeat_stale', completed_at = NOW()
+      WHERE organization_id = :organization_id
+        AND status = 'running'
+        AND heartbeat_at < NOW() - make_interval(secs => :stale_after_seconds)
+      RETURNING id`,
+    {
+      replacements: { organization_id: organizationId, stale_after_seconds: staleAfterSeconds },
+    },
+  );
+  return allRows<{ id: number }>(result).map((r) => r.id);
+}
+
+export interface AppendCorpusRecordArgs {
+  corpusId: number;
+  candidateId: string;
+  attempt: number;
+  text: string;
+  modelName: string;
+  promptHash: string;
+  validationStatus: "valid" | "invalid";
+  invalidReason: string | null;
+}
+
+/**
+ * Appends one generation attempt. The log is append-only: nothing here or
+ * anywhere updates or deletes a record. Only a running corpus in this
+ * organization takes a record; anything else inserts nothing and is refused.
+ */
+export async function appendCorpusRecordQuery(
+  args: AppendCorpusRecordArgs,
+  organizationId: number,
+): Promise<{ id: number | string }> {
+  const result = await sequelize.query(
+    `INSERT INTO bias_audit_corpus_records
+       (organization_id, corpus_id, candidate_id, attempt, text, model_name,
+        prompt_hash, validation_status, invalid_reason)
+     SELECT c.organization_id, c.id, :candidate_id, :attempt, :text, :model_name,
+            :prompt_hash, :validation_status, :invalid_reason
+       FROM bias_audit_corpora c
+      WHERE c.id = :corpus_id AND c.organization_id = :organization_id
+        AND c.status = 'running'
+     RETURNING id`,
+    {
+      replacements: {
+        corpus_id: args.corpusId,
+        candidate_id: args.candidateId,
+        attempt: args.attempt,
+        text: args.text,
+        model_name: args.modelName,
+        prompt_hash: args.promptHash,
+        validation_status: args.validationStatus,
+        invalid_reason: args.invalidReason,
+        organization_id: organizationId,
+      },
+    },
+  );
+  const row = firstRow<{ id: number | string }>(result);
+  if (!row) {
+    throw new ConflictException(
+      `Corpus ${args.corpusId} is not running in this organization`,
+      "Corpus",
+    );
+  }
+  return row;
+}
+
+/** One logged attempt, without its text. */
+export interface CorpusLogRow {
+  candidate_id: string;
+  attempt: number;
+  validation_status: "valid" | "invalid";
+  model_name: string;
+  prompt_hash: string;
+}
+
+/** Every attempt of a corpus, metadata only; the text is never read here. */
+export async function listCorpusLogQuery(
+  corpusId: number,
+  organizationId: number,
+): Promise<CorpusLogRow[]> {
+  return (await sequelize.query(
+    `SELECT candidate_id, attempt, validation_status, model_name, prompt_hash
+       FROM bias_audit_corpus_records
+      WHERE corpus_id = :corpus_id AND organization_id = :organization_id
+      ORDER BY candidate_id, attempt`,
+    {
+      replacements: { corpus_id: corpusId, organization_id: organizationId },
+      type: QueryTypes.SELECT,
+    },
+  )) as CorpusLogRow[];
+}
+
+/** Candidates whose latest attempt is valid: generation progress. */
+export async function countValidCorpusRecordsQuery(
+  corpusId: number,
+  organizationId: number,
+): Promise<number> {
+  const rows = (await sequelize.query(
+    `SELECT COUNT(*)::int AS count
+       FROM (SELECT DISTINCT ON (candidate_id) validation_status
+               FROM bias_audit_corpus_records
+              WHERE corpus_id = :corpus_id AND organization_id = :organization_id
+              ORDER BY candidate_id, attempt DESC) latest
+      WHERE validation_status = 'valid'`,
+    {
+      replacements: { corpus_id: corpusId, organization_id: organizationId },
+      type: QueryTypes.SELECT,
+    },
+  )) as Array<{ count: number }>;
+  return Number(rows[0]?.count ?? 0);
+}
+
+const MAX_RECORD_PAGE = 1000;
+
+/**
+ * One page of the downloadable corpus: each candidate's latest attempt when
+ * it is valid, in candidate-ID order, after `afterCandidateId` ("" for the
+ * first page). Ordered and compared byte-wise (COLLATE "C"), the order the
+ * manifest uses.
+ */
+export async function listLatestValidRecordsPageQuery(
+  corpusId: number,
+  organizationId: number,
+  afterCandidateId: string,
+  limit: number,
+): Promise<Array<{ candidate_id: string; text: string }>> {
+  if (!Number.isInteger(limit) || limit < 1 || limit > MAX_RECORD_PAGE) {
+    throw new Error(`The page limit must be a whole number from 1 to ${MAX_RECORD_PAGE}.`);
+  }
+  return (await sequelize.query(
+    `SELECT candidate_id, text
+       FROM (SELECT DISTINCT ON (candidate_id) candidate_id, text, validation_status
+               FROM bias_audit_corpus_records
+              WHERE corpus_id = :corpus_id AND organization_id = :organization_id
+                AND candidate_id COLLATE "C" > :after_candidate_id
+              ORDER BY candidate_id, attempt DESC) latest
+      WHERE validation_status = 'valid'
+      ORDER BY candidate_id COLLATE "C"
+      LIMIT :limit`,
+    {
+      replacements: {
+        corpus_id: corpusId,
+        after_candidate_id: afterCandidateId,
+        limit,
+        organization_id: organizationId,
+      },
+      type: QueryTypes.SELECT,
+    },
+  )) as Array<{ candidate_id: string; text: string }>;
+}

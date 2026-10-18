@@ -95,6 +95,10 @@ Both places that edit these settings, the Data retention tab and **AI Gateway â†
 
 The Agent Control row's "Last cleanup" reads "Daily" when the effective period (the organization's own, or the deployment default) is above 0; when records are kept indefinitely or the gateway is unreachable it shows "â€”".
 
+## Generated bias-audit corpora
+
+`bias_audit_corpora` and `bias_audit_corpus_records` (the LL 144 bias module's generated corpora and their append-only record log) are outside this subsystem and are retained indefinitely. A corpus is synthetic: every record is generated from a fixed job description and holds no real applicant data, so there is nothing personal to expire. They are left out of the retention registry on purpose; deleting the project removes them.
+
 ## Tests
 
 Real-DB: `Servers/tests/integration/audit-ledger-retention.test.ts` (prune then verify, trigger rejections, checkpoint immutability) and `tenant-isolation/data-retention.isolation.test.ts`. Unit tests sit beside the utils, controller and job; gateway tests are in `AIGateway/tests/test_retention.py`.

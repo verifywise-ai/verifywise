@@ -25,6 +25,8 @@ const IO_LAYER: Record<string, string> = {
     "asks utils/biasAudit.utils whether a user owns or belongs to a project",
   [path.join(MODULE, "generation", "gatewayClient.ts")]:
     "calls the Vercel AI Gateway with fetch and hashes each prompt with node:crypto",
+  [path.join(MODULE, "generation", "generateCorpus.ts")]:
+    "plans and runs a corpus: reads and appends records through utils/biasAudit.utils, calls the gateway client, hashes with node:crypto",
   [path.join(MODULE, "generation", "settings.ts")]:
     "reads the gateway's three deployment variables from process.env",
   [path.join(MODULE, "stance", "render.ts")]:

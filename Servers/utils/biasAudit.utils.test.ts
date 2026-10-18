@@ -33,8 +33,18 @@ import {
   getUserNamesQuery,
   confirmRunDerivedBasisQuery,
   PROJECT_MEMBER_SQL,
+  createCorpusQuery,
+  getCorpusQuery,
+  updateCorpusStatusQuery,
+  touchCorpusHeartbeatQuery,
+  markStaleCorporaFailedQuery,
+  appendCorpusRecordQuery,
+  listCorpusLogQuery,
+  countValidCorpusRecordsQuery,
+  listLatestValidRecordsPageQuery,
+  InsertCorpusArgs,
 } from "./biasAudit.utils";
-import { ConflictException } from "../domain.layer/exceptions/custom.exception";
+import { ConflictException, NotFoundException } from "../domain.layer/exceptions/custom.exception";
 
 const tx = undefined as any;
 
@@ -661,5 +671,199 @@ describe("listTrendRunsQuery", () => {
     // The whole stored result is never selected.
     expect(sql).not.toMatch(/r\.result_json\s*(,|\n\s*FROM)/);
     expect(sql).toMatch(/ORDER BY r\.created_at ASC, r\.id ASC/);
+  });
+});
+
+describe("corpora and the record log", () => {
+  const CORPUS_ARGS: InsertCorpusArgs = {
+    projectId: 7,
+    profileId: 5,
+    profileVersion: 2,
+    jobDescriptionKey: "commercial-ae",
+    jobDescriptionSha256: "a".repeat(64),
+    artifactKind: "resume",
+    knockout: "no",
+    requestedCount: 5000,
+    plannedCount: 4970,
+    seed: 123,
+    modelPinned: "pinned-model-1",
+    nameMethod: "names",
+    criteriaSupplied: null,
+    criteriaComparison: { outcome: "not_supplied" },
+    idOrderCheck: { sex: { observed: 1, expected: 1, fraction: 1 } },
+    generatedBy: 9,
+  };
+  const RECORD = {
+    corpusId: 3,
+    candidateId: "C0001",
+    attempt: 1,
+    text: "x",
+    modelName: "m1",
+    promptHash: "h".repeat(64),
+    validationStatus: "valid" as const,
+    invalidReason: null,
+  };
+
+  const calls: Array<[string, () => Promise<unknown>, unknown]> = [
+    ["create", () => createCorpusQuery(CORPUS_ARGS, 42), [[{ id: 3 }]]],
+    ["get", () => getCorpusQuery(3, 42), []],
+    [
+      "status update",
+      () => updateCorpusStatusQuery({ corpusId: 3, status: "failed", failureCode: "x" }, 42),
+      [[]],
+    ],
+    ["heartbeat", () => touchCorpusHeartbeatQuery(3, 42), [[]]],
+    ["stale sweep", () => markStaleCorporaFailedQuery(42, 900), [[]]],
+    ["append", () => appendCorpusRecordQuery(RECORD, 42), [[{ id: 1 }]]],
+    ["log", () => listCorpusLogQuery(3, 42), []],
+    ["valid count", () => countValidCorpusRecordsQuery(3, 42), [{ count: 0 }]],
+    ["page", () => listLatestValidRecordsPageQuery(3, 42, "", 500), []],
+  ];
+
+  it.each(calls)("scopes the corpus %s statement to the organization", async (_n, call, result) => {
+    mockQuery.mockResolvedValueOnce(result);
+    await call();
+    const [sql, opts] = mockQuery.mock.calls[0];
+    expect(sql).toMatch(/organization_id = :organization_id/);
+    expect(opts.replacements.organization_id).toBe(42);
+  });
+
+  it("creates a corpus only from an attested profile version of the named project in the organization", async () => {
+    mockQuery.mockResolvedValueOnce([[{ id: 3 }]]);
+    await expect(createCorpusQuery(CORPUS_ARGS, 42)).resolves.toEqual({ id: 3 });
+    const [sql, opts] = mockQuery.mock.calls[0];
+    expect(sql).toMatch(/INSERT INTO bias_audit_corpora/);
+    expect(sql).toMatch(/FROM aedt_profiles ap/);
+    expect(sql).toMatch(/pr\.organization_id = :organization_id/);
+    expect(sql).toMatch(/ap\.status = 'attested'/);
+    expect(sql).toMatch(/ap\.version = :profile_version/);
+    expect(opts.replacements).toMatchObject({
+      project_id: 7,
+      profile_id: 5,
+      profile_version: 2,
+      requested_count: 5000,
+      planned_count: 4970,
+      seed: 123,
+      knockout: "no",
+      criteria_comparison_json: JSON.stringify({ outcome: "not_supplied" }),
+      id_order_check_json: JSON.stringify(CORPUS_ARGS.idOrderCheck),
+      generated_by: 9,
+    });
+  });
+
+  it("refuses a corpus for a profile outside the organization, project or attested version", async () => {
+    mockQuery.mockResolvedValueOnce([[]]);
+    await expect(createCorpusQuery(CORPUS_ARGS, 42)).rejects.toThrow(NotFoundException);
+  });
+
+  it("returns null for a corpus outside the organization", async () => {
+    mockQuery.mockResolvedValueOnce([]);
+    await expect(getCorpusQuery(3, 42)).resolves.toBeNull();
+  });
+
+  it("moves a corpus out of running only, and says whether it did", async () => {
+    mockQuery.mockResolvedValueOnce([[{ id: 3 }]]);
+    await expect(
+      updateCorpusStatusQuery(
+        {
+          corpusId: 3,
+          status: "complete",
+          recordCount: 700,
+          modelsObserved: { m1: 700 },
+          cellSizes: { "Male|Asian": 50 },
+          manifest: [{ candidateId: "C0001" }],
+          manifestSha256: "b".repeat(64),
+          corpusSha256: "c".repeat(64),
+        },
+        42,
+      ),
+    ).resolves.toBe(true);
+    const [sql, opts] = mockQuery.mock.calls[0];
+    expect(sql).toMatch(/status = 'running'/);
+    expect(opts.replacements).toMatchObject({
+      status: "complete",
+      record_count: 700,
+      models_observed_json: JSON.stringify({ m1: 700 }),
+      manifest_sha256: "b".repeat(64),
+      corpus_sha256: "c".repeat(64),
+    });
+    mockQuery.mockResolvedValueOnce([[]]);
+    await expect(updateCorpusStatusQuery({ corpusId: 3, status: "failed" }, 42)).resolves.toBe(
+      false,
+    );
+  });
+
+  it("refuses to move a corpus back to running", async () => {
+    await expect(
+      updateCorpusStatusQuery({ corpusId: 3, status: "running" as never }, 42),
+    ).rejects.toThrow(/status/);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it("touches the heartbeat of a running corpus only", async () => {
+    mockQuery.mockResolvedValueOnce([[{ id: 3 }]]);
+    await expect(touchCorpusHeartbeatQuery(3, 42)).resolves.toBe(true);
+    expect(mockQuery.mock.calls[0][0]).toMatch(/status = 'running'/);
+    mockQuery.mockResolvedValueOnce([[]]);
+    await expect(touchCorpusHeartbeatQuery(3, 42)).resolves.toBe(false);
+  });
+
+  it("fails running corpora whose heartbeat is older than the limit, and returns their ids", async () => {
+    mockQuery.mockResolvedValueOnce([[{ id: 3 }, { id: 4 }]]);
+    await expect(markStaleCorporaFailedQuery(42, 900)).resolves.toEqual([3, 4]);
+    const [sql, opts] = mockQuery.mock.calls[0];
+    expect(sql).toMatch(/status = 'running'/);
+    expect(sql).toMatch(/heartbeat_at </);
+    expect(opts.replacements.stale_after_seconds).toBe(900);
+    await expect(markStaleCorporaFailedQuery(42, 0)).rejects.toThrow(/seconds/);
+  });
+
+  it("appends a record only to a running corpus in the organization, never updating one", async () => {
+    mockQuery.mockResolvedValueOnce([[{ id: 1 }]]);
+    await appendCorpusRecordQuery(RECORD, 42);
+    const [sql, opts] = mockQuery.mock.calls[0];
+    expect(sql).toMatch(/INSERT INTO bias_audit_corpus_records/);
+    expect(sql).toMatch(/c\.status = 'running'/);
+    expect(sql).not.toMatch(/UPDATE|ON CONFLICT/i);
+    expect(opts.replacements).toMatchObject({
+      corpus_id: 3,
+      candidate_id: "C0001",
+      attempt: 1,
+      validation_status: "valid",
+      invalid_reason: null,
+    });
+    mockQuery.mockResolvedValueOnce([[]]);
+    await expect(appendCorpusRecordQuery(RECORD, 42)).rejects.toThrow(ConflictException);
+  });
+
+  it("reads the log as metadata only, never the text", async () => {
+    mockQuery.mockResolvedValueOnce([]);
+    await listCorpusLogQuery(3, 42);
+    const [sql] = mockQuery.mock.calls[0];
+    const selected = sql.slice(0, sql.search(/\bFROM\b/));
+    expect(selected).not.toMatch(/\btext\b|\*/);
+    expect(selected).toMatch(/candidate_id/);
+    expect(sql).toMatch(/ORDER BY candidate_id, attempt/);
+  });
+
+  it("counts candidates whose latest attempt is valid", async () => {
+    mockQuery.mockResolvedValueOnce([{ count: 690 }]);
+    await expect(countValidCorpusRecordsQuery(3, 42)).resolves.toBe(690);
+    expect(mockQuery.mock.calls[0][0]).toMatch(/DISTINCT ON \(candidate_id\)/);
+  });
+
+  it("pages the latest valid records by candidate id after a cursor", async () => {
+    mockQuery.mockResolvedValueOnce([{ candidate_id: "C0501", text: "x" }]);
+    await expect(listLatestValidRecordsPageQuery(3, 42, "C0500", 500)).resolves.toEqual([
+      { candidate_id: "C0501", text: "x" },
+    ]);
+    const [sql, opts] = mockQuery.mock.calls[0];
+    expect(sql).toMatch(/DISTINCT ON \(candidate_id\)/);
+    expect(sql).toMatch(/attempt DESC/);
+    expect(sql).toMatch(/validation_status = 'valid'/);
+    expect(sql).toMatch(/LIMIT :limit/);
+    expect(opts.replacements).toMatchObject({ after_candidate_id: "C0500", limit: 500 });
+    await expect(listLatestValidRecordsPageQuery(3, 42, "", 0)).rejects.toThrow(/limit/);
+    await expect(listLatestValidRecordsPageQuery(3, 42, "", 5001)).rejects.toThrow(/limit/);
   });
 });
