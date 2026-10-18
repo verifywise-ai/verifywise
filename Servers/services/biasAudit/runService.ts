@@ -137,19 +137,24 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
   // The same reading the profile view reports as the attested decision.
   const metric = runMetricOf(answerGates);
 
+  // Both refusals come from the attested profile's state, not the upload, so
+  // they are 409s, apart from the 400s of a bad file or mapping. The page
+  // refetches the profile on a 409 to show the state that refused the run.
   if (metric === null) {
     const cutoffShown = applicableQuestions(answers).some((q) => q.key === "cutoff.applied_by");
     if (!cutoffShown) {
-      throw new ValidationException(
+      throw new ConflictException(
         "The attested profile records this tool as outside the rule's scope, so the module " +
           "does not run its measures against it.",
+        "AedtProfile",
         "scope.weighting",
       );
     }
-    throw new ValidationException(
+    throw new ConflictException(
       "The cutoff answer in the attested profile does not establish which metric applies " +
         "(selection rate or scoring rate), so a run cannot be started. Answer cutoff.applied_by " +
         "and attest again.",
+      "AedtProfile",
       "cutoff.applied_by",
     );
   }

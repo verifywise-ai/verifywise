@@ -112,13 +112,14 @@ export function useGenerateAedtScopeDetermination(projectId: number) {
 }
 
 /**
- * Run refusals that may mean the profile changed under the page. runService
- * answers 400 when the attested profile is out of scope or leaves the cutoff
- * open (ValidationException) and 404 when nothing is attested; 409 and 422
- * cover conflicts and business-rule refusals. A 413 or 415 (the file), a
- * network failure or a 5xx says nothing about the profile.
+ * Run refusals caused by the attested profile's state, after which the page
+ * refetches it. POST /runs answers 404 when nothing is attested and 409 when
+ * the attested profile places the tool out of scope or leaves the cutoff
+ * open (runService.createRun). Its 400s (no file, unreadable CSV, unknown
+ * mapping key), 413, 415, a network failure or a 5xx say nothing about the
+ * profile and refetch nothing.
  */
-const STALE_PROFILE_STATUSES = new Set([400, 404, 409, 422]);
+const STALE_PROFILE_STATUSES = new Set([404, 409]);
 
 /**
  * A new run changes only the run list; the profile and questions stay as they

@@ -2278,7 +2278,12 @@ export const biasAuditEndpoints: Endpoint[] = [
     summary: "Create Run",
     requiresAuth: true,
     responses: [
-      { status: 200, description: "Success" },
+      { status: 201, description: "Run recorded (with its gate findings, whether or not a result was computed)" },
+      { status: 400, description: "The upload or mapping is invalid: no file, a CSV that cannot be read, or a mapped key the run does not read" },
+      { status: 404, description: "Project not found or not available to the caller, or no attested profile to run against" },
+      { status: 409, description: "The attested profile refuses a run: it places the tool out of scope, or its cutoff answer does not establish which rate applies" },
+      { status: 413, description: "The dataset exceeds the 30 MB upload limit" },
+      { status: 415, description: "The dataset is not a .csv file" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Bias Audit",

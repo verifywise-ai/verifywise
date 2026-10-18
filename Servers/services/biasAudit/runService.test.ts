@@ -261,6 +261,36 @@ describe("createRun", () => {
     expect(err.message).toMatch(/outside the rule's scope/i);
     expect(err.message).not.toMatch(/answer cutoff/i);
   });
+
+  // Both refusals come from the attested profile's state, not from the
+  // upload, so they are 409s, apart from the 400s of a bad file or mapping.
+  it("refuses an out-of-scope attested profile with a 409", async () => {
+    utils.getProfileAnswersQuery.mockResolvedValue(
+      ANSWERS.map((a) =>
+        a.question_key === "scope.weighting" ? ans("scope.weighting", "one_of_several") : a,
+      ),
+    );
+    await expect(run()).rejects.toMatchObject({ statusCode: 409 });
+    expect(utils.createRunQuery).not.toHaveBeenCalled();
+  });
+
+  it("refuses an attested profile whose cutoff answer is open with a 409", async () => {
+    utils.getProfileAnswersQuery.mockResolvedValue(
+      ANSWERS.map((a) =>
+        a.question_key === "cutoff.applied_by" ? ans("cutoff.applied_by", null) : a,
+      ),
+    );
+    const err = await run().catch((e: { statusCode?: number; message: string }) => e);
+    expect(err).toMatchObject({ statusCode: 409 });
+    expect(err.message).toMatch(/does not establish which metric applies/);
+    expect(utils.createRunQuery).not.toHaveBeenCalled();
+  });
+
+  it("still refuses an unknown mapping key with a 400", async () => {
+    await expect(
+      run({ mapping: { sex: "gender", race_ethnicity: "race", selected: "sel", bogus: "x" } }),
+    ).rejects.toMatchObject({ statusCode: 400 });
+  });
 });
 
 describe("createRun, scoring rate", () => {

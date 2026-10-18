@@ -340,10 +340,19 @@ describe("createRun", () => {
     expect(out.data).toMatch(/attested profile/);
   });
 
-  it("maps a refused run to 400", async () => {
-    svc(runService.createRun).mockRejectedValue(new ValidationException("Out of scope", "x"));
+  it("maps a refused upload to 400", async () => {
+    svc(runService.createRun).mockRejectedValue(new ValidationException("Bad mapping", "x"));
     const { status } = await call(ctrl.createRun, mockReq({ file, body }));
     expect(status).toBe(400);
+  });
+
+  it("maps a refusal from the attested profile's state to 409, keeping its message", async () => {
+    svc(runService.createRun).mockRejectedValue(
+      new ConflictException("Out of scope", "AedtProfile", "scope.weighting"),
+    );
+    const { status, body: out } = await call(ctrl.createRun, mockReq({ file, body }));
+    expect(status).toBe(409);
+    expect(JSON.stringify(out)).toMatch(/Out of scope/);
   });
 });
 
