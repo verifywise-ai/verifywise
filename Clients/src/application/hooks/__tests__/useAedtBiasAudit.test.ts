@@ -73,9 +73,9 @@ describe("useAedtBiasAudit invalidation", () => {
 
   // A refusal such as a 422 "out of scope" means the attested profile changed
   // under the page, so its gate and metric label are refetched.
-  // POST /runs: no attested profile is a 404; an attested profile out of
-  // scope or with the cutoff open is a 409 (runService.createRun).
-  it.each([404, 409])(
+  // POST /runs: 404 nothing attested, 409 out of scope or cutoff open, and a
+  // 400 mapping refusal checked against the attested metric.
+  it.each([400, 404, 409, 422])(
     "refetches the profile view when the server refuses a run with %i, a stale profile",
     async (status) => {
       createRun.mockRejectedValueOnce(httpError(status));
@@ -91,7 +91,7 @@ describe("useAedtBiasAudit invalidation", () => {
     },
   );
 
-  it.each([400, 413, 415, 500])(
+  it.each([413, 415, 500])(
     "refetches nothing on a %i, which says nothing about the profile",
     async (status) => {
       createRun.mockRejectedValueOnce(httpError(status));

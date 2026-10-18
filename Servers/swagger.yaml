@@ -24509,6 +24509,10 @@ paths:
           description: 'Run recorded (with its gate findings, whether or not a result was computed)'
         '400':
           description: 'The upload or mapping is invalid: no file, a CSV that cannot be read, or a mapped key the run does not read'
+        '401':
+          description: 'Not authenticated'
+        '403':
+          description: 'The caller''s role may not record a run (biasAudit.edit)'
         '404':
           description: 'Project not found or not available to the caller, or no attested profile to run against'
         '409':

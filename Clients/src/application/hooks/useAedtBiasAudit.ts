@@ -155,20 +155,12 @@ export function useGenerateAedtScopeDetermination(projectId: number) {
 }
 
 /**
- * Run refusals caused by the attested profile's state, after which the page
- * refetches it. POST /runs answers 404 when nothing is attested and 409 when
- * the attested profile places the tool out of scope or leaves the cutoff
- * open (runService.createRun). Its 400s (no file, unreadable CSV, unknown
- * mapping key), 413, 415, a network failure or a 5xx say nothing about the
- * profile and refetch nothing.
- */
-const STALE_PROFILE_STATUSES = new Set([404, 409]);
-
-/**
  * A new run changes only the run list; the profile and questions stay as they
  * were. The refetch is not awaited, so the caller opens the new run at once.
- * A refusal that may mean the attested decision the page gated on is stale
- * (see STALE_PROFILE_STATUSES) refetches the profile view.
+ * Any 4xx refusal except 413 and 415 (the file itself) may come from the
+ * attested profile: 404 nothing attested, 409 out of scope or cutoff open,
+ * and a 400 mapping refusal is checked against the attested metric. So all
+ * of them refetch the profile view; a network failure or a 5xx does not.
  */
 export function useCreateAedtRun(projectId: number) {
   const queryClient = useQueryClient();
@@ -180,7 +172,7 @@ export function useCreateAedtRun(projectId: number) {
     },
     onError: (error) => {
       const { status } = describeAedtError(error);
-      if (status !== null && STALE_PROFILE_STATUSES.has(status)) {
+      if (status !== null && status >= 400 && status < 500 && status !== 413 && status !== 415) {
         void queryClient.invalidateQueries({ queryKey: aedtQueryKeys.profile(projectId) });
       }
     },
