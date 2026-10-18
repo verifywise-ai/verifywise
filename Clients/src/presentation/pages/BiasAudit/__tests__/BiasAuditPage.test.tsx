@@ -174,7 +174,7 @@ describe("BiasAuditPage", () => {
       state.profile = draftAhead(OUT_OF_SCOPE, { readiness: IN_SCOPE, metric: "scoring_rate" });
       renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
       expect(screen.getByTestId("aedt-draft-differs")).toHaveTextContent(
-        /draft answers place the tool out of scope, unlike the attested version/,
+        /draft answers place the tool out of scope\. Runs and scope determinations follow the attested version/,
       );
       // The summary shows the attested score, which runs act on.
       expect(screen.getByText("60%")).toBeInTheDocument();
@@ -217,11 +217,48 @@ describe("BiasAuditPage", () => {
         { readiness: IN_SCOPE, metric: "selection_rate" },
       );
       renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
-      expect(screen.getByTestId("aedt-draft-differs")).toHaveTextContent("Draft readiness 80%");
-      expect(
-        screen.getByText(/runs use the attested version until you attest/i),
-      ).toBeInTheDocument();
+      expect(screen.getByTestId("aedt-draft-differs")).toHaveTextContent(
+        "Draft readiness 80%. Runs and scope determinations follow the attested version",
+      );
+      // The shared sentence is said once, not again beside the version.
+      expect(screen.queryByText(/runs use the attested version until you attest/i)).toBeNull();
+      expect(screen.getAllByTestId("aedt-draft-differs")).toHaveLength(1);
     });
+  });
+
+  // An undetermined draft over an in-scope attestation still names the
+  // deciding question that leaves it open.
+  it("names the deciding questions an undetermined draft leaves open", () => {
+    state.profile = {
+      ...PROFILE,
+      profile: { id: 4, version: 3, status: "draft" },
+      answers: [
+        {
+          questionKey: "data.held",
+          value: null,
+          notes: null,
+          dontKnow: true,
+          notApplicable: false,
+          answeredByUserId: 1,
+          answeredAt: "2026-10-03T10:00:00.000Z",
+        },
+      ],
+      readiness: {
+        score: null,
+        blockedReason: "Scope is not established: answer data.held before a score can be shown.",
+        missingVetoes: ["data.held"],
+        openItems: [],
+        scope: "undetermined",
+        earned: 0,
+        possible: 0,
+      },
+      attestedDecision: { readiness: IN_SCOPE, metric: "selection_rate" },
+    };
+    renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
+    const note = screen.getByTestId("aedt-draft-differs");
+    expect(note).toHaveTextContent("Your draft answers leave scope undetermined.");
+    expect(note).toHaveTextContent(/answer data\.held before a score can be shown/);
+    expect(note).toHaveTextContent('Demographic data you hold (answered "I don\'t know")');
   });
 
   it("asks for an attestation when the saved answers are not attested", () => {

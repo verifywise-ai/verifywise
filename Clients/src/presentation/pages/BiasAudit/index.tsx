@@ -287,14 +287,11 @@ const ProjectWorkspace = ({
   );
 };
 
-/** What a draft's scope is, said against the attested version it differs from. */
+/** What a draft's scope is, when it differs from the attested version's. */
 const DRAFT_SCOPE_NOTE: Record<AedtReadiness["scope"], string> = {
-  out_of_scope:
-    "Your draft answers place the tool out of scope, unlike the attested version. Runs and scope determinations follow the attested version until you attest the draft.",
-  in_scope:
-    "Your draft answers place the tool in scope, unlike the attested version. Runs and scope determinations follow the attested version until you attest the draft.",
-  undetermined:
-    "Your draft answers leave scope undetermined, unlike the attested version. Runs and scope determinations follow the attested version until you attest the draft.",
+  out_of_scope: "Your draft answers place the tool out of scope.",
+  in_scope: "Your draft answers place the tool in scope.",
+  undetermined: "Your draft answers leave scope undetermined.",
 };
 
 const ProfileSummary = ({ profile }: { profile: AedtProfileView }) => {
@@ -310,6 +307,8 @@ const ProfileSummary = ({ profile }: { profile: AedtProfileView }) => {
   const draftScopeDiffers = draftAhead && attestedDecision && draft.scope !== readiness.scope;
   const draftScoreDiffers =
     draftAhead && !draftScopeDiffers && draft.score !== null && draft.score !== readiness.score;
+  const draftDiffers = draftScopeDiffers || draftScoreDiffers;
+  const draftAnswers = new Map(profile.answers.map((a) => [a.questionKey, a]));
 
   return (
     <Box
@@ -343,7 +342,7 @@ const ProfileSummary = ({ profile }: { profile: AedtProfileView }) => {
             </Typography>
           </Stack>
         )}
-        {draftAhead && !draftScopeDiffers && (
+        {draftAhead && !draftDiffers && (
           <Typography sx={{ fontSize: 12, color: palette.status.warning.text }}>
             Runs use the attested version until you attest this draft.
           </Typography>
@@ -373,20 +372,49 @@ const ProfileSummary = ({ profile }: { profile: AedtProfileView }) => {
             {`${readiness.score}%`}
           </Typography>
         )}
-        {draftScopeDiffers && (
+        {draftDiffers && (
           <Typography
+            component="div"
             sx={{ fontSize: 12, color: palette.status.warning.text }}
             data-testid="aedt-draft-differs"
           >
-            {DRAFT_SCOPE_NOTE[draft.scope]}
-          </Typography>
-        )}
-        {draftScoreDiffers && (
-          <Typography
-            sx={{ fontSize: 12, color: palette.status.warning.text }}
-            data-testid="aedt-draft-differs"
-          >
-            <span>Draft readiness</span> <span>{`${draft.score}%`}</span>
+            {draftScopeDiffers ? (
+              <span>{DRAFT_SCOPE_NOTE[draft.scope]}</span>
+            ) : (
+              <>
+                <span>Draft readiness</span> <span>{`${draft.score}%.`}</span>
+              </>
+            )}{" "}
+            <span>
+              Runs and scope determinations follow the attested version until you attest the draft.
+            </span>
+            {/* An undetermined draft names what leaves it open, as the summary did before attestation. */}
+            {draftScopeDiffers && draft.scope === "undetermined" && (
+              <>
+                {draft.blockedReason && (
+                  <Box component="p" sx={{ m: 0, mt: "4px" }}>
+                    {draft.blockedReason}
+                  </Box>
+                )}
+                {draft.missingVetoes.length > 0 && (
+                  <>
+                    <Box component="p" sx={{ m: 0, mt: "4px" }}>
+                      Deciding questions still open in the draft:
+                    </Box>
+                    <Box component="ul" sx={{ m: 0, pl: "18px" }}>
+                      {draft.missingVetoes.map((key) => (
+                        <li key={key}>
+                          <span>{questionTitle(key)}</span>
+                          {draftAnswers.get(key)?.dontKnow && (
+                            <span> (answered &quot;I don&apos;t know&quot;)</span>
+                          )}
+                        </li>
+                      ))}
+                    </Box>
+                  </>
+                )}
+              </>
+            )}
           </Typography>
         )}
         <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>

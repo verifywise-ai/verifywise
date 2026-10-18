@@ -10678,6 +10678,15 @@ export const translations: Record<string, Record<string, string>> = {
       "Es wurde noch keine Feststellung zum Anwendungsbereich erstellt.",
     "SHA-256": "SHA-256",
     "Superseded by a later attestation": "Durch eine spätere Attestierung ersetzt",
+    "Your draft answers place the tool out of scope.":
+      "Ihre Entwurfsantworten ordnen das Tool außerhalb des Anwendungsbereichs ein.",
+    "Your draft answers place the tool in scope.":
+      "Ihre Entwurfsantworten ordnen das Tool innerhalb des Anwendungsbereichs ein.",
+    "Your draft answers leave scope undetermined.":
+      "Ihre Entwurfsantworten lassen den Anwendungsbereich offen.",
+    "Runs and scope determinations follow the attested version until you attest the draft.":
+      "Läufe und Feststellungen zum Anwendungsbereich folgen der attestierten Version, bis Sie den Entwurf attestieren.",
+    "Deciding questions still open in the draft:": "Im Entwurf noch offene entscheidende Fragen:",
     "These edits cannot be saved, so saving or attesting would lose them:":
       "Diese Änderungen können nicht gespeichert werden; beim Speichern oder Attestieren gingen sie verloren:",
     "(no longer applies)": "(trifft nicht mehr zu)",
@@ -10689,12 +10698,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Nach Ihren gespeicherten Antworten ist die Ausgabe des Tools eine Eingabe unter mehreren ohne zusätzliches Gewicht. Es wird kein Wert angezeigt. Attestieren Sie das Profil, um eine Feststellung zum Anwendungsbereich zu erstellen.",
     "From your saved answers. Nothing is attested yet, so no run or scope determination can be recorded.":
       "Aus Ihren gespeicherten Antworten. Noch ist nichts attestiert, daher kann weder ein Lauf noch eine Feststellung zum Anwendungsbereich erfasst werden.",
-    "Your draft answers place the tool out of scope, unlike the attested version. Runs and scope determinations follow the attested version until you attest the draft.":
-      "Ihre Entwurfsantworten ordnen das Tool außerhalb des Anwendungsbereichs ein, anders als die attestierte Version. Läufe und Feststellungen zum Anwendungsbereich folgen der attestierten Version, bis Sie den Entwurf attestieren.",
-    "Your draft answers place the tool in scope, unlike the attested version. Runs and scope determinations follow the attested version until you attest the draft.":
-      "Ihre Entwurfsantworten ordnen das Tool innerhalb des Anwendungsbereichs ein, anders als die attestierte Version. Läufe und Feststellungen zum Anwendungsbereich folgen der attestierten Version, bis Sie den Entwurf attestieren.",
-    "Your draft answers leave scope undetermined, unlike the attested version. Runs and scope determinations follow the attested version until you attest the draft.":
-      "Ihre Entwurfsantworten lassen den Anwendungsbereich offen, anders als die attestierte Version. Läufe und Feststellungen zum Anwendungsbereich folgen der attestierten Version, bis Sie den Entwurf attestieren.",
     "Draft readiness": "Bereitschaft des Entwurfs",
     "Open items in your draft": "Offene Punkte in Ihrem Entwurf",
     "This scope determination cites an earlier attestation, so generating it again would cite the current one instead. Its file is no longer stored.":
@@ -21362,6 +21365,16 @@ export const translations: Record<string, Record<string, string>> = {
       "Aucune détermination du champ d’application n’a encore été générée.",
     "SHA-256": "SHA-256",
     "Superseded by a later attestation": "Remplacée par une attestation ultérieure",
+    "Your draft answers place the tool out of scope.":
+      "Les réponses de votre brouillon placent l’outil hors du champ d’application.",
+    "Your draft answers place the tool in scope.":
+      "Les réponses de votre brouillon placent l’outil dans le champ d’application.",
+    "Your draft answers leave scope undetermined.":
+      "Les réponses de votre brouillon laissent le champ d’application indéterminé.",
+    "Runs and scope determinations follow the attested version until you attest the draft.":
+      "Les exécutions et les déterminations du champ d’application suivent la version attestée jusqu’à ce que vous attestiez le brouillon.",
+    "Deciding questions still open in the draft:":
+      "Questions décisives encore ouvertes dans le brouillon :",
     "These edits cannot be saved, so saving or attesting would lose them:":
       "Ces modifications ne peuvent pas être enregistrées ; elles seraient perdues à l’enregistrement ou à l’attestation :",
     "(no longer applies)": "(ne s’applique plus)",
@@ -21373,12 +21386,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Selon vos réponses enregistrées, le résultat de l’outil est un élément parmi d’autres, sans poids supplémentaire. Aucun score n’est affiché. Attestez le profil pour générer une détermination du champ d’application.",
     "From your saved answers. Nothing is attested yet, so no run or scope determination can be recorded.":
       "D’après vos réponses enregistrées. Rien n’est encore attesté, donc aucune exécution ni détermination du champ d’application ne peut être enregistrée.",
-    "Your draft answers place the tool out of scope, unlike the attested version. Runs and scope determinations follow the attested version until you attest the draft.":
-      "Les réponses de votre brouillon placent l’outil hors du champ d’application, contrairement à la version attestée. Les exécutions et les déterminations du champ d’application suivent la version attestée jusqu’à ce que vous attestiez le brouillon.",
-    "Your draft answers place the tool in scope, unlike the attested version. Runs and scope determinations follow the attested version until you attest the draft.":
-      "Les réponses de votre brouillon placent l’outil dans le champ d’application, contrairement à la version attestée. Les exécutions et les déterminations du champ d’application suivent la version attestée jusqu’à ce que vous attestiez le brouillon.",
-    "Your draft answers leave scope undetermined, unlike the attested version. Runs and scope determinations follow the attested version until you attest the draft.":
-      "Les réponses de votre brouillon laissent le champ d’application indéterminé, contrairement à la version attestée. Les exécutions et les déterminations du champ d’application suivent la version attestée jusqu’à ce que vous attestiez le brouillon.",
     "Draft readiness": "Préparation du brouillon",
     "Open items in your draft": "Points ouverts dans votre brouillon",
     "This scope determination cites an earlier attestation, so generating it again would cite the current one instead. Its file is no longer stored.":
@@ -31963,6 +31970,16 @@ export const translations: Record<string, Record<string, string>> = {
       "Aún no se ha generado ninguna determinación del ámbito.",
     "SHA-256": "SHA-256",
     "Superseded by a later attestation": "Sustituida por una atestación posterior",
+    "Your draft answers place the tool out of scope.":
+      "Las respuestas de su borrador sitúan la herramienta fuera del ámbito.",
+    "Your draft answers place the tool in scope.":
+      "Las respuestas de su borrador sitúan la herramienta dentro del ámbito.",
+    "Your draft answers leave scope undetermined.":
+      "Las respuestas de su borrador dejan el ámbito sin determinar.",
+    "Runs and scope determinations follow the attested version until you attest the draft.":
+      "Las ejecuciones y las determinaciones del ámbito siguen la versión atestiguada hasta que atestigüe el borrador.",
+    "Deciding questions still open in the draft:":
+      "Preguntas decisivas aún abiertas en el borrador:",
     "These edits cannot be saved, so saving or attesting would lose them:":
       "Estos cambios no se pueden guardar; se perderían al guardar o atestiguar:",
     "(no longer applies)": "(ya no aplica)",
@@ -31974,12 +31991,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Según sus respuestas guardadas, el resultado de la herramienta es un elemento entre varios, sin peso adicional. No se muestra ninguna puntuación. Atestigüe el perfil para generar una determinación del ámbito.",
     "From your saved answers. Nothing is attested yet, so no run or scope determination can be recorded.":
       "Según sus respuestas guardadas. Aún no hay nada atestiguado, por lo que no se puede registrar ninguna ejecución ni determinación del ámbito.",
-    "Your draft answers place the tool out of scope, unlike the attested version. Runs and scope determinations follow the attested version until you attest the draft.":
-      "Las respuestas de su borrador sitúan la herramienta fuera del ámbito, a diferencia de la versión atestiguada. Las ejecuciones y las determinaciones del ámbito siguen la versión atestiguada hasta que atestigüe el borrador.",
-    "Your draft answers place the tool in scope, unlike the attested version. Runs and scope determinations follow the attested version until you attest the draft.":
-      "Las respuestas de su borrador sitúan la herramienta dentro del ámbito, a diferencia de la versión atestiguada. Las ejecuciones y las determinaciones del ámbito siguen la versión atestiguada hasta que atestigüe el borrador.",
-    "Your draft answers leave scope undetermined, unlike the attested version. Runs and scope determinations follow the attested version until you attest the draft.":
-      "Las respuestas de su borrador dejan el ámbito sin determinar, a diferencia de la versión atestiguada. Las ejecuciones y las determinaciones del ámbito siguen la versión atestiguada hasta que atestigüe el borrador.",
     "Draft readiness": "Preparación del borrador",
     "Open items in your draft": "Puntos abiertos en su borrador",
     "This scope determination cites an earlier attestation, so generating it again would cite the current one instead. Its file is no longer stored.":
