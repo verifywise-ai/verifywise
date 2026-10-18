@@ -103,8 +103,16 @@ function canonicalJson(value: unknown): string {
  * The manifest as hashed: rows in candidate-ID order, keys sorted, no
  * whitespace. The manifest is stored as JSONB, which reorders keys, so a hash
  * over insertion-order JSON could not be reproduced from the stored copy.
+ * Rows must already be in strictly ascending candidate-ID order (as
+ * buildManifest returns them); anything else is refused, not re-sorted.
  */
 export function canonicalManifest(rows: ManifestRow[]): string {
-  const ordered = [...rows].sort((x, y) => compareCandidateIds(x.candidateId, y.candidateId));
-  return canonicalJson(ordered);
+  for (let i = 1; i < rows.length; i++) {
+    if (compareCandidateIds(rows[i - 1].candidateId, rows[i].candidateId) >= 0) {
+      throw new Error(
+        `Manifest rows are not in candidate-ID order at ${rows[i - 1].candidateId}, ${rows[i].candidateId}.`,
+      );
+    }
+  }
+  return canonicalJson(rows);
 }

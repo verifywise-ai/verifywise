@@ -860,6 +860,7 @@ describe("corpora and the record log", () => {
     const [sql, opts] = mockQuery.mock.calls[0];
     expect(sql).toMatch(/status = 'running'/);
     expect(sql).toMatch(/heartbeat_at </);
+    expect(sql).toMatch(/owner_token = NULL, lease_expires_at = NULL/);
     expect(opts.replacements.stale_after_seconds).toBe(900);
     await expect(markStaleCorporaFailedQuery(42, 0)).rejects.toThrow(/seconds/);
   });
@@ -871,6 +872,8 @@ describe("corpora and the record log", () => {
     expect(sql).toMatch(/INSERT INTO bias_audit_corpus_records/);
     expect(sql).toMatch(/c\.status = 'running'/);
     expect(sql).toMatch(/c\.owner_token = :owner_token/);
+    // The fence locks the corpus row, so it waits for a concurrent claim and re-checks.
+    expect(sql).toMatch(/c\.owner_token = :owner_token\s+FOR SHARE OF c\s+RETURNING id/);
     expect(sql).not.toMatch(/UPDATE|ON CONFLICT/i);
     expect(opts.replacements).toMatchObject({
       corpus_id: 3,

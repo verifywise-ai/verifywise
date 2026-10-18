@@ -1344,7 +1344,8 @@ export async function markStaleCorporaFailedQuery(
   wholeSeconds("stale limit", staleAfterSeconds);
   const result = await sequelize.query(
     `UPDATE bias_audit_corpora
-        SET status = 'failed', failure_code = 'heartbeat_stale', completed_at = NOW()
+        SET status = 'failed', failure_code = 'heartbeat_stale', completed_at = NOW(),
+            owner_token = NULL, lease_expires_at = NULL
       WHERE organization_id = :organization_id
         AND status = 'running'
         AND heartbeat_at < NOW() - make_interval(secs => :stale_after_seconds)
@@ -1373,7 +1374,9 @@ export interface AppendCorpusRecordArgs {
  * Appends one generation attempt. The log is append-only: nothing here or
  * anywhere updates or deletes a record. Only a running corpus in this
  * organization, held by `ownerToken`, takes a record; anything else inserts
- * nothing and returns null (the caller has lost the lease).
+ * nothing and returns null (the caller has lost the lease). The corpus row is
+ * read FOR SHARE: an old owner's insert racing a new claim waits for the
+ * claim to commit, then re-checks the token against the new row.
  */
 export async function appendCorpusRecordQuery(
   args: AppendCorpusRecordArgs,
@@ -1389,6 +1392,7 @@ export async function appendCorpusRecordQuery(
       WHERE c.id = :corpus_id AND c.organization_id = :organization_id
         AND c.status = 'running'
         AND c.owner_token = :owner_token
+        FOR SHARE OF c
      RETURNING id`,
     {
       replacements: {

@@ -1,6 +1,7 @@
 import type { JobDescription } from "../../../structures/NYC-Local-Law-144/job-descriptions";
 import { findForbidden } from "../stance/vocabulary";
 import { findDemographicTerms } from "./demographicTerms";
+import { THIRD_PARTY_FIRST_NAMES } from "./names";
 
 export type ArtifactKind = "resume" | "transcript" | "structured";
 
@@ -44,6 +45,8 @@ const SHARED_INSTRUCTION = [
   "Describe any licence or certification as something the candidate holds, with a noun " +
     '(for example "holds a current forklift licence"), not with an adjective.',
   "Do not describe the candidate as checked, approved, graded or vouched for by anyone.",
+  "Name no person other than the candidate: refer to anyone else by role only " +
+    '(for example "my manager" or "a customer").',
   "Include no personal details other than the name: no photo, address, date of birth, " +
     "nationality, religion, heritage, languages other than English, family details, or " +
     "membership of community or identity-based organisations.",
@@ -78,6 +81,7 @@ export type RecordInvalidReason =
   | "demographic_term"
   | "wrong_shape"
   | "no_name"
+  | "third_party_name"
   | "unfinished";
 
 export type RecordValidation = { ok: true } | { ok: false; reason: RecordInvalidReason };
@@ -139,15 +143,48 @@ function shapeOk(text: string, kind: ArtifactKind, parsed: unknown): boolean {
   }
 }
 
-const normalise = (t: string) => t.replace(/\s+/g, " ").trim().toLowerCase();
+const escapeRegExp = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** `word` as a whole word (letters on neither side), case-insensitive. */
+const wholeWord = (word: string) => new RegExp(`(?<!\\p{L})${escapeRegExp(word)}(?!\\p{L})`, "iu");
+
+/** Every part of the name (first name and surname) as a whole word, in any order. */
+function carriesName(text: string, candidateName: string): boolean {
+  return candidateName
+    .split(/\s+/)
+    .filter((p) => p !== "")
+    .every((part) => wholeWord(part).test(text));
+}
+
+const THIRD_PARTY_NAME = new RegExp(
+  `(?<!\\p{L})(${[...THIRD_PARTY_FIRST_NAMES].map(escapeRegExp).join("|")})(?!\\p{L})`,
+  "gu",
+);
+// Place names built on a first name ("San Jose", "St. Paul", "Fort Gilbert").
+const PLACE_PREFIXED =
+  /\b(?:San|Santa|Santo|Saint|St\.?|Ste\.?|Fort|Ft\.?|Lake|Port|Mount|Mt\.?|Cape|Los|Las|El)\s+\p{Lu}\p{L}*/gu;
+
+/** A table first name, capitalised and whole, that is not part of the candidate's own name. */
+function namesSomeoneElse(text: string, candidateName: string): boolean {
+  const own = new Set(candidateName.split(/\s+/));
+  const scrubbed = text.replace(PLACE_PREFIXED, " ");
+  for (const m of scrubbed.matchAll(THIRD_PARTY_NAME)) {
+    if (!own.has(m[1])) return true;
+  }
+  return false;
+}
 
 /**
  * Whether a generated record may enter the corpus.
  *
  *  - `finishReason`, when given, must be "stop": a truncated or filtered
  *    response is a record-quality fault and is logged as an invalid attempt.
- *  - The record must contain `candidateName` in full (the structured form in
- *    its "name" key): the name is the record's only group signal.
+ *  - The record must contain the candidate's first name and surname, each as
+ *    a whole word, in any order (the structured form in its "name" key): the
+ *    name is the record's only group signal.
+ *  - It may name no one else: a table first name other than the candidate's
+ *    own, capitalised and whole, is refused (place names such as "San Jose"
+ *    and table names that are common words are not counted).
  *  - Nothing else may signal a group: no demographic field and no term from
  *    the shared demographic-term matcher. Pronouns and honorifics are allowed.
  */
@@ -159,8 +196,7 @@ export function validateRecord(
   if ("finishReason" in opts && opts.finishReason !== "stop") {
     return { ok: false, reason: "unfinished" };
   }
-  if (normalise(opts.candidateName) === "")
-    throw new Error("The candidate name must not be blank.");
+  if (opts.candidateName.trim() === "") throw new Error("The candidate name must not be blank.");
   if (typeof text !== "string" || text.trim() === "") return { ok: false, reason: "empty" };
   if (text.length > RECORD_MAX_CHARS) return { ok: false, reason: "too_long" };
   if (findForbidden(text).length > 0) return { ok: false, reason: "forbidden_words" };
@@ -180,8 +216,8 @@ export function validateRecord(
 
   if (!shapeOk(text, artifactKind, parsed)) return { ok: false, reason: "wrong_shape" };
 
-  const name = normalise(opts.candidateName);
   const carrier = artifactKind === "structured" ? (parsed as { name: string }).name : text;
-  if (!normalise(carrier).includes(name)) return { ok: false, reason: "no_name" };
+  if (!carriesName(carrier, opts.candidateName)) return { ok: false, reason: "no_name" };
+  if (namesSomeoneElse(text, opts.candidateName)) return { ok: false, reason: "third_party_name" };
   return { ok: true };
 }

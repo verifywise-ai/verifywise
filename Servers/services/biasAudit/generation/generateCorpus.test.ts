@@ -40,6 +40,7 @@ import { NAME_METHOD } from "./names";
 import { canonicalManifest } from "./manifest";
 import { corpusCsvHeaderLine, corpusCsvRow } from "./corpusCsv";
 import {
+  CorpusBusyError,
   CorpusModelChangedError,
   createCorpus,
   HEARTBEAT_INTERVAL_MS,
@@ -436,11 +437,20 @@ describe("runCorpusGeneration", () => {
       expect(mockUtils.releaseCorpusLeaseQuery).not.toHaveBeenCalled();
     });
 
-    it("refuses to run while another runner holds the lease", async () => {
+    it("refuses with CorpusBusyError, carrying the lease expiry, while another runner holds it", async () => {
+      const until = new Date("2026-10-18T12:00:00Z");
+      mockUtils.getCorpusQuery
+        .mockResolvedValueOnce(corpusRow())
+        .mockResolvedValueOnce(corpusRow({ lease_expires_at: until }));
       mockUtils.claimCorpusLeaseQuery.mockResolvedValueOnce(false);
-      await expect(run()).rejects.toThrow(LeaseLostError);
+      const err = await run().catch((e) => e);
+      expect(err).toBeInstanceOf(CorpusBusyError);
+      expect(err).not.toBeInstanceOf(LeaseLostError);
+      expect(err.leaseExpiresAt).toBe(until);
       expect(mockComplete).not.toHaveBeenCalled();
       expect(mockUtils.appendCorpusRecordQuery).not.toHaveBeenCalled();
+      // Not this runner's lease, so nothing to release.
+      expect(mockUtils.releaseCorpusLeaseQuery).not.toHaveBeenCalled();
     });
 
     it("stops when an append finds the lease gone", async () => {
@@ -496,6 +506,32 @@ describe("runCorpusGeneration", () => {
       expect(jest.getTimerCount()).toBe(0);
     });
 
+    it("rides out a transient heartbeat error and renews on the next beat (ruling)", async () => {
+      jest.useFakeTimers();
+      mockUtils.touchCorpusHeartbeatQuery
+        .mockRejectedValueOnce(new Error("connection reset"))
+        .mockResolvedValue(true);
+      mockComplete.mockImplementation(async (s: unknown, p: string) => {
+        jest.advanceTimersByTime(10_000);
+        return reply()(s, p);
+      });
+      await expect(run()).resolves.toMatchObject({ status: "complete" });
+    });
+
+    it("stops once heartbeat errors outlast the lease", async () => {
+      jest.useFakeTimers();
+      mockUtils.touchCorpusHeartbeatQuery.mockRejectedValue(new Error("connection reset"));
+      mockComplete.mockImplementation(async (s: unknown, p: string) => {
+        jest.advanceTimersByTime(10_000);
+        return reply()(s, p);
+      });
+      await expect(run()).rejects.toThrow(LeaseLostError);
+      // The lease runs 120 s from the claim; at 10 s a call that is about 12 calls.
+      expect(mockComplete.mock.calls.length).toBeLessThanOrEqual(LEASE_SECONDS / 10 + 1);
+      expect(mockUtils.updateCorpusStatusQuery).not.toHaveBeenCalled();
+      expect(jest.getTimerCount()).toBe(0);
+    });
+
     it("beats once more before the final re-read and hash", async () => {
       seedLog(logFor(700));
       await run();
@@ -507,9 +543,14 @@ describe("runCorpusGeneration", () => {
     });
   });
 
-  it("refuses to resume under a model other than the pinned one", async () => {
+  it("refuses to resume under a model other than the pinned one, and fails the corpus", async () => {
     mockUtils.getCorpusQuery.mockResolvedValue(corpusRow({ model_pinned: "another-model" }));
     await expect(run()).rejects.toThrow(CorpusModelChangedError);
+    // Failed (which clears the lease), so the one-running index frees the project.
+    expect(mockUtils.updateCorpusStatusQuery).toHaveBeenCalledWith(
+      { corpusId: 3, status: "failed", failureCode: "model_changed" },
+      1,
+    );
     expect(mockUtils.claimCorpusLeaseQuery).not.toHaveBeenCalled();
     expect(mockComplete).not.toHaveBeenCalled();
   });
@@ -577,6 +618,10 @@ describe("runCorpusGeneration", () => {
     );
     await expect(run()).rejects.toThrow(/job description/i);
     expect(mockComplete).not.toHaveBeenCalled();
+    expect(mockUtils.updateCorpusStatusQuery).toHaveBeenCalledWith(
+      { corpusId: 3, status: "failed", failureCode: "job_description_changed" },
+      1,
+    );
   });
 
   it("refuses a corpus that is missing or no longer running, and returns a complete one as is", async () => {

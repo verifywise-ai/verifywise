@@ -1,6 +1,7 @@
 import {
   buildAllocation,
   cellKey,
+  LL144_CELLS,
   MAX_COUNT,
   LL144_RACE,
   LL144_SEX,
@@ -133,5 +134,16 @@ describe("buildAllocation", () => {
       if (blocks[blocks.length - 1] !== k) blocks.push(k);
     }
     expect(blocks).toEqual(expected);
+  });
+});
+
+describe("LL144_CELLS", () => {
+  it("lists every sex by race/ethnicity cell once, sex outer, frozen", () => {
+    expect(LL144_CELLS).toHaveLength(LL144_SEX.length * LL144_RACE.length);
+    expect(LL144_CELLS.map(cellKey)).toEqual(
+      LL144_SEX.flatMap((sex) => LL144_RACE.map((r) => `${sex}|${r}`)),
+    );
+    expect(Object.isFrozen(LL144_CELLS)).toBe(true);
+    expect(LL144_CELLS.every((c) => Object.isFrozen(c))).toBe(true);
   });
 });

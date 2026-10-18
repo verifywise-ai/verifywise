@@ -31,6 +31,17 @@ export function cellKey(d: Demographics): string {
   return `${d.sex}|${d.raceEthnicity}`;
 }
 
+/**
+ * Every LL 144 cell, sex outer and race/ethnicity inner, one frozen object
+ * per cell. The allocation balances across these, and a corpus must hold
+ * MIN_PER_CELL valid records in each.
+ */
+export const LL144_CELLS: readonly Demographics[] = Object.freeze(
+  LL144_SEX.flatMap((sex) =>
+    LL144_RACE.map((raceEthnicity) => Object.freeze({ sex, raceEthnicity })),
+  ),
+);
+
 /** Largest corpus a single generation may ask for. */
 export const MAX_COUNT = 10000;
 
@@ -64,12 +75,7 @@ export function buildAllocation(args: {
     throw new Error("The small-sample exclusion must be between 0 and 1.");
   }
 
-  const cells: Demographics[] = [];
-  for (const sex of LL144_SEX) {
-    for (const raceEthnicity of LL144_RACE) {
-      cells.push(Object.freeze({ sex, raceEthnicity }));
-    }
-  }
+  const cells = LL144_CELLS;
 
   const minCount = MIN_PER_CELL * cells.length;
   const perTier = Math.floor(count / (cells.length * tiers.length));

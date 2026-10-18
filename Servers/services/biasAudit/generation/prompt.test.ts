@@ -167,7 +167,9 @@ describe("validateRecord", () => {
     for (const line of [
       "Member, Society of Hispanic Professional Engineers",
       "Fluent in Tongan",
-      "Mexican citizen with a US work permit",
+      "Mexican-born, with a US work permit",
+      "A native Spanish speaker",
+      "Of Korean descent",
       "Volunteer at my church food bank",
       "Board member, Women in Sales network",
       "Treasurer, Alpha Kappa Alpha",
@@ -224,6 +226,51 @@ describe("validateRecord", () => {
     expect(validateRecord(resume.replace("Sam Lee", "SAM   LEE"), "resume", NAME)).toEqual({
       ok: true,
     });
+  });
+
+  it("finds the first name and surname as whole words, in any order (ruling)", () => {
+    const lan = { candidateName: "Lan Tran" };
+    const body = "\nExperience\nWarehouse associate, 2019-2024\nSkills\nForklift";
+    expect(validateRecord(`Tran, Lan${body}`, "resume", lan)).toEqual({ ok: true });
+    expect(validateRecord(`Lan T. Tran${body}`, "resume", lan)).toEqual({ ok: true });
+    expect(validateRecord(`Lan Tranh${body}`, "resume", lan)).toEqual({
+      ok: false,
+      reason: "no_name",
+    });
+    expect(validateRecord(`Tran${body}`, "resume", lan)).toEqual({ ok: false, reason: "no_name" });
+  });
+
+  it("refuses a record that names someone else from the name tables (ruling)", () => {
+    expect(
+      validateRecord(`${resume}\nReported to Patricia, the regional lead`, "resume", NAME),
+    ).toEqual({ ok: false, reason: "third_party_name" });
+    expect(
+      validateRecord(
+        "Interviewer: Hello, Sam Lee.\nCandidate: Hi. My lead, Jose, trained me.",
+        "transcript",
+        NAME,
+      ),
+    ).toEqual({ ok: false, reason: "third_party_name" });
+  });
+
+  it("allows the candidate's own names, roles, place names and table names that are common words", () => {
+    const victor = { candidateName: "Victor Nelson" };
+    for (const extra of [
+      "Reported to my manager",
+      "Covered accounts in San Jose and St. Paul",
+      "Worked a long shift; set up the LAN; built tools in Ruby",
+      "Mark the pallets before loading",
+    ]) {
+      expect(
+        validateRecord(
+          `Victor Nelson\nExperience\nAccount Executive, 2019-2024\n${extra}`,
+          "resume",
+          victor,
+        ),
+      ).toEqual({ ok: true });
+    }
+    // Lowercase use of a table name is not a name.
+    expect(validateRecord(`${resume}\nthe grace period`, "resume", NAME)).toEqual({ ok: true });
   });
 
   it("refuses a record whose shape does not match its form", () => {
@@ -285,5 +332,6 @@ describe("the prompt asks for the name in the record", () => {
     });
     expect(p).toMatch(/religion, heritage, languages other than English/);
     expect(p).toMatch(/identity-based organisations/);
+    expect(p).toMatch(/Name no person other than the candidate/);
   });
 });

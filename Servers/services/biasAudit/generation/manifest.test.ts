@@ -89,13 +89,18 @@ describe("canonicalManifest", () => {
   });
 
   it("serialises a JSONB round trip (keys reordered) to the same text", () => {
-    // JSONB stores object keys shortest first, then by bytes; reversing the
-    // key order and the row order stands in for that round trip.
-    const reordered = [...rows]
-      .reverse()
-      .map((r) => Object.fromEntries(Object.entries(r).reverse())) as typeof rows;
+    // JSONB reorders object keys; reversing the key order stands in for that.
+    const reordered = rows.map((r) =>
+      Object.fromEntries(Object.entries(r).reverse()),
+    ) as typeof rows;
     expect(Object.keys(reordered[0])).not.toEqual(Object.keys(rows[0]));
     expect(canonicalManifest(reordered)).toBe(canonicalManifest(rows));
+  });
+
+  it("refuses rows out of candidate-ID order, or repeated, rather than re-sorting them", () => {
+    expect(() => canonicalManifest([...rows].reverse())).toThrow(/candidate-ID order/);
+    expect(() => canonicalManifest([rows[0], rows[0]])).toThrow(/candidate-ID order/);
+    expect(canonicalManifest([])).toBe("[]");
   });
 
   it("is sorted-key JSON with no whitespace, rows in candidate-ID order", () => {
