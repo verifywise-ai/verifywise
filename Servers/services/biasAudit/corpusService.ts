@@ -77,6 +77,22 @@ export interface StartCorpusInput extends ProjectScope {
 const sweep = (organizationId: number) =>
   markStaleCorporaFailedQuery(organizationId, STALE_AFTER_SECONDS);
 
+/**
+ * The page polls the list every few seconds while a corpus runs, so the list
+ * sweeps an organization at most this often. Create, view and resume always
+ * sweep.
+ */
+export const LIST_SWEEP_INTERVAL_MS = 60_000;
+const lastListSweep = new Map<number, number>();
+
+async function sweepForList(organizationId: number): Promise<void> {
+  const now = Date.now();
+  const last = lastListSweep.get(organizationId);
+  if (last !== undefined && now - last < LIST_SWEEP_INTERVAL_MS) return;
+  lastListSweep.set(organizationId, now);
+  await sweep(organizationId);
+}
+
 /** The form generated records take, from pipeline.input_form. */
 function artifactKindOf(answers: AnswerMap): ArtifactKind {
   const value = answers["pipeline.input_form"]?.value;
@@ -161,7 +177,7 @@ export async function startCorpusGeneration(
 export async function listCorpora(scope: ProjectScope): Promise<{ corpora: CorpusSummaryRow[] }> {
   const { projectId, organizationId, userId, role } = scope;
   await assertProject(projectId, organizationId, { userId, role });
-  await sweep(organizationId);
+  await sweepForList(organizationId);
   return { corpora: await listCorporaQuery(projectId, organizationId) };
 }
 

@@ -194,6 +194,12 @@ describe("BiasAuditPage", () => {
     expect(screen.getByText(/pipeline\.input_form is audio/)).toBeInTheDocument();
   });
 
+  it("closes generation for an out-of-scope attested profile", () => {
+    renderBiasAuditPage("/bias-audit/7/generate");
+    expect(screen.getByText(/a corpus would have no run to feed/i)).toBeInTheDocument();
+    expect(screen.getByTestId("aedt-generate-corpus")).toBeDisabled();
+  });
+
   it("asks for an attested profile before generation", () => {
     state.profile = { ...PROFILE, attested: null, attestedDecision: null };
     renderBiasAuditPage("/bias-audit/7/generate");

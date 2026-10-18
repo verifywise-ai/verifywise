@@ -34,6 +34,7 @@ import { compareCriteria } from "./criteriaComparison";
 import {
   getCorpusView,
   getJobDescriptionsView,
+  LIST_SWEEP_INTERVAL_MS,
   listCorpora,
   resumeCorpus,
   startCorpusGeneration,
@@ -217,6 +218,23 @@ describe("listCorpora", () => {
     expect(utils.markStaleCorporaFailedQuery).toHaveBeenCalledWith(42, 600);
     expect(utils.listCorporaQuery).toHaveBeenCalledWith(7, 42);
     expect(out).toEqual({ corpora: [{ id: 3 }] });
+  });
+
+  it("sweeps an organization at most once a minute on the polled list", async () => {
+    utils.listCorporaQuery.mockResolvedValue([]);
+    const now = jest.spyOn(Date, "now");
+    try {
+      now.mockReturnValue(10_000_000);
+      await listCorpora({ projectId: 7, frameworkId: 12, organizationId: 77, ...VIEWER });
+      now.mockReturnValue(10_000_000 + LIST_SWEEP_INTERVAL_MS - 1);
+      await listCorpora({ projectId: 7, frameworkId: 12, organizationId: 77, ...VIEWER });
+      expect(utils.markStaleCorporaFailedQuery).toHaveBeenCalledTimes(1);
+      now.mockReturnValue(10_000_000 + LIST_SWEEP_INTERVAL_MS);
+      await listCorpora({ projectId: 7, frameworkId: 12, organizationId: 77, ...VIEWER });
+      expect(utils.markStaleCorporaFailedQuery).toHaveBeenCalledTimes(2);
+    } finally {
+      now.mockRestore();
+    }
   });
 });
 

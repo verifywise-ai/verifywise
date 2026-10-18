@@ -58,6 +58,33 @@ const STATUS_LABEL: Record<AedtCorpusStatus, string> = {
   failed: "Failed",
 };
 
+/**
+ * Failures the runner treats as final: the job description, model or plan
+ * changed under the corpus, or it names something this deployment does not
+ * hold. Resuming would fail the same way.
+ */
+const FINAL_FAILURES = new Set([
+  "job_description_changed",
+  "model_changed",
+  "corpus_model_changed",
+  "plan_changed",
+  "unknown_job_description",
+  "unknown_artifact_kind",
+]);
+
+/** What a failed corpus says under its status; raw failure codes stay off the page. */
+function failureText(code: string | null): string {
+  if (code === null) return "Generation stopped before it finished.";
+  if (code === "model_changed" || code === "corpus_model_changed") {
+    return "The configured model changed, so this corpus cannot be finished. Generate a new one.";
+  }
+  if (code === "job_description_changed" || code === "plan_changed") {
+    return "The job description or plan changed, so this corpus cannot be finished. Generate a new one.";
+  }
+  if (FINAL_FAILURES.has(code)) return "This corpus cannot be finished. Generate a new one.";
+  return "Generation stopped before it finished.";
+}
+
 function countError(text: string): string | undefined {
   if (!/^\d+$/.test(text.trim())) return "Enter a whole number of records.";
   const n = Number(text.trim());
@@ -88,7 +115,7 @@ const GenerateCorpus = ({
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [criteria, setCriteria] = useState("");
   const [countText, setCountText] = useState(String(DEFAULT_COUNT));
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"idle" | "copied" | "failed">("idle");
   const [downloading, setDownloading] = useState<number | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
 
@@ -102,6 +129,8 @@ const GenerateCorpus = ({
   const criteriaError =
     criteria.length > CRITERIA_MAX ? "Use at most 10,000 characters." : undefined;
   const countProblem = countError(countText);
+  const corpora = corporaQuery.data ?? [];
+  const running = corpora.some((c) => c.status === "running");
 
   const generateReason = !canEdit
     ? "Only an Admin or Editor can generate a corpus."
@@ -109,9 +138,13 @@ const GenerateCorpus = ({
       ? (blockedReason ?? "The attested profile does not allow generation.")
       : jdQuery.data && !generationAvailable
         ? "Generation is not available on this deployment. Contact VerifyWise."
-        : !selected
-          ? "Choose a job description first."
-          : null;
+        : running
+          ? "A corpus is already generating for this use case. Wait for it to finish."
+          : !selected
+            ? "Choose a job description first."
+            : null;
+  // Resuming starts generation again, so it needs what starting it needs.
+  const canResume = canEdit && mayGenerate && generationAvailable && !running;
   const generateDisabled =
     generateReason !== null ||
     !jdQuery.data ||
@@ -122,7 +155,7 @@ const GenerateCorpus = ({
   const choose = (key: string) => {
     if (key === selectedKey) return;
     setSelectedKey(key);
-    setCopied(false);
+    setCopied("idle");
     compare.reset();
     create.reset();
   };
@@ -131,14 +164,14 @@ const GenerateCorpus = ({
     if (!selected) return;
     try {
       await navigator.clipboard.writeText(selected.body);
-      setCopied(true);
+      setCopied("copied");
     } catch {
-      setCopied(false);
+      setCopied("failed");
     }
   };
 
   const handleCompare = () => {
-    if (!selected || trimmedCriteria === "" || criteriaError) return;
+    if (!canEdit || !selected || trimmedCriteria === "" || criteriaError) return;
     compare.mutate({ jobDescriptionKey: selected.key, criteriaSupplied: trimmedCriteria });
   };
 
@@ -163,8 +196,6 @@ const GenerateCorpus = ({
       setDownloading(null);
     }
   };
-
-  const corpora = corporaQuery.data ?? [];
 
   return (
     <Stack gap="16px">
@@ -221,12 +252,17 @@ const GenerateCorpus = ({
                   <CustomizableButton
                     variant="outlined"
                     size="small"
-                    text={copied ? "Copied" : "Copy job description"}
+                    text={copied === "copied" ? "Copied" : "Copy job description"}
                     testId="aedt-copy-job-description"
                     startIcon={<Copy size={14} strokeWidth={1.5} />}
                     onClick={() => void handleCopy()}
                   />
                 </Box>
+                {copied === "failed" && (
+                  <Typography sx={{ fontSize: 12, color: palette.status.error.text }}>
+                    The job description could not be copied. Select the text above and copy it.
+                  </Typography>
+                )}
               </Stack>
             )}
             <Typography
@@ -252,6 +288,7 @@ const GenerateCorpus = ({
               rows={5}
               placeholder="One criterion per line"
               value={criteria}
+              disabled={!canEdit}
               onChange={(e) => {
                 setCriteria(e.target.value);
                 compare.reset();
@@ -266,7 +303,9 @@ const GenerateCorpus = ({
                 text="Compare criteria"
                 testId="aedt-compare-criteria"
                 onClick={handleCompare}
-                isDisabled={!selected || trimmedCriteria === "" || criteriaError !== undefined}
+                isDisabled={
+                  !canEdit || !selected || trimmedCriteria === "" || criteriaError !== undefined
+                }
                 loading={compare.isPending}
               />
             </Box>
@@ -359,7 +398,7 @@ const GenerateCorpus = ({
                     corpus={c}
                     roleTitle={roleTitleOf(c.job_description_key)}
                     generatedAt={formatDate(c.generated_at, { includeTime: true })}
-                    canEdit={canEdit}
+                    canResume={canResume}
                     downloading={downloading}
                     onDownload={(id) => void handleDownload(id)}
                     resuming={resume.isPending ? resume.variables : null}
@@ -468,7 +507,7 @@ const CorpusRow = ({
   corpus,
   roleTitle,
   generatedAt,
-  canEdit,
+  canResume,
   downloading,
   onDownload,
   resuming,
@@ -477,7 +516,8 @@ const CorpusRow = ({
   corpus: AedtCorpus;
   roleTitle: string;
   generatedAt: string;
-  canEdit: boolean;
+  /** Whether a failed corpus may be started again by this viewer, now. */
+  canResume: boolean;
   downloading: number | null;
   onDownload: (corpusId: number) => void;
   resuming: number | null | undefined;
@@ -491,16 +531,14 @@ const CorpusRow = ({
       <TableCell sx={cellSx}>
         <Stack gap="2px">
           <span>{STATUS_LABEL[corpus.status]}</span>
-          {corpus.failure_code && (
+          {corpus.status === "failed" && (
             <Typography sx={{ fontSize: 11, color: palette.text.tertiary }}>
-              {corpus.failure_code}
+              {failureText(corpus.failure_code)}
             </Typography>
           )}
         </Stack>
       </TableCell>
-      <TableCell sx={cellSx}>
-        {`${corpus.record_count ?? "—"} / ${corpus.requested_count}`}
-      </TableCell>
+      <TableCell sx={cellSx}>{`${corpus.record_count ?? "—"} / ${corpus.planned_count}`}</TableCell>
       <TableCell sx={cellSx}>
         {models.length === 0 ? "—" : models.map(([m, n]) => `${m} (${n})`).join(", ")}
       </TableCell>
@@ -538,7 +576,7 @@ const CorpusRow = ({
             loading={downloading === corpus.id}
           />
         )}
-        {corpus.status === "failed" && (
+        {corpus.status === "failed" && !FINAL_FAILURES.has(corpus.failure_code ?? "") && (
           <CustomizableButton
             variant="outlined"
             size="small"
@@ -546,7 +584,7 @@ const CorpusRow = ({
             testId={`aedt-resume-corpus-${corpus.id}`}
             startIcon={<RotateCw size={14} strokeWidth={1.5} />}
             onClick={() => onResume(corpus.id)}
-            isDisabled={!canEdit || resuming != null}
+            isDisabled={!canResume || resuming != null}
             loading={resuming === corpus.id}
           />
         )}

@@ -9327,6 +9327,19 @@ export const translations: Record<string, Record<string, string>> = {
       "Die Kriterien Ihrer Plattform liegen nahe an denen, auf denen der Korpus beruht",
     "Expected criteria not found:": "Erwartete Kriterien nicht gefunden:",
     "Your criteria the corpus does not cover:": "Ihre Kriterien, die der Korpus nicht abdeckt:",
+    "The job description could not be copied. Select the text above and copy it.":
+      "Die Stellenbeschreibung konnte nicht kopiert werden. Markieren Sie den Text oben und kopieren Sie ihn.",
+    "The attested profile places the tool out of scope, so the module does not run its measures. A corpus would have no run to feed.":
+      "Das bestätigte Profil stuft das Tool als außerhalb des Anwendungsbereichs ein, daher führt das Modul seine Messungen nicht aus. Ein Korpus hätte keinen Lauf, in den er eingeht.",
+    "A corpus is already generating for this use case. Wait for it to finish.":
+      "Für diesen Anwendungsfall wird bereits ein Korpus erzeugt. Warten Sie, bis er fertig ist.",
+    "Generation stopped before it finished.": "Die Erzeugung wurde vor dem Abschluss beendet.",
+    "The configured model changed, so this corpus cannot be finished. Generate a new one.":
+      "Das konfigurierte Modell hat sich geändert, daher kann dieser Korpus nicht fertiggestellt werden. Erzeugen Sie einen neuen.",
+    "The job description or plan changed, so this corpus cannot be finished. Generate a new one.":
+      "Die Stellenbeschreibung oder der Plan hat sich geändert, daher kann dieser Korpus nicht fertiggestellt werden. Erzeugen Sie einen neuen.",
+    "This corpus cannot be finished. Generate a new one.":
+      "Dieser Korpus kann nicht fertiggestellt werden. Erzeugen Sie einen neuen.",
     "Include at least one letter or digit.":
       "Geben Sie mindestens einen Buchstaben oder eine Ziffer an.",
     "Not recorded": "Nicht erfasst",
@@ -20114,6 +20127,19 @@ export const translations: Record<string, Record<string, string>> = {
       "Les critères de votre plateforme sont proches de ceux sur lesquels le corpus est construit",
     "Expected criteria not found:": "Critères attendus introuvables :",
     "Your criteria the corpus does not cover:": "Vos critères que le corpus ne couvre pas :",
+    "The job description could not be copied. Select the text above and copy it.":
+      "La description de poste n'a pas pu être copiée. Sélectionnez le texte ci-dessus et copiez-le.",
+    "The attested profile places the tool out of scope, so the module does not run its measures. A corpus would have no run to feed.":
+      "Le profil attesté place l'outil hors du champ d'application, donc le module n'exécute pas ses mesures. Un corpus n'alimenterait aucune exécution.",
+    "A corpus is already generating for this use case. Wait for it to finish.":
+      "Un corpus est déjà en cours de génération pour ce cas d'usage. Attendez qu'il soit terminé.",
+    "Generation stopped before it finished.": "La génération s'est arrêtée avant la fin.",
+    "The configured model changed, so this corpus cannot be finished. Generate a new one.":
+      "Le modèle configuré a changé, ce corpus ne peut donc pas être terminé. Générez-en un nouveau.",
+    "The job description or plan changed, so this corpus cannot be finished. Generate a new one.":
+      "La description de poste ou le plan a changé, ce corpus ne peut donc pas être terminé. Générez-en un nouveau.",
+    "This corpus cannot be finished. Generate a new one.":
+      "Ce corpus ne peut pas être terminé. Générez-en un nouveau.",
     "Include at least one letter or digit.": "Incluez au moins une lettre ou un chiffre.",
     "Not recorded": "Non enregistré",
     "Browse independently assessed AI applications and track the ones that matter to your organization.":
@@ -30808,6 +30834,19 @@ export const translations: Record<string, Record<string, string>> = {
       "Los criterios de su plataforma son cercanos a aquellos con los que se construyó el corpus",
     "Expected criteria not found:": "Criterios esperados no encontrados:",
     "Your criteria the corpus does not cover:": "Sus criterios que el corpus no cubre:",
+    "The job description could not be copied. Select the text above and copy it.":
+      "No se pudo copiar la descripción del puesto. Seleccione el texto de arriba y cópielo.",
+    "The attested profile places the tool out of scope, so the module does not run its measures. A corpus would have no run to feed.":
+      "El perfil atestiguado sitúa la herramienta fuera del alcance, por lo que el módulo no ejecuta sus mediciones. Un corpus no alimentaría ninguna ejecución.",
+    "A corpus is already generating for this use case. Wait for it to finish.":
+      "Ya se está generando un corpus para este caso de uso. Espere a que termine.",
+    "Generation stopped before it finished.": "La generación se detuvo antes de terminar.",
+    "The configured model changed, so this corpus cannot be finished. Generate a new one.":
+      "El modelo configurado cambió, así que este corpus no se puede terminar. Genere uno nuevo.",
+    "The job description or plan changed, so this corpus cannot be finished. Generate a new one.":
+      "La descripción del puesto o el plan cambió, así que este corpus no se puede terminar. Genere uno nuevo.",
+    "This corpus cannot be finished. Generate a new one.":
+      "Este corpus no se puede terminar. Genere uno nuevo.",
     "Include at least one letter or digit.": "Incluya al menos una letra o un dígito.",
     "Not recorded": "No registrado",
     "Browse independently assessed AI applications and track the ones that matter to your organization.":

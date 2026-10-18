@@ -245,11 +245,15 @@ const ProjectWorkspace = ({ projectId, canEdit, canAttest, activeSection }: Work
       ? "The attested profile places the tool out of scope, so the module does not run its measures. Generate a scope determination instead."
       : null;
 
+  // A corpus becomes a run, and an out-of-scope profile records no runs, so
+  // generation is closed with them.
   const generateBlockedReason = !decision
     ? "Attest the profile first."
-    : decision.mayGenerate
-      ? null
-      : decision.generationBlocked.join("; ");
+    : outOfScope
+      ? "The attested profile places the tool out of scope, so the module does not run its measures. A corpus would have no run to feed."
+      : decision.mayGenerate
+        ? null
+        : decision.generationBlocked.join("; ");
 
   const scopeBlockedReason = !canEdit
     ? "Only an Admin or Editor can generate a scope determination."
@@ -314,7 +318,7 @@ const ProjectWorkspace = ({ projectId, canEdit, canAttest, activeSection }: Work
         <GenerateCorpus
           projectId={projectId}
           canEdit={canEdit}
-          mayGenerate={decision?.mayGenerate ?? false}
+          mayGenerate={generateBlockedReason === null}
           blockedReason={generateBlockedReason}
         />
       )}

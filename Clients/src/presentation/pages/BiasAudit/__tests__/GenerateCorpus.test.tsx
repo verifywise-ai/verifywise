@@ -247,6 +247,63 @@ describe("GenerateCorpus", () => {
     await waitFor(() => expect(svc.resumeCorpus).toHaveBeenCalledWith(2));
   });
 
+  it("shows records against the planned count, which the allocation rounds down", async () => {
+    svc.listCorpora.mockResolvedValue([
+      corpus({
+        id: 5,
+        status: "complete",
+        requested_count: 5000,
+        planned_count: 4970,
+        record_count: 4970,
+      }),
+    ]);
+    renderWithProviders(<GenerateCorpus {...props} />);
+    expect(await screen.findByTestId("corpus-row-5")).toHaveTextContent("4970 / 4970");
+  });
+
+  it("refuses a second corpus while one is generating", async () => {
+    svc.listCorpora.mockResolvedValue([corpus({ id: 6, status: "running" })]);
+    renderWithProviders(<GenerateCorpus {...props} />);
+    await userEvent.click(await screen.findByTestId("aedt-job-description-commercial-ae"));
+    expect(await screen.findByText(/already generating/i)).toBeInTheDocument();
+    expect(screen.getByTestId("aedt-generate-corpus")).toBeDisabled();
+  });
+
+  it("offers no resume for a failure that cannot be finished, and says why in words", async () => {
+    svc.listCorpora.mockResolvedValue([
+      corpus({ id: 7, status: "failed", failure_code: "model_changed" }),
+    ]);
+    renderWithProviders(<GenerateCorpus {...props} />);
+    const row = await screen.findByTestId("corpus-row-7");
+    expect(screen.queryByTestId("aedt-resume-corpus-7")).toBeNull();
+    expect(row).toHaveTextContent(/model changed/i);
+    expect(row).not.toHaveTextContent("model_changed");
+  });
+
+  it("disables resume while the attested profile blocks generation", async () => {
+    svc.listCorpora.mockResolvedValue([corpus({ id: 8, status: "failed" })]);
+    renderWithProviders(
+      <GenerateCorpus {...props} mayGenerate={false} blockedReason="Blocked for a reason." />,
+    );
+    expect(await screen.findByTestId("aedt-resume-corpus-8")).toBeDisabled();
+  });
+
+  it("lets only an editor compare criteria, since the preview needs edit rights", async () => {
+    renderWithProviders(<GenerateCorpus {...props} canEdit={false} />);
+    await userEvent.click(await screen.findByText("Account Executive"));
+    expect(screen.getByLabelText(/criteria your platform/i)).toBeDisabled();
+    expect(screen.getByTestId("aedt-compare-criteria")).toBeDisabled();
+  });
+
+  it("says so when the job description cannot be copied", async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error("denied"));
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    renderWithProviders(<GenerateCorpus {...props} />);
+    await userEvent.click(await screen.findByText("Account Executive"));
+    await userEvent.click(screen.getByTestId("aedt-copy-job-description"));
+    expect(await screen.findByText(/could not be copied/i)).toBeInTheDocument();
+  });
+
   it("never uses forbidden vocabulary", async () => {
     // Clients cannot import Servers/services/biasAudit/stance/vocabulary.ts;
     // same list, same whole-word rule. Built from fragments so the words
