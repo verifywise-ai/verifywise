@@ -23,7 +23,7 @@ jest.mock("../database/db", () => ({
   },
 }));
 
-import { deleteFileById, getFileById } from "./fileUpload.utils";
+import { canUserAccessFile, deleteFileById, getFileById } from "./fileUpload.utils";
 
 const tx = {} as any;
 const ORG = 1;
@@ -77,5 +77,21 @@ describe("getFileById", () => {
   it("still returns a visible file", async () => {
     table = [visibleRow()];
     expect(await getFileById(1, ORG)).toMatchObject({ id: 1 });
+  });
+});
+
+describe("canUserAccessFile", () => {
+  it("denies a stance PDF exactly as a missing file, even to its uploader", async () => {
+    table = [stanceRow({ uploaded_by: 3 })];
+    const stance = await canUserAccessFile(2, 3, "Editor", ORG, ORG);
+    table = [];
+    const missing = await canUserAccessFile(2, 3, "Editor", ORG, ORG);
+    expect(stance).toBe(false);
+    expect(stance).toEqual(missing);
+  });
+
+  it("still grants a visible file", async () => {
+    table = [visibleRow({ uploaded_by: 3 })];
+    expect(await canUserAccessFile(1, 3, "Editor", ORG, ORG)).toBe(true);
   });
 });

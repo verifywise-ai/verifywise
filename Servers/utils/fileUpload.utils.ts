@@ -113,6 +113,7 @@ export const getFileById = async (id: number, organizationId: number) => {
  * - User uploaded the file
  * - For project files: User has access to the project (owner or member)
  * - For org-level files: User belongs to the same organization
+ * A bias audit stance PDF is denied exactly as a missing file is.
  */
 export const canUserAccessFile = async (
   fileId: number,
@@ -133,6 +134,7 @@ export const canUserAccessFile = async (
     LEFT JOIN projects p ON f.project_id = p.id AND p.organization_id = :organizationId
     LEFT JOIN projects_members pm ON p.id = pm.project_id AND pm.organization_id = :organizationId
     WHERE f.organization_id = :organizationId AND f.id = :fileId
+      AND ${VISIBLE_FILE_SQL("f")}
       AND (
         f.uploaded_by = :userId
         OR p.owner = :userId
@@ -143,7 +145,13 @@ export const canUserAccessFile = async (
   `;
 
   const result = await sequelize.query(query, {
-    replacements: { organizationId, fileId, userId, userOrgId: userOrgId || null },
+    replacements: {
+      organizationId,
+      fileId,
+      userId,
+      userOrgId: userOrgId || null,
+      ...VISIBLE_FILE_REPLACEMENTS,
+    },
     type: QueryTypes.SELECT,
   });
 
