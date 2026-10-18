@@ -30,6 +30,7 @@ import {
   useAttestAedtProfile,
   useGenerateAedtScopeDetermination,
   useSaveAedtAnswers,
+  type AedtProfileWrite,
 } from "../../../application/hooks/useAedtBiasAudit";
 import {
   describeAedtError,
@@ -170,11 +171,20 @@ const ProjectWorkspace = ({
     );
   }
 
-  // Only a query with no data blocks the page. A failed background refetch
-  // keeps the data it had; replacing the page would unmount the wizard and
-  // lose an unsaved draft, so that case gets a small notice instead.
-  const loadError =
-    (profile ? null : profileQuery.error) ?? (questionsQuery.data ? null : questionsQuery.error);
+  // A failed background refetch keeps the data it had. When the failure is
+  // transient (network, 5xx) the page stays, with a small notice, so the
+  // wizard and an unsaved draft survive. A refusal (404: deleted or no longer
+  // a member; 403) or a query with no data replaces the page.
+  const blocks = (error: unknown, hasData: boolean) => {
+    if (!error) return false;
+    const { status } = describeAedtError(error);
+    return !hasData || (status !== null && status < 500);
+  };
+  const loadError = blocks(profileQuery.error, Boolean(profile))
+    ? profileQuery.error
+    : blocks(questionsQuery.error, Boolean(questionsQuery.data))
+      ? questionsQuery.error
+      : null;
   const refetchFailed = !loadError && Boolean(profileQuery.error ?? questionsQuery.error);
   if (loadError || !profile) {
     const { status, message } = describeAedtError(loadError);
@@ -191,14 +201,21 @@ const ProjectWorkspace = ({
     );
   }
 
+  // Restart the wizard only once the profile view shows what was written.
+  // If the reload failed it still holds the old answers, so the wizard keeps
+  // what is on screen and the refresh notice says why.
+  const restartIfReloaded = (write: AedtProfileWrite) => {
+    if (write.reloaded) setSavedCount((n) => n + 1);
+  };
+
   const handleSave = (answers: AedtAnswerInput[]) => {
     attest.reset();
-    save.mutate(answers, { onSuccess: () => setSavedCount((n) => n + 1) });
+    save.mutate(answers, { onSuccess: restartIfReloaded });
   };
 
   const handleAttest = () => {
     save.reset();
-    attest.mutate(undefined, { onSuccess: () => setSavedCount((n) => n + 1) });
+    attest.mutate(undefined, { onSuccess: restartIfReloaded });
   };
 
   const actionError = save.error ?? attest.error;

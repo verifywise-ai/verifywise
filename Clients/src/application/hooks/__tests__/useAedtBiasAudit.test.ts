@@ -14,7 +14,10 @@ function httpError(status: number) {
   });
 }
 
-const { createRun } = vi.hoisted(() => ({ createRun: vi.fn() }));
+const { createRun, getProfile } = vi.hoisted(() => ({
+  createRun: vi.fn(),
+  getProfile: vi.fn(),
+}));
 
 vi.mock("../../repository/aedtBiasAudit.repository", async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -23,10 +26,12 @@ vi.mock("../../repository/aedtBiasAudit.repository", async (importOriginal) => (
   saveAedtAnswers: vi.fn().mockResolvedValue({ profileId: 3, version: 2 }),
   attestAedtProfile: vi.fn().mockResolvedValue({ profileId: 3, version: 2 }),
   getAedtQuestions: vi.fn().mockResolvedValue([]),
+  getAedtProfile: getProfile,
 }));
 
 import {
   aedtQueryKeys,
+  useAedtProfile,
   useAedtQuestions,
   useAttestAedtProfile,
   useCreateAedtRun,
@@ -142,5 +147,54 @@ describe("useAedtBiasAudit invalidation", () => {
         .catch(() => undefined);
     });
     expect(invalidateSpy).not.toHaveBeenCalled();
+  });
+
+  describe("reporting whether the profile view reloaded after a write", () => {
+    const view = (version: number, status: string) => ({
+      profile: { id: 3, version, status },
+    });
+
+    async function write(kind: "save" | "attest") {
+      const { wrapper } = createWrapper();
+      const { result } = renderHook(
+        () => ({
+          profile: useAedtProfile(7),
+          write: kind === "save" ? useSaveAedtAnswers(7) : useAttestAedtProfile(7),
+        }),
+        { wrapper },
+      );
+      await act(async () => {});
+      let out: { reloaded: boolean } | undefined;
+      await act(async () => {
+        out = (await (result.current.write.mutateAsync as (a?: unknown) => Promise<unknown>)(
+          kind === "save" ? [] : undefined,
+        )) as { reloaded: boolean };
+      });
+      return out!;
+    }
+
+    it("reports a reload once the refetched view shows the saved version", async () => {
+      getProfile.mockReset();
+      getProfile.mockResolvedValueOnce(view(1, "attested")).mockResolvedValue(view(2, "draft"));
+      await expect(write("save")).resolves.toMatchObject({
+        profileId: 3,
+        version: 2,
+        reloaded: true,
+      });
+    });
+
+    it("reports no reload when the refetch fails, so the page keeps its state", async () => {
+      getProfile.mockReset();
+      getProfile
+        .mockResolvedValueOnce(view(1, "attested"))
+        .mockRejectedValue(new Error("Network Error"));
+      await expect(write("save")).resolves.toMatchObject({ reloaded: false });
+    });
+
+    it("reports no reload after attest until the view shows the version attested", async () => {
+      getProfile.mockReset();
+      getProfile.mockResolvedValueOnce(view(1, "draft")).mockResolvedValue(view(2, "draft"));
+      await expect(write("attest")).resolves.toMatchObject({ reloaded: false });
+    });
   });
 });

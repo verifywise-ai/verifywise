@@ -11,6 +11,8 @@ const state = vi.hoisted(() => ({
   role: "Admin",
   profile: null as unknown,
   profileError: null as unknown,
+  questions: [] as unknown[],
+  saveResult: { profileId: 3, version: 2, reloaded: true },
 }));
 
 const { mutation } = vi.hoisted(() => ({
@@ -41,10 +43,14 @@ vi.mock("../../../../application/hooks/useAedtBiasAudit", () => ({
     isLoading: false,
     error: state.profileError,
   }),
-  useAedtQuestions: () => ({ data: [], isLoading: false, error: null }),
+  useAedtQuestions: () => ({ data: state.questions, isLoading: false, error: null }),
   useAedtRuns: () => ({ data: [], isLoading: false, error: null }),
   useAedtRun: () => ({ data: undefined, isLoading: true, error: null }),
-  useSaveAedtAnswers: mutation,
+  useSaveAedtAnswers: () => ({
+    ...mutation(),
+    mutate: (_answers: unknown, opts?: { onSuccess?: (r: unknown) => void }) =>
+      opts?.onSuccess?.(state.saveResult),
+  }),
   useAttestAedtProfile: mutation,
   useGenerateAedtScopeDetermination: mutation,
   useCreateAedtRun: mutation,
@@ -111,9 +117,9 @@ const PROFILE: AedtProfileView = {
   ],
 };
 
-function notFound(message: string) {
+function notFound(message: string, status = 404) {
   return new AxiosError("Request failed", "ERR_BAD_REQUEST", undefined, undefined, {
-    status: 404,
+    status,
     statusText: "Not Found",
     data: { message: "Not Found", data: message },
     headers: {},
@@ -126,6 +132,8 @@ describe("BiasAuditPage", () => {
     state.role = "Admin";
     state.profile = PROFILE;
     state.profileError = null;
+    state.questions = [];
+    state.saveResult = { profileId: 3, version: 2, reloaded: true };
   });
 
   it("offers only use cases with the LL 144 framework, and shows the education panel", () => {
@@ -294,11 +302,56 @@ describe("BiasAuditPage", () => {
   // A failed background refetch keeps the data it had. Swapping the page for
   // the load error would unmount the wizard and lose an unsaved draft.
   it("keeps the page and the wizard when a refetch fails after data loaded", () => {
-    state.profileError = notFound("Project not found");
+    state.profileError = notFound("Server error", 503);
     renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
     expect(screen.queryByTestId("aedt-load-error")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /save answers/i })).toBeInTheDocument();
     expect(screen.getByTestId("aedt-refetch-error")).toHaveTextContent(/could not be refreshed/i);
+  });
+
+  // A 404 or 403 on refetch means the use case is gone or no longer the
+  // caller's; keeping a stale, editable page would hide that.
+  it.each([404, 403])("replaces the page when a refetch answers %i", (status) => {
+    state.profileError = notFound("Project not found", status);
+    renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
+    expect(screen.getByTestId("aedt-load-error")).toHaveTextContent("Project not found");
+    expect(screen.queryByRole("button", { name: /save answers/i })).not.toBeInTheDocument();
+    // The not-a-member explanation belongs to the 404 the member rule sends.
+    expect(screen.queryAllByText(/not a member of is reported as not found/)).toHaveLength(
+      status === 404 ? 1 : 0,
+    );
+  });
+
+  describe("after a save", () => {
+    const ROLE_QUESTION = {
+      key: "role.party",
+      scope: "profile",
+      weight: "veto",
+      prompt: "Do you hire with it?",
+      notesRequired: false,
+      allowDontKnow: false,
+      options: [{ value: "vendor", label: "We supply it", consequence: "Vendor." }],
+    };
+
+    function saveVendor() {
+      state.questions = [ROLE_QUESTION];
+      renderWithProviders(<BiasAuditPage />, { route: "/bias-audit" });
+      fireEvent.click(screen.getByRole("radio", { name: /We supply it/ }));
+      fireEvent.click(screen.getByRole("button", { name: /save answers/i }));
+    }
+
+    // The profile view still holds the pre-save answers; restarting the
+    // wizard from them would show the old answers as if saved.
+    it("keeps the wizard's state when the profile did not reload", () => {
+      state.saveResult = { profileId: 3, version: 2, reloaded: false };
+      saveVendor();
+      expect(screen.getByRole("radio", { name: /We supply it/ })).toBeChecked();
+    });
+
+    it("restarts the wizard from the reloaded profile when it did", () => {
+      saveVendor();
+      expect(screen.getByRole("radio", { name: /We supply it/ })).not.toBeChecked();
+    });
   });
 
   it("asks for an attestation when the saved answers are not attested", () => {

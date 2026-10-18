@@ -19,6 +19,7 @@ import {
   listAedtRuns,
   saveAedtAnswers,
   type AedtAnswerInput,
+  type AedtProfileView,
 } from "../repository/aedtBiasAudit.repository";
 
 export const aedtQueryKeys = {
@@ -86,19 +87,61 @@ function useInvalidateProfile(projectId: number) {
   return () => queryClient.invalidateQueries({ queryKey: aedtQueryKeys.profile(projectId) });
 }
 
+/** A saved or attested profile version, and whether the page now shows it. */
+export interface AedtProfileWrite {
+  profileId: number;
+  version: number;
+  /**
+   * True once the profile view has been refetched and shows this version
+   * (attested, after an attest). False when the refetch failed or returned
+   * something else: the page then keeps what is on screen rather than
+   * restarting the wizard from answers that predate the write.
+   */
+  reloaded: boolean;
+}
+
+/**
+ * Refetches the profile view after a write, inside the mutation, and reports
+ * whether it now shows the written version. A failed refetch does not throw;
+ * it leaves the query in error with its old data.
+ */
+function useReloadProfile(projectId: number) {
+  const queryClient = useQueryClient();
+  return async (
+    ref: { profileId: number; version: number },
+    expectAttested: boolean,
+  ): Promise<AedtProfileWrite> => {
+    const queryKey = aedtQueryKeys.profile(projectId);
+    await queryClient.invalidateQueries({ queryKey });
+    const state = queryClient.getQueryState<AedtProfileView>(queryKey);
+    const shown = state?.data?.profile;
+    const reloaded =
+      state?.status === "success" &&
+      shown?.id === ref.profileId &&
+      shown.version === ref.version &&
+      (!expectAttested || shown.status === "attested");
+    return { ...ref, reloaded };
+  };
+}
+
 export function useSaveAedtAnswers(projectId: number) {
+  const reload = useReloadProfile(projectId);
   const invalidate = useInvalidateProfile(projectId);
   return useMutation({
-    mutationFn: (answers: AedtAnswerInput[]) => saveAedtAnswers(projectId, answers),
-    onSettled: invalidate,
+    mutationFn: async (answers: AedtAnswerInput[]) =>
+      reload(await saveAedtAnswers(projectId, answers), false),
+    // A refusal (409: another save created the version first) may also mean
+    // the view is out of date.
+    onError: invalidate,
   });
 }
 
 export function useAttestAedtProfile(projectId: number) {
+  const reload = useReloadProfile(projectId);
   const invalidate = useInvalidateProfile(projectId);
   return useMutation({
-    mutationFn: () => attestAedtProfile(projectId),
-    onSettled: invalidate,
+    mutationFn: async () => reload(await attestAedtProfile(projectId), true),
+    onError: invalidate,
   });
 }
 
