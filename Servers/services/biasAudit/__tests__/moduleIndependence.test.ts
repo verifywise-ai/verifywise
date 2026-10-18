@@ -23,6 +23,10 @@ const IO_LAYER: Record<string, string> = {
     "reads a project through utils/biasAudit.utils for the services' shared project check",
   [path.join(MODULE, "projectAccess.ts")]:
     "asks utils/biasAudit.utils whether a user owns or belongs to a project",
+  [path.join(MODULE, "generation", "gatewayClient.ts")]:
+    "calls the Vercel AI Gateway with fetch and hashes each prompt with node:crypto",
+  [path.join(MODULE, "generation", "settings.ts")]:
+    "reads the gateway's three deployment variables from process.env",
   [path.join(MODULE, "stance", "render.ts")]:
     "reads the ejs template from disk, renders on the shared browser from utils/pdfBrowser.utils, and writes the files and stance rows through utils and the db; hashes the PDF with node:crypto",
 };
