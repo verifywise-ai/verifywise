@@ -2,6 +2,12 @@ import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
 import { BIAS_AUDIT_STANCE_SOURCE } from "../../utils/fileUpload.utils";
 import { appendToAuditLedger } from "../../utils/auditLedger.utils";
+import {
+  allFilesVisibleQuery,
+  VISIBLE_FILE_REPLACEMENTS,
+  VISIBLE_FILE_SQL,
+} from "../../utils/files/visibleFiles";
+import { NotFoundException } from "../../domain.layer/exceptions/custom.exception";
 
 /**
  * DB helpers for the model-lifecycle extension.
@@ -456,10 +462,11 @@ export async function getLifecycleForModel(
         `SELECT lf.id, lf.value_id, lf.file_id, lf.created_at,
                 f.filename, f.type AS mimetype
            FROM model_lifecycle_item_files lf
-           JOIN files f ON lf.file_id = f.id
-          WHERE lf.organization_id = :organizationId AND lf.value_id IN (:valueIds);`,
+           JOIN files f ON lf.file_id = f.id AND f.organization_id = lf.organization_id
+          WHERE lf.organization_id = :organizationId AND lf.value_id IN (:valueIds)
+            AND ${VISIBLE_FILE_SQL("f")};`,
         {
-          replacements: { organizationId, valueIds },
+          replacements: { organizationId, valueIds, ...VISIBLE_FILE_REPLACEMENTS },
           type: QueryTypes.SELECT,
         },
       )) as any[];
@@ -627,6 +634,11 @@ export async function attachFile(
   userId: number,
   fileId: number,
 ): Promise<any> {
+  // A missing file, another organization's file and a bias audit stance PDF
+  // (served only by the stance endpoint) are refused alike.
+  if (!(await allFilesVisibleQuery([fileId], organizationId))) {
+    throw new NotFoundException("File not found", "File", fileId);
+  }
   const valueId = await ensureValueRow(organizationId, modelId, itemId, userId);
   const rows = (await sequelize.query(
     `INSERT INTO model_lifecycle_item_files (organization_id, value_id, file_id)
