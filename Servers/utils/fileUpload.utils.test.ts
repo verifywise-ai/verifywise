@@ -52,19 +52,13 @@ describe("deleteFileById", () => {
     expect(stance).toEqual(missing);
   });
 
-  it("scopes the mapping, link and file deletes to a visible file, in the transaction", async () => {
+  it("runs one filtered DELETE FROM files in the transaction; mappings and links cascade", async () => {
     table = [stanceRow()];
     await deleteFileById(2, ORG, tx);
-    expect(calls.map((c) => c.sql.match(/DELETE FROM (\w+)/)?.[1])).toEqual([
-      "file_folder_mappings",
-      "file_entity_links",
-      "files",
-    ]);
-    for (const { sql, options } of calls) {
-      expect(sql).toMatch(/\bFROM\s+files\b/);
-      expect(everyFilesReferenceFiltered(sql)).toBe(true);
-      expect(options.transaction).toBe(tx);
-    }
+    expect(calls).toHaveLength(1);
+    expect(calls[0].sql).toMatch(/^\s*DELETE FROM files\b/);
+    expect(everyFilesReferenceFiltered(calls[0].sql)).toBe(true);
+    expect(calls[0].options.transaction).toBe(tx);
   });
 
   it("deletes any other file", async () => {

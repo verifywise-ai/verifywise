@@ -88,19 +88,13 @@ describe("file.repository by-id functions and bias audit stance PDFs", () => {
   it.each([
     ["deleteFileById", () => deleteFileById(STANCE_ID, ORG, tx)],
     ["deleteProjectFileById", () => deleteProjectFileById(STANCE_ID, ORG, tx)],
-  ])(
-    "%s scopes every statement, mappings and links included, to a visible file",
-    async (_n, run) => {
-      table = [stanceRow()];
-      await (run as () => Promise<unknown>)();
-      const deletes = statements.filter((sql) => /^\s*DELETE\b/i.test(sql));
-      expect(deletes.length).toBeGreaterThanOrEqual(3);
-      for (const sql of deletes) {
-        expect(sql).toMatch(/\bFROM\s+files\b/i);
-        expect(everyFilesReferenceFiltered(sql)).toBe(true);
-      }
-    },
-  );
+  ])("%s runs one filtered DELETE FROM files; mappings and links cascade", async (_n, run) => {
+    table = [stanceRow()];
+    await (run as () => Promise<unknown>)();
+    expect(statements).toHaveLength(1);
+    expect(statements[0]).toMatch(/^\s*DELETE FROM files\b/);
+    expect(everyFilesReferenceFiltered(statements[0])).toBe(true);
+  });
 
   it("deleteFileById still deletes a visible file", async () => {
     table = [visibleRow()];

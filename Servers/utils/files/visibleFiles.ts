@@ -78,31 +78,25 @@ export async function allFilesVisibleQuery(
 }
 
 /**
- * Delete a visible file and its folder mappings and entity links. The one
- * delete every generic path uses. A stance PDF is never deleted, and like a
- * missing id it is a silent no-op: nothing is touched and the answer is
- * false.
+ * Delete a visible file. The one delete every generic path uses. Its folder
+ * mappings and entity links go with it (both file_id foreign keys are
+ * ON DELETE CASCADE). A stance PDF is never deleted, and like a missing id
+ * it is a silent no-op: nothing is touched and the answer is false.
  */
 export async function deleteVisibleFileQuery(
   fileId: number,
   organizationId: number,
   transaction: Transaction,
 ): Promise<boolean> {
-  const replacements = { fileId, organizationId, ...VISIBLE_FILE_REPLACEMENTS };
-  const visibleFileId = `SELECT id FROM files
-      WHERE organization_id = :organizationId AND id = :fileId AND ${VISIBLE_FILE_SQL("files")}`;
-  for (const table of ["file_folder_mappings", "file_entity_links"]) {
-    await sequelize.query(
-      `DELETE FROM ${table}
-        WHERE organization_id = :organizationId AND file_id IN (${visibleFileId})`,
-      { replacements, transaction },
-    );
-  }
   const deleted = await sequelize.query(
     `DELETE FROM files
       WHERE organization_id = :organizationId AND id = :fileId AND ${VISIBLE_FILE_SQL("files")}
       RETURNING id`,
-    { replacements, type: QueryTypes.SELECT, transaction },
+    {
+      replacements: { fileId, organizationId, ...VISIBLE_FILE_REPLACEMENTS },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
   );
   return deleted.length > 0;
 }

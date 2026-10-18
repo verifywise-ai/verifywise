@@ -21,7 +21,7 @@ describe("report delete", () => {
     mockQuery.mockResolvedValue([]);
     await expect(deleteReportByIdQuery(77, 5, tx)).resolves.toBe(false);
     const deletes = mockQuery.mock.calls.filter(([sql]) => /^\s*DELETE\b/.test(sql));
-    expect(deletes).toHaveLength(3);
+    expect(deletes).toHaveLength(1);
     for (const [sql, opts] of deletes) {
       expect(sql).toMatch(/\bFROM\s+files\b/);
       expect(everyFilesReferenceFiltered(sql)).toBe(true);
@@ -31,12 +31,9 @@ describe("report delete", () => {
   });
 
   it("still deletes a report", async () => {
-    mockQuery
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([{ id: 77 }]);
+    mockQuery.mockResolvedValueOnce([{ id: 77 }]);
     await expect(deleteReportByIdQuery(77, 5, tx)).resolves.toBe(true);
-    expect(mockQuery.mock.calls[2][0]).toContain("DELETE FROM files");
+    expect(mockQuery.mock.calls[0][0]).toContain("DELETE FROM files");
   });
 });
 

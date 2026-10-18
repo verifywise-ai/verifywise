@@ -87,7 +87,7 @@ export const uploadFile = async (
 export { BIAS_AUDIT_STANCE_SOURCE };
 
 /**
- * Delete a file, its folder mappings and its entity links. A stance PDF is never
+ * Delete a file (its folder mappings and entity links cascade). A stance PDF is never
  * deleted: like a missing id it is a silent no-op and the answer is false.
  */
 export const deleteFileById = async (

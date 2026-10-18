@@ -277,8 +277,8 @@ export async function setRunArchivedQuery(
  * .file_id is ON DELETE SET NULL, so if the file DELETE committed and the run
  * DELETE then failed the user would be left with a run row pointing at nothing
  * and no way to tell it had ever had a report. File removal goes through
- * deleteFileById rather than a local DELETE so the file's folder mappings go
- * with it — a bare `DELETE FROM files` leaves file_folder_mappings rows behind.
+ * deleteFileById, the shared delete that never removes a bias audit stance
+ * PDF; the file's folder mappings and entity links cascade with it.
  */
 export async function deleteRunQuery(id: number, organization_id: number): Promise<boolean> {
   return await sequelize.transaction(async (transaction) => {
