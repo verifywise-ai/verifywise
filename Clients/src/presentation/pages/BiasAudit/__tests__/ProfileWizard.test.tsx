@@ -337,6 +337,20 @@ describe("ProfileWizard: edits that cannot be saved", () => {
     expect(screen.getByRole("button", { name: /attest/i })).toBeEnabled();
   });
 
+  // The whitespace is still shown: a space typed before the next word must
+  // not vanish just because the trimmed notes match the saved ones.
+  it("keeps a typed space or newline in the notes field", () => {
+    renderWizard({ answers: ALL_VETOES, profileStatus: "draft" });
+    const notes = within(question("role.party")).getByRole("textbox");
+    fireEvent.change(notes, { target: { value: "Our own words. " } });
+    expect(notes).toHaveValue("Our own words. ");
+    fireEvent.change(notes, { target: { value: "Our own words. W" } });
+    expect(notes).toHaveValue("Our own words. W");
+    fireEvent.change(notes, { target: { value: "Our own words.\n" } });
+    expect(notes).toHaveValue("Our own words.\n");
+    expect(screen.getByRole("button", { name: /save answers/i })).toBeDisabled();
+  });
+
   it("treats an answer changed and then changed back as unchanged", () => {
     const { onAttest } = renderWizard({
       answers: [...ALL_VETOES, answer("cutoff.applied_by", "person")],

@@ -62,14 +62,19 @@ const isAnswered = (a: DraftAnswer | undefined) => a !== undefined && (a.dontKno
 const sameAnswer = (a: DraftAnswer, b: DraftAnswer) =>
   a.value === b.value && a.dontKnow === b.dontKnow && a.notes.trim() === b.notes.trim();
 
-/** The edits that still differ from the saved answers. */
+/**
+ * The edits that still differ from the saved answers. Compared exactly, not
+ * trimmed: dropping an edit must never change the text on screen, or a typed
+ * space or newline would vanish mid-typing.
+ */
 function withoutSaved(
   edits: Record<string, DraftAnswer>,
   saved: Record<string, DraftAnswer>,
 ): Record<string, DraftAnswer> {
   const next: Record<string, DraftAnswer> = {};
   for (const [k, a] of Object.entries(edits)) {
-    if (!sameAnswer(a, saved[k] ?? EMPTY_ANSWER)) next[k] = a;
+    const s = saved[k] ?? EMPTY_ANSWER;
+    if (a.value !== s.value || a.dontKnow !== s.dontKnow || a.notes !== s.notes) next[k] = a;
   }
   return next;
 }
@@ -139,9 +144,12 @@ const ProfileWizard = ({
 
   // ---- save
 
-  // Edits hold only answers that differ from the saved ones (withoutSaved).
-  // Of those, Save sends the visible questions with an answer.
-  const edited = Object.keys(edits);
+  // An edit that differs from the saved answer only by surrounding whitespace
+  // in its notes is kept on screen but is not a change. Of the real changes,
+  // Save sends the visible questions with an answer.
+  const edited = Object.keys(edits).filter(
+    (k) => !sameAnswer(edits[k], savedDraft[k] ?? EMPTY_ANSWER),
+  );
   const pending = visible.filter((q) => edited.includes(q.key) && isAnswered(draft[q.key]));
 
   // Edits Save cannot send: notes on a question with no answer, or an answer
