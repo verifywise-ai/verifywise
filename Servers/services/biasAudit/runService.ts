@@ -28,7 +28,7 @@ import {
   type CorpusRow,
   type RunSummaryRow,
 } from "../../utils/biasAudit.utils";
-import { JOB_DESCRIPTIONS } from "../../structures/NYC-Local-Law-144/job-descriptions";
+import { findJobDescription } from "../../structures/NYC-Local-Law-144/job-descriptions";
 import type { JobDescription } from "../../structures/NYC-Local-Law-144/job-descriptions/types";
 import type { BiasAuditRun } from "../../domain.layer/models/biasAudit/biasAuditRun.model";
 import type { BiasAuditStance } from "../../domain.layer/models/biasAudit/biasAuditStance.model";
@@ -47,6 +47,7 @@ import { mayExportStoredRun, type GateFinding } from "./dataGates";
 import { CORPUS_ID_KEY, joinScoresToManifest, tierSeparationFindings } from "./corpusJoin";
 import { sameJobDescription } from "./jobDescription";
 import type { ManifestRow } from "./generation/manifest";
+import { jobDescriptionSha256 } from "./generation/generateCorpus";
 import { buildTrendSeries, type TrendSeries } from "./trendSeries";
 
 export { mayExportStoredRun };
@@ -139,15 +140,20 @@ async function loadRunCorpus(
       String(corpusId),
     );
   }
-  const jobDescription = Object.prototype.hasOwnProperty.call(
-    JOB_DESCRIPTIONS,
-    corpus.job_description_key,
-  )
-    ? (JOB_DESCRIPTIONS as Record<string, JobDescription>)[corpus.job_description_key]
-    : undefined;
+  const jobDescription = findJobDescription(corpus.job_description_key);
   if (!jobDescription) {
     throw new ConflictException(
       `Corpus ${corpusId} names a job description this deployment does not hold.`,
+      "AedtCorpus",
+      String(corpusId),
+    );
+  }
+  // The run names the fixed text and reads its tiers, so they must be the
+  // ones the corpus was built from, as generation itself checks.
+  if (jobDescriptionSha256(jobDescription) !== corpus.job_description_sha256) {
+    throw new ConflictException(
+      `The fixed job description has changed since corpus ${corpusId} was generated, so a ` +
+        `scored file cannot be joined to it. Generate a new corpus from the current text.`,
       "AedtCorpus",
       String(corpusId),
     );
@@ -346,12 +352,13 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
     );
   }
 
-  // A scored corpus is joined to its manifest before anything is computed;
-  // a refused join stores no run, since the rates would describe other
-  // candidates than the corpus holds.
+  // A readable scored corpus is joined to its manifest before anything is
+  // computed; a refused join stores no run, since the rates would describe
+  // other candidates than the corpus holds. A file the checks above already
+  // stopped is stored as a blocked run instead, so its real cause shows.
   let records = parsed.records;
   let tierFindings: GateFinding[] = [];
-  if (corpusSource && parsed.mappingErrors.length === 0) {
+  if (corpusSource && blockers.length === 0) {
     const joined = joinScoresToManifest(parsed.records, corpusSource.manifest);
     if (!joined.ok) {
       throw new ValidationException(
@@ -360,11 +367,26 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
         joined.findings.map((f) => f.code),
       );
     }
+    // Every corpus record was meant to be scored; an unscored one would leave
+    // the rates describing part of the corpus while the stance names all of it.
+    const unscored =
+      metric === "scoring_rate"
+        ? parsed.records.filter((r) => typeof r[RECORD_KEYS.score] !== "number").length
+        : 0;
+    if (unscored > 0) {
+      throw new ValidationException(
+        `${unscored} record(s) of the corpus have no score. Score every record of the corpus ` +
+          `and upload the whole file.`,
+        "csv",
+        "corpus_scores_blank",
+      );
+    }
     tierFindings = tierSeparationFindings(
       parsed.records,
       corpusSource.manifest,
       metric,
       corpusSource.jobDescription.tiers.map((t) => t.key),
+      Object.fromEntries(corpusSource.jobDescription.tiers.map((t) => [t.key, t.label])),
     );
     records = joined.records;
   }

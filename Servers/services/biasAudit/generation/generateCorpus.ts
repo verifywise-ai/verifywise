@@ -1,6 +1,6 @@
 import { createHash, randomInt, randomUUID } from "node:crypto";
 import {
-  JOB_DESCRIPTIONS,
+  findJobDescription,
   type JobDescription,
   type JobDescriptionKey,
 } from "../../../structures/NYC-Local-Law-144/job-descriptions";
@@ -140,7 +140,7 @@ export function jobDescriptionSha256(jd: JobDescription): string {
 }
 
 function jobDescriptionFor(key: string): JobDescription {
-  const jd = (JOB_DESCRIPTIONS as Record<string, JobDescription | undefined>)[key];
+  const jd = findJobDescription(key);
   if (!jd) throw new ValidationException(`Unknown job description "${key}".`, "jobDescriptionKey");
   return jd;
 }
@@ -229,7 +229,7 @@ const toEntry = (r: CorpusLogRow): GenerationLogEntry => ({
 });
 
 /** Reads the verdict of the stored comparison; anything unrecognised is "not_supplied". */
-function criteriaVerdictOf(stored: unknown): "close" | "divergent" | "not_supplied" {
+export function criteriaVerdictOf(stored: unknown): "close" | "divergent" | "not_supplied" {
   const verdict = (stored as { verdict?: unknown } | null)?.verdict;
   return verdict === "close" || verdict === "divergent" ? verdict : "not_supplied";
 }

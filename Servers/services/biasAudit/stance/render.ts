@@ -44,6 +44,7 @@ import {
 import { BIAS_AUDIT_STANCE_SOURCE, uploadFile } from "../../../utils/fileUpload.utils";
 import { getSharedBrowser } from "../../../utils/pdfBrowser.utils";
 import {
+  modelsText,
   REQUIRED_SECTIONS,
   type CorpusStanceFacts,
   type StanceModel,
@@ -110,7 +111,7 @@ export function evidenceFromRun(
 }
 
 const CRITERIA_WORDS: Record<CorpusStanceFacts["criteria"]["verdict"], string> = {
-  close: "matched the expected set",
+  close: "closely matched the expected set",
   divergent: "differed from the expected set",
   not_supplied: "not supplied; the expected criteria were not confirmed against the platform",
 };
@@ -119,16 +120,13 @@ const CRITERIA_WORDS: Record<CorpusStanceFacts["criteria"]["verdict"], string> =
 function corpusRows(corpus: CorpusStanceFacts | null | undefined) {
   if (!corpus) return null;
   const sizes = Object.values(corpus.cellSizes);
-  const models = Object.entries(corpus.modelsObserved)
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .map(([m, n]) => `${m} (${n})`);
   const unmatched =
-    corpus.criteria.verdict === "divergent" && corpus.criteria.unmatchedExpected.length > 0
+    corpus.criteria.verdict !== "not_supplied" && corpus.criteria.unmatchedExpected.length > 0
       ? `; not matched: ${corpus.criteria.unmatchedExpected.join(", ")}`
       : "";
   return {
     corpus: `#${corpus.corpusId}, ${corpus.recordCount} synthetic records`,
-    models: models.length > 0 ? models.join(", ") : "not recorded",
+    models: modelsText(corpus.modelsObserved),
     cellSizes:
       sizes.length > 0
         ? `smallest ${Math.min(...sizes)}, largest ${Math.max(...sizes)} across ${sizes.length} cells`

@@ -40,7 +40,7 @@ export function joinScoresToManifest(
   const byId = new Map(manifest.map((m) => [m.candidateId, m]));
   const seen = new Set<string>();
   const duplicates = new Set<string>();
-  const unknown: string[] = [];
+  const unknownIds = new Set<string>();
   let blank = 0;
 
   for (const record of records) {
@@ -49,11 +49,12 @@ export function joinScoresToManifest(
       blank++;
       continue;
     }
-    if (!byId.has(id)) unknown.push(id);
+    if (!byId.has(id)) unknownIds.add(id);
     else if (seen.has(id)) duplicates.add(id);
     seen.add(id);
   }
   const missing = manifest.filter((m) => !seen.has(m.candidateId)).length;
+  const unknown = [...unknownIds];
 
   const findings: GateFinding[] = [];
   if (blank > 0) {
@@ -125,6 +126,8 @@ export function tierSeparationFindings(
   manifest: ManifestRow[],
   metric: "selection_rate" | "scoring_rate",
   tierOrder: string[],
+  /** How the finding names each tier; a tier without a label is named by its key. */
+  tierLabels: Record<string, string> = {},
 ): GateFinding[] {
   const tierOf = new Map(manifest.map((m) => [m.candidateId, m.tierKey]));
   const values = new Map<string, number[]>();
@@ -159,14 +162,16 @@ export function tierSeparationFindings(
     const gap = level.get(upper)! - level.get(lower)!;
     if (gap < TIER_SEPARATION_MIN) {
       const what = metric === "selection_rate" ? "selection rate" : "scaled mean score";
+      const lowerName = tierLabels[lower] ?? lower;
+      const upperName = tierLabels[upper] ?? upper;
       findings.push({
         code: "tier_does_not_separate",
         severity: "note",
         message:
-          `Qualification tier ${upper} does not sit above tier ${lower}: ${what} ` +
-          `${formatShare(level.get(lower)!)} for ${lower} and ${formatShare(level.get(upper)!)} ` +
-          `for ${upper}. The tool did not distinguish these two levels of qualification in ` +
-          `this corpus.`,
+          `The qualification tier "${upperName}" does not sit above "${lowerName}": ${what} ` +
+          `${formatShare(level.get(lower)!)} for "${lowerName}" and ` +
+          `${formatShare(level.get(upper)!)} for "${upperName}". The tool did not distinguish ` +
+          `these two levels of qualification in this corpus.`,
         detail: { lower, upper, gap },
       });
     }

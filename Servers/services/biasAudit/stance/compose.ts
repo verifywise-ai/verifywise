@@ -336,7 +336,7 @@ function readinessBody(args: ComposeStanceArgs): string {
 
 const CRITERIA_TEXT: Record<CorpusStanceFacts["criteria"]["verdict"], string> = {
   close:
-    "Criteria comparison: the criteria your platform generated from the job description matched the expected set.",
+    "Criteria comparison: the criteria your platform generated from the job description closely matched the expected set.",
   divergent:
     "Criteria comparison: the criteria your platform generated from the job description differed from the expected set, so the corpus may not exercise your configuration well.",
   not_supplied:
@@ -344,13 +344,13 @@ const CRITERIA_TEXT: Record<CorpusStanceFacts["criteria"]["verdict"], string> = 
 };
 
 const KNOCKOUT_TEXT: Record<CorpusStanceFacts["knockout"], string> = {
-  yes: "Knockout: your answers record a knockout step. Knocked-out candidates are pooled with low scorers in these rates.",
+  yes: "Knockout: your answers record a knockout step. Knocked-out candidates count in these rates as the scored file records them: as not selected or as low scores they are pooled with low scorers, and with a blank score they are left out of a scoring rate.",
   no: "Knockout: your answers record no knockout step.",
   dont_know: "Knockout: whether a knockout step applies is not established.",
 };
 
-/** "m1 (700), m2 (3)", largest share first. */
-function modelsText(models: Record<string, number>): string {
+/** "m1 (700), m2 (3)", largest share first. Shared with the rendered fact rows. */
+export function modelsText(models: Record<string, number>): string {
   const entries = Object.entries(models).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
   return entries.length === 0 ? "none recorded" : entries.map(([m, n]) => `${m} (${n})`).join(", ");
 }
@@ -373,7 +373,8 @@ function corpusLines(corpus: CorpusStanceFacts): string[] {
     );
   }
   lines.push(CRITERIA_TEXT[corpus.criteria.verdict]);
-  if (corpus.criteria.verdict === "divergent" && corpus.criteria.unmatchedExpected.length > 0) {
+  // A close verdict allows one unmatched criterion; it is named either way.
+  if (corpus.criteria.verdict !== "not_supplied" && corpus.criteria.unmatchedExpected.length > 0) {
     lines.push(`Expected criteria not matched: ${corpus.criteria.unmatchedExpected.join(", ")}.`);
   }
   lines.push(KNOCKOUT_TEXT[corpus.knockout]);

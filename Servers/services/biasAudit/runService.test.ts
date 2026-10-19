@@ -28,6 +28,7 @@ import {
 } from "./runService";
 import { LL144_RACE, LL144_SEX } from "./generation/allocation";
 import { JOB_DESCRIPTIONS } from "../../structures/NYC-Local-Law-144/job-descriptions";
+import { jobDescriptionSha256 } from "./generation/generateCorpus";
 import {
   ConflictException,
   NotFoundException,
@@ -619,6 +620,7 @@ describe("createRun from a generated corpus", () => {
     organization_id: 42,
     status: "complete",
     job_description_key: "commercial-ae",
+    job_description_sha256: jobDescriptionSha256(JD),
     manifest_json: MANIFEST,
     ...over,
   });
@@ -713,6 +715,35 @@ describe("createRun from a generated corpus", () => {
     expect(utils.createRunQuery).not.toHaveBeenCalled();
   });
 
+  it("refuses a corpus built from fixed text that has since changed", async () => {
+    utils.getCorpusQuery.mockResolvedValue(corpusRow({ job_description_sha256: "0".repeat(64) }));
+    await expect(corpusRun()).rejects.toBeInstanceOf(ConflictException);
+    expect(utils.createRunQuery).not.toHaveBeenCalled();
+  });
+
+  it("stores a blocked run for a file the data checks stop, rather than refusing the join", async () => {
+    const rows = scored().trim().split("\n");
+    rows[1] = `${rows[1]},extra`;
+    await corpusRun({ csv: rows.join("\n") + "\n" });
+    const codes = stored().gateFindingsJson.map((f: { code: string }) => f.code);
+    expect(codes).toContain("rows_wrong_width");
+    expect(stored().corpusId).toBe(3);
+  });
+
+  it("refuses a scoring-rate corpus run with unscored records", async () => {
+    utils.getProfileAnswersQuery.mockResolvedValue([
+      ...ANSWERS.map((a) =>
+        a.question_key === "cutoff.applied_by" ? ans("cutoff.applied_by", "person") : a,
+      ),
+      ans("threshold.operational", "stated"),
+    ]);
+    const rows = ["id,s", ...MANIFEST.map((m, i) => `${m.candidateId},${i === 0 ? "" : i % 10}`)];
+    await expect(
+      corpusRun({ csv: rows.join("\n") + "\n", mapping: { candidate_id: "id", score: "s" } }),
+    ).rejects.toThrow(/1 record\(s\) of the corpus have no score/);
+    expect(utils.createRunQuery).not.toHaveBeenCalled();
+  });
+
   it("stores a note when adjacent tiers do not separate", async () => {
     await corpusRun({ csv: scored(undefined, () => true) });
     const codes = stored().gateFindingsJson.map((f: { code: string }) => f.code);
@@ -721,6 +752,9 @@ describe("createRun from a generated corpus", () => {
       (f: { code: string }) => f.code === "tier_does_not_separate",
     );
     expect(note.severity).toBe("note");
+    // Named by the job description's tier labels, not internal keys.
+    expect(note.message).toContain(`"${JD.tiers[1].label}"`);
+    expect(note.message).not.toContain(JD.tiers[1].key);
   });
 
   it("leaves an uploaded run without a corpus", async () => {

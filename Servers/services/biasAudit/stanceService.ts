@@ -37,8 +37,8 @@ import { answerMapFromRows, assertProject } from "./serviceHelpers";
 import { runAnswerGates } from "./answerGates";
 import { computeReadiness } from "./readinessScore";
 import { composeStance, type CorpusStanceFacts, type StanceAttribution } from "./stance/compose";
-import { JOB_DESCRIPTIONS } from "../../structures/NYC-Local-Law-144/job-descriptions";
-import type { JobDescription } from "../../structures/NYC-Local-Law-144/job-descriptions/types";
+import { findJobDescription } from "../../structures/NYC-Local-Law-144/job-descriptions";
+import { criteriaVerdictOf } from "./generation/generateCorpus";
 import { evidenceFromRun, persistStance } from "./stance/render";
 import { LL144_CONFIG, mayExportStoredRun } from "./runService";
 import type { DerivedBasis } from "./deriveBasis";
@@ -146,32 +146,23 @@ async function attributionFor(
   return { answerAuthors, attestation };
 }
 
-const CRITERIA_VERDICTS = ["close", "divergent", "not_supplied"] as const;
-type CriteriaVerdict = (typeof CRITERIA_VERDICTS)[number];
-
 /**
  * What the stance states about the corpus a run was scored from, built from
- * the corpus row. Unmatched criteria are named by their labels.
+ * the corpus row. Unmatched criteria are named by their labels. The knockout
+ * record comes from the attested answers the run is filed under, not from the
+ * corpus's own snapshot, so the stance never contradicts those answers.
  */
-export function corpusStanceFacts(corpus: CorpusRow): CorpusStanceFacts {
-  const jd = Object.prototype.hasOwnProperty.call(JOB_DESCRIPTIONS, corpus.job_description_key)
-    ? (JOB_DESCRIPTIONS as Record<string, JobDescription>)[corpus.job_description_key]
-    : undefined;
-  const comparison = (corpus.criteria_comparison_json ?? {}) as {
-    verdict?: unknown;
-    unmatchedExpected?: unknown;
-  };
-  const verdict: CriteriaVerdict = (CRITERIA_VERDICTS as readonly unknown[]).includes(
-    comparison.verdict,
-  )
-    ? (comparison.verdict as CriteriaVerdict)
-    : "not_supplied";
+export function corpusStanceFacts(corpus: CorpusRow, answers: AnswerWithNotes): CorpusStanceFacts {
+  const jd = findJobDescription(corpus.job_description_key);
+  const comparison = (corpus.criteria_comparison_json ?? {}) as { unmatchedExpected?: unknown };
   const unmatched = Array.isArray(comparison.unmatchedExpected)
     ? comparison.unmatchedExpected.filter((k): k is string => typeof k === "string")
     : [];
   const labelOf = (key: string) => jd?.expectedCriteria.find((c) => c.key === key)?.label ?? key;
+  const answered = answers["knockout.exists"];
+  const knockoutAnswer = answered && !answered.dontKnow ? answered.value : null;
   const knockout =
-    corpus.knockout === "yes" || corpus.knockout === "no" ? corpus.knockout : "dont_know";
+    knockoutAnswer === "yes" || knockoutAnswer === "no" ? knockoutAnswer : "dont_know";
   return {
     corpusId: corpus.id,
     roleTitle: jd?.roleTitle ?? corpus.job_description_key,
@@ -179,7 +170,10 @@ export function corpusStanceFacts(corpus: CorpusRow): CorpusStanceFacts {
     modelPinned: corpus.model_pinned,
     modelsObserved: corpus.models_observed_json ?? {},
     cellSizes: corpus.cell_sizes_json ?? {},
-    criteria: { verdict, unmatchedExpected: unmatched.map(labelOf) },
+    criteria: {
+      verdict: criteriaVerdictOf(corpus.criteria_comparison_json),
+      unmatchedExpected: unmatched.map(labelOf),
+    },
     knockout,
     nameMethod: corpus.name_method,
   };
@@ -214,7 +208,7 @@ export async function generateStance(input: GenerateStanceInput): Promise<Genera
   // A run scored from a generated corpus names it; the corpus may have been
   // deleted since (the foreign key sets corpus_id null), which reads as none.
   const corpusRow = run.corpus_id ? await getCorpusQuery(run.corpus_id, organizationId) : null;
-  const corpus = corpusRow ? corpusStanceFacts(corpusRow) : null;
+  const corpus = corpusRow ? corpusStanceFacts(corpusRow, answers) : null;
 
   const readiness = computeReadiness(answers);
   const model = composeStance({

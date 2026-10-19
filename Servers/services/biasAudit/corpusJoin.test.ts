@@ -44,6 +44,16 @@ describe("joinScoresToManifest", () => {
     expect(f.message).not.toContain("X6");
   });
 
+  it("counts an unknown id once however often it repeats", () => {
+    const out = joinScoresToManifest(
+      upload([...manifest.map((m) => m.candidateId), "X1", "X1", "X1"]),
+      manifest,
+    );
+    if (out.ok) throw new Error("expected a refusal");
+    const f = out.findings.find((x) => x.code === "corpus_ids_unknown")!;
+    expect(f.message).toMatch(/^1 candidate ID\(s\) are not in this corpus: X1\./);
+  });
+
   it("refuses a duplicate id", () => {
     const ids = manifest.map((m) => m.candidateId);
     const out = joinScoresToManifest(upload([...ids, ids[0]]), manifest);
@@ -89,6 +99,18 @@ describe("tierSeparationFindings", () => {
     const w = f.find((x) => x.code === "tier_does_not_separate" && /t5/.test(x.message))!;
     expect(w.severity).toBe("note");
     expect(w.message).toMatch(/t4.*t5|t5.*t4/);
+  });
+
+  it("names tiers by their labels when given them", () => {
+    const f = tierSeparationFindings(
+      joined((t) => t === "t4" || t === "t5"),
+      manifest,
+      "selection_rate",
+      tiers,
+      { t4: "Qualified", t5: "Strongly qualified" },
+    );
+    const w = f.find((x) => x.detail?.upper === "t5")!;
+    expect(w.message).toContain('"Strongly qualified" does not sit above "Qualified"');
   });
 
   it("reports a reversal, where the upper tier sits below the lower", () => {

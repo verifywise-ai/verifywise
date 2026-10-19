@@ -690,6 +690,9 @@ describe("a stance scored from a generated corpus", () => {
 
   it("states the criteria outcome for each verdict", () => {
     expect(tested().body).toMatch(/matched the expected set/);
+    expect(
+      tested({ criteria: { verdict: "close", unmatchedExpected: ["Deal size"] } }).body,
+    ).toContain("Expected criteria not matched: Deal size.");
     const divergent = tested({
       criteria: { verdict: "divergent", unmatchedExpected: ["Sales cycle length", "Deal size"] },
     }).body;
@@ -700,9 +703,12 @@ describe("a stance scored from a generated corpus", () => {
   });
 
   it("states the knockout record", () => {
-    expect(tested({ knockout: "yes" }).body).toMatch(
-      /knocked-out candidates are pooled with low scorers in these rates/i,
+    const yes = tested({ knockout: "yes" }).body;
+    expect(yes).toMatch(
+      /knocked-out candidates count in these rates as the scored file records them/i,
     );
+    expect(yes).toMatch(/pooled with low scorers/);
+    expect(yes).toMatch(/blank score they are left out of a scoring rate/);
     expect(tested({ knockout: "dont_know" }).body).toMatch(/not established/);
   });
 

@@ -537,12 +537,17 @@ describe("a stance for a run scored from a corpus", () => {
   };
 
   it("loads the corpus and passes its facts to the stance and the evidence", async () => {
+    utils.getProfileAnswersQuery.mockResolvedValue([
+      ...RUN_PROFILE_ANSWERS,
+      answer("knockout.exists", "yes"),
+    ]);
     utils.getRunQuery.mockResolvedValue({
       ...RUN,
       corpus_id: 3,
       job_description_key: "Account Executive",
     });
-    utils.getCorpusQuery.mockResolvedValue(CORPUS);
+    // The corpus snapshot says "no"; the run's attested answers say "yes".
+    utils.getCorpusQuery.mockResolvedValue({ ...CORPUS, knockout: "no" });
     await generateStance(args);
     expect(utils.getCorpusQuery).toHaveBeenCalledWith(3, 42);
     const { model, evidence } = persistStance.mock.calls[0][0];

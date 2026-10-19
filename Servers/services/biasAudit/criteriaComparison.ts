@@ -1,4 +1,4 @@
-import { JOB_DESCRIPTIONS } from "../../structures/NYC-Local-Law-144/job-descriptions";
+import { findJobDescription } from "../../structures/NYC-Local-Law-144/job-descriptions";
 import type {
   ExpectedCriterion,
   JobDescription,
@@ -161,10 +161,7 @@ function parseSupplied(text: string): string[] {
 }
 
 function jobDescriptionFor(key: string): JobDescription {
-  // Object.hasOwn is ES2022; the server compiles against an older lib.
-  const jd = Object.prototype.hasOwnProperty.call(JOB_DESCRIPTIONS, key)
-    ? (JOB_DESCRIPTIONS as Record<string, JobDescription>)[key]
-    : undefined;
+  const jd = findJobDescription(key);
   if (!jd) throw new Error(`Unknown job description "${key}".`);
   return jd;
 }
