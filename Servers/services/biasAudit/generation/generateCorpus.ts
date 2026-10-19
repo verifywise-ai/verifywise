@@ -74,6 +74,22 @@ export interface CreateCorpusArgs {
 
 const KNOCKOUTS: readonly Knockout[] = ["yes", "no", "dont_know"];
 const ORDER_ATTRIBUTES: OrderAttribute[] = ["sex", "raceEthnicity", "tierKey"];
+/**
+ * Failure codes this runner writes for a corpus that can never finish: the
+ * job description, model or plan changed under it, the plan fails its gate,
+ * or it names something this deployment does not hold. Resuming would fail
+ * the same way, so resume refuses them. (The page keeps its own copy to hide
+ * the button; keep the two in step.)
+ */
+export const FINAL_FAILURES: ReadonlySet<string> = new Set([
+  "job_description_changed",
+  "model_changed",
+  "corpus_model_changed",
+  "plan_changed",
+  "plan_failed",
+  "unknown_job_description",
+  "unknown_artifact_kind",
+]);
 /** Attempts per record, across every pass, before it is left out. */
 export const MAX_ATTEMPTS = 5;
 /** The runner renews its lease this often while it runs. */
@@ -335,9 +351,10 @@ export async function runCorpusGeneration(args: {
       throw error;
     };
     /** `fn`'s value, or the corpus failed with `failureCode` and `fn`'s error rethrown. */
-    const orFail = async <T>(failureCode: string, fn: () => T): Promise<T> => {
+    const orFail = async <T>(failureCode: string, fn: () => T | Promise<T>): Promise<T> => {
       try {
-        return fn();
+        // Awaited inside the try, so an async fn's rejection is recorded too.
+        return await fn();
       } catch (e) {
         return failAndThrow(failureCode, e);
       }

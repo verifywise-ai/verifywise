@@ -231,22 +231,42 @@ describe("backoff", () => {
 });
 
 describe("refusals", () => {
-  it.each([400, 413, 422])("reports a %s as a refusal of this prompt", async (status) => {
-    mockFetch.mockResolvedValue({ ok: false, status, text: async () => "" });
-    const err = await complete(settings, "p", { retries: 2, retryDelayMs: 0 }).catch((e) => e);
-    expect(err).toBeInstanceOf(GatewayPromptRefusedError);
-    expect(err.status).toBe(status);
-    // Not retried: the same prompt would be refused again.
-    expect(mockFetch).toHaveBeenCalledTimes(1);
-  });
-
-  it.each([401, 403, 404])(
-    "reports a %s as a configuration fault, not a prompt refusal",
+  it.each([400, 403, 422])(
+    "reports a content refusal (%s) as a refusal of this prompt",
     async (status) => {
-      mockFetch.mockResolvedValue({ ok: false, status, text: async () => "" });
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status,
+        text: async () => '{"error":{"code":"content_filter","message":"flagged"}}',
+      });
       const err = await complete(settings, "p", { retries: 2, retryDelayMs: 0 }).catch((e) => e);
-      expect(err).toBeInstanceOf(GatewayRequestError);
-      expect(err).not.toBeInstanceOf(GatewayPromptRefusedError);
+      expect(err).toBeInstanceOf(GatewayPromptRefusedError);
+      expect(err.status).toBe(status);
+      // Not retried: the same prompt would be refused again.
+      expect(mockFetch).toHaveBeenCalledTimes(1);
     },
   );
+
+  it.each([
+    [400, '{"error":"invalid model id"}'],
+    [401, "unauthorized"],
+    [402, "Budget limit exceeded"],
+    [403, "forbidden"],
+    [404, "not found"],
+    [413, "too large"],
+  ])("reports a %s that is not a content refusal as a deployment fault", async (status, body) => {
+    mockFetch.mockResolvedValue({ ok: false, status, text: async () => body });
+    const err = await complete(settings, "p", { retries: 2, retryDelayMs: 0 }).catch((e) => e);
+    expect(err).toBeInstanceOf(GatewayRequestError);
+    expect(err).not.toBeInstanceOf(GatewayPromptRefusedError);
+    expect(err.message).not.toContain(body);
+  });
+
+  it("retries a 408 as a transient fault", async () => {
+    mockFetch
+      .mockResolvedValueOnce({ ok: false, status: 408, text: async () => "" })
+      .mockResolvedValueOnce(ok("pinned-model-1"));
+    const out = await complete(settings, "p", { retries: 2, retryDelayMs: 0 });
+    expect(out.modelObserved).toBe("pinned-model-1");
+  });
 });

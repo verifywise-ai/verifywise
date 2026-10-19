@@ -25,9 +25,15 @@ const MAX_RETRY_AFTER_MS = 60_000;
 
 const defaultSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-const retryable = (status: number) => status === 429 || status >= 500;
-/** Refusals that mean the deployment's key or endpoint is wrong, not the prompt. */
-const CONFIGURATION_FAULTS = new Set([401, 403, 404]);
+const retryable = (status: number) => status === 408 || status === 429 || status >= 500;
+/** Statuses a provider uses to refuse the content of one prompt. */
+const CONTENT_REFUSAL_STATUSES = new Set([400, 403, 422]);
+/**
+ * Words a provider puts in a content refusal. The body is read for these only
+ * and never logged or quoted, since it can echo the request.
+ */
+const CONTENT_REFUSAL =
+  /content[\s_-]?(?:filter|policy|management|moderation)|moderation|flagged|safety/i;
 
 /** The gateway request failed. The message is fixed text plus a status, never a body. */
 export class GatewayRequestError extends Error {
@@ -38,8 +44,8 @@ export class GatewayRequestError extends Error {
 }
 
 /**
- * The gateway refused this one prompt (a 4xx other than an authentication or
- * endpoint fault, such as a content-filter 400). Asking again sends the same
+ * The gateway refused the content of this one prompt (a 400, 403 or 422 whose
+ * body names a content filter, policy or moderation). Asking again sends the same
  * prompt, so the caller logs it as an invalid attempt rather than failing the
  * whole corpus.
  */
@@ -62,6 +68,15 @@ function retryAfterMs(value: string | null | undefined): number | null {
     ms = at - Date.now();
   }
   return Math.min(Math.max(ms, 0), MAX_RETRY_AFTER_MS);
+}
+
+/** The error body, for the refusal words only; never logged or quoted. */
+async function bodyText(res: Response): Promise<string> {
+  try {
+    return typeof res.text === "function" ? await res.text() : "";
+  } catch {
+    return "";
+  }
 }
 
 async function discard(res: Response): Promise<void> {
@@ -112,10 +127,15 @@ export async function complete(
       if (!res.ok) {
         lastDetail = `status ${res.status}`;
         const hinted = res.status === 429 ? retryAfterMs(res.headers?.get?.("retry-after")) : null;
+        // Only a refusal of this prompt's content is the prompt's fault. Any
+        // other 4xx (a budget 402, an unknown model 400, a bad key 401) is the
+        // deployment's, and fails the corpus so it can be resumed once fixed.
+        const refusesContent =
+          CONTENT_REFUSAL_STATUSES.has(res.status) && CONTENT_REFUSAL.test(await bodyText(res));
         await discard(res);
         if (!retryable(res.status)) {
-          if (CONFIGURATION_FAULTS.has(res.status)) throw new GatewayRequestError(lastDetail);
-          throw new GatewayPromptRefusedError(res.status);
+          if (refusesContent) throw new GatewayPromptRefusedError(res.status);
+          throw new GatewayRequestError(lastDetail);
         }
         if (hinted !== null) wait = hinted;
         continue;

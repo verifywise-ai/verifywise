@@ -69,6 +69,10 @@ describe("findDemographicTerms", () => {
     "Sang in the church choir",
     "Delta Sigma Theta Sorority, Inc.",
     "B.A., Spelman College",
+    "As a first-generation immigrant",
+    "Treasurer, Muslim Students Association",
+    "Member, Society of Women Engineers",
+    "Lead, Asian Pacific American Network",
   ])("refuses self-description and identity organisations: %s", (text) => {
     expect(findDemographicTerms(text)).not.toEqual([]);
   });

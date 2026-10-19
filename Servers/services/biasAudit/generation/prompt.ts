@@ -261,11 +261,19 @@ function structuredText(value: unknown): string {
         // language ({"spanish": "fluent"}); demographic keys are refused by
         // hasDemographicField first.
         if (!STRUCTURED_KEYS.has(k)) out.push(k, `Languages: ${k}`);
-        // A languages list, and a skills list (where "Spanish" can only be the
-        // language), are restated as a Languages line.
-        if (/^(?:languages?(?:[\s_]spoken)?|skills)$/i.test(k.trim())) {
+        // A languages list is restated as a Languages line.
+        if (/^languages?(?:[\s_]spoken)?$/i.test(k.trim())) {
           const listed = Array.isArray(child) ? child : [child];
           out.push(`Languages: ${listed.filter((x) => typeof x === "string").join(", ")}`);
+        }
+        // So is a skills item that is one word, where "Spanish" can only be the
+        // language; "Swedish massage" or "French cuisine" is a skill.
+        if (k === "skills" && Array.isArray(child)) {
+          for (const item of child) {
+            if (typeof item === "string" && /^\s*\p{L}+\s*$/u.test(item)) {
+              out.push(`Languages: ${item.trim()}`);
+            }
+          }
         }
         walk(child);
       }

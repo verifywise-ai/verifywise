@@ -65,6 +65,16 @@ export async function enqueueCorpusGeneration(
   );
 }
 
+/** BullMQ states in which a corpus's job will still run. */
+const PENDING_STATES = new Set(["waiting", "delayed", "active", "prioritized", "waiting-children"]);
+
+/** Whether the queue still holds a job that will run this corpus. */
+export async function corpusJobPending(corpusId: number): Promise<boolean> {
+  const job = await corpusQueue().getJob(`corpus-${corpusId}`);
+  if (!job) return false;
+  return PENDING_STATES.has(await job.getState());
+}
+
 export async function processCorpusJob(
   job: Job<CorpusJobData>,
   token?: string,
@@ -116,7 +126,8 @@ export async function onCorpusJobFailed(
       `Corpus ${corpusId} generation failed after ${job.attemptsMade} attempts: ${failureCode}`,
     );
   } catch {
-    // The stale sweep fails the corpus later if this write did not land.
+    // If this write did not land, the stale sweep fails the corpus once its
+    // job is gone from the queue and its heartbeat is stale.
   }
 }
 

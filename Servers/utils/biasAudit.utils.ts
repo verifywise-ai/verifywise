@@ -1357,30 +1357,59 @@ export async function touchCorpusHeartbeatQuery(
 }
 
 /**
- * Fails this organization's running corpora whose runner died: claimed (an
- * owner token is set), lease expired, and no heartbeat for
- * `staleAfterSeconds`. This frees the one-running-per-project slot. A corpus
- * still waiting in the queue was never claimed, and a runner releases its
- * lease before a retry, so neither is swept while its job is pending.
- * Returns the ids it failed.
+ * This organization's running corpora that look abandoned: no heartbeat for
+ * `staleAfterSeconds` and no live lease. A corpus still waiting in the queue
+ * looks the same, so the caller checks the queue before failing any of them.
+ */
+export async function listStaleCorporaQuery(
+  organizationId: number,
+  staleAfterSeconds: number,
+): Promise<number[]> {
+  const result = await sequelize.query(
+    `SELECT id FROM bias_audit_corpora
+      WHERE organization_id = :organization_id
+        AND status = 'running'
+        AND (lease_expires_at IS NULL OR lease_expires_at < NOW())
+        AND heartbeat_at < NOW() - make_interval(secs => :stale_after_seconds)`,
+    {
+      replacements: {
+        organization_id: organizationId,
+        stale_after_seconds: wholeSeconds("stale limit", staleAfterSeconds),
+      },
+      type: QueryTypes.SELECT,
+    },
+  );
+  return (result as Array<{ id: number }>).map((r) => r.id);
+}
+
+/**
+ * Fails the named corpora, freeing the one-running-per-project slot, when they
+ * still look abandoned (the same conditions as listStaleCorporaQuery, judged
+ * again on the database clock). Returns the ids it failed.
  */
 export async function markStaleCorporaFailedQuery(
   organizationId: number,
   staleAfterSeconds: number,
+  corpusIds: number[],
 ): Promise<number[]> {
   wholeSeconds("stale limit", staleAfterSeconds);
+  if (corpusIds.length === 0) return [];
   const result = await sequelize.query(
     `UPDATE bias_audit_corpora
         SET status = 'failed', failure_code = 'heartbeat_stale', completed_at = NOW(),
             owner_token = NULL, lease_expires_at = NULL
       WHERE organization_id = :organization_id
+        AND id IN (:corpus_ids)
         AND status = 'running'
-        AND owner_token IS NOT NULL
-        AND lease_expires_at < NOW()
+        AND (lease_expires_at IS NULL OR lease_expires_at < NOW())
         AND heartbeat_at < NOW() - make_interval(secs => :stale_after_seconds)
       RETURNING id`,
     {
-      replacements: { organization_id: organizationId, stale_after_seconds: staleAfterSeconds },
+      replacements: {
+        organization_id: organizationId,
+        corpus_ids: corpusIds,
+        stale_after_seconds: staleAfterSeconds,
+      },
     },
   );
   return allRows<{ id: number }>(result).map((r) => r.id);

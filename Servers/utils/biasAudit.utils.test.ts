@@ -37,6 +37,7 @@ import {
   getCorpusQuery,
   updateCorpusStatusQuery,
   touchCorpusHeartbeatQuery,
+  listStaleCorporaQuery,
   markStaleCorporaFailedQuery,
   appendCorpusRecordQuery,
   listCorpusLogQuery,
@@ -718,7 +719,8 @@ describe("corpora and the record log", () => {
       [[]],
     ],
     ["heartbeat", () => touchCorpusHeartbeatQuery(3, 42, "tok", 120), [[]]],
-    ["stale sweep", () => markStaleCorporaFailedQuery(42, 900), [[]]],
+    ["stale list", () => listStaleCorporaQuery(42, 900), []],
+    ["stale sweep", () => markStaleCorporaFailedQuery(42, 900, [3]), [[]]],
     ["lease claim", () => claimCorpusLeaseQuery(3, 42, "tok", 120), [[]]],
     ["lease release", () => releaseCorpusLeaseQuery(3, 42, "tok"), [[]]],
     ["append", () => appendCorpusRecordQuery(RECORD, 42), [[{ id: 1 }]]],
@@ -895,17 +897,29 @@ describe("corpora and the record log", () => {
     expect(opts.replacements.project_id).toBe(7);
   });
 
-  it("fails running corpora whose heartbeat is older than the limit, and returns their ids", async () => {
-    mockQuery.mockResolvedValueOnce([[{ id: 3 }, { id: 4 }]]);
-    await expect(markStaleCorporaFailedQuery(42, 900)).resolves.toEqual([3, 4]);
+  it("lists running corpora with no heartbeat and no live lease", async () => {
+    mockQuery.mockResolvedValueOnce([{ id: 3 }, { id: 4 }]);
+    await expect(listStaleCorporaQuery(42, 900)).resolves.toEqual([3, 4]);
     const [sql, opts] = mockQuery.mock.calls[0];
     expect(sql).toMatch(/status = 'running'/);
+    expect(sql).toMatch(/lease_expires_at IS NULL OR lease_expires_at < NOW\(\)/);
     expect(sql).toMatch(/heartbeat_at </);
-    // Only a claimed corpus whose lease expired: a queued corpus waits unharmed.
-    expect(sql).toMatch(/AND owner_token IS NOT NULL\s+AND lease_expires_at < NOW\(\)/);
-    expect(sql).toMatch(/owner_token = NULL, lease_expires_at = NULL/);
     expect(opts.replacements.stale_after_seconds).toBe(900);
-    await expect(markStaleCorporaFailedQuery(42, 0)).rejects.toThrow(/seconds/);
+  });
+
+  it("fails only the named corpora that still look abandoned, and returns their ids", async () => {
+    mockQuery.mockResolvedValueOnce([[{ id: 3 }]]);
+    await expect(markStaleCorporaFailedQuery(42, 900, [3, 4])).resolves.toEqual([3]);
+    const [sql, opts] = mockQuery.mock.calls[0];
+    expect(sql).toMatch(/id IN \(:corpus_ids\)/);
+    expect(sql).toMatch(/status = 'running'/);
+    expect(sql).toMatch(/heartbeat_at </);
+    expect(sql).toMatch(/owner_token = NULL, lease_expires_at = NULL/);
+    expect(opts.replacements).toMatchObject({ corpus_ids: [3, 4], stale_after_seconds: 900 });
+    mockQuery.mockClear();
+    await expect(markStaleCorporaFailedQuery(42, 900, [])).resolves.toEqual([]);
+    expect(mockQuery).not.toHaveBeenCalled();
+    await expect(markStaleCorporaFailedQuery(42, 0, [3])).rejects.toThrow(/seconds/);
   });
 
   it("appends a record only to a running corpus in the organization held by the token, never updating one", async () => {

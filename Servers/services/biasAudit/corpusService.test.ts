@@ -4,6 +4,7 @@ const utils = {
   getAttestedProfileQuery: jest.fn(),
   getProfileAnswersQuery: jest.fn(),
   getProjectQuery: jest.fn(),
+  listStaleCorporaQuery: jest.fn(),
   markStaleCorporaFailedQuery: jest.fn(),
   getCorpusQuery: jest.fn(),
   listCorporaQuery: jest.fn(),
@@ -21,8 +22,9 @@ jest.mock("./generation/generateCorpus", () => ({
   STALE_AFTER_SECONDS: 600,
   // The real loop, reading the mocked utils, so the download is tested as served.
   corpusCsvChunks: jest.requireActual("./generation/generateCorpus").corpusCsvChunks,
+  FINAL_FAILURES: jest.requireActual("./generation/generateCorpus").FINAL_FAILURES,
 }));
-const job = { enqueueCorpusGeneration: jest.fn() };
+const job = { enqueueCorpusGeneration: jest.fn(), corpusJobPending: jest.fn() };
 jest.mock("./generation/generationJob", () => job);
 const settings = { isGatewayConfigured: jest.fn(), getGatewaySettings: jest.fn() };
 jest.mock("./generation/settings", () => settings);
@@ -112,7 +114,12 @@ const callOrder = (f: jest.Mock) => f.mock.invocationCallOrder[0];
 
 beforeEach(() => {
   [...Object.values(utils), access.assertProjectAccess, gen.createCorpus]
-    .concat(job.enqueueCorpusGeneration, settings.isGatewayConfigured, settings.getGatewaySettings)
+    .concat(
+      job.enqueueCorpusGeneration,
+      job.corpusJobPending,
+      settings.isGatewayConfigured,
+      settings.getGatewaySettings,
+    )
     .forEach((f) => f.mockReset());
   access.assertProjectAccess.mockResolvedValue(undefined);
   utils.getProjectQuery.mockResolvedValue({ id: 7 });
@@ -121,6 +128,7 @@ beforeEach(() => {
     ...IN_SCOPE,
     ans("pipeline.input_form", "resume"),
   ]);
+  utils.listStaleCorporaQuery.mockResolvedValue([]);
   utils.markStaleCorporaFailedQuery.mockResolvedValue([]);
   utils.updateCorpusStatusQuery.mockResolvedValue(true);
   gen.createCorpus.mockResolvedValue({ corpusId: 3 });
@@ -210,8 +218,8 @@ describe("startCorpusGeneration", () => {
   it("sweeps the organization's stale corpora before creating, then enqueues the new one", async () => {
     const out = await startCorpusGeneration(input());
     expect(out).toEqual({ corpusId: 3 });
-    expect(utils.markStaleCorporaFailedQuery).toHaveBeenCalledWith(42, 600);
-    expect(callOrder(utils.markStaleCorporaFailedQuery)).toBeLessThan(callOrder(gen.createCorpus));
+    expect(utils.listStaleCorporaQuery).toHaveBeenCalledWith(42, 600);
+    expect(callOrder(utils.listStaleCorporaQuery)).toBeLessThan(callOrder(gen.createCorpus));
     expect(job.enqueueCorpusGeneration).toHaveBeenCalledWith(3, 42);
   });
 
@@ -225,12 +233,32 @@ describe("startCorpusGeneration", () => {
   });
 });
 
+describe("the stale sweep", () => {
+  it("fails only abandoned corpora whose job is gone from the queue", async () => {
+    utils.listStaleCorporaQuery.mockResolvedValue([3, 4, 5]);
+    job.corpusJobPending.mockImplementation(async (id: number) => id === 4);
+    utils.getCorpusQuery.mockResolvedValue(corpusRow());
+    utils.countValidCorpusRecordsQuery.mockResolvedValue(0);
+    await getCorpusView(3, 42, VIEWER);
+    expect(utils.markStaleCorporaFailedQuery).toHaveBeenCalledWith(42, 600, [3, 5]);
+  });
+
+  it("fails nothing when the queue cannot be read", async () => {
+    utils.listStaleCorporaQuery.mockResolvedValue([3]);
+    job.corpusJobPending.mockRejectedValue(new Error("redis down"));
+    utils.getCorpusQuery.mockResolvedValue(corpusRow());
+    utils.countValidCorpusRecordsQuery.mockResolvedValue(0);
+    await getCorpusView(3, 42, VIEWER);
+    expect(utils.markStaleCorporaFailedQuery).not.toHaveBeenCalled();
+  });
+});
+
 describe("listCorpora", () => {
   it("checks the project, sweeps, and lists the project's corpora in the organization", async () => {
     utils.listCorporaQuery.mockResolvedValue([{ id: 3 }]);
     const out = await listCorpora({ projectId: 7, frameworkId: 12, organizationId: 42, ...VIEWER });
     expect(access.assertProjectAccess).toHaveBeenCalledWith(7, 42, VIEWER);
-    expect(utils.markStaleCorporaFailedQuery).toHaveBeenCalledWith(42, 600);
+    expect(utils.listStaleCorporaQuery).toHaveBeenCalledWith(42, 600);
     expect(utils.listCorporaQuery).toHaveBeenCalledWith(7, 42);
     expect(out).toEqual({ corpora: [{ id: 3 }] });
   });
@@ -243,10 +271,10 @@ describe("listCorpora", () => {
       await listCorpora({ projectId: 7, frameworkId: 12, organizationId: 77, ...VIEWER });
       now.mockReturnValue(10_000_000 + LIST_SWEEP_INTERVAL_MS - 1);
       await listCorpora({ projectId: 7, frameworkId: 12, organizationId: 77, ...VIEWER });
-      expect(utils.markStaleCorporaFailedQuery).toHaveBeenCalledTimes(1);
+      expect(utils.listStaleCorporaQuery).toHaveBeenCalledTimes(1);
       now.mockReturnValue(10_000_000 + LIST_SWEEP_INTERVAL_MS);
       await listCorpora({ projectId: 7, frameworkId: 12, organizationId: 77, ...VIEWER });
-      expect(utils.markStaleCorporaFailedQuery).toHaveBeenCalledTimes(2);
+      expect(utils.listStaleCorporaQuery).toHaveBeenCalledTimes(2);
     } finally {
       now.mockRestore();
     }
@@ -276,9 +304,7 @@ describe("getCorpusView", () => {
     utils.getCorpusQuery.mockResolvedValue(corpusRow());
     utils.countValidCorpusRecordsQuery.mockResolvedValue(120);
     const view = await getCorpusView(3, 42, VIEWER);
-    expect(callOrder(utils.markStaleCorporaFailedQuery)).toBeLessThan(
-      callOrder(utils.getCorpusQuery),
-    );
+    expect(callOrder(utils.listStaleCorporaQuery)).toBeLessThan(callOrder(utils.getCorpusQuery));
     expect(view).toMatchObject({ id: 3, status: "running", valid_record_count: 120 });
     expect(view).not.toHaveProperty("manifest_json");
     expect(view).not.toHaveProperty("owner_token");
@@ -422,9 +448,7 @@ describe("resumeCorpus", () => {
     utils.resumeCorpusQuery.mockResolvedValue(true);
     const out = await resumeCorpus(3, 42, VIEWER);
     expect(out).toEqual({ corpusId: 3, status: "running" });
-    expect(callOrder(utils.markStaleCorporaFailedQuery)).toBeLessThan(
-      callOrder(utils.getCorpusQuery),
-    );
+    expect(callOrder(utils.listStaleCorporaQuery)).toBeLessThan(callOrder(utils.getCorpusQuery));
     expect(utils.resumeCorpusQuery).toHaveBeenCalledWith(3, 42, 600);
     expect(job.enqueueCorpusGeneration).toHaveBeenCalledWith(3, 42);
   });

@@ -36,13 +36,16 @@ const IDENTITY = [
   "black community", "black student", "black students", "black history", "black women",
   "black men", "asian american", "pacific islander", "native hawaiian", "alaska native",
   "native american", "american indian", "first nations", "people of color",
-  "person of color", "minority owned", "tribal member", "immigrated",
+  "person of color", "minority owned", "tribal member", "immigrated", "immigrant",
+  "asian pacific american", "society of women engineers",
 ];
 
-// Religious belonging stated as one's own; a bare "Catholic" or "Baptist" is
-// often an employer.
+// Religious belonging: words with no other common sense, and belonging stated
+// as one's own. A bare "Catholic", "Baptist" or "Christian" is often an
+// employer or a first name, so it is left to the prompt.
 // prettier-ignore
 const RELIGION = [
+  "muslim", "islamic", "jewish", "judaism", "sikh", "hindu", "buddhist",
   "my church", "our church", "my mosque", "our mosque", "my synagogue", "our synagogue",
   "my temple", "our temple", "my parish", "our parish", "church choir", "church youth",
 ];

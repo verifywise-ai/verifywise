@@ -429,6 +429,21 @@ describe("validateRecord", () => {
     });
   });
 
+  it.each([["Buffing and polish"], ["French cuisine"], ["Swedish massage"], ["Thai curries"]])(
+    "passes a structured skill that only borrows a language name: %s",
+    (skill) => {
+      const s = JSON.stringify({
+        name: "Kevin Miller",
+        summary: "x",
+        experience: ["Associate"],
+        skills: [skill, "Negotiation"],
+      });
+      expect(validateRecord(s, "structured", { candidateName: "Kevin Miller" })).toEqual({
+        ok: true,
+      });
+    },
+  );
+
   it("passes an extra structured key that names no group", () => {
     const s = JSON.stringify({
       name: "Kevin Miller",

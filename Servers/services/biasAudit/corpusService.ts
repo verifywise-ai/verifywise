@@ -29,6 +29,7 @@ import {
   getCorpusQuery,
   getProfileAnswersQuery,
   listCorporaQuery,
+  listStaleCorporaQuery,
   markStaleCorporaFailedQuery,
   resumeCorpusQuery,
   updateCorpusStatusQuery,
@@ -41,10 +42,11 @@ import { DEFAULT_COUNT, MAX_COUNT, MIN_COUNT } from "./generation/allocation";
 import {
   corpusCsvChunks,
   createCorpus,
+  FINAL_FAILURES,
   STALE_AFTER_SECONDS,
   type Knockout,
 } from "./generation/generateCorpus";
-import { enqueueCorpusGeneration } from "./generation/generationJob";
+import { corpusJobPending, enqueueCorpusGeneration } from "./generation/generationJob";
 import { ARTIFACT_KINDS, type ArtifactKind } from "./generation/prompt";
 import { getGatewaySettings, isGatewayConfigured } from "./generation/settings";
 import { nycLocalLaw144Structure } from "../../structures/NYC-Local-Law-144/nyc-local-law-144.structure";
@@ -76,8 +78,24 @@ export interface StartCorpusInput extends ProjectScope {
   count: number;
 }
 
-const sweep = (organizationId: number) =>
-  markStaleCorporaFailedQuery(organizationId, STALE_AFTER_SECONDS);
+/**
+ * Fails this organization's abandoned corpora: running, no heartbeat for
+ * STALE_AFTER_SECONDS, no live lease, and no job left in the queue to run
+ * them. A corpus waiting behind another on the shared worker, or between
+ * retries, still has its job and is left alone. When the queue cannot be
+ * read, nothing is failed.
+ */
+async function sweep(organizationId: number): Promise<void> {
+  const stale = await listStaleCorporaQuery(organizationId, STALE_AFTER_SECONDS);
+  if (stale.length === 0) return;
+  const orphaned: number[] = [];
+  try {
+    for (const id of stale) if (!(await corpusJobPending(id))) orphaned.push(id);
+  } catch {
+    return;
+  }
+  await markStaleCorporaFailedQuery(organizationId, STALE_AFTER_SECONDS, orphaned);
+}
 
 /**
  * The page polls the list every few seconds while a corpus runs, so the list
@@ -114,26 +132,6 @@ function knockoutOf(answers: AnswerMap): Knockout {
   const value = answers["knockout.exists"]?.value;
   return value === "yes" || value === "no" ? value : "dont_know";
 }
-
-/**
- * Plans and inserts a corpus from the project's attested profile, then queues
- * its generation. Refused with 409, before anything is created, when the
- * attested answers withhold generation.
- */
-/**
- * Failures the runner treats as final: the job description, model or plan
- * changed under the corpus, or it names something this deployment does not
- * hold. A resume would fail the same way.
- */
-const FINAL_FAILURES = new Set([
-  "job_description_changed",
-  "model_changed",
-  "corpus_model_changed",
-  "plan_changed",
-  "plan_failed",
-  "unknown_job_description",
-  "unknown_artifact_kind",
-]);
 
 /**
  * The project's attested answers, refused unless they allow generation now:
@@ -189,6 +187,11 @@ async function enqueueOrFail(corpusId: number, organizationId: number): Promise<
   }
 }
 
+/**
+ * Plans and inserts a corpus from the project's attested profile, then queues
+ * its generation. Refused with 409, before anything is created, when the
+ * attested answers withhold generation.
+ */
 export async function startCorpusGeneration(
   input: StartCorpusInput,
 ): Promise<{ corpusId: number }> {
