@@ -110,17 +110,35 @@ function ofDescent(text: string): boolean {
   return false;
 }
 
+// Words a Languages line may hold besides English: proficiency qualifiers,
+// connectives, and the programming and office tools some records list there.
+// Any other word is taken to name a language, so a language missing from
+// LANGUAGE_NAME_LIST (Thai, Hmong, Khmer, Ilocano, Marshallese, Dutch) is
+// still caught.
+// prettier-ignore
+const LANGUAGE_LINE_WORDS: ReadonlySet<string> = new Set([
+  "english", "only", "fluent", "fluency", "native", "speaker", "spoken", "written",
+  "reading", "writing", "speaking", "verbal", "oral", "professional", "proficiency",
+  "proficient", "working", "business", "full", "limited", "basic", "conversational",
+  "intermediate", "advanced", "beginner", "elementary", "level", "knowledge", "and",
+  "in", "of", "the", "with", "a", "an", "us", "uk", "american", "british", "excellent",
+  "strong", "good", "communication", "skills", "python", "sql", "java", "javascript",
+  "typescript", "html", "css", "r", "c", "go", "excel", "vba", "salesforce", "apex",
+]);
+
 /**
- * A "Language:" or "Languages:" line that names a language other than English.
- * Only words that name a language count, so qualifiers ("English only",
- * "Fluent in English", "English – native") and non-languages ("Python, SQL")
- * pass.
+ * A Languages line ("Language:", "Languages:", "Languages spoken:", or a dash
+ * in place of the colon) that names any language other than English. English
+ * with qualifiers ("English only", "Fluent in English", "English – native")
+ * and listed tools ("Python, SQL") pass; every other word is read as a
+ * language.
  */
 function languagesLine(text: string): boolean {
-  const re = /^[\s\-*#\u2022]*languages?\s*:\s*(.+)$/gim;
+  const re =
+    /^[\s\-*#\u2022]*languages?(?:\s+spoken)?\s*(?::|\s[-\u2013\u2014]|[\u2013\u2014])\s*(.+)$/gim;
   for (const m of text.matchAll(re)) {
     const words = m[1].toLowerCase().match(/\p{L}+/gu) ?? [];
-    if (words.some((w) => LANGUAGE_NAME_SET.has(w))) return true;
+    if (words.some((w) => LANGUAGE_NAME_SET.has(w) || !LANGUAGE_LINE_WORDS.has(w))) return true;
   }
   return false;
 }

@@ -322,6 +322,10 @@ describe("validateRecord", () => {
     "B.A., University of Mary Washington",
     "A.A.S., Thomas Nelson Community College",
     "A.A., John Wood Community College",
+    "A.A., Thomas Nelson community college",
+    "Volunteer, Mary Washington library",
+    "Volunteer, Martin Luther King Jr. Library",
+    "Coach, Thomas Nelson Park",
     "Shift lead, Mary Washington Hospital",
     "Covered accounts in San Jose and St. Paul",
   ])("does not read an institution or place named after a person as a person: %s", (extra) => {

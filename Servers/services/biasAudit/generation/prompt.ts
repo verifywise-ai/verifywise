@@ -202,9 +202,14 @@ const INSTITUTION_NOUNS = [
   "Academy",
   "Institute",
   "Center",
-].flatMap((n) => [n, n.toUpperCase()]);
+  "Centre",
+  "Library",
+  "Park",
+  "Clinic",
+].flatMap((n) => [n, n.toUpperCase(), n.toLowerCase()]);
+// "Jr." may sit between the name and the noun ("Martin Luther King Jr. Library").
 const INSTITUTION_AFTER = new RegExp(
-  `^(?:\\s+\\p{Lu}\\p{L}*){0,2}?\\s+(?:${INSTITUTION_NOUNS.join("|")})(?!\\p{L})`,
+  `^(?:\\s+\\p{Lu}\\p{L}*\\.?){0,2}?\\s+(?:${INSTITUTION_NOUNS.join("|")})(?!\\p{L})`,
   "u",
 );
 const INSTITUTION_BEFORE = /\buniversity\s+of\s+$/i;

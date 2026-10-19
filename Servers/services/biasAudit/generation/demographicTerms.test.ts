@@ -54,6 +54,33 @@ describe("findDemographicTerms", () => {
     expect(findDemographicTerms(text)).toEqual([]);
   });
 
+  // Parked from Task 5 (must fix before merge): languages missing from the
+  // name list, and the "spoken" and dash forms of the line.
+  it.each([
+    "Languages: English, Thai",
+    "Languages: English, Hmong",
+    "Languages: Khmer",
+    "Languages: English, Ilocano",
+    "Languages: Marshallese, English",
+    "Languages: Dutch",
+    "Languages spoken: English, Spanish",
+    "Languages spoken: English, Thai",
+    "Languages \u2013 English, Hmong",
+    "Languages - English, Tagalog",
+    "Language \u2014 Khmer",
+  ])("refuses a Languages line naming another language: %s", (text) => {
+    expect(findDemographicTerms(text)).not.toEqual([]);
+  });
+
+  it.each([
+    "Languages spoken: English",
+    "Languages \u2013 English (native)",
+    "Languages: English (professional working proficiency)",
+    "Languages: Python, SQL, Excel",
+  ])("passes a Languages line with English, qualifiers or tools only: %s", (text) => {
+    expect(findDemographicTerms(text)).toEqual([]);
+  });
+
   it.each(["Candidate: Languages: Spanish", "Languages: English, Italian", "Of Italian descent"])(
     "still refuses (round 5): %s",
     (text) => {
