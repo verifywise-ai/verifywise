@@ -1,5 +1,5 @@
 # Core dependencies
-aiohttp>=3.14.3
+aiohttp>=3.14.5
 cryptography>=50.0.1
 numpy>=2.5.3,<3.0.0
 pandas>=3.0.6
