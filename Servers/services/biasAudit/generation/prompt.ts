@@ -85,11 +85,15 @@ export type RecordInvalidReason =
   | "wrong_shape"
   | "no_name"
   | "third_party_name"
-  | "unfinished";
+  | "unfinished"
+  /** The gateway refused the prompt itself (a 4xx such as a content filter). */
+  | "gateway_refused";
 
 export type RecordValidation = { ok: true } | { ok: false; reason: RecordInvalidReason };
 
-const FIELD = "gender|sex|race|ethnicity|age|date of birth|nationality";
+const FIELD =
+  "gender|sex|race|ethnicity|ethnic background|age|date of birth|nationality|citizenship|" +
+  "national origin|ancestry|heritage|religion|religious affiliation|faith";
 // A line that opens with a field label, after any bullet, heading mark or
 // speaker label: "Gender: F", "- **Age:** 30", "Candidate: Date of birth: ...".
 const DEMOGRAPHIC_LINE = new RegExp(
@@ -97,7 +101,7 @@ const DEMOGRAPHIC_LINE = new RegExp(
   "im",
 );
 const DEMOGRAPHIC_KEY =
-  /^(?:gender|sex|race|ethnicity|age|date[\s_-]?of[\s_-]?birth|dob|nationality)$/i;
+  /^(?:gender|sex|race|ethnicity|age|date[\s_-]?of[\s_-]?birth|dob|nationality|citizenship|national[\s_-]?origin|ancestry|heritage|religion|faith)$/i;
 const SPEAKER = /^(interviewer|candidate)\s*:/i;
 
 /** A demographic key anywhere in the object, or a string value that opens a line with a field label. */
@@ -253,9 +257,13 @@ function structuredText(value: unknown): string {
     else if (Array.isArray(v)) v.forEach(walk);
     else if (v && typeof v === "object") {
       for (const [k, child] of Object.entries(v)) {
-        // Any key beyond the form's four is content too ({"spanish": "fluent"}).
-        if (!STRUCTURED_KEYS.has(k)) out.push(k);
-        if (/^languages?(?:[\s_]spoken)?$/i.test(k.trim())) {
+        // Any key beyond the form's four is content too, read as a possible
+        // language ({"spanish": "fluent"}); demographic keys are refused by
+        // hasDemographicField first.
+        if (!STRUCTURED_KEYS.has(k)) out.push(k, `Languages: ${k}`);
+        // A languages list, and a skills list (where "Spanish" can only be the
+        // language), are restated as a Languages line.
+        if (/^(?:languages?(?:[\s_]spoken)?|skills)$/i.test(k.trim())) {
           const listed = Array.isArray(child) ? child : [child];
           out.push(`Languages: ${listed.filter((x) => typeof x === "string").join(", ")}`);
         }

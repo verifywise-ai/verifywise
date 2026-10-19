@@ -56,7 +56,7 @@ describe("assignCandidateIds", () => {
 
   it("names the attribute and both counts in the error", () => {
     expect(() => verifyIdOrder(byIndex(), ["raceEthnicity"])).toThrow(
-      /raceEthnicity.*observed.*expected|raceEthnicity.*expected.*observed/is,
+      /raceEthnicity[\s\S]*observed[\s\S]*expected|raceEthnicity[\s\S]*expected[\s\S]*observed/i,
     );
   });
 
@@ -112,7 +112,9 @@ describe("input validation and gate scope", () => {
     expect(() => measureIdOrder(noTier, ["tierKey"])).toThrow(/missing/);
   });
   it("reports every failing attribute in one error", () => {
-    expect(() => verifyIdOrder(byIndex(), ["sex", "raceEthnicity"])).toThrow(/sex.*raceEthnicity/s);
+    expect(() => verifyIdOrder(byIndex(), ["sex", "raceEthnicity"])).toThrow(
+      /sex[\s\S]*raceEthnicity/,
+    );
   });
 });
 

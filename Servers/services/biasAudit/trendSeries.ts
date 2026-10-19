@@ -37,6 +37,10 @@ export interface TrendRun {
   corpus_id?: number | null;
   /** That corpus's fixed job description hash; null or absent for uploaded data. */
   corpus_job_description_sha256?: string | null;
+  /** The model that corpus was configured to generate with. */
+  corpus_model_pinned?: string | null;
+  /** The form of that corpus's records. */
+  corpus_artifact_kind?: string | null;
 }
 
 export interface TrendPoint {
@@ -68,6 +72,10 @@ export interface TrendSegment {
   corpusId: number | null;
   /** The fixed job description hash every corpus in the segment shares. */
   corpusJobDescriptionSha256: string | null;
+  /** The generating model every corpus in the segment shares. */
+  corpusModelPinned: string | null;
+  /** The record form every corpus in the segment shares. */
+  corpusArtifactKind: string | null;
   points: TrendPoint[];
 }
 
@@ -88,6 +96,8 @@ const BREAK_REASONS = {
   jobDescriptionKey: "a different job description was tested",
   dataSource: "the data source changed between uploaded and generated data",
   corpusJobDescription: "the fixed job description text changed between corpora",
+  corpusModel: "the model that generated the corpus changed",
+  corpusArtifactKind: "the form of the generated records changed",
 } as const;
 
 /** Each measure in plain words, in the order a metric reason names them. */
@@ -196,11 +206,16 @@ function reasonsBetween(segment: TrendSegment, run: TrendRun): string[] {
   const runCorpus = run.corpus_id ?? null;
   if ((segment.corpusId === null) !== (runCorpus === null)) {
     reasons.push(BREAK_REASONS.dataSource);
-  } else if (
-    runCorpus !== null &&
-    segment.corpusJobDescriptionSha256 !== (run.corpus_job_description_sha256 ?? null)
-  ) {
-    reasons.push(BREAK_REASONS.corpusJobDescription);
+  } else if (runCorpus !== null) {
+    if (segment.corpusJobDescriptionSha256 !== (run.corpus_job_description_sha256 ?? null)) {
+      reasons.push(BREAK_REASONS.corpusJobDescription);
+    }
+    if (segment.corpusModelPinned !== (run.corpus_model_pinned ?? null)) {
+      reasons.push(BREAK_REASONS.corpusModel);
+    }
+    if (segment.corpusArtifactKind !== (run.corpus_artifact_kind ?? null)) {
+      reasons.push(BREAK_REASONS.corpusArtifactKind);
+    }
   }
   return reasons;
 }
@@ -232,6 +247,8 @@ export function buildTrendSeries(runs: readonly TrendRun[]): TrendSeries {
       metric: run.metric,
       corpusId: run.corpus_id ?? null,
       corpusJobDescriptionSha256: run.corpus_job_description_sha256 ?? null,
+      corpusModelPinned: run.corpus_model_pinned ?? null,
+      corpusArtifactKind: run.corpus_artifact_kind ?? null,
       points: [point],
     });
   }

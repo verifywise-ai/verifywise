@@ -29,7 +29,6 @@ import {
   getCorpusQuery,
   getProfileAnswersQuery,
   listCorporaQuery,
-  listLatestValidRecordsPageQuery,
   markStaleCorporaFailedQuery,
   resumeCorpusQuery,
   updateCorpusStatusQuery,
@@ -39,19 +38,22 @@ import {
 import type { AnswerMap } from "./applicability";
 import { compareCriteria } from "./criteriaComparison";
 import { DEFAULT_COUNT, MAX_COUNT, MIN_COUNT } from "./generation/allocation";
-import { corpusCsvHeaderLine, corpusCsvRow } from "./generation/corpusCsv";
-import { createCorpus, STALE_AFTER_SECONDS, type Knockout } from "./generation/generateCorpus";
+import {
+  corpusCsvChunks,
+  createCorpus,
+  STALE_AFTER_SECONDS,
+  type Knockout,
+} from "./generation/generateCorpus";
 import { enqueueCorpusGeneration } from "./generation/generationJob";
 import { ARTIFACT_KINDS, type ArtifactKind } from "./generation/prompt";
-import { isGatewayConfigured } from "./generation/settings";
+import { getGatewaySettings, isGatewayConfigured } from "./generation/settings";
+import { nycLocalLaw144Structure } from "../../structures/NYC-Local-Law-144/nyc-local-law-144.structure";
 import { decideProfile } from "./profileDecision";
 import { assertProjectAccess, type Viewer } from "./projectAccess";
 import { answerMapFromRows, assertProject, isUniqueViolation } from "./serviceHelpers";
 
 /** The record counts a generation may ask for. */
 export const CORPUS_COUNT = { default: DEFAULT_COUNT, min: MIN_COUNT, max: MAX_COUNT } as const;
-
-const PAGE_SIZE = 500;
 
 export const corpusNotFound = (corpusId: number) => () =>
   new NotFoundException(`Corpus ${corpusId} was not found`, "Corpus", corpusId);
@@ -118,12 +120,32 @@ function knockoutOf(answers: AnswerMap): Knockout {
  * its generation. Refused with 409, before anything is created, when the
  * attested answers withhold generation.
  */
-export async function startCorpusGeneration(
-  input: StartCorpusInput,
-): Promise<{ corpusId: number }> {
-  const { projectId, frameworkId, organizationId, userId } = input;
-  await assertProject(projectId, organizationId, input);
+/**
+ * Failures the runner treats as final: the job description, model or plan
+ * changed under the corpus, or it names something this deployment does not
+ * hold. A resume would fail the same way.
+ */
+const FINAL_FAILURES = new Set([
+  "job_description_changed",
+  "model_changed",
+  "corpus_model_changed",
+  "plan_changed",
+  "plan_failed",
+  "unknown_job_description",
+  "unknown_artifact_kind",
+]);
 
+/**
+ * The project's attested answers, refused unless they allow generation now:
+ * attested, in scope (an out-of-scope profile records no runs, so a corpus
+ * would feed nothing), and with generation not withheld. Start and resume
+ * both pass through here.
+ */
+async function answersAllowingGeneration(
+  projectId: number,
+  frameworkId: number,
+  organizationId: number,
+) {
   const profile = await getAttestedProfileQuery(projectId, frameworkId, organizationId);
   if (!profile) {
     throw new NotFoundException(
@@ -138,12 +160,45 @@ export async function startCorpusGeneration(
   );
   // The same reading the profile view reports as the attested decision.
   const decision = decideProfile(answers);
+  if (decision.readiness.scope === "out_of_scope") {
+    throw new ConflictException(
+      "The attested profile places the tool out of scope, so the module does not run its " +
+        "measures and a corpus would have no run to feed.",
+      "AedtProfile",
+    );
+  }
   if (!decision.mayGenerate) {
     throw new ConflictException(
       `The attested profile withholds corpus generation: ${decision.generationBlocked.join("; ")}.`,
       "AedtProfile",
     );
   }
+  return { profile, answers };
+}
+
+/** Nothing will run a corpus whose job could not be queued: fail it now. */
+async function enqueueOrFail(corpusId: number, organizationId: number): Promise<void> {
+  try {
+    await enqueueCorpusGeneration(corpusId, organizationId);
+  } catch (e) {
+    await updateCorpusStatusQuery(
+      { corpusId, status: "failed", failureCode: "enqueue_failed" },
+      organizationId,
+    ).catch(() => false);
+    throw e;
+  }
+}
+
+export async function startCorpusGeneration(
+  input: StartCorpusInput,
+): Promise<{ corpusId: number }> {
+  const { projectId, frameworkId, organizationId, userId } = input;
+  await assertProject(projectId, organizationId, input);
+  const { profile, answers } = await answersAllowingGeneration(
+    projectId,
+    frameworkId,
+    organizationId,
+  );
 
   const criteriaComparison = compareCriteria(input.jobDescriptionKey, input.criteriaSupplied);
   const artifactKind = artifactKindOf(answers);
@@ -161,16 +216,7 @@ export async function startCorpusGeneration(
     criteriaComparison,
     count: input.count,
   });
-  try {
-    await enqueueCorpusGeneration(corpusId, organizationId);
-  } catch (e) {
-    // Nothing will run it: fail it now rather than hold the project until the sweep.
-    await updateCorpusStatusQuery(
-      { corpusId, status: "failed", failureCode: "enqueue_failed" },
-      organizationId,
-    ).catch(() => false);
-    throw e;
-  }
+  await enqueueOrFail(corpusId, organizationId);
   return { corpusId };
 }
 
@@ -266,7 +312,7 @@ export async function getCorpusView(
 
 /**
  * Streams a complete corpus as CSV: candidate_id, artifact_kind, artifact,
- * with no demographic or tier column. Pages of PAGE_SIZE records go to
+ * with no demographic or tier column. Pages of records go to
  * `write` as they are read; the corpus is never held whole. The bytes are
  * hashed as they go, and a mismatch with the stored corpus_sha256 throws
  * after the last page, so the caller can abort the response rather than
@@ -292,21 +338,8 @@ export async function streamCorpusDownload(
     await write(chunk);
   };
 
-  await emit(corpusCsvHeaderLine());
-  let after = "";
-  for (;;) {
-    const page = await listLatestValidRecordsPageQuery(corpusId, organizationId, after, PAGE_SIZE);
-    if (page.length > 0) {
-      await emit(
-        page
-          .map((r) =>
-            corpusCsvRow({ candidateId: r.candidate_id, artifactKind: kind, text: r.text }),
-          )
-          .join(""),
-      );
-    }
-    if (page.length < PAGE_SIZE) break;
-    after = page[page.length - 1].candidate_id;
+  for await (const chunk of corpusCsvChunks(corpusId, organizationId, kind)) {
+    await emit(chunk.text);
   }
   if (hash.digest("hex") !== corpus.corpus_sha256) {
     throw new Error(`The downloadable records of corpus ${corpusId} do not match its stored hash.`);
@@ -332,6 +365,16 @@ export async function resumeCorpus(
     );
   }
   if (corpus.status === "running" && corpus.lease_live) throw alreadyRunning(corpusId);
+  if (corpus.status === "failed" && FINAL_FAILURES.has(corpus.failure_code ?? "")) {
+    throw new ConflictException(
+      `Corpus ${corpusId} cannot be finished (${corpus.failure_code}). Start a new corpus instead.`,
+      "Corpus",
+    );
+  }
+  // Resuming starts generation again, so it needs what starting it needs. The
+  // settings read throws the 503 errors when the gateway is unset or unusable.
+  getGatewaySettings();
+  await answersAllowingGeneration(corpus.project_id, nycLocalLaw144Structure.id, organizationId);
 
   let moved: boolean;
   try {
@@ -342,7 +385,7 @@ export async function resumeCorpus(
   }
   // A running corpus whose heartbeat is recent is between retries; its job will continue.
   if (!moved) throw alreadyRunning(corpusId);
-  await enqueueCorpusGeneration(corpusId, organizationId);
+  await enqueueOrFail(corpusId, organizationId);
   return { corpusId, status: "running" };
 }
 

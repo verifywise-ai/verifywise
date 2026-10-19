@@ -19,10 +19,12 @@ const gen = { createCorpus: jest.fn() };
 jest.mock("./generation/generateCorpus", () => ({
   createCorpus: gen.createCorpus,
   STALE_AFTER_SECONDS: 600,
+  // The real loop, reading the mocked utils, so the download is tested as served.
+  corpusCsvChunks: jest.requireActual("./generation/generateCorpus").corpusCsvChunks,
 }));
 const job = { enqueueCorpusGeneration: jest.fn() };
 jest.mock("./generation/generationJob", () => job);
-const settings = { isGatewayConfigured: jest.fn() };
+const settings = { isGatewayConfigured: jest.fn(), getGatewaySettings: jest.fn() };
 jest.mock("./generation/settings", () => settings);
 
 import {
@@ -110,7 +112,7 @@ const callOrder = (f: jest.Mock) => f.mock.invocationCallOrder[0];
 
 beforeEach(() => {
   [...Object.values(utils), access.assertProjectAccess, gen.createCorpus]
-    .concat(job.enqueueCorpusGeneration, settings.isGatewayConfigured)
+    .concat(job.enqueueCorpusGeneration, settings.isGatewayConfigured, settings.getGatewaySettings)
     .forEach((f) => f.mockReset());
   access.assertProjectAccess.mockResolvedValue(undefined);
   utils.getProjectQuery.mockResolvedValue({ id: 7 });
@@ -127,6 +129,19 @@ beforeEach(() => {
 });
 
 describe("startCorpusGeneration", () => {
+  it("refuses an out-of-scope attested profile with 409, creating nothing", async () => {
+    utils.getProfileAnswersQuery.mockResolvedValue([
+      ...IN_SCOPE.map((a) =>
+        a.question_key === "scope.weighting" ? ans("scope.weighting", "one_of_several") : a,
+      ),
+      ans("pipeline.input_form", "resume"),
+    ]);
+    const err = await startCorpusGeneration(input()).catch((e) => e);
+    expect(err).toBeInstanceOf(ConflictException);
+    expect(err.message).toMatch(/out of scope/);
+    expect(gen.createCorpus).not.toHaveBeenCalled();
+  });
+
   it("refuses with 409 naming pipeline.input_form when the attested answers block generation", async () => {
     utils.getProfileAnswersQuery.mockResolvedValue([
       ...IN_SCOPE,
@@ -347,6 +362,46 @@ describe("streamCorpusDownload", () => {
 });
 
 describe("resumeCorpus", () => {
+  it.each(["model_changed", "job_description_changed", "plan_changed", "unknown_artifact_kind"])(
+    "refuses a corpus that failed for good (%s) with 409",
+    async (failure_code) => {
+      utils.getCorpusQuery.mockResolvedValue(corpusRow({ status: "failed", failure_code }));
+      await expect(resumeCorpus(3, 42, VIEWER)).rejects.toBeInstanceOf(ConflictException);
+      expect(utils.resumeCorpusQuery).not.toHaveBeenCalled();
+    },
+  );
+
+  it("re-checks the attested profile, refusing one that now withholds generation", async () => {
+    utils.getCorpusQuery.mockResolvedValue(corpusRow({ status: "failed" }));
+    utils.getProfileAnswersQuery.mockResolvedValue([
+      ...IN_SCOPE,
+      ans("pipeline.input_form", "audio"),
+    ]);
+    await expect(resumeCorpus(3, 42, VIEWER)).rejects.toBeInstanceOf(ConflictException);
+    expect(utils.getAttestedProfileQuery).toHaveBeenCalledWith(7, 12, 42);
+    expect(utils.resumeCorpusQuery).not.toHaveBeenCalled();
+  });
+
+  it("refuses when the gateway is no longer configured", async () => {
+    utils.getCorpusQuery.mockResolvedValue(corpusRow({ status: "failed" }));
+    settings.getGatewaySettings.mockImplementation(() => {
+      throw new Error("not configured");
+    });
+    await expect(resumeCorpus(3, 42, VIEWER)).rejects.toThrow("not configured");
+    expect(utils.resumeCorpusQuery).not.toHaveBeenCalled();
+  });
+
+  it("fails the corpus when its job cannot be queued, rather than leave it running", async () => {
+    utils.getCorpusQuery.mockResolvedValue(corpusRow({ status: "failed" }));
+    utils.resumeCorpusQuery.mockResolvedValue(true);
+    job.enqueueCorpusGeneration.mockRejectedValue(new Error("redis down"));
+    await expect(resumeCorpus(3, 42, VIEWER)).rejects.toThrow("redis down");
+    expect(utils.updateCorpusStatusQuery).toHaveBeenCalledWith(
+      { corpusId: 3, status: "failed", failureCode: "enqueue_failed" },
+      42,
+    );
+  });
+
   it.each(["complete", "blocked"])("refuses a %s corpus with 409", async (status) => {
     utils.getCorpusQuery.mockResolvedValue(corpusRow({ status }));
     await expect(resumeCorpus(3, 42, VIEWER)).rejects.toBeInstanceOf(ConflictException);

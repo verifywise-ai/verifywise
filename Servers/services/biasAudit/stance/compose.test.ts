@@ -1,5 +1,5 @@
 import { composeStance, REQUIRED_SECTIONS } from "./compose";
-import type { ComposeStanceArgs } from "./compose";
+import type { ComposeStanceArgs, CorpusStanceFacts } from "./compose";
 import { FORBIDDEN_WORDS, findForbidden } from "./vocabulary";
 import type { BiasAuditResult } from "../index";
 import { LL144_QUESTIONS } from "../../../structures/NYC-Local-Law-144/intake.questions";
@@ -651,15 +651,15 @@ describe("impact ratios in the results", () => {
 });
 
 describe("a stance scored from a generated corpus", () => {
-  const corpus = {
+  const corpus: CorpusStanceFacts = {
     corpusId: 3,
     roleTitle: "Account Executive",
     recordCount: 700,
     modelPinned: "pinned-model-1",
     modelsObserved: { "pinned-model-1": 700 },
     cellSizes: { "Male|White": 50, "Female|Asian": 50 },
-    criteria: { verdict: "close" as const, unmatchedExpected: [] },
-    knockout: "no" as const,
+    criteria: { verdict: "close", unmatchedExpected: [] },
+    knockout: "no",
     nameMethod: "Names come from the documented name tables.",
   };
   const tested = (over: Partial<typeof corpus> = {}) =>

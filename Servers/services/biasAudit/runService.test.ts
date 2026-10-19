@@ -281,7 +281,7 @@ describe("createRun", () => {
         a.question_key === "scope.weighting" ? ans("scope.weighting", "one_of_several") : a,
       ),
     );
-    const err = await run().catch((e: Error) => e);
+    const err = (await run().catch((e: Error) => e)) as Error;
     expect(err.message).toMatch(/outside the rule's scope/i);
     expect(err.message).not.toMatch(/answer cutoff/i);
   });
@@ -304,7 +304,10 @@ describe("createRun", () => {
         a.question_key === "cutoff.applied_by" ? ans("cutoff.applied_by", null) : a,
       ),
     );
-    const err = await run().catch((e: { statusCode?: number; message: string }) => e);
+    const err = (await run().catch((e: { statusCode?: number; message: string }) => e)) as {
+      statusCode?: number;
+      message: string;
+    };
     expect(err).toMatchObject({ statusCode: 409 });
     expect(err.message).toMatch(/does not establish which metric applies/);
     expect(utils.createRunQuery).not.toHaveBeenCalled();
@@ -440,6 +443,8 @@ describe("run reads", () => {
           metric: "selection_rate",
           corpusId: null,
           corpusJobDescriptionSha256: null,
+          corpusModelPinned: null,
+          corpusArtifactKind: null,
           points: [
             {
               runId: 1,
@@ -458,6 +463,8 @@ describe("run reads", () => {
           metric: "selection_rate",
           corpusId: null,
           corpusJobDescriptionSha256: null,
+          corpusModelPinned: null,
+          corpusArtifactKind: null,
           points: [
             {
               runId: 2,

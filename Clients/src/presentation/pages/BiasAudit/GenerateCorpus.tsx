@@ -68,6 +68,7 @@ const FINAL_FAILURES = new Set([
   "model_changed",
   "corpus_model_changed",
   "plan_changed",
+  "plan_failed",
   "unknown_job_description",
   "unknown_artifact_kind",
 ]);

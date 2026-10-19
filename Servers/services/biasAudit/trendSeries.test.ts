@@ -358,10 +358,19 @@ describe("dates and ordering", () => {
 });
 
 describe("the data source", () => {
-  const corpusRun = (id: number, date: string, corpusId: number, sha: string): TrendRun => ({
+  const corpusRun = (
+    id: number,
+    date: string,
+    corpusId: number,
+    sha: string,
+    model = "m1",
+    kind = "resume",
+  ): TrendRun => ({
     ...run(id, date, 1, 0.9),
     corpus_id: corpusId,
     corpus_job_description_sha256: sha,
+    corpus_model_pinned: model,
+    corpus_artifact_kind: kind,
   });
 
   it("breaks between uploaded and generated data with the same job description", () => {
@@ -387,6 +396,18 @@ describe("the data source", () => {
     ]);
     expect(series.segments).toHaveLength(1);
     expect(series.breaks).toEqual([]);
+  });
+
+  it("breaks where the generating model or the record form differs between corpora", () => {
+    const series = buildTrendSeries([
+      corpusRun(1, "2026-01-10", 3, "a".repeat(64), "m1", "resume"),
+      corpusRun(2, "2026-04-10", 4, "a".repeat(64), "m2", "resume"),
+      corpusRun(3, "2026-07-10", 5, "a".repeat(64), "m2", "transcript"),
+    ]);
+    expect(series.breaks.map((b) => b.reasons)).toEqual([
+      ["the model that generated the corpus changed"],
+      ["the form of the generated records changed"],
+    ]);
   });
 
   it("breaks where the fixed job description text differs between corpora", () => {

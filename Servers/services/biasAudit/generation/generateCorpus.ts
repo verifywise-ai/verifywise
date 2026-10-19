@@ -34,7 +34,7 @@ import {
   type OrderAttribute,
 } from "./assignCandidateIds";
 import { corpusCsvHeaderLine, corpusCsvRow } from "./corpusCsv";
-import { complete } from "./gatewayClient";
+import { complete, GatewayPromptRefusedError, type CompletionResult } from "./gatewayClient";
 import {
   buildManifest,
   canonicalManifest,
@@ -42,7 +42,14 @@ import {
   type GenerationLogEntry,
 } from "./manifest";
 import { NAME_METHOD, nameFor } from "./names";
-import { ARTIFACT_KINDS, buildPrompt, validateRecord, type ArtifactKind } from "./prompt";
+import {
+  ARTIFACT_KINDS,
+  buildPrompt,
+  RECORD_MAX_CHARS,
+  validateRecord,
+  type ArtifactKind,
+  type RecordValidation,
+} from "./prompt";
 import { runReleaseGates } from "./releaseGates";
 import { getGatewaySettings } from "./settings";
 
@@ -328,9 +335,9 @@ export async function runCorpusGeneration(args: {
       throw error;
     };
     /** `fn`'s value, or the corpus failed with `failureCode` and `fn`'s error rethrown. */
-    const orFail = async <T>(failureCode: string, fn: () => T | Promise<T>): Promise<T> => {
+    const orFail = async <T>(failureCode: string, fn: () => T): Promise<T> => {
       try {
-        return await fn();
+        return fn();
       } catch (e) {
         return failAndThrow(failureCode, e);
       }
@@ -423,11 +430,27 @@ export async function runCorpusGeneration(args: {
       });
       for (let attempt = (seen?.attempt ?? 0) + 1; attempt <= MAX_ATTEMPTS; attempt++) {
         assertHeld();
-        const res = await complete(settings, prompt, { retries: GATEWAY_RETRIES });
-        const check = validateRecord(res.text, kind, {
-          candidateName,
-          finishReason: res.finishReason,
-        });
+        let res: CompletionResult;
+        let refused = false;
+        try {
+          res = await complete(settings, prompt, { retries: GATEWAY_RETRIES });
+        } catch (e) {
+          if (!(e instanceof GatewayPromptRefusedError)) throw e;
+          // The gateway refused this prompt; asking again sends the same one.
+          // Logged as an invalid attempt, with the requested model since none
+          // answered, so the record runs out of attempts instead of failing
+          // the corpus on every retry.
+          refused = true;
+          res = {
+            text: "",
+            modelObserved: settings.model,
+            promptHash: sha256(prompt),
+            finishReason: null,
+          };
+        }
+        const check: RecordValidation = refused
+          ? { ok: false, reason: "gateway_refused" }
+          : validateRecord(res.text, kind, { candidateName, finishReason: res.finishReason });
         let appended: { id: number | string } | null;
         try {
           appended = await appendCorpusRecordQuery(
@@ -435,7 +458,9 @@ export async function runCorpusGeneration(args: {
               corpusId,
               candidateId: a.candidateId,
               attempt,
-              text: res.text,
+              // An invalid attempt is kept for its reason only, so a runaway
+              // response is stored capped; valid text is stored whole.
+              text: check.ok ? res.text : res.text.slice(0, RECORD_MAX_CHARS),
               modelName: res.modelObserved,
               promptHash: res.promptHash,
               validationStatus: check.ok ? "valid" : "invalid",
@@ -538,26 +563,46 @@ export async function runCorpusGeneration(args: {
  * latest valid record in candidate-ID order, UTF-8, no BOM), so a customer's
  * hash of the file matches. The served IDs must be the manifest's, in order.
  */
+/**
+ * The corpus CSV as served: the header, then one chunk per page of the latest
+ * valid records in candidate-ID order. The stored hash and the download both
+ * read this one loop, so they agree byte for byte.
+ */
+export async function* corpusCsvChunks(
+  corpusId: number,
+  organizationId: number,
+  kind: ArtifactKind,
+): AsyncGenerator<{ text: string; candidateIds: string[] }> {
+  yield { text: corpusCsvHeaderLine(), candidateIds: [] };
+  let after = "";
+  for (;;) {
+    const page = await listLatestValidRecordsPageQuery(corpusId, organizationId, after, PAGE_SIZE);
+    if (page.length > 0) {
+      yield {
+        text: page
+          .map((r) =>
+            corpusCsvRow({ candidateId: r.candidate_id, artifactKind: kind, text: r.text }),
+          )
+          .join(""),
+        candidateIds: page.map((r) => r.candidate_id),
+      };
+    }
+    if (page.length < PAGE_SIZE) break;
+    after = page[page.length - 1].candidate_id;
+  }
+}
+
 async function hashDownload(
   corpusId: number,
   organizationId: number,
   kind: ArtifactKind,
   manifestRows: Array<{ candidateId: string }>,
 ): Promise<string> {
-  const hash = createHash("sha256").update(corpusCsvHeaderLine(), "utf8");
+  const hash = createHash("sha256");
   const served: string[] = [];
-  let after = "";
-  for (;;) {
-    const page = await listLatestValidRecordsPageQuery(corpusId, organizationId, after, PAGE_SIZE);
-    for (const r of page) {
-      hash.update(
-        corpusCsvRow({ candidateId: r.candidate_id, artifactKind: kind, text: r.text }),
-        "utf8",
-      );
-      served.push(r.candidate_id);
-    }
-    if (page.length < PAGE_SIZE) break;
-    after = page[page.length - 1].candidate_id;
+  for await (const chunk of corpusCsvChunks(corpusId, organizationId, kind)) {
+    hash.update(chunk.text, "utf8");
+    served.push(...chunk.candidateIds);
   }
   const expected = manifestRows.map((r) => r.candidateId);
   if (served.length !== expected.length || served.some((id, i) => id !== expected[i])) {

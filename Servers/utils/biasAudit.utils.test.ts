@@ -901,6 +901,8 @@ describe("corpora and the record log", () => {
     const [sql, opts] = mockQuery.mock.calls[0];
     expect(sql).toMatch(/status = 'running'/);
     expect(sql).toMatch(/heartbeat_at </);
+    // Only a claimed corpus whose lease expired: a queued corpus waits unharmed.
+    expect(sql).toMatch(/AND owner_token IS NOT NULL\s+AND lease_expires_at < NOW\(\)/);
     expect(sql).toMatch(/owner_token = NULL, lease_expires_at = NULL/);
     expect(opts.replacements.stale_after_seconds).toBe(900);
     await expect(markStaleCorporaFailedQuery(42, 0)).rejects.toThrow(/seconds/);

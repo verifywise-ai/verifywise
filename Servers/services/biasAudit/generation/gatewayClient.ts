@@ -26,6 +26,29 @@ const MAX_RETRY_AFTER_MS = 60_000;
 const defaultSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 const retryable = (status: number) => status === 429 || status >= 500;
+/** Refusals that mean the deployment's key or endpoint is wrong, not the prompt. */
+const CONFIGURATION_FAULTS = new Set([401, 403, 404]);
+
+/** The gateway request failed. The message is fixed text plus a status, never a body. */
+export class GatewayRequestError extends Error {
+  constructor(readonly detail: string) {
+    super(`Gateway request failed: ${detail}`);
+    this.name = "GatewayRequestError";
+  }
+}
+
+/**
+ * The gateway refused this one prompt (a 4xx other than an authentication or
+ * endpoint fault, such as a content-filter 400). Asking again sends the same
+ * prompt, so the caller logs it as an invalid attempt rather than failing the
+ * whole corpus.
+ */
+export class GatewayPromptRefusedError extends GatewayRequestError {
+  constructor(readonly status: number) {
+    super(`status ${status}`);
+    this.name = "GatewayPromptRefusedError";
+  }
+}
 
 /** Retry-After as delta-seconds or an HTTP date, in ms, capped. Null if absent or unusable. */
 function retryAfterMs(value: string | null | undefined): number | null {
@@ -90,7 +113,10 @@ export async function complete(
         lastDetail = `status ${res.status}`;
         const hinted = res.status === 429 ? retryAfterMs(res.headers?.get?.("retry-after")) : null;
         await discard(res);
-        if (!retryable(res.status)) throw new Error(`Gateway request failed: ${lastDetail}`);
+        if (!retryable(res.status)) {
+          if (CONFIGURATION_FAULTS.has(res.status)) throw new GatewayRequestError(lastDetail);
+          throw new GatewayPromptRefusedError(res.status);
+        }
         if (hinted !== null) wait = hinted;
         continue;
       }
@@ -99,7 +125,7 @@ export async function complete(
       if (e instanceof SyntaxError) {
         throw new Error("Gateway returned an unexpected response: not JSON.");
       }
-      if (e instanceof Error && e.message === `Gateway request failed: ${lastDetail}`) throw e;
+      if (e instanceof GatewayRequestError) throw e;
       // TypeError, TimeoutError, AbortError: transport faults while connecting or reading.
       lastDetail = "network error";
       continue;
@@ -113,5 +139,5 @@ export async function complete(
     const finishReason = typeof choice.finish_reason === "string" ? choice.finish_reason : null;
     return { text, modelObserved: data.model, promptHash, finishReason };
   }
-  throw new Error(`Gateway request failed: ${lastDetail}`);
+  throw new GatewayRequestError(lastDetail);
 }

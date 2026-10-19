@@ -153,9 +153,14 @@ function score(
   return Math.min(1, labelHits + Math.min(DESCRIPTION_CREDIT_CAP, 0.5 * descHits));
 }
 
+/**
+ * One criterion per line. A single line is split on commas and semicolons
+ * ("Quota attainment, Deal size"); a multi-line list is not, so a criterion
+ * holding a comma ("Forklift, reach truck or order picker licence") stays whole.
+ */
 function parseSupplied(text: string): string[] {
   return text
-    .split(/[\n,;]+/)
+    .split(/\r?\n/.test(text.trim()) ? /\r?\n+/ : /[,;]+/)
     .map((line) => line.replace(/^\s*(?:[-*•]|\d+[.)])\s*/, "").trim())
     .filter((line) => line.length > 0);
 }

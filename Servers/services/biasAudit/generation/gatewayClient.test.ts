@@ -1,7 +1,7 @@
 const mockFetch = jest.fn();
 global.fetch = mockFetch as any;
 
-import { complete } from "./gatewayClient";
+import { complete, GatewayPromptRefusedError, GatewayRequestError } from "./gatewayClient";
 
 const settings = {
   baseUrl: "https://gateway.example/v1",
@@ -228,4 +228,25 @@ describe("backoff", () => {
     expect(second).toBeGreaterThanOrEqual(100);
     expect(second).toBeLessThanOrEqual(200);
   });
+});
+
+describe("refusals", () => {
+  it.each([400, 413, 422])("reports a %s as a refusal of this prompt", async (status) => {
+    mockFetch.mockResolvedValue({ ok: false, status, text: async () => "" });
+    const err = await complete(settings, "p", { retries: 2, retryDelayMs: 0 }).catch((e) => e);
+    expect(err).toBeInstanceOf(GatewayPromptRefusedError);
+    expect(err.status).toBe(status);
+    // Not retried: the same prompt would be refused again.
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([401, 403, 404])(
+    "reports a %s as a configuration fault, not a prompt refusal",
+    async (status) => {
+      mockFetch.mockResolvedValue({ ok: false, status, text: async () => "" });
+      const err = await complete(settings, "p", { retries: 2, retryDelayMs: 0 }).catch((e) => e);
+      expect(err).toBeInstanceOf(GatewayRequestError);
+      expect(err).not.toBeInstanceOf(GatewayPromptRefusedError);
+    },
+  );
 });

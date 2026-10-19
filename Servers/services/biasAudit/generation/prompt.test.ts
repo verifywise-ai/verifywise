@@ -167,12 +167,10 @@ describe("validateRecord", () => {
     for (const line of [
       "Member, Society of Hispanic Professional Engineers",
       "Fluent in Tongan",
-      "Mexican citizen with a US work permit",
       "Mexican-born, with a US work permit",
       "A native Spanish speaker",
       "Of Korean descent",
       "Volunteer at my church food bank",
-      "Board member, Women in Sales network",
       "Treasurer, Alpha Kappa Alpha",
     ]) {
       expect(validateRecord(`${resume}\n${line}`, "resume", NAME)).toEqual({
@@ -360,7 +358,7 @@ describe("validateRecord", () => {
     ).toEqual({ ok: false, reason: "demographic_term" });
     expect(
       validateRecord(
-        '{"name":"Kevin Miller","summary":"Ramp agent, Hawaiian Airlines","experience":[],"skills":[]}',
+        '{"name":"Kevin Miller","summary":"Of Korean descent","experience":[],"skills":[]}',
         "structured",
         kevin,
       ),
@@ -397,6 +395,47 @@ describe("validateRecord", () => {
       summary: "Line cook known for grace under pressure, led by Grace",
       experience: ["Cook, 120-seat diner, 2019-2024"],
       skills: ["Knife work"],
+    });
+    expect(validateRecord(s, "structured", { candidateName: "Kevin Miller" })).toEqual({
+      ok: true,
+    });
+  });
+
+  it.each([
+    "Ethnicity: Asian",
+    "- Religion: Catholic",
+    "Nationality: Filipino",
+    "National origin: Mexico",
+    "Citizenship: Canada",
+    "**Heritage:** Samoan",
+  ])("refuses a line labelled with a protected characteristic: %s", (line) => {
+    expect(validateRecord(`${resume}\n${line}`, "resume", NAME)).toEqual({
+      ok: false,
+      reason: "demographic_field",
+    });
+  });
+
+  it("reads an extra structured key as a field label", () => {
+    const s = JSON.stringify({
+      name: "Kevin Miller",
+      summary: "x",
+      experience: ["Warehouse associate"],
+      skills: ["Forklift"],
+      ethnicity: "not stated",
+    });
+    expect(validateRecord(s, "structured", { candidateName: "Kevin Miller" })).toEqual({
+      ok: false,
+      reason: "demographic_field",
+    });
+  });
+
+  it("passes an extra structured key that names no group", () => {
+    const s = JSON.stringify({
+      name: "Kevin Miller",
+      summary: "x",
+      experience: ["Warehouse associate"],
+      skills: ["Forklift"],
+      certifications: ["OSHA 10"],
     });
     expect(validateRecord(s, "structured", { candidateName: "Kevin Miller" })).toEqual({
       ok: true,

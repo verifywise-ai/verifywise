@@ -197,6 +197,12 @@ const RunUpload = ({ projectId, metric, canEdit, blockedReason, onCreated }: Run
               sx={{ width: "100%", maxWidth: "420px" }}
             />
           )}
+          {corpus && (
+            <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+              The file needs only the candidate_id column and the score or selection. Leave out the
+              artifact column to keep a large corpus under the 30 MB upload limit.
+            </Typography>
+          )}
 
           <Stack direction="row" alignItems="center" gap="12px" flexWrap="wrap">
             <input

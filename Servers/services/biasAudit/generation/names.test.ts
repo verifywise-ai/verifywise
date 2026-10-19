@@ -116,3 +116,23 @@ describe("NAME_METHOD", () => {
     expect(findForbidden(NAME_METHOD)).toEqual([]);
   });
 });
+
+describe("first names and surnames are drawn independently", () => {
+  it("pairs a surname with more than one first name within a cell", () => {
+    const pairs = new Map<string, Set<string>>();
+    for (let i = 0; i < 357; i++) {
+      const [first, ...rest] = nameFor(
+        { sex: "Male", raceEthnicity: "Asian" },
+        `C${String(i).padStart(5, "0")}`,
+        7,
+      ).split(" ");
+      const surname = rest.join(" ");
+      if (!pairs.has(surname)) pairs.set(surname, new Set());
+      pairs.get(surname)!.add(first);
+    }
+    const distinct = [...pairs.values()].reduce((n, firsts) => n + firsts.size, 0);
+    // Before the fix every surname carried exactly one first name.
+    expect([...pairs.values()].some((firsts) => firsts.size > 1)).toBe(true);
+    expect(distinct).toBeGreaterThan(pairs.size * 2);
+  });
+});

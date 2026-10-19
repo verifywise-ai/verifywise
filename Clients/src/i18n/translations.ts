@@ -9343,6 +9343,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Candidate ID column": "Spalte mit der Kandidaten-ID",
     "Data source": "Datenquelle",
     "Your own data": "Ihre eigenen Daten",
+    "The file needs only the candidate_id column and the score or selection. Leave out the artifact column to keep a large corpus under the 30 MB upload limit.":
+      "Die Datei braucht nur die Spalte candidate_id und den Score oder die Auswahl. Lassen Sie die Spalte artifact weg, damit ein großer Korpus unter der Upload-Grenze von 30 MB bleibt.",
     "Include at least one letter or digit.":
       "Geben Sie mindestens einen Buchstaben oder eine Ziffer an.",
     "Not recorded": "Nicht erfasst",
@@ -20146,6 +20148,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Candidate ID column": "Colonne de l'identifiant du candidat",
     "Data source": "Source des données",
     "Your own data": "Vos propres données",
+    "The file needs only the candidate_id column and the score or selection. Leave out the artifact column to keep a large corpus under the 30 MB upload limit.":
+      "Le fichier n'a besoin que de la colonne candidate_id et du score ou de la sélection. Omettez la colonne artifact pour qu'un grand corpus reste sous la limite de téléversement de 30 Mo.",
     "Include at least one letter or digit.": "Incluez au moins une lettre ou un chiffre.",
     "Not recorded": "Non enregistré",
     "Browse independently assessed AI applications and track the ones that matter to your organization.":
@@ -30856,6 +30860,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Candidate ID column": "Columna del ID del candidato",
     "Data source": "Origen de los datos",
     "Your own data": "Sus propios datos",
+    "The file needs only the candidate_id column and the score or selection. Leave out the artifact column to keep a large corpus under the 30 MB upload limit.":
+      "El archivo solo necesita la columna candidate_id y la puntuación o la selección. Omita la columna artifact para que un corpus grande no supere el límite de carga de 30 MB.",
     "Include at least one letter or digit.": "Incluya al menos una letra o un dígito.",
     "Not recorded": "No registrado",
     "Browse independently assessed AI applications and track the ones that matter to your organization.":

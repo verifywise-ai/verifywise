@@ -18,7 +18,10 @@ jest.mock("../../../utils/biasAudit.utils", () => ({
   releaseCorpusLeaseQuery: jest.fn(),
   getProjectQuery: jest.fn(),
 }));
-jest.mock("./gatewayClient", () => ({ complete: jest.fn() }));
+jest.mock("./gatewayClient", () => ({
+  ...jest.requireActual("./gatewayClient"),
+  complete: jest.fn(),
+}));
 jest.mock("./settings", () => ({
   ...jest.requireActual("./settings"),
   getGatewaySettings: jest.fn(),
@@ -31,7 +34,8 @@ jest.mock("./assignCandidateIds", () => ({
 import { createHash } from "node:crypto";
 import * as utils from "../../../utils/biasAudit.utils";
 import { JOB_DESCRIPTIONS } from "../../../structures/NYC-Local-Law-144/job-descriptions";
-import { complete } from "./gatewayClient";
+import { complete, GatewayPromptRefusedError } from "./gatewayClient";
+import { RECORD_MAX_CHARS } from "./prompt";
 import * as settings from "./settings";
 import { GatewayNotConfiguredError } from "./settings";
 import {
@@ -288,7 +292,10 @@ describe("runCorpusGeneration", () => {
   afterEach(() => jest.useRealTimers());
 
   const run = () => runCorpusGeneration({ corpusId: 3, organizationId: 1 });
-  const done = () => mockUtils.updateCorpusStatusQuery.mock.calls.at(-1)![0];
+  const done = () => {
+    const calls = mockUtils.updateCorpusStatusQuery.mock.calls;
+    return calls[calls.length - 1][0];
+  };
   const claimToken = () => mockUtils.claimCorpusLeaseQuery.mock.calls[0][2];
 
   it("records every model observed, not the pinned one", async () => {
@@ -500,6 +507,33 @@ describe("runCorpusGeneration", () => {
       mockComplete.mockRejectedValue(new Error("gateway request failed (status 500)"));
       await expect(run()).rejects.toThrow(/status 500/);
       expect(mockUtils.releaseCorpusLeaseQuery).toHaveBeenCalledWith(3, 1, claimToken());
+    });
+
+    it("logs a prompt the gateway refuses as an invalid attempt, not a failed corpus", async () => {
+      mockComplete.mockRejectedValue(new GatewayPromptRefusedError(400));
+      await run();
+      const first = mockUtils.appendCorpusRecordQuery.mock.calls[0][0];
+      expect(first).toMatchObject({
+        text: "",
+        validationStatus: "invalid",
+        invalidReason: "gateway_refused",
+      });
+      expect(first.promptHash).toMatch(/^[0-9a-f]{64}$/);
+      // Every record ran out of attempts, so the corpus is blocked, not failed.
+      expect(done().status).toBe("blocked");
+    });
+
+    it("stores an invalid attempt's text capped, so a runaway response stays small", async () => {
+      mockComplete.mockResolvedValue({
+        text: "x".repeat(RECORD_MAX_CHARS * 3),
+        modelObserved: "m1",
+        promptHash: "h".repeat(64),
+        finishReason: "stop",
+      });
+      await run();
+      const first = mockUtils.appendCorpusRecordQuery.mock.calls[0][0];
+      expect(first.invalidReason).toBe("too_long");
+      expect(first.text).toHaveLength(RECORD_MAX_CHARS);
     });
 
     it("keeps the original error when the release itself fails", async () => {

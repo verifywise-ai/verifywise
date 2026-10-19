@@ -70,6 +70,14 @@ describe("compareCriteria", () => {
     expect(out.supplied).toHaveLength(2);
   });
 
+  it("keeps a criterion holding a comma whole in a multi-line list", () => {
+    const out = compareCriteria(
+      "operational-hourly",
+      "Forklift, reach truck or order picker licence\nPick rate",
+    );
+    expect(out.supplied).toEqual(["Forklift, reach truck or order picker licence", "Pick rate"]);
+  });
+
   it("parses a numbered or bulleted list", () => {
     const out = compareCriteria(
       "commercial-ae",

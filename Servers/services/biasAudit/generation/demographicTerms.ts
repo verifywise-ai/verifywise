@@ -1,95 +1,93 @@
 /*
- * Terms that would give a generated record a group signal beyond the
+ * Unambiguous statements of a group the candidate belongs to, beyond the
  * candidate's name. The name (and pronouns or honorifics consistent with its
- * sex) is the only signal a record may carry; a record matching any term or
- * phrase here is an invalid attempt.
+ * sex) is the only signal a record may carry; a record matching anything here
+ * is an invalid attempt.
+ *
+ * The prompt does the steering: it forbids every other group detail. This
+ * list rejects only what cannot be read any other way. A bare word that also
+ * names a place, employer, food or market ("Navajo County", "Indian Health
+ * Service", "Hawaiian Airlines", "Greek yogurt", "European markets", "women's
+ * health", "Baptist Health") is not listed: its false rejections fall more on
+ * the cells whose names the model associates with it, and a check whose false
+ * rejections fall more on one race/ethnicity cell is worse than a missed extra
+ * signal. What remains:
+ *
+ * - identity words and phrases with no other common sense ("Hispanic",
+ *   "African American", "people of color");
+ * - self-description ("Mexican-born", "of Italian descent", "immigrated",
+ *   "native Korean speaker", "fluent in Tagalog", "my church");
+ * - (field labels such as "Ethnicity:" are refused in prompt.ts, as
+ *   demographic_field);
+ * - a Languages line naming any language other than English;
+ * - identity organisations (NAACP, the HBCUs, the historically Black
+ *   fraternities and sororities).
  *
  * Terms match as whole words or phrases, case-insensitive; a space in a term
- * matches any run of spaces or hyphens. Only the words that are also common
- * job vocabulary are left out as bare words: polish, apache, cherokee, sioux,
- * church, heritage, dominican, kosher, ladies, french and italian ("polish
- * floors", "Apache Kafka", "Sioux Falls", "French fries", "kosher kitchen").
- * Those are still caught in explicit phrases ("Italian-born", "of Italian
- * descent", "native French speaker", "fluent in French", "my church"). Bare
- * words with a common non-demographic sense ("black", "white", "race",
- * "faith", "reservation") are listed only in identity phrases. Every
- * rejection is logged with its reason, so the false-rejection rate can be
- * measured. The list is finite by design; extend it when review finds a gap.
+ * matches any run of spaces or hyphens. Every rejection is logged with its
+ * reason, so the false-rejection rate per cell can be measured.
  */
 
 // prettier-ignore
-const ETHNICITY_AND_RACE = [
-  "hispanic", "latino", "latina", "latinx", "latine", "chicano", "chicana",
-  "african american", "afro caribbean", "black owned", "black professionals",
-  "black engineers", "black community", "black student", "black students",
-  "black history", "black women", "black men", "asian", "asian american",
-  "pacific islander", "native hawaiian", "alaska native", "native american",
-  "american indian", "first nations", "indigenous", "caucasian", "multiracial",
-  "biracial", "mixed race", "ethnic", "ethnicity", "racial", "people of color",
-  "person of color", "minority owned", "minority professionals",
+const IDENTITY = [
+  "hispanic", "latino", "latina", "latinx", "latine", "chicano", "chicana", "caucasian",
+  "multiracial", "biracial", "mixed race", "african american", "afro caribbean",
+  "afro latino", "afro latina", "black owned", "black professionals", "black engineers",
+  "black community", "black student", "black students", "black history", "black women",
+  "black men", "asian american", "pacific islander", "native hawaiian", "alaska native",
+  "native american", "american indian", "first nations", "people of color",
+  "person of color", "minority owned", "tribal member", "immigrated",
 ];
 
-// prettier-ignore
-const NATIONALITY = [
-  "mexican", "puerto rican", "cuban", "salvadoran", "guatemalan", "honduran",
-  "colombian", "venezuelan", "peruvian", "ecuadorian", "brazilian", "chinese",
-  "taiwanese", "vietnamese", "korean", "japanese", "filipino", "filipina", "indian",
-  "pakistani", "bangladeshi", "nigerian", "ghanaian", "ethiopian", "somali", "kenyan",
-  "haitian", "jamaican", "trinidadian", "samoan", "tongan", "fijian", "chamorro",
-  "hawaiian", "navajo", "navajo nation", "cherokee nation", "lakota", "ojibwe", "hopi", "irish", "german",
-  "russian", "ukrainian", "greek", "armenian", "arab", "persian", "iranian", "lebanese",
-  "egyptian", "african", "european", "latin american", "caribbean", "immigrant",
-  "immigrated", "citizenship", "nationality", "tribal college",
-  "tribal council", "tribal nation", "tribal member",
-];
-
-// prettier-ignore
-const LANGUAGES = [
-  "spanish", "mandarin", "cantonese", "tagalog", "hindi", "urdu", "punjabi", "bengali",
-  "gujarati", "tamil", "telugu", "arabic", "portuguese", "creole", "swahili", "amharic",
-  "yoruba", "igbo", "hebrew", "yiddish", "farsi", "bilingual",
-];
-
+// Religious belonging stated as one's own; a bare "Catholic" or "Baptist" is
+// often an employer.
 // prettier-ignore
 const RELIGION = [
-  "christian", "catholic", "protestant", "baptist", "methodist", "evangelical", "mormon", "latter day saints", "muslim",
-  "islam", "islamic", "jewish", "judaism", "hindu", "buddhist", "sikh", "mosque",
-  "synagogue", "gurdwara", "bible", "quran", "ramadan", "halal", "religious", "faith based",
-  "my church", "our church", "church choir", "church volunteer", "church youth",
-];
-
-// Sex beyond the name: pronouns and honorifics consistent with it are allowed.
-// prettier-ignore
-const SEX = [
-  "woman", "women", "female", "male", "gender", "feminine", "masculine", "sorority",
-  "fraternity",
+  "my church", "our church", "my mosque", "our mosque", "my synagogue", "our synagogue",
+  "my temple", "our temple", "my parish", "our parish", "church choir", "church youth",
 ];
 
 // prettier-ignore
 const IDENTITY_ORGANISATIONS = [
-  "naacp", "shpe", "nsbe", "lulac", "unidosus", "hbcu", "howard university", "spelman",
-  "morehouse", "hampton university", "tuskegee", "fisk university", "alpha kappa alpha",
-  "delta sigma theta", "kappa alpha psi", "omega psi phi", "phi beta sigma",
-  "zeta phi beta", "sigma gamma rho", "iota phi theta", "alpha phi alpha",
+  "naacp", "shpe", "nsbe", "lulac", "unidosus", "hbcu", "howard university",
+  "spelman college", "morehouse college", "hampton university", "tuskegee university",
+  "fisk university", "alpha kappa alpha", "delta sigma theta", "kappa alpha psi",
+  "omega psi phi", "phi beta sigma", "zeta phi beta", "sigma gamma rho", "iota phi theta",
+  "alpha phi alpha", "sorority", "fraternity",
 ];
 
 export const DEMOGRAPHIC_TERMS: readonly string[] = [
-  ...ETHNICITY_AND_RACE,
-  ...NATIONALITY,
-  ...LANGUAGES,
+  ...IDENTITY,
   ...RELIGION,
-  ...SEX,
   ...IDENTITY_ORGANISATIONS,
 ];
 
-// Every language a phrase can name, the job-vocabulary ones included: "French"
-// is a fry, but "fluent in French" is a language.
+// Language names other than English. Read only on a Languages line and inside
+// a speaking phrase, where a word can only mean the language.
 // prettier-ignore
 const LANGUAGE_NAME_LIST = [
-  ...LANGUAGES.filter((l) => l !== "bilingual"), "french", "italian", "polish",
-  "cherokee", "german", "russian", "greek", "chinese", "korean", "japanese",
-  "vietnamese", "hawaiian", "navajo", "samoan", "tongan", "somali", "ukrainian",
-  "armenian", "persian",
+  "afrikaans", "albanian", "amharic", "arabic", "armenian", "asl", "assamese", "aymara",
+  "azerbaijani", "azeri", "balinese", "bambara", "basque", "belarusian", "bengali",
+  "bhojpuri", "bislama", "bosnian", "breton", "bulgarian", "burmese", "cantonese",
+  "catalan", "cebuano", "chamorro", "chechen", "cherokee", "chichewa", "chinese",
+  "chuukese", "corsican", "creole", "croatian", "czech", "danish", "dari", "dinka", "dutch",
+  "dzongkha", "esperanto", "estonian", "ewe", "faroese", "farsi", "fijian", "filipino",
+  "finnish", "flemish", "french", "frisian", "fula", "fulani", "gaelic", "galician",
+  "georgian", "german", "greek", "guarani", "gujarati", "haitian", "hakka", "hausa",
+  "hawaiian", "hebrew", "hiligaynon", "hindi", "hmong", "hokkien", "hungarian", "icelandic",
+  "igbo", "ilocano", "ilokano", "indonesian", "inuktitut", "irish", "italian", "japanese",
+  "javanese", "kannada", "kazakh", "khmer", "kinyarwanda", "kirundi", "konkani", "korean",
+  "kosraean", "kurdish", "kyrgyz", "lakota", "lao", "latvian", "lingala", "lithuanian",
+  "luganda", "luxembourgish", "macedonian", "malagasy", "malay", "malayalam", "maltese",
+  "mandarin", "maori", "marathi", "marshallese", "mixtec", "mongolian", "montenegrin",
+  "nahuatl", "navajo", "ndebele", "nepali", "norwegian", "ojibwe", "oriya", "oromo",
+  "palauan", "pashto", "persian", "pohnpeian", "polish", "portuguese", "punjabi", "quechua",
+  "romanian", "romani", "russian", "samoan", "sanskrit", "serbian", "sesotho", "shona",
+  "sindhi", "sinhala", "slovak", "slovenian", "somali", "sorani", "spanish", "sundanese",
+  "swahili", "swedish", "tagalog", "tajik", "tamil", "tatar", "telugu", "tetum", "thai",
+  "tibetan", "tigrinya", "tongan", "tswana", "turkish", "turkmen", "twi", "ukrainian",
+  "urdu", "uyghur", "uzbek", "vietnamese", "visayan", "welsh", "wolof", "xhosa", "yapese",
+  "yiddish", "yoruba", "zapotec", "zulu",
 ];
 const LANGUAGE_NAMES = LANGUAGE_NAME_LIST.join("|");
 const LANGUAGE_NAME_SET: ReadonlySet<string> = new Set(LANGUAGE_NAME_LIST);
@@ -110,42 +108,30 @@ function ofDescent(text: string): boolean {
   return false;
 }
 
-// Words a Languages line may hold besides English: proficiency qualifiers,
-// connectives, and the programming and office tools some records list there.
-// Any other word is taken to name a language, so a language missing from
-// LANGUAGE_NAME_LIST (Thai, Hmong, Khmer, Ilocano, Marshallese, Dutch) is
-// still caught.
-// prettier-ignore
-const LANGUAGE_LINE_WORDS: ReadonlySet<string> = new Set([
-  "english", "only", "fluent", "fluency", "native", "speaker", "spoken", "written",
-  "reading", "writing", "speaking", "verbal", "oral", "professional", "proficiency",
-  "proficient", "working", "business", "full", "limited", "basic", "conversational",
-  "intermediate", "advanced", "beginner", "elementary", "level", "knowledge", "and",
-  "in", "of", "the", "with", "a", "an", "us", "uk", "american", "british", "excellent",
-  "strong", "good", "communication", "skills", "python", "sql", "java", "javascript",
-  "typescript", "html", "css", "r", "c", "go", "excel", "vba", "salesforce", "apex",
-]);
-
 /**
  * A Languages line ("Language:", "Languages:", "Languages spoken:", or a dash
- * in place of the colon) that names any language other than English. English
- * with qualifiers ("English only", "Fluent in English", "English – native")
- * and listed tools ("Python, SQL") pass; every other word is read as a
- * language.
+ * in place of the colon) that names a language other than English. Any other
+ * word on the line ("first language", "native or bilingual proficiency",
+ * "Python, SQL, Tableau") passes.
  */
 function languagesLine(text: string): boolean {
-  const re =
-    /^[\s\-*#\u2022]*languages?(?:\s+spoken)?\s*(?::|\s[-\u2013\u2014]|[\u2013\u2014])\s*(.+)$/gim;
-  for (const m of text.matchAll(re)) {
-    const words = m[1].toLowerCase().match(/\p{L}+/gu) ?? [];
-    if (words.some((w) => LANGUAGE_NAME_SET.has(w) || !LANGUAGE_LINE_WORDS.has(w))) return true;
+  // At a line start with a colon or a dash, or anywhere with a colon.
+  const res = [
+    /^[\s\-*#\u2022]*languages?(?:\s+spoken)?\s*(?::|\s[-\u2013\u2014]|[\u2013\u2014])\s*(.+)$/gim,
+    /\blanguages?(?:\s+spoken)?\s*:\s*([^\n]+)/gi,
+  ];
+  for (const re of res) {
+    for (const m of text.matchAll(re)) {
+      const words = m[1].toLowerCase().match(/\p{L}+/gu) ?? [];
+      if (words.some((w) => LANGUAGE_NAME_SET.has(w))) return true;
+    }
   }
   return false;
 }
 
 const matches = (pattern: RegExp) => (text: string) => pattern.test(text);
 
-/** Explicit national-origin and language phrases, with the label reported. */
+/** Self-description phrases and labels, with the label reported. */
 const PHRASES: Array<{ term: string; test: (text: string) => boolean }> = [
   // "Italian-born", "mexican-born", "U.S.-born"; not "first-born".
   {
@@ -156,7 +142,11 @@ const PHRASES: Array<{ term: string; test: (text: string) => boolean }> = [
   },
   { term: "of … descent", test: ofDescent },
   { term: "Languages: line", test: languagesLine },
-  { term: "native … speaker", test: matches(/\bnative\s+(?:[a-z-]+\s+)?speakers?\b/i) },
+  // "native Korean speaker"; not "native English speaker".
+  {
+    term: "native … speaker",
+    test: matches(/\bnative\s+(?!english\b)(?:[a-z-]+\s+)?speakers?\b/i),
+  },
   {
     term: "speaks a language",
     test: matches(

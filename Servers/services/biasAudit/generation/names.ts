@@ -220,13 +220,23 @@ const BY_RACE: Record<string, { first: FirstNames; surnames: readonly string[] }
   "Two or more races": { first: ALL_FIRST, surnames: ALL_SURNAMES },
 };
 
-/** FNV-1a, 32-bit: a small deterministic string hash. */
+/**
+ * FNV-1a, 32-bit, finished with murmur3's fmix32 so every input bit reaches
+ * the low bits a modulo keeps. Without the finaliser two inputs differing only
+ * in a fixed suffix keep the same low bits, and the first name became a
+ * function of the surname within a cell.
+ */
 function hash(text: string): number {
   let h = 0x811c9dc5;
   for (let i = 0; i < text.length; i++) {
     h ^= text.charCodeAt(i);
     h = Math.imul(h, 0x01000193) >>> 0;
   }
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x85ebca6b) >>> 0;
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2ae35) >>> 0;
+  h ^= h >>> 16;
   return h >>> 0;
 }
 

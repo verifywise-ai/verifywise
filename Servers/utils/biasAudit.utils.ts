@@ -888,6 +888,10 @@ export interface TrendRunRow {
   corpus_id: number | null;
   /** That corpus's fixed job description hash; null for uploaded data. */
   corpus_job_description_sha256: string | null;
+  /** The model that corpus was configured to generate with; null for uploaded data. */
+  corpus_model_pinned: string | null;
+  /** The form of that corpus's records; null for uploaded data. */
+  corpus_artifact_kind: string | null;
 }
 
 /**
@@ -905,7 +909,8 @@ export async function listTrendRunsQuery(
             r.result_json->'tables' AS tables,
             r.result_json->>'metric' AS result_metric,
             r.gate_findings_json,
-            r.corpus_id, c.job_description_sha256 AS corpus_job_description_sha256
+            r.corpus_id, c.job_description_sha256 AS corpus_job_description_sha256,
+            c.model_pinned AS corpus_model_pinned, c.artifact_kind AS corpus_artifact_kind
        FROM bias_audit_runs r
        JOIN aedt_profiles ap ON ap.id = r.profile_id
                             AND ap.organization_id = :organization_id
@@ -1120,7 +1125,7 @@ export interface InsertCorpusArgs {
 export async function createCorpusQuery(
   args: InsertCorpusArgs,
   organizationId: number,
-): Promise<CorpusRow> {
+): Promise<Omit<CorpusRow, "lease_live">> {
   const result = await sequelize.query(
     `INSERT INTO bias_audit_corpora
        (organization_id, project_id, profile_id, profile_version,
@@ -1164,7 +1169,8 @@ export async function createCorpusQuery(
       },
     },
   );
-  const row = firstRow<CorpusRow>(result);
+  // RETURNING * has no computed lease_live; getCorpusQuery adds it.
+  const row = firstRow<Omit<CorpusRow, "lease_live">>(result);
   if (!row) refuseCrossOrg("Profile", args.profileId);
   return row;
 }
@@ -1351,9 +1357,12 @@ export async function touchCorpusHeartbeatQuery(
 }
 
 /**
- * Fails this organization's running corpora whose heartbeat is older than
- * `staleAfterSeconds`, freeing the one-running-per-project slot after a
- * worker died. Returns the ids it failed.
+ * Fails this organization's running corpora whose runner died: claimed (an
+ * owner token is set), lease expired, and no heartbeat for
+ * `staleAfterSeconds`. This frees the one-running-per-project slot. A corpus
+ * still waiting in the queue was never claimed, and a runner releases its
+ * lease before a retry, so neither is swept while its job is pending.
+ * Returns the ids it failed.
  */
 export async function markStaleCorporaFailedQuery(
   organizationId: number,
@@ -1366,6 +1375,8 @@ export async function markStaleCorporaFailedQuery(
             owner_token = NULL, lease_expires_at = NULL
       WHERE organization_id = :organization_id
         AND status = 'running'
+        AND owner_token IS NOT NULL
+        AND lease_expires_at < NOW()
         AND heartbeat_at < NOW() - make_interval(secs => :stale_after_seconds)
       RETURNING id`,
     {
