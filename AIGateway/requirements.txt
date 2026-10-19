@@ -36,7 +36,7 @@ spacy>=3.8.16,<3.9.0
 en_core_web_md @ https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.8.0/en_core_web_md-3.8.0-py3-none-any.whl#sha256=5e6329fe3fecedb1d1a02c3ea2172ee0fede6cea6e4aefb6a02d832dba78a310
 
 # MCP Gateway — Model Context Protocol SDK
-mcp>=2.2.0
+mcp>=2.3.0
 
 # Observability — OpenTelemetry metrics + logs (pushed to central OTLP collector)
 opentelemetry-api>=1.44.0
