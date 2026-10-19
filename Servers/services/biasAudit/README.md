@@ -173,10 +173,79 @@ non-excluded group, the category holding it, and whether any non-excluded group 
 - **A break**, labelled with every reason, between consecutive plotted runs whose profile
   version, question-set version, job description (`job_description_key`, compared by
   base-strength collation, which ignores case, accents and similar letter variants but not
-  every pairing, such as Turkish "ı"; null counts as one value) or metric differ.
+  every pairing, such as Turkish "ı"; null counts as one value) or metric differ, or where the
+  data source changes between uploaded and generated data, or where two corpora were built
+  from different fixed job description text. Corpora built from the same text join whatever
+  their ids.
 
 `GET /runs/trend` returns only the series, not the stored results. `GET /runs/:id` does return
 the whole run row, `result_json` included.
+
+## Generated corpora
+
+Instead of uploading its own data, a customer can generate a synthetic candidate corpus, run
+it through its own platform, and upload the scores. Everything below lives in `generation/`,
+`criteriaComparison.ts`, `corpusService.ts` and `corpusJoin.ts`.
+
+**Two fixed job descriptions** (`structures/NYC-Local-Law-144/job-descriptions/`): Account
+Executive (`commercial-ae`) and Warehouse Operations Associate (`operational-hourly`). Each has
+a body, its expected criteria and five qualification tiers. There is no free-text job
+description: fixing the text is what makes the expected criteria known in advance and every
+corpus comparable. The stored `job_description_sha256` covers the body, criteria and tiers.
+
+**The chain**, in `generation/generateCorpus.ts`:
+
+1. `allocation.ts` gives every sex × race/ethnicity cell (14 cells) the identical tier mix.
+   The requested count (default 5,000, 700 to 10,000) is rounded down to a multiple of 70, so
+   each cell holds at least `MIN_PER_CELL` (50) records.
+2. `assignCandidateIds.ts` maps allocation rows onto candidate IDs with a seeded permutation,
+   never by index. The permutation must clear the ID-order check at 0.9 of the expected runs;
+   otherwise the seed is redrawn, up to 16 times, and the seed used is stored.
+3. `names.ts` gives each candidate a name typical of its cell. The name is the record's only
+   group signal (`NAME_METHOD`, printed in the stance, says how the names were drawn).
+4. `prompt.ts` builds the prompt and `validateRecord` rejects a record that lacks the full
+   name, names a third party, or states another group detail in unambiguous terms
+   (`demographicTerms.ts`). The prompt steers first: a check whose false rejections fall more
+   on one race/ethnicity cell is worse than a missed extra signal.
+5. `gatewayClient.ts` calls the Vercel AI Gateway and records the model each response reports.
+6. Every attempt is appended to `bias_audit_corpus_records`, which is never updated or
+   deleted (a module rule checks the queries). A record gets five attempts.
+7. `manifest.ts` builds the demographic manifest from the whole log. It is stored and hashed
+   apart from the corpus, which carries no demographic or tier column.
+8. `releaseGates.ts` decides the corpus's status. Stops leave it `blocked`, with its records
+   and manifest kept for inspection and no download: `id_order_blocked` (re-measured on the
+   manifest, since records that never validated drop out), `cell_too_small` (below 50) and
+   `manifest_count_mismatch`. Warnings are `multiple_models` (not one configuration) and
+   `criteria_divergent`.
+
+**Resume and ownership.** Generation runs on the `bias-audit-corpus-generation` BullMQ queue,
+one job per corpus (`corpus-<id>`), three attempts. One runner owns a corpus through a lease:
+30 s heartbeat, 120 s lease, and a corpus with no heartbeat for 600 s is failed by the stale
+sweep. A busy corpus delays the job rather than spending an attempt. Every retry, and a
+resume, continues from the record log, so no candidate is generated twice as valid. A change
+of model, job description text or plan fails the corpus for good.
+
+**Gateway configuration** is deployment-only: `BIAS_AUDIT_LLM_API_KEY`,
+`BIAS_AUDIT_LLM_BASE_URL` (https only) and `BIAS_AUDIT_LLM_MODEL`. There is no settings
+table, page or endpoint, and the key is never logged or returned. With the variables unset,
+`POST /corpora` answers 503 and the page says generation is not available. `LLM_API_KEY` is
+the eval CI runner's and is not read here.
+
+**Criteria comparison** (`criteriaComparison.ts`): the customer pastes the criteria its
+platform generated from the same job description. Token overlap against each expected
+criterion gives `close` (at most one expected criterion unmatched), `divergent`, or
+`not_supplied`. The result is stored on the corpus and printed in the stance.
+
+**Corpus → run → stance.** A run marked as scored from a complete corpus maps only
+`candidate_id` and the outcome. `corpusJoin.ts` joins the file to the manifest and refuses
+blank, unknown, duplicate or missing IDs (and, on a scoring-rate run, unscored records)
+rather than dropping them; sex and race/ethnicity come from the manifest. The run stores the
+corpus and the fixed role title as its job description, and a typed title naming a different
+job is refused, as is a corpus whose job description text has changed since generation. A
+tier that does not sit above its neighbour is a `note` on the run. The stance's "What was
+tested" names the fixed job description, the corpus, the models that produced it, the cell
+sizes, the criteria outcome, the knockout answer and the name method, and the section checker
+requires the four corpus facts in the rendered HTML.
 
 ## Endpoints
 
