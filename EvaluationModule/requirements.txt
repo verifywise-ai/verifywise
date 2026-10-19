@@ -30,7 +30,7 @@ pyarrow>=25.0.1
 nltk>=3.10.3
 
 # Utilities
-tqdm>=4.70.0
+tqdm>=4.70.1
 textblob>=0.20.1
 python-dotenv>=1.2.4
 
