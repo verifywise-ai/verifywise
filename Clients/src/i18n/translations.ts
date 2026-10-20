@@ -8614,6 +8614,13 @@ export const translations: Record<string, Record<string, string>> = {
       "Sie können dieses Onboarding jederzeit aus Ihrem Profilmenü erneut aufrufen.",
     "Your AI governance and compliance platform. In 3 minutes, we":
       "Ihre KI-Governance- und Compliance-Plattform. In 3 Minuten",
+    "Your approval is recorded.": "Ihre Genehmigung wurde erfasst.",
+    "Your approval is recorded. Waiting on 1 more approver for this step.":
+      "Ihre Genehmigung wurde erfasst. Für diesen Schritt fehlt noch 1 Genehmiger.",
+    "Your approval is recorded. Waiting on {count} more approvers for this step.":
+      "Ihre Genehmigung wurde erfasst. Für diesen Schritt fehlen noch {count} Genehmiger.",
+    "Your approval is recorded. The request moved to the next step.":
+      "Ihre Genehmigung wurde erfasst. Die Anfrage ist zum nächsten Schritt übergegangen.",
     "Your changes have been saved.": "Ihre Änderungen wurden gespeichert.",
     "Your name, email and personal details":
       "Ihr Name, Ihre E-Mail-Adresse und persönlichen Angaben",
@@ -19153,6 +19160,13 @@ export const translations: Record<string, Record<string, string>> = {
       "Vous pouvez toujours revoir cette intégration depuis le menu de votre profil.",
     "Your AI governance and compliance platform. In 3 minutes, we":
       "Votre plateforme de gouvernance et de conformité IA. En 3 minutes, nous",
+    "Your approval is recorded.": "Votre approbation est enregistrée.",
+    "Your approval is recorded. Waiting on 1 more approver for this step.":
+      "Votre approbation est enregistrée. Il manque encore 1 approbateur pour cette étape.",
+    "Your approval is recorded. Waiting on {count} more approvers for this step.":
+      "Votre approbation est enregistrée. Il manque encore {count} approbateurs pour cette étape.",
+    "Your approval is recorded. The request moved to the next step.":
+      "Votre approbation est enregistrée. La demande est passée à l’étape suivante.",
     "Your changes have been saved.": "Vos modifications ont été enregistrées.",
     "Your name, email and personal details": "Vos nom, e-mail et coordonnées personnelles",
     "Your new task has been added.": "Votre nouvelle tâche a été ajoutée.",
@@ -26329,6 +26343,13 @@ export const translations: Record<string, Record<string, string>> = {
     "Workflow": "Flujo de trabajo",
     "Yes/No": "Sí/No",
     "You are ready to work with VerifyWise": "Ya está listo para trabajar con VerifyWise",
+    "Your approval is recorded.": "Tu aprobación se ha registrado.",
+    "Your approval is recorded. Waiting on 1 more approver for this step.":
+      "Tu aprobación se ha registrado. Falta 1 aprobador más en este paso.",
+    "Your approval is recorded. Waiting on {count} more approvers for this step.":
+      "Tu aprobación se ha registrado. Faltan {count} aprobadores más en este paso.",
+    "Your approval is recorded. The request moved to the next step.":
+      "Tu aprobación se ha registrado. La solicitud pasó al siguiente paso.",
     "Your changes have been saved.": "Sus cambios se han guardado.",
     "Your new task has been added.": "Su nueva tarea se ha añadido.",
     "Your report is being generated.": "Su informe se está generando.",
