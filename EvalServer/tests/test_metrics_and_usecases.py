@@ -56,15 +56,12 @@ def test_metric_name_map_documents_all_camelcase_keys() -> None:
     If a new UI metric is added without a mapping, this test will fail and
     point at the exact missing key.
     """
-    import inspect
+    from utils.run_evaluation import METRIC_NAME_MAP
 
-    from utils import run_evaluation as run_eval_module
-
-    source = inspect.getsource(run_eval_module.run_evaluation)
     for ui_key, backend_key in METRIC_NAME_MAP_EXPECTED.items():
-        assert f'"{ui_key}": "{backend_key}"' in source, (
-            f"Expected metric_name_map to contain {ui_key!r} -> {backend_key!r} but "
-            "the mapping was not found in run_evaluation source code."
+        assert METRIC_NAME_MAP.get(ui_key) == backend_key, (
+            f"Expected METRIC_NAME_MAP to map {ui_key!r} -> {backend_key!r}, "
+            f"got {METRIC_NAME_MAP.get(ui_key)!r}."
         )
 
 

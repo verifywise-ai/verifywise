@@ -59,7 +59,7 @@ export const endpointsContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Delete', text: 'Removes the endpoint. Requests using this slug will fail.' },
+        { bold: 'Delete', text: 'Removes the endpoint. Requests using this slug will fail, and a virtual key that may only use this endpoint can no longer make calls.' },
         { bold: 'View guardrail status', text: 'Shows how many guardrail rules are currently active across all endpoints.' },
         { bold: 'RPM badge', text: 'Shows the rate limit in requests per minute, if configured.' },
         { bold: 'Fallback badge', text: 'Shows "has fallback" when a fallback endpoint is configured.' },
@@ -99,7 +99,7 @@ export const endpointsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Each endpoint has an allowed roles list (defaults to all 4 roles: Admin, Reviewer, Editor, Auditor). When listing endpoints, users only see endpoints their role has access to. This applies to the Endpoints page, the Playground dropdown and any API call that lists endpoints.',
+      text: 'Each endpoint has an allowed roles list (defaults to all 4 roles: Admin, Reviewer, Editor, Auditor). Users only see endpoints their role has access to. This applies to the Endpoints page, the Playground dropdown and any API call that lists endpoints or reads a single endpoint\'s settings; such a read reports an endpoint outside your role as not found.',
     },
     {
       type: 'heading',

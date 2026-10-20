@@ -17,6 +17,7 @@ import StandardModal from "../../../components/Modals/StandardModal";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
+import { getGatewayErrorText } from "../../../../application/utils/apiErrorReason";
 import palette from "../../../themes/palette";
 import { useCardSx } from "../shared";
 import MCPTable from "../MCPTable";
@@ -175,9 +176,7 @@ export default function MCPToolCatalogPage() {
       setEditingTool(null);
       await loadData();
     } catch (err: any) {
-      setFormError(
-        err?.response?.data?.detail || err?.response?.data?.message || "Failed to update tool",
-      );
+      setFormError(getGatewayErrorText(err, "Failed to update tool"));
     } finally {
       setIsSubmitting(false);
     }

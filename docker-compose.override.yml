@@ -40,6 +40,9 @@ services:
       dockerfile: Dockerfile.dev
     volumes:
       - ./EvalServer/src:/app
+      # The engine sits next to the app, as the production Dockerfile copies it; EvalServer
+      # imports it at startup (the gateway client) and for every run
+      - ./EvaluationModule/src/deepeval_engine:/app/deepeval_engine
       - eval_uploads-dev:/app/data/uploads
 
   ai_gateway:

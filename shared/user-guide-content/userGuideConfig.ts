@@ -527,8 +527,8 @@ export const collections: Collection[] = [
       {
         id: 'extensions',
         title: 'Extensions',
-        description: 'Enable, configure and disable the built-in extensions: Slack, MLflow, Azure AI Foundry, Model Lifecycle, Risk Import, Jira Assets and Dataset Bulk Upload.',
-        keywords: ['extension', 'extensions', 'enable', 'disable', 'configure', 'integration', 'slack', 'mlflow', 'azure ai foundry', 'model lifecycle', 'risk import', 'excel', 'jira', 'jira assets', 'dataset bulk upload', 'bulk upload', 'plugin', 'marketplace'],
+        description: 'Enable, configure and disable the built-in extensions: Slack, MLflow, Azure AI Foundry, Model Lifecycle, Risk Import, Jira Assets, Jira incidents and Dataset Bulk Upload.',
+        keywords: ['extension', 'extensions', 'enable', 'disable', 'configure', 'integration', 'slack', 'mlflow', 'azure ai foundry', 'model lifecycle', 'risk import', 'excel', 'jira', 'jira assets', 'jira incidents', 'incident sync', 'dataset bulk upload', 'bulk upload', 'plugin', 'marketplace'],
       },
     ],
   },
@@ -742,7 +742,7 @@ export const collections: Collection[] = [
     title: 'Developer guide',
     description: 'Build on VerifyWise. The guide covers Agent Control (connect any terminal agent and govern its tool calls) and the platform REST API for reading and writing your governance data. More developer topics are coming.',
     icon: 'Plug',
-    articleCount: 13,
+    articleCount: 14,
     articles: [
       {
         id: 'overview',
@@ -767,6 +767,12 @@ export const collections: Collection[] = [
         title: 'Connect any agent',
         description: 'The generic contract and the MCP proxy path for any terminal agent, plus bring-your-own.',
         keywords: ['developer', 'generic', 'any agent', 'cursor', 'codex', 'aider', 'gemini cli', 'mcp proxy', 'hook contract', 'terminal agent', 'integration'],
+      },
+      {
+        id: 'connect-python-agents',
+        title: 'Connect Python agents',
+        description: 'Govern the tool calls of LangChain, CrewAI, Microsoft Agent Framework or plain Python agents with the Python package.',
+        keywords: ['developer', 'python', 'sdk', 'package', 'pip', 'langchain', 'crewai', 'agent framework', 'microsoft', 'middleware', 'decorator', 'governed', 'integration'],
       },
       {
         id: 'governing-tool-calls',

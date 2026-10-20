@@ -10,8 +10,9 @@ from crud.virtual_keys import (
     revoke_virtual_key,
     update_virtual_key,
 )
-from utils.auth import get_org_id, get_user_id, require_admin
-from utils.notifications import notify_config_change
+from utils.auth import get_org_id, get_role_id, get_user_id, require_admin
+from utils.endpoint_model import normalize_acl_models
+from utils.notifications import config_event, notify_config_change
 
 router = APIRouter(prefix="/virtual-keys", tags=["virtual-keys"])
 
@@ -24,7 +25,7 @@ router = APIRouter(prefix="/virtual-keys", tags=["virtual-keys"])
 async def list_virtual_keys(request: Request):
     org_id = get_org_id(request)
 
-    keys = await get_all_virtual_keys(org_id)
+    keys = await get_all_virtual_keys(org_id, role_id=get_role_id(request))
     return {"status": "success", "data": keys}
 
 
@@ -82,6 +83,8 @@ async def create_key(request: Request):
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"{field} must be an array of strings",
                 )
+            if field in ("allowed_models", "blocked_models"):
+                value = normalize_acl_models(value, blocked=field == "blocked_models")
             acl_fields[field] = value
 
     org_id = get_org_id(request)
@@ -111,12 +114,7 @@ async def create_key(request: Request):
     await notify_config_change(
         organization_id=org_id,
         changed_by_user_id=user_id,
-        event={
-            "action": "created",
-            "entity_type": "virtual_key",
-            "entity_id": str(record["id"]),
-            "entity_name": name,
-        },
+        event=config_event("virtual_key", "created", name, record["id"]),
     )
 
     return {
@@ -203,7 +201,10 @@ async def update_key(key_id: int, request: Request):
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"{field} must be an array of strings",
                 )
-            updates[field] = value if value is not None else []
+            value = value if value is not None else []
+            if field in ("allowed_models", "blocked_models"):
+                value = normalize_acl_models(value, blocked=field == "blocked_models")
+            updates[field] = value
 
     # metadata
     if "metadata" in body:
@@ -244,12 +245,7 @@ async def update_key(key_id: int, request: Request):
     await notify_config_change(
         organization_id=org_id,
         changed_by_user_id=user_id,
-        event={
-            "action": "updated",
-            "entity_type": "virtual_key",
-            "entity_id": str(key_id),
-            "entity_name": record.get("name", ""),
-        },
+        event=config_event("virtual_key", "updated", record.get("name", ""), key_id),
     )
 
     return {"status": "success", "data": record}
@@ -276,11 +272,7 @@ async def revoke_key(key_id: int, request: Request):
     await notify_config_change(
         organization_id=org_id,
         changed_by_user_id=user_id,
-        event={
-            "action": "revoked",
-            "entity_type": "virtual_key",
-            "entity_id": str(key_id),
-        },
+        event=config_event("virtual_key", "revoked", revoked["name"], key_id),
     )
 
     return {"status": "success", "message": "Virtual key revoked"}
@@ -307,11 +299,7 @@ async def delete_key(key_id: int, request: Request):
     await notify_config_change(
         organization_id=org_id,
         changed_by_user_id=user_id,
-        event={
-            "action": "deleted",
-            "entity_type": "virtual_key",
-            "entity_id": str(key_id),
-        },
+        event=config_event("virtual_key", "deleted", deleted["name"], key_id),
     )
 
     return {"status": "success", "message": "Virtual key deleted"}

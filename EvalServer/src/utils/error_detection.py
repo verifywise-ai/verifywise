@@ -6,7 +6,9 @@ and should stop the experiment early to avoid wasting time.
 """
 
 import re
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+
+from utils.gateway_litellm_client import BILLING_WORDS, rate_limit_recovers, retry_hint_seconds
 
 # Fatal error patterns that won't recover - experiment should stop
 # Format: (pattern_to_match, error_code, user_friendly_message)
@@ -129,6 +131,47 @@ TRANSIENT_ERROR_PATTERNS = [
     "try again",
 ]
 
+# Typed errors from the AI Gateway (LiteLLM's exception class), read before any text pattern.
+# GatewayProviderError reads "<Type> (<status>): <message>", possibly inside a wrapper message.
+# Types not listed here (RateLimitError, BadRequestError, ...) fall through to the patterns,
+# so a quota 429 still counts as fatal and a plain rate limit does not.
+TYPED_FATAL_ERRORS = {
+    "AuthenticationError": (
+        "invalid_api_key",
+        "The provider rejected the API key. Please check your API key configuration.",
+    ),
+    "PermissionDeniedError": (
+        "permission_denied",
+        "Permission denied. Your API key may not have access to this model.",
+    ),
+    "NotFoundError": (
+        "model_not_found",
+        "The model was not found or is not available to this API key. Please choose another model.",
+    ),
+    "BudgetExceededError": (
+        "budget_exceeded",
+        "The budget for this provider has been reached.",
+    ),
+}
+_QUOTA_EXCEEDED = next((code, msg) for pattern, code, msg in FATAL_ERROR_PATTERNS if code == "quota_exceeded")
+_INSUFFICIENT_CREDITS = next(
+    (code, msg) for pattern, code, msg in FATAL_ERROR_PATTERNS if code == "insufficient_credits"
+)
+# How self-hosted servers word a rate limit; with a retry hint the rule decides it
+_UNTYPED_RATE_LIMIT_WORDS = ("rate limit", "rate_limit", "too many requests")
+# A 429 status, not a port, request id or token count that contains the digits
+_STATUS_429 = re.compile(r"(?<![\w.:-])429(?![\w.:-])")
+# Untyped quota text (direct SDK calls, wrapped messages) that the rule decides. A plain
+# untyped "rate limit exceeded" stays with the patterns: nothing retries it, so it is fatal.
+_RATE_LIMIT_WORDS = (
+    "quota exceeded",
+    "exceeded your current quota",
+    "resource_exhausted",
+    "resource has been exhausted",
+    "per day",
+)
+_TYPED_ERROR = re.compile(r"\b([A-Z]\w*(?:Error|Timeout)) \((\d{3}|-)\): ")
+
 
 def detect_fatal_error(error_message: str) -> Tuple[bool, Optional[str], Optional[str]]:
     """
@@ -146,7 +189,34 @@ def detect_fatal_error(error_message: str) -> Tuple[bool, Optional[str], Optiona
     if not error_message:
         return False, None, None
 
+    typed = _TYPED_ERROR.search(error_message)
+    if typed and typed.group(1) in TYPED_FATAL_ERRORS:
+        error_code, user_message = TYPED_FATAL_ERRORS[typed.group(1)]
+        return True, error_code, user_message
+
     error_lower = error_message.lower()
+
+    # A rate limit follows the rule ModelRunner retries by, before any other pattern:
+    # Gemini's per-minute "Quota exceeded" recovers, a daily or billing one does not,
+    # whatever "try again" wording it carries. Typed, or recognisable from its text.
+    is_rate_limit = (
+        (typed and typed.group(1) == "RateLimitError")
+        or any(word in error_lower for word in _RATE_LIMIT_WORDS)
+        # An untyped rate limit that says when to retry lifts; without a hint it stays fatal
+        or (
+            (any(word in error_lower for word in _UNTYPED_RATE_LIMIT_WORDS) or _STATUS_429.search(error_lower))
+            and retry_hint_seconds(error_lower) is not None
+        )
+    )
+    if is_rate_limit:
+        if rate_limit_recovers(error_message):
+            return False, None, None
+        for pattern, error_code, user_message in FATAL_ERROR_PATTERNS:
+            if pattern in error_lower:
+                return True, error_code, user_message
+        if any(word in error_lower for word in BILLING_WORDS):
+            return True, *_INSUFFICIENT_CREDITS
+        return True, *_QUOTA_EXCEEDED
 
     # First check if it's a transient error (might recover)
     for pattern in TRANSIENT_ERROR_PATTERNS:
@@ -285,7 +355,13 @@ _PREFIXED_SECRETS = [
     re.compile(r"\b(?:hf|gsk|xox[bpas]|ghp|gho|github_pat)_[A-Za-z0-9_]{10,}"),
     re.compile(r"\bAIza[0-9A-Za-z_-]{10,}"),
     re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"),
+    re.compile(r"\bxai-[A-Za-z0-9]{8,}"),
 ]
+
+
+# A key or token query parameter in a URL the error echoes (Gemini sends ?key=...): the
+# value is redacted whatever it looks like. Same rule as AIGateway/src/utils/redaction.py.
+_QUERY_SECRET = re.compile(r"(?i)([?&](?:key|api[_-]?key|access[_-]?token|token)=)[^&\s\"'#]+")
 
 
 def _looks_like_secret(value: str) -> bool:
@@ -305,6 +381,7 @@ def redact_secrets(text: str) -> str:
         label, sep, value = match.groups()
         return f"{label}{sep}[redacted]" if _looks_like_secret(value) else match.group(0)
 
+    text = _QUERY_SECRET.sub(lambda m: f"{m.group(1)}[redacted]", text)
     text = _URL_USERINFO.sub(lambda m: f"{m.group(1)}[redacted]{m.group(3)}", text)
     text = _STRONG_LABEL_VALUE.sub(lambda m: f"{m.group(1)}{m.group(2)}[redacted]", text)
     text = _SCHEME_VALUE.sub(_keep_label, text)
@@ -329,13 +406,83 @@ def build_no_responses_message(total_prompts: int, errors: List[str]) -> str:
         "No responses generated: <failed>/<total> prompts failed. First error: <error>",
         or the bare "No responses generated" when no error was recorded.
     """
-    first_error = next((" ".join(e.split()) for e in errors if e and e.strip()), None)
+    first_error = _first_error(errors)
     if first_error is None:
         return NO_RESPONSES_MESSAGE
-    first_error = redact_secrets(first_error)
-    if len(first_error) > MAX_FIRST_ERROR_CHARS:
-        first_error = first_error[:MAX_FIRST_ERROR_CHARS] + "…"
     return (
         f"{NO_RESPONSES_MESSAGE}: {len(errors)}/{total_prompts} prompts failed. "
         f"First error: {first_error}"
     )
+
+
+NO_SCORES_MESSAGE = "No scores recorded"
+_GEVAL_ERROR_PREFIX = "G-Eval error:"
+
+
+def _first_error(errors: List[str]) -> Optional[str]:
+    """The first non-blank error on one line, redacted and clipped for display."""
+    first = next((" ".join(e.split()) for e in errors if e and e.strip()), None)
+    if first is None:
+        return None
+    first = redact_secrets(first)
+    if len(first) > MAX_FIRST_ERROR_CHARS:
+        first = first[:MAX_FIRST_ERROR_CHARS] + "…"
+    return first
+
+
+def _metric_error(entry: Any) -> Optional[str]:
+    """Why a metric entry has no score, when it records one."""
+    if not isinstance(entry, dict) or isinstance(entry.get("score"), (int, float)):
+        return None
+    if isinstance(entry.get("error"), str):
+        return entry["error"]
+    # G-Eval keeps the exception in its reason instead of an error field
+    reason = entry.get("reason")
+    if isinstance(reason, str) and reason.startswith(_GEVAL_ERROR_PREFIX):
+        return reason[len(_GEVAL_ERROR_PREFIX):].strip()
+    return None
+
+
+def every_metric_failed(results: List[Dict[str, Any]]) -> bool:
+    """
+    True when no metric, under any name, scored a prompt and at least one tried and failed.
+
+    A metric skipped on purpose (``skipped``: no retrieval context for a RAG metric) is
+    neither: a run of only skipped or absent metrics did not fail.
+    """
+    tried = False
+    for r in results:
+        for entry in (r.get("metric_scores") or {}).values():
+            if isinstance(entry, (int, float)):
+                return False
+            if not isinstance(entry, dict) or entry.get("skipped"):
+                continue
+            if isinstance(entry.get("score"), (int, float)):
+                return False
+            tried = True
+    return tried
+
+
+def build_no_scores_message(results: List[Dict[str, Any]]) -> str:
+    """
+    Build the failure reason for a run in which no metric scored any prompt.
+
+    The model answered, but every metric came back without a score, usually
+    because the judge model failed on every call (unknown model, bad key).
+
+    Args:
+        results: Per-prompt results, each with a ``metric_scores`` dict
+
+    Returns:
+        "No scores recorded: no metric scored any of the <n> prompts. First error: <error>",
+        without the first error when no entry recorded one.
+    """
+    errors = [
+        err
+        for r in results
+        for entry in (r.get("metric_scores") or {}).values()
+        if (err := _metric_error(entry))
+    ]
+    message = f"{NO_SCORES_MESSAGE}: no metric scored any of the {len(results)} prompts."
+    first_error = _first_error(errors)
+    return f"{message} First error: {first_error}" if first_error else message

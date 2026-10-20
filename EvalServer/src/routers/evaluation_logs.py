@@ -7,7 +7,7 @@ Shared-schema multi-tenancy: Uses organization_id from request.state.
 from fastapi import APIRouter, Query, Path, Request, HTTPException
 from fastapi.responses import JSONResponse
 import os
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import text
 
@@ -69,24 +69,30 @@ def detect_provider_from_model(model_name: str) -> Optional[str]:
     return None
 
 
-def check_api_key_available(provider: str) -> bool:
-    """Check if the API key for a provider is available in environment variables."""
-    if provider not in PROVIDER_API_KEY_MAP:
-        return True  # Unknown provider, assume it's fine
-
-    env_var = PROVIDER_API_KEY_MAP.get(provider)
-    if env_var is None:
-        return True  # No API key required
-
-    return bool(os.getenv(env_var))
+def provider_needs_key(provider: str) -> bool:
+    """False for Ollama, HuggingFace and unknown providers, which run without a key."""
+    p = (provider or "").lower()
+    return PROVIDER_API_KEY_MAP.get("google" if p == "gemini" else p) is not None
 
 
-def check_openrouter_available() -> bool:
-    """Check if OpenRouter is configured as a fallback."""
-    return bool(os.getenv("OPENROUTER_API_KEY"))
+# Credentials and endpoints a run must take from its own config only; run_evaluation sets
+# them inside the run subprocess from the org's saved keys. Any *_API_KEY counts, so a
+# provider added later is covered. Non-secret judge defaults (G_EVAL_MODEL, ...) pass.
+_RUN_ENV_STRIPPED = {"G_EVAL_BASE_URL", "G_EVAL_API_KEY", "OPENAI_BASE_URL", "OPENAI_API_BASE"}
 
 
-async def check_db_api_key_available(organization_id: int, provider: str) -> bool:
+def run_subprocess_env() -> Dict[str, str]:
+    """The run subprocess environment: the server's, minus provider credentials and
+    endpoints, so one org's run never falls back to a key that isn't that org's."""
+    env = {
+        k: v for k, v in os.environ.items()
+        if k not in _RUN_ENV_STRIPPED and not k.endswith("_API_KEY")
+    }
+    env["PYTHONUNBUFFERED"] = "1"
+    return env
+
+
+async def check_db_api_key_available(organization_id: int, provider: str) -> Optional[bool]:
     """Check if the API key for a provider is stored in AI Gateway key storage."""
     try:
         p = (provider or "").lower()
@@ -112,13 +118,87 @@ async def check_db_api_key_available(organization_id: int, provider: str) -> boo
             row = result.fetchone()
             return row[0] > 0 if row else False
     except Exception as e:
-        print(f"Error checking DB for API key: {e}")
-        return False
+        # None = unknown: a failed lookup must not tell users their saved key is missing
+        print(f"Error checking DB for API key: {type(e).__name__}")
+        return None
 
 
-async def check_db_openrouter_available(organization_id: int) -> bool:
+async def check_db_openrouter_available(organization_id: int) -> Optional[bool]:
     """Check if OpenRouter is configured in the database as a fallback."""
     return await check_db_api_key_available(organization_id, "openrouter")
+
+
+# The probe runs while the user waits on "Start Experiment"; a slow provider gets the
+# benefit of the doubt rather than a long spinner
+PROBE_TIMEOUT_SECONDS = 8.0
+
+# Providers whose saved key the backend injects into a run (Servers VALID_PROVIDERS in
+# evaluationLlmApiKey.model.ts). Probing any other name would test a key the run never gets.
+RUN_KEY_PROVIDERS = {"openai", "anthropic", "google", "xai", "mistral", "huggingface", "openrouter"}
+
+
+async def _newest_saved_key(organization_id: int, provider: str) -> Optional[str]:
+    """The org's newest active saved key for the provider, decrypted; None if none can be read."""
+    from controllers.reports import _decrypt_api_key
+
+    p = (provider or "").lower()
+    # Same alias rule as check_db_api_key_available: only "google" also reads "gemini" rows
+    providers = ["google", "gemini"] if p == "google" else [p]
+    try:
+        async with get_db() as db:
+            result = await db.execute(
+                text(
+                    "SELECT encrypted_key FROM ai_gateway_api_keys "
+                    "WHERE organization_id = :organization_id AND is_active = true "
+                    "AND LOWER(provider) = ANY(:providers) "
+                    "ORDER BY updated_at DESC NULLS LAST, id DESC LIMIT 1"
+                ),
+                {"organization_id": organization_id, "providers": providers},
+            )
+            row = result.fetchone()
+        return _decrypt_api_key(row[0]) if row and row[0] else None
+    except Exception as e:
+        print(f"Could not read the saved provider entry for the model check: {type(e).__name__}")
+        return None
+
+
+async def probe_model(
+    organization_id: int, provider: str, model_name: str
+) -> Optional[Tuple[str, str]]:
+    """
+    Ask the provider for one token with the org's saved key, through the AI Gateway.
+
+    Returns (error_code, message) when the provider refuses the key or the model (the same
+    typed errors that stop a run), else None. A check that cannot run (no saved key, no
+    gateway), times out or fails for another reason returns None: an outage must not
+    block a run.
+    """
+    from utils.error_detection import TYPED_FATAL_ERRORS
+    from utils.gateway_litellm_client import (
+        GatewayProviderError,
+        gateway_completion_async,
+        gateway_mode_enabled,
+        to_litellm_model,
+    )
+
+    if not gateway_mode_enabled():
+        return None
+    key = await _newest_saved_key(organization_id, provider)
+    if not key:
+        return None
+    try:
+        await gateway_completion_async(
+            to_litellm_model(provider, model_name),
+            [{"role": "user", "content": "ping"}],
+            key,
+            max_tokens=1,
+            timeout=PROBE_TIMEOUT_SECONDS,
+        )
+    except GatewayProviderError as e:
+        return TYPED_FATAL_ERRORS.get(e.error_type)
+    except Exception:
+        return None
+    return None
 
 
 # ==================== REQUEST MODELS ====================
@@ -185,6 +265,9 @@ router = APIRouter(prefix="/deepeval", tags=["Evaluation Logs & Monitoring"])
 class ValidateModelRequest(BaseModel):
     model_name: str
     provider: Optional[str] = None  # If not provided, will be auto-detected
+    # Also make a 1-token call with the saved key, so a refused key or a model the provider
+    # no longer serves to it shows before the run starts
+    probe: bool = False
 
 
 @router.post("/models/validate")
@@ -192,7 +275,7 @@ async def validate_model_api_key(request: Request, payload: ValidateModelRequest
     """
     Validate that the required API key is available for a model.
 
-    Checks both environment variables AND the database for stored API keys.
+    Checks the organization's saved API keys (AI Gateway key storage).
 
     Returns:
     {
@@ -214,37 +297,42 @@ async def validate_model_api_key(request: Request, payload: ValidateModelRequest
 
     if not provider:
         # Unknown provider - can't validate, assume it's fine
-        has_openrouter_env = check_openrouter_available()
-        has_openrouter_db = await check_db_openrouter_available(organization_id)
+        has_openrouter = await check_db_openrouter_available(organization_id) is True
         return JSONResponse(content={
             "valid": True,
             "model_name": model_name,
             "provider": None,
             "has_api_key": True,
-            "has_openrouter_fallback": has_openrouter_env or has_openrouter_db,
+            "has_openrouter_fallback": has_openrouter,
             "error_message": None,
         })
 
-    # Check both environment variables and database for API keys
-    has_api_key_env = check_api_key_available(provider)
+    # Only the org's saved keys count: a run never sees keys from the server environment
+    # None (lookup failed) gets the benefit of the doubt, as the probe does for an outage
     has_api_key_db = await check_db_api_key_available(organization_id, provider)
-    has_api_key = has_api_key_env or has_api_key_db
+    has_api_key = not provider_needs_key(provider) or has_api_key_db is not False
 
-    has_openrouter_env = check_openrouter_available()
-    has_openrouter_db = await check_db_openrouter_available(organization_id)
-    has_openrouter = has_openrouter_env or has_openrouter_db
+    has_openrouter = await check_db_openrouter_available(organization_id) is True
 
     # Model is valid if it has its API key OR OpenRouter is available as fallback
     # Note: OpenRouter can proxy to many models but not all (e.g., not ollama/huggingface local)
     is_valid = has_api_key or (has_openrouter and provider in ["openai", "anthropic", "google", "mistral"])
 
-    env_var = PROVIDER_API_KEY_MAP.get(provider)
     error_message = None
     if not is_valid:
-        if env_var:
-            error_message = f"{env_var} is not configured. Please add your API key in settings or enable OpenRouter."
-        else:
-            error_message = f"API key for provider '{provider}' is not configured."
+        error_message = (
+            f"No saved API key for provider '{provider}'. "
+            "Please add your API key in settings or enable OpenRouter."
+        )
+
+    # Only a saved key the run would use is probed
+    probe_failed = False
+    probe_error_code = None
+    if is_valid and payload.probe and has_api_key_db and provider in RUN_KEY_PROVIDERS:
+        refusal = await probe_model(organization_id, provider, model_name)
+        if refusal:
+            probe_error_code, error_message = refusal
+            is_valid, probe_failed = False, True
 
     return JSONResponse(content={
         "valid": is_valid,
@@ -253,6 +341,9 @@ async def validate_model_api_key(request: Request, payload: ValidateModelRequest
         "has_api_key": has_api_key,
         "has_openrouter_fallback": has_openrouter,
         "error_message": error_message,
+        "probe_failed": probe_failed,
+        # invalid_api_key, permission_denied, model_not_found or budget_exceeded
+        "probe_error_code": probe_error_code,
     })
 
 
@@ -434,8 +525,7 @@ async def run_evaluation_task(experiment_id: str, config: Dict, organization_id:
         })
 
         # Async subprocess with piped output (non-blocking)
-        env = dict(**os.environ)
-        env["PYTHONUNBUFFERED"] = "1"
+        env = run_subprocess_env()
 
         proc = await asyncio.create_subprocess_exec(
             python_executable,

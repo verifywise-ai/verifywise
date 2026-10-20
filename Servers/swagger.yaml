@@ -7787,6 +7787,8 @@ tags:
   -
     name: Extensions
   -
+    name: 'Extensions/Jira Incidents'
+  -
     name: FRIA
   -
     name: Files
@@ -13247,6 +13249,7 @@ paths:
       tags:
         - System
       summary: 'Get Logs'
+      description: 'Returns the last 500 lines of the caller''s organization server log for today. Admin only (requires the logs.admin permission; built-in roles: Admin).'
       operationId: getLogs
       security:
         -
@@ -13256,6 +13259,8 @@ paths:
           description: Success
         '401':
           description: Unauthorized
+        '403':
+          description: 'Forbidden: caller does not hold the logs.admin permission'
         '500':
           description: 'Internal server error'
   /modelInventory:
@@ -14671,6 +14676,140 @@ paths:
           description: 'The projectId'
           schema:
             type: integer
+  /extensions/jira-incidents/links:
+    get:
+      summary: 'Get Jira links for incidents'
+      description: 'Jira issue links for the given incident ids (incident_ids=1,2, at most 500). Open to any member; returns an empty list when the extension is disabled.'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Extensions/Jira Incidents'
+      operationId: getLinksCtrl
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-incidents/config:
+    get:
+      summary: 'Get Jira incidents settings'
+      description: 'Connection, mappings and readiness. Never returns the API token. Admin only.'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Extensions/Jira Incidents'
+      operationId: getConfigCtrl
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Save Jira incidents settings'
+      description: 'Partial update of the connection, mappings and import defaults; checks the credentials with Jira. Admin only.'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Extensions/Jira Incidents'
+      operationId: putConfigCtrl
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-incidents/jira/projects:
+    get:
+      summary: 'List Jira projects'
+      description: 'Projects the saved service account can browse. Admin only.'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Extensions/Jira Incidents'
+      operationId: getProjectsCtrl
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-incidents/jira/issue-types:
+    get:
+      summary: 'List Jira issue types'
+      description: 'Issue types of a Jira project (project=<id>). Admin only.'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Extensions/Jira Incidents'
+      operationId: getIssueTypesCtrl
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-incidents/jira/statuses:
+    get:
+      summary: 'List Jira statuses'
+      description: 'Statuses for a project and issue type, with the default status mappings both ways. Admin only.'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Extensions/Jira Incidents'
+      operationId: getStatusesCtrl
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-incidents/jira/priorities:
+    get:
+      summary: 'List Jira priorities'
+      description: 'Jira priorities with the default priority-to-severity mapping. Admin only.'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Extensions/Jira Incidents'
+      operationId: getPrioritiesCtrl
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-incidents/jira/labels:
+    get:
+      summary: 'Search Jira labels'
+      description: 'Labels matching query, for the import filter. Admin only.'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Extensions/Jira Incidents'
+      operationId: getLabelsCtrl
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-incidents/events:
+    get:
+      summary: 'List Jira incidents sync activity'
+      description: 'Most recent sync events, newest first (limit 1-200, default 50). Admin only.'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Extensions/Jira Incidents'
+      operationId: getEventsCtrl
+      security:
+        -
+          bearerAuth: []
   /extensions/model-lifecycle/config:
     get:
       summary: 'List Config'

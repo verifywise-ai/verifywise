@@ -6,6 +6,9 @@ import { light } from "../../themes";
 import {
   formatEntityType,
   formatMcpStatus,
+  describeMcpDecision,
+  formatMcpEventType,
+  MCP_STATUS_COLORS,
   getProviderIcon,
   ProviderIcon,
   useCardSx,
@@ -76,6 +79,18 @@ describe("AIGateway shared utilities", () => {
     it("returns null for an unknown provider", () => {
       expect(getProviderIcon("totally-unknown-provider")).toBeNull();
     });
+
+    it("maps LiteLLM provider variants to their provider's icon", () => {
+      expect(getProviderIcon("vercel_ai_gateway")).toBe(getProviderIcon("v0"));
+      expect(getProviderIcon("vercel_ai_gateway")).not.toBeNull();
+      expect(getProviderIcon("vertex_ai-anthropic_models")).toBe(getProviderIcon("gemini"));
+      expect(getProviderIcon("bedrock_converse")).toBe(getProviderIcon("bedrock"));
+      expect(getProviderIcon("text-completion-openai")).toBe(getProviderIcon("openai"));
+      expect(getProviderIcon("fireworks_ai-embedding-models")).toBe(
+        getProviderIcon("fireworks_ai"),
+      );
+      expect(getProviderIcon("fireworks_ai")).not.toBeNull();
+    });
   });
 
   describe("ProviderIcon", () => {
@@ -84,10 +99,17 @@ describe("AIGateway shared utilities", () => {
       expect(container.querySelector("svg")).toBeInTheDocument();
     });
 
-    it("renders nothing for an unknown provider", () => {
-      const { container } = render(
-        React.createElement(ProviderIcon, { provider: "not-a-real-provider" }),
+    it("renders a same-size initial tile for a provider without a logo", () => {
+      const { getByTestId } = render(
+        React.createElement(ProviderIcon, { provider: "deepinfra", size: 20 }),
       );
+      const tile = getByTestId("provider-icon-fallback");
+      expect(tile).toHaveTextContent("D");
+      expect(tile).toHaveStyle({ width: "20px", height: "20px" });
+    });
+
+    it("renders nothing when the provider has no letters or digits", () => {
+      const { container } = render(React.createElement(ProviderIcon, { provider: "" }));
       expect(container).toBeEmptyDOMElement();
     });
 
@@ -164,6 +186,57 @@ describe("AIGateway shared utilities", () => {
         { _id: "anthropic/claude-3-opus", name: "claude-3-opus" },
       ]);
       expect(result.current.getModelsForProvider("unknown")).toEqual([]);
+    });
+
+    it("does not prefix model ids that already carry the provider", async () => {
+      // LiteLLM lists most Gemini (and xAI, Mistral...) models as
+      // "gemini/<model>"; prefixing them again gave "gemini/gemini/<model>",
+      // which the provider rejects. Some keys appear both with and without
+      // the prefix, so they must collapse into one item.
+      mockGet.mockResolvedValue({
+        data: {
+          data: {
+            providers: ["gemini"],
+            models: {
+              gemini: [
+                { id: "gemini/gemini-2.5-flash", mode: "chat" },
+                { id: "gemini-flash-latest", mode: "chat" },
+                { id: "gemini/gemini-flash-latest", mode: "chat" },
+              ],
+            },
+          },
+        },
+      });
+
+      const { result } = renderHook(() => useGatewayModels());
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      expect(result.current.getModelsForProvider("gemini")).toEqual([
+        { _id: "gemini/gemini-2.5-flash", name: "gemini-2.5-flash" },
+        { _id: "gemini/gemini-flash-latest", name: "gemini-flash-latest" },
+      ]);
+    });
+
+    it("returns the same array for a provider across calls and re-renders", async () => {
+      mockGet.mockResolvedValue({
+        data: {
+          data: {
+            providers: ["openai"],
+            models: { openai: [{ id: "gpt-4o", mode: "chat" }] },
+          },
+        },
+      });
+
+      const { result, rerender } = renderHook(() => useGatewayModels());
+
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      const first = result.current.getModelsForProvider("openai");
+      const firstUnknown = result.current.getModelsForProvider("unknown");
+      rerender();
+      expect(result.current.getModelsForProvider("openai")).toBe(first);
+      expect(result.current.getModelsForProvider("unknown")).toBe(firstUnknown);
     });
 
     it("drops providers that an API key cannot be stored for", async () => {
@@ -499,6 +572,78 @@ describe("AIGateway shared utilities", () => {
       expect(formatMcpStatus("approval_required")).toBe("approval required");
       expect(formatMcpStatus("a_b_c")).toBe("a b c");
       expect(formatMcpStatus("blocked")).toBe("blocked");
+    });
+
+    it("labels the monitor only statuses and event types", () => {
+      expect(formatMcpEventType("would_block")).toBe("Would block");
+      expect(formatMcpEventType("would_need_approval")).toBe("Would need approval");
+      expect(formatMcpEventType("received")).toBe("received");
+      expect(formatMcpStatus("would_block")).toBe("Would block");
+      expect(formatMcpStatus("would_need_approval")).toBe("Would need approval");
+    });
+  });
+
+  describe("MCP_STATUS_COLORS", () => {
+    it("gives the monitor only statuses their own colours, distinct from blocked and denied", () => {
+      const { would_block, would_need_approval, blocked, denied, approval_required } =
+        MCP_STATUS_COLORS;
+      expect(would_block).toBeDefined();
+      expect(would_need_approval).toBeDefined();
+      for (const other of [blocked, denied, approval_required]) {
+        expect(would_block.bg).not.toBe(other.bg);
+        expect(would_need_approval.bg).not.toBe(other.bg);
+      }
+    });
+  });
+
+  describe("describeMcpDecision", () => {
+    it("names the rule for monitor only rows", () => {
+      expect(describeMcpDecision("would_block", "No emails")).toEqual({
+        heading: "Monitor only",
+        template: "Would have been blocked by {rule}",
+        values: { rule: "No emails" },
+      });
+      expect(describeMcpDecision("would_need_approval", "Approve rm")?.template).toBe(
+        "Would have needed approval: {rule}",
+      );
+    });
+
+    it("names the tool list only when the outcome came from a tool list check", () => {
+      expect(describeMcpDecision("would_block", null, "tool_acl")?.template).toBe(
+        "Would have been blocked by this key's tool list",
+      );
+      expect(
+        describeMcpDecision("would_need_approval", undefined, "tool_requires_approval")?.template,
+      ).toBe("Would have needed approval (tool requires approval)");
+    });
+
+    it("never claims a tool list without a tool list source", () => {
+      expect(describeMcpDecision("would_block", null)?.template).toBe(
+        "Would have been blocked by a guardrail",
+      );
+      expect(describeMcpDecision("would_block", null, "guardrail")?.template).toBe(
+        "Would have been blocked by a guardrail",
+      );
+      expect(describeMcpDecision("would_need_approval", null)?.template).toBe(
+        "Would have needed approval",
+      );
+      expect(describeMcpDecision("would_need_approval", null, "approval_rule")?.template).toBe(
+        "Would have needed approval",
+      );
+    });
+
+    it("prefers the rule name when there is one", () => {
+      expect(describeMcpDecision("would_block", "No emails", "guardrail")?.values).toEqual({
+        rule: "No emails",
+      });
+    });
+
+    it("keeps the existing labels for enforced rows", () => {
+      expect(describeMcpDecision("blocked", "No emails")?.heading).toBe("Blocked by rule");
+      expect(describeMcpDecision("approval_required", "Approve rm")?.heading).toBe(
+        "Approval required by rule",
+      );
+      expect(describeMcpDecision("success", null)).toBeNull();
     });
   });
 });

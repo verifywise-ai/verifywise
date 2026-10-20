@@ -3,6 +3,7 @@ Notification callbacks — fires HTTP requests to the Express backend's
 internal notification endpoint. Fire-and-forget via httpx.
 """
 
+import asyncio
 import logging
 from typing import Any, Optional
 
@@ -14,6 +15,10 @@ logger = logging.getLogger("uvicorn")
 
 _NOTIFY_URL = f"{settings.express_backend_url}/api/internal/ai-gateway/notify"
 _TIMEOUT = 5.0  # seconds
+
+# Notifications sent in the background; kept here so they are not garbage
+# collected before they finish.
+_background: set[asyncio.Task] = set()
 
 
 async def _send_notification(payload: dict[str, Any]) -> None:
@@ -36,34 +41,89 @@ async def _send_notification(payload: dict[str, Any]) -> None:
         logger.warning(f"Notification callback failed (fire-and-forget): {e}")
 
 
+# Entity key -> (label shown to admins, frontend path, button label). The
+# backend's notifyConfigChange turns a path into a full link with FRONTEND_URL.
+_CONFIG_ENTITIES: dict[str, tuple[str, str, str]] = {
+    "api_key": ("API key", "/ai-gateway/settings", "View settings"),
+    "endpoint": ("Endpoint", "/ai-gateway/endpoints", "View endpoints"),
+    "virtual_key": ("Virtual key", "/ai-gateway/virtual-keys", "View virtual keys"),
+    "guardrail": ("Guardrail rule", "/ai-gateway/guardrails", "View guardrails"),
+    "guardrail_settings": ("Guardrail settings", "/ai-gateway/guardrails", "View guardrails"),
+    "guardrail_logs": ("Guardrail logs", "/ai-gateway/logs?tab=guardrails", "View logs"),
+    "prompt": ("Prompt", "/ai-gateway/prompts", "View prompts"),
+    "mcp_server": ("MCP server", "/ai-gateway/mcp/servers", "View MCP servers"),
+    "mcp_agent_key": ("Agent key", "/ai-gateway/mcp/agent-keys", "View agent keys"),
+    "mcp_guardrail": ("Agent Control guardrail", "/ai-gateway/mcp/guardrails", "View guardrails"),
+    "mcp_approval": ("Approval request", "/ai-gateway/mcp/approvals", "View approvals"),
+}
+
+
+# Changes that also email admins. Every config change gets an in-app notice;
+# email is kept for changes that weaken or remove a control or change what the
+# gateway can reach, so routine edits and approval decisions do not flood
+# admin inboxes.
+_EMAIL_EVENTS: frozenset[tuple[str, str]] = frozenset({
+    ("mcp_agent_key", "revoked"),
+    ("mcp_agent_key", "deleted"),
+    ("mcp_agent_key", "enforcement_mode_changed"),
+    ("virtual_key", "revoked"),
+    ("virtual_key", "deleted"),
+    ("api_key", "created"),
+    ("api_key", "deleted"),
+    ("mcp_server", "created"),
+    ("mcp_server", "deleted"),
+    ("guardrail", "deleted"),
+    ("guardrail", "disabled"),
+    ("mcp_guardrail", "deleted"),
+})
+
+
+def config_event(
+    entity: str,
+    action: str,
+    name: Optional[str] = None,
+    entity_id: Any = None,
+    detail: Optional[str] = None,
+) -> dict[str, Any]:
+    """Build a config-change event in the shape the backend's
+    notifyConfigChange reads (entityType, entityName, action, actionUrl,
+    actionLabel, email, optional detail). `email` says whether admins also
+    get an email (see _EMAIL_EVENTS). Without a name, the entity id stands in so
+    the message still says which record changed."""
+    label, path, button = _CONFIG_ENTITIES[entity]
+    if not name and entity_id is not None:
+        name = f"#{entity_id}"
+    event: dict[str, Any] = {
+        "entityType": label,
+        "entityName": name or "",
+        "action": action,
+        "actionUrl": path,
+        "actionLabel": button,
+        "email": (entity, action) in _EMAIL_EVENTS,
+    }
+    if detail:
+        event["detail"] = detail
+    return event
+
+
 async def notify_config_change(
-    organization_id: Optional[int] = None,
-    changed_by_user_id: Optional[int] = None,
-    event: Optional[dict[str, Any]] = None,
-    **kwargs: Any,
+    organization_id: Optional[int],
+    changed_by_user_id: Optional[int],
+    event: dict[str, Any],
 ) -> None:
-    """Notify admins of a config change (API key, endpoint, guardrail).
+    """Notify the organization's other admins of a gateway config change.
+    Build `event` with config_event().
 
-    Accepts both positional-style and keyword-style arguments to accommodate
-    various callers (virtual_keys, endpoints, guardrails, api_keys, prompts).
-    """
-    org_id = organization_id or kwargs.get("org_id")
-    user_id = changed_by_user_id or kwargs.get("user_id")
-
-    # Build event dict from explicit event param or from kwargs
-    if event is None:
-        event = {}
-        for k in ("action", "entity", "entity_type", "entity_name",
-                   "entity_id", "detail", "payload", "frontend_url"):
-            if k in kwargs:
-                event[k] = kwargs[k]
-
-    await _send_notification({
+    Returns without waiting: the backend emails every admin before it replies,
+    so awaiting it would hold up the admin request that made the change."""
+    task = asyncio.create_task(_send_notification({
         "type": "config_change",
-        "organization_id": org_id,
-        "changed_by_user_id": user_id,
+        "organization_id": organization_id,
+        "changed_by_user_id": changed_by_user_id,
         "event": event,
-    })
+    }))
+    _background.add(task)
+    task.add_done_callback(_background.discard)
 
 
 async def notify_budget_warning(

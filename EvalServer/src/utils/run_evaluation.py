@@ -11,7 +11,7 @@ import traceback
 import subprocess
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Regex pattern for valid model names (alphanumeric, dash, underscore, colon, slash, dot)
@@ -26,12 +26,82 @@ from crud import evaluation_logs as crud
 from crud.deepeval_scorers import list_scorers, create_scorer, update_scorer, touch_scorer_updated_at
 from deepeval_engine.gatekeeper import evaluate_gate
 from utils.run_custom_scorer import run_custom_scorer, ScorerResult
+from utils.safe_outbound_url import checked_endpoint, openai_base_url
 from utils.error_detection import (
     FatalErrorTracker,
     build_no_responses_message,
+    every_metric_failed,
+    build_no_scores_message,
     detect_fatal_error,
     redact_secrets,
 )
+
+
+# Map metric names to backend snake_case names.
+# Accepts both camelCase (frontend) and snake_case (CI runner / API).
+METRIC_NAME_MAP = {
+    # Universal Core — camelCase
+    "answerRelevancy": "answer_relevancy",
+    "correctness": "correctness",
+    "completeness": "completeness",
+    "hallucination": "hallucination",
+    "instructionFollowing": "instruction_following",
+    "toxicity": "toxicity",
+    "bias": "bias",
+    # RAG — camelCase
+    "contextRelevancy": "context_relevancy",
+    "contextualRelevancy": "context_relevancy",
+    "contextPrecision": "context_precision",
+    "contextRecall": "context_recall",
+    "faithfulness": "faithfulness",
+    # Agent — camelCase
+    "toolSelection": "tool_selection",
+    "toolCorrectness": "tool_correctness",
+    "actionRelevance": "action_relevance",
+    "planningQuality": "planning_quality",
+    "planQuality": "planning_quality",
+    "planAdherence": "plan_adherence",
+    "argumentCorrectness": "argument_correctness",
+    "taskCompletion": "task_completion",
+    "stepEfficiency": "step_efficiency",
+    # snake_case identity (CI runner sends these)
+    "answer_relevancy": "answer_relevancy",
+    "instruction_following": "instruction_following",
+    "context_relevancy": "context_relevancy",
+    "contextual_relevancy": "context_relevancy",
+    "context_precision": "context_precision",
+    "context_recall": "context_recall",
+    "tool_selection": "tool_selection",
+    "tool_correctness": "tool_correctness",
+    "action_relevance": "action_relevance",
+    "planning_quality": "planning_quality",
+    "plan_quality": "planning_quality",
+    "plan_adherence": "plan_adherence",
+    "argument_correctness": "argument_correctness",
+    "task_completion": "task_completion",
+    "step_efficiency": "step_efficiency",
+}
+
+
+def route_threshold_keys(thresholds: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Key thresholds by the metric each name enables, the same way as metric toggles.
+
+    planQuality enables planning_quality, so its threshold goes there too. When a payload
+    names a metric both ways (the UI sends planQuality and planningQuality), the key that
+    names the metric directly wins. Names not in METRIC_NAME_MAP pass through unchanged.
+    """
+    if not isinstance(thresholds, dict):
+        return {}
+    routed: Dict[str, Any] = {}
+    direct: set = set()
+    for key, value in thresholds.items():
+        target = METRIC_NAME_MAP.get(key, key)
+        is_direct = re.sub(r"(?<!^)(?=[A-Z])", "_", str(key)).lower() == target
+        if is_direct or target not in direct:
+            routed[target] = value
+            if is_direct:
+                direct.add(target)
+    return routed
 
 
 async def _upsert_judge_scorer(
@@ -132,6 +202,39 @@ async def _upsert_judge_scorer(
         print(f"   ⚠️  Could not upsert judge scorer: {e}")
 
 
+def _scorer_summary(scorer_scores: List[Dict[str, Any]]) -> Optional[Tuple[float, float]]:
+    """
+    Average score and pass rate of one scorer, or None when no call returned a score.
+
+    Like a built-in metric: an errored call counts as failed in the pass rate and is
+    left out of the average, so 1 pass and 9 errors reads avg 1.0, pass rate 10%.
+    Only the average is saved; the pass rate is for the run log.
+    """
+    scored = [s for s in scorer_scores if isinstance(s.get("score"), (int, float))]
+    if not scored:
+        return None
+    avg_score = sum(s["score"] for s in scored) / len(scored)
+    passed_rate = sum(1 for s in scorer_scores if s["passed"]) / len(scorer_scores)
+    return avg_score, passed_rate
+
+
+def _generation_usage(model_runner: Any, *texts: Any) -> Tuple[int, Optional[float]]:
+    """
+    Tokens and cost of the runner's last generate(): the gateway's counts and LiteLLM's
+    price when it reported them, else a word count of the texts and no cost (local models).
+    """
+    completion = getattr(model_runner, "last_completion", None)
+    cost = completion.cost_usd if completion is not None else None
+    if completion is not None and completion.total_tokens is not None:
+        return completion.total_tokens, cost
+    return sum(len(t.split()) for t in texts if isinstance(t, str)), cost
+
+
+def _add_cost(total: Optional[float], cost: Optional[float]) -> Optional[float]:
+    """Sum costs, staying None until some call reported one."""
+    return cost if total is None else (total if cost is None else total + cost)
+
+
 async def run_evaluation(
     db: AsyncSession,
     experiment_id: str,
@@ -163,7 +266,7 @@ async def run_evaluation(
     
     try:
         # Helper: ensure Ollama model is locally available
-        def ensure_ollama_model(model_name: str) -> None:
+        def ensure_ollama_model(model_name: str, host: Optional[str] = None) -> None:
             # Security: Validate model name to prevent command injection
             if not model_name or not SAFE_MODEL_NAME_PATTERN.match(model_name):
                 print(f"⚠️  Invalid model name format: '{model_name}'. Skipping Ollama check.")
@@ -173,7 +276,20 @@ async def run_evaluation(
                 return
 
             try:
-                # Check if model exists locally
+                if host:
+                    # A user-entered server: the checked client, which never follows a
+                    # redirect (the CLI might), never the CLI with the host in its env
+                    from utils.safe_outbound_url import ollama_client
+
+                    client = ollama_client(host)
+                    if any(m.model == model_name or m.model.split(":")[0] == model_name for m in client.list().models):
+                        print(f"✓ Ollama model '{model_name}' is available on the run's server")
+                        return
+                    print(f"• Ollama model '{model_name}' not found on the run's server; pulling...")
+                    client.pull(model_name)
+                    print(f"✓ Pulled Ollama model '{model_name}' successfully")
+                    return
+                # The operator's default server
                 list_proc = subprocess.run(["ollama", "list"], capture_output=True, text=True, timeout=30)
                 if list_proc.returncode == 0 and model_name in list_proc.stdout:
                     print(f"✓ Ollama model '{model_name}' is available locally")
@@ -205,7 +321,7 @@ async def run_evaluation(
         judge_config = config.get("judgeLlm", {})
         dataset_config = config.get("dataset", {})
         metrics_config = config.get("metrics", {})
-        thresholds_config = config.get("thresholds", {})
+        thresholds_config = route_threshold_keys(config.get("thresholds"))
         
         # Evaluation mode: "scorer" = custom only, "standard" = judge only, "both" = run both
         evaluation_mode = config.get("evaluationMode", "standard")
@@ -249,6 +365,9 @@ async def run_evaluation(
         print(f"📝 Judge LLM config: provider={judge_config.get('provider')}, has_apiKey={bool(judge_config.get('apiKey'))}")
         has_judge_key = judge_config.get("apiKey") and judge_config["apiKey"] not in ["***", "", None]
         is_self_hosted_judge = judge_config.get("provider", "").lower() in ("self-hosted", "ollama")
+        # Set below only for a self-hosted judge; never inherit one from an earlier run
+        os.environ.pop("G_EVAL_BASE_URL", None)
+        os.environ.pop("G_EVAL_API_KEY", None)
 
         if has_judge_key or is_self_hosted_judge:
             provider = judge_config.get("provider", "").lower()
@@ -270,22 +389,19 @@ async def run_evaluation(
                 # Self-hosted / Ollama judge uses OpenAI-compatible API
                 endpoint_url = judge_config.get("endpointUrl", "")
                 if endpoint_url:
-                    base_url = endpoint_url.rstrip("/")
-                    if not base_url.endswith("/v1"):
-                        base_url = base_url + "/v1"
-                    os.environ["OPENAI_API_BASE"] = base_url
-                    print(f"✅ OPENAI_API_BASE set to {base_url}")
+                    # Checked now, so a refused endpoint fails the run before generation
+                    base_url = openai_base_url(endpoint_url)
+                    os.environ["G_EVAL_BASE_URL"] = base_url
+                    print(f"✅ Judge endpoint set to {base_url}")
                 elif provider == "ollama":
                     # Default Ollama endpoint
-                    os.environ["OPENAI_API_BASE"] = "http://localhost:11434/v1"
-                    print(f"✅ OPENAI_API_BASE set to http://localhost:11434/v1 (default Ollama)")
-                # Set API key or dummy for self-hosted endpoints that don't require auth
+                    os.environ["G_EVAL_BASE_URL"] = "http://localhost:11434/v1"
+                    print(f"✅ Judge endpoint set to http://localhost:11434/v1 (default Ollama)")
+                # The judge calls this endpoint directly (deepeval_evaluator.judge_runner), not the
+                # gateway; many self-hosted servers need no key
                 if judge_config.get("apiKey") and judge_config["apiKey"] not in ["***", "", None]:
-                    os.environ["OPENAI_API_KEY"] = judge_config["apiKey"]
-                else:
-                    os.environ["OPENAI_API_KEY"] = "not-needed"
-                    print(f"✅ OPENAI_API_KEY set to dummy (self-hosted endpoint)")
-                # DeepEval's G-Eval uses the OpenAI client, so set provider to openai
+                    os.environ["G_EVAL_API_KEY"] = judge_config["apiKey"]
+                # DeepEval's native metrics are picked for provider "openai"
                 provider = "openai"
 
             # Expose judge provider/model for evaluator (provider-agnostic G‑Eval)
@@ -313,11 +429,7 @@ async def run_evaluation(
                 os.environ["MISTRAL_API_KEY"] = model_config["apiKey"]
             elif provider == "openrouter":
                 os.environ["OPENROUTER_API_KEY"] = model_config["apiKey"]
-            elif provider == "custom_api":
-                # For custom API, we'll set as OPENAI_API_KEY since we use OpenAI client
-                os.environ["OPENAI_API_KEY"] = model_config["apiKey"]
-                if model_config.get("endpointUrl"):
-                    os.environ["OPENAI_API_BASE"] = model_config["endpointUrl"]
+            # custom_api: the key goes straight to ModelRunner below, not the environment
         
         # 1. Initialize Model Runner
         print(f"📦 Initializing model: {model_config.get('name', 'unknown')}")
@@ -329,8 +441,8 @@ async def run_evaluation(
         
         # Map frontend provider names to ModelRunner names
         provider_mapping = {
-            "local": "huggingface",    # Local files treated as HuggingFace models
-            "custom_api": "openai",    # Custom API uses OpenAI client with custom base_url
+            "local": "local",          # Refused by ModelRunner: serve it as a custom API model
+            "custom_api": "custom_api",  # The user's OpenAI-compatible endpoint, not the gateway
             "openai": "openai",        # OpenAI API
             "anthropic": "anthropic",  # Anthropic API
             "google": "google",        # Google API (for Gemini models)
@@ -344,16 +456,14 @@ async def run_evaluation(
         runner_provider = provider_mapping.get(model_provider, "ollama")
         
         # Set custom endpoint if provided
-        if model_config.get("endpointUrl"):
-            if runner_provider == "ollama":
-                os.environ["OLLAMA_HOST"] = model_config["endpointUrl"]
-            elif runner_provider == "openai":
-                os.environ["OPENAI_API_BASE"] = model_config["endpointUrl"]
-        
+        custom_key = model_config.get("apiKey")
         try:
+            # The endpoint goes to this run's client (checked there), never the environment
             model_runner = ModelRunner(
                 model_name=model_name,
                 provider=runner_provider,
+                endpoint_url=model_config.get("endpointUrl") if runner_provider in ("custom_api", "ollama") else None,
+                api_key=custom_key if runner_provider == "custom_api" and custom_key != "***" else None,
             )
         except Exception as e:
             error_msg = f"Failed to initialize model: {str(e)}"
@@ -369,7 +479,8 @@ async def run_evaluation(
         
         # If using Ollama, proactively ensure the model exists locally before generation
         if runner_provider == "ollama" and isinstance(model_name, str):
-            ensure_ollama_model(model_name)
+            entered = model_config.get("endpointUrl")
+            ensure_ollama_model(model_name, checked_endpoint(entered) if entered else None)
         
         # 2. Load Dataset (builtin by name, custom path, prompts, conversations, or benchmarks)
         print(f"\n📊 Loading dataset...")
@@ -567,7 +678,8 @@ async def run_evaluation(
                 
                 start_time = datetime.now()
                 total_tokens = 0
-                
+                total_cost: Optional[float] = None
+
                 for turn_idx, user_msg in enumerate(user_turns_content):
                     # Add user turn
                     turn_objects.append(Turn(role="user", content=user_msg))
@@ -592,7 +704,11 @@ async def run_evaluation(
                             max_tokens=1024,
                             temperature=0.7,
                         )
-                        
+                        # Counted from the model's own answer, before any placeholder text
+                        turn_tokens, turn_cost = _generation_usage(
+                            model_runner, user_msg, assistant_response or ""
+                        )
+
                         # Clean up response if needed
                         if assistant_response:
                             assistant_response = assistant_response.strip()
@@ -605,6 +721,10 @@ async def run_evaluation(
 
                         # Track success to reset fatal error counter
                         fatal_error_tracker.track_success()
+
+                        # Only a turn that answered counts; an error placeholder billed nothing
+                        total_tokens += turn_tokens
+                        total_cost = _add_cost(total_cost, turn_cost)
 
                     except Exception as gen_err:
                         print(f"    ⚠️ Generation error on turn {turn_idx + 1}: {redact_secrets(str(gen_err))}")
@@ -632,10 +752,7 @@ async def run_evaluation(
                     turn_objects.append(Turn(role="assistant", content=assistant_response))
                     conversation_history.append({"role": "assistant", "content": assistant_response})
                     generated_assistant_turns.append(assistant_response)
-                    
-                    # Estimate tokens for this turn
-                    total_tokens += len(user_msg.split()) + len(assistant_response.split())
-                
+
                 latency_ms = int((datetime.now() - start_time).total_seconds() * 1000)
                 
                 print(f"    ✓ Generated {len(generated_assistant_turns)} responses ({latency_ms}ms)")
@@ -682,6 +799,7 @@ async def run_evaluation(
                     model_name=model_name,
                     latency_ms=latency_ms,
                     token_count=total_tokens,
+                    cost=total_cost,
                     metadata={
                         "is_conversational": True,
                         "scenario": scenario,
@@ -717,7 +835,9 @@ async def run_evaluation(
                         max_tokens=2048,
                         temperature=0.7,
                     )
-                    
+                    # Both attempts are billed, so their tokens and cost add up
+                    spent_tokens, spent_cost = _generation_usage(model_runner, response)
+
                     # If response is empty/whitespace, retry once with safer params
                     if not response or not str(response).strip():
                         print("     • Empty response, retrying with higher max_tokens/lower temperature...")
@@ -727,6 +847,9 @@ async def run_evaluation(
                                 max_tokens=2048,
                                 temperature=0.2,
                             )
+                            retry_tokens, retry_cost = _generation_usage(model_runner, response)
+                            spent_tokens += retry_tokens
+                            spent_cost = _add_cost(spent_cost, retry_cost)
                         except Exception as retry_err:
                             print(f"     • Retry failed: {retry_err}")
                             retry_error = str(retry_err)
@@ -745,7 +868,8 @@ async def run_evaluation(
                             output_text="",
                             model_name=model_name,
                             latency_ms=int((datetime.now() - start_time).total_seconds() * 1000),
-                            token_count=0,
+                            token_count=spent_tokens,
+                            cost=spent_cost,
                             status="error",
                             error_message="empty_output",
                         )
@@ -772,7 +896,8 @@ async def run_evaluation(
                         output_text=response,
                         model_name=model_name,
                         latency_ms=latency_ms,
-                        token_count=len(response.split()) if isinstance(response, str) else 0,  # Rough estimate
+                        token_count=spent_tokens,
+                        cost=spent_cost,
                         status="success",
                     )
                     
@@ -845,7 +970,20 @@ async def run_evaluation(
                         return {"error": termination_reason, "early_termination": True}
 
                     continue
-        
+
+        # Prompts (or conversations) the run tried. total_prompts below counts only the
+        # ones that got a response and were evaluated; the UI shows both.
+        # - single-turn: every prompt is logged, answered or not;
+        # - conversations: only those that produced a test case are logged (one with no
+        #   user turns is skipped), so count those to match the experiment's logs;
+        # - simulated: no logs are written; count the scenarios the run tried.
+        if simulated_mode and simulated_scenarios:
+            prompts_attempted = len(simulated_scenarios)
+        elif conversations:
+            prompts_attempted = len(test_cases_data)
+        else:
+            prompts_attempted = len(prompts)
+
         if not test_cases_data:
             error_msg = build_no_responses_message(len(prompts), list(generation_errors.values()))
             await crud.update_experiment_status(
@@ -886,50 +1024,6 @@ async def run_evaluation(
         task_type = (config.get("taskType") or config.get("task_type") or "").strip().lower()
         bundles = config.get("bundles") or {}
         
-        # Map metric names to backend snake_case names.
-        # Accepts both camelCase (frontend) and snake_case (CI runner / API).
-        metric_name_map = {
-            # Universal Core — camelCase
-            "answerRelevancy": "answer_relevancy",
-            "correctness": "correctness",
-            "completeness": "completeness",
-            "hallucination": "hallucination",
-            "instructionFollowing": "instruction_following",
-            "toxicity": "toxicity",
-            "bias": "bias",
-            # RAG — camelCase
-            "contextRelevancy": "context_relevancy",
-            "contextualRelevancy": "context_relevancy",
-            "contextPrecision": "context_precision",
-            "contextRecall": "context_recall",
-            "faithfulness": "faithfulness",
-            # Agent — camelCase
-            "toolSelection": "tool_selection",
-            "toolCorrectness": "tool_correctness",
-            "actionRelevance": "action_relevance",
-            "planningQuality": "planning_quality",
-            "planQuality": "planning_quality",
-            "planAdherence": "plan_adherence",
-            "argumentCorrectness": "argument_correctness",
-            "taskCompletion": "task_completion",
-            "stepEfficiency": "step_efficiency",
-            # snake_case identity (CI runner sends these)
-            "answer_relevancy": "answer_relevancy",
-            "instruction_following": "instruction_following",
-            "context_relevancy": "context_relevancy",
-            "contextual_relevancy": "context_relevancy",
-            "context_precision": "context_precision",
-            "context_recall": "context_recall",
-            "tool_selection": "tool_selection",
-            "tool_correctness": "tool_correctness",
-            "action_relevance": "action_relevance",
-            "planning_quality": "planning_quality",
-            "plan_quality": "planning_quality",
-            "plan_adherence": "plan_adherence",
-            "argument_correctness": "argument_correctness",
-            "task_completion": "task_completion",
-            "step_efficiency": "step_efficiency",
-        }
 
         # Start with all metrics disabled
         deepeval_metrics_config = {
@@ -958,7 +1052,7 @@ async def run_evaluation(
         }
         
         # Enable metrics based on UI selection
-        for ui_key, backend_key in metric_name_map.items():
+        for ui_key, backend_key in METRIC_NAME_MAP.items():
             if ui_metrics.get(ui_key, False):
                 deepeval_metrics_config[backend_key] = True
         
@@ -1108,48 +1202,66 @@ async def run_evaluation(
                                     output_text=output_text,
                                     expected_text=expected_text,
                                 )
-                                
-                                scorer_scores.append({
-                                    "test_case_idx": idx,
-                                    "label": result.label,
-                                    "score": result.score,
-                                    "passed": result.passed,
-                                    "raw_response": result.raw_response,
-                                })
-                                
-                                status_icon = "✅" if result.passed else "❌"
-                                print(f"      {status_icon} Result: {result.label} (score={result.score:.2f}, passed={result.passed})")
-                                if result.total_tokens:
-                                    print(f"      📊 Tokens: {result.total_tokens} (prompt={result.prompt_tokens}, completion={result.completion_tokens})")
-                                
-                                # Merge scorer result into test case results
-                                if idx < len(results):
-                                    if "metric_scores" not in results[idx]:
-                                        results[idx]["metric_scores"] = {}
-                                    results[idx]["metric_scores"][scorer_name] = {
-                                        "score": result.score,
-                                        "label": result.label,
-                                        "passed": result.passed,
-                                        "reason": result.reason if result.reason else (result.raw_response if result.raw_response else ""),
-                                    }
-                                
+                                scorer_error = result.error
                             except Exception as scorer_err:
-                                print(f"      ❌ Error: {redact_secrets(str(scorer_err))}")
+                                scorer_error = redact_secrets(str(scorer_err))
+
+                            if scorer_error is not None:
+                                # The judge was not reached: no score, rather than a 0.0
+                                print(f"      ❌ Error: {scorer_error}")
                                 scorer_scores.append({
                                     "test_case_idx": idx,
                                     "label": "ERROR",
-                                    "score": 0.0,
+                                    "score": None,
                                     "passed": False,
-                                    "raw_response": redact_secrets(str(scorer_err)),
+                                    "raw_response": scorer_error,
                                 })
-                        
+                                # Same shape as a DeepEval metric error, so the sample shows it
+                                # and the no-scores check can report it. Never replaces a
+                                # built-in metric's entry of the same name.
+                                if idx < len(results):
+                                    prompt_scores = results[idx].setdefault("metric_scores", {})
+                                    if scorer_name not in prompt_scores:
+                                        prompt_scores[scorer_name] = {
+                                            "score": None,
+                                            "passed": False,
+                                            "error": scorer_error,
+                                        }
+                                continue
+
+                            scorer_scores.append({
+                                "test_case_idx": idx,
+                                "label": result.label,
+                                "score": result.score,
+                                "passed": result.passed,
+                                "raw_response": result.raw_response,
+                            })
+
+                            status_icon = "✅" if result.passed else "❌"
+                            print(f"      {status_icon} Result: {result.label} (score={result.score:.2f}, passed={result.passed})")
+                            if result.total_tokens:
+                                print(f"      📊 Tokens: {result.total_tokens} (prompt={result.prompt_tokens}, completion={result.completion_tokens})")
+
+                            # Merge scorer result into test case results
+                            if idx < len(results):
+                                if "metric_scores" not in results[idx]:
+                                    results[idx]["metric_scores"] = {}
+                                results[idx]["metric_scores"][scorer_name] = {
+                                    "score": result.score,
+                                    "label": result.label,
+                                    "passed": result.passed,
+                                    # The pass line run_custom_scorer used, so the
+                                    # dashboard colours the average against it.
+                                    "threshold": result.threshold,
+                                    "reason": result.reason if result.reason else (result.raw_response if result.raw_response else ""),
+                                }
+
                         custom_scorer_results[scorer_id] = scorer_scores
                         
-                        # Calculate average score for this scorer
-                        if scorer_scores:
-                            avg_score = sum(s["score"] for s in scorer_scores) / len(scorer_scores)
-                            passed_count = sum(1 for s in scorer_scores if s["passed"])
-                            print(f"\n   📈 Scorer Summary: avg_score={avg_score:.3f}, passed={passed_count}/{len(scorer_scores)}")
+                        summary = _scorer_summary(scorer_scores)
+                        if summary:
+                            avg_score, passed_rate = summary
+                            print(f"\n   📈 Scorer Summary: avg_score={avg_score:.3f}, pass_rate={passed_rate:.1%}")
                 else:
                     print("   ⚪ No enabled LLM scorers found for this project")
                     
@@ -1282,6 +1394,10 @@ async def run_evaluation(
             "tool_correctness": {"display": "Tool Correctness", "camel": "toolCorrectness"},
             "action_relevance": {"display": "Action Relevance", "camel": "actionRelevance"},
             "planning_quality": {"display": "Planning Quality", "camel": "planningQuality"},
+            "plan_adherence": {"display": "Plan Adherence", "camel": "planAdherence"},
+            "argument_correctness": {"display": "Argument Correctness", "camel": "argumentCorrectness"},
+            "task_completion": {"display": "Task Completion", "camel": "taskCompletion"},
+            "step_efficiency": {"display": "Step Efficiency", "camel": "stepEfficiency"},
         }
         
         # Conversational metric names (for multi-turn datasets)
@@ -1376,9 +1492,12 @@ async def run_evaluation(
                             metric_key = s.get("metricKey", scorer_id)
                             break
                     
-                    # Calculate average
-                    avg_score = sum(s["score"] for s in scorer_scores) / len(scorer_scores)
-                    passed_rate = sum(1 for s in scorer_scores if s["passed"]) / len(scorer_scores)
+                    # A scorer with no scores writes no metric, so a failed run leaves no 0.0
+                    summary = _scorer_summary(scorer_scores)
+                    if not summary:
+                        print(f"   ⚠️ {scorer_name} ({metric_key}): no scores, nothing saved")
+                        continue
+                    avg_score, passed_rate = summary
                     
                     # Store in avg_scores with metricKey (same as DeepEval metrics)
                     avg_scores[metric_key] = avg_score
@@ -1398,13 +1517,38 @@ async def run_evaluation(
         # Update experiment with results
         experiment_results: Dict[str, Any] = {
             "total_prompts": total_prompts,
+            "prompts_attempted": prompts_attempted,
             "avg_scores": avg_scores,  # Contains both DeepEval and custom scorer averages
             "detailed_results": results[:10],  # Store first 10 for preview (includes custom scorer scores in metric_scores)
             "completed_at": datetime.now().isoformat(),
         }
         if gatekeeper_result is not None:
             experiment_results["gatekeeper"] = gatekeeper_result
-        
+        # Settings the tested model did not take (a reasoning model drops temperature):
+        # the run used the provider's default instead, so say so on the run
+        dropped = sorted(getattr(model_runner, "dropped_params", None) or [])
+        if dropped:
+            experiment_results["dropped_params"] = dropped
+
+        # Metrics were asked for but none scored a single prompt (typically the judge
+        # failed on every call). A "completed" run with no scores reads as a success,
+        # so fail it with the reason; the answers and logs stay for inspection.
+        metrics_requested = (
+            evaluation_mode in ("standard", "both") and any(deepeval_metrics_config.values())
+        ) or bool(enabled_scorers)
+        if metrics_requested and results and every_metric_failed(results):
+            error_msg = build_no_scores_message(results)
+            print(f"\n❌ {error_msg}")
+            await crud.update_experiment_status(
+                db=db,
+                experiment_id=experiment_id,
+                organization_id=organization_id,
+                status="failed",
+                results=experiment_results,
+                error_message=error_msg,
+            )
+            return {"error": error_msg}
+
         await crud.update_experiment_status(
             db=db,
             experiment_id=experiment_id,

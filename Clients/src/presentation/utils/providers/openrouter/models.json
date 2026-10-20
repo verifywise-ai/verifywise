@@ -5,31 +5,34 @@
     {
       "id": "openai/gpt-4o-mini",
       "name": "GPT-4o Mini (Recommended)",
-      "description": "Best value for AI advisor tasks",
+      "description": "Recommended for AI advisor tasks",
       "inputCost": 0.15,
       "outputCost": 0.6,
       "recommended": true
     },
     {
-      "id": "anthropic/claude-3-haiku",
-      "name": "Claude 3 Haiku (via OpenRouter)",
+      "id": "anthropic/claude-haiku-4.5",
+      "name": "Claude Haiku 4.5 (via OpenRouter)",
       "description": "Fast and affordable Claude model",
-      "inputCost": 0.25,
-      "outputCost": 1.25
+      "inputCost": 1.0,
+      "outputCost": 5.0,
+      "contextWindow": 200000
     },
     {
-      "id": "google/gemini-2.0-flash-exp:free",
-      "name": "Gemini 2.0 Flash (Free)",
-      "description": "Google's latest Gemini model - free tier",
-      "inputCost": 0,
-      "outputCost": 0
+      "id": "google/gemma-4-31b-it:free",
+      "name": "Gemma 4 31B (Free)",
+      "description": "Google's open model, free tier",
+      "inputCost": 0.0,
+      "outputCost": 0.0,
+      "contextWindow": 262144
     },
     {
-      "id": "meta-llama/llama-3.1-8b-instruct:free",
-      "name": "Llama 3.1 8B (Free)",
-      "description": "Smaller Llama model - free tier",
-      "inputCost": 0,
-      "outputCost": 0
+      "id": "meta-llama/llama-3.1-8b-instruct",
+      "name": "Llama 3.1 8B Instruct",
+      "description": "Smaller Llama model",
+      "inputCost": 0.05,
+      "outputCost": 0.08,
+      "contextWindow": 131072
     },
     {
       "id": "openai/gpt-4o",
@@ -39,25 +42,27 @@
       "outputCost": 10
     },
     {
-      "id": "anthropic/claude-3.5-sonnet",
-      "name": "Claude 3.5 Sonnet (via OpenRouter)",
+      "id": "anthropic/claude-sonnet-4.5",
+      "name": "Claude Sonnet 4.5 (via OpenRouter)",
       "description": "Anthropic's balanced model via OpenRouter",
-      "inputCost": 3,
-      "outputCost": 15
+      "inputCost": 3.0,
+      "outputCost": 15.0,
+      "contextWindow": 1000000
     },
     {
       "id": "meta-llama/llama-3.3-70b-instruct",
       "name": "Llama 3.3 70B Instruct",
-      "description": "Meta's latest open-source model",
+      "description": "Meta's open-weight 70B model",
       "inputCost": 0.3,
       "outputCost": 0.4
     },
     {
-      "id": "google/gemini-pro-1.5",
-      "name": "Gemini Pro 1.5 (via OpenRouter)",
-      "description": "Google's Gemini Pro via OpenRouter",
-      "inputCost": 1.25,
-      "outputCost": 5
+      "id": "google/gemini-2.5-flash",
+      "name": "Gemini 2.5 Flash (via OpenRouter)",
+      "description": "Google's Gemini via OpenRouter",
+      "inputCost": 0.3,
+      "outputCost": 2.5,
+      "contextWindow": 1048576
     },
     {
       "id": "mistralai/mistral-large",
@@ -76,7 +81,7 @@
     {
       "id": "qwen/qwen-2.5-72b-instruct",
       "name": "Qwen 2.5 72B Instruct",
-      "description": "Alibaba's latest large model",
+      "description": "Alibaba's open-weight 72B model",
       "inputCost": 0.35,
       "outputCost": 0.4
     }

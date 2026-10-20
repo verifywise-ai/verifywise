@@ -134,3 +134,54 @@ def test_gateway_chat_completion_sync_requires_internal_key(disable_gateway_env:
 )
 def test_extract_assistant_text(payload: Dict[str, Any], expected: str) -> None:
     assert _extract_assistant_text(payload) == expected
+
+
+@respx.mock
+def test_completion_sends_top_p_and_returns_dropped_settings(gateway_env: str) -> None:
+    import json
+
+    from deepeval_engine.gateway_litellm_client import gateway_completion_sync
+
+    payload = {
+        "model": "o3-mini",
+        "choices": [{"message": {"content": "ok"}}],
+        "dropped_params": ["temperature", "top_p"],
+    }
+    route = respx.post(COMPLETIONS_URL).mock(return_value=httpx.Response(200, json=payload))
+    completion = gateway_completion_sync("o3-mini", [{"role": "user", "content": "hi"}], "sk-x", top_p=0.5)
+
+    assert json.loads(route.calls.last.request.read())["top_p"] == 0.5
+    assert completion.dropped_params == ["temperature", "top_p"]
+
+
+@respx.mock
+def test_completion_omits_top_p_when_unset(gateway_env: str) -> None:
+    import json
+
+    from deepeval_engine.gateway_litellm_client import gateway_completion_sync
+
+    route = respx.post(COMPLETIONS_URL).mock(
+        return_value=httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+    )
+    completion = gateway_completion_sync("gpt-4o-mini", [{"role": "user", "content": "hi"}], "sk-x")
+    assert "top_p" not in json.loads(route.calls.last.request.read())
+    # 1 changes nothing and Anthropic refuses it beside temperature
+    gateway_completion_sync("claude-haiku-4-5", [{"role": "user", "content": "hi"}], "sk-x", top_p=1)
+    assert "top_p" not in json.loads(route.calls.last.request.read())
+    assert completion.dropped_params == []
+
+
+
+@respx.mock
+def test_anthropic_gets_top_p_alone(gateway_env: str) -> None:
+    import json
+
+    from deepeval_engine.gateway_litellm_client import gateway_completion_sync
+
+    route = respx.post(COMPLETIONS_URL).mock(
+        return_value=httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+    )
+    gateway_completion_sync("anthropic/claude-haiku-4-5", [{"role": "user", "content": "hi"}], "sk-x", top_p=0.9)
+    body = json.loads(route.calls.last.request.read())
+    assert body["top_p"] == 0.9
+    assert "temperature" not in body

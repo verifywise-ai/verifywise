@@ -19,17 +19,21 @@ on:
 
 jobs:
   e2e-tests:
-    name: Playwright E2E Tests (shard ${{ matrix.shard }}/3)
+    name: Playwright E2E Tests (shard ${{ matrix.shard }}/${{ matrix.total }})
     runs-on: ubuntu-latest
     timeout-minutes: 60
     # Each shard is its own job with its own Postgres and Redis, so tests that
     # depend on earlier tests' data still run in order within a shard and
     # cannot see another shard's data. Playwright runs the setup projects a
     # shard's tests depend on inside that shard.
+    #
+    # Each shard spends ~3 minutes on setup before its first test, so beyond
+    # about 5 shards the setup dominates and more shards barely help.
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4, 5]
+        total: [5]
 
     services:
       postgres:
@@ -64,6 +68,11 @@ jobs:
         with:
           # jsdom 30.x (used by Servers) requires Node >= 22.22.2.
           node-version: '22'
+          # Caches npm's download cache (not node_modules), keyed on both lockfiles.
+          cache: npm
+          cache-dependency-path: |
+            Servers/package-lock.json
+            Clients/package-lock.json
 
       # ---- Backend setup ----
       - name: Install backend dependencies
@@ -107,6 +116,8 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: '3.12'
+          cache: pip
+          cache-dependency-path: AIGateway/requirements.txt
 
       - name: Install AIGateway dependencies
         working-directory: AIGateway
@@ -116,7 +127,7 @@ jobs:
           # which is already declared in requirements.txt.
           grep -v '^presidio-anonymizer' requirements.txt > /tmp/requirements-install.txt
           pip install -r /tmp/requirements-install.txt
-          pip install --no-deps presidio-anonymizer>=2.2.364
+          pip install --no-deps "$(grep '^presidio-anonymizer' requirements.txt)"
 
       - name: Start AIGateway
         working-directory: AIGateway/src
@@ -311,7 +322,7 @@ jobs:
           DB_NAME: verifywise_test
           DB_USER: postgres
           DB_PASSWORD: postgres
-        run: npx playwright test --shard=${{ matrix.shard }}/3
+        run: npx playwright test --shard=${{ matrix.shard }}/${{ matrix.total }}
 
       - name: Save last-run metadata
         if: always()

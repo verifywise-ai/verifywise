@@ -239,8 +239,16 @@ export async function generateReportsV2(req: Request, res: Response): Promise<an
   } = req.body;
 
   const projectId = parseInt(projectIdRaw);
-  const frameworkId = parseInt(frameworkIdRaw);
-  const projectFrameworkId = parseInt(projectFrameworkIdRaw);
+  // A use case with no framework attached sends neither id. 0 rather than the
+  // NaN parseInt gives back: it is the value the collector already treats as
+  // "no pairing" (parseFrameworkSelection rejects 0, so no target resolves),
+  // and it serialises into config_snapshot as a number instead of null.
+  const toId = (raw: unknown) => {
+    const parsed = parseInt(raw as string);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+  const frameworkId = toId(frameworkIdRaw);
+  const projectFrameworkId = toId(projectFrameworkIdRaw);
   const userId = req.userId;
   const reportFormat: ReportFormat = format === "pdf" ? "pdf" : "docx";
 

@@ -134,3 +134,17 @@ export function sanitizeUserHtml(input: unknown): string | null | undefined {
   const str = typeof input === "string" ? input : String(input);
   return sanitizeHtml(str, SANITIZE_OPTIONS);
 }
+
+/**
+ * Escape text for insertion into HTML, as element content or a quoted
+ * attribute value. Use this for plain text; use sanitizeUserHtml for rich text
+ * that should keep its formatting.
+ */
+export function escapeHtml(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}

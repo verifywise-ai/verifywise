@@ -1,6 +1,6 @@
 # Servers — Backend Development Guide
 
-> **Last Updated:** 2026-10-12
+> **Last Updated:** 2026-10-19
 
 ---
 
@@ -237,7 +237,7 @@ Read the relevant file BEFORE implementing changes in that area:
 | TypeScript standards & naming                     | `CodeRules/02-typescript/`                                   |
 | API routes & endpoints                            | `docs/technical/api/endpoints.md`                            |
 | Background jobs (BullMQ)                          | `docs/technical/infrastructure/automations.md`               |
-| Email templates (MJML)                            | `docs/technical/infrastructure/email-service.md`             |
+| Email templates (MJML; values escaped by default) | `docs/technical/infrastructure/email-service.md`             |
 | PDF/DOCX reporting                                | `docs/technical/infrastructure/pdf-generation.md`            |
 | File upload system                                | `docs/technical/infrastructure/file-storage.md`              |
 | Error handling & exceptions                       | `docs/claude/error-handling.md`                              |

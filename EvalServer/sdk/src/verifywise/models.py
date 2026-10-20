@@ -5,6 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+# Lower is better (0 = none found). Matched by exact name, so a custom scorer such as
+# "unbiasedTone" is not inverted. Keep in sync with EvalServer/src/utils/metric_constants.py.
+INVERTED_METRICS = {"bias", "toxicity", "hallucination"}
+
+
+def is_inverted_metric(name: str) -> bool:
+    return name.lower().replace("_", "").replace(" ", "") in INVERTED_METRICS
+
 
 @dataclass
 class Experiment:
@@ -64,14 +72,13 @@ class EvalResults:
         thresholds = results.get("metric_thresholds", {})
         config = exp.config or {}
 
-        inverted_keywords = ("bias", "toxicity", "hallucination")
         metrics_out: List[MetricResult] = []
         all_passed = True
 
         for metric_name, score_val in avg_scores.items():
             score = float(score_val)
             thr = float(thresholds[metric_name]) if metric_name in thresholds else default_threshold
-            inverted = any(k in metric_name.lower() for k in inverted_keywords)
+            inverted = is_inverted_metric(metric_name)
             passed = (score <= thr) if inverted else (score >= thr)
             if not passed:
                 all_passed = False

@@ -7,6 +7,9 @@ AI agents connect here to discover and call MCP tools:
 
 The gateway routes tool calls to the correct backend MCP server,
 enforcing ACLs, rate limits, guardrails, and approval requirements.
+A monitor-only agent key (enforcement_mode = 'monitor') has ACLs, approval
+requirements and guardrails evaluated and recorded but not enforced; rate limits
+and the circuit breaker still apply.
 """
 
 import asyncio
@@ -22,6 +25,18 @@ from crud.mcp_approvals import create_approval_request, get_approval_status, get
 from crud.mcp_audit import CIRCUIT_BREAKER_SUMMARY
 from crud.mcp_tools import get_all_tools
 from services.mcp_audit_service import log_tool_call
+from services.mcp_monitor import (
+    SOURCE_GUARDRAIL,
+    SOURCE_TOOL_ACL,
+    SOURCE_TOOL_REQUIRES_APPROVAL,
+    WOULD_BLOCK,
+    WOULD_NEED_APPROVAL,
+    is_monitor,
+    monitored_payload,
+    most_severe,
+    outcome,
+    outcome_events,
+)
 from services.mcp_guardrail_service import (
     blocking_rule,
     scan_tool_input,
@@ -35,6 +50,7 @@ from services.mcp_proxy_service import (
     enforce_tool_acls,
     enforce_mcp_rate_limits,
     forward_tool_call,
+    tool_acl_violation,
 )
 from services.mcp_session import create_session, get_backend_session, set_backend_session
 from utils.acl import matches_acl
@@ -45,6 +61,9 @@ from utils.notifications import notify_approval_pending
 logger = logging.getLogger("uvicorn")
 
 router = APIRouter()
+
+# JSON-RPC result _meta key carrying what a monitor-only key would have hit.
+MONITORED_META_KEY = "verifywise.ai/monitored"
 
 
 def _jsonrpc_error(id, code: int, message: str, data: dict | None = None) -> dict:
@@ -98,11 +117,16 @@ async def mcp_jsonrpc(request: Request):
         allowed = agent_key.get("allowed_tools") or []
         blocked = agent_key.get("blocked_tools") or []
 
-        filtered = [
-            t for t in all_tools
-            if (not allowed or matches_acl(t["tool_name"], allowed))
-            and (not blocked or not matches_acl(t["tool_name"], blocked))
-        ]
+        if is_monitor(agent_key):
+            # A monitor-only key sees every tool: its tool lists are evaluated
+            # and recorded per call (tools/call), not enforced.
+            filtered = all_tools
+        else:
+            filtered = [
+                t for t in all_tools
+                if (not allowed or matches_acl(t["tool_name"], allowed))
+                and (not blocked or not matches_acl(t["tool_name"], blocked))
+            ]
 
         tools_list = [
             {"name": t["tool_name"], "description": t.get("description", ""), "inputSchema": t.get("input_schema", {})}
@@ -126,6 +150,13 @@ async def mcp_jsonrpc(request: Request):
         # the same agent run; may be None for clients that never sent the header.
         gateway_session_id = request.headers.get("mcp-session-id")
 
+        # Monitor-only key: policies that would have stopped the call are
+        # collected here instead of enforced, and land in the audit row's events
+        # (each stamped when its policy was evaluated). Proxy rows carry only
+        # these would_* entries; they have no received / decided events.
+        monitor = is_monitor(agent_key)
+        outcomes: list[dict] = []
+
         async def _audit(
             status: str,
             summary: str | None,
@@ -146,14 +177,28 @@ async def mcp_jsonrpc(request: Request):
                 session_id=gateway_session_id,
                 matched_rule_id=matched_rule_id,
                 matched_rule_name=matched_rule_name,
+                events=outcome_events(outcomes) if outcomes else None,
             )
 
         try:
             tool = await resolve_tool(org_id, tool_name)
-            enforce_tool_acls(agent_key, tool_name)
+            if monitor:
+                violation = tool_acl_violation(agent_key, tool_name)
+                if violation:
+                    outcomes.append(outcome(WOULD_BLOCK, violation, SOURCE_TOOL_ACL))
+            else:
+                enforce_tool_acls(agent_key, tool_name)
+            # Rate limit and circuit breaker stay enforced for a monitor key.
             await enforce_mcp_rate_limits(agent_key, tool_name)
 
-            if tool.get("requires_approval"):
+            if tool.get("requires_approval") and monitor:
+                # No approval request is looked up, created or notified.
+                outcomes.append(outcome(
+                    WOULD_NEED_APPROVAL,
+                    f"Tool '{tool_name}' requires approval",
+                    SOURCE_TOOL_REQUIRES_APPROVAL,
+                ))
+            elif tool.get("requires_approval"):
                 # Approvals are scoped to the exact arguments of this call, so an
                 # approval for one set of arguments cannot be reused for another.
                 args_hash = hash_arguments(arguments)
@@ -196,14 +241,23 @@ async def mcp_jsonrpc(request: Request):
             if scan_result and scan_result.blocked:
                 reason = scan_result.block_reason or "policy violation"
                 matched_rule_id, matched_rule_name = blocking_rule(scan_result)
-                await _audit(
-                    "blocked",
-                    f"Guardrail: {reason}",
-                    False,
-                    matched_rule_id=matched_rule_id,
-                    matched_rule_name=matched_rule_name,
-                )
-                return JSONResponse(content=_jsonrpc_error(msg_id, -32003, f"Blocked by guardrail: {reason}"), status_code=200)
+                if monitor:
+                    outcomes.append(outcome(
+                        WOULD_BLOCK,
+                        f"Guardrail: {reason}",
+                        SOURCE_GUARDRAIL,
+                        matched_rule_id,
+                        matched_rule_name,
+                    ))
+                else:
+                    await _audit(
+                        "blocked",
+                        f"Guardrail: {reason}",
+                        False,
+                        matched_rule_id=matched_rule_id,
+                        matched_rule_name=matched_rule_name,
+                    )
+                    return JSONResponse(content=_jsonrpc_error(msg_id, -32003, f"Blocked by guardrail: {reason}"), status_code=200)
 
             server_id = tool["server_id"]
 
@@ -260,7 +314,23 @@ async def mcp_jsonrpc(request: Request):
             content_text = None
             if result.get("content"):
                 content_text = str(result["content"][0].get("text", ""))
-            await _audit("success", content_text, False)
+            if outcomes:
+                # The summary stays the upstream result; what the call would
+                # have hit is recorded in the status, matched rule and events.
+                chosen = most_severe(outcomes)
+                await _audit(
+                    chosen["status"],
+                    content_text,
+                    False,
+                    matched_rule_id=chosen["rule_id"],
+                    matched_rule_name=chosen["rule_name"],
+                )
+                result = {
+                    **result,
+                    "_meta": {**(result.get("_meta") or {}), MONITORED_META_KEY: monitored_payload(outcomes)},
+                }
+            else:
+                await _audit("success", content_text, False)
 
             return JSONResponse(content=_jsonrpc_result(msg_id, result))
 

@@ -1,5 +1,14 @@
 import { Box, Drawer, Typography, Stack, IconButton, Divider } from "@mui/material";
-import { X, Activity, PlayCircle, ShieldX, UserCheck, AlertTriangle, Clock } from "lucide-react";
+import {
+  X,
+  Activity,
+  PlayCircle,
+  ShieldX,
+  ShieldAlert,
+  UserCheck,
+  AlertTriangle,
+  Clock,
+} from "lucide-react";
 import { useState, useEffect } from "react";
 import Chip from "../../components/Chip";
 import { StatCard } from "../../components/Cards/StatCard";
@@ -32,6 +41,10 @@ interface ActivitySummary {
   denied: number;
   approvals: number;
   errors: number;
+  /** Monitor-only calls that a rule would have blocked (absent on older gateways). */
+  would_block_count?: number;
+  /** Monitor-only calls that would have needed approval (absent on older gateways). */
+  would_need_approval_count?: number;
   runs: number;
   avg_latency_ms: number;
   last_active: string | null;
@@ -41,6 +54,8 @@ interface ToolRow {
   tool_name: string;
   count: number;
   denied: number;
+  would_block_count?: number;
+  would_need_approval_count?: number;
 }
 
 interface RecentRow {
@@ -102,6 +117,8 @@ export default function AgentActivityDrawer({
   const error = !loading && result.error;
   const data = loading ? null : result.data;
   const s = data?.summary;
+  const wouldBlock = s?.would_block_count ?? 0;
+  const wouldNeedApproval = s?.would_need_approval_count ?? 0;
 
   return (
     <Drawer anchor="right" open={open} onClose={onClose}>
@@ -147,6 +164,16 @@ export default function AgentActivityDrawer({
               />
               <StatCard title="Runs" value={s.runs} Icon={PlayCircle} />
               <StatCard title="Denied" value={s.denied} Icon={ShieldX} highlight={s.denied > 0} />
+              <StatCard
+                title="Would block"
+                value={wouldBlock}
+                Icon={ShieldAlert}
+                subtitle={
+                  wouldNeedApproval > 0
+                    ? fill(tr("{count} would need approval"), { count: wouldNeedApproval })
+                    : undefined
+                }
+              />
               <StatCard title="Approvals" value={s.approvals} Icon={UserCheck} />
               <StatCard
                 title="Errors"
@@ -195,6 +222,24 @@ export default function AgentActivityDrawer({
                           label={fill(tr("{count} denied"), { count: t.denied })}
                           backgroundColor={palette.status.error.bg}
                           textColor={palette.status.error.text}
+                        />
+                      )}
+                      {(t.would_block_count ?? 0) > 0 && (
+                        <Chip
+                          label={fill(tr("{count} would block"), {
+                            count: t.would_block_count ?? 0,
+                          })}
+                          backgroundColor={MCP_STATUS_COLORS.would_block.bg}
+                          textColor={MCP_STATUS_COLORS.would_block.text}
+                        />
+                      )}
+                      {(t.would_need_approval_count ?? 0) > 0 && (
+                        <Chip
+                          label={fill(tr("{count} would need approval"), {
+                            count: t.would_need_approval_count ?? 0,
+                          })}
+                          backgroundColor={MCP_STATUS_COLORS.would_need_approval.bg}
+                          textColor={MCP_STATUS_COLORS.would_need_approval.text}
                         />
                       )}
                     </Stack>

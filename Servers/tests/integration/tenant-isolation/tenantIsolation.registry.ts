@@ -153,6 +153,14 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     testFile: "extensionRuns.isolation.test.ts",
   },
   {
+    // Jira incidents extension. Routes are keyed by the caller's organization
+    // (/api/extensions/jira-incidents/…), not by row id, so a hand-written file covers them.
+    name: "jira_incidents",
+    tables: ["jira_incidents_config", "jira_incident_links", "jira_incident_sync_events"],
+    baseRoute: "/api/extensions/jira-incidents",
+    testFile: "jiraIncidents.isolation.test.ts",
+  },
+  {
     name: "eu_ai_act_classifications",
     tables: ["eu_ai_act_classifications"],
     baseRoute: "/api/projects/:id/eu-ai-act-classification",

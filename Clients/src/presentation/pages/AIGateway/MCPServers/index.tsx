@@ -21,6 +21,11 @@ import Select from "../../../components/Inputs/Select";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
+import {
+  getClientErrorReason,
+  getGatewayErrorDetail,
+  getGatewayErrorText,
+} from "../../../../application/utils/apiErrorReason";
 import palette from "../../../themes/palette";
 import { slugify } from "../shared";
 import MCPTable from "../MCPTable";
@@ -227,11 +232,7 @@ export default function MCPServersPage() {
       reportDiscovery("Server saved", res?.data?.discovery);
       await loadData();
     } catch (err: any) {
-      setFormError(
-        err?.response?.data?.detail ||
-          err?.response?.data?.message ||
-          `Failed to ${editingId ? "update" : "create"} server`,
-      );
+      setFormError(getGatewayErrorText(err, `Failed to ${editingId ? "update" : "create"} server`));
     } finally {
       setIsSubmitting(false);
     }
@@ -256,7 +257,11 @@ export default function MCPServersPage() {
       );
       showAlert("success", toolsFound(res?.data?.tools_discovered ?? 0));
     } catch (err: any) {
-      showAlert("error", "Discovery failed", err?.response?.data?.detail);
+      showAlert(
+        "error",
+        "Discovery failed",
+        getGatewayErrorDetail(err) ?? getClientErrorReason(err) ?? undefined,
+      );
     } finally {
       setDiscoveringId(null);
       await loadData();

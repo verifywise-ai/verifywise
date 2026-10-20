@@ -728,6 +728,21 @@ CREATE TABLE post_market_monitoring_cycles (
 
 ## Key Constraints & Indexes
 
+### Badge status checks
+
+Free-text badge columns reject values outside the lists the UI renders. Nullable columns still allow NULL. Columns that already use a native enum are not duplicated here.
+
+| Table | Column | Allowed values |
+| ----- | ------ | -------------- |
+| `files` | `review_status` | `draft`, `pending_review`, `approved`, `rejected`, `expired`, `superseded` |
+| `policy_manager` | `status` | `Draft`, `Under Review`, `Approved`, `Published`, `Archived`, `Deprecated` |
+| `policy_manager` | `review_status` | `pending_review`, `approved`, `changes_requested` |
+| `ai_incident_managements` | `severity` | `Minor`, `Serious`, `Very serious` |
+| `ai_incident_managements` | `status` | `Open`, `Investigating`, `Mitigated`, `Closed`, `Suspended`, `Emergency action` |
+| `ai_incident_managements` | `approval_status` | `Pending`, `Approved`, `Rejected`, `Not required` |
+| `ai_detection_findings` | `severity` | `critical`, `high`, `medium`, `low` |
+| `ai_detection_findings` | `risk_level` | `high`, `medium`, `low` |
+
 ### Unique Constraints
 
 ```sql

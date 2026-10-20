@@ -68,7 +68,7 @@ interface GatewayLog {
   prompt_tokens: number;
   completion_tokens: number;
   total_tokens: number;
-  cost_usd: number;
+  cost: number;
   latency_ms: number;
   status_code: number;
   metadata: Record<string, string>;
@@ -505,7 +505,7 @@ export default function LogsPage() {
                         {Number(log.total_tokens).toLocaleString()} tokens
                       </Typography>
                       <Typography sx={{ fontSize: 12, fontWeight: 600, minWidth: 70, textAlign: "right" }}>
-                        ${Number(log.cost_usd).toFixed(6)}
+                        ${Number(log.cost).toFixed(6)}
                       </Typography>
 
                       {/* Status chip */}

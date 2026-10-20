@@ -68,6 +68,9 @@ const STATUS_ITEMS = [
   { _id: "error", name: "Error" },
   { _id: "blocked", name: "Blocked" },
   { _id: "rate_limited", name: "Rate limited" },
+  { _id: "approval_required", name: "Approval required" },
+  { _id: "would_block", name: "Would block" },
+  { _id: "would_need_approval", name: "Would need approval" },
 ];
 
 const PAGE_SIZE = 20;

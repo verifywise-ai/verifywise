@@ -26,7 +26,7 @@ import { useAuth } from "../../../../application/hooks/useAuth";
 import useUsers from "../../../../application/hooks/useUsers";
 import { text } from "../../../themes/palette";
 
-const FRAMEWORK_IDS = {
+export const FRAMEWORK_IDS = {
   EU_AI_ACT: 1,
 } as const;
 
@@ -55,7 +55,8 @@ const ProjectFrameworks = ({
 }: {
   project: Project;
   triggerRefresh?: (isTrigger: boolean, toastMessage?: string) => void;
-  initialFrameworkId: number;
+  /** undefined when the project has no framework to preselect. */
+  initialFrameworkId?: number;
 }) => {
   // Stable reference — avoids re-triggering useFrameworks memo + downstream
   // re-renders on every parent render.
@@ -64,7 +65,9 @@ const ProjectFrameworks = ({
     useFrameworks({
       listOfFrameworks: projectFrameworkList,
     });
-  const [selectedFrameworkId, setSelectedFrameworkId] = useState<number>(initialFrameworkId);
+  const [selectedFrameworkId, setSelectedFrameworkId] = useState<number | undefined>(
+    initialFrameworkId,
+  );
   const [selectedFramework, setSelectedFramework] = useState<number>(0);
   const [tracker, setTracker] = useState<TrackerTab>("compliance");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -275,6 +278,10 @@ const ProjectFrameworks = ({
         </Box>
       );
     }
+
+    // The init effect below picks one from projectFrameworks; until it has,
+    // nothing is selected and neither branch can be dispatched honestly.
+    if (selectedFrameworkId === undefined) return null;
 
     if (!isEUAIAct) {
       console.debug("[fw] ProjectFrameworks dispatch → GenericFramework", {

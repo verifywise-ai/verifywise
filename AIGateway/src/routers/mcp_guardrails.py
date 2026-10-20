@@ -11,7 +11,7 @@ from crud.mcp_guardrails import (
 )
 from crud.mcp_agent_keys import get_active_org_agent_key_ids
 from utils.auth import get_org_id, get_user_id, require_admin
-from utils.notifications import notify_config_change
+from utils.notifications import config_event, notify_config_change
 
 # Upper bound on agent keys a single rule can be scoped to.
 MAX_RULE_AGENT_KEYS = 100
@@ -222,12 +222,7 @@ async def create_guardrail(request: Request):
     await notify_config_change(
         organization_id=org_id,
         changed_by_user_id=user_id,
-        event={
-            "action": "created",
-            "entity_type": "mcp_guardrail",
-            "entity_id": str(record["id"]),
-            "entity_name": name,
-        },
+        event=config_event("mcp_guardrail", "created", name, record["id"]),
     )
 
     return {"status": "success", "data": record}
@@ -361,12 +356,7 @@ async def update_guardrail(rule_id: int, request: Request):
     await notify_config_change(
         organization_id=org_id,
         changed_by_user_id=user_id,
-        event={
-            "action": "updated",
-            "entity_type": "mcp_guardrail",
-            "entity_id": str(rule_id),
-            "entity_name": record.get("name", ""),
-        },
+        event=config_event("mcp_guardrail", "updated", record.get("name", ""), rule_id),
     )
 
     return {"status": "success", "data": record}
@@ -394,11 +384,7 @@ async def delete_guardrail(rule_id: int, request: Request):
     await notify_config_change(
         organization_id=org_id,
         changed_by_user_id=user_id,
-        event={
-            "action": "deleted",
-            "entity_type": "mcp_guardrail",
-            "entity_id": str(rule_id),
-        },
+        event=config_event("mcp_guardrail", "deleted", deleted["name"], rule_id),
     )
 
     return {"status": "success", "message": "MCP guardrail rule deleted"}

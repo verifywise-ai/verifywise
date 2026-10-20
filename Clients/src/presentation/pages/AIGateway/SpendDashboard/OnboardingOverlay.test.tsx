@@ -13,6 +13,7 @@ vi.mock("../../../../infrastructure/api/networkServices", () => ({
 
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import OnboardingOverlay from "./OnboardingOverlay";
+import CustomException from "../../../../infrastructure/exceptions/customeException";
 
 const mockGet = apiServices.get as unknown as ReturnType<typeof vi.fn>;
 const mockPost = apiServices.post as unknown as ReturnType<typeof vi.fn>;
@@ -428,7 +429,9 @@ describe("OnboardingOverlay", () => {
   });
 
   it("shows the provider error message when the first request fails", async () => {
-    mockPost.mockRejectedValue({ response: { data: { detail: "Gateway timeout" } } });
+    mockPost.mockRejectedValue(
+      new CustomException("Bad Request", 400, { detail: "Gateway timeout" }),
+    );
     renderWithProviders(
       <OnboardingOverlay
         setupStatus={noneComplete}
@@ -446,6 +449,37 @@ describe("OnboardingOverlay", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Gateway timeout")).toBeInTheDocument();
+    });
+  });
+
+  it("hides a 5xx provider error behind the generic message", async () => {
+    mockPost.mockRejectedValue(
+      new CustomException("Bad Gateway", 502, {
+        detail: "litellm.AuthenticationError: sk-live-secret rejected",
+      }),
+    );
+    renderWithProviders(
+      <OnboardingOverlay
+        setupStatus={noneComplete}
+        onGetStarted={onGetStarted}
+        onStepCompleted={onStepCompleted}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Make your first request"));
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Make your first request" })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Run/ }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          "Request failed. Check that your endpoint and API key are configured correctly.",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/sk-live-secret/)).not.toBeInTheDocument();
     });
   });
 });

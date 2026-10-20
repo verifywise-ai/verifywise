@@ -664,6 +664,14 @@ export const getVisibleEuCategoryIdsForProject = async (
     },
   )) as [{ roles: string[] | null; tier: string }[], number];
 
+  // No row means the pairing does not exist. Nothing is visible, which is what
+  // every caller already does with an empty list: countSubControlsEUByProjectId
+  // reports zeros, getComplianceReportQuery and getComplianceEUByProjectIdQuery
+  // return nothing, readiness skips the pairing, getAllControlCategories
+  // filters to none. Dereferencing instead threw "Cannot read properties of
+  // undefined (reading 'tier')" and failed whole report runs.
+  if (!project) return [];
+
   const ROLE_FILTERED_TIERS = new Set(["High risk", "GPAI"]);
   const applyRoleFilter = ROLE_FILTERED_TIERS.has(project.tier);
   // ANY('{}'::text[]) matches nothing: a use case with no role sees no

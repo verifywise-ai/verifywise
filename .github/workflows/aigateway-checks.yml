@@ -61,15 +61,15 @@ jobs:
           # which is already declared in requirements.txt.
           grep -v '^presidio-anonymizer' requirements.txt > /tmp/requirements-install.txt
           .venv/bin/python -m pip install -r /tmp/requirements-install.txt
-          .venv/bin/python -m pip install --no-deps presidio-anonymizer>=2.2.364
+          .venv/bin/python -m pip install --no-deps "$(grep '^presidio-anonymizer' requirements.txt)"
           .venv/bin/python -m pip install pytest pytest-asyncio
-          .venv/bin/python -m spacy download en_core_web_md
 
       - name: Audit AIGateway dependencies (pip-audit)
         run: |
           .venv/bin/python -m pip install pip-audit
           # Audit the installed environment so presidio-anonymizer (installed with --no-deps)
-          # is checked alongside the cryptography>=50.0.0 requirement.
+          # is checked alongside the cryptography>=50.0.0 requirement. The spaCy model
+          # (en_core_web_md, a pinned GitHub wheel) is not on PyPI, so pip-audit skips it.
           .venv/bin/python -m pip_audit
 
       # Most tests under tests/ are E2E and need a live Express backend,
@@ -88,8 +88,15 @@ jobs:
         run: |
           .venv/bin/python -m pytest \
             tests/test_cache_service.py \
+            tests/test_proxy_tool_calling.py \
+            tests/test_virtual_key_endpoint_names.py \
+            tests/test_endpoint_delete_keeps_key_limits.py \
+            tests/test_guardrail_test_route.py \
+            tests/test_guardrail_scan_offload.py \
             tests/test_spend_by_day_sql.py \
             tests/test_model_catalog_contract.py \
+            tests/test_internal_completion_errors.py \
+            tests/test_redaction.py \
             tests/test_agent_policy_scope.py \
             tests/test_retention.py \
             tests/test_agent_control_retention.py \
@@ -98,4 +105,14 @@ jobs:
             tests/test_19_mcp_discovery.py \
             tests/test_20_mcp_servers_router.py \
             tests/test_21_safe_outbound_url.py \
+            tests/test_22_monitor_mode.py \
+            tests/test_mcp_hook_tool_acls.py \
+            tests/test_mcp_hook_result_outcome.py \
+            tests/test_mcp_hook_request_validation.py \
+            tests/test_config_change_notifications.py \
+            tests/test_endpoint_role_visibility.py \
+            tests/test_invalid_unicode_body.py \
+            tests/test_api_key_saved_verify.py \
+            tests/test_endpoint_model_prefix.py \
+            tests/test_change_history_columns.py \
             -v

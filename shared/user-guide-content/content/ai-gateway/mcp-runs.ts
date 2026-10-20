@@ -66,6 +66,8 @@ export const mcpRunsContent: ArticleContent = {
         { field: 'Model calls', description: 'How many model (conversation) calls the run made.' },
         { field: 'Tool calls', description: 'How many tool (action) calls the run made.' },
         { field: 'Denied', description: 'How many tool calls were blocked by a guardrail. Shows a dash when none were denied.' },
+        { field: 'Would block', description: 'How many tool calls from a monitor only agent key would have been blocked. The calls went through. Shows a dash when there were none.' },
+        { field: 'Would need approval', description: 'How many tool calls from a monitor only agent key would have needed approval. The calls went through and no approval request was created. Shows a dash when there were none.' },
       ],
     },
     {
@@ -135,7 +137,7 @@ export const mcpRunsContent: ArticleContent = {
         { key: 'description', label: 'Description', width: '60%' },
       ],
       rows: [
-        { endpoint: 'GET /mcp/runs', description: 'List runs, one row per run with model and tool call counts, denied count, token and cost totals. Paginated.' },
+        { endpoint: 'GET /mcp/runs', description: 'List runs, one row per run with model and tool call counts, denied count, would block and would need approval counts, token and cost totals. Paginated.' },
         { endpoint: 'GET /mcp/runs/{run_id}', description: 'Get a single run\'s entries (model and tool calls) interleaved in chronological order.' },
       ],
     },

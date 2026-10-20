@@ -1,0 +1,57 @@
+[build-system]
+requires = ["hatchling>=1.27"]  # 1.27+ for PEP 639 license metadata
+build-backend = "hatchling.build"
+
+[project]
+name = "verifywise-agent-control"
+version = "0.1.0"
+description = "VerifyWise Agent Control connector: checks every agent tool call with the VerifyWise AI Gateway before it runs and records the result after."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "VerifyWise" }]
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+]
+dependencies = ["httpx>=0.27,<1"]
+
+[project.optional-dependencies]
+langchain = ["langchain>=1.0,<2", "langchain-core>=1.0,<2"]
+# Lower bounds are the versions the adapters were verified against.
+crewai = ["crewai>=1.15.28,<2"]
+agent-framework = ["agent-framework-core>=1.21,<2"]
+all = ["verifywise-agent-control[langchain,crewai,agent-framework]"]
+dev = [
+  "pytest>=8",
+  "pytest-asyncio>=0.24",
+  "respx>=0.21",
+  "ruff>=0.6",
+]
+
+[project.urls]
+Homepage = "https://github.com/verifywise-ai/verifywise"
+
+[tool.hatch.build.targets.wheel]
+packages = ["verifywise_agent_control"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+filterwarnings = [
+  # crewai warns about its own deprecated fields on every kickoff
+  "ignore::DeprecationWarning:crewai.*",
+]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+extend-exclude = [".venv"]
+
+[tool.ruff.format]
+# README snippets are written for readers, not reformatted.
+exclude = ["*.md"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]

@@ -178,19 +178,19 @@ async def update_prompt(org_id: int, id: int, data: dict) -> Optional[dict]:
         return dict(row) if row else None
 
 
-async def delete_prompt(org_id: int, id: int) -> bool:
+async def delete_prompt(org_id: int, id: int) -> Optional[dict]:
     async with get_db() as db:
         result = await db.execute(
             text("""
                 DELETE FROM ai_gateway_prompts
                 WHERE organization_id = :org_id AND id = :id
-                RETURNING id
+                RETURNING id, name
             """),
             {"org_id": org_id, "id": id},
         )
         await db.commit()
         row = result.fetchone()
-        return row is not None
+        return dict(row._mapping) if row is not None else None
 
 
 async def create_version(

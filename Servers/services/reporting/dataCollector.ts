@@ -41,7 +41,7 @@ import {
   getClausesReportQueryISO27001,
   getAnnexesReportQueryISO27001,
 } from "../../utils/reporting.utils";
-import { FrameworkTarget, ReportScope } from "./reportScope";
+import { FrameworkTarget, ReportScope, resolveFrameworkTargets } from "./reportScope";
 import { parseFrameworkSelection, type ParsedFrameworkSelection } from "./frameworkSelection";
 import {
   mergeAssessment,
@@ -183,22 +183,36 @@ export class ReportDataCollector {
   }
 
   /**
-   * The pairings to collect framework sections from. The legacy path has no
-   * resolved set, so it stands in as a single synthetic target built from the
-   * ids it was constructed with.
+   * The pairings to collect framework sections from, resolved once and cached
+   * into this.targets.
+   *
+   * The scoped path arrives with its set already resolved off
+   * projects_frameworks. The legacy manual path names one pairing in its
+   * request body, and that naming cannot be taken on trust: the wizard
+   * submitted a hardcoded (framework 1, projects_frameworks 1) for any use
+   * case carrying no framework, and projects_frameworks id 1 is a live row
+   * belonging to whichever project holds it.
+   *
+   * Standing that up as a synthetic target made the run fail two different
+   * ways depending on whether the row existed. Where it did not,
+   * collectCompliance -> getVisibleEuCategoryIdsForProject dereferenced the
+   * missing row ("Cannot read properties of undefined (reading 'tier')").
+   * Where it did, compliance silently collected THAT project's requirements
+   * into this report and the run only died later in getAssessmentReportQuery
+   * ("Project framework id not found") — and with the assessment section
+   * deselected it would not have died at all, returning another project's
+   * data under this one's name.
+   *
+   * So the named pairing is looked up like any other. One that does not exist
+   * resolves to no targets, and the section-notice path reports the gap the
+   * way it does for every other unservable section.
    */
-  private frameworkTargets(): FrameworkTarget[] {
+  private async resolveTargets(): Promise<FrameworkTarget[]> {
     if (this.targets) return this.targets;
-    return [
-      {
-        projectId: this.projectId,
-        projectTitle: "",
-        isOrganizationalProject: false,
-        frameworkId: this.frameworkId,
-        frameworkName: "",
-        projectFrameworkId: this.projectFrameworkId,
-      },
-    ];
+    this.targets = await resolveFrameworkTargets("project", this.projectId, this.organizationId, [
+      `native:${this.frameworkId}`,
+    ]);
+    return this.targets;
   }
 
   /**
@@ -218,9 +232,9 @@ export class ReportDataCollector {
    * in scope carries a selected framework" — callers must skip the section, not
    * build `= ANY('{}')`, which hits Postgres empty-array type inference.
    */
-  private scopedProjectIds(): number[] | null {
+  private scopedProjectIds(targets: FrameworkTarget[]): number[] | null {
     if (!this.isFiltered()) return null;
-    return Array.from(new Set(this.frameworkTargets().map((t) => t.projectId)));
+    return Array.from(new Set(targets.map((t) => t.projectId)));
   }
 
   /**
@@ -290,11 +304,11 @@ export class ReportDataCollector {
     // scope does not reuse metadata.isOrganizational — that one still means
     // "projects.is_organizational", and docxGenerator renders off it.
     const orgWide = this.scope === "organization" || metadata.isOrganizational;
-    const targets = this.frameworkTargets();
+    const targets = await this.resolveTargets();
 
     const sectionData: ReportData["sections"] = {};
     const sectionNotices: SectionNotice[] = [];
-    const scopedProjectIds = this.scopedProjectIds();
+    const scopedProjectIds = this.scopedProjectIds(targets);
     const noticeReason = this.filterNoticeReason();
     // An empty scoped set means the filter matched no project at all. Every
     // section below that depends on a pairing has to report it rather than

@@ -34,8 +34,9 @@ export interface ReportRun {
 
 export interface GenerateReportRequestBody {
   projectId: number | string;
-  frameworkId: number | string;
-  projectFrameworkId: number | string;
+  /** Absent when the use case has no framework attached. */
+  frameworkId?: number | string;
+  projectFrameworkId?: number | string;
   reportType: string | string[];
   reportName?: string;
   format?: "pdf" | "docx";

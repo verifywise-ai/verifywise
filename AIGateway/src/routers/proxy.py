@@ -36,7 +36,7 @@ from services.proxy_service import (
     get_guardrail_config,
 )
 from services.cache_service import generate_cache_key, check_cache, store_in_cache, is_cache_globally_enabled
-from services.cost_service import estimate_prompt_cost
+from services.cost_service import estimate_prompt_cost, tool_definitions, whole_tokens
 from services.llm_service import chat_completion, embedding, stream_chat_completion
 
 logger = logging.getLogger("uvicorn")
@@ -55,6 +55,63 @@ class ProxyChatRequest(BaseModel):
     temperature: Optional[float] = Field(None, ge=0, le=2)
     max_tokens: Optional[int] = Field(None, ge=1, le=128000)
     top_p: Optional[float] = Field(None, ge=0, le=1)
+    # OpenAI tool calling. Without these fields Pydantic drops them silently and
+    # the model answers in plain text instead of choosing a tool.
+    tools: Optional[list[dict]] = None
+    tool_choice: Optional[str | dict] = None
+    parallel_tool_calls: Optional[bool] = None
+    # The deprecated functions API, still sent by older clients.
+    functions: Optional[list[dict]] = None
+    function_call: Optional[str | dict] = None
+
+
+# Request fields forwarded to the provider and hashed into the cache key.
+TOOL_PARAMS = ("tools", "tool_choice", "parallel_tool_calls", "functions", "function_call")
+
+
+def _tool_params(body: ProxyChatRequest) -> dict:
+    return {k: getattr(body, k) for k in TOOL_PARAMS if getattr(body, k) is not None}
+
+
+
+
+def _build_llm_kwargs(body: ProxyChatRequest, endpoint: dict) -> dict:
+    """Provider-call parameters: the request's, else the endpoint's defaults."""
+    kwargs: dict = {}
+    if body.temperature is not None or endpoint.get("temperature") is not None:
+        kwargs["temperature"] = body.temperature if body.temperature is not None else float(endpoint["temperature"])
+    if body.max_tokens is not None or endpoint.get("max_tokens") is not None:
+        kwargs["max_tokens"] = body.max_tokens or endpoint["max_tokens"]
+    if body.top_p is not None:
+        kwargs["top_p"] = body.top_p
+    kwargs.update(_tool_params(body))
+    return kwargs
+
+
+def _response_text(message: Optional[dict]) -> Optional[str]:
+    """Text to log for a response message: the content, the tool calls the
+    model asked for, or both as JSON when the model wrote text alongside a tool
+    call. Content parts are stored as JSON so the TEXT column INSERT doesn't
+    break."""
+    if not isinstance(message, dict):
+        return None
+    content = message.get("content")
+    calls = message.get("tool_calls")
+    if not calls and message.get("function_call"):
+        # Deprecated functions API: log it in the same list shape as tool_calls.
+        calls = [{"type": "function", "function": message["function_call"]}]
+    if calls:
+        return json.dumps({"content": content, "tool_calls": calls} if content else calls)
+    if content is None:
+        return None
+    return content if isinstance(content, str) else json.dumps(content)
+
+
+def _first_message(response: dict) -> Optional[dict]:
+    try:
+        return response["choices"][0]["message"]
+    except (KeyError, IndexError, TypeError):
+        return None
 
 
 class ProxyEmbeddingRequest(BaseModel):
@@ -126,6 +183,7 @@ async def proxy_chat(request: Request, body: ProxyChatRequest):
         model=endpoint["model"],
         messages=body.messages,
         max_tokens=body.max_tokens or endpoint.get("max_tokens") or 4096,
+        tools=tool_definitions(_tool_params(body)),
     )
     if not await check_org_budget(org_id, estimated_cost):
         raise HTTPException(status_code=402, detail="Organization budget limit exceeded")
@@ -151,6 +209,8 @@ async def proxy_chat(request: Request, body: ProxyChatRequest):
             messages=cache_messages,
             temperature=body.temperature if body.temperature is not None else endpoint.get("temperature"),
             max_tokens=body.max_tokens or endpoint.get("max_tokens"),
+            top_p=body.top_p,
+            tool_params=_tool_params(body),
         )
         cache_hit = await check_cache(org_id, endpoint["id"], prompt_hash)
 
@@ -159,14 +219,7 @@ async def proxy_chat(request: Request, body: ProxyChatRequest):
 
         # Capture request/response for the run drawer when the org opts in, so a
         # served-from-cache call doesn't wrongly show "(body logging disabled)".
-        cache_resp_text = None
-        if capture_response:
-            try:
-                cache_resp_text = cached_response["choices"][0]["message"]["content"]
-            except (KeyError, IndexError, TypeError):
-                cache_resp_text = None
-            if cache_resp_text is not None and not isinstance(cache_resp_text, str):
-                cache_resp_text = json.dumps(cache_resp_text)
+        cache_resp_text = _response_text(_first_message(cached_response)) if capture_response else None
 
         await log_cache_hit(
             organization_id=org_id,
@@ -195,14 +248,7 @@ async def proxy_chat(request: Request, body: ProxyChatRequest):
     if endpoint.get("system_prompt"):
         final_messages = [{"role": "system", "content": endpoint["system_prompt"]}] + scanned_messages
 
-    # Build kwargs
-    kwargs = {}
-    if body.temperature is not None or endpoint.get("temperature") is not None:
-        kwargs["temperature"] = body.temperature if body.temperature is not None else float(endpoint["temperature"])
-    if body.max_tokens is not None or endpoint.get("max_tokens") is not None:
-        kwargs["max_tokens"] = body.max_tokens or endpoint["max_tokens"]
-    if body.top_p is not None:
-        kwargs["top_p"] = body.top_p
+    kwargs = _build_llm_kwargs(body, endpoint)
 
     start_time = time.time()
 
@@ -249,16 +295,7 @@ async def _handle_completion(
         usage = result.get("usage", {})
         cost = result.get("cost_usd", 0)
 
-        resp_text = None
-        if capture_response:
-            try:
-                resp_text = result["choices"][0]["message"]["content"]
-            except (KeyError, IndexError, TypeError):
-                resp_text = None
-            # Some providers return content as a list of parts — coerce to a
-            # string so the TEXT column INSERT doesn't break.
-            if resp_text is not None and not isinstance(resp_text, str):
-                resp_text = json.dumps(resp_text)
+        resp_text = _response_text(_first_message(result)) if capture_response else None
 
         await log_spend(
             organization_id=org_id,
@@ -278,8 +315,11 @@ async def _handle_completion(
         )
         await reconcile_budget(org_id, estimated_cost, cost)
 
-        # Store in cache if caching enabled
-        if _prompt_hash:
+        # Store in cache if caching enabled. A tool-call response is not cached:
+        # replaying it would hand another caller the same tool_call ids, merging
+        # unrelated runs in run correlation and agent logs.
+        first = _first_message(result)
+        if _prompt_hash and not (first and (first.get("tool_calls") or first.get("function_call"))):
             await store_in_cache(
                 organization_id=org_id,
                 endpoint_id=endpoint["id"],
@@ -341,6 +381,7 @@ async def _handle_stream(
         total_cost = 0.0
         final_model = endpoint["model"]
         acc = []
+        streamed_tool_calls: dict[int, dict] = {}
 
         try:
             async for chunk_str in stream_chat_completion(
@@ -359,18 +400,33 @@ async def _handle_stream(
                         # empty) — guard against IndexError so usage/cost/model below
                         # still parse for that chunk.
                         choices = chunk.get("choices") or []
-                        delta = choices[0].get("delta", {}).get("content") if choices else None
+                        delta_obj = (choices[0].get("delta") or {}) if choices else {}
+                        delta = delta_obj.get("content")
                         if delta and capture_response:
                             acc.append(delta)
-                        if "usage" in chunk:
-                            total_prompt = chunk["usage"].get("prompt_tokens", total_prompt)
-                            total_completion = chunk["usage"].get("completion_tokens", total_completion)
-                        if "cost_usd" in chunk and chunk["cost_usd"] is not None:
-                            total_cost = chunk["cost_usd"]
-                        if "model" in chunk:
+                        if capture_response:
+                            _merge_tool_call_deltas(streamed_tool_calls, delta_obj.get("tool_calls"))
+                            if delta_obj.get("function_call"):
+                                _merge_tool_call_deltas(
+                                    streamed_tool_calls, [{"function": delta_obj["function_call"]}], legacy=True,
+                                )
+                        # The final cost chunk can carry "usage": null or null
+                        # counts; only whole numbers may reach the spend log sums.
+                        usage = chunk.get("usage")
+                        if isinstance(usage, dict):
+                            total_prompt = _token_count(usage.get("prompt_tokens"), total_prompt)
+                            total_completion = _token_count(usage.get("completion_tokens"), total_completion)
+                        cost_usd = chunk.get("cost_usd")
+                        # NaN/Infinity from json.loads are dropped by log_spend and
+                        # reconcile_budget, which both apply _safe_cost.
+                        if isinstance(cost_usd, (int, float)) and not isinstance(cost_usd, bool):
+                            total_cost = cost_usd
+                        if isinstance(chunk.get("model"), str):
                             final_model = chunk["model"]
-                    except (json.JSONDecodeError, KeyError):
-                        pass
+                    except Exception as parse_err:
+                        # This side path only feeds the spend log and usage;
+                        # a chunk it cannot read must never end the client's stream.
+                        logger.debug(f"Could not parse stream chunk for logging: {parse_err}")
 
         except Exception as e:
             logger.error(f"Stream error: {e}")
@@ -387,11 +443,113 @@ async def _handle_stream(
                 metadata={"virtual_key_id": str(vk["id"])},
                 agent_run_id=agent_run_id,
                 request_messages=stored_request,
-                response_text="".join(acc) if (acc and capture_response) else None,
+                response_text=_response_text({
+                    "content": "".join(acc) or None,
+                    "tool_calls": _finished_tool_calls(streamed_tool_calls),
+                }) if capture_response else None,
             )
             await reconcile_budget(org_id, estimated_cost, total_cost)
 
     return StreamingResponse(_stream_generator(), media_type="text/event-stream")
+
+
+def _merge_tool_call_deltas(
+    calls: dict[int, dict], deltas: Optional[list], legacy: bool = False,
+) -> None:
+    """Rebuild streamed tool calls from their deltas.
+
+    The id and name normally arrive in a call's first delta and the arguments
+    in later fragments, all with the same int `index`. Adapters differ, so:
+    a delta with an id joins the call with that id (unless that call has a
+    different index, as with servers that reuse one id), else the latest
+    id-less call with its index, else starts a new call; a delta without an
+    id joins the latest call with its index, or the latest call when it has
+    no index. Legacy `function_call` deltas (`legacy=True`) only ever join
+    each other.
+
+    Name fragments are appended. Some adapters repeat the whole name on every
+    delta, so once arguments have started a name equal to the current one is
+    a repeat and is not appended again. A different name at that point, or
+    the same name with a fragment that opens a new JSON value after the
+    current arguments already form complete JSON, is a new call that reuses
+    the slot.
+
+    This only feeds the response log, so malformed values are coerced to text
+    rather than raised: a bad delta must never abort the client's stream.
+    """
+    for d in deltas or []:
+        if not isinstance(d, dict):
+            continue
+        cid = d.get("id") or None
+        idx = d.get("index") if isinstance(d.get("index"), int) else None
+        fn = d.get("function") if isinstance(d.get("function"), dict) else {}
+        name = _delta_text(fn.get("name"))
+        arguments = _delta_text(fn.get("arguments"))
+        group = {k: c for k, c in calls.items() if c["_legacy"] == legacy}
+        key = None
+        if cid:
+            key = max((k for k, c in group.items()
+                       if c["id"] == cid and (idx is None or c["_index"] in (idx, None))), default=None)
+            if key is None and idx is not None:
+                key = max((k for k, c in group.items() if c["_index"] == idx and not c["id"]), default=None)
+        elif idx is not None:
+            key = max((k for k, c in group.items() if c["_index"] == idx), default=None)
+        elif group:
+            key = max(group)
+        if key is not None:
+            current = calls[key]["function"]
+            if name and current["arguments"] and (
+                name != current["name"]
+                or (arguments.lstrip()[:1] in ("{", "[") and _is_complete_json(current["arguments"]))
+            ):
+                key = None
+        if key is None:
+            key = max(calls) + 1 if calls else 0
+            calls[key] = {"id": None, "type": "function", "function": {"name": "", "arguments": ""},
+                          "_index": idx, "_legacy": legacy}
+        call = calls[key]
+        if cid:
+            call["id"] = cid
+        if call["_index"] is None and idx is not None:
+            call["_index"] = idx
+        current = call["function"]
+        if name and not (name == current["name"] and (current["arguments"] or arguments)):
+            current["name"] += name
+        current["arguments"] += arguments
+
+
+def _delta_text(value) -> str:
+    """A streamed name or arguments fragment as text ("" when absent)."""
+    if value is None:
+        return ""
+    return value if isinstance(value, str) else json.dumps(value, default=str)
+
+
+def _is_complete_json(text: str) -> bool:
+    try:
+        json.loads(text)
+        return True
+    except (ValueError, RecursionError):
+        return False
+
+
+def _token_count(value, fallback: int) -> int:
+    """A usage token count, or `fallback` when it is missing or not a whole number."""
+    count = whole_tokens(value)
+    return fallback if count is None else count
+
+
+def _finished_tool_calls(calls: dict[int, dict]) -> list[dict]:
+    """Tool calls in arrival order, without the merge bookkeeping. Legacy
+    function calls have no id, as in the non-streamed log."""
+    finished = []
+    for key in sorted(calls):
+        call = calls[key]
+        entry = {k: v for k, v in call.items() if not k.startswith("_")}
+        if call["_legacy"] and entry["id"] is None:
+            del entry["id"]
+        finished.append(entry)
+    return finished
 
 
 # ─── Embeddings ──────────────────────────────────────────────────────────────

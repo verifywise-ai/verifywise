@@ -530,6 +530,23 @@ describe("AIGateway - Settings", () => {
   it("shows the gateway's message from an object detail", async () => {
     mockParams = { tab: "guardrails" };
     mockPut.mockRejectedValue(
+      new CustomException("Request failed with status code 409", 409, {
+        detail: { message: "Settings were changed by someone else", code: "settings_conflict" },
+      }),
+    );
+    renderWithProviders(<AIGatewaySettingsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Error behavior")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
+
+    expect(await screen.findByText("Settings were changed by someone else")).toBeInTheDocument();
+  });
+
+  it("hides the gateway's internal key error behind the generic message", async () => {
+    mockParams = { tab: "guardrails" };
+    mockPut.mockRejectedValue(
       new CustomException("Request failed with status code 401", 401, {
         detail: { message: "Invalid internal key", code: "internal_key_rejected" },
       }),
@@ -541,7 +558,8 @@ describe("AIGateway - Settings", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
 
-    expect(await screen.findByText("Invalid internal key")).toBeInTheDocument();
+    expect(await screen.findByText("Failed to save settings")).toBeInTheDocument();
+    expect(screen.queryByText("Invalid internal key")).not.toBeInTheDocument();
   });
 
   it.each([

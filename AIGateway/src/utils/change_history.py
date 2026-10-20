@@ -27,7 +27,7 @@ async def record_endpoint_change(
             await db.execute(
                 text("""
                     INSERT INTO ai_gateway_endpoint_change_history
-                        (organization_id, endpoint_id, changed_by, action,
+                        (organization_id, endpoint_id, changed_by_user_id, action,
                          field_name, old_value, new_value)
                     VALUES
                         (:org_id, :endpoint_id, :changed_by, :action,
@@ -63,7 +63,7 @@ async def record_guardrail_change(
             await db.execute(
                 text("""
                     INSERT INTO ai_gateway_guardrail_change_history
-                        (organization_id, guardrail_id, changed_by, action,
+                        (organization_id, guardrail_id, changed_by_user_id, action,
                          field_name, old_value, new_value)
                     VALUES
                         (:org_id, :guardrail_id, :changed_by, :action,

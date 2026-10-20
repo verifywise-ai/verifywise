@@ -7,6 +7,7 @@ import {
   buildIncidentUpdateReplacements,
 } from "./automation/incident.automation.utils";
 import { replaceTemplateVariables } from "./automation/automation.utils";
+import logger from "./logger/fileLogger";
 import { enqueueAutomationAction } from "../services/automations/automationProducer";
 import {
   assertValidIncidentDescription,
@@ -190,10 +191,13 @@ export const createNewIncidentQuery = async (
           automation_id: automation.automation_id,
         };
 
-        // Enqueue with processed params
-        await enqueueAutomationAction(automation.action_key, {
-          ...processedParams,
-          organizationId,
+        // After commit: a rolled-back create (an import that failed later in
+        // its transaction) must not send an "incident added" email.
+        transaction.afterCommit(() => {
+          enqueueAutomationAction(automation.action_key, {
+            ...processedParams,
+            organizationId,
+          }).catch((error) => logger.error(`[incident] incident_added enqueue failed: ${error}`));
         });
       } else {
         console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
@@ -364,6 +368,14 @@ export const deleteIncidentByIdQuery = async (
   transaction: Transaction,
 ) => {
   try {
+    // A Jira-imported incident keeps its link row, marked so the issue is
+    // never imported again (the FK then nulls incident_id).
+    await sequelize.query(
+      `UPDATE jira_incident_links
+          SET state = 'deleted_in_verifywise', state_reason = NULL, updated_at = now()
+        WHERE organization_id = :organizationId AND incident_id = :id`,
+      { replacements: { organizationId, id }, transaction },
+    );
     const result = (await sequelize.query(
       `DELETE FROM ai_incident_managements WHERE organization_id = :organizationId AND id = :id RETURNING *`,
       {

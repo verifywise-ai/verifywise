@@ -104,7 +104,7 @@ export const mcpAuditContent: ArticleContent = {
       ],
       rows: [
         { field: 'Tool name', description: 'The name of the tool that was called, in monospace font.' },
-        { field: 'Status', description: 'Color-coded chip showing the outcome: success, error, blocked, rate_limited or approval_required.' },
+        { field: 'Status', description: 'Color-coded chip showing the outcome: success, error, blocked, rate_limited, approval_required, Would block or Would need approval.' },
         { field: 'Latency', description: 'Round-trip time in milliseconds.' },
         { field: 'Result summary', description: 'A truncated summary of the tool\'s response (up to 500 characters). Shows a dash if no summary is available.' },
         { field: 'Agent key', description: 'The name of the agent key that made the call.' },
@@ -129,7 +129,13 @@ export const mcpAuditContent: ArticleContent = {
         { bold: 'blocked', text: 'A guardrail rule blocked the call before it reached the server.' },
         { bold: 'rate_limited', text: 'The agent key exceeded its requests-per-minute limit.' },
         { bold: 'approval_required', text: 'The tool requires approval. An approval request was created.' },
+        { bold: 'Would block', text: 'A monitor only agent key made the call, and a guardrail, or for a call through the MCP proxy the key\'s tool lists, would have blocked it. The call went through.' },
+        { bold: 'Would need approval', text: 'A monitor only agent key made the call, and it would have needed approval. The call went through and no approval request was created.' },
       ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Open a Would block or Would need approval entry to see the rule behind it, for example "Would have been blocked by No emails". When there is no rule, the drawer names the reason the gateway recorded: the key\'s tool list or the tool\'s own approval setting (both only for calls through the MCP proxy). Otherwise it says the call would have been blocked by a guardrail, or would have needed approval. Every match is also listed in the entry\'s events, labelled Would block or Would need approval, with the time it was checked.',
     },
     {
       type: 'heading',
@@ -145,7 +151,7 @@ export const mcpAuditContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Filter by tool', text: 'Text field. Type a tool name (e.g., "greet") to show only calls to that tool.' },
-        { bold: 'Status', text: 'Dropdown to filter by result status: All statuses, Success, Error, Blocked or Rate limited.' },
+        { bold: 'Status', text: 'Dropdown to filter by result status: All statuses, Success, Error, Blocked, Rate limited, Approval required, Would block or Would need approval.' },
       ],
     },
     {

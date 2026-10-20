@@ -73,12 +73,6 @@ import SelectableCard from "../../components/SelectableCard";
 import { palette } from "../../themes/palette";
 
 // Import provider logos
-import { ReactComponent as OpenAILogo } from "../../assets/icons/openai_logo.svg";
-import { ReactComponent as AnthropicLogo } from "../../assets/icons/anthropic_logo.svg";
-import { ReactComponent as GeminiLogo } from "../../assets/icons/gemini_logo.svg";
-import { ReactComponent as MistralLogo } from "../../assets/icons/mistral_logo.svg";
-import { ReactComponent as XAILogo } from "../../assets/icons/xai_logo.svg";
-import { ReactComponent as OpenRouterLogo } from "../../assets/icons/openrouter_logo.svg";
 import { ReactComponent as FolderFilledIcon } from "../../assets/icons/folder_filled.svg";
 
 // Large SVGs loaded from public/ to avoid bundling
@@ -91,25 +85,8 @@ const OllamaLogo = (props: React.SVGProps<SVGSVGElement>) => (
     style={{ display: "inline-block", ...props.style }}
   />
 );
-const HuggingFaceLogo = (props: React.SVGProps<SVGSVGElement>) => (
-  <img
-    src="/assets/icons/huggingface_logo.svg"
-    alt="Hugging Face"
-    width={props.width || 24}
-    height={props.height || 24}
-    style={{ display: "inline-block" }}
-  />
-);
-const BuildIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <img
-    src="/assets/icons/build.svg"
-    alt="Build"
-    width={props.width || 24}
-    height={props.height || 24}
-    style={{ display: "inline-block" }}
-  />
-);
 import { ENV_VARs } from "../../../../env.vars";
+import { LLM_PROVIDERS } from "./llmProviders";
 
 // Tab components — loaded per tab so the dashboard shell stays lean and
 // heavy subtrees (experiment detail with katex, arena, bias audits) only
@@ -132,17 +109,6 @@ import type { DeepEvalProject } from "./types";
 
 // Track if Evals dashboard has been loaded before (persists across module switches)
 let hasLoadedEvalsBefore = false;
-
-const LLM_PROVIDERS = [
-  { _id: "openrouter", name: "OpenRouter", Logo: OpenRouterLogo },
-  { _id: "openai", name: "OpenAI", Logo: OpenAILogo },
-  { _id: "anthropic", name: "Anthropic", Logo: AnthropicLogo },
-  { _id: "google", name: "Gemini", Logo: GeminiLogo },
-  { _id: "xai", name: "xAI", Logo: XAILogo },
-  { _id: "mistral", name: "Mistral", Logo: MistralLogo },
-  { _id: "huggingface", name: "Hugging Face", Logo: HuggingFaceLogo },
-  { _id: "custom", name: "Custom", Logo: BuildIcon },
-];
 
 /**
  * API key format patterns for validation

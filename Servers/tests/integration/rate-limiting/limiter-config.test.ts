@@ -130,6 +130,11 @@ const PRODUCTION = {
     maxRequests: 1000,
     message: "Too many health-check requests from this IP, please slow down",
   },
+  virtualKeyProxy: {
+    windowMinutes: 1,
+    maxRequests: 3000,
+    message: "Too many requests from this IP, please slow down and retry",
+  },
 } as const;
 
 /** The relaxed ceilings, which apply ONLY under an explicit dev/test NODE_ENV. */
@@ -149,6 +154,7 @@ const RELAXED_MAX_REQUESTS: Record<string, number> = {
   slackWorkspaceCreate: 10, // deliberately not relaxed
   riskSuggestionsAi: 10, // deliberately not relaxed — every call is a paid LLM request
   healthCheck: 100000,
+  virtualKeyProxy: 100000,
 };
 
 describe("production rate limit configuration", () => {
@@ -217,6 +223,7 @@ describe("dev/test relaxation surface", () => {
       "mrmIngestion",
       "webhook",
       "healthCheck",
+      "virtualKeyProxy",
     ]) {
       expect(relaxed[key].maxRequests).toBeGreaterThan(strict[key].maxRequests);
     }

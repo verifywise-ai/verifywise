@@ -10,7 +10,7 @@ from services.mcp_proxy_service import (
     ON_SAVE_DISCOVERY_SECONDS,
     run_discovery,
 )
-from utils.notifications import notify_config_change
+from utils.notifications import config_event, notify_config_change
 from utils.safe_outbound_url import UnsafeOutboundUrlError, assert_safe_outbound_url
 import crud.mcp_servers as mcp_servers_crud
 
@@ -126,9 +126,9 @@ async def create_mcp_server(request: Request) -> Any:
         raise HTTPException(status_code=500, detail="Failed to create MCP server")
 
     await notify_config_change(
-        org_id=org_id,
-        event="mcp_server_created",
-        payload={"server_id": server["id"], "slug": server["slug"]},
+        org_id,
+        user_id,
+        config_event("mcp_server", "created", server.get("name"), server["id"]),
     )
 
     discovery = SKIPPED
@@ -143,6 +143,7 @@ async def update_mcp_server(server_id: int, request: Request) -> Any:
     require_admin(request)
 
     org_id = get_org_id(request)
+    user_id = get_user_id(request)
 
     body: dict = await request.json()
 
@@ -176,9 +177,9 @@ async def update_mcp_server(server_id: int, request: Request) -> Any:
         raise HTTPException(status_code=500, detail="Failed to update MCP server")
 
     await notify_config_change(
-        org_id=org_id,
-        event="mcp_server_updated",
-        payload={"server_id": server_id, "slug": updated.get("slug")},
+        org_id,
+        user_id,
+        config_event("mcp_server", "updated", updated.get("name"), server_id),
     )
 
     discovery = SKIPPED
@@ -193,6 +194,7 @@ async def delete_mcp_server(server_id: int, request: Request) -> Any:
     require_admin(request)
 
     org_id = get_org_id(request)
+    user_id = get_user_id(request)
 
     existing = await mcp_servers_crud.get_mcp_server(org_id, server_id)
     if not existing:
@@ -203,9 +205,9 @@ async def delete_mcp_server(server_id: int, request: Request) -> Any:
         raise HTTPException(status_code=500, detail="Failed to delete MCP server")
 
     await notify_config_change(
-        org_id=org_id,
-        event="mcp_server_deleted",
-        payload={"server_id": server_id, "slug": existing.get("slug")},
+        org_id,
+        user_id,
+        config_event("mcp_server", "deleted", existing.get("name"), server_id),
     )
 
     return {"deleted": True, "server_id": server_id}

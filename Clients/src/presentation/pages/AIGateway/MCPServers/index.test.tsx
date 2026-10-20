@@ -23,6 +23,7 @@ vi.mock("../../../components/Layout/PageHeaderExtended", () => ({
 
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import MCPServersPage from "./index";
+import CustomException from "../../../../infrastructure/exceptions/customeException";
 
 const mockGet = apiServices.get as unknown as ReturnType<typeof vi.fn>;
 const mockPost = apiServices.post as unknown as ReturnType<typeof vi.fn>;
@@ -294,7 +295,9 @@ describe("MCPServersPage", () => {
 
   it("shows the server-provided error message when submit fails", async () => {
     mockGet.mockResolvedValue({ data: { servers: [] } });
-    mockPost.mockRejectedValue({ response: { data: { detail: "Slug already taken" } } });
+    mockPost.mockRejectedValue(
+      new CustomException("Conflict", 409, { detail: "Slug already taken" }),
+    );
     renderWithProviders(<MCPServersPage />, { route: "/ai-gateway/mcp/servers" });
 
     await waitFor(() => {
@@ -348,9 +351,11 @@ describe("MCPServersPage", () => {
 
   it("shows the gateway's reason when row discovery fails", async () => {
     mockGet.mockResolvedValue({ data: { servers: [makeServer()] } });
-    mockPost.mockRejectedValue({
-      response: { data: { detail: "Could not connect to the server address" } },
-    });
+    mockPost.mockRejectedValue(
+      new CustomException("Bad Request", 400, {
+        detail: "Could not connect to the server address",
+      }),
+    );
     renderWithProviders(<MCPServersPage />, { route: "/ai-gateway/mcp/servers" });
     await waitFor(() => expect(screen.getByText("Search Server")).toBeInTheDocument());
 

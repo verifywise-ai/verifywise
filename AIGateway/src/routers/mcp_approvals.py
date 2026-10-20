@@ -9,7 +9,7 @@ from crud.mcp_approvals import (
     get_pending_approvals,
 )
 from utils.auth import get_org_id, get_user_id, require_admin
-from utils.notifications import notify_config_change
+from utils.notifications import config_event, notify_config_change
 
 router = APIRouter(prefix="/mcp/approvals", tags=["mcp-approvals"])
 
@@ -117,12 +117,7 @@ async def approve_request(request_id: int, request: Request):
     await notify_config_change(
         organization_id=org_id,
         changed_by_user_id=user_id,
-        event={
-            "action": "approved",
-            "entity_type": "mcp_approval",
-            "entity_id": str(request_id),
-            "entity_name": record.get("tool_name", ""),
-        },
+        event=config_event("mcp_approval", "approved", record.get("tool_name", ""), request_id),
     )
 
     return {"status": "success", "data": record}
@@ -171,12 +166,7 @@ async def deny_request(request_id: int, request: Request):
     await notify_config_change(
         organization_id=org_id,
         changed_by_user_id=user_id,
-        event={
-            "action": "denied",
-            "entity_type": "mcp_approval",
-            "entity_id": str(request_id),
-            "entity_name": record.get("tool_name", ""),
-        },
+        event=config_event("mcp_approval", "denied", record.get("tool_name", ""), request_id),
     )
 
     return {"status": "success", "data": record}

@@ -23,13 +23,7 @@ import { WorkflowContext, WorkflowDefinition, StepResult } from "../types";
 import { availableIncidentTools } from "../../../advisor/functions/incidentFunctions";
 import { availableRiskTools } from "../../../advisor/functions/riskFunctions";
 import { requestGateApproval } from "../approvalGate";
-
-/** Severity values that count as a critical-tier incident. */
-const CRITICAL_SEVERITIES = new Set(["very serious", "critical"]);
-
-function isCriticalSeverity(severity: unknown): boolean {
-  return typeof severity === "string" && CRITICAL_SEVERITIES.has(severity.toLowerCase());
-}
+import { isCriticalIncidentSeverity } from "../../../domain.layer/enums/ai-incident-management.enum";
 
 /**
  * Step 1 — classify the incident and decide whether the response runs.
@@ -49,7 +43,7 @@ async function classifyIncident(ctx: WorkflowContext): Promise<StepResult> {
   }
 
   const severity = incident.severity ?? (ctx.triggerPayload.severity as string | undefined);
-  if (!isCriticalSeverity(severity)) {
+  if (!isCriticalIncidentSeverity(severity)) {
     return {
       type: "skip",
       reason: `Incident ${incident.id} is not critical (${severity ?? "unknown"})`,

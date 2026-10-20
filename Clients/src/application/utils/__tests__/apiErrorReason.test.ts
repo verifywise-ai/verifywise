@@ -4,6 +4,7 @@ import {
   getApiValidationMessage,
   getClientErrorReason,
   getGatewayErrorDetail,
+  getGatewayErrorText,
   isClientError,
 } from "../apiErrorReason";
 import CustomException from "../../../infrastructure/exceptions/customeException";
@@ -117,9 +118,9 @@ describe("getGatewayErrorDetail", () => {
   it("reads the message of an object detail ({ message, code }) of a 4xx", () => {
     expect(
       getGatewayErrorDetail(
-        gatewayError(401, { message: "Invalid internal key", code: "internal_key_rejected" }),
+        gatewayError(409, { message: "Key name already in use", code: "duplicate_key_name" }),
       ),
-    ).toBe("Invalid internal key");
+    ).toBe("Key name already in use");
     expect(getGatewayErrorDetail(gatewayError(400, { code: "x" }))).toBeNull();
     expect(getGatewayErrorDetail(gatewayError(400, { message: "" }))).toBeNull();
   });
@@ -132,7 +133,7 @@ describe("getGatewayErrorDetail", () => {
   });
 
   it("returns null when there is no string detail", () => {
-    expect(getGatewayErrorDetail(gatewayError(422, [{ msg: "x" }]))).toBeNull();
+    expect(getGatewayErrorDetail(gatewayError(422, [{ loc: [] }]))).toBeNull();
     expect(getGatewayErrorDetail(gatewayError(400, ""))).toBeNull();
     expect(getGatewayErrorDetail(new Error("network"))).toBeNull();
     expect(getGatewayErrorDetail(null)).toBeNull();
@@ -216,5 +217,78 @@ describe("getApiValidationMessage", () => {
     ).toBeNull();
     expect(getApiValidationMessage(new Error("network down"), fields)).toBeNull();
     expect(getApiValidationMessage(null, fields)).toBeNull();
+  });
+});
+
+describe("getGatewayErrorText", () => {
+  it("prefers a string detail", () => {
+    const err = new CustomException("Bad Request", 400, { detail: "Slug already taken" });
+    expect(getGatewayErrorText(err, "fallback")).toBe("Slug already taken");
+  });
+
+  it("reads detail.message", () => {
+    const err = new CustomException("Bad Request", 400, {
+      detail: { message: "Budget exceeded", code: "budget" },
+    });
+    expect(getGatewayErrorText(err, "fallback")).toBe("Budget exceeded");
+  });
+
+  it("falls back to the 4xx envelope reason", () => {
+    const err = new CustomException("Name is required", 400, {});
+    expect(getGatewayErrorText(err, "fallback")).toBe("Name is required");
+  });
+
+  it("returns the fallback for generic 4xx status text", () => {
+    const err = new CustomException("Bad Request", 400, {});
+    expect(getGatewayErrorText(err, "fallback")).toBe("fallback");
+  });
+
+  it("never shows a 5xx detail or reason", () => {
+    const err = new CustomException("database exploded", 500, { detail: "internal trace" });
+    expect(getGatewayErrorText(err, "fallback")).toBe("fallback");
+  });
+
+  it("returns the fallback for non-API errors", () => {
+    expect(getGatewayErrorText(new Error("boom"), "fallback")).toBe("fallback");
+    expect(getGatewayErrorText({ response: { data: { detail: "x" } } }, "fallback")).toBe(
+      "fallback",
+    );
+  });
+});
+
+describe("getGatewayErrorDetail for validation responses", () => {
+  it("joins the messages of a 422 validation list, without Pydantic's prefix", () => {
+    const err = new CustomException("Request failed with status code 422", 422, {
+      detail: [
+        {
+          loc: ["body", "slug"],
+          msg: "Value error, slug must be at least 2 characters",
+          type: "value_error",
+        },
+        { loc: ["body", "name"], msg: "Field required", type: "missing" },
+      ],
+    });
+    expect(getGatewayErrorDetail(err)).toBe("slug must be at least 2 characters Field required");
+  });
+
+  it("ignores a 422 list without usable messages", () => {
+    const err = new CustomException("Request failed with status code 422", 422, {
+      detail: [{ loc: [] }],
+    });
+    expect(getGatewayErrorText(err, "fallback")).toBe("fallback");
+  });
+});
+
+describe("gateway 401 (internal key misconfiguration)", () => {
+  it("is never shown, whether the reason is in detail or in the error message", () => {
+    const inDetail = new CustomException("Unauthorized", 401, {
+      detail: { message: "Invalid internal key", code: "internal_key_rejected" },
+    });
+    const inMessage = new CustomException("Invalid internal key", 401, {
+      message: "Invalid internal key",
+    });
+    expect(getGatewayErrorDetail(inDetail)).toBeNull();
+    expect(getGatewayErrorText(inDetail, "fallback")).toBe("fallback");
+    expect(getGatewayErrorText(inMessage, "fallback")).toBe("fallback");
   });
 });

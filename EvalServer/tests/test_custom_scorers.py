@@ -18,6 +18,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from utils.gateway_litellm_client import GatewayCompletion
 from utils.run_custom_scorer import (
     PROVIDER_CONFIG,
     ScorerResult,
@@ -200,28 +201,44 @@ def test_label_to_score(label: str, scores: List[Dict[str, Any]], expected: floa
         ("anthropic", "ANTHROPIC_API_KEY"),
         ("mistral", "MISTRAL_API_KEY"),
         ("xai", "XAI_API_KEY"),
-        ("google", "GEMINI_API_KEY"),
-        ("gemini", "GEMINI_API_KEY"),
+        ("google", "GOOGLE_API_KEY"),
+        ("gemini", "GOOGLE_API_KEY"),
         ("huggingface", "HF_API_KEY"),
+        ("openrouter", "OPENROUTER_API_KEY"),
     ],
 )
 def test_get_provider_client_uses_env_var(
-    monkeypatch: pytest.MonkeyPatch, provider: str, env_var: str
+    monkeypatch: pytest.MonkeyPatch, gateway_env: str, provider: str, env_var: str
 ) -> None:
     monkeypatch.setenv(env_var, "sk-fake-key-x")
     client, key = get_provider_client(provider)
     assert key == "sk-fake-key-x"
-    assert client is not None
+    # Cloud judges run through the gateway: no direct client
+    assert client is None
 
 
-def test_get_provider_client_explicit_key_overrides_env(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_get_provider_client_explicit_key_overrides_env(monkeypatch: pytest.MonkeyPatch, gateway_env: str) -> None:
     monkeypatch.setenv("OPENAI_API_KEY", "env-key")
     client, key = get_provider_client("openai", api_key="explicit-key")
     assert key == "explicit-key"
 
 
-def test_get_provider_client_missing_key_raises() -> None:
+def test_get_provider_client_without_env_fallback_ignores_the_env(
+    monkeypatch: pytest.MonkeyPatch, gateway_env: str
+) -> None:
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-server")
+    with pytest.raises(RuntimeError, match="No saved API key"):
+        get_provider_client("openai", env_fallback=False)
+
+
+def test_get_provider_client_missing_key_raises(gateway_env: str) -> None:
     with pytest.raises(RuntimeError, match="No API key found for provider"):
+        get_provider_client("openai")
+
+
+def test_get_provider_client_cloud_without_gateway_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-x")
+    with pytest.raises(RuntimeError, match="AI_GATEWAY_INTERNAL_KEY"):
         get_provider_client("openai")
 
 
@@ -248,11 +265,75 @@ def test_get_provider_client_self_hosted_keeps_v1_if_present() -> None:
 # --------------------------------------------------------------------------- #
 
 
+def _route_gateway_to(monkeypatch: pytest.MonkeyPatch, fake_client: MagicMock) -> None:
+    """Cloud judges run through the gateway: enable it and answer from the fake client."""
+    monkeypatch.setenv("AI_GATEWAY_INTERNAL_KEY", "test-internal-key-not-real")
+
+    def fake_gateway(litellm_model, messages, api_key, **kwargs):
+        response = fake_client.chat.completions.create(model=litellm_model, messages=messages, **kwargs)
+        usage = response.usage
+        return GatewayCompletion(
+            text=response.choices[0].message.content,
+            prompt_tokens=usage.prompt_tokens,
+            completion_tokens=usage.completion_tokens,
+            total_tokens=usage.total_tokens,
+        )
+
+    monkeypatch.setattr("utils.gateway_litellm_client.gateway_completion_sync", fake_gateway)
+
+
 def _mock_openai_response(content: str, total_tokens: int = 10):
     response = MagicMock()
     response.choices = [MagicMock(message=MagicMock(content=content))]
     response.usage = MagicMock(prompt_tokens=5, completion_tokens=5, total_tokens=total_tokens)
     return response
+
+
+@pytest.mark.asyncio
+async def test_run_custom_scorer_key_resolver_supplies_the_org_key_not_the_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The scorer test endpoint runs in the server process: the org's saved key, never the env."""
+    monkeypatch.setenv("AI_GATEWAY_INTERNAL_KEY", "test-internal-key-not-real")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-server")
+    sent = {}
+
+    def fake_gateway(litellm_model, messages, api_key, **kwargs):
+        sent["key"] = api_key
+        return GatewayCompletion(text="PASS", prompt_tokens=1, completion_tokens=1, total_tokens=2)
+
+    monkeypatch.setattr("utils.gateway_litellm_client.gateway_completion_sync", fake_gateway)
+    asked = []
+
+    async def org_key(provider):
+        asked.append(provider)
+        return "sk-org"
+
+    result = await run_custom_scorer(
+        scorer_config=_scorer_row(), input_text="Q", output_text="A", key_resolver=org_key
+    )
+    assert asked == ["openai"]
+    assert sent["key"] == "sk-org"
+    assert result.label == "PASS"
+
+
+@pytest.mark.asyncio
+async def test_run_custom_scorer_key_resolver_without_a_saved_key_fails_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AI_GATEWAY_INTERNAL_KEY", "test-internal-key-not-real")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-server")
+    gateway = MagicMock()
+    monkeypatch.setattr("utils.gateway_litellm_client.gateway_completion_sync", gateway)
+
+    async def no_key(_provider):
+        return None
+
+    result = await run_custom_scorer(
+        scorer_config=_scorer_row(), input_text="Q", output_text="A", key_resolver=no_key
+    )
+    assert result.error and "No saved API key" in result.error
+    gateway.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -266,6 +347,7 @@ async def test_run_custom_scorer_returns_pass_result(monkeypatch: pytest.MonkeyP
         "utils.run_custom_scorer.get_provider_client",
         lambda *args, **kwargs: (fake_client, "sk-test"),
     )
+    _route_gateway_to(monkeypatch, fake_client)
 
     result = await run_custom_scorer(
         scorer_config=_scorer_row(),
@@ -289,6 +371,7 @@ async def test_run_custom_scorer_returns_fail_result(monkeypatch: pytest.MonkeyP
         "utils.run_custom_scorer.get_provider_client",
         lambda *args, **kwargs: (fake_client, "sk-test"),
     )
+    _route_gateway_to(monkeypatch, fake_client)
 
     result = await run_custom_scorer(
         scorer_config=_scorer_row(),
@@ -313,6 +396,7 @@ async def test_run_custom_scorer_handles_legacy_string_judge_model(
         "utils.run_custom_scorer.get_provider_client",
         lambda *args, **kwargs: (fake_client, "sk-test"),
     )
+    _route_gateway_to(monkeypatch, fake_client)
 
     result = await run_custom_scorer(
         scorer_config=_scorer_row(judge_model="gpt-4o"),
@@ -332,6 +416,7 @@ async def test_run_custom_scorer_threshold_boundary(monkeypatch: pytest.MonkeyPa
         "utils.run_custom_scorer.get_provider_client",
         lambda *args, **kwargs: (fake_client, "sk-test"),
     )
+    _route_gateway_to(monkeypatch, fake_client)
 
     # score = 0.5, threshold = 0.5 → passed (>=)
     fake_client.chat.completions.create.return_value = _mock_openai_response("MED")
@@ -367,6 +452,78 @@ async def test_run_custom_scorer_threshold_boundary(monkeypatch: pytest.MonkeyPa
 
 
 @pytest.mark.asyncio
+async def test_run_custom_scorer_reports_the_threshold_it_used(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The result carries its pass line; with no threshold every score passes, i.e. 0."""
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+
+    fake_client = MagicMock()
+    fake_client.chat.completions.create.return_value = _mock_openai_response("FAIL")
+    monkeypatch.setattr(
+        "utils.run_custom_scorer.get_provider_client",
+        lambda *args, **kwargs: (fake_client, "sk-test"),
+    )
+    _route_gateway_to(monkeypatch, fake_client)
+
+    result = await run_custom_scorer(
+        scorer_config=_scorer_row(threshold=0.8), input_text="Q", output_text="A"
+    )
+    assert result.threshold == 0.8
+
+    no_threshold = _scorer_row()
+    no_threshold["defaultThreshold"] = None
+    result = await run_custom_scorer(scorer_config=no_threshold, input_text="Q", output_text="A")
+    assert result.passed is True
+    assert result.threshold == 0.0
+
+    string_threshold = _scorer_row()
+    string_threshold["defaultThreshold"] = "0.7"
+    result = await run_custom_scorer(
+        scorer_config=string_threshold, input_text="Q", output_text="A"
+    )
+    assert result.label == "FAIL"
+    assert result.passed is False
+    assert result.threshold == 0.7
+
+    for bad in ("inf", "abc", float("nan")):
+        invalid = _scorer_row()
+        invalid["defaultThreshold"] = bad
+        result = await run_custom_scorer(scorer_config=invalid, input_text="Q", output_text="A")
+        assert result.threshold == 0.5, bad
+
+    # No threshold on a scale below 0: the stored line is the lowest score, so no row
+    # shows as failing on the dashboard while every row passed.
+    negative = _scorer_row(
+        choice_scores=[{"label": "PASS", "score": 1.0}, {"label": "FAIL", "score": -1.0}]
+    )
+    negative["defaultThreshold"] = None
+    result = await run_custom_scorer(scorer_config=negative, input_text="Q", output_text="A")
+    assert result.score == -1.0
+    assert result.passed is True
+    assert result.threshold == -1.0
+
+
+@pytest.mark.asyncio
+async def test_run_custom_scorer_error_result_keeps_the_threshold(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_client = MagicMock()
+    fake_client.chat.completions.create.side_effect = RuntimeError("judge down")
+    monkeypatch.setattr(
+        "utils.run_custom_scorer.get_provider_client",
+        lambda *args, **kwargs: (fake_client, "sk-test"),
+    )
+    _route_gateway_to(monkeypatch, fake_client)
+
+    result = await run_custom_scorer(
+        scorer_config=_scorer_row(threshold=0.8), input_text="Q", output_text="A"
+    )
+    assert result.label == "ERROR"
+    assert result.threshold == 0.8
+
+
+@pytest.mark.asyncio
 async def test_run_custom_scorer_renders_messages_with_io(monkeypatch: pytest.MonkeyPatch) -> None:
     """Verify {{input}}, {{output}}, {{expected}} are substituted before sending to LLM."""
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
@@ -383,6 +540,7 @@ async def test_run_custom_scorer_renders_messages_with_io(monkeypatch: pytest.Mo
         "utils.run_custom_scorer.get_provider_client",
         lambda *args, **kwargs: (fake_client, "sk-test"),
     )
+    _route_gateway_to(monkeypatch, fake_client)
 
     await run_custom_scorer(
         scorer_config=_scorer_row(
@@ -416,6 +574,7 @@ async def test_run_custom_scorer_parses_json_verdict(monkeypatch: pytest.MonkeyP
         "utils.run_custom_scorer.get_provider_client",
         lambda *args, **kwargs: (fake_client, "sk-test"),
     )
+    _route_gateway_to(monkeypatch, fake_client)
 
     result = await run_custom_scorer(
         scorer_config=_scorer_row(),
@@ -469,15 +628,18 @@ async def test_run_custom_scorer_uses_gateway_when_enabled(
         gateway_called["model"] = litellm_model
         gateway_called["api_key"] = api_key
         gateway_called["messages"] = messages
-        return "PASS"
+        return GatewayCompletion(
+            text="PASS", prompt_tokens=12, completion_tokens=1, total_tokens=13, cost_usd=0.00002
+        )
 
     fake_client = MagicMock()
     monkeypatch.setattr(
         "utils.run_custom_scorer.get_provider_client",
         lambda *args, **kwargs: (fake_client, "sk-test"),
     )
+    _route_gateway_to(monkeypatch, fake_client)
     monkeypatch.setattr(
-        "utils.gateway_litellm_client.gateway_chat_completion_sync", fake_gateway_completion
+        "utils.gateway_litellm_client.gateway_completion_sync", fake_gateway_completion
     )
 
     result = await run_custom_scorer(
@@ -487,6 +649,9 @@ async def test_run_custom_scorer_uses_gateway_when_enabled(
     )
     assert gateway_called["model"] == "gpt-4o-mini"  # openai → no prefix
     assert result.label == "PASS"
+    # The gateway's usage and LiteLLM cost reach the result
+    assert (result.prompt_tokens, result.completion_tokens, result.total_tokens) == (12, 1, 13)
+    assert result.cost_usd == 0.00002
     # OpenAI client should NOT have been hit
     fake_client.chat.completions.create.assert_not_called()
 
@@ -510,7 +675,7 @@ async def test_run_custom_scorer_self_hosted_skips_gateway(
         return "PASS"
 
     monkeypatch.setattr(
-        "utils.gateway_litellm_client.gateway_chat_completion_sync", fake_gateway
+        "utils.gateway_litellm_client.gateway_completion_sync", fake_gateway
     )
 
     result = await run_custom_scorer(
@@ -542,3 +707,39 @@ def test_provider_config_covers_supported_providers() -> None:
 
 def test_google_and_gemini_share_same_env_var() -> None:
     assert PROVIDER_CONFIG["google"]["env_var"] == PROVIDER_CONFIG["gemini"]["env_var"]
+
+
+@pytest.mark.asyncio
+async def test_saved_scorer_gets_its_temperature_tokens_and_top_p(
+    monkeypatch: pytest.MonkeyPatch, gateway_env: str
+) -> None:
+    """The UI saved only top_p under judgeModel.params; temperature and max tokens sit in
+    the camelCase modelParams. All three must reach the gateway call."""
+    seen: Dict[str, Any] = {}
+
+    def fake_gateway_completion(litellm_model, messages, api_key, **kwargs):
+        seen.update(kwargs)
+        return GatewayCompletion(text="PASS")
+
+    monkeypatch.setattr(
+        "utils.run_custom_scorer.get_provider_client",
+        lambda *args, **kwargs: (MagicMock(), "sk-test"),
+    )
+    monkeypatch.setattr("utils.gateway_litellm_client.gateway_completion_sync", fake_gateway_completion)
+
+    row = _scorer_row(judge_model={"name": "gpt-4o-mini", "provider": "openai", "params": {"top_p": 0.4}})
+    row["config"]["modelParams"] = {"temperature": 0.3, "maxTokens": 512, "topP": 1}
+    await run_custom_scorer(scorer_config=row, input_text="Q", output_text="A")
+
+    assert (seen["temperature"], seen["max_tokens"], seen["top_p"]) == (0.3, 512, 0.4)
+
+
+def test_get_provider_client_self_hosted_refuses_the_metadata_endpoint() -> None:
+    with pytest.raises(RuntimeError, match="Self-hosted endpoint refused"):
+        get_provider_client("self-hosted", endpoint_url="http://169.254.169.254/v1")
+
+
+def test_get_provider_client_ollama_is_direct_with_the_default_endpoint() -> None:
+    client, key = get_provider_client("ollama")
+    assert str(client.base_url).startswith("http://localhost:11434/v1")
+    assert key == "not-needed"

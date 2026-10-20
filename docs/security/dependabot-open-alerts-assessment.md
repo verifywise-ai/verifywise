@@ -1,4 +1,4 @@
-# Dependabot open alerts — risk assessment (2026-10-12)
+# Dependabot open alerts — risk assessment (2026-10-12, re-verified 2026-10-19)
 
 Two Dependabot alerts are open against `Servers/package-lock.json`. For
 **both**, the latest version published to npm still falls inside the
@@ -7,6 +7,15 @@ records the chains, the exploitability analysis for this codebase, the
 exposure minimization applied in this branch, and the recommended dismissal
 justification so the alerts can be closed correctly (and re-opened if a fix
 ever ships).
+
+> **2026-10-19 consolidation re-verification.** During the consolidated
+> dependency-update sweep (superseding Dependabot PRs #5016–#5033), both
+> alerts were re-checked: `braces` newest on npm is still 3.0.3 and
+> `sprintf-js` newest is still 1.1.3 — both remain inside their vulnerable
+> ranges and Dependabot still reports no `first_patched_version`. The
+> analysis below stands; the `sprintf-js` override (1.1.3) is still in
+> place in `Servers/package.json`. Dismissal in the Security tab remains
+> the only way to close these two alerts.
 
 - #651 (HIGH) — `braces` — GHSA-vfj7-8cjw-p6xm — "stack-exhaustion denial of
   service through deeply nested patterns" — vulnerable range `<= 3.0.3`.

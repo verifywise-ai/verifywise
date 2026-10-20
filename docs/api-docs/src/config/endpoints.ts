@@ -4429,6 +4429,118 @@ export const extensionEndpoints: Endpoint[] = [
   },
 ];
 
+// Extensions/Jira Incidents endpoints
+export const extensionsjiraIncidentsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/extensions/jira-incidents/links',
+    summary: "Get Jira links for incidents",
+    description: "Jira issue links for the given incident ids (incident_ids=1,2, at most 500). Open to any member; returns an empty list when the extension is disabled.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions/Jira Incidents",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/jira-incidents/config',
+    summary: "Get Jira incidents settings",
+    description: "Connection, mappings and readiness. Never returns the API token. Admin only.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions/Jira Incidents",
+  },
+  {
+    method: 'PUT',
+    path: '/extensions/jira-incidents/config',
+    summary: "Save Jira incidents settings",
+    description: "Partial update of the connection, mappings and import defaults; checks the credentials with Jira. Admin only.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions/Jira Incidents",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/jira-incidents/jira/projects',
+    summary: "List Jira projects",
+    description: "Projects the saved service account can browse. Admin only.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions/Jira Incidents",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/jira-incidents/jira/issue-types',
+    summary: "List Jira issue types",
+    description: "Issue types of a Jira project (project=<id>). Admin only.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions/Jira Incidents",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/jira-incidents/jira/statuses',
+    summary: "List Jira statuses",
+    description: "Statuses for a project and issue type, with the default status mappings both ways. Admin only.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions/Jira Incidents",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/jira-incidents/jira/priorities',
+    summary: "List Jira priorities",
+    description: "Jira priorities with the default priority-to-severity mapping. Admin only.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions/Jira Incidents",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/jira-incidents/jira/labels',
+    summary: "Search Jira labels",
+    description: "Labels matching query, for the import filter. Admin only.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions/Jira Incidents",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/jira-incidents/events',
+    summary: "List Jira incidents sync activity",
+    description: "Most recent sync events, newest first (limit 1-200, default 50). Admin only.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions/Jira Incidents",
+  },
+];
+
 // Files endpoints
 export const fileEndpoints: Endpoint[] = [
   {
@@ -11009,10 +11121,12 @@ export const systemEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/logger/logs',
     summary: "Get Logs",
+    description: "Returns the last 500 lines of the caller's organization server log for today. Admin only (requires the logs.admin permission; built-in roles: Admin).",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
       { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden: caller does not hold the logs.admin permission" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "System",
@@ -11974,6 +12088,7 @@ export const allEndpoints = {
   evidenceAi: evidenceAiEndpoints,
   evidenceHub: evidenceHubEndpoints,
   extension: extensionEndpoints,
+  extensionsjiraIncidents: extensionsjiraIncidentsEndpoints,
   file: fileEndpoints,
   framework: frameworkEndpoints,
   fria: friaEndpoints,

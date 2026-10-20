@@ -14,6 +14,7 @@ import {
   ledgerFilterReplacements,
   ledgerRowValues,
 } from "../utils/auditLedgerExport.utils";
+import { redactRowText } from "../utils/logger/redact";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 
 import { translateError } from "../utils/i18n.utils";
@@ -53,7 +54,7 @@ export async function getAuditLedger(req: Request, res: Response): Promise<any> 
     );
     const total = parseInt(countResult[0]?.count || "0", 10);
 
-    const entries = await sequelize.query(
+    const rows: Array<Record<string, unknown>> = await sequelize.query(
       `SELECT al.*, u.name as user_name, u.surname as user_surname
        FROM audit_ledger al
        LEFT JOIN users u ON al.user_id = u.id
@@ -65,6 +66,7 @@ export async function getAuditLedger(req: Request, res: Response): Promise<any> 
         type: QueryTypes.SELECT,
       },
     );
+    const entries = rows.map(redactRowText);
 
     await logSuccess({
       eventType: "Read",

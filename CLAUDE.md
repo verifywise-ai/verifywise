@@ -1,6 +1,6 @@
 # VerifyWise - Development Guide
 
-> **Last Updated:** 2026-10-11
+> **Last Updated:** 2026-10-17
 
 This document contains cross-cutting rules for the VerifyWise codebase. Directory-scoped guides load automatically when working in each area:
 
@@ -36,7 +36,7 @@ Everything is in this repository. There is no separate plugin repository. The fo
 |------|-------|-----------|
 | Core frameworks (EU AI Act, ISO 42001, ISO 27001, NIST AI RMF; ids 1–4) | Hand-built tables, routes and pages | `docs/technical/domains/compliance-frameworks.md` |
 | 21 bundled frameworks (SOC 2, GDPR, HIPAA, ...; ids 5–25) | `Servers/structures/<Name>/*.structure.ts`, registry `Servers/structures/index.ts` | `docs/technical/guides/adding-new-framework.md` |
-| 7 extensions (Slack, MLflow, Azure AI Foundry, Model Lifecycle, Risk Import, Jira Assets, Dataset Bulk Upload) | `Servers/extensions/<key>/` + `Clients/src/presentation/pages/Extensions/` | `docs/technical/infrastructure/extensions.md` |
+| 8 extensions (Slack, MLflow, Azure AI Foundry, Model Lifecycle, Risk Import, Jira Assets, Jira incidents, Dataset Bulk Upload) | `Servers/extensions/<key>/` + `Clients/src/presentation/pages/Extensions/` | `docs/technical/infrastructure/extensions.md` |
 
 ---
 

@@ -250,25 +250,27 @@ SLACK_BOT_TOKEN=xoxb-...
 
 ### AI Gateway
 
-The backend calls the AI Gateway's internal API with a shared key. Set the same value on both services, including any separate worker process or container (it runs the daily retention job). Both sides trim surrounding whitespace, and a whitespace-only value counts as not set.
+The backend and the EvalServer call the AI Gateway's internal API with a shared key. Set the same value on the backend, the AI Gateway and the EvalServer, including any separate worker process or container (it runs the daily retention job). Both sides trim surrounding whitespace, and a whitespace-only value counts as not set.
 
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `AI_GATEWAY_URL` | Internal URL of the AI Gateway, used for every gateway call and the `/health` check | No (default `http://127.0.0.1:8100`) |
-| `AI_GATEWAY_INTERNAL_KEY` | Shared secret sent as `x-internal-key` from the backend to the AI Gateway. Set the same value in `Servers/.env` and the AI Gateway's environment | Yes, when the AI Gateway runs |
+| `AI_GATEWAY_INTERNAL_KEY` | Shared secret sent as `x-internal-key` from the backend and the EvalServer to the AI Gateway. Set the same value in `Servers/.env`, the AI Gateway's environment and the EvalServer's environment | Yes, when the AI Gateway runs; always for the EvalServer |
 | `MCP_AUDIT_RETENTION_DAYS` | Default number of days to keep Agent Control logs for organizations that have not set their own period in **Settings > Data retention**. Zero or less keeps logs indefinitely for those organizations | No (default `30`) |
 | `MCP_AUDIT_RETENTION_MIN_DAYS` | Shortest period an organization may set for Agent Control logs. Not applied to `MCP_AUDIT_RETENTION_DAYS` | No (default `7`) |
+| `GUARDRAILS_PRELOAD_PII` | Set on the AI Gateway. Loads the PII detection engine (Presidio and its spaCy model) in the background when the gateway starts, so the first PII guardrail scan does not wait for it. Set to `false` to load it on first use instead | No (default `true`) |
 
 The default is the IPv4 loopback address. If the AI Gateway listens only on the IPv6 loopback (`::1`), set `AI_GATEWAY_URL=http://[::1]:8100`.
 
 ```bash
-# Generate once and set on both the backend and the AI Gateway
+# Generate once and set on the backend, the AI Gateway and the EvalServer
 AI_GATEWAY_INTERNAL_KEY=$(openssl rand -hex 32)
 ```
 
 What happens when the key is missing or does not match:
 
 - **AI Gateway:** refuses to start when `AI_GATEWAY_INTERNAL_KEY` is empty or a placeholder.
+- **EvalServer:** refuses to start when `AI_GATEWAY_INTERNAL_KEY` is empty or a placeholder, because it runs every cloud model (tested models, judges, scorers, Arena, report summaries) through the AI Gateway. It also needs `AI_GATEWAY_URL` when the gateway is not on its own host, and `ENCRYPTION_KEY` (the backend's value) to read stored gateway keys for report summaries. On Helm with `secrets.existingSecret`, that Secret must contain both `AI_GATEWAY_INTERNAL_KEY` and `ENCRYPTION_KEY`, or the eval-server pod will not start.
 - **Every internal route:** the gateway checks this key on all `/internal/*` calls from the backend and fails closed. The key is checked before the request body is validated against the route's schema, but after the body is read and decoded as JSON, so a request whose body is not valid JSON gets 422 even without the key. A missing or wrong key gets 401 with code `internal_key_rejected`. With no key configured every internal route answers 503 with code `internal_key_not_configured`. That is defence in depth, since the gateway refuses to start without a key.
 - **Backend and worker:** each logs one startup warning when `AI_GATEWAY_INTERNAL_KEY` is not set and the gateway is in use: `AI_GATEWAY_URL` is set, or a gateway answers `/health` at the default address within 2 seconds. The daily retention job also logs a refusal once per run.
 - **Log retention:** when the gateway refuses the daily purge over the key, the retention job records the guardrail and spend log cleanups as failed, and **Settings > Data retention** shows "Purge refused: internal key not configured" (key missing on either side) or "Purge refused: internal key rejected" (keys differ) in the Last cleanup column. No logs are deleted until the key is fixed.

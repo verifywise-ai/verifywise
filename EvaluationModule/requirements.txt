@@ -1,5 +1,5 @@
 # Core dependencies
-aiohttp>=3.14.3
+aiohttp>=3.14.5
 cryptography>=50.0.1
 numpy>=2.5.3,<3.0.0
 pandas>=3.0.6
@@ -30,18 +30,15 @@ pyarrow>=25.0.1
 nltk>=3.10.3
 
 # Utilities
-tqdm>=4.70.0
+tqdm>=4.70.1
 textblob>=0.20.1
 python-dotenv>=1.2.4
 
-# LLM API Clients
+# LLM clients: cloud models run through the AI Gateway (httpx); openai is for
+# self-hosted and custom OpenAI-compatible endpoints, ollama for local models
 httpx>=0.27.0
-openai>=3.23.0
-anthropic>=1.12.1
-google-generativeai>=0.8.6
+openai>=3.31.0
 ollama>=0.6.2
-xai-sdk>=1.20.0
-mistralai>=3.0.0
 
 # DeepEval for comprehensive LLM evaluation
 deepeval>=4.2.3

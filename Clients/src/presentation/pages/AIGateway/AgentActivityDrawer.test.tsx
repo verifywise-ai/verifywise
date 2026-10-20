@@ -80,6 +80,43 @@ describe("AgentActivityDrawer", () => {
     expect(screen.getByText("Rule: Approve deploys")).toBeInTheDocument();
   });
 
+  it("shows monitor only counts: a would block card, per-tool chip and status chip", async () => {
+    mockGet.mockResolvedValue({
+      data: {
+        data: {
+          ...activity({ would_block_count: 4, would_need_approval_count: 2 }),
+          by_tool: [
+            {
+              tool_name: "Bash",
+              count: 5,
+              denied: 0,
+              would_block_count: 3,
+              would_need_approval_count: 1,
+            },
+          ],
+          recent: [
+            {
+              id: 2,
+              tool_name: "Bash",
+              result_status: "would_block",
+              matched_rule_name: "No emails",
+              latency_ms: 9,
+              created_at: "2026-10-09T10:00:00Z",
+            },
+          ],
+        },
+      },
+    });
+    renderWithProviders(<AgentActivityDrawer agentKeyId={5} open onClose={vi.fn()} />);
+
+    // Card title and the recent-call status chip share the label.
+    await waitFor(() => expect(screen.getAllByText("Would block")).toHaveLength(2));
+    expect(screen.getByText("4")).toBeInTheDocument();
+    expect(screen.getByText("2 would need approval")).toBeInTheDocument();
+    expect(screen.getByText("3 would block")).toBeInTheDocument();
+    expect(screen.getByText("1 would need approval")).toBeInTheDocument();
+  });
+
   it("shows the empty state when the agent has no calls", async () => {
     mockGet.mockResolvedValue({ data: { data: activity({ total_calls: 0 }) } });
     renderWithProviders(<AgentActivityDrawer agentKeyId={5} open onClose={vi.fn()} />);

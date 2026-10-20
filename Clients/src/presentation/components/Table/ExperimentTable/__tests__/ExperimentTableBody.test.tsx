@@ -2,6 +2,7 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import ExperimentTableBody from "../ExperimentTableBody";
+import { EXPERIMENT_ACTION_TOOLTIPS } from "../actionTooltips";
 import type { IExperimentRow } from "../../../../types/interfaces/i.table";
 
 const mockRows: IExperimentRow[] = [
@@ -234,6 +235,47 @@ describe("ExperimentTableBody", () => {
     expect(screen.getByText("Copy results to clipboard")).toBeInTheDocument();
     expect(screen.getByText("Rerun")).toBeInTheDocument();
     expect(screen.getByText("Delete")).toBeInTheDocument();
+  });
+
+  it("explains what download, copy and rerun do in tooltips", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <table>
+        <ExperimentTableBody
+          {...defaultProps}
+          onRerun={vi.fn()}
+          onDownload={vi.fn()}
+          onCopy={vi.fn()}
+        />
+      </table>,
+    );
+    await user.click(screen.getAllByRole("button")[0]);
+
+    await user.hover(screen.getByText("Download results as JSON"));
+    expect(await screen.findByText(EXPERIMENT_ACTION_TOOLTIPS.downloadSummary)).toBeInTheDocument();
+
+    await user.hover(screen.getByText("Copy results to clipboard"));
+    expect(await screen.findByText(EXPERIMENT_ACTION_TOOLTIPS.copySummary)).toBeInTheDocument();
+
+    await user.hover(screen.getByText("Rerun"));
+    expect(await screen.findByText(EXPERIMENT_ACTION_TOOLTIPS.rerun)).toBeInTheDocument();
+  });
+
+  it("explains why rerun is disabled while the experiment runs", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <table>
+        <ExperimentTableBody {...defaultProps} rows={[mockRows[1]]} onRerun={vi.fn()} />
+      </table>,
+    );
+    await user.click(screen.getAllByRole("button")[0]);
+
+    expect(screen.getByRole("button", { name: /rerun/i })).toBeDisabled();
+    // The disabled button fires no hover events; its wrapper shows the tooltip.
+    await user.hover(screen.getByText("Rerun").closest("span") as HTMLElement);
+    expect(
+      await screen.findByText(EXPERIMENT_ACTION_TOOLTIPS.rerunWhileRunning),
+    ).toBeInTheDocument();
   });
 
   it("calls onRerun from action menu", async () => {

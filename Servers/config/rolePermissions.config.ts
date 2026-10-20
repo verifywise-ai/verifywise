@@ -119,6 +119,11 @@ export const ROLE_PERMISSIONS = {
     description: "Add, edit and delete LLM API keys",
     legacyRoles: ADMIN,
   },
+  "logs.admin": {
+    module: "Event tracker",
+    description: "View the organization's server logs",
+    legacyRoles: ADMIN,
+  },
   "organization.admin": {
     module: "Organization",
     description: "Update organization settings",

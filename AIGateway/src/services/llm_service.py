@@ -3,7 +3,15 @@ from typing import AsyncIterator
 
 import litellm
 
-from services.cost_service import _safe_cost, calculate_stream_cost
+from services.cost_service import _safe_cost, calculate_stream_cost, tool_definitions, whole_tokens
+
+
+class ProviderCallError(Exception):
+    """The provider call itself failed; `cause` is LiteLLM's exception (or whatever it raised)."""
+
+    def __init__(self, cause: Exception):
+        super().__init__(str(cause))
+        self.cause = cause
 
 
 async def chat_completion(
@@ -42,7 +50,12 @@ async def chat_completion(
             {"model": m, "api_key": api_key} for m in fallback_models
         ]
 
-    response = await litellm.acompletion(**call_kwargs)
+    # Only the provider call counts as a provider failure; a bug in the bookkeeping below
+    # must surface as the gateway's own error
+    try:
+        response = await litellm.acompletion(**call_kwargs)
+    except Exception as exc:
+        raise ProviderCallError(exc) from exc
 
     try:
         cost = litellm.completion_cost(completion_response=response)
@@ -83,6 +96,17 @@ async def embedding(
     }
 
 
+def _text(value) -> str:
+    """A streamed name or arguments fragment as text ("" when absent).
+
+    Only feeds the fallback token count, so an odd value from an adapter is
+    stringified rather than allowed to raise mid-stream.
+    """
+    if value is None:
+        return ""
+    return value if isinstance(value, str) else str(value)
+
+
 async def stream_chat_completion(
     model: str,
     messages: list[dict],
@@ -111,33 +135,51 @@ async def stream_chat_completion(
 
     async for chunk in response:
         last_chunk = chunk
-        if (
-            chunk.choices
-            and chunk.choices[0].delta
-            and chunk.choices[0].delta.content
-        ):
-            accumulated_text += chunk.choices[0].delta.content
+        delta = chunk.choices[0].delta if chunk.choices else None
+        if delta and delta.content:
+            accumulated_text += delta.content
+        # A tool-call answer has no content; its name and arguments are the
+        # completion tokens, so they must count when the provider sends no usage.
+        functions = [getattr(tc, "function", None) for tc in (getattr(delta, "tool_calls", None) or [])]
+        functions.append(getattr(delta, "function_call", None))  # deprecated functions API
+        for fn in functions:
+            if fn is not None:
+                accumulated_text += _text(getattr(fn, "name", None)) + _text(getattr(fn, "arguments", None))
         yield f"data: {json.dumps(chunk.model_dump())}\n\n"
 
     # Calculate cost: try from usage first, fall back to token counting
     cost = 0.0
     usage = None
 
-    if last_chunk and hasattr(last_chunk, "usage") and last_chunk.usage:
+    provider_usage = getattr(last_chunk, "usage", None) if last_chunk else None
+    prompt_tokens = whole_tokens(getattr(provider_usage, "prompt_tokens", None))
+    completion_tokens = whole_tokens(getattr(provider_usage, "completion_tokens", None))
+    if prompt_tokens is not None and completion_tokens is not None and (prompt_tokens or completion_tokens):
+        # The provider's counts are exact; keep them even when pricing fails.
+        usage = {
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": prompt_tokens + completion_tokens,
+        }
         try:
-            # completion_cost can return NaN (not raise); coerce so the
-            # `cost == 0.0` fallback below still fires and no NaN is emitted.
+            # completion_cost can return NaN (not raise); _safe_cost coerces it.
             cost = _safe_cost(litellm.completion_cost(completion_response=last_chunk))
-            usage = {
-                "prompt_tokens": last_chunk.usage.prompt_tokens,
-                "completion_tokens": last_chunk.usage.completion_tokens,
-                "total_tokens": last_chunk.usage.total_tokens,
-            }
         except Exception:
             pass
-
-    if cost == 0.0 and accumulated_text:
-        cost, usage = calculate_stream_cost(model, messages, accumulated_text)
+        if cost == 0.0:
+            try:
+                prompt_cost, completion_cost = litellm.cost_per_token(
+                    model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens,
+                )
+                cost = _safe_cost(prompt_cost + completion_cost)
+            except Exception:
+                pass
+    elif accumulated_text:
+        # No usable provider counts (missing, partial, null or all zero): estimate them.
+        cost, usage = calculate_stream_cost(
+            model, messages, accumulated_text,
+            tools=tool_definitions(kwargs),
+        )
 
     yield f"data: {json.dumps({'cost_usd': cost, 'usage': usage})}\n\n"
     yield "data: [DONE]\n\n"

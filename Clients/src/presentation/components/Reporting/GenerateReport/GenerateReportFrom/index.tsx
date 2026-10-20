@@ -16,6 +16,7 @@ import { fieldStyle } from "./styles";
 import Select from "../../../../components/Inputs/Select";
 import { VerifyWiseContext } from "../../../../../application/contexts/VerifyWise.context";
 import { Project, FrameworkValues } from "../../../../../application/interfaces/appStates";
+import NoFrameworkNotice from "../NoFrameworkNotice";
 import { FileText, FileType, Sparkles } from "lucide-react";
 import { ReportFormat } from "../../../../../domain/interfaces/i.widget";
 
@@ -32,12 +33,6 @@ interface FormErrors {
   project?: string;
   framework?: string;
 }
-
-const initialFrameworkValue: FrameworkValues = {
-  project_framework_id: 1,
-  framework_id: 1,
-  name: "EU AI Act",
-};
 
 interface ReportProps {
   reportType: "project" | "organization" | null;
@@ -96,8 +91,7 @@ const GenerateReportFrom: React.FC<ReportProps> = ({
     for (const f of allFrameworks) {
       if (!deduped.has(f.framework_id)) deduped.set(f.framework_id, f);
     }
-    const list = Array.from(deduped.values());
-    return list.length > 0 ? list : [initialFrameworkValue];
+    return Array.from(deduped.values());
   }, [dashboardValues.projects]);
 
   // Get frameworks for selected project (use case reports)
@@ -107,10 +101,18 @@ const GenerateReportFrom: React.FC<ReportProps> = ({
 
     const frameworks = selectedProject?.framework;
 
-    return Array.isArray(frameworks) && frameworks.length > 0
-      ? frameworks
-      : [initialFrameworkValue];
+    // No fallback pairing. This used to stand a use case with no framework up
+    // as a hardcoded { framework_id: 1, project_framework_id: 1 } "EU AI Act".
+    // projects_frameworks id 1 is a live row belonging to whichever project
+    // holds it, so the report either collected THAT project's compliance data
+    // (where the row exists) or crashed dereferencing the missing row in
+    // getVisibleEuCategoryIdsForProject (where it does not).
+    return Array.isArray(frameworks) ? frameworks : [];
   }, [dashboardValues.projects, values.project]);
+
+  // Surfaced before the user picks sections or generates, not after the report
+  // comes back short.
+  const hasNoFramework = !isOrganizational && !!values.project && projectFrameworks.length === 0;
 
   // Update projectFrameworkId when project or framework changes
   useEffect(() => {
@@ -127,14 +129,19 @@ const GenerateReportFrom: React.FC<ReportProps> = ({
 
   // Auto-select first framework when project changes (for use case reports)
   useEffect(() => {
-    if (!isOrganizational && values.project && projectFrameworks.length > 0) {
-      const firstFramework = projectFrameworks[0];
-      onValuesChange({
-        ...values,
-        framework: firstFramework.framework_id,
-        projectFrameworkId: firstFramework.project_framework_id,
-      });
-    }
+    if (isOrganizational || !values.project) return;
+    const firstFramework = projectFrameworks[0];
+    onValuesChange({
+      ...values,
+      // 0, not the previous use case's ids, when this one carries no
+      // framework. A use case without one is an ordinary state — it still
+      // reports its risks, models, vendors, training, policies and incidents
+      // — so 0 is the value that lets it through while matching no framework
+      // gate: getAvailableSections drops the whole Compliance & Governance
+      // group, and the collector resolves no pairing for it.
+      framework: firstFramework?.framework_id ?? 0,
+      projectFrameworkId: firstFramework?.project_framework_id ?? 0,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [values.project, isOrganizational]);
 
@@ -273,6 +280,8 @@ const GenerateReportFrom: React.FC<ReportProps> = ({
         error={errors.project}
         isRequired
       />
+
+      {hasNoFramework && <NoFrameworkNotice />}
 
       {/* Framework Selection - Only for organizational reports */}
       {isOrganizational && (

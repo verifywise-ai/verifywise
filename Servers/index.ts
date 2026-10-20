@@ -17,6 +17,7 @@ import {
   stopAiDetectionProgressCleanup,
 } from "./services/aiDetection.service";
 import { warnIfGatewayKeyMissing } from "./utils/aiGatewayKeyCheck";
+import { warnIfLocalOverrideIgnored } from "./extensions/jira-incidents/siteUrl";
 import logger from "./utils/logger/fileLogger";
 
 const DEFAULT_PORT = "3000";
@@ -111,6 +112,8 @@ try {
   // Warn when the AI Gateway is in use but the shared key is missing (rule in
   // aiGatewayKeyCheck). Runs in the background; it never blocks startup.
   void warnIfGatewayKeyMissing(logger);
+  // The Jira incidents local site URL override only counts in development and test.
+  warnIfLocalOverrideIgnored(process.env, (message) => logger.warn(message));
 
   const server = app.listen(port, () => {
     console.log(`Server running on port http://${host}:${port}/`);

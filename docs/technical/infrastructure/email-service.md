@@ -31,7 +31,7 @@ VerifyWise uses a multi-provider email service supporting MJML templates, multip
 │  │  (Templates)     │     │                  │                             │
 │  └────────┬─────────┘     └──────────────────┘                             │
 │           │                                                                 │
-│           │ 3. Variable replacement: {{key}} → value                        │
+│           │ 3. Variable replacement: {{key}} → escaped value                │
 │           ▼                                                                 │
 │  ┌──────────────────────────────────────────────────────────────────────┐  │
 │  │                      Email Provider Factory                           │  │
@@ -149,7 +149,7 @@ Templates are stored in `Servers/templates/` as `.mjml` files.
 
 | Template | Purpose | Key Variables |
 |----------|---------|---------------|
-| `account-creation-email.mjml` | New account invitation | `{{name}}`, `{{link}}` |
+| `account-creation-email.mjml` | New account invitation | `{{link}}`, plus translated copy (`{{heading}}`, `{{greeting}}`, `{{intro}}`, `{{instruction}}`, `{{button}}`, `{{ignore}}`, `{{thanks}}`, `{{footer}}`) |
 | `password-reset-email.mjml` | Password reset | `{{name}}`, `{{email}}`, `{{url}}` |
 | `project-created-admin.mjml` | New project notification | `{{admin_name}}`, `{{project_name}}`, `{{project_url}}` |
 | `user-added-project-admin.mjml` | Added as admin | `{{user_name}}`, `{{project_name}}`, `{{actor_name}}` |
@@ -163,6 +163,8 @@ Templates are stored in `Servers/templates/` as `.mjml` files.
 | `pmm-escalation.mjml` | PMM escalation | Escalation details |
 | `pmm-completed.mjml` | PMM completed | `{{completed_by_name}}`, `{{completed_at}}` |
 | `pmm-flagged-concern.mjml` | Concern flagged | `{{flagged_questions_html}}` |
+
+**Language.** `sendInviteEmail` fills the invitation copy from the backend dictionaries. A known recipient gets the language saved in Settings. An address with no user yet gets the inviter's language. Spanish is a frontend language, so a saved Spanish preference is sent in English, the same as other backend mail.
 
 **Link lifetimes.** An invitation link (`account-creation-email.mjml`) is valid for 30 days after it is sent or resent (`INVITATION_LIFETIME_MS` in `Servers/utils/jwt.utils.ts`). The same constant sets `invitations.expires_at`, which the Team page uses to show "Pending" or "Expired". Invitations sent before this was raised from 7 days keep their original 7-day link; resending issues a new 30-day one. Password-reset links last 1 hour.
 
@@ -206,27 +208,23 @@ Templates are stored in `Servers/templates/` as `.mjml` files.
 
 ### Template Variable Replacement
 
+`compileMjmlToHtml(template, data)` in `Servers/tools/mjmlCompiler.ts` fills every `{{key}}` in one pass:
+
+- **Values are HTML-escaped by default.** Names, titles, descriptions and other user-entered text can never inject markup, in element content or in attributes such as `href="{{url}}"`. Pass plain text; don't escape it yourself, or it will be escaped twice.
+- **Keys ending in `Html` or `_html` are inserted raw** (for example `downloadButtonHtml`, `entity_links_html`, `changedSectionHtml`). Use this suffix only for markup the server builds itself, and escape every piece of user text inside it with `escapeHtml` from `Servers/utils/sanitization.utils.ts`.
+- Values are inserted literally: a `$&` or `$'` in a value is not a replacement pattern, and a `{{key}}` inside a value is not substituted.
+- Placeholders with no matching key are left as they are.
+
 ```typescript
-// File: Servers/tools/mjmlCompiler.ts
+// Plain text: escaped automatically
+await compileMjmlToHtml(template, { use_case_title: title, url: link });
 
-const compileMjmlTemplate = (
-  templateContent: string,
-  data: Record<string, string>
-): string => {
-  // Replace {{key}} with values
-  let compiled = templateContent;
-  for (const [key, value] of Object.entries(data)) {
-    compiled = compiled.replace(
-      new RegExp(`{{${key}}}`, "g"),
-      value
-    );
-  }
-
-  // Convert MJML to HTML
-  const { html } = mjml2html(compiled);
-  return html;
-};
+// Server-built markup: suffix the key, escape the user text inside
+const rowsHtml = items.map((i) => `<tr><td>${escapeHtml(i.name)}</td></tr>`).join("");
+await compileMjmlToHtml(template, { items_html: rowsHtml });
 ```
+
+User-configured automation emails (the `send_email` action) don't use MJML. Their body is plain text from the automation's textarea, with `{{entity.field}}` values filled in by `replaceTemplateVariables`. `actions/sendEmail.ts` escapes the whole body, then turns line breaks into `<br>`.
 
 ### Template Constants
 

@@ -10,7 +10,7 @@ export const guardrailsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Guardrails scan every AI request before it reaches the LLM provider. They catch personal data (PII detection) and prohibited content (content filter). Rules apply globally to all endpoints. Scanning runs within your gateway infrastructure (the AI Gateway FastAPI service) using a local Presidio install; the gateway code makes no external API calls to scan request content. Guardrails check what users send; the model\'s responses are not scanned.',
+      text: 'Guardrails scan every AI request before it reaches the LLM provider. They catch personal data (PII detection) and prohibited content (content filter). Rules apply globally to all endpoints. Scanning runs within your gateway infrastructure (the AI Gateway FastAPI service) using a local Presidio install; the gateway code makes no external API calls to scan request content. Guardrails check what users send and what an agent\'s tools return (tool results); the model\'s responses are not scanned.',
     },
     {
       type: 'heading',
@@ -20,7 +20,7 @@ export const guardrailsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'PII detection identifies personal data in user messages using pattern recognition and natural language processing. Supported entity types include:',
+      text: 'PII detection identifies personal data in user messages and tool results using pattern recognition and natural language processing. Supported entity types include:',
     },
     {
       type: 'table',
@@ -75,7 +75,7 @@ export const guardrailsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Content filters block or mask specific keywords and patterns in user messages. Two match types are available:',
+      text: 'Content filters block or mask specific keywords and patterns in user messages and tool results. Two match types are available:',
     },
     {
       type: 'bullet-list',

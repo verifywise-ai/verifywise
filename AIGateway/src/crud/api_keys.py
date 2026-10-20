@@ -153,16 +153,17 @@ async def update_api_key(
         return {**dict(row), "created_at": str(row["created_at"]), "updated_at": str(row["updated_at"])}
 
 
-async def delete_api_key(organization_id: int, key_id: int) -> bool:
-    """Delete an API key. Returns True if deleted."""
+async def delete_api_key(organization_id: int, key_id: int) -> Optional[dict]:
+    """Delete an API key. Returns the deleted row's id and name, or None."""
     async with get_db() as db:
         result = await db.execute(
             text("""
                 DELETE FROM ai_gateway_api_keys
                 WHERE organization_id = :org_id AND id = :id
-                RETURNING id
+                RETURNING id, key_name AS name
             """),
             {"org_id": organization_id, "id": key_id},
         )
         await db.commit()
-        return result.mappings().fetchone() is not None
+        row = result.mappings().fetchone()
+        return dict(row) if row is not None else None
