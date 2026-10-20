@@ -105,6 +105,7 @@
   "Changes requested: {name}": "Änderungen angefordert: {name}",
   "Classification is required": "Klassifizierung ist erforderlich",
   "comment is required when requesting changes": "Bei der Anforderung von Änderungen ist ein Kommentar erforderlich",
+  "Policy is not awaiting review": "Die Richtlinie wartet nicht auf eine Prüfung",
   "Company logo deleted successfully": "Firmenlogo erfolgreich gelöscht",
   "Company logo not found": "Firmenlogo nicht gefunden",
   "Company logo retrieved successfully": "Firmenlogo erfolgreich abgerufen",

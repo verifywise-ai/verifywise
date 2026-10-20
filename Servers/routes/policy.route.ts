@@ -13,7 +13,13 @@ const upload = multer({
 const router = Router();
 
 // POST /policies/import/docx - Import DOCX and convert to HTML
-router.post("/import/docx", authenticateJWT, upload.single("file"), PolicyController.importDocx);
+router.post(
+  "/import/docx",
+  authenticateJWT,
+  authorize("policy.edit"),
+  upload.single("file"),
+  PolicyController.importDocx,
+);
 
 // PATCH /policies/bulk - Bulk archive / assign reviewer / set tags (Admin/Editor)
 // Must come before generic /:id routes.
@@ -40,16 +46,21 @@ router.get("/:id/export/docx", authenticateJWT, PolicyController.exportPolicyDOC
 router.get("/:id", authenticateJWT, PolicyController.getPolicyById);
 
 // POST /policies - Create new policy
-router.post("/", authenticateJWT, PolicyController.createPolicy);
+router.post("/", authenticateJWT, authorize("policy.edit"), PolicyController.createPolicy);
 
 // PUT /policies/:id - Update policy
-router.put("/:id", authenticateJWT, PolicyController.updatePolicy);
+router.put("/:id", authenticateJWT, authorize("policy.edit"), PolicyController.updatePolicy);
 
 // DELETE /policies/:id - Delete policy by ID
-router.delete("/:id", authenticateJWT, PolicyController.deletePolicyById);
+router.delete("/:id", authenticateJWT, authorize("policy.edit"), PolicyController.deletePolicyById);
 
 // POST /policies/:id/review/request - Request review for a policy
-router.post("/:id/review/request", authenticateJWT, PolicyController.requestReview);
+router.post(
+  "/:id/review/request",
+  authenticateJWT,
+  authorize("policy.edit"),
+  PolicyController.requestReview,
+);
 
 // PUT /policies/:id/review/approve - Approve a policy review
 router.put("/:id/review/approve", authenticateJWT, PolicyController.approveReview);

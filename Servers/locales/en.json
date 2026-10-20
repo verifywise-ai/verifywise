@@ -105,6 +105,7 @@
   "Changes requested: {name}": "Changes requested: {name}",
   "Classification is required": "Classification is required",
   "comment is required when requesting changes": "comment is required when requesting changes",
+  "Policy is not awaiting review": "Policy is not awaiting review",
   "Company logo deleted successfully": "Company logo deleted successfully",
   "Company logo not found": "Company logo not found",
   "Company logo retrieved successfully": "Company logo retrieved successfully",

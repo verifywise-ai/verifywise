@@ -29,6 +29,7 @@ import PolicyStatusCard from "./PolicyStatusCard";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import useUsers from "../../../application/hooks/useUsers";
 import { useAuth } from "../../../application/hooks/useAuth";
+import allowedRoles from "../../../application/constants/permissions";
 import { GroupBy } from "../../components/Table/GroupBy";
 import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
@@ -76,7 +77,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
   const deletePolicyMutation = useDeletePolicy();
   const [flashRowId, setFlashRowId] = useState<number | null>(null);
   const { userRoleName } = useAuth();
-  const canRunBulkActions = !!userRoleName && ["Admin", "Editor"].includes(userRoleName);
+  const canRunBulkActions = !!userRoleName && allowedRoles.policies.edit.includes(userRoleName);
 
   const [showLinkedObjectModal, setLinkedObjectsModalOpen] = useState(false);
   const [policyId, setSelectedPolicyId] = useState<number | null>(null);
@@ -615,19 +616,21 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
               filename="policy-manager"
               title="Policy Manager"
             />
-            <Box data-joyride-id="add-policy-button">
-              <CustomizableButton
-                variant="contained"
-                text="Add new policy"
-                sx={{
-                  backgroundColor: "brand.primary",
-                  border: "1px solid brand.primary",
-                  gap: 3,
-                }}
-                icon={<AddCircleOutlineIcon size={16} />}
-                onClick={handleAddNewPolicy}
-              />
-            </Box>
+            {canRunBulkActions && (
+              <Box data-joyride-id="add-policy-button">
+                <CustomizableButton
+                  variant="contained"
+                  text="Add new policy"
+                  sx={{
+                    backgroundColor: "brand.primary",
+                    border: "1px solid brand.primary",
+                    gap: 3,
+                  }}
+                  icon={<AddCircleOutlineIcon size={16} />}
+                  onClick={handleAddNewPolicy}
+                />
+              </Box>
+            )}
           </Stack>
         </Stack>
 

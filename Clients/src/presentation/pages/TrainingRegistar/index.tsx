@@ -15,6 +15,7 @@ import {
 // Import the table and modal components specific to Training
 import TrainingTable from "./trainingTable";
 import NewTraining from "../../../presentation/components/Modals/NewTraining";
+import allowedRoles from "../../../application/constants/permissions";
 import { createTraining } from "../../../application/repository/trainingregistar.repository";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
@@ -145,8 +146,7 @@ const Training: React.FC = () => {
   const [showAlert, setShowAlert] = useState(false);
 
   const { userRoleName } = useAuth();
-  // Assuming a similar permission structure for 'training' as 'vendors'
-  const isCreatingDisabled = !userRoleName || !["Admin", "Editor"].includes(userRoleName); // Example permission check
+  const isCreatingDisabled = !userRoleName || !allowedRoles.training.create.includes(userRoleName);
   const [alert, setAlert] = useState<{
     variant: "success" | "info" | "warning" | "error";
     title?: string;

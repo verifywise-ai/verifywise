@@ -117,6 +117,27 @@ describe("MCPToolCatalogPage", () => {
     expect(screen.getByText("(1 tool)")).toBeInTheDocument();
   });
 
+  it("filters to the server named in the URL", async () => {
+    mockLoad(
+      [
+        makeTool({ id: 1, tool_name: "search_docs" }),
+        makeTool({ id: 2, server_id: 20, server_name: "Other Server", tool_name: "solo_tool" }),
+      ],
+      [...defaultServers, { id: 20, name: "Other Server" }],
+    );
+    renderWithProviders(<MCPToolCatalogPage />, { route: "/ai-gateway/mcp/tools?server=20" });
+
+    await waitFor(() => expect(screen.getByText("solo_tool")).toBeInTheDocument());
+    expect(screen.queryByText("search_docs")).not.toBeInTheDocument();
+  });
+
+  it("shows all tools when the URL names an unknown server", async () => {
+    mockLoad([makeTool({ tool_name: "search_docs" })]);
+    renderWithProviders(<MCPToolCatalogPage />, { route: "/ai-gateway/mcp/tools?server=999" });
+
+    await waitFor(() => expect(screen.getByText("search_docs")).toBeInTheDocument());
+  });
+
   it("falls back to the server map / server id when tool.server_name is missing", async () => {
     mockLoad(
       [makeTool({ server_name: undefined, server_id: 10 })],

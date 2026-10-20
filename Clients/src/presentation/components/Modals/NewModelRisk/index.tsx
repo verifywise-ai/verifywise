@@ -25,6 +25,9 @@ import CustomFieldsSection, { type CustomFieldsSectionHandle } from "../../Custo
 import { useRequiredCustomFieldsGate } from "../../CustomFieldsSection/RequiredCustomFieldsGate";
 import type { TabItem } from "../../TabBar";
 import { logEngine } from "../../../../application/tools/log.engine";
+import { useAuth } from "../../../../application/hooks/useAuth";
+import allowedRoles from "../../../../application/constants/permissions";
+import ReadOnlyFieldset from "../../ReadOnlyFieldset";
 
 interface NewModelRiskProps {
   isOpen: boolean;
@@ -81,6 +84,9 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
   entityId,
 }) => {
   const theme = useTheme();
+  // Roles without edit rights can open an existing record but not change it.
+  const { userRoleName } = useAuth();
+  const isReadOnly = isEdit && !allowedRoles.modelInventory.edit.includes(userRoleName);
   const [values, setValues] = useState<IModelRiskFormData>(initialData || initialState);
   const [users, setUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
@@ -469,6 +475,7 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
       onSubmit={activeTab === "activity" ? undefined : handleSaveModelRisk}
       submitButtonText={isEdit ? "Update risk" : "Save"}
       isSubmitting={isSubmitting || customFieldsGate.blocked}
+      hideSubmitButton={isReadOnly}
       maxWidth="760px"
     >
       <TabContext value={activeTab}>
@@ -481,14 +488,18 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
         </Box>
         {/* Render details + custom-fields always (display-toggle) so the
             staged-values Map inside CustomFieldsSection survives tab switches. */}
-        <Box sx={{ display: activeTab === "details" ? "block" : "none" }}>{formContent}</Box>
+        <Box sx={{ display: activeTab === "details" ? "block" : "none" }}>
+          <ReadOnlyFieldset readOnly={isReadOnly}>{formContent}</ReadOnlyFieldset>
+        </Box>
         <Box sx={{ display: activeTab === "custom-fields" ? "block" : "none" }}>
-          <CustomFieldsSection
-            ref={customFieldsRef}
-            entityType="model_risk"
-            entityId={entityId ?? null}
-            onPendingChange={customFieldsGate.onPendingChange}
-          />
+          <ReadOnlyFieldset readOnly={isReadOnly}>
+            <CustomFieldsSection
+              ref={customFieldsRef}
+              entityType="model_risk"
+              entityId={entityId ?? null}
+              onPendingChange={customFieldsGate.onPendingChange}
+            />
+          </ReadOnlyFieldset>
         </Box>
         {activeTab === "activity" && isEditMode && (
           <HistorySidebar

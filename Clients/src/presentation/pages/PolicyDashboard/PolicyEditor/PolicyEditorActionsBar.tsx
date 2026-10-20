@@ -34,6 +34,8 @@ export interface PolicyEditorActionsBarProps {
   isSaveDisabled: boolean;
   saveButtonText: string;
   onSave: () => void;
+  /** Hides Import and Save for roles that cannot edit policies. */
+  readOnly?: boolean;
 }
 
 /** History, export, import, and save controls for the policy editor. */
@@ -53,6 +55,7 @@ export function PolicyEditorActionsBar({
   isSaveDisabled,
   saveButtonText,
   onSave,
+  readOnly = false,
 }: PolicyEditorActionsBarProps) {
   const [exportAnchorEl, setExportAnchorEl] = useState<HTMLElement | null>(null);
   const docxInputRef = useRef<HTMLInputElement>(null);
@@ -194,35 +197,37 @@ export function PolicyEditorActionsBar({
         </>
       )}
 
-      <CustomizableButton
-        variant="outlined"
-        text={isImporting ? "Importing..." : "Import"}
-        isDisabled={isImporting}
-        sx={{
-          "backgroundColor": palette.background.main,
-          "border": `1px solid ${palette.border.dark}`,
-          "color": "text.secondary",
-          "gap": 1,
-          "minWidth": "90px",
-          "&:hover": {
-            backgroundColor: palette.background.accent,
-            borderColor: "text.muted",
-          },
-          "&:disabled": {
-            backgroundColor: palette.background.accent,
-            borderColor: palette.border.light,
-            color: "text.muted",
-          },
-        }}
-        onClick={() => docxInputRef.current?.click()}
-        icon={
-          isImporting ? (
-            <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
-          ) : (
-            <Upload size={16} />
-          )
-        }
-      />
+      {!readOnly && (
+        <CustomizableButton
+          variant="outlined"
+          text={isImporting ? "Importing..." : "Import"}
+          isDisabled={isImporting}
+          sx={{
+            "backgroundColor": palette.background.main,
+            "border": `1px solid ${palette.border.dark}`,
+            "color": "text.secondary",
+            "gap": 1,
+            "minWidth": "90px",
+            "&:hover": {
+              backgroundColor: palette.background.accent,
+              borderColor: "text.muted",
+            },
+            "&:disabled": {
+              backgroundColor: palette.background.accent,
+              borderColor: palette.border.light,
+              color: "text.muted",
+            },
+          }}
+          onClick={() => docxInputRef.current?.click()}
+          icon={
+            isImporting ? (
+              <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
+            ) : (
+              <Upload size={16} />
+            )
+          }
+        />
+      )}
       <input
         ref={docxInputRef}
         type="file"
@@ -231,34 +236,36 @@ export function PolicyEditorActionsBar({
         onChange={onDocxFileSelect}
       />
 
-      <CustomizableButton
-        variant="contained"
-        text={saveButtonText}
-        isDisabled={isSaveDisabled}
-        sx={{
-          "backgroundColor": saveSuccess ? SAVE_SUCCESS_BG : brand.primary,
-          "border": `1px solid ${saveSuccess ? SAVE_SUCCESS_BG : brand.primary}`,
-          "gap": 2,
-          "&:hover": {
-            backgroundColor: saveSuccess ? SAVE_SUCCESS_BG : brand.primaryHover,
-            borderColor: saveSuccess ? SAVE_SUCCESS_BG : brand.primaryHover,
-          },
-          "&:disabled": {
-            backgroundColor: brand.primary,
-            opacity: 0.7,
-          },
-        }}
-        onClick={onSave}
-        icon={
-          isSaving ? (
-            <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
-          ) : saveSuccess ? (
-            <Check size={16} />
-          ) : (
-            <SaveIcon size={16} />
-          )
-        }
-      />
+      {!readOnly && (
+        <CustomizableButton
+          variant="contained"
+          text={saveButtonText}
+          isDisabled={isSaveDisabled}
+          sx={{
+            "backgroundColor": saveSuccess ? SAVE_SUCCESS_BG : brand.primary,
+            "border": `1px solid ${saveSuccess ? SAVE_SUCCESS_BG : brand.primary}`,
+            "gap": 2,
+            "&:hover": {
+              backgroundColor: saveSuccess ? SAVE_SUCCESS_BG : brand.primaryHover,
+              borderColor: saveSuccess ? SAVE_SUCCESS_BG : brand.primaryHover,
+            },
+            "&:disabled": {
+              backgroundColor: brand.primary,
+              opacity: 0.7,
+            },
+          }}
+          onClick={onSave}
+          icon={
+            isSaving ? (
+              <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
+            ) : saveSuccess ? (
+              <Check size={16} />
+            ) : (
+              <SaveIcon size={16} />
+            )
+          }
+        />
+      )}
     </Box>
   );
 }
