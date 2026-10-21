@@ -10,11 +10,13 @@ on:
     branches: ['master', 'develop']
     paths:
       - 'Clients/**'
+      - 'ansible/templates/verifywise-nginx.conf.j2'
       - '.github/workflows/frontend-checks.yml'
   push:
     branches: ['master', 'develop']
     paths:
       - 'Clients/**'
+      - 'ansible/templates/verifywise-nginx.conf.j2'
       - '.github/workflows/frontend-checks.yml'
 
 jobs:
@@ -88,6 +90,18 @@ jobs:
         run: |
           npm audit --audit-level=high --omit=dev || true
           node $GITHUB_WORKSPACE/scripts/security/npm-audit-gate.js .
+
+  # The production nginx image must proxy /api and /v1 to the backend. Builds
+  # only the Dockerfile's nginx stage (no npm build), so it takes seconds.
+  nginx-proxy:
+    name: Frontend nginx proxies /api and /v1
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Test the nginx proxy routes
+        run: Clients/scripts/test-nginx-proxy.sh
 
   unit-and-component-tests:
     name: Unit & Component Tests (shard ${{ matrix.shard }}/4)

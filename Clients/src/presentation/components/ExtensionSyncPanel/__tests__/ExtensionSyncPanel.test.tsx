@@ -54,30 +54,50 @@ const renderPanel = (props: Record<string, unknown> = {}) =>
       <ExtensionSyncPanel extensionKey="jira-assets" canManage {...props} />
     </ThemeProvider>,
   );
-/** VWToggle renders an unlabelled MUI Switch: its checkbox input. */
-const toggle = (container: HTMLElement) =>
-  container.querySelector('input[type="checkbox"]') as HTMLInputElement;
+/** The automatic sync switch, found by its accessible name. */
+const toggle = () =>
+  screen.getByRole("switch", { name: "Enable automatic sync" }) as HTMLInputElement;
 
 describe("ExtensionSyncPanel", () => {
   beforeEach(() => mockUseExtensionSync.mockReset());
 
   it("idle: schedule off, Sync now enabled, no last sync", () => {
     mockUseExtensionSync.mockReturnValue(hookState());
-    const { container } = renderPanel();
+    renderPanel();
     expect(mockUseExtensionSync).toHaveBeenCalledWith("jira-assets", { persistSchedule: true });
     expect(screen.getByText("Enable automatic sync")).toBeInTheDocument();
-    expect(toggle(container)).not.toBeChecked();
+    expect(toggle()).not.toBeChecked();
     expect(screen.queryByText("Sync interval")).toBeNull();
     expect(screen.getByRole("button", { name: "Sync now" })).toBeEnabled();
     expect(screen.queryByText(/Last sync/)).toBeNull();
     expect(screen.queryByText("Failing since")).toBeNull();
   });
 
+  it("names the switch by its label and describes it by the schedule description", () => {
+    mockUseExtensionSync.mockReturnValue(hookState());
+    renderPanel({ scheduleDescription: "Runs on the interval below." });
+    expect(toggle()).toHaveAccessibleDescription("Runs on the interval below.");
+  });
+
+  it("leaves the switch undescribed when there is no schedule description", () => {
+    mockUseExtensionSync.mockReturnValue(hookState());
+    renderPanel();
+    expect(toggle()).not.toHaveAttribute("aria-describedby");
+  });
+
+  it("saves the schedule when the label is clicked", () => {
+    const state = hookState();
+    mockUseExtensionSync.mockReturnValue(state);
+    renderPanel();
+    fireEvent.click(screen.getByText("Enable automatic sync"));
+    expect(state.setSchedule).toHaveBeenCalledWith({ enabled: true });
+  });
+
   it("saves the schedule when the toggle changes", () => {
     const state = hookState();
     mockUseExtensionSync.mockReturnValue(state);
-    const { container } = renderPanel();
-    fireEvent.click(toggle(container));
+    renderPanel();
+    fireEvent.click(toggle());
     expect(state.setSchedule).toHaveBeenCalledWith({ enabled: true });
   });
 
@@ -243,20 +263,20 @@ describe("ExtensionSyncPanel", () => {
 
   it("locks the schedule controls until the saved schedule has loaded", () => {
     mockUseExtensionSync.mockReturnValue(hookState({ isLoading: true, status: null }));
-    const { container } = renderPanel();
-    expect(toggle(container)).toBeDisabled();
+    renderPanel();
+    expect(toggle()).toBeDisabled();
   });
 
   it("keeps the schedule controls locked when the first status request failed", () => {
     mockUseExtensionSync.mockReturnValue(hookState({ isLoading: false, status: null }));
-    const { container } = renderPanel();
-    expect(toggle(container)).toBeDisabled();
+    renderPanel();
+    expect(toggle()).toBeDisabled();
   });
 
   it("non-admins cannot change the schedule or sync", () => {
     mockUseExtensionSync.mockReturnValue(hookState());
-    const { container } = renderPanel({ canManage: false });
-    expect(toggle(container)).toBeDisabled();
+    renderPanel({ canManage: false });
+    expect(toggle()).toBeDisabled();
     expect(screen.getByRole("button", { name: "Sync now" })).toBeDisabled();
   });
 });

@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Alert, Box, CircularProgress, Stack, Typography } from "@mui/material";
 import { RefreshCw } from "lucide-react";
-import { VWSelect, VWToggle } from "../VWComponents";
+import { VWSelect } from "../VWComponents";
+import Toggle from "../Inputs/Toggle";
 import { CustomizableButton } from "../button/customizable-button";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import {
@@ -122,6 +123,8 @@ export function ExtensionSyncPanel({
   const formatDate = useFormattedDate();
   const sync = useExtensionSync(extensionKey, { persistSchedule });
   const [message, setMessage] = useState<PanelMessage | null>(null);
+  const autoSyncId = useId();
+  const autoSyncDescriptionId = useId();
   const lastFinished = sync.status?.last_finished_run ?? null;
   // The streak is kept while automatic sync is off, but only means something
   // while it is on.
@@ -151,15 +154,46 @@ export function ExtensionSyncPanel({
   return (
     <Box data-testid={`extension-sync-panel-${extensionKey}`}>
       <Stack spacing="20px">
-        <Box>
-          <VWToggle
-            checked={sync.schedule.enabled}
-            onChange={(event) => sync.setSchedule({ enabled: event.target.checked })}
-            disabled={scheduleLocked}
-            label="Enable automatic sync"
-            description={scheduleDescription}
-          />
-        </Box>
+        <Stack direction="row" alignItems="flex-start" gap="12px">
+          <Box sx={{ pt: "1px" }}>
+            <Toggle
+              id={autoSyncId}
+              checked={sync.schedule.enabled}
+              onChange={(event) => sync.setSchedule({ enabled: event.target.checked })}
+              disabled={scheduleLocked}
+              slotProps={{
+                input: {
+                  "aria-describedby": scheduleDescription ? autoSyncDescriptionId : undefined,
+                },
+              }}
+            />
+          </Box>
+          <Box sx={{ minWidth: 0 }}>
+            {/* A real <label> so clicking the caption flips the switch too. */}
+            <Typography
+              component="label"
+              htmlFor={autoSyncId}
+              sx={{
+                display: "block",
+                fontSize: "13px",
+                fontWeight: 500,
+                cursor: scheduleLocked ? "default" : "pointer",
+              }}
+              color="text.primary"
+            >
+              Enable automatic sync
+            </Typography>
+            {scheduleDescription && (
+              <Typography
+                id={autoSyncDescriptionId}
+                sx={{ fontSize: "12px" }}
+                color="text.tertiary"
+              >
+                {scheduleDescription}
+              </Typography>
+            )}
+          </Box>
+        </Stack>
 
         {sync.schedule.enabled && (
           <Box>

@@ -152,6 +152,31 @@ describe("controllers reject malformed payloads with 400 + consistent shape", ()
       expect(fields).toContain("id");
     });
 
+    it("POST /:id/approve — override without a reason", async () => {
+      const res = await supertest(app)
+        .post("/approval-requests/1/approve")
+        .send({ override: true, step_number: 1, comments: "  " })
+        .expect(400);
+      assertConsistentValidationErrorShape(res.body);
+      const fields = res.body.data.errors.map((e: any) => e.field);
+      expect(fields).toEqual(["comments"]);
+      expect(noopHandler).not.toHaveBeenCalled();
+    });
+
+    it("POST /:id/approve — override as a string is refused", async () => {
+      const res = await supertest(app)
+        .post("/approval-requests/1/approve")
+        .send({ override: "true", step_number: 1, comments: "approver left" })
+        .expect(400);
+      const fields = res.body.data.errors.map((e: any) => e.field);
+      expect(fields).toContain("override");
+    });
+
+    it("POST /:id/approve — a normal decision needs no comment", async () => {
+      await supertest(app).post("/approval-requests/1/approve").send({});
+      expect(noopHandler).toHaveBeenCalled();
+    });
+
     it("POST /:id/withdraw — non-numeric id", async () => {
       const res = await supertest(app).post("/approval-requests/xyz/withdraw").send({}).expect(400);
       assertConsistentValidationErrorShape(res.body);

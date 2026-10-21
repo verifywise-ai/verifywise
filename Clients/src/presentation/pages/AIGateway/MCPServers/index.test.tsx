@@ -401,7 +401,9 @@ describe("MCPServersPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Discover tools" }));
     fireEvent.click(await screen.findByRole("button", { name: "View tools" }));
 
-    expect(mockNavigate).toHaveBeenCalledWith("/ai-gateway/mcp/tools?server=3");
+    expect(mockNavigate).toHaveBeenCalledWith("/ai-gateway/mcp/tools?server=3", {
+      state: { from: "mcp-servers" },
+    });
   });
 
   it("opens the server's tools from the tools count without opening the editor", async () => {
@@ -411,7 +413,9 @@ describe("MCPServersPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "View 4 tools" }));
 
-    expect(mockNavigate).toHaveBeenCalledWith("/ai-gateway/mcp/tools?server=3");
+    expect(mockNavigate).toHaveBeenCalledWith("/ai-gateway/mcp/tools?server=3", {
+      state: { from: "mcp-servers" },
+    });
     expect(screen.queryByText("Edit server")).not.toBeInTheDocument();
   });
 

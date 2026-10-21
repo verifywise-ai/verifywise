@@ -7817,6 +7817,8 @@ tags:
   -
     name: Mail
   -
+    name: Mcp
+  -
     name: 'Model Inventory'
   -
     name: 'Model Risks'
@@ -26171,50 +26173,6 @@ paths:
         -
           bearerAuth: []
       description: 'Requires role: Super Admin'
-  /super-admin/mcp-server:
-    get:
-      summary: 'Get Mcp Server'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'Super Admin'
-      operationId: getMcpServer
-      security:
-        -
-          bearerAuth: []
-      description: 'Requires role: Super Admin'
-    delete:
-      summary: 'Uninstall Mcp Server Handler'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'Super Admin'
-      operationId: uninstallMcpServerHandler
-      security:
-        -
-          bearerAuth: []
-      description: 'Requires role: Super Admin'
-  /super-admin/mcp-server/install:
-    post:
-      summary: 'Install Mcp Server Handler'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'Super Admin'
-      operationId: installMcpServerHandler
-      security:
-        -
-          bearerAuth: []
-      description: 'Requires role: Super Admin'
   /super-admin/super-admins:
     get:
       summary: 'List Super Admins'
@@ -26259,6 +26217,45 @@ paths:
         -
           bearerAuth: []
       description: 'Requires role: Super Admin'
+  /mcp:
+    post:
+      summary: 'MCP JSON-RPC request'
+      responses:
+        '200':
+          description: 'JSON-RPC response'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Mcp
+      operationId: handleMcpRequest
+      security:
+        -
+          bearerAuth: []
+      description: 'Stateless MCP endpoint for the super admin tools. Send a JSON-RPC message in the body; the reply is plain JSON, not an SSE stream. Requires role: Super Admin'
+    get:
+      summary: 'Rejected (use POST)'
+      responses:
+        '405':
+          description: 'Method not allowed: this server has no event stream, use POST'
+      tags:
+        - Mcp
+      operationId: rejectMcpGet
+      security:
+        -
+          bearerAuth: []
+      description: 'Always returns 405. Requires role: Super Admin'
+    delete:
+      summary: 'Rejected (stateless server)'
+      responses:
+        '405':
+          description: 'Method not allowed: there is no session to end'
+      tags:
+        - Mcp
+      operationId: rejectMcpDelete
+      security:
+        -
+          bearerAuth: []
+      description: 'Always returns 405. Requires role: Super Admin'
   /internal/ai-gateway/notify:
     post:
       tags:

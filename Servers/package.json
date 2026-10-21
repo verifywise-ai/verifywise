@@ -58,6 +58,7 @@
     "@azure/msal-node": "^7.1.0",
     "@daytonaio/sdk": "^0.224.1",
     "@e2b/code-interpreter": "^2.9.0",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/api-logs": "^0.223.0",
     "@opentelemetry/exporter-logs-otlp-http": "^0.223.0",

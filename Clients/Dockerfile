@@ -39,8 +39,10 @@ ENV VITE_APP_VERSION=$VITE_APP_VERSION
 # Step 8: Build the application
 RUN npm run build
 
-# Step 9: Use a lightweight web server for production
-FROM nginx:1.31.6-alpine
+# Step 9: Use a lightweight web server for production. The "web" stage is the
+# server without the app, so Clients/scripts/test-nginx-proxy.sh can build and
+# test it (`--target web`) without running the npm build.
+FROM nginx:1.31.6-alpine AS web
 
 # apk upgrade pulls the latest Alpine security patches so Trivy release scans
 # don't fail on fixable base-image CVEs (e.g. util-linux CVE-2026-53612..53614,
@@ -48,19 +50,33 @@ FROM nginx:1.31.6-alpine
 # The nginx alpine base lags behind the Alpine main repo.
 RUN apk upgrade --no-cache
 
-# Step 10: Copy the build output to NGINX's default public directory
-COPY --from=build /app/src/dist /usr/share/nginx/html
-
-# Step 11: Copy the custom error page
+# Step 10: Copy the custom error page
 # COPY Clients/upgrade.html /usr/share/nginx/html/upgrade.html
 
-# Step 12: Copy the custom NGINX configuration
-COPY Clients/nginx.conf /etc/nginx/conf.d/default.conf
+# Step 11: Copy the custom NGINX configuration as a template. At startup the
+# nginx entrypoint writes it to /etc/nginx/conf.d/default.conf, filling in only
+# the variables the filter allows (nginx's own $host etc. are left alone).
+# VW_BACKEND_URL is where /api and /v1 are proxied: scheme, host and port only,
+# no path. docker-compose sets it from BACKEND_PORT; Kubernetes sets the
+# backend Service's full DNS name (nginx's resolver does not use search domains).
+# VW_TRUSTED_PROXIES: proxies whose X-Forwarded-For gives the client address
+# (space-separated addresses or CIDRs). Empty by default, so no forwarded
+# address is believed; docker-compose.yml sets it for its host-proxy setup.
+ENV VW_BACKEND_URL=http://backend:3000 \
+    VW_TRUSTED_PROXIES="" \
+    NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1 \
+    NGINX_ENVSUBST_FILTER="^(VW_BACKEND_URL|NGINX_LOCAL_RESOLVERS)"
+COPY --chmod=755 Clients/docker-entrypoint.d/18-verifywise.envsh /docker-entrypoint.d/
+COPY Clients/nginx.conf /etc/nginx/templates/default.conf.template
 
-# Step 13: Expose port 80
+# Step 12: Expose port 80
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD wget -qO- http://localhost:80/ >/dev/null || exit 1
 
-# Step 14: Start NGINX server
+# Step 13: Start NGINX server
 CMD ["nginx", "-g", "daemon off;"]
+
+# Step 14: The production image: the web server plus the built app
+FROM web
+COPY --from=build /app/src/dist /usr/share/nginx/html

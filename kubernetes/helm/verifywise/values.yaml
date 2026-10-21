@@ -43,6 +43,10 @@ replicas:
 #   • cloud HTTPS:    https://your-domain.com
 frontendUrl: http://localhost
 
+# Cluster DNS domain, used for the backend address the frontend's nginx
+# proxies /api and /v1 to. Change it only if your cluster is not cluster.local.
+clusterDomain: cluster.local
+
 # ---------------------------------------------------------------------------
 # Ingress
 # ---------------------------------------------------------------------------

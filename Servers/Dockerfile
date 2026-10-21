@@ -42,21 +42,6 @@ COPY ./Servers/SQL_Commands.sql ./SQL_Commands.sql
 
 RUN npm run build
 
-# The MCP server (MCPServer/) ships with the backend so the super admin console
-# can install it without a separate download. It is built here, while npm still
-# exists — the layer below removes npm from the runtime image, so nothing can be
-# built after this point.
-COPY ./MCPServer/package.json ./MCPServer/package-lock.json ./MCPServer/
-WORKDIR /app/MCPServer
-# --include=dev is required because NODE_ENV=production is set above: tsc and
-# @types/node are devDependencies and the build below needs both.
-RUN npm ci --include=dev --no-audit --no-fund
-# Absolute destination: WORKDIR is /app/MCPServer here, so a relative
-# ./MCPServer/ would land in /app/MCPServer/MCPServer/ and tsc would find nothing.
-COPY ./MCPServer/ /app/MCPServer/
-RUN npm run build && npm prune --omit=dev
-WORKDIR /app
-
 # Strip the package managers from the runtime image. npm/npx/corepack are only
 # needed at build time (npm ci + npm run build, both done above). Their bundled
 # transitive deps (tar, undici, brace-expansion, ip-address, sigstore, ...)

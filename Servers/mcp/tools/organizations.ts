@@ -1,22 +1,21 @@
 /**
- * Organization tools — Servers/routes/superAdmin.route.ts.
+ * Organization tools.
+ *
+ * Handlers call services/superAdmin.service.ts — the same code the super-admin
+ * console controllers call — so each operation has one implementation
+ * regardless of whether it was reached over REST or MCP.
  */
 
 import { z } from "zod";
-import { request } from "../client.js";
-import { deploymentLabel, resolveProfile } from "../config.js";
-import { generatePassword } from "../password.js";
-import { resolveRoleId } from "../roles.js";
-import { profileArg, result, type ToolDef } from "../tool.js";
-
-interface Organization {
-  id: number;
-  name: string;
-  logo: string | null;
-  created_at: string;
-  onboarding_status: string | null;
-  user_count: string;
-}
+import {
+  createOrganizationWithUser,
+  deleteOrganization,
+  updateOrganization,
+} from "../../services/superAdmin.service";
+import { listOrganizationsQuery } from "../../utils/superAdmin.utils";
+import { getRoleByName } from "../../utils/roleMap";
+import { generatePassword } from "../password";
+import { result, type ToolDef } from "../tool";
 
 const createOrganizationWithAdmin: ToolDef = {
   name: "create_organization_with_admin",
@@ -24,38 +23,37 @@ const createOrganizationWithAdmin: ToolDef = {
   description:
     "Create a new VerifyWise organization together with its first Admin user, generating a random password for that user. The organization and user are created in a single transaction. Returns the generated password, which is shown only once and is not recoverable afterwards.",
   inputSchema: {
-    profile: profileArg,
     organizationName: z.string().min(2).max(255).describe("Name of the new organization."),
     adminEmail: z.string().email().describe("Email address of the organization's Admin user."),
     adminFirstName: z.string().min(1).describe("Admin user's first name."),
     adminLastName: z.string().min(1).describe("Admin user's last name."),
     logo: z.string().url().optional().describe("Optional URL of the organization's logo."),
   },
-  handler: async (args) => {
-    const profile = resolveProfile(args.profile);
-    const role = await resolveRoleId(profile, "Admin");
-    const password = generatePassword();
+  handler: async (args, caller) => {
+    // Resolved from the roles table rather than hardcoded: a role renamed
+    // there would silently break a baked-in id.
+    const role = await getRoleByName(null, "Admin");
+    if (!role) {
+      throw new Error('No built-in "Admin" role exists on this deployment.');
+    }
 
-    const { data } = await request<{ organizationId: number }>(
-      profile,
-      "POST",
-      "/api/super-admin/organizations-with-user",
-      {
-        orgName: args.organizationName,
-        logo: args.logo,
-        mode: "direct",
-        user: {
-          email: args.adminEmail,
-          name: args.adminFirstName,
-          surname: args.adminLastName,
-          roleId: role.id,
-          password,
-        },
+    const password = generatePassword();
+    const { organizationId } = await createOrganizationWithUser({
+      orgName: args.organizationName,
+      logo: args.logo,
+      mode: "direct",
+      user: {
+        email: args.adminEmail,
+        name: args.adminFirstName,
+        surname: args.adminLastName,
+        roleId: role.id,
+        password,
       },
-    );
+      invitedBy: caller.userId,
+    });
 
     return result({
-      organizationId: data.organizationId,
+      organizationId,
       organizationName: args.organizationName,
       adminEmail: args.adminEmail,
       role: role.name,
@@ -69,29 +67,19 @@ const listOrganizations: ToolDef = {
   name: "list_organizations",
   title: "List organizations",
   description:
-    "List every organization on a VerifyWise deployment, with its user count and creation date.",
-  inputSchema: { profile: profileArg },
-  handler: async (args) => {
-    const profile = resolveProfile(args.profile);
-    const { data } = await request<Organization[]>(
-      profile,
-      "GET",
-      "/api/super-admin/organizations",
-    );
-
-    return result({
-      count: data.length,
-      organizations: data,
-    });
+    "List every organization on this VerifyWise deployment, with its user count and creation date.",
+  inputSchema: {},
+  handler: async () => {
+    const organizations = await listOrganizationsQuery();
+    return result({ count: organizations.length, organizations });
   },
 };
 
-const updateOrganization: ToolDef = {
+const updateOrganizationTool: ToolDef = {
   name: "update_organization",
   title: "Update organization",
   description: "Rename an organization or change its logo.",
   inputSchema: {
-    profile: profileArg,
     organizationId: z.number().int().positive().describe("Id of the organization to update."),
     name: z.string().min(2).max(255).optional().describe("New organization name."),
     logo: z.string().url().optional().describe("New logo URL."),
@@ -100,25 +88,23 @@ const updateOrganization: ToolDef = {
     if (args.name === undefined && args.logo === undefined) {
       throw new Error("Provide a name or a logo to update.");
     }
-    const profile = resolveProfile(args.profile);
-    const { data } = await request<Organization>(
-      profile,
-      "PATCH",
-      `/api/super-admin/organizations/${args.organizationId}`,
-      { name: args.name, logo: args.logo },
-    );
-
-    return result({ organization: data });
+    const organization = await updateOrganization(args.organizationId, {
+      name: args.name,
+      logo: args.logo,
+    });
+    if (!organization) {
+      throw new Error(`No organization with id ${args.organizationId} on this deployment.`);
+    }
+    return result({ organization });
   },
 };
 
-const deleteOrganization: ToolDef = {
+const deleteOrganizationTool: ToolDef = {
   name: "delete_organization",
   title: "Delete organization",
   description:
     "Permanently delete an organization and every user in it. Requires the organization's exact name as confirmation. This cannot be undone.",
   inputSchema: {
-    profile: profileArg,
     organizationId: z.number().int().positive().describe("Id of the organization to delete."),
     confirmOrganizationName: z
       .string()
@@ -128,38 +114,25 @@ const deleteOrganization: ToolDef = {
       ),
   },
   handler: async (args) => {
-    const profile = resolveProfile(args.profile);
-
     // The delete cascades through every user and all organization data, so the
     // id is checked against the name the caller believes it belongs to before
     // anything is removed. A wrong id here is not recoverable.
-    const { data: organizations } = await request<Organization[]>(
-      profile,
-      "GET",
-      "/api/super-admin/organizations",
-    );
+    const organizations = await listOrganizationsQuery();
     const target = organizations.find((org) => org.id === args.organizationId);
 
     if (!target) {
-      throw new Error(
-        `No organization with id ${args.organizationId} on ${deploymentLabel(profile)}.`,
-      );
+      throw new Error(`No organization with id ${args.organizationId} on this deployment.`);
     }
     if (target.name !== args.confirmOrganizationName) {
       throw new Error(
-        `Refusing to delete: organization ${target.id} on ${profile.name} is named "${target.name}", not "${args.confirmOrganizationName}".`,
+        `Refusing to delete: organization ${target.id} is named "${target.name}", not "${args.confirmOrganizationName}".`,
       );
     }
 
-    const { data } = await request<{ deleted: boolean; usersRemoved: number }>(
-      profile,
-      "DELETE",
-      `/api/super-admin/organizations/${args.organizationId}`,
-    );
-
+    const { usersRemoved } = await deleteOrganization(args.organizationId);
     return result({
       deletedOrganization: { id: target.id, name: target.name },
-      usersRemoved: data.usersRemoved,
+      usersRemoved,
     });
   },
 };
@@ -167,6 +140,6 @@ const deleteOrganization: ToolDef = {
 export const organizationTools: ToolDef[] = [
   createOrganizationWithAdmin,
   listOrganizations,
-  updateOrganization,
-  deleteOrganization,
+  updateOrganizationTool,
+  deleteOrganizationTool,
 ];

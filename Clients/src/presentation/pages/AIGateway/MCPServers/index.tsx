@@ -28,7 +28,7 @@ import {
   getGatewayErrorText,
 } from "../../../../application/utils/apiErrorReason";
 import palette from "../../../themes/palette";
-import { slugify } from "../shared";
+import { FROM_MCP_SERVERS, slugify } from "../shared";
 import MCPTable from "../MCPTable";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
@@ -160,7 +160,10 @@ export default function MCPServersPage() {
     const action =
       serverId === undefined
         ? undefined
-        : { label: "View tools", onClick: () => navigate(toolsCatalogPath(serverId)) };
+        : {
+            label: "View tools",
+            onClick: () => navigate(toolsCatalogPath(serverId), { state: FROM_MCP_SERVERS }),
+          };
     setAlert({ variant, title, body, action });
     alertTimer.current = setTimeout(() => setAlert(null), 6000);
   };
@@ -475,7 +478,7 @@ export default function MCPServersPage() {
                   }
                   onClick={(e) => {
                     e.stopPropagation();
-                    navigate(toolsCatalogPath(srv.id));
+                    navigate(toolsCatalogPath(srv.id), { state: FROM_MCP_SERVERS });
                   }}
                   sx={{ fontSize: 12 }}
                 >

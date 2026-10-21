@@ -26,7 +26,7 @@ Create an agent key in AI Gateway → Agent Control → Agent keys (the value st
 
 | Variable | Required | Default | Meaning |
 |---|---|---|---|
-| `VW_GATEWAY_URL` | yes | | AI Gateway base URL, e.g. `http://localhost:8100` |
+| `VW_GATEWAY_URL` | yes | | The URL you open VerifyWise at, e.g. `https://verifywise.example.com` (in local development the Vite dev server does not forward `/v1`, so use the backend, e.g. `http://localhost:3000`) |
 | `VW_AGENT_KEY` | yes | | Agent key, `sk-mcp-...` |
 | `VW_FAIL_MODE` | no | `open` | `open` runs the tool when the gateway can't decide; `closed` refuses it |
 | `VW_TIMEOUT` | no | `3` | Seconds per gateway request |
@@ -38,7 +38,7 @@ Every setting can also be passed in code, and code wins over the environment:
 ```python
 from verifywise_agent_control import AgentControlClient
 
-client = AgentControlClient(gateway_url="http://localhost:8100", agent_key="sk-mcp-...", fail_mode="closed")
+client = AgentControlClient(gateway_url="https://verifywise.example.com", agent_key="sk-mcp-...", fail_mode="closed")
 ```
 
 If the gateway URL or key is missing, the SDK logs a warning and applies `VW_FAIL_MODE`, like the shell hook.

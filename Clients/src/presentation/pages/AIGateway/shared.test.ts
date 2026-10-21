@@ -20,6 +20,7 @@ import {
   getLabelVariant,
   streamPromptTest,
   GATEWAY_URL,
+  resolveGatewayUrl,
 } from "./shared";
 
 const mockGet = vi.fn();
@@ -409,6 +410,43 @@ describe("AIGateway shared utilities", () => {
     it("is a non-empty string", () => {
       expect(typeof GATEWAY_URL).toBe("string");
       expect(GATEWAY_URL.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("resolveGatewayUrl", () => {
+    it("keeps the page origin's port in deployments", () => {
+      expect(resolveGatewayUrl({}, "https://vw.example.com:8443")).toBe(
+        "https://vw.example.com:8443",
+      );
+      expect(resolveGatewayUrl({}, "https://app.verifywise.ai")).toBe("https://app.verifywise.ai");
+    });
+
+    it("uses VITE_APP_API_URL without its /api suffix", () => {
+      expect(
+        resolveGatewayUrl(
+          { VITE_APP_API_URL: "http://localhost:3000/api/" },
+          "http://localhost:5173",
+        ),
+      ).toBe("http://localhost:3000");
+    });
+
+    it("uses VITE_APP_API_BASE_URL, as local development sets it", () => {
+      expect(
+        resolveGatewayUrl(
+          { VITE_APP_API_BASE_URL: "http://localhost:3000/" },
+          "http://localhost:5173",
+        ),
+      ).toBe("http://localhost:3000");
+    });
+
+    it("treats an empty VITE_APP_API_BASE_URL as same origin", () => {
+      expect(resolveGatewayUrl({ VITE_APP_API_BASE_URL: "" }, "https://vw.example.com")).toBe(
+        "https://vw.example.com",
+      );
+    });
+
+    it("falls back to a placeholder without a browser origin", () => {
+      expect(resolveGatewayUrl({}, undefined)).toBe("https://your-verifywise-host");
     });
   });
 

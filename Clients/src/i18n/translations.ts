@@ -692,6 +692,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Agent not found": "Agent nicht gefunden",
     "Could not load this agent.": "Dieser Agent konnte nicht geladen werden.",
     "Back to AI agents": "Zurück zu KI-Agenten",
+    "Back to MCP servers": "Zurück zu MCP-Servern",
     "Accountable owners": "Verantwortliche Eigentümer",
     "Manually entered": "Manuell erfasst",
     "Inactive 30+ days": "Seit über 30 Tagen inaktiv",
@@ -8614,6 +8615,13 @@ export const translations: Record<string, Record<string, string>> = {
       "Sie können dieses Onboarding jederzeit aus Ihrem Profilmenü erneut aufrufen.",
     "Your AI governance and compliance platform. In 3 minutes, we":
       "Ihre KI-Governance- und Compliance-Plattform. In 3 Minuten",
+    "Your approval is recorded.": "Ihre Genehmigung wurde erfasst.",
+    "Your approval is recorded. Waiting on 1 more approver for this step.":
+      "Ihre Genehmigung wurde erfasst. Für diesen Schritt fehlt noch 1 Genehmiger.",
+    "Your approval is recorded. Waiting on {count} more approvers for this step.":
+      "Ihre Genehmigung wurde erfasst. Für diesen Schritt fehlen noch {count} Genehmiger.",
+    "Your approval is recorded. The request moved to the next step.":
+      "Ihre Genehmigung wurde erfasst. Die Anfrage ist zum nächsten Schritt übergegangen.",
     "Your changes have been saved.": "Ihre Änderungen wurden gespeichert.",
     "Your name, email and personal details":
       "Ihr Name, Ihre E-Mail-Adresse und persönlichen Angaben",
@@ -9710,6 +9718,28 @@ export const translations: Record<string, Record<string, string>> = {
       "Die Gruppierung läuft noch. Öffnen Sie diesen Tab erneut, um neue Vorschläge zu sehen.",
     "Scanning {count} risks. Links will appear as the scan completes.":
       "{count} Risiken werden gescannt. Verknüpfungen erscheinen, sobald der Scan abgeschlossen ist.",
+    "Scanning {count} risk. Links will appear as the scan completes.":
+      "{count} Risiko wird gescannt. Verknüpfungen erscheinen, sobald der Scan abgeschlossen ist.",
+    "Related risks": "Verwandte Risiken",
+    "How is this risk connected?": "Wie ist dieses Risiko verbunden?",
+    "Where is the parent risk?": "Wo befindet sich das übergeordnete Risiko?",
+    "The two risks are connected, but neither depends on the other.":
+      "Die beiden Risiken sind verbunden, aber keines hängt vom anderen ab.",
+    "This risk is part of a broader parent risk. When the parent's level changes, this risk is flagged for review.":
+      "Dieses Risiko ist Teil eines übergeordneten Risikos. Ändert sich dessen Stufe, wird dieses Risiko zur Prüfung markiert.",
+    "The other risk becomes a child of this one and is flagged when this risk's level changes.":
+      "Das andere Risiko wird diesem untergeordnet und markiert, wenn sich die Stufe dieses Risikos ändert.",
+    "Another risk in the risk register.": "Ein anderes Risiko im Risikoregister.",
+    "A risk recorded on a model.": "Ein Risiko, das zu einem Modell erfasst ist.",
+    "A risk recorded on a vendor.": "Ein Risiko, das zu einem Anbieter erfasst ist.",
+    "Grouping {count} cluster of related risks. Suggestions appear here as they finish.":
+      "{count} Cluster verwandter Risiken wird gruppiert. Vorschläge erscheinen hier, sobald sie fertig sind.",
+    "{count} cluster was too large to group in one pass.":
+      "{count} Cluster war zu groß, um ihn in einem Durchgang zu gruppieren.",
+    "Link this risk to others it is connected to. VerifyWise also suggests links from what risks have in common, such as category, controls, lifecycle phase or project. Confirm a suggestion to keep it, or dismiss it.":
+      "Verknüpfen Sie dieses Risiko mit anderen, mit denen es zusammenhängt. VerifyWise schlägt außerdem Verknüpfungen anhand von Gemeinsamkeiten vor, etwa Kategorie, Kontrollen, Lebenszyklusphase oder Projekt. Bestätigen Sie einen Vorschlag, um ihn zu behalten, oder verwerfen Sie ihn.",
+    "Uses AI to propose parent and child links among risks that are already related. Suggestions appear in this list for you to confirm.":
+      "Schlägt mit KI über- und untergeordnete Verknüpfungen zwischen bereits verwandten Risiken vor. Die Vorschläge erscheinen in dieser Liste zur Bestätigung.",
     "Grouping {count} clusters of related risks. Suggestions appear here as they finish.":
       "{count} Cluster verwandter Risiken werden gruppiert. Vorschläge erscheinen hier, sobald sie fertig sind.",
     "{count} clusters were too large to group in one pass.":
@@ -9740,6 +9770,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Verwandte Anbieterrisiken erscheinen, sobald Anbieterrisiken gespeichert werden oder ein Administrator einen Scan ausführt.",
     "Scanning {count} vendor risks. Related vendor risks appear here as the scan completes.":
       "{count} Anbieterrisiken werden gescannt. Verwandte Anbieterrisiken erscheinen hier, sobald der Scan abgeschlossen ist.",
+    "Scanning {count} vendor risk. Related vendor risks appear here as the scan completes.":
+      "{count} Anbieterrisiko wird gescannt. Verwandte Anbieterrisiken erscheinen hier, sobald der Scan abgeschlossen ist.",
     "Scan finished. No related vendor risks found.":
       "Scan abgeschlossen. Keine verwandten Anbieterrisiken gefunden.",
     "Search vendor risks": "Anbieterrisiken suchen",
@@ -10619,6 +10651,25 @@ export const translations: Record<string, Record<string, string>> = {
     "Evidence graded": "Mit",
     "counts as low quality. Files with no AI analysis are not counted as adequate.":
       "bewertete Nachweise gelten als von geringer Qualität. Dateien ohne KI-Analyse zählen nicht als ausreichend.",
+    // Super admin MCP connect
+    "Connect Claude Code to this deployment": "Claude Code mit dieser Bereitstellung verbinden",
+    "Download the config file": "Konfigurationsdatei herunterladen",
+    "Token expires in": "Token läuft ab in",
+    "Config file downloaded": "Konfigurationsdatei heruntergeladen",
+    "Add it to Claude Code": "Zu Claude Code hinzufügen",
+    "Check it worked": "Prüfen, ob es funktioniert hat",
+    "What the file contains": "Was die Datei enthält",
+    "Tools it adds": "Hinzugefügte Tools",
+    "Download config file": "Konfigurationsdatei herunterladen",
+    "Preparing...": "Wird vorbereitet...",
+    "7 days": "7 Tage",
+    "30 days": "30 Tage",
+    "60 days": "60 Tage",
+    "90 days": "90 Tage",
+    "180 days": "180 Tage",
+    "Failed to create the config file.": "Die Konfigurationsdatei konnte nicht erstellt werden.",
+    "Downloading revokes the token issued here last time. Anything set up with the previous file, on this machine or another, stops working immediately.":
+      "Beim Herunterladen wird das zuletzt hier ausgestellte Token widerrufen. Alles, was mit der vorherigen Datei eingerichtet wurde, auf diesem oder einem anderen Rechner, funktioniert sofort nicht mehr.",
   },
 
   fr: {
@@ -11285,6 +11336,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Agent not found": "Agent introuvable",
     "Could not load this agent.": "Impossible de charger cet agent.",
     "Back to AI agents": "Retour aux agents IA",
+    "Back to MCP servers": "Retour aux serveurs MCP",
     "Accountable owners": "Propriétaires responsables",
     "Manually entered": "Saisi manuellement",
     "Inactive 30+ days": "Inactif depuis plus de 30 jours",
@@ -19153,6 +19205,13 @@ export const translations: Record<string, Record<string, string>> = {
       "Vous pouvez toujours revoir cette intégration depuis le menu de votre profil.",
     "Your AI governance and compliance platform. In 3 minutes, we":
       "Votre plateforme de gouvernance et de conformité IA. En 3 minutes, nous",
+    "Your approval is recorded.": "Votre approbation est enregistrée.",
+    "Your approval is recorded. Waiting on 1 more approver for this step.":
+      "Votre approbation est enregistrée. Il manque encore 1 approbateur pour cette étape.",
+    "Your approval is recorded. Waiting on {count} more approvers for this step.":
+      "Votre approbation est enregistrée. Il manque encore {count} approbateurs pour cette étape.",
+    "Your approval is recorded. The request moved to the next step.":
+      "Votre approbation est enregistrée. La demande est passée à l’étape suivante.",
     "Your changes have been saved.": "Vos modifications ont été enregistrées.",
     "Your name, email and personal details": "Vos nom, e-mail et coordonnées personnelles",
     "Your new task has been added.": "Votre nouvelle tâche a été ajoutée.",
@@ -20248,6 +20307,28 @@ export const translations: Record<string, Record<string, string>> = {
       "Regroupement en cours. Rouvrez cet onglet pour voir les nouvelles suggestions.",
     "Scanning {count} risks. Links will appear as the scan completes.":
       "Analyse de {count} risques en cours. Les liens apparaîtront à la fin de l'analyse.",
+    "Scanning {count} risk. Links will appear as the scan completes.":
+      "Analyse de {count} risque en cours. Les liens apparaîtront à la fin de l'analyse.",
+    "Related risks": "Risques connexes",
+    "How is this risk connected?": "Comment ce risque est-il lié ?",
+    "Where is the parent risk?": "Où se trouve le risque parent ?",
+    "The two risks are connected, but neither depends on the other.":
+      "Les deux risques sont liés, mais aucun ne dépend de l'autre.",
+    "This risk is part of a broader parent risk. When the parent's level changes, this risk is flagged for review.":
+      "Ce risque fait partie d'un risque parent plus large. Quand le niveau du parent change, ce risque est signalé pour révision.",
+    "The other risk becomes a child of this one and is flagged when this risk's level changes.":
+      "L'autre risque devient un enfant de celui-ci et est signalé quand le niveau de ce risque change.",
+    "Another risk in the risk register.": "Un autre risque du registre des risques.",
+    "A risk recorded on a model.": "Un risque enregistré sur un modèle.",
+    "A risk recorded on a vendor.": "Un risque enregistré sur un fournisseur.",
+    "Grouping {count} cluster of related risks. Suggestions appear here as they finish.":
+      "Regroupement de {count} groupe de risques connexes. Les suggestions apparaîtront ici au fur et à mesure.",
+    "{count} cluster was too large to group in one pass.":
+      "{count} groupe était trop volumineux pour être regroupé en une seule passe.",
+    "Link this risk to others it is connected to. VerifyWise also suggests links from what risks have in common, such as category, controls, lifecycle phase or project. Confirm a suggestion to keep it, or dismiss it.":
+      "Liez ce risque aux autres risques avec lesquels il est en relation. VerifyWise suggère aussi des liens à partir de ce que les risques ont en commun, comme la catégorie, les contrôles, la phase du cycle de vie ou le projet. Confirmez une suggestion pour la garder, ou ignorez-la.",
+    "Uses AI to propose parent and child links among risks that are already related. Suggestions appear in this list for you to confirm.":
+      "Utilise l'IA pour proposer des liens parent-enfant entre des risques déjà liés. Les suggestions apparaissent dans cette liste pour que vous les confirmiez.",
     "Grouping {count} clusters of related risks. Suggestions appear here as they finish.":
       "Regroupement de {count} groupes de risques connexes. Les suggestions apparaîtront ici au fur et à mesure.",
     "{count} clusters were too large to group in one pass.":
@@ -20278,6 +20359,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Les risques fournisseurs connexes apparaissent à l'enregistrement des risques fournisseurs, ou après une analyse lancée par un administrateur.",
     "Scanning {count} vendor risks. Related vendor risks appear here as the scan completes.":
       "Analyse de {count} risques fournisseurs en cours. Les risques fournisseurs connexes apparaîtront ici à la fin de l'analyse.",
+    "Scanning {count} vendor risk. Related vendor risks appear here as the scan completes.":
+      "Analyse de {count} risque fournisseur en cours. Les risques fournisseurs connexes apparaîtront ici à la fin de l'analyse.",
     "Scan finished. No related vendor risks found.":
       "Analyse terminée. Aucun risque fournisseur connexe trouvé.",
     "Search vendor risks": "Rechercher des risques fournisseurs",
@@ -21153,6 +21236,25 @@ export const translations: Record<string, Record<string, string>> = {
     "Evidence graded": "Les preuves notées",
     "counts as low quality. Files with no AI analysis are not counted as adequate.":
       "sont considérées comme de faible qualité. Les fichiers sans analyse IA ne comptent pas comme suffisants.",
+    // Super admin MCP connect
+    "Connect Claude Code to this deployment": "Connecter Claude Code à ce déploiement",
+    "Download the config file": "Télécharger le fichier de configuration",
+    "Token expires in": "Le jeton expire dans",
+    "Config file downloaded": "Fichier de configuration téléchargé",
+    "Add it to Claude Code": "L'ajouter à Claude Code",
+    "Check it worked": "Vérifier que cela fonctionne",
+    "What the file contains": "Contenu du fichier",
+    "Tools it adds": "Outils ajoutés",
+    "Download config file": "Télécharger le fichier de configuration",
+    "Preparing...": "Préparation...",
+    "7 days": "7 jours",
+    "30 days": "30 jours",
+    "60 days": "60 jours",
+    "90 days": "90 jours",
+    "180 days": "180 jours",
+    "Failed to create the config file.": "Impossible de créer le fichier de configuration.",
+    "Downloading revokes the token issued here last time. Anything set up with the previous file, on this machine or another, stops working immediately.":
+      "Le téléchargement révoque le jeton émis ici la dernière fois. Tout ce qui a été configuré avec le fichier précédent, sur cette machine ou une autre, cesse immédiatement de fonctionner.",
   },
   es: {
     // Jira incidents extension
@@ -21606,6 +21708,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Agent not found": "Agente no encontrado",
     "Could not load this agent.": "No se pudo cargar este agente.",
     "Back to AI agents": "Volver a agentes de IA",
+    "Back to MCP servers": "Volver a servidores MCP",
     "Accountable owners": "Propietarios responsables",
     "Manually entered": "Introducido manualmente",
     "Inactive 30+ days": "Inactivo desde hace más de 30 días",
@@ -26329,6 +26432,13 @@ export const translations: Record<string, Record<string, string>> = {
     "Workflow": "Flujo de trabajo",
     "Yes/No": "Sí/No",
     "You are ready to work with VerifyWise": "Ya está listo para trabajar con VerifyWise",
+    "Your approval is recorded.": "Tu aprobación se ha registrado.",
+    "Your approval is recorded. Waiting on 1 more approver for this step.":
+      "Tu aprobación se ha registrado. Falta 1 aprobador más en este paso.",
+    "Your approval is recorded. Waiting on {count} more approvers for this step.":
+      "Tu aprobación se ha registrado. Faltan {count} aprobadores más en este paso.",
+    "Your approval is recorded. The request moved to the next step.":
+      "Tu aprobación se ha registrado. La solicitud pasó al siguiente paso.",
     "Your changes have been saved.": "Sus cambios se han guardado.",
     "Your new task has been added.": "Su nueva tarea se ha añadido.",
     "Your report is being generated.": "Su informe se está generando.",
@@ -30699,6 +30809,28 @@ export const translations: Record<string, Record<string, string>> = {
       "Aún se está agrupando. Vuelve a abrir esta pestaña para ver nuevas sugerencias.",
     "Scanning {count} risks. Links will appear as the scan completes.":
       "Analizando {count} riesgos. Los vínculos aparecerán cuando termine el análisis.",
+    "Scanning {count} risk. Links will appear as the scan completes.":
+      "Analizando {count} riesgo. Los vínculos aparecerán cuando termine el análisis.",
+    "Related risks": "Riesgos relacionados",
+    "How is this risk connected?": "¿Cómo está conectado este riesgo?",
+    "Where is the parent risk?": "¿Dónde está el riesgo principal?",
+    "The two risks are connected, but neither depends on the other.":
+      "Los dos riesgos están conectados, pero ninguno depende del otro.",
+    "This risk is part of a broader parent risk. When the parent's level changes, this risk is flagged for review.":
+      "Este riesgo forma parte de un riesgo principal más amplio. Cuando cambia el nivel del principal, este riesgo se marca para revisión.",
+    "The other risk becomes a child of this one and is flagged when this risk's level changes.":
+      "El otro riesgo pasa a depender de este y se marca cuando cambia el nivel de este riesgo.",
+    "Another risk in the risk register.": "Otro riesgo del registro de riesgos.",
+    "A risk recorded on a model.": "Un riesgo registrado en un modelo.",
+    "A risk recorded on a vendor.": "Un riesgo registrado en un proveedor.",
+    "Grouping {count} cluster of related risks. Suggestions appear here as they finish.":
+      "Agrupando {count} grupo de riesgos relacionados. Las sugerencias aparecerán aquí a medida que terminen.",
+    "{count} cluster was too large to group in one pass.":
+      "{count} grupo era demasiado grande para agruparse en una sola pasada.",
+    "Link this risk to others it is connected to. VerifyWise also suggests links from what risks have in common, such as category, controls, lifecycle phase or project. Confirm a suggestion to keep it, or dismiss it.":
+      "Vincule este riesgo con otros con los que está conectado. VerifyWise también sugiere vínculos según lo que los riesgos tienen en común, como la categoría, los controles, la fase del ciclo de vida o el proyecto. Confirme una sugerencia para conservarla o descártela.",
+    "Uses AI to propose parent and child links among risks that are already related. Suggestions appear in this list for you to confirm.":
+      "Usa IA para proponer vínculos principal-secundario entre riesgos ya relacionados. Las sugerencias aparecen en esta lista para que las confirme.",
     "Grouping {count} clusters of related risks. Suggestions appear here as they finish.":
       "Agrupando {count} grupos de riesgos relacionados. Las sugerencias aparecerán aquí a medida que terminen.",
     "{count} clusters were too large to group in one pass.":
@@ -30729,6 +30861,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Los riesgos de proveedor relacionados aparecen al guardar los riesgos de proveedor, o después de que un administrador ejecute un análisis.",
     "Scanning {count} vendor risks. Related vendor risks appear here as the scan completes.":
       "Analizando {count} riesgos de proveedor. Los riesgos de proveedor relacionados aparecerán aquí cuando termine el análisis.",
+    "Scanning {count} vendor risk. Related vendor risks appear here as the scan completes.":
+      "Analizando {count} riesgo de proveedor. Los riesgos de proveedor relacionados aparecerán aquí cuando termine el análisis.",
     "Scan finished. No related vendor risks found.":
       "Análisis finalizado. No se encontraron riesgos de proveedor relacionados.",
     "Search vendor risks": "Buscar riesgos de proveedor",
@@ -31602,5 +31736,24 @@ export const translations: Record<string, Record<string, string>> = {
     "Evidence graded": "La evidencia calificada",
     "counts as low quality. Files with no AI analysis are not counted as adequate.":
       "se considera de baja calidad. Los archivos sin análisis de IA no cuentan como suficientes.",
+    // Super admin MCP connect
+    "Connect Claude Code to this deployment": "Conectar Claude Code a esta implementación",
+    "Download the config file": "Descargar el archivo de configuración",
+    "Token expires in": "El token caduca en",
+    "Config file downloaded": "Archivo de configuración descargado",
+    "Add it to Claude Code": "Añadirlo a Claude Code",
+    "Check it worked": "Comprobar que funcionó",
+    "What the file contains": "Qué contiene el archivo",
+    "Tools it adds": "Herramientas que añade",
+    "Download config file": "Descargar el archivo de configuración",
+    "Preparing...": "Preparando...",
+    "7 days": "7 días",
+    "30 days": "30 días",
+    "60 days": "60 días",
+    "90 days": "90 días",
+    "180 days": "180 días",
+    "Failed to create the config file.": "No se pudo crear el archivo de configuración.",
+    "Downloading revokes the token issued here last time. Anything set up with the previous file, on this machine or another, stops working immediately.":
+      "Al descargarlo se revoca el token emitido aquí la última vez. Todo lo que se configuró con el archivo anterior, en este equipo o en otro, deja de funcionar de inmediato.",
   },
 };

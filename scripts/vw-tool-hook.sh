@@ -7,7 +7,9 @@
 # best-effort; always exits 0 — result capture must never block.
 #
 # Env:
-#   VW_GATEWAY_URL  (required)  e.g. http://localhost:8100
+#   VW_GATEWAY_URL  (required)  the URL you open VerifyWise at, e.g. https://verifywise.example.com
+#                               (local development: the Vite dev server does not forward /v1,
+#                               so use the backend, e.g. http://localhost:3000)
 #   VW_AGENT_KEY    (required)  sk-mcp-...
 #   VW_FAIL_MODE          (optional)  open | closed   (default: open)
 #   VW_TIMEOUT            (optional)  seconds          (default: 3)
@@ -27,6 +29,8 @@ fail() {  # $1 = stderr message
 }
 
 [ -n "${VW_GATEWAY_URL:-}" ] || fail "VW_GATEWAY_URL not set"
+# A URL copied from the address bar ends in "/"; "//v1/..." would miss the route
+while [ "${VW_GATEWAY_URL%/}" != "$VW_GATEWAY_URL" ]; do VW_GATEWAY_URL="${VW_GATEWAY_URL%/}"; done
 [ -n "${VW_AGENT_KEY:-}" ]   || fail "VW_AGENT_KEY not set"
 command -v jq   >/dev/null 2>&1 || fail "jq not found"
 command -v curl >/dev/null 2>&1 || fail "curl not found"

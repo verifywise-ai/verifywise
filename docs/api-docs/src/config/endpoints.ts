@@ -7148,6 +7148,44 @@ export const llmKeyEndpoints: Endpoint[] = [
   },
 ];
 
+// Mcp endpoints
+export const mcpEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/mcp',
+    summary: "Rejected (use POST)",
+    description: "Always returns 405. Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 405, description: "Method not allowed: this server has no event stream, use POST" },
+    ],
+    tag: "Mcp",
+  },
+  {
+    method: 'POST',
+    path: '/mcp',
+    summary: "MCP JSON-RPC request",
+    description: "Stateless MCP endpoint for the super admin tools. Send a JSON-RPC message in the body; the reply is plain JSON, not an SSE stream. Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "JSON-RPC response" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mcp",
+  },
+  {
+    method: 'DELETE',
+    path: '/mcp',
+    summary: "Rejected (stateless server)",
+    description: "Always returns 405. Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 405, description: "Method not allowed: there is no session to end" },
+    ],
+    tag: "Mcp",
+  },
+];
+
 // Model Inventory endpoints
 export const modelInventoryEndpoints: Endpoint[] = [
   {
@@ -11031,42 +11069,6 @@ export const superAdminEndpoints: Endpoint[] = [
   },
   {
     method: 'GET',
-    path: '/super-admin/mcp-server',
-    summary: "Get Mcp Server",
-    description: "Requires role: Super Admin",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Super Admin",
-  },
-  {
-    method: 'DELETE',
-    path: '/super-admin/mcp-server',
-    summary: "Uninstall Mcp Server Handler",
-    description: "Requires role: Super Admin",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Super Admin",
-  },
-  {
-    method: 'POST',
-    path: '/super-admin/mcp-server/install',
-    summary: "Install Mcp Server Handler",
-    description: "Requires role: Super Admin",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Super Admin",
-  },
-  {
-    method: 'GET',
     path: '/super-admin/super-admins',
     summary: "List Super Admins",
     description: "Requires role: Super Admin",
@@ -12101,6 +12103,7 @@ export const allEndpoints = {
   iso42001: iso42001Endpoints,
   llmEvals: llmEvalsEndpoints,
   llmKey: llmKeyEndpoints,
+  mcp: mcpEndpoints,
   modelInventory: modelInventoryEndpoints,
   modelRisk: modelRiskEndpoints,
   mrm: mrmEndpoints,

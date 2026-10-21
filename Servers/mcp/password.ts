@@ -1,7 +1,7 @@
 /**
- * Password generation for accounts created through this server.
+ * Password generation for accounts created through the MCP server.
  *
- * Must satisfy Servers/domain.layer/validations/password.valid.ts: at least 8
+ * Must satisfy domain.layer/validations/password.valid.ts: at least 8
  * characters with a lowercase letter, an uppercase letter and a digit. Special
  * characters are recognised there but not required; the set used here is the
  * one that file's regex matches.

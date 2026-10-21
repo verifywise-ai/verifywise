@@ -123,6 +123,7 @@ import customFieldRoutes from "./routes/customField.route";
 import virtualKeyProxyRoutes from "./routes/virtualKeyProxy.route";
 import internalRoutes from "./routes/internal.route";
 import superAdminRoutes from "./routes/superAdmin.route";
+import mcpRoutes from "./routes/mcp.route";
 import { i18nMiddleware } from "./middleware/i18n.middleware";
 import {
   generalApiLimiter,
@@ -442,6 +443,7 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   app.use("/api/custom-fields", customFieldRoutes);
 
   app.use("/api/super-admin", superAdminRoutes);
+  app.use("/api/mcp", mcpRoutes);
   app.use("/api/internal", internalRoutes);
   app.use("/api/telemetry", telemetryRoutes);
   app.use("/api/ssoConfig", ssoConfigRoutes);

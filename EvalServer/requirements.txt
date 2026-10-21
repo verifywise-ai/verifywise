@@ -9,7 +9,7 @@ asyncpg==0.30.0
 attrs==25.4.0
 backoff==2.2.1
 cachetools==6.2.1
-certifi==2026.7.22
+certifi==2026.10.19
 cryptography==50.0.0
 charset-normalizer==3.4.4
 click==8.3.3  # deepeval 4.1.3 pins click<8.4.0; 8.5.0 (Dependabot #4953) is incompatible

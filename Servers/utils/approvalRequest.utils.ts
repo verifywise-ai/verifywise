@@ -11,7 +11,10 @@ import {
   EntityType,
   AUTO_APPROVABLE_RISK_RANKS,
 } from "../domain.layer/enums/approval-workflow.enum";
-import { ValidationException } from "../domain.layer/exceptions/custom.exception";
+import {
+  ForbiddenException,
+  ValidationException,
+} from "../domain.layer/exceptions/custom.exception";
 import { logStructured } from "./logger/fileLogger";
 import { withLegacyHighRiskRole } from "./highRiskRoles.utils";
 import { executeAiAction } from "../advisor/aiActions";
@@ -408,7 +411,10 @@ export const tryAutoApproveRequestQuery = async (
 };
 
 /**
- * Get requests where user is an approver
+ * Get requests waiting on this user's decision: they are an approver on the
+ * current step and have not responded yet. A step that needs every approver
+ * stays pending after this user approves, so without the result filter the
+ * request would stay in their list.
  */
 export const getPendingApprovalsQuery = async (
   userId: number,
@@ -432,6 +438,7 @@ export const getPendingApprovalsQuery = async (
      JOIN approval_request_step_approvals arsa ON ars.id = arsa.request_step_id AND ars.organization_id = arsa.organization_id
      WHERE ar.organization_id = :organizationId
        AND arsa.approver_id = :userId
+       AND arsa.approval_result = :pendingResult
        AND ars.step_number = ar.current_step
        AND ar.status = :status
      ORDER BY ar.created_at DESC`,
@@ -440,6 +447,7 @@ export const getPendingApprovalsQuery = async (
         organizationId,
         userId,
         status: ApprovalRequestStatus.PENDING,
+        pendingResult: ApprovalResult.PENDING,
       },
       type: "SELECT",
       ...(transaction && { transaction }),
@@ -599,6 +607,70 @@ export const getApprovalRequestByIdQuery = async (
 };
 
 /**
+ * Only an assigned approver of the current step may decide, and only once.
+ * Without this, any user in the org could reject a request (the vote UPDATE
+ * matches no row but the rejection branch still runs).
+ */
+const assertPendingApprover = async (
+  requestId: number,
+  requestStepId: number,
+  userId: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> => {
+  const [myApproval] = (await sequelize.query(
+    `SELECT approval_result
+     FROM approval_request_step_approvals
+     WHERE organization_id = :organizationId
+       AND request_step_id = :requestStepId
+       AND approver_id = :userId`,
+    {
+      replacements: { organizationId, requestStepId, userId },
+      type: "SELECT",
+      transaction,
+    },
+  )) as { approval_result: string }[];
+
+  if (!myApproval) {
+    // A retry or double submit after this user's vote moved the request to
+    // the next step lands here too. That is a repeat, not an outsider.
+    const [earlierVote] = await sequelize.query(
+      `SELECT 1
+       FROM approval_request_step_approvals arsa
+       JOIN approval_request_steps ars
+         ON ars.id = arsa.request_step_id AND ars.organization_id = arsa.organization_id
+       WHERE arsa.organization_id = :organizationId
+         AND ars.request_id = :requestId
+         AND arsa.approver_id = :userId
+         AND arsa.approval_result <> :pending
+       LIMIT 1`,
+      {
+        replacements: { organizationId, requestId, userId, pending: ApprovalResult.PENDING },
+        type: "SELECT",
+        transaction,
+      },
+    );
+    if (earlierVote) {
+      throw new ValidationException("You have already responded to this step");
+    }
+    throw new ForbiddenException("You are not an approver on the current step");
+  }
+  if (myApproval.approval_result !== ApprovalResult.PENDING) {
+    throw new ValidationException("You have already responded to this step");
+  }
+};
+
+/**
+ * An admin deciding a step they were not (or not only) assigned to, e.g. one
+ * stuck on an approver who left. The caller checks the permission;
+ * `stepNumber` is the step the admin meant, so a retry cannot carry the
+ * override on to the next step.
+ */
+export interface ApprovalOverride {
+  stepNumber: number;
+}
+
+/**
  * Approve or reject a request step
  */
 export const processApprovalQuery = async (
@@ -608,10 +680,16 @@ export const processApprovalQuery = async (
   comments: string | undefined,
   organizationId: number,
   transaction: Transaction,
+  override?: ApprovalOverride,
 ): Promise<NotificationInfo | null> => {
-  // Get current request
+  // Get current request. FOR UPDATE serialises every decision on this request:
+  // without it, two approvers on a requires-all step each lock only their own
+  // vote row, neither sees the other's uncommitted vote, and the step never
+  // completes. A waiting decision re-reads the row after the first commits.
   const [request] = await sequelize.query(
-    `SELECT * FROM approval_requests WHERE organization_id = :organizationId AND id = :requestId`,
+    `SELECT * FROM approval_requests
+     WHERE organization_id = :organizationId AND id = :requestId
+     FOR UPDATE`,
     {
       replacements: { organizationId, requestId },
       mapToModel: true,
@@ -624,8 +702,7 @@ export const processApprovalQuery = async (
     throw new Error("Request not found");
   }
 
-  // Guard against concurrent or repeated decisions (there is no row lock on
-  // this path): only a pending request may be acted on.
+  // Only a pending request may be acted on.
   if ((request as any).status !== ApprovalRequestStatus.PENDING) {
     throw new ValidationException("Request is no longer pending");
   }
@@ -649,26 +726,109 @@ export const processApprovalQuery = async (
     throw new Error("Request step not found");
   }
 
-  // Update approval record
-  await sequelize.query(
-    `UPDATE approval_request_step_approvals
-     SET approval_result = :approvalResult,
-         comments = :comments,
-         approved_at = NOW()
-     WHERE organization_id = :organizationId
-       AND request_step_id = :requestStepId
-       AND approver_id = :userId`,
-    {
-      replacements: {
-        organizationId,
-        requestStepId: (requestStep as any).id,
-        userId,
-        approvalResult,
-        comments: comments || null,
+  if (override) {
+    if (override.stepNumber !== currentStep) {
+      throw new ValidationException("The request has moved to another step");
+    }
+    if (Number((request as any).requested_by) === userId) {
+      throw new ForbiddenException("You cannot override your own request");
+    }
+    // The validator already requires it; kept for callers that bypass it.
+    if (!comments?.trim()) {
+      throw new ValidationException("An override needs a comment explaining why");
+    }
+    const [myVote] = (await sequelize.query(
+      `SELECT approval_result
+       FROM approval_request_step_approvals
+       WHERE organization_id = :organizationId
+         AND request_step_id = :requestStepId
+         AND approver_id = :userId`,
+      {
+        replacements: { organizationId, requestStepId: (requestStep as any).id, userId },
+        type: "SELECT",
+        transaction,
       },
+    )) as { approval_result: string }[];
+
+    if (myVote && myVote.approval_result !== ApprovalResult.PENDING) {
+      // A vote already cast stays as cast: an override must not rewrite it.
+      if (myVote.approval_result !== approvalResult) {
+        throw new ValidationException("You have already responded to this step");
+      }
+    } else {
+      // The admin's vote goes on the step like any other, so the timeline
+      // shows who decided and why.
+      await sequelize.query(
+        `INSERT INTO approval_request_step_approvals
+           (organization_id, request_step_id, approver_id, approval_result, comments, approved_at)
+         VALUES (:organizationId, :requestStepId, :userId, :approvalResult, :comments, NOW())
+         ON CONFLICT (request_step_id, approver_id) DO UPDATE
+           SET approval_result = EXCLUDED.approval_result,
+               comments = EXCLUDED.comments,
+               approved_at = EXCLUDED.approved_at`,
+        {
+          replacements: {
+            organizationId,
+            requestStepId: (requestStep as any).id,
+            userId,
+            approvalResult,
+            comments,
+          },
+          transaction,
+        },
+      );
+    }
+
+    // Mark the step itself, so an override can be told apart from a normal
+    // decision and the reason survives even when the vote row was kept.
+    await sequelize.query(
+      `UPDATE approval_request_steps
+       SET step_details = COALESCE(step_details, '{}'::jsonb) || CAST(:stepDetails AS jsonb)
+       WHERE organization_id = :organizationId AND id = :requestStepId`,
+      {
+        replacements: {
+          organizationId,
+          requestStepId: (requestStep as any).id,
+          stepDetails: JSON.stringify({
+            admin_override: true,
+            actor_id: userId,
+            result: approvalResult,
+            reason: comments.trim(),
+          }),
+        },
+        transaction,
+      },
+    );
+  } else {
+    await assertPendingApprover(
+      requestId,
+      (requestStep as any).id,
+      userId,
+      organizationId,
       transaction,
-    },
-  );
+    );
+
+    // Update approval record
+    await sequelize.query(
+      `UPDATE approval_request_step_approvals
+       SET approval_result = :approvalResult,
+           comments = :comments,
+           approved_at = NOW()
+       WHERE organization_id = :organizationId
+         AND request_step_id = :requestStepId
+         AND approver_id = :userId`,
+      {
+        replacements: {
+          organizationId,
+          requestStepId: (requestStep as any).id,
+          userId,
+          approvalResult,
+          comments: comments || null,
+        },
+        transaction,
+      },
+    );
+  }
 
   // Get the workflow step to check requires_all_approvers
   const [workflowStep] = await sequelize.query(
@@ -721,10 +881,13 @@ export const processApprovalQuery = async (
   const hasPending = pendingCount > 0;
   const hasApproved = approvedCount > 0;
 
-  // Determine if step should be completed based on requires_all_approvers setting
-  const shouldComplete = requiresAllApprovers
-    ? !hasPending // All approvers must respond
-    : hasApproved; // At least one approver must approve
+  // Determine if step should be completed based on requires_all_approvers
+  // setting. An admin override completes it whoever is still pending.
+  const shouldComplete = override
+    ? true
+    : requiresAllApprovers
+      ? !hasPending // All approvers must respond
+      : hasApproved; // At least one approver must approve
 
   // If rejected, mark step and request as rejected
   if (approvalResult === ApprovalResult.REJECTED) {

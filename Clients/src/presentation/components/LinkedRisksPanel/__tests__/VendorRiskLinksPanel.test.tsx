@@ -324,7 +324,7 @@ describe("VendorRiskLinksPanel suggest children", () => {
     expect(mockSuggest).toHaveBeenCalled();
     expect(
       await screen.findByText(
-        "Grouping 2 clusters of related risks. Suggestions appear here as they finish. 1 clusters were too large to group in one pass.",
+        "Grouping 2 clusters of related risks. Suggestions appear here as they finish. 1 cluster was too large to group in one pass.",
       ),
     ).toBeInTheDocument();
     // Disabled while the pass is being watched, so it cannot be queued twice.
@@ -521,6 +521,9 @@ describe("VendorRiskLinksPanel relate form", () => {
 
     expect(screen.getByPlaceholderText("Search vendor risks")).toBeInTheDocument();
     expect(screen.queryByPlaceholderText("Search risks")).toBeNull();
-    expect(screen.getAllByRole("button", { name: "Cancel" }).length).toBeGreaterThan(0);
+    // Only the form's own Cancel: the toolbar buttons stay as they are.
+    expect(screen.getAllByRole("button", { name: "Cancel" })).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Relate a vendor risk" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Link a project risk" })).toBeEnabled();
   });
 });

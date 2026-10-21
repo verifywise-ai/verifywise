@@ -8,7 +8,7 @@ This document contains cross-cutting rules for the VerifyWise codebase. Director
 - **Frontend:** `Clients/CLAUDE.md` — clean architecture, component patterns
 - **EvalServer:** `EvalServer/CLAUDE.md` — Alembic migrations, FastAPI patterns
 - **AI Gateway:** `AIGateway/CLAUDE.md` — LLM proxy, guardrails, spend tracking
-- **MCP Server:** `MCPServer/README.md` — MCP server for super-admin org/user administration across deployments
+- **MCP Server:** `Servers/mcp/` — the deployment's own MCP server, served over Streamable HTTP at `POST /api/mcp` for super-admin org/user administration. Tools call `Servers/services/superAdmin.service.ts`, the same code the REST controllers use. Connect a client with `claude mcp add --transport http verifywise https://<deployment>/api/mcp --header "Authorization: Bearer <api token>"`.
 
 ### Custom Agents
 

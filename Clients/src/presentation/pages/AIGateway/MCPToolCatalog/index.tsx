@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Box, Typography, Stack, IconButton } from "@mui/material";
-import { useSearchParams } from "react-router";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
 import {
+  ArrowLeft,
   Wrench,
   Pencil,
   ShieldAlert,
@@ -20,7 +21,7 @@ import { CustomizableButton } from "../../../components/button/customizable-butt
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { getGatewayErrorText } from "../../../../application/utils/apiErrorReason";
 import palette from "../../../themes/palette";
-import { useCardSx } from "../shared";
+import { cameFromMcpServers, useCardSx } from "../shared";
 import MCPTable from "../MCPTable";
 import CustomizableSkeleton from "../../../components/Skeletons";
 
@@ -65,6 +66,11 @@ const RISK_COLORS: Record<string, { bg: string; text: string; border: string }> 
 
 export default function MCPToolCatalogPage() {
   const cardSx = useCardSx();
+  const navigate = useNavigate();
+  const location = useLocation();
+  // Only the MCP servers page sends this state, so the back link never points
+  // at a page the user did not come from. Filter changes carry it forward.
+  const fromMcpServers = cameFromMcpServers(location.state);
   const [tools, setTools] = useState<MCPTool[]>([]);
   const [servers, setServers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,7 +88,7 @@ export default function MCPToolCatalogPage() {
         else next.delete("server");
         return next;
       },
-      { replace: true },
+      { replace: true, state: location.state },
     );
   const [filterRisk, setFilterRisk] = useState("");
 
@@ -292,6 +298,19 @@ export default function MCPToolCatalogPage() {
       description="View and manage all discovered MCP tools across your servers."
       tipBoxEntity="ai-gateway-mcp-tools"
       helpArticlePath="ai-gateway/mcp-tools"
+      backButton={
+        fromMcpServers ? (
+          <CustomizableButton
+            text="Back to MCP servers"
+            // The servers page is the previous history entry (filter changes
+            // replace), so go back rather than push a new entry.
+            onClick={() => navigate(-1)}
+            variant="text"
+            startIcon={<ArrowLeft size={16} />}
+            testId="mcp-tools-back"
+          />
+        ) : undefined
+      }
     >
       {/* Filters */}
       {!loading && tools.length > 0 && (
