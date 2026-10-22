@@ -1,33 +1,25 @@
 import { Request, Response } from "express";
 
-import { resolveHighRiskRolesWrite } from "../utils/highRiskRoles.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import {
   calculateProjectRisks,
   calculateVendirRisks,
   countAnswersByProjectId,
   countSubControlsByProjectId,
-  createNewProjectQuery,
   getAllProjectsQuery,
   getProjectByIdQuery,
   updateProjectByIdQuery,
-  getCurrentProjectMembers,
 } from "../utils/project.utils";
 import { getUserByIdQuery } from "../utils/user.utils";
 import { getControlCategoryByProjectIdQuery } from "../utils/controlCategory.utils";
 import { ProjectModel } from "../domain.layer/models/project/project.model";
 import { getAllControlsByControlGroupQuery } from "../utils/control.utils";
 import { getAllSubcontrolsByControlIdQuery } from "../utils/subControl.utils";
-import { createEUFrameworkQuery } from "../utils/eu.utils";
 import { sequelize } from "../database/db";
-import { createISOFrameworkQuery } from "../utils/iso42001.utils";
 import { IProjectAttributes } from "../domain.layer/interfaces/i.project";
 import { IControl } from "../domain.layer/interfaces/i.control";
 import { IControlCategory } from "../domain.layer/interfaces/i.controlCategory";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
-import { logStructured } from "../utils/logger/fileLogger";
-import { createISO27001FrameworkQuery } from "../utils/iso27001.utils";
-import { createNISTAI_RMFFrameworkQuery } from "../utils/nistAiRmfCorrect.utils";
 import {
   ValidationException,
   BusinessLogicException,
@@ -39,11 +31,7 @@ import {
 } from "../services/userNotification/projectNotifications";
 import { sendSlackNotification } from "../services/slack/slackNotificationService";
 import { SlackNotificationRoutingType } from "../domain.layer/enums/slack.enum";
-import {
-  recordUseCaseCreation,
-  trackUseCaseChanges,
-  recordMultipleFieldChanges,
-} from "../utils/useCaseChangeHistory.utils";
+import { recordMultipleFieldChanges } from "../utils/useCaseChangeHistory.utils";
 import {
   hasPendingApprovalQuery,
   getPendingApprovalRequestIdQuery,
@@ -55,6 +43,7 @@ import {
   createUseCaseApprovalRequest,
   notifyUseCaseApprovalRequested,
 } from "../services/projects/approvalRequest.service";
+import { createUseCaseService, updateUseCaseService } from "../services/useCase.service";
 import {
   notifyUserAssigned,
   notifyApprovalAutoApproved,
@@ -221,115 +210,17 @@ export async function createProject(req: Request, res: Response): Promise<any> {
   });
 
   try {
-    // Either role field may be sent; store the resolved list only.
-    const highRiskRoles = resolveHighRiskRolesWrite(projectData, []) ?? [];
-    delete projectData.type_of_high_risk_role;
-    const newProject: Partial<ProjectModel> & {
-      members: number[] | undefined;
-      framework: number[];
-      enable_ai_data_insertion: boolean;
-    } = { ...projectData, high_risk_roles: highRiskRoles };
-
-    const createdProject = await createNewProjectQuery(
-      newProject,
-      newProject.members ?? [],
-      newProject.framework || [],
-      req.organizationId!,
-      req.userId!,
+    const {
+      useCase: createdProject,
+      frameworks,
+      approvalResult,
+    } = await createUseCaseService(
+      projectData,
+      { userId: req.userId!, organizationId: req.organizationId! },
       transaction,
     );
 
-    // Only create frameworks immediately if NO approval workflow is assigned
-    // Otherwise, store frameworks for creation after approval
-    const frameworks: { [key: string]: object } = {};
-    if (!createdProject.approval_workflow_id) {
-      // No approval workflow - create frameworks immediately
-      for (const framework of newProject.framework || []) {
-        if (framework === 1) {
-          const eu = await createEUFrameworkQuery(
-            createdProject.id!,
-            newProject.enable_ai_data_insertion,
-            req.organizationId!,
-            transaction,
-          );
-          frameworks["eu"] = eu;
-        } else if (framework === 2) {
-          const iso42001 = await createISOFrameworkQuery(
-            createdProject.id!,
-            newProject.enable_ai_data_insertion,
-            req.organizationId!,
-            transaction,
-          );
-          frameworks["iso42001"] = iso42001;
-        } else if (framework === 3) {
-          const iso27001 = await createISO27001FrameworkQuery(
-            createdProject.id!,
-            newProject.enable_ai_data_insertion,
-            req.organizationId!,
-            transaction,
-          );
-          frameworks["iso27001"] = iso27001;
-        } else if (framework === 4) {
-          const nist = await createNISTAI_RMFFrameworkQuery(
-            createdProject.id!,
-            newProject.enable_ai_data_insertion,
-            req.organizationId!,
-            transaction,
-          );
-          frameworks["nist_ai_rmf"] = nist;
-        }
-      }
-    } else {
-      // Approval workflow assigned - defer framework creation until approval
-      logProcessing({
-        description: `deferring framework creation pending approval (frameworks=${JSON.stringify(newProject.framework)}, enable_ai_data_insertion=${newProject.enable_ai_data_insertion})`,
-        functionName: "createProject",
-        fileName: "project.ctrl.ts",
-        userId: req.userId!,
-        organizationId: req.organizationId!,
-      });
-    }
-
     if (createdProject) {
-      // Record use case creation in change history
-      if (createdProject.id && req.userId) {
-        await recordUseCaseCreation(
-          createdProject.id,
-          req.userId,
-          req.organizationId!,
-          {
-            project_title: createdProject.project_title,
-            owner: createdProject.owner,
-            start_date: createdProject.start_date,
-            geography: createdProject.geography,
-            ai_risk_classification: createdProject.ai_risk_classification,
-            // An empty list is no value, so creation records no roles line.
-            high_risk_roles: createdProject.high_risk_roles?.length
-              ? createdProject.high_risk_roles
-              : undefined,
-            goal: createdProject.goal,
-            target_industry: createdProject.target_industry,
-            description: createdProject.description,
-            status: createdProject.status,
-          },
-          transaction,
-        );
-      }
-
-      // Create approval request if an approval workflow is assigned to the use-case
-      logStructured(
-        "processing",
-        `use case ${createdProject.id} created with approval_workflow_id=${createdProject.approval_workflow_id ?? "none"} (body sent ${projectData.approval_workflow_id ?? "none"})`,
-        "createProject",
-        "project.ctrl.ts",
-      );
-      const approvalResult = await createUseCaseApprovalRequest(
-        createdProject,
-        req.userId!,
-        req.organizationId!,
-        transaction,
-      );
-
       await transaction.commit();
 
       // Auto-approved requests skip approver notifications; tell the
@@ -551,74 +442,16 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
     }
 
     const updatedProject: Partial<ProjectModel> & { members?: number[] } = updateData;
-    // Only replace members when the request sends a list; a missing field leaves them
-    // unchanged. null still clears them, as it did before.
-    const rawMembers = updatedProject.members as number[] | null | undefined;
-    const members = rawMembers === null ? [] : Array.isArray(rawMembers) ? rawMembers : undefined;
 
-    delete updatedProject.members;
-    delete updatedProject.id;
-
-    // Either role field may be sent. Resolve them against the stored list, so a
-    // client that writes back the derived single role cannot drop the other one.
-    const highRiskRoles = resolveHighRiskRolesWrite(updateData, existingProject.high_risk_roles);
-    delete updateData.type_of_high_risk_role;
-    if (highRiskRoles === undefined) delete updatedProject.high_risk_roles;
-    else updatedProject.high_risk_roles = highRiskRoles;
-
-    // if (!updatedProject.project_title || !updatedProject.owner) {
-    //   return res.status(400).json(
-    //     STATUS_CODE[400]({ message: req.t!("project_title and owner are required") })
-    //   );
-    // }
-
-    // Get current project and members to check for changes
-    // const ownerChanged =
-    //   existingProject && existingProject.owner !== updatedProject.owner;
-
-    // Get current members before update to identify newly added ones
-    const currentMembers = await getCurrentProjectMembers(
-      projectId,
-      req.organizationId!,
-      transaction,
-    );
-
-    const project = await updateProjectByIdQuery(
+    const { useCase: project, currentMembers } = await updateUseCaseService(
       projectId,
       updatedProject,
-      members,
-      req.organizationId!,
+      existingProject,
+      { userId, organizationId: req.organizationId! },
       transaction,
     );
 
     if (project) {
-      // Track and record changes for use case history
-      if (req.userId && existingProject) {
-        // members is removed from updatedProject above, so compare it on its own.
-        // Sorted, so the same members in another order are not recorded as a change.
-        const byId = (a: number, b: number) => a - b;
-        const memberChanges =
-          members !== undefined
-            ? await trackUseCaseChanges(
-                { members: currentMembers.map(Number).sort(byId) } as any,
-                { members: [...project.members].sort(byId) } as any,
-              )
-            : [];
-        const changes = [
-          ...(await trackUseCaseChanges(existingProject, updatedProject)),
-          ...memberChanges,
-        ];
-        if (changes.length > 0) {
-          await recordMultipleFieldChanges(
-            projectId,
-            req.userId,
-            req.organizationId!,
-            changes,
-            transaction,
-          );
-        }
-      }
-
       // #4904: a workflow attached on edit (not set before) starts an approval
       // request, exactly as create does. An inactive or wrong-entity workflow
       // throws ValidationException, which rolls back and maps to 400.

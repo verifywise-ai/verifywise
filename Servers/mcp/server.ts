@@ -1,8 +1,9 @@
 /**
  * The deployment's own MCP server.
  *
- * Exposes super-admin organization and user administration over Streamable
- * HTTP at /api/mcp, so an MCP client connects to the deployment directly:
+ * Exposes super-admin administration — organizations, users, and the
+ * governance data inside them — over Streamable HTTP at /api/mcp, so an MCP
+ * client connects to the deployment directly:
  *
  *   claude mcp add --transport http verifywise \
  *     https://<deployment>/api/mcp --header "Authorization: Bearer <api token>"
@@ -15,9 +16,18 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { organizationTools } from "./tools/organizations";
 import { userTools } from "./tools/users";
+import { useCaseTools } from "./tools/useCases";
+import { riskTools } from "./tools/risks";
+import { complianceTools } from "./tools/compliance";
 import type { McpCaller, ToolDef } from "./tool";
 
-const tools: ToolDef[] = [...organizationTools, ...userTools];
+const tools: ToolDef[] = [
+  ...organizationTools,
+  ...userTools,
+  ...useCaseTools,
+  ...riskTools,
+  ...complianceTools,
+];
 
 /**
  * A server instance bound to one caller.
