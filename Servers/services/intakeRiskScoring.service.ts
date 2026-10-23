@@ -42,7 +42,7 @@ interface FormField {
   riskDimension?: string;
 }
 
-interface FormSchema {
+export interface FormSchema {
   version: string;
   fields: FormField[];
 }
@@ -259,6 +259,29 @@ function optionLabelOf(field: FormSchema["fields"][number], value: unknown): str
 }
 
 /**
+ * The scorable text of one answered field (see answersForScoring). Shared with
+ * the AI scoring input so both read select answers the same way.
+ */
+export function answerTextOf(field: FormSchema["fields"][number], value: unknown): string {
+  const optionLabel = (v: unknown) => optionLabelOf(field, v);
+  switch (field.type) {
+    case "text":
+    case "textarea":
+    case "email":
+    case "url":
+      return typeof value === "string" ? value : "";
+    case "select":
+      return optionLabel(value);
+    case "multiselect":
+      return Array.isArray(value) ? value.map(optionLabel).join(", ") : "";
+    case "checkbox":
+      return value === true ? field.label : "";
+    default:
+      return "";
+  }
+}
+
+/**
  * The text each answer contributes to keyword scoring. Selects contribute
  * their option labels (stored values default to "option1", "option2", ...),
  * a checked checkbox contributes its field label, and number, date and
@@ -273,27 +296,7 @@ export function answersForScoring(
     const value = submissionData[field.id];
     // Same notion of blank as the show/hide rules: whitespace and [] are not answers.
     if (isEmptyAnswer(value)) continue;
-    const optionLabel = (v: unknown) => optionLabelOf(field, v);
-    let text = "";
-    switch (field.type) {
-      case "text":
-      case "textarea":
-      case "email":
-      case "url":
-        text = typeof value === "string" ? value : "";
-        break;
-      case "select":
-        text = optionLabel(value);
-        break;
-      case "multiselect":
-        text = Array.isArray(value) ? value.map(optionLabel).join(", ") : "";
-        break;
-      case "checkbox":
-        text = value === true ? field.label : "";
-        break;
-      default:
-        text = "";
-    }
+    const text = answerTextOf(field, value);
     // Every answered field is listed, even with no scorable text. One with no
     // text (an unchecked checkbox) matches no keyword, so if it is a
     // dimension's only tagged answer, that dimension falls back to all answers.

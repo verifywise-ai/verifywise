@@ -1,6 +1,5 @@
 import { FormValues } from "../components/Forms/ProjectForm/constants";
 import { MitigationFormValues, RiskFormValues } from "../components/AddNewRiskForm/interface";
-import { FormValues as VendorRiskFormValues } from "../../domain/interfaces/i.form";
 
 /** Visual tab order for ProjectForm fields that participate in validation. */
 export const PROJECT_FORM_FIELD_ORDER: (keyof FormValues)[] = [
@@ -63,22 +62,6 @@ export const MITIGATION_FORM_FIELD_IDS: Partial<Record<keyof MitigationFormValue
   approver: "approver-input",
   approvalStatus: "approval-status-input",
   dateOfAssessment: "mitigation-assessment-date-input",
-};
-
-export const VENDOR_RISK_FORM_FIELD_ORDER: (keyof VendorRiskFormValues)[] = [
-  "vendorName",
-  "actionOwner",
-  "riskName",
-  "reviewDate",
-  "riskDescription",
-];
-
-export const VENDOR_RISK_FORM_FIELD_IDS: Partial<Record<keyof VendorRiskFormValues, string>> = {
-  vendorName: "vendor-name-input",
-  actionOwner: "action-owner-input",
-  riskName: "risk-name-input",
-  reviewDate: "vendor-review-date-input",
-  riskDescription: "risk-description-input",
 };
 
 /** Vendor risk modal (`Modals/NewRisk`) — the form used on /vendors/risks. */

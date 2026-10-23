@@ -12,7 +12,6 @@ export type {
   MitigationFormValues,
   AddNewRiskFormCorePropsBase,
   RiskSectionProps,
-  IRiskFormValues,
   IRiskFormErrors,
   IAuditRiskModalProps,
   IRiskLevelFormValues,

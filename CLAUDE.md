@@ -1,6 +1,6 @@
 # VerifyWise - Development Guide
 
-> **Last Updated:** 2026-10-17
+> **Last Updated:** 2026-10-21
 
 This document contains cross-cutting rules for the VerifyWise codebase. Directory-scoped guides load automatically when working in each area:
 
@@ -224,6 +224,7 @@ Read the relevant file BEFORE implementing changes in that area:
 | Datasets | `docs/technical/domains/datasets.md` |
 | Tasks | `docs/technical/domains/tasks.md` |
 | Incidents | `docs/technical/domains/incidents.md` |
+| Intake forms (AI scoring with rule minimums, suggested risks, assessment job, one-time email, approval risks) | `docs/technical/domains/intake-forms.md` |
 | Evidence hub | `docs/technical/domains/evidence.md` |
 | Training registry | `docs/technical/domains/training.md` |
 | Search | `docs/technical/domains/search.md` |

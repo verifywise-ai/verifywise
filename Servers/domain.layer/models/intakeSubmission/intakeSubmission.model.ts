@@ -2,11 +2,14 @@ import { Column, DataType, Model, Table } from "sequelize-typescript";
 import { IntakeSubmissionStatus } from "../../enums/intake-submission-status.enum";
 import { IntakeEntityType } from "../../enums/intake-entity-type.enum";
 import {
+  IDecisionRecord,
   IIntakeSubmission,
+  ISubmissionRouting,
   IntakeSubmissionData,
   ICreateIntakeSubmissionInput,
   IRiskAssessment,
   IRiskOverride,
+  ISuggestedRisksBlock,
 } from "../../interfaces/i.intakeSubmission";
 import { ValidationException } from "../../exceptions/custom.exception";
 
@@ -141,6 +144,34 @@ export class IntakeSubmissionModel
   riskOverride!: IRiskOverride | null;
 
   @Column({
+    type: DataType.JSONB,
+    allowNull: true,
+    field: "suggested_risks",
+  })
+  suggestedRisks!: ISuggestedRisksBlock | null;
+
+  @Column({
+    type: DataType.JSONB,
+    allowNull: true,
+    field: "routing",
+  })
+  routing!: ISubmissionRouting | null;
+
+  @Column({
+    type: DataType.JSONB,
+    allowNull: true,
+    field: "decision_record",
+  })
+  decisionRecord!: IDecisionRecord | null;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+    field: "notification_sent_at",
+  })
+  notificationSentAt!: Date | null;
+
+  @Column({
     type: DataType.DATE,
     field: "created_at",
   })
@@ -259,6 +290,10 @@ export class IntakeSubmissionModel
       riskAssessment: this.riskAssessment,
       riskTier: this.riskTier,
       riskOverride: this.riskOverride,
+      suggestedRisks: this.suggestedRisks,
+      routing: this.routing,
+      decisionRecord: this.decisionRecord,
+      notificationSentAt: this.notificationSentAt,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,
     };

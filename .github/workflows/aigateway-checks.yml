@@ -74,7 +74,9 @@ jobs:
 
       # Most tests under tests/ are E2E and need a live Express backend,
       # gateway, and database (see tests/conftest.py). Run only the
-      # self-contained subset that passes without live services.
+      # self-contained subset that passes without live services: the pure
+      # unit suites (tests/unit, test_cache_service, test_cost_service) and
+      # the mocked router/service suites listed below.
       - name: Run self-contained AIGateway tests
         env:
           DB_USER: test
@@ -87,7 +89,9 @@ jobs:
           OPENAI_API_KEY: sk-test
         run: |
           .venv/bin/python -m pytest \
+            tests/unit \
             tests/test_cache_service.py \
+            tests/test_cost_service.py \
             tests/test_proxy_tool_calling.py \
             tests/test_virtual_key_endpoint_names.py \
             tests/test_endpoint_delete_keeps_key_limits.py \

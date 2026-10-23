@@ -13,17 +13,30 @@ dotenv.config({ quiet: true });
  *   4. Frontend dev server started automatically via webServer block below
  */
 
-const CRITICAL_PATH_SPECS = /(use-cases|risk-management|tasks|critical-journey)\.spec\.ts/;
+const CRITICAL_PATH_SPECS =
+  /(use-cases|risk-management|tasks|critical-journey|reporting-journey|compliance-journey)\.spec\.ts/;
 const SUPER_ADMIN_SPECS = /super-admin\.spec\.ts/;
 const RISK_INHERITANCE_SPECS = /risk-inheritance\.spec\.ts/;
+// Quarantined specs: kept in the project map so `playwright test --list`
+// claims every spec file, but the specs self-skip (see #4617 triage notes
+// inside each file). Do NOT add real assertions here without rewriting the
+// spec against the current routes first.
+const QUARANTINE_SPECS = /plugins\.spec\.ts/;
 // Feature-coverage specs that all run against the seeded org Admin auth state.
-// Deliberately excluded:
-//   - plugins.spec.ts: quarantined (targets the removed /plugins route,
-//     superseded by /extensions) pending rewrite — see the spec file.
+// Quarantined specs (plugins.spec.ts — targets the removed /plugins route,
+// superseded by /extensions) live in the dedicated `quarantine` project
+// below; see the spec file and Clients/e2e/README.md for the triage note.
 // Axe tests inside these files (titles matching /accessibility violations/)
 // are carved out via grepInvert and run once under the `a11y` project instead.
 const FEATURE_SPECS =
-  /[\\/](agent-discovery|ai-detection|ai-gateway|ai-trust-center|approval-workflows|assessment|automations|command-palette|compliance-tracker|dashboard|datasets|evals-dashboard|event-tracker|file-manager|frameworks|incidents|intake-forms|model-inventory|navigation|network-resilience|notifications|onboarding|overview|page-not-found|policies|policy-editor|post-market-monitoring|project-view|public-intake-form|reporting|settings|shadow-ai|start-here|training|vendors)\.spec\.ts$/;
+  /[\\/](agent-discovery|ai-detection|ai-gateway|ai-trust-center|approval-workflows|assessment|automations|command-palette|compliance-tracker|dashboard|datasets|evals-dashboard|event-tracker|file-manager|framework-empty-state|frameworks|incidents|intake-forms|model-inventory|navigation|network-resilience|notifications|onboarding|overview|page-not-found|policies|policy-editor|post-market-monitoring|project-view|public-intake-form|recent-activity|reporting|service-worker|settings|shadow-ai|start-here|training|vendors)\.spec\.ts$/;
+
+// Convention for known-flaky tests (issues #4503/#4617 item 9): tag a test
+// or describe block with `@flaky` (test("… @flaky", …) or
+// test.describe("… @flaky", …)) and it is excluded from every project below.
+// Run quarantined tests explicitly with: `npx playwright test --grep @flaky`.
+// See Clients/e2e/README.md for the full triage workflow.
+const FLAKY_TAG = /@flaky/;
 
 // When Playwright's bundled Chromium is not available (e.g. restricted CDN),
 // set PLAYWRIGHT_USE_SYSTEM_CHROME=1 to use the locally installed Google Chrome.
@@ -62,12 +75,14 @@ export default defineConfig({
     {
       name: "auth-tests",
       testMatch: /auth\.spec\.ts/,
+      grepInvert: FLAKY_TAG,
       use: { ...devices["Desktop Chrome"] },
     },
     // Super-admin tests: reuse the stored super-admin auth state
     {
       name: "chromium",
       testMatch: SUPER_ADMIN_SPECS,
+      grepInvert: FLAKY_TAG,
       dependencies: ["setup"],
       use: {
         ...devices["Desktop Chrome"],
@@ -86,6 +101,7 @@ export default defineConfig({
     {
       name: "risk-inheritance",
       testMatch: RISK_INHERITANCE_SPECS,
+      grepInvert: FLAKY_TAG,
       dependencies: ["risk-inheritance-setup"],
       use: {
         ...devices["Desktop Chrome"],
@@ -97,6 +113,7 @@ export default defineConfig({
     {
       name: "admin",
       testMatch: CRITICAL_PATH_SPECS,
+      grepInvert: FLAKY_TAG,
       dependencies: ["setup"],
       use: {
         ...devices["Desktop Chrome"],
@@ -110,7 +127,7 @@ export default defineConfig({
     {
       name: "features",
       testMatch: FEATURE_SPECS,
-      grepInvert: /accessibility violations/,
+      grepInvert: [/accessibility violations/, FLAKY_TAG],
       dependencies: ["setup"],
       use: {
         ...devices["Desktop Chrome"],
@@ -126,6 +143,41 @@ export default defineConfig({
       name: "a11y",
       testMatch: FEATURE_SPECS,
       grep: /accessibility violations/,
+      grepInvert: FLAKY_TAG,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        channel: browserChannel,
+        storageState: "e2e/.auth/admin.json",
+      },
+    },
+    // Scheduled canary smoke tests (issue #4681-a) + CSP evidence capture
+    // (issue #4686-a), both owned by the canary pod under e2e/canary/. The
+    // scheduled workflow runs `npx playwright test --project=canary
+    // --grep @canary`, so both specs live in this project. Org Admin auth
+    // state: the journey opens /overview, and ProtectedRoute sends a
+    // super-admin (user.json) to /super-admin instead. csp-capture tolerates
+    // the login redirect on protected routes by design.
+    {
+      name: "canary",
+      testDir: "./e2e/canary",
+      testMatch: /(canary|csp-capture)\.spec\.ts/,
+      grep: /@canary/,
+      grepInvert: FLAKY_TAG,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        channel: browserChannel,
+        storageState: "e2e/.auth/admin.json",
+      },
+    },
+    // Quarantined specs (currently only plugins.spec.ts, see the file's
+    // #4617 triage note): claimed here so every spec file maps to a project,
+    // and self-skip at runtime. Kept on the admin auth state so the file can
+    // be reactivated without config changes once rewritten against /extensions.
+    {
+      name: "quarantine",
+      testMatch: QUARANTINE_SPECS,
       dependencies: ["setup"],
       use: {
         ...devices["Desktop Chrome"],

@@ -183,6 +183,8 @@ jobs:
           AI_GATEWAY_INTERNAL_KEY: test-ai-gateway-key-for-e2e
         run: |
           node dist/index.js > /tmp/backend.log 2>&1 &
+          # Report generation and other queued jobs run on the BullMQ worker, a separate process
+          node dist/jobs/worker.js > /tmp/worker.log 2>&1 &
           # Wait for backend to be ready
           BACKEND_READY=false
           for i in $(seq 1 30); do
@@ -365,7 +367,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: backend-logs-shard${{ matrix.shard }}
-          path: /tmp/backend.log
+          path: |
+            /tmp/backend.log
+            /tmp/worker.log
           retention-days: 7
 
       - name: Upload AIGateway logs

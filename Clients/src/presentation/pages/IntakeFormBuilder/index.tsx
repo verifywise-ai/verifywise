@@ -30,10 +30,12 @@ import {
   getIntakeForm,
   createIntakeForm,
   updateIntakeForm,
+  getEligibleReviewers,
   IntakeFormStatus,
   IntakeEntityType,
 } from "../../../application/repository/intakeForm.repository";
 import CustomAxios from "../../../infrastructure/api/customAxios";
+import { useAuth } from "../../../application/hooks/useAuth";
 import { invalidateLLMKeyQueries, useLLMKeys } from "../../../application/hooks/useLLMKeys";
 import { validateSchemaLogic } from "../../../application/utils/intakeFormLogic";
 import { getClientErrorReason, isClientError } from "../../../application/utils/apiErrorReason";
@@ -45,6 +47,7 @@ import {
 import { FormCanvas, FormCanvasHandle } from "./FormCanvas";
 import { FieldEditor } from "./FieldEditor";
 import { DesignPanel } from "./DesignPanel";
+import RoutingSettingsSection, { getRoutingErrors } from "./routing/RoutingSettingsSection";
 import CustomizableMultiSelect from "../../components/Inputs/Select/Multi";
 import {
   FormField,
@@ -103,6 +106,9 @@ export function IntakeFormBuilder() {
   // the default form cannot be saved over the stored one.
   const [loadFailed, setLoadFailed] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  // Only an Admin may change routing; everyone else's saves leave it to the server's copy
+  const { userRoleName } = useAuth();
+  const canEditRouting = userRoleName === "Admin";
   // Shared, per-organization cache: refreshed wherever a key changes. A failed
   // load leaves the picker with only "None", as before.
   const { keys: llmKeys, loading: llmKeysLoading, isError: llmKeysError } = useLLMKeys();
@@ -119,6 +125,10 @@ export function IntakeFormBuilder() {
   const [orgUsers, setOrgUsers] = useState<
     Array<{ id: number; name: string; surname?: string; email: string }>
   >([]);
+  const [routingReviewers, setRoutingReviewers] = useState<
+    Array<{ _id: number; name: string; email: string }>
+  >([]);
+  const [routingReviewersLoaded, setRoutingReviewersLoaded] = useState(false);
   const [fieldToDelete, setFieldToDelete] = useState<string | null>(null);
   const [deleteFieldModalOpen, setDeleteFieldModalOpen] = useState(false);
   const [snackbar, setSnackbar] = useState<{
@@ -175,6 +185,22 @@ export function IntakeFormBuilder() {
       .then((res) => {
         const users = res.data?.data || res.data || [];
         setOrgUsers(Array.isArray(users) ? users : []);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Load the users a form can route to (once)
+  useEffect(() => {
+    getEligibleReviewers()
+      .then((users) => {
+        setRoutingReviewers(
+          (Array.isArray(users) ? users : []).map((u) => ({
+            _id: u.id,
+            name: [u.name, u.surname].filter(Boolean).join(" "),
+            email: u.email,
+          })),
+        );
+        setRoutingReviewersLoaded(true);
       })
       .catch(() => {});
   }, []);
@@ -317,6 +343,14 @@ export function IntakeFormBuilder() {
       });
       return null;
     }
+    if (canEditRouting && Object.keys(getRoutingErrors(form.routing ?? null)).length > 0) {
+      setSnackbar({
+        open: true,
+        message: "Fix the routing settings before saving",
+        severity: "error",
+      });
+      return null;
+    }
     // A draft may be saved with unfinished logic; a live form may not.
     const isLive = form.status === IntakeFormStatus.ACTIVE;
     if (logicErrors.length > 0 && isLive) {
@@ -339,6 +373,7 @@ export function IntakeFormBuilder() {
         llmKeyId: activeLlmKeyId,
         suggestedQuestionsEnabled: form.suggestedQuestionsEnabled ?? false,
         euAiActRiskStepEnabled: form.euAiActRiskStepEnabled ?? false,
+        ...(canEditRouting ? {} : { routing: undefined }),
       };
       if (isEditing && formId) {
         const response = await updateIntakeForm(parseInt(formId), formData);
@@ -387,6 +422,14 @@ export function IntakeFormBuilder() {
       });
       return;
     }
+    if (canEditRouting && Object.keys(getRoutingErrors(form.routing ?? null)).length > 0) {
+      setSnackbar({
+        open: true,
+        message: "Fix the routing settings before publishing",
+        severity: "error",
+      });
+      return;
+    }
     setIsSaving(true);
     try {
       const formData = {
@@ -397,6 +440,7 @@ export function IntakeFormBuilder() {
         llmKeyId: activeLlmKeyId,
         suggestedQuestionsEnabled: form.suggestedQuestionsEnabled ?? false,
         euAiActRiskStepEnabled: form.euAiActRiskStepEnabled ?? false,
+        ...(canEditRouting ? {} : { routing: undefined }),
         status: IntakeFormStatus.ACTIVE,
       };
       const formIdNum = isEditing && formId ? parseInt(formId) : undefined;
@@ -1178,6 +1222,13 @@ export function IntakeFormBuilder() {
                           </Typography>
                         </Box>
 
+                        <RoutingSettingsSection
+                          value={form.routing ?? null}
+                          onChange={(routing) => updateForm({ routing })}
+                          reviewers={routingReviewers}
+                          reviewersLoaded={routingReviewersLoaded}
+                        />
+
                         <Box>
                           <Typography
                             sx={{
@@ -1215,8 +1266,8 @@ export function IntakeFormBuilder() {
                             }}
                           >
                             {activeLlmKeyId
-                              ? "Submissions will be scored using AI-enhanced risk analysis. You can also generate suggested questions and field guidance text with AI."
-                              : "Without an LLM key, submissions are scored using rule-based risk analysis only. Add a key in Settings > LLM keys to enable AI features."}
+                              ? "Used to score submissions and suggest risks. You can also generate suggested questions and field guidance text with AI."
+                              : "Used to score submissions and suggest risks. Without a key, reviewers see the rule-based classification only. Add a key in Settings > LLM keys."}
                           </Typography>
                         </Box>
 

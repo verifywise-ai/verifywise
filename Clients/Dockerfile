@@ -42,7 +42,7 @@ RUN npm run build
 # Step 9: Use a lightweight web server for production. The "web" stage is the
 # server without the app, so Clients/scripts/test-nginx-proxy.sh can build and
 # test it (`--target web`) without running the npm build.
-FROM nginx:1.31.6-alpine AS web
+FROM nginx:1.31.8-alpine AS web
 
 # apk upgrade pulls the latest Alpine security patches so Trivy release scans
 # don't fail on fixable base-image CVEs (e.g. util-linux CVE-2026-53612..53614,

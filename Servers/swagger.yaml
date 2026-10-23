@@ -23981,6 +23981,7 @@ paths:
       tags:
         - 'Intake Forms'
       summary: 'Create Intake Form'
+      description: 'The optional routing block turns on review routing for the form. Form responses carry the saved routing block.'
       operationId: createIntakeForm
       security:
         -
@@ -23990,9 +23991,18 @@ paths:
           application/json:
             schema:
               type: object
+              properties:
+                routing:
+                  type: object
+                  nullable: true
+                  description: 'Review routing settings. Omit to leave unchanged, null to clear.'
+                  required: [enabled]
+                  properties: {enabled: {type: boolean}, seniorReviewerIds: {type: array, items: {type: integer}, description: 'User ids who can edit intake forms. At least one is required when enabled.'}, standardReviewerIds: {type: array, items: {type: integer}, description: 'User ids who can edit intake forms. At least one is required when enabled.'}, threshold: {type: integer, minimum: 1, maximum: 99, default: 50}, closeCallMargin: {type: integer, minimum: 0, maximum: 25, default: 10}, secondReviewRate: {type: integer, minimum: 0, maximum: 100, default: 10, description: 'Percent of standard-lane approvals by non-senior reviewers picked for a second review'}}
       responses:
         '201':
           description: 'Created successfully'
+        '400':
+          description: 'Invalid routing settings, or a reviewer who cannot review intake submissions'
         '401':
           description: Unauthorized
         '500':
@@ -24024,6 +24034,7 @@ paths:
       tags:
         - 'Intake Forms'
       summary: 'Update Intake Form'
+      description: 'Saving a routing block routes the form''s pending submissions again. Form responses carry the saved routing block.'
       operationId: updateIntakeForm
       security:
         -
@@ -24040,9 +24051,16 @@ paths:
           application/json:
             schema:
               type: object
+              properties:
+                routing:
+                  type: object
+                  nullable: true
+                  description: 'Review routing settings. Omit to leave unchanged, null to clear. Same fields as on create: enabled (required), seniorReviewerIds, standardReviewerIds, threshold (1 to 99, default 50), closeCallMargin (0 to 25, default 10), secondReviewRate (0 to 100, default 10).'
       responses:
         '200':
           description: Success
+        '400':
+          description: 'Invalid routing settings, or a reviewer who cannot review intake submissions'
         '401':
           description: Unauthorized
         '500':
@@ -24120,6 +24138,25 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+  /intake/routing/eligible-reviewers:
+    get:
+      summary: 'Get Eligible Reviewers'
+      description: 'Users of the organization whose role can edit intake forms, as id, name, surname and email. Used to fill the reviewer pickers in the routing settings.'
+      responses:
+        '200':
+          description: Success
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Intake Forms'
+      operationId: getEligibleReviewers
+      security:
+        -
+          bearerAuth: []
   /intake/forms/suggested-questions:
     post:
       tags:
@@ -24162,11 +24199,54 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+  /intake/oversight:
+    get:
+      summary: 'Get Intake Oversight'
+      description: 'Routing and review figures for the last 4, 8 or 12 weeks (weeks start Monday, UTC): totals by lane, weekly buckets, median hours to decision, redlines, second reviews, per-reviewer decisions, band kept, suggested risks accepted and up to 20 needs-attention rows. An empty period returns zero counts and null medians.'
+      parameters:
+        -
+          name: weeks
+          in: query
+          required: false
+          schema:
+            type: integer
+            enum:
+              - 4
+              - 8
+              - 12
+            default: 8
+        -
+          name: formId
+          in: query
+          required: false
+          description: 'Limit the figures to one form of the organization'
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: 'weeks is not 4, 8 or 12, or formId is invalid'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: 'Form not found in this organization'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Intake Forms'
+      operationId: getIntakeOversight
+      security:
+        -
+          bearerAuth: []
   /intake/submissions:
     get:
       tags:
         - 'Intake Forms'
       summary: 'Get Pending Submissions'
+      description: 'Each row also carries routing (lane, reason, score, threshold, closeCallMargin, routedAt, and escalation or secondReview when set), routingEnabled and laneReviewerIds (user ids who can decide the stored lane).'
       operationId: getPendingSubmissions
       security:
         -
@@ -24251,6 +24331,7 @@ paths:
       tags:
         - 'Intake Forms'
       summary: 'Get Submission Preview'
+      description: 'Also returns routing, routingEnabled, canDecide, decideBlockedReason, laneReviewers (id and name of the users who can decide) and isSeniorReviewer for the caller.'
       operationId: getSubmissionPreview
       security:
         -
@@ -24293,8 +24374,145 @@ paths:
       responses:
         '200':
           description: Success
+        '400':
+          description: 'Invalid band, or a band below the rule minimum (AI-scored submissions)'
         '401':
           description: Unauthorized
+        '500':
+          description: 'Internal server error'
+  '/intake/submissions/{id}/assessment/retry':
+    post:
+      tags:
+        - 'Intake Forms'
+      summary: 'Retry Failed Or Stalled Assessment Stages'
+      description: 'Queues the scoring and/or suggested-risk stages that failed or have been pending for over 10 minutes. Finished stages are never re-run. Pending submissions only.'
+      operationId: retrySubmissionAssessment
+      security:
+        -
+          bearerAuth: []
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '202':
+          description: 'Queued; body lists the stages'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: 'Submission not found'
+        '409':
+          description: 'Submission not pending, or nothing to retry'
+        '500':
+          description: 'Internal server error'
+  '/intake/submissions/{id}/suggested-risks/accept-all':
+    post:
+      tags:
+        - 'Intake Forms'
+      summary: 'Accept All Suggested Risks'
+      description: 'Moves every suggested risk still in "suggested" to "accepted". Dismissed ones stay dismissed; ones without a mitigation plan are skipped. Returns { accepted, skipped }.'
+      operationId: acceptAllSuggestedRisks
+      security:
+        -
+          bearerAuth: []
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: 'Submission not found'
+        '409':
+          description: 'Submission not pending'
+        '500':
+          description: 'Internal server error'
+  '/intake/submissions/{id}/suggested-risks/{suggestionId}':
+    patch:
+      tags:
+        - 'Intake Forms'
+      summary: 'Update A Suggested Risk'
+      description: 'Edits, accepts, dismisses or restores one suggested risk on a pending submission. Accepting requires a mitigation plan.'
+      operationId: updateSuggestedRisk
+      security:
+        -
+          bearerAuth: []
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        -
+          name: suggestionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                state:
+                  type: string
+                  enum: [suggested, accepted, dismissed]
+                name:
+                  type: string
+                  maxLength: 200
+                description:
+                  type: string
+                  maxLength: 1000
+                likelihood:
+                  type: string
+                  enum: [Rare, Unlikely, Possible, Likely, 'Almost Certain']
+                severity:
+                  type: string
+                  enum: [Negligible, Minor, Moderate, Major, Catastrophic]
+                mitigationPlan:
+                  type: string
+                  maxLength: 1000
+                implementationStrategy:
+                  type: string
+                  maxLength: 1000
+                deadline:
+                  type: string
+                  format: date
+                  nullable: true
+                modelRiskCategory:
+                  type: string
+                  enum: [Performance, 'Bias & Fairness', Security, 'Data Quality', Compliance]
+                modelRiskLevel:
+                  type: string
+                  enum: [Low, Medium, High, Critical]
+      responses:
+        '200':
+          description: 'The updated suggestion'
+        '400':
+          description: 'Invalid field, nothing to update, or accepting without a mitigation plan'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: 'Submission or suggestion not found'
+        '409':
+          description: 'Submission not pending'
         '500':
           description: 'Internal server error'
   '/intake/forms/{id}/submissions':
@@ -24325,6 +24543,7 @@ paths:
       tags:
         - 'Intake Forms'
       summary: 'Approve Submission'
+      description: 'With routing on, only a reviewer of the lane the approval would make true, or an Admin, can approve (403 otherwise). A standard-lane approval by a non-senior reviewer may be picked for a second review.'
       operationId: approveSubmission
       security:
         -
@@ -24346,6 +24565,8 @@ paths:
           description: 'Created successfully'
         '401':
           description: Unauthorized
+        '403':
+          description: 'Routing is on and the caller may not decide this lane'
         '500':
           description: 'Internal server error'
   '/intake/submissions/{id}/reject':
@@ -24353,6 +24574,7 @@ paths:
       tags:
         - 'Intake Forms'
       summary: 'Reject Submission'
+      description: 'With routing on, only a reviewer of the stored lane, or an Admin, can reject (403 otherwise).'
       operationId: rejectSubmission
       security:
         -
@@ -24374,8 +24596,148 @@ paths:
           description: 'Created successfully'
         '401':
           description: Unauthorized
+        '403':
+          description: 'Routing is on and the caller may not decide this lane'
         '500':
           description: 'Internal server error'
+  '/intake/submissions/{id}/escalate':
+    post:
+      summary: 'Send Submission To Senior Review'
+      description: 'Moves a pending standard-lane submission to the senior lane with reason escalated. Re-routing leaves it there. Allowed for an Admin or a reviewer listed on the form. Returns the new routing.'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reason
+              properties:
+                reason:
+                  type: string
+                  minLength: 1
+                  maxLength: 1000
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: 'Invalid id, or the reason is missing or longer than 1000 characters'
+        '401':
+          description: Unauthorized
+        '403':
+          description: 'Caller is not an Admin or a reviewer of the form'
+        '404':
+          description: 'Submission or form not found'
+        '409':
+          description: 'Not pending, routing is off, not in the standard lane, or the submission changed'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Intake Forms'
+      operationId: escalateSubmission
+      security:
+        -
+          bearerAuth: []
+  '/intake/submissions/{id}/second-review':
+    post:
+      summary: 'Record Second Review'
+      description: 'Closes an open second review as agreed or missed. Allowed for a senior reviewer of the form or an Admin, never for the person who approved the submission. Does not change the approval or the entity it created. Returns the new routing.'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - outcome
+              properties:
+                outcome:
+                  type: string
+                  enum: [agreed, missed]
+                note:
+                  type: string
+                  maxLength: 2000
+                  description: 'Required when the outcome is missed'
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: 'Invalid id or outcome, a missed outcome without a note, or a note over 2000 characters'
+        '401':
+          description: Unauthorized
+        '403':
+          description: 'Caller is not a senior reviewer of the form or an Admin, or approved the submission'
+        '404':
+          description: 'Submission not found'
+        '409':
+          description: 'The second review is not open, or it changed'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Intake Forms'
+      operationId: recordSecondReview
+      security:
+        -
+          bearerAuth: []
+  '/intake/submissions/{id}/second-review/resolve':
+    post:
+      summary: 'Resolve Missed Second Review'
+      description: 'Closes a missed second review once the follow-up is done. Same caller rules as recording a second review. Returns the new routing.'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - note
+              properties:
+                note:
+                  type: string
+                  minLength: 1
+                  maxLength: 2000
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: 'Invalid id, or the note is missing or longer than 2000 characters'
+        '401':
+          description: Unauthorized
+        '403':
+          description: 'Caller is not a senior reviewer of the form or an Admin, or approved the submission'
+        '404':
+          description: 'Submission not found'
+        '409':
+          description: 'The review is not missed, is already resolved, or changed'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Intake Forms'
+      operationId: resolveSecondReviewMiss
+      security:
+        -
+          bearerAuth: []
   /intake/public/captcha:
     get:
       tags:

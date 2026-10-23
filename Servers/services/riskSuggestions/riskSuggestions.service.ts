@@ -57,6 +57,8 @@ export interface UseCaseInput {
   name: string;
   purpose?: string;
   technology?: string;
+  /** Untrusted extra text (e.g. intake answers); fenced as data in the prompt. */
+  context?: string;
 }
 
 export interface MatchedCatalogRisk {
@@ -69,9 +71,13 @@ export interface MatchedCatalogRisk {
   /** Catalog strings, verbatim — NOT necessarily the likelihood/severity enums. */
   likelihood: string;
   severity: string;
-  /** The model's reason, sanitized; the only model-authored text kept. */
+  /** The model's reason, sanitized. */
   reason: string;
   ai_lifecycle_phase?: string;
+  /** Model-drafted for this use case; "" when the model omitted them. */
+  impact: string;
+  mitigation_plan: string;
+  implementation_strategy: string;
 }
 
 export interface SuggestedRisk {
@@ -85,6 +91,8 @@ export interface SuggestedRisk {
   severity: number;
   impact: string;
   mitigation_plan: string;
+  /** "" when the model omitted it. */
+  implementation_strategy: string;
 }
 
 export interface RiskSuggestionResult {
@@ -192,6 +200,9 @@ export function hydrateMatched(matched: RiskSuggestionOutput["matched"]): Matche
       likelihood: entry.likelihood,
       severity: entry.riskSeverity,
       reason: sanitizeLlmText(match.reason, 300),
+      impact: sanitizeLlmText(match.impact ?? "", 1000),
+      mitigation_plan: sanitizeLlmText(match.mitigation_plan ?? "", 1000),
+      implementation_strategy: sanitizeLlmText(match.implementation_strategy ?? "", 1000),
     };
     if (match.ai_lifecycle_phase && AI_LIFECYCLE_PHASE_SET.has(match.ai_lifecycle_phase)) {
       result.ai_lifecycle_phase = match.ai_lifecycle_phase;
@@ -220,6 +231,7 @@ export function processSuggested(suggested: RiskSuggestionOutput["suggested"]): 
       severity: clamp1to5(risk.severity),
       impact: sanitizeLlmText(risk.impact, 1000),
       mitigation_plan: sanitizeLlmText(risk.mitigation_plan, 1000),
+      implementation_strategy: sanitizeLlmText(risk.implementation_strategy ?? "", 1000),
     };
     if (AI_LIFECYCLE_PHASE_SET.has(risk.ai_lifecycle_phase)) {
       result.ai_lifecycle_phase = risk.ai_lifecycle_phase;

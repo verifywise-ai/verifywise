@@ -68,6 +68,9 @@ services:
       - "--web.enable-otlp-receiver"
     volumes:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      # (#4683) Alert rules as code — must sit next to prometheus.yml in the
+      # container because rule_files paths resolve relative to the config file.
+      - ./observability/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus_data:/prometheus
     expose:
       - "9090"

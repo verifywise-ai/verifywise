@@ -22,13 +22,17 @@ server {
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
-    # TLS hardening (per docs/deployment/SECURITY_HARDENING_GUIDE.md).
-    # These take effect once certbot adds the SSL listener (listen 443 ssl) to
-    # this server block. Certbot manages its own options-ssl-nginx.conf include;
-    # keep these directives here as well so the protocol/cipher policy persists
-    # even if that include is changed or removed.
+    # TLS hardening (per docs/deployment/SECURITY_HARDENING_GUIDE.md). These
+    # take effect once certbot adds the SSL listener (listen 443 ssl) to this
+    # server block, and they are kept here so the TLS floor survives a change
+    # to certbot's options-ssl-nginx.conf include.
+    #
+    # ssl_ciphers is deliberately NOT set: certbot's nginx installer inserts the
+    # cipher list from that include and refuses to deploy the certificate when
+    # the block already carries a different one ("tried to insert directive
+    # ssl_ciphers but found conflicting"), which leaves the host on port 80 with
+    # no TLS listener. Both values below match the include's, so they pass.
     ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
     ssl_prefer_server_ciphers off;
 
     # Maintenance page for browser pages. /api and /v1 set their own JSON

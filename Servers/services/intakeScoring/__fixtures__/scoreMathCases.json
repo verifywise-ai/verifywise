@@ -1,0 +1,28 @@
+[
+  {
+    "ruleMinimum": 90,
+    "aiMedian": 40,
+    "finalScore": 90,
+    "source": "rule_minimum",
+    "rulesOnly": false
+  },
+  { "ruleMinimum": 70, "aiMedian": 85, "finalScore": 85, "source": "ai", "rulesOnly": false },
+  {
+    "ruleMinimum": 70,
+    "aiMedian": 70,
+    "finalScore": 70,
+    "source": "rule_minimum",
+    "rulesOnly": false
+  },
+  {
+    "ruleMinimum": 30,
+    "aiMedian": null,
+    "finalScore": 30,
+    "source": "rule_minimum",
+    "rulesOnly": true
+  },
+  { "ruleMinimum": 0, "aiMedian": null, "finalScore": null, "source": null, "rulesOnly": false },
+  { "ruleMinimum": null, "aiMedian": null, "finalScore": null, "source": null, "rulesOnly": false },
+  { "ruleMinimum": null, "aiMedian": 64, "finalScore": 64, "source": "ai", "rulesOnly": false },
+  { "ruleMinimum": 0, "aiMedian": 12, "finalScore": 12, "source": "ai", "rulesOnly": false }
+]

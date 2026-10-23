@@ -31,6 +31,7 @@ vi.mock("../../../../application/repository/intakeForm.repository", () => ({
   getIntakeForm: vi.fn().mockResolvedValue({ data: null }),
   createIntakeForm: vi.fn().mockResolvedValue({ data: {} }),
   updateIntakeForm: vi.fn().mockResolvedValue({ data: {} }),
+  getEligibleReviewers: vi.fn().mockResolvedValue([]),
   IntakeFormStatus: {
     DRAFT: "draft",
     ACTIVE: "active",
@@ -153,7 +154,8 @@ describe("IntakeFormBuilder Page", () => {
         { route: "/intake-forms/5/edit" },
       );
 
-    const AI_SCORING = /Submissions will be scored using AI-enhanced risk analysis/;
+    // Only shown with a key; without one the helper says reviewers see rules only.
+    const AI_SCORING = /You can also generate suggested questions and field guidance text with AI/;
     const toggle = () => screen.queryByText("Suggested questions");
     // The breadcrumb shows the saved form name once it has loaded.
     const formLoaded = () => screen.findAllByText("Intake");

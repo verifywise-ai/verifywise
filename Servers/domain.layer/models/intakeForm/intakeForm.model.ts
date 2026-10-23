@@ -2,6 +2,7 @@ import { Column, DataType, Model, Table } from "sequelize-typescript";
 import { IntakeFormStatus } from "../../enums/intake-form-status.enum";
 import { IntakeEntityType } from "../../enums/intake-entity-type.enum";
 import {
+  IFormRouting,
   IIntakeForm,
   IIntakeFormSchema,
   ICreateIntakeFormInput,
@@ -140,6 +141,13 @@ export class IntakeFormModel extends Model<IntakeFormModel> implements IIntakeFo
   designSettings!: Record<string, unknown> | null;
 
   @Column({
+    type: DataType.JSONB,
+    allowNull: true,
+    field: "routing",
+  })
+  routing!: IFormRouting | null;
+
+  @Column({
     type: DataType.INTEGER,
     allowNull: false,
     field: "created_by",
@@ -269,6 +277,7 @@ export class IntakeFormModel extends Model<IntakeFormModel> implements IIntakeFo
       suggestedQuestionsEnabled: this.suggestedQuestionsEnabled,
       euAiActRiskStepEnabled: this.euAiActRiskStepEnabled,
       designSettings: this.designSettings,
+      routing: this.routing,
       createdBy: this.createdBy,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt,

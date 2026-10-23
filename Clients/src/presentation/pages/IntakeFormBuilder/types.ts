@@ -105,6 +105,98 @@ export const DEFAULT_DESIGN_SETTINGS: FormDesignSettings = {
   collectContactInfo: true,
 };
 
+/** Per-form review routing settings, as the server stores them. */
+export interface FormRouting {
+  enabled: boolean;
+  seniorReviewerIds: number[];
+  standardReviewerIds: number[];
+  threshold: number;
+  closeCallMargin: number;
+  secondReviewRate: number;
+}
+
+export type ReviewLane = "senior" | "standard";
+
+export type RoutingReason =
+  | "prohibited"
+  | "no_score"
+  | "close_call"
+  | "at_or_above_threshold"
+  | "below_threshold"
+  | "override_raised"
+  | "escalated";
+
+export interface SecondReview {
+  status: "open" | "agreed" | "missed";
+  selectedAt: string;
+  reviewedBy?: number;
+  reviewedAt?: string;
+  note?: string;
+  resolvedBy?: number;
+  resolvedAt?: string;
+  resolutionNote?: string;
+}
+
+/** Lane decision for one submission. */
+export interface SubmissionRouting {
+  lane: ReviewLane;
+  reason: RoutingReason;
+  score: number | null;
+  threshold: number;
+  closeCallMargin: number;
+  routedAt: string;
+  escalation?: { by: number; at: string; reason: string };
+  secondReview?: SecondReview;
+}
+
+export type NeedsAttentionKind =
+  | "second_review_open"
+  | "second_review_missed"
+  | "prohibited_pending"
+  | "pending_old"
+  | "lane_empty";
+
+/** Figures behind the oversight tab. */
+export interface IntakeOversight {
+  weeks: number;
+  totals: {
+    submissions: number;
+    senior: number;
+    standard: number;
+    closeCalls: number;
+    notRouted: number;
+    routingOff: number;
+  };
+  medianDecisionHours: { all: number | null; senior: number | null; standard: number | null };
+  redlines: { prohibited: number; highRisk: number };
+  secondReviews: { completed: number; missed: number; open: number };
+  byWeek: Array<{
+    weekStart: string;
+    senior: number;
+    closeCall: number;
+    standard: number;
+    notRouted: number;
+    routingOff: number;
+  }>;
+  reviewers: Array<{
+    userId: number;
+    name: string;
+    decisions: number;
+    bandChanged: number;
+    medianDecisionHours: number | null;
+    check: boolean;
+  }>;
+  bandKept: { kept: number; decided: number; seniorKept: number; seniorDecided: number };
+  suggestions: { accepted: number; suggested: number };
+  needsAttention: Array<{
+    kind: NeedsAttentionKind;
+    submissionId: number | null;
+    formId: number;
+    title: string;
+    at: string;
+  }>;
+}
+
 /**
  * Intake form data structure
  */
@@ -126,6 +218,7 @@ export interface IntakeForm {
   suggestedQuestionsEnabled?: boolean;
   euAiActRiskStepEnabled?: boolean;
   designSettings?: FormDesignSettings | null;
+  routing?: FormRouting | null;
   createdBy?: number;
   createdAt?: Date;
   updatedAt?: Date;
@@ -149,6 +242,7 @@ export interface CreateIntakeFormInput {
   suggestedQuestionsEnabled?: boolean;
   euAiActRiskStepEnabled?: boolean;
   designSettings?: FormDesignSettings | null;
+  routing?: FormRouting | null;
 }
 
 /**
@@ -168,6 +262,7 @@ export interface UpdateIntakeFormInput {
   suggestedQuestionsEnabled?: boolean;
   euAiActRiskStepEnabled?: boolean;
   designSettings?: FormDesignSettings | null;
+  routing?: FormRouting | null;
 }
 
 /**
