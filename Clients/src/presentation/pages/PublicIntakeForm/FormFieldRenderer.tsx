@@ -17,7 +17,7 @@ import { isEmptyAnswer } from "../../../application/utils/intakeFormLogic";
  * Pass `id` instead for a group of controls — a multiselect's option list —
  * where the label names the group via aria-labelledby rather than one input.
  */
-function FieldLabel({
+export function FieldLabel({
   label,
   required,
   htmlFor,

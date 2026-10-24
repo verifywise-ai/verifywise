@@ -97,7 +97,7 @@ export interface FormDesignSettings {
  */
 export const DEFAULT_DESIGN_SETTINGS: FormDesignSettings = {
   format: "narrow",
-  alignment: "left",
+  alignment: "center",
   colorTheme: `${brand.primary}`,
   backgroundColor: "#fafafa",
   logoUrl: "",
