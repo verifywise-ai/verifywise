@@ -2,7 +2,6 @@ import { getData, deleteDemoVendorsData } from "../../utils/autoDriver.utils";
 import { createEUFrameworkQuery } from "../../utils/eu.utils";
 import { createISOFrameworkQuery } from "../../utils/iso42001.utils";
 import { createISO27001FrameworkQuery } from "../../utils/iso27001.utils";
-import { createDataGovernanceFrameworkQuery } from "../../utils/frameworkRegistry.utils";
 import { createAiAppQuery } from "../../utils/aiApp.utils";
 import { sequelize } from "../../database/db";
 import { createNewProjectQuery, lockProjectForDelete } from "../../utils/project.utils";
@@ -119,9 +118,11 @@ export async function insertMockData(
         },
         [], // no additional members
         // Every organizational framework the demo covers: ISO/IEC 42001 (2),
-        // ISO/IEC 27001 (3), NIST AI RMF (4) and Data Governance (16). All four
-        // are is_organizational, so this is the only project they can hang off.
-        [2, 3, 4, 16],
+        // ISO/IEC 27001 (3) and NIST AI RMF (4). All three are
+        // is_organizational, so this is the only project they can hang off.
+        // Data Governance (16) is left out: it is a generic data checklist,
+        // not an AI framework, and on the demo dashboard it confused people.
+        [2, 3, 4],
         organizationId,
         userId,
         transaction,
@@ -137,13 +138,6 @@ export async function insertMockData(
       );
       // The Advisor's NIST tools fail unless a project has framework 4 linked.
       await createNISTAI_RMFFrameworkQuery(
-        isoOrgProject.id!,
-        true,
-        organizationId,
-        transaction,
-        true,
-      );
-      await createDataGovernanceFrameworkQuery(
         isoOrgProject.id!,
         true,
         organizationId,
