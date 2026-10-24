@@ -961,11 +961,14 @@ export async function suggestRisksWithAI(req: Request, res: Response): Promise<a
       .map((risk) => risk.risk_name)
       .filter((name): name is string => Boolean(name));
 
+    // The service decides how purpose and description combine (fallback and
+    // repeat handling): see resolvePurposeAndDescription.
     const result = await suggestRisksForUseCase({
       model,
       useCase: {
         name: project.project_title,
-        purpose: project.goal || project.use_case_purpose || project.description || undefined,
+        purpose: project.goal?.trim() || project.use_case_purpose?.trim() || undefined,
+        description: project.description || undefined,
         technology:
           technologySummary || project.deployment_context || project.use_case_category || undefined,
       },
