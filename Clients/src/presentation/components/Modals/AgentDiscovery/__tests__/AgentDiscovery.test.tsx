@@ -4,7 +4,12 @@ import { act, fireEvent, screen } from "@testing-library/react";
 // Mock shared dependencies
 vi.mock("../../../Inputs/Field", () => ({
   default: (props: any) => (
-    <input data-testid={`field-${props.id || "field"}`} placeholder={props.placeholder} />
+    <input
+      data-testid={`field-${props.id || "field"}`}
+      placeholder={props.placeholder}
+      value={props.value ?? ""}
+      onChange={props.onChange ?? (() => {})}
+    />
   ),
 }));
 vi.mock("../../../Inputs/Select", () => ({
@@ -36,17 +41,58 @@ vi.mock("../../../../../infrastructure/api/networkServices", () => ({
     patch: vi.fn().mockResolvedValue({}),
   },
 }));
-// The owner picker: shows its value and, when clicked, picks user 2 only.
-vi.mock("../../../Inputs/MultiSelect", () => ({
+// The owner, use case and model pickers. data-value holds the selected ids. A
+// click picks user 2 (owners) or the first option (single pickers); the
+// "-clear" button empties the picker.
+vi.mock("../../../Inputs/Autocomplete", () => ({
   default: (props: any) => (
-    <button
-      data-testid={`multiselect-${props.id}`}
-      data-value={JSON.stringify(props.value)}
-      onClick={() => props.onChange({ target: { value: [2] } })}
-    >
-      {props.label}
-    </button>
+    <span>
+      <button
+        data-testid={`autocomplete-${props.id}`}
+        data-value={JSON.stringify(
+          props.multiple ? props.value.map((o: any) => o.id) : (props.value?.id ?? null),
+        )}
+        data-options={JSON.stringify(props.options.map((o: any) => o.id))}
+        onClick={() =>
+          props.onChange(
+            {},
+            props.multiple
+              ? props.options.filter((o: any) => o.id === 2)
+              : (props.options[0] ?? null),
+          )
+        }
+      >
+        {props.label}
+      </button>
+      <button
+        data-testid={`autocomplete-${props.id}-clear`}
+        onClick={() => props.onChange({}, props.multiple ? [] : null)}
+      />
+    </span>
   ),
+}));
+// Use cases come from the shared projects query; organizational (framework)
+// projects are not use cases.
+const projectsState = vi.hoisted(() => ({
+  projects: [
+    { id: 5, project_title: "Claims triage", is_organizational: false },
+    { id: 6, project_title: "Organization ISO 42001", is_organizational: true },
+  ],
+  enabledCalls: [] as (boolean | undefined)[],
+}));
+vi.mock("../../../../../application/hooks/useProjects", () => ({
+  useProjects: (options?: { enabled?: boolean }) => {
+    projectsState.enabledCalls.push(options?.enabled);
+    return { approvedProjects: projectsState.projects };
+  },
+}));
+// Models come from the shared model inventory query.
+const modelsState = vi.hoisted(() => ({
+  models: [] as { id: number; provider: string; model: string }[],
+  isError: false,
+}));
+vi.mock("../../../../../application/hooks/useModelInventories", () => ({
+  useModelInventories: () => ({ data: modelsState.models, isError: modelsState.isError }),
 }));
 // Users come from the shared, cached users hook. refreshUsers is stable across
 // renders, like the real hook's; a test can make it load a different list.
@@ -114,6 +160,9 @@ beforeEach(() => {
   usersState.users = [...BASE_USERS];
   usersState.refreshUsers.mockReset();
   usersState.refreshUsers.mockImplementation(async () => {});
+  modelsState.models = [];
+  modelsState.isError = false;
+  projectsState.enabledCalls = [];
   vi.mocked(apiServices.patch).mockClear();
   vi.mocked(apiServices.post).mockClear();
 });
@@ -152,8 +201,11 @@ describe("ManualAgentModal", () => {
     renderWithProviders(<ManualAgentModal isOpen={true} setIsOpen={vi.fn()} onSuccess={vi.fn()} />);
     expect(screen.getByTestId("field-display_name")).toBeInTheDocument();
     expect(screen.getByTestId("select-primitive_type")).toBeInTheDocument();
-    // Owners is now a multi-select (an agent can have several accountable owners).
+    // Owners is a multi-select (an agent can have several accountable owners).
     expect(screen.getByText("Owners")).toBeInTheDocument();
+    expect(screen.getByTestId("field-description")).toBeInTheDocument();
+    expect(screen.getByTestId("autocomplete-linked_project_id")).toBeInTheDocument();
+    expect(screen.getByTestId("autocomplete-linked_model_inventory_id")).toBeInTheDocument();
     expect(screen.getByTestId("field-notes")).toBeInTheDocument();
   });
 
@@ -222,7 +274,7 @@ describe("ManualAgentModal", () => {
         agent={{ ...mockAgent, owner_ids: [1] }}
       />,
     );
-    fireEvent.click(screen.getByTestId("multiselect-owner_ids"));
+    fireEvent.click(screen.getByTestId("autocomplete-owner_ids"));
     fireEvent.click(screen.getByText("Save changes"));
 
     await vi.waitFor(() => expect(apiServices.patch).toHaveBeenCalled());
@@ -267,7 +319,8 @@ describe("ManualAgentModal", () => {
     expect(usersState.refreshUsers).toHaveBeenCalledTimes(1);
     // Not decided on the stale list.
     expect(screen.queryByTestId("agent-dropped-owners-note")).not.toBeInTheDocument();
-    expect(screen.getByTestId("multiselect-owner_ids")).toHaveAttribute("data-value", "[3,9,1]");
+    // The picker can only show owners in the (stale) user list until the refresh.
+    expect(screen.getByTestId("autocomplete-owner_ids")).toHaveAttribute("data-value", "[1]");
 
     await act(async () => {
       finishRefresh();
@@ -279,7 +332,7 @@ describe("ManualAgentModal", () => {
       ),
     ).toBeInTheDocument();
     // Only 9 is still unknown, so only 9 leaves the picker.
-    expect(screen.getByTestId("multiselect-owner_ids")).toHaveAttribute("data-value", "[3,1]");
+    expect(screen.getByTestId("autocomplete-owner_ids")).toHaveAttribute("data-value", "[3,1]");
   });
 
   it("uses the cached users and does not refresh them when adding an agent", async () => {
@@ -315,7 +368,7 @@ describe("ManualAgentModal", () => {
     await vi.waitFor(() => expect(usersState.refreshUsers).toHaveBeenCalled());
     await act(async () => {});
     expect(screen.queryByTestId("agent-dropped-owners-note")).not.toBeInTheDocument();
-    expect(screen.getByTestId("multiselect-owner_ids")).toHaveAttribute("data-value", "[2,1]");
+    expect(screen.getByTestId("autocomplete-owner_ids")).toHaveAttribute("data-value", "[2,1]");
   });
 
   it("shows a legacy text owner read-only, and picks no user for it", async () => {
@@ -332,9 +385,129 @@ describe("ManualAgentModal", () => {
         'Current owner "Data platform team" is not a VerifyWise user. Choosing owners replaces it.',
       ),
     ).toBeInTheDocument();
-    expect(screen.getByTestId("multiselect-owner_ids")).toHaveAttribute("data-value", "[]");
+    expect(screen.getByTestId("autocomplete-owner_ids")).toHaveAttribute("data-value", "[]");
     await act(async () => {});
     expect(screen.queryByTestId("agent-dropped-owners-note")).not.toBeInTheDocument();
+  });
+
+  it("sends the description and both links for a new agent", async () => {
+    renderWithProviders(<ManualAgentModal isOpen={true} setIsOpen={vi.fn()} onSuccess={vi.fn()} />);
+    fireEvent.change(screen.getByTestId("field-description"), {
+      target: { value: "  Triages incoming claims  " },
+    });
+    fireEvent.click(screen.getByText("Add agent"));
+    await vi.waitFor(() => expect(apiServices.post).toHaveBeenCalled());
+    expect(vi.mocked(apiServices.post).mock.calls[0][1]).toEqual(
+      expect.objectContaining({
+        description: "Triages incoming claims",
+        linked_model_inventory_id: null,
+        linked_project_id: null,
+      }),
+    );
+  });
+
+  it("offers only use cases, not organizational projects, and sends the chosen one", async () => {
+    renderWithProviders(<ManualAgentModal isOpen={true} setIsOpen={vi.fn()} onSuccess={vi.fn()} />);
+    const picker = screen.getByTestId("autocomplete-linked_project_id");
+    expect(picker).toHaveAttribute("data-options", "[5]");
+    fireEvent.click(picker);
+    fireEvent.click(screen.getByText("Add agent"));
+    await vi.waitFor(() => expect(apiServices.post).toHaveBeenCalled());
+    expect(vi.mocked(apiServices.post).mock.calls[0][1]).toEqual(
+      expect.objectContaining({ linked_project_id: 5 }),
+    );
+  });
+
+  it("links a model from the inventory", async () => {
+    modelsState.models = [{ id: 7, provider: "OpenAI", model: "gpt-4o" }];
+    renderWithProviders(<ManualAgentModal isOpen={true} setIsOpen={vi.fn()} onSuccess={vi.fn()} />);
+    const picker = screen.getByTestId("autocomplete-linked_model_inventory_id");
+    expect(picker).toHaveAttribute("data-options", "[7]");
+    fireEvent.click(picker);
+    fireEvent.click(screen.getByText("Add agent"));
+    await vi.waitFor(() => expect(apiServices.post).toHaveBeenCalled());
+    expect(vi.mocked(apiServices.post).mock.calls[0][1]).toEqual(
+      expect.objectContaining({ linked_model_inventory_id: 7 }),
+    );
+  });
+
+  it("fetches the pickers' lists only while the drawer is open", () => {
+    renderWithProviders(
+      <ManualAgentModal isOpen={false} setIsOpen={vi.fn()} onSuccess={vi.fn()} />,
+    );
+    expect(projectsState.enabledCalls).not.toContain(true);
+    expect(projectsState.enabledCalls).toContain(false);
+  });
+
+  it("keeps a current model link when the inventory fails to load", () => {
+    modelsState.isError = true;
+    renderWithProviders(
+      <ManualAgentModal
+        isOpen={true}
+        setIsOpen={vi.fn()}
+        onSuccess={vi.fn()}
+        agent={{ ...mockAgent, linked_model_inventory_id: 9 }}
+      />,
+    );
+    const picker = screen.getByTestId("autocomplete-linked_model_inventory_id");
+    expect(picker).toHaveAttribute("data-options", "[9]");
+    expect(picker).toHaveAttribute("data-value", "9");
+  });
+
+  it("sends no description or link fields on an edit that leaves them alone", async () => {
+    renderWithProviders(
+      <ManualAgentModal
+        isOpen={true}
+        setIsOpen={vi.fn()}
+        onSuccess={vi.fn()}
+        agent={{
+          ...mockAgent,
+          description: "Triages claims",
+          linked_project_id: 5,
+          linked_model_inventory_id: 7,
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByText("Save changes"));
+    await vi.waitFor(() => expect(apiServices.patch).toHaveBeenCalled());
+    const payload = vi.mocked(apiServices.patch).mock.calls[0][1] as Record<string, unknown>;
+    expect(payload).not.toHaveProperty("description");
+    expect(payload).not.toHaveProperty("linked_project_id");
+    expect(payload).not.toHaveProperty("linked_model_inventory_id");
+  });
+
+  it("sends null to remove a link and to clear the description", async () => {
+    renderWithProviders(
+      <ManualAgentModal
+        isOpen={true}
+        setIsOpen={vi.fn()}
+        onSuccess={vi.fn()}
+        agent={{ ...mockAgent, description: "Triages claims", linked_project_id: 5 }}
+      />,
+    );
+    fireEvent.click(screen.getByTestId("autocomplete-linked_project_id-clear"));
+    fireEvent.change(screen.getByTestId("field-description"), { target: { value: "   " } });
+    fireEvent.click(screen.getByText("Save changes"));
+    await vi.waitFor(() => expect(apiServices.patch).toHaveBeenCalled());
+    const payload = vi.mocked(apiServices.patch).mock.calls[0][1] as Record<string, unknown>;
+    expect(payload).toEqual(
+      expect.objectContaining({ linked_project_id: null, description: null }),
+    );
+    expect(payload).not.toHaveProperty("linked_model_inventory_id");
+  });
+
+  it("keeps a linked use case that is not in the list selectable", () => {
+    renderWithProviders(
+      <ManualAgentModal
+        isOpen={true}
+        setIsOpen={vi.fn()}
+        onSuccess={vi.fn()}
+        agent={{ ...mockAgent, linked_project_id: 99, linked_project_title: "Pending use case" }}
+      />,
+    );
+    const picker = screen.getByTestId("autocomplete-linked_project_id");
+    expect(picker).toHaveAttribute("data-value", "99");
+    expect(picker).toHaveAttribute("data-options", "[5,99]");
   });
 
   it("shows no legacy owner note for an agent whose owners are users", () => {

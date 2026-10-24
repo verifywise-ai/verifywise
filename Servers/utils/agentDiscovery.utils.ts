@@ -16,6 +16,10 @@ export interface AgentPrimitive {
   reviewed_by: number | null;
   reviewed_at: string | null;
   linked_model_inventory_id: number | null;
+  linked_project_id: number | null;
+  /** Title of the linked use case; set by the list and detail reads only. */
+  linked_project_title?: string | null;
+  description: string | null;
   is_stale: boolean;
   is_manual: boolean;
   created_at: string;
@@ -46,6 +50,11 @@ export interface SyncLogEntry {
 
 // ─── Agent Primitives ────────────────────────────────────────────
 
+/** An agent row plus the title of its linked use case (same organization). */
+const AGENT_COLUMNS = "ap.*, p.project_title AS linked_project_title";
+const AGENT_FROM = `agent_primitives ap
+  LEFT JOIN projects p ON p.id = ap.linked_project_id AND p.organization_id = ap.organization_id`;
+
 /**
  * List the organization's agent primitives. Pass `includeOwners` to also attach
  * each agent's owner set as `owner_ids` (one extra grouped query); callers that
@@ -56,28 +65,28 @@ export const getAllAgentPrimitivesQuery = async (
   filters: AgentPrimitiveFilters = {},
   options: { includeOwners?: boolean } = {},
 ): Promise<AgentPrimitive[]> => {
-  const conditions: string[] = ["organization_id = :organizationId"];
+  const conditions: string[] = ["ap.organization_id = :organizationId"];
   const replacements: Record<string, any> = { organizationId };
 
   if (filters.review_status) {
-    conditions.push("review_status = :review_status");
+    conditions.push("ap.review_status = :review_status");
     replacements.review_status = filters.review_status;
   }
   if (filters.source_system) {
-    conditions.push("source_system = :source_system");
+    conditions.push("ap.source_system = :source_system");
     replacements.source_system = filters.source_system;
   }
   if (filters.primitive_type) {
-    conditions.push("primitive_type = :primitive_type");
+    conditions.push("ap.primitive_type = :primitive_type");
     replacements.primitive_type = filters.primitive_type;
   }
   if (filters.is_stale !== undefined) {
-    conditions.push("is_stale = :is_stale");
+    conditions.push("ap.is_stale = :is_stale");
     replacements.is_stale = filters.is_stale;
   }
   if (filters.search) {
     conditions.push(
-      "(display_name ILIKE :search OR external_id ILIKE :search OR owner_id ILIKE :search)",
+      "(ap.display_name ILIKE :search OR ap.external_id ILIKE :search OR ap.owner_id ILIKE :search)",
     );
     replacements.search = `%${filters.search}%`;
   }
@@ -85,7 +94,7 @@ export const getAllAgentPrimitivesQuery = async (
   const whereClause = `WHERE ${conditions.join(" AND ")}`;
 
   const results = (await sequelize.query(
-    `SELECT * FROM agent_primitives ${whereClause} ORDER BY created_at DESC, id ASC`,
+    `SELECT ${AGENT_COLUMNS} FROM ${AGENT_FROM} ${whereClause} ORDER BY ap.created_at DESC, ap.id ASC`,
     { replacements, type: QueryTypes.SELECT },
   )) as AgentPrimitive[];
 
@@ -124,7 +133,7 @@ export const getAgentPrimitiveByIdQuery = async (
   options: { includeOwners?: boolean } = {},
 ): Promise<AgentPrimitive | null> => {
   const results = await sequelize.query(
-    `SELECT * FROM agent_primitives WHERE organization_id = :organizationId AND id = :id`,
+    `SELECT ${AGENT_COLUMNS} FROM ${AGENT_FROM} WHERE ap.organization_id = :organizationId AND ap.id = :id`,
     { replacements: { organizationId, id }, type: QueryTypes.SELECT },
   );
   const agent = (results as AgentPrimitive[])[0] || null;
@@ -169,18 +178,51 @@ export const getUserIdsInOrganizationQuery = async (
   return rows.map((r) => Number(r.id));
 };
 
+/** True when `modelId` is a model in the organization's inventory. */
+export const modelInOrganizationQuery = async (
+  modelId: number,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<boolean> => {
+  const rows = await sequelize.query(
+    `SELECT 1 FROM model_inventories WHERE organization_id = :organizationId AND id = :modelId`,
+    { replacements: { organizationId, modelId }, type: QueryTypes.SELECT, transaction },
+  );
+  return rows.length > 0;
+};
+
+/**
+ * True when `projectId` is a use case of the organization (a project that is
+ * not an organizational framework project).
+ */
+export const useCaseInOrganizationQuery = async (
+  projectId: number,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<boolean> => {
+  const rows = await sequelize.query(
+    `SELECT 1 FROM projects
+     WHERE organization_id = :organizationId AND id = :projectId AND is_organizational IS NOT TRUE`,
+    { replacements: { organizationId, projectId }, type: QueryTypes.SELECT, transaction },
+  );
+  return rows.length > 0;
+};
+
 /** The fields of a locked agent row that an update audits against. */
 export interface LockedAgentPrimitive {
   owner_id: string | null;
   display_name: string;
   primitive_type: string;
   metadata: Record<string, any>;
+  description: string | null;
+  linked_model_inventory_id: number | null;
+  linked_project_id: number | null;
 }
 
 /**
  * Lock an agent primitive row for the rest of the transaction and return the
- * values an update audits against (primary owner, name, type, metadata), as
- * of the lock. Serializes concurrent edits.
+ * values an update audits against (primary owner, name, type, metadata,
+ * description and links), as of the lock. Serializes concurrent edits.
  */
 export const lockAgentPrimitiveQuery = async (
   id: number,
@@ -188,7 +230,9 @@ export const lockAgentPrimitiveQuery = async (
   transaction: Transaction,
 ): Promise<LockedAgentPrimitive | null> => {
   const rows = (await sequelize.query(
-    `SELECT owner_id, display_name, primitive_type, metadata FROM agent_primitives
+    `SELECT owner_id, display_name, primitive_type, metadata, description,
+            linked_model_inventory_id, linked_project_id
+     FROM agent_primitives
      WHERE organization_id = :organizationId AND id = :id
      FOR UPDATE`,
     { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
@@ -276,6 +320,9 @@ export const createAgentPrimitiveQuery = async (
     permission_categories?: string[];
     metadata?: Record<string, any>;
     is_manual?: boolean;
+    description?: string | null;
+    linked_model_inventory_id?: number | null;
+    linked_project_id?: number | null;
   },
   organizationId: number,
   transaction?: Transaction,
@@ -285,10 +332,12 @@ export const createAgentPrimitiveQuery = async (
     `INSERT INTO agent_primitives (
       organization_id, source_system, primitive_type, external_id, display_name,
       owner_id, permissions, permission_categories, metadata, is_manual,
+      description, linked_model_inventory_id, linked_project_id,
       created_at, updated_at
     ) VALUES (
       :organizationId, :source_system, :primitive_type, :external_id, :display_name,
       :owner_id, :permissions, :permission_categories, :metadata, :is_manual,
+      :description, :linked_model_inventory_id, :linked_project_id,
       NOW(), NOW()
     ) RETURNING *`,
     {
@@ -303,6 +352,9 @@ export const createAgentPrimitiveQuery = async (
         permission_categories: JSON.stringify(data.permission_categories || []),
         metadata: JSON.stringify(data.metadata || {}),
         is_manual: data.is_manual ?? true,
+        description: data.description ?? null,
+        linked_model_inventory_id: data.linked_model_inventory_id ?? null,
+        linked_project_id: data.linked_project_id ?? null,
       },
       transaction,
     },
@@ -317,6 +369,9 @@ export const updateAgentPrimitiveQuery = async (
     primitive_type?: string;
     owner_id?: string | null;
     metadata?: Record<string, any>;
+    description?: string | null;
+    linked_model_inventory_id?: number | null;
+    linked_project_id?: number | null;
   },
   organizationId: number,
   transaction?: Transaction,
@@ -339,6 +394,12 @@ export const updateAgentPrimitiveQuery = async (
   if (data.metadata !== undefined) {
     sets.push("metadata = :metadata");
     replacements.metadata = JSON.stringify(data.metadata);
+  }
+  for (const column of ["description", "linked_model_inventory_id", "linked_project_id"] as const) {
+    if (data[column] !== undefined) {
+      sets.push(`${column} = :${column}`);
+      replacements[column] = data[column];
+    }
   }
 
   sets.push("updated_at = NOW()");

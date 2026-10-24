@@ -19,8 +19,10 @@ export const projectQueryKeys = {
  * - data: All projects (including pending/rejected)
  * - approvedProjects: Only approved projects (excludes pending/rejected approval requests)
  * - isLoading, error, etc. from React Query
+ *
+ * Pass `enabled: false` to hold off the fetch (e.g. until a drawer opens).
  */
-export const useProjects = () => {
+export const useProjects = ({ enabled = true }: { enabled?: boolean } = {}) => {
   const query = useQuery({
     queryKey: projectQueryKeys.list(),
     queryFn: async (): Promise<Project[]> => {
@@ -29,6 +31,7 @@ export const useProjects = () => {
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
+    enabled,
   });
 
   // Filter projects to only include approved ones (no pending/rejected approvals)

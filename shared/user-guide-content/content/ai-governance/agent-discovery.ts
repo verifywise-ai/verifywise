@@ -65,7 +65,7 @@ export const agentDiscoveryContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { text: 'Click **Add agent**.' },
-        { text: 'Enter the agent\'s name, type, owners and notes.' },
+        { text: 'Enter the agent\'s name and type. Optionally add a description, owners, a linked use case, a linked model and notes.' },
         { text: 'Manually added agents are marked as such so you can distinguish them from auto-discovered ones.' },
       ],
     },
@@ -123,8 +123,8 @@ export const agentDiscoveryContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { text: '**Lifecycle**: the stages the agent has been through (added, under review, then confirmed or rejected, then active), with who was in charge of each and when it happened. An agent with no activity for 30 days or more is flagged as stale.' },
-        { text: '**Ownership & capabilities**: the accountable owners, type, source, linked model, access categories and permissions.' },
-        { text: '**Activity**: the governance actions taken on the agent, such as review status changes, model links and edits, with who made each change and when.' },
+        { text: '**Ownership & capabilities**: the accountable owners, description, type, source, linked use case, linked model, access categories and permissions. Click the linked use case to open it.' },
+        { text: '**Activity**: the governance actions taken on the agent, such as review status changes, model and use case links and edits, with who made each change and when.' },
       ],
     },
     {
@@ -141,7 +141,7 @@ export const agentDiscoveryContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { text: '**Review**: opens the review panel. Available to everyone; only Admins can change the review status or the linked model.' },
-        { text: '**Edit**: changes the name, type, owners and notes. Only for manually added agents, because auto-discovered agents come from their source system. Admin only.' },
+        { text: '**Edit**: changes the name, type, description, owners, linked use case, linked model and notes. Only for manually added agents, because auto-discovered agents come from their source system. Admin only.' },
         { text: '**Delete**: removes the agent and its data. This cannot be undone. Admin only.' },
       ],
     },
@@ -159,11 +159,15 @@ export const agentDiscoveryContent: ArticleContent = {
       type: 'heading',
       id: 'model-linking',
       level: 2,
-      text: 'Linking agents to models',
+      text: 'Linking agents to models and use cases',
     },
     {
       type: 'paragraph',
       text: 'From the review panel, you can link an agent to a model from the model inventory. This creates a traceable connection between the non-human identity and the AI system it interacts with, which is useful for risk assessments and access reviews.',
+    },
+    {
+      type: 'paragraph',
+      text: 'When you add or edit a manually added agent, you can also link it to a use case and to a model. Both links are optional, and you can remove either one by clearing the field. Only use cases are offered, not organization-wide framework projects. If the linked use case is deleted, the link is removed.',
     },
     {
       type: 'heading',
