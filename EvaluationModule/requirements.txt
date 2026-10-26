@@ -8,7 +8,7 @@ pyyaml>=6.0.3
 
 # Machine learning and fairness
 scikit-learn>=1.9.1
-fairlearn>=0.14.0
+fairlearn>=0.15.0
 
 # Deep learning and transformers
 torch>=2.14.1,<3.0.0
