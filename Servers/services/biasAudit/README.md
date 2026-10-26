@@ -223,7 +223,10 @@ one job per corpus (`corpus-<id>`), three attempts. One runner owns a corpus thr
 30 s heartbeat, 120 s lease, and a corpus with no heartbeat for 600 s is failed by the stale
 sweep. A busy corpus delays the job rather than spending an attempt. Every retry, and a
 resume, continues from the record log, so no candidate is generated twice as valid. A change
-of model, job description text or plan fails the corpus for good.
+of model, job description text or plan fails the corpus for good. If a worker dies mid-run,
+its job's BullMQ lock (`lockDuration`, 10 minutes, in `generationJob.ts`) must expire before
+another worker reclaims it, so generation pauses for up to 10 minutes and then continues; the
+corpus stays `running` meanwhile and needs no resume.
 
 **Gateway configuration** is deployment-only: `BIAS_AUDIT_LLM_API_KEY`,
 `BIAS_AUDIT_LLM_BASE_URL` (https only) and `BIAS_AUDIT_LLM_MODEL`. There is no settings
