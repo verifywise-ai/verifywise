@@ -1,6 +1,6 @@
 import type { JobDescription } from "../../../structures/NYC-Local-Law-144/job-descriptions";
 import { findForbidden } from "../stance/vocabulary";
-import { findDemographicTerms } from "./demographicTerms";
+import { findDemographicTerms, isLanguageSkill } from "./demographicTerms";
 import { TABLE_SURNAMES, THIRD_PARTY_FIRST_NAMES } from "./names";
 
 export type ArtifactKind = "resume" | "transcript" | "structured";
@@ -266,11 +266,11 @@ function structuredText(value: unknown): string {
           const listed = Array.isArray(child) ? child : [child];
           out.push(`Languages: ${listed.filter((x) => typeof x === "string").join(", ")}`);
         }
-        // So is a skills item that is one word, where "Spanish" can only be the
-        // language; "Swedish massage" or "French cuisine" is a skill.
+        // So is a skills item that can only be a language ("Spanish (fluent)");
+        // "Swedish massage" or "French cuisine" is a skill.
         if (k === "skills" && Array.isArray(child)) {
           for (const item of child) {
-            if (typeof item === "string" && /^\s*\p{L}+\s*$/u.test(item)) {
+            if (typeof item === "string" && isLanguageSkill(item)) {
               out.push(`Languages: ${item.trim()}`);
             }
           }

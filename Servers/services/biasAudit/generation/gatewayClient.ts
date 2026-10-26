@@ -29,11 +29,17 @@ const retryable = (status: number) => status === 408 || status === 429 || status
 /** Statuses a provider uses to refuse the content of one prompt. */
 const CONTENT_REFUSAL_STATUSES = new Set([400, 403, 422]);
 /**
- * Words a provider puts in a content refusal. The body is read for these only
+ * Words a provider or the AI Gateway puts in a refusal of one prompt's
+ * content ("content_filter", "content_policy_violation", "our safety system",
+ * "Request blocked by guardrail: …"). Bare "safety" and "moderation" also name
+ * request parameters, so they are not enough. The body is read for these only
  * and never logged or quoted, since it can echo the request.
  */
 const CONTENT_REFUSAL =
-  /content[\s_-]?(?:filter|policy|management|moderation)|moderation|flagged|safety/i;
+  /content[\s_-]?(?:filter|policy|management|moderation)|flagged|safety[\s_-]system|guardrail|policy[\s_-]violation/i;
+/** A malformed request ("Unknown parameter: safety_identifier") is the deployment's fault. */
+const PARAMETER_ERROR =
+  /\b(?:unknown|unrecognized|invalid|unsupported)[\s_-]+(?:parameter|argument|field)/i;
 
 /** The gateway request failed. The message is fixed text plus a status, never a body. */
 export class GatewayRequestError extends Error {
@@ -130,8 +136,8 @@ export async function complete(
         // Only a refusal of this prompt's content is the prompt's fault. Any
         // other 4xx (a budget 402, an unknown model 400, a bad key 401) is the
         // deployment's, and fails the corpus so it can be resumed once fixed.
-        const refusesContent =
-          CONTENT_REFUSAL_STATUSES.has(res.status) && CONTENT_REFUSAL.test(await bodyText(res));
+        const body = CONTENT_REFUSAL_STATUSES.has(res.status) ? await bodyText(res) : "";
+        const refusesContent = CONTENT_REFUSAL.test(body) && !PARAMETER_ERROR.test(body);
         await discard(res);
         if (!retryable(res.status)) {
           if (refusesContent) throw new GatewayPromptRefusedError(res.status);

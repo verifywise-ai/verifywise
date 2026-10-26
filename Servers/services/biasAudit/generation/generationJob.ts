@@ -65,8 +65,40 @@ export async function enqueueCorpusGeneration(
   );
 }
 
-/** BullMQ states in which a corpus's job will still run. */
-const PENDING_STATES = new Set(["waiting", "delayed", "active", "prioritized", "waiting-children"]);
+/**
+ * BullMQ states in which a corpus's job will still run. Not "active": the
+ * sweep only asks about a corpus with no live lease and a stale heartbeat,
+ * and a live worker renews both, so an active job there has lost its worker.
+ */
+const PENDING_STATES = new Set(["waiting", "delayed", "prioritized", "waiting-children"]);
+
+/** How long the stale sweep waits on the queue before giving up. */
+export const QUEUE_LOOKUP_TIMEOUT_MS = 2_000;
+
+/**
+ * Of these corpora, the ones the queue holds no job to run. Null when the
+ * queue cannot be read in QUEUE_LOOKUP_TIMEOUT_MS, so a Redis outage neither
+ * fails a corpus nor stalls the request that swept.
+ */
+export async function corporaWithoutPendingJob(corpusIds: number[]): Promise<number[] | null> {
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error("timed out")), QUEUE_LOOKUP_TIMEOUT_MS);
+  });
+  try {
+    const pending = await Promise.race([Promise.all(corpusIds.map(corpusJobPending)), timeout]);
+    return corpusIds.filter((_, i) => !pending[i]);
+  } catch (error) {
+    logger.warn(
+      `Stale corpus sweep skipped: the generation queue could not be read (${
+        error instanceof Error ? error.message : "unknown error"
+      })`,
+    );
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 /** Whether the queue still holds a job that will run this corpus. */
 export async function corpusJobPending(corpusId: number): Promise<boolean> {

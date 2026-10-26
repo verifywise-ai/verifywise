@@ -444,6 +444,24 @@ describe("validateRecord", () => {
     },
   );
 
+  it.each([
+    ["Spanish (fluent)"],
+    ["Mandarin Chinese"],
+    ["Spanish - native"],
+    ["Tagalog, conversational"],
+  ])("refuses a structured skill that can only be a language: %s", (skill) => {
+    const s = JSON.stringify({
+      name: "Kevin Miller",
+      summary: "x",
+      experience: ["Associate"],
+      skills: [skill, "Negotiation"],
+    });
+    expect(validateRecord(s, "structured", { candidateName: "Kevin Miller" })).toEqual({
+      ok: false,
+      reason: "demographic_term",
+    });
+  });
+
   it("passes an extra structured key that names no group", () => {
     const s = JSON.stringify({
       name: "Kevin Miller",

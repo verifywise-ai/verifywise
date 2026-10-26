@@ -36,16 +36,19 @@ const IDENTITY = [
   "black community", "black student", "black students", "black history", "black women",
   "black men", "asian american", "pacific islander", "native hawaiian", "alaska native",
   "native american", "american indian", "first nations", "people of color",
-  "person of color", "minority owned", "tribal member", "immigrated", "immigrant",
+  "person of color", "minority owned", "tribal member", "immigrated",
+  "first generation immigrant", "second generation immigrant",
   "asian pacific american", "society of women engineers",
 ];
 
 // Religious belonging: words with no other common sense, and belonging stated
-// as one's own. A bare "Catholic", "Baptist" or "Christian" is often an
-// employer or a first name, so it is left to the prompt.
+// as one's own. A bare "Catholic", "Baptist", "Christian", "Jewish",
+// "Islamic", "Hindu", "Buddhist" or "Sikh" is often an employer ("National
+// Jewish Health", "Islamic Relief USA") or a first name, so it is left to the
+// prompt; so is "immigrant" ("represented immigrant clients").
 // prettier-ignore
 const RELIGION = [
-  "muslim", "islamic", "jewish", "judaism", "sikh", "hindu", "buddhist",
+  "muslim", "judaism",
   "my church", "our church", "my mosque", "our mosque", "my synagogue", "our synagogue",
   "my temple", "our temple", "my parish", "our parish", "church choir", "church youth",
 ];
@@ -94,6 +97,25 @@ const LANGUAGE_NAME_LIST = [
 ];
 const LANGUAGE_NAMES = LANGUAGE_NAME_LIST.join("|");
 const LANGUAGE_NAME_SET: ReadonlySet<string> = new Set(LANGUAGE_NAME_LIST);
+// Proficiency words that may follow a language in a skills item.
+// prettier-ignore
+const PROFICIENCY_WORDS: ReadonlySet<string> = new Set([
+  "fluent", "fluency", "native", "bilingual", "conversational", "proficient", "proficiency",
+  "basic", "elementary", "intermediate", "advanced", "professional", "working", "limited",
+  "full", "business", "level", "speaker", "written", "spoken", "reading", "writing", "and",
+]);
+
+/**
+ * Whether a skills item can only be a language: a language name followed by
+ * nothing, another language name or proficiency words ("Spanish", "Spanish
+ * (fluent)", "Mandarin Chinese", "Spanish - native"). "Swedish massage" and
+ * "French cuisine" are skills.
+ */
+export function isLanguageSkill(item: string): boolean {
+  const [first, ...rest] = item.toLowerCase().match(/\p{L}+/gu) ?? [];
+  if (first === undefined || !LANGUAGE_NAME_SET.has(first)) return false;
+  return rest.every((w) => LANGUAGE_NAME_SET.has(w) || PROFICIENCY_WORDS.has(w));
+}
 
 /**
  * "of Italian descent": of/descent in lowercase, capitalised or capitals, the

@@ -24,7 +24,7 @@ jest.mock("./generation/generateCorpus", () => ({
   corpusCsvChunks: jest.requireActual("./generation/generateCorpus").corpusCsvChunks,
   FINAL_FAILURES: jest.requireActual("./generation/generateCorpus").FINAL_FAILURES,
 }));
-const job = { enqueueCorpusGeneration: jest.fn(), corpusJobPending: jest.fn() };
+const job = { enqueueCorpusGeneration: jest.fn(), corporaWithoutPendingJob: jest.fn() };
 jest.mock("./generation/generationJob", () => job);
 const settings = { isGatewayConfigured: jest.fn(), getGatewaySettings: jest.fn() };
 jest.mock("./generation/settings", () => settings);
@@ -116,7 +116,7 @@ beforeEach(() => {
   [...Object.values(utils), access.assertProjectAccess, gen.createCorpus]
     .concat(
       job.enqueueCorpusGeneration,
-      job.corpusJobPending,
+      job.corporaWithoutPendingJob,
       settings.isGatewayConfigured,
       settings.getGatewaySettings,
     )
@@ -236,7 +236,7 @@ describe("startCorpusGeneration", () => {
 describe("the stale sweep", () => {
   it("fails only abandoned corpora whose job is gone from the queue", async () => {
     utils.listStaleCorporaQuery.mockResolvedValue([3, 4, 5]);
-    job.corpusJobPending.mockImplementation(async (id: number) => id === 4);
+    job.corporaWithoutPendingJob.mockResolvedValue([3, 5]);
     utils.getCorpusQuery.mockResolvedValue(corpusRow());
     utils.countValidCorpusRecordsQuery.mockResolvedValue(0);
     await getCorpusView(3, 42, VIEWER);
@@ -245,7 +245,7 @@ describe("the stale sweep", () => {
 
   it("fails nothing when the queue cannot be read", async () => {
     utils.listStaleCorporaQuery.mockResolvedValue([3]);
-    job.corpusJobPending.mockRejectedValue(new Error("redis down"));
+    job.corporaWithoutPendingJob.mockResolvedValue(null);
     utils.getCorpusQuery.mockResolvedValue(corpusRow());
     utils.countValidCorpusRecordsQuery.mockResolvedValue(0);
     await getCorpusView(3, 42, VIEWER);

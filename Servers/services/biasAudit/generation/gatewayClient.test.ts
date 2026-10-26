@@ -248,12 +248,25 @@ describe("refusals", () => {
   );
 
   it.each([
+    '{"detail":"Request blocked by guardrail: pii: PERSON detected"}',
+    '{"detail":"Request blocked by guardrail: policy violation"}',
+    '{"error":{"code":"content_policy_violation","message":"rejected by our safety system"}}',
+  ])("reports an AI Gateway or provider block as a refusal of this prompt: %s", async (body) => {
+    mockFetch.mockResolvedValue({ ok: false, status: 400, text: async () => body });
+    const err = await complete(settings, "p", { retries: 2, retryDelayMs: 0 }).catch((e) => e);
+    expect(err).toBeInstanceOf(GatewayPromptRefusedError);
+  });
+
+  it.each([
     [400, '{"error":"invalid model id"}'],
     [401, "unauthorized"],
     [402, "Budget limit exceeded"],
     [403, "forbidden"],
     [404, "not found"],
     [413, "too large"],
+    [400, '{"error":{"message":"Unknown parameter: safety_identifier"}}'],
+    [400, '{"error":{"message":"Invalid argument: safety_settings must be a list"}}'],
+    [400, '{"error":{"message":"moderation is not enabled for this deployment"}}'],
   ])("reports a %s that is not a content refusal as a deployment fault", async (status, body) => {
     mockFetch.mockResolvedValue({ ok: false, status, text: async () => body });
     const err = await complete(settings, "p", { retries: 2, retryDelayMs: 0 }).catch((e) => e);

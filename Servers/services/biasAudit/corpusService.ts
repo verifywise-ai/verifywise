@@ -46,7 +46,7 @@ import {
   STALE_AFTER_SECONDS,
   type Knockout,
 } from "./generation/generateCorpus";
-import { corpusJobPending, enqueueCorpusGeneration } from "./generation/generationJob";
+import { corporaWithoutPendingJob, enqueueCorpusGeneration } from "./generation/generationJob";
 import { ARTIFACT_KINDS, type ArtifactKind } from "./generation/prompt";
 import { getGatewaySettings, isGatewayConfigured } from "./generation/settings";
 import { nycLocalLaw144Structure } from "../../structures/NYC-Local-Law-144/nyc-local-law-144.structure";
@@ -88,12 +88,8 @@ export interface StartCorpusInput extends ProjectScope {
 async function sweep(organizationId: number): Promise<void> {
   const stale = await listStaleCorporaQuery(organizationId, STALE_AFTER_SECONDS);
   if (stale.length === 0) return;
-  const orphaned: number[] = [];
-  try {
-    for (const id of stale) if (!(await corpusJobPending(id))) orphaned.push(id);
-  } catch {
-    return;
-  }
+  const orphaned = await corporaWithoutPendingJob(stale);
+  if (orphaned === null) return;
   await markStaleCorporaFailedQuery(organizationId, STALE_AFTER_SECONDS, orphaned);
 }
 
