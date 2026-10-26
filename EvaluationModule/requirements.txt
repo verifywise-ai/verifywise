@@ -27,7 +27,7 @@ pyarrow>=25.0.1
 # CVE-2026-81726 (GHSA-8mgp-746c-j5xp / PYSEC-2026-3740): file sandbox bypass in model-artifact
 # APIs. 3.10.3 is the latest release but is still listed as last_affected ("not yet patched"),
 # so this pin only keeps us on the newest nltk; the pip-audit gate suppresses the unfixed finding.
-nltk>=3.10.3
+nltk>=3.10.4
 
 # Utilities
 tqdm>=4.70.1
