@@ -74,17 +74,20 @@ const PENDING_STATES = new Set(["waiting", "delayed", "active", "prioritized", "
 
 /** How long the stale sweep waits on the queue before giving up. */
 export const QUEUE_LOOKUP_TIMEOUT_MS = 2_000;
-/** After the queue did not answer in time, sweeps skip it for this long. */
+/** After the queue could not be read, sweeps skip it for this long. */
 export const QUEUE_RETRY_AFTER_MS = 60_000;
 let queueUnreadableUntil = 0;
 const QUEUE_TIMED_OUT = new Error("timed out");
+/** A lookup that errored: its corpus is left alone. */
+const UNREADABLE = Symbol("unreadable");
 
 /**
- * Of these corpora, the ones the queue holds no job to run. Null when the
- * queue cannot be read in QUEUE_LOOKUP_TIMEOUT_MS, so a Redis outage neither
- * fails a corpus nor stalls the request that swept. After a timeout (Redis
- * unreachable), the next QUEUE_RETRY_AFTER_MS of sweeps return null without
- * asking; one job that errors does not pause sweeps for anyone else.
+ * Of these corpora, the ones the queue holds no job to run. A corpus whose
+ * job cannot be read is left alone, so one bad job holds back only itself.
+ * Null when the queue as a whole cannot be read (no answer within
+ * QUEUE_LOOKUP_TIMEOUT_MS, or every lookup errored): a Redis outage neither
+ * fails a corpus nor stalls the request that swept, and the next
+ * QUEUE_RETRY_AFTER_MS of sweeps return null without asking.
  */
 export async function corporaWithoutPendingJob(corpusIds: number[]): Promise<number[] | null> {
   if (Date.now() < queueUnreadableUntil) return null;
@@ -92,20 +95,25 @@ export async function corporaWithoutPendingJob(corpusIds: number[]): Promise<num
   const timeout = new Promise<never>((_, reject) => {
     timer = setTimeout(() => reject(QUEUE_TIMED_OUT), QUEUE_LOOKUP_TIMEOUT_MS);
   });
+  let pending: Array<boolean | typeof UNREADABLE>;
   try {
-    const pending = await Promise.race([Promise.all(corpusIds.map(corpusJobPending)), timeout]);
-    return corpusIds.filter((_, i) => !pending[i]);
-  } catch (error) {
-    if (error === QUEUE_TIMED_OUT) queueUnreadableUntil = Date.now() + QUEUE_RETRY_AFTER_MS;
-    logger.warn(
-      `Stale corpus sweep skipped: the generation queue could not be read (${
-        error instanceof Error ? error.message : "unknown error"
-      })`,
-    );
-    return null;
+    pending = await Promise.race([
+      Promise.all(
+        corpusIds.map((id) => corpusJobPending(id).catch((): typeof UNREADABLE => UNREADABLE)),
+      ),
+      timeout,
+    ]);
+  } catch {
+    pending = corpusIds.map(() => UNREADABLE);
   } finally {
     clearTimeout(timer);
   }
+  if (pending.length > 0 && pending.every((p) => p === UNREADABLE)) {
+    queueUnreadableUntil = Date.now() + QUEUE_RETRY_AFTER_MS;
+    logger.warn("Stale corpus sweep skipped: the generation queue could not be read.");
+    return null;
+  }
+  return corpusIds.filter((_, i) => pending[i] === false);
 }
 
 /** Whether the queue still holds a job that will run this corpus. */

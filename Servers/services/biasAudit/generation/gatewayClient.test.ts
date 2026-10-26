@@ -251,6 +251,7 @@ describe("refusals", () => {
     '{"error":{"code":"content_policy_violation","message":"rejected by our safety system"}}',
     // Google's status name must not hide a content refusal.
     '{"error":{"message":"Blocked by content policy","status":"INVALID_ARGUMENT"}}',
+    '{"error":{"message":"Blocked by content filter","code":"invalid_argument"}}',
   ])("reports a provider content block as a refusal of this prompt: %s", async (body) => {
     mockFetch.mockResolvedValue({ ok: false, status: 400, text: async () => body });
     const err = await complete(settings, "p", { retries: 2, retryDelayMs: 0 }).catch((e) => e);
@@ -284,6 +285,8 @@ describe("refusals", () => {
     [400, '{"error":{"message":"Unknown parameter: content_filter_mode"}}'],
     [400, '{"error":{"message":"Unknown field: content_filter_config"}}'],
     [400, '{"error":{"message":"Unsupported argument: content_moderation"}}'],
+    [400, '{"error":{"message":"The guardrail identifier or version provided does not exist"}}'],
+    [400, '{"error":{"message":"Unknown parameter: guardrailConfig"}}'],
   ])("reports a %s that is not a content refusal as a deployment fault", async (status, body) => {
     mockFetch.mockResolvedValue({ ok: false, status, text: async () => body });
     const err = await complete(settings, "p", { retries: 2, retryDelayMs: 0 }).catch((e) => e);

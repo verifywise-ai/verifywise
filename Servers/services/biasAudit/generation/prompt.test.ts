@@ -459,6 +459,11 @@ describe("validateRecord", () => {
     ["Japanese (JLPT N2)"],
     ["Spanish language (fluent)"],
     ["American Sign Language (ASL)"],
+    ["Business Spanish"],
+    ["Basic French"],
+    ["Native Spanish"],
+    ["Sign Language (ASL)"],
+    ["Business Polish"],
   ])("refuses a structured skill that can only be a language: %s", (skill) => {
     const s = JSON.stringify({
       name: "Kevin Miller",

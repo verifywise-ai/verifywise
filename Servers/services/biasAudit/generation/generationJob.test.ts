@@ -266,11 +266,22 @@ describe("corporaWithoutPendingJob", () => {
     await result;
   });
 
-  it("keeps sweeping after one job errors", async () => {
-    getJob.mockRejectedValueOnce(new Error("corrupt job"));
+  it("leaves a corpus whose job cannot be read alone and sweeps the rest", async () => {
+    getJob.mockImplementation(async (id: string) => {
+      if (id === "corpus-7") throw new Error("corrupt job");
+      return null;
+    });
+    await expect(corporaWithoutPendingJob([7, 8])).resolves.toEqual([8]);
+    // No pause: the next sweep asks the queue again.
+    await expect(corporaWithoutPendingJob([8])).resolves.toEqual([8]);
+  });
+
+  it("skips the queue for a while after every lookup errored", async () => {
+    getJob.mockRejectedValue(new Error("NOAUTH"));
+    await expect(corporaWithoutPendingJob([1, 2])).resolves.toBeNull();
+    getJob.mockReset().mockResolvedValue(null);
     await expect(corporaWithoutPendingJob([1])).resolves.toBeNull();
-    getJob.mockResolvedValue(null);
-    await expect(corporaWithoutPendingJob([1])).resolves.toEqual([1]);
+    expect(getJob).not.toHaveBeenCalled();
   });
 
   it("skips the queue for a while after it did not answer, then asks again", async () => {

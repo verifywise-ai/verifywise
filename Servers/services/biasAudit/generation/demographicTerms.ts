@@ -39,7 +39,7 @@ const IDENTITY = [
   "person of color", "minority owned", "tribal member", "immigrated",
   "first generation immigrant", "first generation immigrants", "second generation immigrant",
   "second generation immigrants", "1st generation immigrant", "2nd generation immigrant",
-  "first gen immigrant", "i am an immigrant", "i'm an immigrant", "i’m an immigrant",
+  "first gen immigrant", "i am an immigrant", "i'm an immigrant",
   "asian pacific american", "society of women engineers",
 ];
 
@@ -106,33 +106,44 @@ const LANGUAGE_NAME_LIST = [
 ];
 const LANGUAGE_NAMES = LANGUAGE_NAME_LIST.join("|");
 const LANGUAGE_NAME_SET: ReadonlySet<string> = new Set(LANGUAGE_NAME_LIST);
-// Words that may follow a language in a skills item: proficiency, test and
-// level names (the letters of "C1", "B2", "N2"), and "American Sign Language".
+// Words that may stand beside a language in a skills item, before or after it.
 // prettier-ignore
 const PROFICIENCY_WORDS: ReadonlySet<string> = new Set([
   "fluent", "fluency", "native", "bilingual", "conversational", "proficient", "proficiency",
   "basic", "elementary", "intermediate", "advanced", "professional", "working", "limited",
   "full", "business", "level", "speaker", "written", "spoken", "reading", "writing", "and",
-  "language", "sign", "american", "a", "b", "c", "n", "cefr", "jlpt", "hsk", "topik", "dele",
-  "delf", "dalf",
+  "language", "cefr", "jlpt", "hsk", "topik", "dele", "delf", "dalf",
 ]);
+// Level codes ("C1", "B2", "N2", "HSK4").
+const LEVEL_CODE = /^(?:[abc][12]|n[1-5]|hsk[1-9]|topik[1-6])$/;
+// Language names that are also common English words; only a capitalised form
+// is the language ("Professional polish" is a skill, "Business Polish" is not).
+const LOWERCASE_WORD_TOO: ReadonlySet<string> = new Set(["polish"]);
 
 /**
- * Whether a skills item is a language other than English: it starts with a
- * language name (or English) and holds only language names and proficiency
- * words, at least one of them not English ("Spanish (fluent)", "Mandarin
- * Chinese", "English/Spanish (bilingual)", "Japanese (JLPT N2)"). "Swedish
- * massage", "Professional polish" and "English (native)" pass.
+ * Whether a skills item is a language other than English: it names one
+ * ("Spanish", "Business Spanish", "Japanese (JLPT N2)", "Sign Language (ASL)",
+ * "English/Spanish (bilingual)") and every other token is English, a
+ * proficiency word or a level code. "Swedish massage", "Professional polish"
+ * and "English (native)" pass.
  */
 export function isLanguageSkill(item: string): boolean {
-  const words = item.toLowerCase().match(/\p{L}+/gu) ?? [];
-  const isLanguage = (w: string) => w === "english" || LANGUAGE_NAME_SET.has(w);
-  const [first, second] = words;
+  const tokens = item.match(/[\p{L}\p{N}]+/gu) ?? [];
+  const lower = tokens.map((t) => t.toLowerCase());
+  const names = (t: string, i: number) =>
+    LANGUAGE_NAME_SET.has(lower[i] as string) &&
+    (!LOWERCASE_WORD_TOO.has(lower[i] as string) || /^\p{Lu}/u.test(t));
+  const signLanguage = /\bsign\s+language\b/i.test(item);
   return (
-    first !== undefined &&
-    (isLanguage(first) || (first === "american" && second === "sign")) &&
-    words.some((w) => LANGUAGE_NAME_SET.has(w)) &&
-    words.every((w) => isLanguage(w) || PROFICIENCY_WORDS.has(w))
+    (signLanguage || tokens.some(names)) &&
+    lower.every(
+      (w, i) =>
+        w === "english" ||
+        names(tokens[i] as string, i) ||
+        PROFICIENCY_WORDS.has(w) ||
+        LEVEL_CODE.test(w) ||
+        (signLanguage && (w === "sign" || w === "american" || w === "british")),
+    )
   );
 }
 
@@ -205,6 +216,14 @@ const PHRASES: Array<{ term: string; test: (text: string) => boolean }> = [
     term: "-speaking",
     test: matches(new RegExp(`\\b(?:${LANGUAGE_NAMES})[\\s-]speak(?:ing|er|ers)\\b`, "i")),
   },
+  // "As an immigrant myself", "proud to be an immigrant"; not "as an
+  // immigrant rights advocate" or "represented an immigrant from Honduras".
+  {
+    term: "an immigrant (self)",
+    test: matches(
+      /\b(?:as|being|proud\s+to\s+be)\s+an\s+immigrant\b(?![\s-]+(?:rights|advocate|advocacy|services|service|clients|client|community|communities|families|family|law|legal|justice|support|outreach|students|workers|youth|populations?|organi[sz]ations?)\b)/i,
+    ),
+  },
 ];
 
 const MATCHERS = [
@@ -215,7 +234,11 @@ const MATCHERS = [
   ...PHRASES,
 ];
 
-/** The demographic terms and phrases found in `text`. */
+/**
+ * The demographic terms and phrases found in `text`. Typographic apostrophes
+ * are read as "'" so "I’m" matches the terms' "I'm".
+ */
 export function findDemographicTerms(text: string): string[] {
-  return MATCHERS.filter((m) => m.test(text)).map((m) => m.term);
+  const folded = text.replace(/[‘’ʼ]/g, "'");
+  return MATCHERS.filter((m) => m.test(folded)).map((m) => m.term);
 }
