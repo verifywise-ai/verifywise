@@ -38,7 +38,7 @@ python-dotenv>=1.2.4
 # self-hosted and custom OpenAI-compatible endpoints, ollama for local models
 httpx>=0.27.0
 openai>=3.31.0
-ollama>=0.6.2
+ollama>=0.6.3
 
 # DeepEval for comprehensive LLM evaluation
 deepeval>=4.2.3
