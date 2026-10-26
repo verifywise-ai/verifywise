@@ -37,7 +37,7 @@ python-dotenv>=1.2.4
 # LLM clients: cloud models run through the AI Gateway (httpx); openai is for
 # self-hosted and custom OpenAI-compatible endpoints, ollama for local models
 httpx>=0.27.0
-openai>=3.31.0
+openai>=3.37.0
 ollama>=0.6.2
 
 # DeepEval for comprehensive LLM evaluation
