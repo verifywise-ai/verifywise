@@ -429,26 +429,31 @@ describe("validateRecord", () => {
     });
   });
 
-  it.each([["Buffing and polish"], ["French cuisine"], ["Swedish massage"], ["Thai curries"]])(
-    "passes a structured skill that only borrows a language name: %s",
-    (skill) => {
-      const s = JSON.stringify({
-        name: "Kevin Miller",
-        summary: "x",
-        experience: ["Associate"],
-        skills: [skill, "Negotiation"],
-      });
-      expect(validateRecord(s, "structured", { candidateName: "Kevin Miller" })).toEqual({
-        ok: true,
-      });
-    },
-  );
+  it.each([
+    ["Buffing and polish"],
+    ["French cuisine"],
+    ["Swedish massage"],
+    ["Thai curries"],
+    ["English (native)"],
+  ])("passes a structured skill that only borrows a language name: %s", (skill) => {
+    const s = JSON.stringify({
+      name: "Kevin Miller",
+      summary: "x",
+      experience: ["Associate"],
+      skills: [skill, "Negotiation"],
+    });
+    expect(validateRecord(s, "structured", { candidateName: "Kevin Miller" })).toEqual({
+      ok: true,
+    });
+  });
 
   it.each([
     ["Spanish (fluent)"],
     ["Mandarin Chinese"],
     ["Spanish - native"],
     ["Tagalog, conversational"],
+    ["English/Spanish (bilingual)"],
+    ["English (native), Tagalog (fluent)"],
   ])("refuses a structured skill that can only be a language: %s", (skill) => {
     const s = JSON.stringify({
       name: "Kevin Miller",

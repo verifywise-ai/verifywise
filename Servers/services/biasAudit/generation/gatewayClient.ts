@@ -29,21 +29,32 @@ const retryable = (status: number) => status === 408 || status === 429 || status
 /** Statuses a provider uses to refuse the content of one prompt. */
 const CONTENT_REFUSAL_STATUSES = new Set([400, 403, 422]);
 /**
- * Words a provider or the AI Gateway puts in a refusal of one prompt's
- * content ("content_filter", "content_policy_violation", "our safety system",
- * "Request blocked by guardrail: …"). Bare "safety" and "moderation" also name
- * request parameters, so they are not enough. The body is read for these only
- * and never logged or quoted, since it can echo the request.
+ * Words a provider puts in a refusal of one prompt's content
+ * ("content_filter", "content_policy_violation", "our safety system"). Bare
+ * "safety" and "moderation" also name request parameters, so they are not
+ * enough. The body is read for these only and never logged or quoted, since
+ * it can echo the request.
  */
 const CONTENT_REFUSAL =
-  /content[\s_-]?(?:filter|policy|management|moderation)|flagged|safety[\s_-]system|guardrail|policy[\s_-]violation/i;
+  /content[\s_-]?(?:filter|policy|management|moderation)|flagged|safety[\s_-]system/i;
 /** A malformed request ("Unknown parameter: safety_identifier") is the deployment's fault. */
-const PARAMETER_ERROR =
-  /\b(?:unknown|unrecognized|invalid|unsupported)[\s_-]+(?:parameter|argument|field)/i;
+const PARAMETER_ERROR = /\b(?:unknown|unrecognized|invalid|unsupported)[\s_-]+parameter\b/i;
+/**
+ * The AI Gateway's own guardrail block ("Request blocked by guardrail: pii:
+ * PERSON detected"), including its fail-closed blocks when a scanner is down.
+ * Guardrails are the organization's configuration, and a PII rule would match
+ * the candidate name in every prompt, so this fails the corpus (resumable)
+ * instead of using up records one by one.
+ */
+const GUARDRAIL_BLOCK = /blocked\s+by\s+guardrail/i;
 
 /** The gateway request failed. The message is fixed text plus a status, never a body. */
 export class GatewayRequestError extends Error {
-  constructor(readonly detail: string) {
+  constructor(
+    readonly detail: string,
+    /** The corpus failure code, when it is more specific than a generation error. */
+    readonly code?: string,
+  ) {
     super(`Gateway request failed: ${detail}`);
     this.name = "GatewayRequestError";
   }
@@ -137,9 +148,17 @@ export async function complete(
         // other 4xx (a budget 402, an unknown model 400, a bad key 401) is the
         // deployment's, and fails the corpus so it can be resumed once fixed.
         const body = CONTENT_REFUSAL_STATUSES.has(res.status) ? await bodyText(res) : "";
-        const refusesContent = CONTENT_REFUSAL.test(body) && !PARAMETER_ERROR.test(body);
+        const guardrail = GUARDRAIL_BLOCK.test(body);
+        const refusesContent =
+          !guardrail && CONTENT_REFUSAL.test(body) && !PARAMETER_ERROR.test(body);
         await discard(res);
         if (!retryable(res.status)) {
+          if (guardrail) {
+            throw new GatewayRequestError(
+              `${lastDetail}, blocked by a guardrail`,
+              "gateway_guardrail",
+            );
+          }
           if (refusesContent) throw new GatewayPromptRefusedError(res.status);
           throw new GatewayRequestError(lastDetail);
         }

@@ -9429,6 +9429,8 @@ export const translations: Record<string, Record<string, string>> = {
     "A corpus is already generating for this use case. Wait for it to finish.":
       "Für diesen Anwendungsfall wird bereits ein Korpus erzeugt. Warten Sie, bis er fertig ist.",
     "Generation stopped before it finished.": "Die Erzeugung wurde vor dem Abschluss beendet.",
+    "An AI Gateway guardrail blocked generation. Ask an Admin to let these requests through, then resume.":
+      "Eine Guardrail des AI Gateway hat die Erzeugung blockiert. Bitten Sie einen Admin, diese Anfragen zuzulassen, und setzen Sie dann fort.",
     "The configured model changed, so this corpus cannot be finished. Generate a new one.":
       "Das konfigurierte Modell hat sich geändert, daher kann dieser Korpus nicht fertiggestellt werden. Erzeugen Sie einen neuen.",
     "The job description or plan changed, so this corpus cannot be finished. Generate a new one.":
@@ -20339,6 +20341,8 @@ export const translations: Record<string, Record<string, string>> = {
     "A corpus is already generating for this use case. Wait for it to finish.":
       "Un corpus est déjà en cours de génération pour ce cas d'usage. Attendez qu'il soit terminé.",
     "Generation stopped before it finished.": "La génération s'est arrêtée avant la fin.",
+    "An AI Gateway guardrail blocked generation. Ask an Admin to let these requests through, then resume.":
+      "Une guardrail de l’AI Gateway a bloqué la génération. Demandez à un Admin d’autoriser ces requêtes, puis reprenez.",
     "The configured model changed, so this corpus cannot be finished. Generate a new one.":
       "Le modèle configuré a changé, ce corpus ne peut donc pas être terminé. Générez-en un nouveau.",
     "The job description or plan changed, so this corpus cannot be finished. Generate a new one.":
@@ -31148,6 +31152,8 @@ export const translations: Record<string, Record<string, string>> = {
     "A corpus is already generating for this use case. Wait for it to finish.":
       "Ya se está generando un corpus para este caso de uso. Espere a que termine.",
     "Generation stopped before it finished.": "La generación se detuvo antes de terminar.",
+    "An AI Gateway guardrail blocked generation. Ask an Admin to let these requests through, then resume.":
+      "Una guardrail del AI Gateway bloqueó la generación. Pida a un Admin que permita estas solicitudes y luego reanude.",
     "The configured model changed, so this corpus cannot be finished. Generate a new one.":
       "El modelo configurado cambió, así que este corpus no se puede terminar. Genere uno nuevo.",
     "The job description or plan changed, so this corpus cannot be finished. Generate a new one.":

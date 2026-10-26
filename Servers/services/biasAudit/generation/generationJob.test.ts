@@ -67,6 +67,8 @@ import * as generateCorpus from "./generateCorpus";
 import {
   corporaWithoutPendingJob,
   CORPUS_QUEUE,
+  QUEUE_LOOKUP_TIMEOUT_MS,
+  QUEUE_RETRY_AFTER_MS,
   createCorpusGenerationWorker,
   enqueueCorpusGeneration,
   onCorpusJobFailed,
@@ -221,8 +223,15 @@ describe("createCorpusGenerationWorker", () => {
 
 describe("corporaWithoutPendingJob", () => {
   const withState = (state: string) => ({ getState: async () => state });
+  // Each test starts well past any skip window an earlier one opened.
+  let clock = Date.now();
+  beforeEach(() => {
+    clock += 10 * QUEUE_RETRY_AFTER_MS;
+    jest.useFakeTimers({ now: clock });
+  });
+  afterEach(() => jest.useRealTimers());
 
-  it("returns the corpora whose job is gone, finished or has lost its worker", async () => {
+  it("returns the corpora whose job is gone or finished", async () => {
     getJob.mockImplementation(
       async (id: string) =>
         ({
@@ -230,11 +239,11 @@ describe("corporaWithoutPendingJob", () => {
           "corpus-2": withState("delayed"),
           "corpus-3": null,
           "corpus-4": withState("failed"),
-          // An active job asked about here has no lease and a stale heartbeat.
+          // Just taken by the worker, before it claims the lease.
           "corpus-5": withState("active"),
         })[id],
     );
-    await expect(corporaWithoutPendingJob([1, 2, 3, 4, 5])).resolves.toEqual([3, 4, 5]);
+    await expect(corporaWithoutPendingJob([1, 2, 3, 4, 5])).resolves.toEqual([3, 4]);
   });
 
   it("returns null when the queue errors", async () => {
@@ -243,27 +252,27 @@ describe("corporaWithoutPendingJob", () => {
   });
 
   it("returns null instead of waiting when the queue does not answer", async () => {
-    jest.useFakeTimers();
-    try {
-      getJob.mockReturnValue(new Promise(() => undefined));
-      const result = corporaWithoutPendingJob([1, 2]);
-      await jest.advanceTimersByTimeAsync(2_000);
-      await expect(result).resolves.toBeNull();
-    } finally {
-      jest.useRealTimers();
-    }
+    getJob.mockReturnValue(new Promise(() => undefined));
+    const result = corporaWithoutPendingJob([1, 2]);
+    await jest.advanceTimersByTimeAsync(QUEUE_LOOKUP_TIMEOUT_MS);
+    await expect(result).resolves.toBeNull();
   });
 
   it("looks the corpora up in parallel", async () => {
     getJob.mockReturnValue(new Promise(() => undefined));
-    jest.useFakeTimers();
-    try {
-      const result = corporaWithoutPendingJob([1, 2, 3]);
-      expect(getJob).toHaveBeenCalledTimes(3);
-      await jest.advanceTimersByTimeAsync(2_000);
-      await result;
-    } finally {
-      jest.useRealTimers();
-    }
+    const result = corporaWithoutPendingJob([1, 2, 3]);
+    expect(getJob).toHaveBeenCalledTimes(3);
+    await jest.advanceTimersByTimeAsync(QUEUE_LOOKUP_TIMEOUT_MS);
+    await result;
+  });
+
+  it("skips the queue for a while after it could not be read, then asks again", async () => {
+    getJob.mockRejectedValue(new Error("redis down"));
+    await corporaWithoutPendingJob([1]);
+    getJob.mockReset().mockResolvedValue(null);
+    await expect(corporaWithoutPendingJob([1])).resolves.toBeNull();
+    expect(getJob).not.toHaveBeenCalled();
+    jest.setSystemTime(Date.now() + QUEUE_RETRY_AFTER_MS);
+    await expect(corporaWithoutPendingJob([1])).resolves.toEqual([1]);
   });
 });

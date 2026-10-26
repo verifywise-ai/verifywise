@@ -248,13 +248,26 @@ describe("refusals", () => {
   );
 
   it.each([
-    '{"detail":"Request blocked by guardrail: pii: PERSON detected"}',
-    '{"detail":"Request blocked by guardrail: policy violation"}',
     '{"error":{"code":"content_policy_violation","message":"rejected by our safety system"}}',
-  ])("reports an AI Gateway or provider block as a refusal of this prompt: %s", async (body) => {
+    // Google's status name must not hide a content refusal.
+    '{"error":{"message":"Blocked by content policy","status":"INVALID_ARGUMENT"}}',
+  ])("reports a provider content block as a refusal of this prompt: %s", async (body) => {
     mockFetch.mockResolvedValue({ ok: false, status: 400, text: async () => body });
     const err = await complete(settings, "p", { retries: 2, retryDelayMs: 0 }).catch((e) => e);
     expect(err).toBeInstanceOf(GatewayPromptRefusedError);
+  });
+
+  it.each([
+    '{"detail":"Request blocked by guardrail: pii: PERSON detected"}',
+    '{"detail":"Request blocked by guardrail: pii: SYSTEM_ERROR detected"}',
+    '{"detail":"Request blocked by guardrail: content_filter: policy violation"}',
+  ])("fails the corpus, resumably, on an AI Gateway guardrail block: %s", async (body) => {
+    mockFetch.mockResolvedValue({ ok: false, status: 400, text: async () => body });
+    const err = await complete(settings, "p", { retries: 2, retryDelayMs: 0 }).catch((e) => e);
+    expect(err).toBeInstanceOf(GatewayRequestError);
+    expect(err.code).toBe("gateway_guardrail");
+    expect(err.message).not.toContain("PERSON");
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
   it.each([
@@ -267,6 +280,7 @@ describe("refusals", () => {
     [400, '{"error":{"message":"Unknown parameter: safety_identifier"}}'],
     [400, '{"error":{"message":"Invalid argument: safety_settings must be a list"}}'],
     [400, '{"error":{"message":"moderation is not enabled for this deployment"}}'],
+    [400, '{"error":{"message":"Unknown parameter: content_filter_mode"}}'],
   ])("reports a %s that is not a content refusal as a deployment fault", async (status, body) => {
     mockFetch.mockResolvedValue({ ok: false, status, text: async () => body });
     const err = await complete(settings, "p", { retries: 2, retryDelayMs: 0 }).catch((e) => e);

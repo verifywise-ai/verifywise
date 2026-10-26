@@ -83,6 +83,9 @@ function failureText(code: string | null): string {
     return "The job description or plan changed, so this corpus cannot be finished. Generate a new one.";
   }
   if (FINAL_FAILURES.has(code)) return "This corpus cannot be finished. Generate a new one.";
+  if (code === "gateway_guardrail") {
+    return "An AI Gateway guardrail blocked generation. Ask an Admin to let these requests through, then resume.";
+  }
   return "Generation stopped before it finished.";
 }
 

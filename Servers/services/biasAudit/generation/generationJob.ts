@@ -66,21 +66,26 @@ export async function enqueueCorpusGeneration(
 }
 
 /**
- * BullMQ states in which a corpus's job will still run. Not "active": the
- * sweep only asks about a corpus with no live lease and a stale heartbeat,
- * and a live worker renews both, so an active job there has lost its worker.
+ * BullMQ states in which a corpus's job will still run. "active" counts: a
+ * job the worker has just taken has not claimed its lease yet. One whose
+ * worker died is moved back to waiting by BullMQ's stalled-job check.
  */
-const PENDING_STATES = new Set(["waiting", "delayed", "prioritized", "waiting-children"]);
+const PENDING_STATES = new Set(["waiting", "delayed", "active", "prioritized", "waiting-children"]);
 
 /** How long the stale sweep waits on the queue before giving up. */
 export const QUEUE_LOOKUP_TIMEOUT_MS = 2_000;
+/** After the queue could not be read, sweeps skip it for this long. */
+export const QUEUE_RETRY_AFTER_MS = 60_000;
+let queueUnreadableUntil = 0;
 
 /**
  * Of these corpora, the ones the queue holds no job to run. Null when the
  * queue cannot be read in QUEUE_LOOKUP_TIMEOUT_MS, so a Redis outage neither
- * fails a corpus nor stalls the request that swept.
+ * fails a corpus nor stalls the request that swept; the next
+ * QUEUE_RETRY_AFTER_MS of sweeps then return null without asking.
  */
 export async function corporaWithoutPendingJob(corpusIds: number[]): Promise<number[] | null> {
+  if (Date.now() < queueUnreadableUntil) return null;
   let timer: NodeJS.Timeout | undefined;
   const timeout = new Promise<never>((_, reject) => {
     timer = setTimeout(() => reject(new Error("timed out")), QUEUE_LOOKUP_TIMEOUT_MS);
@@ -89,6 +94,7 @@ export async function corporaWithoutPendingJob(corpusIds: number[]): Promise<num
     const pending = await Promise.race([Promise.all(corpusIds.map(corpusJobPending)), timeout]);
     return corpusIds.filter((_, i) => !pending[i]);
   } catch (error) {
+    queueUnreadableUntil = Date.now() + QUEUE_RETRY_AFTER_MS;
     logger.warn(
       `Stale corpus sweep skipped: the generation queue could not be read (${
         error instanceof Error ? error.message : "unknown error"

@@ -37,7 +37,10 @@ const IDENTITY = [
   "black men", "asian american", "pacific islander", "native hawaiian", "alaska native",
   "native american", "american indian", "first nations", "people of color",
   "person of color", "minority owned", "tribal member", "immigrated",
-  "first generation immigrant", "second generation immigrant",
+  "first generation immigrant", "first generation immigrants", "second generation immigrant",
+  "second generation immigrants", "1st generation immigrant", "2nd generation immigrant",
+  "first gen immigrant", "an immigrant from", "as an immigrant", "i am an immigrant",
+  "i'm an immigrant",
   "asian pacific american", "society of women engineers",
 ];
 
@@ -45,10 +48,17 @@ const IDENTITY = [
 // as one's own. A bare "Catholic", "Baptist", "Christian", "Jewish",
 // "Islamic", "Hindu", "Buddhist" or "Sikh" is often an employer ("National
 // Jewish Health", "Islamic Relief USA") or a first name, so it is left to the
-// prompt; so is "immigrant" ("represented immigrant clients").
+// prompt; so is "immigrant" ("represented immigrant clients"). Their student
+// groups and "practicing …" are belonging, and are listed for every faith so
+// the check does not fall more on one.
 // prettier-ignore
 const RELIGION = [
   "muslim", "judaism",
+  "jewish student", "jewish students", "hindu student", "hindu students", "sikh student",
+  "sikh students", "buddhist student", "buddhist students", "islamic student",
+  "islamic students", "christian student", "christian students", "catholic student",
+  "catholic students", "practicing jew", "practicing hindu", "practicing sikh",
+  "practicing buddhist", "practicing christian", "practicing catholic",
   "my church", "our church", "my mosque", "our mosque", "my synagogue", "our synagogue",
   "my temple", "our temple", "my parish", "our parish", "church choir", "church youth",
 ];
@@ -106,15 +116,17 @@ const PROFICIENCY_WORDS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Whether a skills item can only be a language: a language name followed by
- * nothing, another language name or proficiency words ("Spanish", "Spanish
- * (fluent)", "Mandarin Chinese", "Spanish - native"). "Swedish massage" and
- * "French cuisine" are skills.
+ * Whether a skills item names a language other than English and nothing but
+ * languages and proficiency words ("Spanish", "Spanish (fluent)", "Mandarin
+ * Chinese", "English/Spanish (bilingual)"). "Swedish massage", "French
+ * cuisine" and "English (native)" pass.
  */
 export function isLanguageSkill(item: string): boolean {
-  const [first, ...rest] = item.toLowerCase().match(/\p{L}+/gu) ?? [];
-  if (first === undefined || !LANGUAGE_NAME_SET.has(first)) return false;
-  return rest.every((w) => LANGUAGE_NAME_SET.has(w) || PROFICIENCY_WORDS.has(w));
+  const words = item.toLowerCase().match(/\p{L}+/gu) ?? [];
+  return (
+    words.some((w) => LANGUAGE_NAME_SET.has(w)) &&
+    words.every((w) => w === "english" || LANGUAGE_NAME_SET.has(w) || PROFICIENCY_WORDS.has(w))
+  );
 }
 
 /**
