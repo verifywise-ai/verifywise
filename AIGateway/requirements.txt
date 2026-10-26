@@ -19,7 +19,7 @@ litellm==1.102.1
 # Database migrations (Alembic)
 sqlalchemy[asyncio]>=2.1.4
 asyncpg>=0.29.0
-alembic>=1.20.0
+alembic>=1.20.1
 
 # Guardrails — PII detection (in-process, no Docker)
 # Pinned exactly: Presidio ships config changes in patch releases, and
