@@ -246,12 +246,19 @@ describe("corporaWithoutPendingJob", () => {
     await expect(corporaWithoutPendingJob([1, 2, 3, 4, 5])).resolves.toEqual([3, 4]);
   });
 
-  it("leaves a corpus alone when its lookup errors", async () => {
-    getJob.mockRejectedValue(new Error("NOAUTH"));
-    await expect(corporaWithoutPendingJob([1, 2])).resolves.toEqual([]);
-    // Errors do not pause the sweep: the next one asks again.
+  it("leaves a lone corpus whose lookup errors alone, without pausing the sweep", async () => {
+    getJob.mockRejectedValue(new Error("corrupt job"));
+    await expect(corporaWithoutPendingJob([1])).resolves.toEqual([]);
     getJob.mockReset().mockResolvedValue(null);
     await expect(corporaWithoutPendingJob([1])).resolves.toEqual([1]);
+  });
+
+  it("pauses the sweep when every one of several lookups fails fast", async () => {
+    getJob.mockRejectedValue(new Error("connect ECONNREFUSED"));
+    await expect(corporaWithoutPendingJob([1, 2])).resolves.toBeNull();
+    getJob.mockReset().mockResolvedValue(null);
+    await expect(corporaWithoutPendingJob([1])).resolves.toBeNull();
+    expect(getJob).not.toHaveBeenCalled();
   });
 
   it("leaves a corpus whose job cannot be read alone and sweeps the rest", async () => {
