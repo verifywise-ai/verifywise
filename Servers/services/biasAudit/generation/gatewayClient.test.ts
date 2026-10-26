@@ -252,6 +252,7 @@ describe("refusals", () => {
     // Google's status name must not hide a content refusal.
     '{"error":{"message":"Blocked by content policy","status":"INVALID_ARGUMENT"}}',
     '{"error":{"message":"Blocked by content filter","code":"invalid_argument"}}',
+    '{"error":{"message":"litellm.BadRequestError: {\\"error\\": {\\"message\\": \\"Blocked by content policy\\", \\"status\\": \\"INVALID_ARGUMENT\\"}}"}}',
   ])("reports a provider content block as a refusal of this prompt: %s", async (body) => {
     mockFetch.mockResolvedValue({ ok: false, status: 400, text: async () => body });
     const err = await complete(settings, "p", { retries: 2, retryDelayMs: 0 }).catch((e) => e);
@@ -263,6 +264,8 @@ describe("refusals", () => {
     '{"detail":"Request blocked by guardrail: pii: SYSTEM_ERROR detected"}',
     '{"detail":"Request blocked by guardrail: content_filter: policy violation"}',
     '{"error":{"message":"Violated guardrail policy"}}',
+    '{"error":{"code":"guardrail_intervened","message":"content blocked"}}',
+    '{"detail":"Request blocked by guardrail: custom_regex: invalid argument field detected"}',
   ])("fails the corpus, resumably, on an AI Gateway guardrail block: %s", async (body) => {
     mockFetch.mockResolvedValue({ ok: false, status: 400, text: async () => body });
     const err = await complete(settings, "p", { retries: 2, retryDelayMs: 0 }).catch((e) => e);

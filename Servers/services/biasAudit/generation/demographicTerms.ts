@@ -142,6 +142,7 @@ export function isLanguageSkill(item: string): boolean {
         names(tokens[i] as string, i) ||
         PROFICIENCY_WORDS.has(w) ||
         LEVEL_CODE.test(w) ||
+        /^\d+$/.test(w) ||
         (signLanguage && (w === "sign" || w === "american" || w === "british")),
     )
   );

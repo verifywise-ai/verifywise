@@ -74,46 +74,50 @@ const PENDING_STATES = new Set(["waiting", "delayed", "active", "prioritized", "
 
 /** How long the stale sweep waits on the queue before giving up. */
 export const QUEUE_LOOKUP_TIMEOUT_MS = 2_000;
-/** After the queue could not be read, sweeps skip it for this long. */
+/** After every lookup timed out (Redis unreachable), sweeps skip the queue for this long. */
 export const QUEUE_RETRY_AFTER_MS = 60_000;
 let queueUnreadableUntil = 0;
-const QUEUE_TIMED_OUT = new Error("timed out");
-/** A lookup that errored: its corpus is left alone. */
-const UNREADABLE = Symbol("unreadable");
+const TIMED_OUT = Symbol("timed out");
+const ERRORED = Symbol("errored");
+type Lookup = boolean | typeof TIMED_OUT | typeof ERRORED;
 
-/**
- * Of these corpora, the ones the queue holds no job to run. A corpus whose
- * job cannot be read is left alone, so one bad job holds back only itself.
- * Null when the queue as a whole cannot be read (no answer within
- * QUEUE_LOOKUP_TIMEOUT_MS, or every lookup errored): a Redis outage neither
- * fails a corpus nor stalls the request that swept, and the next
- * QUEUE_RETRY_AFTER_MS of sweeps return null without asking.
- */
-export async function corporaWithoutPendingJob(corpusIds: number[]): Promise<number[] | null> {
-  if (Date.now() < queueUnreadableUntil) return null;
+/** One corpus's lookup, bounded by QUEUE_LOOKUP_TIMEOUT_MS; an error is logged. */
+async function lookup(corpusId: number): Promise<Lookup> {
   let timer: NodeJS.Timeout | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(QUEUE_TIMED_OUT), QUEUE_LOOKUP_TIMEOUT_MS);
+  const timeout = new Promise<typeof TIMED_OUT>((resolve) => {
+    timer = setTimeout(() => resolve(TIMED_OUT), QUEUE_LOOKUP_TIMEOUT_MS);
   });
-  let pending: Array<boolean | typeof UNREADABLE>;
   try {
-    pending = await Promise.race([
-      Promise.all(
-        corpusIds.map((id) => corpusJobPending(id).catch((): typeof UNREADABLE => UNREADABLE)),
-      ),
-      timeout,
-    ]);
-  } catch {
-    pending = corpusIds.map(() => UNREADABLE);
+    return await Promise.race([corpusJobPending(corpusId), timeout]);
+  } catch (error) {
+    logger.warn(
+      `Stale corpus sweep left corpus ${corpusId} alone: its job could not be read (${
+        error instanceof Error ? error.message : "unknown error"
+      })`,
+    );
+    return ERRORED;
   } finally {
     clearTimeout(timer);
   }
-  if (pending.length > 0 && pending.every((p) => p === UNREADABLE)) {
+}
+
+/**
+ * Of these corpora, the ones the queue holds no job to run. The lookups run
+ * in parallel, each bounded on its own; a corpus whose lookup errors or times
+ * out is left alone, so one bad or slow job holds back only itself. When every
+ * lookup timed out, Redis is taken as unreachable: the result is null, and
+ * sweeps skip the queue for QUEUE_RETRY_AFTER_MS, so an outage neither fails a
+ * corpus nor stalls each request that sweeps.
+ */
+export async function corporaWithoutPendingJob(corpusIds: number[]): Promise<number[] | null> {
+  if (Date.now() < queueUnreadableUntil) return null;
+  const results = await Promise.all(corpusIds.map(lookup));
+  if (results.length > 0 && results.every((r) => r === TIMED_OUT)) {
     queueUnreadableUntil = Date.now() + QUEUE_RETRY_AFTER_MS;
-    logger.warn("Stale corpus sweep skipped: the generation queue could not be read.");
+    logger.warn("Stale corpus sweep skipped: the generation queue did not answer.");
     return null;
   }
-  return corpusIds.filter((_, i) => pending[i] === false);
+  return corpusIds.filter((_, i) => results[i] === false);
 }
 
 /** Whether the queue still holds a job that will run this corpus. */

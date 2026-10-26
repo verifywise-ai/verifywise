@@ -246,24 +246,12 @@ describe("corporaWithoutPendingJob", () => {
     await expect(corporaWithoutPendingJob([1, 2, 3, 4, 5])).resolves.toEqual([3, 4]);
   });
 
-  it("returns null when the queue errors", async () => {
-    getJob.mockRejectedValue(new Error("redis down"));
-    await expect(corporaWithoutPendingJob([1])).resolves.toBeNull();
-  });
-
-  it("returns null instead of waiting when the queue does not answer", async () => {
-    getJob.mockReturnValue(new Promise(() => undefined));
-    const result = corporaWithoutPendingJob([1, 2]);
-    await jest.advanceTimersByTimeAsync(QUEUE_LOOKUP_TIMEOUT_MS);
-    await expect(result).resolves.toBeNull();
-  });
-
-  it("looks the corpora up in parallel", async () => {
-    getJob.mockReturnValue(new Promise(() => undefined));
-    const result = corporaWithoutPendingJob([1, 2, 3]);
-    expect(getJob).toHaveBeenCalledTimes(3);
-    await jest.advanceTimersByTimeAsync(QUEUE_LOOKUP_TIMEOUT_MS);
-    await result;
+  it("leaves a corpus alone when its lookup errors", async () => {
+    getJob.mockRejectedValue(new Error("NOAUTH"));
+    await expect(corporaWithoutPendingJob([1, 2])).resolves.toEqual([]);
+    // Errors do not pause the sweep: the next one asks again.
+    getJob.mockReset().mockResolvedValue(null);
+    await expect(corporaWithoutPendingJob([1])).resolves.toEqual([1]);
   });
 
   it("leaves a corpus whose job cannot be read alone and sweeps the rest", async () => {
@@ -272,23 +260,23 @@ describe("corporaWithoutPendingJob", () => {
       return null;
     });
     await expect(corporaWithoutPendingJob([7, 8])).resolves.toEqual([8]);
-    // No pause: the next sweep asks the queue again.
-    await expect(corporaWithoutPendingJob([8])).resolves.toEqual([8]);
   });
 
-  it("skips the queue for a while after every lookup errored", async () => {
-    getJob.mockRejectedValue(new Error("NOAUTH"));
-    await expect(corporaWithoutPendingJob([1, 2])).resolves.toBeNull();
-    getJob.mockReset().mockResolvedValue(null);
-    await expect(corporaWithoutPendingJob([1])).resolves.toBeNull();
-    expect(getJob).not.toHaveBeenCalled();
-  });
-
-  it("skips the queue for a while after it did not answer, then asks again", async () => {
-    getJob.mockReturnValue(new Promise(() => undefined));
-    const first = corporaWithoutPendingJob([1]);
+  it("sweeps the corpora that answered when one lookup hangs", async () => {
+    getJob.mockImplementation((id: string) =>
+      id === "corpus-3" ? new Promise(() => undefined) : Promise.resolve(null),
+    );
+    const result = corporaWithoutPendingJob([1, 2, 3]);
+    expect(getJob).toHaveBeenCalledTimes(3);
     await jest.advanceTimersByTimeAsync(QUEUE_LOOKUP_TIMEOUT_MS);
-    await first;
+    await expect(result).resolves.toEqual([1, 2]);
+  });
+
+  it("returns null and skips the queue for a while when no lookup answers", async () => {
+    getJob.mockReturnValue(new Promise(() => undefined));
+    const first = corporaWithoutPendingJob([1, 2]);
+    await jest.advanceTimersByTimeAsync(QUEUE_LOOKUP_TIMEOUT_MS);
+    await expect(first).resolves.toBeNull();
     getJob.mockReset().mockResolvedValue(null);
     await expect(corporaWithoutPendingJob([1])).resolves.toBeNull();
     expect(getJob).not.toHaveBeenCalled();

@@ -45,18 +45,21 @@ const CONTENT_REFUSAL =
  */
 const PARAMETER_ERROR =
   /\b(?:unknown|unrecognized|invalid|unsupported)[\s_-]+(?:parameter|argument|field)\b/i;
-const STATUS_INVALID_ARGUMENT = /"(?:status|code)"\s*:\s*"invalid[_\s-]argument"/gi;
+// The field may sit in a nested provider body, with its quotes escaped.
+const STATUS_INVALID_ARGUMENT = /\\*"(?:status|code)\\*"\s*:\s*\\*"invalid[_\s-]argument\\*"/gi;
 /**
  * A gateway guardrail block (the AI Gateway's "Request blocked by guardrail:
  * pii: PERSON detected", including its fail-closed blocks when a scanner is
- * down; another proxy's "Violated guardrail policy" or "guardrail
- * intervened"). Guardrails are the organization's configuration, and a PII
- * rule would match the candidate name in every prompt, so this fails the
- * corpus (resumable) instead of using up records one by one. A guardrail
- * setting the provider rejects is a parameter error, read first.
+ * down; another proxy's "Violated guardrail policy", "guardrail_intervened").
+ * Guardrails are the organization's configuration, and a PII rule would match
+ * the candidate name in every prompt, so this fails the corpus (resumable)
+ * instead of using up records one by one. It is read first: these wordings
+ * name a block, and the reason after them is the organization's own text. A
+ * guardrail setting the provider rejects names no block, so it reads as a
+ * parameter error.
  */
 const GUARDRAIL_BLOCK =
-  /blocked\s+by\s+(?:a\s+)?guardrail|violated\s+guardrail|guardrail\s+(?:policy\s+)?violat|guardrail\s+intervened/i;
+  /blocked[\s_-]+by[\s_-]+(?:a[\s_-]+)?guardrail|violated[\s_-]+guardrail|guardrail[\s_-]+(?:policy[\s_-]+)?violat|guardrail[\s_-]+intervened/i;
 
 /** The gateway request failed. The message is fixed text plus a status, never a body. */
 export class GatewayRequestError extends Error {
@@ -158,9 +161,9 @@ export async function complete(
         // other 4xx (a budget 402, an unknown model 400, a bad key 401) is the
         // deployment's, and fails the corpus so it can be resumed once fixed.
         const body = CONTENT_REFUSAL_STATUSES.has(res.status) ? await bodyText(res) : "";
+        const guardrail = GUARDRAIL_BLOCK.test(body);
         const parameterError = PARAMETER_ERROR.test(body.replace(STATUS_INVALID_ARGUMENT, ""));
-        const guardrail = !parameterError && GUARDRAIL_BLOCK.test(body);
-        const refusesContent = !parameterError && !guardrail && CONTENT_REFUSAL.test(body);
+        const refusesContent = !guardrail && !parameterError && CONTENT_REFUSAL.test(body);
         await discard(res);
         if (!retryable(res.status)) {
           if (guardrail) {
