@@ -37,16 +37,22 @@ const CONTENT_REFUSAL_STATUSES = new Set([400, 403, 422]);
  */
 const CONTENT_REFUSAL =
   /content[\s_-]?(?:filter|policy|management|moderation)|flagged|safety[\s_-]system/i;
-/** A malformed request ("Unknown parameter: safety_identifier") is the deployment's fault. */
-const PARAMETER_ERROR = /\b(?:unknown|unrecognized|invalid|unsupported)[\s_-]+parameter\b/i;
 /**
- * The AI Gateway's own guardrail block ("Request blocked by guardrail: pii:
- * PERSON detected"), including its fail-closed blocks when a scanner is down.
- * Guardrails are the organization's configuration, and a PII rule would match
- * the candidate name in every prompt, so this fails the corpus (resumable)
- * instead of using up records one by one.
+ * A malformed request ("Unknown parameter: safety_identifier", "Unknown field:
+ * content_filter_config") is the deployment's fault. Read with Google's
+ * status name INVALID_ARGUMENT removed, which a content refusal also carries.
  */
-const GUARDRAIL_BLOCK = /blocked\s+by\s+guardrail/i;
+const PARAMETER_ERROR =
+  /\b(?:unknown|unrecognized|invalid|unsupported)[\s_-]+(?:parameter|argument|field)\b/i;
+/**
+ * A gateway guardrail block (the AI Gateway's "Request blocked by guardrail:
+ * pii: PERSON detected", including its fail-closed blocks when a scanner is
+ * down; another proxy's "Violated guardrail policy"). Guardrails are the
+ * organization's configuration, and a PII rule would match the candidate name
+ * in every prompt, so this fails the corpus (resumable) instead of using up
+ * records one by one.
+ */
+const GUARDRAIL_BLOCK = /guardrail/i;
 
 /** The gateway request failed. The message is fixed text plus a status, never a body. */
 export class GatewayRequestError extends Error {
@@ -150,7 +156,9 @@ export async function complete(
         const body = CONTENT_REFUSAL_STATUSES.has(res.status) ? await bodyText(res) : "";
         const guardrail = GUARDRAIL_BLOCK.test(body);
         const refusesContent =
-          !guardrail && CONTENT_REFUSAL.test(body) && !PARAMETER_ERROR.test(body);
+          !guardrail &&
+          CONTENT_REFUSAL.test(body) &&
+          !PARAMETER_ERROR.test(body.replace(/INVALID_ARGUMENT/g, ""));
         await discard(res);
         if (!retryable(res.status)) {
           if (guardrail) {

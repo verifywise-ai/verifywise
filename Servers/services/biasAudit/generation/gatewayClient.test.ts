@@ -261,6 +261,7 @@ describe("refusals", () => {
     '{"detail":"Request blocked by guardrail: pii: PERSON detected"}',
     '{"detail":"Request blocked by guardrail: pii: SYSTEM_ERROR detected"}',
     '{"detail":"Request blocked by guardrail: content_filter: policy violation"}',
+    '{"error":{"message":"Violated guardrail policy"}}',
   ])("fails the corpus, resumably, on an AI Gateway guardrail block: %s", async (body) => {
     mockFetch.mockResolvedValue({ ok: false, status: 400, text: async () => body });
     const err = await complete(settings, "p", { retries: 2, retryDelayMs: 0 }).catch((e) => e);
@@ -281,6 +282,8 @@ describe("refusals", () => {
     [400, '{"error":{"message":"Invalid argument: safety_settings must be a list"}}'],
     [400, '{"error":{"message":"moderation is not enabled for this deployment"}}'],
     [400, '{"error":{"message":"Unknown parameter: content_filter_mode"}}'],
+    [400, '{"error":{"message":"Unknown field: content_filter_config"}}'],
+    [400, '{"error":{"message":"Unsupported argument: content_moderation"}}'],
   ])("reports a %s that is not a content refusal as a deployment fault", async (status, body) => {
     mockFetch.mockResolvedValue({ ok: false, status, text: async () => body });
     const err = await complete(settings, "p", { retries: 2, retryDelayMs: 0 }).catch((e) => e);

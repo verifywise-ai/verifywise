@@ -435,6 +435,7 @@ describe("validateRecord", () => {
     ["Swedish massage"],
     ["Thai curries"],
     ["English (native)"],
+    ["Professional polish"],
   ])("passes a structured skill that only borrows a language name: %s", (skill) => {
     const s = JSON.stringify({
       name: "Kevin Miller",
@@ -454,6 +455,10 @@ describe("validateRecord", () => {
     ["Tagalog, conversational"],
     ["English/Spanish (bilingual)"],
     ["English (native), Tagalog (fluent)"],
+    ["Spanish (C1)"],
+    ["Japanese (JLPT N2)"],
+    ["Spanish language (fluent)"],
+    ["American Sign Language (ASL)"],
   ])("refuses a structured skill that can only be a language: %s", (skill) => {
     const s = JSON.stringify({
       name: "Kevin Miller",

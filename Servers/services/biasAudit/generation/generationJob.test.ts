@@ -266,9 +266,18 @@ describe("corporaWithoutPendingJob", () => {
     await result;
   });
 
-  it("skips the queue for a while after it could not be read, then asks again", async () => {
-    getJob.mockRejectedValue(new Error("redis down"));
-    await corporaWithoutPendingJob([1]);
+  it("keeps sweeping after one job errors", async () => {
+    getJob.mockRejectedValueOnce(new Error("corrupt job"));
+    await expect(corporaWithoutPendingJob([1])).resolves.toBeNull();
+    getJob.mockResolvedValue(null);
+    await expect(corporaWithoutPendingJob([1])).resolves.toEqual([1]);
+  });
+
+  it("skips the queue for a while after it did not answer, then asks again", async () => {
+    getJob.mockReturnValue(new Promise(() => undefined));
+    const first = corporaWithoutPendingJob([1]);
+    await jest.advanceTimersByTimeAsync(QUEUE_LOOKUP_TIMEOUT_MS);
+    await first;
     getJob.mockReset().mockResolvedValue(null);
     await expect(corporaWithoutPendingJob([1])).resolves.toBeNull();
     expect(getJob).not.toHaveBeenCalled();

@@ -39,8 +39,7 @@ const IDENTITY = [
   "person of color", "minority owned", "tribal member", "immigrated",
   "first generation immigrant", "first generation immigrants", "second generation immigrant",
   "second generation immigrants", "1st generation immigrant", "2nd generation immigrant",
-  "first gen immigrant", "an immigrant from", "as an immigrant", "i am an immigrant",
-  "i'm an immigrant",
+  "first gen immigrant", "i am an immigrant", "i'm an immigrant", "i’m an immigrant",
   "asian pacific american", "society of women engineers",
 ];
 
@@ -107,25 +106,33 @@ const LANGUAGE_NAME_LIST = [
 ];
 const LANGUAGE_NAMES = LANGUAGE_NAME_LIST.join("|");
 const LANGUAGE_NAME_SET: ReadonlySet<string> = new Set(LANGUAGE_NAME_LIST);
-// Proficiency words that may follow a language in a skills item.
+// Words that may follow a language in a skills item: proficiency, test and
+// level names (the letters of "C1", "B2", "N2"), and "American Sign Language".
 // prettier-ignore
 const PROFICIENCY_WORDS: ReadonlySet<string> = new Set([
   "fluent", "fluency", "native", "bilingual", "conversational", "proficient", "proficiency",
   "basic", "elementary", "intermediate", "advanced", "professional", "working", "limited",
   "full", "business", "level", "speaker", "written", "spoken", "reading", "writing", "and",
+  "language", "sign", "american", "a", "b", "c", "n", "cefr", "jlpt", "hsk", "topik", "dele",
+  "delf", "dalf",
 ]);
 
 /**
- * Whether a skills item names a language other than English and nothing but
- * languages and proficiency words ("Spanish", "Spanish (fluent)", "Mandarin
- * Chinese", "English/Spanish (bilingual)"). "Swedish massage", "French
- * cuisine" and "English (native)" pass.
+ * Whether a skills item is a language other than English: it starts with a
+ * language name (or English) and holds only language names and proficiency
+ * words, at least one of them not English ("Spanish (fluent)", "Mandarin
+ * Chinese", "English/Spanish (bilingual)", "Japanese (JLPT N2)"). "Swedish
+ * massage", "Professional polish" and "English (native)" pass.
  */
 export function isLanguageSkill(item: string): boolean {
   const words = item.toLowerCase().match(/\p{L}+/gu) ?? [];
+  const isLanguage = (w: string) => w === "english" || LANGUAGE_NAME_SET.has(w);
+  const [first, second] = words;
   return (
+    first !== undefined &&
+    (isLanguage(first) || (first === "american" && second === "sign")) &&
     words.some((w) => LANGUAGE_NAME_SET.has(w)) &&
-    words.every((w) => w === "english" || LANGUAGE_NAME_SET.has(w) || PROFICIENCY_WORDS.has(w))
+    words.every((w) => isLanguage(w) || PROFICIENCY_WORDS.has(w))
   );
 }
 
